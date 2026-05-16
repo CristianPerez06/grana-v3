@@ -34,9 +34,9 @@ This is a Next.js project using the App Router architecture.
 
 ## Commands
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run lint` - Run ESLint
+- `pnpm dev` - Start development server
+- `pnpm build` - Build for production
+- `pnpm lint` - Run ESLint
 
 ## Branching
 
