@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Grana V3
 
-## Getting Started
+Aplicación de finanzas personales.
 
-First, run the development server:
+## Primeros pasos
+
+### 1. Instalar dependencias
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Configurar variables de entorno
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Copia el archivo de ejemplo y completa tus credenciales de Supabase:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cp .env.local.example .env.local
+```
 
-## Learn More
+| Variable                        | Dónde encontrarla                                              |
+| ------------------------------- | -------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Panel de Supabase → Project Settings → API → Project URL       |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Panel de Supabase → Project Settings → API → Publishable key   |
 
-To learn more about Next.js, take a look at the following resources:
+### 3. Ejecutar la aplicación
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+La app estará disponible en [http://localhost:3000](http://localhost:3000).
 
-## Deploy on Vercel
+## Scripts disponibles
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Script         | Descripción                              |
+| -------------- | ---------------------------------------- |
+| `pnpm dev`     | Inicia el servidor de desarrollo         |
+| `pnpm build`   | Compila la app para producción           |
+| `pnpm start`   | Ejecuta la build de producción           |
+| `pnpm lint`    | Ejecuta ESLint en todo el proyecto       |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Estructura del proyecto
+
+```
+grana-v3/
+├── app/                    # App Router de Next.js (páginas, layouts, route handlers)
+│   ├── favicon.ico
+│   ├── globals.css         # Estilos globales (Tailwind CSS v4)
+│   ├── layout.tsx          # Layout raíz
+│   └── page.tsx            # Página de inicio
+├── public/                 # Activos estáticos servidos tal cual
+├── CLAUDE.md               # Contexto del proyecto para Claude Code (se carga automáticamente en cada sesión)
+├── SUPABASE_SETUP.md       # Guía paso a paso para integrar Supabase
+├── README.md
+├── eslint.config.mjs       # Configuración de ESLint (flat config)
+├── next.config.ts          # Configuración de Next.js
+├── next-env.d.ts           # Tipos ambientales de Next.js para TypeScript
+├── package.json
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml
+├── postcss.config.mjs      # Pipeline de PostCSS / Tailwind
+└── tsconfig.json           # Configuración de TypeScript (alias: @/*)
+```
+
+## Stack tecnológico
+
+- [Next.js 16](https://nextjs.org) (App Router)
+- [React 19](https://react.dev)
+- [TypeScript](https://www.typescriptlang.org) (modo estricto)
+- [Tailwind CSS v4](https://tailwindcss.com)
+- [Supabase](https://supabase.com) — autenticación y base de datos (ver [`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md))
+- [pnpm](https://pnpm.io) — gestor de paquetes
