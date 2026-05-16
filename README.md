@@ -31,6 +31,23 @@ pnpm dev
 
 La app estará disponible en [http://localhost:3000](http://localhost:3000).
 
+### 4. (Opcional) Instalar el CLI de OpenSpec
+
+El repo está configurado para usar [OpenSpec](https://github.com/Fission-AI/OpenSpec) como flujo de spec-driven development. Los skills y slash commands ya vienen versionados en `.claude/`, pero el CLI se instala aparte:
+
+```bash
+pnpm add -g @fission-ai/openspec
+```
+
+Una vez instalado, dentro de Claude Code podés usar:
+
+- `/opsx:propose "<idea>"` — crear una nueva propuesta de cambio
+- `/opsx:explore` — explorar / refinar una idea antes de proponerla
+- `/opsx:apply` — implementar las tasks de un cambio
+- `/opsx:archive` — archivar un cambio ya completado
+
+Las propuestas viven en `openspec/changes/` y las specs en `openspec/specs/`.
+
 ## Scripts disponibles
 
 | Script         | Descripción                              |
@@ -73,3 +90,4 @@ grana-v3/
 - [Tailwind CSS v4](https://tailwindcss.com)
 - [Supabase](https://supabase.com) — autenticación y base de datos (ver [`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md))
 - [pnpm](https://pnpm.io) — gestor de paquetes
+- [OpenSpec](https://github.com/Fission-AI/OpenSpec) — spec-driven development asistido por IA
