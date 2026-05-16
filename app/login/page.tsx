@@ -1,3 +1,14 @@
+import { Alert } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { FormField } from '@/components/ui/form-field'
 import { login, signup } from './actions'
 
 export default async function LoginPage({
@@ -8,33 +19,46 @@ export default async function LoginPage({
   const { error, message } = await searchParams
 
   return (
-    <form className="flex flex-col gap-2 max-w-sm mx-auto mt-20">
-      <label className="flex flex-col gap-1">
-        Email
-        <input
-          name="email"
-          type="email"
-          required
-          className="border p-2 w-full"
-        />
-      </label>
-      <label className="flex flex-col gap-1">
-        Password
-        <input
-          name="password"
-          type="password"
-          required
-          className="border p-2 w-full"
-        />
-      </label>
-      <button formAction={login} className="bg-black text-white p-2">
-        Log in
-      </button>
-      <button formAction={signup} className="border p-2">
-        Sign up
-      </button>
-      {error && <p className="text-red-600 text-sm">{error}</p>}
-      {message && <p className="text-green-700 text-sm">{message}</p>}
-    </form>
+    <div className="mx-auto mt-20 w-full max-w-sm px-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Welcome back</CardTitle>
+          <CardDescription>
+            Log in or create an account to continue.
+          </CardDescription>
+        </CardHeader>
+        <form>
+          <CardContent className="flex flex-col gap-4">
+            <FormField
+              label="Email"
+              name="email"
+              type="email"
+              required
+              placeholder="you@example.com"
+            />
+            <FormField
+              label="Password"
+              name="password"
+              type="password"
+              required
+            />
+            {error && <Alert variant="error">{error}</Alert>}
+            {message && <Alert variant="success">{message}</Alert>}
+          </CardContent>
+          <CardFooter className="flex-col gap-2">
+            <Button formAction={login} className="w-full">
+              Log in
+            </Button>
+            <Button
+              formAction={signup}
+              variant="secondary"
+              className="w-full"
+            >
+              Sign up
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
+    </div>
   )
 }
