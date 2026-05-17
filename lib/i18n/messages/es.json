@@ -1,0 +1,81 @@
+{
+  "auth": {
+    "signup": {
+      "title": "Crear cuenta",
+      "description": "Completá los datos para empezar.",
+      "fullName_label": "Nombre completo",
+      "email_label": "Email",
+      "password_label": "Contraseña",
+      "confirm_label": "Confirmar contraseña",
+      "submit": "Crear cuenta",
+      "check_email_title": "Revisá tu email",
+      "check_email_body": "Te enviamos un enlace de confirmación. Hacé click para activar tu cuenta.",
+      "have_account": "¿Ya tenés cuenta? Iniciá sesión"
+    },
+    "login": {
+      "title": "Iniciar sesión",
+      "description": "Ingresá con tu email y contraseña.",
+      "email_label": "Email",
+      "password_label": "Contraseña",
+      "submit": "Iniciar sesión",
+      "forgot": "¿Olvidaste tu contraseña?",
+      "no_account": "¿No tenés cuenta? Registrate",
+      "confirmed_notice": "Tu cuenta fue confirmada. Ingresá con tu email y contraseña.",
+      "callback_error": "No pudimos verificar el enlace. Probá de nuevo."
+    },
+    "forgot": {
+      "title": "Recuperar contraseña",
+      "description": "Ingresá tu email y te enviamos un enlace para restablecerla.",
+      "email_label": "Email",
+      "submit": "Enviar enlace",
+      "sent_notice": "Si tu email está registrado, te enviamos un enlace para restablecer tu contraseña.",
+      "back_to_login": "Volver a iniciar sesión"
+    },
+    "reset": {
+      "title": "Nueva contraseña",
+      "description": "Elegí una contraseña nueva para tu cuenta.",
+      "password_label": "Nueva contraseña",
+      "confirm_label": "Confirmar contraseña",
+      "submit": "Guardar contraseña",
+      "success_title": "Contraseña actualizada",
+      "success_body": "Tu contraseña fue cambiada. Iniciá sesión con la nueva.",
+      "go_to_login": "Ir a iniciar sesión",
+      "invalid_link_title": "Enlace inválido",
+      "invalid_link": "Este enlace es inválido o ya expiró. Pedí uno nuevo.",
+      "go_to_forgot": "Pedir un nuevo enlace"
+    },
+    "errors": {
+      "invalid_credentials": "Email o contraseña incorrectos.",
+      "email_not_confirmed": "Confirmá tu email antes de iniciar sesión.",
+      "user_already_exists": "Ya existe una cuenta con ese email.",
+      "weak_password": "La contraseña es demasiado débil.",
+      "same_password": "La contraseña nueva debe ser distinta a la actual.",
+      "over_email_send_rate_limit": "Demasiados intentos. Esperá unos minutos antes de volver a intentar.",
+      "generic": "Algo salió mal. Probá de nuevo en un momento."
+    }
+  },
+  "validation": {
+    "required": "Este campo es obligatorio.",
+    "email": "Ingresá un email válido.",
+    "min": "Debe tener al menos {min} caracteres.",
+    "max": "No puede tener más de {max} caracteres.",
+    "notType": "Valor inválido.",
+    "password_letter": "Debe incluir al menos una letra.",
+    "password_number": "Debe incluir al menos un número.",
+    "password_match": "Las contraseñas no coinciden."
+  },
+  "dashboard": {
+    "title": "Inicio",
+    "welcome": "Hola, {name}.",
+    "welcome_anon": "Hola."
+  },
+  "footer": {
+    "language": "Idioma",
+    "language_es": "ES",
+    "language_en": "EN"
+  },
+  "common": {
+    "app_name": "grana",
+    "logout": "Cerrar sesión"
+  }
+}
