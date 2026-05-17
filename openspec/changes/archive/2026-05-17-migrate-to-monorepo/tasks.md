@@ -71,13 +71,13 @@
 
 ## 8. Vercel y merge
 
-- [ ] 8.1 (Humano, antes del push) En el dashboard de Vercel, cambiar "Root Directory" del proyecto a `apps/web`. Verificar que las env vars del proyecto siguen presentes.
+- [x] 8.1 (Humano, antes del push) En el dashboard de Vercel, cambiar "Root Directory" del proyecto a `apps/web`. Verificar que las env vars del proyecto siguen presentes.
 - [x] 8.2 Verificar checklist completo en local: `pnpm install`, `pnpm --filter web build`, `pnpm --filter web lint`, `pnpm --filter web storybook`, `pnpm --filter web dev` con los flujos clave funcionando (login, signup, logout, switcher de idioma, dark mode).
-- [ ] 8.3 Squash de todos los commits de la branch en uno solo (`git rebase -i main` con fixups, o `git reset --soft main && git commit`). Mensaje: `feat(repo): migrate to pnpm monorepo with apps/web and shared packages`.
-- [ ] 8.4 (Humano) Fast-forward merge a main: `git checkout main && git merge --ff-only feature/migrate-to-monorepo && git push origin main`.
-- [ ] 8.5 (Humano) Verificar que el deploy de Vercel post-merge cierra verde. Si no, revertir el commit en main y revertir el cambio de Root Directory.
+- [x] 8.3 Squash de todos los commits de la branch en uno solo (`git rebase -i main` con fixups, o `git reset --soft main && git commit`). Mensaje: `feat(repo): migrate to pnpm monorepo with apps/web and shared packages`.
+- [x] 8.4 (Humano) Fast-forward merge a main: `git checkout main && git merge --ff-only feature/migrate-to-monorepo && git push origin main`.
+- [x] 8.5 (Humano) Verificar que el deploy de Vercel post-merge cierra verde. Si no, revertir el commit en main y revertir el cambio de Root Directory.
 
 ## 9. Cierre del change
 
-- [ ] 9.1 Ejecutar `openspec validate migrate-to-monorepo --strict` y confirmar que pasa.
-- [ ] 9.2 Archivar el change con `openspec archive migrate-to-monorepo` una vez deployado y estable.
+- [x] 9.1 Ejecutar `openspec validate migrate-to-monorepo --strict` y confirmar que pasa.
+- [x] 9.2 Archivar el change con `openspec archive migrate-to-monorepo` una vez deployado y estable.
