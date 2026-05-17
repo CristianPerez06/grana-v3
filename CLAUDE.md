@@ -112,3 +112,51 @@ git push origin main
 - **Commit messages are in English**, following conventional commits (`type(scope): subject`).
 - **This file (`CLAUDE.md`) stays in English** by design — it's an LLM system-prompt extension.
 - **OpenSpec parser keywords stay in English** even inside Spanish specs (`### Requirement:`, `#### Scenario:`, `**WHEN**`, `**THEN**`, `**AND**`, `## ADDED Requirements`, `## MODIFIED Requirements`, `## REMOVED Requirements`, `## RENAMED Requirements`, `FROM:`, `TO:`).
+
+## Domain — Grana
+
+Personal finance app for the Argentine market. Built by an accountant for people who need real financial control in a two-currency environment (ARS + USD).
+
+**Three pillars:** accounting trust (numbers are correct, nothing hidden), own personality (not a bank, not a spreadsheet), pedagogy without condescension (the app suggests and teaches, never talks down).
+
+**Key differentials:** credit card installment tracking as a first-class citizen; bi-currency daily life (Argentines save in USD, spend in both); inflation context.
+
+**User modes:** `novato` — simplified UI, default accounts hidden, answers "how much do I have / where did it go / what came in?"; `experto` — full app, adds "where exactly is that money?" with account-level detail. Mode is stored in `users.mode` and is **UI-only** — server actions do not enforce it.
+
+### Cross-cutting principles
+
+These affect every feature. Not knowing them causes silent bugs anywhere in the codebase.
+
+| Principle | Rule |
+|-----------|------|
+| **Bimoneda** | ARS and USD are separate ledgers. Never convert automatically. ARS is always primary (large type); USD is subordinate (smaller, labeled). Totals are always shown per currency, never merged. |
+| **Off-ledger credit cards** | `account.type='credit'` transactions never reduce `disponible`. Only the statement payment — an `expense` posted on a cash/debit account — does. |
+| **Derived balances** | No balance column anywhere. Always computed from transaction history. Never persisted. |
+| **`disponible ≥ 0` invariant** | Must be enforced in **every write path** that can reduce available balance (expense, transfer, adjustment, confirm recurrence, pay card period, delete income). Clamping in reads is not enforcement — it just hides corruption. |
+| **`Money` type + `decimal.js`** | All monetary arithmetic uses a `Money` branded type backed by `decimal.js`. Never use raw JS `+` `-` `*` `/` on money values. `NUMERIC(18,2)` in DB — never `FLOAT`. |
+| **`getTodayAR()`** | Always use this helper (never `new Date()`) for any "today" in financial operations. Timezone: `America/Argentina/Buenos_Aires`. Raw `new Date()` causes date corruption between 21:00–00:00 AR. |
+| **Deterministic ordering** | All transaction queries: `ORDER BY date ASC, created_at ASC, id ASC`. No exceptions — same-date transactions must resolve consistently. |
+| **Mother/child installments** | A credit card purchase in N installments = 1 parent row (`is_parent=true`, `account_id=NULL`, `status=NULL`) + N child rows (`status='pending'`, `account_id=card`). Children go `pending → paid` when the period is paid — never `posted`. |
+| **Migrations are the schema truth** | No `schema.sql` reference file. The source of truth is the ordered migration files in `supabase/migrations/` + the generated `packages/supabase/src/types.ts`. |
+| **Supabase is online-only** | There is no local Supabase instance and there never will be. Migrations are applied by pasting SQL into the Supabase dashboard SQL Editor. Types are regenerated with `supabase gen types typescript --project-id <id>` against the remote project. Any task or spec that says "local DB" means the online Supabase project. |
+
+### Modules
+
+Build order matters — each module depends on the ones above it.
+
+| # | Module | Status | Qué incluye |
+|---|--------|--------|-------------|
+| 1 | `auth` | ✅ Done | Registro, login, recupero de contraseña |
+| 2 | `schema-base` | ✅ Done | Monedas, instituciones, redes de tarjeta, tipo `Money`, `getTodayAR()` |
+| 3 | `categories` | ✅ Done | 17 categorías sistema + subcategorías, categorías propias del usuario, i18n |
+| 4 | `accounts` | 🔲 Next | Cuentas efectivo (ARS/USD), cuentas bancarias/débito, tarjetas de crédito con períodos explícitos |
+| 5 | `transactions` | 🔲 Planned | Ingresos, gastos, transferencias, ajustes, cuotas (madre+hijos), recurrencias |
+| 6 | `shared` | 🔲 Planned | Gastos compartidos entre N personas ("Compartido"), deuda derivada, liquidación |
+| 7 | `savings` | 🔲 Planned | Sistema de sobres (envelopes), enganche a ingresos — diseño pendiente |
+| 8 | `cashflow` | 🔜 Future | Proyecciones de flujo de caja |
+| 9 | `investments` | 🔜 Future | Inversiones |
+
+**Dependencias:** `accounts` → `transactions` → `shared` y `savings`. No se puede implementar una sin la anterior.
+
+**Specs viven en:** `openspec/specs/<module>/spec.md` una vez que el módulo se archiva.
+| `investments` | `openspec/specs/investments/` | 🔜 Future |
