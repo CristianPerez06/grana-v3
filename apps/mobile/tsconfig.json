@@ -1,0 +1,14 @@
+{
+  "extends": ["../../tsconfig.base.json", "expo/tsconfig.base"],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@grana/validation": ["../../packages/validation/src/index.ts"],
+      "@grana/i18n-messages": ["../../packages/i18n-messages/src/index.ts"],
+      "@grana/supabase": ["../../packages/supabase/src/index.ts"],
+      "@grana/ui-tokens": ["../../packages/ui-tokens/src/index.ts"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
+}
