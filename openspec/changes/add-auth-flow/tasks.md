@@ -129,11 +129,11 @@
 - [x] 16.3 Login con email + password → llega a `/dashboard`, ve su nombre, ve botón logout en header
 - [x] 16.4 Click logout → cae en `/login`
 - [x] 16.5 Intentar acceso directo a `/dashboard` sin sesión → middleware redirige a `/login`
-- [ ] 16.6 En `/login`, ir a `/forgot-password`, ingresar email → email recibido
-- [ ] 16.7 Click link de recovery → cae en `/reset-password`, ver form
+- [x] 16.6 En `/login`, ir a `/forgot-password`, ingresar email → email recibido
+- [x] 16.7 Click link de recovery → cae en `/reset-password`, ver form
 - [x] 16.8 Intentar navegar a `/dashboard` mientras está en recovery → middleware redirige a `/reset-password`
-- [ ] 16.9 Setear nuevo password → ver mensaje de éxito → click "Ir a login" → reingresar con nuevo password → éxito
-- [ ] 16.10 Probar errores: login con password incorrecto (mensaje en form), signup con email ya registrado (mensaje en form), reset con confirm distinto (mensaje en field) _(login ✓, signup duplicado ✓, reset confirm pendiente del SMTP)_
+- [x] 16.9 Setear nuevo password → ver mensaje de éxito → click "Ir a login" → reingresar con nuevo password → éxito
+- [x] 16.10 Probar errores: login con password incorrecto (mensaje en form), signup con email ya registrado (mensaje en form), reset con confirm distinto (mensaje en field)
 - [x] 16.11 Cambiar idioma desde footer (ES → EN) → todas las pantallas anteriores renderizan en inglés
 - [x] 16.12 Verificar en SQL Editor de Supabase que cada signup creó fila en `public.profiles` con `full_name` correcto
 - [x] 16.13 Probar dark mode (`html.dark` toggle): toda la UI usa los tokens semánticos, nada se rompe visualmente

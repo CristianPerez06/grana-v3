@@ -1,0 +1,27 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"],
+      "@grana/validation": ["../../packages/validation/src/index.ts"],
+      "@grana/i18n-messages": ["../../packages/i18n-messages/src/index.ts"],
+      "@grana/supabase": ["../../packages/supabase/src/index.ts"],
+      "@grana/ui-tokens": ["../../packages/ui-tokens/src/index.ts"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
+  ],
+  "exclude": ["node_modules"]
+}

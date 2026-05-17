@@ -1,44 +1,69 @@
-# Next.js Project
+# grana-v3monorepo
 
-This is a Next.js project using the App Router architecture.
+pnpm workspaces monorepo. Today `apps/web` (Next.js App Router) is the only app. `apps/mobile` is reserved for the Expo app and will be scaffolded in a separate change — do not create it here.
 
-## Tech Stack
+## Repo Layout
 
-- Next.js with App Router
-- TypeScript for type safety
-- Tailwind CSS for styling
-- React Server Components by default
+```
+apps/
+  web/             # Next.js (App Router) — the only app today
+packages/
+  validation/      # @grana/validation       — Yup schemas + helpers (pure, cross-platform)
+  i18n-messages/   # @grana/i18n-messages    — locale catalogs (JSON), no runtime
+  supabase/        # @grana/supabase         — Database type slot + createClient factory
+  ui-tokens/       # @grana/ui-tokens        — design tokens (CSS, single source for web)
+supabase/          # SQL migrations + email templates (backend, NOT an app)
+openspec/          # spec-driven workflow
+```
 
-## Project Structure
+### What goes where
 
-- `app/` - App Router pages and layouts
-- `components/` - Reusable React components
-- `lib/` - Utility functions and shared code
-- `public/` - Static assets
-- `supabase/migrations/` - SQL migrations (run manually in the Supabase SQL Editor)
-- `supabase/templates/` - Email templates (source of truth — see "Email templates" below)
+- **`apps/<name>/`** — platform/deployment-specific code: routes, screens, middleware, server actions, components, Next/Expo config.
+- **`packages/<name>/`** — code reusable across apps **with no platform deps**. If something only one app uses, it stays in that app.
+- **Repo root** — orchestrator `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, meta files. **No product code at the root.**
+
+When a module that lives in `apps/web/lib/` later needs to be reused by mobile, promote it to `packages/` rather than copying.
+
+## Tech Stack (apps/web)
+
+- Next.js with App Router, TypeScript strict, Tailwind CSS v4, React Server Components by default.
 
 ## Conventions
 
-- Use Server Components by default, add 'use client' only when needed
-- Prefer named exports for components
-- Use TypeScript strict mode
-- Follow the Next.js file-based routing conventions
-- Use next/image for optimized images
-- Use next/link for client-side navigation
-
-## Code Style
-
-- Use functional components with TypeScript
-- Prefer async/await over .then() chains
-- Use early returns for cleaner code
-- Keep components small and focused
+- Server Components by default; `'use client'` only when needed.
+- Named exports for components.
+- next/image for images, next/link for client-side navigation.
+- Functional components, async/await, early returns, small focused components.
+- **Code is in English** (see "Language conventions" below).
 
 ## Commands
 
-- `pnpm dev` - Start development server
-- `pnpm build` - Build for production
-- `pnpm lint` - Run ESLint
+All scripts work from the repo root (orchestrator forwards to `pnpm --filter web ...`) or from `apps/web/`.
+
+- `pnpm dev` — Next dev server (web)
+- `pnpm build` — production build (web)
+- `pnpm lint` — ESLint (web)
+- `pnpm storybook` — Storybook on :6006 (web)
+- `pnpm --filter web <script>` — explicit form if you ever add another app
+
+## Shared packages — TypeScript paths to source
+
+Packages under `packages/<name>/` have **no build step**. Their `package.json` `main`/`exports` point directly at `src/index.ts`. Next resolves them via `transpilePackages` in `apps/web/next.config.ts`, and TS resolves the `@grana/*` aliases via `paths` declared in `tsconfig.base.json` (extended by `apps/web/tsconfig.json`).
+
+Consequences:
+
+- Editing a package shows up immediately in web (no rebuild step).
+- Any new package must be added both to `transpilePackages` in `apps/web/next.config.ts` and to `paths` in `tsconfig.base.json` + `apps/web/tsconfig.json`.
+- If a future Metro/Expo setup can't resolve TS through workspaces cleanly, the fix is to add a build step to the affected package only — not a repo-wide change.
+
+## Specs — cross-platform convention
+
+When a behavior exists on multiple platforms, write **one capability per business behavior** with a platform-neutral name (`auth`, `dashboard`, …). Inside it:
+
+- Scenarios identical across platforms have no tag.
+- Scenarios that diverge are tagged at the end of the name: `(web)` / `(mobile)`.
+
+Capabilities that are genuinely single-platform get a prefix: `web-middleware-routing`, `mobile-push-notifications`. Meta capabilities like `project-conventions` stay unprefixed. Full rules in the `project-conventions` spec.
 
 ## Branching
 
@@ -83,7 +108,7 @@ git push origin main
 ## Language conventions
 
 - **Project documentation is in Spanish** (`README.md`, `SUPABASE_SETUP.md`, every `openspec/changes/**/*.md` and `openspec/specs/**/*.md`).
-- **Code is in English** (identifiers, file/dir names, code comments, JSDoc/TSDoc, Storybook story names). The only exception is the *values* of strings in `lib/i18n/messages/*.json`, which are user-facing copy.
+- **Code is in English** (identifiers, file/dir names, code comments, JSDoc/TSDoc, Storybook story names). The only exception is the *values* of strings in `packages/i18n-messages/src/*.json`, which are user-facing copy.
 - **Commit messages are in English**, following conventional commits (`type(scope): subject`).
 - **This file (`CLAUDE.md`) stays in English** by design — it's an LLM system-prompt extension.
 - **OpenSpec parser keywords stay in English** even inside Spanish specs (`### Requirement:`, `#### Scenario:`, `**WHEN**`, `**THEN**`, `**AND**`, `## ADDED Requirements`, `## MODIFIED Requirements`, `## REMOVED Requirements`, `## RENAMED Requirements`, `FROM:`, `TO:`).
