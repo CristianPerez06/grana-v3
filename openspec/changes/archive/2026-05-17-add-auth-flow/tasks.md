@@ -35,7 +35,7 @@
 - [x] 4.2 Crear `components/ui/password-field.stories.tsx`: stories `Default`, `WithError`, `WithDescription` (mismo patrón que las stories existentes en `components/ui/*.stories.tsx`)
 - [x] 4.3 Crear `components/ui/submit-button.tsx`: extiende `Button` con prop `pending?: boolean`. Cuando `pending=true`: agrega `disabled`, `aria-busy="true"`, y renderiza `<Spinner />` antes del children (o reemplaza children, decidir mirando la consistencia con `Button`)
 - [x] 4.4 Crear `components/ui/submit-button.stories.tsx`: stories `Default`, `Pending`, `SecondaryPending`
-- [ ] 4.5 Confirmar en Storybook (`pnpm storybook`) que ambos primitivos renderizan light/dark y respetan los tokens (`bg-background`, `text-destructive` para error, etc.) _(verificación manual del usuario)_
+- [x] 4.5 Confirmar en Storybook (`pnpm storybook`) que ambos primitivos renderizan light/dark y respetan los tokens (`bg-background`, `text-destructive` para error, etc.) _(verificación manual del usuario)_
 
 ## 5. SQL de profiles (Supabase)
 
