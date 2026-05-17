@@ -1,0 +1,81 @@
+{
+  "auth": {
+    "signup": {
+      "title": "Create account",
+      "description": "Fill in your details to get started.",
+      "fullName_label": "Full name",
+      "email_label": "Email",
+      "password_label": "Password",
+      "confirm_label": "Confirm password",
+      "submit": "Create account",
+      "check_email_title": "Check your email",
+      "check_email_body": "We sent you a confirmation link. Click it to activate your account.",
+      "have_account": "Already have an account? Sign in"
+    },
+    "login": {
+      "title": "Sign in",
+      "description": "Use your email and password to continue.",
+      "email_label": "Email",
+      "password_label": "Password",
+      "submit": "Sign in",
+      "forgot": "Forgot your password?",
+      "no_account": "No account yet? Sign up",
+      "confirmed_notice": "Your account was confirmed. Sign in with your email and password.",
+      "callback_error": "We couldn't verify the link. Please try again."
+    },
+    "forgot": {
+      "title": "Reset password",
+      "description": "Enter your email and we'll send you a reset link.",
+      "email_label": "Email",
+      "submit": "Send link",
+      "sent_notice": "If your email is registered, we sent you a link to reset your password.",
+      "back_to_login": "Back to sign in"
+    },
+    "reset": {
+      "title": "New password",
+      "description": "Choose a new password for your account.",
+      "password_label": "New password",
+      "confirm_label": "Confirm password",
+      "submit": "Save password",
+      "success_title": "Password updated",
+      "success_body": "Your password has been changed. Sign in with the new one.",
+      "go_to_login": "Go to sign in",
+      "invalid_link_title": "Invalid link",
+      "invalid_link": "This link is invalid or has expired. Request a new one.",
+      "go_to_forgot": "Request a new link"
+    },
+    "errors": {
+      "invalid_credentials": "Invalid email or password.",
+      "email_not_confirmed": "Confirm your email before signing in.",
+      "user_already_exists": "An account with that email already exists.",
+      "weak_password": "Password is too weak.",
+      "same_password": "New password must differ from the current one.",
+      "over_email_send_rate_limit": "Too many attempts. Wait a few minutes and try again.",
+      "generic": "Something went wrong. Please try again in a moment."
+    }
+  },
+  "validation": {
+    "required": "This field is required.",
+    "email": "Enter a valid email.",
+    "min": "Must be at least {min} characters.",
+    "max": "Must be at most {max} characters.",
+    "notType": "Invalid value.",
+    "password_letter": "Must include at least one letter.",
+    "password_number": "Must include at least one number.",
+    "password_match": "Passwords do not match."
+  },
+  "dashboard": {
+    "title": "Home",
+    "welcome": "Hi, {name}.",
+    "welcome_anon": "Hi."
+  },
+  "footer": {
+    "language": "Language",
+    "language_es": "ES",
+    "language_en": "EN"
+  },
+  "common": {
+    "app_name": "grana",
+    "logout": "Sign out"
+  }
+}
