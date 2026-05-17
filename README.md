@@ -39,8 +39,10 @@ pnpm install
 Copia el archivo de ejemplo y completa tus credenciales de Supabase:
 
 ```bash
-cp .env.local.example .env.local
+cp apps/web/.env.example apps/web/.env
 ```
+
+> Next.js carga el `.env` desde el cwd de la app, por eso vive en `apps/web/`, no en la raíz del repo.
 
 | Variable                        | Dónde encontrarla                                              |
 | ------------------------------- | -------------------------------------------------------------- |
@@ -137,36 +139,57 @@ Las propuestas viven en `openspec/changes/` y las specs en `openspec/specs/`.
 
 ## Convenciones
 
-- **Componentes reusables** viven en `components/ui/` con su Storybook story al lado. Antes de inventar un wrapper compuesto, ver si se puede componer con los primitivos existentes.
-- **Estilos**: solo Tailwind, usando los tokens semánticos del tema (`bg-background`, `text-foreground`, `text-destructive`, etc.) definidos en `app/globals.css`. Nada de `bg-zinc-*`/`text-gray-*` directos — rompen el dark mode.
-- **i18n**: la app usa [`next-intl`](https://next-intl.dev) con cookie `NEXT_LOCALE` (sin segmento `[locale]` en la URL). Los locales soportados están en `lib/i18n/config.ts`; los mensajes en `lib/i18n/messages/<locale>.json`. El switcher vive en el footer.
-- **Validación**: schemas en `lib/validation/` (Yup) compartidos entre los forms (`react-hook-form` + `yupResolver`) y los server actions (`validateActionInput`).
+- **Componentes reusables** viven en `apps/web/components/ui/` con su Storybook story al lado. Antes de inventar un wrapper compuesto, ver si se puede componer con los primitivos existentes.
+- **Estilos**: solo Tailwind v4, usando los tokens semánticos del tema (`bg-background`, `text-foreground`, `text-destructive`, etc.). Los tokens viven en `packages/ui-tokens/src/theme.css` y `apps/web/app/globals.css` los importa. Nada de `bg-zinc-*`/`text-gray-*` directos — rompen el dark mode.
+- **i18n**: la app usa [`next-intl`](https://next-intl.dev) con cookie `NEXT_LOCALE` (sin segmento `[locale]` en la URL). Los locales soportados están en `apps/web/lib/i18n/config.ts`; los catálogos en `packages/i18n-messages/src/<locale>.json` (consumidos vía `@grana/i18n-messages`). El switcher vive en el footer.
+- **Validación**: schemas Yup y helpers cross-platform viven en `packages/validation/src/` (paquete `@grana/validation`), compartidos entre los forms (`react-hook-form` + `yupResolver`) y los server actions (`validateActionInput`). El bridge React/`next-intl` (`setup-yup-locale.tsx`) se queda en `apps/web/lib/validation/` porque depende del runtime de next-intl.
+- **Supabase client**: el factory cross-platform vive en `packages/supabase/` (paquete `@grana/supabase`, expone `createClient` + slot `Database`). Los wrappers Next-aware (`createBrowserClient` / `createServerClient` con cookies de `@supabase/ssr`) viven en `apps/web/lib/supabase/`.
 - **Server actions de auth** devuelven `ActionResult<T> = { ok: true } | { ok: false, fieldErrors?, formError? }`. Los errores se muestran en la ruta con estado local, no por querystring.
 
 ---
 
 ## Estructura del proyecto
 
+El repo es un **monorepo pnpm**: una app web hoy (`apps/web`), paquetes compartidos en `packages/*`, y un slot reservado para la app mobile (`apps/mobile`, todavía no creado).
+
 ```
 grana-v3/
-├── app/                    # App Router de Next.js (páginas, layouts, route handlers)
-│   ├── favicon.ico
-│   ├── globals.css         # Estilos globales (Tailwind CSS v4)
-│   ├── layout.tsx          # Layout raíz
-│   └── page.tsx            # Página de inicio
-├── public/                 # Activos estáticos servidos tal cual
-├── CLAUDE.md               # Contexto del proyecto para Claude Code (se carga automáticamente en cada sesión)
-├── SUPABASE_SETUP.md       # Guía paso a paso para integrar Supabase
+├── apps/
+│   └── web/                       # Next.js App Router — la única app por ahora
+│       ├── app/                   # rutas, layouts, server actions
+│       ├── components/            # primitivos UI + footer
+│       ├── lib/                   # código específico de web (supabase ssr, i18n runtime, etc.)
+│       ├── .storybook/
+│       ├── public/                # activos estáticos
+│       ├── .env / .env.example    # vars de entorno (Next las lee desde el cwd de la app)
+│       ├── next.config.ts         # `transpilePackages` incluye los @grana/*
+│       └── tsconfig.json          # extiende `../../tsconfig.base.json`
+├── packages/
+│   ├── validation/                # @grana/validation — schemas Yup + helpers (cross-platform)
+│   ├── i18n-messages/             # @grana/i18n-messages — catálogos JSON
+│   ├── supabase/                  # @grana/supabase — slot Database + createClient factory
+│   └── ui-tokens/                 # @grana/ui-tokens — design tokens (CSS, fuente única para web)
+├── supabase/                      # SQL migrations + email templates (backend, no es una app)
+├── openspec/                      # workflow spec-driven
+├── CLAUDE.md                      # contexto para Claude Code
+├── SUPABASE_SETUP.md
 ├── README.md
-├── eslint.config.mjs       # Configuración de ESLint (flat config)
-├── next.config.ts          # Configuración de Next.js
-├── next-env.d.ts           # Tipos ambientales de Next.js para TypeScript
-├── package.json
-├── pnpm-lock.yaml
-├── pnpm-workspace.yaml
-├── postcss.config.mjs      # Pipeline de PostCSS / Tailwind
-└── tsconfig.json           # Configuración de TypeScript (alias: @/*)
+├── package.json                   # orquestador (`pnpm dev`, `build`, etc. → `pnpm --filter web …`)
+├── pnpm-workspace.yaml            # declara `apps/*` y `packages/*`
+├── tsconfig.base.json             # base TS con paths `@grana/*` → source directa
+└── .npmrc                         # hoist patterns necesarios para eslint-config-next
 ```
+
+Reglas rápidas:
+- Código específico de una plataforma vive en `apps/<name>/`.
+- Código reutilizable entre apps **y sin deps de plataforma** vive en `packages/<name>/`.
+- La raíz **no tiene código de producto**.
+
+## Deploy en Vercel
+
+Por ser monorepo, Vercel necesita saber qué subdirectorio buildear. En el dashboard del proyecto → **Settings → Build & Development Settings → Root Directory**, setear `apps/web`. Las env vars del proyecto (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) no cambian. Vercel detecta el `pnpm-workspace.yaml` en la raíz y corre `pnpm install` desde ahí.
+
+> Acción única por entorno: hay que cambiarlo **antes** del primer push post-migración para evitar un build rojo. Sin Root Directory ajustado, Vercel buildea la raíz y no encuentra Next.
 
 ## Stack tecnológico
 

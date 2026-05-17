@@ -1,0 +1,8 @@
+{
+  "name": "@grana/ui-tokens",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./theme.css": "./src/theme.css"
+  }
+}
