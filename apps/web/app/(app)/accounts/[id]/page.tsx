@@ -22,6 +22,7 @@ const AccountDetailPage = async ({ params }: Props) => {
     getTransactions(id, { limit: 20 }),
   ])
   if (!account) notFound()
+  if (account.type === 'credit') redirect(`/cards/${id}`)
 
   const inactiveCurrencies = account.currencies.filter((c) => !c.is_active)
   const allCurrencyCodes = new Set(account.currencies.map((c) => c.currency_code))

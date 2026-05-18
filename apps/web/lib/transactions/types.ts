@@ -3,7 +3,7 @@ export type TransactionType = 'income' | 'expense' | 'transfer' | 'adjustment'
 export type Transaction = {
   id: string
   user_id: string
-  account_id: string
+  account_id: string | null
   category_id: string | null
   subcategory_id: string | null
   transfer_destination_account_id: string | null
@@ -14,6 +14,15 @@ export type Transaction = {
   description: string | null
   is_verified: boolean
   created_at: string
+  // Credit card fields
+  status: 'pending' | 'paid' | null
+  due_date: string | null
+  is_parent: boolean
+  parent_id: string | null
+  installment_n: number | null
+  installments_total: number | null
+  card_period_id: string | null
+  fx_rate_to_ars: number | null
 }
 
 export type TransactionCategory = {

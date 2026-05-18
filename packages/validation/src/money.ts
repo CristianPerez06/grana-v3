@@ -1,6 +1,6 @@
 import Decimal from 'decimal.js'
 
-declare const _brand: unique symbol
+const _brand = Symbol('Money')
 
 export type Money = {
   readonly [_brand]: true

@@ -185,6 +185,29 @@ export async function deleteTransaction(
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
 
+  // Block deletion of individual installment children — must delete from parent
+  const { data: tx } = await supabase
+    .from('transactions')
+    .select('parent_id, status')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .single()
+
+  if (tx?.parent_id) {
+    return {
+      ok: false,
+      formError: 'Para eliminar una cuota, eliminá la compra completa desde el movimiento padre.',
+    }
+  }
+
+  // Block deletion of paid credit card transactions
+  if (tx?.status === 'paid') {
+    return {
+      ok: false,
+      formError: 'No podés eliminar un consumo que ya fue pagado en el resumen.',
+    }
+  }
+
   const { error } = await supabase
     .from('transactions')
     .delete()
@@ -195,6 +218,7 @@ export async function deleteTransaction(
 
   revalidatePath('/accounts')
   revalidatePath(`/accounts/${accountId}`)
+  revalidatePath('/cards')
   return { ok: true }
 }
 

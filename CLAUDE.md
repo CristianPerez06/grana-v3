@@ -135,8 +135,13 @@ These affect every feature. Not knowing them causes silent bugs anywhere in the 
 | **`disponible ≥ 0` invariant** | Must be enforced in **every write path** that can reduce available balance (expense, transfer, adjustment, confirm recurrence, pay card period, delete income). Clamping in reads is not enforcement — it just hides corruption. |
 | **`Money` type + `decimal.js`** | All monetary arithmetic uses a `Money` branded type backed by `decimal.js`. Never use raw JS `+` `-` `*` `/` on money values. `NUMERIC(18,2)` in DB — never `FLOAT`. |
 | **`getTodayAR()`** | Always use this helper (never `new Date()`) for any "today" in financial operations. Timezone: `America/Argentina/Buenos_Aires`. Raw `new Date()` causes date corruption between 21:00–00:00 AR. |
-| **Deterministic ordering** | All transaction queries: `ORDER BY date ASC, created_at ASC, id ASC`. No exceptions — same-date transactions must resolve consistently. |
+| **Deterministic ordering** | Transaction ordering depends on use: **calculation queries** (balance, running totals) use `ORDER BY date ASC, created_at ASC, id ASC`; **display queries** (lists shown to users) use `ORDER BY date DESC, created_at DESC, id DESC`. Never mix them up — using ASC for display shows oldest first; using DESC for balance breaks running totals. |
 | **Mother/child installments** | A credit card purchase in N installments = 1 parent row (`is_parent=true`, `account_id=NULL`, `status=NULL`) + N child rows (`status='pending'`, `account_id=card`). Children go `pending → paid` when the period is paid — never `posted`. |
+| **I-CRED-1: credit initial balance = 0** | `account.type='credit'` must always have `initial_balance=0` on all its `account_currencies` rows. Enforced by DB trigger `trg_fn_credit_initial_balance`. |
+| **I-CRED-6: credit expense → period required** | Every `expense` on a credit account must have `card_period_id NOT NULL` and `status IN ('pending','paid')`. Enforced by DB trigger `trg_fn_credit_transaction_invariants`. |
+| **I-CRED-9: installments ARS only** | `installments_total > 1` is only allowed when `currency_code = 'ARS'`. Enforced by CHECK constraint `chk_installments_ars_only`. |
+| **I-CRED-11: fx_rate_to_ars iff credit+non-ARS** | `fx_rate_to_ars` must be NOT NULL when `account.type='credit'` AND `currency_code != 'ARS'`, and NULL otherwise. Enforced by trigger. |
+| **I-CRED-12: at least 1 open period** | Each active credit card must always have ≥1 period with state 'open' or 'closed' (i.e., unpaid in the future). Rolling automático creates estimated periods on demand. |
 | **Migrations are the schema truth** | No `schema.sql` reference file. The source of truth is the ordered migration files in `supabase/migrations/` + the generated `packages/supabase/src/types.ts`. |
 | **Supabase is online-only** | There is no local Supabase instance and there never will be. Migrations are applied by pasting SQL into the Supabase dashboard SQL Editor. Types are regenerated with `supabase gen types typescript --project-id <id>` against the remote project. Any task or spec that says "local DB" means the online Supabase project. |
 
@@ -149,8 +154,9 @@ Build order matters — each module depends on the ones above it.
 | 1 | `auth` | ✅ Done | Registro, login, recupero de contraseña |
 | 2 | `schema-base` | ✅ Done | Monedas, instituciones, redes de tarjeta, tipo `Money`, `getTodayAR()` |
 | 3 | `categories` | ✅ Done | 17 categorías sistema + subcategorías, categorías propias del usuario, i18n |
-| 4 | `accounts` | ✅ Done | Cuentas efectivo (ARS/USD), cuentas bancarias/débito (tarjetas de crédito: change futuro) |
+| 4 | `accounts` | ✅ Done | Cuentas efectivo (ARS/USD), cuentas bancarias/débito (tarjetas de crédito: ver módulo cards) |
 | 5 | `transactions` | ✅ Done | Ingresos y gastos en cuentas cash/bank (transferencias, ajustes, cuotas y recurrencias: changes futuros) |
+| 5.5 | `cards` | 🚧 In progress | Tarjetas de crédito: alta experto/novato, períodos (resúmenes), consumos, cuotas en pesos, pago de resumen, reversión |
 | 6 | `shared` | 🔲 Planned | Gastos compartidos entre N personas ("Compartido"), deuda derivada, liquidación |
 | 7 | `savings` | 🔲 Planned | Sistema de sobres (envelopes), enganche a ingresos — diseño pendiente |
 | 8 | `cashflow` | 🔜 Future | Proyecciones de flujo de caja |

@@ -24,6 +24,7 @@ const EditTransactionPage = async ({ params }: Props) => {
   const isDestination =
     transaction?.type === 'transfer' && transaction?.transfer_destination_account_id === id
   if (!transaction || (!isOwner && !isDestination)) notFound()
+  if (!transaction.account_id) notFound()
 
   return (
     <div className="flex flex-col gap-6 max-w-lg">

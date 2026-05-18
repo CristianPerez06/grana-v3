@@ -57,3 +57,30 @@ export async function getTransactionDetail(
 
   return data as TransactionWithDetails | null
 }
+
+// ── getInstallmentFamily ──────────────────────────────────────────────────────
+// Returns parent + all child rows for a given parent_id (or null if not found)
+
+export async function getInstallmentFamily(parentId: string): Promise<{
+  parent: TransactionWithDetails | null
+  children: TransactionWithDetails[]
+}> {
+  const supabase = await createClient()
+
+  const [parentResult, childrenResult] = await Promise.all([
+    supabase.from('transactions').select(TRANSACTION_SELECT).eq('id', parentId).single(),
+    supabase
+      .from('transactions')
+      .select(TRANSACTION_SELECT)
+      .eq('parent_id', parentId)
+      .order('installment_n', { ascending: true }),
+  ])
+
+  if (parentResult.error && parentResult.error.code !== 'PGRST116') throw parentResult.error
+  if (childrenResult.error) throw childrenResult.error
+
+  return {
+    parent: parentResult.error ? null : (parentResult.data as TransactionWithDetails),
+    children: (childrenResult.data ?? []) as TransactionWithDetails[],
+  }
+}

@@ -33,9 +33,12 @@ const TYPE_LABELS = {
 type Props = {
   transaction: TransactionWithDetails
   accountId: string
+  periodId?: string | null
+  installmentParent?: TransactionWithDetails | null
+  installmentSiblings?: TransactionWithDetails[] | null
 }
 
-export const TransactionDetailHeader = ({ transaction, accountId }: Props) => {
+export const TransactionDetailHeader = ({ transaction, accountId, periodId, installmentParent, installmentSiblings }: Props) => {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -71,7 +74,7 @@ export const TransactionDetailHeader = ({ transaction, accountId }: Props) => {
         setError(result.formError ?? 'Error al eliminar.')
         return
       }
-      router.push(`/accounts/${accountId}`)
+      router.push(periodId ? `/cards/${accountId}/periods/${periodId}` : `/accounts/${accountId}`)
     })
   }
 
@@ -151,7 +154,61 @@ export const TransactionDetailHeader = ({ transaction, accountId }: Props) => {
             <dd>{transaction.description}</dd>
           </div>
         )}
+
+        {/* Credit card specific fields */}
+        {transaction.status && (
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">Estado</dt>
+            <dd>
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                transaction.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+              }`}>
+                {transaction.status === 'paid' ? 'Pagado' : 'Pendiente'}
+              </span>
+            </dd>
+          </div>
+        )}
+        {transaction.due_date && (
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">Vencimiento del resumen</dt>
+            <dd>{formatDate(transaction.due_date)}</dd>
+          </div>
+        )}
+        {transaction.installment_n && transaction.installments_total && (
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">Cuota</dt>
+            <dd>{transaction.installment_n} de {transaction.installments_total}</dd>
+          </div>
+        )}
+        {transaction.fx_rate_to_ars && (
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">Tipo de cambio</dt>
+            <dd>1 USD = ${transaction.fx_rate_to_ars} ARS</dd>
+          </div>
+        )}
       </dl>
+
+      {/* Installment family */}
+      {installmentParent && installmentSiblings && installmentSiblings.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium">
+            Compra total: {formatBalance(installmentParent.amount, installmentParent.currency_code as 'ARS' | 'USD')} en {installmentSiblings.length} cuotas
+          </p>
+          <div className="flex flex-col divide-y divide-border rounded-md border border-border">
+            {installmentSiblings.map((sibling) => (
+              <div key={sibling.id} className={`flex justify-between px-3 py-2 text-sm ${sibling.id === transaction.id ? 'bg-muted font-medium' : ''}`}>
+                <span>Cuota {sibling.installment_n}</span>
+                <span className="flex items-center gap-2">
+                  {formatBalance(sibling.amount, sibling.currency_code as 'ARS' | 'USD')}
+                  <span className={`text-xs ${sibling.status === 'paid' ? 'text-green-600' : 'text-muted-foreground'}`}>
+                    {sibling.status === 'paid' ? '✓' : '·'}
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-3">

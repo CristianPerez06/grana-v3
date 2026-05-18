@@ -43,6 +43,20 @@ export {
   type UpdateTransferInput,
   type UpdateAdjustmentInput,
 } from './transactions'
+export {
+  createCreditCardSchema,
+  createNovatoCreditCardSchema,
+  registerCardPurchaseSchema,
+  registerInstallmentsSchema,
+  payCardPeriodSchema,
+  updatePeriodDatesSchema,
+  type CreateCreditCardInput,
+  type CreateNovatoCreditCardInput,
+  type RegisterCardPurchaseInput,
+  type RegisterInstallmentsInput,
+  type PayCardPeriodInput,
+  type UpdatePeriodDatesInput,
+} from './credit-cards'
 export { translateFieldError } from './translate-error'
 export {
   validateActionInput,

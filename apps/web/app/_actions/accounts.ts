@@ -11,6 +11,7 @@ import {
   type UpdateAccountInput,
   type AddCurrencyInput,
 } from '@grana/validation'
+import { getCreditCardDebtCheck } from '@/lib/cards/queries'
 import type { ActionResult } from './types'
 
 async function getAuthenticatedUserId(): Promise<string> {
@@ -98,9 +99,26 @@ export async function updateAccount(
 
 // ── archiveAccount ────────────────────────────────────────────────────────────
 
-export async function archiveAccount(id: string): Promise<ActionResult<never>> {
+export async function archiveAccount(
+  id: string,
+): Promise<ActionResult<never> & { reason?: string }> {
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
+
+  // For credit accounts, enforce R-tarjeta (no pending debt before archiving)
+  const { data: account } = await supabase
+    .from('accounts')
+    .select('type')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .single()
+
+  if (account?.type === 'credit') {
+    const debtCheck = await getCreditCardDebtCheck(id)
+    if (debtCheck.hasPendingDebt) {
+      return { ok: false, formError: 'pending_debt', reason: 'pending_debt' }
+    }
+  }
 
   const { error } = await supabase
     .from('accounts')
@@ -111,6 +129,7 @@ export async function archiveAccount(id: string): Promise<ActionResult<never>> {
   if (error) return { ok: false, formError: error.message }
 
   revalidatePath('/accounts')
+  revalidatePath('/cards')
   return { ok: true }
 }
 

@@ -11,12 +11,15 @@ export async function getTransactionSums(
 
   const supabase = await createClient()
 
+  // Exclude credit card child transactions (status IS NOT NULL) and
+  // off-ledger parent rows (is_parent=true, account_id=NULL, auto-excluded by the or filter)
   const { data, error } = await supabase
     .from('transactions')
     .select('account_id, transfer_destination_account_id, currency_code, amount, type')
     .or(
       `account_id.in.(${accountIds.join(',')}),transfer_destination_account_id.in.(${accountIds.join(',')})`,
     )
+    .is('status', null)
 
   if (error) throw error
 
@@ -31,16 +34,16 @@ export async function getTransactionSums(
 
     const amount = Number(row.amount)
 
+    if (!row.account_id) continue
+
     if (row.type === 'income') {
       ensure(row.account_id)[currency] += amount
     } else if (row.type === 'expense') {
       ensure(row.account_id)[currency] -= amount
     } else if (row.type === 'transfer') {
-      // Outgoing leg: subtract from source
       if (accountIds.includes(row.account_id)) {
         ensure(row.account_id)[currency] -= amount
       }
-      // Incoming leg: add to destination
       if (
         row.transfer_destination_account_id &&
         accountIds.includes(row.transfer_destination_account_id)
@@ -48,7 +51,6 @@ export async function getTransactionSums(
         ensure(row.transfer_destination_account_id)[currency] += amount
       }
     } else if (row.type === 'adjustment') {
-      // amount is already signed (positive adds, negative subtracts)
       ensure(row.account_id)[currency] += amount
     }
   }

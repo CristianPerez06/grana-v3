@@ -62,28 +62,37 @@ export type Database = {
       accounts: {
         Row: {
           created_at: string
+          credit_limit: number | null
           id: string
           institution_id: string | null
           is_active: boolean
           name: string
+          network_id: string | null
+          other_network_name: string | null
           type: Database["public"]["Enums"]["account_type"]
           user_id: string
         }
         Insert: {
           created_at?: string
+          credit_limit?: number | null
           id?: string
           institution_id?: string | null
           is_active?: boolean
           name: string
+          network_id?: string | null
+          other_network_name?: string | null
           type: Database["public"]["Enums"]["account_type"]
           user_id: string
         }
         Update: {
           created_at?: string
+          credit_limit?: number | null
           id?: string
           institution_id?: string | null
           is_active?: boolean
           name?: string
+          network_id?: string | null
+          other_network_name?: string | null
           type?: Database["public"]["Enums"]["account_type"]
           user_id?: string
         }
@@ -93,6 +102,13 @@ export type Database = {
             columns: ["institution_id"]
             isOneToOne: false
             referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_network_id_fkey"
+            columns: ["network_id"]
+            isOneToOne: false
+            referencedRelation: "card_networks"
             referencedColumns: ["id"]
           },
         ]
@@ -123,6 +139,44 @@ export type Database = {
           slug?: string
         }
         Relationships: []
+      }
+      card_periods: {
+        Row: {
+          account_id: string
+          created_at: string
+          due_date: string
+          end_date: string
+          id: string
+          is_estimated: boolean
+          start_date: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          due_date: string
+          end_date: string
+          id?: string
+          is_estimated?: boolean
+          start_date: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          due_date?: string
+          end_date?: string
+          id?: string
+          is_estimated?: boolean
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "card_periods_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       categories: {
         Row: {
@@ -211,6 +265,42 @@ export type Database = {
         }
         Relationships: []
       }
+      period_payments: {
+        Row: {
+          created_at: string
+          id: string
+          period_id: string
+          transaction_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          period_id: string
+          transaction_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          period_id?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "period_payments_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: true
+            referencedRelation: "card_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "period_payments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -272,45 +362,69 @@ export type Database = {
       }
       transactions: {
         Row: {
-          account_id: string
+          account_id: string | null
           amount: number
+          card_period_id: string | null
           category_id: string | null
           created_at: string
           currency_code: string
           date: string
           description: string | null
+          due_date: string | null
+          fx_rate_to_ars: number | null
           id: string
+          installment_n: number | null
+          installments_total: number | null
+          is_parent: boolean
           is_verified: boolean
+          parent_id: string | null
+          status: string | null
           subcategory_id: string | null
           transfer_destination_account_id: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           user_id: string
         }
         Insert: {
-          account_id: string
+          account_id?: string | null
           amount: number
+          card_period_id?: string | null
           category_id?: string | null
           created_at?: string
           currency_code: string
           date: string
           description?: string | null
+          due_date?: string | null
+          fx_rate_to_ars?: number | null
           id?: string
+          installment_n?: number | null
+          installments_total?: number | null
+          is_parent?: boolean
           is_verified?: boolean
+          parent_id?: string | null
+          status?: string | null
           subcategory_id?: string | null
           transfer_destination_account_id?: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           user_id: string
         }
         Update: {
-          account_id?: string
+          account_id?: string | null
           amount?: number
+          card_period_id?: string | null
           category_id?: string | null
           created_at?: string
           currency_code?: string
           date?: string
           description?: string | null
+          due_date?: string | null
+          fx_rate_to_ars?: number | null
           id?: string
+          installment_n?: number | null
+          installments_total?: number | null
+          is_parent?: boolean
           is_verified?: boolean
+          parent_id?: string | null
+          status?: string | null
           subcategory_id?: string | null
           transfer_destination_account_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]
@@ -322,6 +436,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_card_period_id_fkey"
+            columns: ["card_period_id"]
+            isOneToOne: false
+            referencedRelation: "card_periods"
             referencedColumns: ["id"]
           },
           {
@@ -337,6 +458,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "currencies"
             referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "transactions_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "transactions_subcategory_id_fkey"
@@ -362,7 +490,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      account_type: "cash" | "bank"
+      account_type: "cash" | "bank" | "credit"
       transaction_type: "income" | "expense" | "transfer" | "adjustment"
     }
     CompositeTypes: {

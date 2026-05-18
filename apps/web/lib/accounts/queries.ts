@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getTransactionSums } from '@/lib/transactions/balance'
+import { getCreditCards, type CreditCardSummary } from '@/lib/cards/queries'
 import type {
   AccountWithDetails,
   AccountWithBalances,
@@ -9,6 +10,7 @@ import type {
 type GroupedAccountsWithBalances = {
   cash: AccountWithBalances[]
   bank: AccountWithBalances[]
+  credit: CreditCardSummary[]
 }
 
 // ── getAccounts ───────────────────────────────────────────────────────────────
@@ -25,13 +27,17 @@ export async function getAccounts(
       institution:institutions(*),
       currencies:account_currencies(*)
     `)
+    .in('type', ['cash', 'bank'])
     .order('created_at', { ascending: true })
 
   if (!options.includeArchived) {
     query = query.eq('is_active', true)
   }
 
-  const { data, error } = await query
+  const [{ data, error }, creditCards] = await Promise.all([
+    query,
+    getCreditCards(options),
+  ])
 
   if (error) throw error
 
@@ -56,6 +62,7 @@ export async function getAccounts(
   return {
     cash: withBalances.filter((a) => a.type === 'cash'),
     bank: withBalances.filter((a) => a.type === 'bank'),
+    credit: creditCards,
   }
 }
 

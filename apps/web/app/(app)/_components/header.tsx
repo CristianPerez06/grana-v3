@@ -15,6 +15,18 @@ export const Header = async () => {
       </Link>
       <nav className="flex items-center gap-4">
         <Link
+          href="/accounts"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Cuentas
+        </Link>
+        <Link
+          href="/cards"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Tarjetas
+        </Link>
+        <Link
           href="/settings/categories"
           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
