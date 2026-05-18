@@ -147,7 +147,7 @@
       "currency_required": "Seleccioná al menos una moneda.",
       "currency_unsupported": "Moneda no compatible.",
       "balance_negative": "El saldo inicial no puede ser negativo.",
-      "archive_non_zero_balance": "No podés archivar una cuenta con saldo distinto de cero.",
+      "delete_has_transactions": "Esta cuenta tiene movimientos. Archivala para preservar el historial.",
       "deactivate_non_zero_balance": "No podés desactivar una moneda con saldo distinto de cero.",
       "deactivate_last_currency": "Debe quedar al menos una moneda activa.",
       "generic": "Algo salió mal. Intentá de nuevo."

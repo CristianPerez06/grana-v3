@@ -41,7 +41,7 @@ const AccountDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
 
-      <AccountDetailHeader account={account} />
+      <AccountDetailHeader account={account} hasTransactions={transactions.length > 0} />
 
       {canAddCurrency && (
         <Link

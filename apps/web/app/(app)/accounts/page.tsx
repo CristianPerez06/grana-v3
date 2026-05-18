@@ -10,8 +10,13 @@ const AccountsPage = async () => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const grouped = await getAccounts()
-  const total = grouped.cash.length + grouped.bank.length
+  const grouped = await getAccounts({ includeArchived: true })
+
+  const activeCash = grouped.cash.filter((a) => a.is_active)
+  const activeBank = grouped.bank.filter((a) => a.is_active)
+  const archived = [...grouped.cash, ...grouped.bank].filter((a) => !a.is_active)
+
+  const activeTotal = activeCash.length + activeBank.length
 
   return (
     <div className="flex flex-col gap-6">
@@ -25,12 +30,15 @@ const AccountsPage = async () => {
         </Link>
       </div>
 
-      {total === 0 ? (
+      {activeTotal === 0 && archived.length === 0 ? (
         <EmptyAccountsState />
       ) : (
         <div className="flex flex-col gap-8">
-          <AccountSection title="Efectivo" accounts={grouped.cash} />
-          <AccountSection title="Cuentas bancarias" accounts={grouped.bank} />
+          <AccountSection title="Efectivo" accounts={activeCash} />
+          <AccountSection title="Cuentas bancarias" accounts={activeBank} />
+          {archived.length > 0 && (
+            <AccountSection title="Archivadas" accounts={archived} archived />
+          )}
         </div>
       )}
     </div>

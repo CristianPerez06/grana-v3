@@ -14,9 +14,10 @@ const formatBalance = (amount: number, currency: 'ARS' | 'USD') =>
 
 type Props = {
   account: AccountWithBalances
+  hasTransactions: boolean
 }
 
-export const AccountDetailHeader = ({ account }: Props) => {
+export const AccountDetailHeader = ({ account, hasTransactions }: Props) => {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -27,7 +28,7 @@ export const AccountDetailHeader = ({ account }: Props) => {
   const hasUSD = activeCurrencies.some((c) => c.currency_code === 'USD')
 
   const handleArchive = () => {
-    if (!confirm('¿Archivar esta cuenta? La cuenta quedará inactiva.')) return
+    if (!confirm('¿Archivar esta cuenta? Vas a poder reactivarla más tarde.')) return
     startTransition(async () => {
       setError(null)
       const result = await archiveAccount(account.id)
@@ -44,7 +45,7 @@ export const AccountDetailHeader = ({ account }: Props) => {
   }
 
   const handleDelete = () => {
-    if (!confirm('¿Eliminar esta cuenta? Esta acción no se puede deshacer.')) return
+    if (!confirm('Esta cuenta no tiene movimientos. ¿Eliminarla? Esta acción no se puede deshacer.')) return
     startTransition(async () => {
       setError(null)
       const result = await deleteAccount(account.id)
@@ -80,7 +81,15 @@ export const AccountDetailHeader = ({ account }: Props) => {
           >
             Editar
           </a>
-          {account.is_active ? (
+          {!account.is_active ? (
+            <button
+              onClick={handleReactivate}
+              disabled={isPending}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            >
+              Reactivar
+            </button>
+          ) : hasTransactions ? (
             <button
               onClick={handleArchive}
               disabled={isPending}
@@ -90,20 +99,13 @@ export const AccountDetailHeader = ({ account }: Props) => {
             </button>
           ) : (
             <button
-              onClick={handleReactivate}
+              onClick={handleDelete}
               disabled={isPending}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+              className="text-xs text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
             >
-              Reactivar
+              Eliminar
             </button>
           )}
-          <button
-            onClick={handleDelete}
-            disabled={isPending}
-            className="text-xs text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
-          >
-            Eliminar
-          </button>
         </div>
       </div>
 

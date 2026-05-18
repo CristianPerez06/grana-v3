@@ -3,16 +3,14 @@
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import type { AccountWithBalances } from '@/lib/accounts/types'
-import { archiveAccount, reactivateAccount, deleteAccount } from '@/app/_actions/accounts'
+import { reactivateAccount } from '@/app/_actions/accounts'
 
-const formatBalance = (amount: number, currency: 'ARS' | 'USD') => {
-  const formatted = new Intl.NumberFormat('es-AR', {
+const formatBalance = (amount: number, currency: 'ARS' | 'USD') =>
+  new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency,
     minimumFractionDigits: 2,
   }).format(amount)
-  return formatted
-}
 
 type Props = {
   account: AccountWithBalances
@@ -25,29 +23,11 @@ export const AccountRow = ({ account }: Props) => {
   const balances = account.balances
   const activeCurrencies = account.currencies.filter((c) => c.is_active)
 
-  const handleArchive = () => {
-    if (!confirm('¿Archivar esta cuenta? La cuenta quedará inactiva.')) return
-    startTransition(async () => {
-      setError(null)
-      const result = await archiveAccount(account.id)
-      if (!result.ok) setError(result.formError ?? 'Error al archivar')
-    })
-  }
-
   const handleReactivate = () => {
     startTransition(async () => {
       setError(null)
       const result = await reactivateAccount(account.id)
       if (!result.ok) setError(result.formError ?? 'Error al reactivar')
-    })
-  }
-
-  const handleDelete = () => {
-    if (!confirm('¿Eliminar esta cuenta? Esta acción no se puede deshacer.')) return
-    startTransition(async () => {
-      setError(null)
-      const result = await deleteAccount(account.id)
-      if (!result.ok) setError(result.formError ?? 'Error al eliminar')
     })
   }
 
@@ -82,20 +62,13 @@ export const AccountRow = ({ account }: Props) => {
       </Link>
 
       <div className="flex items-center gap-2 flex-shrink-0">
-        <Link
-          href={`/accounts/${account.id}/edit`}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Editar
-        </Link>
         {account.is_active ? (
-          <button
-            onClick={handleArchive}
-            disabled={isPending}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+          <Link
+            href={`/accounts/${account.id}/edit`}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            Archivar
-          </button>
+            Editar
+          </Link>
         ) : (
           <button
             onClick={handleReactivate}
@@ -105,13 +78,6 @@ export const AccountRow = ({ account }: Props) => {
             Reactivar
           </button>
         )}
-        <button
-          onClick={handleDelete}
-          disabled={isPending}
-          className="text-xs text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
-        >
-          Eliminar
-        </button>
       </div>
     </div>
   )

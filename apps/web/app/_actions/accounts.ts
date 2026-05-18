@@ -102,22 +102,6 @@ export async function archiveAccount(id: string): Promise<ActionResult<never>> {
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
 
-  const { data: currencies, error: fetchError } = await supabase
-    .from('account_currencies')
-    .select('currency_code, initial_balance')
-    .eq('account_id', id)
-    .eq('is_active', true)
-
-  if (fetchError) return { ok: false, formError: fetchError.message }
-
-  const hasNonZeroBalance = (currencies ?? []).some((c) => c.initial_balance !== 0)
-  if (hasNonZeroBalance) {
-    return {
-      ok: false,
-      formError: 'No podés archivar una cuenta con saldo distinto de cero.',
-    }
-  }
-
   const { error } = await supabase
     .from('accounts')
     .update({ is_active: false })
@@ -154,8 +138,24 @@ export async function deleteAccount(id: string): Promise<ActionResult<never>> {
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
 
-  // Guard: once transactions module exists, block delete if account has any.
-  // For now the table doesn't exist, so any account can be deleted.
+  // Block delete if the account has any transaction history (either as source
+  // or as transfer destination). Archive must be used instead for accounts with
+  // history — see openspec/specs/accounts/spec.md.
+  const { data: existingTx, error: txError } = await supabase
+    .from('transactions')
+    .select('id')
+    .or(`account_id.eq.${id},transfer_destination_account_id.eq.${id}`)
+    .limit(1)
+
+  if (txError) return { ok: false, formError: txError.message }
+
+  if (existingTx && existingTx.length > 0) {
+    return {
+      ok: false,
+      formError: 'Esta cuenta tiene movimientos. Archivala para preservar el historial.',
+    }
+  }
+
   const { error } = await supabase
     .from('accounts')
     .delete()

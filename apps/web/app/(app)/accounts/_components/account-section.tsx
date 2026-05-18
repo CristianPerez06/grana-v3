@@ -4,13 +4,14 @@ import { AccountRow } from './account-row'
 type Props = {
   title: string
   accounts: AccountWithBalances[]
+  archived?: boolean
 }
 
-export const AccountSection = ({ title, accounts }: Props) => {
+export const AccountSection = ({ title, accounts, archived = false }: Props) => {
   if (accounts.length === 0) return null
 
   return (
-    <section>
+    <section className={archived ? 'opacity-70' : ''}>
       <h2 className="mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wide">
         {title} ({accounts.length})
       </h2>
