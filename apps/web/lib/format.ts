@@ -6,9 +6,10 @@ export const formatARS = (amount: number, showCents = false) =>
     maximumFractionDigits: showCents ? 2 : 0,
   }).format(amount)
 
-export const formatUSD = (amount: number) =>
+export const formatUSD = (amount: number, showCents = true) =>
   new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'USD',
-    minimumFractionDigits: 2,
+    minimumFractionDigits: showCents ? 2 : 0,
+    maximumFractionDigits: showCents ? 2 : 0,
   }).format(amount)

@@ -55,7 +55,7 @@ export const CreditCardItem = ({ card, showCents = false }: Props) => {
       <div>
         <p className="text-2xl font-bold tracking-tight">{formatARS(pendingARS, showCents)}</p>
         {hasUSD && pendingUSD > 0 && (
-          <p className="text-xs text-muted-foreground mt-0.5">{formatUSD(pendingUSD)}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{formatUSD(pendingUSD, showCents)}</p>
         )}
       </div>
 

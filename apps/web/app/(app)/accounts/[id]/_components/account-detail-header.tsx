@@ -4,13 +4,8 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { AccountWithBalances } from '@/lib/accounts/types'
 import { archiveAccount, reactivateAccount, deleteAccount } from '@/app/_actions/accounts'
-
-const formatBalance = (amount: number, currency: 'ARS' | 'USD') =>
-  new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-  }).format(amount)
+import { formatARS, formatUSD } from '@/lib/format'
+import { useShowCents } from '@/lib/preferences-context'
 
 type Props = {
   account: AccountWithBalances
@@ -18,6 +13,7 @@ type Props = {
 }
 
 export const AccountDetailHeader = ({ account, hasTransactions }: Props) => {
+  const showCents = useShowCents()
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -113,14 +109,14 @@ export const AccountDetailHeader = ({ account, hasTransactions }: Props) => {
       <div className="flex items-end gap-6">
         {hasARS && (
           <div>
-            <p className="text-3xl font-bold tabular-nums">{formatBalance(balances.ARS, 'ARS')}</p>
+            <p className="text-3xl font-bold tabular-nums">{formatARS(balances.ARS, showCents)}</p>
             <p className="text-xs text-muted-foreground mt-0.5">ARS</p>
           </div>
         )}
         {hasUSD && (
           <div>
             <p className="text-xl font-semibold tabular-nums text-muted-foreground">
-              {formatBalance(balances.USD, 'USD')}
+              {formatUSD(balances.USD, showCents)}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">USD</p>
           </div>

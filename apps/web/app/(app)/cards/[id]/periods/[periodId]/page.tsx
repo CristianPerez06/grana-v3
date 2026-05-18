@@ -69,7 +69,7 @@ const PeriodDetailPage = async ({ params }: Props) => {
       <div className="rounded-lg border border-border bg-card p-4 flex flex-col gap-1">
         <p className="text-3xl font-bold">{formatARS(totalAmount, showCents)}</p>
         {hasUSD && period.pendingAmountUSD > 0 && (
-          <p className="text-sm text-muted-foreground">{formatUSD(period.pendingAmountUSD)} USD</p>
+          <p className="text-sm text-muted-foreground">{formatUSD(period.pendingAmountUSD, showCents)} USD</p>
         )}
         {period.has_payment && period.paymentDate && (
           <p className="text-xs text-green-700 mt-1">
@@ -129,7 +129,7 @@ const PeriodDetailPage = async ({ params }: Props) => {
                   <p className="text-sm font-medium">
                     {tx.currency_code === 'ARS'
                       ? formatARS(Number(tx.amount), showCents)
-                      : formatUSD(Number(tx.amount))}
+                      : formatUSD(Number(tx.amount), showCents)}
                   </p>
                   {tx.currency_code !== 'ARS' && tx.fx_rate_to_ars && (
                     <p className="text-xs text-muted-foreground">

@@ -56,7 +56,7 @@ export const CardHero = ({ card, showCents = false }: Props) => {
       {/* Primary amount */}
       <p className="text-4xl font-bold tracking-tight">{formatARS(pendingARS, showCents)}</p>
       {hasUSD && pendingUSD > 0 && (
-        <p className="text-sm text-muted-foreground">{formatUSD(pendingUSD)} USD</p>
+        <p className="text-sm text-muted-foreground">{formatUSD(pendingUSD, showCents)} USD</p>
       )}
     </div>
   )

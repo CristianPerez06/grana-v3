@@ -5,13 +5,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { TransactionWithDetails } from '@/lib/transactions/types'
 import { deleteTransaction, deleteTransfer, deleteAdjustment } from '@/app/_actions/transactions'
+import { formatARS, formatUSD } from '@/lib/format'
+import { useShowCents } from '@/lib/preferences-context'
 
-const formatBalance = (amount: number, currency: 'ARS' | 'USD') =>
-  new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-  }).format(Math.abs(amount))
+const formatBalance = (amount: number, currency: 'ARS' | 'USD', showCents: boolean) =>
+  currency === 'ARS' ? formatARS(Math.abs(amount), showCents) : formatUSD(Math.abs(amount), showCents)
 
 const formatDate = (dateStr: string) => {
   const [year, month, day] = dateStr.split('-').map(Number)
@@ -39,6 +37,7 @@ type Props = {
 }
 
 export const TransactionDetailHeader = ({ transaction, accountId, periodId, installmentParent, installmentSiblings }: Props) => {
+  const showCents = useShowCents()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -100,7 +99,7 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, inst
           {TYPE_LABELS[type]}
         </span>
         <p className={`text-3xl font-bold tabular-nums ${isPositive ? 'text-green-600' : ''}`}>
-          {sign}{formatBalance(displayAmount, transaction.currency_code)}
+          {sign}{formatBalance(displayAmount, transaction.currency_code, showCents)}
         </p>
         <p className="text-sm text-muted-foreground">{transaction.currency_code}</p>
       </div>
@@ -192,14 +191,14 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, inst
       {installmentParent && installmentSiblings && installmentSiblings.length > 0 && (
         <div className="flex flex-col gap-2">
           <p className="text-sm font-medium">
-            Compra total: {formatBalance(installmentParent.amount, installmentParent.currency_code as 'ARS' | 'USD')} en {installmentSiblings.length} cuotas
+            Compra total: {formatBalance(installmentParent.amount, installmentParent.currency_code as 'ARS' | 'USD', showCents)} en {installmentSiblings.length} cuotas
           </p>
           <div className="flex flex-col divide-y divide-border rounded-md border border-border">
             {installmentSiblings.map((sibling) => (
               <div key={sibling.id} className={`flex justify-between px-3 py-2 text-sm ${sibling.id === transaction.id ? 'bg-muted font-medium' : ''}`}>
                 <span>Cuota {sibling.installment_n}</span>
                 <span className="flex items-center gap-2">
-                  {formatBalance(sibling.amount, sibling.currency_code as 'ARS' | 'USD')}
+                  {formatBalance(sibling.amount, sibling.currency_code as 'ARS' | 'USD', showCents)}
                   <span className={`text-xs ${sibling.status === 'paid' ? 'text-green-600' : 'text-muted-foreground'}`}>
                     {sibling.status === 'paid' ? '✓' : '·'}
                   </span>

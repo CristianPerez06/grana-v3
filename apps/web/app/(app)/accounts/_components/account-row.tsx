@@ -4,19 +4,15 @@ import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import type { AccountWithBalances } from '@/lib/accounts/types'
 import { reactivateAccount } from '@/app/_actions/accounts'
-
-const formatBalance = (amount: number, currency: 'ARS' | 'USD') =>
-  new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-  }).format(amount)
+import { formatARS, formatUSD } from '@/lib/format'
+import { useShowCents } from '@/lib/preferences-context'
 
 type Props = {
   account: AccountWithBalances
 }
 
 export const AccountRow = ({ account }: Props) => {
+  const showCents = useShowCents()
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -51,9 +47,9 @@ export const AccountRow = ({ account }: Props) => {
           {activeCurrencies.map((c) => (
             <span key={c.currency_code} className="text-xs text-muted-foreground">
               {c.currency_code === 'ARS' ? (
-                <span className="font-medium">{formatBalance(balances.ARS, 'ARS')}</span>
+                <span className="font-medium">{formatARS(balances.ARS, showCents)}</span>
               ) : (
-                <span>{formatBalance(balances.USD, 'USD')}</span>
+                <span>{formatUSD(balances.USD, showCents)}</span>
               )}
             </span>
           ))}
