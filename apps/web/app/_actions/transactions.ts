@@ -78,7 +78,7 @@ export async function createIncome(
       amount: normalizeActionMoney(validation.data.amount),
       currency_code: validation.data.currency_code,
       date: validation.data.date,
-      category_id: validation.data.category_id ?? null,
+      category_id: validation.data.category_id,
       subcategory_id: validation.data.subcategory_id ?? null,
       description: validation.data.description ?? null,
     })

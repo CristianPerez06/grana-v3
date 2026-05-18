@@ -407,6 +407,7 @@ export async function registerInstallments(
       subcategory_id: data.subcategory_id ?? null,
       description: data.description ?? null,
       is_parent: true,
+      installments_total: n,
     })
     .select('id')
     .single()

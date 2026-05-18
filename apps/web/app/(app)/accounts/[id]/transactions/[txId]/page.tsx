@@ -6,10 +6,12 @@ import { TransactionDetailHeader } from './_components/transaction-detail-header
 
 type Props = {
   params: Promise<{ id: string; txId: string }>
+  searchParams: Promise<{ from?: string }>
 }
 
-const TransactionDetailPage = async ({ params }: Props) => {
+const TransactionDetailPage = async ({ params, searchParams }: Props) => {
   const { id, txId } = await params
+  const { from } = await searchParams
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -25,10 +27,17 @@ const TransactionDetailPage = async ({ params }: Props) => {
   const installmentFamily =
     transaction.parent_id ? await getInstallmentFamily(transaction.parent_id) : null
 
-  const backHref = transaction.card_period_id
-    ? `/cards/${id}/periods/${transaction.card_period_id}`
-    : `/accounts/${id}`
-  const backLabel = transaction.card_period_id ? '← Resumen' : '← Movimientos'
+  const cameFromGlobalMovements = from === 'transactions'
+  const backHref = cameFromGlobalMovements
+    ? '/transactions'
+    : transaction.card_period_id
+      ? `/cards/${id}/periods/${transaction.card_period_id}`
+      : `/accounts/${id}`
+  const backLabel = cameFromGlobalMovements
+    ? '← Movimientos'
+    : transaction.card_period_id
+      ? '← Resumen'
+      : '← Cuenta'
 
   return (
     <div className="flex flex-col gap-8 max-w-lg">
@@ -45,6 +54,7 @@ const TransactionDetailPage = async ({ params }: Props) => {
         transaction={transaction}
         accountId={id}
         periodId={transaction.card_period_id ?? null}
+        returnHref={backHref}
         installmentParent={installmentFamily?.parent ?? null}
         installmentSiblings={installmentFamily?.children ?? null}
       />

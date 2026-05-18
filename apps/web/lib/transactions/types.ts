@@ -43,6 +43,7 @@ export type TransactionSubcategory = {
 export type TransactionAccount = {
   id: string
   name: string
+  type: 'cash' | 'bank' | 'credit'
 }
 
 export type TransactionWithDetails = Transaction & {
@@ -50,6 +51,7 @@ export type TransactionWithDetails = Transaction & {
   subcategory: TransactionSubcategory | null
   destination_account: TransactionAccount | null
   source_account: TransactionAccount | null
+  period_payments: Array<{ id: string; period_id: string }> | null
 }
 
 export type CreateIncomeInput = {
@@ -57,7 +59,7 @@ export type CreateIncomeInput = {
   currency_code: 'ARS' | 'USD'
   amount: number
   date: string
-  category_id?: string
+  category_id: string
   subcategory_id?: string
   description?: string
 }

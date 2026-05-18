@@ -378,7 +378,7 @@ Este invariante SHALL ser enforced en:
 
 El sistema SHALL respetar el invariante `I-CRED-7`: una compra en N cuotas (N ≥ 2) en tarjeta SHALL generar una transacción "madre" (`is_parent=true`, `account_id=NULL`, `status=NULL`, `card_period_id=NULL`) y N transacciones "hijas" (`is_parent=false`, `parent_id=<madre.id>`, `account_id=<tarjeta>`, `status='pending'`, `installment_n=i`, `installments_total=N`).
 
-La madre SHALL ser **off-ledger**: no impacta saldos, no aparece en listas de movimientos del listado general, no aparece en queries de cálculo de total del período. La madre existe únicamente para agrupar las hijas en la UI de "detalle de la compra" y para soportar edición/eliminación cascadeada.
+La madre SHALL ser **off-ledger**: no impacta saldos y no aparece en queries de cálculo de total del período. La madre existe para agrupar las hijas en la UI de "detalle de la compra", soportar edición/eliminación cascadeada, y representar funcionalmente la compra original en el listado global de movimientos sin duplicar las cuotas.
 
 Las hijas SHALL transitar `pending → paid` exclusivamente como efecto del flujo "pago de resumen" — nunca como UPDATE manual o directo.
 
@@ -387,10 +387,12 @@ Las hijas SHALL transitar `pending → paid` exclusivamente como efecto del fluj
 - **WHEN** se calcula el saldo de cualquier cuenta del usuario
 - **THEN** las transacciones con `is_parent=true` se excluyen del SUM
 
-#### Scenario: Madre con is_parent=true no aparece en lista de movimientos
+#### Scenario: Madre con is_parent=true aparece solo como representación funcional global
 
-- **WHEN** se renderiza la lista de movimientos de una tarjeta o del listado general
-- **THEN** las transacciones con `is_parent=true` se omiten; solo se muestran las hijas
+- **WHEN** se renderiza una vista contable de tarjeta o período
+- **THEN** las transacciones con `is_parent=true` se omiten; solo se muestran las hijas imputadas al período correspondiente
+- **AND** cuando se renderiza el listado global `/transactions`, la madre MAY mostrarse como una única compra en cuotas en la fecha original de compra
+- **AND** las hijas SHALL NOT aparecer en el listado global por defecto para evitar movimientos futuros que el usuario no registró en esa fecha
 
 #### Scenario: UPDATE manual de status pending → paid en una hija es rechazado
 

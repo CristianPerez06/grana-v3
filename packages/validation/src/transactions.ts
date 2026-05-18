@@ -12,7 +12,7 @@ export const createIncomeSchema = yup
       .oneOf(SUPPORTED_CURRENCIES),
     amount: yup.number().label('amount').required().positive(),
     date: yup.string().label('date').required(),
-    category_id: yup.string().label('category_id').uuid().optional(),
+    category_id: yup.string().label('category_id').uuid().required(),
     subcategory_id: yup.string().label('subcategory_id').uuid().optional(),
     description: yup.string().label('description').optional(),
   })

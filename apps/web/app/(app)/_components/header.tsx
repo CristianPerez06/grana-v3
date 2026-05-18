@@ -27,6 +27,12 @@ export const Header = async () => {
           Tarjetas
         </Link>
         <Link
+          href="/transactions"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Movimientos
+        </Link>
+        <Link
           href="/settings/categories"
           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >

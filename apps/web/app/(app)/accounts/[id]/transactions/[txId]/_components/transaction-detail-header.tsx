@@ -32,11 +32,13 @@ type Props = {
   transaction: TransactionWithDetails
   accountId: string
   periodId?: string | null
+  returnHref?: string
+  showActions?: boolean
   installmentParent?: TransactionWithDetails | null
   installmentSiblings?: TransactionWithDetails[] | null
 }
 
-export const TransactionDetailHeader = ({ transaction, accountId, periodId, installmentParent, installmentSiblings }: Props) => {
+export const TransactionDetailHeader = ({ transaction, accountId, periodId, returnHref, showActions = true, installmentParent, installmentSiblings }: Props) => {
   const showCents = useShowCents()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -73,7 +75,7 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, inst
         setError(result.formError ?? 'Error al eliminar.')
         return
       }
-      router.push(periodId ? `/cards/${accountId}/periods/${periodId}` : `/accounts/${accountId}`)
+      router.push(returnHref ?? (periodId ? `/cards/${accountId}/periods/${periodId}` : `/accounts/${accountId}`))
     })
   }
 
@@ -96,7 +98,7 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, inst
       {/* Type badge + amount */}
       <div className="flex flex-col gap-1">
         <span className={`text-xs font-medium px-2 py-0.5 rounded-full w-fit ${typeBadgeClass}`}>
-          {TYPE_LABELS[type]}
+          {transaction.is_parent ? 'Compra en cuotas' : TYPE_LABELS[type]}
         </span>
         <p className={`text-3xl font-bold tabular-nums ${isPositive ? 'text-green-600' : ''}`}>
           {sign}{formatBalance(displayAmount, transaction.currency_code, showCents)}
@@ -210,21 +212,23 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, inst
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-3">
-        <Link
-          href={`/accounts/${accountId}/transactions/${transaction.id}/edit`}
-          className="inline-flex items-center rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
-        >
-          Editar
-        </Link>
-        <button
-          onClick={handleDelete}
-          disabled={isPending}
-          className="inline-flex items-center rounded-md px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-        >
-          Eliminar
-        </button>
-      </div>
+      {showActions && (
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/accounts/${accountId}/transactions/${transaction.id}/edit`}
+            className="inline-flex items-center rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
+          >
+            Editar
+          </Link>
+          <button
+            onClick={handleDelete}
+            disabled={isPending}
+            className="inline-flex items-center rounded-md px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+          >
+            Eliminar
+          </button>
+        </div>
+      )}
 
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>

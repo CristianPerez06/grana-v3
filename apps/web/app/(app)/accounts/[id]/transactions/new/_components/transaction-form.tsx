@@ -78,7 +78,8 @@ export const TransactionForm = ({
 
   const expenseCategories = categories.filter((c) => c.type === 'expense' || c.type === 'both')
   const incomeCategories = categories.filter((c) => c.type === 'income' || c.type === 'both')
-  const selectedCategory = expenseCategories.find((c) => c.id === categoryId)
+  const transactionCategories = tab === 'income' ? incomeCategories : expenseCategories
+  const selectedCategory = transactionCategories.find((c) => c.id === categoryId)
 
   // Currencies shared between this account and the selected destination
   const sharedCurrencies = useMemo<('ARS' | 'USD')[]>(() => {
@@ -112,6 +113,10 @@ export const TransactionForm = ({
       setFormError('El monto debe ser mayor a cero.')
       return
     }
+    if ((tab === 'income' || tab === 'expense') && !categoryId) {
+      setFormError('Seleccioná una categoría.')
+      return
+    }
 
     startTransition(async () => {
       let result
@@ -122,7 +127,7 @@ export const TransactionForm = ({
           currency_code: currencyCode,
           amount: parsedAmount,
           date,
-          category_id: categoryId || undefined,
+          category_id: categoryId,
           subcategory_id: subcategoryId || undefined,
           description: description || undefined,
         })
@@ -328,8 +333,8 @@ export const TransactionForm = ({
         />
       </div>
 
-      {/* ── Category (expense only, required) ────────────────────────────────── */}
-      {tab === 'expense' && (
+      {/* ── Category (income/expense, required) ──────────────────────────────── */}
+      {(tab === 'income' || tab === 'expense') && (
         <div className="flex flex-col gap-1.5">
           <label htmlFor="category" className="text-sm font-medium">
             Categoría <span className="text-destructive">*</span>
@@ -342,27 +347,7 @@ export const TransactionForm = ({
             className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="">Seleccioná una categoría</option>
-            {expenseCategories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* ── Category (income, optional) ──────────────────────────────────────── */}
-      {tab === 'income' && (
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="category" className="text-sm font-medium">
-            Categoría <span className="text-muted-foreground text-xs">(opcional)</span>
-          </label>
-          <select
-            id="category"
-            value={categoryId}
-            onChange={(e) => { setCategoryId(e.target.value); setSubcategoryId('') }}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="">Sin categoría</option>
-            {incomeCategories.map((c) => (
+            {transactionCategories.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>

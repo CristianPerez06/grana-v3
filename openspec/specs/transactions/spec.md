@@ -5,7 +5,7 @@ TBD - created by archiving change add-transactions-income-expense. Update Purpos
 ## Requirements
 ### Requirement: El usuario puede registrar un ingreso en una cuenta
 
-El sistema SHALL permitir registrar un ingreso (plata que entra) en una cuenta de tipo `cash` o `bank`. El ingreso requiere: cuenta, moneda activa en esa cuenta, monto mayor a cero, y fecha. La descripción y categoría son opcionales.
+El sistema SHALL permitir registrar un ingreso (plata que entra) en una cuenta de tipo `cash` o `bank`. El ingreso requiere: cuenta, moneda activa en esa cuenta, monto mayor a cero, fecha y categoría. La descripción y subcategoría son opcionales.
 
 #### Scenario: Ingreso creado correctamente
 
@@ -21,6 +21,11 @@ El sistema SHALL permitir registrar un ingreso (plata que entra) en una cuenta d
 
 - **WHEN** el usuario intenta registrar un ingreso en una moneda que no tiene una `account_currencies` activa en la cuenta seleccionada
 - **THEN** el sistema retorna un error y no inserta la transacción
+
+#### Scenario: Ingreso sin categoría es rechazado
+
+- **WHEN** el usuario intenta crear un ingreso sin seleccionar categoría
+- **THEN** el sistema muestra un error de validación y no inserta la transacción
 
 #### Scenario: Ingreso con fecha en el pasado
 
@@ -130,6 +135,12 @@ Un "movimiento" no es solamente una fila técnica de `transactions`: es la repre
 - **THEN** ve una opción "Movimientos"
 - **AND** al seleccionarla navega a `/transactions`
 
+#### Scenario: Volver desde un detalle respeta el origen global
+
+- **WHEN** el usuario abre un movimiento desde `/transactions`
+- **THEN** el detalle conserva ese origen de navegación
+- **AND** la acción de volver lo devuelve a `/transactions`, no al detalle de la cuenta ni al resumen de tarjeta
+
 #### Scenario: La pantalla muestra movimientos de todas las cuentas
 
 - **WHEN** el usuario abre `/transactions`
@@ -162,6 +173,13 @@ El contrato inicial SHALL cubrir al menos estas variantes: ingreso, gasto, trans
 - **THEN** el listado global muestra un solo movimiento de tipo transferencia
 - **AND** muestra cuenta origen, cuenta destino, monto y moneda
 
+#### Scenario: Un pago de resumen no se muestra como gasto común
+
+- **WHEN** existe una transacción `type='expense'` asociada a `period_payments.transaction_id`
+- **THEN** el listado global la muestra como movimiento funcional "Pago de resumen"
+- **AND** no la titula como "Gasto"
+- **AND** no la marca como "Sin categoría" aunque `category_id` sea `NULL`
+
 #### Scenario: Un ajuste conserva su signo funcional
 
 - **WHEN** existe una transacción `type='adjustment'` con monto positivo o negativo
@@ -171,8 +189,16 @@ El contrato inicial SHALL cubrir al menos estas variantes: ingreso, gasto, trans
 #### Scenario: Una compra en cuotas no duplica información en el listado global
 
 - **WHEN** existe una compra en cuotas con transacción madre e hijas
-- **THEN** el listado global SHALL mostrar la representación funcional definida para compras en cuotas
-- **AND** SHALL evitar duplicar la compra total y cada cuota como si fueran gastos independientes, salvo que el usuario filtre explícitamente por cuotas
+- **THEN** el listado global SHALL mostrar una única representación funcional de la compra en la fecha de la transacción madre
+- **AND** las cuotas hijas SHALL NOT aparecer como movimientos independientes en el listado global por defecto
+- **AND** las cuotas hijas MAY aparecer solamente en vistas específicas de período/resumen o cuando el usuario filtre explícitamente por cuotas
+
+#### Scenario: Una compra en cuotas del listado global abre su detalle
+
+- **WHEN** el usuario toca una compra en cuotas desde `/transactions`
+- **THEN** el sistema navega al detalle global `/transactions/<parent_id>`
+- **AND** el detalle muestra la compra madre y sus cuotas hijas
+- **AND** la acción de volver regresa a `/transactions`
 
 ---
 

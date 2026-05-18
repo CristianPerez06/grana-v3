@@ -1,12 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
+import { toFinancialMovement, type FinancialMovement } from './movements'
 import type { TransactionWithDetails } from './types'
 
 const TRANSACTION_SELECT = `
   *,
   category:categories(id, name, canonical_name, color, icon),
   subcategory:subcategories(id, name, canonical_name, category_id),
-  destination_account:accounts!transactions_transfer_destination_account_id_fkey(id, name),
-  source_account:accounts!transactions_account_id_fkey(id, name)
+  destination_account:accounts!transactions_transfer_destination_account_id_fkey(id, name, type),
+  source_account:accounts!transactions_account_id_fkey(id, name, type),
+  period_payments(id, period_id)
 `
 
 // ── getTransactions ───────────────────────────────────────────────────────────
@@ -38,6 +40,26 @@ export async function getTransactions(
 }
 
 // ── getTransactionDetail ──────────────────────────────────────────────────────
+
+export async function getGlobalMovements(
+  options: { limit?: number; offset?: number } = {},
+): Promise<FinancialMovement[]> {
+  const supabase = await createClient()
+  const { limit = 50, offset = 0 } = options
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .select(TRANSACTION_SELECT)
+    .is('parent_id', null)
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .range(offset, offset + limit - 1)
+
+  if (error) throw error
+
+  return ((data ?? []) as TransactionWithDetails[]).map(toFinancialMovement)
+}
 
 export async function getTransactionDetail(
   id: string,
