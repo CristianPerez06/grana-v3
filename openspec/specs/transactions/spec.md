@@ -118,6 +118,119 @@ El sistema SHALL mostrar la lista de transacciones de una cuenta ordenada por fe
 
 ---
 
+### Requirement: El usuario puede ver un módulo global de movimientos
+
+El sistema SHALL renderizar una pantalla global `/transactions` accesible desde la navegación principal bajo el nombre "Movimientos". Esta pantalla SHALL mostrar todos los movimientos financieros del usuario en un único listado cronológico, independientemente de la cuenta, tarjeta o flujo que los haya originado.
+
+Un "movimiento" no es solamente una fila técnica de `transactions`: es la representación funcional de un hecho financiero visible para el usuario. El sistema SHALL mapear las filas técnicas necesarias a una variante funcional de movimiento antes de renderizarlas.
+
+#### Scenario: El usuario accede al módulo desde la navegación
+
+- **WHEN** el usuario autenticado abre la navegación principal
+- **THEN** ve una opción "Movimientos"
+- **AND** al seleccionarla navega a `/transactions`
+
+#### Scenario: La pantalla muestra movimientos de todas las cuentas
+
+- **WHEN** el usuario abre `/transactions`
+- **THEN** el sistema muestra movimientos de cuentas cash, bank y credit según las reglas funcionales vigentes
+- **AND** no limita el listado a una cuenta específica
+
+#### Scenario: El listado está ordenado para lectura del usuario
+
+- **WHEN** el sistema renderiza el listado global de movimientos
+- **THEN** muestra primero el movimiento con fecha más reciente
+- **AND** si dos movimientos tienen la misma fecha, muestra primero el creado más tarde
+
+---
+
+### Requirement: El listado global usa un contrato funcional de Movimiento
+
+El sistema SHALL definir un contrato funcional `Movimiento` para la UI global de movimientos. Este contrato SHALL ser una unión discriminada de variantes funcionales, no una exposición directa de la tabla `transactions`.
+
+El contrato inicial SHALL cubrir al menos estas variantes: ingreso, gasto, transferencia, ajuste, cuota de tarjeta y pago de resumen. Cada variante SHALL declarar explícitamente los campos que la UI necesita para mostrar fecha, monto, moneda, descripción, cuenta relacionada, categoría cuando aplique, y datos específicos del tipo.
+
+#### Scenario: Una fila técnica se transforma antes de llegar a la UI
+
+- **WHEN** la query global obtiene filas desde `transactions`
+- **THEN** el sistema las transforma a `Movimiento[]` mediante un mapper puro
+- **AND** la UI renderiza sobre `Movimiento`, no sobre filas crudas de base de datos
+
+#### Scenario: Una transferencia se muestra como hecho financiero único
+
+- **WHEN** existe una transacción `type='transfer'`
+- **THEN** el listado global muestra un solo movimiento de tipo transferencia
+- **AND** muestra cuenta origen, cuenta destino, monto y moneda
+
+#### Scenario: Un ajuste conserva su signo funcional
+
+- **WHEN** existe una transacción `type='adjustment'` con monto positivo o negativo
+- **THEN** el movimiento de tipo ajuste muestra si suma o resta saldo
+- **AND** no se normaliza visualmente como monto siempre positivo
+
+#### Scenario: Una compra en cuotas no duplica información en el listado global
+
+- **WHEN** existe una compra en cuotas con transacción madre e hijas
+- **THEN** el listado global SHALL mostrar la representación funcional definida para compras en cuotas
+- **AND** SHALL evitar duplicar la compra total y cada cuota como si fueran gastos independientes, salvo que el usuario filtre explícitamente por cuotas
+
+---
+
+### Requirement: El módulo global de movimientos permite búsqueda y filtros
+
+El sistema SHALL permitir filtrar el listado global de movimientos por texto, período, tipo de movimiento, categoría y cuenta. Los filtros SHALL estar representados en la URL para que la pantalla sea compartible, recargable y navegable con back/forward del browser.
+
+#### Scenario: Buscar por descripción
+
+- **WHEN** el usuario ingresa texto en la búsqueda
+- **THEN** el sistema filtra movimientos cuya descripción o texto funcional visible coincida con la búsqueda
+- **AND** mantiene el término de búsqueda en la URL
+
+#### Scenario: Filtrar por período
+
+- **WHEN** el usuario filtra por mes actual, mes pasado, año actual o rango personalizado
+- **THEN** el sistema muestra solamente movimientos cuya fecha contable esté dentro del período
+- **AND** interpreta las fechas como `financial_date`, no como timestamp UTC
+
+#### Scenario: Filtrar por cuenta
+
+- **WHEN** el usuario filtra por una cuenta específica
+- **THEN** el sistema muestra movimientos donde esa cuenta participa como origen, destino, cuenta de pago o tarjeta relacionada según el tipo funcional del movimiento
+
+---
+
+### Requirement: El módulo global de movimientos destaca movimientos que requieren revisión
+
+El sistema SHALL poder marcar movimientos con estados de revisión funcionales cuando detecta que podrían requerir atención del usuario. Estos estados no cambian el impacto contable del movimiento: solamente ayudan a priorizar revisión, corrección o categorización.
+
+Un movimiento MAY requerir revisión por motivos como: falta de categoría, monto inusualmente alto, posible duplicado, datos incompletos, cotización faltante, ajuste frecuente o inconsistencia funcional detectada.
+
+#### Scenario: Movimiento sin categoría requiere revisión
+
+- **WHEN** existe un movimiento de tipo gasto o ingreso que debería tener categoría pero no la tiene
+- **THEN** el listado global puede mostrarlo como "Sin categoría"
+- **AND** puede incluirlo en un filtro de revisión
+
+#### Scenario: Posible duplicado requiere revisión
+
+- **WHEN** existen dos movimientos del mismo usuario con fecha, monto, moneda, cuenta y descripción muy similares
+- **THEN** el sistema puede marcarlos como posibles duplicados
+- **AND** no los elimina ni los fusiona automáticamente
+
+#### Scenario: Revisión por cotización faltante
+
+- **WHEN** un movimiento requiere cotización para mostrarse o controlarse correctamente y la cotización falta
+- **THEN** el sistema puede marcarlo como movimiento a revisar
+- **AND** la marca no inventa una cotización ni modifica el monto original
+
+#### Scenario: Revisión no altera saldos
+
+- **WHEN** un movimiento es marcado como requiere revisión
+- **THEN** el saldo de las cuentas no cambia
+- **AND** la marca funciona únicamente como ayuda operativa para el usuario
+
+---
+
 ### Requirement: El usuario puede ver el detalle de una transacción
 
 El sistema SHALL mostrar el detalle completo de una transacción: fecha, monto, moneda, tipo, cuenta, descripción, y los campos extra según el tipo — categoría/subcategoría (income/expense), cuenta destino (transfer) o signo (adjustment).
