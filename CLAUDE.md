@@ -75,6 +75,17 @@ Capabilities that are genuinely single-platform get a prefix: `web-middleware-ro
   - ✗ `feature/add-login-form-xA43I`, `chore/cleanup-7b3f9`
 - Semantically meaningful suffixes are allowed (they carry meaning, not randomness): `feature/migration-step-2`, `bugfix/race-condition-v2`, `chore/cleanup-rollback`.
 
+### Pre-commit check — MANDATORY
+
+**Before every `git commit`, run `git branch --show-current`.** If the output is `main`, STOP. Do not commit. Create a feature branch first:
+
+```bash
+git checkout -b <prefix>/<kebab-name>
+# then commit normally
+```
+
+No exceptions. This check is non-negotiable even when the user says "commit this" without specifying a branch.
+
 ### Merging to `main`
 
 `main` keeps a **linear history**: one commit per feature/fix/chore, no merge commits.
