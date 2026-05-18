@@ -1,19 +1,5 @@
 import type { CreditCardSummary } from '@/lib/cards/queries'
-
-const formatARS = (amount: number) =>
-  new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount)
-
-const formatUSD = (amount: number) =>
-  new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount)
+import { formatARS, formatUSD } from '@/lib/format'
 
 type CardDetailData = {
   name: string
@@ -26,9 +12,10 @@ type CardDetailData = {
 
 type Props = {
   card: CardDetailData
+  showCents?: boolean
 }
 
-export const CardHero = ({ card }: Props) => {
+export const CardHero = ({ card, showCents = false }: Props) => {
   const period = card.activePeriod
   const alert = period?.alert ?? 'none'
   const pendingARS = period?.pendingAmountARS ?? 0
@@ -67,7 +54,7 @@ export const CardHero = ({ card }: Props) => {
       )}
 
       {/* Primary amount */}
-      <p className="text-4xl font-bold tracking-tight">{formatARS(pendingARS)}</p>
+      <p className="text-4xl font-bold tracking-tight">{formatARS(pendingARS, showCents)}</p>
       {hasUSD && pendingUSD > 0 && (
         <p className="text-sm text-muted-foreground">{formatUSD(pendingUSD)} USD</p>
       )}

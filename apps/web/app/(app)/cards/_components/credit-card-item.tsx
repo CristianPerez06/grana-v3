@@ -1,24 +1,11 @@
 import Link from 'next/link'
 import type { CreditCardSummary } from '@/lib/cards/queries'
+import { formatARS, formatUSD } from '@/lib/format'
 import { CardDatesFooter } from './card-dates-footer'
-
-const formatARS = (amount: number) =>
-  new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount)
-
-const formatUSD = (amount: number) =>
-  new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount)
 
 type Props = {
   card: CreditCardSummary
+  showCents?: boolean
 }
 
 const alertBorderColors = {
@@ -27,7 +14,7 @@ const alertBorderColors = {
   none: 'border-l-border',
 }
 
-export const CreditCardItem = ({ card }: Props) => {
+export const CreditCardItem = ({ card, showCents = false }: Props) => {
   const period = card.activePeriod
   const alert = period?.alert ?? 'none'
   const pendingARS = period?.pendingAmountARS ?? 0
@@ -66,7 +53,7 @@ export const CreditCardItem = ({ card }: Props) => {
 
       {/* Amounts */}
       <div>
-        <p className="text-2xl font-bold tracking-tight">{formatARS(pendingARS)}</p>
+        <p className="text-2xl font-bold tracking-tight">{formatARS(pendingARS, showCents)}</p>
         {hasUSD && pendingUSD > 0 && (
           <p className="text-xs text-muted-foreground mt-0.5">{formatUSD(pendingUSD)}</p>
         )}
@@ -84,7 +71,7 @@ export const CreditCardItem = ({ card }: Props) => {
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            {usedPercent}% usado · {formatARS(card.credit_limit! - pendingARS)} disponible
+            {usedPercent}% usado · {formatARS(card.credit_limit! - pendingARS, showCents)} disponible
           </p>
         </div>
       )}

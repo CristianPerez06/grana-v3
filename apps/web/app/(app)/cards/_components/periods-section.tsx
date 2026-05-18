@@ -6,9 +6,10 @@ type Props = {
   cardId: string
   periods: CardPeriodDetail[]
   hasUSD?: boolean
+  showCents?: boolean
 }
 
-export const PeriodsSection = ({ cardId, periods, hasUSD = false }: Props) => {
+export const PeriodsSection = ({ cardId, periods, hasUSD = false, showCents = false }: Props) => {
   // Show at most 2 non-paid periods (actual + next), or most recent if all paid
   const activePeriods = periods
     .filter((p) => !p.has_payment)
@@ -32,7 +33,7 @@ export const PeriodsSection = ({ cardId, periods, hasUSD = false }: Props) => {
 
       <div className="flex flex-col gap-2">
         {displayPeriods.map((period) => (
-          <PeriodCard key={period.id} period={period} cardId={cardId} hasUSD={hasUSD} />
+          <PeriodCard key={period.id} period={period} cardId={cardId} hasUSD={hasUSD} showCents={showCents} />
         ))}
       </div>
     </section>

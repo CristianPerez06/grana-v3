@@ -1,10 +1,4 @@
-const formatARS = (amount: number) =>
-  new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount)
+import { formatARS } from '@/lib/format'
 
 const formatDate = (iso: string) => {
   const [y, m, d] = iso.split('-')
@@ -16,6 +10,7 @@ type Props = {
   pendingAmountARS: number
   createdAt: string
   archivedAt?: string | null
+  showCents?: boolean
 }
 
 export const CardDetailsSection = ({
@@ -23,6 +18,7 @@ export const CardDetailsSection = ({
   pendingAmountARS,
   createdAt,
   archivedAt,
+  showCents = false,
 }: Props) => {
   const usedPercent =
     creditLimit && creditLimit > 0
@@ -39,7 +35,7 @@ export const CardDetailsSection = ({
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Límite de crédito</span>
-            <span className="font-medium">{formatARS(creditLimit)}</span>
+            <span className="font-medium">{formatARS(creditLimit, showCents)}</span>
           </div>
           {usedPercent !== null && (
             <>
@@ -53,7 +49,7 @@ export const CardDetailsSection = ({
               </div>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>{usedPercent}% utilizado</span>
-                <span>{formatARS(creditLimit - pendingAmountARS)} disponible</span>
+                <span>{formatARS(creditLimit - pendingAmountARS, showCents)} disponible</span>
               </div>
             </>
           )}

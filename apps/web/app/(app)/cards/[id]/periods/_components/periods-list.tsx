@@ -1,22 +1,8 @@
 import Link from 'next/link'
 import type { CardPeriodDetail } from '@/lib/cards/queries'
 import type { PeriodVariant } from '@/lib/cards/types'
+import { formatARS, formatUSD } from '@/lib/format'
 import { EstimatedDateBadge } from '../../../_components/estimated-date-badge'
-
-const formatARS = (amount: number) =>
-  new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount)
-
-const formatUSD = (amount: number) =>
-  new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount)
 
 const formatDate = (iso: string) => {
   const [y, m, d] = iso.split('-')
@@ -45,9 +31,10 @@ type Props = {
   periods: CardPeriodDetail[]
   cardId: string
   hasUSD?: boolean
+  showCents?: boolean
 }
 
-export const PeriodsList = ({ periods, cardId, hasUSD = false }: Props) => {
+export const PeriodsList = ({ periods, cardId, hasUSD = false, showCents = false }: Props) => {
   if (periods.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-8 text-center">
@@ -78,7 +65,7 @@ export const PeriodsList = ({ periods, cardId, hasUSD = false }: Props) => {
                 {period.is_estimated && <EstimatedDateBadge />}
               </div>
               <div className="mt-0.5">
-                <span className="font-medium text-sm">{formatARS(totalAmount)}</span>
+                <span className="font-medium text-sm">{formatARS(totalAmount, showCents)}</span>
                 {hasUSD && period.pendingAmountUSD > 0 && (
                   <span className="ml-2 text-xs text-muted-foreground">
                     {formatUSD(period.pendingAmountUSD)}

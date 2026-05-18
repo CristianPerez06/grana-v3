@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCreditCards } from '@/lib/cards/queries'
+import { getShowCents } from '@/lib/preferences'
 import { CreditCardCarousel } from './_components/credit-card-carousel'
 
 const CardsPage = async () => {
@@ -9,7 +10,10 @@ const CardsPage = async () => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const cards = await getCreditCards({ includeArchived: false })
+  const [cards, showCents] = await Promise.all([
+    getCreditCards({ includeArchived: false }),
+    getShowCents(),
+  ])
 
   return (
     <div className="flex flex-col gap-6">
@@ -23,7 +27,7 @@ const CardsPage = async () => {
         </Link>
       </div>
 
-      <CreditCardCarousel cards={cards} />
+      <CreditCardCarousel cards={cards} showCents={showCents} />
     </div>
   )
 }

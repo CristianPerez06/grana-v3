@@ -2,22 +2,9 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardPeriodDetail } from '@/lib/cards/queries'
+import { formatARS, formatUSD } from '@/lib/format'
+import { getShowCents } from '@/lib/preferences'
 import { EditDatesSheet } from './_components/edit-dates-sheet'
-
-const formatARS = (amount: number) =>
-  new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount)
-
-const formatUSD = (amount: number) =>
-  new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount)
 
 const formatDate = (iso: string) => {
   const [y, m, d] = iso.split('-')
@@ -35,9 +22,10 @@ const PeriodDetailPage = async ({ params }: Props) => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [cardDetail, period] = await Promise.all([
+  const [cardDetail, period, showCents] = await Promise.all([
     getCreditCardDetail(id),
     getCardPeriodDetail(periodId),
+    getShowCents(),
   ])
 
   if (!cardDetail || cardDetail.type !== 'credit') notFound()
@@ -79,7 +67,7 @@ const PeriodDetailPage = async ({ params }: Props) => {
 
       {/* Amount summary */}
       <div className="rounded-lg border border-border bg-card p-4 flex flex-col gap-1">
-        <p className="text-3xl font-bold">{formatARS(totalAmount)}</p>
+        <p className="text-3xl font-bold">{formatARS(totalAmount, showCents)}</p>
         {hasUSD && period.pendingAmountUSD > 0 && (
           <p className="text-sm text-muted-foreground">{formatUSD(period.pendingAmountUSD)} USD</p>
         )}
@@ -140,7 +128,7 @@ const PeriodDetailPage = async ({ params }: Props) => {
                 <div className="text-right shrink-0">
                   <p className="text-sm font-medium">
                     {tx.currency_code === 'ARS'
-                      ? formatARS(Number(tx.amount))
+                      ? formatARS(Number(tx.amount), showCents)
                       : formatUSD(Number(tx.amount))}
                   </p>
                   {tx.currency_code !== 'ARS' && tx.fx_rate_to_ars && (

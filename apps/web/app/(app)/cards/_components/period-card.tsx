@@ -1,22 +1,8 @@
 import Link from 'next/link'
 import type { CardPeriodDetail } from '@/lib/cards/queries'
 import type { PeriodVariant } from '@/lib/cards/types'
+import { formatARS, formatUSD } from '@/lib/format'
 import { EstimatedDateBadge } from './estimated-date-badge'
-
-const formatARS = (amount: number) =>
-  new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount)
-
-const formatUSD = (amount: number) =>
-  new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount)
 
 const formatDate = (iso: string) => {
   const [y, m, d] = iso.split('-')
@@ -45,9 +31,10 @@ type Props = {
   period: CardPeriodDetail
   cardId: string
   hasUSD?: boolean
+  showCents?: boolean
 }
 
-export const PeriodCard = ({ period, cardId, hasUSD = false }: Props) => {
+export const PeriodCard = ({ period, cardId, hasUSD = false, showCents = false }: Props) => {
   const label = variantLabel[period.variant]
   const colorClass = variantColors[period.variant]
   const totalAmount = period.has_payment ? period.paidAmountARS : period.pendingAmountARS
@@ -67,7 +54,7 @@ export const PeriodCard = ({ period, cardId, hasUSD = false }: Props) => {
       </div>
 
       <div>
-        <p className="text-xl font-bold">{formatARS(totalAmount)}</p>
+        <p className="text-xl font-bold">{formatARS(totalAmount, showCents)}</p>
         {hasUSD && period.pendingAmountUSD > 0 && (
           <p className="text-xs text-muted-foreground">{formatUSD(period.pendingAmountUSD)}</p>
         )}

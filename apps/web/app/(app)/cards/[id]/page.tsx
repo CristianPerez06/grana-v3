@@ -4,27 +4,14 @@ import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardPeriods, getCardPeriodDetail } from '@/lib/cards/queries'
 import { derivePeriodVariant } from '@/lib/cards/utils'
 import { getTodayAR } from '@/lib/date'
+import { formatARS, formatUSD } from '@/lib/format'
+import { getShowCents } from '@/lib/preferences'
 import { CardHero } from '../_components/card-hero'
 import { PaymentCTABlock } from '../_components/payment-cta-block'
 import { QuickActions } from '../_components/quick-actions'
 import { CardDetailsSection } from '../_components/card-details-section'
 import { CardActions } from './_components/card-actions'
 import type { CreditCardSummary, CardPeriodDetail } from '@/lib/cards/queries'
-
-const formatARS = (amount: number) =>
-  new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount)
-
-const formatUSD = (amount: number) =>
-  new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount)
 
 const formatDate = (iso: string) => {
   const [y, m, d] = iso.split('-')
@@ -42,9 +29,10 @@ const CardDetailPage = async ({ params }: Props) => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [cardDetail, periods] = await Promise.all([
+  const [cardDetail, periods, showCents] = await Promise.all([
     getCreditCardDetail(id),
     getCardPeriods(id),
+    getShowCents(),
   ])
 
   if (!cardDetail || cardDetail.type !== 'credit') notFound()
@@ -113,7 +101,7 @@ const CardDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
 
-      <CardHero card={cardForHero} />
+      <CardHero card={cardForHero} showCents={showCents} />
 
       <CardActions cardId={id} isActive={cardDetail.is_active} />
 
@@ -178,7 +166,7 @@ const CardDetailPage = async ({ params }: Props) => {
                   <div className="text-right shrink-0">
                     <p className="text-sm font-medium">
                       {tx.currency_code === 'ARS'
-                        ? formatARS(Number(tx.amount))
+                        ? formatARS(Number(tx.amount), showCents)
                         : formatUSD(Number(tx.amount))}
                     </p>
                     {tx.currency_code !== 'ARS' && tx.fx_rate_to_ars && (
@@ -239,6 +227,7 @@ const CardDetailPage = async ({ params }: Props) => {
         pendingAmountARS={activePeriodForDetail?.pendingAmountARS ?? 0}
         createdAt={cardDetail.created_at}
         archivedAt={cardDetail.is_active ? null : cardDetail.created_at}
+        showCents={showCents}
       />
     </div>
   )

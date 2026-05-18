@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardPeriods } from '@/lib/cards/queries'
+import { getShowCents } from '@/lib/preferences'
 import { PeriodsList } from './_components/periods-list'
 
 type Props = {
@@ -15,9 +16,10 @@ const CardPeriodsPage = async ({ params }: Props) => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [cardDetail, periods] = await Promise.all([
+  const [cardDetail, periods, showCents] = await Promise.all([
     getCreditCardDetail(id),
     getCardPeriods(id),
+    getShowCents(),
   ])
 
   if (!cardDetail || cardDetail.type !== 'credit') notFound()
@@ -37,7 +39,7 @@ const CardPeriodsPage = async ({ params }: Props) => {
 
       <h1 className="text-2xl font-semibold tracking-tight">Historial de resúmenes</h1>
 
-      <PeriodsList periods={periods} cardId={id} hasUSD={hasUSD} />
+      <PeriodsList periods={periods} cardId={id} hasUSD={hasUSD} showCents={showCents} />
     </div>
   )
 }
