@@ -150,7 +150,7 @@ Build order matters — each module depends on the ones above it.
 | 2 | `schema-base` | ✅ Done | Monedas, instituciones, redes de tarjeta, tipo `Money`, `getTodayAR()` |
 | 3 | `categories` | ✅ Done | 17 categorías sistema + subcategorías, categorías propias del usuario, i18n |
 | 4 | `accounts` | ✅ Done | Cuentas efectivo (ARS/USD), cuentas bancarias/débito (tarjetas de crédito: change futuro) |
-| 5 | `transactions` | 🔲 Planned | Ingresos, gastos, transferencias, ajustes, cuotas (madre+hijos), recurrencias |
+| 5 | `transactions` | ✅ Done | Ingresos y gastos en cuentas cash/bank (transferencias, ajustes, cuotas y recurrencias: changes futuros) |
 | 6 | `shared` | 🔲 Planned | Gastos compartidos entre N personas ("Compartido"), deuda derivada, liquidación |
 | 7 | `savings` | 🔲 Planned | Sistema de sobres (envelopes), enganche a ingresos — diseño pendiente |
 | 8 | `cashflow` | 🔜 Future | Proyecciones de flujo de caja |

@@ -72,10 +72,10 @@
 ## 11. Documentación
 
 - [x] 11.1 Actualizar `SUPABASE_SETUP.md` con instrucciones de aplicación de `0008_transactions.sql`.
-- [ ] 11.2 Actualizar módulo #5 en `CLAUDE.md` de `🔲 Planned` a `✅ Done` post-merge.
+- [x] 11.2 Actualizar módulo #5 en `CLAUDE.md` de `🔲 Planned` a `✅ Done` post-merge.
 
 ## 12. Validación final
 
 - [x] 12.1 Correr `openspec validate add-transactions-income-expense` sin errores.
 - [x] 12.2 Correr `pnpm build` sin errores.
-- [ ] 12.3 Test manual: crear ingreso → verificar saldo; crear gasto con categoría → verificar saldo; editar monto → verificar saldo; eliminar → verificar saldo vuelve al estado anterior.
+- [x] 12.3 Test manual: crear ingreso → verificar saldo; crear gasto con categoría → verificar saldo; editar monto → verificar saldo; eliminar → verificar saldo vuelve al estado anterior.
