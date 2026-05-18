@@ -14,6 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_currencies: {
+        Row: {
+          account_id: string
+          created_at: string
+          currency_code: string
+          id: string
+          initial_balance: number
+          initial_balance_date: string
+          is_active: boolean
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          currency_code: string
+          id?: string
+          initial_balance?: number
+          initial_balance_date?: string
+          is_active?: boolean
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          currency_code?: string
+          id?: string
+          initial_balance?: number
+          initial_balance_date?: string
+          is_active?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_currencies_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_currencies_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      accounts: {
+        Row: {
+          created_at: string
+          id: string
+          institution_id: string | null
+          is_active: boolean
+          name: string
+          type: Database["public"]["Enums"]["account_type"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          institution_id?: string | null
+          is_active?: boolean
+          name: string
+          type: Database["public"]["Enums"]["account_type"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          institution_id?: string | null
+          is_active?: boolean
+          name?: string
+          type?: Database["public"]["Enums"]["account_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       card_networks: {
         Row: {
           brand_color: string | null
@@ -195,7 +278,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      account_type: "cash" | "bank"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -322,6 +405,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      account_type: ["cash", "bank"],
+    },
   },
 } as const

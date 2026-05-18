@@ -97,6 +97,73 @@
     "otros-ingresos": "Otros ingresos",
     "reintegros-cashback": "Reintegros / Cashback"
   },
+  "accounts": {
+    "title": "Cuentas",
+    "sections": {
+      "cash": "Efectivo",
+      "bank": "Cuentas bancarias"
+    },
+    "labels": {
+      "name": "Nombre",
+      "type": "Tipo",
+      "institution": "Institución",
+      "initialBalance": "Saldo inicial",
+      "currency": "Moneda",
+      "currencies": "Monedas",
+      "balance": "Saldo",
+      "ars": "Pesos",
+      "usd": "Dólares"
+    },
+    "types": {
+      "cash": "Efectivo",
+      "bank": "Bancaria / Débito"
+    },
+    "placeholders": {
+      "name": "Ej: Billetera, Caja chica",
+      "institutionSearch": "Buscar banco o billetera…"
+    },
+    "actions": {
+      "create": "Crear cuenta",
+      "edit": "Editar",
+      "archive": "Archivar",
+      "reactivate": "Reactivar",
+      "delete": "Eliminar",
+      "addCurrency": "Agregar moneda",
+      "deactivateCurrency": "Desactivar moneda"
+    },
+    "confirmations": {
+      "archive_title": "¿Archivar esta cuenta?",
+      "archive_body": "La cuenta quedará inactiva. Podés reactivarla cuando quieras.",
+      "delete_title": "¿Eliminar esta cuenta?",
+      "delete_body": "Esta acción no se puede deshacer.",
+      "deactivateCurrency_title": "¿Desactivar {currency} en esta cuenta?",
+      "deactivateCurrency_body": "Las transacciones históricas en {currency} se conservarán."
+    },
+    "errors": {
+      "name_required": "El nombre es obligatorio.",
+      "name_too_long": "El nombre no puede tener más de 50 caracteres.",
+      "institution_required": "Seleccioná una institución para cuentas bancarias.",
+      "institution_forbidden": "Las cuentas de efectivo no tienen institución.",
+      "currency_required": "Seleccioná al menos una moneda.",
+      "currency_unsupported": "Moneda no compatible.",
+      "balance_negative": "El saldo inicial no puede ser negativo.",
+      "archive_non_zero_balance": "No podés archivar una cuenta con saldo distinto de cero.",
+      "deactivate_non_zero_balance": "No podés desactivar una moneda con saldo distinto de cero.",
+      "deactivate_last_currency": "Debe quedar al menos una moneda activa.",
+      "generic": "Algo salió mal. Intentá de nuevo."
+    },
+    "empty": {
+      "title": "Todavía no tenés cuentas",
+      "description": "Creá tu primera cuenta para empezar a registrar tus movimientos.",
+      "cta": "Crear cuenta"
+    },
+    "movements_empty": "Todavía no hay movimientos en esta cuenta.",
+    "defaultCashName": "Efectivo",
+    "readonly": {
+      "type": "El tipo de cuenta no se puede cambiar.",
+      "initialBalance": "El saldo inicial no se puede modificar. Registrá un ajuste cuando exista el módulo de transacciones."
+    }
+  },
   "subcategories": {
     "supermercado": "Supermercado",
     "restaurante": "Restaurante",

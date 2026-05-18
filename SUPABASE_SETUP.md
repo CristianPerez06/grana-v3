@@ -324,7 +324,56 @@ Regenerá los tipos cada vez que cambie el schema (vale la pena agregar un scrip
 
 ---
 
-## 10. Checklist de producción
+## 10. Migración 0007 — módulo de cuentas (accounts)
+
+### 10.1 Aplicar la migración
+
+La migración vive en `supabase/migrations/0007_accounts.sql`. Para aplicarla:
+
+1. Abrí el **SQL Editor** en el dashboard de Supabase de este proyecto.
+2. Pegá el contenido completo de `supabase/migrations/0007_accounts.sql`.
+3. Ejecutá. Al final deberías ver una fila de resumen con todos los flags en `true`:
+   - `accounts_table_exists`: `true`
+   - `account_currencies_table_exists`: `true`
+   - `accounts_rls_enabled`: `true`
+   - `account_currencies_rls_enabled`: `true`
+   - `policy_count`: `8`
+   - `trigger_installed`: `true`
+   - `function_installed`: `true`
+   - `default_accounts_count`: (número de usuarios existentes — ≥ 0)
+
+Si algún flag es `false` o el bloque `DO $$ ... $$` de self-check lanzó una excepción, revisá la consola de errores del SQL Editor.
+
+### 10.2 Regenerar tipos TypeScript
+
+Después de aplicar la migración, regenerá los tipos:
+
+```bash
+pnpm --filter @grana/supabase types:gen
+```
+
+O bien, si no tenés el script configurado:
+
+```bash
+supabase gen types typescript --project-id <project-id> > packages/supabase/src/types.ts
+```
+
+Verificá que `packages/supabase/src/types.ts` incluye ahora las tablas `accounts` y `account_currencies` y el enum `account_type`.
+
+### 10.3 Verificar el trigger (test manual)
+
+Para confirmar que el trigger `on_auth_user_created_default_account` funciona:
+
+1. Creá un nuevo usuario de prueba desde `/signup` en la app.
+2. En el dashboard de Supabase → **Table Editor → accounts**, verificá que se creó una fila con:
+   - `name`: `Efectivo`
+   - `type`: `cash`
+   - `institution_id`: `null`
+3. En **Table Editor → account_currencies**, verificá que hay dos filas para ese account: una en `ARS` y otra en `USD`, ambas con `initial_balance = 0`.
+
+---
+
+## 11. Checklist de producción
 
 - [ ] Agregar `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` al host (Vercel u otro).
 - [ ] Agregar la callback URL de producción en **Authentication → URL Configuration → Redirect URLs**.
@@ -335,7 +384,7 @@ Regenerá los tipos cada vez que cambie el schema (vale la pena agregar un scrip
 
 ---
 
-## Resumen de archivos
+## 12. Resumen de archivos
 
 ```
 grana-v3/

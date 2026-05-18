@@ -97,6 +97,73 @@
     "otros-ingresos": "Other Income",
     "reintegros-cashback": "Refunds / Cashback"
   },
+  "accounts": {
+    "title": "Accounts",
+    "sections": {
+      "cash": "Cash",
+      "bank": "Bank accounts"
+    },
+    "labels": {
+      "name": "Name",
+      "type": "Type",
+      "institution": "Institution",
+      "initialBalance": "Opening balance",
+      "currency": "Currency",
+      "currencies": "Currencies",
+      "balance": "Balance",
+      "ars": "Pesos",
+      "usd": "Dollars"
+    },
+    "types": {
+      "cash": "Cash",
+      "bank": "Bank / Debit"
+    },
+    "placeholders": {
+      "name": "E.g. Wallet, Petty cash",
+      "institutionSearch": "Search bank or wallet…"
+    },
+    "actions": {
+      "create": "Create account",
+      "edit": "Edit",
+      "archive": "Archive",
+      "reactivate": "Reactivate",
+      "delete": "Delete",
+      "addCurrency": "Add currency",
+      "deactivateCurrency": "Deactivate currency"
+    },
+    "confirmations": {
+      "archive_title": "Archive this account?",
+      "archive_body": "The account will become inactive. You can reactivate it at any time.",
+      "delete_title": "Delete this account?",
+      "delete_body": "This action cannot be undone.",
+      "deactivateCurrency_title": "Deactivate {currency} on this account?",
+      "deactivateCurrency_body": "Historical {currency} transactions will be preserved."
+    },
+    "errors": {
+      "name_required": "Name is required.",
+      "name_too_long": "Name cannot exceed 50 characters.",
+      "institution_required": "Select an institution for bank accounts.",
+      "institution_forbidden": "Cash accounts do not have an institution.",
+      "currency_required": "Select at least one currency.",
+      "currency_unsupported": "Unsupported currency.",
+      "balance_negative": "Opening balance cannot be negative.",
+      "archive_non_zero_balance": "Cannot archive an account with a non-zero balance.",
+      "deactivate_non_zero_balance": "Cannot deactivate a currency with a non-zero balance.",
+      "deactivate_last_currency": "At least one currency must remain active.",
+      "generic": "Something went wrong. Please try again."
+    },
+    "empty": {
+      "title": "No accounts yet",
+      "description": "Create your first account to start recording your transactions.",
+      "cta": "Create account"
+    },
+    "movements_empty": "No transactions on this account yet.",
+    "defaultCashName": "Cash",
+    "readonly": {
+      "type": "Account type cannot be changed.",
+      "initialBalance": "Opening balance cannot be modified. Record an adjustment once the transactions module is available."
+    }
+  },
   "subcategories": {
     "supermercado": "Supermarket",
     "restaurante": "Restaurant",

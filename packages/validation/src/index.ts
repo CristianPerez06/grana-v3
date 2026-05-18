@@ -19,6 +19,14 @@ export {
   type CreateSubcategoryInput,
   type UpdateSubcategoryInput,
 } from './categories'
+export {
+  createAccountSchema,
+  updateAccountSchema,
+  addCurrencySchema,
+  type CreateAccountInput,
+  type UpdateAccountInput,
+  type AddCurrencyInput,
+} from './accounts'
 export { translateFieldError } from './translate-error'
 export {
   validateActionInput,
