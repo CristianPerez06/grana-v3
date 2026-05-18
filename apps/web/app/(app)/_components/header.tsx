@@ -13,7 +13,15 @@ export const Header = async () => {
       >
         {t('app_name')}
       </Link>
-      <LogoutButton />
+      <nav className="flex items-center gap-4">
+        <Link
+          href="/settings/categories"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Configuración
+        </Link>
+        <LogoutButton />
+      </nav>
     </header>
   )
 }
