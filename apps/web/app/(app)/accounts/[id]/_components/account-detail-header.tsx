@@ -2,8 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import type { AccountWithDetails } from '@/lib/accounts/types'
-import { computeBalance } from '@/lib/accounts/utils'
+import type { AccountWithBalances } from '@/lib/accounts/types'
 import { archiveAccount, reactivateAccount, deleteAccount } from '@/app/_actions/accounts'
 
 const formatBalance = (amount: number, currency: 'ARS' | 'USD') =>
@@ -14,7 +13,7 @@ const formatBalance = (amount: number, currency: 'ARS' | 'USD') =>
   }).format(amount)
 
 type Props = {
-  account: AccountWithDetails
+  account: AccountWithBalances
 }
 
 export const AccountDetailHeader = ({ account }: Props) => {
@@ -22,7 +21,7 @@ export const AccountDetailHeader = ({ account }: Props) => {
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  const balances = computeBalance(account)
+  const balances = account.balances
   const activeCurrencies = account.currencies.filter((c) => c.is_active)
   const hasARS = activeCurrencies.some((c) => c.currency_code === 'ARS')
   const hasUSD = activeCurrencies.some((c) => c.currency_code === 'USD')

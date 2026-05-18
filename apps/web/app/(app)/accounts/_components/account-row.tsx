@@ -2,8 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
-import type { AccountWithDetails } from '@/lib/accounts/types'
-import { computeBalance } from '@/lib/accounts/utils'
+import type { AccountWithBalances } from '@/lib/accounts/types'
 import { archiveAccount, reactivateAccount, deleteAccount } from '@/app/_actions/accounts'
 
 const formatBalance = (amount: number, currency: 'ARS' | 'USD') => {
@@ -16,14 +15,14 @@ const formatBalance = (amount: number, currency: 'ARS' | 'USD') => {
 }
 
 type Props = {
-  account: AccountWithDetails
+  account: AccountWithBalances
 }
 
 export const AccountRow = ({ account }: Props) => {
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  const balances = computeBalance(account)
+  const balances = account.balances
   const activeCurrencies = account.currencies.filter((c) => c.is_active)
 
   const handleArchive = () => {

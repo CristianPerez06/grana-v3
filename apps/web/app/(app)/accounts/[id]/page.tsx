@@ -2,6 +2,8 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getAccountDetail } from '@/lib/accounts/queries'
+import { getTransactions } from '@/lib/transactions/queries'
+import { TransactionList } from '@/lib/transactions/components/transaction-list'
 import { AccountDetailHeader } from './_components/account-detail-header'
 
 type Props = {
@@ -15,7 +17,10 @@ const AccountDetailPage = async ({ params }: Props) => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const account = await getAccountDetail(id)
+  const [account, transactions] = await Promise.all([
+    getAccountDetail(id),
+    getTransactions(id, { limit: 20 }),
+  ])
   if (!account) notFound()
 
   const inactiveCurrencies = account.currencies.filter((c) => !c.is_active)
@@ -47,16 +52,19 @@ const AccountDetailPage = async ({ params }: Props) => {
         </Link>
       )}
 
-      {/* Movements placeholder */}
       <section>
-        <h2 className="mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wide">
-          Movimientos
-        </h2>
-        <div className="rounded-lg border border-dashed border-border p-12 text-center">
-          <p className="text-sm text-muted-foreground">
-            Todavía no hay movimientos en esta cuenta.
-          </p>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            Movimientos
+          </h2>
+          <Link
+            href={`/accounts/${account.id}/transactions/new`}
+            className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            + Agregar
+          </Link>
         </div>
+        <TransactionList transactions={transactions} accountId={account.id} />
       </section>
     </div>
   )

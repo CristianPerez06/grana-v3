@@ -1,9 +1,9 @@
-import type { AccountWithDetails } from '@/lib/accounts/types'
+import type { AccountWithBalances } from '@/lib/accounts/types'
 import { AccountRow } from './account-row'
 
 type Props = {
   title: string
-  accounts: AccountWithDetails[]
+  accounts: AccountWithBalances[]
 }
 
 export const AccountSection = ({ title, accounts }: Props) => {

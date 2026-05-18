@@ -27,6 +27,14 @@ export {
   type UpdateAccountInput,
   type AddCurrencyInput,
 } from './accounts'
+export {
+  createIncomeSchema,
+  createExpenseSchema,
+  updateTransactionSchema,
+  type CreateIncomeInput,
+  type CreateExpenseInput,
+  type UpdateTransactionInput,
+} from './transactions'
 export { translateFieldError } from './translate-error'
 export {
   validateActionInput,

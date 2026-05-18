@@ -239,7 +239,21 @@ export async function deactivateCurrencyFromAccount(
   }
 
   const target = activeCurrencies.find((c) => c.currency_code === currencyCode)
-  if (target && target.initial_balance !== 0) {
+  if (!target) return { ok: false, formError: 'Moneda no encontrada en la cuenta.' }
+
+  // Check combined balance: initial_balance + net transaction sums
+  const { data: txSumRow } = await supabase
+    .from('transactions')
+    .select('amount, type')
+    .eq('account_id', accountId)
+    .eq('currency_code', currencyCode)
+
+  const txNet = (txSumRow ?? []).reduce((acc, row) => {
+    return acc + (row.type === 'income' ? Number(row.amount) : -Number(row.amount))
+  }, 0)
+
+  const totalBalance = Number(target.initial_balance) + txNet
+  if (totalBalance !== 0) {
     return {
       ok: false,
       formError: 'No podés desactivar una moneda con saldo distinto de cero.',

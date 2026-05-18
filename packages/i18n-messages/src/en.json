@@ -164,6 +164,62 @@
       "initialBalance": "Opening balance cannot be modified. Record an adjustment once the transactions module is available."
     }
   },
+  "transactions": {
+    "title": "Transactions",
+    "new_income": "New income",
+    "new_expense": "New expense",
+    "tabs": {
+      "income": "Income",
+      "expense": "Expense"
+    },
+    "labels": {
+      "amount": "Amount",
+      "date": "Date",
+      "category": "Category",
+      "subcategory": "Subcategory",
+      "description": "Description",
+      "type": "Type",
+      "currency": "Currency",
+      "account": "Account"
+    },
+    "types": {
+      "income": "Income",
+      "expense": "Expense"
+    },
+    "placeholders": {
+      "amount": "0.00",
+      "description": "Optional description",
+      "category": "Select a category",
+      "subcategory": "Select a subcategory (optional)"
+    },
+    "errors": {
+      "amount_required": "Amount is required.",
+      "amount_positive": "Amount must be greater than zero.",
+      "date_required": "Date is required.",
+      "category_required": "Category is required for expenses.",
+      "currency_inactive": "The selected currency is not active on this account.",
+      "generic": "Something went wrong. Please try again."
+    },
+    "empty": {
+      "title": "No transactions yet",
+      "description": "Record your first income or expense on this account.",
+      "cta": "Add transaction"
+    },
+    "actions": {
+      "create": "Save",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "confirmations": {
+      "delete_title": "Delete this transaction?",
+      "delete_body": "This action cannot be undone."
+    },
+    "readonly": {
+      "type": "Type cannot be changed.",
+      "account": "Account cannot be changed.",
+      "currency": "Currency cannot be changed."
+    }
+  },
   "subcategories": {
     "supermercado": "Supermarket",
     "restaurante": "Restaurant",

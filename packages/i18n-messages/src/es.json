@@ -164,6 +164,62 @@
       "initialBalance": "El saldo inicial no se puede modificar. Registrá un ajuste cuando exista el módulo de transacciones."
     }
   },
+  "transactions": {
+    "title": "Movimientos",
+    "new_income": "Nuevo ingreso",
+    "new_expense": "Nuevo gasto",
+    "tabs": {
+      "income": "Ingreso",
+      "expense": "Gasto"
+    },
+    "labels": {
+      "amount": "Monto",
+      "date": "Fecha",
+      "category": "Categoría",
+      "subcategory": "Subcategoría",
+      "description": "Descripción",
+      "type": "Tipo",
+      "currency": "Moneda",
+      "account": "Cuenta"
+    },
+    "types": {
+      "income": "Ingreso",
+      "expense": "Gasto"
+    },
+    "placeholders": {
+      "amount": "0,00",
+      "description": "Descripción opcional",
+      "category": "Seleccioná una categoría",
+      "subcategory": "Seleccioná una subcategoría (opcional)"
+    },
+    "errors": {
+      "amount_required": "El monto es obligatorio.",
+      "amount_positive": "El monto debe ser mayor a cero.",
+      "date_required": "La fecha es obligatoria.",
+      "category_required": "La categoría es obligatoria para los gastos.",
+      "currency_inactive": "La moneda seleccionada no está activa en esta cuenta.",
+      "generic": "Algo salió mal. Intentá de nuevo."
+    },
+    "empty": {
+      "title": "Todavía no hay movimientos",
+      "description": "Registrá tu primer ingreso o gasto en esta cuenta.",
+      "cta": "Agregar movimiento"
+    },
+    "actions": {
+      "create": "Guardar",
+      "edit": "Editar",
+      "delete": "Eliminar"
+    },
+    "confirmations": {
+      "delete_title": "¿Eliminar este movimiento?",
+      "delete_body": "Esta acción no se puede deshacer."
+    },
+    "readonly": {
+      "type": "El tipo no se puede cambiar.",
+      "account": "La cuenta no se puede cambiar.",
+      "currency": "La moneda no se puede cambiar."
+    }
+  },
   "subcategories": {
     "supermercado": "Supermercado",
     "restaurante": "Restaurante",

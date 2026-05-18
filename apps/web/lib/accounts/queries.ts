@@ -1,14 +1,21 @@
 import { createClient } from '@/lib/supabase/server'
+import { getTransactionSums } from '@/lib/transactions/balance'
 import type {
   AccountWithDetails,
+  AccountWithBalances,
   GroupedAccounts,
 } from './types'
+
+type GroupedAccountsWithBalances = {
+  cash: AccountWithBalances[]
+  bank: AccountWithBalances[]
+}
 
 // ── getAccounts ───────────────────────────────────────────────────────────────
 
 export async function getAccounts(
   options: { includeArchived?: boolean } = {},
-): Promise<GroupedAccounts> {
+): Promise<GroupedAccountsWithBalances> {
   const supabase = await createClient()
 
   let query = supabase
@@ -29,16 +36,32 @@ export async function getAccounts(
   if (error) throw error
 
   const accounts = (data ?? []) as AccountWithDetails[]
+  const accountIds = accounts.map((a) => a.id)
+  const txSumsMap = await getTransactionSums(accountIds)
+
+  const withBalances = accounts.map((a) => ({
+    ...a,
+    balances: {
+      ARS: a.currencies.find((c) => c.currency_code === 'ARS')?.initial_balance ?? 0,
+      USD: a.currencies.find((c) => c.currency_code === 'USD')?.initial_balance ?? 0,
+      ...Object.fromEntries(
+        Object.entries(txSumsMap.get(a.id) ?? {}).map(([k, v]) => [
+          k,
+          ((a.currencies.find((c) => c.currency_code === k)?.initial_balance ?? 0) + v),
+        ]),
+      ),
+    } as Record<'ARS' | 'USD', number>,
+  }))
 
   return {
-    cash: accounts.filter((a) => a.type === 'cash'),
-    bank: accounts.filter((a) => a.type === 'bank'),
+    cash: withBalances.filter((a) => a.type === 'cash'),
+    bank: withBalances.filter((a) => a.type === 'bank'),
   }
 }
 
 // ── getAccountDetail ──────────────────────────────────────────────────────────
 
-export async function getAccountDetail(id: string): Promise<AccountWithDetails | null> {
+export async function getAccountDetail(id: string): Promise<AccountWithBalances | null> {
   const supabase = await createClient()
 
   const { data, error } = await supabase
@@ -56,7 +79,18 @@ export async function getAccountDetail(id: string): Promise<AccountWithDetails |
     throw error
   }
 
-  return data as AccountWithDetails | null
+  const account = data as AccountWithDetails
+  const txSumsMap = await getTransactionSums([id])
+  const txSums = txSumsMap.get(id) ?? { ARS: 0, USD: 0 }
+
+  const balances: Record<'ARS' | 'USD', number> = { ARS: 0, USD: 0 }
+  for (const c of account.currencies) {
+    if (c.currency_code === 'ARS' || c.currency_code === 'USD') {
+      balances[c.currency_code] = c.initial_balance + (txSums[c.currency_code] ?? 0)
+    }
+  }
+
+  return { ...account, balances }
 }
 
 // ── getInstitutions ───────────────────────────────────────────────────────────

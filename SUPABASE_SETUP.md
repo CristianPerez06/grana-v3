@@ -373,7 +373,38 @@ Para confirmar que el trigger `on_auth_user_created_default_account` funciona:
 
 ---
 
-## 11. Checklist de producción
+## 11. Migración 0008 — módulo de transacciones (transactions)
+
+### 11.1 Aplicar la migración
+
+La migración vive en `supabase/migrations/0008_transactions.sql`. Para aplicarla:
+
+1. Abrí el **SQL Editor** en el dashboard de Supabase de este proyecto.
+2. Pegá el contenido completo de `supabase/migrations/0008_transactions.sql`.
+3. Ejecutá. Al final deberías ver una fila de resumen con todos los flags en `true`:
+   - `transactions_table_exists`: `true`
+   - `transaction_type_enum_exists`: `true`
+   - `rls_enabled`: `true`
+   - `policy_count`: `4`
+   - `idx_account_currency_exists`: `true`
+   - `idx_user_date_exists`: `true`
+   - `idx_account_date_exists`: `true`
+
+Si algún flag es `false` o el bloque `DO $$ ... $$` de self-check lanzó una excepción, revisá la consola de errores del SQL Editor.
+
+### 11.2 Regenerar tipos TypeScript
+
+Después de aplicar la migración, regenerá los tipos:
+
+```bash
+./node_modules/.bin/supabase gen types typescript --project-id exhpnnaigjfcxcvmptxa > packages/supabase/src/types.ts
+```
+
+Verificá que `packages/supabase/src/types.ts` incluye ahora la tabla `transactions` y el enum `transaction_type`.
+
+---
+
+## 12. Checklist de producción
 
 - [ ] Agregar `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` al host (Vercel u otro).
 - [ ] Agregar la callback URL de producción en **Authentication → URL Configuration → Redirect URLs**.
@@ -384,7 +415,7 @@ Para confirmar que el trigger `on_auth_user_created_default_account` funciona:
 
 ---
 
-## 12. Resumen de archivos
+## 13. Resumen de archivos
 
 ```
 grana-v3/
