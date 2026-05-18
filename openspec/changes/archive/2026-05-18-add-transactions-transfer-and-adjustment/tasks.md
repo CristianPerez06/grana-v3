@@ -10,9 +10,9 @@
 
 ## 2. Tipos y package supabase
 
-- [ ] 2.1 Aplicar `0009_transactions_transfer_adjustment.sql` contra el proyecto Supabase remoto vía SQL Editor.
-- [ ] 2.2 Regenerar tipos: `./node_modules/.bin/supabase gen types typescript --project-id exhpnnaigjfcxcvmptxa > packages/supabase/src/types.ts`.
-- [ ] 2.3 Verificar que `transfer_destination_account_id` aparece en `transactions` y que `transaction_type` incluye `'transfer'` y `'adjustment'`.
+- [x] 2.1 Aplicar `0009_transactions_transfer_adjustment.sql` contra el proyecto Supabase remoto vía SQL Editor.
+- [x] 2.2 Regenerar tipos: `./node_modules/.bin/supabase gen types typescript --project-id exhpnnaigjfcxcvmptxa > packages/supabase/src/types.ts`.
+- [x] 2.3 Verificar que `transfer_destination_account_id` aparece en `transactions` y que `transaction_type` incluye `'transfer'` y `'adjustment'`.
 
 > ⚠️ Tareas 2.1–2.3 son pasos manuales. Tipos actualizados manualmente para que el build pase. Regenerar con supabase gen types después de aplicar la migración.
 
@@ -81,6 +81,6 @@
 
 ## 12. Validación final
 
-- [ ] 12.1 Correr `openspec validate add-transactions-transfer-and-adjustment` sin errores.
+- [x] 12.1 Correr `openspec validate add-transactions-transfer-and-adjustment` sin errores.
 - [x] 12.2 Correr `pnpm build` sin errores. ✓ Build pasa limpio.
-- [ ] 12.3 Test manual: crear transferencia A→B → verificar saldos de ambas cuentas; crear ajuste positivo → verificar saldo; crear ajuste negativo → verificar saldo; editar monto de transferencia → verificar saldos; editar signo de ajuste → verificar saldo; eliminar transferencia → verificar saldos vuelven al estado anterior; eliminar ajuste → idem.
+- [x] 12.3 Test manual: crear transferencia A→B → verificar saldos de ambas cuentas; crear ajuste positivo → verificar saldo; crear ajuste negativo → verificar saldo; editar monto de transferencia → verificar saldos; editar signo de ajuste → verificar saldo; eliminar transferencia → verificar saldos vuelven al estado anterior; eliminar ajuste → idem.
