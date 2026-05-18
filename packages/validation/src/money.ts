@@ -7,6 +7,15 @@ export type Money = {
   readonly _d: Decimal
 }
 
+type ParseMoneyInputOptions = {
+  decimalPlaces?: number
+  allowNegative?: boolean
+}
+
+type NormalizeMoneyAmountOptions = {
+  decimalPlaces?: number
+}
+
 function wrap(d: Decimal): Money {
   return { [_brand]: true as const, _d: d } as Money
 }
@@ -63,4 +72,39 @@ export const Money = {
     const c = a._d.comparedTo(b._d)
     return c < 0 ? -1 : c > 0 ? 1 : 0
   },
+}
+
+export function parseMoneyInput(
+  value: string,
+  options: ParseMoneyInputOptions = {},
+): number | null {
+  const decimalPlaces = options.decimalPlaces ?? 2
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  const normalized = trimmed.replace(',', '.')
+  const sign = options.allowNegative ? '-?' : ''
+  const pattern = new RegExp(`^${sign}(?:\\d+|\\d*\\.\\d{1,${decimalPlaces}})$`)
+  if (!pattern.test(normalized)) return null
+
+  try {
+    return Money.toNumber(Money.from(normalized))
+  } catch {
+    return null
+  }
+}
+
+export function normalizeMoneyAmount(
+  value: number | string,
+  options: NormalizeMoneyAmountOptions = {},
+): number | null {
+  const decimalPlaces = options.decimalPlaces ?? 2
+
+  try {
+    const decimal = new Decimal(value)
+    if (!decimal.isFinite()) return null
+    return decimal.toDecimalPlaces(decimalPlaces).toNumber()
+  } catch {
+    return null
+  }
 }

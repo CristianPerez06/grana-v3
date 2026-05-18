@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Alert } from '@/components/ui/alert'
 import { createAccount } from '@/app/_actions/accounts'
+import { parseMoneyInput } from '@grana/validation'
 import type { Institution } from '@/lib/accounts/types'
 
 type Props = {
@@ -51,8 +52,8 @@ export const CreateAccountForm = ({ institutions }: Props) => {
     if (type === 'bank' && !institutionId) errs.institution = 'Seleccioná una institución.'
     if (selectedCurrencies.size === 0) errs.currencies = 'Seleccioná al menos una moneda.'
     for (const code of selectedCurrencies) {
-      const val = parseFloat(balances[code] ?? '0')
-      if (isNaN(val) || val < 0) errs[`balance_${code}`] = 'El saldo inicial no puede ser negativo.'
+      const value = parseMoneyInput(balances[code] ?? '0')
+      if (value === null || value < 0) errs[`balance_${code}`] = 'El saldo inicial no puede ser negativo.'
     }
     setErrors(errs)
     return Object.keys(errs).length === 0
@@ -68,7 +69,7 @@ export const CreateAccountForm = ({ institutions }: Props) => {
     try {
       const currencies = Array.from(selectedCurrencies).map((code) => ({
         currency_code: code,
-        initial_balance: parseFloat(balances[code] ?? '0'),
+        initial_balance: parseMoneyInput(balances[code] ?? '0') ?? 0,
       }))
 
       const result = await createAccount({

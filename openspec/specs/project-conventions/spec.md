@@ -3,6 +3,30 @@
 ## Purpose
 TBD - created by archiving change add-project-conventions. Update Purpose after archive.
 ## Requirements
+### Requirement: La V3 debe sostenerse desde el repo, no desde contexto de chat
+
+Grana V3 SHALL tratar al repositorio como la memoria principal del producto. La V3 no es una reescritura por si misma: es una reconstruccion cuyo objetivo es que la app sea funcionalmente explicita, tecnicamente confiable y documentada al nivel de que una conversacion nueva con un LLM pueda continuar el trabajo sin depender de contexto oculto.
+
+Toda decision funcional o tecnica que afecte el comportamiento contable, financiero, de UX critica, de datos o de arquitectura SHALL quedar registrada en el lugar correspondiente del repo: specs, migraciones, `CLAUDE.md`, README, codigo y/o tests. Las decisiones importantes SHALL NOT quedar solamente en una conversacion, en memoria humana o implicitas dentro de una implementacion dificil de descubrir.
+
+#### Scenario: Una regla contable nueva queda escrita antes o junto con el codigo
+
+- **WHEN** un colaborador define una regla que afecta saldos, fechas, tarjetas, cuotas, monedas, categorias o reportes
+- **THEN** la regla queda documentada en una spec o documento rector del repo
+- **AND** la implementacion referencia o sigue esa regla de forma trazable
+
+#### Scenario: Una conversacion nueva puede retomar el proyecto
+
+- **WHEN** un LLM nuevo lee el repo sin acceso al historial de chat anterior
+- **THEN** encuentra en `CLAUDE.md`, `openspec/specs/` y las migraciones las reglas necesarias para no inventar comportamiento
+- **AND** puede distinguir que decisiones son funcionales, cuales son tecnicas y cuales estan pendientes
+
+#### Scenario: Una decision importante no queda solo en el chat
+
+- **WHEN** durante una sesion se acuerda una decision de producto o arquitectura que cambia como debe funcionar Grana
+- **THEN** el colaborador la registra en el repo antes de cerrar el bloque de trabajo
+- **AND** si todavia no se implementa, queda claro si es regla vigente, deuda documentada o decision futura
+
 ### Requirement: La documentación del proyecto debe estar en español
 
 Toda la documentación del proyecto SHALL estar escrita en español. Esto incluye `README.md`, `SUPABASE_SETUP.md` y todos los archivos bajo `openspec/changes/**/*.md` y `openspec/specs/**/*.md` (proposals, design, tasks, specs).
@@ -254,6 +278,51 @@ La capability `project-conventions` y otras capabilities meta (que aplican a tod
 - **WHEN** un LLM lee `openspec/specs/auth/spec.md` para implementar un cambio
 - **THEN** distingue los scenarios cross-platform de los platform-specific por la presencia/ausencia del tag `(web)` / `(mobile)` al final del nombre
 - **AND** sabe que las capabilities con prefijo `web-` / `mobile-` son enteramente para esa plataforma
+
+---
+
+### Requirement: Los cálculos monetarios usan aritmética decimal
+
+Todo cálculo monetario del producto SHALL usar aritmética decimal (`Money`/`decimal.js` o una primitiva equivalente), no aritmética binaria de JavaScript con `number`, mientras el valor esté dentro del motor contable. Esto aplica a saldos derivados, sumatorias de transacciones, pagos, límites, cuotas, ajustes y cualquier operación que combine montos.
+
+Los campos monetarios pueden cruzar bordes de UI/API como `number` o `string` cuando sea necesario por formularios, Supabase o formateo visual, pero la conversión a `number` SHALL ocurrir únicamente en el borde de presentación o persistencia. Entre lectura, cálculo y comparación de montos, el código SHALL usar `Money`.
+
+#### Scenario: Sumar centavos no deja residuo binario
+
+- **WHEN** el sistema calcula `0.10 + 0.20 - 0.30` para un saldo o total monetario
+- **THEN** el resultado contable es exactamente `0`
+- **AND** la comparación contra cero se hace con `Money.isZero` o equivalente decimal
+
+#### Scenario: Una query convierte a number solo al devolver datos para display
+
+- **WHEN** una query de saldos lee `numeric(18,2)` desde Supabase
+- **THEN** acumula los montos con `Money`
+- **AND** convierte a `number` recién al construir el modelo de lectura que consume la UI
+
+#### Scenario: Un cálculo contable nuevo no usa `Number(row.amount)` para sumar
+
+- **WHEN** un colaborador agrega una sumatoria de montos de transacciones
+- **THEN** convierte cada monto con `Money.from(row.amount)`
+- **AND** usa `Money.add`/`Money.subtract` para acumular
+
+#### Scenario: Un formulario monetario no usa parseFloat directo
+
+- **WHEN** un formulario convierte un string ingresado por el usuario en un monto
+- **THEN** usa un parser monetario compartido que rechaza parseos parciales como `123abc`
+- **AND** recién después pasa el monto normalizado a la action o schema correspondiente
+
+#### Scenario: Una server action normaliza antes de persistir
+
+- **WHEN** una server action persiste `amount`, `initial_balance`, `credit_limit` o un campo monetario equivalente
+- **THEN** normaliza el valor con el helper monetario compartido antes del INSERT/UPDATE
+- **AND** usa la escala de DB correspondiente (`2` decimales para montos, `6` para `fx_rate_to_ars`)
+
+#### Scenario: El baseline monetario actual queda auditado
+
+- **WHEN** un colaborador revisa el baseline monetario de la V3
+- **THEN** encuentra cubiertos con helpers decimales: cálculo de balances de cuentas, totales de tarjetas/períodos, inputs monetarios de formularios, normalización previa a persistencia, cuotas y comparación contra saldo cero
+- **AND** considera aceptables los usos residuales de `number` en bordes de IO/display, formateo de una fila individual, cálculo de porcentajes visuales, y tipos generados de Supabase
+- **AND** mantiene como pendiente consciente cualquier migración futura para representar `NUMERIC` como `string` o `Money` en tipos generados/curados de Supabase
 
 ---
 

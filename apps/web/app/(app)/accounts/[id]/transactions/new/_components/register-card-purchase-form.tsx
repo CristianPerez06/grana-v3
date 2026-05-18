@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { getTodayAR } from '@/lib/date'
 import { registerCardPurchase, registerInstallments } from '@/app/_actions/credit-cards'
+import { parseMoneyInput } from '@grana/validation'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 
 const todayStr = () => {
@@ -40,9 +41,18 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
     e.preventDefault()
     setFormError(null)
 
-    const parsedAmount = parseFloat(amount)
+    const parsedAmount = parseMoneyInput(amount)
     const parsedInstallments = parseInt(installments)
-    const parsedFxRate = fxRate ? parseFloat(fxRate) : undefined
+    const parsedFxRate = fxRate ? parseMoneyInput(fxRate, { decimalPlaces: 6 }) : undefined
+
+    if (parsedAmount === null || parsedAmount <= 0) {
+      setFormError('El monto debe ser mayor a cero.')
+      return
+    }
+    if (isUSD && (parsedFxRate === null || parsedFxRate === undefined || parsedFxRate <= 0)) {
+      setFormError('El tipo de cambio debe ser mayor a cero.')
+      return
+    }
 
     startTransition(async () => {
       let result
@@ -67,7 +77,7 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
           category_id: categoryId,
           subcategory_id: subcategoryId || undefined,
           description: description || undefined,
-          fx_rate_to_ars: parsedFxRate,
+          fx_rate_to_ars: parsedFxRate ?? undefined,
         })
       }
 

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Alert } from '@/components/ui/alert'
 import { updateCreditCard } from '@/app/_actions/credit-cards'
+import { parseMoneyInput } from '@grana/validation'
 import { LimitInputWithSuffix } from '../../../_components/limit-input-with-suffix'
 import type { Institution } from '@/lib/accounts/types'
 
@@ -45,8 +46,8 @@ export const EditCreditCardForm = ({
   const validate = () => {
     const errs: Record<string, string> = {}
     if (name.trim().length > 50) errs.name = 'Máximo 50 caracteres.'
-    const limit = creditLimit ? parseFloat(creditLimit) : null
-    if (creditLimit && (isNaN(limit!) || limit! <= 0)) {
+    const limit = creditLimit ? parseMoneyInput(creditLimit) : null
+    if (creditLimit && (limit === null || limit <= 0)) {
       errs.creditLimit = 'El límite debe ser mayor a cero.'
     }
     setErrors(errs)
@@ -64,7 +65,7 @@ export const EditCreditCardForm = ({
       const result = await updateCreditCard(cardId, {
         name: name.trim() || undefined,
         institution_id: institutionId || undefined,
-        credit_limit: creditLimit ? parseFloat(creditLimit) : undefined,
+        credit_limit: creditLimit ? parseMoneyInput(creditLimit) ?? undefined : undefined,
       })
 
       if (!result.ok) {

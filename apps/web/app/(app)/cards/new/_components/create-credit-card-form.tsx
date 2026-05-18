@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Alert } from '@/components/ui/alert'
 import { createCreditCard } from '@/app/_actions/credit-cards'
+import { parseMoneyInput } from '@grana/validation'
 import { NetworkSelector } from '../../_components/network-selector'
 import { CardCycleSection } from '../../_components/card-cycle-section'
 import { LimitInputWithSuffix } from '../../_components/limit-input-with-suffix'
@@ -58,8 +59,8 @@ export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
       errs.network = 'Ingresá el nombre de la red.'
     }
 
-    const limit = creditLimit ? parseFloat(creditLimit) : null
-    if (creditLimit && (isNaN(limit!) || limit! <= 0)) {
+    const limit = creditLimit ? parseMoneyInput(creditLimit) : null
+    if (creditLimit && (limit === null || limit <= 0)) {
       errs.creditLimit = 'El límite debe ser mayor a cero.'
     }
 
@@ -101,7 +102,7 @@ export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
         other_network_name: network?.type === 'other' ? network.name.trim() : undefined,
         name: name.trim() || undefined,
         currencies,
-        credit_limit: creditLimit ? parseFloat(creditLimit) : undefined,
+        credit_limit: creditLimit ? parseMoneyInput(creditLimit) ?? undefined : undefined,
         current_end_date: currentEndDate,
         current_due_date: currentDueDate,
         next_end_date: nextEndDate,

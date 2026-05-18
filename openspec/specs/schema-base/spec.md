@@ -49,11 +49,11 @@ El sistema SHALL proveer un catálogo de redes de tarjeta de crédito (`card_net
 
 ### Requirement: Aritmética monetaria con tipo Money
 
-Todo el código de la aplicación que opere sobre valores monetarios SHALL usar el tipo `Money` (branded type sobre `decimal.js`). Está prohibido usar operadores aritméticos nativos de JavaScript (`+`, `-`, `*`, `/`) directamente sobre valores monetarios.
+Todo cálculo o comparación monetaria de la aplicación SHALL usar el tipo `Money` (branded type sobre `decimal.js`) o un helper compartido que lo use internamente. Está prohibido usar operadores aritméticos nativos de JavaScript (`+`, `-`, `*`, `/`) directamente para combinar valores monetarios dentro del motor contable.
 
-El tipo `Money` provee métodos seguros: `add`, `subtract`, `multiply`, `divide`, `toNumber`, `toFixed`, `isZero`, `isNegative`, `compare`. Todos los resultados son instancias de `Money`.
+El tipo `Money` provee métodos seguros: `add`, `subtract`, `multiply`, `divide`, `toNumber`, `toFixed`, `isZero`, `isNegative`, `compare`. Los helpers compartidos MAY convertir el resultado a `number` cuando están construyendo un modelo de lectura para UI o normalizando un valor justo antes de persistir.
 
-Los valores monetarios en DB se almacenan como `NUMERIC(18,2)`. Al leer de DB, el valor se deserializa a `Money`. Al escribir a DB, se serializa con exactamente 2 decimales.
+Los valores monetarios en DB se almacenan como `NUMERIC(18,2)` y `fx_rate_to_ars` se almacena como `NUMERIC(18,6)`. Los tipos generados de Supabase pueden transportar esos valores como `number`; esa representación se considera un borde de IO, no una autorización para hacer aritmética binaria. Al escribir a DB, las server actions SHALL normalizar los montos con la escala correspondiente.
 
 #### Scenario: Suma de dos montos sin error de punto flotante
 
@@ -65,20 +65,48 @@ Los valores monetarios en DB se almacenan como `NUMERIC(18,2)`. Al leer de DB, e
 - **WHEN** se divide `Money(100)` en 3 cuotas usando `Money.divide(3)`
 - **THEN** las cuotas suman exactamente `Money(100)` (el residuo se asigna a la primera cuota)
 
+#### Scenario: Supabase transporta numeric como number en el borde
+
+- **WHEN** una query de Supabase retorna un campo `NUMERIC(18,2)` tipado como `number`
+- **THEN** el código puede pasarlo a la UI para display sin cálculo intermedio
+- **AND** si necesita sumarlo, restarlo, compararlo contra cero o persistirlo de nuevo, lo convierte mediante `Money` o un helper monetario compartido
+
 ---
 
-### Requirement: Fecha actual en timezone argentino
+### Requirement: Fecha contable y zona horaria financiera
 
-El sistema SHALL proveer el helper `getTodayAR()` como única fuente de la fecha actual para operaciones financieras. Este helper retorna un objeto `Date` con la fecha correcta en el timezone `America/Argentina/Buenos_Aires` (UTC−3, sin DST).
+El sistema SHALL tratar las fechas financieras como **fechas contables**: el campo `date` de movimientos, saldos iniciales, períodos y cualquier hecho económico se guarda como `DATE` sin timezone. Esa fecha representa el día contable elegido para la operación, no el instante técnico en que se creó la fila.
 
-Ningún módulo de la aplicación MUST usar `new Date()` directamente cuando necesite "la fecha de hoy" en contexto financiero.
+El sistema SHALL guardar el instante técnico de auditoría en campos `created_at` con tipo `TIMESTAMPTZ`. `date` y `created_at` tienen significados distintos y MUST NOT usarse como sustitutos entre sí:
 
-#### Scenario: Fecha correcta en horario nocturno argentino
+- `date`: día contable del hecho económico, usado para saldos, reportes, períodos y agrupación funcional.
+- `created_at`: instante real de inserción o auditoría técnica, usado como desempate determinístico y trazabilidad.
 
-- **WHEN** se llama a `getTodayAR()` a las 23:30 hora argentina (02:30 UTC del día siguiente)
-- **THEN** el resultado es la fecha argentina (no la fecha UTC del día siguiente)
+El sistema SHALL calcular los defaults de "hoy" usando la **zona horaria financiera del usuario**, no la zona horaria del servidor ni del navegador. En la V3 inicial, la zona horaria financiera por defecto es `America/Argentina/Buenos_Aires` porque el mercado objetivo inicial es Argentina. El helper actual `getTodayAR()` representa ese default inicial.
 
-#### Scenario: Consistencia con registro de transacciones
+El sistema SHOULD evolucionar hacia un helper general `getTodayForTimezone(timezone)` o `getTodayForUser(userId)` cuando el perfil del usuario incluya una preferencia como `financial_timezone`. Hasta entonces, todo código financiero que necesite "hoy" MUST usar el helper centralizado vigente (`getTodayAR()`), nunca `new Date()` directo.
 
-- **WHEN** un usuario registra una transacción "hoy"
-- **THEN** la fecha asignada a la transacción usa `getTodayAR()` como base, no `new Date()`
+#### Scenario: Fecha contable se guarda sin timezone
+
+- **WHEN** un usuario registra un gasto con fecha contable `2026-05-18`
+- **THEN** `transactions.date` se guarda como `DATE '2026-05-18'`
+- **AND** no se guarda un timestamp ni una conversión UTC en ese campo
+
+#### Scenario: Auditoría técnica se guarda separada
+
+- **WHEN** el sistema inserta una transacción
+- **THEN** `transactions.created_at` registra el instante real de creación como `TIMESTAMPTZ`
+- **AND** ese valor no reemplaza a `transactions.date` para reportes financieros
+
+#### Scenario: Default de hoy usa la zona horaria financiera
+
+- **WHEN** la app necesita prellenar una fecha "hoy" para una operación financiera
+- **THEN** calcula el día usando la zona horaria financiera del usuario
+- **AND** en la V3 inicial usa `America/Argentina/Buenos_Aires` mediante `getTodayAR()`
+- **AND** no usa la fecha local del servidor ni `new Date()` directo
+
+#### Scenario: Usuario viajando conserva su criterio contable
+
+- **WHEN** un usuario con zona horaria financiera `America/Argentina/Buenos_Aires` usa la app desde otro país
+- **THEN** los defaults de "hoy" siguen el calendario financiero configurado para ese usuario
+- **AND** la ubicación física temporal no cambia automáticamente el día contable

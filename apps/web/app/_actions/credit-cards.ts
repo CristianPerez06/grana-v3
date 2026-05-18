@@ -12,6 +12,7 @@ import {
   updatePeriodDatesSchema,
   validateActionInput,
   Money,
+  normalizeMoneyAmount,
   type CreateCreditCardInput,
   type CreateNovatoCreditCardInput,
   type RegisterCardPurchaseInput,
@@ -32,6 +33,14 @@ import {
   formatDateISO,
 } from '@/lib/cards/utils'
 import type { ActionResult } from './types'
+
+function normalizeActionMoney(value: number): number {
+  return normalizeMoneyAmount(value) ?? value
+}
+
+function normalizeActionFxRate(value: number): number {
+  return normalizeMoneyAmount(value, { decimalPlaces: 6 }) ?? value
+}
 
 async function getAuthenticatedUserId(): Promise<string> {
   const supabase = await createClient()
@@ -96,7 +105,7 @@ export async function createCreditCard(
       institution_id: data.institution_id,
       network_id: data.network_id ?? null,
       other_network_name: data.other_network_name ?? null,
-      credit_limit: data.credit_limit ?? null,
+      credit_limit: data.credit_limit != null ? normalizeActionMoney(data.credit_limit) : null,
     })
     .select('id')
     .single()
@@ -296,7 +305,7 @@ export async function registerCardPurchase(
       user_id: userId,
       account_id: data.account_id,
       type: 'expense',
-      amount: data.amount,
+      amount: normalizeActionMoney(data.amount),
       currency_code: data.currency_code,
       date: data.date,
       category_id: data.category_id,
@@ -305,7 +314,7 @@ export async function registerCardPurchase(
       status: 'pending',
       card_period_id: periodId,
       due_date: dueDate,
-      fx_rate_to_ars: data.fx_rate_to_ars ?? null,
+      fx_rate_to_ars: data.fx_rate_to_ars != null ? normalizeActionFxRate(data.fx_rate_to_ars) : null,
       is_parent: false,
     })
     .select('id')
@@ -349,7 +358,8 @@ export async function registerInstallments(
   }
 
   // Split amounts (residue on first installment)
-  const installmentAmounts = splitAmountIntoInstallments(data.amount, n)
+  const normalizedAmount = normalizeActionMoney(data.amount)
+  const installmentAmounts = splitAmountIntoInstallments(normalizedAmount, n)
 
   // Pre-compute dates and periods for all N installments
   const installmentDates: string[] = []
@@ -390,7 +400,7 @@ export async function registerInstallments(
       user_id: userId,
       account_id: null,
       type: 'expense',
-      amount: data.amount,
+      amount: normalizedAmount,
       currency_code: 'ARS',
       date: data.date,
       category_id: data.category_id,
@@ -541,7 +551,7 @@ export async function payCardPeriod(
       user_id: userId,
       account_id: data.payment_account_id,
       type: 'expense',
-      amount: data.amount,
+      amount: normalizeActionMoney(data.amount),
       currency_code: 'ARS',
       date: data.payment_date,
       category_id: null,
@@ -848,7 +858,7 @@ export async function updateCreditCard(
     if (limit !== null && limit <= 0) {
       return { ok: false, formError: 'El límite de crédito debe ser un número positivo.' }
     }
-    updates.credit_limit = limit
+    updates.credit_limit = limit != null ? normalizeActionMoney(limit) : limit
   }
 
   if (Object.keys(updates).length === 0) {

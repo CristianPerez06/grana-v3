@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { getTodayAR } from '@/lib/date'
 import { payCardPeriod } from '@/app/_actions/credit-cards'
+import { parseMoneyInput } from '@grana/validation'
 
 const todayStr = () => {
   const d = getTodayAR()
@@ -54,7 +55,8 @@ export const PayCardPeriodForm = ({
 
   const validate = () => {
     const errs: Record<string, string> = {}
-    if (!amount || parseFloat(amount) <= 0) errs.amount = 'El monto debe ser mayor a cero.'
+    const parsedAmount = parseMoneyInput(amount)
+    if (parsedAmount === null || parsedAmount <= 0) errs.amount = 'El monto debe ser mayor a cero.'
     if (!paymentAccountId) errs.paymentAccountId = 'Seleccioná una cuenta.'
     if (!paymentDate) errs.paymentDate = 'Requerido.'
     if (!nextEndDate) errs.nextEndDate = 'Requerido.'
@@ -74,7 +76,7 @@ export const PayCardPeriodForm = ({
     startTransition(async () => {
       const result = await payCardPeriod({
         period_id: periodId,
-        amount: parseFloat(amount),
+        amount: parseMoneyInput(amount) ?? 0,
         payment_account_id: paymentAccountId,
         payment_date: paymentDate,
         next_end_date: nextEndDate,

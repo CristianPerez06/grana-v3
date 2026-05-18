@@ -10,6 +10,7 @@ import {
   createAdjustmentSchema,
   updateTransferSchema,
   updateAdjustmentSchema,
+  normalizeMoneyAmount,
   validateActionInput,
   type CreateIncomeInput,
   type CreateExpenseInput,
@@ -20,6 +21,10 @@ import {
   type UpdateAdjustmentInput,
 } from '@grana/validation'
 import type { ActionResult } from './types'
+
+function normalizeActionMoney(value: number): number {
+  return normalizeMoneyAmount(value) ?? value
+}
 
 async function getAuthenticatedUserId(): Promise<string> {
   const supabase = await createClient()
@@ -70,7 +75,7 @@ export async function createIncome(
       user_id: userId,
       account_id: validation.data.account_id,
       type: 'income',
-      amount: validation.data.amount,
+      amount: normalizeActionMoney(validation.data.amount),
       currency_code: validation.data.currency_code,
       date: validation.data.date,
       category_id: validation.data.category_id ?? null,
@@ -115,7 +120,7 @@ export async function createExpense(
       user_id: userId,
       account_id: validation.data.account_id,
       type: 'expense',
-      amount: validation.data.amount,
+      amount: normalizeActionMoney(validation.data.amount),
       currency_code: validation.data.currency_code,
       date: validation.data.date,
       category_id: validation.data.category_id,
@@ -159,7 +164,7 @@ export async function updateTransaction(
   const { error } = await supabase
     .from('transactions')
     .update({
-      ...(validation.data.amount !== undefined && { amount: validation.data.amount }),
+      ...(validation.data.amount !== undefined && { amount: normalizeActionMoney(validation.data.amount) }),
       ...(validation.data.date !== undefined && { date: validation.data.date }),
       ...('description' in validation.data && { description: validation.data.description ?? null }),
       ...('category_id' in validation.data && { category_id: validation.data.category_id ?? null }),
@@ -259,7 +264,7 @@ export async function createTransfer(
       account_id: validation.data.account_id,
       transfer_destination_account_id: validation.data.transfer_destination_account_id,
       type: 'transfer',
-      amount: validation.data.amount,
+      amount: normalizeActionMoney(validation.data.amount),
       currency_code: validation.data.currency_code,
       date: validation.data.date,
       description: validation.data.description ?? null,
@@ -303,7 +308,7 @@ export async function createAdjustment(
       user_id: userId,
       account_id: validation.data.account_id,
       type: 'adjustment',
-      amount: validation.data.amount,
+      amount: normalizeActionMoney(validation.data.amount),
       currency_code: validation.data.currency_code,
       date: validation.data.date,
       description: validation.data.description ?? null,
@@ -347,7 +352,7 @@ export async function updateTransfer(
   const { error } = await supabase
     .from('transactions')
     .update({
-      ...(validation.data.amount !== undefined && { amount: validation.data.amount }),
+      ...(validation.data.amount !== undefined && { amount: normalizeActionMoney(validation.data.amount) }),
       ...(validation.data.date !== undefined && { date: validation.data.date }),
       ...('description' in validation.data && { description: validation.data.description ?? null }),
     })
@@ -389,7 +394,7 @@ export async function updateAdjustment(
   const { error } = await supabase
     .from('transactions')
     .update({
-      ...(validation.data.amount !== undefined && { amount: validation.data.amount }),
+      ...(validation.data.amount !== undefined && { amount: normalizeActionMoney(validation.data.amount) }),
       ...(validation.data.date !== undefined && { date: validation.data.date }),
       ...('description' in validation.data && { description: validation.data.description ?? null }),
     })

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getTransactionSums } from '@/lib/transactions/balance'
 import { getCreditCards, type CreditCardSummary } from '@/lib/cards/queries'
+import { Money } from '@grana/validation'
 import type {
   AccountWithDetails,
   AccountWithBalances,
@@ -11,6 +12,10 @@ type GroupedAccountsWithBalances = {
   cash: AccountWithBalances[]
   bank: AccountWithBalances[]
   credit: CreditCardSummary[]
+}
+
+function addMoneyAmounts(a: number | string, b: number | string): number {
+  return Money.toNumber(Money.add(Money.from(a), Money.from(b)))
 }
 
 // ── getAccounts ───────────────────────────────────────────────────────────────
@@ -53,7 +58,7 @@ export async function getAccounts(
       ...Object.fromEntries(
         Object.entries(txSumsMap.get(a.id) ?? {}).map(([k, v]) => [
           k,
-          ((a.currencies.find((c) => c.currency_code === k)?.initial_balance ?? 0) + v),
+          addMoneyAmounts(a.currencies.find((c) => c.currency_code === k)?.initial_balance ?? 0, v),
         ]),
       ),
     } as Record<'ARS' | 'USD', number>,
@@ -93,7 +98,10 @@ export async function getAccountDetail(id: string): Promise<AccountWithBalances 
   const balances: Record<'ARS' | 'USD', number> = { ARS: 0, USD: 0 }
   for (const c of account.currencies) {
     if (c.currency_code === 'ARS' || c.currency_code === 'USD') {
-      balances[c.currency_code] = c.initial_balance + (txSums[c.currency_code] ?? 0)
+      balances[c.currency_code] = addMoneyAmounts(
+        c.initial_balance,
+        txSums[c.currency_code] ?? 0,
+      )
     }
   }
 

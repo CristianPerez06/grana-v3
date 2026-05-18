@@ -2,7 +2,11 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { formatDateISO, getTodayAR } from '@/lib/date'
+import { getTransactionSums } from '@/lib/transactions/balance'
 import {
+  Money,
+  normalizeMoneyAmount,
   createAccountSchema,
   updateAccountSchema,
   addCurrencySchema,
@@ -13,6 +17,10 @@ import {
 } from '@grana/validation'
 import { getCreditCardDebtCheck } from '@/lib/cards/queries'
 import type { ActionResult } from './types'
+
+function normalizeActionMoney(value: number): number {
+  return normalizeMoneyAmount(value) ?? value
+}
 
 async function getAuthenticatedUserId(): Promise<string> {
   const supabase = await createClient()
@@ -31,6 +39,7 @@ export async function createAccount(
 
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
+  const today = formatDateISO(getTodayAR())
 
   const { data: account, error: accountError } = await supabase
     .from('accounts')
@@ -50,8 +59,8 @@ export async function createAccount(
   const currencyRows = validation.data.currencies.map((c) => ({
     account_id: account.id,
     currency_code: c.currency_code,
-    initial_balance: c.initial_balance,
-    initial_balance_date: new Date().toLocaleDateString('en-CA'),
+    initial_balance: normalizeActionMoney(c.initial_balance),
+    initial_balance_date: today,
   }))
 
   const { error: currencyError } = await supabase
@@ -198,6 +207,7 @@ export async function addCurrencyToAccount(
 
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
+  const today = formatDateISO(getTodayAR())
 
   const { data: account, error: ownerError } = await supabase
     .from('accounts')
@@ -212,8 +222,8 @@ export async function addCurrencyToAccount(
     {
       account_id: accountId,
       currency_code: validation.data.currency_code,
-      initial_balance: validation.data.initial_balance,
-      initial_balance_date: new Date().toLocaleDateString('en-CA'),
+      initial_balance: normalizeActionMoney(validation.data.initial_balance),
+      initial_balance_date: today,
       is_active: true,
     },
     { onConflict: 'account_id,currency_code' },
@@ -260,29 +270,13 @@ export async function deactivateCurrencyFromAccount(
   const target = activeCurrencies.find((c) => c.currency_code === currencyCode)
   if (!target) return { ok: false, formError: 'Moneda no encontrada en la cuenta.' }
 
-  // Check combined balance: initial_balance + net transaction sums
-  // Include incoming transfers where this account is the destination
-  const { data: txSumRow } = await supabase
-    .from('transactions')
-    .select('account_id, transfer_destination_account_id, amount, type')
-    .or(
-      `account_id.eq.${accountId},transfer_destination_account_id.eq.${accountId}`,
-    )
-    .eq('currency_code', currencyCode)
+  const txSums = (await getTransactionSums([accountId])).get(accountId) ?? { ARS: 0, USD: 0 }
+  const totalBalance = Money.add(
+    Money.from(target.initial_balance),
+    Money.from(txSums[currencyCode] ?? 0),
+  )
 
-  const txNet = (txSumRow ?? []).reduce((acc, row) => {
-    if (row.type === 'income') return acc + Number(row.amount)
-    if (row.type === 'expense') return acc - Number(row.amount)
-    if (row.type === 'transfer') {
-      if (row.account_id === accountId) return acc - Number(row.amount)
-      if (row.transfer_destination_account_id === accountId) return acc + Number(row.amount)
-    }
-    if (row.type === 'adjustment') return acc + Number(row.amount)
-    return acc
-  }, 0)
-
-  const totalBalance = Number(target.initial_balance) + txNet
-  if (totalBalance !== 0) {
+  if (!Money.isZero(totalBalance)) {
     return {
       ok: false,
       formError: 'No podés desactivar una moneda con saldo distinto de cero.',

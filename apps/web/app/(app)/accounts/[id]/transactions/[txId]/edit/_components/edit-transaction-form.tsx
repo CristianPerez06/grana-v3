@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { TransactionWithDetails } from '@/lib/transactions/types'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 import { updateTransaction, updateTransfer, updateAdjustment } from '@/app/_actions/transactions'
+import { parseMoneyInput } from '@grana/validation'
 
 const TYPE_LABELS = {
   income: 'Ingreso',
@@ -53,6 +54,11 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setFormError(null)
+    const parsedAmount = parseMoneyInput(amount)
+    if (parsedAmount === null || parsedAmount <= 0) {
+      setFormError('El monto debe ser mayor a cero.')
+      return
+    }
 
     startTransition(async () => {
       let result
@@ -63,7 +69,7 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
           accountId,
           transaction.transfer_destination_account_id ?? '',
           {
-            amount: parseFloat(amount),
+            amount: parsedAmount,
             date,
             description: description || null,
           },
@@ -71,8 +77,8 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
       } else if (type === 'adjustment') {
         const signedAmount =
           adjustmentDirection === 'decrease'
-            ? -Math.abs(parseFloat(amount))
-            : Math.abs(parseFloat(amount))
+            ? -Math.abs(parsedAmount)
+            : Math.abs(parsedAmount)
         result = await updateAdjustment(transaction.id, accountId, {
           amount: signedAmount,
           date,
@@ -80,7 +86,7 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
         })
       } else {
         result = await updateTransaction(transaction.id, accountId, {
-          amount: parseFloat(amount),
+          amount: parsedAmount,
           date,
           category_id: categoryId || null,
           subcategory_id: subcategoryId || null,

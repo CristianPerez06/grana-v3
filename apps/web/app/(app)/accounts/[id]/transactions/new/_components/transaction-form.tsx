@@ -9,6 +9,7 @@ import {
   createTransfer,
   createAdjustment,
 } from '@/app/_actions/transactions'
+import { parseMoneyInput } from '@grana/validation'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 
 const todayStr = () => {
@@ -106,6 +107,11 @@ export const TransactionForm = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setFormError(null)
+    const parsedAmount = parseMoneyInput(amount)
+    if (parsedAmount === null || parsedAmount <= 0) {
+      setFormError('El monto debe ser mayor a cero.')
+      return
+    }
 
     startTransition(async () => {
       let result
@@ -114,7 +120,7 @@ export const TransactionForm = ({
         result = await createIncome({
           account_id: accountId,
           currency_code: currencyCode,
-          amount: parseFloat(amount),
+          amount: parsedAmount,
           date,
           category_id: categoryId || undefined,
           subcategory_id: subcategoryId || undefined,
@@ -124,7 +130,7 @@ export const TransactionForm = ({
         result = await createExpense({
           account_id: accountId,
           currency_code: currencyCode,
-          amount: parseFloat(amount),
+          amount: parsedAmount,
           date,
           category_id: categoryId || undefined,
           subcategory_id: subcategoryId || undefined,
@@ -135,14 +141,14 @@ export const TransactionForm = ({
           account_id: accountId,
           transfer_destination_account_id: destinationAccountId,
           currency_code: transferCurrencyCode,
-          amount: parseFloat(amount),
+          amount: parsedAmount,
           date,
           description: description || undefined,
         })
       } else {
         // adjustment
         const signedAmount =
-          adjustmentDirection === 'decrease' ? -Math.abs(parseFloat(amount)) : Math.abs(parseFloat(amount))
+          adjustmentDirection === 'decrease' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount)
         result = await createAdjustment({
           account_id: accountId,
           currency_code: currencyCode,

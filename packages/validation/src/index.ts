@@ -1,4 +1,9 @@
-export { Money, type Money as MoneyType } from './money'
+export {
+  Money,
+  normalizeMoneyAmount,
+  parseMoneyInput,
+  type Money as MoneyType,
+} from './money'
 export {
   signupSchema,
   loginSchema,

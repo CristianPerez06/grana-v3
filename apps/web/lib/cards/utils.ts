@@ -94,6 +94,19 @@ export function splitAmountIntoInstallments(amount: number, n: number): Money[] 
   return Money.split(Money.from(amount), n)
 }
 
+export function sumMoneyValues(values: Array<number | string>): number {
+  const total = values.reduce(
+    (acc, value) => Money.add(acc, Money.from(value)),
+    Money.from(0),
+  )
+
+  return Money.toNumber(total)
+}
+
+export function subtractMoneyValues(a: number | string, b: number | string): number {
+  return Money.toNumber(Money.subtract(Money.from(a), Money.from(b)))
+}
+
 // ─── Date helpers (ISO string arithmetic, exported for use in actions) ────────
 
 export function formatDateISO(date: Date): string {

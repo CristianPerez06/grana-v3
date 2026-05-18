@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { derivePeriodStatus, derivePeriodVariant } from '../utils'
+import {
+  derivePeriodStatus,
+  derivePeriodVariant,
+  subtractMoneyValues,
+  sumMoneyValues,
+} from '../utils'
 
 // ── 12.20: derivePeriodStatus — boundary tests ────────────────────────────────
 // Use new Date(year, month-1, day) — local time — to avoid UTC-to-local
@@ -81,5 +86,15 @@ describe('derivePeriodVariant', () => {
 
   it('returns "actual" when open and has transactions', () => {
     expect(derivePeriodVariant(period, new Date(2026, 4, 15), false, 3)).toBe('actual')
+  })
+})
+
+describe('money helpers', () => {
+  it('sums card totals with decimal math', () => {
+    expect(sumMoneyValues(['0.10', '0.20', '-0.30'])).toBe(0)
+  })
+
+  it('subtracts available credit with decimal math', () => {
+    expect(subtractMoneyValues('1000.30', '0.10')).toBe(1000.2)
   })
 })

@@ -1,4 +1,5 @@
 import { formatARS } from '@/lib/format'
+import { subtractMoneyValues } from '@/lib/cards/utils'
 
 const formatDate = (iso: string) => {
   const [y, m, d] = iso.split('-')
@@ -49,7 +50,7 @@ export const CardDetailsSection = ({
               </div>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>{usedPercent}% utilizado</span>
-                <span>{formatARS(creditLimit - pendingAmountARS, showCents)} disponible</span>
+                <span>{formatARS(subtractMoneyValues(creditLimit, pendingAmountARS), showCents)} disponible</span>
               </div>
             </>
           )}

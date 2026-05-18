@@ -9,6 +9,7 @@ import {
   suggestNextPeriodDates,
   assignTransactionToPeriod,
   formatDateISO,
+  sumMoneyValues,
 } from './utils'
 import type { CardPeriodWithPayment, PeriodVariant } from './types'
 
@@ -303,8 +304,8 @@ export async function getCreditCards(
   for (const tx of txResult.data ?? []) {
     if (!tx.card_period_id) continue
     const entry = amountByPeriod.get(tx.card_period_id) ?? { ARS: 0, USD: 0 }
-    if (tx.currency_code === 'ARS') entry.ARS += Number(tx.amount)
-    if (tx.currency_code === 'USD') entry.USD += Number(tx.amount)
+    if (tx.currency_code === 'ARS') entry.ARS = sumMoneyValues([entry.ARS, tx.amount])
+    if (tx.currency_code === 'USD') entry.USD = sumMoneyValues([entry.USD, tx.amount])
     amountByPeriod.set(tx.card_period_id, entry)
   }
 
@@ -428,9 +429,21 @@ export async function getCardPeriods(accountId: string): Promise<CardPeriodDetai
 
   return periods.reverse().map((period) => {
     const periodTxs = (txRows ?? []).filter((t) => t.card_period_id === period.id)
-    const pendingARS = periodTxs.filter((t) => t.status === 'pending' && t.currency_code === 'ARS').reduce((s, t) => s + Number(t.amount), 0)
-    const pendingUSD = periodTxs.filter((t) => t.status === 'pending' && t.currency_code === 'USD').reduce((s, t) => s + Number(t.amount), 0)
-    const paidARS = periodTxs.filter((t) => t.status === 'paid' && t.currency_code === 'ARS').reduce((s, t) => s + Number(t.amount), 0)
+    const pendingARS = sumMoneyValues(
+      periodTxs
+        .filter((t) => t.status === 'pending' && t.currency_code === 'ARS')
+        .map((t) => t.amount),
+    )
+    const pendingUSD = sumMoneyValues(
+      periodTxs
+        .filter((t) => t.status === 'pending' && t.currency_code === 'USD')
+        .map((t) => t.amount),
+    )
+    const paidARS = sumMoneyValues(
+      periodTxs
+        .filter((t) => t.status === 'paid' && t.currency_code === 'ARS')
+        .map((t) => t.amount),
+    )
     const paymentInfo = paymentByPeriod.get(period.id)
 
     return {
@@ -489,9 +502,21 @@ export async function getCardPeriodDetail(periodId: string): Promise<CardPeriodD
 
   const today = getTodayAR()
   const txRows = txResult.data ?? []
-  const pendingARS = txRows.filter((t) => t.status === 'pending' && t.currency_code === 'ARS').reduce((s, t) => s + Number(t.amount), 0)
-  const pendingUSD = txRows.filter((t) => t.status === 'pending' && t.currency_code === 'USD').reduce((s, t) => s + Number(t.amount), 0)
-  const paidARS = txRows.filter((t) => t.status === 'paid' && t.currency_code === 'ARS').reduce((s, t) => s + Number(t.amount), 0)
+  const pendingARS = sumMoneyValues(
+    txRows
+      .filter((t) => t.status === 'pending' && t.currency_code === 'ARS')
+      .map((t) => t.amount),
+  )
+  const pendingUSD = sumMoneyValues(
+    txRows
+      .filter((t) => t.status === 'pending' && t.currency_code === 'USD')
+      .map((t) => t.amount),
+  )
+  const paidARS = sumMoneyValues(
+    txRows
+      .filter((t) => t.status === 'paid' && t.currency_code === 'ARS')
+      .map((t) => t.amount),
+  )
 
   const payment = paymentResult.data
   const paymentTxDate = (payment?.transactions as unknown as { date: string } | null)?.date ?? null

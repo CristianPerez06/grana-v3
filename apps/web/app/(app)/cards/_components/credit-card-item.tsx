@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { CreditCardSummary } from '@/lib/cards/queries'
+import { subtractMoneyValues } from '@/lib/cards/utils'
 import { formatARS, formatUSD } from '@/lib/format'
 import { CardDatesFooter } from './card-dates-footer'
 
@@ -71,7 +72,7 @@ export const CreditCardItem = ({ card, showCents = false }: Props) => {
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            {usedPercent}% usado · {formatARS(card.credit_limit! - pendingARS, showCents)} disponible
+            {usedPercent}% usado · {formatARS(subtractMoneyValues(card.credit_limit!, pendingARS), showCents)} disponible
           </p>
         </div>
       )}

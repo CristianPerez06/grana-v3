@@ -2,6 +2,12 @@
 
 pnpm workspaces monorepo. Today `apps/web` (Next.js App Router) is the only app. `apps/mobile` is reserved for the Expo app and will be scaffolded in a separate change — do not create it here.
 
+## V3 Rebuild Standard
+
+Grana V3 is not a rewrite for its own sake. It is a rebuild whose goal is to make the product functionally explicit, technically reliable, and documented enough that a fresh LLM session can continue the app without relying on hidden chat context.
+
+The repo is the memory. Important business decisions must be captured in specs, migrations, code, and tests where appropriate. If a rule matters to the accounting behavior of the app, do not leave it only in conversation history or implicit implementation.
+
 ## Repo Layout
 
 ```
@@ -145,7 +151,7 @@ These affect every feature. Not knowing them causes silent bugs anywhere in the 
 | **Derived balances** | No balance column anywhere. Always computed from transaction history. Never persisted. |
 | **`disponible ≥ 0` invariant** | Must be enforced in **every write path** that can reduce available balance (expense, transfer, adjustment, confirm recurrence, pay card period, delete income). Clamping in reads is not enforcement — it just hides corruption. |
 | **`Money` type + `decimal.js`** | All monetary arithmetic uses a `Money` branded type backed by `decimal.js`. Never use raw JS `+` `-` `*` `/` on money values. `NUMERIC(18,2)` in DB — never `FLOAT`. |
-| **`getTodayAR()`** | Always use this helper (never `new Date()`) for any "today" in financial operations. Timezone: `America/Argentina/Buenos_Aires`. Raw `new Date()` causes date corruption between 21:00–00:00 AR. |
+| **Accounting dates + financial timezone** | Financial `date` fields are accounting dates stored as `DATE` without timezone. `created_at` is the technical audit instant stored as `TIMESTAMPTZ`; never use it as a financial date. Any "today" default in financial operations must be computed from the user's financial timezone, not the server/browser timezone. V3 defaults that timezone to `America/Argentina/Buenos_Aires`, represented today by `getTodayAR()`. Raw `new Date()` causes date corruption near midnight and must not be used directly for financial "today". |
 | **Deterministic ordering** | Transaction ordering depends on use: **calculation queries** (balance, running totals) use `ORDER BY date ASC, created_at ASC, id ASC`; **display queries** (lists shown to users) use `ORDER BY date DESC, created_at DESC, id DESC`. Never mix them up — using ASC for display shows oldest first; using DESC for balance breaks running totals. |
 | **Mother/child installments** | A credit card purchase in N installments = 1 parent row (`is_parent=true`, `account_id=NULL`, `status=NULL`) + N child rows (`status='pending'`, `account_id=card`). Children go `pending → paid` when the period is paid — never `posted`. |
 | **I-CRED-1: credit initial balance = 0** | `account.type='credit'` must always have `initial_balance=0` on all its `account_currencies` rows. Enforced by DB trigger `trg_fn_credit_initial_balance`. |
@@ -163,7 +169,7 @@ Build order matters — each module depends on the ones above it.
 | # | Module | Status | Qué incluye |
 |---|--------|--------|-------------|
 | 1 | `auth` | ✅ Done | Registro, login, recupero de contraseña |
-| 2 | `schema-base` | ✅ Done | Monedas, instituciones, redes de tarjeta, tipo `Money`, `getTodayAR()` |
+| 2 | `schema-base` | ✅ Done | Monedas, instituciones, redes de tarjeta, tipo `Money`, fecha contable y zona horaria financiera |
 | 3 | `categories` | ✅ Done | 17 categorías sistema + subcategorías, categorías propias del usuario, i18n |
 | 4 | `accounts` | ✅ Done | Cuentas efectivo (ARS/USD), cuentas bancarias/débito (tarjetas de crédito: ver módulo cards) |
 | 5 | `transactions` | ✅ Done | Ingresos y gastos en cuentas cash/bank (transferencias, ajustes, cuotas y recurrencias: changes futuros) |

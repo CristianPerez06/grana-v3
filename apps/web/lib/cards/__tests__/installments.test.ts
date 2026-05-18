@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { splitAmountIntoInstallments } from '../utils'
+import { splitAmountIntoInstallments, sumMoneyValues } from '../utils'
 import { Money } from '@grana/validation'
 
 // ── 12.7: splitAmountIntoInstallments — residue-to-first ─────────────────────
@@ -36,7 +36,7 @@ describe('splitAmountIntoInstallments', () => {
 
     for (const [amount, n] of cases) {
       const parts = splitAmountIntoInstallments(amount, n)
-      const total = parts.reduce((acc, m) => acc + Money.toNumber(m), 0)
+      const total = sumMoneyValues(parts.map((m) => Money.toFixed(m)))
       expect(Math.round(total * 100)).toBe(Math.round(amount * 100))
     }
   })

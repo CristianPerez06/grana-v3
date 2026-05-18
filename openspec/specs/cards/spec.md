@@ -202,6 +202,12 @@ El sistema SHALL renderizar una pantalla `/cards/[id]/periods` que liste todos l
 - **WHEN** un item es de estado `paid`
 - **THEN** la metadata muestra "Pagado DD-mm · N movimientos"
 
+#### Scenario: El monto total del período usa aritmética decimal
+
+- **WHEN** un período contiene consumos por `$0.10`, `$0.20` y un ajuste visual/total equivalente a `-$0.30`
+- **THEN** el total monetario del período se calcula como `0`
+- **AND** no quedan residuos binarios visibles ni comparables en la UI
+
 ---
 
 ### Requirement: El detalle de período muestra movimientos del período e info del pago
