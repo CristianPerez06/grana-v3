@@ -31,9 +31,17 @@ export {
   createIncomeSchema,
   createExpenseSchema,
   updateTransactionSchema,
+  createTransferSchema,
+  createAdjustmentSchema,
+  updateTransferSchema,
+  updateAdjustmentSchema,
   type CreateIncomeInput,
   type CreateExpenseInput,
   type UpdateTransactionInput,
+  type CreateTransferInput,
+  type CreateAdjustmentInput,
+  type UpdateTransferInput,
+  type UpdateAdjustmentInput,
 } from './transactions'
 export { translateFieldError } from './translate-error'
 export {

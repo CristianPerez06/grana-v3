@@ -4,7 +4,9 @@ import type { TransactionWithDetails } from './types'
 const TRANSACTION_SELECT = `
   *,
   category:categories(id, name, canonical_name, color, icon),
-  subcategory:subcategories(id, name, canonical_name, category_id)
+  subcategory:subcategories(id, name, canonical_name, category_id),
+  destination_account:accounts!transactions_transfer_destination_account_id_fkey(id, name),
+  source_account:accounts!transactions_account_id_fkey(id, name)
 `
 
 // ── getTransactions ───────────────────────────────────────────────────────────
@@ -19,7 +21,7 @@ export async function getTransactions(
   let query = supabase
     .from('transactions')
     .select(TRANSACTION_SELECT)
-    .eq('account_id', accountId)
+    .or(`account_id.eq.${accountId},transfer_destination_account_id.eq.${accountId}`)
     .order('date', { ascending: false })
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)

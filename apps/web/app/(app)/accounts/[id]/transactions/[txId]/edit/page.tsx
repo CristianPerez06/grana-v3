@@ -20,7 +20,10 @@ const EditTransactionPage = async ({ params }: Props) => {
     getTransactionDetail(txId),
     getAllCategories(user.id),
   ])
-  if (!transaction || transaction.account_id !== id) notFound()
+  const isOwner = transaction?.account_id === id
+  const isDestination =
+    transaction?.type === 'transfer' && transaction?.transfer_destination_account_id === id
+  if (!transaction || (!isOwner && !isDestination)) notFound()
 
   return (
     <div className="flex flex-col gap-6 max-w-lg">
@@ -37,7 +40,7 @@ const EditTransactionPage = async ({ params }: Props) => {
 
       <EditTransactionForm
         transaction={transaction}
-        accountId={id}
+        accountId={transaction.account_id}
         categories={categories}
       />
     </div>

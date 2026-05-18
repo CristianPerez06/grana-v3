@@ -6,10 +6,18 @@ import {
   createIncomeSchema,
   createExpenseSchema,
   updateTransactionSchema,
+  createTransferSchema,
+  createAdjustmentSchema,
+  updateTransferSchema,
+  updateAdjustmentSchema,
   validateActionInput,
   type CreateIncomeInput,
   type CreateExpenseInput,
   type UpdateTransactionInput,
+  type CreateTransferInput,
+  type CreateAdjustmentInput,
+  type UpdateTransferInput,
+  type UpdateAdjustmentInput,
 } from '@grana/validation'
 import type { ActionResult } from './types'
 
@@ -139,7 +147,6 @@ export async function updateTransaction(
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
 
-  // Verify ownership (RLS will also enforce this, but explicit check gives better errors)
   const { data: existing } = await supabase
     .from('transactions')
     .select('id')
@@ -172,6 +179,234 @@ export async function updateTransaction(
 // ── deleteTransaction ─────────────────────────────────────────────────────────
 
 export async function deleteTransaction(
+  id: string,
+  accountId: string,
+): Promise<ActionResult<never>> {
+  const userId = await getAuthenticatedUserId()
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('transactions')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId)
+
+  if (error) return { ok: false, formError: error.message }
+
+  revalidatePath('/accounts')
+  revalidatePath(`/accounts/${accountId}`)
+  return { ok: true }
+}
+
+// ── createTransfer ────────────────────────────────────────────────────────────
+
+export async function createTransfer(
+  input: unknown,
+): Promise<ActionResult<CreateTransferInput> & { id?: string }> {
+  const validation = await validateActionInput(createTransferSchema, input)
+  if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
+
+  const userId = await getAuthenticatedUserId()
+  const supabase = await createClient()
+
+  const [sourceActive, destActive] = await Promise.all([
+    verifyActiveCurrency(supabase, validation.data.account_id, validation.data.currency_code),
+    verifyActiveCurrency(
+      supabase,
+      validation.data.transfer_destination_account_id,
+      validation.data.currency_code,
+    ),
+  ])
+
+  if (!sourceActive) {
+    return { ok: false, formError: 'La moneda seleccionada no está activa en la cuenta origen.' }
+  }
+  if (!destActive) {
+    return {
+      ok: false,
+      formError: 'La moneda seleccionada no está activa en la cuenta destino.',
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .insert({
+      user_id: userId,
+      account_id: validation.data.account_id,
+      transfer_destination_account_id: validation.data.transfer_destination_account_id,
+      type: 'transfer',
+      amount: validation.data.amount,
+      currency_code: validation.data.currency_code,
+      date: validation.data.date,
+      description: validation.data.description ?? null,
+    })
+    .select('id')
+    .single()
+
+  if (error || !data) {
+    return { ok: false, formError: error?.message ?? 'No se pudo registrar la transferencia.' }
+  }
+
+  revalidatePath('/accounts')
+  revalidatePath(`/accounts/${validation.data.account_id}`)
+  revalidatePath(`/accounts/${validation.data.transfer_destination_account_id}`)
+  return { ok: true, id: data.id }
+}
+
+// ── createAdjustment ──────────────────────────────────────────────────────────
+
+export async function createAdjustment(
+  input: unknown,
+): Promise<ActionResult<CreateAdjustmentInput> & { id?: string }> {
+  const validation = await validateActionInput(createAdjustmentSchema, input)
+  if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
+
+  const userId = await getAuthenticatedUserId()
+  const supabase = await createClient()
+
+  const currencyActive = await verifyActiveCurrency(
+    supabase,
+    validation.data.account_id,
+    validation.data.currency_code,
+  )
+  if (!currencyActive) {
+    return { ok: false, formError: 'La moneda seleccionada no está activa en esta cuenta.' }
+  }
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .insert({
+      user_id: userId,
+      account_id: validation.data.account_id,
+      type: 'adjustment',
+      amount: validation.data.amount,
+      currency_code: validation.data.currency_code,
+      date: validation.data.date,
+      description: validation.data.description ?? null,
+    })
+    .select('id')
+    .single()
+
+  if (error || !data) {
+    return { ok: false, formError: error?.message ?? 'No se pudo registrar el ajuste.' }
+  }
+
+  revalidatePath('/accounts')
+  revalidatePath(`/accounts/${validation.data.account_id}`)
+  return { ok: true, id: data.id }
+}
+
+// ── updateTransfer ────────────────────────────────────────────────────────────
+
+export async function updateTransfer(
+  id: string,
+  accountId: string,
+  destinationAccountId: string,
+  input: unknown,
+): Promise<ActionResult<UpdateTransferInput>> {
+  const validation = await validateActionInput(updateTransferSchema, input)
+  if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
+
+  const userId = await getAuthenticatedUserId()
+  const supabase = await createClient()
+
+  const { data: existing } = await supabase
+    .from('transactions')
+    .select('id, type')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .eq('type', 'transfer')
+    .single()
+
+  if (!existing) return { ok: false, formError: 'Transferencia no encontrada.' }
+
+  const { error } = await supabase
+    .from('transactions')
+    .update({
+      ...(validation.data.amount !== undefined && { amount: validation.data.amount }),
+      ...(validation.data.date !== undefined && { date: validation.data.date }),
+      ...('description' in validation.data && { description: validation.data.description ?? null }),
+    })
+    .eq('id', id)
+    .eq('user_id', userId)
+
+  if (error) return { ok: false, formError: error.message }
+
+  revalidatePath('/accounts')
+  revalidatePath(`/accounts/${accountId}`)
+  revalidatePath(`/accounts/${destinationAccountId}`)
+  revalidatePath(`/accounts/${accountId}/transactions/${id}`)
+  return { ok: true }
+}
+
+// ── updateAdjustment ──────────────────────────────────────────────────────────
+
+export async function updateAdjustment(
+  id: string,
+  accountId: string,
+  input: unknown,
+): Promise<ActionResult<UpdateAdjustmentInput>> {
+  const validation = await validateActionInput(updateAdjustmentSchema, input)
+  if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
+
+  const userId = await getAuthenticatedUserId()
+  const supabase = await createClient()
+
+  const { data: existing } = await supabase
+    .from('transactions')
+    .select('id, type')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .eq('type', 'adjustment')
+    .single()
+
+  if (!existing) return { ok: false, formError: 'Ajuste no encontrado.' }
+
+  const { error } = await supabase
+    .from('transactions')
+    .update({
+      ...(validation.data.amount !== undefined && { amount: validation.data.amount }),
+      ...(validation.data.date !== undefined && { date: validation.data.date }),
+      ...('description' in validation.data && { description: validation.data.description ?? null }),
+    })
+    .eq('id', id)
+    .eq('user_id', userId)
+
+  if (error) return { ok: false, formError: error.message }
+
+  revalidatePath('/accounts')
+  revalidatePath(`/accounts/${accountId}`)
+  revalidatePath(`/accounts/${accountId}/transactions/${id}`)
+  return { ok: true }
+}
+
+// ── deleteTransfer ────────────────────────────────────────────────────────────
+
+export async function deleteTransfer(
+  id: string,
+  accountId: string,
+  destinationAccountId: string,
+): Promise<ActionResult<never>> {
+  const userId = await getAuthenticatedUserId()
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('transactions')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId)
+
+  if (error) return { ok: false, formError: error.message }
+
+  revalidatePath('/accounts')
+  revalidatePath(`/accounts/${accountId}`)
+  revalidatePath(`/accounts/${destinationAccountId}`)
+  return { ok: true }
+}
+
+// ── deleteAdjustment ──────────────────────────────────────────────────────────
+
+export async function deleteAdjustment(
   id: string,
   accountId: string,
 ): Promise<ActionResult<never>> {

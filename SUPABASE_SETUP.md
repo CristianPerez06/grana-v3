@@ -404,7 +404,42 @@ Verificá que `packages/supabase/src/types.ts` incluye ahora la tabla `transacti
 
 ---
 
-## 12. Checklist de producción
+## 12. Migración 0009 — transferencias y ajustes (add-transactions-transfer-and-adjustment)
+
+### 12.1 Aplicar la migración
+
+La migración vive en `supabase/migrations/0009_transactions_transfer_adjustment.sql`. Para aplicarla:
+
+1. Abrí el **SQL Editor** en el dashboard de Supabase de este proyecto.
+2. Pegá el contenido completo de `supabase/migrations/0009_transactions_transfer_adjustment.sql`.
+3. Ejecutá. Al final deberías ver una fila de resumen con todos los flags en `true`:
+   - `enum_transfer_ok`: `true`
+   - `enum_adjustment_ok`: `true`
+   - `column_dest_ok`: `true`
+   - `chk_non_adj_ok`: `true`
+   - `chk_nonzero_ok`: `true`
+   - `chk_has_dest_ok`: `true`
+   - `chk_diff_accts_ok`: `true`
+   - `chk_no_dest_ok`: `true`
+   - `idx_dest_ok`: `true`
+
+Si algún flag es `false` o el bloque `DO $$ ... $$` de self-check lanzó una excepción, revisá la consola de errores del SQL Editor.
+
+### 12.2 Regenerar tipos TypeScript
+
+Después de aplicar la migración, regenerá los tipos:
+
+```bash
+./node_modules/.bin/supabase gen types typescript --project-id exhpnnaigjfcxcvmptxa > packages/supabase/src/types.ts
+```
+
+Verificá que `packages/supabase/src/types.ts` incluye ahora:
+- La columna `transfer_destination_account_id` en `transactions`.
+- El enum `transaction_type` con los valores `'income' | 'expense' | 'transfer' | 'adjustment'`.
+
+---
+
+## 13. Checklist de producción
 
 - [ ] Agregar `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` al host (Vercel u otro).
 - [ ] Agregar la callback URL de producción en **Authentication → URL Configuration → Redirect URLs**.
@@ -415,7 +450,7 @@ Verificá que `packages/supabase/src/types.ts` incluye ahora la tabla `transacti
 
 ---
 
-## 13. Resumen de archivos
+## 14. Resumen de archivos
 
 ```
 grana-v3/

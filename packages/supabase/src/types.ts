@@ -282,6 +282,7 @@ export type Database = {
           id: string
           is_verified: boolean
           subcategory_id: string | null
+          transfer_destination_account_id: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           user_id: string
         }
@@ -296,6 +297,7 @@ export type Database = {
           id?: string
           is_verified?: boolean
           subcategory_id?: string | null
+          transfer_destination_account_id?: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           user_id: string
         }
@@ -310,6 +312,7 @@ export type Database = {
           id?: string
           is_verified?: boolean
           subcategory_id?: string | null
+          transfer_destination_account_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]
           user_id?: string
         }
@@ -342,6 +345,13 @@ export type Database = {
             referencedRelation: "subcategories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "transactions_transfer_destination_account_id_fkey"
+            columns: ["transfer_destination_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -353,7 +363,7 @@ export type Database = {
     }
     Enums: {
       account_type: "cash" | "bank"
-      transaction_type: "income" | "expense"
+      transaction_type: "income" | "expense" | "transfer" | "adjustment"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -482,7 +492,7 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["cash", "bank"],
-      transaction_type: ["income", "expense"],
+      transaction_type: ["income", "expense", "transfer", "adjustment"],
     },
   },
 } as const

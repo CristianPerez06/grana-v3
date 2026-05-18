@@ -242,14 +242,24 @@ export async function deactivateCurrencyFromAccount(
   if (!target) return { ok: false, formError: 'Moneda no encontrada en la cuenta.' }
 
   // Check combined balance: initial_balance + net transaction sums
+  // Include incoming transfers where this account is the destination
   const { data: txSumRow } = await supabase
     .from('transactions')
-    .select('amount, type')
-    .eq('account_id', accountId)
+    .select('account_id, transfer_destination_account_id, amount, type')
+    .or(
+      `account_id.eq.${accountId},transfer_destination_account_id.eq.${accountId}`,
+    )
     .eq('currency_code', currencyCode)
 
   const txNet = (txSumRow ?? []).reduce((acc, row) => {
-    return acc + (row.type === 'income' ? Number(row.amount) : -Number(row.amount))
+    if (row.type === 'income') return acc + Number(row.amount)
+    if (row.type === 'expense') return acc - Number(row.amount)
+    if (row.type === 'transfer') {
+      if (row.account_id === accountId) return acc - Number(row.amount)
+      if (row.transfer_destination_account_id === accountId) return acc + Number(row.amount)
+    }
+    if (row.type === 'adjustment') return acc + Number(row.amount)
+    return acc
   }, 0)
 
   const totalBalance = Number(target.initial_balance) + txNet

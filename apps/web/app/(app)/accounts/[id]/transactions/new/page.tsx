@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { getAccountDetail } from '@/lib/accounts/queries'
+import { getAccountDetail, getAccounts } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
 import { TransactionForm } from './_components/transaction-form'
 
@@ -16,11 +16,21 @@ const NewTransactionPage = async ({ params }: Props) => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const account = await getAccountDetail(id)
+  const [account, categories, accountGroups] = await Promise.all([
+    getAccountDetail(id),
+    getAllCategories(user.id),
+    getAccounts(),
+  ])
+
   if (!account) notFound()
 
   const activeCurrencies = account.currencies.filter((c) => c.is_active)
-  const categories = await getAllCategories(user.id)
+
+  // All active accounts except the current one, for transfer destination
+  const otherAccounts = [
+    ...accountGroups.cash,
+    ...accountGroups.bank,
+  ].filter((a) => a.id !== id && a.is_active)
 
   return (
     <div className="flex flex-col gap-6 max-w-lg">
@@ -39,6 +49,13 @@ const NewTransactionPage = async ({ params }: Props) => {
         accountId={id}
         activeCurrencies={activeCurrencies.map((c) => c.currency_code as 'ARS' | 'USD')}
         categories={categories}
+        otherAccounts={otherAccounts.map((a) => ({
+          id: a.id,
+          name: a.name,
+          currencies: a.currencies
+            .filter((c) => c.is_active)
+            .map((c) => c.currency_code as 'ARS' | 'USD'),
+        }))}
       />
     </div>
   )

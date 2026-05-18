@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 
 // Returns a map of accountId → { ARS: net, USD: net }
-// net = SUM(income amounts) - SUM(expense amounts) per (account, currency).
+// net = Σ income − Σ expense − Σ transfer_out + Σ transfer_in + Σ adjustment(signed)
 export async function getTransactionSums(
   accountIds: string[],
 ): Promise<Map<string, Record<'ARS' | 'USD', number>>> {
@@ -13,24 +13,44 @@ export async function getTransactionSums(
 
   const { data, error } = await supabase
     .from('transactions')
-    .select('account_id, currency_code, amount, type')
-    .in('account_id', accountIds)
+    .select('account_id, transfer_destination_account_id, currency_code, amount, type')
+    .or(
+      `account_id.in.(${accountIds.join(',')}),transfer_destination_account_id.in.(${accountIds.join(',')})`,
+    )
 
   if (error) throw error
 
-  for (const row of data ?? []) {
-    const accountId = row.account_id
-    const currency = row.currency_code as 'ARS' | 'USD'
+  const ensure = (id: string) => {
+    if (!result.has(id)) result.set(id, { ARS: 0, USD: 0 })
+    return result.get(id)!
+  }
 
+  for (const row of data ?? []) {
+    const currency = row.currency_code as 'ARS' | 'USD'
     if (currency !== 'ARS' && currency !== 'USD') continue
 
-    if (!result.has(accountId)) {
-      result.set(accountId, { ARS: 0, USD: 0 })
-    }
+    const amount = Number(row.amount)
 
-    const sums = result.get(accountId)!
-    const delta = row.type === 'income' ? Number(row.amount) : -Number(row.amount)
-    sums[currency] += delta
+    if (row.type === 'income') {
+      ensure(row.account_id)[currency] += amount
+    } else if (row.type === 'expense') {
+      ensure(row.account_id)[currency] -= amount
+    } else if (row.type === 'transfer') {
+      // Outgoing leg: subtract from source
+      if (accountIds.includes(row.account_id)) {
+        ensure(row.account_id)[currency] -= amount
+      }
+      // Incoming leg: add to destination
+      if (
+        row.transfer_destination_account_id &&
+        accountIds.includes(row.transfer_destination_account_id)
+      ) {
+        ensure(row.transfer_destination_account_id)[currency] += amount
+      }
+    } else if (row.type === 'adjustment') {
+      // amount is already signed (positive adds, negative subtracts)
+      ensure(row.account_id)[currency] += amount
+    }
   }
 
   return result

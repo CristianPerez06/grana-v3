@@ -170,7 +170,9 @@
     "new_expense": "New expense",
     "tabs": {
       "income": "Income",
-      "expense": "Expense"
+      "expense": "Expense",
+      "transfer": "Transfer",
+      "adjustment": "Adjustment"
     },
     "labels": {
       "amount": "Amount",
@@ -180,24 +182,37 @@
       "description": "Description",
       "type": "Type",
       "currency": "Currency",
-      "account": "Account"
+      "account": "Account",
+      "destination_account": "Destination account",
+      "direction": "Direction"
     },
     "types": {
       "income": "Income",
-      "expense": "Expense"
+      "expense": "Expense",
+      "transfer": "Transfer",
+      "adjustment": "Adjustment"
+    },
+    "directions": {
+      "increase": "Add",
+      "decrease": "Subtract"
     },
     "placeholders": {
       "amount": "0.00",
       "description": "Optional description",
       "category": "Select a category",
-      "subcategory": "Select a subcategory (optional)"
+      "subcategory": "Select a subcategory (optional)",
+      "destination_account": "Select destination account"
     },
     "errors": {
       "amount_required": "Amount is required.",
       "amount_positive": "Amount must be greater than zero.",
+      "amount_nonzero": "Amount cannot be zero.",
       "date_required": "Date is required.",
       "category_required": "Category is required for expenses.",
       "currency_inactive": "The selected currency is not active on this account.",
+      "currency_inactive_destination": "The selected currency is not active on the destination account.",
+      "destination_required": "Destination account is required.",
+      "destination_same_as_source": "Destination account cannot be the same as the source account.",
       "generic": "Something went wrong. Please try again."
     },
     "empty": {
@@ -212,12 +227,15 @@
     },
     "confirmations": {
       "delete_title": "Delete this transaction?",
-      "delete_body": "This action cannot be undone."
+      "delete_body": "This action cannot be undone.",
+      "delete_transfer_body": "The transfer will be deleted and balances of both accounts will be updated.",
+      "delete_adjustment_body": "The adjustment will be deleted and the account balance will be updated."
     },
     "readonly": {
       "type": "Type cannot be changed.",
       "account": "Account cannot be changed.",
-      "currency": "Currency cannot be changed."
+      "currency": "Currency cannot be changed.",
+      "destination_account": "Destination account cannot be changed."
     }
   },
   "subcategories": {

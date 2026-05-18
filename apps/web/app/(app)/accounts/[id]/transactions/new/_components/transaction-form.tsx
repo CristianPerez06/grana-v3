@@ -1,9 +1,14 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { getTodayAR } from '@/lib/date'
-import { createIncome, createExpense } from '@/app/_actions/transactions'
+import {
+  createIncome,
+  createExpense,
+  createTransfer,
+  createAdjustment,
+} from '@/app/_actions/transactions'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 
 const todayStr = () => {
@@ -14,50 +19,138 @@ const todayStr = () => {
   return `${y}-${m}-${day}`
 }
 
-type Tab = 'income' | 'expense'
+type Tab = 'income' | 'expense' | 'transfer' | 'adjustment'
+
+type OtherAccount = {
+  id: string
+  name: string
+  currencies: ('ARS' | 'USD')[]
+}
 
 type Props = {
   accountId: string
   activeCurrencies: ('ARS' | 'USD')[]
   categories: CategoryWithSubcategories[]
+  otherAccounts: OtherAccount[]
 }
 
-export const TransactionForm = ({ accountId, activeCurrencies, categories }: Props) => {
+const CURRENCY_SYMBOL: Record<'ARS' | 'USD', string> = { ARS: '$', USD: 'U$D' }
+
+const TAB_LABELS: Record<Tab, string> = {
+  income: 'Ingreso',
+  expense: 'Gasto',
+  transfer: 'Transferencia',
+  adjustment: 'Ajuste',
+}
+
+export const TransactionForm = ({
+  accountId,
+  activeCurrencies,
+  categories,
+  otherAccounts,
+}: Props) => {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [tab, setTab] = useState<Tab>('income')
   const [formError, setFormError] = useState<string | null>(null)
 
+  // Shared fields
   const [currencyCode, setCurrencyCode] = useState<'ARS' | 'USD'>(activeCurrencies[0] ?? 'ARS')
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(todayStr())
-  const [categoryId, setCategoryId] = useState('')
-  const [subcategoryId, setSubcategoryId] = useState('')
   const [description, setDescription] = useState('')
 
-  const expenseCategories = categories.filter(
-    (c) => c.type === 'expense' || c.type === 'both',
+  // Income/Expense fields
+  const [categoryId, setCategoryId] = useState('')
+  const [subcategoryId, setSubcategoryId] = useState('')
+
+  // Transfer fields
+  const [destinationAccountId, setDestinationAccountId] = useState('')
+  const [transferCurrencyCode, setTransferCurrencyCode] = useState<'ARS' | 'USD'>(
+    activeCurrencies[0] ?? 'ARS',
   )
+
+  // Adjustment fields
+  const [adjustmentDirection, setAdjustmentDirection] = useState<'increase' | 'decrease'>(
+    'increase',
+  )
+
+  const expenseCategories = categories.filter((c) => c.type === 'expense' || c.type === 'both')
+  const incomeCategories = categories.filter((c) => c.type === 'income' || c.type === 'both')
   const selectedCategory = expenseCategories.find((c) => c.id === categoryId)
+
+  // Currencies shared between this account and the selected destination
+  const sharedCurrencies = useMemo<('ARS' | 'USD')[]>(() => {
+    if (!destinationAccountId) return []
+    const dest = otherAccounts.find((a) => a.id === destinationAccountId)
+    if (!dest) return []
+    return activeCurrencies.filter((c) => dest.currencies.includes(c))
+  }, [destinationAccountId, activeCurrencies, otherAccounts])
+
+  // Auto-select transfer currency when destination changes
+  const handleDestinationChange = (newDestId: string) => {
+    setDestinationAccountId(newDestId)
+    const dest = otherAccounts.find((a) => a.id === newDestId)
+    if (!dest) return
+    const shared = activeCurrencies.filter((c) => dest.currencies.includes(c))
+    if (shared.length > 0) setTransferCurrencyCode(shared[0])
+  }
+
+  const handleTabChange = (t: Tab) => {
+    setTab(t)
+    setCategoryId('')
+    setSubcategoryId('')
+    setFormError(null)
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setFormError(null)
 
-    const payload = {
-      account_id: accountId,
-      currency_code: currencyCode,
-      amount: parseFloat(amount),
-      date,
-      category_id: categoryId || undefined,
-      subcategory_id: subcategoryId || undefined,
-      description: description || undefined,
-    }
-
     startTransition(async () => {
-      const result = tab === 'income'
-        ? await createIncome(payload)
-        : await createExpense(payload)
+      let result
+
+      if (tab === 'income') {
+        result = await createIncome({
+          account_id: accountId,
+          currency_code: currencyCode,
+          amount: parseFloat(amount),
+          date,
+          category_id: categoryId || undefined,
+          subcategory_id: subcategoryId || undefined,
+          description: description || undefined,
+        })
+      } else if (tab === 'expense') {
+        result = await createExpense({
+          account_id: accountId,
+          currency_code: currencyCode,
+          amount: parseFloat(amount),
+          date,
+          category_id: categoryId || undefined,
+          subcategory_id: subcategoryId || undefined,
+          description: description || undefined,
+        })
+      } else if (tab === 'transfer') {
+        result = await createTransfer({
+          account_id: accountId,
+          transfer_destination_account_id: destinationAccountId,
+          currency_code: transferCurrencyCode,
+          amount: parseFloat(amount),
+          date,
+          description: description || undefined,
+        })
+      } else {
+        // adjustment
+        const signedAmount =
+          adjustmentDirection === 'decrease' ? -Math.abs(parseFloat(amount)) : Math.abs(parseFloat(amount))
+        result = await createAdjustment({
+          account_id: accountId,
+          currency_code: currencyCode,
+          amount: signedAmount,
+          date,
+          description: description || undefined,
+        })
+      }
 
       if (!result.ok) {
         setFormError(result.formError ?? 'Error al guardar el movimiento.')
@@ -68,28 +161,90 @@ export const TransactionForm = ({ accountId, activeCurrencies, categories }: Pro
     })
   }
 
+  const showCurrencySelector = activeCurrencies.length > 1
+  const transferCurrencyOptions = sharedCurrencies.length > 0 ? sharedCurrencies : activeCurrencies
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       {/* Tabs */}
-      <div className="flex rounded-md border border-border p-0.5 w-fit">
-        {(['income', 'expense'] as Tab[]).map((t) => (
+      <div className="flex rounded-md border border-border p-0.5 w-fit flex-wrap gap-y-1">
+        {(['income', 'expense', 'transfer', 'adjustment'] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
-            onClick={() => { setTab(t); setCategoryId(''); setSubcategoryId('') }}
+            onClick={() => handleTabChange(t)}
             className={`px-4 py-1.5 text-sm font-medium rounded transition-colors ${
               tab === t
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            {t === 'income' ? 'Ingreso' : 'Gasto'}
+            {TAB_LABELS[t]}
           </button>
         ))}
       </div>
 
-      {/* Currency selector (only when multiple active) */}
-      {activeCurrencies.length > 1 && (
+      {/* ── Transfer: destination account ──────────────────────────────────────── */}
+      {tab === 'transfer' && (
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="destination" className="text-sm font-medium">
+            Cuenta destino <span className="text-destructive">*</span>
+          </label>
+          {otherAccounts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No hay otras cuentas activas para transferir.
+            </p>
+          ) : (
+            <select
+              id="destination"
+              required
+              value={destinationAccountId}
+              onChange={(e) => handleDestinationChange(e.target.value)}
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="">Seleccioná la cuenta destino</option>
+              {otherAccounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
+      {/* ── Currency selector ──────────────────────────────────────────────────── */}
+      {tab === 'transfer' && destinationAccountId && (
+        <>
+          {transferCurrencyOptions.length === 0 ? (
+            <p className="text-sm text-destructive">
+              No hay monedas en común entre las dos cuentas.
+            </p>
+          ) : transferCurrencyOptions.length > 1 ? (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Moneda</label>
+              <div className="flex gap-2">
+                {transferCurrencyOptions.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setTransferCurrencyCode(c)}
+                    className={`px-3 py-1.5 text-sm rounded border transition-colors ${
+                      transferCurrencyCode === c
+                        ? 'border-primary bg-primary/10 text-primary font-medium'
+                        : 'border-border text-muted-foreground hover:border-foreground'
+                    }`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </>
+      )}
+
+      {tab !== 'transfer' && showCurrencySelector && (
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">Moneda</label>
           <div className="flex gap-2">
@@ -111,12 +266,34 @@ export const TransactionForm = ({ accountId, activeCurrencies, categories }: Pro
         </div>
       )}
 
-      {/* Amount */}
+      {/* ── Adjustment: direction ─────────────────────────────────────────────── */}
+      {tab === 'adjustment' && (
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">Dirección</label>
+          <div className="flex gap-3">
+            {(['increase', 'decrease'] as const).map((dir) => (
+              <label key={dir} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="direction"
+                  value={dir}
+                  checked={adjustmentDirection === dir}
+                  onChange={() => setAdjustmentDirection(dir)}
+                  className="accent-primary"
+                />
+                <span className="text-sm">{dir === 'increase' ? 'Suma' : 'Resta'}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Amount ───────────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="amount" className="text-sm font-medium">Monto</label>
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-            {currencyCode === 'ARS' ? '$' : 'U$D'}
+            {CURRENCY_SYMBOL[tab === 'transfer' ? transferCurrencyCode : currencyCode]}
           </span>
           <input
             id="amount"
@@ -132,7 +309,7 @@ export const TransactionForm = ({ accountId, activeCurrencies, categories }: Pro
         </div>
       </div>
 
-      {/* Date */}
+      {/* ── Date ─────────────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="date" className="text-sm font-medium">Fecha</label>
         <input
@@ -145,7 +322,7 @@ export const TransactionForm = ({ accountId, activeCurrencies, categories }: Pro
         />
       </div>
 
-      {/* Category (expense only, required) */}
+      {/* ── Category (expense only, required) ────────────────────────────────── */}
       {tab === 'expense' && (
         <div className="flex flex-col gap-1.5">
           <label htmlFor="category" className="text-sm font-medium">
@@ -166,7 +343,7 @@ export const TransactionForm = ({ accountId, activeCurrencies, categories }: Pro
         </div>
       )}
 
-      {/* Category (income, optional) */}
+      {/* ── Category (income, optional) ──────────────────────────────────────── */}
       {tab === 'income' && (
         <div className="flex flex-col gap-1.5">
           <label htmlFor="category" className="text-sm font-medium">
@@ -179,16 +356,14 @@ export const TransactionForm = ({ accountId, activeCurrencies, categories }: Pro
             className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="">Sin categoría</option>
-            {categories
-              .filter((c) => c.type === 'income' || c.type === 'both')
-              .map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
+            {incomeCategories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
           </select>
         </div>
       )}
 
-      {/* Subcategory (optional, shown when category has subcategories) */}
+      {/* ── Subcategory ──────────────────────────────────────────────────────── */}
       {selectedCategory && selectedCategory.subcategories.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <label htmlFor="subcategory" className="text-sm font-medium">
@@ -208,7 +383,7 @@ export const TransactionForm = ({ accountId, activeCurrencies, categories }: Pro
         </div>
       )}
 
-      {/* Description */}
+      {/* ── Description ──────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="description" className="text-sm font-medium">
           Descripción <span className="text-muted-foreground text-xs">(opcional)</span>

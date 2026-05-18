@@ -1,4 +1,4 @@
-export type TransactionType = 'income' | 'expense'
+export type TransactionType = 'income' | 'expense' | 'transfer' | 'adjustment'
 
 export type Transaction = {
   id: string
@@ -6,6 +6,7 @@ export type Transaction = {
   account_id: string
   category_id: string | null
   subcategory_id: string | null
+  transfer_destination_account_id: string | null
   type: TransactionType
   amount: number
   currency_code: 'ARS' | 'USD'
@@ -30,9 +31,16 @@ export type TransactionSubcategory = {
   category_id: string
 }
 
+export type TransactionAccount = {
+  id: string
+  name: string
+}
+
 export type TransactionWithDetails = Transaction & {
   category: TransactionCategory | null
   subcategory: TransactionSubcategory | null
+  destination_account: TransactionAccount | null
+  source_account: TransactionAccount | null
 }
 
 export type CreateIncomeInput = {
@@ -61,4 +69,33 @@ export type UpdateTransactionInput = {
   description?: string | null
   category_id?: string | null
   subcategory_id?: string | null
+}
+
+export type CreateTransferInput = {
+  account_id: string
+  transfer_destination_account_id: string
+  currency_code: 'ARS' | 'USD'
+  amount: number
+  date: string
+  description?: string
+}
+
+export type CreateAdjustmentInput = {
+  account_id: string
+  currency_code: 'ARS' | 'USD'
+  amount: number
+  date: string
+  description?: string
+}
+
+export type UpdateTransferInput = {
+  amount?: number
+  date?: string
+  description?: string | null
+}
+
+export type UpdateAdjustmentInput = {
+  amount?: number
+  date?: string
+  description?: string | null
 }

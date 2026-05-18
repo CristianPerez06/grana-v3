@@ -170,7 +170,9 @@
     "new_expense": "Nuevo gasto",
     "tabs": {
       "income": "Ingreso",
-      "expense": "Gasto"
+      "expense": "Gasto",
+      "transfer": "Transferencia",
+      "adjustment": "Ajuste"
     },
     "labels": {
       "amount": "Monto",
@@ -180,24 +182,37 @@
       "description": "Descripción",
       "type": "Tipo",
       "currency": "Moneda",
-      "account": "Cuenta"
+      "account": "Cuenta",
+      "destination_account": "Cuenta destino",
+      "direction": "Dirección"
     },
     "types": {
       "income": "Ingreso",
-      "expense": "Gasto"
+      "expense": "Gasto",
+      "transfer": "Transferencia",
+      "adjustment": "Ajuste"
+    },
+    "directions": {
+      "increase": "Suma",
+      "decrease": "Resta"
     },
     "placeholders": {
       "amount": "0,00",
       "description": "Descripción opcional",
       "category": "Seleccioná una categoría",
-      "subcategory": "Seleccioná una subcategoría (opcional)"
+      "subcategory": "Seleccioná una subcategoría (opcional)",
+      "destination_account": "Seleccioná la cuenta destino"
     },
     "errors": {
       "amount_required": "El monto es obligatorio.",
       "amount_positive": "El monto debe ser mayor a cero.",
+      "amount_nonzero": "El monto no puede ser cero.",
       "date_required": "La fecha es obligatoria.",
       "category_required": "La categoría es obligatoria para los gastos.",
       "currency_inactive": "La moneda seleccionada no está activa en esta cuenta.",
+      "currency_inactive_destination": "La moneda seleccionada no está activa en la cuenta destino.",
+      "destination_required": "La cuenta destino es obligatoria.",
+      "destination_same_as_source": "La cuenta destino no puede ser igual a la cuenta origen.",
       "generic": "Algo salió mal. Intentá de nuevo."
     },
     "empty": {
@@ -212,12 +227,15 @@
     },
     "confirmations": {
       "delete_title": "¿Eliminar este movimiento?",
-      "delete_body": "Esta acción no se puede deshacer."
+      "delete_body": "Esta acción no se puede deshacer.",
+      "delete_transfer_body": "Se eliminará la transferencia y los saldos de ambas cuentas se actualizarán.",
+      "delete_adjustment_body": "Se eliminará el ajuste y el saldo de la cuenta se actualizará."
     },
     "readonly": {
       "type": "El tipo no se puede cambiar.",
       "account": "La cuenta no se puede cambiar.",
-      "currency": "La moneda no se puede cambiar."
+      "currency": "La moneda no se puede cambiar.",
+      "destination_account": "La cuenta destino no se puede cambiar."
     }
   },
   "subcategories": {

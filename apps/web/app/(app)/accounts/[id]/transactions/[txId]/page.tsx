@@ -16,7 +16,10 @@ const TransactionDetailPage = async ({ params }: Props) => {
   if (!user) redirect('/login')
 
   const transaction = await getTransactionDetail(txId)
-  if (!transaction || transaction.account_id !== id) notFound()
+  const isOwner = transaction?.account_id === id
+  const isDestination =
+    transaction?.type === 'transfer' && transaction?.transfer_destination_account_id === id
+  if (!transaction || (!isOwner && !isDestination)) notFound()
 
   return (
     <div className="flex flex-col gap-8 max-w-lg">

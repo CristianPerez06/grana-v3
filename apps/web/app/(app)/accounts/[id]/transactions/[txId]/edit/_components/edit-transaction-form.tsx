@@ -4,7 +4,14 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { TransactionWithDetails } from '@/lib/transactions/types'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
-import { updateTransaction } from '@/app/_actions/transactions'
+import { updateTransaction, updateTransfer, updateAdjustment } from '@/app/_actions/transactions'
+
+const TYPE_LABELS = {
+  income: 'Ingreso',
+  expense: 'Gasto',
+  transfer: 'Transferencia',
+  adjustment: 'Ajuste',
+}
 
 type Props = {
   transaction: TransactionWithDetails
@@ -17,15 +24,29 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
   const [isPending, startTransition] = useTransition()
   const [formError, setFormError] = useState<string | null>(null)
 
-  const [amount, setAmount] = useState(String(transaction.amount))
+  const { type } = transaction
+
+  // For income/expense, amount is always positive in DB
+  // For adjustment, amount is signed — we show absolute value + direction radio
+  const absAmount = Math.abs(transaction.amount)
+  const initialDirection: 'increase' | 'decrease' =
+    type === 'adjustment' && transaction.amount < 0 ? 'decrease' : 'increase'
+
+  const [amount, setAmount] = useState(String(absAmount))
   const [date, setDate] = useState(transaction.date)
   const [categoryId, setCategoryId] = useState(transaction.category_id ?? '')
   const [subcategoryId, setSubcategoryId] = useState(transaction.subcategory_id ?? '')
   const [description, setDescription] = useState(transaction.description ?? '')
+  const [adjustmentDirection, setAdjustmentDirection] = useState<'increase' | 'decrease'>(
+    initialDirection,
+  )
 
-  const isExpense = transaction.type === 'expense'
+  const isExpense = type === 'expense'
   const filteredCategories = categories.filter(
-    (c) => isExpense ? c.type === 'expense' || c.type === 'both' : c.type === 'income' || c.type === 'both',
+    (c) =>
+      isExpense
+        ? c.type === 'expense' || c.type === 'both'
+        : c.type === 'income' || c.type === 'both',
   )
   const selectedCategory = filteredCategories.find((c) => c.id === categoryId)
 
@@ -34,13 +55,38 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
     setFormError(null)
 
     startTransition(async () => {
-      const result = await updateTransaction(transaction.id, accountId, {
-        amount: parseFloat(amount),
-        date,
-        category_id: categoryId || null,
-        subcategory_id: subcategoryId || null,
-        description: description || null,
-      })
+      let result
+
+      if (type === 'transfer') {
+        result = await updateTransfer(
+          transaction.id,
+          accountId,
+          transaction.transfer_destination_account_id ?? '',
+          {
+            amount: parseFloat(amount),
+            date,
+            description: description || null,
+          },
+        )
+      } else if (type === 'adjustment') {
+        const signedAmount =
+          adjustmentDirection === 'decrease'
+            ? -Math.abs(parseFloat(amount))
+            : Math.abs(parseFloat(amount))
+        result = await updateAdjustment(transaction.id, accountId, {
+          amount: signedAmount,
+          date,
+          description: description || null,
+        })
+      } else {
+        result = await updateTransaction(transaction.id, accountId, {
+          amount: parseFloat(amount),
+          date,
+          category_id: categoryId || null,
+          subcategory_id: subcategoryId || null,
+          description: description || null,
+        })
+      }
 
       if (!result.ok) {
         setFormError(result.formError ?? 'Error al guardar.')
@@ -58,7 +104,7 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
         <div className="flex justify-between">
           <span className="text-muted-foreground">Tipo</span>
           <span>
-            {transaction.type === 'income' ? 'Ingreso' : 'Gasto'}
+            {TYPE_LABELS[type]}
             <span className="ml-2 text-xs text-muted-foreground">— no editable</span>
           </span>
         </div>
@@ -69,7 +115,47 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
             <span className="ml-2 text-xs text-muted-foreground">— no editable</span>
           </span>
         </div>
+        {type === 'transfer' && (
+          <>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Cuenta origen</span>
+              <span>
+                {transaction.source_account?.name ?? accountId}
+                <span className="ml-2 text-xs text-muted-foreground">— no editable</span>
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Cuenta destino</span>
+              <span>
+                {transaction.destination_account?.name ?? '—'}
+                <span className="ml-2 text-xs text-muted-foreground">— no editable</span>
+              </span>
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Adjustment direction */}
+      {type === 'adjustment' && (
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">Dirección</label>
+          <div className="flex gap-3">
+            {(['increase', 'decrease'] as const).map((dir) => (
+              <label key={dir} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="direction"
+                  value={dir}
+                  checked={adjustmentDirection === dir}
+                  onChange={() => setAdjustmentDirection(dir)}
+                  className="accent-primary"
+                />
+                <span className="text-sm">{dir === 'increase' ? 'Suma' : 'Resta'}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Amount */}
       <div className="flex flex-col gap-1.5">
@@ -104,25 +190,27 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
         />
       </div>
 
-      {/* Category */}
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="category" className="text-sm font-medium">
-          Categoría {isExpense && <span className="text-destructive">*</span>}
-          {!isExpense && <span className="text-muted-foreground text-xs ml-1">(opcional)</span>}
-        </label>
-        <select
-          id="category"
-          required={isExpense}
-          value={categoryId}
-          onChange={(e) => { setCategoryId(e.target.value); setSubcategoryId('') }}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <option value="">Sin categoría</option>
-          {filteredCategories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-      </div>
+      {/* Category (income/expense only) */}
+      {(type === 'income' || type === 'expense') && (
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="category" className="text-sm font-medium">
+            Categoría {isExpense && <span className="text-destructive">*</span>}
+            {!isExpense && <span className="text-muted-foreground text-xs ml-1">(opcional)</span>}
+          </label>
+          <select
+            id="category"
+            required={isExpense}
+            value={categoryId}
+            onChange={(e) => { setCategoryId(e.target.value); setSubcategoryId('') }}
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <option value="">Sin categoría</option>
+            {filteredCategories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Subcategory */}
       {selectedCategory && selectedCategory.subcategories.length > 0 && (
