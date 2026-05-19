@@ -1,10 +1,11 @@
-<h2>Confirm your email address</h2>
+<h2>Confirmá tu cuenta de Grana</h2>
 
 <p>
-  Follow the link below to confirm this email address and finish signing up.
+  Para terminar de crear tu cuenta, ingresá este código de 8 dígitos en la app:
 </p>
+
+<p>{{ .Token }}</p>
+
 <p>
-  <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup"
-    >Confirm email address</a
-  >
+  El código expira en 1 hora. Si no pediste este código, ignorá este mensaje.
 </p>

@@ -26,6 +26,24 @@ import {
   translateFieldError,
 } from '@grana/validation'
 
+type JwtAmrEntry = { method?: string }
+
+const hasRecoveryClaim = (accessToken: string): boolean => {
+  const parts = accessToken.split('.')
+  if (parts.length < 2) return false
+  try {
+    const padded = parts[1].padEnd(
+      parts[1].length + ((4 - (parts[1].length % 4)) % 4),
+      '=',
+    )
+    const json = atob(padded.replace(/-/g, '+').replace(/_/g, '/'))
+    const payload = JSON.parse(json) as { amr?: JwtAmrEntry[] }
+    return (payload.amr ?? []).some((entry) => entry.method === 'otp')
+  } catch {
+    return false
+  }
+}
+
 const ResetPasswordPage = () => {
   const t = useTranslations('auth.reset')
   const tv = useTranslations('validation')
@@ -50,8 +68,9 @@ const ResetPasswordPage = () => {
   })
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setHasRecovery(Boolean(data.user))
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data.session?.access_token
+      setHasRecovery(Boolean(token && hasRecoveryClaim(token)))
       setCheckingSession(false)
     })
   }, [supabase])

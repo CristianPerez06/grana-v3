@@ -4,4 +4,5 @@ export type ActionResult<T> =
       ok: false
       fieldErrors?: Partial<Record<keyof T, string>>
       formError?: string
+      errorCode?: string
     }

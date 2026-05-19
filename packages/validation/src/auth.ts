@@ -50,7 +50,18 @@ export const resetSchema = yup
   })
   .strict()
 
+export const otpCodeSchema = yup
+  .object({
+    code: yup
+      .string()
+      .label('otp_code')
+      .required()
+      .matches(/^\d{8}$/, 'otp_format'),
+  })
+  .strict()
+
 export type SignupInput = yup.InferType<typeof signupSchema>
 export type LoginInput = yup.InferType<typeof loginSchema>
 export type ForgotInput = yup.InferType<typeof forgotSchema>
 export type ResetInput = yup.InferType<typeof resetSchema>
+export type OtpCodeInput = yup.InferType<typeof otpCodeSchema>

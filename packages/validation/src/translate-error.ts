@@ -6,6 +6,7 @@ const KNOWN_KEYS = new Set([
   'password_letter',
   'password_number',
   'password_match',
+  'otp_format',
 ])
 
 export const translateFieldError = (

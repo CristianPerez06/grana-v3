@@ -23,7 +23,11 @@ export const loginAction = async (
 
   if (error) {
     const t = await getTranslations()
-    return { ok: false, formError: mapSupabaseError(error, t) }
+    return {
+      ok: false,
+      formError: mapSupabaseError(error, t),
+      errorCode: error.code ?? undefined,
+    }
   }
 
   revalidatePath('/', 'layout')

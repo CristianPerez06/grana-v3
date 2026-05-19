@@ -1,0 +1,95 @@
+import { useState } from 'react'
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native'
+import { Link, useRouter } from 'expo-router'
+import { forgotSchema, ValidationError } from '@grana/validation'
+import { Button } from '../../components/ui/Button'
+import { FormError } from '../../components/ui/FormError'
+import { TextInput } from '../../components/ui/TextInput'
+import { supabase } from '../../lib/supabase'
+import { mapSupabaseError } from '../../lib/supabase-errors'
+import { translateValidationMessage } from '../../lib/yup-locale'
+
+export default function ForgotPasswordScreen() {
+  const router = useRouter()
+  const [email, setEmail] = useState('')
+  const [emailError, setEmailError] = useState<string | undefined>()
+  const [formError, setFormError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit() {
+    setEmailError(undefined)
+    setFormError(null)
+    try {
+      await forgotSchema.validate({ email })
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        setEmailError(translateValidationMessage(err.message))
+      }
+      return
+    }
+
+    setLoading(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(email)
+    setLoading(false)
+
+    if (error) {
+      setFormError(mapSupabaseError(error))
+      return
+    }
+
+    router.replace({
+      pathname: '/(auth)/recovery-verify',
+      params: { email },
+    })
+  }
+
+  return (
+    <KeyboardAvoidingView
+      className="flex-1 bg-background"
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerClassName="flex-grow justify-center px-6 py-8"
+        keyboardShouldPersistTaps="handled"
+      >
+        <View className="mb-8">
+          <Text className="text-3xl font-bold text-foreground">Recuperar contraseña</Text>
+          <Text className="mt-1 text-muted-foreground">
+            Ingresá tu email y te enviamos un código para restablecerla.
+          </Text>
+        </View>
+
+        <TextInput
+          label="Email"
+          value={email}
+          onChangeText={setEmail}
+          placeholder="tu@email.com"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
+          error={emailError}
+        />
+
+        <FormError message={formError} />
+
+        <View className="mt-4">
+          <Button title="Enviar código" onPress={handleSubmit} loading={loading} />
+        </View>
+
+        <Pressable className="mt-6 items-center">
+          <Link href="/(auth)/login" className="text-sm font-medium text-primary">
+            Volver a iniciar sesión
+          </Link>
+        </Pressable>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  )
+}

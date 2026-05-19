@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@grana/supabase": "workspace:*",
+    "@grana/validation": "workspace:*",
     "expo": "~54.0.33",
     "expo-constants": "~18.0.13",
     "expo-linking": "~8.0.12",

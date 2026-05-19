@@ -8,8 +8,6 @@
       "password_label": "Password",
       "confirm_label": "Confirm password",
       "submit": "Create account",
-      "check_email_title": "Check your email",
-      "check_email_body": "We sent you a confirmation link. Click it to activate your account.",
       "have_account": "Already have an account? Sign in"
     },
     "login": {
@@ -21,15 +19,30 @@
       "forgot": "Forgot your password?",
       "no_account": "No account yet? Sign up",
       "confirmed_notice": "Your account was confirmed. Sign in with your email and password.",
-      "callback_error": "We couldn't verify the link. Please try again."
+      "resend_confirmation_code": "Resend confirmation code"
     },
     "forgot": {
       "title": "Reset password",
-      "description": "Enter your email and we'll send you a reset link.",
+      "description": "Enter your email and we'll send you a reset code.",
       "email_label": "Email",
-      "submit": "Send link",
-      "sent_notice": "If your email is registered, we sent you a link to reset your password.",
+      "submit": "Send code",
       "back_to_login": "Back to sign in"
+    },
+    "verify": {
+      "signup_title": "Confirm your account",
+      "signup_description": "Enter the 8-digit code we sent to {email}.",
+      "recovery_title": "Verify it's you",
+      "recovery_description": "Enter the 8-digit code we sent to {email}.",
+      "code_label": "Code",
+      "code_placeholder": "12345678",
+      "submit": "Verify",
+      "no_email_title": "Email missing",
+      "no_email_body": "Start over so we can send you a fresh code."
+    },
+    "resend": {
+      "button": "Resend code",
+      "button_cooldown": "Resend in {seconds}s",
+      "sent_notice": "We sent you a new code."
     },
     "reset": {
       "title": "New password",
@@ -40,16 +53,19 @@
       "success_title": "Password updated",
       "success_body": "Your password has been changed. Sign in with the new one.",
       "go_to_login": "Go to sign in",
-      "invalid_link_title": "Invalid link",
-      "invalid_link": "This link is invalid or has expired. Request a new one.",
-      "go_to_forgot": "Request a new link"
+      "invalid_link_title": "Invalid session",
+      "invalid_link": "This recovery session is invalid or has expired. Request a new code.",
+      "go_to_forgot": "Request a new code"
     },
     "errors": {
       "invalid_credentials": "Invalid email or password.",
       "email_not_confirmed": "Confirm your email before signing in.",
+      "email_not_confirmed_with_resend": "Your account isn't confirmed yet. Resend the code and finish confirming.",
       "user_already_exists": "An account with that email already exists.",
       "weak_password": "Password is too weak.",
       "same_password": "New password must differ from the current one.",
+      "invalid_otp": "The code is invalid.",
+      "otp_expired": "The code expired. Request a new one.",
       "over_email_send_rate_limit": "Too many attempts. Wait a few minutes and try again.",
       "generic": "Something went wrong. Please try again in a moment."
     }
@@ -62,7 +78,8 @@
     "notType": "Invalid value.",
     "password_letter": "Must include at least one letter.",
     "password_number": "Must include at least one number.",
-    "password_match": "Passwords do not match."
+    "password_match": "Passwords do not match.",
+    "otp_format": "The code must be exactly 8 digits."
   },
   "dashboard": {
     "title": "Home",
