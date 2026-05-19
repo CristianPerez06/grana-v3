@@ -322,6 +322,237 @@ export type Database = {
         }
         Relationships: []
       }
+      recurrence_instances: {
+        Row: {
+          account_id: string
+          amount: number
+          category_id: string | null
+          confirmed_transaction_id: string | null
+          created_at: string
+          currency_code: string
+          description: string | null
+          id: string
+          recurrence_id: string
+          resolved_at: string | null
+          scheduled_date: string
+          status: string
+          subcategory_id: string | null
+          transfer_destination_account_id: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          category_id?: string | null
+          confirmed_transaction_id?: string | null
+          created_at?: string
+          currency_code: string
+          description?: string | null
+          id?: string
+          recurrence_id: string
+          resolved_at?: string | null
+          scheduled_date: string
+          status?: string
+          subcategory_id?: string | null
+          transfer_destination_account_id?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          category_id?: string | null
+          confirmed_transaction_id?: string | null
+          created_at?: string
+          currency_code?: string
+          description?: string | null
+          id?: string
+          recurrence_id?: string
+          resolved_at?: string | null
+          scheduled_date?: string
+          status?: string
+          subcategory_id?: string | null
+          transfer_destination_account_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurrence_instances_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurrence_instances_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurrence_instances_confirmed_transaction_id_fkey"
+            columns: ["confirmed_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurrence_instances_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "recurrence_instances_recurrence_id_fkey"
+            columns: ["recurrence_id"]
+            isOneToOne: false
+            referencedRelation: "recurrences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurrence_instances_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurrence_instances_transfer_destination_account_id_fkey"
+            columns: ["transfer_destination_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurrence_suggestion_dismissals: {
+        Row: {
+          created_at: string
+          fingerprint: string
+          id: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fingerprint: string
+          id?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fingerprint?: string
+          id?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      recurrences: {
+        Row: {
+          account_id: string
+          amount: number
+          category_id: string | null
+          created_at: string
+          created_from_transaction_id: string | null
+          currency_code: string
+          description: string | null
+          end_date: string | null
+          frequency: string
+          id: string
+          last_generated_date: string | null
+          movement_type: string
+          start_date: string
+          status: string
+          subcategory_id: string | null
+          transfer_destination_account_id: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          created_from_transaction_id?: string | null
+          currency_code: string
+          description?: string | null
+          end_date?: string | null
+          frequency: string
+          id?: string
+          last_generated_date?: string | null
+          movement_type: string
+          start_date: string
+          status?: string
+          subcategory_id?: string | null
+          transfer_destination_account_id?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          created_from_transaction_id?: string | null
+          currency_code?: string
+          description?: string | null
+          end_date?: string | null
+          frequency?: string
+          id?: string
+          last_generated_date?: string | null
+          movement_type?: string
+          start_date?: string
+          status?: string
+          subcategory_id?: string | null
+          transfer_destination_account_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurrences_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurrences_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurrences_created_from_transaction_id_fkey"
+            columns: ["created_from_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurrences_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "recurrences_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurrences_transfer_destination_account_id_fkey"
+            columns: ["transfer_destination_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subcategories: {
         Row: {
           canonical_name: string
@@ -619,7 +850,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      account_type: ["cash", "bank"],
+      account_type: ["cash", "bank", "credit"],
       transaction_type: ["income", "expense", "transfer", "adjustment"],
     },
   },

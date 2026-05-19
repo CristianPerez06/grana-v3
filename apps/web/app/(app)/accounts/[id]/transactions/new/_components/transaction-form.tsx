@@ -9,6 +9,7 @@ import {
   createTransfer,
   createAdjustment,
 } from '@/app/_actions/transactions'
+import { createRecurrenceFromMovement } from '@/app/_actions/recurrences'
 import { parseMoneyInput } from '@grana/validation'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 
@@ -74,6 +75,12 @@ export const TransactionForm = ({
   // Adjustment fields
   const [adjustmentDirection, setAdjustmentDirection] = useState<'increase' | 'decrease'>(
     'increase',
+  )
+
+  // Recurrence fields (not available on adjustments — out of scope)
+  const [isRecurrent, setIsRecurrent] = useState(false)
+  const [frequency, setFrequency] = useState<'weekly' | 'biweekly' | 'monthly' | 'annual'>(
+    'monthly',
   )
 
   const expenseCategories = categories.filter((c) => c.type === 'expense' || c.type === 'both')
@@ -166,6 +173,21 @@ export const TransactionForm = ({
       if (!result.ok) {
         setFormError(result.formError ?? 'Error al guardar el movimiento.')
         return
+      }
+
+      if (isRecurrent && tab !== 'adjustment' && result.id) {
+        const recurrenceResult = await createRecurrenceFromMovement({
+          transaction_id: result.id,
+          frequency,
+        })
+        if (!recurrenceResult.ok) {
+          setFormError(
+            `Movimiento guardado, pero no se pudo crear la regla recurrente: ${
+              recurrenceResult.formError ?? 'error desconocido'
+            }`,
+          )
+          return
+        }
       }
 
       router.push(`/accounts/${accountId}`)
@@ -388,6 +410,41 @@ export const TransactionForm = ({
           className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
+
+      {/* ── Recurrente ───────────────────────────────────────────────────────── */}
+      {tab !== 'adjustment' && (
+        <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isRecurrent}
+              onChange={(e) => setIsRecurrent(e.target.checked)}
+              className="accent-primary"
+            />
+            <span className="text-sm font-medium">Hacer recurrente</span>
+          </label>
+          {isRecurrent && (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="frequency" className="text-xs text-muted-foreground">
+                Frecuencia
+              </label>
+              <select
+                id="frequency"
+                value={frequency}
+                onChange={(e) =>
+                  setFrequency(e.target.value as typeof frequency)
+                }
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="weekly">Semanal</option>
+                <option value="biweekly">Quincenal</option>
+                <option value="monthly">Mensual</option>
+                <option value="annual">Anual</option>
+              </select>
+            </div>
+          )}
+        </div>
+      )}
 
       {formError && (
         <p className="text-sm text-destructive">{formError}</p>

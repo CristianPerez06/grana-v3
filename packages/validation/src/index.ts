@@ -52,6 +52,26 @@ export {
   type UpdateAdjustmentInput,
 } from "./transactions";
 export {
+  createIncomeRecurrenceSchema,
+  createExpenseRecurrenceSchema,
+  createTransferRecurrenceSchema,
+  createRecurrenceSchema,
+  createRecurrenceFromMovementSchema,
+  confirmRecurrenceInstanceSchema,
+  acceptRecurrenceSuggestionSchema,
+  dismissRecurrenceSuggestionSchema,
+  updateRecurrenceSchema,
+  type CreateIncomeRecurrenceInput,
+  type CreateExpenseRecurrenceInput,
+  type CreateTransferRecurrenceInput,
+  type CreateRecurrenceInput,
+  type CreateRecurrenceFromMovementInput,
+  type ConfirmRecurrenceInstanceInput,
+  type AcceptRecurrenceSuggestionInput,
+  type DismissRecurrenceSuggestionInput,
+  type UpdateRecurrenceInput,
+} from './recurrences'
+export {
   createCreditCardSchema,
   createNovatoCreditCardSchema,
   registerCardPurchaseSchema,

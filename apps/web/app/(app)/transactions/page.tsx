@@ -8,6 +8,14 @@ import {
   parseMovementLimit,
 } from '@/lib/transactions/filters'
 import { getGlobalMovementsPage, getMovementFilterOptions } from '@/lib/transactions/queries'
+import { PendingRecurrencesBlock } from '@/lib/recurrences/components/pending-recurrences-block'
+import { RecurrenceSuggestionBanner } from '@/lib/recurrences/components/recurrence-suggestion-banner'
+import {
+  generateDueRecurrenceInstances,
+  getPendingRecurrenceInstances,
+  getRecurrenceLinkedTransactionIds,
+  getTopRecurrenceSuggestion,
+} from '@/lib/recurrences/queries'
 
 type SearchParams = Record<string, string | string[] | undefined>
 
@@ -19,20 +27,42 @@ const TransactionsPage = async ({ searchParams }: Props) => {
   const resolvedSearchParams = await searchParams
   const filters = parseMovementFilters(resolvedSearchParams)
   const limit = parseMovementLimit(resolvedSearchParams)
-  const [movementsPage, filterOptions] = await Promise.all([
-    getGlobalMovementsPage({ limit, filters }),
-    getMovementFilterOptions(),
-  ])
+
+  // Generación lazy de instancias recurrentes: una pasada por carga de página.
+  await generateDueRecurrenceInstances()
+
+  const [movementsPage, filterOptions, pendingRecurrences, topSuggestion] =
+    await Promise.all([
+      getGlobalMovementsPage({ limit, filters }),
+      getMovementFilterOptions(),
+      getPendingRecurrenceInstances(),
+      getTopRecurrenceSuggestion(),
+    ])
+
+  const recurrenceLinkedIds = await getRecurrenceLinkedTransactionIds(
+    movementsPage.movements.map((m) => m.id),
+  )
 
   return (
     <div className="flex max-w-3xl flex-col gap-6">
-      <div>
-        <p className="text-sm font-medium text-muted-foreground">Tus movimientos</p>
-        <h1 className="text-2xl font-semibold tracking-tight">Movimientos</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Historial cronológico de ingresos, gastos, transferencias, ajustes y consumos.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">Tus movimientos</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Movimientos</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Historial cronológico de ingresos, gastos, transferencias, ajustes y consumos.
+          </p>
+        </div>
+        <Button asChild variant="secondary">
+          <Link href="/transactions/recurring">Recurrencias</Link>
+        </Button>
       </div>
+
+      {topSuggestion && (
+        <RecurrenceSuggestionBanner suggestion={topSuggestion} />
+      )}
+
+      <PendingRecurrencesBlock pending={pendingRecurrences} />
 
       <MovementFilters
         filters={filters}
@@ -40,7 +70,10 @@ const TransactionsPage = async ({ searchParams }: Props) => {
         categories={filterOptions.categories}
       />
 
-      <GlobalMovementList movements={movementsPage.movements} />
+      <GlobalMovementList
+        movements={movementsPage.movements}
+        recurrenceLinkedIds={recurrenceLinkedIds}
+      />
 
       {movementsPage.hasMore && (
         <div className="flex justify-center">
