@@ -390,4 +390,4 @@ xcrun simctl spawn booted log show --predicate 'process == "Grana"' --info --deb
 
 ---
 
-_Próximas fases (pendientes): credenciales iOS device + primer build para iPhone físico (Fase 5, bloqueado por Apple Developer enrollment), `eas submit` a stores (Fase 8a), EAS Update para OTA (Fase 8b), integración CI (Fase 8c)._
+_Trabajo pendiente (Fase 5, 8a-c, tech debt) tracked en [`PROXIMAS_FASES.md`](./PROXIMAS_FASES.md). Ese archivo se borra cuando todo lo de adentro está hecho._

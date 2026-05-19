@@ -23,6 +23,8 @@ build-*.apk
 build-*.aab
 build-*.ipa
 build-*.tar.gz
+# iOS simulator .app bundles extracted from the .tar.gz above
+*.app/
 
 # Metro
 .metro-health-check*
