@@ -9,7 +9,12 @@
     "lint": "pnpm --filter web lint",
     "storybook": "pnpm --filter web storybook",
     "build-storybook": "pnpm --filter web build-storybook",
-    "dev:mobile": "pnpm --filter mobile dev"
+    "dev:mobile": "pnpm --filter mobile dev",
+    "eas:android": "pnpm --filter mobile build:android",
+    "eas:android:local": "pnpm --filter mobile build:android:local",
+    "eas:ios": "pnpm --filter mobile build:ios",
+    "eas:ios:local": "pnpm --filter mobile build:ios:local",
+    "eas:list": "pnpm --filter mobile build:list"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
