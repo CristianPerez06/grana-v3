@@ -1,7 +1,13 @@
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 import { MovementFilters } from '@/lib/transactions/components/movement-filters'
 import { GlobalMovementList } from '@/lib/transactions/components/global-movement-list'
-import { parseMovementFilters } from '@/lib/transactions/filters'
-import { getGlobalMovements, getMovementFilterOptions } from '@/lib/transactions/queries'
+import {
+  buildMovementLimitHref,
+  parseMovementFilters,
+  parseMovementLimit,
+} from '@/lib/transactions/filters'
+import { getGlobalMovementsPage, getMovementFilterOptions } from '@/lib/transactions/queries'
 
 type SearchParams = Record<string, string | string[] | undefined>
 
@@ -10,9 +16,11 @@ type Props = {
 }
 
 const TransactionsPage = async ({ searchParams }: Props) => {
-  const filters = parseMovementFilters(await searchParams)
-  const [movements, filterOptions] = await Promise.all([
-    getGlobalMovements({ limit: 50, filters }),
+  const resolvedSearchParams = await searchParams
+  const filters = parseMovementFilters(resolvedSearchParams)
+  const limit = parseMovementLimit(resolvedSearchParams)
+  const [movementsPage, filterOptions] = await Promise.all([
+    getGlobalMovementsPage({ limit, filters }),
     getMovementFilterOptions(),
   ])
 
@@ -32,7 +40,17 @@ const TransactionsPage = async ({ searchParams }: Props) => {
         categories={filterOptions.categories}
       />
 
-      <GlobalMovementList movements={movements} />
+      <GlobalMovementList movements={movementsPage.movements} />
+
+      {movementsPage.hasMore && (
+        <div className="flex justify-center">
+          <Button asChild variant="secondary">
+            <Link href={buildMovementLimitHref(resolvedSearchParams, movementsPage.nextLimit)}>
+              Cargar más
+            </Link>
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

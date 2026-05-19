@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildMovementLimitHref,
   movementMatchesText,
   parseMovementFilters,
+  parseMovementLimit,
   resolveMovementPeriod,
 } from '../filters'
 import type { FinancialMovement } from '../movements'
@@ -50,6 +52,35 @@ describe('parseMovementFilters', () => {
       from: '2026-05-01',
       to: '2026-05-31',
     })
+  })
+})
+
+describe('parseMovementLimit', () => {
+  it('uses the default page size when the URL has no limit', () => {
+    expect(parseMovementLimit({})).toBe(50)
+  })
+
+  it('accepts valid limits and clamps excessive values', () => {
+    expect(parseMovementLimit({ limit: '150' })).toBe(150)
+    expect(parseMovementLimit({ limit: '9999' })).toBe(500)
+  })
+
+  it('ignores malformed or too-small limits', () => {
+    expect(parseMovementLimit({ limit: 'abc' })).toBe(50)
+    expect(parseMovementLimit({ limit: '10' })).toBe(50)
+  })
+})
+
+describe('buildMovementLimitHref', () => {
+  it('preserves movement filters and updates the limit', () => {
+    const href = buildMovementLimitHref({
+      q: 'super',
+      type: 'expense',
+      category: 'category-1',
+      limit: '50',
+    }, 100)
+
+    expect(href).toBe('/transactions?q=super&type=expense&category=category-1&limit=100')
   })
 })
 

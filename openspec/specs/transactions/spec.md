@@ -153,6 +153,13 @@ Un "movimiento" no es solamente una fila técnica de `transactions`: es la repre
 - **THEN** muestra primero el movimiento con fecha más reciente
 - **AND** si dos movimientos tienen la misma fecha, muestra primero el creado más tarde
 
+#### Scenario: El listado global está paginado
+
+- **WHEN** el usuario abre `/transactions` y existen más movimientos que el tamaño inicial de página
+- **THEN** el sistema muestra los movimientos más recientes primero
+- **AND** ofrece una acción para cargar más movimientos preservando los filtros activos en la URL
+- **AND** los movimientos adicionales respetan el mismo orden funcional del listado global
+
 ---
 
 ### Requirement: El listado global usa un contrato funcional de Movimiento

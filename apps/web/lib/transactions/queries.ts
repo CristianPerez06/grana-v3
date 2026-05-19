@@ -1,5 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
-import { movementMatchesText, type MovementFilters } from './filters'
+import {
+  DEFAULT_MOVEMENTS_LIMIT,
+  MAX_MOVEMENTS_LIMIT,
+  MOVEMENTS_LIMIT_STEP,
+  movementMatchesText,
+  type MovementFilters,
+} from './filters'
 import { toFinancialMovement, type FinancialMovement } from './movements'
 import type { TransactionWithDetails } from './types'
 
@@ -11,6 +17,8 @@ const TRANSACTION_SELECT = `
   source_account:accounts!transactions_account_id_fkey(id, name, type),
   period_payments(id, period_id)
 `
+
+const GLOBAL_MOVEMENTS_QUERY_CHUNK_SIZE = 200
 
 // ── getTransactions ───────────────────────────────────────────────────────────
 
@@ -45,8 +53,19 @@ export async function getTransactions(
 export async function getGlobalMovements(
   options: { limit?: number; offset?: number; filters?: MovementFilters } = {},
 ): Promise<FinancialMovement[]> {
+  const page = await getGlobalMovementsPage(options)
+  return page.movements
+}
+
+export async function getGlobalMovementsPage(
+  options: { limit?: number; offset?: number; filters?: MovementFilters } = {},
+): Promise<{
+  movements: FinancialMovement[]
+  hasMore: boolean
+  nextLimit: number
+}> {
   const supabase = await createClient()
-  const { limit = 50, offset = 0, filters = {} } = options
+  const { limit = DEFAULT_MOVEMENTS_LIMIT, offset = 0, filters = {} } = options
 
   let parentIdsForAccount: string[] = []
   let cardPaymentIdsForAccount: string[] = []
@@ -79,45 +98,62 @@ export async function getGlobalMovements(
     ]
   }
 
-  let query = supabase
-    .from('transactions')
-    .select(TRANSACTION_SELECT)
-    .is('parent_id', null)
-    .order('date', { ascending: false })
-    .order('created_at', { ascending: false })
-    .order('id', { ascending: false })
-    .range(offset, offset + Math.max(limit * 10, 200) - 1)
+  const matchingMovements: FinancialMovement[] = []
+  let queryOffset = offset
 
-  if (filters.from) query = query.gte('date', filters.from)
-  if (filters.to) query = query.lte('date', filters.to)
-  if (filters.categoryId) query = query.eq('category_id', filters.categoryId)
+  while (matchingMovements.length <= limit) {
+    let query = supabase
+      .from('transactions')
+      .select(TRANSACTION_SELECT)
+      .is('parent_id', null)
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(queryOffset, queryOffset + GLOBAL_MOVEMENTS_QUERY_CHUNK_SIZE - 1)
 
-  if (filters.accountId) {
-    const accountConditions = [
-      `account_id.eq.${filters.accountId}`,
-      `transfer_destination_account_id.eq.${filters.accountId}`,
-    ]
+    if (filters.from) query = query.gte('date', filters.from)
+    if (filters.to) query = query.lte('date', filters.to)
+    if (filters.categoryId) query = query.eq('category_id', filters.categoryId)
 
-    if (parentIdsForAccount.length > 0) {
-      accountConditions.push(`id.in.(${parentIdsForAccount.join(',')})`)
+    if (filters.accountId) {
+      const accountConditions = [
+        `account_id.eq.${filters.accountId}`,
+        `transfer_destination_account_id.eq.${filters.accountId}`,
+      ]
+
+      if (parentIdsForAccount.length > 0) {
+        accountConditions.push(`id.in.(${parentIdsForAccount.join(',')})`)
+      }
+
+      if (cardPaymentIdsForAccount.length > 0) {
+        accountConditions.push(`id.in.(${cardPaymentIdsForAccount.join(',')})`)
+      }
+
+      query = query.or(accountConditions.join(','))
     }
 
-    if (cardPaymentIdsForAccount.length > 0) {
-      accountConditions.push(`id.in.(${cardPaymentIdsForAccount.join(',')})`)
-    }
+    const { data, error } = await query
 
-    query = query.or(accountConditions.join(','))
+    if (error) throw error
+
+    const pageMovements = ((data ?? []) as TransactionWithDetails[])
+      .map(toFinancialMovement)
+      .filter((movement) => !filters.type || movement.kind === filters.type)
+      .filter((movement) => !filters.query || movementMatchesText(movement, filters.query))
+
+    matchingMovements.push(...pageMovements)
+
+    if ((data ?? []).length < GLOBAL_MOVEMENTS_QUERY_CHUNK_SIZE) break
+    queryOffset += GLOBAL_MOVEMENTS_QUERY_CHUNK_SIZE
   }
 
-  const { data, error } = await query
+  const hasMore = matchingMovements.length > limit && limit < MAX_MOVEMENTS_LIMIT
 
-  if (error) throw error
-
-  return ((data ?? []) as TransactionWithDetails[])
-    .map(toFinancialMovement)
-    .filter((movement) => !filters.type || movement.kind === filters.type)
-    .filter((movement) => !filters.query || movementMatchesText(movement, filters.query))
-    .slice(0, limit)
+  return {
+    movements: matchingMovements.slice(0, limit),
+    hasMore,
+    nextLimit: Math.min(limit + MOVEMENTS_LIMIT_STEP, MAX_MOVEMENTS_LIMIT),
+  }
 }
 
 export async function getMovementFilterOptions(): Promise<{

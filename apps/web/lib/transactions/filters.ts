@@ -22,6 +22,10 @@ export type MovementFilters = {
 type SearchParamValue = string | string[] | undefined
 type SearchParamsLike = Record<string, SearchParamValue> | URLSearchParams
 
+export const DEFAULT_MOVEMENTS_LIMIT = 50
+export const MOVEMENTS_LIMIT_STEP = 50
+export const MAX_MOVEMENTS_LIMIT = 500
+
 export const MOVEMENT_TYPE_LABELS: Record<MovementTypeFilter, string> = {
   income: 'Ingresos',
   expense: 'Gastos',
@@ -123,6 +127,35 @@ export const parseMovementFilters = (params: SearchParamsLike): MovementFilters 
   if (categoryId) filters.categoryId = categoryId
 
   return filters
+}
+
+export const parseMovementLimit = (params: SearchParamsLike): number => {
+  const rawLimit = getParam(params, 'limit')
+  if (!rawLimit) return DEFAULT_MOVEMENTS_LIMIT
+
+  const parsed = Number(rawLimit)
+  if (!Number.isInteger(parsed) || parsed < DEFAULT_MOVEMENTS_LIMIT) {
+    return DEFAULT_MOVEMENTS_LIMIT
+  }
+
+  return Math.min(parsed, MAX_MOVEMENTS_LIMIT)
+}
+
+export const buildMovementLimitHref = (
+  params: SearchParamsLike,
+  nextLimit: number,
+): string => {
+  const searchParams = new URLSearchParams()
+
+  const keys = ['q', 'period', 'from', 'to', 'type', 'account', 'category']
+  for (const key of keys) {
+    const value = getParam(params, key)
+    if (value) searchParams.set(key, value)
+  }
+
+  searchParams.set('limit', String(Math.min(nextLimit, MAX_MOVEMENTS_LIMIT)))
+
+  return `/transactions?${searchParams.toString()}`
 }
 
 export const movementMatchesText = (movement: FinancialMovement, query: string): boolean => {
