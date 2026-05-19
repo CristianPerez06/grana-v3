@@ -1,7 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { AlertTriangle, ArrowDownLeft, ArrowLeftRight, CreditCard, Scale, Tag } from 'lucide-react'
+import {
+  AlertTriangle,
+  ArrowDownLeft,
+  ArrowLeftRight,
+  CreditCard,
+  Repeat,
+  Scale,
+  Tag,
+} from 'lucide-react'
 import { formatARS, formatUSD } from '@/lib/format'
 import { useShowCents } from '@/lib/preferences-context'
 import type { FinancialMovement, MovementReviewFlag } from '../movements'
@@ -58,9 +66,10 @@ const movementSubtitle = (movement: FinancialMovement) => {
 
 type Props = {
   movements: FinancialMovement[]
+  recurrenceLinkedIds?: Set<string>
 }
 
-export const GlobalMovementList = ({ movements }: Props) => {
+export const GlobalMovementList = ({ movements, recurrenceLinkedIds }: Props) => {
   const showCents = useShowCents()
 
   if (movements.length === 0) {
@@ -91,6 +100,7 @@ export const GlobalMovementList = ({ movements }: Props) => {
           <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
             {dayMovements.map((movement) => {
               const Icon = movementIcon[movement.kind]
+              const isRecurrent = recurrenceLinkedIds?.has(movement.id) ?? false
               const content = (
                 <div className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-muted/50 transition-colors">
                   <div className="flex min-w-0 items-center gap-3">
@@ -100,6 +110,13 @@ export const GlobalMovementList = ({ movements }: Props) => {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="truncate text-sm font-medium">{movement.title}</span>
+                        {isRecurrent && (
+                          <Repeat
+                            size={12}
+                            className="shrink-0 text-muted-foreground"
+                            aria-label="Generado por una regla recurrente"
+                          />
+                        )}
                         {movement.review_flags.length > 0 && (
                           <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-800">
                             <AlertTriangle size={12} />

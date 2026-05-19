@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { getTodayAR } from '@/lib/date'
 import { registerCardPurchase, registerInstallments } from '@/app/_actions/credit-cards'
+import { createRecurrenceFromMovement } from '@/app/_actions/recurrences'
 import { parseMoneyInput } from '@grana/validation'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 
@@ -31,6 +32,10 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
   const [description, setDescription] = useState('')
   const [installments, setInstallments] = useState('1')
   const [fxRate, setFxRate] = useState('')
+  const [isRecurrent, setIsRecurrent] = useState(false)
+  const [frequency, setFrequency] = useState<'weekly' | 'biweekly' | 'monthly' | 'annual'>(
+    'monthly',
+  )
 
   const expenseCategories = categories.filter((c) => c.type === 'expense' || c.type === 'both')
   const selectedCategory = expenseCategories.find((c) => c.id === categoryId)
@@ -84,6 +89,22 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
       if (!result.ok) {
         setFormError(result.formError ?? 'Error al registrar el consumo.')
         return
+      }
+
+      // Las cuotas no admiten recurrencia (design D4).
+      if (isRecurrent && !isInstallments && 'id' in result && result.id) {
+        const recurrenceResult = await createRecurrenceFromMovement({
+          transaction_id: result.id,
+          frequency,
+        })
+        if (!recurrenceResult.ok) {
+          setFormError(
+            `Consumo guardado, pero no se pudo crear la regla recurrente: ${
+              recurrenceResult.formError ?? 'error desconocido'
+            }`,
+          )
+          return
+        }
       }
 
       router.push(`/cards/${accountId}`)
@@ -248,6 +269,46 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
           className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
+
+      {/* Recurrente (solo para consumos simples, no cuotas — design D4) */}
+      {!isInstallments && (
+        <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isRecurrent}
+              onChange={(e) => setIsRecurrent(e.target.checked)}
+              className="accent-primary"
+            />
+            <span className="text-sm font-medium">Hacer recurrente</span>
+          </label>
+          {isRecurrent && (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="frequency" className="text-xs text-muted-foreground">
+                Frecuencia
+              </label>
+              <select
+                id="frequency"
+                value={frequency}
+                onChange={(e) =>
+                  setFrequency(e.target.value as typeof frequency)
+                }
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="weekly">Semanal</option>
+                <option value="biweekly">Quincenal</option>
+                <option value="monthly">Mensual</option>
+                <option value="annual">Anual</option>
+              </select>
+              {isUSD && (
+                <p className="text-xs text-muted-foreground">
+                  Vas a tener que cargar la cotización del día al confirmar cada mes.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {formError && <p className="text-sm text-destructive">{formError}</p>}
 
