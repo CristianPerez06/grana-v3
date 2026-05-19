@@ -53,6 +53,7 @@ describe('toFinancialMovement', () => {
       title: 'Transferencia',
       account_name: 'Galicia',
       destination_account_name: 'Efectivo',
+      detail_href: '/transactions/11111111-1111-1111-1111-111111111111',
       sign: null,
     })
   })
@@ -113,6 +114,7 @@ describe('toFinancialMovement', () => {
       installments_total: 3,
       date: '2026-05-18',
       amount: 300,
+      detail_href: '/transactions/11111111-1111-1111-1111-111111111111',
     })
   })
 })

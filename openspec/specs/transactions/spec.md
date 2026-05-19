@@ -141,6 +141,13 @@ Un "movimiento" no es solamente una fila técnica de `transactions`: es la repre
 - **THEN** el detalle conserva ese origen de navegación
 - **AND** la acción de volver lo devuelve a `/transactions`, no al detalle de la cuenta ni al resumen de tarjeta
 
+#### Scenario: El listado global abre detalles globales
+
+- **WHEN** el usuario toca un ingreso, gasto, transferencia, ajuste, pago de resumen o compra en cuotas desde `/transactions`
+- **THEN** el sistema navega a `/transactions/<transaction_id>`
+- **AND** el detalle muestra el hecho financiero con lenguaje funcional según el tipo de movimiento
+- **AND** no redirige automáticamente al detalle técnico de una cuenta o resumen
+
 #### Scenario: La pantalla muestra movimientos de todas las cuentas
 
 - **WHEN** el usuario abre `/transactions`

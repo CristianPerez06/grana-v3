@@ -1,8 +1,9 @@
-import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
+import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getInstallmentFamily, getTransactionDetail } from '@/lib/transactions/queries'
-import { TransactionDetailHeader } from '../../accounts/[id]/transactions/[txId]/_components/transaction-detail-header'
+import { toFinancialMovement } from '@/lib/transactions/movements'
+import { GlobalTransactionDetail } from './_components/global-transaction-detail'
 
 type Props = {
   params: Promise<{ txId: string }>
@@ -18,13 +19,12 @@ const GlobalTransactionDetailPage = async ({ params }: Props) => {
   const transaction = await getTransactionDetail(txId)
   if (!transaction) notFound()
 
-  if (!transaction.is_parent) {
-    if (!transaction.account_id) notFound()
-    redirect(`/accounts/${transaction.account_id}/transactions/${transaction.id}?from=transactions`)
-  }
-
-  const installmentFamily = await getInstallmentFamily(transaction.id)
-  const firstChildAccountId = installmentFamily.children.find((child) => child.account_id)?.account_id ?? ''
+  const installmentFamily = transaction.is_parent
+    ? await getInstallmentFamily(transaction.id)
+    : transaction.parent_id
+      ? await getInstallmentFamily(transaction.parent_id)
+      : null
+  const movement = toFinancialMovement(transaction)
 
   return (
     <div className="flex flex-col gap-8 max-w-lg">
@@ -37,13 +37,11 @@ const GlobalTransactionDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
 
-      <TransactionDetailHeader
+      <GlobalTransactionDetail
         transaction={transaction}
-        accountId={firstChildAccountId}
-        returnHref="/transactions"
-        showActions={false}
-        installmentParent={installmentFamily.parent ?? transaction}
-        installmentSiblings={installmentFamily.children}
+        movement={movement}
+        installmentParent={installmentFamily?.parent ?? null}
+        installmentSiblings={installmentFamily?.children ?? null}
       />
     </div>
   )

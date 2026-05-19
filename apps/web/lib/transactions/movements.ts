@@ -63,12 +63,7 @@ export type FinancialMovement =
   | AdjustmentMovement
   | CardInstallmentMovement
 
-const detailHref = (tx: TransactionWithDetails) =>
-  tx.is_parent
-    ? `/transactions/${tx.id}`
-    : tx.account_id
-      ? `/accounts/${tx.account_id}/transactions/${tx.id}`
-      : null
+const detailHref = (tx: TransactionWithDetails) => `/transactions/${tx.id}`
 
 const getReviewFlags = (tx: TransactionWithDetails): MovementReviewFlag[] => {
   const flags: MovementReviewFlag[] = []

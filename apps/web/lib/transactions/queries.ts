@@ -15,7 +15,17 @@ const TRANSACTION_SELECT = `
   subcategory:subcategories(id, name, canonical_name, category_id),
   destination_account:accounts!transactions_transfer_destination_account_id_fkey(id, name, type),
   source_account:accounts!transactions_account_id_fkey(id, name, type),
-  period_payments(id, period_id)
+  period_payments(
+    id,
+    period_id,
+    period:card_periods(
+      id,
+      start_date,
+      end_date,
+      due_date,
+      account:accounts(id, name, type)
+    )
+  )
 `
 
 const GLOBAL_MOVEMENTS_QUERY_CHUNK_SIZE = 200

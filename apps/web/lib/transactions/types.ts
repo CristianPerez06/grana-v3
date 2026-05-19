@@ -51,7 +51,17 @@ export type TransactionWithDetails = Transaction & {
   subcategory: TransactionSubcategory | null
   destination_account: TransactionAccount | null
   source_account: TransactionAccount | null
-  period_payments: Array<{ id: string; period_id: string }> | null
+  period_payments: Array<{
+    id: string
+    period_id: string
+    period?: {
+      id: string
+      start_date: string
+      end_date: string
+      due_date: string
+      account: TransactionAccount | null
+    } | null
+  }> | null
 }
 
 export type CreateIncomeInput = {
