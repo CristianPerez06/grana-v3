@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { useTranslations } from 'next-intl'
@@ -19,7 +20,7 @@ export const SignupForm = () => {
   const t = useTranslations('auth.signup')
   const tv = useTranslations('validation')
   const fieldError = (msg: string | undefined) => translateFieldError(msg, tv)
-  const [submitted, setSubmitted] = useState(false)
+  const router = useRouter()
   const [formError, setFormError] = useState<string | null>(null)
 
   const {
@@ -36,7 +37,7 @@ export const SignupForm = () => {
     setFormError(null)
     const result = await signupAction(values)
     if (result.ok) {
-      setSubmitted(true)
+      router.replace(`/signup/verify?email=${encodeURIComponent(values.email)}`)
       return
     }
     if (result.fieldErrors) {
@@ -46,14 +47,6 @@ export const SignupForm = () => {
     }
     if (result.formError) setFormError(result.formError)
   })
-
-  if (submitted) {
-    return (
-      <Alert variant="success" title={t('check_email_title')}>
-        {t('check_email_body')}
-      </Alert>
-    )
-  }
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>

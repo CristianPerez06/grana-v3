@@ -8,8 +8,6 @@
       "password_label": "Contraseña",
       "confirm_label": "Confirmar contraseña",
       "submit": "Crear cuenta",
-      "check_email_title": "Revisá tu email",
-      "check_email_body": "Te enviamos un enlace de confirmación. Hacé click para activar tu cuenta.",
       "have_account": "¿Ya tenés cuenta? Iniciá sesión"
     },
     "login": {
@@ -21,15 +19,30 @@
       "forgot": "¿Olvidaste tu contraseña?",
       "no_account": "¿No tenés cuenta? Registrate",
       "confirmed_notice": "Tu cuenta fue confirmada. Ingresá con tu email y contraseña.",
-      "callback_error": "No pudimos verificar el enlace. Probá de nuevo."
+      "resend_confirmation_code": "Reenviar código de confirmación"
     },
     "forgot": {
       "title": "Recuperar contraseña",
-      "description": "Ingresá tu email y te enviamos un enlace para restablecerla.",
+      "description": "Ingresá tu email y te enviamos un código para restablecerla.",
       "email_label": "Email",
-      "submit": "Enviar enlace",
-      "sent_notice": "Si tu email está registrado, te enviamos un enlace para restablecer tu contraseña.",
+      "submit": "Enviar código",
       "back_to_login": "Volver a iniciar sesión"
+    },
+    "verify": {
+      "signup_title": "Confirmá tu cuenta",
+      "signup_description": "Ingresá el código de 8 dígitos que te enviamos a {email}.",
+      "recovery_title": "Verificá tu identidad",
+      "recovery_description": "Ingresá el código de 8 dígitos que te enviamos a {email}.",
+      "code_label": "Código",
+      "code_placeholder": "12345678",
+      "submit": "Verificar",
+      "no_email_title": "Falta tu email",
+      "no_email_body": "Volvé a empezar para que podamos enviarte un código nuevo."
+    },
+    "resend": {
+      "button": "Reenviar código",
+      "button_cooldown": "Reenviar en {seconds}s",
+      "sent_notice": "Te enviamos un código nuevo."
     },
     "reset": {
       "title": "Nueva contraseña",
@@ -40,16 +53,19 @@
       "success_title": "Contraseña actualizada",
       "success_body": "Tu contraseña fue cambiada. Iniciá sesión con la nueva.",
       "go_to_login": "Ir a iniciar sesión",
-      "invalid_link_title": "Enlace inválido",
-      "invalid_link": "Este enlace es inválido o ya expiró. Pedí uno nuevo.",
-      "go_to_forgot": "Pedir un nuevo enlace"
+      "invalid_link_title": "Sesión inválida",
+      "invalid_link": "Esta sesión de recuperación es inválida o ya expiró. Pedí un código nuevo.",
+      "go_to_forgot": "Pedir un código nuevo"
     },
     "errors": {
       "invalid_credentials": "Email o contraseña incorrectos.",
       "email_not_confirmed": "Confirmá tu email antes de iniciar sesión.",
+      "email_not_confirmed_with_resend": "Tu cuenta todavía no está confirmada. Reenviá el código y completá la confirmación.",
       "user_already_exists": "Ya existe una cuenta con ese email.",
       "weak_password": "La contraseña es demasiado débil.",
       "same_password": "La contraseña nueva debe ser distinta a la actual.",
+      "invalid_otp": "El código es inválido.",
+      "otp_expired": "El código expiró. Pedí uno nuevo.",
       "over_email_send_rate_limit": "Demasiados intentos. Esperá unos minutos antes de volver a intentar.",
       "generic": "Algo salió mal. Probá de nuevo en un momento."
     }
@@ -62,7 +78,8 @@
     "notType": "Valor inválido.",
     "password_letter": "Debe incluir al menos una letra.",
     "password_number": "Debe incluir al menos un número.",
-    "password_match": "Las contraseñas no coinciden."
+    "password_match": "Las contraseñas no coinciden.",
+    "otp_format": "El código debe tener exactamente 8 dígitos."
   },
   "dashboard": {
     "title": "Inicio",

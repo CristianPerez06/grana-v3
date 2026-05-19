@@ -2,7 +2,6 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { defaultLocale, isLocale, localeCookieName } from '@/lib/i18n/config'
 
-const RECOVERY_COOKIE = 'recovery_in_progress'
 const ONE_YEAR = 60 * 60 * 24 * 365
 
 type JwtAmrEntry = { method?: string }
@@ -73,24 +72,9 @@ export const updateSession = async (request: NextRequest) => {
     }
   }
 
-  // Detect recovery session with two independent signals:
-  //   1) recovery_in_progress cookie set by /auth/callback on PKCE recovery
-  //   2) JWT amr claim containing method=otp (Supabase marks recovery sessions this way)
-  // Either alone is fragile (cookie can be missing; amr=otp also fires on signup OTP).
-  // Together they cover each other and let us safely gate the user inside /reset-password.
-  const recoveryCookie = request.cookies.get(RECOVERY_COOKIE)?.value === '1'
-  const amrMethods = decodeAmr(session?.access_token)
-  const amrIsOtp = amrMethods.includes('otp')
-  const amrIsPassword = amrMethods.includes('password')
-
-  let isRecoverySession = recoveryCookie || amrIsOtp
-
-  // Cleanup: a fresh email+password login (amr=password) with a stale recovery
-  // cookie hanging around — drop the cookie so the user can navigate freely.
-  if (recoveryCookie && amrIsPassword) {
-    isRecoverySession = false
-    response.cookies.set(RECOVERY_COOKIE, '', { maxAge: 0, path: '/' })
-  }
+  // A recovery session is identified by the JWT amr claim containing method=otp.
+  // Supabase tags sessions created via verifyOtp(type='recovery') this way.
+  const isRecoverySession = decodeAmr(session?.access_token).includes('otp')
 
   const pathname = request.nextUrl.pathname
   const protectedPrefixes = ['/dashboard', '/account', '/accounts']
@@ -102,12 +86,7 @@ export const updateSession = async (request: NextRequest) => {
     return NextResponse.redirect(url)
   }
 
-  if (
-    user &&
-    isRecoverySession &&
-    !pathname.startsWith('/reset-password') &&
-    !pathname.startsWith('/auth/')
-  ) {
+  if (user && isRecoverySession && !pathname.startsWith('/reset-password')) {
     const url = request.nextUrl.clone()
     url.pathname = '/reset-password'
     return NextResponse.redirect(url)

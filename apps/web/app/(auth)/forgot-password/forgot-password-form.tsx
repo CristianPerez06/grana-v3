@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { useTranslations } from 'next-intl'
@@ -18,7 +19,7 @@ export const ForgotPasswordForm = () => {
   const t = useTranslations('auth.forgot')
   const tv = useTranslations('validation')
   const fieldError = (msg: string | undefined) => translateFieldError(msg, tv)
-  const [submitted, setSubmitted] = useState(false)
+  const router = useRouter()
   const [formError, setFormError] = useState<string | null>(null)
 
   const {
@@ -35,7 +36,9 @@ export const ForgotPasswordForm = () => {
     setFormError(null)
     const result = await requestPasswordResetAction(values)
     if (result.ok) {
-      setSubmitted(true)
+      router.replace(
+        `/forgot-password/verify?email=${encodeURIComponent(values.email)}`,
+      )
       return
     }
     if (result.fieldErrors) {
@@ -45,8 +48,6 @@ export const ForgotPasswordForm = () => {
     }
     if (result.formError) setFormError(result.formError)
   })
-
-  if (submitted) return <Alert variant="info">{t('sent_notice')}</Alert>
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
