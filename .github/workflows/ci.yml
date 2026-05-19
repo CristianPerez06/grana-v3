@@ -1,0 +1,149 @@
+# CI for grana-v3 monorepo (apps/web + apps/mobile + shared packages/).
+# Runs on every PR targeting main + every push to main.
+#
+# Jobs run in parallel:
+#   - quality        : eslint + tsc --noEmit for both apps
+#   - web-build      : next build for apps/web with placeholder env
+#   - web-test       : vitest tests for apps/web
+#   - monorepo-health: pnpm-lock.yaml freshness + peer dep dedup
+#
+# Mobile builds (eas build) are NOT run from CI today — they consume
+# EAS free-tier credits. Local validation (pnpm eas:android:local /
+# eas:ios:local) is the current alternative. See PROXIMAS_FASES.md
+# Phase 8c if/when we want CI-driven mobile builds.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs for PR updates (saves runner minutes).
+# Never cancel on main pushes — we want every commit validated.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  quality:
+    name: Lint & typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint web
+        run: pnpm --filter web lint
+
+      - name: Lint mobile
+        run: pnpm --filter mobile lint
+
+      - name: Typecheck web
+        run: pnpm --filter web typecheck
+
+      - name: Typecheck mobile
+        run: pnpm --filter mobile typecheck
+
+  web-build:
+    name: Web production build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (Next.js)
+        env:
+          # Placeholders so Next can complete static analysis. CI doesn't
+          # hit Supabase, so real credentials aren't needed. If a future
+          # build step requires valid values, switch to repo secrets.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key-for-ci
+        run: pnpm --filter web build
+
+  web-test:
+    name: Web tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests (vitest)
+        run: pnpm --filter web test
+
+  monorepo-health:
+    name: Monorepo health (lockfile + peer dep dedup)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      # --frozen-lockfile fails if pnpm-lock.yaml is stale relative to
+      # any package.json in the workspace. Catches missing lockfile
+      # updates from PRs that touched dependencies.
+      - name: Validate pnpm-lock.yaml freshness
+        run: pnpm install --frozen-lockfile
+
+      # Guards against the bug from 2026-05-19: two React versions in
+      # the monorepo crashed the mobile bundle with "Cannot read
+      # property 'useRef' of null" inside react-native-screens. See
+      # apps/mobile/PROXIMAS_FASES.md for the incident.
+      # Why these and not react-dom:
+      # - react: bundled into both web and mobile. Two versions = crash.
+      # - react-native: bundled into mobile. Two versions = crash.
+      # - react-dom: bundled into web only. Mobile transitively pulls a
+      #   different react-dom via @expo/metro-runtime for Expo's web
+      #   export feature, but mobile's native builds never bundle it.
+      #   That duplication is benign and intentional, so it's excluded.
+      - name: Detect duplicate critical peer dependencies
+        run: |
+          set -euo pipefail
+          failed=0
+          for pkg in react react-native; do
+            versions=$(pnpm why "$pkg" --json 2>/dev/null \
+              | jq -r --arg name "$pkg" '[.. | objects | select(has("version") and (.name? == $name or .alias? == $name)) | .version] | unique | .[]' \
+              || true)
+            count=$(printf "%s" "$versions" | grep -c . || true)
+            echo "::group::$pkg (${count} version(s) installed)"
+            printf "%s\n" "$versions"
+            echo "::endgroup::"
+            if [ "${count:-0}" -gt 1 ]; then
+              echo "::error::Multiple versions of '$pkg' installed in the workspace. This causes bundle resolution failures (e.g. 'Cannot read property X of null' in React Native). Align the version across apps/web and apps/mobile."
+              failed=1
+            fi
+          done
+          exit $failed
