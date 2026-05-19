@@ -46,28 +46,19 @@ Tracker temporal de trabajo pendiente relacionado a la app mobile, builds y dist
   - `EAS_SETUP.md` extendido con Fase 8b documentada.
 - **Notas**: solo funciona para cambios que NO requieren rebuild nativo (JS/TS, assets, configs no-nativos). Cambios en `app.json`, módulos nativos, o pods siguen requiriendo `eas build`.
 
-### Fase 8c — Integración CI
+### Fase 8c — Builds de EAS desde CI
 
-- **Qué**: Correr `eas build` desde GitHub Actions automáticamente. Mínimo viable: build de Android en cada push a `main`. Stretch: build paralelo de iOS, validación pre-merge en PRs, gates de typecheck/lint.
-- **Bloqueador**: ninguno técnico. Conviene tener resueltas las Fases 8a/8b primero si querés que CI también submitee y/o haga OTA.
+- **Qué**: Correr `eas build` desde GitHub Actions automáticamente. Mínimo viable: build de Android en cada push a `main` (o por tag de release). Stretch: iOS en paralelo, integrado con `eas submit` cuando haya stores activas.
+- **Estado**: parcialmente hecho. **El workflow base de CI ya existe** (`.github/workflows/ci.yml`) cubriendo lint, typecheck, build de web, tests de web, y monorepo health (lockfile freshness + dedup de react/react-native). Lo que falta es solo el step que dispara `eas build`.
+- **Bloqueador**: ninguno técnico. Necesita `EXPO_TOKEN` en GitHub Secrets. Conviene tener resuelta la Fase 8a/8b primero si querés que CI también submitee a stores o shippee OTAs.
 - **Listo cuando**:
-  - Workflow de GitHub Actions corriendo `pnpm eas:android` (o equivalente) en `main` con `EXPO_TOKEN` en secrets.
+  - Job nuevo en el workflow corriendo `pnpm eas:android` con `EXPO_TOKEN` en secrets, gated por tag o branch específico (no en cada PR — eats credits).
   - Build visible en el dashboard de EAS, taggeado con el commit.
-  - Documentación de CI agregada a `EAS_SETUP.md` o `.github/workflows/<name>.yml` autoexplicativo.
-- **Notas**: cuidado con créditos del free tier de EAS si CI corre builds en cada push (~30/mes). Considerar gatear por tag o branch específico.
+- **Notas**: cuidado con créditos del free tier (~30/mes total cloud builds). Recomendado gatear por tag de release o trigger manual (`workflow_dispatch`).
 
 ---
 
 ## Tech debt / Hygiene
-
-### Guardrail CI: detectar versiones duplicadas de React
-
-- **Qué**: Agregar un check de CI que falle si `pnpm why react` reporta más de una versión instalada. Generalizable a `react-dom` y `react-native`.
-- **Bloqueador**: ninguno. Pendiente de la Fase 8c (CI base) o se puede agregar como check standalone antes.
-- **Listo cuando**:
-  - Step de CI que corre algo como `pnpm why react --json | jq '<filter>' | wc -l` y falla si > 1.
-  - Idealmente extendido a `react-dom` y `react-native`.
-- **Notas**: motivado por el bug del 2026-05-19 — dos versiones de React (web 19.2.4 + mobile 19.1.0) coexistiendo crashearon el bundle de mobile con `Cannot read property 'useRef' of null`. Fix landed en `feature/eas-bootstrap` (alineamos web a 19.1.0). Detalle del incidente en la memoria `project_pnpm_workspace_gotchas.md`.
 
 ### Triage de peer dependency warnings
 
