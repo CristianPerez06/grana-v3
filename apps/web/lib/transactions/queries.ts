@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { movementMatchesText, type MovementFilters } from './filters'
 import { toFinancialMovement, type FinancialMovement } from './movements'
 import type { TransactionWithDetails } from './types'
 
@@ -42,23 +43,119 @@ export async function getTransactions(
 // ── getTransactionDetail ──────────────────────────────────────────────────────
 
 export async function getGlobalMovements(
-  options: { limit?: number; offset?: number } = {},
+  options: { limit?: number; offset?: number; filters?: MovementFilters } = {},
 ): Promise<FinancialMovement[]> {
   const supabase = await createClient()
-  const { limit = 50, offset = 0 } = options
+  const { limit = 50, offset = 0, filters = {} } = options
 
-  const { data, error } = await supabase
+  let parentIdsForAccount: string[] = []
+  let cardPaymentIdsForAccount: string[] = []
+  if (filters.accountId) {
+    const [childRowsResult, cardPaymentsResult] = await Promise.all([
+      supabase
+        .from('transactions')
+        .select('parent_id')
+        .eq('account_id', filters.accountId)
+        .not('parent_id', 'is', null),
+      supabase
+        .from('period_payments')
+        .select('transaction_id, card_periods!inner(account_id)')
+        .eq('card_periods.account_id', filters.accountId),
+    ])
+
+    if (childRowsResult.error) throw childRowsResult.error
+    if (cardPaymentsResult.error) throw cardPaymentsResult.error
+
+    parentIdsForAccount = [
+      ...new Set(
+        (childRowsResult.data ?? [])
+          .map((row) => row.parent_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ]
+
+    cardPaymentIdsForAccount = [
+      ...new Set((cardPaymentsResult.data ?? []).map((row) => row.transaction_id)),
+    ]
+  }
+
+  let query = supabase
     .from('transactions')
     .select(TRANSACTION_SELECT)
     .is('parent_id', null)
     .order('date', { ascending: false })
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
-    .range(offset, offset + limit - 1)
+    .range(offset, offset + Math.max(limit * 10, 200) - 1)
+
+  if (filters.from) query = query.gte('date', filters.from)
+  if (filters.to) query = query.lte('date', filters.to)
+  if (filters.categoryId) query = query.eq('category_id', filters.categoryId)
+
+  if (filters.accountId) {
+    const accountConditions = [
+      `account_id.eq.${filters.accountId}`,
+      `transfer_destination_account_id.eq.${filters.accountId}`,
+    ]
+
+    if (parentIdsForAccount.length > 0) {
+      accountConditions.push(`id.in.(${parentIdsForAccount.join(',')})`)
+    }
+
+    if (cardPaymentIdsForAccount.length > 0) {
+      accountConditions.push(`id.in.(${cardPaymentIdsForAccount.join(',')})`)
+    }
+
+    query = query.or(accountConditions.join(','))
+  }
+
+  const { data, error } = await query
 
   if (error) throw error
 
-  return ((data ?? []) as TransactionWithDetails[]).map(toFinancialMovement)
+  return ((data ?? []) as TransactionWithDetails[])
+    .map(toFinancialMovement)
+    .filter((movement) => !filters.type || movement.kind === filters.type)
+    .filter((movement) => !filters.query || movementMatchesText(movement, filters.query))
+    .slice(0, limit)
+}
+
+export async function getMovementFilterOptions(): Promise<{
+  accounts: Array<{ id: string; name: string; type: 'cash' | 'bank' | 'credit' }>
+  categories: Array<{ id: string; name: string; type: 'income' | 'expense' | 'both' }>
+}> {
+  const supabase = await createClient()
+
+  const [accountsResult, categoriesResult] = await Promise.all([
+    supabase
+      .from('accounts')
+      .select('id, name, type')
+      .eq('is_active', true)
+      .order('type')
+      .order('name'),
+    supabase
+      .from('categories')
+      .select('id, name, type')
+      .eq('is_active', true)
+      .order('type')
+      .order('name'),
+  ])
+
+  if (accountsResult.error) throw accountsResult.error
+  if (categoriesResult.error) throw categoriesResult.error
+
+  return {
+    accounts: (accountsResult.data ?? []) as Array<{
+      id: string
+      name: string
+      type: 'cash' | 'bank' | 'credit'
+    }>,
+    categories: (categoriesResult.data ?? []) as Array<{
+      id: string
+      name: string
+      type: 'income' | 'expense' | 'both'
+    }>,
+  }
 }
 
 export async function getTransactionDetail(
