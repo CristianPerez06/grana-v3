@@ -8,6 +8,7 @@ import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { FormField } from '@/components/ui/form-field'
 import { SubmitButton } from '@/components/ui/submit-button'
+import { AUTH_INPUT_CLASS } from '@/lib/auth-class-names'
 import { createClient } from '@/lib/supabase/client'
 import { supabaseErrorKey } from '@/lib/supabase/errors'
 import {
@@ -93,6 +94,7 @@ export const OtpVerifyForm = ({ email, type, onVerified }: OtpVerifyFormProps) =
         autoComplete="one-time-code"
         maxLength={8}
         placeholder={t('auth.verify.code_placeholder')}
+        className={AUTH_INPUT_CLASS}
         error={fieldError(errors.code?.message)}
         {...register('code')}
       />

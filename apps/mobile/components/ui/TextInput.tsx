@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Text, TextInput as RNTextInput, type TextInputProps, View } from 'react-native'
 
 type Props = TextInputProps & {
@@ -6,22 +5,19 @@ type Props = TextInputProps & {
   value: string
   onChangeText: (text: string) => void
   error?: string
+  className?: string
 }
 
-export function TextInput({ label, value, onChangeText, error, ...rest }: Props) {
-  const [focused, setFocused] = useState(false)
-
+export function TextInput({ label, value, onChangeText, error, className, ...rest }: Props) {
   return (
     <View className="mb-4">
       <Text className="mb-1 text-sm font-medium text-text">{label}</Text>
       <RNTextInput
         value={value}
         onChangeText={onChangeText}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        className={`h-11 rounded-lg border bg-card px-3 text-sm text-text ${
-          error ? 'border-error' : focused ? 'border-emerald' : 'border-border'
-        }`}
+        className={`h-11 rounded-lg border bg-card px-3 text-sm text-text placeholder:text-text-soft ${
+          error ? 'border-error' : 'border-border focus:border-emerald'
+        } ${className ?? ''}`}
         placeholderTextColor="#8A94A3"
         {...rest}
       />

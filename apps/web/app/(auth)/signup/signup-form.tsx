@@ -9,6 +9,7 @@ import { Alert } from '@/components/ui/alert'
 import { FormField } from '@/components/ui/form-field'
 import { PasswordField } from '@/components/ui/password-field'
 import { SubmitButton } from '@/components/ui/submit-button'
+import { AUTH_INPUT_CLASS } from '@/lib/auth-class-names'
 import { signupAction } from '@/app/_actions/signup'
 import {
   signupSchema,
@@ -53,6 +54,7 @@ export const SignupForm = () => {
       <FormField
         label={t('fullName_label')}
         autoComplete="name"
+        className={AUTH_INPUT_CLASS}
         error={fieldError(errors.fullName?.message)}
         {...register('fullName')}
       />
@@ -60,18 +62,21 @@ export const SignupForm = () => {
         label={t('email_label')}
         type="email"
         autoComplete="email"
+        className={AUTH_INPUT_CLASS}
         error={fieldError(errors.email?.message)}
         {...register('email')}
       />
       <PasswordField
         label={t('password_label')}
         autoComplete="new-password"
+        className={AUTH_INPUT_CLASS}
         error={fieldError(errors.password?.message)}
         {...register('password')}
       />
       <PasswordField
         label={t('confirm_label')}
         autoComplete="new-password"
+        className={AUTH_INPUT_CLASS}
         error={fieldError(errors.confirmPassword?.message)}
         {...register('confirmPassword')}
       />

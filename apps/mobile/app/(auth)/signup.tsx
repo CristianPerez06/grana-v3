@@ -1,17 +1,12 @@
 import { useState } from 'react'
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native'
+import { Pressable, View } from 'react-native'
 import { Link, useRouter } from 'expo-router'
 import { signupSchema, ValidationError } from '@grana/validation'
 import { Button } from '../../components/ui/Button'
 import { FormError } from '../../components/ui/FormError'
 import { TextInput } from '../../components/ui/TextInput'
+import { CurvedNavyContainer } from '../../components/layout/CurvedNavyContainer'
+import { AUTH_INPUT_CLASS } from '../../lib/auth-class-names'
 import { supabase } from '../../lib/supabase'
 import { mapSupabaseError } from '../../lib/supabase-errors'
 import { translateValidationMessage } from '../../lib/yup-locale'
@@ -64,8 +59,6 @@ export default function SignupScreen() {
       return
     }
 
-    // Supabase returns a fake success with empty identities[] when the email
-    // is already registered (enumeration protection). Surface the explicit error.
     if (data.user && (data.user.identities?.length ?? 0) === 0) {
       setFormError(mapSupabaseError({ code: 'user_already_exists' }))
       return
@@ -78,75 +71,69 @@ export default function SignupScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-background"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <CurvedNavyContainer
+      title="Creá tu cuenta"
+      subtitle="Completá los datos para empezar."
+      showBack
+      backHref="/(auth)/login"
     >
-      <ScrollView
-        contentContainerClassName="flex-grow justify-center px-6 py-8"
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="mb-8">
-          <Text className="text-3xl font-bold text-foreground">Crear cuenta</Text>
-          <Text className="mt-1 text-muted-foreground">
-            Completá los datos para empezar.
-          </Text>
-        </View>
+      <TextInput
+        label="Nombre completo"
+        value={fullName}
+        onChangeText={setFullName}
+        placeholder="Juana Pérez"
+        autoCapitalize="words"
+        autoComplete="name"
+        error={fieldErrors.fullName}
+        className={AUTH_INPUT_CLASS}
+      />
 
-        <TextInput
-          label="Nombre completo"
-          value={fullName}
-          onChangeText={setFullName}
-          placeholder="Juana Pérez"
-          autoCapitalize="words"
-          autoComplete="name"
-          error={fieldErrors.fullName}
-        />
+      <TextInput
+        label="Email"
+        value={email}
+        onChangeText={setEmail}
+        placeholder="tu@email.com"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoCorrect={false}
+        autoComplete="email"
+        error={fieldErrors.email}
+        className={AUTH_INPUT_CLASS}
+      />
 
-        <TextInput
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="tu@email.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoComplete="email"
-          error={fieldErrors.email}
-        />
+      <TextInput
+        label="Contraseña"
+        value={password}
+        onChangeText={setPassword}
+        placeholder="••••••••"
+        secureTextEntry
+        autoComplete="new-password"
+        error={fieldErrors.password}
+        className={AUTH_INPUT_CLASS}
+      />
 
-        <TextInput
-          label="Contraseña"
-          value={password}
-          onChangeText={setPassword}
-          placeholder="••••••••"
-          secureTextEntry
-          autoComplete="new-password"
-          error={fieldErrors.password}
-        />
+      <TextInput
+        label="Confirmar contraseña"
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        placeholder="••••••••"
+        secureTextEntry
+        autoComplete="new-password"
+        error={fieldErrors.confirmPassword}
+        className={AUTH_INPUT_CLASS}
+      />
 
-        <TextInput
-          label="Confirmar contraseña"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          placeholder="••••••••"
-          secureTextEntry
-          autoComplete="new-password"
-          error={fieldErrors.confirmPassword}
-        />
+      <FormError message={formError} />
 
-        <FormError message={formError} />
+      <View className="mt-4">
+        <Button title="Crear cuenta" onPress={handleSignup} loading={loading} />
+      </View>
 
-        <View className="mt-4">
-          <Button title="Crear cuenta" onPress={handleSignup} loading={loading} />
-        </View>
-
-        <Pressable className="mt-6 items-center">
-          <Link href="/(auth)/login" className="text-sm font-medium text-primary">
-            ¿Ya tenés cuenta? Iniciá sesión
-          </Link>
-        </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <Pressable className="mt-6 items-center">
+        <Link href="/(auth)/login" className="text-sm font-medium text-primary">
+          ¿Ya tenés cuenta? Iniciá sesión
+        </Link>
+      </Pressable>
+    </CurvedNavyContainer>
   )
 }

@@ -7,17 +7,11 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import { useTranslations } from 'next-intl'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { PasswordField } from '@/components/ui/password-field'
 import { SubmitButton } from '@/components/ui/submit-button'
 import { Spinner } from '@/components/ui/spinner'
+import { CurvedNavyContainer } from '@/components/layout/curved-navy-container'
+import { AUTH_INPUT_CLASS } from '@/lib/auth-class-names'
 import { createClient } from '@/lib/supabase/client'
 import { mapSupabaseError } from '@/lib/supabase/errors'
 import {
@@ -60,7 +54,6 @@ const ResetPasswordPage = () => {
   const {
     register,
     handleSubmit,
-    setError,
     formState: { errors, isSubmitting },
   } = useForm<ResetInput>({
     resolver: yupResolver(resetSchema),
@@ -92,73 +85,65 @@ const ResetPasswordPage = () => {
 
   if (checkingSession) {
     return (
-      <Card>
-        <CardContent className="py-10 flex justify-center">
+      <CurvedNavyContainer title={t('title')} subtitle={t('description')}>
+        <div className="flex justify-center py-10">
           <Spinner />
-        </CardContent>
-      </Card>
+        </div>
+      </CurvedNavyContainer>
     )
   }
 
   if (updated) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('success_title')}</CardTitle>
-          <CardDescription>{t('success_body')}</CardDescription>
-        </CardHeader>
-        <CardFooter>
-          <Button asChild className="w-full">
-            <Link href="/login">{t('go_to_login')}</Link>
-          </Button>
-        </CardFooter>
-      </Card>
+      <CurvedNavyContainer
+        title={t('success_title')}
+        subtitle={t('success_body')}
+      >
+        <Button asChild className="w-full">
+          <Link href="/login">{t('go_to_login')}</Link>
+        </Button>
+      </CurvedNavyContainer>
     )
   }
 
   if (!hasRecovery) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('invalid_link_title')}</CardTitle>
-          <CardDescription>{t('invalid_link')}</CardDescription>
-        </CardHeader>
-        <CardFooter>
+      <CurvedNavyContainer
+        title={t('invalid_link_title')}
+        subtitle={t('invalid_link')}
+      >
+        <div className="flex justify-center">
           <Button variant="link" size="sm" asChild>
             <Link href="/forgot-password">{t('go_to_forgot')}</Link>
           </Button>
-        </CardFooter>
-      </Card>
+        </div>
+      </CurvedNavyContainer>
     )
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t('title')}</CardTitle>
-        <CardDescription>{t('description')}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
-          <PasswordField
-            label={t('password_label')}
-            autoComplete="new-password"
-            error={fieldError(errors.password?.message)}
-            {...register('password')}
-          />
-          <PasswordField
-            label={t('confirm_label')}
-            autoComplete="new-password"
-            error={fieldError(errors.confirmPassword?.message)}
-            {...register('confirmPassword')}
-          />
-          {formError && <Alert variant="error">{formError}</Alert>}
-          <SubmitButton pending={isSubmitting} className="w-full">
-            {t('submit')}
-          </SubmitButton>
-        </form>
-      </CardContent>
-    </Card>
+    <CurvedNavyContainer title={t('title')} subtitle={t('description')}>
+      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+        <PasswordField
+          label={t('password_label')}
+          autoComplete="new-password"
+          className={AUTH_INPUT_CLASS}
+          error={fieldError(errors.password?.message)}
+          {...register('password')}
+        />
+        <PasswordField
+          label={t('confirm_label')}
+          autoComplete="new-password"
+          className={AUTH_INPUT_CLASS}
+          error={fieldError(errors.confirmPassword?.message)}
+          {...register('confirmPassword')}
+        />
+        {formError && <Alert variant="error">{formError}</Alert>}
+        <SubmitButton pending={isSubmitting} className="w-full">
+          {t('submit')}
+        </SubmitButton>
+      </form>
+    </CurvedNavyContainer>
   )
 }
 

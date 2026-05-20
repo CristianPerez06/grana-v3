@@ -1,17 +1,12 @@
 import { useEffect, useState } from 'react'
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native'
+import { ActivityIndicator, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { resetSchema, ValidationError } from '@grana/validation'
 import { Button } from '../../components/ui/Button'
 import { FormError } from '../../components/ui/FormError'
 import { TextInput } from '../../components/ui/TextInput'
+import { CurvedNavyContainer } from '../../components/layout/CurvedNavyContainer'
+import { AUTH_INPUT_CLASS } from '../../lib/auth-class-names'
 import { supabase } from '../../lib/supabase'
 import { hasRecoveryClaim } from '../../lib/recovery'
 import { mapSupabaseError } from '../../lib/supabase-errors'
@@ -66,7 +61,6 @@ export default function NewPasswordScreen() {
     }
 
     await supabase.auth.signOut()
-    // onAuthStateChange in root layout will redirect to /(auth)/login.
     router.replace({
       pathname: '/(auth)/login',
       params: { message: 'password_updated' },
@@ -75,7 +69,7 @@ export default function NewPasswordScreen() {
 
   if (checking) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
+      <View className="flex-1 items-center justify-center bg-page">
         <ActivityIndicator />
       </View>
     )
@@ -83,63 +77,52 @@ export default function NewPasswordScreen() {
 
   if (!hasRecovery) {
     return (
-      <View className="flex-1 justify-center bg-background px-6">
-        <Text className="text-xl font-semibold text-foreground">Sesión inválida</Text>
-        <Text className="mt-2 text-muted-foreground">
-          Esta sesión de recuperación es inválida o ya expiró. Pedí un código nuevo.
-        </Text>
+      <CurvedNavyContainer
+        title="Sesión inválida"
+        subtitle="Esta sesión de recuperación es inválida o ya expiró. Pedí un código nuevo."
+      >
         <View className="mt-6">
           <Button
             title="Pedir un código nuevo"
             onPress={() => router.replace('/(auth)/forgot-password')}
           />
         </View>
-      </View>
+      </CurvedNavyContainer>
     )
   }
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-background"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <CurvedNavyContainer
+      title="Nueva contraseña"
+      subtitle="Elegí una contraseña nueva para tu cuenta."
     >
-      <ScrollView
-        contentContainerClassName="flex-grow justify-center px-6 py-8"
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="mb-8">
-          <Text className="text-3xl font-bold text-foreground">Nueva contraseña</Text>
-          <Text className="mt-1 text-muted-foreground">
-            Elegí una contraseña nueva para tu cuenta.
-          </Text>
-        </View>
+      <TextInput
+        label="Nueva contraseña"
+        value={password}
+        onChangeText={setPassword}
+        placeholder="••••••••"
+        secureTextEntry
+        autoComplete="new-password"
+        error={fieldErrors.password}
+        className={AUTH_INPUT_CLASS}
+      />
 
-        <TextInput
-          label="Nueva contraseña"
-          value={password}
-          onChangeText={setPassword}
-          placeholder="••••••••"
-          secureTextEntry
-          autoComplete="new-password"
-          error={fieldErrors.password}
-        />
+      <TextInput
+        label="Confirmar contraseña"
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        placeholder="••••••••"
+        secureTextEntry
+        autoComplete="new-password"
+        error={fieldErrors.confirmPassword}
+        className={AUTH_INPUT_CLASS}
+      />
 
-        <TextInput
-          label="Confirmar contraseña"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          placeholder="••••••••"
-          secureTextEntry
-          autoComplete="new-password"
-          error={fieldErrors.confirmPassword}
-        />
+      <FormError message={formError} />
 
-        <FormError message={formError} />
-
-        <View className="mt-4">
-          <Button title="Guardar contraseña" onPress={handleSubmit} loading={loading} />
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <View className="mt-4">
+        <Button title="Guardar contraseña" onPress={handleSubmit} loading={loading} />
+      </View>
+    </CurvedNavyContainer>
   )
 }

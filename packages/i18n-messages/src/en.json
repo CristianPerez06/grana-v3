@@ -12,6 +12,7 @@
     },
     "login": {
       "title": "Sign in",
+      "header_title": "Welcome",
       "description": "Use your email and password to continue.",
       "email_label": "Email",
       "password_label": "Password",
@@ -93,7 +94,8 @@
   },
   "common": {
     "app_name": "grana",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "back": "Back"
   },
   "onboarding": {
     "welcome": {

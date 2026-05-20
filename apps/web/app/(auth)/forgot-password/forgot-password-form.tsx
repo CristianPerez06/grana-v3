@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl'
 import { Alert } from '@/components/ui/alert'
 import { FormField } from '@/components/ui/form-field'
 import { SubmitButton } from '@/components/ui/submit-button'
+import { AUTH_INPUT_CLASS } from '@/lib/auth-class-names'
 import { requestPasswordResetAction } from '@/app/_actions/request-password-reset'
 import {
   forgotSchema,
@@ -55,6 +56,7 @@ export const ForgotPasswordForm = () => {
         label={t('email_label')}
         type="email"
         autoComplete="email"
+        className={AUTH_INPUT_CLASS}
         error={fieldError(errors.email?.message)}
         {...register('email')}
       />

@@ -1,17 +1,12 @@
 import { useState } from 'react'
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native'
+import { Pressable, View } from 'react-native'
 import { Link, useRouter } from 'expo-router'
 import { forgotSchema, ValidationError } from '@grana/validation'
 import { Button } from '../../components/ui/Button'
 import { FormError } from '../../components/ui/FormError'
 import { TextInput } from '../../components/ui/TextInput'
+import { CurvedNavyContainer } from '../../components/layout/CurvedNavyContainer'
+import { AUTH_INPUT_CLASS } from '../../lib/auth-class-names'
 import { supabase } from '../../lib/supabase'
 import { mapSupabaseError } from '../../lib/supabase-errors'
 import { translateValidationMessage } from '../../lib/yup-locale'
@@ -51,45 +46,36 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-background"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <CurvedNavyContainer
+      title="Recuperar contraseña"
+      subtitle="Te enviaremos un código a tu email."
+      showBack
+      backHref="/(auth)/login"
     >
-      <ScrollView
-        contentContainerClassName="flex-grow justify-center px-6 py-8"
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="mb-8">
-          <Text className="text-3xl font-bold text-foreground">Recuperar contraseña</Text>
-          <Text className="mt-1 text-muted-foreground">
-            Ingresá tu email y te enviamos un código para restablecerla.
-          </Text>
-        </View>
+      <TextInput
+        label="Email"
+        value={email}
+        onChangeText={setEmail}
+        placeholder="tu@email.com"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoCorrect={false}
+        autoComplete="email"
+        error={emailError}
+        className={AUTH_INPUT_CLASS}
+      />
 
-        <TextInput
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="tu@email.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoComplete="email"
-          error={emailError}
-        />
+      <FormError message={formError} />
 
-        <FormError message={formError} />
+      <View className="mt-4">
+        <Button title="Enviar código" onPress={handleSubmit} loading={loading} />
+      </View>
 
-        <View className="mt-4">
-          <Button title="Enviar código" onPress={handleSubmit} loading={loading} />
-        </View>
-
-        <Pressable className="mt-6 items-center">
-          <Link href="/(auth)/login" className="text-sm font-medium text-primary">
-            Volver a iniciar sesión
-          </Link>
-        </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <Pressable className="mt-6 items-center">
+        <Link href="/(auth)/login" className="text-sm font-medium text-primary">
+          Volver a iniciar sesión
+        </Link>
+      </Pressable>
+    </CurvedNavyContainer>
   )
 }

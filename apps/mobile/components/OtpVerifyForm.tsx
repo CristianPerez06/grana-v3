@@ -6,6 +6,7 @@ import { mapSupabaseError } from '../lib/supabase-errors'
 import { Button } from './ui/Button'
 import { FormError } from './ui/FormError'
 import { TextInput } from './ui/TextInput'
+import { AUTH_INPUT_CLASS } from '../lib/auth-class-names'
 
 const RESEND_COOLDOWN_SECONDS = 60
 
@@ -86,6 +87,7 @@ export function OtpVerifyForm({ email, type, onVerified }: Props) {
         autoCorrect={false}
         autoComplete="one-time-code"
         textContentType="oneTimeCode"
+        className={AUTH_INPUT_CLASS}
       />
 
       <FormError message={error} />
