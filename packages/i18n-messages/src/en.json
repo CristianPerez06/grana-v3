@@ -85,7 +85,41 @@
   "dashboard": {
     "title": "Home",
     "welcome": "Hi, {name}.",
-    "welcome_anon": "Hi."
+    "welcome_anon": "Hi.",
+    "mask_show": "Show amounts",
+    "mask_hide": "Hide amounts",
+    "hero": {
+      "label": "Available"
+    },
+    "upcoming": {
+      "title": "What's coming",
+      "subtitle": "Next 2 weeks",
+      "to_pay": "To pay",
+      "to_collect": "To collect",
+      "period_balance": "Period balance",
+      "empty": "No events expected in the next 14 days.",
+      "error": "Couldn't load upcoming events."
+    },
+    "month": {
+      "title": "Monthly balance",
+      "income": "Income",
+      "expense": "Expenses",
+      "final_balance": "Balance",
+      "empty": "No movements this month.",
+      "error": "Couldn't load monthly balance."
+    },
+    "cards": {
+      "title": "Cards",
+      "empty_title": "No cards added yet",
+      "empty_cta": "Add card",
+      "error": "Couldn't load cards."
+    },
+    "hero_error": "Couldn't load your available balance.",
+    "welcome_card": {
+      "title": "Add your first movement",
+      "description": "Once you record your first income or expense, you'll see your available balance, what's coming, and how the month is going.",
+      "cta": "Add a movement"
+    }
   },
   "footer": {
     "language": "Language",

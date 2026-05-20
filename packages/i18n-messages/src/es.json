@@ -85,7 +85,41 @@
   "dashboard": {
     "title": "Inicio",
     "welcome": "Hola, {name}.",
-    "welcome_anon": "Hola."
+    "welcome_anon": "Hola.",
+    "mask_show": "Mostrar importes",
+    "mask_hide": "Ocultar importes",
+    "hero": {
+      "label": "Para gastar"
+    },
+    "upcoming": {
+      "title": "Lo que viene",
+      "subtitle": "Próximas 2 semanas",
+      "to_pay": "A pagar",
+      "to_collect": "A cobrar",
+      "period_balance": "Balance del período",
+      "empty": "No tenés movimientos previstos en los próximos 14 días.",
+      "error": "No pudimos cargar los próximos eventos."
+    },
+    "month": {
+      "title": "Balance del mes",
+      "income": "Ingresos",
+      "expense": "Gastos",
+      "final_balance": "Balance",
+      "empty": "Sin movimientos este mes.",
+      "error": "No pudimos cargar el balance del mes."
+    },
+    "cards": {
+      "title": "Tarjetas",
+      "empty_title": "Todavía no agregaste ninguna tarjeta",
+      "empty_cta": "Agregar tarjeta",
+      "error": "No pudimos cargar las tarjetas."
+    },
+    "hero_error": "No pudimos cargar tu disponible.",
+    "welcome_card": {
+      "title": "Cargá tu primer movimiento",
+      "description": "Cuando registres tu primer ingreso o gasto, vas a ver acá cuánto tenés, qué viene y cómo va el mes.",
+      "cta": "Cargar movimiento"
+    }
   },
   "footer": {
     "language": "Idioma",
