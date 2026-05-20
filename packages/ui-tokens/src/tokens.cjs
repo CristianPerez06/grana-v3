@@ -1,80 +1,216 @@
 module.exports = {
   "colors": {
-    "background": {
-      "DEFAULT": "#ffffff",
-      "dark": "#0a0a0a"
+    "navy": {
+      "DEFAULT": "#0B1A2B"
     },
-    "foreground": {
-      "DEFAULT": "#171717",
-      "dark": "#ededed"
+    "navy-muted": {
+      "DEFAULT": "rgba(255, 255, 255, 0.62)"
     },
-    "primary": {
-      "DEFAULT": "#171717",
-      "dark": "#fafafa"
+    "navy-soft": {
+      "DEFAULT": "rgba(255, 255, 255, 0.08)"
     },
-    "primary-foreground": {
-      "DEFAULT": "#fafafa",
-      "dark": "#171717"
+    "navy-border": {
+      "DEFAULT": "rgba(255, 255, 255, 0.14)"
     },
-    "secondary": {
-      "DEFAULT": "#f5f5f5",
-      "dark": "#262626"
+    "emerald": {
+      "DEFAULT": "#10B981"
     },
-    "secondary-foreground": {
-      "DEFAULT": "#171717",
-      "dark": "#fafafa"
+    "emerald-deep": {
+      "DEFAULT": "#059669"
     },
-    "muted": {
-      "DEFAULT": "#f5f5f5",
-      "dark": "#262626"
+    "emerald-soft": {
+      "DEFAULT": "rgba(16, 185, 129, 0.12)"
     },
-    "muted-foreground": {
-      "DEFAULT": "#737373",
-      "dark": "#a3a3a3"
+    "emerald-bg": {
+      "DEFAULT": "#ECFDF5",
+      "dark": "rgba(16, 185, 129, 0.14)"
+    },
+    "plum": {
+      "DEFAULT": "#8A6E98"
+    },
+    "plum-deep": {
+      "DEFAULT": "#6E5482"
+    },
+    "plum-soft": {
+      "DEFAULT": "rgba(138, 110, 152, 0.12)"
+    },
+    "terracotta": {
+      "DEFAULT": "#B56A5A"
+    },
+    "terracotta-soft": {
+      "DEFAULT": "rgba(181, 106, 90, 0.12)"
+    },
+    "slate": {
+      "DEFAULT": "#3A6B8A"
+    },
+    "slate-soft": {
+      "DEFAULT": "#EAF1F6",
+      "dark": "rgba(58, 107, 138, 0.18)"
+    },
+    "white": {
+      "DEFAULT": "#FFFFFF"
+    },
+    "page": {
+      "DEFAULT": "#F6F7F9",
+      "dark": "#0B1A2B"
+    },
+    "card": {
+      "DEFAULT": "#FFFFFF",
+      "dark": "#142539"
     },
     "border": {
-      "DEFAULT": "#e5e5e5",
-      "dark": "#262626"
+      "DEFAULT": "#E6EAEF",
+      "dark": "rgba(255, 255, 255, 0.14)"
     },
-    "input": {
-      "DEFAULT": "#e5e5e5",
-      "dark": "#262626"
+    "border-soft": {
+      "DEFAULT": "#EEF1F4",
+      "dark": "rgba(255, 255, 255, 0.08)"
     },
-    "ring": {
-      "DEFAULT": "#171717",
-      "dark": "#fafafa"
+    "text": {
+      "DEFAULT": "#0B1A2B",
+      "dark": "#FFFFFF"
     },
-    "destructive": {
-      "DEFAULT": "#dc2626",
-      "dark": "#ef4444"
+    "text-muted": {
+      "DEFAULT": "#6B7683",
+      "dark": "rgba(255, 255, 255, 0.62)"
     },
-    "destructive-foreground": {
-      "DEFAULT": "#fafafa",
-      "dark": "#fafafa"
+    "text-soft": {
+      "DEFAULT": "#8A94A3",
+      "dark": "rgba(255, 255, 255, 0.45)"
     },
-    "success": {
-      "DEFAULT": "#16a34a",
-      "dark": "#22c55e"
+    "text-neutral": {
+      "DEFAULT": "#7A8494",
+      "dark": "rgba(255, 255, 255, 0.55)"
     },
-    "success-foreground": {
-      "DEFAULT": "#fafafa",
-      "dark": "#052e16"
+    "positive": {
+      "DEFAULT": "#10B981"
+    },
+    "negative": {
+      "DEFAULT": "#B56A5A"
     },
     "warning": {
-      "DEFAULT": "#d97706",
-      "dark": "#f59e0b"
+      "DEFAULT": "#C49A3C"
+    },
+    "warning-deep": {
+      "DEFAULT": "#B45309"
+    },
+    "warning-soft": {
+      "DEFAULT": "rgba(196, 154, 60, 0.12)"
+    },
+    "warning-bg": {
+      "DEFAULT": "rgba(196, 154, 60, 0.10)"
+    },
+    "error": {
+      "DEFAULT": "#C54B3C"
+    },
+    "error-deep": {
+      "DEFAULT": "#8A2A1E"
+    },
+    "error-soft": {
+      "DEFAULT": "#FBECE9",
+      "dark": "rgba(197, 75, 60, 0.18)"
+    },
+    "error-bg": {
+      "DEFAULT": "rgba(197, 75, 60, 0.06)",
+      "dark": "rgba(197, 75, 60, 0.10)"
+    },
+    "surface-page": {
+      "DEFAULT": "var(--page)"
+    },
+    "surface-card": {
+      "DEFAULT": "var(--card)"
+    },
+    "surface-elevated": {
+      "DEFAULT": "var(--card)"
+    },
+    "surface-dark": {
+      "DEFAULT": "var(--navy)"
+    },
+    "surface-sunken": {
+      "DEFAULT": "var(--border-soft)"
+    },
+    "cat-1": {
+      "DEFAULT": "#10B981"
+    },
+    "cat-2": {
+      "DEFAULT": "#0D9488"
+    },
+    "cat-3": {
+      "DEFAULT": "#3A6B8A"
+    },
+    "cat-4": {
+      "DEFAULT": "#B56A5A"
+    },
+    "cat-5": {
+      "DEFAULT": "#8A6E98"
+    },
+    "background": {
+      "DEFAULT": "var(--page)",
+      "dark": "var(--page)"
+    },
+    "foreground": {
+      "DEFAULT": "var(--text)",
+      "dark": "var(--text)"
+    },
+    "primary": {
+      "DEFAULT": "var(--navy)",
+      "dark": "var(--emerald)"
+    },
+    "primary-foreground": {
+      "DEFAULT": "var(--white)",
+      "dark": "var(--navy)"
+    },
+    "secondary": {
+      "DEFAULT": "var(--border-soft)",
+      "dark": "var(--border-soft)"
+    },
+    "secondary-foreground": {
+      "DEFAULT": "var(--text)",
+      "dark": "var(--text)"
+    },
+    "muted": {
+      "DEFAULT": "var(--border-soft)",
+      "dark": "var(--border-soft)"
+    },
+    "muted-foreground": {
+      "DEFAULT": "var(--text-muted)",
+      "dark": "var(--text-muted)"
+    },
+    "input": {
+      "DEFAULT": "var(--border)",
+      "dark": "var(--border)"
+    },
+    "ring": {
+      "DEFAULT": "var(--emerald)",
+      "dark": "var(--emerald)"
+    },
+    "destructive": {
+      "DEFAULT": "var(--terracotta)",
+      "dark": "var(--terracotta)"
+    },
+    "destructive-foreground": {
+      "DEFAULT": "var(--white)",
+      "dark": "var(--white)"
+    },
+    "success": {
+      "DEFAULT": "var(--emerald)",
+      "dark": "var(--emerald)"
+    },
+    "success-foreground": {
+      "DEFAULT": "var(--white)",
+      "dark": "var(--navy)"
     },
     "warning-foreground": {
-      "DEFAULT": "#fafafa",
-      "dark": "#1c1917"
+      "DEFAULT": "var(--white)",
+      "dark": "var(--navy)"
     },
     "info": {
-      "DEFAULT": "#2563eb",
-      "dark": "#3b82f6"
+      "DEFAULT": "var(--slate)",
+      "dark": "var(--slate)"
     },
     "info-foreground": {
-      "DEFAULT": "#fafafa",
-      "dark": "#fafafa"
+      "DEFAULT": "var(--white)",
+      "dark": "var(--white)"
     }
   }
 };

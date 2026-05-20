@@ -13,19 +13,19 @@ export function TextInput({ label, value, onChangeText, error, ...rest }: Props)
 
   return (
     <View className="mb-4">
-      <Text className="mb-1 text-sm font-medium text-foreground">{label}</Text>
+      <Text className="mb-1 text-sm font-medium text-text">{label}</Text>
       <RNTextInput
         value={value}
         onChangeText={onChangeText}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        className={`h-12 rounded-lg border px-3 text-foreground bg-background ${
-          error ? 'border-destructive' : focused ? 'border-primary' : 'border-input'
+        className={`h-11 rounded-lg border bg-card px-3 text-sm text-text ${
+          error ? 'border-error' : focused ? 'border-emerald' : 'border-border'
         }`}
-        placeholderTextColor="#737373"
+        placeholderTextColor="#8A94A3"
         {...rest}
       />
-      {error ? <Text className="mt-1 text-sm text-destructive">{error}</Text> : null}
+      {error ? <Text className="mt-1 text-xs text-error">{error}</Text> : null}
     </View>
   )
 }

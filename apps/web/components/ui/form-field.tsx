@@ -34,12 +34,12 @@ const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
           {...inputProps}
         />
         {description && !error && (
-          <p id={descriptionId} className="text-xs text-muted-foreground">
+          <p id={descriptionId} className="text-xs text-text-muted">
             {description}
           </p>
         )}
         {error && (
-          <p id={errorId} className="text-xs text-destructive">
+          <p id={errorId} className="text-xs text-error">
             {error}
           </p>
         )}

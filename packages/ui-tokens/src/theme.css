@@ -1,50 +1,191 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --primary: #171717;
-  --primary-foreground: #fafafa;
-  --secondary: #f5f5f5;
-  --secondary-foreground: #171717;
-  --muted: #f5f5f5;
-  --muted-foreground: #737373;
-  --border: #e5e5e5;
-  --input: #e5e5e5;
-  --ring: #171717;
-  --destructive: #dc2626;
-  --destructive-foreground: #fafafa;
-  --success: #16a34a;
-  --success-foreground: #fafafa;
-  --warning: #d97706;
-  --warning-foreground: #fafafa;
-  --info: #2563eb;
-  --info-foreground: #fafafa;
+  /* Brand — navy (primary structural) */
+  --navy: #0B1A2B;
+  --navy-muted: rgba(255, 255, 255, 0.62);
+  --navy-soft: rgba(255, 255, 255, 0.08);
+  --navy-border: rgba(255, 255, 255, 0.14);
+
+  /* Brand — emerald (primary accent / positive) */
+  --emerald: #10B981;
+  --emerald-deep: #059669;
+  --emerald-soft: rgba(16, 185, 129, 0.12);
+  --emerald-bg: #ECFDF5;
+
+  /* Brand — plum (secondary member color) */
+  --plum: #8A6E98;
+  --plum-deep: #6E5482;
+  --plum-soft: rgba(138, 110, 152, 0.12);
+
+  /* Brand — terracotta (negative — NOT red) */
+  --terracotta: #B56A5A;
+  --terracotta-soft: rgba(181, 106, 90, 0.12);
+
+  /* Brand — slate (informational / contextual) */
+  --slate: #3A6B8A;
+  --slate-soft: #EAF1F6;
+
+  /* Neutrals — surfaces */
+  --white: #FFFFFF;
+  --page: #F6F7F9;
+  --card: #FFFFFF;
+  --border: #E6EAEF;
+  --border-soft: #EEF1F4;
+
+  /* Text */
+  --text: #0B1A2B;
+  --text-muted: #6B7683;
+  --text-soft: #8A94A3;
+  --text-neutral: #7A8494;
+
+  /* Semantic — positive / negative */
+  --positive: #10B981;
+  --negative: #B56A5A;
+
+  /* Semantic — warning */
+  --warning: #C49A3C;
+  --warning-deep: #B45309;
+  --warning-soft: rgba(196, 154, 60, 0.12);
+  --warning-bg: rgba(196, 154, 60, 0.10);
+
+  /* Semantic — error (critical alerts) */
+  --error: #C54B3C;
+  --error-deep: #8A2A1E;
+  --error-soft: #FBECE9;
+  --error-bg: rgba(197, 75, 60, 0.06);
+
+  /* Surface aliases */
+  --surface-page: var(--page);
+  --surface-card: var(--card);
+  --surface-elevated: var(--card);
+  --surface-dark: var(--navy);
+  --surface-sunken: var(--border-soft);
+
+  /* Category palette */
+  --cat-1: #10B981;
+  --cat-2: #0D9488;
+  --cat-3: #3A6B8A;
+  --cat-4: #B56A5A;
+  --cat-5: #8A6E98;
+
+  /* shadcn-style semantic tokens, re-pointed at v2 brand values */
+  --background: var(--page);
+  --foreground: var(--text);
+  --primary: var(--navy);
+  --primary-foreground: var(--white);
+  --secondary: var(--border-soft);
+  --secondary-foreground: var(--text);
+  --muted: var(--border-soft);
+  --muted-foreground: var(--text-muted);
+  --input: var(--border);
+  --ring: var(--emerald);
+  --destructive: var(--terracotta);
+  --destructive-foreground: var(--white);
+  --success: var(--emerald);
+  --success-foreground: var(--white);
+  --warning-foreground: var(--white);
+  --info: var(--slate);
+  --info-foreground: var(--white);
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --primary: #fafafa;
-  --primary-foreground: #171717;
-  --secondary: #262626;
-  --secondary-foreground: #fafafa;
-  --muted: #262626;
-  --muted-foreground: #a3a3a3;
-  --border: #262626;
-  --input: #262626;
-  --ring: #fafafa;
-  --destructive: #ef4444;
-  --destructive-foreground: #fafafa;
-  --success: #22c55e;
-  --success-foreground: #052e16;
-  --warning: #f59e0b;
-  --warning-foreground: #1c1917;
-  --info: #3b82f6;
-  --info-foreground: #fafafa;
+  /* Surfaces invert: navy is the page; cards sit slightly above */
+  --page: #0B1A2B;
+  --card: #142539;
+  --border: rgba(255, 255, 255, 0.14);
+  --border-soft: rgba(255, 255, 255, 0.08);
+
+  /* Text on dark */
+  --text: #FFFFFF;
+  --text-muted: rgba(255, 255, 255, 0.62);
+  --text-soft: rgba(255, 255, 255, 0.45);
+  --text-neutral: rgba(255, 255, 255, 0.55);
+
+  /* Soft brand backgrounds: drop the pale tinted bg in favor of the rgba soft */
+  --emerald-bg: rgba(16, 185, 129, 0.14);
+  --slate-soft: rgba(58, 107, 138, 0.18);
+  --error-soft: rgba(197, 75, 60, 0.18);
+  --error-bg: rgba(197, 75, 60, 0.10);
+
+  /* shadcn semantic remap for dark: bright accent becomes the CTA primary */
+  --background: var(--page);
+  --foreground: var(--text);
+  --primary: var(--emerald);
+  --primary-foreground: var(--navy);
+  --secondary: var(--border-soft);
+  --secondary-foreground: var(--text);
+  --muted: var(--border-soft);
+  --muted-foreground: var(--text-muted);
+  --input: var(--border);
+  --ring: var(--emerald);
+  --destructive: var(--terracotta);
+  --destructive-foreground: var(--white);
+  --success: var(--emerald);
+  --success-foreground: var(--navy);
+  --warning-foreground: var(--navy);
+  --info: var(--slate);
+  --info-foreground: var(--white);
 }
 
 @theme inline {
+  /* Raw brand palette as Tailwind utilities: bg-navy, text-emerald, border-plum, ... */
+  --color-navy: var(--navy);
+  --color-navy-muted: var(--navy-muted);
+  --color-navy-soft: var(--navy-soft);
+  --color-navy-border: var(--navy-border);
+
+  --color-emerald: var(--emerald);
+  --color-emerald-deep: var(--emerald-deep);
+  --color-emerald-soft: var(--emerald-soft);
+  --color-emerald-bg: var(--emerald-bg);
+
+  --color-plum: var(--plum);
+  --color-plum-deep: var(--plum-deep);
+  --color-plum-soft: var(--plum-soft);
+
+  --color-terracotta: var(--terracotta);
+  --color-terracotta-soft: var(--terracotta-soft);
+
+  --color-slate: var(--slate);
+  --color-slate-soft: var(--slate-soft);
+
+  /* Neutrals + text */
+  --color-page: var(--page);
+  --color-card: var(--card);
+  --color-border-soft: var(--border-soft);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-soft: var(--text-soft);
+  --color-text-neutral: var(--text-neutral);
+
+  /* Semantic raw */
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-warning: var(--warning);
+  --color-warning-deep: var(--warning-deep);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-bg: var(--warning-bg);
+  --color-error: var(--error);
+  --color-error-deep: var(--error-deep);
+  --color-error-soft: var(--error-soft);
+  --color-error-bg: var(--error-bg);
+
+  /* Surface aliases */
+  --color-surface-page: var(--surface-page);
+  --color-surface-card: var(--surface-card);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-dark: var(--surface-dark);
+  --color-surface-sunken: var(--surface-sunken);
+
+  /* Category palette */
+  --color-cat-1: var(--cat-1);
+  --color-cat-2: var(--cat-2);
+  --color-cat-3: var(--cat-3);
+  --color-cat-4: var(--cat-4);
+  --color-cat-5: var(--cat-5);
+
+  /* shadcn-style semantic tokens kept for existing consumers */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
@@ -60,10 +201,44 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
-  --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(26, 23, 20, 0.05);
+  --shadow-md: 0 2px 8px rgba(26, 23, 20, 0.08), 0 1px 2px rgba(26, 23, 20, 0.04);
+  --shadow-lg: 0 4px 16px rgba(26, 23, 20, 0.10), 0 2px 4px rgba(26, 23, 20, 0.05);
+  --shadow-xl: 0 8px 32px rgba(26, 23, 20, 0.12), 0 4px 8px rgba(26, 23, 20, 0.06);
+
+  /* Radii */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.125rem;
+  --radius-3xl: 1.25rem;
+  --radius-4xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* Motion */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Typography scale */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

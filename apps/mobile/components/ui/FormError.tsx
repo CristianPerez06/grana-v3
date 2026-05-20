@@ -6,5 +6,5 @@ type Props = {
 
 export function FormError({ message }: Props) {
   if (!message) return null
-  return <Text className="mt-2 text-sm text-destructive">{message}</Text>
+  return <Text className="mt-2 text-sm text-error">{message}</Text>
 }

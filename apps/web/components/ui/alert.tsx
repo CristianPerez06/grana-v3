@@ -8,10 +8,10 @@ const alertVariants = cva(
   {
     variants: {
       variant: {
-        info: 'border-info/30 bg-info/10 text-info',
-        success: 'border-success/30 bg-success/10 text-success',
-        error: 'border-destructive/30 bg-destructive/10 text-destructive',
-        warning: 'border-warning/30 bg-warning/10 text-warning',
+        info: 'border-slate/20 bg-slate-soft text-slate',
+        success: 'border-emerald/20 bg-emerald-soft text-emerald-deep',
+        error: 'border-error/20 bg-error-soft text-error-deep',
+        warning: 'border-warning/20 bg-warning-soft text-warning-deep',
       },
     },
     defaultVariants: { variant: 'info' },
