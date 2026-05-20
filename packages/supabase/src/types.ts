@@ -305,20 +305,29 @@ export type Database = {
         Row: {
           created_at: string
           email: string
+          financial_timezone: string
           full_name: string
           id: string
+          mode: string
+          onboarding_completed_at: string | null
         }
         Insert: {
           created_at?: string
           email: string
+          financial_timezone?: string
           full_name: string
           id: string
+          mode?: string
+          onboarding_completed_at?: string | null
         }
         Update: {
           created_at?: string
           email?: string
+          financial_timezone?: string
           full_name?: string
           id?: string
+          mode?: string
+          onboarding_completed_at?: string | null
         }
         Relationships: []
       }

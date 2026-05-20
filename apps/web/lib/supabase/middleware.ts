@@ -77,8 +77,9 @@ export const updateSession = async (request: NextRequest) => {
   const isRecoverySession = decodeAmr(session?.access_token).includes('otp')
 
   const pathname = request.nextUrl.pathname
-  const protectedPrefixes = ['/dashboard', '/account', '/accounts']
+  const protectedPrefixes = ['/dashboard', '/account', '/accounts', '/cards', '/onboarding']
   const isProtected = protectedPrefixes.some((p) => pathname.startsWith(p))
+  const isOnboardingRoute = pathname.startsWith('/onboarding')
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone()
@@ -90,6 +91,23 @@ export const updateSession = async (request: NextRequest) => {
     const url = request.nextUrl.clone()
     url.pathname = '/reset-password'
     return NextResponse.redirect(url)
+  }
+
+  // Force the onboarding wizard on authenticated users who haven't finished
+  // it. The check only runs on protected app routes (not on /onboarding/*
+  // itself, not on /login, /signup, /auth/callback, etc.) to avoid loops.
+  if (user && isProtected && !isOnboardingRoute && !isRecoverySession) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('onboarding_completed_at')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (profile && profile.onboarding_completed_at === null) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/onboarding/welcome'
+      return NextResponse.redirect(url)
+    }
   }
 
   return response

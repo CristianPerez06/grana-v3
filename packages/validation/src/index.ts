@@ -85,6 +85,12 @@ export {
   type PayCardPeriodInput,
   type UpdatePeriodDatesInput,
 } from "./credit-cards";
+export {
+  perfilSchema,
+  saldoActualSchema,
+  type PerfilInput,
+  type SaldoActualInput,
+} from "./onboarding";
 export { translateFieldError } from "./translate-error";
 export {
   validateActionInput,

@@ -95,6 +95,58 @@
     "app_name": "grana",
     "logout": "Sign out"
   },
+  "onboarding": {
+    "welcome": {
+      "greeting": "Hi, {name}",
+      "title": "Welcome to Grana",
+      "description": "We'll ask a couple of quick questions to tailor the app to you. Takes less than a minute.",
+      "cta": "Get started"
+    },
+    "perfil": {
+      "title": "To set up your Grana, tell us a bit",
+      "mode_question": "What are you looking for in Grana?",
+      "mode_simple_title": "Just the basics",
+      "mode_simple_description": "See my available and where my money goes.",
+      "mode_detailed_title": "With more detail",
+      "mode_detailed_description": "See my available, where my money goes, and which accounts I keep it in.",
+      "bank_question": "Do you have a bank account?",
+      "bank_yes": "Yes",
+      "bank_no": "No",
+      "institution_label": "Bank",
+      "institution_placeholder": "Search bank or wallet…",
+      "account_name_label": "Account name",
+      "account_name_placeholder": "e.g. Savings account",
+      "continue": "Continue"
+    },
+    "saldoActual": {
+      "title": "How much money do you have today?",
+      "description_novato": "Just to get you started with a real available balance. You can adjust it with any later movement. If you have no money, enter 0.",
+      "description_experto": "Enter how much you have available in each place. Anything you leave blank starts at zero. The ARS amount is required (can be 0).",
+      "group_novato": "Total",
+      "group_primary_bank": "In {accountName}",
+      "group_cash": "In cash (optional)",
+      "ars_label": "Pesos (ARS)",
+      "usd_label": "Dollars (USD)",
+      "amount_placeholder": "0.00",
+      "continue": "Continue"
+    },
+    "done": {
+      "title": "All set, your Grana is configured",
+      "balance_label": "Your available",
+      "next_step_with_data": "Now you can start logging movements as life happens.",
+      "next_step_skip": "Whenever you're ready, log your first movement from the dashboard.",
+      "cta": "Go to dashboard"
+    },
+    "errors": {
+      "mode_required": "Pick the option that fits you to continue.",
+      "institution_required": "Choose your bank to create the account.",
+      "account_name_required": "Give your account a name.",
+      "amount_invalid": "Enter a valid amount.",
+      "amount_negative": "Amount can't be negative.",
+      "primary_ars_required": "Enter how much money you have in ARS today (zero is fine).",
+      "generic": "Something went wrong. Try again in a moment."
+    }
+  },
   "categories": {
     "comida": "Food & Dining",
     "transporte": "Transportation",
@@ -175,7 +227,7 @@
       "cta": "Create account"
     },
     "movements_empty": "No transactions on this account yet.",
-    "defaultCashName": "Cash",
+    "defaultCashName": "Wallet",
     "readonly": {
       "type": "Account type cannot be changed.",
       "initialBalance": "Opening balance cannot be modified. Record an adjustment once the transactions module is available."
