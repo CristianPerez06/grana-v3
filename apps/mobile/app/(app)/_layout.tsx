@@ -1,10 +1,14 @@
-import { useEffect } from 'react'
-import { Stack, useRouter } from 'expo-router'
+import { useEffect, useState } from 'react'
+import { Modal, Pressable, View } from 'react-native'
+import { Tabs, useRouter } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { hasRecoveryClaim } from '../../lib/recovery'
+import { AppMenu } from '../../components/layout/AppMenu'
+import { TabBar } from '../../components/layout/TabBar'
 
 export default function AppLayout() {
   const router = useRouter()
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -35,5 +39,35 @@ export default function AppLayout() {
     }
   }, [router])
 
-  return <Stack screenOptions={{ headerShown: false }} />
+  return (
+    <>
+      <Modal
+        visible={menuOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setMenuOpen(false)}
+      >
+        <View className="flex-1 justify-end bg-black/30">
+          <Pressable className="flex-1" onPress={() => setMenuOpen(false)} />
+          <AppMenu onClose={() => setMenuOpen(false)} />
+        </View>
+      </Modal>
+
+      <Tabs
+        screenOptions={{ headerShown: false }}
+        tabBar={(props) => (
+          <TabBar
+            {...props}
+            onMenuPress={() => setMenuOpen(true)}
+            menuActive={menuOpen}
+          />
+        )}
+      >
+        <Tabs.Screen name="dashboard" />
+        <Tabs.Screen name="movimientos" />
+        <Tabs.Screen name="tarjetas" />
+        <Tabs.Screen name="menu" />
+      </Tabs>
+    </>
+  )
 }
