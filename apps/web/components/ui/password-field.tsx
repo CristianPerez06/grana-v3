@@ -38,7 +38,7 @@ const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
           aria-pressed={visible}
           className={cn(
             'absolute right-2 top-[34px] inline-flex h-7 w-7 items-center justify-center rounded-md',
-            'text-muted-foreground transition-colors hover:text-foreground',
+            'text-text-muted transition-colors hover:text-text',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
           )}
         >

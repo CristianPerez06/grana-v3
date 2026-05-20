@@ -15,8 +15,8 @@ import { supabase } from '../../lib/supabase'
 import { mapSupabaseError } from '../../lib/supabase-errors'
 
 const MESSAGE_COPY: Record<string, string> = {
-  account_confirmed: 'Tu cuenta fue confirmada. Iniciá sesión con tu email y contraseña.',
-  password_updated: 'Tu contraseña fue actualizada. Iniciá sesión con la nueva.',
+  account_confirmed: 'Tu cuenta fue confirmada. Ingresá con tu email y contraseña.',
+  password_updated: 'Tu contraseña fue cambiada. Iniciá sesión con la nueva.',
 }
 
 export default function LoginScreen() {
@@ -82,7 +82,7 @@ export default function LoginScreen() {
       >
         <View className="mb-8">
           <Text className="text-3xl font-bold text-foreground">Grana</Text>
-          <Text className="mt-1 text-muted-foreground">Ingresá a tu cuenta</Text>
+          <Text className="mt-1 text-muted-foreground">Ingresá con tu email y contraseña.</Text>
         </View>
 
         {notice ? (
@@ -125,7 +125,7 @@ export default function LoginScreen() {
         ) : null}
 
         <View className="mt-4">
-          <Button title="Ingresar" onPress={handleLogin} loading={loading} />
+          <Button title="Iniciar sesión" onPress={handleLogin} loading={loading} />
         </View>
 
         <View className="mt-6 items-center gap-2">

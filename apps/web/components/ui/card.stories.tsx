@@ -37,7 +37,7 @@ export const FullComposition: Story = {
         <CardDescription>Log in to your account to continue.</CardDescription>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-text-muted">
           This is the content area of the card.
         </p>
       </CardContent>

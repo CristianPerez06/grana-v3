@@ -5,22 +5,20 @@ import { cn } from '@/lib/utils'
 import { Spinner } from './spinner'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50',
+  'flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-lg)] text-sm font-medium transition-colors duration-[var(--duration-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 cursor-pointer',
   {
     variants: {
       variant: {
-        primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
-        secondary:
-          'bg-secondary text-secondary-foreground border border-border hover:bg-secondary/80',
-        ghost: 'hover:bg-muted hover:text-foreground',
-        destructive:
-          'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+        primary: 'bg-emerald text-white hover:bg-emerald-deep active:bg-emerald-deep',
+        secondary: 'bg-border-soft text-text hover:bg-border active:bg-border',
+        ghost: 'bg-transparent text-text-muted hover:bg-border-soft active:bg-border',
+        destructive: 'bg-negative/10 text-negative hover:bg-negative/20 active:bg-negative/30',
         link: 'text-primary underline-offset-4 hover:underline px-0 h-auto',
       },
       size: {
-        sm: 'h-8 px-3 text-xs',
-        md: 'h-10 px-4 py-2',
-        lg: 'h-12 px-6 text-base',
+        sm: 'h-11 px-3 text-sm',
+        md: 'py-2.5 px-4 text-sm',
+        lg: 'py-3 px-5 text-base',
       },
     },
     defaultVariants: { variant: 'primary', size: 'md' },
