@@ -6,6 +6,7 @@ import { getTodayAR } from '@/lib/date'
 import { registerCardPurchase, registerInstallments } from '@/app/_actions/credit-cards'
 import { createRecurrenceFromMovement } from '@/app/_actions/recurrences'
 import { parseMoneyInput } from '@grana/validation'
+import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 
 const todayStr = () => {
@@ -143,14 +144,11 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
             {currency === 'ARS' ? '$' : 'U$D'}
           </span>
-          <input
+          <MoneyAmountInput
             id="amount"
-            type="number"
-            min="0.01"
-            step="0.01"
             required
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={setAmount}
             placeholder="0,00"
             className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
@@ -189,14 +187,11 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
           <label htmlFor="fx_rate" className="text-sm font-medium">
             Tipo de cambio (ARS por USD)
           </label>
-          <input
+          <MoneyAmountInput
             id="fx_rate"
-            type="number"
-            min="0.01"
-            step="0.01"
             required
             value={fxRate}
-            onChange={(e) => setFxRate(e.target.value)}
+            onChange={setFxRate}
             placeholder="Cotización del día"
             className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />

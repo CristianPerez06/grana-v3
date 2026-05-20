@@ -1,5 +1,7 @@
 'use client'
 
+import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+
 type Props = {
   value: string
   onChange: (value: string) => void
@@ -9,12 +11,9 @@ type Props = {
 export const LimitInputWithSuffix = ({ value, onChange, error }: Props) => (
   <div className="flex flex-col gap-1.5">
     <div className="flex rounded-md border border-input overflow-hidden focus-within:ring-2 focus-within:ring-ring">
-      <input
-        type="number"
-        min="0"
-        step="1"
+      <MoneyAmountInput
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onChange}
         placeholder="Opcional"
         className="flex-1 bg-background px-3 py-2 text-sm focus:outline-none"
       />

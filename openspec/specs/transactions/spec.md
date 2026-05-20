@@ -575,37 +575,6 @@ El operacion `payCardPeriod` SHALL retornar `{ paymentId, newPeriodId, expenseId
 
 ---
 
-### Requirement: El usuario puede revertir un pago de resumen
-
-El sistema SHALL exponer una operación `reverseCardPayment(paymentId)` que ejecute, en una única transacción DB:
-
-1. UPDATE `status='pending'` de todas las transacciones con `card_period_id = payment.period_id` que estaban en `paid`.
-2. DELETE de la fila en `period_payments`.
-3. DELETE de la transacción `expense` original del pago.
-
-El período "siguiente" creado durante el pago NO SHALL borrarse automáticamente — vive como `card_periods` independiente y el usuario puede borrarlo manualmente si está `open` y vacío.
-
-#### Scenario: Reversión limpia de pago reciente
-
-- **WHEN** el usuario revierte un pago que marcó las cuotas del período X como paid
-- **THEN** todas las cuotas vuelven a `status='pending'`
-- **AND** la fila en `period_payments` se elimina
-- **AND** el expense que registró el pago se elimina, recuperando el saldo de la cuenta de pago
-
-#### Scenario: Período siguiente creado durante el pago sobrevive a la reversión
-
-- **WHEN** el usuario revierte un pago que había generado el período siguiente Y
-- **THEN** la reversión no toca el `card_periods` del período Y
-- **AND** si Y tiene transacciones imputadas, esas transacciones se conservan
-
-#### Scenario: Reversión falla si hay tx imputadas al período siguiente Y, no — la reversión sigue siendo válida
-
-- **WHEN** el período Y creado durante el pago tiene una transacción imputada (un consumo nuevo entre el pago y la reversión)
-- **THEN** la reversión se ejecuta exitosamente
-- **AND** Y queda intacto con su transacción
-
----
-
 ### Requirement: El sistema rechaza registrar un consumo con fecha dentro de un período pagado
 
 El sistema SHALL rechazar la inserción de cualquier transacción de tarjeta cuya `date` caiga dentro del rango (`start_date`, `end_date`) de un `card_periods` cuyo estado derivado sea `paid`. El sistema SHALL devolver un error explicativo y ofrecer al usuario alternativas (registrar como ajuste manual, o consultar un flujo futuro de corrección).
@@ -930,3 +899,4 @@ El sistema SHALL NOT ofrecer recurrencias para ajustes ni compras en cuotas en e
 
 - **WHEN** el usuario registra un ajuste de saldo
 - **THEN** el sistema no muestra el toggle de recurrencia
+

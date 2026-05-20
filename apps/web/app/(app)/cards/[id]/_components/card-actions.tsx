@@ -3,16 +3,17 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { deactivateCreditCardAccount } from '@/app/_actions/credit-cards'
-import { reactivateAccount } from '@/app/_actions/accounts'
+import { deleteAccount, reactivateAccount } from '@/app/_actions/accounts'
 import { DeactivateBlockDialog } from '../../_components/deactivate-block-dialog'
 import { InactiveCardBanner } from '../../_components/inactive-card-banner'
 
 type Props = {
   cardId: string
   isActive: boolean
+  hasMovements: boolean
 }
 
-export const CardActions = ({ cardId, isActive }: Props) => {
+export const CardActions = ({ cardId, isActive, hasMovements }: Props) => {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [blockDialogOpen, setBlockDialogOpen] = useState(false)
@@ -42,6 +43,24 @@ export const CardActions = ({ cardId, isActive }: Props) => {
     })
   }
 
+  const handleDelete = () => {
+    if (
+      !confirm(
+        'Esta tarjeta no tiene movimientos. ¿Eliminarla? Esta acción no se puede deshacer.',
+      )
+    )
+      return
+    startTransition(async () => {
+      setError(null)
+      const result = await deleteAccount(cardId)
+      if (!result.ok) {
+        setError(result.formError ?? 'Error al eliminar')
+        return
+      }
+      router.push('/cards')
+    })
+  }
+
   return (
     <>
       {!isActive && (
@@ -56,13 +75,23 @@ export const CardActions = ({ cardId, isActive }: Props) => {
           >
             Editar
           </a>
-          <button
-            onClick={handleDeactivate}
-            disabled={isPending}
-            className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
-          >
-            Archivar
-          </button>
+          {hasMovements ? (
+            <button
+              onClick={handleDeactivate}
+              disabled={isPending}
+              className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+            >
+              Archivar
+            </button>
+          ) : (
+            <button
+              onClick={handleDelete}
+              disabled={isPending}
+              className="text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
+            >
+              Eliminar
+            </button>
+          )}
         </div>
       )}
 

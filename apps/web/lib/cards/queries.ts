@@ -45,6 +45,8 @@ export type CardPeriodDetail = CardPeriodWithPayment & {
   paymentDate: string | null
   paymentRecordId: string | null
   paymentExpenseId: string | null
+  nextPeriodStart: string | null
+  nextPeriodIsPaid: boolean
   transactions: Array<{
     id: string
     amount: number
@@ -427,6 +429,15 @@ export async function getCardPeriods(accountId: string): Promise<CardPeriodDetai
     paymentByPeriod.set(p.period_id, { date: txDate, recordId: p.id, expenseId: p.transaction_id })
   }
 
+  // Index next period (by chronological asc) before reversing for display order.
+  const nextByPeriodId = new Map<string, { start_date: string; has_payment: boolean }>()
+  for (let i = 0; i < periods.length - 1; i++) {
+    nextByPeriodId.set(periods[i].id, {
+      start_date: periods[i + 1].start_date,
+      has_payment: periods[i + 1].has_payment,
+    })
+  }
+
   return periods.reverse().map((period) => {
     const periodTxs = (txRows ?? []).filter((t) => t.card_period_id === period.id)
     const pendingARS = sumMoneyValues(
@@ -445,6 +456,7 @@ export async function getCardPeriods(accountId: string): Promise<CardPeriodDetai
         .map((t) => t.amount),
     )
     const paymentInfo = paymentByPeriod.get(period.id)
+    const nextInfo = nextByPeriodId.get(period.id) ?? null
 
     return {
       ...period,
@@ -456,6 +468,8 @@ export async function getCardPeriods(accountId: string): Promise<CardPeriodDetai
       paymentDate: paymentInfo?.date ?? null,
       paymentRecordId: paymentInfo?.recordId ?? null,
       paymentExpenseId: paymentInfo?.expenseId ?? null,
+      nextPeriodStart: nextInfo?.start_date ?? null,
+      nextPeriodIsPaid: nextInfo?.has_payment ?? false,
       transactions: periodTxs,
     }
   })
@@ -500,6 +514,10 @@ export async function getCardPeriodDetail(periodId: string): Promise<CardPeriodD
   const periodWithPayment = periodsWithStatus.find((p) => p.id === periodId)
   if (!periodWithPayment) return null
 
+  const nextPeriod = periodsWithStatus
+    .filter((p) => p.start_date > periodWithPayment.start_date)
+    .sort((a, b) => a.start_date.localeCompare(b.start_date))[0] ?? null
+
   const today = getTodayAR()
   const txRows = txResult.data ?? []
   const pendingARS = sumMoneyValues(
@@ -531,6 +549,8 @@ export async function getCardPeriodDetail(periodId: string): Promise<CardPeriodD
     paymentDate: paymentTxDate,
     paymentRecordId: payment?.id ?? null,
     paymentExpenseId: payment?.transaction_id ?? null,
+    nextPeriodStart: nextPeriod?.start_date ?? null,
+    nextPeriodIsPaid: nextPeriod?.has_payment ?? false,
     transactions: txRows,
   }
 }

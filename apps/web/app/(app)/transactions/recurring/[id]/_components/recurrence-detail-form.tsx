@@ -9,6 +9,7 @@ import {
   updateRecurrence,
 } from '@/app/_actions/recurrences'
 import { parseMoneyInput } from '@grana/validation'
+import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import type { RecurrenceDetail } from '@/lib/recurrences/types'
 
 const FREQUENCY_OPTIONS: { value: 'weekly' | 'biweekly' | 'monthly' | 'annual'; label: string }[] =
@@ -135,14 +136,11 @@ export const RecurrenceDetailForm = ({ rule }: Props) => {
           <label htmlFor="amount" className="text-sm font-medium">
             Monto
           </label>
-          <input
+          <MoneyAmountInput
             id="amount"
-            type="number"
-            min="0.01"
-            step="0.01"
             required
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={setAmount}
             disabled={isDeleted}
             className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
           />

@@ -55,7 +55,7 @@ export const PeriodCard = ({ period, cardId, hasUSD = false, showCents = false }
 
       <div>
         <p className="text-xl font-bold">{formatARS(totalAmount, showCents)}</p>
-        {hasUSD && period.pendingAmountUSD > 0 && (
+        {hasUSD && (
           <p className="text-xs text-muted-foreground">{formatUSD(period.pendingAmountUSD, showCents)}</p>
         )}
       </div>

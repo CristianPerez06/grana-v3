@@ -53,9 +53,11 @@ export const CardHero = ({ card, showCents = false }: Props) => {
         </p>
       )}
 
-      {/* Primary amount */}
+      {/* Primary amount. Bimoneda por defecto: si la tarjeta tiene USD activo,
+          mostramos USD siempre — incluso en cero — hasta que exista el toggle
+          de settings para ocultar USD. */}
       <p className="text-4xl font-bold tracking-tight">{formatARS(pendingARS, showCents)}</p>
-      {hasUSD && pendingUSD > 0 && (
+      {hasUSD && (
         <p className="text-sm text-muted-foreground">{formatUSD(pendingUSD, showCents)} USD</p>
       )}
     </div>

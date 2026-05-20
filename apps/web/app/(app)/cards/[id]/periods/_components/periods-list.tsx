@@ -66,7 +66,7 @@ export const PeriodsList = ({ periods, cardId, hasUSD = false, showCents = false
               </div>
               <div className="mt-0.5">
                 <span className="font-medium text-sm">{formatARS(totalAmount, showCents)}</span>
-                {hasUSD && period.pendingAmountUSD > 0 && (
+                {hasUSD && (
                   <span className="ml-2 text-xs text-muted-foreground">
                     {formatUSD(period.pendingAmountUSD, showCents)}
                   </span>
