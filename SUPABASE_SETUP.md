@@ -366,7 +366,7 @@ Para confirmar que el trigger `on_auth_user_created_default_account` funciona:
 
 1. Creá un nuevo usuario de prueba desde `/signup` en la app.
 2. En el dashboard de Supabase → **Table Editor → accounts**, verificá que se creó una fila con:
-   - `name`: `Efectivo`
+   - `name`: `Billetera` (renombrado en la migración 0012 — antes era `Efectivo`)
    - `type`: `cash`
    - `institution_id`: `null`
 3. En **Table Editor → account_currencies**, verificá que hay dos filas para ese account: una en `ARS` y otra en `USD`, ambas con `initial_balance = 0`.
@@ -436,6 +436,40 @@ Después de aplicar la migración, regenerá los tipos:
 Verificá que `packages/supabase/src/types.ts` incluye ahora:
 - La columna `transfer_destination_account_id` en `transactions`.
 - El enum `transaction_type` con los valores `'income' | 'expense' | 'transfer' | 'adjustment'`.
+
+---
+
+## 12.5 Migración 0012 — onboarding + rename de cuenta default (add-onboarding-post-signup)
+
+### 12.5.1 Aplicar la migración
+
+La migración vive en `supabase/migrations/0012_profiles_onboarding_and_default_account.sql`. Hace tres cosas en un solo archivo:
+
+1. `ALTER TABLE profiles` agrega `mode` (`'novato'` | `'experto'`, default `'novato'`), `financial_timezone` (text, default `'America/Argentina/Buenos_Aires'`) y `onboarding_completed_at` (timestamptz, nullable).
+2. `CREATE OR REPLACE FUNCTION public.handle_new_user_default_account()` reemplaza el trigger para que las nuevas cuentas default se llamen `Billetera` en vez de `Efectivo`.
+3. `UPDATE public.accounts SET name='Billetera' WHERE name='Efectivo' AND type='cash'` renombra las cuentas ya existentes para que coincidan con el nuevo nombre.
+
+Además, marca el onboarding del owner como completado para que no le aparezca el wizard:
+
+```sql
+UPDATE public.profiles SET onboarding_completed_at = now() WHERE email = '<owner>';
+```
+
+Para aplicarla:
+
+1. Abrí el **SQL Editor** en el dashboard de Supabase.
+2. Pegá el contenido completo de `supabase/migrations/0012_profiles_onboarding_and_default_account.sql`.
+3. Ejecutá. La última query devuelve un resumen con `new_profile_columns=3`, `leftover_efectivo_accounts=0`, `billetera_accounts>=1` y `owner_onboarding_completed_at` con un timestamp.
+
+Si el self-check falla con `% account(s) named Efectivo still exist`, alguien creó manualmente una cuenta `Efectivo` que no es del trigger — revisarlo antes de continuar.
+
+### 12.5.2 Regenerar tipos TypeScript
+
+```bash
+./node_modules/.bin/supabase gen types typescript --project-id exhpnnaigjfcxcvmptxa > packages/supabase/src/types.ts
+```
+
+`packages/supabase/src/types.ts` debe incluir ahora `mode`, `financial_timezone` y `onboarding_completed_at` en `profiles` (Row / Insert / Update).
 
 ---
 

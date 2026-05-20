@@ -95,6 +95,58 @@
     "app_name": "grana",
     "logout": "Cerrar sesión"
   },
+  "onboarding": {
+    "welcome": {
+      "greeting": "Hola, {name}",
+      "title": "Bienvenida a Grana",
+      "description": "Vamos a hacer un par de preguntas para que la app se ajuste a vos. Te toma menos de un minuto.",
+      "cta": "Empezar"
+    },
+    "perfil": {
+      "title": "Para configurar tu Grana, contanos un poco",
+      "mode_question": "¿Qué buscás en Grana?",
+      "mode_simple_title": "Lo esencial",
+      "mode_simple_description": "Ver mi disponible y en qué se va mi plata.",
+      "mode_detailed_title": "Con más detalle",
+      "mode_detailed_description": "Ver mi disponible, en qué se va mi plata y en qué cuentas la tengo.",
+      "bank_question": "¿Tenés cuenta en algún banco?",
+      "bank_yes": "Sí",
+      "bank_no": "No",
+      "institution_label": "Banco",
+      "institution_placeholder": "Buscar banco o billetera…",
+      "account_name_label": "Nombre de la cuenta",
+      "account_name_placeholder": "Ej: Caja de ahorro",
+      "continue": "Continuar"
+    },
+    "saldoActual": {
+      "title": "¿Cuánta plata tenés hoy?",
+      "description_novato": "Es solo para arrancar con un disponible real. Después lo ajustás con cualquier movimiento. Si no tenés plata, poné 0.",
+      "description_experto": "Cargá cuánto tenés disponible en cada lugar. Lo que dejes en blanco arranca en cero. El monto en pesos es obligatorio (puede ser 0).",
+      "group_novato": "En total",
+      "group_primary_bank": "En {accountName}",
+      "group_cash": "En efectivo (opcional)",
+      "ars_label": "Pesos (ARS)",
+      "usd_label": "Dólares (USD)",
+      "amount_placeholder": "0,00",
+      "continue": "Continuar"
+    },
+    "done": {
+      "title": "Listo, ya está configurada tu Grana",
+      "balance_label": "Tu disponible",
+      "next_step_with_data": "Ahora podés empezar a registrar movimientos a medida que vivís el día a día.",
+      "next_step_skip": "Cuando quieras, cargá tu primer movimiento desde el dashboard.",
+      "cta": "Ir al dashboard"
+    },
+    "errors": {
+      "mode_required": "Elegí cuál opción se parece más a vos para continuar.",
+      "institution_required": "Elegí tu banco para crear la cuenta.",
+      "account_name_required": "Poné un nombre para tu cuenta.",
+      "amount_invalid": "Ingresá un monto válido.",
+      "amount_negative": "El monto no puede ser negativo.",
+      "primary_ars_required": "Cargá cuánta plata tenés en pesos hoy (puede ser 0).",
+      "generic": "Algo salió mal. Probá de nuevo en un momento."
+    }
+  },
   "categories": {
     "comida": "Comida",
     "transporte": "Transporte",
@@ -175,7 +227,7 @@
       "cta": "Crear cuenta"
     },
     "movements_empty": "Todavía no hay movimientos en esta cuenta.",
-    "defaultCashName": "Efectivo",
+    "defaultCashName": "Billetera",
     "readonly": {
       "type": "El tipo de cuenta no se puede cambiar.",
       "initialBalance": "El saldo inicial no se puede modificar. Registrá un ajuste cuando exista el módulo de transacciones."

@@ -147,6 +147,7 @@ These affect every feature. Not knowing them causes silent bugs anywhere in the 
 | Principle | Rule |
 |-----------|------|
 | **Bimoneda** | ARS and USD are separate ledgers. Never convert automatically. ARS is always primary (large type); USD is subordinate (smaller, labeled). Totals are always shown per currency, never merged. |
+| **Bimoneda por defecto** | Every user is provisioned with ARS *and* USD enabled at signup; the default `Billetera` cash account is created with both currencies, and any account created during onboarding (e.g. a bank account) also gets both. Onboarding never asks "do you use dollars?". Hiding USD is an opt-out preference in `settings` (future change), implemented as a UI-only flag — it must not remove rows from `account_currencies` nor mutate the ledger. Complementary to (not a replacement for) the **Bimoneda** principle above. |
 | **Off-ledger credit cards** | `account.type='credit'` transactions never reduce `disponible`. Only the statement payment — an `expense` posted on a cash/debit account — does. |
 | **Derived balances** | No balance column anywhere. Always computed from transaction history. Never persisted. |
 | **`disponible ≥ 0` invariant** | Must be enforced in **every write path** that can reduce available balance (expense, transfer, adjustment, confirm recurrence, pay card period, delete income). Clamping in reads is not enforcement — it just hides corruption. |
