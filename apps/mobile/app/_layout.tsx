@@ -32,10 +32,23 @@ export default function RootLayout() {
   }, [fontsLoaded])
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN') {
         if (hasRecoveryClaim(session?.access_token)) return
-        router.replace('/(app)/dashboard')
+        if (!session) {
+          router.replace('/(app)/dashboard')
+          return
+        }
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('onboarding_completed_at')
+          .eq('id', session.user.id)
+          .maybeSingle()
+        if (!profile?.onboarding_completed_at) {
+          router.replace('/(onboarding)/welcome')
+        } else {
+          router.replace('/(app)/dashboard')
+        }
       } else if (event === 'SIGNED_OUT') {
         router.replace('/(auth)/login')
       }
