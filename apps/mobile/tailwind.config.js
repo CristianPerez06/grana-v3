@@ -5,6 +5,14 @@ module.exports = {
   theme: {
     extend: {
       colors: require('@grana/ui-tokens/tokens').colors,
+      fontFamily: {
+        sans: [
+          'PlusJakartaSans_400Regular',
+          'system-ui',
+          '-apple-system',
+          'sans-serif',
+        ],
+      },
     },
   },
   plugins: [],

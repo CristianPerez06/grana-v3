@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { FormField } from '@/components/ui/form-field'
 import { PasswordField } from '@/components/ui/password-field'
 import { SubmitButton } from '@/components/ui/submit-button'
+import { AUTH_INPUT_CLASS } from '@/lib/auth-class-names'
 import { createClient } from '@/lib/supabase/client'
 import { loginAction } from '@/app/_actions/login'
 import {
@@ -80,12 +81,14 @@ export const LoginForm = ({ initialNotice }: { initialNotice: InitialNotice }) =
         label={t('email_label')}
         type="email"
         autoComplete="email"
+        className={AUTH_INPUT_CLASS}
         error={fieldError(errors.email?.message)}
         {...register('email')}
       />
       <PasswordField
         label={t('password_label')}
         autoComplete="current-password"
+        className={AUTH_INPUT_CLASS}
         error={fieldError(errors.password?.message)}
         {...register('password')}
       />

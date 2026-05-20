@@ -12,6 +12,7 @@
     },
     "login": {
       "title": "Iniciar sesión",
+      "header_title": "Bienvenido",
       "description": "Ingresá con tu email y contraseña.",
       "email_label": "Email",
       "password_label": "Contraseña",
@@ -31,7 +32,7 @@
     "verify": {
       "signup_title": "Confirmá tu cuenta",
       "signup_description": "Ingresá el código de 8 dígitos que te enviamos a {email}.",
-      "recovery_title": "Verificá tu identidad",
+      "recovery_title": "Verificá que sos vos",
       "recovery_description": "Ingresá el código de 8 dígitos que te enviamos a {email}.",
       "code_label": "Código",
       "code_placeholder": "12345678",
@@ -93,7 +94,8 @@
   },
   "common": {
     "app_name": "grana",
-    "logout": "Cerrar sesión"
+    "logout": "Cerrar sesión",
+    "back": "Volver"
   },
   "onboarding": {
     "welcome": {
