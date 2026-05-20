@@ -5,9 +5,10 @@ import { CreditCardItem } from './credit-card-item'
 type Props = {
   cards: CreditCardSummary[]
   showCents?: boolean
+  masked?: boolean
 }
 
-export const CreditCardCarousel = ({ cards, showCents = false }: Props) => {
+export const CreditCardCarousel = ({ cards, showCents = false, masked = false }: Props) => {
   if (cards.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border p-8 text-center">
@@ -30,7 +31,7 @@ export const CreditCardCarousel = ({ cards, showCents = false }: Props) => {
       style={{ scrollbarWidth: 'none' }}
     >
       {cards.map((card) => (
-        <CreditCardItem key={card.id} card={card} showCents={showCents} />
+        <CreditCardItem key={card.id} card={card} showCents={showCents} masked={masked} />
       ))}
       <Link
         href="/cards/new"
