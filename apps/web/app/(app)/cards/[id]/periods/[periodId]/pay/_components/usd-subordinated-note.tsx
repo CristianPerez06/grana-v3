@@ -1,6 +1,6 @@
 'use client'
 
-import { formatUSD } from '@/lib/format'
+import { formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 
 type Props = {

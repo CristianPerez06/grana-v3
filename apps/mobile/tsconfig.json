@@ -17,6 +17,9 @@
       ],
       "@grana/ui-tokens": [
         "../../packages/ui-tokens/src/index.ts"
+      ],
+      "@grana/dashboard": [
+        "../../packages/dashboard/src/index.ts"
       ]
     }
   },

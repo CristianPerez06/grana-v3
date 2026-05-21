@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { formatARS, formatUSD } from '@/lib/format'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { getRecurrences } from '@/lib/recurrences/queries'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
 

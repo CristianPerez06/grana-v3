@@ -1,4 +1,4 @@
-import type { MonthBalanceDay } from '@/lib/dashboard/types'
+import type { MonthBalanceDay } from '@grana/dashboard'
 
 type Props = {
   days: MonthBalanceDay[]

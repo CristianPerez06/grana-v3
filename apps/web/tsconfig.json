@@ -12,6 +12,7 @@
       "@grana/validation": ["../../packages/validation/src/index.ts"],
       "@grana/i18n-messages": ["../../packages/i18n-messages/src/index.ts"],
       "@grana/supabase": ["../../packages/supabase/src/index.ts"],
+      "@grana/dashboard": ["../../packages/dashboard/src/index.ts"],
     }
   },
   "include": [

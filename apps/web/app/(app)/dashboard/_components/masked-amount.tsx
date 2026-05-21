@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { formatARS, formatUSD } from '@/lib/format'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import { useEyeMask } from './eye-mask-context'
 

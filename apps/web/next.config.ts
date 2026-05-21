@@ -5,6 +5,7 @@ const withNextIntl = createNextIntlPlugin('./lib/i18n/request.ts')
 
 const nextConfig: NextConfig = {
   transpilePackages: [
+    '@grana/dashboard',
     '@grana/i18n-messages',
     '@grana/supabase',
     '@grana/validation',

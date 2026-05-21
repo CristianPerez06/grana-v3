@@ -1,11 +1,12 @@
 import { getTranslations } from 'next-intl/server'
 import {
-  getCreditCards,
   getDashboardHero,
   getMonthBalanceSeries,
   getUpcomingFortnight,
   hasUserMovements,
-} from '@/lib/dashboard/queries'
+} from '@grana/dashboard'
+import { getCreditCards } from '@/lib/cards/queries'
+import { createClient } from '@/lib/supabase/server'
 import { getTodayAR } from '@/lib/date'
 import { CardsSection } from './_components/cards-section'
 import { DashboardHeader } from './_components/dashboard-header'
@@ -54,14 +55,15 @@ const DashboardPage = async ({ searchParams }: { searchParams: SearchParams }) =
   )
 
   const t = await getTranslations('dashboard')
+  const supabase = await createClient()
 
   const [heroResult, upcomingResult, monthResult, cardsResult, hasMovementsResult] =
     await Promise.allSettled([
-      getDashboardHero(),
-      getUpcomingFortnight(today),
-      getMonthBalanceSeries(year, month),
+      getDashboardHero(supabase),
+      getUpcomingFortnight(supabase, today),
+      getMonthBalanceSeries(supabase, year, month),
       getCreditCards(),
-      hasUserMovements(),
+      hasUserMovements(supabase),
     ])
 
   const showWelcomeCard =

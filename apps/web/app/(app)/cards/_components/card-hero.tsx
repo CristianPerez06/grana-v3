@@ -1,5 +1,5 @@
 import type { CreditCardSummary } from '@/lib/cards/queries'
-import { formatARS, formatUSD } from '@/lib/format'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
 
 type CardDetailData = {
   name: string

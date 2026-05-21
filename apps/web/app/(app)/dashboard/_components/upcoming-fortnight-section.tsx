@@ -5,8 +5,16 @@ import { MaskedAmount } from './masked-amount'
 import type {
   UpcomingFortnight,
   UpcomingItem,
-} from '@/lib/dashboard/types'
+  UpcomingItemTarget,
+} from '@grana/dashboard'
 import { cn } from '@/lib/utils'
+
+function routeForUpcomingItem(target: UpcomingItemTarget): string {
+  if (target.kind === 'card_period') {
+    return `/cards/${target.accountId}/periods/${target.periodId}`
+  }
+  return '/transactions/recurring'
+}
 
 type Props = {
   data: UpcomingFortnight
@@ -53,7 +61,7 @@ const Column = ({
           {items.map((item) => (
             <li key={item.id}>
               <Link
-                href={item.href}
+                href={routeForUpcomingItem(item.target)}
                 className="-mx-2 flex items-baseline justify-between gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-border-soft"
               >
                 <div className="min-w-0">

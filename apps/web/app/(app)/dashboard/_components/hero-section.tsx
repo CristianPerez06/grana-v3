@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { MaskedAmount } from './masked-amount'
-import type { DashboardHero } from '@/lib/dashboard/types'
+import type { DashboardHero } from '@grana/dashboard'
 
 type Props = {
   data: DashboardHero

@@ -1,0 +1,22 @@
+{
+  "name": "@grana/dashboard",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@grana/supabase": "workspace:*",
+    "@grana/validation": "workspace:*",
+    "@supabase/supabase-js": "^2.105.4"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  }
+}
