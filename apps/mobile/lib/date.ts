@@ -1,0 +1,28 @@
+// TODO(@grana/date or @grana/transactions): duplicación temporal — getTodayAR
+// también vive en apps/web/lib/date.ts. Cuando se prometa una utilidad
+// compartida de fecha financiera (o se promueva transactions/cards a package),
+// esta copia se borra. Mantener firma sincronizada hasta entonces.
+
+const TZ = 'America/Argentina/Buenos_Aires'
+
+const arFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: TZ,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+export function getTodayAR(): Date {
+  const parts = arFormatter.formatToParts(new Date())
+  const year = Number(parts.find((p) => p.type === 'year')!.value)
+  const month = Number(parts.find((p) => p.type === 'month')!.value)
+  const day = Number(parts.find((p) => p.type === 'day')!.value)
+  return new Date(year, month - 1, day)
+}
+
+export function formatDateISO(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}

@@ -1,4 +1,4 @@
-import { formatARS } from '@/lib/format'
+import { formatARS } from '@grana/i18n-messages'
 import { subtractMoneyValues } from '@/lib/cards/utils'
 
 const formatDate = (iso: string) => {

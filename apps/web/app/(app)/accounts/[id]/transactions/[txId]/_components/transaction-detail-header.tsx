@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { TransactionWithDetails } from '@/lib/transactions/types'
 import { deleteTransaction, deleteTransfer, deleteAdjustment } from '@/app/_actions/transactions'
-import { formatARS, formatUSD } from '@/lib/format'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 
 const formatBalance = (amount: number, currency: 'ARS' | 'USD', showCents: boolean) =>

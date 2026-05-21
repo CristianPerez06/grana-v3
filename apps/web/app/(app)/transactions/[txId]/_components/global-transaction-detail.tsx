@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { AlertTriangle } from 'lucide-react'
-import { formatARS, formatUSD } from '@/lib/format'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import type { FinancialMovement, MovementReviewFlag } from '@/lib/transactions/movements'
 import type { TransactionWithDetails } from '@/lib/transactions/types'

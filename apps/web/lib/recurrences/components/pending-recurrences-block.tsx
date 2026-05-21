@@ -7,7 +7,7 @@ import {
   confirmRecurrenceInstance,
   skipRecurrenceInstance,
 } from '@/app/_actions/recurrences'
-import { formatARS, formatUSD } from '@/lib/format'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import { parseMoneyInput } from '@grana/validation'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'

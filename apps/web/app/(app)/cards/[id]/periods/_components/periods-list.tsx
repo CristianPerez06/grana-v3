@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { CardPeriodDetail } from '@/lib/cards/queries'
 import type { PeriodVariant } from '@/lib/cards/types'
-import { formatARS, formatUSD } from '@/lib/format'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { EstimatedDateBadge } from '../../../_components/estimated-date-badge'
 
 const formatDate = (iso: string) => {

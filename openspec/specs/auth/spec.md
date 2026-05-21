@@ -481,33 +481,32 @@ Las rutas `/login`, `/signup`, `/forgot-password` y `/reset-password` SHALL comp
 
 El sistema SHALL ejecutar, al completar el onboarding con `users.mode='novato'`, una operación atómica que cree:
 
-1. Una cuenta `accounts` con `type='cash'`, `name='Mi plata'`, `institution_id=NULL`, `is_active=true`, propiedad del usuario.
-2. Las filas en `account_currencies` correspondientes a las monedas seleccionadas por el usuario (ARS siempre + USD si activó la segunda moneda), ambas con `initial_balance=0`.
-3. Una cuenta `accounts` con `type='credit'`, `name='Mi tarjeta'`, `institution_id=NULL`, `network_id=NULL`, `other_network_name='Mi tarjeta'`, `credit_limit=NULL`, `is_active=true`.
+1. Una cuenta `accounts` con `name='Mi plata'`, `type='cash'`, `is_active=true`.
+2. Una cuenta `accounts` con `name='Mi tarjeta'`, `type='credit'`, `is_active=true`, sin `network_id` ni `other_network_name` (queda completable después).
+3. Las filas en `account_currencies` para la cuenta cash con `currency_code='ARS'` y la moneda secundaria si el usuario la activó, ambas con `initial_balance=0`.
 4. La fila en `account_currencies` para esa tarjeta con `currency_code='ARS'` e `initial_balance=0` (USD adicional si el usuario activó la segunda moneda en el onboarding).
-5. Dos filas en `card_periods` correspondientes al período actual y al próximo, con fechas calculadas a partir de la única fecha que cargó el usuario (ver requirement de fechas estimadas).
 
-La operación SHALL ser atómica: si cualquier paso falla, todo se rolea hacia atrás.
+Tras completar la operación atómica con éxito, el sistema SHALL redirigir al usuario a `/dashboard` (la landing universal post-onboarding), NO a `/cards`.
 
-#### Scenario: Onboarding novato exitoso crea las dos entidades default
+#### Scenario: Onboarding novato exitoso crea las dos entidades default y redirige a dashboard
 
 - **WHEN** un usuario completa el onboarding eligiendo modo novato, con ARS como moneda principal y la fecha de cierre cargada
-- **THEN** existen en `accounts` exactamente dos filas para ese usuario: una `type='cash'` con `name='Mi plata'` y una `type='credit'` con `name='Mi tarjeta'`
-- **AND** existe al menos una fila en `account_currencies` para cada cuenta (ARS), con `initial_balance=0`
-- **AND** existen exactamente dos filas en `card_periods` para "Mi tarjeta", ambas con `is_estimated=true`
+- **THEN** se crean las dos cuentas ("Mi plata" cash y "Mi tarjeta" credit) con sus `account_currencies` en `ARS` e `initial_balance=0`
+- **AND** se crean los dos primeros `card_periods` con `is_estimated=true` para la tarjeta default
+- **AND** el sistema redirige a `/dashboard`
 
 #### Scenario: Falla en cualquier paso del onboarding hace rollback
 
 - **WHEN** durante la operación atómica de onboarding novato falla el INSERT de `card_periods` (por error de constraint)
-- **THEN** la cuenta "Mi plata" no queda creada
-- **AND** la cuenta "Mi tarjeta" no queda creada
-- **AND** el usuario ve un error y puede reintentar
+- **THEN** la transacción se revierte completamente y ninguna de las dos cuentas queda creada
+- **AND** el usuario permanece en la pantalla de onboarding con un mensaje de error
+- **AND** NO se ejecuta el redirect a `/dashboard`
 
-#### Scenario: Onboarding experto no crea entidades default
+#### Scenario: Onboarding experto no crea entidades default y también redirige a dashboard
 
 - **WHEN** un usuario completa el onboarding con modo experto
-- **THEN** no se crean "Mi plata" ni "Mi tarjeta" automáticamente
-- **AND** el flujo del usuario continúa con las pantallas de gestión manual de cuentas
+- **THEN** NO se auto-crean cuentas "Mi plata" ni "Mi tarjeta"
+- **AND** el sistema redirige a `/dashboard`
 
 ---
 

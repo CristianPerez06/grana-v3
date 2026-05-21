@@ -8,7 +8,7 @@ import {
   type UpcomingCardPeriodInput,
   type UpcomingPeriodTxInput,
   type UpcomingRecurrenceInstanceInput,
-} from '../aggregations'
+} from '../src/aggregations'
 
 describe('aggregateHero', () => {
   it('sums initial balances and tx sums across ARS+USD accounts', () => {
@@ -116,7 +116,11 @@ describe('buildUpcomingFortnight', () => {
         label: 'Visa Galicia',
         amount: 145_200,
         currency: 'ARS',
-        href: '/cards/card-visa/periods/period-visa',
+        target: {
+          kind: 'card_period',
+          accountId: 'card-visa',
+          periodId: 'period-visa',
+        },
       },
     ])
   })
@@ -159,6 +163,7 @@ describe('buildUpcomingFortnight', () => {
         amount: 850_000,
         currency_code: 'ARS',
         recurrence: {
+          id: 'rec-sueldo',
           movement_type: 'income',
           description: 'Sueldo',
           account: sueldoAccount,
@@ -173,6 +178,7 @@ describe('buildUpcomingFortnight', () => {
       kind: 'card_period',
       amount: 120_000,
       date: '2026-05-30',
+      target: { kind: 'card_period', accountId: 'card-visa', periodId: 'period-visa' },
     })
     expect(result.toCollect).toHaveLength(1)
     expect(result.toCollect[0]).toMatchObject({
@@ -180,6 +186,7 @@ describe('buildUpcomingFortnight', () => {
       label: 'Sueldo',
       amount: 850_000,
       date: '2026-05-30',
+      target: { kind: 'recurrence_instance', recurrenceInstanceId: 'inst-sueldo' },
     })
   })
 
@@ -191,6 +198,7 @@ describe('buildUpcomingFortnight', () => {
         amount: 280_000,
         currency_code: 'ARS',
         recurrence: {
+          id: 'rec-1',
           movement_type: 'expense',
           description: 'Alquiler',
           account: { id: 'bank-1', name: 'Banco' },
@@ -202,6 +210,7 @@ describe('buildUpcomingFortnight', () => {
         amount: 50_000,
         currency_code: 'ARS',
         recurrence: {
+          id: 'rec-2',
           movement_type: 'transfer',
           description: 'Pase a ahorro',
           account: { id: 'bank-1', name: 'Banco' },
@@ -213,6 +222,7 @@ describe('buildUpcomingFortnight', () => {
         amount: 1_200_000,
         currency_code: 'ARS',
         recurrence: {
+          id: 'rec-3',
           movement_type: 'income',
           description: 'Freelance',
           account: { id: 'cash-1', name: 'Caja' },
@@ -255,6 +265,7 @@ describe('buildUpcomingFortnight', () => {
         amount: 1000,
         currency_code: 'ARS',
         recurrence: {
+          id: 'rec-1',
           movement_type: 'income',
           description: null,
           account: { id: 'cash-1', name: 'Mi plata' },

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { CreditCardSummary } from '@/lib/cards/queries'
 import { subtractMoneyValues } from '@/lib/cards/utils'
-import { formatARS, formatUSD } from '@/lib/format'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { CardDatesFooter } from './card-dates-footer'
 
 type Props = {

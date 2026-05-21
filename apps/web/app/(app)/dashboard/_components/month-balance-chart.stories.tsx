@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite'
 import { MonthBalanceChart } from './month-balance-chart'
-import type { MonthBalanceDay } from '@/lib/dashboard/types'
+import type { MonthBalanceDay } from '@grana/dashboard'
 
 const meta: Meta<typeof MonthBalanceChart> = {
   title: 'Dashboard/MonthBalanceChart',

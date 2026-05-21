@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { CreditCardCarousel } from '@/app/(app)/cards/_components/credit-card-carousel'
 import { useShowCents } from '@/lib/preferences-context'
 import { useEyeMask } from './eye-mask-context'
-import type { CreditCardSummary } from '@/lib/dashboard/queries'
+import type { CreditCardSummary } from '@/lib/cards/queries'
 
 type Props = {
   cards: CreditCardSummary[]

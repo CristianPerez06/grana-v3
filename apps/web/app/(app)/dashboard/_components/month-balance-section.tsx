@@ -2,7 +2,7 @@ import { getTranslations } from 'next-intl/server'
 import { MaskedAmount } from './masked-amount'
 import { MonthBalanceChart } from './month-balance-chart'
 import { MonthNavigator } from './month-navigator'
-import type { MonthBalanceSeries } from '@/lib/dashboard/types'
+import type { MonthBalanceSeries } from '@grana/dashboard'
 import { cn } from '@/lib/utils'
 
 type Props = {

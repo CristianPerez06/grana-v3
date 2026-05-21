@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import type { AccountWithBalances } from '@/lib/accounts/types'
 import { reactivateAccount } from '@/app/_actions/accounts'
-import { formatARS, formatUSD } from '@/lib/format'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 
 type Props = {

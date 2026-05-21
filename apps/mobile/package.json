@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
+    "@grana/dashboard": "workspace:*",
     "@grana/supabase": "workspace:*",
     "@grana/validation": "workspace:*",
     "expo": "~54.0.33",

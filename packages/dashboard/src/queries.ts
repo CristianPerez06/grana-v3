@@ -1,10 +1,10 @@
-import { createClient } from '@/lib/supabase/server'
-import { formatDateISO, getTodayAR } from '@/lib/date'
-import { getTransactionSums } from '@/lib/transactions/balance'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   aggregateHero,
   buildMonthBalanceSeries,
   buildUpcomingFortnight,
+  calculateTransactionSums,
+  type BalanceTransactionRow,
   type UpcomingCardPeriodInput,
   type UpcomingPeriodTxInput,
   type UpcomingRecurrenceInstanceInput,
@@ -16,11 +16,14 @@ import type {
   UpcomingFortnight,
 } from './types'
 
-export { getCreditCards } from '@/lib/cards/queries'
-export type { CreditCardSummary } from '@/lib/cards/queries'
+function formatDateISO(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
-export async function hasUserMovements(): Promise<boolean> {
-  const supabase = await createClient()
+export async function hasUserMovements(supabase: SupabaseClient): Promise<boolean> {
   const { count, error } = await supabase
     .from('transactions')
     .select('id', { count: 'exact', head: true })
@@ -30,9 +33,9 @@ export async function hasUserMovements(): Promise<boolean> {
   return (count ?? 0) > 0
 }
 
-export async function getDashboardHero(): Promise<DashboardHero> {
-  const supabase = await createClient()
-
+export async function getDashboardHero(
+  supabase: SupabaseClient,
+): Promise<DashboardHero> {
   const { data: accounts, error } = await supabase
     .from('accounts')
     .select('id, currencies:account_currencies(currency_code, initial_balance)')
@@ -42,15 +45,36 @@ export async function getDashboardHero(): Promise<DashboardHero> {
   if (error) throw error
 
   const accountIds = (accounts ?? []).map((a) => a.id)
-  const txSums = await getTransactionSums(accountIds)
+  const txSums = await getTransactionSums(supabase, accountIds)
 
   return aggregateHero(accounts ?? [], txSums)
 }
 
+async function getTransactionSums(
+  supabase: SupabaseClient,
+  accountIds: string[],
+): Promise<Map<string, { ARS: number; USD: number }>> {
+  if (accountIds.length === 0) return new Map()
+
+  // Exclude credit card child transactions (status IS NOT NULL) and
+  // off-ledger parent rows (is_parent=true, account_id=NULL, auto-excluded by the or filter).
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('account_id, transfer_destination_account_id, currency_code, amount, type')
+    .or(
+      `account_id.in.(${accountIds.join(',')}),transfer_destination_account_id.in.(${accountIds.join(',')})`,
+    )
+    .is('status', null)
+
+  if (error) throw error
+
+  return calculateTransactionSums((data ?? []) as BalanceTransactionRow[], accountIds)
+}
+
 export async function getUpcomingFortnight(
-  today: Date = getTodayAR(),
+  supabase: SupabaseClient,
+  today: Date,
 ): Promise<UpcomingFortnight> {
-  const supabase = await createClient()
   const todayISO = formatDateISO(today)
   const horizon = new Date(today)
   horizon.setDate(horizon.getDate() + 14)
@@ -106,11 +130,10 @@ export async function getUpcomingFortnight(
 }
 
 export async function getMonthBalanceSeries(
+  supabase: SupabaseClient,
   year: number,
   month: number,
 ): Promise<MonthBalanceSeries> {
-  const supabase = await createClient()
-
   const firstDay = new Date(year, month - 1, 1)
   const lastDay = new Date(year, month, 0)
   const fromISO = formatDateISO(firstDay)

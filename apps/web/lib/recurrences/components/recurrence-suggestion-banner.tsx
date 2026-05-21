@@ -7,7 +7,7 @@ import {
   acceptRecurrenceSuggestion,
   dismissRecurrenceSuggestion,
 } from '@/app/_actions/recurrences'
-import { formatARS, formatUSD } from '@/lib/format'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 
 const FREQUENCY_LABEL: Record<string, string> = {

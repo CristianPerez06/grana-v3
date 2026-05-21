@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { AccountWithBalances } from '@/lib/accounts/types'
 import { archiveAccount, reactivateAccount, deleteAccount } from '@/app/_actions/accounts'
-import { formatARS, formatUSD } from '@/lib/format'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 
 type Props = {
