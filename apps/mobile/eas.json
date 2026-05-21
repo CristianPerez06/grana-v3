@@ -8,6 +8,8 @@
       "distribution": "internal",
       "autoIncrement": true,
       "environment": "production",
+      "node": "22.13.0",
+      "pnpm": "11.0.8",
       "ios": { "simulator": true },
       "android": { "buildType": "apk" }
     }
