@@ -58,10 +58,11 @@ export const CreditCardItem = ({ card, showCents = false, masked = false }: Prop
         )}
       </div>
 
-      {/* Amounts */}
+      {/* Amounts. Bimoneda por defecto: si la tarjeta tiene USD activo lo
+          mostramos siempre, incluso en cero. */}
       <div>
         <p className="text-2xl font-bold tracking-tight">{renderARS(pendingARS)}</p>
-        {hasUSD && pendingUSD > 0 && (
+        {hasUSD && (
           <p className="text-xs text-muted-foreground mt-0.5">{renderUSD(pendingUSD)}</p>
         )}
       </div>

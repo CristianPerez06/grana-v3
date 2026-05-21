@@ -32,6 +32,19 @@ function getRowMeta(tx: TransactionWithDetails, currentAccountId: string): RowMe
   }
 
   if (tx.type === 'expense') {
+    // Card payment expenses (the expense created by payCardPeriod) link to a
+    // period_payments row. They have no category and their description is the
+    // authoritative label, so show it as the primary text instead of "Gasto".
+    const isCardPayment = Array.isArray(tx.period_payments) && tx.period_payments.length > 0
+    if (isCardPayment) {
+      return {
+        label: tx.description ?? 'Pago de tarjeta',
+        secondaryLabel: null,
+        sign: '-',
+        colorClass: 'text-foreground',
+        amount: absAmount,
+      }
+    }
     return {
       label: tx.category?.name ?? 'Gasto',
       secondaryLabel: tx.description ?? null,

@@ -6,6 +6,7 @@ import type { TransactionWithDetails } from '@/lib/transactions/types'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 import { updateTransaction, updateTransfer, updateAdjustment } from '@/app/_actions/transactions'
 import { parseMoneyInput } from '@grana/validation'
+import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 
 const TYPE_LABELS = {
   income: 'Ingreso',
@@ -43,6 +44,8 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
   )
 
   const isExpense = type === 'expense'
+  const isCardPayment =
+    Array.isArray(transaction.period_payments) && transaction.period_payments.length > 0
   const filteredCategories = categories.filter(
     (c) =>
       isExpense
@@ -170,14 +173,11 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
             {transaction.currency_code === 'ARS' ? '$' : 'U$D'}
           </span>
-          <input
+          <MoneyAmountInput
             id="amount"
-            type="number"
-            min="0.01"
-            step="0.01"
             required
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={setAmount}
             className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
@@ -196,8 +196,10 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
         />
       </div>
 
-      {/* Category (income/expense only) */}
-      {(type === 'income' || type === 'expense') && (
+      {/* Category (income/expense only). Card payment expenses have no
+          category — payCardPeriod inserts them with category_id=null on
+          purpose, so hide the field entirely for them. */}
+      {(type === 'income' || type === 'expense') && !isCardPayment && (
         <div className="flex flex-col gap-1.5">
           <label htmlFor="category" className="text-sm font-medium">
             Categoría {isExpense && <span className="text-destructive">*</span>}

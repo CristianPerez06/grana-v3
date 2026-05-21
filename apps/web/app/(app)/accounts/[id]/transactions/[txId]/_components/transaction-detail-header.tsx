@@ -98,7 +98,11 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, retu
       {/* Type badge + amount */}
       <div className="flex flex-col gap-1">
         <span className={`text-xs font-medium px-2 py-0.5 rounded-full w-fit ${typeBadgeClass}`}>
-          {transaction.is_parent ? 'Compra en cuotas' : TYPE_LABELS[type]}
+          {transaction.is_parent
+            ? 'Compra en cuotas'
+            : (transaction.period_payments?.length ?? 0) > 0
+              ? 'Pago de tarjeta'
+              : TYPE_LABELS[type]}
         </span>
         <p className={`text-3xl font-bold tabular-nums ${isPositive ? 'text-green-600' : ''}`}>
           {sign}{formatBalance(displayAmount, transaction.currency_code, showCents)}

@@ -10,6 +10,7 @@ import {
 import { formatARS, formatUSD } from '@/lib/format'
 import { useShowCents } from '@/lib/preferences-context'
 import { parseMoneyInput } from '@grana/validation'
+import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import type { PendingRecurrenceInstance } from '@/lib/recurrences/types'
 
 type Props = {
@@ -254,13 +255,10 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
                     >
                       Monto
                     </label>
-                    <input
+                    <MoneyAmountInput
                       id={`amount-${instance.id}`}
-                      type="number"
-                      min="0.01"
-                      step="0.01"
                       value={editAmount}
-                      onChange={(e) => setEditAmount(e.target.value)}
+                      onChange={setEditAmount}
                       className="rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     />
                     <p className="text-[11px] text-muted-foreground">
@@ -311,16 +309,13 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
                   >
                     Cotización ARS por 1 USD
                   </label>
-                  <input
+                  <MoneyAmountInput
                     id={`fx-${instance.id}`}
-                    type="number"
-                    min="0.01"
-                    step="0.01"
                     value={fxByInstance[instance.id] ?? ''}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setFxByInstance((prev) => ({
                         ...prev,
-                        [instance.id]: e.target.value,
+                        [instance.id]: value,
                       }))
                     }
                     placeholder="Ej: 1230.50"

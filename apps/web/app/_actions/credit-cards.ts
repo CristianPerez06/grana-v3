@@ -173,7 +173,8 @@ export async function createNovatoCreditCard(
 
   const today = getTodayAR()
   const todayStr = formatDateISO(today)
-  const { close_date } = validation.data
+  const data = validation.data
+  const { close_date } = data
 
   // Sanity: close_date must not be before today - 7 days
   if (close_date < addDaysToISO(todayStr, -7)) {
@@ -186,15 +187,37 @@ export async function createNovatoCreditCard(
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
 
+  // If the user didn't type a name, build it from "Red Banco" — same fallback
+  // the experto action uses, so a novato card never shows up as plain "Mi tarjeta"
+  // when institution + network are known.
+  let cardName = data.name?.trim() ?? ''
+  if (!cardName) {
+    let networkLabel = data.other_network_name?.trim() ?? ''
+    if (data.network_id) {
+      const { data: network } = await supabase
+        .from('card_networks')
+        .select('name')
+        .eq('id', data.network_id)
+        .single()
+      networkLabel = network?.name ?? ''
+    }
+    const { data: institution } = await supabase
+      .from('institutions')
+      .select('name')
+      .eq('id', data.institution_id)
+      .single()
+    cardName = [networkLabel, institution?.name].filter(Boolean).join(' ') || 'Mi tarjeta'
+  }
+
   const { data: account, error: accountError } = await supabase
     .from('accounts')
     .insert({
       user_id: userId,
-      name: 'Mi tarjeta',
+      name: cardName,
       type: 'credit',
-      institution_id: null,
-      network_id: null,
-      other_network_name: 'Mi tarjeta',
+      institution_id: data.institution_id,
+      network_id: data.network_id ?? null,
+      other_network_name: data.other_network_name?.trim() || null,
       credit_limit: null,
     })
     .select('id')
@@ -204,12 +227,11 @@ export async function createNovatoCreditCard(
     return { ok: false, formError: accountError?.message ?? 'Error al crear la tarjeta.' }
   }
 
-  const { error: currencyError } = await supabase.from('account_currencies').insert({
-    account_id: account.id,
-    currency_code: 'ARS',
-    initial_balance: 0,
-    initial_balance_date: todayStr,
-  })
+  // Bimoneda por defecto: every credit card is provisioned with ARS + USD.
+  const { error: currencyError } = await supabase.from('account_currencies').insert([
+    { account_id: account.id, currency_code: 'ARS', initial_balance: 0, initial_balance_date: todayStr },
+    { account_id: account.id, currency_code: 'USD', initial_balance: 0, initial_balance_date: todayStr },
+  ])
 
   if (currencyError) {
     await supabase.from('accounts').delete().eq('id', account.id)
@@ -628,93 +650,6 @@ export async function payCardPeriod(
   return { ok: true, expenseId: expense.id }
 }
 
-// ── 4.6: reverseCardPayment ───────────────────────────────────────────────────
-
-export async function reverseCardPayment(
-  paymentId: string,
-): Promise<ActionResult<never>> {
-  const userId = await getAuthenticatedUserId()
-  const supabase = await createClient()
-
-  // Fetch payment with linked period and transaction
-  const { data: payment, error: fetchError } = await supabase
-    .from('period_payments')
-    .select('id, period_id, transaction_id')
-    .eq('id', paymentId)
-    .single()
-
-  if (fetchError || !payment) {
-    return { ok: false, formError: 'Pago no encontrado.' }
-  }
-
-  // Verify ownership via the period → account → user chain
-  const { data: period, error: periodError } = await supabase
-    .from('card_periods')
-    .select('account_id, end_date')
-    .eq('id', payment.period_id)
-    .single()
-
-  if (periodError || !period) {
-    return { ok: false, formError: 'Período no encontrado.' }
-  }
-
-  const { data: ownerCheck, error: ownerError } = await supabase
-    .from('accounts')
-    .select('id')
-    .eq('id', period.account_id)
-    .eq('user_id', userId)
-    .single()
-
-  if (ownerError || !ownerCheck) {
-    return { ok: false, formError: 'No tenés acceso a este pago.' }
-  }
-
-  // 1. Revert child transactions to 'pending'
-  const { error: revertError } = await supabase
-    .from('transactions')
-    .update({ status: 'pending' })
-    .eq('card_period_id', payment.period_id)
-    .eq('status', 'paid')
-
-  if (revertError) {
-    return { ok: false, formError: revertError.message }
-  }
-
-  // 2. DELETE period_payment
-  const { error: deletePaymentError } = await supabase
-    .from('period_payments')
-    .delete()
-    .eq('id', paymentId)
-
-  if (deletePaymentError) {
-    // Rollback: re-mark transactions as paid
-    await supabase
-      .from('transactions')
-      .update({ status: 'paid' })
-      .eq('card_period_id', payment.period_id)
-      .eq('status', 'pending')
-    return { ok: false, formError: deletePaymentError.message }
-  }
-
-  // 3. DELETE the expense transaction
-  const { error: deleteExpenseError } = await supabase
-    .from('transactions')
-    .delete()
-    .eq('id', payment.transaction_id)
-
-  if (deleteExpenseError) {
-    // Rollback is complex here — log and surface error but don't leave orphaned state
-    return { ok: false, formError: deleteExpenseError.message }
-  }
-
-  // NOTE: the next card_period created during the payment is intentionally NOT deleted.
-  // The user can manage it manually if needed.
-
-  revalidatePath('/cards')
-  revalidatePath('/transactions')
-  return { ok: true }
-}
-
 // ── 4.7: updatePeriodDates ────────────────────────────────────────────────────
 
 export async function updatePeriodDates(
@@ -766,6 +701,79 @@ export async function updatePeriodDates(
     return {
       ok: false,
       formError: 'La fecha de cierre debe ser posterior al inicio del período.',
+    }
+  }
+
+  // Boundary cascade: the boundary between this period and the next is the
+  // point where this.end_date + 1 == next.start_date. If the user moves the
+  // boundary in either direction (extending or shrinking), the next period's
+  // start_date is shifted to keep the two contiguous, and transactions in the
+  // affected window are reassigned accordingly.
+  const { data: nextPeriod } = await supabase
+    .from('card_periods')
+    .select('id, start_date, end_date')
+    .eq('account_id', period.account_id)
+    .gt('start_date', period.start_date)
+    .order('start_date', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  if (nextPeriod) {
+    const newNextStart = addDaysToISO(data.end_date, 1)
+    const boundaryMoved = newNextStart !== nextPeriod.start_date
+
+    if (boundaryMoved) {
+      const { data: nextPayment } = await supabase
+        .from('period_payments')
+        .select('id')
+        .eq('period_id', nextPeriod.id)
+        .maybeSingle()
+
+      if (nextPayment) {
+        return {
+          ok: false,
+          formError:
+            'El próximo resumen ya está pagado. No se puede modificar el borde entre ambos resúmenes.',
+        }
+      }
+
+      if (data.end_date >= nextPeriod.end_date) {
+        return {
+          ok: false,
+          formError:
+            'La nueva fecha de cierre cubriría todo el próximo resumen. Editá primero las fechas del próximo resumen.',
+        }
+      }
+
+      const isExtending = data.end_date > period.end_date
+
+      if (isExtending) {
+        // Move transactions from next → current for the days now covered by current.
+        const { error: reassignError } = await supabase
+          .from('transactions')
+          .update({ card_period_id: periodId })
+          .eq('card_period_id', nextPeriod.id)
+          .lte('date', data.end_date)
+
+        if (reassignError) return { ok: false, formError: reassignError.message }
+      } else {
+        // Shrinking: move transactions from current → next for the days that fall
+        // out of current and are now covered by next.
+        const { error: reassignError } = await supabase
+          .from('transactions')
+          .update({ card_period_id: nextPeriod.id })
+          .eq('card_period_id', periodId)
+          .gt('date', data.end_date)
+
+        if (reassignError) return { ok: false, formError: reassignError.message }
+      }
+
+      const { error: nextUpdateError } = await supabase
+        .from('card_periods')
+        .update({ start_date: newNextStart })
+        .eq('id', nextPeriod.id)
+
+      if (nextUpdateError) return { ok: false, formError: nextUpdateError.message }
     }
   }
 

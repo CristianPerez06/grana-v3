@@ -3,11 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Alert } from '@/components/ui/alert'
-import { createCreditCard } from '@/app/_actions/credit-cards'
-import { parseMoneyInput } from '@grana/validation'
+import { createNovatoCreditCard } from '@/app/_actions/credit-cards'
 import { NetworkSelector } from '../../_components/network-selector'
-import { CardCycleSection } from '../../_components/card-cycle-section'
-import { LimitInputWithSuffix } from '../../_components/limit-input-with-suffix'
 import type { Institution } from '@/lib/accounts/types'
 
 type Network = {
@@ -27,7 +24,7 @@ type Props = {
   networks: Network[]
 }
 
-export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
+export const CreateNovatoCreditCardForm = ({ institutions, networks }: Props) => {
   const router = useRouter()
   const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -38,11 +35,7 @@ export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
   const [institutionFocused, setInstitutionFocused] = useState(false)
   const [network, setNetwork] = useState<NetworkSelection>(null)
   const [name, setName] = useState('')
-  const [creditLimit, setCreditLimit] = useState('')
-  const [currentEndDate, setCurrentEndDate] = useState('')
-  const [currentDueDate, setCurrentDueDate] = useState('')
-  const [nextEndDate, setNextEndDate] = useState('')
-  const [nextDueDate, setNextDueDate] = useState('')
+  const [closeDate, setCloseDate] = useState('')
 
   const filteredInstitutions = institutions.filter((i) =>
     i.name.toLowerCase().includes(institutionSearch.toLowerCase()),
@@ -50,35 +43,13 @@ export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
 
   const validate = () => {
     const errs: Record<string, string> = {}
-
     if (!institutionId) errs.institution = 'Seleccioná el banco emisor.'
-
     if (!network) {
       errs.network = 'Seleccioná la red de la tarjeta.'
     } else if (network.type === 'other' && !network.name.trim()) {
       errs.network = 'Ingresá el nombre de la red.'
     }
-
-    const limit = creditLimit ? parseMoneyInput(creditLimit) : null
-    if (creditLimit && (limit === null || limit <= 0)) {
-      errs.creditLimit = 'El límite debe ser mayor a cero.'
-    }
-
-    if (!currentEndDate) errs.currentEndDate = 'Requerido.'
-    if (!currentDueDate) errs.currentDueDate = 'Requerido.'
-    if (!nextEndDate) errs.nextEndDate = 'Requerido.'
-    if (!nextDueDate) errs.nextDueDate = 'Requerido.'
-
-    if (currentEndDate && currentDueDate && currentDueDate <= currentEndDate) {
-      errs.currentDueDate = 'El vencimiento debe ser posterior al cierre.'
-    }
-    if (currentEndDate && nextEndDate && nextEndDate <= currentEndDate) {
-      errs.nextEndDate = 'El próximo cierre debe ser posterior al cierre actual.'
-    }
-    if (nextEndDate && nextDueDate && nextDueDate <= nextEndDate) {
-      errs.nextDueDate = 'El próximo vencimiento debe ser posterior al cierre.'
-    }
-
+    if (!closeDate) errs.closeDate = 'Requerido.'
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -89,48 +60,23 @@ export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
 
     setFormError(null)
     setIsSubmitting(true)
-
     try {
-      // Bimoneda por defecto: cards are always provisioned with ARS + USD.
-      // USD visibility is a future per-user settings flag — not a per-card opt-in.
-      const currencies = [
-        { currency_code: 'ARS', initial_balance: 0 },
-        { currency_code: 'USD', initial_balance: 0 },
-      ]
-
-      const result = await createCreditCard({
+      const result = await createNovatoCreditCard({
         institution_id: institutionId,
         network_id: network?.type === 'catalog' ? network.networkId : undefined,
         other_network_name: network?.type === 'other' ? network.name.trim() : undefined,
         name: name.trim() || undefined,
-        currencies,
-        credit_limit: creditLimit ? parseMoneyInput(creditLimit) ?? undefined : undefined,
-        current_end_date: currentEndDate,
-        current_due_date: currentDueDate,
-        next_end_date: nextEndDate,
-        next_due_date: nextDueDate,
+        close_date: closeDate,
       })
-
       if (!result.ok) {
         setFormError(result.formError ?? 'Error al crear la tarjeta')
         return
       }
-
       if (result.id) router.push(`/cards/${result.id}`)
       else router.push('/cards')
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  const handleCycleChange = (
-    field: 'currentEndDate' | 'currentDueDate' | 'nextEndDate' | 'nextDueDate',
-    value: string,
-  ) => {
-    if (field === 'currentEndDate') setCurrentEndDate(value)
-    if (field === 'currentDueDate') setCurrentDueDate(value)
-    if (field === 'nextEndDate') setNextEndDate(value)
-    if (field === 'nextDueDate') setNextDueDate(value)
   }
 
   return (
@@ -148,7 +94,6 @@ export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
             }}
             onFocus={() => setInstitutionFocused(true)}
             onBlur={() => {
-              // Delay blur so click on a dropdown option still registers.
               setTimeout(() => setInstitutionFocused(false), 150)
             }}
             placeholder="Hacé click para ver los bancos…"
@@ -160,10 +105,7 @@ export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
                 <button
                   key={inst.id}
                   type="button"
-                  onMouseDown={(e) => {
-                    // Prevent the input's onBlur from firing before the click.
-                    e.preventDefault()
-                  }}
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
                     setInstitutionId(inst.id)
                     setInstitutionSearch(inst.name)
@@ -203,40 +145,30 @@ export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Se auto-genera si lo dejás en blanco"
+          placeholder="Ej: Visa principal"
           maxLength={50}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
       </div>
 
-      {/* 4. Límite */}
+      {/* 4. Fecha de cierre */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium">
-          Límite de crédito <span className="text-muted-foreground font-normal">(opcional)</span>
+        <label htmlFor="close_date" className="text-sm font-medium">
+          Fecha del próximo cierre
         </label>
-        <LimitInputWithSuffix
-          value={creditLimit}
-          onChange={setCreditLimit}
-          error={errors.creditLimit}
+        <p className="text-xs text-muted-foreground">
+          Tomala del último resumen que te mandó el banco. La app va a ir generando los
+          resúmenes siguientes sola.
+        </p>
+        <input
+          id="close_date"
+          type="date"
+          required
+          value={closeDate}
+          onChange={(e) => setCloseDate(e.target.value)}
+          className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
-      </div>
-
-      {/* 5. Fechas */}
-      <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium">Fechas del ciclo</label>
-        <CardCycleSection
-          currentEndDate={currentEndDate}
-          currentDueDate={currentDueDate}
-          nextEndDate={nextEndDate}
-          nextDueDate={nextDueDate}
-          onChange={handleCycleChange}
-          errors={{
-            currentEndDate: errors.currentEndDate,
-            currentDueDate: errors.currentDueDate,
-            nextEndDate: errors.nextEndDate,
-            nextDueDate: errors.nextDueDate,
-          }}
-        />
+        {errors.closeDate && <p className="text-xs text-destructive">{errors.closeDate}</p>}
       </div>
 
       {formError && <Alert variant="error">{formError}</Alert>}

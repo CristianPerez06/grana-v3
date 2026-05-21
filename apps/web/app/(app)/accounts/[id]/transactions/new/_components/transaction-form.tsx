@@ -11,6 +11,7 @@ import {
 } from '@/app/_actions/transactions'
 import { createRecurrenceFromMovement } from '@/app/_actions/recurrences'
 import { parseMoneyInput } from '@grana/validation'
+import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 
 const todayStr = () => {
@@ -328,14 +329,11 @@ export const TransactionForm = ({
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
             {CURRENCY_SYMBOL[tab === 'transfer' ? transferCurrencyCode : currencyCode]}
           </span>
-          <input
+          <MoneyAmountInput
             id="amount"
-            type="number"
-            min="0.01"
-            step="0.01"
             required
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={setAmount}
             placeholder="0,00"
             className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Alert } from '@/components/ui/alert'
 import { createAccount } from '@/app/_actions/accounts'
 import { parseMoneyInput } from '@grana/validation'
+import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import type { Institution } from '@/lib/accounts/types'
 
 type Props = {
@@ -25,7 +26,8 @@ export const CreateAccountForm = ({ institutions }: Props) => {
   const [name, setName] = useState('')
   const [institutionId, setInstitutionId] = useState('')
   const [institutionSearch, setInstitutionSearch] = useState('')
-  const [selectedCurrencies, setSelectedCurrencies] = useState<Set<string>>(new Set(['ARS']))
+  // Bimoneda por defecto: every account is provisioned with ARS + USD.
+  // The user only edits the initial balance per currency; toggling is not allowed.
   const [balances, setBalances] = useState<Record<string, string>>({ ARS: '0', USD: '0' })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -33,25 +35,12 @@ export const CreateAccountForm = ({ institutions }: Props) => {
     i.name.toLowerCase().includes(institutionSearch.toLowerCase()),
   )
 
-  const toggleCurrency = (code: string) => {
-    setSelectedCurrencies((prev) => {
-      const next = new Set(prev)
-      if (next.has(code)) {
-        if (next.size > 1) next.delete(code)
-      } else {
-        next.add(code)
-      }
-      return next
-    })
-  }
-
   const validate = () => {
     const errs: Record<string, string> = {}
     if (!name.trim()) errs.name = 'El nombre es obligatorio.'
     if (name.trim().length > 50) errs.name = 'El nombre no puede tener más de 50 caracteres.'
     if (type === 'bank' && !institutionId) errs.institution = 'Seleccioná una institución.'
-    if (selectedCurrencies.size === 0) errs.currencies = 'Seleccioná al menos una moneda.'
-    for (const code of selectedCurrencies) {
+    for (const { code } of CURRENCIES) {
       const value = parseMoneyInput(balances[code] ?? '0')
       if (value === null || value < 0) errs[`balance_${code}`] = 'El saldo inicial no puede ser negativo.'
     }
@@ -67,7 +56,7 @@ export const CreateAccountForm = ({ institutions }: Props) => {
     setIsSubmitting(true)
 
     try {
-      const currencies = Array.from(selectedCurrencies).map((code) => ({
+      const currencies = CURRENCIES.map(({ code }) => ({
         currency_code: code,
         initial_balance: parseMoneyInput(balances[code] ?? '0') ?? 0,
       }))
@@ -162,42 +151,25 @@ export const CreateAccountForm = ({ institutions }: Props) => {
         </div>
       )}
 
-      {/* Currencies */}
+      {/* Currencies — bimoneda por defecto: ambas monedas siempre activas. */}
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-foreground">Monedas y saldo inicial</label>
-        {errors.currencies && (
-          <p className="text-xs text-destructive">{errors.currencies}</p>
-        )}
+        <label className="text-sm font-medium text-foreground">Saldo inicial</label>
         {CURRENCIES.map(({ code, label }) => (
           <div key={code} className="flex items-center gap-3 rounded-md border border-input p-3">
-            <input
-              type="checkbox"
-              id={`currency-${code}`}
-              checked={selectedCurrencies.has(code)}
-              onChange={() => toggleCurrency(code)}
-              className="h-4 w-4 rounded border-input"
-            />
-            <label htmlFor={`currency-${code}`} className="text-sm font-medium flex-1">
-              {label}
-            </label>
-            {selectedCurrencies.has(code) && (
-              <div className="flex flex-col gap-1">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={balances[code] ?? '0'}
-                  onChange={(e) =>
-                    setBalances((prev) => ({ ...prev, [code]: e.target.value }))
-                  }
-                  placeholder="0.00"
-                  className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-ring"
-                />
-                {errors[`balance_${code}`] && (
-                  <p className="text-xs text-destructive">{errors[`balance_${code}`]}</p>
-                )}
-              </div>
-            )}
+            <span className="text-sm font-medium flex-1">{label}</span>
+            <div className="flex flex-col gap-1">
+              <MoneyAmountInput
+                value={balances[code] ?? '0'}
+                onChange={(value) =>
+                  setBalances((prev) => ({ ...prev, [code]: value }))
+                }
+                placeholder="0.00"
+                className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              {errors[`balance_${code}`] && (
+                <p className="text-xs text-destructive">{errors[`balance_${code}`]}</p>
+              )}
+            </div>
           </div>
         ))}
       </div>

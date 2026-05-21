@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { getTodayAR } from '@/lib/date'
 import { payCardPeriod } from '@/app/_actions/credit-cards'
 import { parseMoneyInput } from '@grana/validation'
+import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 
 const todayStr = () => {
   const d = getTodayAR()
@@ -107,13 +108,10 @@ export const PayCardPeriodForm = ({
           </p>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-            <input
-              type="number"
-              min="0.01"
-              step="0.01"
+            <MoneyAmountInput
               required
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={setAmount}
               className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>

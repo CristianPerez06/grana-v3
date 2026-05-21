@@ -111,9 +111,41 @@ export const createCreditCardSchema = yup
 
 export const createNovatoCreditCardSchema = yup
   .object({
+    institution_id: yup.string().label('institution_id').uuid().required(),
+    network_id: yup
+      .string()
+      .label('network_id')
+      .uuid()
+      .nullable()
+      .optional(),
+    other_network_name: yup
+      .string()
+      .label('other_network_name')
+      .transform((v) => (typeof v === 'string' ? v.trim() : v))
+      .min(2)
+      .max(50)
+      .nullable()
+      .optional(),
+    name: yup
+      .string()
+      .label('name')
+      .transform((v) => (typeof v === 'string' ? v.trim() : v))
+      .min(1)
+      .max(50)
+      .optional(),
     close_date: yup.string().label('close_date').required(),
   })
   .strict()
+  .test('network-xor', 'network_xor_required', function (value) {
+    const hasNetworkId = Boolean(value.network_id)
+    const hasOtherName = Boolean(value.other_network_name?.trim())
+    if (hasNetworkId === hasOtherName) {
+      return this.createError({
+        message: hasNetworkId ? 'network_both_set' : 'network_none_set',
+      })
+    }
+    return true
+  })
 
 // ─── Task 2.3: Registrar consumo simple en tarjeta ───────────────────────────
 

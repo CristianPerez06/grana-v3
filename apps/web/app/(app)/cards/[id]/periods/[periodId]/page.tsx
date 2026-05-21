@@ -57,6 +57,8 @@ const PeriodDetailPage = async ({ params }: Props) => {
               periodId={period.id}
               currentEndDate={period.end_date}
               currentDueDate={period.due_date}
+              nextPeriodStart={period.nextPeriodStart}
+              nextPeriodIsPaid={period.nextPeriodIsPaid}
             />
           )}
         </div>
@@ -68,7 +70,7 @@ const PeriodDetailPage = async ({ params }: Props) => {
       {/* Amount summary */}
       <div className="rounded-lg border border-border bg-card p-4 flex flex-col gap-1">
         <p className="text-3xl font-bold">{formatARS(totalAmount, showCents)}</p>
-        {hasUSD && period.pendingAmountUSD > 0 && (
+        {hasUSD && (
           <p className="text-sm text-muted-foreground">{formatUSD(period.pendingAmountUSD, showCents)} USD</p>
         )}
         {period.has_payment && period.paymentDate && (

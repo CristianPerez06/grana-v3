@@ -103,7 +103,7 @@ const CardDetailPage = async ({ params }: Props) => {
 
       <CardHero card={cardForHero} showCents={showCents} />
 
-      <CardActions cardId={id} isActive={cardDetail.is_active} />
+      <CardActions cardId={id} isActive={cardDetail.is_active} hasMovements={cardHasHistory} />
 
       {cardDetail.is_active && (
         <>
@@ -211,7 +211,7 @@ const CardDetailPage = async ({ params }: Props) => {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium">{formatARS(p.pendingAmountARS, showCents)}</p>
-                    {hasUSD && p.pendingAmountUSD > 0 && (
+                    {hasUSD && (
                       <p className="text-xs text-muted-foreground">{formatUSD(p.pendingAmountUSD, showCents)} USD</p>
                     )}
                   </div>
