@@ -1,7 +1,9 @@
 # cards Specification
 
 ## Purpose
-TBD - created by archiving change add-credit-cards. Update Purpose after archive.
+
+Cubre las tarjetas de crédito como módulo de primera clase del producto. Modela cada resumen como un período con cuatro fechas (apertura, cierre, vencimiento, próximo cierre) cuyo estado se deriva sin persistir, soporta el alta de tarjeta en modos novato y experto, el registro de consumos en una o varias cuotas (ARS only por invariante `I-CRED-9`), el pago del resumen como `expense` en una cuenta cash o bank (única transacción que reduce `disponible` por la regla off-ledger), la reversión del pago, y las vistas de carrusel y detalle.
+
 ## Requirements
 ### Requirement: El sistema modela cada resumen de tarjeta como un período con cuatro fechas
 

@@ -1,19 +1,15 @@
 import { useState } from 'react'
 import { Pressable, Text, View, type TextInputProps } from 'react-native'
+import type { PasswordFieldProps } from '@grana/ui-contracts'
 import { FormField } from './FormField'
 
-type Props = TextInputProps & {
-  label: string
-  error?: string
-  toggleLabelShow?: string
-  toggleLabelHide?: string
-}
+type MobilePasswordFieldProps = PasswordFieldProps & TextInputProps
 
 export function PasswordField({
   toggleLabelShow = 'Ver',
   toggleLabelHide = 'Ocultar',
   ...props
-}: Props) {
+}: MobilePasswordFieldProps) {
   const [visible, setVisible] = useState(false)
 
   return (

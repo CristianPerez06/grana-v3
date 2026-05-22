@@ -1,7 +1,9 @@
 # auth Specification
 
 ## Purpose
-TBD - created by archiving change version-email-templates. Update Purpose after archive.
+
+Define los flujos de autenticación de Grana: alta de usuario con confirmación vía código OTP de 8 dígitos, inicio de sesión, recuperación de contraseña, reenvío de códigos con cooldown, y los templates de email versionados que los soportan. Cubre tanto el cliente web (Next.js + `@supabase/ssr`) como el cliente mobile (Expo + `@supabase/supabase-js` sobre AsyncStorage), y los callbacks que cierran cada flujo en cada plataforma.
+
 ## Requirements
 ### Requirement: Los templates de email viven versionados en el repo
 
@@ -414,12 +416,98 @@ Esta detección NO SHALL usar cookies — el callback `/auth/callback` y la cook
 
 ### Requirement: Las rutas protegidas redirigen a usuarios no autenticados
 
-El sistema SHALL redirigir cualquier request no autenticado que apunte a una ruta bajo `/dashboard` o a cualquier ruta futura bajo el grupo `(app)/` hacia `/login`.
+El sistema SHALL redirigir cualquier request no autenticado que apunte a una ruta bajo `/dashboard`, a cualquier ruta futura bajo el grupo `(app)/`, o a cualquier ruta bajo `/onboarding/` hacia `/login`. La lista de prefijos protegidos SHALL incluir `/onboarding` además de los del grupo `(app)/`.
 
 #### Scenario: Acceso anónimo al dashboard
 
 - **WHEN** un usuario sin sesión navega a `/dashboard`
 - **THEN** el middleware emite un redirect a `/login`
+
+#### Scenario: Acceso anónimo al onboarding
+
+- **WHEN** un usuario sin sesión navega a `/onboarding/welcome`
+- **THEN** el middleware emite un redirect a `/login`
+
+### Requirement: El middleware redirige al wizard cuando el onboarding no fue completado
+
+El sistema SHALL extender el middleware de Next.js (`apps/web/lib/supabase/middleware.ts`) para que, además de proteger rutas autenticadas, consulte `profiles.onboarding_completed_at` y redirija al wizard cuando corresponda:
+
+- Si la request va dirigida a una ruta del grupo `(app)/` (cualquiera bajo `/dashboard`, `/accounts`, `/cards`, etc.) y el usuario está autenticado pero `onboarding_completed_at IS NULL`, el middleware SHALL emitir un redirect a `/onboarding/welcome`.
+- Si la request va dirigida a `/onboarding/*` y el usuario está autenticado, el middleware SHALL dejar pasar la request independientemente del valor de `onboarding_completed_at` (un usuario que ya completó el onboarding puede revisitar `/done` o `/welcome` sin ser redirigido).
+- Si la request va dirigida a `/onboarding/*` y el usuario NO está autenticado, el middleware SHALL emitir un redirect a `/login` (las rutas de onboarding requieren sesión).
+- Si la request va dirigida al grupo `(auth)/` (`/login`, `/signup`, etc.), `/auth/callback`, o rutas públicas, el middleware NO SHALL aplicar el redirect de onboarding, independientemente del estado del usuario.
+
+#### Scenario: Usuario autenticado sin onboarding accede al dashboard (web)
+
+- **WHEN** un usuario autenticado con `onboarding_completed_at IS NULL` navega a `/dashboard`
+- **THEN** el middleware emite un redirect a `/onboarding/welcome`
+
+#### Scenario: Usuario con onboarding completo accede a /onboarding/done (web)
+
+- **WHEN** un usuario autenticado con `onboarding_completed_at IS NOT NULL` navega a `/onboarding/done`
+- **THEN** el middleware deja pasar la request — `/done` se renderiza normalmente
+
+#### Scenario: Usuario sin sesión accede a /onboarding/perfil (web)
+
+- **WHEN** un usuario sin sesión navega a `/onboarding/perfil`
+- **THEN** el middleware emite un redirect a `/login`
+
+#### Scenario: Usuario sin onboarding accede a /login (web)
+
+- **WHEN** un usuario autenticado con `onboarding_completed_at IS NULL` navega a `/login`
+- **THEN** el middleware NO emite redirect de onboarding (la ruta `/login` queda accesible)
+- **AND** la lógica de login puede operar normalmente
+
+### Requirement: El gate de mobile redirige al wizard cuando el onboarding no fue completado
+
+El sistema SHALL implementar en mobile (`apps/mobile/`) un mecanismo equivalente al middleware web para asegurar que un usuario autenticado con `profiles.onboarding_completed_at IS NULL` no pueda acceder a las pantallas del área protegida (grupo `(app)/`). Como Expo Router no expone middleware HTTP, el mecanismo SHALL apoyarse en dos puntos del flujo de navegación:
+
+- **Splash gate** (`app/index.tsx`): después de resolver la sesión con `supabase.auth.getSession()` y descartar el caso de recovery session, el splash SHALL leer `profiles.onboarding_completed_at` y elegir el destino: si NULL → `(onboarding)/welcome`; si NOT NULL → `(app)/dashboard`; sin sesión → `(auth)/login`; con recovery claim → `(auth)/new-password`.
+- **Layout gate** (`app/(app)/_layout.tsx`): al entrar al grupo `(app)/`, el layout SHALL re-chequear `profiles.onboarding_completed_at`; si NULL, ejecutar `router.replace('/(onboarding)/welcome')`. Esto cubre el caso post-signup donde el handler de `onAuthStateChange SIGNED_IN` empuja al usuario a `(app)/dashboard` sin pasar por el splash.
+
+Adicionalmente, el handler de `onAuthStateChange SIGNED_IN` en `app/_layout.tsx` SHALL consultar `onboarding_completed_at` antes de elegir destino para minimizar el flash de pantalla equivocada — si NULL, redirige directamente a `(onboarding)/welcome`; si NOT NULL, a `(app)/dashboard`.
+
+En los tres puntos, si la sesión tiene recovery claim (`hasRecoveryClaim(access_token) === true`), el sistema NO SHALL consultar `onboarding_completed_at` ni redirigir al wizard — la sesión se trata como recovery (redirect a `(auth)/new-password`).
+
+#### Scenario: Arranque en frío con sesión y onboarding incompleto (mobile)
+
+- **WHEN** un usuario abre la app mobile en frío con una sesión persistida en SecureStore y `profiles.onboarding_completed_at IS NULL`
+- **THEN** `app/index.tsx` resuelve `getSession()` con una sesión válida
+- **AND** descarta el caso de recovery (no tiene `amr=otp`)
+- **AND** lee `profiles.onboarding_completed_at`, ve NULL
+- **AND** emite `<Redirect href="/(onboarding)/welcome" />`
+
+#### Scenario: Arranque en frío con sesión y onboarding completado (mobile)
+
+- **WHEN** un usuario abre la app mobile en frío con una sesión persistida y `profiles.onboarding_completed_at` no es NULL
+- **THEN** `app/index.tsx` resuelve sesión, descarta recovery, lee `onboarding_completed_at` no-NULL
+- **AND** emite `<Redirect href="/(app)/dashboard" />`
+
+#### Scenario: Signup nuevo cae en el wizard sin tocar dashboard (mobile)
+
+- **WHEN** un usuario completa signup + verify y Supabase emite `SIGNED_IN`
+- **THEN** el handler de `onAuthStateChange` en `app/_layout.tsx` consulta `onboarding_completed_at`, ve NULL
+- **AND** ejecuta `router.replace('/(onboarding)/welcome')` (no `/(app)/dashboard`)
+- **AND** el usuario nunca ve un frame de `(app)/dashboard`
+
+#### Scenario: Usuario navega manualmente al área (app) sin haber completado (mobile)
+
+- **WHEN** un usuario con `onboarding_completed_at IS NULL` llega de algún modo a una ruta bajo `(app)/` (p. ej. por un deep link futuro o un bug de navegación)
+- **THEN** el layout gate en `app/(app)/_layout.tsx` detecta `onboarding_completed_at IS NULL` al montarse
+- **AND** ejecuta `router.replace('/(onboarding)/welcome')`
+
+#### Scenario: Recovery session no dispara redirect a onboarding (mobile)
+
+- **WHEN** un usuario abre la app con una sesión de recovery (`hasRecoveryClaim(session.access_token) === true`) y `onboarding_completed_at IS NULL`
+- **THEN** ningún gate (splash, handler, layout) consulta `onboarding_completed_at`
+- **AND** el usuario es redirigido a `(auth)/new-password` igual que hoy
+- **AND** después de completar el reset y re-login, los gates normales evalúan onboarding
+
+#### Scenario: Usuario sin sesión accede al área (app) (mobile)
+
+- **WHEN** un usuario sin sesión abre la app
+- **THEN** `app/index.tsx` resuelve `getSession()` con `null`
+- **AND** emite `<Redirect href="/(auth)/login" />` sin consultar `profiles`
 
 ### Requirement: Los server actions devuelven un resultado tipado, nunca querystrings de error
 
@@ -477,70 +565,6 @@ Las rutas `/login`, `/signup`, `/forgot-password` y `/reset-password` SHALL comp
 - **WHEN** un usuario autenticado navega a `/dashboard`
 - **THEN** la página se renderiza dentro del layout `(app)` (header con logout, sin card centrada)
 
-### Requirement: El onboarding en modo novato auto-crea una cuenta cash y una tarjeta default
-
-El sistema SHALL ejecutar, al completar el onboarding con `users.mode='novato'`, una operación atómica que cree:
-
-1. Una cuenta `accounts` con `name='Mi plata'`, `type='cash'`, `is_active=true`.
-2. Una cuenta `accounts` con `name='Mi tarjeta'`, `type='credit'`, `is_active=true`, sin `network_id` ni `other_network_name` (queda completable después).
-3. Las filas en `account_currencies` para la cuenta cash con `currency_code='ARS'` y la moneda secundaria si el usuario la activó, ambas con `initial_balance=0`.
-4. La fila en `account_currencies` para esa tarjeta con `currency_code='ARS'` e `initial_balance=0` (USD adicional si el usuario activó la segunda moneda en el onboarding).
-
-Tras completar la operación atómica con éxito, el sistema SHALL redirigir al usuario a `/dashboard` (la landing universal post-onboarding), NO a `/cards`.
-
-#### Scenario: Onboarding novato exitoso crea las dos entidades default y redirige a dashboard
-
-- **WHEN** un usuario completa el onboarding eligiendo modo novato, con ARS como moneda principal y la fecha de cierre cargada
-- **THEN** se crean las dos cuentas ("Mi plata" cash y "Mi tarjeta" credit) con sus `account_currencies` en `ARS` e `initial_balance=0`
-- **AND** se crean los dos primeros `card_periods` con `is_estimated=true` para la tarjeta default
-- **AND** el sistema redirige a `/dashboard`
-
-#### Scenario: Falla en cualquier paso del onboarding hace rollback
-
-- **WHEN** durante la operación atómica de onboarding novato falla el INSERT de `card_periods` (por error de constraint)
-- **THEN** la transacción se revierte completamente y ninguna de las dos cuentas queda creada
-- **AND** el usuario permanece en la pantalla de onboarding con un mensaje de error
-- **AND** NO se ejecuta el redirect a `/dashboard`
-
-#### Scenario: Onboarding experto no crea entidades default y también redirige a dashboard
-
-- **WHEN** un usuario completa el onboarding con modo experto
-- **THEN** NO se auto-crean cuentas "Mi plata" ni "Mi tarjeta"
-- **AND** el sistema redirige a `/dashboard`
-
----
-
-### Requirement: El onboarding novato pide una única fecha para configurar el ciclo de tarjeta
-
-El sistema SHALL incluir en el flujo del onboarding novato un paso con la pregunta literal "¿Cuándo cierra tu actual resumen?" (en presente/futuro, no en pasado) acompañada de un único campo `<input type="date">` que acepta una fecha en el futuro (puede ser hoy, no puede ser anterior a hoy − 7 días por sanity).
-
-A partir de esa fecha cargada (`closeDate`), el sistema SHALL calcular las cuatro fechas del modelo:
-
-- Período actual: `start_date = closeDate − 30 días` (técnico), `end_date = closeDate` (lo cargado), `due_date = closeDate + 15 días`.
-- Período próximo: `start_date = closeDate + 1 día`, `end_date = closeDate + 30 días`, `due_date = closeDate + 45 días`.
-
-Ambos períodos SHALL marcarse `is_estimated=true` para indicar que las fechas no fueron confirmadas explícitamente por el usuario (excepto `closeDate` que sí fue cargada).
-
-#### Scenario: Usuario carga fecha de cierre el 15 del mes
-
-- **WHEN** un usuario en modo novato carga `closeDate='2026-06-15'`
-- **THEN** el período actual se crea con `start_date='2026-05-16'`, `end_date='2026-06-15'`, `due_date='2026-06-30'`
-- **AND** el período próximo se crea con `start_date='2026-06-16'`, `end_date='2026-07-15'`, `due_date='2026-07-30'`
-- **AND** ambos tienen `is_estimated=true`
-
-#### Scenario: Fecha cargada en el pasado lejano es rechazada
-
-- **WHEN** un usuario carga `closeDate` con valor anterior a `today − 7 días`
-- **THEN** el form muestra error "Tomá la fecha del próximo cierre que figura en tu resumen del banco"
-- **AND** no avanza el onboarding
-
-#### Scenario: Fecha cargada en el futuro lejano es aceptada
-
-- **WHEN** un usuario carga `closeDate='2026-06-30'` con `today='2026-05-15'` (45 días en el futuro)
-- **THEN** el form acepta la fecha y crea los períodos correspondientes
-
----
-
 ### Requirement: La UI muestra una marca visual cuando las fechas de un período son estimadas
 
 El sistema SHALL renderizar un indicador visual (iconito 📅 o equivalente discreto) en las fechas de cualquier período con `is_estimated=true`. El indicador SHALL aparecer en:
@@ -570,15 +594,15 @@ El indicador SHALL desaparecer cuando `is_estimated` pase a `false` (lo cual ocu
 
 El sistema SHALL adaptar el selector de "cuenta de pago" en el formulario de pago de resumen según el modo del usuario:
 
-- **Modo novato**: el selector SHALL fijarse a "Mi plata" sin permitir cambio (ya que es la única cuenta cash/bank que tiene el novato).
+- **Modo novato**: el selector SHALL fijarse a la cuenta `Billetera` (creada por el trigger `on_auth_user_created_default_account` al alta del usuario) sin permitir cambio, ya que en modo novato la UI no expone otras cuentas cash/bank al usuario.
 - **Modo experto**: el selector SHALL mostrar todas las cuentas `cash` y `bank` activas del usuario que tengan ARS habilitada.
 
 En ambos modos, el sistema SHALL excluir las cuentas `credit` y las cuentas `bank` con función `ahorro` (cuando ese flag exista).
 
-#### Scenario: Novato paga resumen desde Mi plata fija
+#### Scenario: Novato paga resumen desde Billetera fija
 
 - **WHEN** un usuario novato abre el flujo de pago de resumen
-- **THEN** el campo "Cuenta de pago" muestra "Mi plata" en estado read-only
+- **THEN** el campo "Cuenta de pago" muestra "Billetera" en estado read-only
 
 #### Scenario: Experto elige entre todas sus cash/bank
 

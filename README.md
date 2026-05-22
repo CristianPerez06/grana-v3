@@ -129,13 +129,23 @@ Las propuestas viven en `openspec/changes/` y las specs en `openspec/specs/`.
 
 ## Scripts disponibles
 
-| Script              | Descripción                                       |
-| ------------------- | ------------------------------------------------- |
-| `pnpm dev`          | Inicia el servidor de desarrollo                  |
-| `pnpm build`        | Compila la app para producción                    |
-| `pnpm start`        | Ejecuta la build de producción                    |
-| `pnpm lint`         | Ejecuta ESLint en todo el proyecto                |
-| `pnpm storybook`    | Levanta Storybook en el puerto 6006               |
+Los comandos sin sufijo apuntan a `apps/web`. Para mobile usá los sufijos `:mobile` o `pnpm --filter mobile <script>`.
+
+| Script                    | Descripción                                                   |
+| ------------------------- | ------------------------------------------------------------- |
+| `pnpm dev`                | Inicia el servidor de desarrollo de web                       |
+| `pnpm build`              | Compila la app web para producción                            |
+| `pnpm start`              | Ejecuta la build de producción de web                         |
+| `pnpm lint`               | Ejecuta ESLint sobre `apps/web`                               |
+| `pnpm typecheck`          | Type-check de `apps/web`                                      |
+| `pnpm test`               | Tests (Vitest) de `apps/web`                                  |
+| `pnpm storybook`          | Levanta Storybook en el puerto 6006 (web)                     |
+| `pnpm dev:mobile`         | Inicia Expo dev server                                        |
+| `pnpm lint:mobile`        | Lint de `apps/mobile`                                         |
+| `pnpm typecheck:mobile`   | Type-check de `apps/mobile`                                   |
+| `pnpm eas:android`        | Build de Android con EAS (remoto)                             |
+| `pnpm eas:ios`            | Build de iOS con EAS (remoto)                                 |
+| `pnpm openspec:check`     | Valida que ningún spec maestro tenga `Purpose: TBD` residual  |
 
 ## Convenciones
 
@@ -150,31 +160,37 @@ Las propuestas viven en `openspec/changes/` y las specs en `openspec/specs/`.
 
 ## Estructura del proyecto
 
-El repo es un **monorepo pnpm**: una app web hoy (`apps/web`), paquetes compartidos en `packages/*`, y un slot reservado para la app mobile (`apps/mobile`, todavía no creado).
+El repo es un **monorepo pnpm** con dos apps: web (`apps/web`, Next.js App Router) y mobile (`apps/mobile`, Expo). Comparten datos en Supabase y código vía los paquetes `packages/*`.
 
 ```
 grana-v3/
 ├── apps/
-│   └── web/                       # Next.js App Router — la única app por ahora
-│       ├── app/                   # rutas, layouts, server actions
-│       ├── components/            # primitivos UI + footer
-│       ├── lib/                   # código específico de web (supabase ssr, i18n runtime, etc.)
-│       ├── .storybook/
-│       ├── public/                # activos estáticos
-│       ├── .env / .env.example    # vars de entorno (Next las lee desde el cwd de la app)
-│       ├── next.config.ts         # `transpilePackages` incluye los @grana/*
-│       └── tsconfig.json          # extiende `../../tsconfig.base.json`
+│   ├── web/                       # Next.js App Router
+│   │   ├── app/                   # rutas, layouts, server actions
+│   │   ├── components/            # primitivos UI (HTML) + features web
+│   │   ├── lib/                   # código específico de web (supabase ssr, i18n runtime, etc.)
+│   │   ├── .storybook/
+│   │   ├── public/                # activos estáticos
+│   │   ├── .env / .env.example    # vars de entorno (Next las lee desde el cwd de la app)
+│   │   ├── next.config.ts         # `transpilePackages` incluye los @grana/*
+│   │   └── tsconfig.json          # extiende `../../tsconfig.base.json`
+│   └── mobile/                    # Expo (React Native) — espejo funcional del web
+│       ├── app/                   # rutas Expo Router
+│       ├── components/            # primitivos UI (RN) + features mobile
+│       ├── lib/                   # código específico de mobile (supabase client RN, i18n RN)
+│       └── app.json               # config de Expo
 ├── packages/
 │   ├── validation/                # @grana/validation — schemas Yup + helpers (cross-platform)
 │   ├── i18n-messages/             # @grana/i18n-messages — catálogos JSON
 │   ├── supabase/                  # @grana/supabase — slot Database + createClient factory
-│   └── ui-tokens/                 # @grana/ui-tokens — design tokens (CSS, fuente única para web)
+│   ├── ui-tokens/                 # @grana/ui-tokens — design tokens (CSS variables, web + mobile)
+│   └── dashboard/                 # @grana/dashboard — queries + agregaciones del dashboard
 ├── supabase/                      # SQL migrations + email templates (backend, no es una app)
 ├── openspec/                      # workflow spec-driven
 ├── CLAUDE.md                      # contexto para Claude Code
 ├── SUPABASE_SETUP.md
 ├── README.md
-├── package.json                   # orquestador (`pnpm dev`, `build`, etc. → `pnpm --filter web …`)
+├── package.json                   # orquestador con scripts para web y mobile
 ├── pnpm-workspace.yaml            # declara `apps/*` y `packages/*`
 ├── tsconfig.base.json             # base TS con paths `@grana/*` → source directa
 └── .npmrc                         # hoist patterns necesarios para eslint-config-next
@@ -184,6 +200,7 @@ Reglas rápidas:
 - Código específico de una plataforma vive en `apps/<name>/`.
 - Código reutilizable entre apps **y sin deps de plataforma** vive en `packages/<name>/`.
 - La raíz **no tiene código de producto**.
+- Política web↔mobile: dos implementaciones nativas paralelas con API idéntica (ver `CLAUDE.md` → "Web ↔ Mobile policy"). No se comparte JSX entre web y React Native.
 
 ## Deploy en Vercel
 

@@ -7,7 +7,9 @@ const nextConfig: NextConfig = {
   transpilePackages: [
     '@grana/dashboard',
     '@grana/i18n-messages',
+    '@grana/money-logic',
     '@grana/supabase',
+    '@grana/ui-contracts',
     '@grana/validation',
   ],
 }

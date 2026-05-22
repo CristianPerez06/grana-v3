@@ -1,7 +1,9 @@
 # project-conventions Specification
 
 ## Purpose
-TBD - created by archiving change add-project-conventions. Update Purpose after archive.
+
+Spec meta del proyecto: agrupa las convenciones transversales que aplican a todo el repo Grana V3 y que no pertenecen a ningún módulo de negocio en particular. Incluye el principio "el repo es la memoria del producto" (la app debe poder continuarse sin contexto de chat), el bilingüismo (documentación en español, código en inglés), las reglas de branching y merge `--ff-only` a `main`, el workflow obligatorio de OpenSpec (archive en la branch antes del merge, checklist post-archivado, `pnpm openspec:check` como gate) y la política web↔mobile de implementaciones paralelas con API idéntica.
+
 ## Requirements
 ### Requirement: La V3 debe sostenerse desde el repo, no desde contexto de chat
 
@@ -471,4 +473,107 @@ El sistema SHALL enforce esto vía constraint `CHECK` con subquery sobre `accoun
 
 - **WHEN** se intenta INSERT con `type='income'`, `account.type='cash'`, y `fx_rate_to_ars=1400`
 - **THEN** la DB rechaza
+
+### Requirement: Bimoneda por defecto — todo usuario arranca con ARS y USD habilitados
+
+El sistema SHALL habilitar ambas monedas (ARS y USD) para todo usuario nuevo en el momento del alta, sin pedirle al usuario que opte por la segunda moneda. La decisión de NO ver USD SHALL ser un opt-out posterior desde el módulo `settings` (próxima change), no un opt-in en el onboarding.
+
+Esto se traduce concretamente a:
+
+- El trigger `on_auth_user_created_default_account` SHALL crear la cuenta `Billetera` con filas en `account_currencies` para ARS y USD, ambas con `initial_balance=0` (comportamiento ya existente, que se preserva).
+- Toda cuenta creada en el wizard de onboarding (cuenta bancaria) SHALL incluir filas en `account_currencies` para ARS y USD por defecto.
+- La pantalla `/onboarding/saldo-actual` SHALL pedir saldos en ARS y USD para todas las cuentas relevantes, sin preguntar previamente "¿manejás dólares?".
+- La UI de la app SHALL mostrar columnas y totales por separado para ARS y USD por defecto, en línea con el principio cross-cutting "Bimoneda" (ARS y USD son ledgers separados, nunca se convierten).
+- Cuando la próxima change del módulo `settings` agregue un toggle "ocultar USD" en preferencias del usuario, ese toggle SHALL afectar solo la presentación visual (esconder columnas USD, no mostrar el segundo input en formularios) y NO SHALL alterar las filas de `account_currencies` ni el ledger interno.
+
+Este principio es complementario, no reemplazo, del principio "Bimoneda" listado en la tabla de cross-cutting principles del `CLAUDE.md` (que prohíbe convertir automáticamente entre ARS y USD). "Bimoneda por defecto" agrega: ARS+USD están habilitados por defecto para todos.
+
+#### Scenario: Usuario nuevo tiene cuenta Billetera con ambas monedas tras signup
+
+- **WHEN** un usuario completa el signup
+- **THEN** existe en `accounts` una fila `Billetera` (tipo cash, propiedad del usuario)
+- **AND** existen exactamente dos filas en `account_currencies` para esa cuenta: una con `currency_code='ARS', initial_balance=0` y otra con `currency_code='USD', initial_balance=0`
+
+#### Scenario: Cuenta bancaria creada en onboarding tiene ambas monedas
+
+- **WHEN** un usuario en `/onboarding/perfil` crea una cuenta bancaria
+- **THEN** existen filas en `account_currencies` para ARS y USD asociadas a esa cuenta, ambas con `initial_balance=0`
+
+#### Scenario: Saldo actual del onboarding pregunta ambas monedas sin precondición
+
+- **WHEN** un usuario en `/onboarding/saldo-actual` ve el formulario
+- **THEN** hay un input de monto para ARS y otro para USD (por cada cuenta visible en esa pantalla, según el modo)
+- **AND** no hay pregunta previa tipo "¿manejás dólares?" que controle la visibilidad de los inputs USD
+
+### Requirement: El archive de una change ocurre en la branch antes del merge a main
+
+Cuando una change implementada se considera completa, su archivado SHALL ocurrir como último commit de la branch de trabajo, **antes** del merge `--ff-only` a `main`. El archivado NO se difiere a un commit posterior ni a un PR separado.
+
+Archivado significa: mover la carpeta de `openspec/changes/<name>/` a `openspec/changes/archive/YYYY-MM-DD-<name>/`, aplicar los deltas (`## ADDED Requirements`, `## MODIFIED Requirements`, `## REMOVED Requirements`, `## RENAMED Requirements`) al spec maestro de cada capability tocada en `openspec/specs/<capability>/spec.md`, completar el `Purpose` real del spec maestro reemplazando cualquier placeholder `TBD - created by archiving change ...`, y actualizar `CLAUDE.md` (secciones "Modules" y "Repo Layout") cuando corresponda.
+
+Esta regla sostiene tres invariantes del proyecto:
+
+- El merge a `main` SHALL ser atómico: en una sola commit aparecen el código, los specs maestros actualizados, los `Purpose` completados y los cambios consecuentes en `CLAUDE.md`.
+- El estado de `main` SHALL cumplir que cada implementación tiene su spec maestro alineado.
+- Cualquier feedback de PR que requiera ajustar el spec MUST aplicarse en la misma branch sin abrir un segundo PR de "archive housekeeping".
+
+El gate de validación SHALL ser el comando `pnpm openspec:check`, que falla si encuentra `TBD - created by archiving` o `Purpose: TBD` dentro de `openspec/specs/`. Este comando MUST correrse antes de cualquier merge a `main` y MUST pasar.
+
+#### Scenario: Branch lista para merge tiene la change archivada
+
+- **WHEN** un colaborador termina la implementación de una change y se prepara para mergear su branch a `main`
+- **THEN** la branch tiene como último commit el archivado de la change (mover carpeta + aplicar deltas al spec maestro + completar `Purpose` + actualizar `CLAUDE.md` Modules y Repo Layout si corresponde)
+- **AND** el merge a `main` se hace `--ff-only` sin commits adicionales
+
+#### Scenario: Merge a main rechazado si quedan TBD residuales
+
+- **WHEN** el colaborador corre `pnpm openspec:check` sobre una branch que dejó `Purpose: TBD - created by archiving change ...` en algún spec maestro
+- **THEN** el comando falla con exit code distinto de 0
+- **AND** el merge se posterga hasta completar los `Purpose` reales
+
+#### Scenario: Una change archivada no deja deltas residuales en el spec maestro
+
+- **WHEN** un colaborador archiva una change
+- **THEN** el spec maestro de cada capability tocada NO contiene secciones `## ADDED Requirements`, `## MODIFIED Requirements`, `## REMOVED Requirements` ni `## RENAMED Requirements`
+- **AND** los requirements modificados aparecen integrados en la sección plana `## Requirements`
+
+#### Scenario: Antes de iniciar una change nueva se verifica el solapamiento
+
+- **WHEN** un colaborador va a crear una nueva change que toca una capability `X`
+- **THEN** verifica que no exista otra change activa en `openspec/changes/` (excluyendo `archive/`) que también toque la capability `X`
+- **AND** si existe, decide el orden de merge y las dependencias antes de empezar la nueva
+
+### Requirement: La paridad web↔mobile se sostiene por contratos de props compartidos
+
+Grana SHALL mantener dos implementaciones nativas de cada primitivo de UI: una en `apps/web/components/ui/` y otra en `apps/mobile/components/`. NO se SHALL intentar compartir JSX entre web y React Native; ambas implementaciones permanecen independientes en su árbol de DOM/View nativo.
+
+La paridad de API entre ambas SHALL estar garantizada por **tipos de props compartidos** vivos en el package `@grana/ui-contracts`. Cada componente equivalente en web y mobile MUST importar el mismo prop type desde `@grana/ui-contracts` y exponerlo como su prop signature pública. Las implementaciones MAY aceptar props adicionales propias de su plataforma vía intersection con el tipo del contrato, pero NO MAY divergir en los nombres, tipos ni semántica de las props comunes.
+
+Las convenciones de naming adoptadas (las que difieren entre web y RN) SHALL quedar documentadas en `packages/ui-contracts/README.md`. Una convención fijada por esta spec: los callbacks de interacción se llaman `onPress` (no `onClick`) en ambos lados, alineado con la convención de React Native.
+
+Esta política aplica a los primitivos de UI (`Button`, `Card`, `Input`, `Label`, `Alert`, `Spinner`, `FormField`, `PasswordField` y futuros). NO aplica a la lógica de negocio pura: para eso existe `@grana/money-logic`, donde una única implementación SHALL ser consumida por ambas plataformas.
+
+#### Scenario: Web y mobile importan el mismo prop type
+
+- **WHEN** un colaborador define un componente primitivo equivalente en web y mobile (por ejemplo `Button`)
+- **THEN** ambos archivos importan `ButtonProps` desde `@grana/ui-contracts`
+- **AND** ambos archivos exponen `Button(props: ButtonProps)` como su firma pública
+
+#### Scenario: Una prop nueva en el contrato obliga a mobile a implementarla
+
+- **WHEN** un colaborador agrega una nueva prop obligatoria al tipo `ButtonProps` en `@grana/ui-contracts`
+- **THEN** TypeScript marca como error el archivo `apps/mobile/components/Button.tsx` hasta que mobile la implemente
+- **AND** la PR NO puede mergearse mientras mobile no cumpla el contrato
+
+#### Scenario: Una implementación necesita una prop específica de su plataforma
+
+- **WHEN** la implementación de mobile necesita una prop extra que no aplica a web (por ejemplo, haptic feedback)
+- **THEN** mobile expone su firma como `MobileButtonProps = ButtonProps & { hapticFeedback?: 'light' | 'medium' }`
+- **AND** la prop extra NO se agrega al contrato compartido
+
+#### Scenario: Lógica financiera no se duplica entre apps
+
+- **WHEN** una función de cálculo financiero puro (balance, derivación de período, generación de fechas de recurrencia) es necesaria en web y mobile
+- **THEN** la función vive en `@grana/money-logic` y ambas apps la importan desde ahí
+- **AND** ninguna app reimplementa la función en su propio `lib/`
 

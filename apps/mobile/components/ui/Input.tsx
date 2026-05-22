@@ -1,12 +1,10 @@
 import { useState } from 'react'
 import { TextInput as RNTextInput, type TextInputProps } from 'react-native'
+import type { InputProps } from '@grana/ui-contracts'
 
-type Props = TextInputProps & {
-  invalid?: boolean
-  className?: string
-}
+type MobileInputProps = InputProps & TextInputProps
 
-export function Input({ invalid, className, ...props }: Props) {
+export function Input({ invalid, className, ...props }: MobileInputProps) {
   const [focused, setFocused] = useState(false)
 
   const borderClass = invalid

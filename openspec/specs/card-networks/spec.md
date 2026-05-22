@@ -1,7 +1,9 @@
 # card-networks Specification
 
 ## Purpose
-TBD - created by archiving change add-credit-cards. Update Purpose after archive.
+
+Mantiene el catálogo de redes de tarjeta de crédito (Visa, Mastercard, American Express, Cabal, Naranja, Naranja X, Mercado Pago, etc.) como tabla seed administrada por el sistema, con metadata visual (color, ícono, orden de display) para el render del listado y detalle. Define cómo cada tarjeta del usuario referencia una red del catálogo o queda con un nombre custom, y la regla de inmutabilidad de la red post-creación.
+
 ## Requirements
 ### Requirement: El sistema mantiene un catálogo de redes de tarjeta como tabla seed
 

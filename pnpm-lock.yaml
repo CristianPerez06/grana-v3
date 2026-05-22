@@ -20,9 +20,15 @@ importers:
       '@grana/dashboard':
         specifier: workspace:*
         version: link:../../packages/dashboard
+      '@grana/money-logic':
+        specifier: workspace:*
+        version: link:../../packages/money-logic
       '@grana/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
+      '@grana/ui-contracts':
+        specifier: workspace:*
+        version: link:../../packages/ui-contracts
       '@grana/validation':
         specifier: workspace:*
         version: link:../../packages/validation
@@ -114,9 +120,15 @@ importers:
       '@grana/i18n-messages':
         specifier: workspace:*
         version: link:../../packages/i18n-messages
+      '@grana/money-logic':
+        specifier: workspace:*
+        version: link:../../packages/money-logic
       '@grana/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
+      '@grana/ui-contracts':
+        specifier: workspace:*
+        version: link:../../packages/ui-contracts
       '@grana/ui-tokens':
         specifier: workspace:*
         version: link:../../packages/ui-tokens
@@ -230,11 +242,27 @@ importers:
 
   packages/i18n-messages: {}
 
+  packages/money-logic:
+    dependencies:
+      '@grana/validation':
+        specifier: workspace:*
+        version: link:../validation
+
   packages/supabase:
     dependencies:
       '@supabase/supabase-js':
         specifier: ^2.105.4
         version: 2.105.4
+
+  packages/ui-contracts:
+    dependencies:
+      react:
+        specifier: '>=18'
+        version: 19.1.0
+    devDependencies:
+      '@types/react':
+        specifier: ^19
+        version: 19.1.17
 
   packages/ui-tokens: {}
 

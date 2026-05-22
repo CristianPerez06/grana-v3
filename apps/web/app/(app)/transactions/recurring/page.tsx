@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
+import { formatDateISO, getTodayAR } from '@/lib/date'
 import { getRecurrences } from '@/lib/recurrences/queries'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
 
@@ -33,14 +34,9 @@ const formatDate = (iso: string | null) => {
   })
 }
 
-const todayISO = () => {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
 const isFinished = (rule: RecurrenceSummary) => {
   if (!rule.end_date) return false
-  return rule.end_date < todayISO()
+  return rule.end_date < formatDateISO(getTodayAR())
 }
 
 const RecurringPage = async () => {

@@ -2,13 +2,12 @@
 
 import { forwardRef, useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
+import type { PasswordFieldProps as ContractPasswordFieldProps } from '@grana/ui-contracts'
 import { cn } from '@/lib/utils'
 import { FormField, type FormFieldProps } from './form-field'
 
-type PasswordFieldProps = Omit<FormFieldProps, 'type'> & {
-  toggleLabelShow?: string
-  toggleLabelHide?: string
-}
+type PasswordFieldProps = Omit<FormFieldProps, 'type'> &
+  Pick<ContractPasswordFieldProps, 'toggleLabelShow' | 'toggleLabelHide'>
 
 const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
   (

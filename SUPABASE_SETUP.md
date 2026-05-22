@@ -2,6 +2,8 @@
 
 Pasos punta a punta para integrar Supabase en este proyecto Next.js 16 App Router, tanto para **autenticación** como para **acceso a base de datos**, usando el paquete `@supabase/ssr` (que tiene buen soporte para SSR).
 
+> **Un único proyecto Supabase para web y mobile.** Tanto `apps/web` como `apps/mobile` (Expo) consumen el mismo proyecto: misma base de datos, mismas migraciones, mismos templates de email, mismos usuarios. Cambian sólo los wrappers del cliente: web usa `@supabase/ssr` (cookies de Next) y mobile usa `@supabase/supabase-js` con storage adaptado a AsyncStorage. La configuración de provider, URLs de redirect y templates descripta abajo aplica a ambas plataformas — usá la misma `Project URL` y `anon key` en los `.env` de cada app. Agregá la(s) URL(s) de redirect de mobile (por ejemplo `grana://auth/callback` o el deeplink que use tu build de Expo) además de las de web.
+
 ---
 
 ## 1. Crear el proyecto en Supabase

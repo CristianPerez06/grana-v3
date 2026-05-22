@@ -1,10 +1,17 @@
 import * as LabelPrimitive from '@radix-ui/react-label'
 import { forwardRef, type ComponentPropsWithoutRef, type ElementRef } from 'react'
+import type { LabelProps as ContractLabelProps } from '@grana/ui-contracts'
 import { cn } from '@/lib/utils'
+
+type LabelProps = ContractLabelProps &
+  Omit<
+    ComponentPropsWithoutRef<typeof LabelPrimitive.Root>,
+    'children' | 'className'
+  >
 
 const Label = forwardRef<
   ElementRef<typeof LabelPrimitive.Root>,
-  ComponentPropsWithoutRef<typeof LabelPrimitive.Root>
+  LabelProps
 >(({ className, ...props }, ref) => (
   <LabelPrimitive.Root
     ref={ref}
@@ -18,3 +25,4 @@ const Label = forwardRef<
 Label.displayName = 'Label'
 
 export { Label }
+export type { LabelProps }

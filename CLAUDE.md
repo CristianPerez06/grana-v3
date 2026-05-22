@@ -1,6 +1,6 @@
 # grana-v3monorepo
 
-pnpm workspaces monorepo. Today `apps/web` (Next.js App Router) is the only app. `apps/mobile` is reserved for the Expo app and will be scaffolded in a separate change — do not create it here.
+pnpm workspaces monorepo with two apps: `apps/web` (Next.js App Router) and `apps/mobile` (Expo). Mobile mirrors web feature-by-feature with parallel native implementations sharing typed prop contracts via `@grana/ui-contracts` and pure business logic via `@grana/money-logic` (see "Web ↔ Mobile policy" below).
 
 ## V3 Rebuild Standard
 
@@ -12,12 +12,14 @@ The repo is the memory. Important business decisions must be captured in specs, 
 
 ```
 apps/
-  web/             # Next.js (App Router) — the only app today
+  web/             # Next.js (App Router) — web app
+  mobile/          # Expo — mobile app (mirrors web feature-by-feature)
 packages/
   validation/      # @grana/validation       — Yup schemas + helpers (pure, cross-platform)
   i18n-messages/   # @grana/i18n-messages    — locale catalogs (JSON), no runtime
   supabase/        # @grana/supabase         — Database type slot + createClient factory
-  ui-tokens/       # @grana/ui-tokens        — design tokens (CSS, single source for web)
+  ui-tokens/       # @grana/ui-tokens        — design tokens (CSS variables, shared web+mobile)
+  dashboard/       # @grana/dashboard        — dashboard queries + pure aggregations
 supabase/          # SQL migrations + email templates (backend, NOT an app)
 openspec/          # spec-driven workflow
 ```
@@ -29,6 +31,16 @@ openspec/          # spec-driven workflow
 - **Repo root** — orchestrator `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, meta files. **No product code at the root.**
 
 When a module that lives in `apps/web/lib/` later needs to be reused by mobile, promote it to `packages/` rather than copying.
+
+### Web ↔ Mobile policy
+
+Two native implementations, one shared API.
+
+- Each primitive UI component (`Button`, `Card`, `Input`, etc.) has a separate implementation in `apps/web/components/ui/` (HTML primitives) and `apps/mobile/components/ui/` (React Native primitives). **JSX is not shared between web and React Native** — `<div>` does not exist in RN, `<View>` does not exist in web.
+- Parity is guaranteed by **shared prop types** in `packages/ui-contracts/`. Both apps import the same `ButtonProps`, `CardProps`, etc. Divergence in prop names, types or semantics breaks TypeScript on the other side.
+- Pure business logic (balance calculation, period derivation, recurrence date generation) lives in `packages/money-logic/` and is consumed by both apps. No duplicate calculation code in `apps/<name>/lib/`.
+- Naming convention: interaction callbacks are named `onPress` (RN-friendly) on both sides — not `onClick`. Other naming conventions are documented in `packages/ui-contracts/README.md`.
+- Supabase queries stay in each app's `lib/` because they depend on each app's Supabase client wrapper. Only the pure functions move to `packages/`.
 
 ## Tech Stack (apps/web)
 
@@ -112,6 +124,35 @@ git merge --ff-only my-branch
 git push origin main
 ```
 
+## OpenSpec — workflow obligatorio
+
+The repo uses [OpenSpec](https://github.com/Fission-AI/OpenSpec) for spec-driven changes. Active changes live in `openspec/changes/<name>/`; archived changes in `openspec/changes/archive/YYYY-MM-DD-<name>/`; master specs in `openspec/specs/<capability>/spec.md`.
+
+### Archive happens in the branch, before merge to main
+
+When a change implementation is complete, archive it as the **last commit of the working branch, before the `--ff-only` merge to `main`**. Not after. This keeps the merge atomic: in a single commit `main` receives the code, the updated master specs, the completed `Purpose` fields, and the consequent `CLAUDE.md` edits.
+
+### Post-archive checklist — MANDATORY before merge
+
+When archiving a change:
+
+1. Move the folder from `openspec/changes/<name>/` to `openspec/changes/archive/YYYY-MM-DD-<name>/`.
+2. For each capability touched by the change, open `openspec/specs/<capability>/spec.md` and:
+   - Apply the deltas (`## ADDED Requirements`, `## MODIFIED Requirements`, `## REMOVED Requirements`, `## RENAMED Requirements`) so they are integrated into the flat `## Requirements` section. The master spec MUST NOT contain delta sections.
+   - Replace any `Purpose: TBD - created by archiving change ...` placeholder with a real 2-4 line `Purpose` describing the capability's scope.
+3. Update `CLAUDE.md` when applicable:
+   - Section "Modules" if the change completes or adds a module.
+   - Section "Repo Layout" if the change adds a package or app.
+4. Run `pnpm openspec:check`. It MUST pass before the merge.
+
+### Pre-change check
+
+Before starting a new change, verify no other active change in `openspec/changes/` touches the same capability. If one does, decide ordering and dependencies before starting the new one.
+
+### `pnpm openspec:check`
+
+The script fails if any master spec under `openspec/specs/` contains the placeholder `TBD - created by archiving` or a literal `Purpose: TBD`. It is the merge-gate for spec hygiene — humans and LLMs alike. Run it as part of the pre-merge checklist; CI may enforce it in the future.
+
 ## Email templates
 
 - Supabase email templates used by the app live versioned under `supabase/templates/` (`confirm-signup.html`, `reset-password.html`). The repo is the **source of truth**; the Supabase dashboard is a manual mirror until we adopt the Supabase CLI.
@@ -166,22 +207,29 @@ These affect every feature. Not knowing them causes silent bugs anywhere in the 
 
 ### Modules
 
-Build order matters — each module depends on the ones above it.
+Build order matters — each module generally depends on the ones above it. Cross-cutting modules (`schema-base`, `profiles`, `i18n`, `card-networks`, `project-conventions`) underpin everything else.
 
 | # | Module | Status | Qué incluye |
 |---|--------|--------|-------------|
-| 1 | `auth` | ✅ Done | Registro, login, recupero de contraseña |
+| 1 | `auth` | ✅ Done | Registro, login, recupero de contraseña, OTP, callbacks |
 | 2 | `schema-base` | ✅ Done | Monedas, instituciones, redes de tarjeta, tipo `Money`, fecha contable y zona horaria financiera |
-| 3 | `categories` | ✅ Done | 17 categorías sistema + subcategorías, categorías propias del usuario, i18n |
-| 4 | `accounts` | ✅ Done | Cuentas efectivo (ARS/USD), cuentas bancarias/débito (tarjetas de crédito: ver módulo cards) |
-| 5 | `transactions` | ✅ Done | Ingresos y gastos en cuentas cash/bank (transferencias, ajustes, cuotas y recurrencias: changes futuros) |
-| 5.5 | `cards` | 🚧 In progress | Tarjetas de crédito: alta experto/novato, períodos (resúmenes), consumos, cuotas en pesos, pago de resumen, reversión |
-| 6 | `shared` | 🔲 Planned | Gastos compartidos entre N personas ("Compartido"), deuda derivada, liquidación |
-| 7 | `savings` | 🔲 Planned | Sistema de sobres (envelopes), enganche a ingresos — diseño pendiente |
-| 8 | `cashflow` | 🔜 Future | Proyecciones de flujo de caja |
-| 9 | `investments` | 🔜 Future | Inversiones |
+| 3 | `profiles` | ✅ Done | Perfil del usuario, modo novato/experto, zona horaria financiera, flag de onboarding |
+| 4 | `card-networks` | ✅ Done | Catálogo de redes de tarjeta con BIN ranges y branding |
+| 5 | `categories` | ✅ Done | 17 categorías sistema + subcategorías, categorías propias del usuario, i18n |
+| 6 | `i18n` | ✅ Done | Estrategia de mensajes (next-intl + helper RN), catálogos JSON compartidos, fallback |
+| 7 | `accounts` | ✅ Done | Cuentas efectivo (ARS/USD), cuentas bancarias/débito (las de crédito viven en `cards`) |
+| 8 | `transactions` | ✅ Done | Ingresos, gastos, transferencias, ajustes; reglas de balance |
+| 9 | `cards` | ✅ Done | Tarjetas de crédito: alta experto/novato, períodos (resúmenes), consumos, cuotas en pesos, pago de resumen, reversión |
+| 10 | `recurring-movements` | ✅ Done | Plantillas de recurrencias e instancias generadas; confirmar, saltar, posponer |
+| 11 | `dashboard` | ✅ Done | Landing universal post-login: Hero "Para gastar", Lo que viene, Balance del mes, Tarjetas |
+| 12 | `onboarding` | ✅ Done | Wizard post-signup (web + mobile), bimoneda default, gate logic |
+| 13 | `mobile-app-shell` | ✅ Done | Expo app shell, navegación tabs, gating de auth y onboarding |
+| 14 | `settings` | ✅ Done | Categorías personalizadas, preferencias de usuario (mostrar centavos, etc.) |
+| 15 | `shared` | 🔲 Planned | Gastos compartidos entre N personas ("Compartido"), deuda derivada, liquidación |
+| 16 | `savings` | 🔲 Planned | Sistema de sobres (envelopes), enganche a ingresos — diseño pendiente |
+| 17 | `cashflow` | 🔜 Future | Proyecciones de flujo de caja |
+| 18 | `investments` | 🔜 Future | Inversiones |
 
-**Dependencias:** `accounts` → `transactions` → `shared` y `savings`. No se puede implementar una sin la anterior.
+**Dependencias clave:** `accounts` → `transactions` → `shared` y `savings`. `cards` y `recurring-movements` se apoyan en `transactions`. `dashboard` y `onboarding` consumen casi todo lo anterior.
 
 **Specs viven en:** `openspec/specs/<module>/spec.md` una vez que el módulo se archiva.
-| `investments` | `openspec/specs/investments/` | 🔜 Future |
