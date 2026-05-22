@@ -131,6 +131,16 @@
     "logout": "Cerrar sesión",
     "back": "Volver"
   },
+  "nav": {
+    "dashboard": "Inicio",
+    "accounts": "Cuentas",
+    "cards": "Tarjetas",
+    "movements": "Movimientos",
+    "settings": "Configuración",
+    "logout": "Cerrar sesión",
+    "open_menu": "Abrir menú",
+    "close_menu": "Cerrar menú"
+  },
   "onboarding": {
     "welcome": {
       "greeting": "Hola, {name}",

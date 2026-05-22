@@ -131,6 +131,16 @@
     "logout": "Sign out",
     "back": "Back"
   },
+  "nav": {
+    "dashboard": "Home",
+    "accounts": "Accounts",
+    "cards": "Cards",
+    "movements": "Movements",
+    "settings": "Settings",
+    "logout": "Sign out",
+    "open_menu": "Open menu",
+    "close_menu": "Close menu"
+  },
   "onboarding": {
     "welcome": {
       "greeting": "Hi, {name}",

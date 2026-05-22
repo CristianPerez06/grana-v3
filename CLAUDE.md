@@ -223,7 +223,8 @@ Build order matters — each module generally depends on the ones above it. Cros
 | 10 | `recurring-movements` | ✅ Done | Plantillas de recurrencias e instancias generadas; confirmar, saltar, posponer |
 | 11 | `dashboard` | ✅ Done | Landing universal post-login: Hero "Para gastar", Lo que viene, Balance del mes, Tarjetas |
 | 12 | `onboarding` | ✅ Done | Wizard post-signup (web + mobile), bimoneda default, gate logic |
-| 13 | `mobile-app-shell` | ✅ Done | Expo app shell, navegación tabs, gating de auth y onboarding |
+| 13 | `mobile-app-shell` | ✅ Done | Expo app shell, navegación tabs, gating de auth y onboarding, presentación visual del tab bar y `AppMenu` |
+| 13b | `web-app-shell` | ✅ Done | Shell de navegación web: sidebar island único, paleta de marca, drawer mobile-first bajo `md`, estado activo derivado de la ruta |
 | 14 | `settings` | ✅ Done | Categorías personalizadas, preferencias de usuario (mostrar centavos, etc.) |
 | 15 | `shared` | 🔲 Planned | Gastos compartidos entre N personas ("Compartido"), deuda derivada, liquidación |
 | 16 | `savings` | 🔲 Planned | Sistema de sobres (envelopes), enganche a ingresos — diseño pendiente |

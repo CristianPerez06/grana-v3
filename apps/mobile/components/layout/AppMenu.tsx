@@ -9,6 +9,7 @@ import {
   X,
 } from 'lucide-react-native'
 import { supabase } from '../../lib/supabase'
+import { colors } from '../../lib/colors'
 
 type Props = {
   onClose: () => void
@@ -37,7 +38,7 @@ export function AppMenu({ onClose }: Props) {
           onPress={onClose}
           className="h-7 w-7 items-center justify-center rounded-full bg-page"
         >
-          <X size={14} strokeWidth={2.2} color="#8A94A3" />
+          <X size={14} strokeWidth={2.2} color={colors.textSoft} />
         </Pressable>
       </View>
 
@@ -70,13 +71,18 @@ function SheetItem({
   destructive = false,
   comingSoon = false,
 }: SheetItemProps) {
-  const color = destructive ? '#C54B3C' : '#0B1A2B'
+  const color = destructive ? colors.error : colors.text
   const containerOpacity = comingSoon ? 'opacity-50' : ''
+  const pressFeedback = comingSoon
+    ? ''
+    : destructive
+      ? 'active:bg-error-soft'
+      : 'active:bg-emerald-soft'
 
   return (
     <Pressable
       onPress={comingSoon ? undefined : onPress}
-      className={`flex-row items-center gap-3 rounded-2xl px-4 py-[13px] ${containerOpacity}`}
+      className={`flex-row items-center gap-3 rounded-2xl px-4 py-[13px] ${containerOpacity} ${pressFeedback}`}
     >
       <Icon size={20} strokeWidth={1.9} color={color} />
       <Text
