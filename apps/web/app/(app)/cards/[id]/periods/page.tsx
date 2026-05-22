@@ -37,7 +37,7 @@ const CardPeriodsPage = async ({ params }: Props) => {
         </Link>
       </div>
 
-      <h1 className="text-2xl font-semibold tracking-tight">Historial de resúmenes</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Resúmenes</h1>
 
       <PeriodsList periods={periods} cardId={id} hasUSD={hasUSD} showCents={showCents} />
     </div>

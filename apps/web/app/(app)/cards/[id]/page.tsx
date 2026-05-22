@@ -1,21 +1,42 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { getCreditCardDetail, getCardPeriods, getCardPeriodDetail } from '@/lib/cards/queries'
-import { derivePeriodVariant } from '@/lib/cards/utils'
+import { getCreditCardDetail, getCardPeriods } from '@/lib/cards/queries'
+import { addDaysToISO, formatDateISO, suggestNextPeriodDates, sumMoneyValues } from '@/lib/cards/utils'
 import { getTodayAR } from '@/lib/date'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { getShowCents } from '@/lib/preferences'
 import { CardHero } from '../_components/card-hero'
 import { PaymentCTABlock } from '../_components/payment-cta-block'
-import { QuickActions } from '../_components/quick-actions'
+import { CardsThermometer, type ThermometerColumn } from '../_components/cards-thermometer'
+import { LimitSummary } from '../_components/limit-summary'
 import { CardDetailsSection } from '../_components/card-details-section'
 import { CardActions } from './_components/card-actions'
-import type { CreditCardSummary, CardPeriodDetail } from '@/lib/cards/queries'
+import type { CardPeriodDetail } from '@/lib/cards/queries'
+import type { PeriodVariant } from '@/lib/cards/types'
 
 const formatDate = (iso: string) => {
   const [y, m, d] = iso.split('-')
   return `${d}/${m}/${y}`
+}
+
+const activeColumnLabel = (variant: PeriodVariant): {
+  label: ThermometerColumn['label']
+  tone: ThermometerColumn['tone']
+} => {
+  switch (variant) {
+    case 'cerrado_esperando_pago':
+      return { label: 'POR PAGAR', tone: 'amber' }
+    case 'vencido':
+      return { label: 'VENCIDO', tone: 'red' }
+    case 'pagado':
+      return { label: 'PAGADO', tone: 'paid' }
+    case 'actual':
+    case 'futuro':
+    case 'tarjeta_nueva':
+    default:
+      return { label: 'EN CURSO', tone: 'neutral' }
+  }
 }
 
 type Props = {
@@ -29,7 +50,7 @@ const CardDetailPage = async ({ params }: Props) => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [cardDetail, periods, showCents] = await Promise.all([
+  const [cardDetail, periodsDesc, showCents] = await Promise.all([
     getCreditCardDetail(id),
     getCardPeriods(id),
     getShowCents(),
@@ -38,101 +59,229 @@ const CardDetailPage = async ({ params }: Props) => {
   if (!cardDetail || cardDetail.type !== 'credit') notFound()
 
   const today = getTodayAR()
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const todayStr = formatDateISO(today)
 
-  // Active period priority:
-  // 1. Overdue with debt (past due_date, unpaid, has transactions)
-  // 2. Closed waiting for payment (past end_date but before due_date, has transactions)
-  // 3. Current open period (today within range)
-  // 4. Fallback: latest unpaid
-  const unpaidPeriods = cardDetail.periods.filter((p) => !p.has_payment)
-  const activePeriod =
-    unpaidPeriods.find((p) => p.due_date < todayStr && p.tx_count > 0) ??
-    unpaidPeriods.find((p) => p.end_date < todayStr && p.due_date >= todayStr && p.tx_count > 0) ??
-    unpaidPeriods.find((p) => p.start_date <= todayStr && todayStr <= p.end_date) ??
-    unpaidPeriods.at(-1) ??
+  // Empty state: tarjeta_nueva — no movement and no payment in any period.
+  const cardHasHistory = cardDetail.periods.some((p) => p.has_payment || p.tx_count > 0)
+
+  const institutionName =
+    cardDetail.other_network_name ??
+    (cardDetail.institution as { name?: string } | null)?.name ??
     null
 
-  const activePeriodForDetail = periods.find((p) => p.id === activePeriod?.id) ?? null
+  // ── Empty state: tarjeta nueva (no history) ─────────────────────────────────
+  if (!cardHasHistory && cardDetail.is_active) {
+    return (
+      <div className="flex flex-col gap-6 max-w-2xl">
+        <Breadcrumb />
+        <CardHero
+          name={cardDetail.name}
+          institutionName={institutionName}
+          creditLimit={cardDetail.credit_limit}
+          showCents={showCents}
+        />
 
-  // Load transactions of the active period
-  const activePeriodDetail = activePeriod ? await getCardPeriodDetail(activePeriod.id) : null
+        <div className="rounded-lg border border-border bg-card p-6 flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <p className="text-lg font-semibold">Tu tarjeta está lista.</p>
+            <p className="text-sm text-muted-foreground">
+              Registrá el primer consumo para empezar a ver cómo viene cada resumen.
+            </p>
+          </div>
+          <Link
+            href={`/accounts/${id}/transactions/new`}
+            className="inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            Registrar primer consumo
+          </Link>
+        </div>
 
-  const activePeriodMeta = activePeriodForDetail
-    ? ({
-        ...activePeriodForDetail,
-        pendingAmountARS: activePeriodForDetail.pendingAmountARS,
-        pendingAmountUSD: activePeriodForDetail.pendingAmountUSD,
-        variant: activePeriodForDetail.variant,
-        alert: activePeriodForDetail.alert,
-      } as CreditCardSummary['activePeriod'])
-    : null
-
-  const cardForHero = {
-    name: cardDetail.name,
-    is_active: cardDetail.is_active,
-    institution: cardDetail.institution as { name: string } | null,
-    other_network_name: cardDetail.other_network_name,
-    currencies: cardDetail.currencies,
-    activePeriod: activePeriodMeta,
+        <AdminFooter
+          cardId={id}
+          isActive={cardDetail.is_active}
+          hasMovements={false}
+          createdAt={cardDetail.created_at}
+          archivedAt={null}
+        />
+      </div>
+    )
   }
 
-  // A card is truly "nueva" only if no period has ever had a transaction or payment.
-  // After the first payment, empty open periods are just normal open periods.
-  const cardHasHistory = cardDetail.periods.some((p) => p.has_payment || p.tx_count > 0)
-  const rawVariant = activePeriodForDetail?.variant ?? 'tarjeta_nueva'
-  const ctaVariant = !cardDetail.is_active
-    ? 'inactiva'
-    : cardHasHistory && rawVariant === 'tarjeta_nueva'
-      ? 'actual'
-      : rawVariant
+  // ── Empty state: tarjeta archivada sin pendientes ───────────────────────────
+  const hasPendings = cardDetail.debtCheck.hasPendingDebt ||
+    cardDetail.periods.some((p) => !p.has_payment && p.tx_count > 0)
 
-  const hasUSD = cardDetail.currencies.some((c) => c.currency_code === 'USD' && c.is_active)
-  const txList: CardPeriodDetail['transactions'] = activePeriodDetail?.transactions ?? []
+  if (!cardDetail.is_active && !hasPendings) {
+    return (
+      <div className="flex flex-col gap-6 max-w-2xl">
+        <Breadcrumb />
+        <CardHero
+          name={cardDetail.name}
+          institutionName={institutionName}
+          creditLimit={cardDetail.credit_limit}
+          showCents={showCents}
+        />
+
+        <CardActions cardId={id} isActive={false} hasMovements={cardHasHistory} />
+
+        <p className="text-sm text-muted-foreground text-center py-6">
+          Tarjeta archivada · sin pendientes
+        </p>
+
+        <CardDetailsSection
+          createdAt={cardDetail.created_at}
+          archivedAt={cardDetail.created_at}
+        />
+      </div>
+    )
+  }
+
+  // ── Active period detection (same precedence as listado de tarjetas) ────────
+  const periodsAsc = [...periodsDesc].reverse()
+  const unpaidAsc = periodsAsc.filter((p) => !p.has_payment)
+
+  const activePeriod =
+    unpaidAsc.find((p) => p.due_date < todayStr && p.tx_count > 0) ??
+    unpaidAsc.find((p) => p.end_date < todayStr && p.due_date >= todayStr && p.tx_count > 0) ??
+    unpaidAsc.find((p) => p.start_date <= todayStr && todayStr <= p.end_date) ??
+    unpaidAsc.at(-1) ??
+    periodsAsc.at(-1)!
+
+  // ── Next 2 periods after the active one (chronological order) ───────────────
+  const activeIdx = periodsAsc.findIndex((p) => p.id === activePeriod.id)
+  const realAfter = periodsAsc.slice(activeIdx + 1, activeIdx + 3)
+  const projectedNeeded = 2 - realAfter.length
+
+  const projectedAfter: Array<{
+    start_date: string
+    end_date: string
+    due_date: string
+    pendingAmountARS: number
+    pendingAmountUSD: number
+  }> = []
+  if (projectedNeeded > 0) {
+    const working = periodsAsc.map((p) => ({
+      start_date: p.start_date,
+      end_date: p.end_date,
+      due_date: p.due_date,
+    }))
+    if (realAfter.length > 0) {
+      // We already have one real next; project from the last real period.
+    }
+    for (let i = 0; i < projectedNeeded; i++) {
+      const last = working[working.length - 1]
+      const { suggestedEndDate, suggestedDueDate } = suggestNextPeriodDates(working, today)
+      const start = addDaysToISO(last.end_date, 1)
+      const projected = {
+        start_date: start,
+        end_date: suggestedEndDate,
+        due_date: suggestedDueDate,
+      }
+      working.push(projected)
+      projectedAfter.push({ ...projected, pendingAmountARS: 0, pendingAmountUSD: 0 })
+    }
+  }
+
+  const nextPeriods = [...realAfter, ...projectedAfter]
+  const nextCol = nextPeriods[0]
+  const siguienteCol = nextPeriods[1]
+
+  // ── Build thermometer columns ───────────────────────────────────────────────
+  const activeLabel = cardDetail.is_active
+    ? activeColumnLabel(activePeriod.variant)
+    : activeColumnLabel(activePeriod.variant) // archived shows real state too
+
+  const columns: [ThermometerColumn, ThermometerColumn, ThermometerColumn] = [
+    {
+      label: activeLabel.label,
+      tone: activeLabel.tone,
+      closeDate: activePeriod.end_date,
+      dueDate: activePeriod.due_date,
+      pendingARS: activePeriod.pendingAmountARS,
+      pendingUSD: activePeriod.pendingAmountUSD,
+    },
+    {
+      label: 'PRÓXIMO',
+      tone: 'neutral',
+      closeDate: nextCol.end_date,
+      dueDate: nextCol.due_date,
+      pendingARS: nextCol.pendingAmountARS,
+      pendingUSD: nextCol.pendingAmountUSD,
+    },
+    {
+      label: 'SIGUIENTE',
+      tone: 'neutral',
+      closeDate: siguienteCol.end_date,
+      dueDate: siguienteCol.due_date,
+      pendingARS: siguienteCol.pendingAmountARS,
+      pendingUSD: siguienteCol.pendingAmountUSD,
+    },
+  ]
+
+  const totalCommittedARS = sumMoneyValues(columns.map((c) => c.pendingARS))
+
+  // ── CTA variant for active period ──────────────────────────────────────────
+  const ctaVariant: PeriodVariant | 'inactiva' = !cardDetail.is_active
+    ? 'inactiva'
+    : activePeriod.variant
+
+  // ── Transactions of the active period (already in periodsDesc) ─────────────
+  const activeWithTxs = periodsDesc.find((p) => p.id === activePeriod.id)
+  const txList: CardPeriodDetail['transactions'] = activeWithTxs?.transactions ?? []
+
+  const isOverdue = activePeriod.variant === 'vencido'
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/cards"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← Tarjetas
-        </Link>
-      </div>
+      <Breadcrumb />
 
-      <CardHero card={cardForHero} showCents={showCents} />
+      <CardHero
+        name={cardDetail.name}
+        institutionName={institutionName}
+        creditLimit={cardDetail.credit_limit}
+        showCents={showCents}
+      />
 
-      <CardActions cardId={id} isActive={cardDetail.is_active} hasMovements={cardHasHistory} />
-
-      {cardDetail.is_active && (
-        <>
-          <PaymentCTABlock
-            cardId={id}
-            periodId={activePeriodForDetail?.id ?? null}
-            variant={ctaVariant}
-          />
-
-          {ctaVariant !== 'tarjeta_nueva' && <QuickActions cardId={id} />}
-        </>
+      {!cardDetail.is_active && (
+        <ArchivedBanner cardId={id} hasMovements={cardHasHistory} />
       )}
 
-      {/* Transactions of the active period */}
+      {isOverdue && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm font-medium text-red-700">
+          Resumen vencido — evitá cargos por mora
+        </div>
+      )}
+
+      <CardsThermometer
+        columns={columns}
+        creditLimit={cardDetail.credit_limit}
+        showCents={showCents}
+      />
+
+      <LimitSummary
+        creditLimit={cardDetail.credit_limit}
+        totalCommittedARS={totalCommittedARS}
+        editHref={`/cards/${id}/edit`}
+        showCents={showCents}
+      />
+
+      <PaymentCTABlock
+        cardId={id}
+        periodId={activePeriod.id}
+        variant={ctaVariant}
+        canRegisterPurchase={cardDetail.is_active}
+      />
+
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            Movimientos
-            {activePeriodDetail && (
-              <span className="ml-1.5 font-normal normal-case">
-                — {formatDate(activePeriodDetail.start_date)} al {formatDate(activePeriodDetail.end_date)}
-              </span>
-            )}
+            Movimientos del resumen actual
           </h2>
           <Link
             href={`/cards/${id}/periods`}
             className="text-xs text-primary hover:underline"
           >
-            Ver resúmenes
+            Ver todos los resúmenes →
           </Link>
         </div>
 
@@ -142,7 +291,7 @@ const CardDetailPage = async ({ params }: Props) => {
           </p>
         ) : (
           <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
-            {txList.map((tx: CardPeriodDetail['transactions'][number]) => {
+            {txList.map((tx) => {
               const label = tx.description
                 ?? (tx.subcategory?.name ? `${tx.category?.name} · ${tx.subcategory.name}` : tx.category?.name)
                 ?? '—'
@@ -164,7 +313,7 @@ const CardDetailPage = async ({ params }: Props) => {
                     <p className="text-xs text-muted-foreground">{formatDate(tx.date)}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-medium">
+                    <p className="text-sm font-medium tabular-nums">
                       {tx.currency_code === 'ARS'
                         ? formatARS(Number(tx.amount), showCents)
                         : formatUSD(Number(tx.amount), showCents)}
@@ -180,57 +329,51 @@ const CardDetailPage = async ({ params }: Props) => {
         )}
       </section>
 
-      {/* Upcoming periods (non-active, unpaid) */}
-      {(() => {
-        const upcomingPeriods = periods.filter(
-          (p) => !p.has_payment && p.id !== activePeriod?.id,
-        )
-        if (upcomingPeriods.length === 0) return null
-        return (
-          <section>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                Próximos resúmenes
-              </h2>
-              <Link href={`/cards/${id}/periods`} className="text-xs text-primary hover:underline">
-                Ver historial
-              </Link>
-            </div>
-            <div className="flex flex-col gap-2">
-              {upcomingPeriods.slice(0, 2).map((p) => (
-                <Link
-                  key={p.id}
-                  href={`/cards/${id}/periods/${p.id}`}
-                  className="flex items-center justify-between rounded-lg border border-border px-4 py-3 hover:bg-muted/40 transition-colors"
-                >
-                  <div>
-                    <p className="text-sm font-medium">
-                      {formatDate(p.start_date)} – {formatDate(p.end_date)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Vence {formatDate(p.due_date)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">{formatARS(p.pendingAmountARS, showCents)}</p>
-                    {hasUSD && (
-                      <p className="text-xs text-muted-foreground">{formatUSD(p.pendingAmountUSD, showCents)} USD</p>
-                    )}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )
-      })()}
-
-      <CardDetailsSection
-        creditLimit={cardDetail.credit_limit}
-        pendingAmountARS={activePeriodForDetail?.pendingAmountARS ?? 0}
+      <AdminFooter
+        cardId={id}
+        isActive={cardDetail.is_active}
+        hasMovements={cardHasHistory}
         createdAt={cardDetail.created_at}
         archivedAt={cardDetail.is_active ? null : cardDetail.created_at}
-        showCents={showCents}
       />
     </div>
   )
 }
+
+const Breadcrumb = () => (
+  <div className="flex items-center gap-3">
+    <Link
+      href="/cards"
+      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+    >
+      ← Tarjetas
+    </Link>
+  </div>
+)
+
+const ArchivedBanner = ({ cardId, hasMovements }: { cardId: string; hasMovements: boolean }) => (
+  <CardActions cardId={cardId} isActive={false} hasMovements={hasMovements} />
+)
+
+const AdminFooter = ({
+  cardId,
+  isActive,
+  hasMovements,
+  createdAt,
+  archivedAt,
+}: {
+  cardId: string
+  isActive: boolean
+  hasMovements: boolean
+  createdAt: string
+  archivedAt: string | null
+}) => (
+  <div className="flex flex-col gap-3 pt-4 border-t border-border">
+    <CardDetailsSection createdAt={createdAt} archivedAt={archivedAt} />
+    {isActive && (
+      <CardActions cardId={cardId} isActive={isActive} hasMovements={hasMovements} />
+    )}
+  </div>
+)
 
 export default CardDetailPage
