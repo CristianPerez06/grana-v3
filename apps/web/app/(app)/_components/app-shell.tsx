@@ -158,7 +158,7 @@ const SidebarContent = ({
         </Link>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-[2px] px-2">
+      <nav className="flex min-h-0 flex-1 flex-col gap-[2px] overflow-y-auto px-2">
         {PRIMARY_NAV.map((item) => (
           <SidebarLink
             key={item.href}
@@ -172,9 +172,9 @@ const SidebarContent = ({
         ))}
       </nav>
 
-      <div className="mx-3 my-3 border-t border-border-soft" />
+      <div className="mx-3 my-3 shrink-0 border-t border-border-soft" />
 
-      <nav className="flex flex-col gap-[2px] px-2 pb-1">
+      <nav className="flex shrink-0 flex-col gap-[2px] px-2 pb-1">
         <SidebarLink
           href="/settings"
           icon={Settings}
@@ -276,6 +276,16 @@ const Drawer = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
     if (!dialog) return;
     if (open && !dialog.open) dialog.showModal();
     if (!open && dialog.open) dialog.close();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const html = document.documentElement;
+    const previous = html.style.overflow;
+    html.style.overflow = "hidden";
+    return () => {
+      html.style.overflow = previous;
+    };
   }, [open]);
 
   return (
