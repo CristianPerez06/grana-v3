@@ -121,10 +121,12 @@
       "cta": "Add a movement"
     }
   },
-  "footer": {
-    "language": "Language",
-    "language_es": "ES",
-    "language_en": "EN"
+  "settings": {
+    "language": {
+      "label": "Language",
+      "es": "ES",
+      "en": "EN"
+    }
   },
   "common": {
     "app_name": "grana",
@@ -136,10 +138,16 @@
     "accounts": "Accounts",
     "cards": "Cards",
     "movements": "Movements",
+    "home": "Household",
+    "savings": "Savings",
     "settings": "Settings",
     "logout": "Sign out",
     "open_menu": "Open menu",
-    "close_menu": "Close menu"
+    "close_menu": "Close menu",
+    "expand_sidebar": "Expand menu",
+    "collapse_sidebar": "Collapse menu",
+    "more_options": "More options",
+    "coming_soon": "Coming soon"
   },
   "onboarding": {
     "welcome": {

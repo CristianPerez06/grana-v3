@@ -1,7 +1,8 @@
 import { Pressable, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { CreditCard, Home, List, MoreHorizontal } from 'lucide-react-native'
+import { Home, List, MoreHorizontal, Users } from 'lucide-react-native'
 import { colors } from '../../lib/colors'
+import { t } from '../../lib/i18n'
 
 type TabRoute = { key: string; name: string }
 type TabBarNavigation = {
@@ -14,16 +15,19 @@ type TabBarState = { index: number; routes: TabRoute[] }
 
 type IconType = React.ComponentType<{ color?: string; size?: number; strokeWidth?: number }>
 
-const ROUTE_TO_ICON: Record<string, IconType> = {
-  dashboard: Home,
-  movimientos: List,
-  tarjetas: CreditCard,
+type SlotKind = 'tab' | 'tab-disabled' | 'menu'
+
+type SlotConfig = {
+  kind: SlotKind
+  icon?: IconType
+  labelKey?: string
 }
 
-const ROUTE_TO_LABEL: Record<string, string> = {
-  dashboard: 'Inicio',
-  movimientos: 'Movimientos',
-  tarjetas: 'Tarjetas',
+const SLOT_CONFIG: Record<string, SlotConfig> = {
+  dashboard: { kind: 'tab', icon: Home, labelKey: 'nav.dashboard' },
+  movimientos: { kind: 'tab', icon: List, labelKey: 'nav.movements' },
+  home: { kind: 'tab-disabled', icon: Users, labelKey: 'nav.home' },
+  menu: { kind: 'menu' },
 }
 
 type Props = {
@@ -42,22 +46,20 @@ export function TabBar({ state, navigation, onMenuPress, menuActive }: Props) {
       style={{ paddingBottom: Math.max(14, insets.bottom) }}
     >
       {state.routes.map((route, index) => {
-        if (route.name === 'menu') {
-          return (
-            <MenuButton
-              key={route.key}
-              onPress={onMenuPress}
-              active={menuActive}
-            />
-          )
+        const slot = SLOT_CONFIG[route.name]
+        if (!slot) return null
+
+        if (slot.kind === 'menu') {
+          return <MenuButton key={route.key} onPress={onMenuPress} active={menuActive} />
         }
 
-        const Icon = ROUTE_TO_ICON[route.name]
-        const label = ROUTE_TO_LABEL[route.name] ?? route.name
-        if (!Icon) return null
+        if (slot.kind === 'tab-disabled') {
+          return <DisabledTab key={route.key} icon={slot.icon!} labelKey={slot.labelKey!} />
+        }
 
         const isFocused = state.index === index && !menuActive
         const color = isFocused ? colors.positive : colors.textSoft
+        const Icon = slot.icon!
 
         const handlePress = () => {
           const event = navigation.emit({
@@ -85,12 +87,9 @@ export function TabBar({ state, navigation, onMenuPress, menuActive }: Props) {
             <Icon size={22} strokeWidth={1.9} color={color} />
             <Text
               className="text-[10px]"
-              style={{
-                color,
-                fontWeight: isFocused ? '700' : '500',
-              }}
+              style={{ color, fontWeight: isFocused ? '700' : '500' }}
             >
-              {label}
+              {t(slot.labelKey!)}
             </Text>
           </Pressable>
         )
@@ -105,13 +104,33 @@ function MenuButton({ onPress, active }: { onPress: () => void; active: boolean 
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel="Menú"
+        accessibilityLabel={t('nav.open_menu')}
         accessibilityState={active ? { selected: true } : {}}
         className="h-[52px] w-[52px] items-center justify-center rounded-full"
         style={{ backgroundColor: colors.positive }}
       >
         <MoreHorizontal size={26} strokeWidth={2} color={colors.white} />
       </Pressable>
+    </View>
+  )
+}
+
+function DisabledTab({ icon: Icon, labelKey }: { icon: IconType; labelKey: string }) {
+  return (
+    <View
+      className="flex-1 items-center gap-1 py-1 opacity-50"
+      accessibilityRole="button"
+      accessibilityState={{ disabled: true }}
+      accessibilityHint={t('nav.coming_soon')}
+    >
+      <View className="h-[3px] w-6 rounded-full" />
+      <Icon size={22} strokeWidth={1.9} color={colors.textSoft} />
+      <Text className="text-[10px] font-medium" style={{ color: colors.textSoft }}>
+        {t(labelKey)}
+      </Text>
+      <Text className="text-[8px] font-medium" style={{ color: colors.textSoft }}>
+        {t('nav.coming_soon')}
+      </Text>
     </View>
   )
 }

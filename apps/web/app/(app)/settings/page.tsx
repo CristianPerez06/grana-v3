@@ -1,9 +1,12 @@
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { getShowCents } from '@/lib/preferences'
+import { LanguageSwitcher } from './_components/language-switcher'
 import { ShowCentsToggle } from './_components/show-cents-toggle'
 
 const SettingsPage = async () => {
   const showCents = await getShowCents()
+  const tLanguage = await getTranslations('settings.language')
 
   return (
     <div className="flex flex-col gap-8 max-w-2xl">
@@ -16,6 +19,16 @@ const SettingsPage = async () => {
         </h2>
         <div className="rounded-lg border border-border bg-card p-4">
           <ShowCentsToggle initialValue={showCents} />
+        </div>
+      </section>
+
+      {/* Language */}
+      <section className="flex flex-col gap-4">
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+          {tLanguage('label')}
+        </h2>
+        <div className="rounded-lg border border-border bg-card p-4">
+          <LanguageSwitcher />
         </div>
       </section>
 
