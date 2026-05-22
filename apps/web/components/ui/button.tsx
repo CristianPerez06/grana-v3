@@ -1,6 +1,7 @@
 import { Slot } from '@radix-ui/react-slot'
-import { cva, type VariantProps } from 'class-variance-authority'
+import { cva } from 'class-variance-authority'
 import { forwardRef, type ButtonHTMLAttributes } from 'react'
+import type { ButtonProps as ContractButtonProps } from '@grana/ui-contracts'
 import { cn } from '@/lib/utils'
 import { Spinner } from './spinner'
 
@@ -25,15 +26,28 @@ const buttonVariants = cva(
   },
 )
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
-  VariantProps<typeof buttonVariants> & {
+type ButtonProps = ContractButtonProps &
+  Omit<
+    ButtonHTMLAttributes<HTMLButtonElement>,
+    'children' | 'className' | 'disabled'
+  > & {
     asChild?: boolean
-    loading?: boolean
   }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
-    { className, variant, size, asChild = false, loading = false, disabled, children, ...props },
+    {
+      className,
+      variant,
+      size,
+      asChild = false,
+      loading = false,
+      disabled,
+      children,
+      onPress,
+      onClick,
+      ...props
+    },
     ref,
   ) => {
     const Comp = asChild ? Slot : 'button'
@@ -42,6 +56,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         className={cn(buttonVariants({ variant, size }), className)}
         disabled={disabled || loading}
+        onClick={onPress ?? onClick}
         {...props}
       >
         {loading ? (

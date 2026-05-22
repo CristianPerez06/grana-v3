@@ -1,6 +1,7 @@
 import { forwardRef, type HTMLAttributes, type ReactNode } from 'react'
-import { cva, type VariantProps } from 'class-variance-authority'
+import { cva } from 'class-variance-authority'
 import { AlertCircle, CheckCircle2, Info, TriangleAlert } from 'lucide-react'
+import type { AlertProps as ContractAlertProps } from '@grana/ui-contracts'
 import { cn } from '@/lib/utils'
 
 const alertVariants = cva(
@@ -25,9 +26,8 @@ const iconMap = {
   warning: TriangleAlert,
 } as const
 
-type AlertProps = HTMLAttributes<HTMLDivElement> &
-  VariantProps<typeof alertVariants> & {
-    title?: string
+type AlertProps = ContractAlertProps &
+  Omit<HTMLAttributes<HTMLDivElement>, 'title' | 'children' | 'className'> & {
     icon?: ReactNode | false
   }
 

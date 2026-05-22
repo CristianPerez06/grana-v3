@@ -1,14 +1,14 @@
 import { forwardRef, useId, type InputHTMLAttributes } from 'react'
+import type { FormFieldProps as ContractFormFieldProps } from '@grana/ui-contracts'
 import { cn } from '@/lib/utils'
 import { Input } from './input'
 import { Label } from './label'
 
-type FormFieldProps = InputHTMLAttributes<HTMLInputElement> & {
-  label: string
-  description?: string
-  error?: string
-  containerClassName?: string
-}
+type FormFieldProps = ContractFormFieldProps &
+  Omit<InputHTMLAttributes<HTMLInputElement>, 'className'> & {
+    containerClassName?: string
+    className?: string
+  }
 
 const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
   (

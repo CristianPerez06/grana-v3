@@ -1,35 +1,32 @@
 import { View, Text } from 'react-native'
+import type { AlertProps, AlertVariant } from '@grana/ui-contracts'
 
-type Variant = 'info' | 'success' | 'error' | 'warning'
+// The contract types `children` as ReactNode for parity with the web Alert.
+// This mobile implementation today only renders strings inside `<Text>`;
+// passing JSX is not supported and would fail at runtime.
 
-type Props = {
-  variant?: Variant
-  title?: string
-  children: string
-}
-
-const containerVariant: Record<Variant, string> = {
+const containerVariant: Record<AlertVariant, string> = {
   info: 'bg-slate-soft border-l-4 border-slate',
   success: 'bg-emerald-soft border-l-4 border-emerald',
   error: 'bg-error-soft border-l-4 border-error',
   warning: 'bg-warning-soft border-l-4 border-warning',
 }
 
-const titleVariant: Record<Variant, string> = {
+const titleVariant: Record<AlertVariant, string> = {
   info: 'text-slate',
   success: 'text-emerald-deep',
   error: 'text-error-deep',
   warning: 'text-warning-deep',
 }
 
-const bodyVariant: Record<Variant, string> = {
+const bodyVariant: Record<AlertVariant, string> = {
   info: 'text-slate',
   success: 'text-emerald-deep',
   error: 'text-error-deep',
   warning: 'text-warning-deep',
 }
 
-export function Alert({ variant = 'info', title, children }: Props) {
+export function Alert({ variant = 'info', title, children }: AlertProps) {
   return (
     <View className={`rounded-lg p-4 ${containerVariant[variant]}`}>
       {title && (

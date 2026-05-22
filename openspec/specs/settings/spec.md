@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Preferencias de visualización y configuración personal del usuario. No afecta la lógica de negocio ni los cálculos — solo controla cómo se presentan los datos.
+Agrupa las preferencias de visualización y la administración personal del usuario bajo la ruta `/settings`. Incluye el toggle de mostrar/ocultar centavos en todos los importes (persistido por cookie de 1 año, sin afectar los cálculos), y el acceso a la gestión de categorías personalizadas y subcategorías (las categorías de sistema se ven pero no se editan). Es UI-only: no muta el ledger ni la lógica de cálculo.
 
 ## Requirements
 

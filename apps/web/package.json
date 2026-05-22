@@ -16,8 +16,10 @@
   "dependencies": {
     "@grana/i18n-messages": "workspace:*",
     "@grana/supabase": "workspace:*",
+    "@grana/ui-contracts": "workspace:*",
     "@grana/ui-tokens": "workspace:*",
     "@grana/validation": "workspace:*",
+    "@grana/money-logic": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-slot": "^1.2.4",

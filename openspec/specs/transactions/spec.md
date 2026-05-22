@@ -1,7 +1,9 @@
 # transactions Specification
 
 ## Purpose
-TBD - created by archiving change add-transactions-income-expense. Update Purpose after archive.
+
+Define el módulo de movimientos de Grana: registro de ingresos y gastos en cuentas `cash` y `bank`, transferencias entre cuentas, ajustes manuales, y manejo de recurrencias (plantillas e instancias generadas) bajo un contrato funcional unificado de Movimiento. Deriva el saldo disponible respetando los invariantes contables del proyecto (`disponible ≥ 0`, off-ledger credit cards, deterministic ordering ASC para cálculo / DESC para display, `Money` + `decimal.js`). Expone también el módulo global de Movimientos con búsqueda, filtros y destacado de ítems que requieren revisión. Los consumos y cuotas de tarjeta de crédito viven en `cards`.
+
 ## Requirements
 ### Requirement: El usuario puede registrar un ingreso en una cuenta
 

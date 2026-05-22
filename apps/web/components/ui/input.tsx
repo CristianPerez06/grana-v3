@@ -1,9 +1,9 @@
 import { forwardRef, type InputHTMLAttributes } from 'react'
+import type { InputProps as ContractInputProps } from '@grana/ui-contracts'
 import { cn } from '@/lib/utils'
 
-type InputProps = InputHTMLAttributes<HTMLInputElement> & {
-  invalid?: boolean
-}
+type InputProps = ContractInputProps &
+  Omit<InputHTMLAttributes<HTMLInputElement>, 'className'>
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, invalid, type = 'text', ...props }, ref) => (

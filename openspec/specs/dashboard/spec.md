@@ -1,7 +1,9 @@
 # dashboard Specification
 
 ## Purpose
-TBD - created by archiving change add-dashboard. Update Purpose after archive.
+
+Define la pantalla `/dashboard` como landing universal post-login y post-onboarding (idéntica para modo novato y experto, en web y mobile). Es read-only y se compone de cuatro secciones en orden fijo: Hero "Para gastar" con disponible bimoneda y eye toggle de privacidad, "Lo que viene" con compromisos firmes y recurrencias de los próximos 14 días, Balance del mes con gráfico de línea y navegador mensual, y carrusel de Tarjetas. Toda interacción navega al módulo correspondiente; el dashboard no muta datos.
+
 ## Requirements
 ### Requirement: La pantalla dashboard es la landing universal post-login y post-onboarding
 

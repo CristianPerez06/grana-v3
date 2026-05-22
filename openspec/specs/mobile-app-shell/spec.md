@@ -1,7 +1,9 @@
 # mobile-app-shell Specification
 
 ## Purpose
-TBD - created by archiving change scaffold-mobile-app. Update Purpose after archive.
+
+Asegura las condiciones de base para que `apps/mobile` (Expo) pueda construir features sobre paquetes compartidos del workspace: arranque limpio de la app, resolución correcta de los paquetes `@grana/*` desde Metro sin un build step adicional, y type-check + lint pasando sin errores. No define features de producto; cada feature mobile se especifica dentro de la capability de su dominio (`auth`, `dashboard`, `onboarding`, etc.) con tags `(mobile)`.
+
 ## Requirements
 ### Requirement: La app mobile arranca correctamente
 

@@ -1,7 +1,9 @@
 # i18n Specification
 
 ## Purpose
-TBD - created by archiving change add-auth-flow. Update Purpose after archive.
+
+Define la estrategia de internacionalización de Grana: catálogos JSON compartidos en `@grana/i18n-messages`, motor `next-intl` en web con resolución de locale por cookie `NEXT_LOCALE` (sin segmento `[locale]` en la URL), language switcher visible en el footer en toda ruta, y un set mínimo de mensajes localizados para auth, validación, errores comunes, placeholders del dashboard y footer. Mobile consume los mismos catálogos vía un helper propio adaptado a React Native.
+
 ## Requirements
 ### Requirement: Soporte multi-idioma con next-intl
 

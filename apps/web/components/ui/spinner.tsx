@@ -1,5 +1,6 @@
 import { Loader2 } from 'lucide-react'
-import { cva, type VariantProps } from 'class-variance-authority'
+import { cva } from 'class-variance-authority'
+import type { SpinnerProps } from '@grana/ui-contracts'
 import { cn } from '@/lib/utils'
 
 const spinnerVariants = cva('animate-spin text-muted-foreground', {
@@ -12,11 +13,6 @@ const spinnerVariants = cva('animate-spin text-muted-foreground', {
   },
   defaultVariants: { size: 'md' },
 })
-
-type SpinnerProps = VariantProps<typeof spinnerVariants> & {
-  className?: string
-  label?: string
-}
 
 export const Spinner = ({ size, className, label = 'Loading' }: SpinnerProps) => (
   <Loader2

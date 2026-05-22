@@ -19,6 +19,8 @@
       "@grana/i18n-messages": ["packages/i18n-messages/src/index.ts"],
       "@grana/supabase": ["packages/supabase/src/index.ts"],
       "@grana/dashboard": ["packages/dashboard/src/index.ts"],
+      "@grana/ui-contracts": ["packages/ui-contracts/src/index.ts"],
+      "@grana/money-logic": ["packages/money-logic/src/index.ts"],
     }
   }
 }
