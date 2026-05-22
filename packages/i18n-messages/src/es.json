@@ -121,10 +121,12 @@
       "cta": "Cargar movimiento"
     }
   },
-  "footer": {
-    "language": "Idioma",
-    "language_es": "ES",
-    "language_en": "EN"
+  "settings": {
+    "language": {
+      "label": "Idioma",
+      "es": "ES",
+      "en": "EN"
+    }
   },
   "common": {
     "app_name": "grana",
@@ -136,10 +138,16 @@
     "accounts": "Cuentas",
     "cards": "Tarjetas",
     "movements": "Movimientos",
+    "home": "Hogar",
+    "savings": "Ahorros",
     "settings": "Configuración",
     "logout": "Cerrar sesión",
     "open_menu": "Abrir menú",
-    "close_menu": "Cerrar menú"
+    "close_menu": "Cerrar menú",
+    "expand_sidebar": "Expandir menú",
+    "collapse_sidebar": "Colapsar menú",
+    "more_options": "Más opciones",
+    "coming_soon": "Próximamente"
   },
   "onboarding": {
     "welcome": {

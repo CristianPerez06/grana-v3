@@ -7,7 +7,7 @@ import { setLocaleAction } from '@/app/_actions/set-locale'
 import { locales, type Locale } from '@/lib/i18n/config'
 
 export const LanguageSwitcher = () => {
-  const t = useTranslations('footer')
+  const t = useTranslations('settings.language')
   const current = useLocale() as Locale
   const [pending, startTransition] = useTransition()
 
@@ -19,7 +19,7 @@ export const LanguageSwitcher = () => {
   }
 
   return (
-    <div className="inline-flex items-center gap-1" aria-label={t('language')}>
+    <div className="inline-flex items-center gap-1" aria-label={t('label')}>
       {locales.map((locale) => (
         <Button
           key={locale}
@@ -35,7 +35,7 @@ export const LanguageSwitcher = () => {
               : 'text-muted-foreground'
           }
         >
-          {t(`language_${locale}`)}
+          {t(locale)}
         </Button>
       ))}
     </div>

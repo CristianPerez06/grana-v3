@@ -67,8 +67,9 @@ export default function AppLayout() {
       >
         <Tabs.Screen name="dashboard" />
         <Tabs.Screen name="movimientos" />
-        <Tabs.Screen name="tarjetas" />
+        <Tabs.Screen name="home" />
         <Tabs.Screen name="menu" />
+        <Tabs.Screen name="tarjetas" options={{ href: null }} />
         <Tabs.Screen name="accounts" options={{ href: null }} />
       </Tabs>
     </>

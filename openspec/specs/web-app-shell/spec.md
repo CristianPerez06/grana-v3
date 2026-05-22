@@ -39,11 +39,12 @@ El componente `Header` previo (`apps/web/app/(app)/_components/header.tsx`) SHAL
 
 El sidebar SHALL renderizarse como un panel flotante separado del viewport y del contenido principal:
 
-- Margen exterior respecto a las paredes del viewport (~12px en cada lado).
-- Esquinas redondeadas en los cuatro lados (no solo a la derecha).
+- Margen exterior respecto al viewport (~12px en los lados visibles: izquierdo, superior, inferior).
+- Esquinas redondeadas en los cuatro lados.
 - Sombra sutil (`shadow-sm` o equivalente).
 - Padding interior superior e inferior que separe el logo del borde superior y los items de pie del borde inferior.
 - Fondo `bg-card` y borde `border-border-soft`.
+- El sidebar SHALL ocupar el alto completo del viewport (menos los márgenes externos).
 
 El contenido principal (`<main>`) SHALL renderizarse en un contenedor adyacente al sidebar, separado por un gap visual (no por borde compartido). En anchos `md` y mayores, sidebar y main coexisten en el mismo viewport.
 
@@ -53,15 +54,16 @@ El contenido principal (`<main>`) SHALL renderizarse en un contenedor adyacente 
 - **THEN** el sidebar tiene margen externo respecto al borde izquierdo, superior e inferior del viewport
 - **AND** las cuatro esquinas del sidebar están redondeadas
 - **AND** el sidebar muestra una sombra sutil
+- **AND** el sidebar ocupa el alto completo del viewport (menos el margen externo)
 
 ### Requirement: El sidebar usa la paleta de marca para estados
 
 El sidebar SHALL aplicar la paleta de tokens de `@grana/ui-tokens` para todos sus estados visuales. En particular:
 
-- **Item activo (nav primaria):** color de acento `--positive` (emerald) en texto, ícono, y una barra lateral izquierda de 3px sobre el item. El fondo del item activo SHALL ser una variante translúcida del mismo emerald.
-- **Item inactivo:** texto `text-text`, ícono `text-text`, hover `bg-page`.
+- **Item activo (nav primaria):** color de acento `--positive` (emerald) en texto e ícono. El fondo del item activo SHALL ser una variante translúcida del mismo emerald (`bg-positive/8`). El item activo NO SHALL usar barra lateral izquierda ni ningún otro indicador de borde; el realce es exclusivamente por color de texto + fondo translúcido.
+- **Item inactivo:** texto `text-text`, ícono `text-text`, hover `bg-page`. Sin borde lateral.
 - **Logo:** color `text-navy`.
-- **Logout:** texto `text-error`, hover `bg-error/8` (o variante translúcida equivalente).
+- **Logout:** texto `text-error`, hover `bg-error/8` (o variante translúcida equivalente). Sin borde lateral.
 - **Surface del sidebar:** `bg-card`, borde `border-border-soft`.
 
 Ningún color SHALL estar hardcodeado como hex literal en el sidebar; todos los colores SHALL venir de tokens.
@@ -70,7 +72,8 @@ Ningún color SHALL estar hardcodeado como hex literal en el sidebar; todos los 
 
 - **WHEN** un usuario navega a una ruta cubierta por un item del sidebar
 - **THEN** ese item se renderiza con texto e ícono en color `--positive`
-- **AND** muestra una barra lateral izquierda de 3px en color `--positive`
+- **AND** el fondo del item es una variante translúcida del mismo emerald (`bg-positive/8`)
+- **AND** el item NO muestra una barra lateral izquierda ni ningún otro borde de acento
 - **AND** el resto de los items se renderizan en color `text-text`
 
 #### Scenario: El sidebar no contiene literales de color hex
@@ -103,8 +106,8 @@ El sidebar SHALL determinar el item activo a partir del pathname actual usando `
 
 - El sidebar de desktop SHALL ocultarse.
 - Una topbar delgada (~56px de alto) SHALL aparecer en la parte superior, conteniendo el logo "grana" (clickable → `/dashboard`) y un botón hamburger a la izquierda.
-- El botón hamburger SHALL abrir un drawer lateral izquierdo que contiene exactamente el mismo conjunto de items que el sidebar de desktop (logo, nav primaria, Settings, Logout).
-- El drawer SHALL cerrarse al: hacer click fuera de su área, presionar ESC, o presionar un botón de cierre dentro del drawer.
+- El botón hamburger SHALL abrir un drawer full-screen (100% del ancho del viewport) que se desliza desde el borde izquierdo y contiene exactamente el mismo conjunto de items que el sidebar de desktop (logo, nav primaria, Settings, Logout). El drawer ocupa el alto y el ancho completos del viewport mientras está abierto; no es un panel lateral parcial.
+- El drawer SHALL cerrarse al presionar ESC o presionar un botón de cierre dentro del drawer. (Cuando el drawer ocupa el viewport completo no hay área de overlay fuera del drawer; el cierre por click-outside es relevante solo si una implementación futura reduce el ancho del drawer.)
 - El estado activo dentro del drawer SHALL seguir la misma regla que en el sidebar de desktop.
 
 En anchos ≥ 768px (`md` y mayores), la topbar y el drawer NO SHALL renderizarse; el sidebar de desktop ocupa su lugar.
@@ -115,16 +118,12 @@ En anchos ≥ 768px (`md` y mayores), la topbar y el drawer NO SHALL renderizars
 - **THEN** el sidebar de desktop NO está visible
 - **AND** una topbar de ~56px aparece en la parte superior con logo + botón hamburger
 
-#### Scenario: El hamburger abre un drawer lateral
+#### Scenario: El hamburger abre un drawer full-screen
 
 - **WHEN** el usuario presiona el botón hamburger
 - **THEN** un drawer se desliza desde el borde izquierdo
+- **AND** el drawer ocupa el 100% del ancho y del alto del viewport mientras está abierto
 - **AND** el drawer contiene logo, nav primaria, Settings y Logout
-
-#### Scenario: El drawer se cierra al hacer click fuera
-
-- **WHEN** el drawer está abierto y el usuario hace click en el overlay (fuera del drawer)
-- **THEN** el drawer se cierra
 
 #### Scenario: El drawer se cierra con ESC
 
@@ -158,3 +157,52 @@ Los labels visibles de los items del sidebar (Dashboard, Cuentas, Tarjetas, Movi
 - **WHEN** un desarrollador inspecciona el código del sidebar
 - **THEN** cada label visible se obtiene vía `useTranslations('nav')` (o `getTranslations` en server)
 - **AND** los strings concretos existen en el catálogo de locale por default
+
+### Requirement: El sidebar de desktop es colapsable y la preferencia persiste
+
+El sidebar de desktop SHALL soportar dos estados: **expandido** (ancho ~240px, labels visibles junto a los íconos) y **colapsado** (ancho ~64px, solo íconos visibles, logo compacto). El estado por default SHALL ser expandido.
+
+El sidebar SHALL incluir un botón toggle que pertenece al shell de navegación (su DOM y su comportamiento son parte del sidebar, no del `<main>`) y que mantiene su posición relativa al sidebar en ambos estados — el botón NO SHALL cambiar de ubicación dentro del sidebar cuando el usuario alterna entre expandido y colapsado. Visualmente el botón PUEDE renderizarse como un handle en el borde derecho del sidebar (overhanging sobre el límite entre sidebar y `<main>`) o íntegramente dentro del chrome interior; la implementación elige una de las dos opciones y la mantiene. La transición SHALL animar el cambio de ancho (`transition-[width]`, ~200ms).
+
+La preferencia SHALL persistir entre sesiones mediante una cookie `sidebar_collapsed` con valor `'true'` o `'false'`, `maxAge` 1 año, `path /`, `sameSite: lax`. La cookie SHALL leerse en Server Components antes de hidratar el sidebar para evitar flash visual al recargar.
+
+El estado de colapso aplica ÚNICAMENTE al sidebar de desktop (≥ `md`). El drawer mobile NO tiene estado colapsado.
+
+#### Scenario: El usuario colapsa el sidebar
+
+- **WHEN** el usuario presiona el botón toggle del sidebar
+- **THEN** el sidebar transiciona a ~64px de ancho
+- **AND** los labels se ocultan, solo quedan visibles los íconos
+- **AND** la cookie `sidebar_collapsed` se escribe con valor `'true'`
+
+#### Scenario: La preferencia persiste tras recargar
+
+- **WHEN** un usuario con `sidebar_collapsed=true` recarga la página
+- **THEN** el sidebar se renderiza ya colapsado desde el primer paint
+- **AND** no se produce un flash de sidebar expandido seguido de colapso
+
+#### Scenario: Mobile no usa la preferencia de colapso
+
+- **WHEN** un usuario con `sidebar_collapsed=true` carga la app en un viewport < 768px
+- **THEN** el sidebar de desktop NO se renderiza (igual que cuando la cookie está `false`)
+- **AND** la topbar + drawer mobile aparecen sin alteraciones
+
+### Requirement: El `<main>` es el contenedor scrollable; el body no scrollea
+
+El `<body>` y los contenedores raíz del layout autenticado (`(app)/layout.tsx`) SHALL tener altura limitada al viewport (`h-screen` o equivalente). Cuando el contenido de una pantalla supera el alto disponible, el scroll vertical SHALL ocurrir dentro del elemento `<main>` (`overflow-y-auto`), NO en el body.
+
+El sidebar SHALL permanecer visible y fijo en pantalla mientras el `<main>` scrollea internamente. El logo y los items de pie del sidebar SHALL ser siempre alcanzables sin scrollear el contenido.
+
+#### Scenario: Scroll de contenido largo no mueve el sidebar
+
+- **WHEN** un usuario está en una pantalla con contenido que supera el alto del viewport
+- **AND** scrollea dentro del `<main>`
+- **THEN** el sidebar permanece estacionario
+- **AND** el logo del sidebar sigue siendo visible en su posición original
+- **AND** los items de pie (Configuración, Logout) siguen siendo visibles en su posición original
+
+#### Scenario: El body no scrollea
+
+- **WHEN** un usuario está en una pantalla con contenido largo
+- **THEN** la barra de scroll del navegador NO aparece sobre el body
+- **AND** la barra de scroll aparece, si acaso, dentro del `<main>`
