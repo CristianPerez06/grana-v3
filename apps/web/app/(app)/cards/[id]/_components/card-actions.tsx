@@ -68,13 +68,14 @@ export const CardActions = ({ cardId, isActive, hasMovements }: Props) => {
       )}
 
       {isActive && (
-        <div className="flex items-center gap-3 text-sm">
+        <div className="flex items-center gap-2 text-sm">
           <a
             href={`/cards/${cardId}/edit`}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
             Editar
           </a>
+          <span className="text-muted-foreground" aria-hidden="true">·</span>
           {hasMovements ? (
             <button
               onClick={handleDeactivate}
