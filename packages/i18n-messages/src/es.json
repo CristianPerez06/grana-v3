@@ -1,4 +1,8 @@
 {
+  "error": {
+    "generic_title": "Algo salió mal",
+    "retry_action": "Reintentar"
+  },
   "auth": {
     "signup": {
       "title": "Crear cuenta",

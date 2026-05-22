@@ -225,6 +225,7 @@ Build order matters — each module generally depends on the ones above it. Cros
 | 12 | `onboarding` | ✅ Done | Wizard post-signup (web + mobile), bimoneda default, gate logic |
 | 13 | `mobile-app-shell` | ✅ Done | Expo app shell, navegación tabs, gating de auth y onboarding, presentación visual del tab bar y `AppMenu` |
 | 13b | `web-app-shell` | ✅ Done | Shell de navegación web: sidebar island único, paleta de marca, drawer mobile-first bajo `md`, estado activo derivado de la ruta |
+| 13c | `route-loading-and-errors` | ✅ Done | Componentes `Spinner` y `RouteError` (web + mobile) con API compartida vía `@grana/ui-contracts`. Web: `loading.tsx`/`error.tsx` por layout group de Next App Router. Mobile: TanStack Query como seam de fetching cliente (provider en root, refetch on focus integrado via `AppState`). |
 | 14 | `settings` | ✅ Done | Categorías personalizadas, preferencias de usuario (mostrar centavos, etc.) |
 | 15 | `shared` | 🔲 Planned | Gastos compartidos entre N personas ("Compartido"), deuda derivada, liquidación |
 | 16 | `savings` | 🔲 Planned | Sistema de sobres (envelopes), enganche a ingresos — diseño pendiente |

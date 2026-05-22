@@ -1,7 +1,7 @@
 import '../global.css'
 import '../lib/yup-locale'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Slot, useRouter } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import {
@@ -11,13 +11,18 @@ import {
   PlusJakartaSans_700Bold,
   useFonts,
 } from '@expo-google-fonts/plus-jakarta-sans'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { hasRecoveryClaim } from '../lib/recovery'
+import { createQueryClient } from '../lib/query-client'
+import { registerFocusManager } from '../lib/focus-manager-setup'
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
+registerFocusManager()
 
 export default function RootLayout() {
   const router = useRouter()
+  const [queryClient] = useState(() => createQueryClient())
   const [fontsLoaded] = useFonts({
     PlusJakartaSans_400Regular,
     PlusJakartaSans_500Medium,
@@ -59,5 +64,9 @@ export default function RootLayout() {
 
   if (!fontsLoaded) return null
 
-  return <Slot />
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Slot />
+    </QueryClientProvider>
+  )
 }

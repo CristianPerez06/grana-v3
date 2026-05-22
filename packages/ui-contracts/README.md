@@ -45,6 +45,7 @@ Las **props comunes** salen del contract y NO se renombran ni se re-tipean. Cada
 - **`children` para contenido**, no `title` ni `label`. (Mobile Button hoy todavía expone un `title?` legacy para no romper call-sites pre-contract; queda como deuda P2.)
 - **Variantes** comunes en mayúsculas-conceptuales: `primary | secondary | ghost | destructive | link`.
 - **Tamaños** comunes: `sm | md | lg`.
+- **Callbacks de dominio** llevan nombre del dominio, no `onPress`. Ejemplo: `RouteErrorProps.onRetry` (reintentar la operación fallida) no `onPress`. La regla `onPress` aplica a *wrappers genéricos de interacción* (presionar un botón); cuando el callback tiene una semántica explícita ("retry", "submit", "dismiss"), ese nombre gana. Web sigue mapeando la interacción interna a `onClick`.
 
 ## Lo que NO entra acá
 

@@ -1,22 +1,17 @@
-import { useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, ScrollView, View } from 'react-native'
+import { useCallback, useState } from 'react'
+import { RefreshControl, ScrollView, View } from 'react-native'
 import { useFocusEffect, useLocalSearchParams } from 'expo-router'
-import {
-  getDashboardHero,
-  getMonthBalanceSeries,
-  getUpcomingFortnight,
-  hasUserMovements,
-  type DashboardHero,
-  type MonthBalanceSeries,
-  type UpcomingFortnight,
-} from '@grana/dashboard'
-import { supabase } from '../../lib/supabase'
+import { useQueryClient } from '@tanstack/react-query'
+import { colors } from '../../lib/colors'
 import { getTodayAR } from '../../lib/date'
-import {
-  getCreditCards,
-  type CreditCardSummary,
-} from '../../lib/cards/queries'
 import { t } from '../../lib/i18n'
+import {
+  useDashboardCards,
+  useDashboardHero,
+  useHasMovements,
+  useMonthBalanceSeries,
+  useUpcomingFortnight,
+} from '../../lib/dashboard/queries'
 import { PreferencesProvider } from '../../lib/preferences-context'
 import { CardsSection } from '../../components/dashboard/CardsSection'
 import { DashboardHeader } from '../../components/dashboard/DashboardHeader'
@@ -26,6 +21,7 @@ import { MonthBalanceSection } from '../../components/dashboard/MonthBalanceSect
 import { SectionFallback } from '../../components/dashboard/SectionFallback'
 import { UpcomingFortnightSection } from '../../components/dashboard/UpcomingFortnightSection'
 import { WelcomeFirstMoveCard } from '../../components/dashboard/WelcomeFirstMoveCard'
+import { Spinner } from '../../components/ui/Spinner'
 
 const MONTHS_BACK_LIMIT = 12
 
@@ -55,44 +51,28 @@ function parseMonthParam(raw: string | undefined, today: Date): MonthParam {
   return { year, month, currentYear, currentMonth }
 }
 
-type Results = {
-  hero: PromiseSettledResult<DashboardHero>
-  upcoming: PromiseSettledResult<UpcomingFortnight>
-  monthSeries: PromiseSettledResult<MonthBalanceSeries>
-  cards: PromiseSettledResult<CreditCardSummary[]>
-  hasMovements: PromiseSettledResult<boolean>
-}
-
 export default function DashboardScreen() {
   const params = useLocalSearchParams<{ month?: string }>()
   const today = getTodayAR()
   const { year, month, currentYear, currentMonth } = parseMonthParam(params.month, today)
 
-  const [results, setResults] = useState<Results | null>(null)
+  const queryClient = useQueryClient()
+  const hero = useDashboardHero()
+  const upcoming = useUpcomingFortnight(today)
+  const monthSeries = useMonthBalanceSeries(year, month)
+  const cards = useDashboardCards()
+  const movements = useHasMovements()
 
-  useEffect(() => {
-    let cancelled = false
-    Promise.allSettled([
-      getDashboardHero(supabase),
-      getUpcomingFortnight(supabase, today),
-      getMonthBalanceSeries(supabase, year, month),
-      getCreditCards(),
-      hasUserMovements(supabase),
-    ]).then(([hero, upcoming, monthSeries, cards, hasMovements]) => {
-      if (cancelled) return
-      setResults({
-        hero: hero as PromiseSettledResult<DashboardHero>,
-        upcoming: upcoming as PromiseSettledResult<UpcomingFortnight>,
-        monthSeries: monthSeries as PromiseSettledResult<MonthBalanceSeries>,
-        cards: cards as PromiseSettledResult<CreditCardSummary[]>,
-        hasMovements: hasMovements as PromiseSettledResult<boolean>,
-      })
-    })
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, month])
+  const isRefetching =
+    hero.isFetching ||
+    upcoming.isFetching ||
+    monthSeries.isFetching ||
+    cards.isFetching ||
+    movements.isFetching
+
+  const onRefresh = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+  }, [queryClient])
 
   // Reset EyeMaskProvider when leaving the tab: bump key so the provider
   // remounts with masked=false on the next focus. Expo Router keeps tab
@@ -107,54 +87,71 @@ export default function DashboardScreen() {
     }, []),
   )
 
-  if (!results) {
+  const initialLoading =
+    hero.isPending &&
+    upcoming.isPending &&
+    monthSeries.isPending &&
+    cards.isPending &&
+    movements.isPending
+
+  if (initialLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator />
+        <Spinner size="lg" />
       </View>
     )
   }
 
-  const showWelcomeCard =
-    results.hasMovements.status === 'fulfilled' && results.hasMovements.value === false
+  const showWelcomeCard = movements.data === false
 
   return (
     <PreferencesProvider>
       <EyeMaskProvider key={eyeMaskKey}>
-        <ScrollView className="flex-1 bg-background" contentContainerClassName="px-6 py-6">
+        <ScrollView
+          className="flex-1 bg-background"
+          contentContainerClassName="px-6 py-6"
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={onRefresh}
+              tintColor={colors.textSoft}
+              colors={[colors.textSoft]}
+            />
+          }
+        >
           <DashboardHeader />
 
           <View className="flex-col gap-5">
             {showWelcomeCard && <WelcomeFirstMoveCard />}
 
-            {results.hero.status === 'fulfilled' ? (
-              <HeroSection data={results.hero.value} />
-            ) : (
+            {hero.data ? (
+              <HeroSection data={hero.data} />
+            ) : hero.error ? (
               <SectionFallback message={t('dashboard.hero_error')} />
-            )}
+            ) : null}
 
-            {results.upcoming.status === 'fulfilled' ? (
-              <UpcomingFortnightSection data={results.upcoming.value} />
-            ) : (
+            {upcoming.data ? (
+              <UpcomingFortnightSection data={upcoming.data} />
+            ) : upcoming.error ? (
               <SectionFallback message={t('dashboard.upcoming.error')} />
-            )}
+            ) : null}
 
-            {results.monthSeries.status === 'fulfilled' ? (
+            {monthSeries.data ? (
               <MonthBalanceSection
-                data={results.monthSeries.value}
+                data={monthSeries.data}
                 currentYear={currentYear}
                 currentMonth={currentMonth}
                 monthsBackLimit={MONTHS_BACK_LIMIT}
               />
-            ) : (
+            ) : monthSeries.error ? (
               <SectionFallback message={t('dashboard.month.error')} />
-            )}
+            ) : null}
 
-            {results.cards.status === 'fulfilled' ? (
-              <CardsSection cards={results.cards.value} />
-            ) : (
+            {cards.data ? (
+              <CardsSection cards={cards.data} />
+            ) : cards.error ? (
               <SectionFallback message={t('dashboard.cards.error')} />
-            )}
+            ) : null}
           </View>
         </ScrollView>
       </EyeMaskProvider>

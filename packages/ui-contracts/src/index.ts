@@ -118,3 +118,21 @@ export type SpinnerProps = {
    */
   label?: string
 }
+
+// ── RouteError ──────────────────────────────────────────────────────────────
+
+export type RouteErrorProps = {
+  /**
+   * The error caught by the route-level boundary. On web this is the value
+   * passed to Next.js `error.tsx` (may include a `digest` in production). On
+   * mobile this is typically the `error` returned by a TanStack Query hook.
+   */
+  error: Error & { digest?: string }
+  /**
+   * Domain-named retry callback. Not `onPress`/`onClick`: this is a domain
+   * action (re-run the failed work), not a generic interaction wrapper.
+   * Web wires it to Next's `reset()`; mobile wires it to `query.refetch()`.
+   */
+  onRetry: () => void
+  className?: string
+}

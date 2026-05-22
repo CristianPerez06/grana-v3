@@ -1,5 +1,6 @@
 import { Pressable, Text } from 'react-native'
 import type { ButtonProps, ButtonSize, ButtonVariant } from '@grana/ui-contracts'
+import { colors } from '../../lib/colors'
 import { Spinner } from './Spinner'
 
 type MobileButtonProps = ButtonProps & {
@@ -61,7 +62,7 @@ export function Button({
       className={`w-full flex-row items-center justify-center rounded-xl ${containerVariant[variant]} ${containerSize[size]} ${isDisabled ? 'opacity-50' : ''}`}
     >
       {loading ? (
-        <Spinner size="sm" color={variant === 'primary' ? '#ffffff' : '#10B981'} />
+        <Spinner size="sm" color={variant === 'primary' ? colors.white : colors.positive} />
       ) : (
         <Text className={`font-semibold ${textVariant[variant]} ${textSize[size]}`}>
           {label}
