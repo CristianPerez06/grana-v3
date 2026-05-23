@@ -1,10 +1,10 @@
 import { notFound, redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardPeriodDetail } from '@/lib/cards/queries'
 import { getAccounts } from '@/lib/accounts/queries'
 import { suggestNextPeriodDates } from '@/lib/cards/utils'
 import { getTodayAR } from '@/lib/date'
+import { PageHeader } from '@/components/ui/page-header'
 import { PayCardPeriodForm } from './_components/pay-card-period-form'
 import { USDSubordinatedNote } from './_components/usd-subordinated-note'
 
@@ -49,16 +49,10 @@ const PayPeriodPage = async ({ params }: Props) => {
 
   return (
     <div className="flex flex-col gap-6 max-w-lg">
-      <div className="flex items-center gap-3">
-        <Link
-          href={`/cards/${id}/periods/${periodId}`}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← Resumen
-        </Link>
-      </div>
-
-      <h1 className="text-2xl font-semibold tracking-tight">Pagar resumen</h1>
+      <PageHeader
+        title="Pagar resumen"
+        backLink={{ href: `/cards/${id}/periods/${periodId}`, label: 'Resumen' }}
+      />
 
       {period.pendingAmountUSD > 0 && (
         <USDSubordinatedNote usdAmount={period.pendingAmountUSD} />

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { getShowCents } from '@/lib/preferences'
+import { PageHeader } from '@/components/ui/page-header'
 import { LanguageSwitcher } from './_components/language-switcher'
 import { ShowCentsToggle } from './_components/show-cents-toggle'
 
@@ -10,7 +11,7 @@ const SettingsPage = async () => {
 
   return (
     <div className="flex flex-col gap-8 max-w-2xl">
-      <h1 className="text-2xl font-bold tracking-tight">Configuración</h1>
+      <PageHeader title="Configuración" />
 
       {/* Display */}
       <section className="flex flex-col gap-4">

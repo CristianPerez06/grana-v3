@@ -1,8 +1,8 @@
 import { notFound, redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getAccountDetail, getAccounts } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
+import { PageHeader } from '@/components/ui/page-header'
 import { TransactionForm } from './_components/transaction-form'
 import { RegisterCardPurchaseForm } from './_components/register-card-purchase-form'
 
@@ -42,18 +42,10 @@ const NewTransactionPage = async ({ params }: Props) => {
 
   return (
     <div className="flex flex-col gap-6 max-w-lg">
-      <div className="flex items-center gap-3">
-        <Link
-          href={backHref}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← {backLabel}
-        </Link>
-      </div>
-
-      <h1 className="text-2xl font-semibold tracking-tight">
-        {isCredit ? 'Registrar consumo' : 'Nuevo movimiento'}
-      </h1>
+      <PageHeader
+        title={isCredit ? 'Registrar consumo' : 'Nuevo movimiento'}
+        backLink={{ href: backHref, label: backLabel }}
+      />
 
       {isCredit ? (
         <RegisterCardPurchaseForm

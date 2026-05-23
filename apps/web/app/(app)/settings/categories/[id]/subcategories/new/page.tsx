@@ -1,7 +1,7 @@
-import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCategoryById } from '@/lib/categories/queries'
+import { PageHeader } from '@/components/ui/page-header'
 import { CreateSubcategoryForm } from './_components/create-subcategory-form'
 
 type Props = { params: Promise<{ id: string }> }
@@ -18,18 +18,14 @@ const NewSubcategoryPage = async ({ params }: Props) => {
 
   return (
     <div className="flex flex-col gap-6 max-w-md">
-      <div className="flex items-center gap-3">
-        <Link
-          href={`/settings/categories/${id}/subcategories`}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← Subcategorías
-        </Link>
-      </div>
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Nueva subcategoría</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{category.name}</p>
-      </div>
+      <PageHeader
+        title="Nueva subcategoría"
+        description={category.name}
+        backLink={{
+          href: `/settings/categories/${id}/subcategories`,
+          label: 'Subcategorías',
+        }}
+      />
       <CreateSubcategoryForm categoryId={id} />
     </div>
   )

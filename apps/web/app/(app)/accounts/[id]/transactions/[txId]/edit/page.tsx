@@ -1,8 +1,8 @@
 import { notFound, redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getTransactionDetail } from '@/lib/transactions/queries'
 import { getAllCategories } from '@/lib/categories/queries'
+import { PageHeader } from '@/components/ui/page-header'
 import { EditTransactionForm } from './_components/edit-transaction-form'
 
 type Props = {
@@ -28,16 +28,10 @@ const EditTransactionPage = async ({ params }: Props) => {
 
   return (
     <div className="flex flex-col gap-6 max-w-lg">
-      <div className="flex items-center gap-3">
-        <Link
-          href={`/accounts/${id}/transactions/${txId}`}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← Detalle
-        </Link>
-      </div>
-
-      <h1 className="text-2xl font-semibold tracking-tight">Editar movimiento</h1>
+      <PageHeader
+        title="Editar movimiento"
+        backLink={{ href: `/accounts/${id}/transactions/${txId}`, label: 'Detalle' }}
+      />
 
       <EditTransactionForm
         transaction={transaction}

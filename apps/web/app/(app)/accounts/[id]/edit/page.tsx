@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getAccountDetail, getInstitutions } from '@/lib/accounts/queries'
+import { PageHeader } from '@/components/ui/page-header'
 import { EditAccountForm } from './_components/edit-account-form'
 
 type Props = {
@@ -24,16 +24,10 @@ const EditAccountPage = async ({ params }: Props) => {
 
   return (
     <div className="flex flex-col gap-6 max-w-lg">
-      <div className="flex items-center gap-3">
-        <Link
-          href={`/accounts/${id}`}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← {account.name}
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        <h1 className="text-xl font-semibold">Editar</h1>
-      </div>
+      <PageHeader
+        title="Editar cuenta"
+        backLink={{ href: `/accounts/${id}`, label: account.name }}
+      />
       <EditAccountForm account={account} institutions={institutions} />
     </div>
   )

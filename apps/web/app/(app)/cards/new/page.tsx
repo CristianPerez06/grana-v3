@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getInstitutions } from '@/lib/accounts/queries'
 import { getCardNetworks } from '@/lib/cards/queries'
+import { PageHeader } from '@/components/ui/page-header'
 import { CreateCreditCardForm } from './_components/create-credit-card-form'
 import { CreateNovatoCreditCardForm } from './_components/create-novato-credit-card-form'
 
@@ -25,23 +25,15 @@ const NewCardPage = async () => {
 
   return (
     <div className="flex flex-col gap-6 max-w-lg">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/cards"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← Tarjetas
-        </Link>
-      </div>
-
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Nueva tarjeta de crédito</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {isNovato
+      <PageHeader
+        title="Nueva tarjeta de crédito"
+        description={
+          isNovato
             ? 'Solo necesitamos la fecha de cierre del próximo resumen.'
-            : 'Ingresá los datos de tu tarjeta y las fechas del ciclo actual.'}
-        </p>
-      </div>
+            : 'Ingresá los datos de tu tarjeta y las fechas del ciclo actual.'
+        }
+        backLink={{ href: '/cards', label: 'Tarjetas' }}
+      />
 
       {isNovato ? (
         <CreateNovatoCreditCardForm institutions={institutions} networks={networks} />

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/ui/page-header'
 import { MovementFilters } from '@/lib/transactions/components/movement-filters'
 import { GlobalMovementList } from '@/lib/transactions/components/global-movement-list'
 import {
@@ -45,18 +46,15 @@ const TransactionsPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="flex max-w-3xl flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">Tus movimientos</p>
-          <h1 className="text-2xl font-semibold tracking-tight">Movimientos</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Historial cronológico de ingresos, gastos, transferencias, ajustes y consumos.
-          </p>
-        </div>
-        <Button asChild variant="secondary">
-          <Link href="/transactions/recurring">Recurrencias</Link>
-        </Button>
-      </div>
+      <PageHeader
+        title="Movimientos"
+        description="Historial cronológico de ingresos, gastos, transferencias, ajustes y consumos."
+        actions={
+          <Button asChild variant="secondary">
+            <Link href="/transactions/recurring">Recurrencias</Link>
+          </Button>
+        }
+      />
 
       {topSuggestion && (
         <RecurrenceSuggestionBanner suggestion={topSuggestion} />
