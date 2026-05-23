@@ -119,6 +119,39 @@ export type SpinnerProps = {
   label?: string
 }
 
+// ── PageHeader ──────────────────────────────────────────────────────────────
+
+export type PageHeaderBackLink = {
+  href: string
+  label: string
+}
+
+export type PageHeaderProps = {
+  /**
+   * Title rendered as the page-level heading. Required.
+   */
+  title: string
+  /**
+   * Optional one-line description rendered immediately below the title,
+   * inside the header block so the visual cohesion is preserved (the page
+   * wrapper's gap does not separate them). Use sentence case, no period.
+   */
+  description?: string
+  /**
+   * Optional back link rendered above the title. When provided, both `href`
+   * and `label` are required — the object shape forbids the half-defined
+   * state at the type level.
+   */
+  backLink?: PageHeaderBackLink
+  /**
+   * Optional slot rendered on the right side of the title row. Intended for
+   * page-level actions (a button, a dropdown, a small action group). Not a
+   * general right-side slot; the contract narrows it to actions on purpose.
+   */
+  actions?: ReactNode
+  className?: string
+}
+
 // ── RouteError ──────────────────────────────────────────────────────────────
 
 export type RouteErrorProps = {

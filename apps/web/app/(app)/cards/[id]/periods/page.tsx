@@ -1,8 +1,8 @@
 import { notFound, redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardPeriods } from '@/lib/cards/queries'
 import { getShowCents } from '@/lib/preferences'
+import { PageHeader } from '@/components/ui/page-header'
 import { PeriodsList } from './_components/periods-list'
 
 type Props = {
@@ -28,16 +28,10 @@ const CardPeriodsPage = async ({ params }: Props) => {
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
-      <div className="flex items-center gap-3">
-        <Link
-          href={`/cards/${id}`}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← {cardDetail.name}
-        </Link>
-      </div>
-
-      <h1 className="text-2xl font-semibold tracking-tight">Resúmenes</h1>
+      <PageHeader
+        title="Resúmenes"
+        backLink={{ href: `/cards/${id}`, label: cardDetail.name }}
+      />
 
       <PeriodsList periods={periods} cardId={id} hasUSD={hasUSD} showCents={showCents} />
     </div>

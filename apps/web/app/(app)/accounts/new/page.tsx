@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getInstitutions } from '@/lib/accounts/queries'
+import { PageHeader } from '@/components/ui/page-header'
 import { CreateAccountForm } from './_components/create-account-form'
 
 const NewAccountPage = async () => {
@@ -13,16 +13,10 @@ const NewAccountPage = async () => {
 
   return (
     <div className="flex flex-col gap-6 max-w-lg">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/accounts"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← Cuentas
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        <h1 className="text-xl font-semibold">Crear cuenta</h1>
-      </div>
+      <PageHeader
+        title="Crear cuenta"
+        backLink={{ href: '/accounts', label: 'Cuentas' }}
+      />
       <CreateAccountForm institutions={institutions} />
     </div>
   )

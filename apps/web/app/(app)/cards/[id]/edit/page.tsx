@@ -1,8 +1,8 @@
 import { notFound, redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardNetworks } from '@/lib/cards/queries'
 import { getInstitutions } from '@/lib/accounts/queries'
+import { PageHeader } from '@/components/ui/page-header'
 import { EditCreditCardForm } from './_components/edit-credit-card-form'
 
 type Props = {
@@ -30,16 +30,10 @@ const EditCardPage = async ({ params }: Props) => {
 
   return (
     <div className="flex flex-col gap-6 max-w-lg">
-      <div className="flex items-center gap-3">
-        <Link
-          href={`/cards/${id}`}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← {cardDetail.name}
-        </Link>
-      </div>
-
-      <h1 className="text-2xl font-semibold tracking-tight">Editar tarjeta</h1>
+      <PageHeader
+        title="Editar tarjeta"
+        backLink={{ href: `/cards/${id}`, label: cardDetail.name }}
+      />
 
       <EditCreditCardForm
         cardId={id}

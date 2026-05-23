@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardPeriodDetail } from '@/lib/cards/queries'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { getShowCents } from '@/lib/preferences'
+import { PageHeader } from '@/components/ui/page-header'
 import { EditDatesSheet } from './_components/edit-dates-sheet'
 
 const formatDate = (iso: string) => {
@@ -37,22 +38,12 @@ const PeriodDetailPage = async ({ params }: Props) => {
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
-      <div className="flex items-center gap-3">
-        <Link
-          href={`/cards/${id}/periods`}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← Resúmenes
-        </Link>
-      </div>
-
-      {/* Period header */}
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between gap-2">
-          <h1 className="text-xl font-semibold">
-            {formatDate(period.start_date)} – {formatDate(period.end_date)}
-          </h1>
-          {canEditDates && (
+      <PageHeader
+        title={`${formatDate(period.start_date)} – ${formatDate(period.end_date)}`}
+        description={`Vence ${formatDate(period.due_date)}`}
+        backLink={{ href: `/cards/${id}/periods`, label: 'Resúmenes' }}
+        actions={
+          canEditDates && (
             <EditDatesSheet
               periodId={period.id}
               currentEndDate={period.end_date}
@@ -60,12 +51,9 @@ const PeriodDetailPage = async ({ params }: Props) => {
               nextPeriodStart={period.nextPeriodStart}
               nextPeriodIsPaid={period.nextPeriodIsPaid}
             />
-          )}
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Vence {formatDate(period.due_date)}
-        </p>
-      </div>
+          )
+        }
+      />
 
       {/* Amount summary */}
       <div className="rounded-lg border border-border bg-card p-4 flex flex-col gap-1">

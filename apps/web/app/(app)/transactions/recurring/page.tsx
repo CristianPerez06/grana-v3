@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
+import { PageHeader } from '@/components/ui/page-header'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { getRecurrences } from '@/lib/recurrences/queries'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
@@ -44,21 +45,11 @@ const RecurringPage = async () => {
 
   return (
     <div className="flex max-w-3xl flex-col gap-6">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/transactions"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← Movimientos
-        </Link>
-      </div>
-
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Recurrencias</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Reglas que generan movimientos pendientes para que confirmes o omitas.
-        </p>
-      </div>
+      <PageHeader
+        title="Recurrencias"
+        description="Reglas que generan movimientos pendientes para que confirmes o omitas."
+        backLink={{ href: '/transactions', label: 'Movimientos' }}
+      />
 
       {rules.length === 0 ? (
         <p className="text-sm text-muted-foreground">
