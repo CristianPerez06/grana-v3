@@ -4,6 +4,16 @@
 
 Sesión de exploración de diseño en mayo 2026. El owner reportó que la página `/cards/[id]` se sentía "desordenada" y, conversando, lo concretó: la pregunta que vive en la página es **"¿cómo vienen mis tarjetas?"** — específicamente, "¿puedo hacer un gasto no esencial hoy, o me conviene esperar al cierre del resumen para que caiga en el período siguiente?". Esto desplaza el foco de la página de mirada contable retrospectiva ("qué debo pagar") a mirada decisional prospectiva ("cómo se proyecta la carga").
 
+## Actualización durante la implementación y revisión
+
+Este documento es el diseño **as-proposed**. Durante la implementación y la revisión visual con el owner se ajustaron varias decisiones. **La fuente de verdad es el spec en `openspec/specs/cards/spec.md`.** Divergencias respecto del diseño original de abajo:
+
+1. **USD subordinado — se oculta cuando la columna tiene USD pendiente = 0** (el diseño original lo mostraba siempre, incluso `USD 0,00`; ver tabla de descartadas). Motivo: en tarjetas con USD activo pero sin consumos en dólares, repetir `USD 0,00` en las tres columnas era ruido. Reconciliación con **Bimoneda**: el principio "totales siempre por moneda, nunca fusionados" rige los saldos/totales canónicos; las columnas del termómetro son proyecciones prospectivas por período, no el saldo, y ahí `USD 0,00` repetido no aporta. Los totales por moneda siguen intactos en las pantallas de saldo.
+2. **Copy de columna vacía: "sin cuotas" → "sin movimientos"** (una columna puede estar vacía por motivos más allá de cuotas). La columna sigue mostrándose siempre (no se oculta).
+3. **CTA de pago integrado en un banner contextual** (no botón ancho debajo del termómetro). Dos tonos: rojo `vencido` ("Pagar ahora") y ámbar `cerrado_esperando_pago` ("Pagar resumen"). Debajo del termómetro queda solo `[Registrar consumo]`. Motivo: el botón ancho parecía acción de tarjeta cuando pagaba solo el período activo. Esto reemplaza la sección 6 ("Banners full-width") de abajo.
+4. **Estado "archivada con pendientes" eliminado.** La regla de archivado es Opción A (no se archiva una tarjeta con deuda; se alineó `getCreditCardDebtCheck`, que estaba más permisivo que el master spec). Por eso una tarjeta inactiva nunca tiene pendientes y el detalle de archivada es siempre "sin pendientes".
+5. **Sección "Archivadas" agregada al listado `/cards`** (estaba listada como out-of-scope). Sin ella, el `[Reactivar]` del detalle era inalcanzable una vez archivada la tarjeta.
+
 ## Decisiones
 
 ### 1. Layout — termómetro horizontal de 3 columnas
@@ -164,8 +174,8 @@ El botón `[Cuotas — Próximamente]` desaparece sin reemplazo. Cuando exista l
 | Tabs (Resumen actual · Próximos · Historial) | Rompe el scroll lineal y mete state en una página mayormente de lectura. |
 | Mostrar el resumen actual grande y los próximos como mini lista debajo (lo más parecido a hoy, solo limpiado) | Pierde la pregunta "cómo viene" — el usuario tiene que leer una lista para inferir abultamiento. |
 | Barra de carga sobre disponible (verde grande cuando hay margen, rojo chico cuando no) | Confunde porque rompe la convención "barra llena = carga". |
-| Ocultar la columna que está en $0 | Rompe la predictibilidad: el usuario no sabe si la columna falta porque no hay datos o porque no se calculó. Mejor mostrarla con "sin cuotas". |
-| Mostrar USD solo en columnas con USD > 0 | Inconsistente con **Bimoneda por defecto**: si la tarjeta opera en USD, USD se muestra siempre. USD 0,00 es información ("no comprometiste USD en este período"), no ruido. |
+| Ocultar la columna que está en $0 | Rompe la predictibilidad: el usuario no sabe si la columna falta porque no hay datos o porque no se calculó. Se mantiene la columna siempre, con copy "sin movimientos" (el copy original era "sin cuotas" — ver "Actualización durante la implementación"). |
+| Mostrar USD solo en columnas con USD > 0 | **Revisado en implementación: se ADOPTÓ** (ver "Actualización durante la implementación"). El argumento original era Bimoneda ("USD 0,00 es información, no ruido"), pero se concluyó que en columnas prospectivas el `USD 0,00` repetido es ruido y que Bimoneda rige los saldos canónicos, no estas proyecciones. La línea USD se muestra solo cuando la columna tiene USD pendiente > 0. |
 | Repetir "78% utilizado" como texto debajo de la barra | La barra ya comunica eso. Sumarlo en texto es ruido. |
 
 ## Out of scope

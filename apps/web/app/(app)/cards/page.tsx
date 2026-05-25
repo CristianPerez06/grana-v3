@@ -5,16 +5,20 @@ import { getCreditCards } from '@/lib/cards/queries'
 import { getShowCents } from '@/lib/preferences'
 import { PageHeader } from '@/components/ui/page-header'
 import { CreditCardCarousel } from './_components/credit-card-carousel'
+import { ArchivedCardsSection } from './_components/archived-cards-section'
 
 const CardsPage = async () => {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [cards, showCents] = await Promise.all([
-    getCreditCards({ includeArchived: false }),
+  const [allCards, showCents] = await Promise.all([
+    getCreditCards({ includeArchived: true }),
     getShowCents(),
   ])
+
+  const activeCards = allCards.filter((c) => c.is_active)
+  const archivedCards = allCards.filter((c) => !c.is_active)
 
   return (
     <div className="flex flex-col gap-6">
@@ -30,7 +34,9 @@ const CardsPage = async () => {
         }
       />
 
-      <CreditCardCarousel cards={cards} showCents={showCents} />
+      <CreditCardCarousel cards={activeCards} showCents={showCents} />
+
+      <ArchivedCardsSection cards={archivedCards} />
     </div>
   )
 }

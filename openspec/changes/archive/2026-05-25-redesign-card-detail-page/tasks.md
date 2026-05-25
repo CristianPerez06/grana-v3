@@ -24,6 +24,13 @@
 - [x] 4.1 Cambiar el `<h1>` de "Historial de resúmenes" a "Resúmenes" en `apps/web/app/(app)/cards/[id]/periods/page.tsx`.
 - [x] 4.2 Verificar que la navegación desde el detalle (link "Ver todos los resúmenes →") apunta correctamente a esta página.
 
+## 4b. Sección "Archivadas" en el listado (`/cards`)
+
+- [x] 4b.1 Crear `apps/web/app/(app)/cards/_components/archived-cards-section.tsx`: sección colapsable (`<details>`, sin JS de cliente) que solo se renderiza si hay ≥1 archivada. Encabezado `Archivadas (N)`. Cada item linkea al detalle (`/cards/[id]`).
+- [x] 4b.4 Alinear la regla de archivado con el master spec (Opción A: no se archiva con deuda). `getCreditCardDebtCheck` (`lib/cards/queries.ts`) bloqueaba solo deuda en períodos `closed`/`overdue`; ahora bloquea si **cualquier** período no-pagado tiene transacciones (incluye `open`/futuros, ej. cuotas). En consecuencia, una tarjeta inactiva nunca tiene deuda → el detalle de archivada es siempre "sin pendientes"; se elimina el render y el escenario "archivada con pendientes" (era inalcanzable bajo la regla A). El master spec ya definía A — driftaba solo la implementación.
+- [x] 4b.2 Modificar `apps/web/app/(app)/cards/page.tsx`: traer todas las tarjetas con `includeArchived: true`, separar activas (`is_active=true`) de archivadas, pasar las activas al carrusel y las archivadas a `<ArchivedCardsSection />`. Motivo: el `[Reactivar]` del detalle (introducido por este redesign) era inalcanzable porque el listado filtraba las archivadas.
+- [x] 4b.3 Banner-CTA de pago: `period-alert-banner.tsx` reemplaza el botón ancho de pago debajo del termómetro por un cartel contextual (rojo `vencido` / ámbar `cerrado_esperando_pago`) con el CTA integrado a la derecha. `PaymentCTABlock` queda solo con `[Registrar consumo]`. Motivo: el botón ancho parecía acción de tarjeta cuando en realidad pagaba solo el período activo.
+
 ## 5. Storybook (si aplica)
 
 - [~] 5.1 Story para `CardsThermometer`. **N/A en esta iteración**: en este monorepo Storybook solo cubre primitivas de `components/ui/` (`Button`, `Card`, `Alert`, etc.); ningún componente feature de `app/(app)/cards/_components/` tiene stories. Mantener la convención: si en el futuro se decide darle Storybook a feature components, este se agrega como parte de ese cambio.
@@ -32,5 +39,5 @@
 ## 6. Validación spec y archive
 
 - [x] 6.1 Ejecutar `pnpm openspec:check` — pasa.
-- [ ] 6.2 Verificación visual en el browser de los casos: período actual con cuotas en próximo, vencido, tarjeta nueva, sin límite cargado, archivada con pendientes. **Bloqueado en este entorno** (remoto sin browser). El owner debe correr `pnpm dev` y validar antes del merge.
-- [ ] 6.3 Archivar el change con el skill `openspec-archive-change` antes del merge a `main`. Integrar los deltas en `openspec/specs/cards/spec.md` (sección 3 del checklist del CLAUDE.md). Se hace cuando el owner confirme la verificación visual de 6.2.
+- [x] 6.2 Verificación visual en el browser por el owner (sesión de revisión): EN CURSO con cuotas distribuidas 10/10/10, POR PAGAR (banner ámbar), VENCIDO (banner rojo), tarjeta nueva (estado vacío), sin límite cargado (hint), archivada sin pendientes, sección "Archivadas" en el listado, y el bloqueo de archivado con deuda. Durante la verificación se detectaron y corrigieron divergencias spec↔implementación (USD oculto en 0, "sin movimientos", banner-CTA contextual, regla de archivado A) y el delta se realineó a lo implementado antes de integrar.
+- [x] 6.3 Deltas integrados en `openspec/specs/cards/spec.md` (requirements de carrusel, detalle, resúmenes y mora reescritos en la sección plana `## Requirements`; sin secciones de delta en el master). Change movido a `openspec/changes/archive/2026-05-25-redesign-card-detail-page/`.
