@@ -17,6 +17,7 @@ import {
 } from '@grana/validation'
 import { getCreditCardDebtCheck } from '@/lib/cards/queries'
 import type { ActionResult } from './types'
+import { translatePostgresError } from './_lib/translate-error'
 
 function normalizeActionMoney(value: number): number {
   return normalizeMoneyAmount(value) ?? value
@@ -100,7 +101,7 @@ export async function updateAccount(
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'account') }
 
   revalidatePath('/accounts')
   return { ok: true }
@@ -135,7 +136,7 @@ export async function archiveAccount(
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'account') }
 
   revalidatePath('/accounts')
   revalidatePath('/cards')
@@ -154,7 +155,7 @@ export async function reactivateAccount(id: string): Promise<ActionResult<never>
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'account') }
 
   revalidatePath('/accounts')
   return { ok: true }
@@ -190,7 +191,7 @@ export async function deleteAccount(id: string): Promise<ActionResult<never>> {
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'account') }
 
   revalidatePath('/accounts')
   return { ok: true }
@@ -229,7 +230,7 @@ export async function addCurrencyToAccount(
     { onConflict: 'account_id,currency_code' },
   )
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'account') }
 
   revalidatePath('/accounts')
   return { ok: true }
@@ -289,7 +290,7 @@ export async function deactivateCurrencyFromAccount(
     .eq('account_id', accountId)
     .eq('currency_code', currencyCode)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'account') }
 
   revalidatePath('/accounts')
   return { ok: true }

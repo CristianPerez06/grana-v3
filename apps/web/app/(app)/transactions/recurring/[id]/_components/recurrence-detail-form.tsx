@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import {
   deleteRecurrence,
   pauseRecurrence,
@@ -12,13 +13,8 @@ import { parseMoneyInput } from '@grana/validation'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import type { RecurrenceDetail } from '@/lib/recurrences/types'
 
-const FREQUENCY_OPTIONS: { value: 'weekly' | 'biweekly' | 'monthly' | 'annual'; label: string }[] =
-  [
-    { value: 'weekly', label: 'Semanal' },
-    { value: 'biweekly', label: 'Quincenal' },
-    { value: 'monthly', label: 'Mensual' },
-    { value: 'annual', label: 'Anual' },
-  ]
+type FrequencyValue = 'weekly' | 'biweekly' | 'monthly' | 'annual'
+const FREQUENCY_VALUES: FrequencyValue[] = ['weekly', 'biweekly', 'monthly', 'annual']
 
 type Props = {
   rule: RecurrenceDetail
@@ -26,13 +22,15 @@ type Props = {
 
 export const RecurrenceDetailForm = ({ rule }: Props) => {
   const router = useRouter()
+  const t = useTranslations('recurrences')
+  const tCommon = useTranslations('common')
   const [isPending, startTransition] = useTransition()
   const [formError, setFormError] = useState<string | null>(null)
   const [formSuccess, setFormSuccess] = useState<string | null>(null)
 
   const [amount, setAmount] = useState(String(rule.amount))
-  const [frequency, setFrequency] = useState<typeof FREQUENCY_OPTIONS[number]['value']>(
-    rule.frequency as typeof FREQUENCY_OPTIONS[number]['value'],
+  const [frequency, setFrequency] = useState<FrequencyValue>(
+    rule.frequency as FrequencyValue,
   )
   const [endDate, setEndDate] = useState(rule.end_date ?? '')
   const [description, setDescription] = useState(rule.description ?? '')
@@ -47,7 +45,7 @@ export const RecurrenceDetailForm = ({ rule }: Props) => {
 
     const parsedAmount = parseMoneyInput(amount)
     if (parsedAmount === null || parsedAmount <= 0) {
-      setFormError('El monto debe ser mayor a cero.')
+      setFormError(t('errors.amount_invalid'))
       return
     }
 
@@ -59,10 +57,10 @@ export const RecurrenceDetailForm = ({ rule }: Props) => {
         description: description || null,
       })
       if (!result.ok) {
-        setFormError(result.formError ?? 'No se pudo guardar.')
+        setFormError(result.formError ?? t('errors.save_failed'))
         return
       }
-      setFormSuccess('Cambios guardados.')
+      setFormSuccess(t('messages.changes_saved'))
       router.refresh()
     })
   }
@@ -75,16 +73,16 @@ export const RecurrenceDetailForm = ({ rule }: Props) => {
         ? await resumeRecurrence(rule.id)
         : await pauseRecurrence(rule.id)
       if (!result.ok) {
-        setFormError(result.formError ?? 'No se pudo cambiar el estado.')
+        setFormError(result.formError ?? t('errors.status_change_failed'))
         return
       }
-      setFormSuccess(isPaused ? 'Regla reanudada.' : 'Regla pausada.')
+      setFormSuccess(isPaused ? t('messages.rule_resumed') : t('messages.rule_paused'))
       router.refresh()
     })
   }
 
   const handleDelete = () => {
-    if (!confirm('¿Eliminar esta regla? Las instancias pendientes se cancelarán.')) {
+    if (!confirm(t('confirmations.delete'))) {
       return
     }
     setFormError(null)
@@ -92,7 +90,7 @@ export const RecurrenceDetailForm = ({ rule }: Props) => {
     startTransition(async () => {
       const result = await deleteRecurrence(rule.id)
       if (!result.ok) {
-        setFormError(result.formError ?? 'No se pudo eliminar.')
+        setFormError(result.formError ?? t('errors.delete_failed'))
         return
       }
       router.push('/transactions/recurring')
@@ -108,7 +106,7 @@ export const RecurrenceDetailForm = ({ rule }: Props) => {
           disabled={isPending || isDeleted}
           className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground disabled:opacity-50"
         >
-          {isPaused ? 'Reanudar' : 'Pausar'}
+          {isPaused ? t('actions.resume') : t('actions.pause')}
         </button>
         <button
           type="button"
@@ -116,7 +114,7 @@ export const RecurrenceDetailForm = ({ rule }: Props) => {
           disabled={isPending || isDeleted}
           className="rounded-md border border-destructive/40 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/5 disabled:opacity-50"
         >
-          Eliminar
+          {t('actions.delete')}
         </button>
       </div>
 
@@ -134,7 +132,7 @@ export const RecurrenceDetailForm = ({ rule }: Props) => {
       <form onSubmit={handleSave} className="flex flex-col gap-5">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="amount" className="text-sm font-medium">
-            Monto
+            {t('labels.amount')}
           </label>
           <MoneyAmountInput
             id="amount"
@@ -148,7 +146,7 @@ export const RecurrenceDetailForm = ({ rule }: Props) => {
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="frequency" className="text-sm font-medium">
-            Frecuencia
+            {t('labels.frequency')}
           </label>
           <select
             id="frequency"
@@ -159,9 +157,9 @@ export const RecurrenceDetailForm = ({ rule }: Props) => {
             disabled={isDeleted}
             className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
           >
-            {FREQUENCY_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
+            {FREQUENCY_VALUES.map((value) => (
+              <option key={value} value={value}>
+                {t(`frequencies.${value}`)}
               </option>
             ))}
           </select>
@@ -169,8 +167,8 @@ export const RecurrenceDetailForm = ({ rule }: Props) => {
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="end_date" className="text-sm font-medium">
-            Fecha de fin{' '}
-            <span className="text-muted-foreground text-xs">(opcional)</span>
+            {t('labels.end_date')}{' '}
+            <span className="text-muted-foreground text-xs">{tCommon('optional')}</span>
           </label>
           <input
             id="end_date"
@@ -184,8 +182,8 @@ export const RecurrenceDetailForm = ({ rule }: Props) => {
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="description" className="text-sm font-medium">
-            Descripción{' '}
-            <span className="text-muted-foreground text-xs">(opcional)</span>
+            {t('labels.description')}{' '}
+            <span className="text-muted-foreground text-xs">{tCommon('optional')}</span>
           </label>
           <input
             id="description"
@@ -202,7 +200,7 @@ export const RecurrenceDetailForm = ({ rule }: Props) => {
           disabled={isPending || isDeleted}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
-          {isPending ? 'Guardando…' : 'Guardar cambios'}
+          {isPending ? tCommon('saving') : t('actions.save_changes')}
         </button>
       </form>
     </div>

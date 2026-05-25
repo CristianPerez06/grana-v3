@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import type { CardPeriodDetail } from '@/lib/cards/queries'
 import type { PeriodVariant } from '@/lib/cards/types'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -9,13 +10,13 @@ const formatDate = (iso: string) => {
   return `${d}/${m}/${y}`
 }
 
-const variantLabel: Record<PeriodVariant, string> = {
-  futuro: 'Futuro',
-  actual: 'En curso',
-  tarjeta_nueva: 'Sin movimientos',
-  cerrado_esperando_pago: 'Pendiente de pago',
-  vencido: 'Vencido',
-  pagado: 'Pagado',
+const variantLabelKey: Record<PeriodVariant, string> = {
+  futuro: 'period.future',
+  actual: 'period.current',
+  tarjeta_nueva: 'period.no_movements',
+  cerrado_esperando_pago: 'period.pending_payment',
+  vencido: 'period.overdue',
+  pagado: 'period.paid',
 }
 
 const variantColors: Record<PeriodVariant, string> = {
@@ -35,10 +36,11 @@ type Props = {
 }
 
 export const PeriodsList = ({ periods, cardId, hasUSD = false, showCents = false }: Props) => {
+  const t = useTranslations('cards')
   if (periods.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-8 text-center">
-        No hay resúmenes registrados.
+        {t('list.periods_empty')}
       </p>
     )
   }
@@ -60,7 +62,7 @@ export const PeriodsList = ({ periods, cardId, hasUSD = false, showCents = false
                   {formatDate(period.start_date)} – {formatDate(period.end_date)}
                 </span>
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${variantColors[period.variant]}`}>
-                  {variantLabel[period.variant]}
+                  {t(variantLabelKey[period.variant])}
                 </span>
                 {period.is_estimated && <EstimatedDateBadge />}
               </div>
@@ -74,7 +76,7 @@ export const PeriodsList = ({ periods, cardId, hasUSD = false, showCents = false
               </div>
             </div>
             <span className="text-xs text-muted-foreground shrink-0">
-              Vence {formatDate(period.due_date)}
+              {t('period.due_prefix')} {formatDate(period.due_date)}
             </span>
           </Link>
         )

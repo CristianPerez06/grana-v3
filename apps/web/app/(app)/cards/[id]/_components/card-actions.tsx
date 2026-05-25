@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { deactivateCreditCardAccount } from '@/app/_actions/credit-cards'
 import { deleteAccount, reactivateAccount } from '@/app/_actions/accounts'
 import { DeactivateBlockDialog } from '../../_components/deactivate-block-dialog'
@@ -15,6 +16,7 @@ type Props = {
 
 export const CardActions = ({ cardId, isActive, hasMovements }: Props) => {
   const router = useRouter()
+  const t = useTranslations('cards')
   const [isPending, startTransition] = useTransition()
   const [blockDialogOpen, setBlockDialogOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -27,7 +29,7 @@ export const CardActions = ({ cardId, isActive, hasMovements }: Props) => {
         if (result.formError === 'pending_debt') {
           setBlockDialogOpen(true)
         } else {
-          setError(result.formError ?? 'Error al archivar')
+          setError(result.formError ?? t('errors.archive_failed'))
         }
       }
     })
@@ -38,7 +40,7 @@ export const CardActions = ({ cardId, isActive, hasMovements }: Props) => {
       setError(null)
       const result = await reactivateAccount(cardId)
       if (!result.ok) {
-        setError(result.formError ?? 'Error al reactivar')
+        setError(result.formError ?? t('errors.reactivate_failed'))
       }
     })
   }
@@ -46,7 +48,7 @@ export const CardActions = ({ cardId, isActive, hasMovements }: Props) => {
   const handleDelete = () => {
     if (
       !confirm(
-        'Esta tarjeta no tiene movimientos. ¿Eliminarla? Esta acción no se puede deshacer.',
+        t('confirmations.delete_body'),
       )
     )
       return
@@ -54,7 +56,7 @@ export const CardActions = ({ cardId, isActive, hasMovements }: Props) => {
       setError(null)
       const result = await deleteAccount(cardId)
       if (!result.ok) {
-        setError(result.formError ?? 'Error al eliminar')
+        setError(result.formError ?? t('errors.delete_failed'))
         return
       }
       router.push('/cards')
@@ -73,7 +75,7 @@ export const CardActions = ({ cardId, isActive, hasMovements }: Props) => {
             href={`/cards/${cardId}/edit`}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
-            Editar
+            {t('actions.edit')}
           </a>
           <span className="text-muted-foreground" aria-hidden="true">·</span>
           {hasMovements ? (
@@ -82,7 +84,7 @@ export const CardActions = ({ cardId, isActive, hasMovements }: Props) => {
               disabled={isPending}
               className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
             >
-              Archivar
+              {t('actions.archive')}
             </button>
           ) : (
             <button
@@ -90,7 +92,7 @@ export const CardActions = ({ cardId, isActive, hasMovements }: Props) => {
               disabled={isPending}
               className="text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
             >
-              Eliminar
+              {t('actions.delete')}
             </button>
           )}
         </div>

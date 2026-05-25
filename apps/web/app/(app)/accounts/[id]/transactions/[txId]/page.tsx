@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getTransactionDetail, getInstallmentFamily } from '@/lib/transactions/queries'
 import { TransactionDetailHeader } from './_components/transaction-detail-header'
@@ -16,6 +17,8 @@ const TransactionDetailPage = async ({ params, searchParams }: Props) => {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const t = await getTranslations('transactions')
 
   const transaction = await getTransactionDetail(txId)
   const isOwner = transaction?.account_id === id
@@ -34,10 +37,10 @@ const TransactionDetailPage = async ({ params, searchParams }: Props) => {
       ? `/cards/${id}/periods/${transaction.card_period_id}`
       : `/accounts/${id}`
   const backLabel = cameFromGlobalMovements
-    ? '← Movimientos'
+    ? `← ${t('back_label')}`
     : transaction.card_period_id
-      ? '← Resumen'
-      : '← Cuenta'
+      ? `← ${t('summary_back_label')}`
+      : `← ${t('account_back_label')}`
 
   return (
     <div className="flex flex-col gap-8 max-w-lg">

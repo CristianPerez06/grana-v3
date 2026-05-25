@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { getTodayAR } from '@/lib/date'
 import { payCardPeriod } from '@/app/_actions/credit-cards'
 import { parseMoneyInput } from '@grana/validation'
@@ -44,6 +45,8 @@ export const PayCardPeriodForm = ({
   paymentAccounts,
 }: Props) => {
   const router = useRouter()
+  const t = useTranslations('cards')
+  const tCommon = useTranslations('common')
   const [isPending, startTransition] = useTransition()
   const [formError, setFormError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -57,13 +60,13 @@ export const PayCardPeriodForm = ({
   const validate = () => {
     const errs: Record<string, string> = {}
     const parsedAmount = parseMoneyInput(amount)
-    if (parsedAmount === null || parsedAmount <= 0) errs.amount = 'El monto debe ser mayor a cero.'
-    if (!paymentAccountId) errs.paymentAccountId = 'Seleccioná una cuenta.'
-    if (!paymentDate) errs.paymentDate = 'Requerido.'
-    if (!nextEndDate) errs.nextEndDate = 'Requerido.'
-    if (!nextDueDate) errs.nextDueDate = 'Requerido.'
+    if (parsedAmount === null || parsedAmount <= 0) errs.amount = t('errors.limit_invalid')
+    if (!paymentAccountId) errs.paymentAccountId = t('errors.account_required')
+    if (!paymentDate) errs.paymentDate = tCommon('required_short')
+    if (!nextEndDate) errs.nextEndDate = tCommon('required_short')
+    if (!nextDueDate) errs.nextDueDate = tCommon('required_short')
     if (nextEndDate && nextDueDate && nextDueDate <= nextEndDate) {
-      errs.nextDueDate = 'El vencimiento debe ser posterior al cierre.'
+      errs.nextDueDate = t('errors.due_after_close')
     }
     setErrors(errs)
     return Object.keys(errs).length === 0
@@ -85,7 +88,7 @@ export const PayCardPeriodForm = ({
       })
 
       if (!result.ok) {
-        setFormError(result.formError ?? 'Error al registrar el pago.')
+        setFormError(result.formError ?? t('errors.payment_failed'))
         return
       }
 
@@ -98,13 +101,13 @@ export const PayCardPeriodForm = ({
       {/* Section 1: Payment data */}
       <div className="flex flex-col gap-4">
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-          Datos del pago
+          {t('payment.section_payment_data')}
         </h2>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Monto a pagar</label>
+          <label className="text-sm font-medium">{t('labels.amount_to_pay')}</label>
           <p className="text-xs text-muted-foreground mb-1">
-            Pre-llenado con el total pendiente ({formatARS(pendingAmountARS)}). Podés editarlo.
+            {t('labels.amount_to_pay_helper')} ({formatARS(pendingAmountARS)})
           </p>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
@@ -119,7 +122,7 @@ export const PayCardPeriodForm = ({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Cuenta de débito</label>
+          <label className="text-sm font-medium">{t('labels.debit_account')}</label>
           <select
             required
             value={paymentAccountId}
@@ -136,7 +139,7 @@ export const PayCardPeriodForm = ({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Fecha del pago</label>
+          <label className="text-sm font-medium">{t('labels.payment_date')}</label>
           <input
             type="date"
             required
@@ -152,16 +155,16 @@ export const PayCardPeriodForm = ({
       <div className="flex flex-col gap-4">
         <div>
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            Próximo resumen
+            {t('payment.section_next_period')}
           </h2>
           <p className="text-xs text-muted-foreground mt-1">
-            Confirmá las fechas del próximo ciclo (sugeridas por el historial).
+            {t('labels.next_period_helper')}
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium">Cierre</label>
+            <label className="text-sm font-medium">{t('labels.close_date')}</label>
             <input
               type="date"
               required
@@ -172,7 +175,7 @@ export const PayCardPeriodForm = ({
             {errors.nextEndDate && <p className="text-xs text-destructive">{errors.nextEndDate}</p>}
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium">Vencimiento</label>
+            <label className="text-sm font-medium">{t('labels.due_date')}</label>
             <input
               type="date"
               required
@@ -188,7 +191,7 @@ export const PayCardPeriodForm = ({
       {formError && <p className="text-sm text-destructive">{formError}</p>}
 
       <p className="text-xs text-muted-foreground rounded-md bg-muted px-3 py-2">
-        Una vez confirmado, el pago no se puede revertir. Si registraste un monto o cuenta incorrectos, podés corregirlo con un ajuste de saldo.
+        {t('payment.warning')}
       </p>
 
       <button
@@ -196,7 +199,7 @@ export const PayCardPeriodForm = ({
         disabled={isPending}
         className="w-full rounded-md bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
       >
-        {isPending ? 'Procesando…' : 'Confirmar pago'}
+        {isPending ? tCommon('processing') : t('actions.confirm_payment')}
       </button>
     </form>
   )

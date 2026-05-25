@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Pencil, X } from 'lucide-react'
+import { useLocale, useTranslations } from 'next-intl'
 import {
   confirmRecurrenceInstance,
   skipRecurrenceInstance,
@@ -17,27 +18,6 @@ type Props = {
   pending: PendingRecurrenceInstance[]
 }
 
-const FREQUENCY_LABEL: Record<string, string> = {
-  weekly: 'Semanal',
-  biweekly: 'Quincenal',
-  monthly: 'Mensual',
-  annual: 'Anual',
-}
-
-const MOVEMENT_LABEL: Record<string, string> = {
-  income: 'Ingreso',
-  expense: 'Gasto',
-  transfer: 'Transferencia',
-}
-
-const formatDate = (iso: string) => {
-  const [y, m, d] = iso.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString('es-AR', {
-    day: 'numeric',
-    month: 'short',
-  })
-}
-
 const isCardExpenseUSD = (instance: PendingRecurrenceInstance) =>
   instance.recurrence.movement_type === 'expense' &&
   instance.account?.type === 'credit' &&
@@ -47,6 +27,19 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
   const router = useRouter()
   const showCents = useShowCents()
   const [isPending, startTransition] = useTransition()
+  const locale = useLocale()
+  const t = useTranslations('recurrences')
+  const tTx = useTranslations('transactions')
+
+  const localeCode = locale === 'en' ? 'en-US' : 'es-AR'
+
+  const formatDate = (iso: string) => {
+    const [y, m, d] = iso.split('-').map(Number)
+    return new Date(y, m - 1, d).toLocaleDateString(localeCode, {
+      day: 'numeric',
+      month: 'short',
+    })
+  }
   const [activeId, setActiveId] = useState<string | null>(null)
   const [fxByInstance, setFxByInstance] = useState<Record<string, string>>({})
   const [errorByInstance, setErrorByInstance] = useState<Record<string, string>>({})
@@ -81,7 +74,7 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
       if (!parsed || parsed <= 0) {
         setErrorByInstance((prev) => ({
           ...prev,
-          [instance.id]: 'Ingresá la cotización ARS/USD del día.',
+          [instance.id]: t('errors_extra.fx_required'),
         }))
         setActiveId(null)
         return
@@ -96,7 +89,7 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
       if (parsedAmount === null || parsedAmount <= 0) {
         setErrorByInstance((prev) => ({
           ...prev,
-          [instance.id]: 'El monto debe ser mayor a cero.',
+          [instance.id]: t('errors.amount_invalid'),
         }))
         setActiveId(null)
         return
@@ -121,14 +114,14 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
       if (!result.ok) {
         setErrorByInstance((prev) => ({
           ...prev,
-          [instance.id]: result.formError ?? 'No se pudo confirmar la instancia.',
+          [instance.id]: result.formError ?? t('errors_extra.confirm_failed'),
         }))
         setActiveId(null)
         return
       }
       setActiveId(null)
       setEditingId(null)
-      setSuccessMessage('Movimiento confirmado.')
+      setSuccessMessage(t('pending.confirmed_success'))
       router.refresh()
     })
   }
@@ -141,13 +134,13 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
       if (!result.ok) {
         setErrorByInstance((prev) => ({
           ...prev,
-          [instance.id]: result.formError ?? 'No se pudo omitir la instancia.',
+          [instance.id]: result.formError ?? t('errors_extra.skip_failed'),
         }))
         setActiveId(null)
         return
       }
       setActiveId(null)
-      setSuccessMessage('Movimiento omitido.')
+      setSuccessMessage(t('pending.skipped_success'))
       router.refresh()
     })
   }
@@ -156,11 +149,11 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
     <section className="flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold tracking-tight">
-          Movimientos recurrentes pendientes
+          {t('pending.title')}
         </h2>
         {pending.length > 1 && (
           <span className="text-xs text-muted-foreground">
-            {pending.length} pendientes
+            {t('pending.count', { count: pending.length })}
           </span>
         )}
       </div>
@@ -172,7 +165,7 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
             type="button"
             onClick={() => setSuccessMessage(null)}
             className="text-green-700/70 hover:text-green-700 dark:text-green-400/70 dark:hover:text-green-400"
-            aria-label="Cerrar aviso"
+            aria-label={t('pending.close_notice')}
           >
             <X size={14} />
           </button>
@@ -189,9 +182,10 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
           const accountName = instance.account?.name ?? '—'
           const destinationName = instance.destination_account?.name
           const movementLabel =
-            MOVEMENT_LABEL[instance.recurrence.movement_type] ?? '—'
-          const freqLabel =
-            FREQUENCY_LABEL[instance.recurrence.frequency] ?? instance.recurrence.frequency
+            tTx(`types.${instance.recurrence.movement_type}` as 'types.income') ?? '—'
+          const freqLabel = t(
+            `frequencies.${instance.recurrence.frequency}` as 'frequencies.weekly',
+          )
           const showFxInput = isCardExpenseUSD(instance)
           const error = errorByInstance[instance.id]
           const busy = isPending && activeId === instance.id
@@ -225,8 +219,8 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
                       onClick={() => startEditing(instance)}
                       disabled={busy}
                       className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
-                      aria-label="Editar antes de confirmar"
-                      title="Editar antes de confirmar"
+                      aria-label={t('pending.edit_aria')}
+                      title={t('pending.edit_aria')}
                     >
                       <Pencil size={14} />
                     </button>
@@ -237,8 +231,8 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
                       onClick={cancelEditing}
                       disabled={busy}
                       className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
-                      aria-label="Cancelar edición"
-                      title="Cancelar edición"
+                      aria-label={t('pending.cancel_edit_aria')}
+                      title={t('pending.cancel_edit_aria')}
                     >
                       <X size={14} />
                     </button>
@@ -253,7 +247,7 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
                       htmlFor={`amount-${instance.id}`}
                       className="text-xs text-muted-foreground"
                     >
-                      Monto
+                      {t('labels.amount')}
                     </label>
                     <MoneyAmountInput
                       id={`amount-${instance.id}`}
@@ -262,7 +256,7 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
                       className="rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     />
                     <p className="text-[11px] text-muted-foreground">
-                      Si cambia, también se actualiza la regla recurrente.
+                      {t('pending.amount_changes_rule')}
                     </p>
                   </div>
 
@@ -271,7 +265,7 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
                       htmlFor={`date-${instance.id}`}
                       className="text-xs text-muted-foreground"
                     >
-                      Fecha
+                      {t('labels_extra.date')}
                     </label>
                     <input
                       id={`date-${instance.id}`}
@@ -287,14 +281,14 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
                       htmlFor={`description-${instance.id}`}
                       className="text-xs text-muted-foreground"
                     >
-                      Descripción
+                      {t('labels.description')}
                     </label>
                     <input
                       id={`description-${instance.id}`}
                       type="text"
                       value={editDescription}
                       onChange={(e) => setEditDescription(e.target.value)}
-                      placeholder="Opcional"
+                      placeholder={t('pending.description_placeholder')}
                       className="rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     />
                   </div>
@@ -307,7 +301,7 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
                     htmlFor={`fx-${instance.id}`}
                     className="text-xs text-muted-foreground"
                   >
-                    Cotización ARS por 1 USD
+                    {t('pending.fx_rate_label')}
                   </label>
                   <MoneyAmountInput
                     id={`fx-${instance.id}`}
@@ -318,7 +312,7 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
                         [instance.id]: value,
                       }))
                     }
-                    placeholder="Ej: 1230.50"
+                    placeholder={t('pending.fx_rate_placeholder')}
                     className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
@@ -335,7 +329,7 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
                   disabled={busy}
                   className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
-                  {busy ? 'Confirmando…' : 'Confirmar'}
+                  {busy ? t('pending.confirming') : t('pending.confirm')}
                 </button>
                 <button
                   type="button"
@@ -343,7 +337,7 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
                   disabled={busy}
                   className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-foreground disabled:opacity-50"
                 >
-                  Omitir
+                  {t('pending.skip')}
                 </button>
               </div>
             </li>

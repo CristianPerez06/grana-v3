@@ -16,27 +16,13 @@ import {
   type UpdateSubcategoryInput,
 } from '@grana/validation'
 import type { ActionResult } from './types'
+import { translatePostgresError } from './_lib/translate-error'
 
 async function getAuthenticatedUserId(): Promise<string> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
   return user.id
-}
-
-// Maps Postgres error codes to user-facing i18n messages. Uses the active
-// locale (read via next-intl cookie) so the message comes back already
-// translated for the client to render verbatim. Falls back to a generic
-// message when the code isn't known.
-async function translatePostgresError(
-  code: string | undefined,
-  kind: 'category' | 'subcategory',
-): Promise<string> {
-  const t = await getTranslations('settings.categories.errors')
-  if (code === '23505') {
-    return kind === 'category' ? t('duplicate') : t('duplicate_subcategory')
-  }
-  return t('generic')
 }
 
 // ── Categories ────────────────────────────────────────────────────────────────

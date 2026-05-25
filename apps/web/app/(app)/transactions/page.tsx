@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
 import { MovementFilters } from '@/lib/transactions/components/movement-filters'
@@ -28,6 +29,9 @@ const TransactionsPage = async ({ searchParams }: Props) => {
   const resolvedSearchParams = await searchParams
   const filters = parseMovementFilters(resolvedSearchParams)
   const limit = parseMovementLimit(resolvedSearchParams)
+  const t = await getTranslations('transactions')
+  const tRec = await getTranslations('recurrences')
+  const tCommon = await getTranslations('common')
 
   // Generación lazy de instancias recurrentes: una pasada por carga de página.
   await generateDueRecurrenceInstances()
@@ -47,11 +51,11 @@ const TransactionsPage = async ({ searchParams }: Props) => {
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <PageHeader
-        title="Movimientos"
-        description="Historial cronológico de ingresos, gastos, transferencias, ajustes y consumos."
+        title={t('title')}
+        description={t('description')}
         actions={
           <Button asChild variant="secondary">
-            <Link href="/transactions/recurring">Recurrencias</Link>
+            <Link href="/transactions/recurring">{tRec('title')}</Link>
           </Button>
         }
       />
@@ -77,7 +81,7 @@ const TransactionsPage = async ({ searchParams }: Props) => {
         <div className="flex justify-center">
           <Button asChild variant="secondary">
             <Link href={buildMovementLimitHref(resolvedSearchParams, movementsPage.nextLimit)}>
-              Cargar más
+              {tCommon('load_more')}
             </Link>
           </Button>
         </div>

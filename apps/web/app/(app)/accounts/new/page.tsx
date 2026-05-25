@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getInstitutions } from '@/lib/accounts/queries'
 import { PageHeader } from '@/components/ui/page-header'
@@ -9,13 +10,14 @@ const NewAccountPage = async () => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const t = await getTranslations('accounts')
   const institutions = await getInstitutions()
 
   return (
     <div className="flex flex-col gap-6 max-w-lg">
       <PageHeader
-        title="Crear cuenta"
-        backLink={{ href: '/accounts', label: 'Cuentas' }}
+        title={t('actions.create')}
+        backLink={{ href: '/accounts', label: t('title') }}
       />
       <CreateAccountForm institutions={institutions} />
     </div>

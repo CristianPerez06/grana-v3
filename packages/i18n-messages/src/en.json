@@ -6,7 +6,7 @@
   "auth": {
     "signup": {
       "title": "Create account",
-      "description": "Fill in your details to get started.",
+      "description": "Fill in the details to get started.",
       "fullName_label": "Full name",
       "email_label": "Email",
       "password_label": "Password",
@@ -17,18 +17,18 @@
     "login": {
       "title": "Sign in",
       "header_title": "Welcome",
-      "description": "Use your email and password to continue.",
+      "description": "Sign in with your email and password.",
       "email_label": "Email",
       "password_label": "Password",
       "submit": "Sign in",
       "forgot": "Forgot your password?",
-      "no_account": "No account yet? Sign up",
+      "no_account": "Don't have an account? Sign up",
       "confirmed_notice": "Your account was confirmed. Sign in with your email and password.",
       "resend_confirmation_code": "Resend confirmation code"
     },
     "forgot": {
-      "title": "Reset password",
-      "description": "Enter your email and we'll send you a reset code.",
+      "title": "Recover password",
+      "description": "Enter your email and we'll send you a code to reset it.",
       "email_label": "Email",
       "submit": "Send code",
       "back_to_login": "Back to sign in"
@@ -42,12 +42,12 @@
       "code_placeholder": "12345678",
       "submit": "Verify",
       "no_email_title": "Email missing",
-      "no_email_body": "Start over so we can send you a fresh code."
+      "no_email_body": "Start over so we can send you a new code."
     },
     "resend": {
       "button": "Resend code",
       "button_cooldown": "Resend in {seconds}s",
-      "sent_notice": "We sent you a new code."
+      "sent_notice": "We've sent you a new code."
     },
     "reset": {
       "title": "New password",
@@ -56,22 +56,22 @@
       "confirm_label": "Confirm password",
       "submit": "Save password",
       "success_title": "Password updated",
-      "success_body": "Your password has been changed. Sign in with the new one.",
+      "success_body": "Your password was changed. Sign in with the new one.",
       "go_to_login": "Go to sign in",
       "invalid_link_title": "Invalid session",
       "invalid_link": "This recovery session is invalid or has expired. Request a new code.",
       "go_to_forgot": "Request a new code"
     },
     "errors": {
-      "invalid_credentials": "Invalid email or password.",
+      "invalid_credentials": "Incorrect email or password.",
       "email_not_confirmed": "Confirm your email before signing in.",
-      "email_not_confirmed_with_resend": "Your account isn't confirmed yet. Resend the code and finish confirming.",
+      "email_not_confirmed_with_resend": "Your account is not confirmed yet. Resend the code and complete confirmation.",
       "user_already_exists": "An account with that email already exists.",
       "weak_password": "Password is too weak.",
-      "same_password": "New password must differ from the current one.",
-      "invalid_otp": "The code is invalid.",
+      "same_password": "The new password must be different from the current one.",
+      "invalid_otp": "Invalid code.",
       "otp_expired": "The code expired. Request a new one.",
-      "over_email_send_rate_limit": "Too many attempts. Wait a few minutes and try again.",
+      "over_email_send_rate_limit": "Too many attempts. Wait a few minutes before trying again.",
       "generic": "Something went wrong. Please try again in a moment."
     }
   },
@@ -79,7 +79,7 @@
     "required": "This field is required.",
     "email": "Enter a valid email.",
     "min": "Must be at least {min} characters.",
-    "max": "Must be at most {max} characters.",
+    "max": "Cannot be more than {max} characters.",
     "notType": "Invalid value.",
     "password_letter": "Must include at least one letter.",
     "password_number": "Must include at least one number.",
@@ -93,7 +93,7 @@
     "mask_show": "Show amounts",
     "mask_hide": "Hide amounts",
     "hero": {
-      "label": "Available"
+      "label": "To spend"
     },
     "upcoming": {
       "title": "What's coming",
@@ -101,28 +101,28 @@
       "to_pay": "To pay",
       "to_collect": "To collect",
       "period_balance": "Period balance",
-      "empty": "No events expected in the next 14 days.",
-      "error": "Couldn't load upcoming events."
+      "empty": "No upcoming transactions in the next 14 days.",
+      "error": "We couldn't load upcoming events."
     },
     "month": {
-      "title": "Monthly balance",
+      "title": "Month balance",
       "income": "Income",
       "expense": "Expenses",
       "final_balance": "Balance",
-      "empty": "No movements this month.",
-      "error": "Couldn't load monthly balance."
+      "empty": "No transactions this month.",
+      "error": "We couldn't load this month's balance."
     },
     "cards": {
       "title": "Cards",
-      "empty_title": "No cards added yet",
+      "empty_title": "You haven't added any cards yet",
       "empty_cta": "Add card",
-      "error": "Couldn't load cards."
+      "error": "We couldn't load your cards."
     },
-    "hero_error": "Couldn't load your available balance.",
+    "hero_error": "We couldn't load your available balance.",
     "welcome_card": {
-      "title": "Add your first movement",
-      "description": "Once you record your first income or expense, you'll see your available balance, what's coming, and how the month is going.",
-      "cta": "Add a movement"
+      "title": "Record your first transaction",
+      "description": "Once you record your first income or expense, you'll see here how much you have, what's coming, and how the month is going.",
+      "cta": "Record transaction"
     }
   },
   "settings": {
@@ -145,7 +145,7 @@
       "description": "Manage your income and expense categories.",
       "list": {
         "system_heading": "System",
-        "user_heading": "Your categories",
+        "user_heading": "Custom",
         "empty": "No categories yet.",
         "subcategory_count": "{count} subcategories"
       },
@@ -163,7 +163,7 @@
         "add_subcategory": "+ Add subcategory"
       },
       "confirmations": {
-        "delete_category": "Delete this category? This cannot be undone.",
+        "delete_category": "Delete this category? This action cannot be undone.",
         "delete_subcategory": "Delete this subcategory?"
       },
       "errors": {
@@ -173,16 +173,16 @@
         "delete_failed": "Failed to delete.",
         "system_readonly": "System categories cannot be edited.",
         "not_found": "Category not found.",
-        "generic": "Something went wrong. Try again."
+        "generic": "Something went wrong. Please try again."
       },
       "form": {
         "name_label": "Name",
-        "name_placeholder": "e.g. Pets",
+        "name_placeholder": "E.g. Pets",
         "type_label": "Type",
         "icon_label": "Icon (emoji)",
-        "icon_placeholder": "e.g. 🐾",
+        "icon_placeholder": "E.g. 🐾",
         "color_label": "Color (hex)",
-        "color_placeholder": "e.g. #FF6B6B",
+        "color_placeholder": "E.g. #FF6B6B",
         "submit_create": "Save category",
         "submit_update": "Save changes"
       },
@@ -197,7 +197,7 @@
         "empty": "No subcategories yet.",
         "new": {
           "title": "New subcategory",
-          "name_placeholder": "e.g. Pharmacy",
+          "name_placeholder": "E.g. Pharmaceuticals",
           "submit": "Save subcategory"
         }
       }
@@ -206,14 +206,26 @@
   "common": {
     "app_name": "grana",
     "logout": "Sign out",
-    "back": "Back"
+    "back": "Back",
+    "cancel": "Cancel",
+    "save": "Save",
+    "save_changes": "Save changes",
+    "saving": "Saving…",
+    "creating": "Creating…",
+    "processing": "Processing…",
+    "loading": "Loading…",
+    "load_more": "Load more",
+    "optional": "(optional)",
+    "not_editable": "— not editable",
+    "no_results": "No results.",
+    "required_short": "Required."
   },
   "nav": {
     "dashboard": "Home",
     "accounts": "Accounts",
     "cards": "Cards",
-    "movements": "Movements",
-    "home": "Household",
+    "movements": "Transactions",
+    "home": "Home",
     "savings": "Savings",
     "settings": "Settings",
     "logout": "Sign out",
@@ -228,30 +240,30 @@
     "welcome": {
       "greeting": "Hi, {name}",
       "title": "Welcome to Grana",
-      "description": "We'll ask a couple of quick questions to tailor the app to you. Takes less than a minute.",
+      "description": "We'll ask you a couple of questions so the app fits you. It takes less than a minute.",
       "cta": "Get started"
     },
     "perfil": {
-      "title": "To set up your Grana, tell us a bit",
+      "title": "To set up your Grana, tell us a bit about you",
       "mode_question": "What are you looking for in Grana?",
-      "mode_simple_title": "Just the basics",
-      "mode_simple_description": "See my available and where my money goes.",
+      "mode_simple_title": "The essentials",
+      "mode_simple_description": "See my available balance and where my money goes.",
       "mode_detailed_title": "With more detail",
-      "mode_detailed_description": "See my available, where my money goes, and which accounts I keep it in.",
+      "mode_detailed_description": "See my available balance, where my money goes, and which accounts it's in.",
       "bank_question": "Do you have a bank account?",
       "bank_yes": "Yes",
       "bank_no": "No",
       "institution_label": "Bank",
       "institution_placeholder": "Search bank or wallet…",
       "account_name_label": "Account name",
-      "account_name_placeholder": "e.g. Savings account",
+      "account_name_placeholder": "E.g. Savings account",
       "continue": "Continue"
     },
     "saldoActual": {
       "title": "How much money do you have today?",
-      "description_novato": "Just to get you started with a real available balance. You can adjust it with any later movement. If you have no money, enter 0.",
-      "description_experto": "Enter how much you have available in each place. Anything you leave blank starts at zero. The ARS amount is required (can be 0).",
-      "group_novato": "Total",
+      "description_novato": "Just so you start with a real available balance. You can adjust it later with any transaction. If you have no money, enter 0.",
+      "description_experto": "Enter how much you have available in each place. Anything you leave blank starts at zero. The peso amount is required (can be 0).",
+      "group_novato": "In total",
       "group_primary_bank": "In {accountName}",
       "group_cash": "In cash (optional)",
       "ars_label": "Pesos (ARS)",
@@ -260,25 +272,25 @@
       "continue": "Continue"
     },
     "done": {
-      "title": "All set, your Grana is configured",
-      "balance_label": "Your available",
-      "next_step_with_data": "Now you can start logging movements as life happens.",
-      "next_step_skip": "Whenever you're ready, log your first movement from the dashboard.",
+      "title": "Done, your Grana is set up",
+      "balance_label": "Your available balance",
+      "next_step_with_data": "Now you can start recording transactions as you go through your day.",
+      "next_step_skip": "Whenever you want, record your first transaction from the dashboard.",
       "cta": "Go to dashboard"
     },
     "errors": {
-      "mode_required": "Pick the option that fits you to continue.",
-      "institution_required": "Choose your bank to create the account.",
-      "account_name_required": "Give your account a name.",
+      "mode_required": "Pick the option that fits you best to continue.",
+      "institution_required": "Pick your bank to create the account.",
+      "account_name_required": "Set a name for your account.",
       "amount_invalid": "Enter a valid amount.",
-      "amount_negative": "Amount can't be negative.",
-      "primary_ars_required": "Enter how much money you have in ARS today (zero is fine).",
-      "generic": "Something went wrong. Try again in a moment."
+      "amount_negative": "Amount cannot be negative.",
+      "primary_ars_required": "Enter how much money you have in pesos today (can be 0).",
+      "generic": "Something went wrong. Please try again in a moment."
     }
   },
   "categories": {
-    "comida": "Food & Dining",
-    "transporte": "Transportation",
+    "comida": "Food",
+    "transporte": "Transport",
     "salud": "Health",
     "educacion": "Education",
     "entretenimiento": "Entertainment",
@@ -297,9 +309,14 @@
   },
   "accounts": {
     "title": "Accounts",
+    "edit_title": "Edit account",
     "sections": {
       "cash": "Cash",
-      "bank": "Bank accounts"
+      "bank": "Bank accounts",
+      "archived": "Archived"
+    },
+    "badges": {
+      "archived": "Archived"
     },
     "labels": {
       "name": "Name",
@@ -318,6 +335,7 @@
     },
     "placeholders": {
       "name": "E.g. Wallet, Petty cash",
+      "name_bank": "E.g. Galicia savings",
       "institutionSearch": "Search bank or wallet…"
     },
     "actions": {
@@ -327,20 +345,27 @@
       "reactivate": "Reactivate",
       "delete": "Delete",
       "addCurrency": "Add currency",
-      "deactivateCurrency": "Deactivate currency"
+      "deactivateCurrency": "Deactivate currency",
+      "add_transaction": "Add"
+    },
+    "headers": {
+      "movements": "Transactions"
     },
     "confirmations": {
       "archive_title": "Archive this account?",
       "archive_body": "The account will become inactive. You can reactivate it at any time.",
       "delete_title": "Delete this account?",
       "delete_body": "This action cannot be undone.",
+      "delete_body_no_transactions": "This account has no transactions. Delete it? This action cannot be undone.",
       "deactivateCurrency_title": "Deactivate {currency} on this account?",
       "deactivateCurrency_body": "Historical {currency} transactions will be preserved."
     },
     "errors": {
+      "duplicate": "An account with that name already exists.",
       "name_required": "Name is required.",
       "name_too_long": "Name cannot exceed 50 characters.",
       "institution_required": "Select an institution for bank accounts.",
+      "institution_required_short": "Select an institution.",
       "institution_forbidden": "Cash accounts do not have an institution.",
       "currency_required": "Select at least one currency.",
       "currency_unsupported": "Unsupported currency.",
@@ -348,6 +373,11 @@
       "delete_has_transactions": "This account has transactions. Archive it to preserve the history.",
       "deactivate_non_zero_balance": "Cannot deactivate a currency with a non-zero balance.",
       "deactivate_last_currency": "At least one currency must remain active.",
+      "create_failed": "Failed to create the account.",
+      "archive_failed": "Failed to archive.",
+      "reactivate_failed": "Failed to reactivate.",
+      "delete_failed": "Failed to delete.",
+      "save_failed": "Failed to save.",
       "generic": "Something went wrong. Please try again."
     },
     "empty": {
@@ -357,15 +387,212 @@
     },
     "movements_empty": "No transactions on this account yet.",
     "defaultCashName": "Wallet",
+    "currency_options": {
+      "ars": "Pesos (ARS)",
+      "usd": "Dollars (USD)"
+    },
     "readonly": {
       "type": "Account type cannot be changed.",
       "initialBalance": "Opening balance cannot be modified. Record an adjustment once the transactions module is available."
     }
   },
+  "cards": {
+    "title": "Cards",
+    "back_label": "Cards",
+    "new": {
+      "title": "New credit card",
+      "subtitle_novato": "We only need the closing date of the next statement.",
+      "subtitle_full": "Enter your card details and the current cycle dates."
+    },
+    "edit": {
+      "title": "Edit card",
+      "network_readonly_hint": "cannot be changed after creation"
+    },
+    "labels": {
+      "limit": "Limit",
+      "credit_limit": "Credit limit",
+      "credit_limit_helper": "The limit applies in pesos. Dollar purchases convert at the day's FX rate.",
+      "bank": "Bank / institution",
+      "network": "Card network",
+      "network_short": "Network",
+      "name": "Name",
+      "cycle_dates": "Cycle dates",
+      "current_period": "Current statement",
+      "next_period": "Next statement",
+      "close_date": "Closing",
+      "due_date": "Due",
+      "novato_close_date": "Next closing date",
+      "novato_close_helper": "Take it from the last statement your bank sent you. The app will generate the following statements automatically.",
+      "creation_date": "Created on",
+      "archived_date": "Archived",
+      "movements": "Transactions",
+      "movements_with_count": "Transactions ({count})",
+      "current_movements": "Transactions in the current statement",
+      "amount_to_pay": "Amount to pay",
+      "amount_to_pay_helper": "Pre-filled with the total outstanding. You can edit it.",
+      "debit_account": "Debit account",
+      "payment_date": "Payment date",
+      "next_period_helper": "Confirm the next cycle dates (suggested from your history).",
+      "limit_suffix": "ARS",
+      "limit_placeholder": "Optional",
+      "network_unknown": "Unknown",
+      "network_custom": "Custom"
+    },
+    "placeholders": {
+      "bank_search": "Click to see banks…",
+      "bank_search_short": "Search bank…",
+      "name_auto": "Auto-generated if left blank",
+      "name_example": "E.g. Main Visa",
+      "network_other": "Network name"
+    },
+    "actions": {
+      "add": "+ Add card",
+      "add_short": "+ Add",
+      "edit": "Edit",
+      "archive": "Archive",
+      "reactivate": "Reactivate",
+      "delete": "Delete",
+      "view_all_periods": "View all statements →",
+      "view_full_history": "View full history",
+      "register_first_purchase": "Record first purchase",
+      "register_purchase": "Record purchase",
+      "pay_now": "Pay now",
+      "pay_statement": "Pay statement",
+      "confirm_payment": "Confirm payment",
+      "edit_dates": "Edit dates",
+      "create": "Create card",
+      "save": "Save",
+      "got_it": "Got it",
+      "network_other": "Other network"
+    },
+    "list": {
+      "carousel_empty": "You don't have any credit cards yet.",
+      "periods_title": "Statements",
+      "periods_empty": "No statements recorded."
+    },
+    "limit_summary": {
+      "empty_prompt": "Add a limit to see how much you have left.",
+      "empty_cta": "Add",
+      "committed": "Committed",
+      "over_limit": "over the limit",
+      "available": "Available",
+      "of_connector": "of"
+    },
+    "period": {
+      "future": "Future",
+      "current": "Current",
+      "no_movements": "No transactions",
+      "pending_payment": "Pending payment",
+      "overdue": "Overdue",
+      "paid": "Paid",
+      "estimated_tooltip": "Estimated dates",
+      "estimated_badge": "Estimated",
+      "no_cycle_assigned": "No cycle assigned",
+      "close_prefix": "Closes",
+      "due_prefix": "Due",
+      "close_prefix_lower": "closes",
+      "due_prefix_lower": "due",
+      "paid_on_prefix": "Paid on",
+      "paid_prefix_short": "Paid",
+      "empty_movements": "No transactions in this statement.",
+      "empty_movements_period": "No transactions in this period.",
+      "pending_short": "Pending"
+    },
+    "thermometer": {
+      "title": "How your card is doing",
+      "label_next": "NEXT",
+      "label_next_next": "AFTER",
+      "label_current": "CURRENT",
+      "label_pending": "TO PAY",
+      "label_overdue": "OVERDUE",
+      "label_paid": "PAID",
+      "empty_status": "no transactions"
+    },
+    "detail": {
+      "ready_title": "Your card is ready.",
+      "ready_description": "Record the first purchase to start seeing how each statement is going.",
+      "archived_no_pending": "Archived card · no pending balance",
+      "overdue_alert": "Statement overdue — avoid late charges"
+    },
+    "status": {
+      "archived": "Archived",
+      "overdue": "Overdue",
+      "due_soon": "Due soon",
+      "usage_progress": "{percent}% used · {available} available"
+    },
+    "archived_banner": {
+      "title": "Card archived",
+      "description": "Historical transactions are preserved but you cannot record new purchases.",
+      "cta": "Reactivate"
+    },
+    "deactivate_block": {
+      "title": "Cannot archive",
+      "description": "This card has pending purchases. Pay the statement before archiving."
+    },
+    "payment": {
+      "title": "Pay statement",
+      "back_label": "Statement",
+      "usd_note_prefix": "Dollar purchases:",
+      "usd_note_description": "USD purchases are shown for reference. The ARS amount to pay already includes the conversion at the FX rate used on each purchase.",
+      "section_payment_data": "Payment details",
+      "section_next_period": "Next statement",
+      "warning": "Once confirmed, the payment cannot be reverted. If you recorded a wrong amount or account, fix it with a balance adjustment."
+    },
+    "edit_dates": {
+      "dialog_title": "Edit statement dates",
+      "close_label": "Closing date",
+      "due_label": "Due date",
+      "info_extending": "The next statement will now start on {newStart} (previously {oldStart}). Purchases of the next statement dated up to {newClose} will move to this one.",
+      "info_shrinking": "The next statement will now start on {newStart} (previously {oldStart}). Purchases of this statement dated after {newClose} will move to the next one.",
+      "error_next_paid": "You can't move this date: the next statement is already paid."
+    },
+    "confirmations": {
+      "delete_body": "This card has no transactions. Delete it? This action cannot be undone."
+    },
+    "errors": {
+      "duplicate": "A card with that name already exists.",
+      "bank_required": "Select the issuing bank.",
+      "network_required": "Select the card network.",
+      "network_other_required": "Enter the network name.",
+      "limit_invalid": "Limit must be greater than zero.",
+      "name_too_long": "Maximum 50 characters.",
+      "due_after_close": "Due date must be after the closing date.",
+      "next_close_after_current": "Next closing date must be after the current closing date.",
+      "next_due_after_close": "Next due date must be after the closing date.",
+      "create_failed": "Failed to create the card.",
+      "save_failed": "Failed to save.",
+      "archive_failed": "Failed to archive.",
+      "reactivate_failed": "Failed to reactivate.",
+      "delete_failed": "Failed to delete.",
+      "payment_failed": "Failed to record the payment.",
+      "register_purchase_failed": "Failed to record the purchase.",
+      "edit_dates_failed": "Failed to update dates.",
+      "account_required": "Select an account.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
   "transactions": {
     "title": "Transactions",
+    "description": "Chronological history of income, expenses, transfers, adjustments, and card purchases.",
+    "back_label": "Transactions",
     "new_income": "New income",
     "new_expense": "New expense",
+    "new_title": "New transaction",
+    "edit_title": "Edit transaction",
+    "register_purchase_title": "Record purchase",
+    "detail_back_label": "Detail",
+    "summary_back_label": "Statement",
+    "account_back_label": "Account",
+    "review_alert_title": "Transaction to review",
+    "generated_by_rule": "Generated by a recurring rule",
+    "card_purchase_total": "Total purchase",
+    "installment_summary": "Total purchase: {amount} in {count} installments",
+    "installment_label": "Installment {number}",
+    "installment_label_short": "Installment",
+    "installment_pair": "Installment {n} of {total}",
+    "fx_rate_template": "1 USD = ${rate} ARS",
+    "installment_purchase_label": "Installment purchase",
+    "card_payment_label": "Card payment",
     "tabs": {
       "income": "Income",
       "expense": "Expense",
@@ -381,8 +608,23 @@
       "type": "Type",
       "currency": "Currency",
       "account": "Account",
+      "source_account": "Source account",
       "destination_account": "Destination account",
-      "direction": "Direction"
+      "direction": "Direction",
+      "adjustment_type": "Adjustment type",
+      "payment_account": "Payment account",
+      "card": "Card",
+      "billing_period": "Statement",
+      "due_date": "Due date",
+      "installments": "Installments",
+      "status": "Status",
+      "fx_rate": "Exchange rate",
+      "fx_rate_label": "Exchange rate (ARS per USD)",
+      "fx_rate_daily": "Today's rate",
+      "frequency": "Frequency",
+      "make_recurrent": "Make recurring",
+      "no_subcategory": "No subcategory",
+      "no_category": "No category"
     },
     "types": {
       "income": "Income",
@@ -392,25 +634,60 @@
     },
     "directions": {
       "increase": "Add",
-      "decrease": "Subtract"
+      "decrease": "Subtract",
+      "increase_full": "Add to balance",
+      "decrease_full": "Subtract from balance"
+    },
+    "statuses": {
+      "paid": "Paid",
+      "pending": "Pending",
+      "installment_paid": "Paid"
+    },
+    "review_flags": {
+      "missing_category": "Missing category",
+      "missing_fx_rate": "Review FX rate"
+    },
+    "installments_options": {
+      "none": "No installments",
+      "count": "{n}x",
+      "ars_only": "Only available in pesos",
+      "usd_rate_warning": "You'll need to enter the day's FX rate when confirming each month."
+    },
+    "frequencies": {
+      "weekly": "Weekly",
+      "biweekly": "Biweekly",
+      "monthly": "Monthly",
+      "annual": "Yearly"
     },
     "placeholders": {
       "amount": "0.00",
       "description": "Optional description",
       "category": "Select a category",
       "subcategory": "Select a subcategory (optional)",
-      "destination_account": "Select destination account"
+      "destination_account": "Select destination account",
+      "no_subcategory": "No subcategory",
+      "no_category": "No category"
     },
     "errors": {
+      "duplicate": "An identical transaction already exists.",
       "amount_required": "Amount is required.",
       "amount_positive": "Amount must be greater than zero.",
       "amount_nonzero": "Amount cannot be zero.",
       "date_required": "Date is required.",
       "category_required": "Category is required for expenses.",
+      "category_required_short": "Select a category.",
       "currency_inactive": "The selected currency is not active on this account.",
       "currency_inactive_destination": "The selected currency is not active on the destination account.",
       "destination_required": "Destination account is required.",
       "destination_same_as_source": "Destination account cannot be the same as the source account.",
+      "no_other_accounts": "There are no other active accounts to transfer to.",
+      "no_shared_currencies": "The two accounts share no common currencies.",
+      "exchange_rate_invalid": "Exchange rate must be greater than zero.",
+      "save_failed": "Failed to save the transaction.",
+      "save_failed_short": "Failed to save.",
+      "delete_failed": "Failed to delete.",
+      "recurrence_failed": "Transaction saved, but the recurring rule couldn't be created: {detail}",
+      "recurrence_unknown_error": "unknown error",
       "generic": "Something went wrong. Please try again."
     },
     "empty": {
@@ -421,12 +698,18 @@
     "actions": {
       "create": "Save",
       "edit": "Edit",
-      "delete": "Delete"
+      "delete": "Delete",
+      "view_in_account": "View in account",
+      "register_purchase": "Record purchase",
+      "register_installments": "Record {count} installments"
     },
     "confirmations": {
       "delete_title": "Delete this transaction?",
       "delete_body": "This action cannot be undone.",
       "delete_transfer_body": "The transfer will be deleted and balances of both accounts will be updated.",
+      "delete_transfer_inline": "Delete this transfer? Balances of both accounts will be updated.",
+      "delete_adjustment_inline": "Delete this adjustment? This action cannot be undone.",
+      "delete_movement_inline": "Delete this transaction? This action cannot be undone.",
       "delete_adjustment_body": "The adjustment will be deleted and the account balance will be updated."
     },
     "readonly": {
@@ -434,6 +717,143 @@
       "account": "Account cannot be changed.",
       "currency": "Currency cannot be changed.",
       "destination_account": "Destination account cannot be changed."
+    },
+    "filters": {
+      "search": "Search",
+      "search_placeholder": "Description, account, or visible text",
+      "period": "Period",
+      "type": "Type",
+      "account": "Account",
+      "category": "Category",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "clear": "Clear",
+      "all_masc": "All",
+      "all_fem": "All"
+    },
+    "movement_kinds": {
+      "income": "Income",
+      "expense": "Expenses",
+      "card_payment": "Statement payments",
+      "transfer": "Transfers",
+      "adjustment": "Adjustments",
+      "installment_purchase": "Installment purchases"
+    },
+    "periods": {
+      "current_month": "Current month",
+      "previous_month": "Previous month",
+      "current_year": "Current year",
+      "custom": "Custom"
+    },
+    "account_types": {
+      "cash": "Cash",
+      "bank": "Account",
+      "credit": "Card"
+    },
+    "list": {
+      "global_empty_description": "When you record income, expenses, transfers, or purchases, they'll appear here.",
+      "review_short": "Review",
+      "transfer_subtitle_unknown_source": "Source account",
+      "transfer_subtitle_unknown_destination": "Destination account",
+      "installment_subtitle": "{count} installments",
+      "card_payment_from": "From {accountName}"
+    }
+  },
+  "recurrences": {
+    "title": "Recurring",
+    "description": "Rules that generate pending transactions for you to confirm or skip.",
+    "back_label": "Transactions",
+    "empty": "No recurring rules yet. Toggle \"Make recurring\" when recording a transaction.",
+    "pending_suffix": "pending",
+    "until_template": "until {date}",
+    "frequencies": {
+      "weekly": "Weekly",
+      "biweekly": "Biweekly",
+      "monthly": "Monthly",
+      "annual": "Yearly"
+    },
+    "frequencies_lower": {
+      "weekly": "weekly",
+      "biweekly": "biweekly",
+      "monthly": "monthly",
+      "annual": "yearly"
+    },
+    "statuses": {
+      "active": "Active",
+      "paused": "Paused",
+      "deleted": "Deleted",
+      "finished": "Finished"
+    },
+    "labels": {
+      "amount": "Amount",
+      "frequency": "Frequency",
+      "end_date": "End date",
+      "description": "Description"
+    },
+    "actions": {
+      "pause": "Pause",
+      "resume": "Resume",
+      "delete": "Delete",
+      "save_changes": "Save changes"
+    },
+    "messages": {
+      "changes_saved": "Changes saved.",
+      "rule_paused": "Rule paused.",
+      "rule_resumed": "Rule resumed."
+    },
+    "confirmations": {
+      "delete": "Delete this rule? Pending instances will be cancelled."
+    },
+    "errors": {
+      "duplicate": "An identical recurring rule already exists.",
+      "amount_invalid": "Amount must be greater than zero.",
+      "save_failed": "Failed to save.",
+      "status_change_failed": "Failed to change status.",
+      "delete_failed": "Failed to delete.",
+      "generic": "Something went wrong. Please try again."
+    },
+    "mapper_errors": {
+      "missing_transfer_destination": "The recurring transfer instance has no destination account.",
+      "invalid_transfer_source": "The source account of the transfer doesn't allow this type of movement.",
+      "invalid_income_account": "The selected account doesn't accept income.",
+      "missing_category": "A category is required for this transaction.",
+      "missing_fx_rate": "The day's FX rate is required to confirm this transaction.",
+      "fx_rate_not_allowed": "An FX rate is not applicable to this transaction."
+    },
+    "pending": {
+      "title": "Pending recurring transactions",
+      "count": "{count} pending",
+      "close_notice": "Close notice",
+      "edit_aria": "Edit before confirming",
+      "cancel_edit_aria": "Cancel editing",
+      "amount_changes_rule": "If it changes, the recurring rule will be updated too.",
+      "fx_rate_label": "ARS rate per 1 USD",
+      "fx_rate_placeholder": "E.g. 1230.50",
+      "description_placeholder": "Optional",
+      "confirm": "Confirm",
+      "confirming": "Confirming…",
+      "skip": "Skip",
+      "confirmed_success": "Transaction confirmed.",
+      "skipped_success": "Transaction skipped."
+    },
+    "suggestion": {
+      "title": "Looks like this is recurring",
+      "basis": "Based on {count} transactions in the last 6 months.",
+      "create_rule": "Create rule",
+      "processing": "Processing…",
+      "dismiss": "Dismiss"
+    },
+    "errors_extra": {
+      "fx_required": "Enter the day's ARS/USD rate.",
+      "confirm_failed": "Couldn't confirm the instance.",
+      "skip_failed": "Couldn't skip the instance.",
+      "create_rule_failed": "Couldn't create the rule.",
+      "dismiss_failed": "Couldn't dismiss the suggestion."
+    },
+    "transfer_subtitle_unknown_destination": "—",
+    "labels_extra": {
+      "date": "Date"
     }
   },
   "subcategories": {

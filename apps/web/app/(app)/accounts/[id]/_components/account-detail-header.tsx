@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import type { AccountWithBalances } from '@/lib/accounts/types'
 import { archiveAccount, reactivateAccount, deleteAccount } from '@/app/_actions/accounts'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -13,6 +14,7 @@ type Props = {
 }
 
 export const AccountDetailHeader = ({ account, hasTransactions }: Props) => {
+  const t = useTranslations('accounts')
   const showCents = useShowCents()
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
@@ -24,11 +26,11 @@ export const AccountDetailHeader = ({ account, hasTransactions }: Props) => {
   const hasUSD = activeCurrencies.some((c) => c.currency_code === 'USD')
 
   const handleArchive = () => {
-    if (!confirm('¿Archivar esta cuenta? Vas a poder reactivarla más tarde.')) return
+    if (!confirm(`${t('confirmations.archive_title')} ${t('confirmations.archive_body')}`)) return
     startTransition(async () => {
       setError(null)
       const result = await archiveAccount(account.id)
-      if (!result.ok) setError(result.formError ?? 'Error al archivar')
+      if (!result.ok) setError(result.formError ?? t('errors.archive_failed'))
     })
   }
 
@@ -36,17 +38,17 @@ export const AccountDetailHeader = ({ account, hasTransactions }: Props) => {
     startTransition(async () => {
       setError(null)
       const result = await reactivateAccount(account.id)
-      if (!result.ok) setError(result.formError ?? 'Error al reactivar')
+      if (!result.ok) setError(result.formError ?? t('errors.reactivate_failed'))
     })
   }
 
   const handleDelete = () => {
-    if (!confirm('Esta cuenta no tiene movimientos. ¿Eliminarla? Esta acción no se puede deshacer.')) return
+    if (!confirm(t('confirmations.delete_body_no_transactions'))) return
     startTransition(async () => {
       setError(null)
       const result = await deleteAccount(account.id)
       if (!result.ok) {
-        setError(result.formError ?? 'Error al eliminar')
+        setError(result.formError ?? t('errors.delete_failed'))
         return
       }
       router.push('/accounts')
@@ -61,7 +63,7 @@ export const AccountDetailHeader = ({ account, hasTransactions }: Props) => {
             <h1 className="text-2xl font-semibold">{account.name}</h1>
             {!account.is_active && (
               <span className="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-800">
-                Archivada
+                {t('badges.archived')}
               </span>
             )}
           </div>
@@ -75,7 +77,7 @@ export const AccountDetailHeader = ({ account, hasTransactions }: Props) => {
             href={`/accounts/${account.id}/edit`}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            Editar
+            {t('actions.edit')}
           </a>
           {!account.is_active ? (
             <button
@@ -83,7 +85,7 @@ export const AccountDetailHeader = ({ account, hasTransactions }: Props) => {
               disabled={isPending}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
             >
-              Reactivar
+              {t('actions.reactivate')}
             </button>
           ) : hasTransactions ? (
             <button
@@ -91,7 +93,7 @@ export const AccountDetailHeader = ({ account, hasTransactions }: Props) => {
               disabled={isPending}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
             >
-              Archivar
+              {t('actions.archive')}
             </button>
           ) : (
             <button
@@ -99,7 +101,7 @@ export const AccountDetailHeader = ({ account, hasTransactions }: Props) => {
               disabled={isPending}
               className="text-xs text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
             >
-              Eliminar
+              {t('actions.delete')}
             </button>
           )}
         </div>

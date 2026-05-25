@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl'
 import type { CardPeriodAlert } from '@/lib/cards/queries'
 import { EstimatedDateBadge } from './estimated-date-badge'
 
@@ -20,9 +21,10 @@ const alertColors: Record<CardPeriodAlert, string> = {
 }
 
 export const CardDatesFooter = ({ endDate, dueDate, alert, isEstimated }: Props) => {
+  const t = useTranslations('cards')
   if (!endDate && !dueDate) {
     return (
-      <p className="text-xs text-muted-foreground italic">Sin ciclo asignado</p>
+      <p className="text-xs text-muted-foreground italic">{t('period.no_cycle_assigned')}</p>
     )
   }
 
@@ -30,12 +32,12 @@ export const CardDatesFooter = ({ endDate, dueDate, alert, isEstimated }: Props)
     <div className="flex items-center gap-3 text-xs">
       {endDate && (
         <span className="text-muted-foreground">
-          Cierra <span className="font-medium">{formatShortDate(endDate)}</span>
+          {t('period.close_prefix')} <span className="font-medium">{formatShortDate(endDate)}</span>
         </span>
       )}
       {dueDate && (
         <span className={alertColors[alert]}>
-          Vence <span className="font-medium">{formatShortDate(dueDate)}</span>
+          {t('period.due_prefix')} <span className="font-medium">{formatShortDate(dueDate)}</span>
         </span>
       )}
       {isEstimated && <EstimatedDateBadge />}

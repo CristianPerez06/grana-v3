@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getInstitutions } from '@/lib/accounts/queries'
 import { getCardNetworks } from '@/lib/cards/queries'
@@ -23,16 +24,18 @@ const NewCardPage = async () => {
     getCardNetworks(),
   ])
 
+  const t = await getTranslations('cards')
+
   return (
     <div className="flex flex-col gap-6 max-w-lg">
       <PageHeader
-        title="Nueva tarjeta de crédito"
+        title={t('new.title')}
         description={
           isNovato
-            ? 'Solo necesitamos la fecha de cierre del próximo resumen.'
-            : 'Ingresá los datos de tu tarjeta y las fechas del ciclo actual.'
+            ? t('new.subtitle_novato')
+            : t('new.subtitle_full')
         }
-        backLink={{ href: '/cards', label: 'Tarjetas' }}
+        backLink={{ href: '/cards', label: t('back_label') }}
       />
 
       {isNovato ? (

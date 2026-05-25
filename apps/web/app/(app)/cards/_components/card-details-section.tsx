@@ -1,3 +1,5 @@
+import { useTranslations } from 'next-intl'
+
 const formatDate = (iso: string) => {
   const [y, m, d] = iso.split('-')
   return `${d}/${m}/${y}`
@@ -8,17 +10,20 @@ type Props = {
   archivedAt?: string | null
 }
 
-export const CardDetailsSection = ({ createdAt, archivedAt }: Props) => (
-  <section className="flex flex-col gap-1 text-xs text-muted-foreground">
-    <div className="flex items-center justify-between">
-      <span>Fecha de alta</span>
-      <span>{formatDate(createdAt.slice(0, 10))}</span>
-    </div>
-    {archivedAt && (
+export const CardDetailsSection = ({ createdAt, archivedAt }: Props) => {
+  const t = useTranslations('cards')
+  return (
+    <section className="flex flex-col gap-1 text-xs text-muted-foreground">
       <div className="flex items-center justify-between">
-        <span>Archivada</span>
-        <span>{formatDate(archivedAt.slice(0, 10))}</span>
+        <span>{t('labels.creation_date')}</span>
+        <span>{formatDate(createdAt.slice(0, 10))}</span>
       </div>
-    )}
-  </section>
-)
+      {archivedAt && (
+        <div className="flex items-center justify-between">
+          <span>{t('labels.archived_date')}</span>
+          <span>{formatDate(archivedAt.slice(0, 10))}</span>
+        </div>
+      )}
+    </section>
+  )
+}

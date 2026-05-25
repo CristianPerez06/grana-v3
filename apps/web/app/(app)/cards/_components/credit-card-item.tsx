@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import type { CreditCardSummary } from '@/lib/cards/queries'
 import { subtractMoneyValues } from '@/lib/cards/utils'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -19,6 +20,7 @@ const alertBorderColors = {
 const MASK = '••••••'
 
 export const CreditCardItem = ({ card, showCents = false, masked = false }: Props) => {
+  const t = useTranslations('cards')
   const period = card.activePeriod
   const alert = period?.alert ?? 'none'
   const pendingARS = period?.pendingAmountARS ?? 0
@@ -43,17 +45,17 @@ export const CreditCardItem = ({ card, showCents = false, masked = false }: Prop
         <div className="min-w-0">
           <p className="font-semibold text-sm truncate">{card.name}</p>
           {!card.is_active && (
-            <span className="text-xs text-muted-foreground italic">Archivada</span>
+            <span className="text-xs text-muted-foreground italic">{t('status.archived')}</span>
           )}
         </div>
         {alert === 'red' && (
           <span className="shrink-0 text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
-            Vencido
+            {t('status.overdue')}
           </span>
         )}
         {alert === 'amber' && (
           <span className="shrink-0 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
-            Por vencer
+            {t('status.due_soon')}
           </span>
         )}
       </div>
@@ -79,7 +81,10 @@ export const CreditCardItem = ({ card, showCents = false, masked = false }: Prop
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            {usedPercent}% usado · {renderARS(subtractMoneyValues(card.credit_limit!, pendingARS))} disponible
+            {t('status.usage_progress', {
+              percent: usedPercent,
+              available: renderARS(subtractMoneyValues(card.credit_limit!, pendingARS)),
+            })}
           </p>
         </div>
       )}

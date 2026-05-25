@@ -10,26 +10,10 @@ import {
   Scale,
   Tag,
 } from 'lucide-react'
+import { useLocale, useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import type { FinancialMovement, MovementReviewFlag } from '../movements'
-
-const formatDate = (dateStr: string) => {
-  const [year, month, day] = dateStr.split('-').map(Number)
-  return new Date(year, month - 1, day).toLocaleDateString('es-AR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  })
-}
-
-const formatAmount = (amount: number, currency: 'ARS' | 'USD', showCents: boolean) =>
-  currency === 'ARS' ? formatARS(amount, showCents) : formatUSD(amount, showCents)
-
-const reviewLabel: Record<MovementReviewFlag, string> = {
-  missing_category: 'Sin categoría',
-  missing_fx_rate: 'Revisar cotización',
-}
 
 const movementIcon = {
   income: ArrowDownLeft,
@@ -46,23 +30,8 @@ const movementTone = (movement: FinancialMovement) => {
   return 'text-foreground'
 }
 
-const movementSubtitle = (movement: FinancialMovement) => {
-  if (movement.kind === 'transfer') {
-    return `${movement.account_name ?? 'Cuenta origen'} → ${movement.destination_account_name ?? 'Cuenta destino'}`
-  }
-
-  if (movement.kind === 'installment_purchase') {
-    return movement.installments_total
-      ? `${movement.installments_total} cuotas`
-      : 'Compra en cuotas'
-  }
-
-  if (movement.kind === 'card_payment') {
-    return movement.account_name ? `Desde ${movement.account_name}` : 'Pago de tarjeta'
-  }
-
-  return movement.description ?? movement.account_name ?? null
-}
+const formatAmount = (amount: number, currency: 'ARS' | 'USD', showCents: boolean) =>
+  currency === 'ARS' ? formatARS(amount, showCents) : formatUSD(amount, showCents)
 
 type Props = {
   movements: FinancialMovement[]
@@ -71,13 +40,51 @@ type Props = {
 
 export const GlobalMovementList = ({ movements, recurrenceLinkedIds }: Props) => {
   const showCents = useShowCents()
+  const locale = useLocale()
+  const t = useTranslations('transactions')
+
+  const localeCode = locale === 'en' ? 'en-US' : 'es-AR'
+
+  const formatDate = (dateStr: string) => {
+    const [year, month, day] = dateStr.split('-').map(Number)
+    return new Date(year, month - 1, day).toLocaleDateString(localeCode, {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    })
+  }
+
+  const reviewLabel: Record<MovementReviewFlag, string> = {
+    missing_category: t('review_flags.missing_category'),
+    missing_fx_rate: t('review_flags.missing_fx_rate'),
+  }
+
+  const movementSubtitle = (movement: FinancialMovement): string | null => {
+    if (movement.kind === 'transfer') {
+      return `${movement.account_name ?? t('labels.source_account')} → ${movement.destination_account_name ?? t('labels.destination_account')}`
+    }
+
+    if (movement.kind === 'installment_purchase') {
+      return movement.installments_total
+        ? t('list.installment_subtitle', { count: movement.installments_total })
+        : t('installment_purchase_label')
+    }
+
+    if (movement.kind === 'card_payment') {
+      return movement.account_name
+        ? t('list.card_payment_from', { accountName: movement.account_name })
+        : t('card_payment_label')
+    }
+
+    return movement.description ?? movement.account_name ?? null
+  }
 
   if (movements.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-border p-12 text-center">
-        <p className="text-sm font-medium text-foreground">Todavía no hay movimientos</p>
+        <p className="text-sm font-medium text-foreground">{t('empty.title')}</p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Cuando registres ingresos, gastos, transferencias o consumos, van a aparecer acá.
+          {t('list.global_empty_description')}
         </p>
       </div>
     )
@@ -114,13 +121,13 @@ export const GlobalMovementList = ({ movements, recurrenceLinkedIds }: Props) =>
                           <Repeat
                             size={12}
                             className="shrink-0 text-muted-foreground"
-                            aria-label="Generado por una regla recurrente"
+                            aria-label={t('generated_by_rule')}
                           />
                         )}
                         {movement.review_flags.length > 0 && (
                           <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-800">
                             <AlertTriangle size={12} />
-                            Revisar
+                            {t('list.review_short')}
                           </span>
                         )}
                       </div>

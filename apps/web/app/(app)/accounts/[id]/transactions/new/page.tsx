@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getAccountDetail, getAccounts } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
@@ -16,6 +17,8 @@ const NewTransactionPage = async ({ params }: Props) => {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const t = await getTranslations('transactions')
 
   const [account, categories, accountGroups] = await Promise.all([
     getAccountDetail(id),
@@ -43,7 +46,7 @@ const NewTransactionPage = async ({ params }: Props) => {
   return (
     <div className="flex flex-col gap-6 max-w-lg">
       <PageHeader
-        title={isCredit ? 'Registrar consumo' : 'Nuevo movimiento'}
+        title={isCredit ? t('register_purchase_title') : t('new_title')}
         backLink={{ href: backHref, label: backLabel }}
       />
 

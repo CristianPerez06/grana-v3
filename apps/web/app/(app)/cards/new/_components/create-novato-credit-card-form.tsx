@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Alert } from '@/components/ui/alert'
 import { createNovatoCreditCard } from '@/app/_actions/credit-cards'
 import { NetworkSelector } from '../../_components/network-selector'
@@ -26,6 +27,8 @@ type Props = {
 
 export const CreateNovatoCreditCardForm = ({ institutions, networks }: Props) => {
   const router = useRouter()
+  const t = useTranslations('cards')
+  const tCommon = useTranslations('common')
   const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -43,13 +46,13 @@ export const CreateNovatoCreditCardForm = ({ institutions, networks }: Props) =>
 
   const validate = () => {
     const errs: Record<string, string> = {}
-    if (!institutionId) errs.institution = 'Seleccioná el banco emisor.'
+    if (!institutionId) errs.institution = t('errors.bank_required')
     if (!network) {
-      errs.network = 'Seleccioná la red de la tarjeta.'
+      errs.network = t('errors.network_required')
     } else if (network.type === 'other' && !network.name.trim()) {
-      errs.network = 'Ingresá el nombre de la red.'
+      errs.network = t('errors.network_other_required')
     }
-    if (!closeDate) errs.closeDate = 'Requerido.'
+    if (!closeDate) errs.closeDate = tCommon('required_short')
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -69,7 +72,7 @@ export const CreateNovatoCreditCardForm = ({ institutions, networks }: Props) =>
         close_date: closeDate,
       })
       if (!result.ok) {
-        setFormError(result.formError ?? 'Error al crear la tarjeta')
+        setFormError(result.formError ?? t('errors.create_failed'))
         return
       }
       if (result.id) router.push(`/cards/${result.id}`)
@@ -83,7 +86,7 @@ export const CreateNovatoCreditCardForm = ({ institutions, networks }: Props) =>
     <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
       {/* 1. Banco */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium">Banco / institución</label>
+        <label className="text-sm font-medium">{t('labels.bank')}</label>
         <div className="relative">
           <input
             type="text"
@@ -96,7 +99,7 @@ export const CreateNovatoCreditCardForm = ({ institutions, networks }: Props) =>
             onBlur={() => {
               setTimeout(() => setInstitutionFocused(false), 150)
             }}
-            placeholder="Hacé click para ver los bancos…"
+            placeholder={t('placeholders.bank_search')}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
           {institutionFocused && !institutionId && (
@@ -117,7 +120,7 @@ export const CreateNovatoCreditCardForm = ({ institutions, networks }: Props) =>
                 </button>
               ))}
               {filteredInstitutions.length === 0 && (
-                <p className="px-3 py-2 text-sm text-muted-foreground">Sin resultados.</p>
+                <p className="px-3 py-2 text-sm text-muted-foreground">{tCommon('no_results')}</p>
               )}
             </div>
           )}
@@ -127,7 +130,7 @@ export const CreateNovatoCreditCardForm = ({ institutions, networks }: Props) =>
 
       {/* 2. Red */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium">Red de la tarjeta</label>
+        <label className="text-sm font-medium">{t('labels.network')}</label>
         <NetworkSelector
           networks={networks}
           value={network}
@@ -139,13 +142,13 @@ export const CreateNovatoCreditCardForm = ({ institutions, networks }: Props) =>
       {/* 3. Nombre (opcional) */}
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium">
-          Nombre <span className="text-muted-foreground font-normal">(opcional)</span>
+          {t('labels.name')} <span className="text-muted-foreground font-normal">{tCommon('optional')}</span>
         </label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Ej: Visa principal"
+          placeholder={t('placeholders.name_example')}
           maxLength={50}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
@@ -154,11 +157,10 @@ export const CreateNovatoCreditCardForm = ({ institutions, networks }: Props) =>
       {/* 4. Fecha de cierre */}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="close_date" className="text-sm font-medium">
-          Fecha del próximo cierre
+          {t('labels.novato_close_date')}
         </label>
         <p className="text-xs text-muted-foreground">
-          Tomala del último resumen que te mandó el banco. La app va a ir generando los
-          resúmenes siguientes sola.
+          {t('labels.novato_close_helper')}
         </p>
         <input
           id="close_date"
@@ -178,7 +180,7 @@ export const CreateNovatoCreditCardForm = ({ institutions, networks }: Props) =>
         disabled={isSubmitting}
         className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
       >
-        {isSubmitting ? 'Creando…' : 'Crear tarjeta'}
+        {isSubmitting ? tCommon('creating') : t('actions.create')}
       </button>
     </form>
   )

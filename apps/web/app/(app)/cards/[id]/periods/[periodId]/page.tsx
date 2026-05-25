@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardPeriodDetail } from '@/lib/cards/queries'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -36,12 +37,14 @@ const PeriodDetailPage = async ({ params }: Props) => {
   const canEditDates = !period.has_payment
   const totalAmount = period.has_payment ? period.paidAmountARS : period.pendingAmountARS
 
+  const t = await getTranslations('cards')
+
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
       <PageHeader
         title={`${formatDate(period.start_date)} – ${formatDate(period.end_date)}`}
-        description={`Vence ${formatDate(period.due_date)}`}
-        backLink={{ href: `/cards/${id}/periods`, label: 'Resúmenes' }}
+        description={`${t('period.due_prefix')} ${formatDate(period.due_date)}`}
+        backLink={{ href: `/cards/${id}/periods`, label: t('list.periods_title') }}
         actions={
           canEditDates && (
             <EditDatesSheet
@@ -63,7 +66,7 @@ const PeriodDetailPage = async ({ params }: Props) => {
         )}
         {period.has_payment && period.paymentDate && (
           <p className="text-xs text-green-700 mt-1">
-            Pagado el {formatDate(period.paymentDate)}
+            {t('period.paid_on_prefix')} {formatDate(period.paymentDate)}
           </p>
         )}
       </div>
@@ -78,19 +81,19 @@ const PeriodDetailPage = async ({ params }: Props) => {
               : 'bg-primary text-primary-foreground hover:bg-primary/90'
           }`}
         >
-          Pagar resumen
+          {t('actions.pay_statement')}
         </Link>
       )}
 
       {/* Transactions */}
       <section>
         <h2 className="mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wide">
-          Movimientos ({period.transactions.length})
+          {t('labels.movements_with_count', { count: period.transactions.length })}
         </h2>
 
         {period.transactions.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">
-            Sin movimientos en este período.
+            {t('period.empty_movements_period')}
           </p>
         ) : (
           <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
@@ -127,7 +130,7 @@ const PeriodDetailPage = async ({ params }: Props) => {
                     </p>
                   )}
                   <span className={`text-xs ${tx.status === 'paid' ? 'text-green-600' : 'text-muted-foreground'}`}>
-                    {tx.status === 'paid' ? 'Pagado' : 'Pendiente'}
+                    {tx.status === 'paid' ? t('period.paid') : t('period.pending_short')}
                   </span>
                 </div>
               </Link>

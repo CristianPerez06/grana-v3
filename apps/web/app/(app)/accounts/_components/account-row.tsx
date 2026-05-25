@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
+import { useTranslations } from 'next-intl'
 import type { AccountWithBalances } from '@/lib/accounts/types'
 import { reactivateAccount } from '@/app/_actions/accounts'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -12,6 +13,7 @@ type Props = {
 }
 
 export const AccountRow = ({ account }: Props) => {
+  const t = useTranslations('accounts')
   const showCents = useShowCents()
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -23,7 +25,7 @@ export const AccountRow = ({ account }: Props) => {
     startTransition(async () => {
       setError(null)
       const result = await reactivateAccount(account.id)
-      if (!result.ok) setError(result.formError ?? 'Error al reactivar')
+      if (!result.ok) setError(result.formError ?? t('errors.reactivate_failed'))
     })
   }
 
@@ -39,7 +41,7 @@ export const AccountRow = ({ account }: Props) => {
           )}
           {!account.is_active && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-800">
-              Archivada
+              {t('badges.archived')}
             </span>
           )}
         </div>
@@ -63,7 +65,7 @@ export const AccountRow = ({ account }: Props) => {
             href={`/accounts/${account.id}/edit`}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            Editar
+            {t('actions.edit')}
           </Link>
         ) : (
           <button
@@ -71,7 +73,7 @@ export const AccountRow = ({ account }: Props) => {
             disabled={isPending}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
           >
-            Reactivar
+            {t('actions.reactivate')}
           </button>
         )}
       </div>

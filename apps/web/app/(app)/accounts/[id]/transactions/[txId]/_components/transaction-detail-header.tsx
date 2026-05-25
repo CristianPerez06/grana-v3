@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import type { TransactionWithDetails } from '@/lib/transactions/types'
 import { deleteTransaction, deleteTransfer, deleteAdjustment } from '@/app/_actions/transactions'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -21,13 +22,6 @@ const formatDate = (dateStr: string) => {
   })
 }
 
-const TYPE_LABELS = {
-  income: 'Ingreso',
-  expense: 'Gasto',
-  transfer: 'Transferencia',
-  adjustment: 'Ajuste',
-}
-
 type Props = {
   transaction: TransactionWithDetails
   accountId: string
@@ -39,6 +33,7 @@ type Props = {
 }
 
 export const TransactionDetailHeader = ({ transaction, accountId, periodId, returnHref, showActions = true, installmentParent, installmentSiblings }: Props) => {
+  const t = useTranslations('transactions')
   const showCents = useShowCents()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -46,12 +41,19 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, retu
 
   const { type } = transaction
 
+  const TYPE_LABELS: Record<typeof type, string> = {
+    income: t('types.income'),
+    expense: t('types.expense'),
+    transfer: t('types.transfer'),
+    adjustment: t('types.adjustment'),
+  }
+
   const confirmMessage =
     type === 'transfer'
-      ? '¿Eliminar esta transferencia? Se actualizarán los saldos de ambas cuentas.'
+      ? t('confirmations.delete_transfer_inline')
       : type === 'adjustment'
-        ? '¿Eliminar este ajuste? Esta acción no se puede deshacer.'
-        : '¿Eliminar este movimiento? Esta acción no se puede deshacer.'
+        ? t('confirmations.delete_adjustment_inline')
+        : t('confirmations.delete_movement_inline')
 
   const handleDelete = () => {
     if (!confirm(confirmMessage)) return
@@ -72,7 +74,7 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, retu
       }
 
       if (!result.ok) {
-        setError(result.formError ?? 'Error al eliminar.')
+        setError(result.formError ?? t('errors.delete_failed'))
         return
       }
       router.push(returnHref ?? (periodId ? `/cards/${accountId}/periods/${periodId}` : `/accounts/${accountId}`))
@@ -99,9 +101,9 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, retu
       <div className="flex flex-col gap-1">
         <span className={`text-xs font-medium px-2 py-0.5 rounded-full w-fit ${typeBadgeClass}`}>
           {transaction.is_parent
-            ? 'Compra en cuotas'
+            ? t('installment_purchase_label')
             : (transaction.period_payments?.length ?? 0) > 0
-              ? 'Pago de tarjeta'
+              ? t('card_payment_label')
               : TYPE_LABELS[type]}
         </span>
         <p className={`text-3xl font-bold tabular-nums ${isPositive ? 'text-green-600' : ''}`}>
@@ -113,20 +115,20 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, retu
       {/* Details */}
       <dl className="flex flex-col gap-3 text-sm">
         <div className="flex justify-between">
-          <dt className="text-muted-foreground">Fecha</dt>
+          <dt className="text-muted-foreground">{t('labels.date')}</dt>
           <dd className="capitalize">{formatDate(transaction.date)}</dd>
         </div>
 
         {/* Income/Expense: category */}
         {(type === 'income' || type === 'expense') && transaction.category && (
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">Categoría</dt>
+            <dt className="text-muted-foreground">{t('labels.category')}</dt>
             <dd>{transaction.category.name}</dd>
           </div>
         )}
         {(type === 'income' || type === 'expense') && transaction.subcategory && (
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">Subcategoría</dt>
+            <dt className="text-muted-foreground">{t('labels.subcategory')}</dt>
             <dd>{transaction.subcategory.name}</dd>
           </div>
         )}
@@ -135,11 +137,11 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, retu
         {type === 'transfer' && (
           <>
             <div className="flex justify-between">
-              <dt className="text-muted-foreground">Cuenta origen</dt>
+              <dt className="text-muted-foreground">{t('labels.source_account')}</dt>
               <dd>{transaction.source_account?.name ?? accountId}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-muted-foreground">Cuenta destino</dt>
+              <dt className="text-muted-foreground">{t('labels.destination_account')}</dt>
               <dd>{transaction.destination_account?.name ?? '—'}</dd>
             </div>
           </>
@@ -148,14 +150,14 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, retu
         {/* Adjustment: show sign context */}
         {type === 'adjustment' && (
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">Tipo de ajuste</dt>
-            <dd>{transaction.amount > 0 ? 'Suma al saldo' : 'Resta del saldo'}</dd>
+            <dt className="text-muted-foreground">{t('labels.adjustment_type')}</dt>
+            <dd>{transaction.amount > 0 ? t('directions.increase_full') : t('directions.decrease_full')}</dd>
           </div>
         )}
 
         {transaction.description && (
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">Descripción</dt>
+            <dt className="text-muted-foreground">{t('labels.description')}</dt>
             <dd>{transaction.description}</dd>
           </div>
         )}
@@ -163,32 +165,32 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, retu
         {/* Credit card specific fields */}
         {transaction.status && (
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">Estado</dt>
+            <dt className="text-muted-foreground">{t('labels.status')}</dt>
             <dd>
               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                 transaction.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
               }`}>
-                {transaction.status === 'paid' ? 'Pagado' : 'Pendiente'}
+                {transaction.status === 'paid' ? t('statuses.paid') : t('statuses.pending')}
               </span>
             </dd>
           </div>
         )}
         {transaction.due_date && (
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">Vencimiento del resumen</dt>
+            <dt className="text-muted-foreground">{t('labels.due_date')}</dt>
             <dd>{formatDate(transaction.due_date)}</dd>
           </div>
         )}
         {transaction.installment_n && transaction.installments_total && (
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">Cuota</dt>
-            <dd>{transaction.installment_n} de {transaction.installments_total}</dd>
+            <dt className="text-muted-foreground">{t('installment_label_short')}</dt>
+            <dd>{t('installment_pair', { n: transaction.installment_n, total: transaction.installments_total })}</dd>
           </div>
         )}
         {transaction.fx_rate_to_ars && (
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">Tipo de cambio</dt>
-            <dd>1 USD = ${transaction.fx_rate_to_ars} ARS</dd>
+            <dt className="text-muted-foreground">{t('labels.fx_rate')}</dt>
+            <dd>{t('fx_rate_template', { rate: transaction.fx_rate_to_ars })}</dd>
           </div>
         )}
       </dl>
@@ -197,12 +199,15 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, retu
       {installmentParent && installmentSiblings && installmentSiblings.length > 0 && (
         <div className="flex flex-col gap-2">
           <p className="text-sm font-medium">
-            Compra total: {formatBalance(installmentParent.amount, installmentParent.currency_code as 'ARS' | 'USD', showCents)} en {installmentSiblings.length} cuotas
+            {t('installment_summary', {
+              amount: formatBalance(installmentParent.amount, installmentParent.currency_code as 'ARS' | 'USD', showCents),
+              count: installmentSiblings.length,
+            })}
           </p>
           <div className="flex flex-col divide-y divide-border rounded-md border border-border">
             {installmentSiblings.map((sibling) => (
               <div key={sibling.id} className={`flex justify-between px-3 py-2 text-sm ${sibling.id === transaction.id ? 'bg-muted font-medium' : ''}`}>
-                <span>Cuota {sibling.installment_n}</span>
+                <span>{t('installment_label', { number: sibling.installment_n ?? 0 })}</span>
                 <span className="flex items-center gap-2">
                   {formatBalance(sibling.amount, sibling.currency_code as 'ARS' | 'USD', showCents)}
                   <span className={`text-xs ${sibling.status === 'paid' ? 'text-green-600' : 'text-muted-foreground'}`}>
@@ -222,14 +227,14 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, retu
             href={`/accounts/${accountId}/transactions/${transaction.id}/edit`}
             className="inline-flex items-center rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
           >
-            Editar
+            {t('actions.edit')}
           </Link>
           <button
             onClick={handleDelete}
             disabled={isPending}
             className="inline-flex items-center rounded-md px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
           >
-            Eliminar
+            {t('actions.delete')}
           </button>
         </div>
       )}

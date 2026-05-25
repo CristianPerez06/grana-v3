@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 
 const formatDate = (iso: string) => {
@@ -5,13 +6,7 @@ const formatDate = (iso: string) => {
   return `${d}/${m}`
 }
 
-export type ThermometerColumnLabel =
-  | 'EN CURSO'
-  | 'POR PAGAR'
-  | 'VENCIDO'
-  | 'PAGADO'
-  | 'PRÓXIMO'
-  | 'SIGUIENTE'
+export type ThermometerColumnLabel = string
 
 export type ThermometerColumn = {
   label: ThermometerColumnLabel
@@ -42,12 +37,13 @@ const barColor = (percent: number) => {
 }
 
 export const CardsThermometer = ({ columns, creditLimit, showCents = false }: Props) => {
+  const t = useTranslations('cards')
   const hasLimit = creditLimit !== null && creditLimit > 0
 
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-        Cómo viene tu tarjeta
+        {t('thermometer.title')}
       </h2>
 
       <div className="grid grid-cols-3 gap-3">
@@ -67,8 +63,8 @@ export const CardsThermometer = ({ columns, creditLimit, showCents = false }: Pr
                 {col.label}
               </p>
               <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-                <span>cierra {formatDate(col.closeDate)}</span>
-                <span>vence {formatDate(col.dueDate)}</span>
+                <span>{t('period.close_prefix_lower')} {formatDate(col.closeDate)}</span>
+                <span>{t('period.due_prefix_lower')} {formatDate(col.dueDate)}</span>
               </div>
 
               {hasLimit && (
@@ -92,7 +88,7 @@ export const CardsThermometer = ({ columns, creditLimit, showCents = false }: Pr
                 </p>
               )}
               {isEmpty && (
-                <p className="text-[11px] text-muted-foreground italic">sin movimientos</p>
+                <p className="text-[11px] text-muted-foreground italic">{t('thermometer.empty_status')}</p>
               )}
             </div>
           )

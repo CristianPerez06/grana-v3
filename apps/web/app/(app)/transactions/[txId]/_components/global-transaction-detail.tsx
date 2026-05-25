@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { AlertTriangle } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import type { FinancialMovement, MovementReviewFlag } from '@/lib/transactions/movements'
@@ -20,11 +21,6 @@ const formatDate = (dateStr: string) => {
   })
 }
 
-const reviewLabel: Record<MovementReviewFlag, string> = {
-  missing_category: 'Sin categoría',
-  missing_fx_rate: 'Revisar cotización',
-}
-
 const movementTone = (movement: FinancialMovement) => {
   if (movement.kind === 'income') return 'text-green-600'
   if (movement.kind === 'adjustment' && movement.sign === '+') return 'text-green-600'
@@ -34,6 +30,7 @@ const movementTone = (movement: FinancialMovement) => {
 const detailRows = (
   transaction: TransactionWithDetails,
   movement: FinancialMovement,
+  t: (key: string) => string,
   installmentSiblings?: TransactionWithDetails[] | null,
 ): Array<{ label: string; value: string | null }> => {
   const payment = transaction.period_payments?.[0]
@@ -42,51 +39,53 @@ const detailRows = (
 
   if (movement.kind === 'transfer') {
     return [
-      { label: 'Cuenta origen', value: movement.account_name },
-      { label: 'Cuenta destino', value: movement.destination_account_name },
-      { label: 'Descripción', value: movement.description },
+      { label: t('labels.source_account'), value: movement.account_name },
+      { label: t('labels.destination_account'), value: movement.destination_account_name },
+      { label: t('labels.description'), value: movement.description },
     ]
   }
 
   if (movement.kind === 'adjustment') {
     return [
       {
-        label: 'Tipo de ajuste',
-        value: transaction.amount > 0 ? 'Suma al saldo' : 'Resta del saldo',
+        label: t('labels.adjustment_type'),
+        value: transaction.amount > 0 ? t('directions.increase_full') : t('directions.decrease_full'),
       },
-      { label: 'Cuenta', value: movement.account_name },
-      { label: 'Descripción', value: movement.description },
+      { label: t('labels.account'), value: movement.account_name },
+      { label: t('labels.description'), value: movement.description },
     ]
   }
 
   if (movement.kind === 'card_payment') {
     return [
-      { label: 'Cuenta de pago', value: movement.account_name },
-      { label: 'Tarjeta', value: payment?.period?.account?.name ?? null },
-      { label: 'Resumen', value: payment?.period ? `${formatDate(payment.period.start_date)} - ${formatDate(payment.period.end_date)}` : null },
-      { label: 'Vencimiento', value: payment?.period?.due_date ? formatDate(payment.period.due_date) : null },
-      { label: 'Descripción', value: movement.description },
+      { label: t('labels.payment_account'), value: movement.account_name },
+      { label: t('labels.card'), value: payment?.period?.account?.name ?? null },
+      { label: t('labels.billing_period'), value: payment?.period ? `${formatDate(payment.period.start_date)} - ${formatDate(payment.period.end_date)}` : null },
+      { label: t('labels.due_date'), value: payment?.period?.due_date ? formatDate(payment.period.due_date) : null },
+      { label: t('labels.description'), value: movement.description },
     ]
   }
 
   if (movement.kind === 'installment_purchase') {
     return [
-      { label: 'Tarjeta', value: installmentCardName },
+      { label: t('labels.card'), value: installmentCardName },
       {
-        label: 'Cuotas',
-        value: movement.installments_total ? `${movement.installments_total} cuotas` : null,
+        label: t('labels.installments'),
+        value: movement.installments_total
+          ? `${movement.installments_total} ${t('labels.installments').toLowerCase()}`
+          : null,
       },
-      { label: 'Categoría', value: transaction.category?.name ?? null },
-      { label: 'Subcategoría', value: transaction.subcategory?.name ?? null },
-      { label: 'Descripción', value: movement.description },
+      { label: t('labels.category'), value: transaction.category?.name ?? null },
+      { label: t('labels.subcategory'), value: transaction.subcategory?.name ?? null },
+      { label: t('labels.description'), value: movement.description },
     ]
   }
 
   return [
-    { label: 'Cuenta', value: movement.account_name },
-    { label: 'Categoría', value: transaction.category?.name ?? null },
-    { label: 'Subcategoría', value: transaction.subcategory?.name ?? null },
-    { label: 'Descripción', value: movement.description },
+    { label: t('labels.account'), value: movement.account_name },
+    { label: t('labels.category'), value: transaction.category?.name ?? null },
+    { label: t('labels.subcategory'), value: transaction.subcategory?.name ?? null },
+    { label: t('labels.description'), value: movement.description },
   ]
 }
 
@@ -104,7 +103,13 @@ export const GlobalTransactionDetail = ({
   installmentSiblings,
 }: Props) => {
   const showCents = useShowCents()
+  const t = useTranslations('transactions')
   const sign = movement.sign ?? ''
+
+  const reviewLabel: Record<MovementReviewFlag, string> = {
+    missing_category: t('review_flags.missing_category'),
+    missing_fx_rate: t('review_flags.missing_fx_rate'),
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -122,7 +127,7 @@ export const GlobalTransactionDetail = ({
         <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           <AlertTriangle className="mt-0.5 shrink-0" size={16} />
           <div>
-            <p className="font-medium">Movimiento a revisar</p>
+            <p className="font-medium">{t('review_alert_title')}</p>
             <p>{movement.review_flags.map((flag) => reviewLabel[flag]).join(' · ')}</p>
           </div>
         </div>
@@ -130,11 +135,11 @@ export const GlobalTransactionDetail = ({
 
       <dl className="flex flex-col gap-3 text-sm">
         <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">Fecha</dt>
+          <dt className="text-muted-foreground">{t('labels.date')}</dt>
           <dd className="text-right capitalize">{formatDate(movement.date)}</dd>
         </div>
 
-        {detailRows(transaction, movement, installmentSiblings)
+        {detailRows(transaction, movement, t, installmentSiblings)
           .filter((row) => row.value)
           .map((row) => (
             <div key={row.label} className="flex justify-between gap-4">
@@ -145,14 +150,14 @@ export const GlobalTransactionDetail = ({
 
         {transaction.status && (
           <div className="flex justify-between gap-4">
-            <dt className="text-muted-foreground">Estado</dt>
+            <dt className="text-muted-foreground">{t('labels.status')}</dt>
             <dd>
               <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                 transaction.status === 'paid'
                   ? 'bg-green-100 text-green-700'
                   : 'bg-amber-100 text-amber-700'
               }`}>
-                {transaction.status === 'paid' ? 'Pagado' : 'Pendiente'}
+                {transaction.status === 'paid' ? t('statuses.paid') : t('statuses.pending')}
               </span>
             </dd>
           </div>
@@ -160,8 +165,8 @@ export const GlobalTransactionDetail = ({
 
         {transaction.fx_rate_to_ars && (
           <div className="flex justify-between gap-4">
-            <dt className="text-muted-foreground">Tipo de cambio</dt>
-            <dd>1 USD = ${transaction.fx_rate_to_ars} ARS</dd>
+            <dt className="text-muted-foreground">{t('labels.fx_rate')}</dt>
+            <dd>{t('fx_rate_template', { rate: transaction.fx_rate_to_ars })}</dd>
           </div>
         )}
       </dl>
@@ -169,7 +174,10 @@ export const GlobalTransactionDetail = ({
       {installmentParent && installmentSiblings && installmentSiblings.length > 0 && (
         <div className="flex flex-col gap-2">
           <p className="text-sm font-medium">
-            Compra total: {formatBalance(installmentParent.amount, installmentParent.currency_code, showCents)} en {installmentSiblings.length} cuotas
+            {t('installment_summary', {
+              amount: formatBalance(installmentParent.amount, installmentParent.currency_code, showCents),
+              count: installmentSiblings.length,
+            })}
           </p>
           <div className="flex flex-col divide-y divide-border rounded-md border border-border">
             {installmentSiblings.map((sibling) => (
@@ -177,11 +185,11 @@ export const GlobalTransactionDetail = ({
                 key={sibling.id}
                 className="flex justify-between px-3 py-2 text-sm"
               >
-                <span>Cuota {sibling.installment_n}</span>
+                <span>{t('installment_label', { number: sibling.installment_n ?? 0 })}</span>
                 <span className="flex items-center gap-2">
                   {formatBalance(sibling.amount, sibling.currency_code, showCents)}
                   <span className={`text-xs ${sibling.status === 'paid' ? 'text-green-600' : 'text-muted-foreground'}`}>
-                    {sibling.status === 'paid' ? 'Pagada' : 'Pendiente'}
+                    {sibling.status === 'paid' ? t('statuses.installment_paid') : t('statuses.pending')}
                   </span>
                 </span>
               </div>
@@ -195,7 +203,7 @@ export const GlobalTransactionDetail = ({
           href={`/accounts/${transaction.account_id}/transactions/${transaction.id}`}
           className="text-sm font-medium text-primary hover:underline"
         >
-          Ver en cuenta
+          {t('actions.view_in_account')}
         </Link>
       )}
     </div>

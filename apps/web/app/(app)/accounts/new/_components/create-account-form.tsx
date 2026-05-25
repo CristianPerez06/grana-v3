@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Alert } from '@/components/ui/alert'
 import { createAccount } from '@/app/_actions/accounts'
 import { parseMoneyInput } from '@grana/validation'
@@ -12,12 +13,11 @@ type Props = {
   institutions: Institution[]
 }
 
-const CURRENCIES = [
-  { code: 'ARS', label: 'Pesos (ARS)' },
-  { code: 'USD', label: 'Dólares (USD)' },
-]
+const CURRENCY_CODES = ['ARS', 'USD'] as const
 
 export const CreateAccountForm = ({ institutions }: Props) => {
+  const t = useTranslations('accounts')
+  const tCommon = useTranslations('common')
   const router = useRouter()
   const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -31,18 +31,23 @@ export const CreateAccountForm = ({ institutions }: Props) => {
   const [balances, setBalances] = useState<Record<string, string>>({ ARS: '0', USD: '0' })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  const CURRENCIES = [
+    { code: 'ARS', label: t('currency_options.ars') },
+    { code: 'USD', label: t('currency_options.usd') },
+  ]
+
   const filteredInstitutions = institutions.filter((i) =>
     i.name.toLowerCase().includes(institutionSearch.toLowerCase()),
   )
 
   const validate = () => {
     const errs: Record<string, string> = {}
-    if (!name.trim()) errs.name = 'El nombre es obligatorio.'
-    if (name.trim().length > 50) errs.name = 'El nombre no puede tener más de 50 caracteres.'
-    if (type === 'bank' && !institutionId) errs.institution = 'Seleccioná una institución.'
-    for (const { code } of CURRENCIES) {
+    if (!name.trim()) errs.name = t('errors.name_required')
+    if (name.trim().length > 50) errs.name = t('errors.name_too_long')
+    if (type === 'bank' && !institutionId) errs.institution = t('errors.institution_required_short')
+    for (const code of CURRENCY_CODES) {
       const value = parseMoneyInput(balances[code] ?? '0')
-      if (value === null || value < 0) errs[`balance_${code}`] = 'El saldo inicial no puede ser negativo.'
+      if (value === null || value < 0) errs[`balance_${code}`] = t('errors.balance_negative')
     }
     setErrors(errs)
     return Object.keys(errs).length === 0
@@ -56,7 +61,7 @@ export const CreateAccountForm = ({ institutions }: Props) => {
     setIsSubmitting(true)
 
     try {
-      const currencies = CURRENCIES.map(({ code }) => ({
+      const currencies = CURRENCY_CODES.map((code) => ({
         currency_code: code,
         initial_balance: parseMoneyInput(balances[code] ?? '0') ?? 0,
       }))
@@ -69,7 +74,7 @@ export const CreateAccountForm = ({ institutions }: Props) => {
       })
 
       if (!result.ok) {
-        setFormError(result.formError ?? 'Error al crear la cuenta')
+        setFormError(result.formError ?? t('errors.create_failed'))
         return
       }
 
@@ -83,21 +88,21 @@ export const CreateAccountForm = ({ institutions }: Props) => {
     <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
       {/* Type selector */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-foreground">Tipo de cuenta</label>
+        <label className="text-sm font-medium text-foreground">{t('labels.type')}</label>
         <div className="flex rounded-md border border-input overflow-hidden">
-          {(['cash', 'bank'] as const).map((t) => (
+          {(['cash', 'bank'] as const).map((opt) => (
             <button
-              key={t}
+              key={opt}
               type="button"
-              onClick={() => setType(t)}
+              onClick={() => setType(opt)}
               className={[
                 'flex-1 py-2 text-sm font-medium transition-colors',
-                type === t
+                type === opt
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-background text-muted-foreground hover:text-foreground',
               ].join(' ')}
             >
-              {t === 'cash' ? 'Efectivo' : 'Bancaria / Débito'}
+              {opt === 'cash' ? t('types.cash') : t('types.bank')}
             </button>
           ))}
         </div>
@@ -105,12 +110,12 @@ export const CreateAccountForm = ({ institutions }: Props) => {
 
       {/* Name */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-foreground">Nombre</label>
+        <label className="text-sm font-medium text-foreground">{t('labels.name')}</label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder={type === 'cash' ? 'Ej: Billetera, Caja chica' : 'Ej: Caja de ahorro Galicia'}
+          placeholder={type === 'cash' ? t('placeholders.name') : t('placeholders.name_bank')}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
         {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
@@ -119,12 +124,12 @@ export const CreateAccountForm = ({ institutions }: Props) => {
       {/* Institution (bank only) */}
       {type === 'bank' && (
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-foreground">Institución</label>
+          <label className="text-sm font-medium text-foreground">{t('labels.institution')}</label>
           <input
             type="text"
             value={institutionSearch}
             onChange={(e) => setInstitutionSearch(e.target.value)}
-            placeholder="Buscar banco o billetera…"
+            placeholder={t('placeholders.institutionSearch')}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
           <div className="max-h-48 overflow-y-auto rounded-md border border-input">
@@ -153,7 +158,7 @@ export const CreateAccountForm = ({ institutions }: Props) => {
 
       {/* Currencies — bimoneda por defecto: ambas monedas siempre activas. */}
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-foreground">Saldo inicial</label>
+        <label className="text-sm font-medium text-foreground">{t('labels.initialBalance')}</label>
         {CURRENCIES.map(({ code, label }) => (
           <div key={code} className="flex items-center gap-3 rounded-md border border-input p-3">
             <span className="text-sm font-medium flex-1">{label}</span>
@@ -181,7 +186,7 @@ export const CreateAccountForm = ({ institutions }: Props) => {
         disabled={isSubmitting}
         className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
       >
-        {isSubmitting ? 'Creando…' : 'Crear cuenta'}
+        {isSubmitting ? tCommon('creating') : t('actions.create')}
       </button>
     </form>
   )

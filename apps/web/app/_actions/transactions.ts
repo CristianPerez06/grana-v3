@@ -21,6 +21,7 @@ import {
   type UpdateAdjustmentInput,
 } from '@grana/validation'
 import type { ActionResult } from './types'
+import { translatePostgresError } from './_lib/translate-error'
 
 function normalizeActionMoney(value: number): number {
   return normalizeMoneyAmount(value) ?? value
@@ -173,7 +174,7 @@ export async function updateTransaction(
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
 
   revalidatePath('/accounts')
   revalidatePath(`/accounts/${accountId}`)
@@ -219,7 +220,7 @@ export async function deleteTransaction(
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
 
   revalidatePath('/accounts')
   revalidatePath(`/accounts/${accountId}`)
@@ -359,7 +360,7 @@ export async function updateTransfer(
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
 
   revalidatePath('/accounts')
   revalidatePath(`/accounts/${accountId}`)
@@ -401,7 +402,7 @@ export async function updateAdjustment(
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
 
   revalidatePath('/accounts')
   revalidatePath(`/accounts/${accountId}`)
@@ -425,7 +426,7 @@ export async function deleteTransfer(
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
 
   revalidatePath('/accounts')
   revalidatePath(`/accounts/${accountId}`)
@@ -448,7 +449,7 @@ export async function deleteAdjustment(
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
 
   revalidatePath('/accounts')
   revalidatePath(`/accounts/${accountId}`)

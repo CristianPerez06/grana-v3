@@ -2,18 +2,12 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import type { TransactionWithDetails } from '@/lib/transactions/types'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 import { updateTransaction, updateTransfer, updateAdjustment } from '@/app/_actions/transactions'
 import { parseMoneyInput } from '@grana/validation'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
-
-const TYPE_LABELS = {
-  income: 'Ingreso',
-  expense: 'Gasto',
-  transfer: 'Transferencia',
-  adjustment: 'Ajuste',
-}
 
 type Props = {
   transaction: TransactionWithDetails
@@ -22,6 +16,14 @@ type Props = {
 }
 
 export const EditTransactionForm = ({ transaction, accountId, categories }: Props) => {
+  const t = useTranslations('transactions')
+  const tCommon = useTranslations('common')
+  const TYPE_LABELS = {
+    income: t('types.income'),
+    expense: t('types.expense'),
+    transfer: t('types.transfer'),
+    adjustment: t('types.adjustment'),
+  }
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [formError, setFormError] = useState<string | null>(null)
@@ -59,7 +61,7 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
     setFormError(null)
     const parsedAmount = parseMoneyInput(amount)
     if (parsedAmount === null || parsedAmount <= 0) {
-      setFormError('El monto debe ser mayor a cero.')
+      setFormError(t('errors.amount_positive'))
       return
     }
 
@@ -98,7 +100,7 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
       }
 
       if (!result.ok) {
-        setFormError(result.formError ?? 'Error al guardar.')
+        setFormError(result.formError ?? t('errors.save_failed_short'))
         return
       }
 
@@ -111,33 +113,33 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
       {/* Read-only fields */}
       <div className="flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-4 text-sm">
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Tipo</span>
+          <span className="text-muted-foreground">{t('labels.type')}</span>
           <span>
             {TYPE_LABELS[type]}
-            <span className="ml-2 text-xs text-muted-foreground">— no editable</span>
+            <span className="ml-2 text-xs text-muted-foreground">{tCommon('not_editable')}</span>
           </span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Moneda</span>
+          <span className="text-muted-foreground">{t('labels.currency')}</span>
           <span>
             {transaction.currency_code}
-            <span className="ml-2 text-xs text-muted-foreground">— no editable</span>
+            <span className="ml-2 text-xs text-muted-foreground">{tCommon('not_editable')}</span>
           </span>
         </div>
         {type === 'transfer' && (
           <>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Cuenta origen</span>
+              <span className="text-muted-foreground">{t('labels.source_account')}</span>
               <span>
                 {transaction.source_account?.name ?? accountId}
-                <span className="ml-2 text-xs text-muted-foreground">— no editable</span>
+                <span className="ml-2 text-xs text-muted-foreground">{tCommon('not_editable')}</span>
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Cuenta destino</span>
+              <span className="text-muted-foreground">{t('labels.destination_account')}</span>
               <span>
                 {transaction.destination_account?.name ?? '—'}
-                <span className="ml-2 text-xs text-muted-foreground">— no editable</span>
+                <span className="ml-2 text-xs text-muted-foreground">{tCommon('not_editable')}</span>
               </span>
             </div>
           </>
@@ -147,7 +149,7 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
       {/* Adjustment direction */}
       {type === 'adjustment' && (
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Dirección</label>
+          <label className="text-sm font-medium">{t('labels.direction')}</label>
           <div className="flex gap-3">
             {(['increase', 'decrease'] as const).map((dir) => (
               <label key={dir} className="flex items-center gap-2 cursor-pointer">
@@ -159,7 +161,7 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
                   onChange={() => setAdjustmentDirection(dir)}
                   className="accent-primary"
                 />
-                <span className="text-sm">{dir === 'increase' ? 'Suma' : 'Resta'}</span>
+                <span className="text-sm">{dir === 'increase' ? t('directions.increase') : t('directions.decrease')}</span>
               </label>
             ))}
           </div>
@@ -168,7 +170,7 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
 
       {/* Amount */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="amount" className="text-sm font-medium">Monto</label>
+        <label htmlFor="amount" className="text-sm font-medium">{t('labels.amount')}</label>
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
             {transaction.currency_code === 'ARS' ? '$' : 'U$D'}
@@ -185,7 +187,7 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
 
       {/* Date */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="date" className="text-sm font-medium">Fecha</label>
+        <label htmlFor="date" className="text-sm font-medium">{t('labels.date')}</label>
         <input
           id="date"
           type="date"
@@ -202,8 +204,8 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
       {(type === 'income' || type === 'expense') && !isCardPayment && (
         <div className="flex flex-col gap-1.5">
           <label htmlFor="category" className="text-sm font-medium">
-            Categoría {isExpense && <span className="text-destructive">*</span>}
-            {!isExpense && <span className="text-muted-foreground text-xs ml-1">(opcional)</span>}
+            {t('labels.category')} {isExpense && <span className="text-destructive">*</span>}
+            {!isExpense && <span className="text-muted-foreground text-xs ml-1">{tCommon('optional')}</span>}
           </label>
           <select
             id="category"
@@ -212,7 +214,7 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
             onChange={(e) => { setCategoryId(e.target.value); setSubcategoryId('') }}
             className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <option value="">Sin categoría</option>
+            <option value="">{t('placeholders.no_category')}</option>
             {filteredCategories.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -224,7 +226,7 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
       {selectedCategory && selectedCategory.subcategories.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <label htmlFor="subcategory" className="text-sm font-medium">
-            Subcategoría <span className="text-muted-foreground text-xs">(opcional)</span>
+            {t('labels.subcategory')} <span className="text-muted-foreground text-xs">{tCommon('optional')}</span>
           </label>
           <select
             id="subcategory"
@@ -232,7 +234,7 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
             onChange={(e) => setSubcategoryId(e.target.value)}
             className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <option value="">Sin subcategoría</option>
+            <option value="">{t('placeholders.no_subcategory')}</option>
             {selectedCategory.subcategories.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
@@ -243,14 +245,14 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
       {/* Description */}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="description" className="text-sm font-medium">
-          Descripción <span className="text-muted-foreground text-xs">(opcional)</span>
+          {t('labels.description')} <span className="text-muted-foreground text-xs">{tCommon('optional')}</span>
         </label>
         <input
           id="description"
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Descripción opcional"
+          placeholder={t('placeholders.description')}
           className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
@@ -262,7 +264,7 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
         disabled={isPending}
         className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
       >
-        {isPending ? 'Guardando…' : 'Guardar cambios'}
+        {isPending ? tCommon('saving') : tCommon('save_changes')}
       </button>
     </form>
   )

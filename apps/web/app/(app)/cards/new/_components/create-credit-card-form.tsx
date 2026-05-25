@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Alert } from '@/components/ui/alert'
 import { createCreditCard } from '@/app/_actions/credit-cards'
 import { parseMoneyInput } from '@grana/validation'
@@ -29,6 +30,8 @@ type Props = {
 
 export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
   const router = useRouter()
+  const t = useTranslations('cards')
+  const tCommon = useTranslations('common')
   const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -51,32 +54,32 @@ export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
   const validate = () => {
     const errs: Record<string, string> = {}
 
-    if (!institutionId) errs.institution = 'Seleccioná el banco emisor.'
+    if (!institutionId) errs.institution = t('errors.bank_required')
 
     if (!network) {
-      errs.network = 'Seleccioná la red de la tarjeta.'
+      errs.network = t('errors.network_required')
     } else if (network.type === 'other' && !network.name.trim()) {
-      errs.network = 'Ingresá el nombre de la red.'
+      errs.network = t('errors.network_other_required')
     }
 
     const limit = creditLimit ? parseMoneyInput(creditLimit) : null
     if (creditLimit && (limit === null || limit <= 0)) {
-      errs.creditLimit = 'El límite debe ser mayor a cero.'
+      errs.creditLimit = t('errors.limit_invalid')
     }
 
-    if (!currentEndDate) errs.currentEndDate = 'Requerido.'
-    if (!currentDueDate) errs.currentDueDate = 'Requerido.'
-    if (!nextEndDate) errs.nextEndDate = 'Requerido.'
-    if (!nextDueDate) errs.nextDueDate = 'Requerido.'
+    if (!currentEndDate) errs.currentEndDate = tCommon('required_short')
+    if (!currentDueDate) errs.currentDueDate = tCommon('required_short')
+    if (!nextEndDate) errs.nextEndDate = tCommon('required_short')
+    if (!nextDueDate) errs.nextDueDate = tCommon('required_short')
 
     if (currentEndDate && currentDueDate && currentDueDate <= currentEndDate) {
-      errs.currentDueDate = 'El vencimiento debe ser posterior al cierre.'
+      errs.currentDueDate = t('errors.due_after_close')
     }
     if (currentEndDate && nextEndDate && nextEndDate <= currentEndDate) {
-      errs.nextEndDate = 'El próximo cierre debe ser posterior al cierre actual.'
+      errs.nextEndDate = t('errors.next_close_after_current')
     }
     if (nextEndDate && nextDueDate && nextDueDate <= nextEndDate) {
-      errs.nextDueDate = 'El próximo vencimiento debe ser posterior al cierre.'
+      errs.nextDueDate = t('errors.next_due_after_close')
     }
 
     setErrors(errs)
@@ -112,7 +115,7 @@ export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
       })
 
       if (!result.ok) {
-        setFormError(result.formError ?? 'Error al crear la tarjeta')
+        setFormError(result.formError ?? t('errors.create_failed'))
         return
       }
 
@@ -137,7 +140,7 @@ export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
     <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
       {/* 1. Banco */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium">Banco / institución</label>
+        <label className="text-sm font-medium">{t('labels.bank')}</label>
         <div className="relative">
           <input
             type="text"
@@ -151,7 +154,7 @@ export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
               // Delay blur so click on a dropdown option still registers.
               setTimeout(() => setInstitutionFocused(false), 150)
             }}
-            placeholder="Hacé click para ver los bancos…"
+            placeholder={t('placeholders.bank_search')}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
           {institutionFocused && !institutionId && (
@@ -175,7 +178,7 @@ export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
                 </button>
               ))}
               {filteredInstitutions.length === 0 && (
-                <p className="px-3 py-2 text-sm text-muted-foreground">Sin resultados.</p>
+                <p className="px-3 py-2 text-sm text-muted-foreground">{tCommon('no_results')}</p>
               )}
             </div>
           )}
@@ -185,7 +188,7 @@ export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
 
       {/* 2. Red */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium">Red de la tarjeta</label>
+        <label className="text-sm font-medium">{t('labels.network')}</label>
         <NetworkSelector
           networks={networks}
           value={network}
@@ -197,13 +200,13 @@ export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
       {/* 3. Nombre (opcional) */}
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium">
-          Nombre <span className="text-muted-foreground font-normal">(opcional)</span>
+          {t('labels.name')} <span className="text-muted-foreground font-normal">{tCommon('optional')}</span>
         </label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Se auto-genera si lo dejás en blanco"
+          placeholder={t('placeholders.name_auto')}
           maxLength={50}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
@@ -212,7 +215,7 @@ export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
       {/* 4. Límite */}
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium">
-          Límite de crédito <span className="text-muted-foreground font-normal">(opcional)</span>
+          {t('labels.credit_limit')} <span className="text-muted-foreground font-normal">{tCommon('optional')}</span>
         </label>
         <LimitInputWithSuffix
           value={creditLimit}
@@ -223,7 +226,7 @@ export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
 
       {/* 5. Fechas */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium">Fechas del ciclo</label>
+        <label className="text-sm font-medium">{t('labels.cycle_dates')}</label>
         <CardCycleSection
           currentEndDate={currentEndDate}
           currentDueDate={currentDueDate}
@@ -246,7 +249,7 @@ export const CreateCreditCardForm = ({ institutions, networks }: Props) => {
         disabled={isSubmitting}
         className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
       >
-        {isSubmitting ? 'Creando…' : 'Crear tarjeta'}
+        {isSubmitting ? tCommon('creating') : t('actions.create')}
       </button>
     </form>
   )
