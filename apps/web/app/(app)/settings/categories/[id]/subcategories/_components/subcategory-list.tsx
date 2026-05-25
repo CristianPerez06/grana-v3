@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useTranslations } from 'next-intl'
 import type { Subcategory } from '@/lib/categories/types'
 import { archiveSubcategory, deleteSubcategory } from '@/app/_actions/categories'
 
@@ -13,10 +14,11 @@ type Props = {
 }
 
 export const SubcategoryList = ({ subcategories, isSystem }: Props) => {
+  const t = useTranslations('settings.categories.subcategories')
   if (subcategories.length === 0) {
     return (
       <p className="text-center text-sm text-muted-foreground py-12">
-        No hay subcategorías todavía.
+        {t('empty')}
       </p>
     )
   }
@@ -42,6 +44,7 @@ type RowProps = {
 }
 
 const SubcategoryRow = ({ subcategory, displayName, isSystem }: RowProps) => {
+  const t = useTranslations('settings.categories')
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -49,16 +52,16 @@ const SubcategoryRow = ({ subcategory, displayName, isSystem }: RowProps) => {
     startTransition(async () => {
       setError(null)
       const result = await archiveSubcategory(subcategory.id)
-      if (!result.ok) setError(result.formError ?? 'Error al archivar')
+      if (!result.ok) setError(result.formError ?? t('errors.archive_failed'))
     })
   }
 
   const handleDelete = () => {
-    if (!confirm('¿Eliminár esta subcategoría?')) return
+    if (!confirm(t('confirmations.delete_subcategory'))) return
     startTransition(async () => {
       setError(null)
       const result = await deleteSubcategory(subcategory.id)
-      if (!result.ok) setError(result.formError ?? 'Error al eliminar')
+      if (!result.ok) setError(result.formError ?? t('errors.delete_failed'))
     })
   }
 
@@ -75,14 +78,14 @@ const SubcategoryRow = ({ subcategory, displayName, isSystem }: RowProps) => {
             disabled={isPending}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
           >
-            Archivar
+            {t('actions.archive')}
           </button>
           <button
             onClick={handleDelete}
             disabled={isPending}
             className="text-xs text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
           >
-            Eliminar
+            {t('actions.delete')}
           </button>
         </div>
       )}

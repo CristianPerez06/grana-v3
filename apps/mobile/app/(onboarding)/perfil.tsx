@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { perfilSchema, ValidationError } from '@grana/validation'
 import { Button } from '../../components/ui/Button'
@@ -9,7 +10,7 @@ import { SelectableCard } from '../../components/ui/SelectableCard'
 import { InstitutionPickerModal } from '../../components/ui/InstitutionPickerModal'
 import { supabase } from '../../lib/supabase'
 import { translateValidationMessage } from '../../lib/yup-locale'
-import { t } from '../../lib/i18n'
+import { useT } from '../../lib/locale-context'
 
 type Mode = 'novato' | 'experto'
 
@@ -20,6 +21,7 @@ type FieldErrors = Partial<
 >
 
 export default function PerfilScreen() {
+  const t = useT()
   const router = useRouter()
   const [mode, setMode] = useState<Mode | null>(null)
   const [hasBankAccount, setHasBankAccount] = useState(false)
@@ -163,14 +165,15 @@ export default function PerfilScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-page"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
-        contentContainerClassName="flex-grow px-6 py-10"
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView className="flex-1 bg-page" edges={['top']}>
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        <ScrollView
+          contentContainerClassName="flex-grow px-6 py-10"
+          keyboardShouldPersistTaps="handled"
+        >
         <View className="mx-auto w-full max-w-md gap-8">
           <Text className="text-center text-2xl font-bold tracking-tight text-text">
             {t('onboarding.perfil.title')}
@@ -277,15 +280,16 @@ export default function PerfilScreen() {
         </View>
       </ScrollView>
 
-      <InstitutionPickerModal
-        visible={pickerVisible}
-        onClose={() => setPickerVisible(false)}
-        institutions={institutions}
-        onSelect={handleSelectInstitution}
-        selectedId={institutionId}
-        title={t('onboarding.perfil.institution_label')}
-        searchPlaceholder={t('onboarding.perfil.institution_placeholder')}
-      />
-    </KeyboardAvoidingView>
+        <InstitutionPickerModal
+          visible={pickerVisible}
+          onClose={() => setPickerVisible(false)}
+          institutions={institutions}
+          onSelect={handleSelectInstitution}
+          selectedId={institutionId}
+          title={t('onboarding.perfil.institution_label')}
+          searchPlaceholder={t('onboarding.perfil.institution_placeholder')}
+        />
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   )
 }

@@ -1,9 +1,11 @@
-// TODO(migrate-show-cents-to-db): hoy mobile lee `show_cents` desde
-// expo-secure-store local; web lo lee desde una cookie. Las dos
-// preferencias son independientes — togglear en web no se refleja en mobile.
-// Cuando se haga el change que migra `show_cents` a una columna en `users`
-// (o a una tabla `user_preferences`), este archivo pasa a leer del cliente
-// Supabase compartido y la divergencia desaparece.
+// TODO(migrate-ui-prefs-to-db): hoy mobile guarda preferencias UI-only en
+// expo-secure-store local (este archivo para `show_cents`, y
+// `apps/mobile/lib/locale.ts` para `locale`); web persiste sus equivalentes
+// en cookies (`show_cents`, `NEXT_LOCALE`). Las preferencias son
+// independientes por plataforma — togglear en una no se refleja en la otra.
+// Cuando se haga el change que migra estas preferencias a una columna en
+// `users` (o a una tabla `user_preferences`), ambos clientes pasan a leer
+// del cliente Supabase compartido y la divergencia desaparece.
 
 import * as SecureStore from 'expo-secure-store'
 

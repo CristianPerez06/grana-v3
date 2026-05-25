@@ -16,7 +16,7 @@ export const CategoryList = ({ categories, t }: Props) => {
       {system.length > 0 && (
         <section>
           <h2 className="mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            Del sistema
+            {t('settings.categories.list.system_heading')}
           </h2>
           <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
             {system.map((category) => (
@@ -35,7 +35,7 @@ export const CategoryList = ({ categories, t }: Props) => {
       {user.length > 0 && (
         <section>
           <h2 className="mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            Propias
+            {t('settings.categories.list.user_heading')}
           </h2>
           <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
             {user.map((category) => (
@@ -53,7 +53,7 @@ export const CategoryList = ({ categories, t }: Props) => {
 
       {categories.length === 0 && (
         <p className="text-center text-sm text-muted-foreground py-12">
-          No hay categorías todavía.
+          {t('settings.categories.list.empty')}
         </p>
       )}
     </div>

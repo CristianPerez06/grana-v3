@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { parseMoneyInput, saldoActualSchema } from '@grana/validation'
 import { Button } from '../../components/ui/Button'
 import { FormError } from '../../components/ui/FormError'
 import { TextInput } from '../../components/ui/TextInput'
 import { supabase } from '../../lib/supabase'
-import { t } from '../../lib/i18n'
+import { useT } from '../../lib/locale-context'
 
 type Mode = 'novato' | 'experto'
 type Account = { id: string; name: string; type: string }
@@ -19,6 +20,7 @@ type ParsedAmounts = {
 }
 
 export default function SaldoActualScreen() {
+  const t = useT()
   const router = useRouter()
   const [mode, setMode] = useState<Mode | null>(null)
   const [primaryAccount, setPrimaryAccount] = useState<Account | null>(null)
@@ -172,9 +174,9 @@ export default function SaldoActualScreen() {
 
   if (loadingScreen || !primaryAccount || !mode) {
     return (
-      <View className="flex-1 items-center justify-center bg-page">
+      <SafeAreaView className="flex-1 items-center justify-center bg-page" edges={['top']}>
         <ActivityIndicator />
-      </View>
+      </SafeAreaView>
     )
   }
 
@@ -185,14 +187,15 @@ export default function SaldoActualScreen() {
       : t('onboarding.saldoActual.group_novato')
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-page"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
-        contentContainerClassName="flex-grow px-6 py-10"
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView className="flex-1 bg-page" edges={['top']}>
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        <ScrollView
+          contentContainerClassName="flex-grow px-6 py-10"
+          keyboardShouldPersistTaps="handled"
+        >
         <View className="mx-auto w-full max-w-md gap-8">
           <View className="gap-2">
             <Text className="text-center text-2xl font-bold tracking-tight text-text">
@@ -257,7 +260,8 @@ export default function SaldoActualScreen() {
             loading={submitting}
           />
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   )
 }

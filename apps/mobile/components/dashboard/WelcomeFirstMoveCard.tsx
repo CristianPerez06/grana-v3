@@ -1,9 +1,10 @@
 import { Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Sparkles } from 'lucide-react-native'
-import { t } from '../../lib/i18n'
+import { useT } from '../../lib/locale-context'
 
 export const WelcomeFirstMoveCard = () => {
+  const t = useT()
   const router = useRouter()
 
   return (

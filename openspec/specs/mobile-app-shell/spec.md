@@ -3,7 +3,6 @@
 ## Purpose
 
 Asegura las condiciones de base para que `apps/mobile` (Expo) pueda construir features sobre paquetes compartidos del workspace: arranque limpio de la app, resolución correcta de los paquetes `@grana/*` desde Metro sin un build step adicional, y type-check + lint pasando sin errores. No define features de producto; cada feature mobile se especifica dentro de la capability de su dominio (`auth`, `dashboard`, `onboarding`, etc.) con tags `(mobile)`.
-
 ## Requirements
 ### Requirement: La app mobile arranca correctamente
 
@@ -139,7 +138,7 @@ El `AppMenu` SHALL contener los siguientes items en este orden:
 
 1. **Tarjetas** (route `/tarjetas`) — item habilitado; al press cierra el sheet y navega a la ruta.
 2. **Ahorros** — item **comingSoon** (no navegable hasta que la capability `savings` se implemente).
-3. **Configuración** — item visible; al press cierra el sheet. La navegación efectiva a una pantalla mobile de settings es follow-up cuando la pantalla exista en mobile (hoy `apps/mobile/app/(app)/settings.tsx` no existe; la presencia del item comunica al usuario que la sección viene).
+3. **Configuración** (route `/(app)/settings`) — item habilitado; al press cierra el sheet y navega a `/(app)/settings`. La pantalla destino existe y entrega las tres secciones de paridad con web (Visualización, Idioma, Categorías).
 4. (divisor)
 5. **Salir** — item destructivo que dispara `supabase.auth.signOut()`.
 
@@ -151,6 +150,13 @@ El `AppMenu` SHALL contener los siguientes items en este orden:
 - **THEN** ve, de arriba a abajo: Tarjetas, Ahorros (próximamente), Configuración, (divisor), Salir
 - **AND** no ve un item llamado "Hogar"
 - **AND** no ve un item llamado "Mis tarjetas"
+
+#### Scenario: Press del item Configuración navega a /settings
+
+- **WHEN** un usuario presiona el item "Configuración" en el `AppMenu`
+- **THEN** el sheet del menú se cierra
+- **AND** la app navega a `/(app)/settings`
+- **AND** la pantalla destino renderea el `PageHeader` con título "Configuración" y las tres secciones (Visualización, Idioma, Categorías)
 
 #### Scenario: Press de un item muestra feedback emerald
 
@@ -258,3 +264,34 @@ La integración SHALL ser global (configurada una sola vez en `_layout.tsx` raí
 - **WHEN** la app pasa de background a foreground (usuario vuelve a la app desde el switcher del SO)
 - **AND** hay queries stale en pantallas montadas
 - **THEN** esas queries se refrescan automáticamente
+
+### Requirement: La app mobile respeta el safe-area top en todas las pantallas root
+
+`apps/mobile` SHALL montar `<SafeAreaProvider>` (de `react-native-safe-area-context`) como wrapper outermost en `apps/mobile/app/_layout.tsx`, de modo que cualquier descendiente que llame `useSafeAreaInsets()` reciba los insets reales del dispositivo (no el fallback `{ top: 0, ... }`).
+
+Cada pantalla **root de stack** SHALL envolver su contenido superior en `SafeAreaView edges={['top']}` (o aplicar `paddingTop: insets.top` manualmente) para que el contenido no quede debajo del notch / status bar. Las pantallas root del shell autenticado son al menos: `dashboard`, `accounts`, `tarjetas`, `movimientos`, `/(app)/settings`, `/(app)/settings/categories`.
+
+Las pantallas **anidadas dentro de un stack que usa el native header** (ej. `/(app)/settings/categories/new`, `/[id]/edit`, `/[id]/subcategories`, `/[id]/subcategories/new`) NO necesitan `SafeAreaView` propio: el native stack header ya respeta el safe-area top de la plataforma.
+
+Los headers visuales con fondo extendido (ej. `CurvedNavyHeader` de las pantallas de auth y onboarding) SHALL leer `useSafeAreaInsets()` para calcular su `paddingTop` dinámicamente, en lugar de usar valores hardcoded (`pt-12`) que solo funcionan en una fracción de dispositivos.
+
+#### Scenario: SafeAreaProvider está mounteado en el root
+
+- **WHEN** la app arranca en cualquier dispositivo (con o sin notch)
+- **THEN** `useSafeAreaInsets()` invocado desde `TabBar` o `AppMenu` retorna `insets.top` y `insets.bottom` reales (no cero)
+
+#### Scenario: La pantalla dashboard respeta el safe-area top
+
+- **WHEN** un usuario abre la app en un iPhone con notch (o un Android con cutout)
+- **THEN** el contenido del dashboard (header "Inicio" + secciones) arranca debajo del status bar / notch, no detrás
+
+#### Scenario: Las pantallas root del shell autenticado no quedan tapadas
+
+- **WHEN** un usuario navega a `/(app)/accounts`, `/(app)/tarjetas`, `/(app)/movimientos`, `/(app)/settings` o `/(app)/settings/categories`
+- **THEN** el `PageHeader` aparece visible por debajo del notch en todos los casos
+
+#### Scenario: El header de las pantallas auth respeta el inset
+
+- **WHEN** un usuario abre `/login` en un dispositivo con notch
+- **THEN** el título "Bienvenido" queda visible y NO clipped por el status bar, en lugar de depender del `pt-12` hardcoded
+

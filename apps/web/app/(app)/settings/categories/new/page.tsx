@@ -1,13 +1,16 @@
+import { getTranslations } from 'next-intl/server'
 import { PageHeader } from '@/components/ui/page-header'
 import { CreateCategoryForm } from './_components/create-category-form'
 
-const NewCategoryPage = () => {
+const NewCategoryPage = async () => {
+  const t = await getTranslations('settings.categories')
+
   return (
     <div className="flex flex-col gap-6 max-w-md">
       <PageHeader
-        title="Nueva categoría"
-        description="Agregá una categoría personalizada."
-        backLink={{ href: '/settings/categories', label: 'Categorías' }}
+        title={t('new.title')}
+        description={t('description')}
+        backLink={{ href: '/settings/categories', label: t('label') }}
       />
       <CreateCategoryForm />
     </div>

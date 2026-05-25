@@ -4,6 +4,7 @@ import type { Database } from '@grana/supabase'
 
 type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
 import {
+  derivePeriodStatus,
   derivePeriodVariant,
   suggestNextPeriodDates,
   assignTransactionToPeriod,
@@ -114,15 +115,15 @@ export async function getCreditCardDebtCheck(
     }
   }
 
+  const today = getTodayAR()
+
   for (const period of periods) {
     const hasPayment = paidPeriodIds.has(period.id)
     const txCount = countByPeriod.get(period.id) ?? 0
+    const status = derivePeriodStatus(period, today, hasPayment)
 
-    // Block if ANY non-paid period has imputed transactions, regardless of
-    // whether the period is open, closed or overdue. The debt is owed the
-    // moment a consumo is imputed (e.g. future installments), so archiving a
-    // card with any pending consumo would hide money still owed.
-    if (!hasPayment && txCount > 0) {
+    // Block if a non-paid period has transactions (closed or overdue)
+    if (!hasPayment && txCount > 0 && (status === 'closed' || status === 'overdue')) {
       return { hasPendingDebt: true, reason: 'pending_debt' }
     }
   }

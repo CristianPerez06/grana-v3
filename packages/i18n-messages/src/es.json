@@ -126,10 +126,81 @@
     }
   },
   "settings": {
+    "title": "Configuración",
+    "display": {
+      "label": "Visualización",
+      "show_cents": {
+        "label": "Mostrar centavos",
+        "description": "Muestra los decimales en los montos en pesos (ej: $333,34 en vez de $333)."
+      }
+    },
     "language": {
       "label": "Idioma",
       "es": "ES",
       "en": "EN"
+    },
+    "categories": {
+      "label": "Categorías",
+      "manage_cta": "Administrar categorías",
+      "description": "Gestioná tus categorías de ingresos y gastos.",
+      "list": {
+        "system_heading": "Del sistema",
+        "user_heading": "Propias",
+        "empty": "No hay categorías todavía.",
+        "subcategory_count": "{count} subcategorías"
+      },
+      "types": {
+        "income": "Ingreso",
+        "expense": "Gasto",
+        "both": "Ambos"
+      },
+      "actions": {
+        "add": "+ Agregar",
+        "edit": "Editar",
+        "archive": "Archivar",
+        "delete": "Eliminar",
+        "view_subcategories": "Subcategorías",
+        "add_subcategory": "+ Agregar subcategoría"
+      },
+      "confirmations": {
+        "delete_category": "¿Eliminar esta categoría? Esta acción no se puede deshacer.",
+        "delete_subcategory": "¿Eliminar esta subcategoría?"
+      },
+      "errors": {
+        "duplicate": "Ya existe una categoría con ese nombre.",
+        "duplicate_subcategory": "Ya existe una subcategoría con ese nombre en esta categoría.",
+        "archive_failed": "Error al archivar.",
+        "delete_failed": "Error al eliminar.",
+        "system_readonly": "Las categorías del sistema no se pueden editar.",
+        "not_found": "Categoría no encontrada.",
+        "generic": "Algo salió mal. Intentá de nuevo."
+      },
+      "form": {
+        "name_label": "Nombre",
+        "name_placeholder": "Ej: Mascotas",
+        "type_label": "Tipo",
+        "icon_label": "Ícono (emoji)",
+        "icon_placeholder": "Ej: 🐾",
+        "color_label": "Color (hex)",
+        "color_placeholder": "Ej: #FF6B6B",
+        "submit_create": "Guardar categoría",
+        "submit_update": "Guardar cambios"
+      },
+      "new": {
+        "title": "Nueva categoría"
+      },
+      "edit": {
+        "title": "Editar categoría"
+      },
+      "subcategories": {
+        "title": "Subcategorías",
+        "empty": "No hay subcategorías todavía.",
+        "new": {
+          "title": "Nueva subcategoría",
+          "name_placeholder": "Ej: Farmacéuticos",
+          "submit": "Guardar subcategoría"
+        }
+      }
     }
   },
   "common": {

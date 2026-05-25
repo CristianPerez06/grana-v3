@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import type { CreditCardSummary } from '../../lib/cards/queries'
-import { t } from '../../lib/i18n'
+import { useT } from '../../lib/locale-context'
 import { CreditCardCarousel } from './CreditCardCarousel'
 
 type Props = {
@@ -9,6 +9,7 @@ type Props = {
 }
 
 export const CardsSection = ({ cards }: Props) => {
+  const t = useT()
   const router = useRouter()
 
   return (

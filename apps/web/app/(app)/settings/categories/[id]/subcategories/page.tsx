@@ -31,16 +31,19 @@ const SubcategoriesPage = async ({ params }: Props) => {
   return (
     <div className="flex flex-col gap-6 max-w-md">
       <PageHeader
-        title="Subcategorías"
+        title={t('settings.categories.subcategories.title')}
         description={categoryDisplayName}
-        backLink={{ href: '/settings/categories', label: 'Categorías' }}
+        backLink={{
+          href: '/settings/categories',
+          label: t('settings.categories.label'),
+        }}
         actions={
           !isSystem && (
             <Link
               href={`/settings/categories/${id}/subcategories/new`}
               className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
             >
-              + Agregar
+              {t('settings.categories.actions.add')}
             </Link>
           )
         }

@@ -1,10 +1,11 @@
 import { useCallback, useState } from 'react'
 import { RefreshControl, ScrollView, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { colors } from '../../lib/colors'
 import { getTodayAR } from '../../lib/date'
-import { t } from '../../lib/i18n'
+import { useT } from '../../lib/locale-context'
 import {
   useDashboardCards,
   useDashboardHero,
@@ -12,7 +13,6 @@ import {
   useMonthBalanceSeries,
   useUpcomingFortnight,
 } from '../../lib/dashboard/queries'
-import { PreferencesProvider } from '../../lib/preferences-context'
 import { CardsSection } from '../../components/dashboard/CardsSection'
 import { DashboardHeader } from '../../components/dashboard/DashboardHeader'
 import { EyeMaskProvider } from '../../components/dashboard/EyeMaskContext'
@@ -52,6 +52,7 @@ function parseMonthParam(raw: string | undefined, today: Date): MonthParam {
 }
 
 export default function DashboardScreen() {
+  const t = useT()
   const params = useLocalSearchParams<{ month?: string }>()
   const today = getTodayAR()
   const { year, month, currentYear, currentMonth } = parseMonthParam(params.month, today)
@@ -96,19 +97,18 @@ export default function DashboardScreen() {
 
   if (initialLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
+      <SafeAreaView className="flex-1 items-center justify-center bg-background" edges={['top']}>
         <Spinner size="lg" />
-      </View>
+      </SafeAreaView>
     )
   }
 
   const showWelcomeCard = movements.data === false
 
   return (
-    <PreferencesProvider>
-      <EyeMaskProvider key={eyeMaskKey}>
+    <EyeMaskProvider key={eyeMaskKey}>
+      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
         <ScrollView
-          className="flex-1 bg-background"
           contentContainerClassName="px-6 py-6"
           refreshControl={
             <RefreshControl
@@ -154,7 +154,7 @@ export default function DashboardScreen() {
             ) : null}
           </View>
         </ScrollView>
-      </EyeMaskProvider>
-    </PreferencesProvider>
+      </SafeAreaView>
+    </EyeMaskProvider>
   )
 }

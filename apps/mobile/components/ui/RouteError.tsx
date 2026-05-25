@@ -1,9 +1,10 @@
 import { Text, View } from 'react-native'
 import type { RouteErrorProps } from '@grana/ui-contracts'
-import { t } from '../../lib/i18n'
+import { useT } from '../../lib/locale-context'
 import { Button } from './Button'
 
 export function RouteError({ error, onRetry, className }: RouteErrorProps) {
+  const t = useT()
   const showDetails = __DEV__
 
   return (

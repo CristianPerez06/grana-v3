@@ -126,10 +126,81 @@
     }
   },
   "settings": {
+    "title": "Settings",
+    "display": {
+      "label": "Display",
+      "show_cents": {
+        "label": "Show cents",
+        "description": "Show decimals on peso amounts (e.g. $333.34 instead of $333)."
+      }
+    },
     "language": {
       "label": "Language",
       "es": "ES",
       "en": "EN"
+    },
+    "categories": {
+      "label": "Categories",
+      "manage_cta": "Manage categories",
+      "description": "Manage your income and expense categories.",
+      "list": {
+        "system_heading": "System",
+        "user_heading": "Your categories",
+        "empty": "No categories yet.",
+        "subcategory_count": "{count} subcategories"
+      },
+      "types": {
+        "income": "Income",
+        "expense": "Expense",
+        "both": "Both"
+      },
+      "actions": {
+        "add": "+ Add",
+        "edit": "Edit",
+        "archive": "Archive",
+        "delete": "Delete",
+        "view_subcategories": "Subcategories",
+        "add_subcategory": "+ Add subcategory"
+      },
+      "confirmations": {
+        "delete_category": "Delete this category? This cannot be undone.",
+        "delete_subcategory": "Delete this subcategory?"
+      },
+      "errors": {
+        "duplicate": "A category with that name already exists.",
+        "duplicate_subcategory": "A subcategory with that name already exists in this category.",
+        "archive_failed": "Failed to archive.",
+        "delete_failed": "Failed to delete.",
+        "system_readonly": "System categories cannot be edited.",
+        "not_found": "Category not found.",
+        "generic": "Something went wrong. Try again."
+      },
+      "form": {
+        "name_label": "Name",
+        "name_placeholder": "e.g. Pets",
+        "type_label": "Type",
+        "icon_label": "Icon (emoji)",
+        "icon_placeholder": "e.g. 🐾",
+        "color_label": "Color (hex)",
+        "color_placeholder": "e.g. #FF6B6B",
+        "submit_create": "Save category",
+        "submit_update": "Save changes"
+      },
+      "new": {
+        "title": "New category"
+      },
+      "edit": {
+        "title": "Edit category"
+      },
+      "subcategories": {
+        "title": "Subcategories",
+        "empty": "No subcategories yet.",
+        "new": {
+          "title": "New subcategory",
+          "name_placeholder": "e.g. Pharmacy",
+          "submit": "Save subcategory"
+        }
+      }
     }
   },
   "common": {

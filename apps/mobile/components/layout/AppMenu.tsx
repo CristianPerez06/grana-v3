@@ -4,13 +4,14 @@ import { useRouter } from 'expo-router'
 import { CreditCard, LogOut, PiggyBank, Settings, X } from 'lucide-react-native'
 import { supabase } from '../../lib/supabase'
 import { colors } from '../../lib/colors'
-import { t } from '../../lib/i18n'
+import { useT } from '../../lib/locale-context'
 
 type Props = {
   onClose: () => void
 }
 
 export function AppMenu({ onClose }: Props) {
+  const t = useT()
   const insets = useSafeAreaInsets()
   const router = useRouter()
 
@@ -19,7 +20,7 @@ export function AppMenu({ onClose }: Props) {
     await supabase.auth.signOut()
   }
 
-  const navigateAndClose = (path: '/tarjetas') => {
+  const navigateAndClose = (path: '/tarjetas' | '/(app)/settings') => {
     onClose()
     router.push(path)
   }
@@ -51,7 +52,11 @@ export function AppMenu({ onClose }: Props) {
           onPress={() => navigateAndClose('/tarjetas')}
         />
         <SheetItem Icon={PiggyBank} label={t('nav.savings')} onPress={onClose} comingSoon />
-        <SheetItem Icon={Settings} label={t('nav.settings')} onPress={onClose} />
+        <SheetItem
+          Icon={Settings}
+          label={t('nav.settings')}
+          onPress={() => navigateAndClose('/(app)/settings')}
+        />
 
         <View className="my-2 border-t border-border-soft" />
 
@@ -76,6 +81,7 @@ function SheetItem({
   destructive = false,
   comingSoon = false,
 }: SheetItemProps) {
+  const t = useT()
   const color = destructive ? colors.error : colors.text
   const containerOpacity = comingSoon ? 'opacity-50' : ''
   const pressFeedback = comingSoon
@@ -97,7 +103,7 @@ function SheetItem({
       </Text>
       {comingSoon && (
         <View className="rounded-full bg-border-soft px-2 py-0.5">
-          <Text className="text-[10px] font-medium text-text-soft">Próximamente</Text>
+          <Text className="text-[10px] font-medium text-text-soft">{t('nav.coming_soon')}</Text>
         </View>
       )}
     </Pressable>

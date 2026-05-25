@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
+import { useTranslations } from 'next-intl'
 import { FormField } from '@/components/ui/form-field'
 import { SubmitButton } from '@/components/ui/submit-button'
 import { Alert } from '@/components/ui/alert'
@@ -14,6 +15,7 @@ import type { Category } from '@/lib/categories/types'
 type Props = { category: Category }
 
 export const EditCategoryForm = ({ category }: Props) => {
+  const t = useTranslations('settings.categories')
   const router = useRouter()
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -53,25 +55,25 @@ export const EditCategoryForm = ({ category }: Props) => {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
       <FormField
-        label="Nombre"
+        label={t('form.name_label')}
         error={errors.name?.message}
         {...register('name')}
       />
       <FormField
-        label="Ícono (emoji)"
-        placeholder="Ej: 🐾"
+        label={t('form.icon_label')}
+        placeholder={t('form.icon_placeholder')}
         error={errors.icon?.message}
         {...register('icon')}
       />
       <FormField
-        label="Color (hex)"
-        placeholder="Ej: #FF6B6B"
+        label={t('form.color_label')}
+        placeholder={t('form.color_placeholder')}
         error={errors.color?.message}
         {...register('color')}
       />
       {formError && <Alert variant="error">{formError}</Alert>}
       <SubmitButton pending={isSubmitting} className="w-full">
-        Guardar cambios
+        {t('form.submit_update')}
       </SubmitButton>
     </form>
   )

@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import type { DashboardHero } from '@grana/dashboard'
-import { t } from '../../lib/i18n'
+import { useT } from '../../lib/locale-context'
 import { MaskedAmount } from './MaskedAmount'
 
 type Props = {
@@ -9,6 +9,7 @@ type Props = {
 }
 
 export const HeroSection = ({ data }: Props) => {
+  const t = useT()
   const router = useRouter()
 
   return (

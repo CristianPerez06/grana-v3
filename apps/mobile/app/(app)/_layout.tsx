@@ -3,6 +3,7 @@ import { Modal, Pressable, View } from 'react-native'
 import { Tabs, useRouter } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { hasRecoveryClaim } from '../../lib/recovery'
+import { PreferencesProvider } from '../../lib/preferences-context'
 import { AppMenu } from '../../components/layout/AppMenu'
 import { TabBar } from '../../components/layout/TabBar'
 
@@ -40,7 +41,7 @@ export default function AppLayout() {
   }, [router])
 
   return (
-    <>
+    <PreferencesProvider>
       <Modal
         visible={menuOpen}
         transparent
@@ -71,7 +72,8 @@ export default function AppLayout() {
         <Tabs.Screen name="menu" />
         <Tabs.Screen name="tarjetas" options={{ href: null }} />
         <Tabs.Screen name="accounts" options={{ href: null }} />
+        <Tabs.Screen name="settings" options={{ href: null }} />
       </Tabs>
-    </>
+    </PreferencesProvider>
   )
 }

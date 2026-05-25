@@ -17,14 +17,14 @@ const CategoriesPage = async () => {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Categorías"
-        description="Gestioná tus categorías de ingresos y gastos."
+        title={t('settings.categories.label')}
+        description={t('settings.categories.description')}
         actions={
           <Link
             href="/settings/categories/new"
             className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
           >
-            + Agregar
+            {t('settings.categories.actions.add')}
           </Link>
         }
       />

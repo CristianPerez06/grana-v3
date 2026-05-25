@@ -12,10 +12,12 @@ import {
   useFonts,
 } from '@expo-google-fonts/plus-jakarta-sans'
 import { QueryClientProvider } from '@tanstack/react-query'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { supabase } from '../lib/supabase'
 import { hasRecoveryClaim } from '../lib/recovery'
 import { createQueryClient } from '../lib/query-client'
 import { registerFocusManager } from '../lib/focus-manager-setup'
+import { LocaleProvider } from '../lib/locale-context'
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
 registerFocusManager()
@@ -64,9 +66,17 @@ export default function RootLayout() {
 
   if (!fontsLoaded) return null
 
+  // Provider order: SafeAreaProvider must wrap everything so any descendant
+  // (TabBar, AppMenu, screen-level SafeAreaView) gets non-zero insets.
+  // LocaleProvider is next so translations reach auth screens.
+  // QueryClientProvider has no dependency on the others and sits innermost.
   return (
-    <QueryClientProvider client={queryClient}>
-      <Slot />
-    </QueryClientProvider>
+    <SafeAreaProvider>
+      <LocaleProvider>
+        <QueryClientProvider client={queryClient}>
+          <Slot />
+        </QueryClientProvider>
+      </LocaleProvider>
+    </SafeAreaProvider>
   )
 }
