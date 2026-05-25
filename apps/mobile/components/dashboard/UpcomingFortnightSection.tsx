@@ -6,7 +6,7 @@ import type {
   UpcomingItem,
   UpcomingItemTarget,
 } from '@grana/dashboard'
-import { t } from '../../lib/i18n'
+import { useT } from '../../lib/locale-context'
 import { MaskedAmount } from './MaskedAmount'
 
 type Props = {
@@ -124,6 +124,7 @@ const Group = ({ title, items, direction }: GroupProps) => {
 }
 
 export const UpcomingFortnightSection = ({ data }: Props) => {
+  const t = useT()
   const totalPayARS = sumByCurrency(data.toPay).ARS
   const totalPayUSD = sumByCurrency(data.toPay).USD
   const totalCollectARS = sumByCurrency(data.toCollect).ARS

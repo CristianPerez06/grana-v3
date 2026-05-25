@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { Button } from '../../components/ui/Button'
 import { supabase } from '../../lib/supabase'
-import { t } from '../../lib/i18n'
+import { useT } from '../../lib/locale-context'
 
 type Totals = { ARS: number; USD: number }
 
@@ -20,6 +21,7 @@ const formatUSD = (n: number) =>
   }).format(n)}`
 
 export default function DoneScreen() {
+  const t = useT()
   const router = useRouter()
   const [totals, setTotals] = useState<Totals | null>(null)
 
@@ -74,20 +76,21 @@ export default function DoneScreen() {
 
   if (!totals) {
     return (
-      <View className="flex-1 items-center justify-center bg-page">
+      <SafeAreaView className="flex-1 items-center justify-center bg-page" edges={['top']}>
         <ActivityIndicator />
-      </View>
+      </SafeAreaView>
     )
   }
 
   const hasData = totals.ARS > 0 || totals.USD > 0
 
   return (
-    <ScrollView
-      className="flex-1 bg-page"
-      contentContainerClassName="flex-grow justify-center px-6 py-10"
-    >
-      <View className="mx-auto w-full max-w-md gap-8">
+    <SafeAreaView className="flex-1 bg-page" edges={['top']}>
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="flex-grow justify-center px-6 py-10"
+      >
+        <View className="mx-auto w-full max-w-md gap-8">
         <Text className="text-center text-3xl font-bold tracking-tight text-text">
           {t('onboarding.done.title')}
         </Text>
@@ -114,7 +117,8 @@ export default function DoneScreen() {
           title={t('onboarding.done.cta')}
           onPress={() => router.replace('/(app)/dashboard')}
         />
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   )
 }

@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { getCategoryById } from '@/lib/categories/queries'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/ui/page-header'
@@ -16,12 +17,14 @@ const EditCategoryPage = async ({ params }: Props) => {
   const category = await getCategoryById(id)
   if (!category || category.user_id !== user.id) notFound()
 
+  const t = await getTranslations('settings.categories')
+
   return (
     <div className="flex flex-col gap-6 max-w-md">
       <PageHeader
-        title="Editar categoría"
+        title={t('edit.title')}
         description={category.name}
-        backLink={{ href: '/settings/categories', label: 'Categorías' }}
+        backLink={{ href: '/settings/categories', label: t('label') }}
       />
       <EditCategoryForm category={category} />
     </div>

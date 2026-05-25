@@ -1,50 +1,48 @@
 'use client'
 
-import { useTransition } from 'react'
-import { setShowCents } from '@/app/_actions/preferences'
+import type { ShowCentsToggleProps } from '@grana/ui-contracts'
 
-type Props = {
-  initialValue: boolean
-}
-
-export const ShowCentsToggle = ({ initialValue }: Props) => {
-  const [isPending, startTransition] = useTransition()
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.checked
-    startTransition(() => setShowCents(value))
+export const ShowCentsToggle = ({
+  value,
+  onValueChange,
+  disabled = false,
+  label,
+  description,
+}: ShowCentsToggleProps) => {
+  const handleClick = () => {
+    if (disabled) return
+    onValueChange(!value)
   }
 
   return (
     <label className="flex items-center justify-between gap-4 cursor-pointer">
       <div>
-        <p className="text-sm font-medium">Mostrar centavos</p>
-        <p className="text-xs text-muted-foreground">
-          Muestra los decimales en los montos en pesos (ej: $333,34 en vez de $333).
-        </p>
+        <p className="text-sm font-medium">{label}</p>
+        {description && (
+          <p className="text-xs text-muted-foreground">{description}</p>
+        )}
       </div>
       <button
+        type="button"
         role="switch"
-        aria-checked={isPending ? undefined : initialValue}
-        onClick={() => {
-          startTransition(() => setShowCents(!initialValue))
-        }}
-        disabled={isPending}
+        aria-checked={value}
+        onClick={handleClick}
+        disabled={disabled}
         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${
-          initialValue ? 'bg-primary' : 'bg-input'
+          value ? 'bg-primary' : 'bg-input'
         }`}
       >
         <span
           className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${
-            initialValue ? 'translate-x-5' : 'translate-x-0'
+            value ? 'translate-x-5' : 'translate-x-0'
           }`}
         />
       </button>
       <input
         type="checkbox"
         className="sr-only"
-        checked={initialValue}
-        onChange={handleChange}
+        checked={value}
+        onChange={(e) => onValueChange(e.target.checked)}
         aria-hidden="true"
       />
     </label>

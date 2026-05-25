@@ -8,7 +8,6 @@ import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { getShowCents } from '@/lib/preferences'
 import { CardHero } from '../_components/card-hero'
 import { PaymentCTABlock } from '../_components/payment-cta-block'
-import { PeriodAlertBanner } from '../_components/period-alert-banner'
 import { CardsThermometer, type ThermometerColumn } from '../_components/cards-thermometer'
 import { LimitSummary } from '../_components/limit-summary'
 import { CardDetailsSection } from '../_components/card-details-section'
@@ -108,10 +107,11 @@ const CardDetailPage = async ({ params }: Props) => {
     )
   }
 
-  // ── Empty state: tarjeta archivada ──────────────────────────────────────────
-  // Por la regla de archivado (no se archiva con deuda), una tarjeta inactiva
-  // nunca tiene consumos pendientes: siempre es el estado "sin pendientes".
-  if (!cardDetail.is_active) {
+  // ── Empty state: tarjeta archivada sin pendientes ───────────────────────────
+  const hasPendings = cardDetail.debtCheck.hasPendingDebt ||
+    cardDetail.periods.some((p) => !p.has_payment && p.tx_count > 0)
+
+  if (!cardDetail.is_active && !hasPendings) {
     return (
       <div className="flex flex-col gap-6 max-w-2xl">
         <Breadcrumb />
@@ -229,9 +229,7 @@ const CardDetailPage = async ({ params }: Props) => {
   const activeWithTxs = periodsDesc.find((p) => p.id === activePeriod.id)
   const txList: CardPeriodDetail['transactions'] = activeWithTxs?.transactions ?? []
 
-  const needsPayment =
-    cardDetail.is_active &&
-    (activePeriod.variant === 'vencido' || activePeriod.variant === 'cerrado_esperando_pago')
+  const isOverdue = activePeriod.variant === 'vencido'
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
@@ -244,13 +242,14 @@ const CardDetailPage = async ({ params }: Props) => {
         showCents={showCents}
       />
 
-      {needsPayment && (
-        <PeriodAlertBanner
-          cardId={id}
-          periodId={activePeriod.id}
-          variant={activePeriod.variant as 'vencido' | 'cerrado_esperando_pago'}
-          dueDate={activePeriod.due_date}
-        />
+      {!cardDetail.is_active && (
+        <ArchivedBanner cardId={id} hasMovements={cardHasHistory} />
+      )}
+
+      {isOverdue && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm font-medium text-red-700">
+          Resumen vencido — evitá cargos por mora
+        </div>
       )}
 
       <CardsThermometer
@@ -268,6 +267,7 @@ const CardDetailPage = async ({ params }: Props) => {
 
       <PaymentCTABlock
         cardId={id}
+        periodId={activePeriod.id}
         variant={ctaVariant}
         canRegisterPurchase={cardDetail.is_active}
       />
@@ -349,6 +349,10 @@ const Breadcrumb = () => (
       ← Tarjetas
     </Link>
   </div>
+)
+
+const ArchivedBanner = ({ cardId, hasMovements }: { cardId: string; hasMovements: boolean }) => (
+  <CardActions cardId={cardId} isActive={false} hasMovements={hasMovements} />
 )
 
 const AdminFooter = ({

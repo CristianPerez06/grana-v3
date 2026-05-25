@@ -1,51 +1,46 @@
 import Link from 'next/link'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
 import { getShowCents } from '@/lib/preferences'
+import { locales, type Locale } from '@/lib/i18n/config'
 import { PageHeader } from '@/components/ui/page-header'
-import { LanguageSwitcher } from './_components/language-switcher'
-import { ShowCentsToggle } from './_components/show-cents-toggle'
+import { SettingsClient } from './_components/settings-client'
+import { SettingsSection } from './_components/settings-section'
 
 const SettingsPage = async () => {
   const showCents = await getShowCents()
-  const tLanguage = await getTranslations('settings.language')
+  const locale = (await getLocale()) as Locale
+  const t = await getTranslations('settings')
+
+  const localeLabels: Record<Locale, string> = {
+    es: t('language.es'),
+    en: t('language.en'),
+  }
 
   return (
     <div className="flex flex-col gap-8 max-w-2xl">
-      <PageHeader title="Configuración" />
+      <PageHeader title={t('title')} />
 
-      {/* Display */}
-      <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-          Visualización
-        </h2>
-        <div className="rounded-lg border border-border bg-card p-4">
-          <ShowCentsToggle initialValue={showCents} />
-        </div>
-      </section>
+      <SettingsClient
+        initialShowCents={showCents}
+        initialLocale={locale}
+        locales={locales}
+        localeLabels={localeLabels}
+        displaySectionTitle={t('display.label')}
+        showCentsLabel={t('display.show_cents.label')}
+        showCentsDescription={t('display.show_cents.description')}
+        languageSectionTitle={t('language.label')}
+        languageAriaLabel={t('language.label')}
+      />
 
-      {/* Language */}
-      <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-          {tLanguage('label')}
-        </h2>
-        <div className="rounded-lg border border-border bg-card p-4">
-          <LanguageSwitcher />
-        </div>
-      </section>
-
-      {/* Categories */}
-      <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-          Categorías
-        </h2>
+      <SettingsSection title={t('categories.label')}>
         <Link
           href="/settings/categories"
-          className="rounded-lg border border-border bg-card p-4 text-sm font-medium hover:shadow-sm transition-shadow flex items-center justify-between"
+          className="-m-4 block rounded-lg p-4 text-sm font-medium hover:bg-muted/40 transition-colors flex items-center justify-between"
         >
-          Administrar categorías
+          {t('categories.manage_cta')}
           <span className="text-muted-foreground">→</span>
         </Link>
-      </section>
+      </SettingsSection>
     </div>
   )
 }

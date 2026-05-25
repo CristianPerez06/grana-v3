@@ -152,6 +152,80 @@ export type PageHeaderProps = {
   className?: string
 }
 
+// ── SettingsSection ─────────────────────────────────────────────────────────
+
+export type SettingsSectionProps = {
+  /**
+   * Section header rendered in small uppercase muted style above the card.
+   * Required — every settings section has a heading.
+   */
+  title: string
+  children?: ReactNode
+  className?: string
+}
+
+// ── ShowCentsToggle ─────────────────────────────────────────────────────────
+
+export type ShowCentsToggleProps = {
+  /**
+   * Current value of the preference. The component is presentational and
+   * controlled — it does not own the state or the persistence.
+   */
+  value: boolean
+  /**
+   * Called when the user toggles the switch. The parent decides how to
+   * persist (cookie on web, SecureStore on mobile) and re-render consumers.
+   */
+  onValueChange: (next: boolean) => void
+  /**
+   * Whether the control is in a pending/transitioning state. The component
+   * SHOULD disable interaction and reduce visual emphasis while true.
+   */
+  disabled?: boolean
+  /**
+   * Label rendered next to the switch (e.g. "Mostrar centavos").
+   */
+  label: string
+  /**
+   * Optional helper copy under the label.
+   */
+  description?: string
+  className?: string
+}
+
+// ── LanguageSwitcher ────────────────────────────────────────────────────────
+
+export type LanguageSwitcherProps<TLocale extends string = string> = {
+  /**
+   * The active locale. Used to highlight the selected option.
+   */
+  current: TLocale
+  /**
+   * The set of supported locales, in the order they should render.
+   */
+  locales: readonly TLocale[]
+  /**
+   * Called when the user selects a locale. The parent decides how to
+   * persist (cookie on web, SecureStore on mobile) and trigger re-render.
+   */
+  onSelect: (locale: TLocale) => void
+  /**
+   * Whether the control is in a pending state. Both platforms SHOULD
+   * disable buttons while true to prevent double-fire during persistence.
+   */
+  disabled?: boolean
+  /**
+   * Maps a locale code to its display label (e.g. 'es' -> 'ES').
+   * Lifted so the contract does not depend on a particular i18n system.
+   */
+  renderLabel: (locale: TLocale) => string
+  /**
+   * Accessibility label for the group as a whole (e.g. "Idioma").
+   */
+  ariaLabel: string
+  className?: string
+}
+
 // ── RouteError ──────────────────────────────────────────────────────────────
 
 export type RouteErrorProps = {

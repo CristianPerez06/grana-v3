@@ -2,14 +2,9 @@
 
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
+import { useTranslations } from 'next-intl'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 import { archiveCategory, deleteCategory } from '@/app/_actions/categories'
-
-const TYPE_LABELS: Record<string, string> = {
-  income: 'Ingreso',
-  expense: 'Gasto',
-  both: 'Ambos',
-}
 
 type Props = {
   category: CategoryWithSubcategories
@@ -19,6 +14,7 @@ type Props = {
 }
 
 export const CategoryRow = ({ category, displayName, subcategoryCount, isSystem }: Props) => {
+  const t = useTranslations('settings.categories')
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -26,16 +22,16 @@ export const CategoryRow = ({ category, displayName, subcategoryCount, isSystem 
     startTransition(async () => {
       setError(null)
       const result = await archiveCategory(category.id)
-      if (!result.ok) setError(result.formError ?? 'Error al archivar')
+      if (!result.ok) setError(result.formError ?? t('errors.archive_failed'))
     })
   }
 
   const handleDelete = () => {
-    if (!confirm('¿Eliminár esta categoría? Esta acción no se puede deshacer.')) return
+    if (!confirm(t('confirmations.delete_category'))) return
     startTransition(async () => {
       setError(null)
       const result = await deleteCategory(category.id)
-      if (!result.ok) setError(result.formError ?? 'Error al eliminar')
+      if (!result.ok) setError(result.formError ?? t('errors.delete_failed'))
     })
   }
 
@@ -48,10 +44,12 @@ export const CategoryRow = ({ category, displayName, subcategoryCount, isSystem 
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-medium text-sm truncate">{displayName}</span>
           <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-            {TYPE_LABELS[category.type] ?? category.type}
+            {t(`types.${category.type}`)}
           </span>
           {subcategoryCount > 0 && (
-            <span className="text-xs text-muted-foreground">{subcategoryCount} subcategorías</span>
+            <span className="text-xs text-muted-foreground">
+              {t('list.subcategory_count', { count: subcategoryCount })}
+            </span>
           )}
         </div>
         {error && <p className="text-xs text-destructive mt-1">{error}</p>}
@@ -61,7 +59,7 @@ export const CategoryRow = ({ category, displayName, subcategoryCount, isSystem 
           href={`/settings/categories/${category.id}/subcategories`}
           className="text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
-          Subcategorías
+          {t('actions.view_subcategories')}
         </Link>
         {!isSystem && (
           <>
@@ -69,21 +67,21 @@ export const CategoryRow = ({ category, displayName, subcategoryCount, isSystem 
               href={`/settings/categories/${category.id}/edit`}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              Editar
+              {t('actions.edit')}
             </Link>
             <button
               onClick={handleArchive}
               disabled={isPending}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
             >
-              Archivar
+              {t('actions.archive')}
             </button>
             <button
               onClick={handleDelete}
               disabled={isPending}
               className="text-xs text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
             >
-              Eliminar
+              {t('actions.delete')}
             </button>
           </>
         )}

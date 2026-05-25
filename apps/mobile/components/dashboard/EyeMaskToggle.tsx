@@ -1,9 +1,10 @@
 import { Pressable } from 'react-native'
 import { Eye, EyeOff } from 'lucide-react-native'
-import { t } from '../../lib/i18n'
+import { useT } from '../../lib/locale-context'
 import { useEyeMask } from './EyeMaskContext'
 
 export const EyeMaskToggle = () => {
+  const t = useT()
   const { masked, toggle } = useEyeMask()
   const Icon = masked ? EyeOff : Eye
   const label = masked ? t('dashboard.mask_show') : t('dashboard.mask_hide')

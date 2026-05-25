@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { slugify } from '@/lib/slugify'
 import {
@@ -23,6 +24,21 @@ async function getAuthenticatedUserId(): Promise<string> {
   return user.id
 }
 
+// Maps Postgres error codes to user-facing i18n messages. Uses the active
+// locale (read via next-intl cookie) so the message comes back already
+// translated for the client to render verbatim. Falls back to a generic
+// message when the code isn't known.
+async function translatePostgresError(
+  code: string | undefined,
+  kind: 'category' | 'subcategory',
+): Promise<string> {
+  const t = await getTranslations('settings.categories.errors')
+  if (code === '23505') {
+    return kind === 'category' ? t('duplicate') : t('duplicate_subcategory')
+  }
+  return t('generic')
+}
+
 // ── Categories ────────────────────────────────────────────────────────────────
 
 export async function createCategory(
@@ -43,7 +59,9 @@ export async function createCategory(
     color: validation.data.color ?? null,
   })
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) {
+    return { ok: false, formError: await translatePostgresError(error.code, 'category'), errorCode: error.code }
+  }
 
   revalidatePath('/settings/categories')
   return { ok: true }
@@ -70,7 +88,9 @@ export async function updateCategory(
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) {
+    return { ok: false, formError: await translatePostgresError(error.code, 'category'), errorCode: error.code }
+  }
 
   revalidatePath('/settings/categories')
   return { ok: true }
@@ -86,7 +106,10 @@ export async function archiveCategory(id: string): Promise<ActionResult<never>> 
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) {
+    const t = await getTranslations('settings.categories.errors')
+    return { ok: false, formError: t('archive_failed'), errorCode: error.code }
+  }
 
   revalidatePath('/settings/categories')
   return { ok: true }
@@ -105,7 +128,10 @@ export async function deleteCategory(id: string): Promise<ActionResult<never>> {
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) {
+    const t = await getTranslations('settings.categories.errors')
+    return { ok: false, formError: t('delete_failed'), errorCode: error.code }
+  }
 
   revalidatePath('/settings/categories')
   return { ok: true }
@@ -129,7 +155,9 @@ export async function createSubcategory(
     canonical_name: slugify(validation.data.name),
   })
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) {
+    return { ok: false, formError: await translatePostgresError(error.code, 'subcategory'), errorCode: error.code }
+  }
 
   revalidatePath('/settings/categories')
   return { ok: true }
@@ -154,7 +182,9 @@ export async function updateSubcategory(
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) {
+    return { ok: false, formError: await translatePostgresError(error.code, 'subcategory'), errorCode: error.code }
+  }
 
   revalidatePath('/settings/categories')
   return { ok: true }
@@ -170,7 +200,10 @@ export async function archiveSubcategory(id: string): Promise<ActionResult<never
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) {
+    const t = await getTranslations('settings.categories.errors')
+    return { ok: false, formError: t('archive_failed'), errorCode: error.code }
+  }
 
   revalidatePath('/settings/categories')
   return { ok: true }
@@ -188,7 +221,10 @@ export async function deleteSubcategory(id: string): Promise<ActionResult<never>
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) {
+    const t = await getTranslations('settings.categories.errors')
+    return { ok: false, formError: t('delete_failed'), errorCode: error.code }
+  }
 
   revalidatePath('/settings/categories')
   return { ok: true }

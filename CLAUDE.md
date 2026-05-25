@@ -227,7 +227,7 @@ Build order matters — each module generally depends on the ones above it. Cros
 | 13b | `web-app-shell` | ✅ Done | Shell de navegación web: sidebar island único, paleta de marca, drawer mobile-first bajo `md`, estado activo derivado de la ruta |
 | 13c | `route-loading-and-errors` | ✅ Done | Componentes `Spinner` y `RouteError` (web + mobile) con API compartida vía `@grana/ui-contracts`. Web: `loading.tsx`/`error.tsx` por layout group de Next App Router. Mobile: TanStack Query como seam de fetching cliente (provider en root, refetch on focus integrado via `AppState`). |
 | 13d | `page-header` | ✅ Done | Componente `PageHeader` (web + mobile) con contract compartido `PageHeaderProps` (`title`, `description?`, `backLink?`, `actions?`) en `@grana/ui-contracts`. Estilo canónico de título de página (`text-2xl font-semibold tracking-tight`). Anti-regresión: prohíbe `<h1>` ad-hoc en pages, salvo headers compuestos de detalle (`DashboardHeader`, `AccountDetailHeader`, `CardHero`, `TransactionDetailHeader`) y wizard de onboarding. |
-| 14 | `settings` | ✅ Done | Categorías personalizadas, preferencias de usuario (mostrar centavos, etc.) |
+| 14 | `settings` | ✅ Done | Categorías personalizadas, preferencias de usuario (mostrar centavos, etc.) + paridad mobile (toggle centavos, switcher de idioma reactivo via `LocaleProvider`, CRUD de categorías en mobile) |
 | 15 | `shared` | 🔲 Planned | Gastos compartidos entre N personas ("Compartido"), deuda derivada, liquidación |
 | 16 | `savings` | 🔲 Planned | Sistema de sobres (envelopes), enganche a ingresos — diseño pendiente |
 | 17 | `cashflow` | 🔜 Future | Proyecciones de flujo de caja |

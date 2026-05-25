@@ -2,7 +2,7 @@ import { Pressable, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Home, List, MoreHorizontal, Users } from 'lucide-react-native'
 import { colors } from '../../lib/colors'
-import { t } from '../../lib/i18n'
+import { useT } from '../../lib/locale-context'
 
 type TabRoute = { key: string; name: string }
 type TabBarNavigation = {
@@ -38,6 +38,7 @@ type Props = {
 }
 
 export function TabBar({ state, navigation, onMenuPress, menuActive }: Props) {
+  const t = useT()
   const insets = useSafeAreaInsets()
 
   return (
@@ -99,6 +100,7 @@ export function TabBar({ state, navigation, onMenuPress, menuActive }: Props) {
 }
 
 function MenuButton({ onPress, active }: { onPress: () => void; active: boolean }) {
+  const t = useT()
   return (
     <View className="flex-1 items-center justify-center py-1">
       <Pressable
@@ -116,6 +118,7 @@ function MenuButton({ onPress, active }: { onPress: () => void; active: boolean 
 }
 
 function DisabledTab({ icon: Icon, labelKey }: { icon: IconType; labelKey: string }) {
+  const t = useT()
   return (
     <View
       className="flex-1 items-center gap-1 py-1 opacity-50"

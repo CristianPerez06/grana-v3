@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import Svg, { Path } from 'react-native-svg'
 
@@ -18,9 +19,13 @@ export function CurvedNavyHeader({
   backLabel = 'Volver',
 }: Props) {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
 
   return (
-    <View className="relative bg-navy px-5 pt-12 pb-12">
+    <View
+      className="relative bg-navy px-5 pb-12"
+      style={{ paddingTop: Math.max(insets.top, 8) + 24 }}
+    >
       <View className="mx-auto w-full max-w-[430px]">
         {showBack ? (
           <Pressable

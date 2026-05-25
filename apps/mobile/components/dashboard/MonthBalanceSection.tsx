@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native'
 import type { MonthBalanceSeries } from '@grana/dashboard'
-import { t } from '../../lib/i18n'
+import { useT } from '../../lib/locale-context'
 import { MaskedAmount } from './MaskedAmount'
 import { MonthBalanceChart } from './MonthBalanceChart'
 import { MonthNavigator } from './MonthNavigator'
@@ -31,6 +31,7 @@ export const MonthBalanceSection = ({
   currentMonth,
   monthsBackLimit = 12,
 }: Props) => {
+  const t = useT()
   const monthsBack = diffMonths(currentYear, currentMonth, data.year, data.month)
   const canGoBack = monthsBack < monthsBackLimit
   const canGoForward = monthsBack > 0
