@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardPeriods } from '@/lib/cards/queries'
 import { getShowCents } from '@/lib/preferences'
@@ -26,10 +27,12 @@ const CardPeriodsPage = async ({ params }: Props) => {
 
   const hasUSD = cardDetail.currencies.some((c) => c.currency_code === 'USD' && c.is_active)
 
+  const t = await getTranslations('cards')
+
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
       <PageHeader
-        title="Resúmenes"
+        title={t('list.periods_title')}
         backLink={{ href: `/cards/${id}`, label: cardDetail.name }}
       />
 

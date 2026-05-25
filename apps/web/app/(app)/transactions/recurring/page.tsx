@@ -1,22 +1,10 @@
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { PageHeader } from '@/components/ui/page-header'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { getRecurrences } from '@/lib/recurrences/queries'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
-
-const FREQUENCY_LABEL: Record<string, string> = {
-  weekly: 'Semanal',
-  biweekly: 'Quincenal',
-  monthly: 'Mensual',
-  annual: 'Anual',
-}
-
-const MOVEMENT_LABEL: Record<string, string> = {
-  income: 'Ingreso',
-  expense: 'Gasto',
-  transfer: 'Transferencia',
-}
 
 const formatRuleAmount = (rule: RecurrenceSummary) => {
   const amount = Number(rule.amount)
@@ -42,27 +30,41 @@ const isFinished = (rule: RecurrenceSummary) => {
 
 const RecurringPage = async () => {
   const rules = await getRecurrences({ statuses: ['active', 'paused'] })
+  const tRec = await getTranslations('recurrences')
+  const tTx = await getTranslations('transactions')
+
+  const getMovementLabel = (type: string) => {
+    if (type === 'income' || type === 'expense' || type === 'transfer' || type === 'adjustment') {
+      return tTx(`types.${type}`)
+    }
+    return '—'
+  }
+
+  const getFrequencyLabel = (freq: string) => {
+    if (freq === 'weekly' || freq === 'biweekly' || freq === 'monthly' || freq === 'annual') {
+      return tRec(`frequencies.${freq}`)
+    }
+    return freq
+  }
 
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <PageHeader
-        title="Recurrencias"
-        description="Reglas que generan movimientos pendientes para que confirmes o omitas."
-        backLink={{ href: '/transactions', label: 'Movimientos' }}
+        title={tRec('title')}
+        description={tRec('description')}
+        backLink={{ href: '/transactions', label: tRec('back_label') }}
       />
 
       {rules.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Todavía no tenés reglas recurrentes. Activá el toggle &quot;Hacer recurrente&quot;
-          cuando registres un movimiento.
+          {tRec('empty')}
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
           {rules.map((rule) => {
             const finished = isFinished(rule)
-            const movementLabel = MOVEMENT_LABEL[rule.movement_type] ?? '—'
-            const freqLabel =
-              FREQUENCY_LABEL[rule.frequency] ?? rule.frequency
+            const movementLabel = getMovementLabel(rule.movement_type)
+            const freqLabel = getFrequencyLabel(rule.frequency)
             const accountName = rule.account?.name ?? '—'
             const destinationName = rule.destination_account?.name
 
@@ -87,7 +89,7 @@ const RecurringPage = async () => {
                         : accountName}
                       {' · '}
                       {freqLabel}
-                      {rule.end_date && ` · hasta ${formatDate(rule.end_date)}`}
+                      {rule.end_date && ` · ${tRec('until_template', { date: formatDate(rule.end_date) ?? rule.end_date })}`}
                     </span>
                   </div>
                   <div className="flex flex-col items-end gap-1">
@@ -96,11 +98,11 @@ const RecurringPage = async () => {
                     </span>
                     <span className="text-xs uppercase tracking-wide text-muted-foreground">
                       {rule.status === 'paused'
-                        ? 'Pausada'
+                        ? tRec('statuses.paused')
                         : finished
-                          ? 'Finalizada'
-                          : 'Activa'}
-                      {rule.pending_instance && ' · pendiente'}
+                          ? tRec('statuses.finished')
+                          : tRec('statuses.active')}
+                      {rule.pending_instance && ` · ${tRec('pending_suffix')}`}
                     </span>
                   </div>
                 </Link>

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCreditCards } from '@/lib/cards/queries'
 import { getShowCents } from '@/lib/preferences'
@@ -16,16 +17,18 @@ const CardsPage = async () => {
     getShowCents(),
   ])
 
+  const t = await getTranslations('cards')
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Tarjetas"
+        title={t('title')}
         actions={
           <Link
             href="/cards/new"
             className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
           >
-            + Agregar tarjeta
+            {t('actions.add')}
           </Link>
         }
       />

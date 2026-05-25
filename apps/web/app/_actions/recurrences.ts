@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import {
   acceptRecurrenceSuggestionSchema,
@@ -24,6 +25,7 @@ import type { RecurrenceCurrencyCode, RecurrenceMovementType } from '@/lib/recur
 import { createExpense, createIncome, createTransfer } from './transactions'
 import { registerCardPurchase } from './credit-cards'
 import type { ActionResult } from './types'
+import { translatePostgresError } from './_lib/translate-error'
 
 async function getAuthenticatedUserId(): Promise<string> {
   const supabase = await createClient()
@@ -241,7 +243,8 @@ export async function confirmRecurrenceInstance(
     })
   } catch (error) {
     if (error instanceof RecurrenceMapError) {
-      return { ok: false, formError: error.message }
+      const tm = await getTranslations('recurrences.mapper_errors')
+      return { ok: false, formError: tm(error.code) }
     }
     throw error
   }
@@ -511,7 +514,7 @@ export async function pauseRecurrence(id: string): Promise<ActionResult<never>> 
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'recurrence') }
 
   revalidatePath('/transactions')
   revalidatePath('/transactions/recurring')
@@ -546,7 +549,7 @@ export async function resumeRecurrence(id: string): Promise<ActionResult<never>>
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'recurrence') }
 
   revalidatePath('/transactions')
   revalidatePath('/transactions/recurring')
@@ -693,7 +696,7 @@ export async function dismissRecurrenceSuggestion(
       { onConflict: 'user_id,fingerprint' },
     )
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'recurrence') }
 
   revalidatePath('/transactions')
   return { ok: true }

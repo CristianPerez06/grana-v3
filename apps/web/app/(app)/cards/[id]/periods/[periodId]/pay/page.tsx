@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardPeriodDetail } from '@/lib/cards/queries'
 import { getAccounts } from '@/lib/accounts/queries'
@@ -47,11 +48,13 @@ const PayPeriodPage = async ({ params }: Props) => {
     .filter((a) => a.is_active && a.currencies.some((c) => c.currency_code === 'ARS' && c.is_active))
     .map((a) => ({ id: a.id, name: a.name, balanceARS: a.balances.ARS }))
 
+  const t = await getTranslations('cards')
+
   return (
     <div className="flex flex-col gap-6 max-w-lg">
       <PageHeader
-        title="Pagar resumen"
-        backLink={{ href: `/cards/${id}/periods/${periodId}`, label: 'Resumen' }}
+        title={t('payment.title')}
+        backLink={{ href: `/cards/${id}/periods/${periodId}`, label: t('payment.back_label') }}
       />
 
       {period.pendingAmountUSD > 0 && (

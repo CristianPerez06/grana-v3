@@ -1,18 +1,12 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { Repeat } from 'lucide-react'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getInstallmentFamily, getTransactionDetail } from '@/lib/transactions/queries'
 import { toFinancialMovement } from '@/lib/transactions/movements'
 import { getRecurrenceLinkForTransaction } from '@/lib/recurrences/queries'
 import { GlobalTransactionDetail } from './_components/global-transaction-detail'
-
-const FREQUENCY_LABEL: Record<string, string> = {
-  weekly: 'semanal',
-  biweekly: 'quincenal',
-  monthly: 'mensual',
-  annual: 'anual',
-}
 
 type Props = {
   params: Promise<{ txId: string }>
@@ -27,6 +21,16 @@ const GlobalTransactionDetailPage = async ({ params }: Props) => {
 
   const transaction = await getTransactionDetail(txId)
   if (!transaction) notFound()
+
+  const t = await getTranslations('transactions')
+  const tRec = await getTranslations('recurrences')
+
+  const getFrequencyLowerLabel = (freq: string) => {
+    if (freq === 'weekly' || freq === 'biweekly' || freq === 'monthly' || freq === 'annual') {
+      return tRec(`frequencies_lower.${freq}`)
+    }
+    return freq
+  }
 
   const [installmentFamily, recurrenceLink] = await Promise.all([
     transaction.is_parent
@@ -45,7 +49,7 @@ const GlobalTransactionDetailPage = async ({ params }: Props) => {
           href="/transactions"
           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          ← Movimientos
+          ← {t('back_label')}
         </Link>
       </div>
 
@@ -55,9 +59,9 @@ const GlobalTransactionDetailPage = async ({ params }: Props) => {
           className="flex items-center gap-2 rounded-md border border-border bg-muted/30 p-3 text-sm hover:bg-muted/50 transition-colors"
         >
           <Repeat className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-          <span className="text-muted-foreground">Generado por una regla recurrente</span>{' '}
+          <span className="text-muted-foreground">{t('generated_by_rule')}</span>{' '}
           <span className="font-medium">
-            ({FREQUENCY_LABEL[recurrenceLink.frequency] ?? recurrenceLink.frequency})
+            ({getFrequencyLowerLabel(recurrenceLink.frequency)})
           </span>
         </Link>
       )}

@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 type Network = {
   id: string
   slug: string
@@ -20,6 +22,7 @@ type Props = {
 }
 
 export const NetworkSelector = ({ networks, value, onChange, error }: Props) => {
+  const t = useTranslations('cards')
   const selectedCatalogId = value?.type === 'catalog' ? value.networkId : null
   const isOther = value?.type === 'other'
   const otherName = value?.type === 'other' ? value.name : ''
@@ -57,7 +60,7 @@ export const NetworkSelector = ({ networks, value, onChange, error }: Props) => 
               : 'border-border bg-background text-foreground hover:bg-muted',
           ].join(' ')}
         >
-          Otra red
+          {t('actions.network_other')}
         </button>
       </div>
 
@@ -66,7 +69,7 @@ export const NetworkSelector = ({ networks, value, onChange, error }: Props) => 
           type="text"
           value={otherName}
           onChange={(e) => onChange({ type: 'other', name: e.target.value })}
-          placeholder="Nombre de la red"
+          placeholder={t('placeholders.network_other')}
           maxLength={50}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />

@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardPeriods } from '@/lib/cards/queries'
 import { addDaysToISO, formatDateISO, suggestNextPeriodDates, sumMoneyValues } from '@/lib/cards/utils'
@@ -20,22 +21,25 @@ const formatDate = (iso: string) => {
   return `${d}/${m}/${y}`
 }
 
-const activeColumnLabel = (variant: PeriodVariant): {
+const activeColumnLabel = (
+  variant: PeriodVariant,
+  t: (key: string) => string,
+): {
   label: ThermometerColumn['label']
   tone: ThermometerColumn['tone']
 } => {
   switch (variant) {
     case 'cerrado_esperando_pago':
-      return { label: 'POR PAGAR', tone: 'amber' }
+      return { label: t('thermometer.label_pending') as ThermometerColumn['label'], tone: 'amber' }
     case 'vencido':
-      return { label: 'VENCIDO', tone: 'red' }
+      return { label: t('thermometer.label_overdue') as ThermometerColumn['label'], tone: 'red' }
     case 'pagado':
-      return { label: 'PAGADO', tone: 'paid' }
+      return { label: t('thermometer.label_paid') as ThermometerColumn['label'], tone: 'paid' }
     case 'actual':
     case 'futuro':
     case 'tarjeta_nueva':
     default:
-      return { label: 'EN CURSO', tone: 'neutral' }
+      return { label: t('thermometer.label_current') as ThermometerColumn['label'], tone: 'neutral' }
   }
 }
 
@@ -50,10 +54,11 @@ const CardDetailPage = async ({ params }: Props) => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [cardDetail, periodsDesc, showCents] = await Promise.all([
+  const [cardDetail, periodsDesc, showCents, t] = await Promise.all([
     getCreditCardDetail(id),
     getCardPeriods(id),
     getShowCents(),
+    getTranslations('cards'),
   ])
 
   if (!cardDetail || cardDetail.type !== 'credit') notFound()
@@ -73,7 +78,7 @@ const CardDetailPage = async ({ params }: Props) => {
   if (!cardHasHistory && cardDetail.is_active) {
     return (
       <div className="flex flex-col gap-6 max-w-2xl">
-        <Breadcrumb />
+        <Breadcrumb label={t('back_label')} />
         <CardHero
           name={cardDetail.name}
           institutionName={institutionName}
@@ -83,16 +88,16 @@ const CardDetailPage = async ({ params }: Props) => {
 
         <div className="rounded-lg border border-border bg-card p-6 flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <p className="text-lg font-semibold">Tu tarjeta está lista.</p>
+            <p className="text-lg font-semibold">{t('detail.ready_title')}</p>
             <p className="text-sm text-muted-foreground">
-              Registrá el primer consumo para empezar a ver cómo viene cada resumen.
+              {t('detail.ready_description')}
             </p>
           </div>
           <Link
             href={`/accounts/${id}/transactions/new`}
             className="inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
           >
-            Registrar primer consumo
+            {t('actions.register_first_purchase')}
           </Link>
         </div>
 
@@ -114,7 +119,7 @@ const CardDetailPage = async ({ params }: Props) => {
   if (!cardDetail.is_active && !hasPendings) {
     return (
       <div className="flex flex-col gap-6 max-w-2xl">
-        <Breadcrumb />
+        <Breadcrumb label={t('back_label')} />
         <CardHero
           name={cardDetail.name}
           institutionName={institutionName}
@@ -125,7 +130,7 @@ const CardDetailPage = async ({ params }: Props) => {
         <CardActions cardId={id} isActive={false} hasMovements={cardHasHistory} />
 
         <p className="text-sm text-muted-foreground text-center py-6">
-          Tarjeta archivada · sin pendientes
+          {t('detail.archived_no_pending')}
         </p>
 
         <CardDetailsSection
@@ -188,8 +193,8 @@ const CardDetailPage = async ({ params }: Props) => {
 
   // ── Build thermometer columns ───────────────────────────────────────────────
   const activeLabel = cardDetail.is_active
-    ? activeColumnLabel(activePeriod.variant)
-    : activeColumnLabel(activePeriod.variant) // archived shows real state too
+    ? activeColumnLabel(activePeriod.variant, t)
+    : activeColumnLabel(activePeriod.variant, t) // archived shows real state too
 
   const columns: [ThermometerColumn, ThermometerColumn, ThermometerColumn] = [
     {
@@ -201,7 +206,7 @@ const CardDetailPage = async ({ params }: Props) => {
       pendingUSD: activePeriod.pendingAmountUSD,
     },
     {
-      label: 'PRÓXIMO',
+      label: t('thermometer.label_next'),
       tone: 'neutral',
       closeDate: nextCol.end_date,
       dueDate: nextCol.due_date,
@@ -209,7 +214,7 @@ const CardDetailPage = async ({ params }: Props) => {
       pendingUSD: nextCol.pendingAmountUSD,
     },
     {
-      label: 'SIGUIENTE',
+      label: t('thermometer.label_next_next'),
       tone: 'neutral',
       closeDate: siguienteCol.end_date,
       dueDate: siguienteCol.due_date,
@@ -233,7 +238,7 @@ const CardDetailPage = async ({ params }: Props) => {
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
-      <Breadcrumb />
+      <Breadcrumb label={t('back_label')} />
 
       <CardHero
         name={cardDetail.name}
@@ -248,7 +253,7 @@ const CardDetailPage = async ({ params }: Props) => {
 
       {isOverdue && (
         <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm font-medium text-red-700">
-          Resumen vencido — evitá cargos por mora
+          {t('detail.overdue_alert')}
         </div>
       )}
 
@@ -275,19 +280,19 @@ const CardDetailPage = async ({ params }: Props) => {
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            Movimientos del resumen actual
+            {t('labels.current_movements')}
           </h2>
           <Link
             href={`/cards/${id}/periods`}
             className="text-xs text-primary hover:underline"
           >
-            Ver todos los resúmenes →
+            {t('actions.view_all_periods')}
           </Link>
         </div>
 
         {txList.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">
-            Sin movimientos en este resumen.
+            {t('period.empty_movements')}
           </p>
         ) : (
           <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
@@ -340,13 +345,13 @@ const CardDetailPage = async ({ params }: Props) => {
   )
 }
 
-const Breadcrumb = () => (
+const Breadcrumb = ({ label }: { label: string }) => (
   <div className="flex items-center gap-3">
     <Link
       href="/cards"
       className="text-sm text-muted-foreground hover:text-foreground transition-colors"
     >
-      ← Tarjetas
+      ← {label}
     </Link>
   </div>
 )

@@ -206,7 +206,19 @@
   "common": {
     "app_name": "grana",
     "logout": "Cerrar sesión",
-    "back": "Volver"
+    "back": "Volver",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "save_changes": "Guardar cambios",
+    "saving": "Guardando…",
+    "creating": "Creando…",
+    "processing": "Procesando…",
+    "loading": "Cargando…",
+    "load_more": "Cargar más",
+    "optional": "(opcional)",
+    "not_editable": "— no editable",
+    "no_results": "Sin resultados.",
+    "required_short": "Requerido."
   },
   "nav": {
     "dashboard": "Inicio",
@@ -297,9 +309,14 @@
   },
   "accounts": {
     "title": "Cuentas",
+    "edit_title": "Editar cuenta",
     "sections": {
       "cash": "Efectivo",
-      "bank": "Cuentas bancarias"
+      "bank": "Cuentas bancarias",
+      "archived": "Archivadas"
+    },
+    "badges": {
+      "archived": "Archivada"
     },
     "labels": {
       "name": "Nombre",
@@ -318,6 +335,7 @@
     },
     "placeholders": {
       "name": "Ej: Billetera, Caja chica",
+      "name_bank": "Ej: Caja de ahorro Galicia",
       "institutionSearch": "Buscar banco o billetera…"
     },
     "actions": {
@@ -327,20 +345,27 @@
       "reactivate": "Reactivar",
       "delete": "Eliminar",
       "addCurrency": "Agregar moneda",
-      "deactivateCurrency": "Desactivar moneda"
+      "deactivateCurrency": "Desactivar moneda",
+      "add_transaction": "Agregar"
+    },
+    "headers": {
+      "movements": "Movimientos"
     },
     "confirmations": {
       "archive_title": "¿Archivar esta cuenta?",
       "archive_body": "La cuenta quedará inactiva. Podés reactivarla cuando quieras.",
       "delete_title": "¿Eliminar esta cuenta?",
       "delete_body": "Esta acción no se puede deshacer.",
+      "delete_body_no_transactions": "Esta cuenta no tiene movimientos. ¿Eliminarla? Esta acción no se puede deshacer.",
       "deactivateCurrency_title": "¿Desactivar {currency} en esta cuenta?",
       "deactivateCurrency_body": "Las transacciones históricas en {currency} se conservarán."
     },
     "errors": {
+      "duplicate": "Ya existe una cuenta con ese nombre.",
       "name_required": "El nombre es obligatorio.",
       "name_too_long": "El nombre no puede tener más de 50 caracteres.",
       "institution_required": "Seleccioná una institución para cuentas bancarias.",
+      "institution_required_short": "Seleccioná una institución.",
       "institution_forbidden": "Las cuentas de efectivo no tienen institución.",
       "currency_required": "Seleccioná al menos una moneda.",
       "currency_unsupported": "Moneda no compatible.",
@@ -348,6 +373,11 @@
       "delete_has_transactions": "Esta cuenta tiene movimientos. Archivala para preservar el historial.",
       "deactivate_non_zero_balance": "No podés desactivar una moneda con saldo distinto de cero.",
       "deactivate_last_currency": "Debe quedar al menos una moneda activa.",
+      "create_failed": "Error al crear la cuenta.",
+      "archive_failed": "Error al archivar.",
+      "reactivate_failed": "Error al reactivar.",
+      "delete_failed": "Error al eliminar.",
+      "save_failed": "Error al guardar.",
       "generic": "Algo salió mal. Intentá de nuevo."
     },
     "empty": {
@@ -357,15 +387,212 @@
     },
     "movements_empty": "Todavía no hay movimientos en esta cuenta.",
     "defaultCashName": "Billetera",
+    "currency_options": {
+      "ars": "Pesos (ARS)",
+      "usd": "Dólares (USD)"
+    },
     "readonly": {
       "type": "El tipo de cuenta no se puede cambiar.",
       "initialBalance": "El saldo inicial no se puede modificar. Registrá un ajuste cuando exista el módulo de transacciones."
     }
   },
+  "cards": {
+    "title": "Tarjetas",
+    "back_label": "Tarjetas",
+    "new": {
+      "title": "Nueva tarjeta de crédito",
+      "subtitle_novato": "Solo necesitamos la fecha de cierre del próximo resumen.",
+      "subtitle_full": "Ingresá los datos de tu tarjeta y las fechas del ciclo actual."
+    },
+    "edit": {
+      "title": "Editar tarjeta",
+      "network_readonly_hint": "no se puede cambiar después de la creación"
+    },
+    "labels": {
+      "limit": "Límite",
+      "credit_limit": "Límite de crédito",
+      "credit_limit_helper": "El límite aplica en pesos. Los consumos en dólares se convierten al TC del día.",
+      "bank": "Banco / institución",
+      "network": "Red de la tarjeta",
+      "network_short": "Red",
+      "name": "Nombre",
+      "cycle_dates": "Fechas del ciclo",
+      "current_period": "Resumen actual",
+      "next_period": "Próximo resumen",
+      "close_date": "Cierre",
+      "due_date": "Vencimiento",
+      "novato_close_date": "Fecha del próximo cierre",
+      "novato_close_helper": "Tomala del último resumen que te mandó el banco. La app va a ir generando los resúmenes siguientes sola.",
+      "creation_date": "Fecha de alta",
+      "archived_date": "Archivada",
+      "movements": "Movimientos",
+      "movements_with_count": "Movimientos ({count})",
+      "current_movements": "Movimientos del resumen actual",
+      "amount_to_pay": "Monto a pagar",
+      "amount_to_pay_helper": "Pre-llenado con el total pendiente. Podés editarlo.",
+      "debit_account": "Cuenta de débito",
+      "payment_date": "Fecha del pago",
+      "next_period_helper": "Confirmá las fechas del próximo ciclo (sugeridas por el historial).",
+      "limit_suffix": "ARS",
+      "limit_placeholder": "Opcional",
+      "network_unknown": "Desconocida",
+      "network_custom": "Personalizada"
+    },
+    "placeholders": {
+      "bank_search": "Hacé click para ver los bancos…",
+      "bank_search_short": "Buscar banco…",
+      "name_auto": "Se auto-genera si lo dejás en blanco",
+      "name_example": "Ej: Visa principal",
+      "network_other": "Nombre de la red"
+    },
+    "actions": {
+      "add": "+ Agregar tarjeta",
+      "add_short": "+ Agregar",
+      "edit": "Editar",
+      "archive": "Archivar",
+      "reactivate": "Reactivar",
+      "delete": "Eliminar",
+      "view_all_periods": "Ver todos los resúmenes →",
+      "view_full_history": "Ver historial completo",
+      "register_first_purchase": "Registrar primer consumo",
+      "register_purchase": "Registrar consumo",
+      "pay_now": "Pagar ahora",
+      "pay_statement": "Pagar resumen",
+      "confirm_payment": "Confirmar pago",
+      "edit_dates": "Editar fechas",
+      "create": "Crear tarjeta",
+      "save": "Guardar",
+      "got_it": "Entendido",
+      "network_other": "Otra red"
+    },
+    "list": {
+      "carousel_empty": "No tenés tarjetas de crédito registradas.",
+      "periods_title": "Resúmenes",
+      "periods_empty": "No hay resúmenes registrados."
+    },
+    "limit_summary": {
+      "empty_prompt": "Cargá el límite para ver cuánto te queda.",
+      "empty_cta": "Cargar",
+      "committed": "Comprometido",
+      "over_limit": "por encima del límite",
+      "available": "Disponible",
+      "of_connector": "de"
+    },
+    "period": {
+      "future": "Futuro",
+      "current": "En curso",
+      "no_movements": "Sin movimientos",
+      "pending_payment": "Pendiente de pago",
+      "overdue": "Vencido",
+      "paid": "Pagado",
+      "estimated_tooltip": "Fechas estimadas",
+      "estimated_badge": "Estimado",
+      "no_cycle_assigned": "Sin ciclo asignado",
+      "close_prefix": "Cierra",
+      "due_prefix": "Vence",
+      "close_prefix_lower": "cierra",
+      "due_prefix_lower": "vence",
+      "paid_on_prefix": "Pagado el",
+      "paid_prefix_short": "Pagado",
+      "empty_movements": "Sin movimientos en este resumen.",
+      "empty_movements_period": "Sin movimientos en este período.",
+      "pending_short": "Pendiente"
+    },
+    "thermometer": {
+      "title": "Cómo viene tu tarjeta",
+      "label_next": "PRÓXIMO",
+      "label_next_next": "SIGUIENTE",
+      "label_current": "EN CURSO",
+      "label_pending": "POR PAGAR",
+      "label_overdue": "VENCIDO",
+      "label_paid": "PAGADO",
+      "empty_status": "sin movimientos"
+    },
+    "detail": {
+      "ready_title": "Tu tarjeta está lista.",
+      "ready_description": "Registrá el primer consumo para empezar a ver cómo viene cada resumen.",
+      "archived_no_pending": "Tarjeta archivada · sin pendientes",
+      "overdue_alert": "Resumen vencido — evitá cargos por mora"
+    },
+    "status": {
+      "archived": "Archivada",
+      "overdue": "Vencido",
+      "due_soon": "Por vencer",
+      "usage_progress": "{percent}% usado · {available} disponible"
+    },
+    "archived_banner": {
+      "title": "Tarjeta archivada",
+      "description": "Los movimientos históricos están preservados pero no podés registrar nuevos consumos.",
+      "cta": "Reactivar"
+    },
+    "deactivate_block": {
+      "title": "No se puede archivar",
+      "description": "Esta tarjeta tiene consumos pendientes de pago. Pagá el resumen antes de archivarla."
+    },
+    "payment": {
+      "title": "Pagar resumen",
+      "back_label": "Resumen",
+      "usd_note_prefix": "Consumos en dólares:",
+      "usd_note_description": "Los consumos en USD se muestran informativamente. El monto a pagar en ARS ya incluye la conversión al TC utilizado en cada compra.",
+      "section_payment_data": "Datos del pago",
+      "section_next_period": "Próximo resumen",
+      "warning": "Una vez confirmado, el pago no se puede revertir. Si registraste un monto o cuenta incorrectos, podés corregirlo con un ajuste de saldo."
+    },
+    "edit_dates": {
+      "dialog_title": "Editar fechas del resumen",
+      "close_label": "Fecha de cierre",
+      "due_label": "Fecha de vencimiento",
+      "info_extending": "El próximo resumen va a pasar a empezar el {newStart} (antes empezaba el {oldStart}). Los consumos del próximo resumen con fecha hasta el {newClose} se van a mover a este resumen.",
+      "info_shrinking": "El próximo resumen va a pasar a empezar el {newStart} (antes empezaba el {oldStart}). Los consumos de este resumen con fecha posterior al {newClose} se van a mover al próximo resumen.",
+      "error_next_paid": "No podés mover esta fecha: el próximo resumen ya está pagado."
+    },
+    "confirmations": {
+      "delete_body": "Esta tarjeta no tiene movimientos. ¿Eliminarla? Esta acción no se puede deshacer."
+    },
+    "errors": {
+      "duplicate": "Ya existe una tarjeta con ese nombre.",
+      "bank_required": "Seleccioná el banco emisor.",
+      "network_required": "Seleccioná la red de la tarjeta.",
+      "network_other_required": "Ingresá el nombre de la red.",
+      "limit_invalid": "El límite debe ser mayor a cero.",
+      "name_too_long": "Máximo 50 caracteres.",
+      "due_after_close": "El vencimiento debe ser posterior al cierre.",
+      "next_close_after_current": "El próximo cierre debe ser posterior al cierre actual.",
+      "next_due_after_close": "El próximo vencimiento debe ser posterior al cierre.",
+      "create_failed": "Error al crear la tarjeta.",
+      "save_failed": "Error al guardar.",
+      "archive_failed": "Error al archivar.",
+      "reactivate_failed": "Error al reactivar.",
+      "delete_failed": "Error al eliminar.",
+      "payment_failed": "Error al registrar el pago.",
+      "register_purchase_failed": "Error al registrar el consumo.",
+      "edit_dates_failed": "Error al actualizar fechas.",
+      "account_required": "Seleccioná una cuenta.",
+      "generic": "Algo salió mal. Intentá de nuevo."
+    }
+  },
   "transactions": {
     "title": "Movimientos",
+    "description": "Historial cronológico de ingresos, gastos, transferencias, ajustes y consumos.",
+    "back_label": "Movimientos",
     "new_income": "Nuevo ingreso",
     "new_expense": "Nuevo gasto",
+    "new_title": "Nuevo movimiento",
+    "edit_title": "Editar movimiento",
+    "register_purchase_title": "Registrar consumo",
+    "detail_back_label": "Detalle",
+    "summary_back_label": "Resumen",
+    "account_back_label": "Cuenta",
+    "review_alert_title": "Movimiento a revisar",
+    "generated_by_rule": "Generado por una regla recurrente",
+    "card_purchase_total": "Compra total",
+    "installment_summary": "Compra total: {amount} en {count} cuotas",
+    "installment_label": "Cuota {number}",
+    "installment_label_short": "Cuota",
+    "installment_pair": "Cuota {n} de {total}",
+    "fx_rate_template": "1 USD = ${rate} ARS",
+    "installment_purchase_label": "Compra en cuotas",
+    "card_payment_label": "Pago de tarjeta",
     "tabs": {
       "income": "Ingreso",
       "expense": "Gasto",
@@ -381,8 +608,23 @@
       "type": "Tipo",
       "currency": "Moneda",
       "account": "Cuenta",
+      "source_account": "Cuenta origen",
       "destination_account": "Cuenta destino",
-      "direction": "Dirección"
+      "direction": "Dirección",
+      "adjustment_type": "Tipo de ajuste",
+      "payment_account": "Cuenta de pago",
+      "card": "Tarjeta",
+      "billing_period": "Resumen",
+      "due_date": "Vencimiento",
+      "installments": "Cuotas",
+      "status": "Estado",
+      "fx_rate": "Tipo de cambio",
+      "fx_rate_label": "Tipo de cambio (ARS por USD)",
+      "fx_rate_daily": "Cotización del día",
+      "frequency": "Frecuencia",
+      "make_recurrent": "Hacer recurrente",
+      "no_subcategory": "Sin subcategoría",
+      "no_category": "Sin categoría"
     },
     "types": {
       "income": "Ingreso",
@@ -392,25 +634,60 @@
     },
     "directions": {
       "increase": "Suma",
-      "decrease": "Resta"
+      "decrease": "Resta",
+      "increase_full": "Suma al saldo",
+      "decrease_full": "Resta del saldo"
+    },
+    "statuses": {
+      "paid": "Pagado",
+      "pending": "Pendiente",
+      "installment_paid": "Pagada"
+    },
+    "review_flags": {
+      "missing_category": "Sin categoría",
+      "missing_fx_rate": "Revisar cotización"
+    },
+    "installments_options": {
+      "none": "Sin cuotas",
+      "count": "{n}x",
+      "ars_only": "Solo disponible en pesos",
+      "usd_rate_warning": "Vas a tener que cargar la cotización del día al confirmar cada mes."
+    },
+    "frequencies": {
+      "weekly": "Semanal",
+      "biweekly": "Quincenal",
+      "monthly": "Mensual",
+      "annual": "Anual"
     },
     "placeholders": {
       "amount": "0,00",
       "description": "Descripción opcional",
       "category": "Seleccioná una categoría",
       "subcategory": "Seleccioná una subcategoría (opcional)",
-      "destination_account": "Seleccioná la cuenta destino"
+      "destination_account": "Seleccioná la cuenta destino",
+      "no_subcategory": "Sin subcategoría",
+      "no_category": "Sin categoría"
     },
     "errors": {
+      "duplicate": "Ya existe un movimiento idéntico.",
       "amount_required": "El monto es obligatorio.",
       "amount_positive": "El monto debe ser mayor a cero.",
       "amount_nonzero": "El monto no puede ser cero.",
       "date_required": "La fecha es obligatoria.",
       "category_required": "La categoría es obligatoria para los gastos.",
+      "category_required_short": "Seleccioná una categoría.",
       "currency_inactive": "La moneda seleccionada no está activa en esta cuenta.",
       "currency_inactive_destination": "La moneda seleccionada no está activa en la cuenta destino.",
       "destination_required": "La cuenta destino es obligatoria.",
       "destination_same_as_source": "La cuenta destino no puede ser igual a la cuenta origen.",
+      "no_other_accounts": "No hay otras cuentas activas para transferir.",
+      "no_shared_currencies": "No hay monedas en común entre las dos cuentas.",
+      "exchange_rate_invalid": "El tipo de cambio debe ser mayor a cero.",
+      "save_failed": "Error al guardar el movimiento.",
+      "save_failed_short": "Error al guardar.",
+      "delete_failed": "Error al eliminar.",
+      "recurrence_failed": "Movimiento guardado, pero no se pudo crear la regla recurrente: {detail}",
+      "recurrence_unknown_error": "error desconocido",
       "generic": "Algo salió mal. Intentá de nuevo."
     },
     "empty": {
@@ -421,12 +698,18 @@
     "actions": {
       "create": "Guardar",
       "edit": "Editar",
-      "delete": "Eliminar"
+      "delete": "Eliminar",
+      "view_in_account": "Ver en cuenta",
+      "register_purchase": "Registrar consumo",
+      "register_installments": "Registrar {count} cuotas"
     },
     "confirmations": {
       "delete_title": "¿Eliminar este movimiento?",
       "delete_body": "Esta acción no se puede deshacer.",
       "delete_transfer_body": "Se eliminará la transferencia y los saldos de ambas cuentas se actualizarán.",
+      "delete_transfer_inline": "¿Eliminar esta transferencia? Se actualizarán los saldos de ambas cuentas.",
+      "delete_adjustment_inline": "¿Eliminar este ajuste? Esta acción no se puede deshacer.",
+      "delete_movement_inline": "¿Eliminar este movimiento? Esta acción no se puede deshacer.",
       "delete_adjustment_body": "Se eliminará el ajuste y el saldo de la cuenta se actualizará."
     },
     "readonly": {
@@ -434,6 +717,143 @@
       "account": "La cuenta no se puede cambiar.",
       "currency": "La moneda no se puede cambiar.",
       "destination_account": "La cuenta destino no se puede cambiar."
+    },
+    "filters": {
+      "search": "Buscar",
+      "search_placeholder": "Descripción, cuenta o texto visible",
+      "period": "Período",
+      "type": "Tipo",
+      "account": "Cuenta",
+      "category": "Categoría",
+      "from": "Desde",
+      "to": "Hasta",
+      "apply": "Aplicar",
+      "clear": "Limpiar",
+      "all_masc": "Todos",
+      "all_fem": "Todas"
+    },
+    "movement_kinds": {
+      "income": "Ingresos",
+      "expense": "Gastos",
+      "card_payment": "Pagos de resumen",
+      "transfer": "Transferencias",
+      "adjustment": "Ajustes",
+      "installment_purchase": "Compras en cuotas"
+    },
+    "periods": {
+      "current_month": "Mes actual",
+      "previous_month": "Mes pasado",
+      "current_year": "Año actual",
+      "custom": "Personalizado"
+    },
+    "account_types": {
+      "cash": "Efectivo",
+      "bank": "Cuenta",
+      "credit": "Tarjeta"
+    },
+    "list": {
+      "global_empty_description": "Cuando registres ingresos, gastos, transferencias o consumos, van a aparecer acá.",
+      "review_short": "Revisar",
+      "transfer_subtitle_unknown_source": "Cuenta origen",
+      "transfer_subtitle_unknown_destination": "Cuenta destino",
+      "installment_subtitle": "{count} cuotas",
+      "card_payment_from": "Desde {accountName}"
+    }
+  },
+  "recurrences": {
+    "title": "Recurrencias",
+    "description": "Reglas que generan movimientos pendientes para que confirmes o omitas.",
+    "back_label": "Movimientos",
+    "empty": "Todavía no tenés reglas recurrentes. Activá el toggle \"Hacer recurrente\" cuando registres un movimiento.",
+    "pending_suffix": "pendiente",
+    "until_template": "hasta {date}",
+    "frequencies": {
+      "weekly": "Semanal",
+      "biweekly": "Quincenal",
+      "monthly": "Mensual",
+      "annual": "Anual"
+    },
+    "frequencies_lower": {
+      "weekly": "semanal",
+      "biweekly": "quincenal",
+      "monthly": "mensual",
+      "annual": "anual"
+    },
+    "statuses": {
+      "active": "Activa",
+      "paused": "Pausada",
+      "deleted": "Eliminada",
+      "finished": "Finalizada"
+    },
+    "labels": {
+      "amount": "Monto",
+      "frequency": "Frecuencia",
+      "end_date": "Fecha de fin",
+      "description": "Descripción"
+    },
+    "actions": {
+      "pause": "Pausar",
+      "resume": "Reanudar",
+      "delete": "Eliminar",
+      "save_changes": "Guardar cambios"
+    },
+    "messages": {
+      "changes_saved": "Cambios guardados.",
+      "rule_paused": "Regla pausada.",
+      "rule_resumed": "Regla reanudada."
+    },
+    "confirmations": {
+      "delete": "¿Eliminar esta regla? Las instancias pendientes se cancelarán."
+    },
+    "errors": {
+      "duplicate": "Ya existe una regla recurrente idéntica.",
+      "amount_invalid": "El monto debe ser mayor a cero.",
+      "save_failed": "No se pudo guardar.",
+      "status_change_failed": "No se pudo cambiar el estado.",
+      "delete_failed": "No se pudo eliminar.",
+      "generic": "Algo salió mal. Intentá de nuevo."
+    },
+    "mapper_errors": {
+      "missing_transfer_destination": "La instancia recurrente de transferencia no tiene cuenta destino.",
+      "invalid_transfer_source": "La cuenta origen de la transferencia no permite este tipo de movimiento.",
+      "invalid_income_account": "La cuenta seleccionada no admite ingresos.",
+      "missing_category": "Falta seleccionar una categoría para este movimiento.",
+      "missing_fx_rate": "Falta la cotización del día para confirmar este movimiento.",
+      "fx_rate_not_allowed": "No corresponde cargar una cotización para este movimiento."
+    },
+    "pending": {
+      "title": "Movimientos recurrentes pendientes",
+      "count": "{count} pendientes",
+      "close_notice": "Cerrar aviso",
+      "edit_aria": "Editar antes de confirmar",
+      "cancel_edit_aria": "Cancelar edición",
+      "amount_changes_rule": "Si cambia, también se actualiza la regla recurrente.",
+      "fx_rate_label": "Cotización ARS por 1 USD",
+      "fx_rate_placeholder": "Ej: 1230.50",
+      "description_placeholder": "Opcional",
+      "confirm": "Confirmar",
+      "confirming": "Confirmando…",
+      "skip": "Omitir",
+      "confirmed_success": "Movimiento confirmado.",
+      "skipped_success": "Movimiento omitido."
+    },
+    "suggestion": {
+      "title": "Parece que esto se repite",
+      "basis": "Basado en {count} movimientos en los últimos 6 meses.",
+      "create_rule": "Crear regla",
+      "processing": "Procesando…",
+      "dismiss": "Descartar"
+    },
+    "errors_extra": {
+      "fx_required": "Ingresá la cotización ARS/USD del día.",
+      "confirm_failed": "No se pudo confirmar la instancia.",
+      "skip_failed": "No se pudo omitir la instancia.",
+      "create_rule_failed": "No se pudo crear la regla.",
+      "dismiss_failed": "No se pudo descartar la sugerencia."
+    },
+    "transfer_subtitle_unknown_destination": "—",
+    "labels_extra": {
+      "date": "Fecha"
     }
   },
   "subcategories": {

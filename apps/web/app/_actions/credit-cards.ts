@@ -33,6 +33,7 @@ import {
   formatDateISO,
 } from '@/lib/cards/utils'
 import type { ActionResult } from './types'
+import { translatePostgresError } from './_lib/translate-error'
 
 function normalizeActionMoney(value: number): number {
   return normalizeMoneyAmount(value) ?? value
@@ -827,7 +828,7 @@ export async function deactivateCreditCardAccount(
     .eq('id', accountId)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'card') }
 
   revalidatePath('/cards')
   revalidatePath('/accounts')
@@ -880,7 +881,7 @@ export async function updateCreditCard(
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'card') }
 
   revalidatePath('/cards')
   revalidatePath('/accounts')
@@ -955,7 +956,7 @@ export async function updateInstallmentParent(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .update(parentUpdates as any)
       .eq('id', parentId)
-    if (error) return { ok: false, formError: error.message }
+    if (error) return { ok: false, formError: await translatePostgresError(error.code, 'card') }
   }
 
   // Propagate to children
@@ -965,7 +966,7 @@ export async function updateInstallmentParent(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .update(childUpdates as any)
       .eq('parent_id', parentId)
-    if (error) return { ok: false, formError: error.message }
+    if (error) return { ok: false, formError: await translatePostgresError(error.code, 'card') }
   }
 
   revalidatePath('/transactions')
@@ -1017,7 +1018,7 @@ export async function deleteInstallmentParent(
     .eq('id', parentId)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: error.message }
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'card') }
 
   revalidatePath('/transactions')
   revalidatePath('/cards')

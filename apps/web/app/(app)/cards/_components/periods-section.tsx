@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import type { CardPeriodDetail } from '@/lib/cards/queries'
 import { PeriodCard } from './period-card'
 
@@ -10,6 +11,7 @@ type Props = {
 }
 
 export const PeriodsSection = ({ cardId, periods, hasUSD = false, showCents = false }: Props) => {
+  const t = useTranslations('cards')
   // Show at most 2 non-paid periods (actual + next), or most recent if all paid
   const activePeriods = periods
     .filter((p) => !p.has_payment)
@@ -21,13 +23,13 @@ export const PeriodsSection = ({ cardId, periods, hasUSD = false, showCents = fa
     <section className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-          Resúmenes
+          {t('list.periods_title')}
         </h2>
         <Link
           href={`/cards/${cardId}/periods`}
           className="text-xs text-primary hover:underline"
         >
-          Ver historial completo
+          {t('actions.view_full_history')}
         </Link>
       </div>
 

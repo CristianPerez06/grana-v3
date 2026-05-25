@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useTranslations } from 'next-intl'
 import { updatePeriodDates } from '@/app/_actions/credit-cards'
 
 type Props = {
@@ -33,6 +34,8 @@ export const EditDatesSheet = ({
   nextPeriodStart,
   nextPeriodIsPaid,
 }: Props) => {
+  const t = useTranslations('cards')
+  const tCommon = useTranslations('common')
   const [open, setOpen] = useState(false)
   const [endDate, setEndDate] = useState(currentEndDate)
   const [dueDate, setDueDate] = useState(currentDueDate)
@@ -52,7 +55,7 @@ export const EditDatesSheet = ({
     startTransition(async () => {
       const result = await updatePeriodDates(periodId, { end_date: endDate, due_date: dueDate })
       if (!result.ok) {
-        setError(result.formError ?? 'Error al actualizar fechas')
+        setError(result.formError ?? t('errors.edit_dates_failed'))
       } else {
         setOpen(false)
       }
@@ -65,18 +68,18 @@ export const EditDatesSheet = ({
         onClick={() => setOpen(true)}
         className="text-xs text-primary hover:underline"
       >
-        Editar fechas
+        {t('actions.edit_dates')}
       </button>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-sm rounded-xl bg-background p-6 shadow-xl flex flex-col gap-4">
-            <h2 className="text-base font-semibold">Editar fechas del resumen</h2>
+            <h2 className="text-base font-semibold">{t('edit_dates.dialog_title')}</h2>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium" htmlFor="end_date">
-                  Fecha de cierre
+                  {t('edit_dates.close_label')}
                 </label>
                 <input
                   id="end_date"
@@ -88,29 +91,32 @@ export const EditDatesSheet = ({
                 />
                 {isExtending && newNextStart && !blockedByPaidNext && (
                   <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 mt-1">
-                    El próximo resumen va a pasar a empezar el {formatDMY(newNextStart)}{' '}
-                    (antes empezaba el {formatDMY(nextPeriodStart!)}). Los consumos del próximo
-                    resumen con fecha hasta el {formatDMY(endDate)} se van a mover a este resumen.
+                    {t('edit_dates.info_extending', {
+                      newStart: formatDMY(newNextStart),
+                      oldStart: formatDMY(nextPeriodStart!),
+                      newClose: formatDMY(endDate),
+                    })}
                   </p>
                 )}
                 {isShrinking && newNextStart && !blockedByPaidNext && (
                   <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 mt-1">
-                    El próximo resumen va a pasar a empezar el {formatDMY(newNextStart)}{' '}
-                    (antes empezaba el {formatDMY(nextPeriodStart!)}). Los consumos de este
-                    resumen con fecha posterior al {formatDMY(endDate)} se van a mover al próximo
-                    resumen.
+                    {t('edit_dates.info_shrinking', {
+                      newStart: formatDMY(newNextStart),
+                      oldStart: formatDMY(nextPeriodStart!),
+                      newClose: formatDMY(endDate),
+                    })}
                   </p>
                 )}
                 {blockedByPaidNext && (
                   <p className="text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-md px-2 py-1.5 mt-1">
-                    No podés mover esta fecha: el próximo resumen ya está pagado.
+                    {t('edit_dates.error_next_paid')}
                   </p>
                 )}
               </div>
 
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium" htmlFor="due_date">
-                  Fecha de vencimiento
+                  {t('edit_dates.due_label')}
                 </label>
                 <input
                   id="due_date"
@@ -130,14 +136,14 @@ export const EditDatesSheet = ({
                   onClick={() => setOpen(false)}
                   className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted transition-colors"
                 >
-                  Cancelar
+                  {tCommon('cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={isPending || blockedByPaidNext}
                   className="px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
                 >
-                  {isPending ? 'Guardando…' : 'Guardar'}
+                  {isPending ? tCommon('saving') : t('actions.save')}
                 </button>
               </div>
             </form>

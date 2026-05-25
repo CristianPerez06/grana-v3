@@ -3,25 +3,13 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Repeat, X } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import {
   acceptRecurrenceSuggestion,
   dismissRecurrenceSuggestion,
 } from '@/app/_actions/recurrences'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
-
-const FREQUENCY_LABEL: Record<string, string> = {
-  weekly: 'semanal',
-  biweekly: 'quincenal',
-  monthly: 'mensual',
-  annual: 'anual',
-}
-
-const MOVEMENT_LABEL: Record<string, string> = {
-  income: 'Ingreso',
-  expense: 'Gasto',
-  transfer: 'Transferencia',
-}
 
 type EnrichedSuggestion = {
   fingerprint: string
@@ -49,15 +37,20 @@ export const RecurrenceSuggestionBanner = ({ suggestion }: Props) => {
   const showCents = useShowCents()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const t = useTranslations('recurrences')
+  const tTx = useTranslations('transactions')
 
   const formatted =
     suggestion.currency_code === 'ARS'
       ? formatARS(suggestion.amount, showCents)
       : formatUSD(suggestion.amount, showCents)
 
-  const movementLabel = MOVEMENT_LABEL[suggestion.movement_type] ?? '—'
-  const freqLabel =
-    FREQUENCY_LABEL[suggestion.frequency] ?? suggestion.frequency
+  const movementLabel = tTx(
+    `types.${suggestion.movement_type}` as 'types.income',
+  )
+  const freqLabel = t(
+    `frequencies_lower.${suggestion.frequency}` as 'frequencies_lower.weekly',
+  )
   const title =
     suggestion.description ||
     suggestion.category?.name ||
@@ -81,7 +74,7 @@ export const RecurrenceSuggestionBanner = ({ suggestion }: Props) => {
         fingerprint: suggestion.fingerprint,
       })
       if (!result.ok) {
-        setError(result.formError ?? 'No se pudo crear la regla.')
+        setError(result.formError ?? t('errors_extra.create_rule_failed'))
         return
       }
       router.refresh()
@@ -95,7 +88,7 @@ export const RecurrenceSuggestionBanner = ({ suggestion }: Props) => {
         fingerprint: suggestion.fingerprint,
       })
       if (!result.ok) {
-        setError(result.formError ?? 'No se pudo descartar la sugerencia.')
+        setError(result.formError ?? t('errors_extra.dismiss_failed'))
         return
       }
       router.refresh()
@@ -108,7 +101,7 @@ export const RecurrenceSuggestionBanner = ({ suggestion }: Props) => {
         <Repeat className="size-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
         <div className="flex flex-col gap-1">
           <h2 className="text-sm font-semibold tracking-tight">
-            Parece que esto se repite
+            {t('suggestion.title')}
           </h2>
           <p className="text-sm">
             <span className="font-medium">{title}</span>
@@ -122,7 +115,7 @@ export const RecurrenceSuggestionBanner = ({ suggestion }: Props) => {
             {freqLabel}
           </p>
           <p className="text-xs text-muted-foreground">
-            Basado en {suggestion.occurrence_count} movimientos en los últimos 6 meses.
+            {t('suggestion.basis', { count: suggestion.occurrence_count })}
           </p>
         </div>
       </div>
@@ -136,7 +129,7 @@ export const RecurrenceSuggestionBanner = ({ suggestion }: Props) => {
           disabled={isPending}
           className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
-          {isPending ? 'Procesando…' : 'Crear regla'}
+          {isPending ? t('suggestion.processing') : t('suggestion.create_rule')}
         </button>
         <button
           type="button"
@@ -145,7 +138,7 @@ export const RecurrenceSuggestionBanner = ({ suggestion }: Props) => {
           className="flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-foreground disabled:opacity-50"
         >
           <X size={12} />
-          Descartar
+          {t('suggestion.dismiss')}
         </button>
       </div>
     </section>

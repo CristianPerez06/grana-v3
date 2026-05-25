@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { formatARS } from '@grana/i18n-messages'
 import { subtractMoneyValues } from '@/lib/cards/utils'
 
@@ -15,12 +16,13 @@ export const LimitSummary = ({
   editHref,
   showCents = false,
 }: Props) => {
+  const t = useTranslations('cards')
   if (creditLimit === null || creditLimit <= 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        Cargá el límite para ver cuánto te queda.{' '}
+        {t('limit_summary.empty_prompt')}{' '}
         <Link href={editHref} className="text-primary hover:underline">
-          Cargar
+          {t('limit_summary.empty_cta')}
         </Link>
       </p>
     )
@@ -30,8 +32,8 @@ export const LimitSummary = ({
     const over = subtractMoneyValues(totalCommittedARS, creditLimit)
     return (
       <p className="text-sm font-medium text-red-700">
-        Comprometido {formatARS(totalCommittedARS, showCents)} —{' '}
-        {formatARS(over, showCents)} por encima del límite
+        {t('limit_summary.committed')} {formatARS(totalCommittedARS, showCents)} —{' '}
+        {formatARS(over, showCents)} {t('limit_summary.over_limit')}
       </p>
     )
   }
@@ -39,8 +41,8 @@ export const LimitSummary = ({
   const available = subtractMoneyValues(creditLimit, totalCommittedARS)
   return (
     <p className="text-sm text-foreground">
-      <span className="font-medium">Disponible {formatARS(available, showCents)}</span>
-      <span className="text-muted-foreground"> de {formatARS(creditLimit, showCents)}</span>
+      <span className="font-medium">{t('limit_summary.available')} {formatARS(available, showCents)}</span>
+      <span className="text-muted-foreground"> {t('limit_summary.of_connector')} {formatARS(creditLimit, showCents)}</span>
     </p>
   )
 }

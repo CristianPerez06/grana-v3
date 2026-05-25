@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getTransactionDetail } from '@/lib/transactions/queries'
 import { getAllCategories } from '@/lib/categories/queries'
@@ -16,6 +17,8 @@ const EditTransactionPage = async ({ params }: Props) => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const t = await getTranslations('transactions')
+
   const [transaction, categories] = await Promise.all([
     getTransactionDetail(txId),
     getAllCategories(user.id),
@@ -29,8 +32,8 @@ const EditTransactionPage = async ({ params }: Props) => {
   return (
     <div className="flex flex-col gap-6 max-w-lg">
       <PageHeader
-        title="Editar movimiento"
-        backLink={{ href: `/accounts/${id}/transactions/${txId}`, label: 'Detalle' }}
+        title={t('edit_title')}
+        backLink={{ href: `/accounts/${id}/transactions/${txId}`, label: t('detail_back_label') }}
       />
 
       <EditTransactionForm

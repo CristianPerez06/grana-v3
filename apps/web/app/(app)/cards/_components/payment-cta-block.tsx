@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import type { PeriodVariant } from '@/lib/cards/types'
 
 type Props = {
@@ -18,19 +19,20 @@ const secondaryClasses =
   'inline-flex w-full items-center justify-center rounded-lg border border-border bg-background px-4 py-3 text-sm font-medium hover:bg-muted transition-colors'
 
 export const PaymentCTABlock = ({ cardId, periodId, variant, canRegisterPurchase }: Props) => {
+  const t = useTranslations('cards')
   if (variant === 'inactiva') return null
 
   if (variant === 'tarjeta_nueva') {
     return (
       <Link href={`/accounts/${cardId}/transactions/new`} className={primaryClasses}>
-        Registrar primer consumo
+        {t('actions.register_first_purchase')}
       </Link>
     )
   }
 
   const registerLink = canRegisterPurchase ? (
     <Link href={`/accounts/${cardId}/transactions/new`} className={secondaryClasses}>
-      Registrar consumo
+      {t('actions.register_purchase')}
     </Link>
   ) : null
 
@@ -42,7 +44,7 @@ export const PaymentCTABlock = ({ cardId, periodId, variant, canRegisterPurchase
           href={`/cards/${cardId}/periods/${periodId}/pay`}
           className={isOverdue ? dangerClasses : primaryClasses}
         >
-          {isOverdue ? 'Pagar ahora' : 'Pagar resumen'}
+          {isOverdue ? t('actions.pay_now') : t('actions.pay_statement')}
         </Link>
         {registerLink}
       </div>

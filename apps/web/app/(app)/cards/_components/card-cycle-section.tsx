@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 type Props = {
   currentEndDate: string
   currentDueDate: string
@@ -16,15 +18,17 @@ export const CardCycleSection = ({
   nextDueDate,
   onChange,
   errors = {},
-}: Props) => (
+}: Props) => {
+  const t = useTranslations('cards')
+  return (
   <div className="flex flex-col gap-4">
     <div className="flex flex-col gap-3">
       <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-        Resumen actual
+        {t('labels.current_period')}
       </p>
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium">Cierre</label>
+          <label className="text-sm font-medium">{t('labels.close_date')}</label>
           <input
             type="date"
             value={currentEndDate}
@@ -37,7 +41,7 @@ export const CardCycleSection = ({
           )}
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium">Vencimiento</label>
+          <label className="text-sm font-medium">{t('labels.due_date')}</label>
           <input
             type="date"
             value={currentDueDate}
@@ -54,11 +58,11 @@ export const CardCycleSection = ({
 
     <div className="flex flex-col gap-3">
       <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-        Próximo resumen
+        {t('labels.next_period')}
       </p>
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium">Cierre</label>
+          <label className="text-sm font-medium">{t('labels.close_date')}</label>
           <input
             type="date"
             value={nextEndDate}
@@ -71,7 +75,7 @@ export const CardCycleSection = ({
           )}
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium">Vencimiento</label>
+          <label className="text-sm font-medium">{t('labels.due_date')}</label>
           <input
             type="date"
             value={nextDueDate}
@@ -86,4 +90,5 @@ export const CardCycleSection = ({
       </div>
     </div>
   </div>
-)
+  )
+}

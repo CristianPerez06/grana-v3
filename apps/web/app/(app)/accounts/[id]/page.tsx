@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getAccountDetail } from '@/lib/accounts/queries'
 import { getTransactions } from '@/lib/transactions/queries'
@@ -16,6 +17,8 @@ const AccountDetailPage = async ({ params }: Props) => {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const t = await getTranslations('accounts')
 
   const [account, transactions] = await Promise.all([
     getAccountDetail(id),
@@ -38,7 +41,7 @@ const AccountDetailPage = async ({ params }: Props) => {
           href="/accounts"
           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          ← Cuentas
+          {`← ${t('title')}`}
         </Link>
       </div>
 
@@ -49,20 +52,20 @@ const AccountDetailPage = async ({ params }: Props) => {
           href={`/accounts/${account.id}/edit`}
           className="self-start text-sm text-primary hover:underline"
         >
-          + Agregar moneda
+          {`+ ${t('actions.addCurrency')}`}
         </Link>
       )}
 
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            Movimientos
+            {t('headers.movements')}
           </h2>
           <Link
             href={`/accounts/${account.id}/transactions/new`}
             className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
           >
-            + Agregar
+            {`+ ${t('actions.add_transaction')}`}
           </Link>
         </div>
         <TransactionList transactions={transactions} accountId={account.id} />

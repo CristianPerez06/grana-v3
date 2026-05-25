@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { getTodayAR } from '@/lib/date'
 import { registerCardPurchase, registerInstallments } from '@/app/_actions/credit-cards'
 import { createRecurrenceFromMovement } from '@/app/_actions/recurrences'
@@ -21,6 +22,9 @@ type Props = {
 }
 
 export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categories }: Props) => {
+  const t = useTranslations('transactions')
+  const tCommon = useTranslations('common')
+  const tCards = useTranslations('cards')
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [formError, setFormError] = useState<string | null>(null)
@@ -52,11 +56,11 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
     const parsedFxRate = fxRate ? parseMoneyInput(fxRate, { decimalPlaces: 6 }) : undefined
 
     if (parsedAmount === null || parsedAmount <= 0) {
-      setFormError('El monto debe ser mayor a cero.')
+      setFormError(t('errors.amount_positive'))
       return
     }
     if (isUSD && (parsedFxRate === null || parsedFxRate === undefined || parsedFxRate <= 0)) {
-      setFormError('El tipo de cambio debe ser mayor a cero.')
+      setFormError(t('errors.exchange_rate_invalid'))
       return
     }
 
@@ -88,7 +92,7 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
       }
 
       if (!result.ok) {
-        setFormError(result.formError ?? 'Error al registrar el consumo.')
+        setFormError(result.formError ?? tCards('errors.register_purchase_failed'))
         return
       }
 
@@ -100,9 +104,9 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
         })
         if (!recurrenceResult.ok) {
           setFormError(
-            `Consumo guardado, pero no se pudo crear la regla recurrente: ${
-              recurrenceResult.formError ?? 'error desconocido'
-            }`,
+            t('errors.recurrence_failed', {
+              detail: recurrenceResult.formError ?? t('errors.recurrence_unknown_error'),
+            }),
           )
           return
         }
@@ -117,7 +121,7 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
       {/* Currency */}
       {activeCurrencies.length > 1 && (
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Moneda</label>
+          <label className="text-sm font-medium">{t('labels.currency')}</label>
           <div className="flex gap-2">
             {activeCurrencies.map((c) => (
               <button
@@ -139,7 +143,7 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
 
       {/* Amount */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="amount" className="text-sm font-medium">Monto</label>
+        <label htmlFor="amount" className="text-sm font-medium">{t('labels.amount')}</label>
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
             {currency === 'ARS' ? '$' : 'U$D'}
@@ -149,7 +153,7 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
             required
             value={amount}
             onChange={setAmount}
-            placeholder="0,00"
+            placeholder={t('placeholders.amount')}
             className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
@@ -158,7 +162,7 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
       {/* Installments (ARS only) */}
       {currency === 'ARS' && (
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="installments" className="text-sm font-medium">Cuotas</label>
+          <label htmlFor="installments" className="text-sm font-medium">{t('labels.installments')}</label>
           <div className="flex gap-2 flex-wrap">
             {[1, 2, 3, 6, 9, 12, 18, 24].map((n) => (
               <button
@@ -171,12 +175,12 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
                     : 'border-border text-muted-foreground hover:border-foreground'
                 }`}
               >
-                {n === 1 ? 'Sin cuotas' : `${n}x`}
+                {n === 1 ? t('installments_options.none') : t('installments_options.count', { n })}
               </button>
             ))}
           </div>
           <p className="text-xs text-muted-foreground">
-            Solo disponible en pesos
+            {t('installments_options.ars_only')}
           </p>
         </div>
       )}
@@ -185,14 +189,14 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
       {isUSD && (
         <div className="flex flex-col gap-1.5">
           <label htmlFor="fx_rate" className="text-sm font-medium">
-            Tipo de cambio (ARS por USD)
+            {t('labels.fx_rate_label')}
           </label>
           <MoneyAmountInput
             id="fx_rate"
             required
             value={fxRate}
             onChange={setFxRate}
-            placeholder="Cotización del día"
+            placeholder={t('labels.fx_rate_daily')}
             className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
@@ -200,7 +204,7 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
 
       {/* Date */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="date" className="text-sm font-medium">Fecha</label>
+        <label htmlFor="date" className="text-sm font-medium">{t('labels.date')}</label>
         <input
           id="date"
           type="date"
@@ -214,7 +218,7 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
       {/* Category */}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="category" className="text-sm font-medium">
-          Categoría <span className="text-destructive">*</span>
+          {t('labels.category')} <span className="text-destructive">*</span>
         </label>
         <select
           id="category"
@@ -223,7 +227,7 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
           onChange={(e) => { setCategoryId(e.target.value); setSubcategoryId('') }}
           className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <option value="">Seleccioná una categoría</option>
+          <option value="">{t('placeholders.category')}</option>
           {expenseCategories.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
@@ -234,7 +238,7 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
       {selectedCategory && selectedCategory.subcategories.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <label htmlFor="subcategory" className="text-sm font-medium">
-            Subcategoría <span className="text-muted-foreground text-xs">(opcional)</span>
+            {t('labels.subcategory')} <span className="text-muted-foreground text-xs">{tCommon('optional')}</span>
           </label>
           <select
             id="subcategory"
@@ -242,7 +246,7 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
             onChange={(e) => setSubcategoryId(e.target.value)}
             className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <option value="">Sin subcategoría</option>
+            <option value="">{t('placeholders.no_subcategory')}</option>
             {selectedCategory.subcategories.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
@@ -253,14 +257,14 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
       {/* Description */}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="description" className="text-sm font-medium">
-          Descripción <span className="text-muted-foreground text-xs">(opcional)</span>
+          {t('labels.description')} <span className="text-muted-foreground text-xs">{tCommon('optional')}</span>
         </label>
         <input
           id="description"
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Descripción opcional"
+          placeholder={t('placeholders.description')}
           className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
@@ -275,12 +279,12 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
               onChange={(e) => setIsRecurrent(e.target.checked)}
               className="accent-primary"
             />
-            <span className="text-sm font-medium">Hacer recurrente</span>
+            <span className="text-sm font-medium">{t('labels.make_recurrent')}</span>
           </label>
           {isRecurrent && (
             <div className="flex flex-col gap-1.5">
               <label htmlFor="frequency" className="text-xs text-muted-foreground">
-                Frecuencia
+                {t('labels.frequency')}
               </label>
               <select
                 id="frequency"
@@ -290,14 +294,14 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
                 }
                 className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <option value="weekly">Semanal</option>
-                <option value="biweekly">Quincenal</option>
-                <option value="monthly">Mensual</option>
-                <option value="annual">Anual</option>
+                <option value="weekly">{t('frequencies.weekly')}</option>
+                <option value="biweekly">{t('frequencies.biweekly')}</option>
+                <option value="monthly">{t('frequencies.monthly')}</option>
+                <option value="annual">{t('frequencies.annual')}</option>
               </select>
               {isUSD && (
                 <p className="text-xs text-muted-foreground">
-                  Vas a tener que cargar la cotización del día al confirmar cada mes.
+                  {t('installments_options.usd_rate_warning')}
                 </p>
               )}
             </div>
@@ -312,7 +316,11 @@ export const RegisterCardPurchaseForm = ({ accountId, activeCurrencies, categori
         disabled={isPending}
         className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
       >
-        {isPending ? 'Guardando…' : isInstallments ? `Registrar ${installments} cuotas` : 'Registrar consumo'}
+        {isPending
+          ? tCommon('saving')
+          : isInstallments
+            ? t('actions.register_installments', { count: parseInt(installments) })
+            : t('actions.register_purchase')}
       </button>
     </form>
   )

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import type { CardPeriodDetail } from '@/lib/cards/queries'
 import type { PeriodVariant } from '@/lib/cards/types'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -9,13 +10,13 @@ const formatDate = (iso: string) => {
   return `${d}/${m}/${y}`
 }
 
-const variantLabel: Record<PeriodVariant, string> = {
-  futuro: 'Futuro',
-  actual: 'En curso',
-  tarjeta_nueva: 'Sin movimientos',
-  cerrado_esperando_pago: 'Pendiente de pago',
-  vencido: 'Vencido',
-  pagado: 'Pagado',
+const variantLabelKey: Record<PeriodVariant, string> = {
+  futuro: 'period.future',
+  actual: 'period.current',
+  tarjeta_nueva: 'period.no_movements',
+  cerrado_esperando_pago: 'period.pending_payment',
+  vencido: 'period.overdue',
+  pagado: 'period.paid',
 }
 
 const variantColors: Record<PeriodVariant, string> = {
@@ -35,7 +36,8 @@ type Props = {
 }
 
 export const PeriodCard = ({ period, cardId, hasUSD = false, showCents = false }: Props) => {
-  const label = variantLabel[period.variant]
+  const t = useTranslations('cards')
+  const label = t(variantLabelKey[period.variant])
   const colorClass = variantColors[period.variant]
   const totalAmount = period.has_payment ? period.paidAmountARS : period.pendingAmountARS
 
@@ -62,9 +64,9 @@ export const PeriodCard = ({ period, cardId, hasUSD = false, showCents = false }
 
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">
-          Vence {formatDate(period.due_date)}
+          {t('period.due_prefix')} {formatDate(period.due_date)}
           {period.has_payment && period.paymentDate && (
-            <> · Pagado {formatDate(period.paymentDate)}</>
+            <> · {t('period.paid_prefix_short')} {formatDate(period.paymentDate)}</>
           )}
         </span>
         {period.is_estimated && <EstimatedDateBadge />}

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Alert } from '@/components/ui/alert'
 import { updateAccount } from '@/app/_actions/accounts'
 import type { AccountWithDetails, Institution } from '@/lib/accounts/types'
@@ -12,6 +13,8 @@ type Props = {
 }
 
 export const EditAccountForm = ({ account, institutions }: Props) => {
+  const t = useTranslations('accounts')
+  const tCommon = useTranslations('common')
   const router = useRouter()
   const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -26,9 +29,9 @@ export const EditAccountForm = ({ account, institutions }: Props) => {
 
   const validate = () => {
     const errs: Record<string, string> = {}
-    if (!name.trim()) errs.name = 'El nombre es obligatorio.'
-    if (name.trim().length > 50) errs.name = 'El nombre no puede tener más de 50 caracteres.'
-    if (account.type === 'bank' && !institutionId) errs.institution = 'Seleccioná una institución.'
+    if (!name.trim()) errs.name = t('errors.name_required')
+    if (name.trim().length > 50) errs.name = t('errors.name_too_long')
+    if (account.type === 'bank' && !institutionId) errs.institution = t('errors.institution_required_short')
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -61,16 +64,16 @@ export const EditAccountForm = ({ account, institutions }: Props) => {
     <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
       {/* Type — read-only */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-foreground">Tipo de cuenta</label>
+        <label className="text-sm font-medium text-foreground">{t('labels.type')}</label>
         <div className="rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
-          {account.type === 'cash' ? 'Efectivo' : 'Bancaria / Débito'}
+          {account.type === 'cash' ? t('types.cash') : t('types.bank')}
         </div>
-        <p className="text-xs text-muted-foreground">El tipo de cuenta no se puede cambiar.</p>
+        <p className="text-xs text-muted-foreground">{t('readonly.type')}</p>
       </div>
 
       {/* Name */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-foreground">Nombre</label>
+        <label className="text-sm font-medium text-foreground">{t('labels.name')}</label>
         <input
           type="text"
           value={name}
@@ -83,12 +86,12 @@ export const EditAccountForm = ({ account, institutions }: Props) => {
       {/* Institution (bank only) */}
       {account.type === 'bank' && (
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-foreground">Institución</label>
+          <label className="text-sm font-medium text-foreground">{t('labels.institution')}</label>
           <input
             type="text"
             value={institutionSearch}
             onChange={(e) => setInstitutionSearch(e.target.value)}
-            placeholder="Buscar banco o billetera…"
+            placeholder={t('placeholders.institutionSearch')}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
           <div className="max-h-48 overflow-y-auto rounded-md border border-input">
@@ -117,7 +120,7 @@ export const EditAccountForm = ({ account, institutions }: Props) => {
 
       {/* Initial balance — read-only */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-foreground">Saldo inicial</label>
+        <label className="text-sm font-medium text-foreground">{t('labels.initialBalance')}</label>
         {account.currencies.map((c) => (
           <div
             key={c.currency_code}
@@ -127,8 +130,7 @@ export const EditAccountForm = ({ account, institutions }: Props) => {
           </div>
         ))}
         <p className="text-xs text-muted-foreground">
-          El saldo inicial no se puede modificar. Registrá un ajuste cuando exista el módulo de
-          transacciones.
+          {t('readonly.initialBalance')}
         </p>
       </div>
 
@@ -140,14 +142,14 @@ export const EditAccountForm = ({ account, institutions }: Props) => {
           onClick={() => router.back()}
           className="flex-1 rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
         >
-          Cancelar
+          {tCommon('cancel')}
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
           className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
-          {isSubmitting ? 'Guardando…' : 'Guardar cambios'}
+          {isSubmitting ? tCommon('saving') : tCommon('save_changes')}
         </button>
       </div>
     </form>

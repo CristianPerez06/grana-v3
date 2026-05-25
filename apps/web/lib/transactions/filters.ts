@@ -26,24 +26,24 @@ export const DEFAULT_MOVEMENTS_LIMIT = 50
 export const MOVEMENTS_LIMIT_STEP = 50
 export const MAX_MOVEMENTS_LIMIT = 500
 
-export const MOVEMENT_TYPE_LABELS: Record<MovementTypeFilter, string> = {
-  income: 'Ingresos',
-  expense: 'Gastos',
-  card_payment: 'Pagos de resumen',
-  transfer: 'Transferencias',
-  adjustment: 'Ajustes',
-  installment_purchase: 'Compras en cuotas',
-}
+export const MOVEMENT_TYPE_KEYS: ReadonlyArray<MovementTypeFilter> = [
+  'income',
+  'expense',
+  'card_payment',
+  'transfer',
+  'adjustment',
+  'installment_purchase',
+]
 
-export const MOVEMENT_PERIOD_LABELS: Record<MovementPeriodFilter, string> = {
-  current_month: 'Mes actual',
-  previous_month: 'Mes pasado',
-  current_year: 'Año actual',
-  custom: 'Personalizado',
-}
+export const MOVEMENT_PERIOD_KEYS: ReadonlyArray<MovementPeriodFilter> = [
+  'current_month',
+  'previous_month',
+  'current_year',
+  'custom',
+]
 
-const VALID_MOVEMENT_TYPES = new Set<string>(Object.keys(MOVEMENT_TYPE_LABELS))
-const VALID_PERIODS = new Set<string>(Object.keys(MOVEMENT_PERIOD_LABELS))
+const VALID_MOVEMENT_TYPES = new Set<string>(MOVEMENT_TYPE_KEYS)
+const VALID_PERIODS = new Set<string>(MOVEMENT_PERIOD_KEYS)
 
 const getParam = (params: SearchParamsLike, key: string) => {
   if (params instanceof URLSearchParams) return params.get(key)

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Alert } from '@/components/ui/alert'
 import { updateCreditCard } from '@/app/_actions/credit-cards'
 import { parseMoneyInput } from '@grana/validation'
@@ -26,6 +27,8 @@ export const EditCreditCardForm = ({
   institutions,
 }: Props) => {
   const router = useRouter()
+  const t = useTranslations('cards')
+  const tCommon = useTranslations('common')
   const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -45,10 +48,10 @@ export const EditCreditCardForm = ({
 
   const validate = () => {
     const errs: Record<string, string> = {}
-    if (name.trim().length > 50) errs.name = 'Máximo 50 caracteres.'
+    if (name.trim().length > 50) errs.name = t('errors.name_too_long')
     const limit = creditLimit ? parseMoneyInput(creditLimit) : null
     if (creditLimit && (limit === null || limit <= 0)) {
-      errs.creditLimit = 'El límite debe ser mayor a cero.'
+      errs.creditLimit = t('errors.limit_invalid')
     }
     setErrors(errs)
     return Object.keys(errs).length === 0
@@ -69,7 +72,7 @@ export const EditCreditCardForm = ({
       })
 
       if (!result.ok) {
-        setFormError(result.formError ?? 'Error al guardar')
+        setFormError(result.formError ?? t('errors.save_failed'))
         return
       }
 
@@ -83,15 +86,15 @@ export const EditCreditCardForm = ({
     <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
       {/* Red — read-only */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-muted-foreground">Red</label>
+        <label className="text-sm font-medium text-muted-foreground">{t('labels.network_short')}</label>
         <p className="text-sm px-3 py-2 rounded-md border border-input bg-muted/30 text-muted-foreground">
-          {networkLabel} — no se puede cambiar después de la creación
+          {networkLabel} — {t('edit.network_readonly_hint')}
         </p>
       </div>
 
       {/* Banco */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium">Banco / institución</label>
+        <label className="text-sm font-medium">{t('labels.bank')}</label>
         <input
           type="text"
           value={institutionSearch}
@@ -99,7 +102,7 @@ export const EditCreditCardForm = ({
             setInstitutionSearch(e.target.value)
             if (institutionId) setInstitutionId('')
           }}
-          placeholder="Buscar banco…"
+          placeholder={t('placeholders.bank_search_short')}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
         {institutionSearch && !institutionId && (
@@ -124,7 +127,7 @@ export const EditCreditCardForm = ({
 
       {/* Nombre */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium">Nombre</label>
+        <label className="text-sm font-medium">{t('labels.name')}</label>
         <input
           type="text"
           value={name}
@@ -138,7 +141,7 @@ export const EditCreditCardForm = ({
       {/* Límite */}
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium">
-          Límite de crédito <span className="text-muted-foreground font-normal">(opcional)</span>
+          {t('labels.credit_limit')} <span className="text-muted-foreground font-normal">{tCommon('optional')}</span>
         </label>
         <LimitInputWithSuffix
           value={creditLimit}
@@ -155,14 +158,14 @@ export const EditCreditCardForm = ({
           onClick={() => router.back()}
           className="flex-1 rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
         >
-          Cancelar
+          {tCommon('cancel')}
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
           className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
-          {isSubmitting ? 'Guardando…' : 'Guardar'}
+          {isSubmitting ? tCommon('saving') : t('actions.save')}
         </button>
       </div>
     </form>
