@@ -628,7 +628,8 @@
       "make_recurrent": "Make recurring",
       "no_subcategory": "No subcategory",
       "no_category": "No category",
-      "exchange_received": "Amount received"
+      "exchange_received": "Amount received",
+      "same_account_option": "{name} (same account)"
     },
     "types": {
       "income": "Income",
@@ -689,6 +690,8 @@
       "destination_same_as_source": "Destination account cannot be the same as the source account.",
       "no_other_accounts": "There are no other active accounts to transfer to.",
       "no_shared_currencies": "The two accounts share no common currencies.",
+      "destination_amount_positive": "Received amount must be greater than zero.",
+      "destination_account_no_other_currency": "The destination account doesn't have another currency for the exchange.",
       "exchange_rate_invalid": "Exchange rate must be greater than zero.",
       "save_failed": "Failed to save the transaction.",
       "save_failed_short": "Failed to save.",
@@ -710,6 +713,9 @@
     "negative_balance_notice": {
       "title": "The account balance would go negative",
       "body": "Available in {currency} would drop to −{formatted}. You can still record it."
+    },
+    "exchange": {
+      "no_other_currency_hint": "That account doesn't have another currency enabled. Choose an account with {currency} to exchange."
     },
     "actions": {
       "create": "Save",
