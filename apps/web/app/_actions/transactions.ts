@@ -193,7 +193,8 @@ export async function updateTransaction(
 
   revalidatePath('/accounts')
   revalidatePath(`/accounts/${accountId}`)
-  revalidatePath(`/accounts/${accountId}/transactions/${id}`)
+  revalidatePath('/transactions')
+  revalidatePath(`/transactions/${id}`)
   return { ok: true }
 }
 
@@ -380,7 +381,8 @@ export async function updateTransfer(
   revalidatePath('/accounts')
   revalidatePath(`/accounts/${accountId}`)
   revalidatePath(`/accounts/${destinationAccountId}`)
-  revalidatePath(`/accounts/${accountId}/transactions/${id}`)
+  revalidatePath('/transactions')
+  revalidatePath(`/transactions/${id}`)
   return { ok: true }
 }
 
@@ -421,7 +423,8 @@ export async function updateAdjustment(
 
   revalidatePath('/accounts')
   revalidatePath(`/accounts/${accountId}`)
-  revalidatePath(`/accounts/${accountId}/transactions/${id}`)
+  revalidatePath('/transactions')
+  revalidatePath(`/transactions/${id}`)
   return { ok: true }
 }
 
@@ -568,7 +571,8 @@ export async function updateExchange(
   revalidatePath('/accounts')
   revalidatePath(`/accounts/${accountId}`)
   revalidatePath(`/accounts/${destinationAccountId}`)
-  revalidatePath(`/accounts/${accountId}/transactions/${id}`)
+  revalidatePath('/transactions')
+  revalidatePath(`/transactions/${id}`)
   revalidatePath('/transactions')
   return { ok: true }
 }

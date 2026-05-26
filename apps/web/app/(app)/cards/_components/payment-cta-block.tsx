@@ -24,14 +24,14 @@ export const PaymentCTABlock = ({ cardId, periodId, variant, canRegisterPurchase
 
   if (variant === 'tarjeta_nueva') {
     return (
-      <Link href={`/accounts/${cardId}/transactions/new`} className={primaryClasses}>
+      <Link href={`/transactions/new?account=${cardId}&from=card:${cardId}`} className={primaryClasses}>
         {t('actions.register_first_purchase')}
       </Link>
     )
   }
 
   const registerLink = canRegisterPurchase ? (
-    <Link href={`/accounts/${cardId}/transactions/new`} className={secondaryClasses}>
+    <Link href={`/transactions/new?account=${cardId}&from=card:${cardId}`} className={secondaryClasses}>
       {t('actions.register_purchase')}
     </Link>
   ) : null

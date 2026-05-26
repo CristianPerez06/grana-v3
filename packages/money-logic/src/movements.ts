@@ -117,3 +117,130 @@ export function resolveMovementView(
     isCategorized,
   }
 }
+
+/** Functional movement type for editability (`type` column of `transactions`). */
+export type MovementType = 'income' | 'expense' | 'transfer' | 'adjustment' | 'exchange'
+
+/**
+ * Everything `getEditableFields` needs, with no I/O. The caller (web/mobile)
+ * maps its own transaction model onto this:
+ * - `status`: card lifecycle (`pending`/`paid`) or `null` for cash/bank.
+ * - `isParent`: installment parent (madre, `is_parent=true`, `account_id=NULL`).
+ * - `isCardPayment`: an expense that pays a statement (no category — `payCardPeriod`
+ *   inserts it with `category_id=null` on purpose).
+ * - `hasPaidInstallment`: only meaningful for a parent — true when any child is `paid`.
+ */
+export type MovementEditInput = {
+  type: MovementType
+  status: 'pending' | 'paid' | null
+  isParent: boolean
+  isCardPayment: boolean
+  hasPaidInstallment: boolean
+}
+
+/**
+ * Which fields a movement exposes for editing, per type and state. A `false`
+ * field is either immutable (shown as read-only context) or not applicable to
+ * the type. `type`, `currency` and the account(s) are NEVER editable post-
+ * creation, so they are not part of this descriptor — they are immutable context.
+ * `category`/`subcategory` being `false` means the field is not shown at all
+ * (e.g. a statement-payment expense, or any two-legged/adjustment movement).
+ */
+export type EditableFields = {
+  amount: boolean
+  date: boolean
+  category: boolean
+  subcategory: boolean
+  description: boolean
+  adjustmentDirection: boolean
+  /** Received-leg amount of a currency exchange. */
+  destinationAmount: boolean
+}
+
+/**
+ * Single source of truth for movement editability. Pure: same input → same
+ * output. Centralizes the rules that used to live duplicated in the edit page
+ * (`amountEditable`) and the two scoped edit forms. Does NOT change those rules.
+ */
+export function getEditableFields(input: MovementEditInput): EditableFields {
+  const { type, status, isParent, isCardPayment, hasPaidInstallment } = input
+
+  // Installment parent (madre): category/description always editable; amount only
+  // when no child is paid (changing it re-splits the children); date never (the
+  // parent's date drives the cuotas' periods).
+  if (isParent) {
+    return {
+      amount: !hasPaidInstallment,
+      date: false,
+      category: true,
+      subcategory: true,
+      description: true,
+      adjustmentDirection: false,
+      destinationAmount: false,
+    }
+  }
+
+  // A paid single card consumption locks amount + date (only category/desc).
+  // Cash/bank movements and unpaid consumptions are not locked (`status` null/pending).
+  const locked = status === 'paid'
+
+  switch (type) {
+    case 'income':
+      return {
+        amount: true,
+        date: true,
+        category: true,
+        subcategory: true,
+        description: true,
+        adjustmentDirection: false,
+        destinationAmount: false,
+      }
+    case 'expense': {
+      // A statement-payment expense has no category.
+      const category = !isCardPayment
+      return {
+        amount: !locked,
+        date: !locked,
+        category,
+        subcategory: category,
+        description: true,
+        adjustmentDirection: false,
+        destinationAmount: false,
+      }
+    }
+    case 'transfer':
+      return {
+        amount: true,
+        date: true,
+        category: false,
+        subcategory: false,
+        description: true,
+        adjustmentDirection: false,
+        destinationAmount: false,
+      }
+    case 'adjustment':
+      return {
+        amount: true,
+        date: true,
+        category: false,
+        subcategory: false,
+        description: true,
+        adjustmentDirection: true,
+        destinationAmount: false,
+      }
+    case 'exchange':
+      return {
+        amount: true,
+        date: true,
+        category: false,
+        subcategory: false,
+        description: true,
+        adjustmentDirection: false,
+        destinationAmount: true,
+      }
+    default: {
+      const _exhaustive: never = type
+      return _exhaustive
+    }
+  }
+}
