@@ -146,7 +146,7 @@ const SidebarContent = ({
   return (
     <>
       <div
-        className={`mb-2 flex items-center ${collapsed ? "justify-center px-2" : "px-5"}`}
+        className={`mb-2 flex shrink-0 items-center ${collapsed ? "justify-center px-2" : "px-5"}`}
       >
         <Link
           href="/dashboard"

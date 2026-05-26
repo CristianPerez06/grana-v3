@@ -1,8 +1,8 @@
 ## 1. Shell — estructura del sidebar (web-app-shell)
 
-- [ ] 1.1 Reestructurar el sidebar island en `apps/web/app/(app)/_components/app-shell.tsx`: logo `grana` como header fijo (`flex-shrink:0`), nav primaria como zona central (`flex:1; min-h-0; overflow-y-auto`), Configuración + Cerrar sesión como footer (`flex-shrink:0`) separados por el divisor.
-- [ ] 1.2 Verificar que el scroll del nav es interno al island (no mueve el `<main>`) y que el footer queda siempre alcanzable, sin romper "island flotante" ni "`<main>` scrollable".
-- [ ] 1.3 Usar clases de token (`bg-card`, `border-border-soft`, `text-navy`, etc.), sin hex literales.
+- [x] 1.1 Reestructurar el sidebar island en `apps/web/app/(app)/_components/app-shell.tsx`: logo `grana` como header fijo (`flex-shrink:0`), nav primaria como zona central (`flex:1; min-h-0; overflow-y-auto`), Configuración + Cerrar sesión como footer (`flex-shrink:0`) separados por el divisor.
+- [x] 1.2 Verificar que el scroll del nav es interno al island (no mueve el `<main>`) y que el footer queda siempre alcanzable, sin romper "island flotante" ni "`<main>` scrollable".
+- [x] 1.3 Usar clases de token (`bg-card`, `border-border-soft`, `text-navy`, etc.), sin hex literales.
 
 ## 2. Dashboard desktop — header + layout multi-columna (dashboard, web)
 
