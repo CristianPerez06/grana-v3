@@ -94,7 +94,7 @@ const CardDetailPage = async ({ params }: Props) => {
             </p>
           </div>
           <Link
-            href={`/accounts/${id}/transactions/new`}
+            href={`/transactions/new?account=${id}&from=card:${id}`}
             className="inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             {t('actions.register_first_purchase')}
@@ -303,7 +303,7 @@ const CardDetailPage = async ({ params }: Props) => {
               return (
                 <Link
                   key={tx.id}
-                  href={`/accounts/${id}/transactions/${tx.id}`}
+                  href={`/transactions/${tx.id}?from=card:${id}`}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
                 >
                   <div className="flex-1 min-w-0">

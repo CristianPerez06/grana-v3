@@ -24,17 +24,24 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
   const transaction = await getTransactionDetail(txId)
   if (!transaction) notFound()
 
-  // "Volver" respeta el origen: from=account:<id> regresa a la cuenta; si no, a Movimientos.
+  // "Volver" respeta el origen: from=account:<id> regresa a la cuenta,
+  // from=card:<id> a la tarjeta; si no, a Movimientos.
   const fromAccountId = from?.startsWith('account:') ? from.slice('account:'.length) : null
-  const backHref = fromAccountId ? `/accounts/${fromAccountId}` : '/transactions'
+  const fromCardId = from?.startsWith('card:') ? from.slice('card:'.length) : null
+  const backHref = fromAccountId
+    ? `/accounts/${fromAccountId}`
+    : fromCardId
+      ? `/cards/${fromCardId}`
+      : '/transactions'
 
   const t = await getTranslations('transactions')
   const tRec = await getTranslations('recurrences')
 
+  const fromId = fromAccountId ?? fromCardId
   const backLabel =
-    fromAccountId && transaction.source_account?.id === fromAccountId
+    fromId && transaction.source_account?.id === fromId
       ? transaction.source_account.name
-      : fromAccountId && transaction.destination_account?.id === fromAccountId
+      : fromId && transaction.destination_account?.id === fromId
         ? (transaction.destination_account?.name ?? t('back_label'))
         : t('back_label')
 
@@ -84,6 +91,7 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
         movement={movement}
         installmentParent={installmentFamily?.parent ?? null}
         installmentSiblings={installmentFamily?.children ?? null}
+        from={from}
       />
     </div>
   )

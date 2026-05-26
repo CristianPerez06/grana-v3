@@ -100,7 +100,7 @@ const AccountDetailPage = async ({ params, searchParams }: Props) => {
             {t('headers.movements')}
           </h2>
           <Link
-            href={`/accounts/${account.id}/transactions/new`}
+            href={`/transactions/new?account=${account.id}&from=account:${account.id}`}
             className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             {`+ ${t('actions.add_transaction')}`}

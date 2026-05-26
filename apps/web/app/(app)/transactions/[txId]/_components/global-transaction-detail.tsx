@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { AlertTriangle } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -103,6 +102,8 @@ type Props = {
   movement: FinancialMovement
   installmentParent?: TransactionWithDetails | null
   installmentSiblings?: TransactionWithDetails[] | null
+  /** Perspective origin (`account:<id>` / `transactions`), preserved on edit. */
+  from?: string
 }
 
 export const GlobalTransactionDetail = ({
@@ -110,6 +111,7 @@ export const GlobalTransactionDetail = ({
   movement,
   installmentParent,
   installmentSiblings,
+  from,
 }: Props) => {
   const showCents = useShowCents()
   const t = useTranslations('transactions')
@@ -120,12 +122,11 @@ export const GlobalTransactionDetail = ({
     missing_fx_rate: t('review_flags.missing_fx_rate'),
   }
 
-  // Account used to edit/delete. For a normal movement it's its own account;
-  // for an installment parent (account_id=NULL) it's a child's card account.
+  // Account used to delete (revalidation). For a normal movement it's its own
+  // account; for an installment parent (account_id=NULL) it's a child's card
+  // account. Edit goes to the canonical route, which resolves the account itself.
   const actionAccountId = transaction.account_id ?? installmentSiblings?.[0]?.account_id ?? null
-  const editHref = actionAccountId
-    ? `/accounts/${actionAccountId}/transactions/${transaction.id}/edit?from=transactions`
-    : null
+  const editHref = `/transactions/${transaction.id}/edit${from ? `?from=${encodeURIComponent(from)}` : ''}`
 
   return (
     <div className="flex flex-col gap-6">
@@ -235,22 +236,13 @@ export const GlobalTransactionDetail = ({
         </div>
       )}
 
-      {actionAccountId && editHref && (
+      {actionAccountId && (
         <TransactionActions
           transaction={transaction}
           accountId={actionAccountId}
-          returnHref="/transactions"
+          returnHref={from?.startsWith('account:') ? `/accounts/${from.slice('account:'.length)}` : '/transactions'}
           editHref={editHref}
         />
-      )}
-
-      {transaction.account_id && (
-        <Link
-          href={`/accounts/${transaction.account_id}/transactions/${transaction.id}`}
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          {t('actions.view_in_account')}
-        </Link>
       )}
     </div>
   )

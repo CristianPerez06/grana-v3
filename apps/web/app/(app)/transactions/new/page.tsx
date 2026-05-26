@@ -13,13 +13,28 @@ const activeCodes = (
     .filter((c) => c.is_active && (c.currency_code === 'ARS' || c.currency_code === 'USD'))
     .map((c) => c.currency_code as 'ARS' | 'USD')
 
+type Props = {
+  searchParams: Promise<{ account?: string; from?: string }>
+}
+
+// Resolve where to return after saving from the optional `?from=` origin:
+// `account:<id>` → the account, `card:<id>` → the card, otherwise the list.
+const resolveReturnHref = (from?: string): string => {
+  if (from?.startsWith('account:')) return `/accounts/${from.slice('account:'.length)}`
+  if (from?.startsWith('card:')) return `/cards/${from.slice('card:'.length)}`
+  return '/transactions'
+}
+
 /**
- * Global entry point to register a movement. The account is a field inside the
- * form (chosen while loading the movement), not a pre-step. Cash/bank accounts
+ * Canonical entry point to register a movement. The account is a field inside
+ * the form (chosen while loading the movement), optionally pre-selected via
+ * `?account=` when arriving from a specific account or card. Cash/bank accounts
  * show the income/expense/transfer/adjustment form; credit cards switch to the
  * consumo form.
  */
-const NewMovementPage = async () => {
+const NewMovementPage = async ({ searchParams }: Props) => {
+  const { account: preselectAccountId, from } = await searchParams
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -55,7 +70,12 @@ const NewMovementPage = async () => {
         backLink={{ href: '/transactions', label: t('back_label') }}
       />
 
-      <MovementForm accounts={accounts} categories={categories} />
+      <MovementForm
+        accounts={accounts}
+        categories={categories}
+        preselectAccountId={preselectAccountId}
+        createReturnHref={resolveReturnHref(from)}
+      />
     </div>
   )
 }

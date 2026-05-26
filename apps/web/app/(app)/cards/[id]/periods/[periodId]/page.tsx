@@ -104,7 +104,7 @@ const PeriodDetailPage = async ({ params }: Props) => {
               return (
               <Link
                 key={tx.id}
-                href={`/accounts/${id}/transactions/${tx.id}`}
+                href={`/transactions/${tx.id}?from=card:${id}`}
                 className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
               >
                 <div className="flex-1 min-w-0">
