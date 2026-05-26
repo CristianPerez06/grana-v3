@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { PageHeader } from '../../../../../../components/ui/PageHeader'
 import { Spinner } from '../../../../../../components/ui/Spinner'
@@ -55,47 +54,45 @@ export default function SubcategoriesScreen() {
     : t('settings.categories.subcategories.title')
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <View className="flex-1 bg-background">
+      <PageHeader
+        title={screenTitle}
+        backLink={{
+          href: '/(app)/settings/categories',
+          label: t('settings.categories.label'),
+        }}
+        actions={
+          id ? (
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: '/(app)/settings/categories/[id]/subcategories/new',
+                  params: { id },
+                })
+              }
+              className="rounded-xl bg-emerald px-4 py-2"
+              accessibilityRole="button"
+            >
+              <Text className="text-sm font-semibold text-white">
+                {t('settings.categories.actions.add_subcategory')}
+              </Text>
+            </Pressable>
+          ) : null
+        }
+      />
       <ScrollView contentContainerClassName="px-6 py-6">
-        <View className="flex-col gap-6">
-          <PageHeader
-            title={screenTitle}
-            backLink={{
-              href: '/(app)/settings/categories',
-              label: t('settings.categories.label'),
-            }}
-            actions={
-              id ? (
-                <Pressable
-                  onPress={() =>
-                    router.push({
-                      pathname: '/(app)/settings/categories/[id]/subcategories/new',
-                      params: { id },
-                    })
-                  }
-                  className="rounded-xl bg-emerald px-4 py-2"
-                  accessibilityRole="button"
-                >
-                  <Text className="text-sm font-semibold text-white">
-                    {t('settings.categories.actions.add_subcategory')}
-                  </Text>
-                </Pressable>
-              ) : null
-            }
-          />
-          {category === undefined || subcategories === null ? (
-            <View className="items-center py-12">
-              <Spinner size="md" />
-            </View>
-          ) : category === null ? (
-            <Text className="text-sm text-error">
-              {t('settings.categories.errors.not_found')}
-            </Text>
-          ) : (
-            <SubcategoryList subcategories={subcategories} onChanged={load} />
-          )}
-        </View>
+        {category === undefined || subcategories === null ? (
+          <View className="items-center py-12">
+            <Spinner size="md" />
+          </View>
+        ) : category === null ? (
+          <Text className="text-sm text-error">
+            {t('settings.categories.errors.not_found')}
+          </Text>
+        ) : (
+          <SubcategoryList subcategories={subcategories} onChanged={load} />
+        )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   )
 }

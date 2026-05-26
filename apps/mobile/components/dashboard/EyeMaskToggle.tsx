@@ -16,7 +16,7 @@ export const EyeMaskToggle = () => {
       accessibilityRole="button"
       className="h-9 w-9 items-center justify-center rounded-full"
     >
-      <Icon size={18} color="#6B7683" />
+      <Icon size={18} color="#FFFFFF" />
     </Pressable>
   )
 }

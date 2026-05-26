@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { LanguageSwitcher } from '../../../components/settings/LanguageSwitcher'
 import { SettingsSection } from '../../../components/settings/SettingsSection'
@@ -39,11 +38,10 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <View className="flex-1 bg-background">
+      <PageHeader title={t('settings.title')} />
       <ScrollView contentContainerClassName="px-6 py-6">
         <View className="flex-col gap-6">
-        <PageHeader title={t('settings.title')} />
-
         <SettingsSection title={t('settings.display.label')}>
           <ShowCentsToggle
             value={showCents}
@@ -79,6 +77,6 @@ export default function SettingsScreen() {
         </SettingsSection>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   )
 }
