@@ -213,16 +213,16 @@ export const MovementForm = ({ accounts, categories }: Props) => {
     let parsedDestinationAmount: number | null = null
     if (tab === 'exchange') {
       if (!destinationAccountId) {
-        setFormError('Seleccioná la cuenta destino.')
+        setFormError(t('errors.destination_required_short'))
         return
       }
       if (!exchangeDestCurrency) {
-        setFormError('La cuenta destino no tiene otra moneda para el cambio.')
+        setFormError(t('errors.destination_account_no_other_currency'))
         return
       }
       parsedDestinationAmount = parseMoneyInput(destinationAmount)
       if (parsedDestinationAmount === null || parsedDestinationAmount <= 0) {
-        setFormError('El monto recibido debe ser mayor a cero.')
+        setFormError(t('errors.destination_amount_positive'))
         return
       }
     }
@@ -483,7 +483,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
         <>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="exchange-dest" className="text-sm font-medium">
-              Cuenta destino <span className="text-destructive">*</span>
+              {t('labels.destination_account')} <span className="text-destructive">*</span>
             </label>
             <select
               id="exchange-dest"
@@ -492,10 +492,10 @@ export const MovementForm = ({ accounts, categories }: Props) => {
               onChange={(e) => setDestinationAccountId(e.target.value)}
               className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <option value="">Seleccioná la cuenta destino</option>
+              <option value="">{t('placeholders.destination_account')}</option>
               {cashBank.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.id === accountId ? `${a.name} (misma cuenta)` : a.name}
+                  {a.id === accountId ? t('labels.same_account_option', { name: a.name }) : a.name}
                 </option>
               ))}
             </select>
@@ -504,7 +504,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
           {exchangeDestCurrency ? (
             <div className="flex flex-col gap-1.5">
               <label htmlFor="exchange-dest-amount" className="text-sm font-medium">
-                Monto recibido ({exchangeDestCurrency})
+                {t('labels.exchange_received')} ({exchangeDestCurrency})
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
@@ -522,8 +522,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Esa cuenta no tiene activada otra moneda. Elegí una cuenta con{' '}
-              {currencyCode === 'ARS' ? 'USD' : 'ARS'} para poder cambiar.
+              {t('exchange.no_other_currency_hint', { currency: currencyCode === 'ARS' ? 'USD' : 'ARS' })}
             </p>
           )}
         </>

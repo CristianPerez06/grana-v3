@@ -59,11 +59,11 @@ export const EditExchangeForm = ({ transaction, returnHref, availableBalances }:
     const parsedAmount = parseMoneyInput(amount)
     const parsedDest = parseMoneyInput(destinationAmount)
     if (parsedAmount === null || parsedAmount <= 0) {
-      setFormError('El monto debe ser mayor a cero.')
+      setFormError(t('errors.amount_positive'))
       return
     }
     if (parsedDest === null || parsedDest <= 0) {
-      setFormError('El monto recibido debe ser mayor a cero.')
+      setFormError(t('errors.destination_amount_positive'))
       return
     }
 

@@ -628,7 +628,8 @@
       "make_recurrent": "Hacer recurrente",
       "no_subcategory": "Sin subcategoría",
       "no_category": "Sin categoría",
-      "exchange_received": "Monto recibido"
+      "exchange_received": "Monto recibido",
+      "same_account_option": "{name} (misma cuenta)"
     },
     "types": {
       "income": "Ingreso",
@@ -689,6 +690,8 @@
       "destination_same_as_source": "La cuenta destino no puede ser igual a la cuenta origen.",
       "no_other_accounts": "No hay otras cuentas activas para transferir.",
       "no_shared_currencies": "No hay monedas en común entre las dos cuentas.",
+      "destination_amount_positive": "El monto recibido debe ser mayor a cero.",
+      "destination_account_no_other_currency": "La cuenta destino no tiene otra moneda para el cambio.",
       "exchange_rate_invalid": "El tipo de cambio debe ser mayor a cero.",
       "save_failed": "Error al guardar el movimiento.",
       "save_failed_short": "Error al guardar.",
@@ -710,6 +713,9 @@
     "negative_balance_notice": {
       "title": "El saldo de la cuenta quedaría en negativo",
       "body": "El disponible en {currency} pasaría a −{formatted}. Podés registrarlo igual."
+    },
+    "exchange": {
+      "no_other_currency_hint": "Esa cuenta no tiene activada otra moneda. Elegí una cuenta con {currency} para poder cambiar."
     },
     "actions": {
       "create": "Guardar",
