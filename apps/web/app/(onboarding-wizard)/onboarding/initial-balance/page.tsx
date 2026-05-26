@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { SaldoActualForm } from './_components/saldo-actual-form'
+import { InitialBalanceForm } from './_components/initial-balance-form'
 
-const SaldoActualPage = async () => {
+const InitialBalancePage = async () => {
   const supabase = await createClient()
   const {
     data: { user },
@@ -39,7 +39,7 @@ const SaldoActualPage = async () => {
   const secondaryCash = bank ? cash : null
 
   return (
-    <SaldoActualForm
+    <InitialBalanceForm
       mode={profile?.mode === 'experto' ? 'experto' : 'novato'}
       primaryAccount={primary}
       secondaryCashAccount={secondaryCash}
@@ -47,4 +47,4 @@ const SaldoActualPage = async () => {
   )
 }
 
-export default SaldoActualPage
+export default InitialBalancePage

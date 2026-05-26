@@ -45,7 +45,7 @@ export const CreditCardItem = ({ card, width }: Props) => {
 
   return (
     <Pressable
-      onPress={() => router.push('/tarjetas')}
+      onPress={() => router.push('/cards')}
       accessibilityRole="button"
       style={{ width }}
       className={`mr-4 rounded-xl border border-border border-l-4 ${alertBorderClass[alert]} bg-card p-4`}

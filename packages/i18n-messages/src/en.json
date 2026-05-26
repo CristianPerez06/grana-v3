@@ -243,7 +243,7 @@
       "description": "We'll ask you a couple of questions so the app fits you. It takes less than a minute.",
       "cta": "Get started"
     },
-    "perfil": {
+    "profile": {
       "title": "To set up your Grana, tell us a bit about you",
       "mode_question": "What are you looking for in Grana?",
       "mode_simple_title": "The essentials",
@@ -259,7 +259,7 @@
       "account_name_placeholder": "E.g. Savings account",
       "continue": "Continue"
     },
-    "saldoActual": {
+    "initialBalance": {
       "title": "How much money do you have today?",
       "description_novato": "Just so you start with a real available balance. You can adjust it later with any transaction. If you have no money, enter 0.",
       "description_experto": "Enter how much you have available in each place. Anything you leave blank starts at zero. The peso amount is required (can be 0).",

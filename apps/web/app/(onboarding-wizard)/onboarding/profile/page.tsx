@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { PerfilForm } from './_components/perfil-form'
+import { ProfileForm } from './_components/profile-form'
 
-const PerfilPage = async () => {
+const ProfilePage = async () => {
   const supabase = await createClient()
   const {
     data: { user },
@@ -14,7 +14,7 @@ const PerfilPage = async () => {
     .select('id, name')
     .order('name', { ascending: true })
 
-  return <PerfilForm institutions={institutions ?? []} />
+  return <ProfileForm institutions={institutions ?? []} />
 }
 
-export default PerfilPage
+export default ProfilePage

@@ -9,11 +9,11 @@ import { Alert } from '@/components/ui/alert'
 import { FormField } from '@/components/ui/form-field'
 import { SubmitButton } from '@/components/ui/submit-button'
 import {
-  saldoActualSchema,
-  type SaldoActualInput,
+  initialBalanceSchema,
+  type InitialBalanceInput,
   parseMoneyInput,
 } from '@grana/validation'
-import { saveSaldoActualAction } from '@/app/_actions/onboarding'
+import { saveInitialBalanceAction } from '@/app/_actions/onboarding'
 
 type Account = { id: string; name: string; type: string }
 
@@ -30,8 +30,8 @@ type FormShape = {
   cash_usd_str: string
 }
 
-export const SaldoActualForm = ({ mode, primaryAccount, secondaryCashAccount }: Props) => {
-  const t = useTranslations('onboarding.saldoActual')
+export const InitialBalanceForm = ({ mode, primaryAccount, secondaryCashAccount }: Props) => {
+  const t = useTranslations('onboarding.initialBalance')
   const tErr = useTranslations('onboarding.errors')
   const router = useRouter()
   const [formError, setFormError] = useState<string | null>(null)
@@ -70,7 +70,7 @@ export const SaldoActualForm = ({ mode, primaryAccount, secondaryCashAccount }: 
       return
     }
 
-    const input: SaldoActualInput = {
+    const input: InitialBalanceInput = {
       primary_account_id: primaryAccount.id,
       primary_ars: parsed.data.primary_ars,
       primary_usd: parsed.data.primary_usd,
@@ -81,13 +81,13 @@ export const SaldoActualForm = ({ mode, primaryAccount, secondaryCashAccount }: 
 
     // Manually run the schema as a safety net (the action also validates).
     try {
-      await saldoActualSchema.validate(input)
+      await initialBalanceSchema.validate(input)
     } catch (err) {
       setFormError(tErr('amount_invalid'))
       return
     }
 
-    const result = await saveSaldoActualAction(input)
+    const result = await saveInitialBalanceAction(input)
     if (result.ok) {
       router.push('/onboarding/done')
       return

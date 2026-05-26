@@ -32,9 +32,9 @@ function formatItemDate(iso: string): string {
 
 // Mobile route mapping for upcoming item targets. The cards module mobile
 // doesn't yet have detail-of-period or detail-of-card routes, so both kinds
-// fall back to the `/tarjetas` tab (decisión transitoria documentada en spec).
+// fall back to the `/cards` tab (decisión transitoria documentada en spec).
 function routeForUpcomingItem(_target: UpcomingItemTarget): string {
-  return '/tarjetas'
+  return '/cards'
 }
 
 type GroupProps = {

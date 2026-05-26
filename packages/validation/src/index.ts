@@ -86,10 +86,10 @@ export {
   type UpdatePeriodDatesInput,
 } from "./credit-cards";
 export {
-  perfilSchema,
-  saldoActualSchema,
-  type PerfilInput,
-  type SaldoActualInput,
+  profileSchema,
+  initialBalanceSchema,
+  type ProfileInput,
+  type InitialBalanceInput,
 } from "./onboarding";
 export { translateFieldError } from "./translate-error";
 export {

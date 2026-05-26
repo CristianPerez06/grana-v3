@@ -54,7 +54,7 @@ export default function WelcomeScreen() {
 
         <Button
           title={t('onboarding.welcome.cta')}
-          onPress={() => router.push('/(onboarding)/perfil')}
+          onPress={() => router.push('/(onboarding)/profile')}
         />
         </View>
       </ScrollView>

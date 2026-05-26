@@ -64,7 +64,7 @@ Una vez aterrizado en `(app)/dashboard`, la pantalla SHALL renderizar el dashboa
 `apps/mobile` SHALL renderizar el cuarto slot del tab bar (la acción de abrir el menú) con un treatment visual distinto a las pestañas de navegación primaria. La composición de slots del tab bar SHALL ser, en orden:
 
 1. **Inicio** (route `dashboard`) — pestaña habilitada.
-2. **Movimientos** (route `movimientos`) — pestaña habilitada.
+2. **Movimientos** (route `transactions`) — pestaña habilitada.
 3. **Hogar** (route `home`) — pestaña **disabled** hasta que la capability `shared` se implemente (ver requirement "El tab bar puede mostrar slots en estado disabled").
 4. **Botón de menú** — acción que abre el `AppMenu` (bottom sheet modal).
 
@@ -76,6 +76,8 @@ Reglas:
 - El slot de menú SHALL mantenerse en la misma fila del tab bar (no ser un FAB flotante encima ni un botón en un header).
 - "Tarjetas" NO SHALL aparecer como slot del tab bar; sigue navegable desde el `AppMenu` y vía deep link.
 - El comportamiento funcional del botón de menú NO cambia: presionar abre el `AppMenu`.
+
+Los nombres de archivo bajo `apps/mobile/app/(app)/` SHALL estar en inglés (`transactions.tsx`, `cards.tsx`, etc.), alineados con la regla "código en inglés" definida en `project-conventions`. La etiqueta visible al usuario ("Movimientos", "Tarjetas") se resuelve via `@grana/i18n-messages` y es independiente del nombre del archivo.
 
 #### Scenario: El tab bar contiene los 4 slots en el orden definido
 
@@ -136,7 +138,7 @@ El `Modal` que aloja al `AppMenu` SHALL configurarse con `statusBarTranslucent` 
 
 El `AppMenu` SHALL contener los siguientes items en este orden:
 
-1. **Tarjetas** (route `/tarjetas`) — item habilitado; al press cierra el sheet y navega a la ruta.
+1. **Tarjetas** (route `/cards`) — item habilitado; al press cierra el sheet y navega a la ruta.
 2. **Ahorros** — item **comingSoon** (no navegable hasta que la capability `savings` se implemente).
 3. **Configuración** (route `/(app)/settings`) — item habilitado; al press cierra el sheet y navega a `/(app)/settings`. La pantalla destino existe y entrega las tres secciones de paridad con web (Visualización, Idioma, Categorías).
 4. (divisor)
@@ -254,7 +256,7 @@ La integración SHALL ser global (configurada una sola vez en `_layout.tsx` raí
 
 #### Scenario: Volver a una pantalla refresca queries stale
 
-- **WHEN** un usuario navega de `(app)/dashboard` a `(app)/movimientos` y luego vuelve a `(app)/dashboard`
+- **WHEN** un usuario navega de `(app)/dashboard` a `(app)/transactions` y luego vuelve a `(app)/dashboard`
 - **AND** el `staleTime` de las queries del dashboard se cumplió
 - **THEN** las queries del dashboard se reejecutan automáticamente al volver
 - **AND** el usuario ve un indicador no intrusivo de refetch (estado `isFetching` sin `isPending`)
@@ -269,7 +271,7 @@ La integración SHALL ser global (configurada una sola vez en `_layout.tsx` raí
 
 `apps/mobile` SHALL montar `<SafeAreaProvider>` (de `react-native-safe-area-context`) como wrapper outermost en `apps/mobile/app/_layout.tsx`, de modo que cualquier descendiente que llame `useSafeAreaInsets()` reciba los insets reales del dispositivo (no el fallback `{ top: 0, ... }`).
 
-Cada pantalla **root de stack** SHALL envolver su contenido superior en `SafeAreaView edges={['top']}` (o aplicar `paddingTop: insets.top` manualmente) para que el contenido no quede debajo del notch / status bar. Las pantallas root del shell autenticado son al menos: `dashboard`, `accounts`, `tarjetas`, `movimientos`, `/(app)/settings`, `/(app)/settings/categories`.
+Cada pantalla **root de stack** SHALL envolver su contenido superior en `SafeAreaView edges={['top']}` (o aplicar `paddingTop: insets.top` manualmente) para que el contenido no quede debajo del notch / status bar. Las pantallas root del shell autenticado son al menos: `dashboard`, `accounts`, `cards`, `transactions`, `/(app)/settings`, `/(app)/settings/categories`.
 
 Las pantallas **anidadas dentro de un stack que usa el native header** (ej. `/(app)/settings/categories/new`, `/[id]/edit`, `/[id]/subcategories`, `/[id]/subcategories/new`) NO necesitan `SafeAreaView` propio: el native stack header ya respeta el safe-area top de la plataforma.
 
@@ -287,7 +289,7 @@ Los headers visuales con fondo extendido (ej. `CurvedNavyHeader` de las pantalla
 
 #### Scenario: Las pantallas root del shell autenticado no quedan tapadas
 
-- **WHEN** un usuario navega a `/(app)/accounts`, `/(app)/tarjetas`, `/(app)/movimientos`, `/(app)/settings` o `/(app)/settings/categories`
+- **WHEN** un usuario navega a `/(app)/accounts`, `/(app)/cards`, `/(app)/transactions`, `/(app)/settings` o `/(app)/settings/categories`
 - **THEN** el `PageHeader` aparece visible por debajo del notch en todos los casos
 
 #### Scenario: El header de las pantallas auth respeta el inset
