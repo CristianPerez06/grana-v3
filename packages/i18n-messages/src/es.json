@@ -704,7 +704,13 @@
       "title": "Todavía no hay movimientos",
       "description": "Registrá tu primer ingreso o gasto en esta cuenta.",
       "cta": "Agregar movimiento",
-      "no_accounts": "Todavía no tenés cuentas. Creá una para empezar a registrar movimientos."
+      "no_accounts": "Todavía no tenés cuentas. Creá una para empezar a registrar movimientos.",
+      "search_title": "Sin resultados",
+      "search_description": "No encontramos movimientos para «{query}».",
+      "clear_search": "Limpiar búsqueda",
+      "filter_title": "Sin resultados",
+      "filter_description": "Ningún movimiento cumple los filtros aplicados.",
+      "clear_filters": "Limpiar filtros"
     },
     "account_groups": {
       "cash_bank": "Efectivo / Banco",

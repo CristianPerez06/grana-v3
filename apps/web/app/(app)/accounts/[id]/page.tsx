@@ -7,9 +7,12 @@ import { getAccountDetail } from '@/lib/accounts/queries'
 import { getAccountMovements, getMovementFilterOptions } from '@/lib/transactions/queries'
 import { toFinancialMovement } from '@/lib/transactions/movements'
 import {
+  buildFiltersClearedHref,
+  buildSearchClearedHref,
   hasContentFilters,
   movementMatchesText,
   parseMovementFilters,
+  resolveEmptyVariant,
 } from '@/lib/transactions/filters'
 import { MovementList } from '@/lib/transactions/components/movement-list'
 import { MovementFilters } from '@/lib/transactions/components/movement-filters'
@@ -24,7 +27,8 @@ type Props = {
 
 const AccountDetailPage = async ({ params, searchParams }: Props) => {
   const { id } = await params
-  const filters = parseMovementFilters(await searchParams)
+  const resolvedSearchParams = await searchParams
+  const filters = parseMovementFilters(resolvedSearchParams)
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -122,6 +126,17 @@ const AccountDetailPage = async ({ params, searchParams }: Props) => {
           showAccount={false}
           recurrenceLinkedIds={recurrenceLinkedIds}
           runningBalances={showRunningBalance ? runningBalances : null}
+          emptyState={{
+            variant: resolveEmptyVariant(filters),
+            query: filters.query,
+            addHref: `/transactions/new?account=${id}&from=account:${id}`,
+            clearHref:
+              resolveEmptyVariant(filters) === 'filter'
+                ? buildFiltersClearedHref(`/accounts/${id}`, resolvedSearchParams)
+                : resolveEmptyVariant(filters) === 'search'
+                  ? buildSearchClearedHref(`/accounts/${id}`, resolvedSearchParams)
+                  : undefined,
+          }}
         />
       </section>
     </div>

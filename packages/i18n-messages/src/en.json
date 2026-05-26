@@ -704,7 +704,13 @@
       "title": "No transactions yet",
       "description": "Record your first income or expense on this account.",
       "cta": "Add transaction",
-      "no_accounts": "You don't have any accounts yet. Create one to start recording transactions."
+      "no_accounts": "You don't have any accounts yet. Create one to start recording transactions.",
+      "search_title": "No results",
+      "search_description": "No movements found for “{query}”.",
+      "clear_search": "Clear search",
+      "filter_title": "No results",
+      "filter_description": "No movement matches the applied filters.",
+      "clear_filters": "Clear filters"
     },
     "account_groups": {
       "cash_bank": "Cash / Bank",

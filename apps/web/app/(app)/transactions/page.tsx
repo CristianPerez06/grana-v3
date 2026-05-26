@@ -8,10 +8,14 @@ import { PageHeader } from '@/components/ui/page-header'
 import { MovementFilters } from '@/lib/transactions/components/movement-filters'
 import { MovementList } from '@/lib/transactions/components/movement-list'
 import {
+  buildFiltersClearedHref,
   buildMovementLimitHref,
+  buildSearchClearedHref,
   parseMovementFilters,
   parseMovementLimit,
+  resolveEmptyVariant,
 } from '@/lib/transactions/filters'
+import { QuickAddFab } from '@/lib/transactions/components/quick-add-fab'
 import { getGlobalMovementsPage, getMovementFilterOptions } from '@/lib/transactions/queries'
 import { getAccounts } from '@/lib/accounts/queries'
 import { PendingRecurrencesBlock } from '@/lib/recurrences/components/pending-recurrences-block'
@@ -42,6 +46,7 @@ const TransactionsPage = async ({ searchParams }: Props) => {
 
   const resolvedSearchParams = await searchParams
   const filters = parseMovementFilters(resolvedSearchParams)
+  const emptyVariant = resolveEmptyVariant(filters)
   const limit = parseMovementLimit(resolvedSearchParams)
   const t = await getTranslations('transactions')
   const tRec = await getTranslations('recurrences')
@@ -112,6 +117,17 @@ const TransactionsPage = async ({ searchParams }: Props) => {
         todayISO={formatDateISO(getTodayAR())}
         showAccount={showAccount}
         recurrenceLinkedIds={recurrenceLinkedIds}
+        emptyState={{
+          variant: emptyVariant,
+          query: filters.query,
+          addHref: '/transactions/new',
+          clearHref:
+            emptyVariant === 'filter'
+              ? buildFiltersClearedHref('/transactions', resolvedSearchParams)
+              : emptyVariant === 'search'
+                ? buildSearchClearedHref('/transactions', resolvedSearchParams)
+                : undefined,
+        }}
       />
 
       {movementsPage.hasMore && (
@@ -123,6 +139,8 @@ const TransactionsPage = async ({ searchParams }: Props) => {
           </Button>
         </div>
       )}
+
+      <QuickAddFab />
     </div>
   )
 }
