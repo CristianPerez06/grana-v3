@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { getTodayAR } from '@/lib/date'
 import {
   createIncome,
@@ -43,13 +44,6 @@ type Props = {
 
 const CURRENCY_SYMBOL: Record<'ARS' | 'USD', string> = { ARS: '$', USD: 'U$D' }
 
-const TAB_LABELS: Record<Tab, string> = {
-  income: 'Ingreso',
-  expense: 'Gasto',
-  transfer: 'Transferencia',
-  adjustment: 'Ajuste',
-}
-
 const INSTALLMENT_OPTIONS = [1, 2, 3, 6, 9, 12, 18, 24]
 
 // Accounts eligible per type: only Gasto can target a credit card.
@@ -58,6 +52,14 @@ const eligibleFor = (accounts: MovementFormAccount[], tab: Tab) =>
 
 export const MovementForm = ({ accounts, categories }: Props) => {
   const router = useRouter()
+  const t = useTranslations('transactions')
+  const tCommon = useTranslations('common')
+  const TAB_LABELS: Record<Tab, string> = {
+    income: t('tabs.income'),
+    expense: t('tabs.expense'),
+    transfer: t('tabs.transfer'),
+    adjustment: t('tabs.adjustment'),
+  }
   const [isPending, startTransition] = useTransition()
   const [tab, setTab] = useState<Tab>('income')
   const [formError, setFormError] = useState<string | null>(null)
@@ -87,9 +89,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
 
   if (accounts.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
-        Todavía no tenés cuentas. Creá una para empezar a registrar movimientos.
-      </p>
+      <p className="text-sm text-muted-foreground">{t('empty.no_accounts')}</p>
     )
   }
 
@@ -182,20 +182,20 @@ export const MovementForm = ({ accounts, categories }: Props) => {
 
     const parsedAmount = parseMoneyInput(amount)
     if (parsedAmount === null || parsedAmount <= 0) {
-      setFormError('El monto debe ser mayor a cero.')
+      setFormError(t('errors.amount_positive'))
       return
     }
     if ((tab === 'income' || tab === 'expense') && !categoryId) {
-      setFormError('Seleccioná una categoría.')
+      setFormError(t('errors.category_required_short'))
       return
     }
     if (tab === 'transfer' && !destinationAccountId) {
-      setFormError('Seleccioná la cuenta destino.')
+      setFormError(t('errors.destination_required_short'))
       return
     }
     const parsedFxRate = fxRate ? parseMoneyInput(fxRate, { decimalPlaces: 6 }) : undefined
     if (isUSDCard && (parsedFxRate === null || parsedFxRate === undefined || parsedFxRate <= 0)) {
-      setFormError('El tipo de cambio debe ser mayor a cero.')
+      setFormError(t('errors.exchange_rate_invalid'))
       return
     }
 
@@ -269,7 +269,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
       }
 
       if (!result.ok) {
-        setFormError(result.formError ?? 'Error al guardar el movimiento.')
+        setFormError(result.formError ?? t('errors.save_failed'))
         return
       }
 
@@ -281,9 +281,9 @@ export const MovementForm = ({ accounts, categories }: Props) => {
         })
         if (!recurrenceResult.ok) {
           setFormError(
-            `Movimiento guardado, pero no se pudo crear la regla recurrente: ${
-              recurrenceResult.formError ?? 'error desconocido'
-            }`,
+            t('errors.recurrence_failed', {
+              detail: recurrenceResult.formError ?? t('errors.recurrence_unknown_error'),
+            }),
           )
           return
         }
@@ -318,7 +318,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
       {/* ── Account (after the type, v2-style) ─────────────────────────────── */}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="account" className="text-sm font-medium">
-          {tab === 'transfer' ? 'Cuenta origen' : 'Cuenta'}
+          {tab === 'transfer' ? t('labels.source_account') : t('labels.account')}
         </label>
         <select
           id="account"
@@ -327,14 +327,14 @@ export const MovementForm = ({ accounts, categories }: Props) => {
           className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {cashBank.length > 0 && (
-            <optgroup label="Efectivo / Banco">
+            <optgroup label={t('account_groups.cash_bank')}>
               {cashBank.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
             </optgroup>
           )}
           {tab === 'expense' && creditCards.length > 0 && (
-            <optgroup label="Tarjetas de crédito">
+            <optgroup label={t('account_groups.credit_cards')}>
               {creditCards.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
@@ -347,10 +347,10 @@ export const MovementForm = ({ accounts, categories }: Props) => {
       {tab === 'transfer' && (
         <div className="flex flex-col gap-1.5">
           <label htmlFor="destination" className="text-sm font-medium">
-            Cuenta destino <span className="text-destructive">*</span>
+            {t('labels.destination_account')} <span className="text-destructive">*</span>
           </label>
           {otherAccounts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No hay otras cuentas activas para transferir.</p>
+            <p className="text-sm text-muted-foreground">{t('errors.no_other_accounts')}</p>
           ) : (
             <select
               id="destination"
@@ -359,7 +359,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
               onChange={(e) => handleDestinationChange(e.target.value)}
               className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <option value="">Seleccioná la cuenta destino</option>
+              <option value="">{t('placeholders.destination_account')}</option>
               {otherAccounts.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
@@ -371,7 +371,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
       {/* ── Currency ───────────────────────────────────────────────────────── */}
       {currencyOptions.length > 1 && (
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Moneda</label>
+          <label className="text-sm font-medium">{t('labels.currency')}</label>
           <div className="flex gap-2">
             {currencyOptions.map((c) => (
               <button
@@ -394,7 +394,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
       {/* ── Adjustment direction ───────────────────────────────────────────── */}
       {tab === 'adjustment' && (
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Dirección</label>
+          <label className="text-sm font-medium">{t('labels.direction')}</label>
           <div className="flex gap-3">
             {(['increase', 'decrease'] as const).map((dir) => (
               <label key={dir} className="flex items-center gap-2 cursor-pointer">
@@ -406,7 +406,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
                   onChange={() => setAdjustmentDirection(dir)}
                   className="accent-primary"
                 />
-                <span className="text-sm">{dir === 'increase' ? 'Suma' : 'Resta'}</span>
+                <span className="text-sm">{dir === 'increase' ? t('directions.increase') : t('directions.decrease')}</span>
               </label>
             ))}
           </div>
@@ -415,7 +415,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
 
       {/* ── Amount ─────────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="amount" className="text-sm font-medium">Monto</label>
+        <label htmlFor="amount" className="text-sm font-medium">{t('labels.amount')}</label>
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
             {CURRENCY_SYMBOL[effectiveCurrency]}
@@ -425,7 +425,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
             required
             value={amount}
             onChange={setAmount}
-            placeholder="0,00"
+            placeholder={t('placeholders.amount')}
             className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
@@ -437,7 +437,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
       {/* ── Installments (Gasto + tarjeta + ARS) ───────────────────────────── */}
       {tab === 'expense' && isCredit && currencyCode === 'ARS' && (
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Cuotas</label>
+          <label className="text-sm font-medium">{t('labels.installments')}</label>
           <div className="flex gap-2 flex-wrap">
             {INSTALLMENT_OPTIONS.map((n) => (
               <button
@@ -450,24 +450,24 @@ export const MovementForm = ({ accounts, categories }: Props) => {
                     : 'border-border text-muted-foreground hover:border-foreground'
                 }`}
               >
-                {n === 1 ? 'Sin cuotas' : `${n}x`}
+                {n === 1 ? t('installments_options.none') : t('installments_options.count', { n })}
               </button>
             ))}
           </div>
-          <p className="text-xs text-muted-foreground">Las cuotas solo están disponibles en pesos.</p>
+          <p className="text-xs text-muted-foreground">{t('installments_options.ars_only_hint')}</p>
         </div>
       )}
 
       {/* ── FX rate (Gasto + tarjeta + USD) ────────────────────────────────── */}
       {tab === 'expense' && isUSDCard && (
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="fx_rate" className="text-sm font-medium">Tipo de cambio (ARS por USD)</label>
+          <label htmlFor="fx_rate" className="text-sm font-medium">{t('labels.fx_rate_label')}</label>
           <MoneyAmountInput
             id="fx_rate"
             required
             value={fxRate}
             onChange={setFxRate}
-            placeholder="Cotización del día"
+            placeholder={t('labels.fx_rate_daily')}
             className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
@@ -475,7 +475,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
 
       {/* ── Date ───────────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="date" className="text-sm font-medium">Fecha</label>
+        <label htmlFor="date" className="text-sm font-medium">{t('labels.date')}</label>
         <input
           id="date"
           type="date"
@@ -490,7 +490,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
       {(tab === 'income' || tab === 'expense') && (
         <div className="flex flex-col gap-1.5">
           <label htmlFor="category" className="text-sm font-medium">
-            Categoría <span className="text-destructive">*</span>
+            {t('labels.category')} <span className="text-destructive">*</span>
           </label>
           <select
             id="category"
@@ -499,7 +499,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
             onChange={(e) => { setCategoryId(e.target.value); setSubcategoryId('') }}
             className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <option value="">Seleccioná una categoría</option>
+            <option value="">{t('placeholders.category')}</option>
             {transactionCategories.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -511,7 +511,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
       {selectedCategory && selectedCategory.subcategories.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <label htmlFor="subcategory" className="text-sm font-medium">
-            Subcategoría <span className="text-muted-foreground text-xs">(opcional)</span>
+            {t('labels.subcategory')} <span className="text-muted-foreground text-xs">{tCommon('optional')}</span>
           </label>
           <select
             id="subcategory"
@@ -519,7 +519,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
             onChange={(e) => setSubcategoryId(e.target.value)}
             className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <option value="">Sin subcategoría</option>
+            <option value="">{t('placeholders.no_subcategory')}</option>
             {selectedCategory.subcategories.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
@@ -530,14 +530,14 @@ export const MovementForm = ({ accounts, categories }: Props) => {
       {/* ── Description ─────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="description" className="text-sm font-medium">
-          Descripción <span className="text-muted-foreground text-xs">(opcional)</span>
+          {t('labels.description')} <span className="text-muted-foreground text-xs">{tCommon('optional')}</span>
         </label>
         <input
           id="description"
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Descripción opcional"
+          placeholder={t('placeholders.description')}
           className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
@@ -552,21 +552,21 @@ export const MovementForm = ({ accounts, categories }: Props) => {
               onChange={(e) => setIsRecurrent(e.target.checked)}
               className="accent-primary"
             />
-            <span className="text-sm font-medium">Hacer recurrente</span>
+            <span className="text-sm font-medium">{t('labels.make_recurrent')}</span>
           </label>
           {isRecurrent && (
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="frequency" className="text-xs text-muted-foreground">Frecuencia</label>
+              <label htmlFor="frequency" className="text-xs text-muted-foreground">{t('labels.frequency')}</label>
               <select
                 id="frequency"
                 value={frequency}
                 onChange={(e) => setFrequency(e.target.value as typeof frequency)}
                 className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <option value="weekly">Semanal</option>
-                <option value="biweekly">Quincenal</option>
-                <option value="monthly">Mensual</option>
-                <option value="annual">Anual</option>
+                <option value="weekly">{t('frequencies.weekly')}</option>
+                <option value="biweekly">{t('frequencies.biweekly')}</option>
+                <option value="monthly">{t('frequencies.monthly')}</option>
+                <option value="annual">{t('frequencies.annual')}</option>
               </select>
             </div>
           )}
@@ -581,10 +581,10 @@ export const MovementForm = ({ accounts, categories }: Props) => {
         className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
       >
         {isPending
-          ? 'Guardando…'
+          ? tCommon('saving')
           : isInstallments
-            ? `Registrar ${installments} cuotas`
-            : 'Guardar'}
+            ? t('actions.register_installments', { count: parseInt(installments) })
+            : t('actions.create')}
       </button>
     </form>
   )
