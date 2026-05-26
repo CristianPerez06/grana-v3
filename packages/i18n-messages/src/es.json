@@ -596,7 +596,8 @@
     "installment_recalc_hint": "Cambiar el monto recalcula las {count} cuotas (el resto en la primera).",
     "card_payment_label": "Pago de tarjeta",
     "category_suggestion": {
-      "chip": "¿{category}? · la última vez lo pusiste ahí"
+      "chip": "¿{category}? · la última vez lo pusiste ahí",
+      "hint": "La próxima vez que cargues «{description}» te vamos a sugerir «{category}»."
     },
     "tabs": {
       "income": "Ingreso",

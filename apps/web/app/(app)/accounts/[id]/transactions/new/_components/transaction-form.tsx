@@ -17,7 +17,8 @@ import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
 import { CategorySuggestionChip } from '@/lib/transactions/components/category-suggestion-chip'
-import type { CategorySuggestion } from '@/lib/transactions/category-suggestion'
+import { CategorySuggestionHint } from '@/lib/transactions/components/category-suggestion-hint'
+import { normalizeDescription, type CategorySuggestion } from '@/lib/transactions/category-suggestion'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 
 const todayStr = () => {
@@ -78,6 +79,9 @@ export const TransactionForm = ({
   const [subcategoryId, setSubcategoryId] = useState('')
   // Capa 1 del autocategorizador: sugerencia por historial (chip, no auto-fill).
   const [suggestion, setSuggestion] = useState<CategorySuggestion | null>(null)
+  // True once a blur lookup confirms the current (normalizable) description has
+  // NO history match — the precondition for the pedagogical hint.
+  const [descriptionHasNoHistory, setDescriptionHasNoHistory] = useState(false)
 
   // Transfer fields
   const [destinationAccountId, setDestinationAccountId] = useState('')
@@ -146,17 +150,24 @@ export const TransactionForm = ({
     setCategoryId('')
     setSubcategoryId('')
     setSuggestion(null)
+    setDescriptionHasNoHistory(false)
     setFormError(null)
   }
 
-  // History-based category suggestion: on description blur (income/expense, only
-  // if no category chosen yet), offer the user's last category for this description.
+  // History-based category suggestion + pedagogical hint: on description blur
+  // (income/expense), look up the user's last category for this description. A
+  // match feeds the chip (Capa 1); no match for a normalizable description arms
+  // the hint, which fires once a category is chosen. Chip and hint are mutually
+  // exclusive (chip needs no category yet; hint needs one).
   const handleDescriptionBlur = async () => {
-    if ((tab !== 'income' && tab !== 'expense') || categoryId) {
+    if (tab !== 'income' && tab !== 'expense') {
       setSuggestion(null)
+      setDescriptionHasNoHistory(false)
       return
     }
-    setSuggestion(await suggestCategoryFromHistory(description, tab))
+    const result = await suggestCategoryFromHistory(description, tab)
+    setSuggestion(result)
+    setDescriptionHasNoHistory(result === null && normalizeDescription(description) !== null)
   }
 
   const applySuggestion = () => {
@@ -465,11 +476,14 @@ export const TransactionForm = ({
           id="description"
           type="text"
           value={description}
-          onChange={(e) => { setDescription(e.target.value); setSuggestion(null) }}
+          onChange={(e) => { setDescription(e.target.value); setSuggestion(null); setDescriptionHasNoHistory(false) }}
           onBlur={handleDescriptionBlur}
           placeholder={t('placeholders.description')}
           className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
+        {(tab === 'income' || tab === 'expense') && descriptionHasNoHistory && selectedCategory && (
+          <CategorySuggestionHint description={description} categoryName={selectedCategory.name} />
+        )}
       </div>
 
       {/* ── Recurrente ───────────────────────────────────────────────────────── */}
