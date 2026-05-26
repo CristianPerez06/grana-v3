@@ -653,6 +653,7 @@
       "none": "Sin cuotas",
       "count": "{n}x",
       "ars_only": "Solo disponible en pesos",
+      "ars_only_hint": "Las cuotas solo están disponibles en pesos.",
       "usd_rate_warning": "Vas a tener que cargar la cotización del día al confirmar cada mes."
     },
     "frequencies": {
@@ -681,6 +682,7 @@
       "currency_inactive": "La moneda seleccionada no está activa en esta cuenta.",
       "currency_inactive_destination": "La moneda seleccionada no está activa en la cuenta destino.",
       "destination_required": "La cuenta destino es obligatoria.",
+      "destination_required_short": "Seleccioná la cuenta destino.",
       "destination_same_as_source": "La cuenta destino no puede ser igual a la cuenta origen.",
       "no_other_accounts": "No hay otras cuentas activas para transferir.",
       "no_shared_currencies": "No hay monedas en común entre las dos cuentas.",
@@ -695,7 +697,16 @@
     "empty": {
       "title": "Todavía no hay movimientos",
       "description": "Registrá tu primer ingreso o gasto en esta cuenta.",
-      "cta": "Agregar movimiento"
+      "cta": "Agregar movimiento",
+      "no_accounts": "Todavía no tenés cuentas. Creá una para empezar a registrar movimientos."
+    },
+    "account_groups": {
+      "cash_bank": "Efectivo / Banco",
+      "credit_cards": "Tarjetas de crédito"
+    },
+    "negative_balance_notice": {
+      "title": "El saldo de la cuenta quedaría en negativo",
+      "body": "El disponible en {currency} pasaría a −{formatted}. Podés registrarlo igual."
     },
     "actions": {
       "create": "Guardar",

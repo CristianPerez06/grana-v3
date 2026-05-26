@@ -1,6 +1,7 @@
 'use client'
 
 import { AlertTriangle } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 
@@ -18,6 +19,7 @@ type Props = {
  * deliberate departure from grana-v2, which hard-blocked the operation.
  */
 export const NegativeBalanceNotice = ({ projected, currency }: Props) => {
+  const t = useTranslations('transactions.negative_balance_notice')
   const showCents = useShowCents()
   const abs = Math.abs(projected)
   const formatted = currency === 'ARS' ? formatARS(abs, showCents) : formatUSD(abs, showCents)
@@ -29,10 +31,8 @@ export const NegativeBalanceNotice = ({ projected, currency }: Props) => {
     >
       <AlertTriangle className="mt-0.5 shrink-0" size={16} aria-hidden />
       <div>
-        <p className="font-medium">El saldo de la cuenta quedaría en negativo</p>
-        <p>
-          El disponible en {currency} pasaría a −{formatted}. Podés registrarlo igual.
-        </p>
+        <p className="font-medium">{t('title')}</p>
+        <p>{t('body', { currency, formatted })}</p>
       </div>
     </div>
   )

@@ -653,6 +653,7 @@
       "none": "No installments",
       "count": "{n}x",
       "ars_only": "Only available in pesos",
+      "ars_only_hint": "Installments are only available in pesos.",
       "usd_rate_warning": "You'll need to enter the day's FX rate when confirming each month."
     },
     "frequencies": {
@@ -681,6 +682,7 @@
       "currency_inactive": "The selected currency is not active on this account.",
       "currency_inactive_destination": "The selected currency is not active on the destination account.",
       "destination_required": "Destination account is required.",
+      "destination_required_short": "Select the destination account.",
       "destination_same_as_source": "Destination account cannot be the same as the source account.",
       "no_other_accounts": "There are no other active accounts to transfer to.",
       "no_shared_currencies": "The two accounts share no common currencies.",
@@ -695,7 +697,16 @@
     "empty": {
       "title": "No transactions yet",
       "description": "Record your first income or expense on this account.",
-      "cta": "Add transaction"
+      "cta": "Add transaction",
+      "no_accounts": "You don't have any accounts yet. Create one to start recording transactions."
+    },
+    "account_groups": {
+      "cash_bank": "Cash / Bank",
+      "credit_cards": "Credit cards"
+    },
+    "negative_balance_notice": {
+      "title": "The account balance would go negative",
+      "body": "Available in {currency} would drop to −{formatted}. You can still record it."
     },
     "actions": {
       "create": "Save",

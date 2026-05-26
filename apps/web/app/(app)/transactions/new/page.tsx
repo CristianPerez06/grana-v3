@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/ui/page-header'
 import { getAccounts } from '@/lib/accounts/queries'
@@ -22,6 +23,8 @@ const NewMovementPage = async () => {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const t = await getTranslations('transactions')
 
   const [{ cash, bank, credit }, categories] = await Promise.all([
     getAccounts(),
@@ -48,8 +51,8 @@ const NewMovementPage = async () => {
   return (
     <div className="flex flex-col gap-6 max-w-lg">
       <PageHeader
-        title="Registrar movimiento"
-        backLink={{ href: '/transactions', label: 'Movimientos' }}
+        title={t('actions.register_movement')}
+        backLink={{ href: '/transactions', label: t('back_label') }}
       />
 
       <MovementForm accounts={accounts} categories={categories} />
