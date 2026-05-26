@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildFiltersClearedHref,
   buildMovementLimitHref,
+  buildSearchClearedHref,
   hasContentFilters,
+  hasOtherContentFilters,
+  hasSearch,
   monthOf,
   movementMatchesText,
   parseMovementFilters,
   parseMovementLimit,
+  resolveEmptyVariant,
   resolveMonthRange,
   shiftMonth,
 } from '../filters'
@@ -169,5 +174,77 @@ describe('movementMatchesText', () => {
     expect(movementMatchesText(movement, 'efectivo')).toBe(true)
     expect(movementMatchesText(movement, 'AHORRO')).toBe(true)
     expect(movementMatchesText(movement, 'supermercado')).toBe(false)
+  })
+})
+
+describe('resolveEmptyVariant', () => {
+  it('none: no search and no content filters (month alone does not count)', () => {
+    expect(resolveEmptyVariant({})).toBe('none')
+    expect(resolveEmptyVariant({ month: '2026-05', from: '2026-05-01', to: '2026-05-31' })).toBe('none')
+  })
+
+  it('search: only a text query is active', () => {
+    expect(resolveEmptyVariant({ query: 'uber' })).toBe('search')
+    expect(hasSearch({ query: 'uber' })).toBe(true)
+  })
+
+  it('filter: any of type/category/account/currency/amount range', () => {
+    expect(resolveEmptyVariant({ type: 'expense' })).toBe('filter')
+    expect(resolveEmptyVariant({ categoryId: 'c1' })).toBe('filter')
+    expect(resolveEmptyVariant({ accountId: 'a1' })).toBe('filter')
+    expect(resolveEmptyVariant({ currency: 'USD' })).toBe('filter')
+    expect(resolveEmptyVariant({ amountMin: 100 })).toBe('filter')
+    expect(resolveEmptyVariant({ amountMax: 100 })).toBe('filter')
+  })
+
+  it('currency counts for the empty variant (unlike hasContentFilters)', () => {
+    expect(hasOtherContentFilters({ currency: 'USD' })).toBe(true)
+    expect(hasContentFilters({ currency: 'USD' })).toBe(false)
+  })
+
+  it('precedence filter > search when both are active', () => {
+    expect(resolveEmptyVariant({ query: 'uber', type: 'expense' })).toBe('filter')
+  })
+})
+
+describe('buildFiltersClearedHref / buildSearchClearedHref', () => {
+  const params = {
+    q: 'uber',
+    month: '2026-05',
+    type: 'expense',
+    category: 'c1',
+    account: 'a1',
+    currency: 'USD',
+    amount_min: '100',
+    amount_max: '500',
+    limit: '150',
+  }
+
+  it('clear filters: keeps q + month, drops content filters and limit', () => {
+    const href = buildFiltersClearedHref('/transactions', params)
+    expect(href).toContain('q=uber')
+    expect(href).toContain('month=2026-05')
+    expect(href).not.toContain('type=')
+    expect(href).not.toContain('category=')
+    expect(href).not.toContain('account=')
+    expect(href).not.toContain('currency=')
+    expect(href).not.toContain('amount_min=')
+    expect(href).not.toContain('amount_max=')
+    expect(href).not.toContain('limit=')
+  })
+
+  it('clear search: drops only q, keeps the filters and month', () => {
+    const href = buildSearchClearedHref('/transactions', params)
+    expect(href).not.toContain('q=')
+    expect(href).toContain('type=expense')
+    expect(href).toContain('month=2026-05')
+  })
+
+  it('respects the base path (account view)', () => {
+    expect(buildFiltersClearedHref('/accounts/a1', params).startsWith('/accounts/a1?')).toBe(true)
+  })
+
+  it('returns the bare base path when nothing remains', () => {
+    expect(buildFiltersClearedHref('/transactions', { type: 'expense' })).toBe('/transactions')
   })
 })

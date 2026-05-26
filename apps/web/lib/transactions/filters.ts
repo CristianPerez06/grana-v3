@@ -78,6 +78,33 @@ export const hasContentFilters = (filters: MovementFilters): boolean =>
   filters.amountMin != null ||
   filters.amountMax != null
 
+/** Active text search. */
+export const hasSearch = (filters: MovementFilters): boolean => Boolean(filters.query)
+
+/**
+ * Active content filters OTHER than text search. Unlike `hasContentFilters`,
+ * this drives the empty-state classification, so it INCLUDES the currency filter
+ * (an explicit narrowing the user can clear) but still excludes month navigation
+ * (a time window, not a filter).
+ */
+export const hasOtherContentFilters = (filters: MovementFilters): boolean =>
+  Boolean(filters.type || filters.categoryId || filters.accountId || filters.currency) ||
+  filters.amountMin != null ||
+  filters.amountMax != null
+
+export type MovementEmptyVariant = 'none' | 'search' | 'filter'
+
+/**
+ * Why a movement list came back empty, for the right empty state. Precedence
+ * `filter > search > none`: when both search and filters are active, the filter
+ * message wins (clearing filters is the likelier way back to results).
+ */
+export const resolveEmptyVariant = (filters: MovementFilters): MovementEmptyVariant => {
+  if (hasOtherContentFilters(filters)) return 'filter'
+  if (hasSearch(filters)) return 'search'
+  return 'none'
+}
+
 export const parseMovementFilters = (params: SearchParamsLike): MovementFilters => {
   const filters: MovementFilters = {}
 
@@ -147,6 +174,36 @@ const FILTER_PARAM_KEYS = [
   'amount_min',
   'amount_max',
 ]
+
+const CONTENT_FILTER_PARAM_KEYS = ['type', 'account', 'category', 'currency', 'amount_min', 'amount_max']
+
+/**
+ * Rebuild the list href dropping some filter params (and always the pagination
+ * `limit`, since the result set changes). Keeps the rest (e.g. the month) so
+ * "clear filters"/"clear search" stay within the current period.
+ */
+const buildClearedHref = (
+  basePath: string,
+  params: SearchParamsLike,
+  dropKeys: string[],
+): string => {
+  const searchParams = new URLSearchParams()
+  for (const key of FILTER_PARAM_KEYS) {
+    if (dropKeys.includes(key)) continue
+    const value = getParam(params, key)
+    if (value) searchParams.set(key, value)
+  }
+  const qs = searchParams.toString()
+  return qs ? `${basePath}?${qs}` : basePath
+}
+
+/** Href with every content filter (except text search) cleared. */
+export const buildFiltersClearedHref = (basePath: string, params: SearchParamsLike): string =>
+  buildClearedHref(basePath, params, CONTENT_FILTER_PARAM_KEYS)
+
+/** Href with the text search cleared. */
+export const buildSearchClearedHref = (basePath: string, params: SearchParamsLike): string =>
+  buildClearedHref(basePath, params, ['q'])
 
 export const buildMovementLimitHref = (
   params: SearchParamsLike,

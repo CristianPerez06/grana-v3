@@ -8,6 +8,7 @@ import {
 import { createClient } from '@/lib/supabase/server'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { DashboardHeader } from './_components/dashboard-header'
+import { QuickAddFab } from '@/lib/transactions/components/quick-add-fab'
 import { EyeMaskProvider } from './_components/eye-mask-context'
 import { HeroSection } from './_components/hero-section'
 import { MonthBalanceSection } from './_components/month-balance-section'
@@ -120,6 +121,8 @@ const DashboardPage = async ({ searchParams }: { searchParams: SearchParams }) =
           </div>
         </div>
       </div>
+
+      <QuickAddFab />
     </EyeMaskProvider>
   )
 }

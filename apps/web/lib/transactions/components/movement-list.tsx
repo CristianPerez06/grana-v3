@@ -16,6 +16,17 @@ const addDaysISO = (iso: string, days: number): string => {
   return `${yy}-${mm}-${dd}`
 }
 
+/** Why the list is empty + the relevant action href. Absent ⇒ 'none'. */
+export type MovementEmptyState = {
+  variant: 'none' | 'search' | 'filter'
+  /** CTA to register the first movement (variant 'none'). */
+  addHref?: string
+  /** URL that clears the search ('search') or the filters ('filter'). */
+  clearHref?: string
+  /** The active search term, for the 'search' message. */
+  query?: string
+}
+
 type Props = {
   movements: FinancialMovement[]
   perspective: MovementPerspective
@@ -26,6 +37,8 @@ type Props = {
   recurrenceLinkedIds?: Set<string>
   /** Per-movement running balance snapshots (account view, no filters); null hides them. */
   runningBalances?: Map<string, Record<'ARS' | 'USD', number>> | null
+  /** Empty-state reason + actions. Absent ⇒ generic "no movements". */
+  emptyState?: MovementEmptyState
 }
 
 export const MovementList = ({
@@ -35,16 +48,58 @@ export const MovementList = ({
   showAccount = false,
   recurrenceLinkedIds,
   runningBalances = null,
+  emptyState,
 }: Props) => {
   const t = useTranslations('transactions')
   const locale = useLocale()
   const localeCode = locale === 'en' ? 'en-US' : 'es-AR'
 
   if (movements.length === 0) {
+    const variant = emptyState?.variant ?? 'none'
+    const containerClass = 'rounded-lg border border-dashed border-border p-12 text-center'
+    const actionClass =
+      'mt-4 inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors'
+    const clearClass = 'mt-4 inline-flex items-center text-sm font-medium text-primary hover:underline'
+
+    if (variant === 'search') {
+      return (
+        <div className={containerClass}>
+          <p className="text-sm font-medium text-foreground">{t('empty.search_title')}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t('empty.search_description', { query: emptyState?.query ?? '' })}
+          </p>
+          {emptyState?.clearHref && (
+            <div>
+              <Link href={emptyState.clearHref} className={clearClass}>{t('empty.clear_search')}</Link>
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    if (variant === 'filter') {
+      return (
+        <div className={containerClass}>
+          <p className="text-sm font-medium text-foreground">{t('empty.filter_title')}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t('empty.filter_description')}</p>
+          {emptyState?.clearHref && (
+            <div>
+              <Link href={emptyState.clearHref} className={clearClass}>{t('empty.clear_filters')}</Link>
+            </div>
+          )}
+        </div>
+      )
+    }
+
     return (
-      <div className="rounded-lg border border-dashed border-border p-12 text-center">
+      <div className={containerClass}>
         <p className="text-sm font-medium text-foreground">{t('empty.title')}</p>
         <p className="mt-1 text-sm text-muted-foreground">{t('list.global_empty_description')}</p>
+        {emptyState?.addHref && (
+          <div>
+            <Link href={emptyState.addHref} className={actionClass}>{t('empty.cta')}</Link>
+          </div>
+        )}
       </div>
     )
   }
