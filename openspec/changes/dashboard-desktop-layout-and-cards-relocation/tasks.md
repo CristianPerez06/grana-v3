@@ -20,10 +20,10 @@
 
 ## 4. Dashboard mobile + nativo (dashboard, mobile)
 
-- [ ] 4.1 En `apps/mobile/app/(app)/dashboard.tsx`: renderizar 3 secciones (Hero → Lo que viene → Balance del mes), quitar la sección Tarjetas y `getCreditCards` del paralelo, manteniendo `EyeMaskProvider` y `SectionFallback` por sección.
-- [ ] 4.2 Header nativo del dashboard: saludo + fecha (`getTodayAR()` o equivalente mobile), con el `eye toggle`.
-- [ ] 4.3 Confirmar/formalizar el header navy + status bar `light` leyendo el color desde el mirror de tokens (sin hex literal); respetar safe-area top.
-- [ ] 4.4 Verificar que Tarjetas sigue navegable desde el `AppMenu` → `/cards` (sin cambios de navegación).
+- [x] 4.1 En `apps/mobile/app/(app)/dashboard.tsx`: renderizar 3 secciones (Hero → Lo que viene → Balance del mes), quitar la sección Tarjetas y `getCreditCards` del paralelo, manteniendo `EyeMaskProvider` y `SectionFallback` por sección. → se borró `useDashboardCards` y el `CardsSection` mobile.
+- [x] 4.2 Header nativo del dashboard: saludo + fecha (`getTodayAR()` o equivalente mobile), con el `eye toggle`. → `DashboardHeader` recibe `name` + `todayISO`; saludo (`dashboard.welcome`/`welcome_anon`) + fecha (locale) + eye toggle, dentro del header navy.
+- [x] 4.3 Confirmar/formalizar el header navy + status bar `light` leyendo el color desde el mirror de tokens (sin hex literal); respetar safe-area top. → header usa la clase token `bg-navy` (no hex), `StatusBar style="light"` ya está en `(app)/_layout.tsx`, `SafeAreaView edges={['top']}`.
+- [x] 4.4 Verificar que Tarjetas sigue navegable desde el `AppMenu` → `/cards` (sin cambios de navegación). → `AppMenu` intacto; además se cableó la pantalla `/cards` mobile (mirror de web: título + carrusel), reubicando `CreditCardCarousel`/`CreditCardItem` a `components/cards/`, así no queda código muerto. Nota: sin afford. "agregar tarjeta" porque no existe ruta `/cards/new` en mobile (fuera de alcance).
 
 ## 5. i18n
 
