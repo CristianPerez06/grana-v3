@@ -13,10 +13,13 @@ import {
 } from '@/app/_actions/transactions'
 import { registerCardPurchase, registerInstallments } from '@/app/_actions/credit-cards'
 import { createRecurrenceFromMovement } from '@/app/_actions/recurrences'
+import { suggestCategoryFromHistory } from '@/app/_actions/category-suggestion'
 import { parseMoneyInput } from '@grana/validation'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
+import { CategorySuggestionChip } from '@/lib/transactions/components/category-suggestion-chip'
+import type { CategorySuggestion } from '@/lib/transactions/category-suggestion'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 
 const todayStr = () => {
@@ -78,6 +81,8 @@ export const MovementForm = ({ accounts, categories }: Props) => {
 
   const [categoryId, setCategoryId] = useState('')
   const [subcategoryId, setSubcategoryId] = useState('')
+  // Capa 1 del autocategorizador: sugerencia por historial (chip, no auto-fill).
+  const [suggestion, setSuggestion] = useState<CategorySuggestion | null>(null)
 
   const [destinationAccountId, setDestinationAccountId] = useState('')
   // Exchange: received-leg amount. Destination currency is derived (the other
@@ -154,6 +159,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
     setTab(t)
     setCategoryId('')
     setSubcategoryId('')
+    setSuggestion(null)
     setFormError(null)
     setInstallments('1')
     setFxRate('')
@@ -191,6 +197,24 @@ export const MovementForm = ({ accounts, categories }: Props) => {
       const shared = activeCurrencies.filter((c) => dest.activeCurrencies.includes(c))
       if (shared.length > 0 && !shared.includes(currencyCode)) setCurrencyCode(shared[0])
     }
+  }
+
+  // History-based category suggestion: on description blur (income/expense, and
+  // only if no category chosen yet), look up the user's last category for this
+  // description and offer it as a chip.
+  const handleDescriptionBlur = async () => {
+    if ((tab !== 'income' && tab !== 'expense') || categoryId) {
+      setSuggestion(null)
+      return
+    }
+    setSuggestion(await suggestCategoryFromHistory(description, tab))
+  }
+
+  const applySuggestion = () => {
+    if (!suggestion) return
+    setCategoryId(suggestion.categoryId)
+    setSubcategoryId(suggestion.subcategoryId ?? '')
+    setSuggestion(null)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -586,11 +610,14 @@ export const MovementForm = ({ accounts, categories }: Props) => {
           <label htmlFor="category" className="text-sm font-medium">
             {t('labels.category')} <span className="text-destructive">*</span>
           </label>
+          {suggestion && !categoryId && (
+            <CategorySuggestionChip suggestion={suggestion} onApply={applySuggestion} />
+          )}
           <select
             id="category"
             required
             value={categoryId}
-            onChange={(e) => { setCategoryId(e.target.value); setSubcategoryId('') }}
+            onChange={(e) => { setCategoryId(e.target.value); setSubcategoryId(''); setSuggestion(null) }}
             className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="">{t('placeholders.category')}</option>
@@ -630,7 +657,8 @@ export const MovementForm = ({ accounts, categories }: Props) => {
           id="description"
           type="text"
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={(e) => { setDescription(e.target.value); setSuggestion(null) }}
+          onBlur={handleDescriptionBlur}
           placeholder={t('placeholders.description')}
           className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
