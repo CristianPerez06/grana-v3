@@ -15,7 +15,6 @@ export type Transaction = {
   destination_currency: 'ARS' | 'USD' | null
   date: string
   description: string | null
-  is_verified: boolean
   created_at: string
   // Credit card fields
   status: 'pending' | 'paid' | null
