@@ -12,7 +12,8 @@ type BaseMovement = {
   description: string | null
   account_id: string | null
   account_name: string | null
-  /** Category name/emoji/color for the row icon and subtitle (null when not categorized). */
+  /** Category id/name/emoji/color for filtering, the row icon and subtitle (null when not categorized). */
+  category_id: string | null
   category_name: string | null
   category_icon: string | null
   category_color: string | null
@@ -115,6 +116,7 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
     description: tx.description,
     account_id: tx.account_id,
     account_name: tx.source_account?.name ?? null,
+    category_id: tx.category_id ?? null,
     category_name: tx.category?.name ?? null,
     category_icon: tx.category?.icon ?? null,
     category_color: tx.category?.color ?? null,

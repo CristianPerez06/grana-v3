@@ -2,21 +2,21 @@ import { formatDateISO, getTodayAR } from '@/lib/date'
 import type { FinancialMovement } from './movements'
 
 export type MovementTypeFilter = FinancialMovement['kind']
-
-export type MovementPeriodFilter =
-  | 'current_month'
-  | 'previous_month'
-  | 'current_year'
-  | 'custom'
+export type MovementCurrencyFilter = 'ARS' | 'USD'
 
 export type MovementFilters = {
   query?: string
-  period?: MovementPeriodFilter
+  /** Selected month as `YYYY-MM` (period navigation). Absent when a custom range is used. */
+  month?: string
+  /** Custom date range (takes priority over `month`). */
   from?: string
   to?: string
   type?: MovementTypeFilter
   accountId?: string
   categoryId?: string
+  currency?: MovementCurrencyFilter
+  amountMin?: number
+  amountMax?: number
 }
 
 type SearchParamValue = string | string[] | undefined
@@ -36,15 +36,7 @@ export const MOVEMENT_TYPE_KEYS: ReadonlyArray<MovementTypeFilter> = [
   'installment_purchase',
 ]
 
-export const MOVEMENT_PERIOD_KEYS: ReadonlyArray<MovementPeriodFilter> = [
-  'current_month',
-  'previous_month',
-  'current_year',
-  'custom',
-]
-
 const VALID_MOVEMENT_TYPES = new Set<string>(MOVEMENT_TYPE_KEYS)
-const VALID_PERIODS = new Set<string>(MOVEMENT_PERIOD_KEYS)
 
 const getParam = (params: SearchParamsLike, key: string) => {
   if (params instanceof URLSearchParams) return params.get(key)
@@ -55,39 +47,36 @@ const getParam = (params: SearchParamsLike, key: string) => {
 }
 
 const isIsoDate = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(value)
+const isMonth = (value: string): boolean => /^\d{4}-\d{2}$/.test(value)
 
-const firstDayOfMonth = (date: Date) =>
-  new Date(date.getFullYear(), date.getMonth(), 1)
+/** `YYYY-MM` of a date. */
+export const monthOf = (date: Date): string =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 
-const lastDayOfMonth = (date: Date) =>
-  new Date(date.getFullYear(), date.getMonth() + 1, 0)
-
-export const resolveMovementPeriod = (
-  period: MovementPeriodFilter,
-  today: Date = getTodayAR(),
-): Pick<MovementFilters, 'from' | 'to'> => {
-  if (period === 'current_month') {
-    return {
-      from: formatDateISO(firstDayOfMonth(today)),
-      to: formatDateISO(lastDayOfMonth(today)),
-    }
-  }
-
-  if (period === 'previous_month') {
-    const previousMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-    return {
-      from: formatDateISO(firstDayOfMonth(previousMonth)),
-      to: formatDateISO(lastDayOfMonth(previousMonth)),
-    }
-  }
-
-  if (period === 'current_year') {
-    const year = today.getFullYear()
-    return { from: `${year}-01-01`, to: `${year}-12-31` }
-  }
-
-  return {}
+/** First/last accounting date of a `YYYY-MM` month. */
+export const resolveMonthRange = (month: string): Pick<MovementFilters, 'from' | 'to'> => {
+  const [year, m] = month.split('-').map(Number)
+  const from = formatDateISO(new Date(year, m - 1, 1))
+  const to = formatDateISO(new Date(year, m, 0))
+  return { from, to }
 }
+
+/** Shift a `YYYY-MM` month by `delta` months. */
+export const shiftMonth = (month: string, delta: number): string => {
+  const [year, m] = month.split('-').map(Number)
+  return monthOf(new Date(year, m - 1 + delta, 1))
+}
+
+/**
+ * Content filters narrow WHICH movements show (skipping rows), so a per-row
+ * running balance would be misleading and must hide. Month navigation and the
+ * currency filter are NOT content filters: the month shows a consecutive slice,
+ * and currency only narrows a dimension the balance already keeps separate.
+ */
+export const hasContentFilters = (filters: MovementFilters): boolean =>
+  Boolean(filters.query || filters.type || filters.categoryId) ||
+  filters.amountMin != null ||
+  filters.amountMax != null
 
 export const parseMovementFilters = (params: SearchParamsLike): MovementFilters => {
   const filters: MovementFilters = {}
@@ -95,25 +84,20 @@ export const parseMovementFilters = (params: SearchParamsLike): MovementFilters 
   const query = getParam(params, 'q')?.trim()
   if (query) filters.query = query
 
-  const rawPeriod = getParam(params, 'period')
-  if (rawPeriod && VALID_PERIODS.has(rawPeriod)) {
-    filters.period = rawPeriod as MovementPeriodFilter
+  // Period: a custom from/to range takes priority; otherwise the selected month;
+  // otherwise the current month (financial timezone).
+  const from = getParam(params, 'from')
+  const to = getParam(params, 'to')
+  const hasCustomRange = (from && isIsoDate(from)) || (to && isIsoDate(to))
 
-    if (filters.period === 'custom') {
-      const from = getParam(params, 'from')
-      const to = getParam(params, 'to')
-
-      if (from && isIsoDate(from)) filters.from = from
-      if (to && isIsoDate(to)) filters.to = to
-    } else {
-      Object.assign(filters, resolveMovementPeriod(filters.period))
-    }
-  } else {
-    const from = getParam(params, 'from')
-    const to = getParam(params, 'to')
-
+  if (hasCustomRange) {
     if (from && isIsoDate(from)) filters.from = from
     if (to && isIsoDate(to)) filters.to = to
+  } else {
+    const rawMonth = getParam(params, 'month')
+    const month = rawMonth && isMonth(rawMonth) ? rawMonth : monthOf(getTodayAR())
+    filters.month = month
+    Object.assign(filters, resolveMonthRange(month))
   }
 
   const rawType = getParam(params, 'type')
@@ -126,6 +110,15 @@ export const parseMovementFilters = (params: SearchParamsLike): MovementFilters 
 
   const categoryId = getParam(params, 'category')?.trim()
   if (categoryId) filters.categoryId = categoryId
+
+  const currency = getParam(params, 'currency')
+  if (currency === 'ARS' || currency === 'USD') filters.currency = currency
+
+  const amountMin = Number(getParam(params, 'amount_min'))
+  if (Number.isFinite(amountMin) && amountMin > 0) filters.amountMin = amountMin
+
+  const amountMax = Number(getParam(params, 'amount_max'))
+  if (Number.isFinite(amountMax) && amountMax > 0) filters.amountMax = amountMax
 
   return filters
 }
@@ -142,14 +135,26 @@ export const parseMovementLimit = (params: SearchParamsLike): number => {
   return Math.min(parsed, MAX_MOVEMENTS_LIMIT)
 }
 
+const FILTER_PARAM_KEYS = [
+  'q',
+  'month',
+  'from',
+  'to',
+  'type',
+  'account',
+  'category',
+  'currency',
+  'amount_min',
+  'amount_max',
+]
+
 export const buildMovementLimitHref = (
   params: SearchParamsLike,
   nextLimit: number,
 ): string => {
   const searchParams = new URLSearchParams()
 
-  const keys = ['q', 'period', 'from', 'to', 'type', 'account', 'category']
-  for (const key of keys) {
+  for (const key of FILTER_PARAM_KEYS) {
     const value = getParam(params, key)
     if (value) searchParams.set(key, value)
   }

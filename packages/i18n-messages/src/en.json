@@ -761,7 +761,15 @@
       "apply": "Apply",
       "clear": "Clear",
       "all_masc": "All",
-      "all_fem": "All"
+      "all_fem": "All",
+      "filters_button": "Filters",
+      "clear_all": "Clear all",
+      "currency": "Currency",
+      "amount_min": "Min amount",
+      "amount_max": "Max amount",
+      "prev_month": "Previous month",
+      "next_month": "Next month",
+      "custom_range": "Custom range"
     },
     "movement_kinds": {
       "income": "Income",
