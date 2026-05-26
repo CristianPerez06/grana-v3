@@ -1,5 +1,4 @@
 import { ScrollView, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams } from 'expo-router'
 import { PageHeader } from '../../../../../../components/ui/PageHeader'
 import { CreateSubcategoryForm } from '../../../../../../components/categories/CreateSubcategoryForm'
@@ -10,22 +9,20 @@ export default function NewSubcategoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <View className="flex-1 bg-background">
+      <PageHeader
+        title={t('settings.categories.subcategories.new.title')}
+        backLink={{
+          href: `/(app)/settings/categories/${id ?? ''}/subcategories`,
+          label: t('settings.categories.subcategories.title'),
+        }}
+      />
       <ScrollView
         contentContainerClassName="px-6 py-6"
         keyboardShouldPersistTaps="handled"
       >
-        <View className="flex-col gap-6">
-          <PageHeader
-            title={t('settings.categories.subcategories.new.title')}
-            backLink={{
-              href: `/(app)/settings/categories/${id ?? ''}/subcategories`,
-              label: t('settings.categories.subcategories.title'),
-            }}
-          />
-          {id ? <CreateSubcategoryForm categoryId={id} /> : null}
-        </View>
+        {id ? <CreateSubcategoryForm categoryId={id} /> : null}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   )
 }

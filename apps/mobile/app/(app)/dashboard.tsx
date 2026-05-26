@@ -107,7 +107,8 @@ export default function DashboardScreen() {
 
   return (
     <EyeMaskProvider key={eyeMaskKey}>
-      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      <View className="flex-1 bg-background">
+        <DashboardHeader />
         <ScrollView
           contentContainerClassName="px-6 py-6"
           refreshControl={
@@ -119,8 +120,6 @@ export default function DashboardScreen() {
             />
           }
         >
-          <DashboardHeader />
-
           <View className="flex-col gap-5">
             {showWelcomeCard && <WelcomeFirstMoveCard />}
 
@@ -154,7 +153,7 @@ export default function DashboardScreen() {
             ) : null}
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </EyeMaskProvider>
   )
 }

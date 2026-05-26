@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams } from 'expo-router'
 import { PageHeader } from '../../../../../components/ui/PageHeader'
 import { Spinner } from '../../../../../components/ui/Spinner'
@@ -29,32 +28,30 @@ export default function EditCategoryScreen() {
   }, [id])
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <View className="flex-1 bg-background">
+      <PageHeader
+        title={t('settings.categories.edit.title')}
+        backLink={{
+          href: '/(app)/settings/categories',
+          label: t('settings.categories.label'),
+        }}
+      />
       <ScrollView
         contentContainerClassName="px-6 py-6"
         keyboardShouldPersistTaps="handled"
       >
-        <View className="flex-col gap-6">
-          <PageHeader
-            title={t('settings.categories.edit.title')}
-            backLink={{
-              href: '/(app)/settings/categories',
-              label: t('settings.categories.label'),
-            }}
-          />
-          {category === undefined ? (
-            <View className="items-center py-12">
-              <Spinner size="md" />
-            </View>
-          ) : category === null ? (
-            <Text className="text-sm text-error">
-              {t('settings.categories.errors.not_found')}
-            </Text>
-          ) : (
-            <EditCategoryForm category={category} />
-          )}
-        </View>
+        {category === undefined ? (
+          <View className="items-center py-12">
+            <Spinner size="md" />
+          </View>
+        ) : category === null ? (
+          <Text className="text-sm text-error">
+            {t('settings.categories.errors.not_found')}
+          </Text>
+        ) : (
+          <EditCategoryForm category={category} />
+        )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Modal, Pressable, View } from 'react-native'
 import { Tabs, useRouter } from 'expo-router'
+import { StatusBar } from 'expo-status-bar'
 import { supabase } from '../../lib/supabase'
 import { hasRecoveryClaim } from '../../lib/recovery'
 import { PreferencesProvider } from '../../lib/preferences-context'
@@ -42,6 +43,7 @@ export default function AppLayout() {
 
   return (
     <PreferencesProvider>
+      <StatusBar style="light" />
       <Modal
         visible={menuOpen}
         transparent

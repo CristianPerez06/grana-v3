@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { PageHeader } from '../../../../components/ui/PageHeader'
 import { Spinner } from '../../../../components/ui/Spinner'
 import { CategoryList } from '../../../../components/categories/CategoryList'
@@ -41,37 +40,34 @@ export default function CategoriesScreen() {
   )
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <View className="flex-1 bg-background">
+      <PageHeader
+        title={t('settings.categories.label')}
+        description={t('settings.categories.description')}
+        backLink={{ href: '/(app)/settings', label: t('settings.title') }}
+        actions={
+          <Pressable
+            onPress={() => router.push('/(app)/settings/categories/new')}
+            className="rounded-xl bg-emerald px-4 py-2"
+            accessibilityRole="button"
+          >
+            <Text className="text-sm font-semibold text-white">
+              {t('settings.categories.actions.add')}
+            </Text>
+          </Pressable>
+        }
+      />
       <ScrollView contentContainerClassName="px-6 py-6">
-        <View className="flex-col gap-6">
-          <PageHeader
-            title={t('settings.categories.label')}
-            description={t('settings.categories.description')}
-            backLink={{ href: '/(app)/settings', label: t('settings.title') }}
-            actions={
-              <Pressable
-                onPress={() => router.push('/(app)/settings/categories/new')}
-                className="rounded-xl bg-emerald px-4 py-2"
-                accessibilityRole="button"
-              >
-                <Text className="text-sm font-semibold text-white">
-                  {t('settings.categories.actions.add')}
-                </Text>
-              </Pressable>
-            }
-          />
-
-          {error ? (
-            <Text className="text-sm text-error">{error}</Text>
-          ) : categories === null ? (
-            <View className="items-center py-12">
-              <Spinner size="md" />
-            </View>
-          ) : (
-            <CategoryList categories={categories} onChanged={fetchCategories} />
-          )}
-        </View>
+        {error ? (
+          <Text className="text-sm text-error">{error}</Text>
+        ) : categories === null ? (
+          <View className="items-center py-12">
+            <Spinner size="md" />
+          </View>
+        ) : (
+          <CategoryList categories={categories} onChanged={fetchCategories} />
+        )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   )
 }
