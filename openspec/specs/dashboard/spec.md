@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define la pantalla `/dashboard` como landing universal post-login y post-onboarding (idéntica para modo novato y experto, en web y mobile). Es read-only y se compone de cuatro secciones en orden fijo: Hero "Para gastar" con disponible bimoneda y eye toggle de privacidad, "Lo que viene" con compromisos firmes y recurrencias de los próximos 14 días, Balance del mes con gráfico de línea y navegador mensual, y carrusel de Tarjetas. Toda interacción navega al módulo correspondiente; el dashboard no muta datos.
+Define la pantalla `/dashboard` como landing universal post-login y post-onboarding (idéntica para modo novato y experto, en web y mobile). Es read-only y se compone de tres secciones en orden fijo: Hero "Para gastar" con disponible bimoneda y eye toggle de privacidad, "Lo que viene" con compromisos firmes y recurrencias de los próximos 14 días, y Balance del mes con gráfico de línea y navegador mensual. En desktop (web) el dashboard reorganiza esas secciones en un layout multi-columna; el resumen de tarjetas NO vive en el dashboard sino en `/cards`. Toda interacción navega al módulo correspondiente; el dashboard no muta datos.
 
 ## Requirements
 ### Requirement: La pantalla dashboard es la landing universal post-login y post-onboarding
@@ -10,6 +10,8 @@ Define la pantalla `/dashboard` como landing universal post-login y post-onboard
 El sistema SHALL renderizar la pantalla principal de la app en la ruta `/dashboard` bajo el grupo `(app)`, tanto en web como en mobile. La pantalla SHALL ser la única landing tras tres flujos: login exitoso, signup confirmado con onboarding ya completado, y completar el onboarding (en ambos modos, novato y experto).
 
 El dashboard SHALL ser idéntico para los dos modos (`users.mode='novato'` y `users.mode='experto'`). El modo NO modifica ninguna sección, dato, layout ni componente del dashboard. El detalle adicional del modo experto vive en el módulo Cuentas, no en el dashboard.
+
+El dashboard SHALL renderizar **tres** secciones en orden vertical (mobile) o reorganizadas en desktop: Hero → Lo que viene → Balance del mes. La sección Tarjetas NO forma parte del dashboard; el resumen de tarjetas vive en `/cards` (web) y se navega desde el `AppMenu` → `/cards` (nativo).
 
 #### Scenario: Usuario novato aterriza en dashboard tras completar el onboarding
 
@@ -30,13 +32,74 @@ El dashboard SHALL ser idéntico para los dos modos (`users.mode='novato'` y `us
 #### Scenario: Dashboard se ve igual en novato y experto
 
 - **WHEN** dos usuarios con datos idénticos pero `users.mode` distinto cargan `/dashboard`
-- **THEN** la pantalla renderiza las mismas cuatro secciones, en el mismo orden, con los mismos componentes y los mismos importes
+- **THEN** la pantalla renderiza las mismas tres secciones (Hero, Lo que viene, Balance del mes), en el mismo orden, con los mismos componentes y los mismos importes
 
 #### Scenario: Arranque con sesión activa aterriza en /dashboard renderizado (mobile)
 
 - **WHEN** un usuario mobile con sesión válida persistida abre la app
-- **THEN** la app aterriza en `(app)/dashboard` con las cuatro secciones renderizadas (Hero, Lo que viene, Balance del mes, Tarjetas)
+- **THEN** la app aterriza en `(app)/dashboard` con las tres secciones renderizadas (Hero, Lo que viene, Balance del mes)
 - **AND** NO renderiza el placeholder "Dashboard" de texto plano
+
+---
+
+### Requirement: El dashboard usa un layout multi-columna en desktop (web)
+
+En viewports `lg` (≥1024px) y mayores, la pantalla `/dashboard` web SHALL reorganizar sus secciones en un layout multi-columna en lugar de la columna única mobile-first: el Hero ocupa el ancho completo arriba; debajo, "Balance del mes" y "Lo que viene" se muestran lado a lado, con "Balance del mes" creciendo para ocupar el ancho disponible y "Lo que viene" como rail de ancho acotado a la derecha. Ambas columnas SHALL igualar su altura. Por debajo de `lg`, el dashboard SHALL mantener la columna única mobile-first actual. El layout NO SHALL depender del modo (`novato`/`experto`).
+
+#### Scenario: Desktop ancho muestra dos columnas con alturas igualadas
+
+- **WHEN** un usuario carga `/dashboard` en un viewport de 1440px
+- **THEN** el Hero ocupa el ancho completo arriba
+- **AND** "Balance del mes" y "Lo que viene" se muestran lado a lado debajo del Hero
+- **AND** ambas columnas terminan a la misma altura
+
+#### Scenario: Entre md y lg el dashboard sigue en columna única
+
+- **WHEN** un usuario carga `/dashboard` en un viewport de 820px (sidebar visible)
+- **THEN** las secciones se apilan en una sola columna (Hero → Lo que viene → Balance del mes)
+
+#### Scenario: Bajo md el dashboard es mobile-first
+
+- **WHEN** un usuario carga `/dashboard` en un viewport de 375px
+- **THEN** las secciones se apilan en una sola columna
+
+---
+
+### Requirement: El header del dashboard saluda al usuario y muestra la fecha de hoy
+
+El header del dashboard SHALL mostrar un saludo `Hola, {name}.` usando el nombre del perfil (key `dashboard.welcome`), con fallback a `dashboard.welcome_anon` ("Hola.") cuando el perfil no tiene nombre. El header SHALL mostrar la fecha del día calculada desde la zona horaria financiera del usuario vía `getTodayAR()`; NO SHALL usar `new Date()` directo del navegador/servidor. El `eye toggle` (definido en su propio requirement) convive en este header. En desktop el saludo es el título grande del header; en la app nativa el saludo se pinta dentro del header navy.
+
+#### Scenario: Saludo con nombre del perfil
+
+- **WHEN** el usuario con nombre "Cristian" carga `/dashboard`
+- **THEN** el header muestra "Hola, Cristian."
+- **AND** muestra la fecha de hoy en la zona horaria financiera (AR)
+
+#### Scenario: Saludo sin nombre usa fallback
+
+- **WHEN** el usuario no tiene nombre cargado en el perfil
+- **THEN** el header muestra "Hola."
+
+#### Scenario: La fecha de hoy se calcula desde la zona financiera
+
+- **WHEN** se renderiza la fecha del header del dashboard
+- **THEN** el valor se deriva de `getTodayAR()` y NO de `new Date()` directo
+
+---
+
+### Requirement: El header del dashboard ofrece un acceso primario para registrar un movimiento (web)
+
+En web, el header del dashboard SHALL incluir un botón primario "Nuevo movimiento" (estilo `positive`/emerald) que navega a la creación de movimiento (`/transactions/new`). El label del botón SHALL leerse del catálogo i18n (no hardcodeado). En la app nativa este acceso NO es parte del header del dashboard; cargar un movimiento se resuelve por el flujo existente (fuera de alcance de este change).
+
+#### Scenario: El botón navega a la creación de movimiento
+
+- **WHEN** un usuario web toca "Nuevo movimiento" en el header del dashboard
+- **THEN** navega a `/transactions/new`
+
+#### Scenario: El label del botón es traducible
+
+- **WHEN** un desarrollador inspecciona el botón "Nuevo movimiento"
+- **THEN** su label se obtiene del catálogo i18n, sin string hardcodeado
 
 ---
 
@@ -50,11 +113,6 @@ El dashboard SHALL NOT exponer formularios, botones de creación, edición, elim
 - **THEN** el sistema navega al detalle de ese período en `/cards/[accountId]/periods/[periodId]`
 - **AND** NO abre un modal de pago de resumen ni dispara ninguna mutación
 
-#### Scenario: Click en una tarjeta del carrusel navega al detalle (web)
-
-- **WHEN** el usuario hace click en una tarjeta dentro del carrusel "Tarjetas"
-- **THEN** el sistema navega a `/cards/[accountId]`
-
 #### Scenario: Click en el Hero navega a Cuentas (web)
 
 - **WHEN** el usuario hace click en el importe del Hero "Para gastar"
@@ -66,12 +124,6 @@ El dashboard SHALL NOT exponer formularios, botones de creación, edición, elim
 - **THEN** la app navega con `useRouter().push(...)` al detalle de ese período dentro del módulo cards mobile
 - **AND** NO abre un modal de pago de resumen ni dispara ninguna mutación
 - **AND** mientras la ruta de detalle de período no exista en cards mobile, la navegación apunta a `/tarjetas` (decisión transitoria)
-
-#### Scenario: Toque en una tarjeta del carrusel navega al detalle (mobile)
-
-- **WHEN** el usuario toca una tarjeta dentro del carrusel "Tarjetas"
-- **THEN** la app navega con `useRouter().push(...)` a la pantalla de detalle de la tarjeta dentro del módulo cards mobile
-- **AND** mientras la ruta de detalle por tarjeta no exista en cards mobile, la navegación apunta a `/tarjetas` (decisión transitoria)
 
 #### Scenario: Toque en el Hero navega a Cuentas (mobile)
 
@@ -89,6 +141,8 @@ El cálculo SHALL respetar el invariante "Off-ledger credit cards": las transacc
 
 Si el usuario tiene ARS habilitado pero no tiene cuentas con saldo USD inicializado, el Hero SHALL mostrar `u$s 0,00` (no oculta la línea, porque V3 provisiona ambas monedas por default).
 
+En **desktop** (≥`lg`), además del disponible total, el Hero SHALL mostrar un desglose de hasta 2–3 cuentas `type IN ('cash','bank')` con su saldo y un enlace "Ver todas las cuentas" → `/accounts`. En **mobile** el Hero SHALL mantenerse minimal: solo el disponible total (ARS primario + USD subordinado), sin desglose. En ambos casos se respeta bimoneda (ARS primario, USD subordinado, sin merge entre monedas).
+
 #### Scenario: Usuario con saldos en ambas monedas
 
 - **WHEN** el usuario tiene una cuenta cash con $ 150.000 ARS + u$s 500 USD y una cuenta bank con $ 137.450 ARS + u$s 740,50 USD, sin pagos de resúmenes pendientes ya descontados
@@ -98,12 +152,18 @@ Si el usuario tiene ARS habilitado pero no tiene cuentas con saldo USD inicializ
 
 - **WHEN** el usuario tiene $ 100.000 ARS disponibles y registra un consumo de $ 30.000 en su tarjeta Visa
 - **THEN** el Hero sigue mostrando `$ 100.000,00`
-- **AND** el consumo aparece en el carrusel de Tarjetas y eventualmente en la sección "Lo que viene" cuando el resumen cierre
+- **AND** el consumo aparece en `/cards` y eventualmente en la sección "Lo que viene" cuando el resumen cierre
 
 #### Scenario: Pago de resumen reduce el disponible
 
 - **WHEN** el usuario paga el resumen de Visa por $ 145.200 desde una cuenta cash que tenía $ 287.450
 - **THEN** el Hero pasa a mostrar `$ 142.250,00`
+
+#### Scenario: Desktop muestra el desglose de cuentas; mobile no
+
+- **WHEN** el usuario con dos cuentas cash/bank carga `/dashboard` en un viewport ≥1024px
+- **THEN** el Hero muestra el disponible total y un desglose de esas cuentas con su saldo y un enlace "Ver todas las cuentas"
+- **AND** en un viewport mobile el Hero muestra solo el disponible total (ARS + USD), sin desglose
 
 ---
 
@@ -111,13 +171,13 @@ Si el usuario tiene ARS habilitado pero no tiene cuentas con saldo USD inicializ
 
 El sistema SHALL exponer en el header del dashboard un botón "ojo" que, al activarse, reemplaza visualmente todos los importes numéricos del dashboard por un placeholder genérico (`••••••` o equivalente) sin alterar los datos subyacentes. El estado del eye toggle SHALL ser client-side y SHALL NOT persistir entre sesiones ni navegaciones fuera del dashboard.
 
-El toggle SHALL aplicar al menos a: Hero (importes ARS y USD), Lo que viene (importes individuales y totales), Balance del mes (importes de ingresos, gastos y balance), y Tarjetas (importes de cada card).
+El toggle SHALL aplicar al menos a: Hero (importes ARS y USD, y los saldos del desglose de cuentas en desktop), Lo que viene (importes individuales y totales) y Balance del mes (importes de ingresos, gastos y balance).
 
 #### Scenario: Activar el toggle enmascara todos los importes
 
 - **WHEN** el usuario está en `/dashboard` con todos los importes visibles y toca el botón "ojo"
 - **THEN** todos los importes numéricos visibles se reemplazan por `••••••`
-- **AND** los labels, fechas, nombres de tarjetas y categorías permanecen visibles
+- **AND** los labels, fechas y categorías permanecen visibles
 
 #### Scenario: Salir del dashboard y volver resetea el toggle
 
@@ -263,40 +323,9 @@ El cálculo SHALL usar exclusivamente la moneda ARS. El gráfico NO renderiza da
 
 ---
 
-### Requirement: La sección Tarjetas reutiliza el carrusel del módulo cards
-
-El sistema SHALL renderizar un componente llamado `CreditCardCarousel` con scroll/swipe horizontal y snap a card. La implementación interna es específica de cada plataforma (CSS scroll-snap en web; `FlatList` horizontal con `snapToInterval` en mobile). La sección SHALL consumir la misma información que alimenta el listado completo de tarjetas (`getCreditCards(userId)` o equivalente cuando se promueva a `@grana/cards`). La sección SHALL mostrar las mismas alertas visuales (resumen próximo a vencer en ámbar, vencido en rojo) que el listado completo, semánticamente.
-
-Si el usuario no tiene ninguna tarjeta activa, la sección SHALL renderizar un estado vacío con CTA "Agregar tarjeta" cuyo destino es específico de la plataforma:
-
-- En web, navega a `/cards/new` (o equivalente del módulo cards web).
-- En mobile, navega a `/tarjetas` (el módulo cards mobile aún no tiene una ruta de alta dedicada; cuando exista, se redirigirá a esa ruta).
-
-#### Scenario: Usuario con dos tarjetas activas ve ambas en el carrusel
-
-- **WHEN** el usuario tiene dos cuentas `type='credit'` activas
-- **THEN** el carrusel del dashboard muestra ambas tarjetas con scroll/swipe horizontal y snap a card
-
-#### Scenario: Tarjeta con resumen vencido aparece en rojo en el carrusel del dashboard
-
-- **WHEN** una tarjeta del usuario tiene un período con estado derivado `overdue`
-- **THEN** la card en el carrusel del dashboard muestra el badge visual de vencido (idéntico al del listado completo del módulo cards)
-
-#### Scenario: Sin tarjetas activas muestra estado vacío con CTA (web)
-
-- **WHEN** el usuario web no tiene ninguna cuenta `type='credit'` activa
-- **THEN** la sección renderiza "Todavía no agregaste ninguna tarjeta" con un botón "Agregar tarjeta" que navega a la pantalla de alta de tarjeta del módulo cards web
-
-#### Scenario: Sin tarjetas activas muestra estado vacío con CTA (mobile)
-
-- **WHEN** el usuario mobile no tiene ninguna cuenta `type='credit'` activa
-- **THEN** la sección renderiza "Todavía no agregaste ninguna tarjeta" con un botón "Agregar tarjeta" que navega con `useRouter().push('/tarjetas')` (decisión transitoria hasta que cards mobile tenga ruta de alta dedicada)
-
----
-
 ### Requirement: El dashboard tolera datos parciales sin romperse
 
-El dashboard SHALL renderizar las cuatro secciones aunque alguna(s) de ellas no tengan datos o sus queries devuelvan vacío. Cada sección SHALL manejar su propio estado vacío con un mensaje neutral y nunca dejar la pantalla en blanco. Cada sección SHALL renderizarse de forma independiente: una falla en la query de "Lo que viene" NO SHALL impedir que se rendericen Hero, Balance del mes o Tarjetas.
+El dashboard SHALL renderizar las tres secciones aunque alguna(s) de ellas no tengan datos o sus queries devuelvan vacío. Cada sección SHALL manejar su propio estado vacío con un mensaje neutral y nunca dejar la pantalla en blanco. Cada sección SHALL renderizarse de forma independiente: una falla en la query de "Lo que viene" NO SHALL impedir que se rendericen Hero o Balance del mes.
 
 #### Scenario: Usuario nuevo sin transacciones ve dashboard funcional
 
@@ -304,13 +333,12 @@ El dashboard SHALL renderizar las cuatro secciones aunque alguna(s) de ellas no 
 - **THEN** el Hero muestra `$ 0,00` y `u$s 0,00`
 - **AND** "Lo que viene" muestra el estado vacío
 - **AND** "Balance del mes" muestra la línea plana en 0
-- **AND** Tarjetas muestra la tarjeta default creada por el onboarding novato con su período actual sin consumos
 
 #### Scenario: Falla parcial en una query no rompe la pantalla
 
 - **WHEN** la query `getUpcomingFortnight` falla (timeout, error de DB)
 - **THEN** la sección "Lo que viene" renderiza un estado de error compacto ("No pudimos cargar los próximos eventos")
-- **AND** las otras tres secciones renderizan normalmente
+- **AND** las otras dos secciones renderizan normalmente
 
 ---
 
@@ -366,7 +394,7 @@ Cada plataforma (web, mobile) SHALL implementar localmente un helper `routeForUp
 
 ### Requirement: Los componentes del dashboard mobile siguen la convención de naming espejo del web
 
-Los componentes mobile del dashboard SHALL llamarse igual que sus pares web a nivel de export PascalCase: `HeroSection`, `UpcomingFortnightSection`, `MonthBalanceSection`, `MonthBalanceChart`, `MonthNavigator`, `CardsSection`, `CreditCardCarousel`, `MaskedAmount`, `EyeMaskToggle`, `EyeMaskProvider`, `useEyeMask`, `SectionFallback`, `DashboardHeader`, `WelcomeFirstMoveCard`. Las props públicas SHALL coincidir cuando es técnicamente posible.
+Los componentes mobile del dashboard SHALL llamarse igual que sus pares web a nivel de export PascalCase: `HeroSection`, `UpcomingFortnightSection`, `MonthBalanceSection`, `MonthBalanceChart`, `MonthNavigator`, `MaskedAmount`, `EyeMaskToggle`, `EyeMaskProvider`, `useEyeMask`, `SectionFallback`, `DashboardHeader`, `WelcomeFirstMoveCard`. Las props públicas SHALL coincidir cuando es técnicamente posible. El carrusel de tarjetas (`CreditCardCarousel`, `CreditCardItem`) ya no es parte del dashboard: vive en el módulo cards (`apps/mobile/components/cards/`) y lo consume la pantalla `/cards`.
 
 Cada componente mobile SHALL usar las primitivas idiomáticas de RN/Expo (`View`, `Text`, `Pressable`, `FlatList`, `react-native-svg`, `useRouter` de `expo-router`, NativeWind classes) en vez de las primitivas del DOM. NO se exige que el código se comparta entre plataformas; solo el contrato semántico de naming y comportamiento.
 
@@ -384,23 +412,42 @@ Cada componente mobile SHALL usar las primitivas idiomáticas de RN/Expo (`View`
 
 ---
 
-### Requirement: La pantalla `(app)/dashboard` mobile renderiza las cuatro secciones con tolerancia a fallas parciales
+### Requirement: El dashboard nativo pinta el header y la status bar con el navy de marca (mobile)
 
-La pantalla `apps/mobile/app/(app)/dashboard.tsx` SHALL renderizar las cuatro secciones del dashboard en orden vertical (Hero → Lo que viene → Balance del mes → Tarjetas) envueltas en `EyeMaskProvider`. La pantalla SHALL cargar las cuatro queries en paralelo y SHALL tolerar fallas parciales: si una query falla, la sección correspondiente renderiza `SectionFallback` mientras las demás siguen funcionando.
+En la app nativa, el header del dashboard (que contiene el saludo y el `eye toggle`) y la status bar SHALL pintarse con el navy de marca (`--navy` / `#0B1A2B`) leído desde el mirror de tokens, sin hex hardcodeado, y la status bar SHALL usar estilo `light`. El header navy SHALL respetar el safe-area top del dispositivo.
+
+#### Scenario: Header navy con status bar light
+
+- **WHEN** un usuario abre el dashboard en la app nativa
+- **THEN** el header del dashboard se pinta con el navy de marca
+- **AND** la status bar usa estilo light (íconos/hora en claro)
+- **AND** el header respeta el safe-area top
+
+#### Scenario: El color navy no está hardcodeado
+
+- **WHEN** un desarrollador inspecciona el componente del header nativo
+- **THEN** el color proviene del mirror de tokens, no de un literal hex
+
+---
+
+### Requirement: La pantalla `(app)/dashboard` mobile renderiza las secciones del dashboard con tolerancia a fallas parciales
+
+La pantalla `apps/mobile/app/(app)/dashboard.tsx` SHALL renderizar las **tres** secciones del dashboard en orden vertical (Hero → Lo que viene → Balance del mes) envueltas en `EyeMaskProvider`. La pantalla SHALL cargar las queries correspondientes en paralelo y SHALL tolerar fallas parciales: si una query falla, la sección correspondiente renderiza `SectionFallback` mientras las demás siguen funcionando. La pantalla NO SHALL renderizar una sección Tarjetas ni disparar `getCreditCards` como parte de la carga del dashboard.
 
 La pantalla SHALL respetar el principio "Off-ledger credit cards" idéntico al spec web (las queries ya lo encapsulan) y SHALL usar `getTodayAR()` (o su equivalente mobile) para todo cálculo de "hoy".
 
-#### Scenario: Las cuatro secciones cargan en paralelo
+#### Scenario: Las tres secciones cargan en paralelo
 
 - **WHEN** la pantalla `dashboard` mobile monta con un usuario logueado y onboarding completado
-- **THEN** las cuatro queries (`getDashboardHero`, `getUpcomingFortnight`, `getMonthBalanceSeries`, `getCreditCards`) se disparan en paralelo
-- **AND** las cuatro secciones renderizan independientemente a medida que sus queries resuelven
+- **THEN** las queries `getDashboardHero`, `getUpcomingFortnight` y `getMonthBalanceSeries` se disparan en paralelo
+- **AND** las tres secciones renderizan independientemente a medida que sus queries resuelven
+- **AND** NO se dispara `getCreditCards` para el dashboard
 
 #### Scenario: Falla en una query no rompe la pantalla mobile
 
 - **WHEN** la query `getUpcomingFortnight` falla (timeout, error de DB) en mobile
 - **THEN** `UpcomingFortnightSection` renderiza `SectionFallback` con mensaje i18n
-- **AND** Hero, Balance del mes y Tarjetas renderizan normalmente
+- **AND** Hero y Balance del mes renderizan normalmente
 
 #### Scenario: Salir del tab dashboard y volver resetea el eye toggle (mobile)
 

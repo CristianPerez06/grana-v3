@@ -32,12 +32,12 @@
 
 ## 6. Verificación
 
-- [ ] 6.1 `pnpm lint` y type-check en web y mobile sin errores.
-- [ ] 6.2 Verificar responsive web en tres anchos: <768 (mobile-first), 768–1023 (columna única + sidebar), ≥1024 (multi-columna).
-- [ ] 6.3 Verificar el dashboard nativo (header navy, 3 secciones, tab bar intacto).
-- [ ] 6.4 Verificar el `eye toggle`: enmascara Hero (incl. desglose desktop), Lo que viene y Balance del mes; resetea al salir/volver.
-- [ ] 6.5 Cotejar el resultado contra las referencias de `design-refs/` (layout e intención, NO los hex literales).
+- [x] 6.1 `pnpm lint` y type-check en web y mobile sin errores. → web: lint 0 errores + typecheck OK; mobile: lint 0 errores + typecheck OK (warnings preexistentes, ajenos al change).
+- [ ] 6.2 Verificar responsive web en tres anchos: <768 (mobile-first), 768–1023 (columna única + sidebar), ≥1024 (multi-columna). → verificación visual manual a cargo del usuario, en paralelo al archivado (decisión acordada).
+- [ ] 6.3 Verificar el dashboard nativo (header navy, 3 secciones, tab bar intacto). → verificación visual manual a cargo del usuario, en paralelo.
+- [ ] 6.4 Verificar el `eye toggle`: enmascara Hero (incl. desglose desktop), Lo que viene y Balance del mes; resetea al salir/volver. → verificación visual manual a cargo del usuario, en paralelo.
+- [ ] 6.5 Cotejar el resultado contra las referencias de `design-refs/` (layout e intención, NO los hex literales). → verificación visual manual a cargo del usuario, en paralelo.
 
 ## 7. Archivado (pre-merge)
 
-- [ ] 7.1 Archivar el change: mover a `openspec/changes/archive/AAAA-MM-DD-...`, integrar los deltas en los specs maestros de `dashboard` y `web-app-shell`, y correr `pnpm openspec:check` (debe pasar) antes del merge `--ff-only`.
+- [x] 7.1 Archivar el change: mover a `openspec/changes/archive/AAAA-MM-DD-...`, integrar los deltas en los specs maestros de `dashboard` y `web-app-shell`, y correr `pnpm openspec:check` (debe pasar) antes del merge. → archivado a `archive/2026-05-26-...`; deltas integrados (+ se corrigieron inconsistencias consecuentes que los deltas no cubrían: Purpose, escenarios de click en carrusel, "tres secciones", lista de naming mobile); `CLAUDE.md` (módulo dashboard) actualizado; `openspec:check` OK.
