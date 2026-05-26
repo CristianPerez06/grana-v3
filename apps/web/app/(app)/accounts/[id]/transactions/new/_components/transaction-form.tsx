@@ -13,6 +13,8 @@ import {
 import { createRecurrenceFromMovement } from '@/app/_actions/recurrences'
 import { parseMoneyInput } from '@grana/validation'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
+import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 
 const todayStr = () => {
@@ -36,6 +38,8 @@ type Props = {
   activeCurrencies: ('ARS' | 'USD')[]
   categories: CategoryWithSubcategories[]
   otherAccounts: OtherAccount[]
+  /** Current available balance of this account, per currency (for the soft warning). */
+  availableBalances: Record<'ARS' | 'USD', number>
 }
 
 const CURRENCY_SYMBOL: Record<'ARS' | 'USD', string> = { ARS: '$', USD: 'U$D' }
@@ -45,6 +49,7 @@ export const TransactionForm = ({
   activeCurrencies,
   categories,
   otherAccounts,
+  availableBalances,
 }: Props) => {
   const t = useTranslations('transactions')
   const tCommon = useTranslations('common')
@@ -98,6 +103,29 @@ export const TransactionForm = ({
     if (!dest) return []
     return activeCurrencies.filter((c) => dest.currencies.includes(c))
   }, [destinationAccountId, activeCurrencies, otherAccounts])
+
+  // Soft, non-blocking warning: would this operation leave THIS account's
+  // available balance (for the operation's currency) below zero? Only outflows
+  // count — income and upward adjustments never warn. Compared per account and
+  // per currency, never a cross-account total (spec).
+  const negativeWarning = useMemo(() => {
+    const parsed = parseMoneyInput(amount)
+    if (parsed === null || parsed <= 0) return null
+
+    let currency: 'ARS' | 'USD'
+    if (tab === 'expense') {
+      currency = currencyCode
+    } else if (tab === 'transfer') {
+      currency = transferCurrencyCode
+    } else if (tab === 'adjustment' && adjustmentDirection === 'decrease') {
+      currency = currencyCode
+    } else {
+      return null
+    }
+
+    const check = checkNegativeBalance(availableBalances[currency] ?? 0, parsed)
+    return check.negative ? { projected: check.projected, currency } : null
+  }, [amount, tab, currencyCode, transferCurrencyCode, adjustmentDirection, availableBalances])
 
   // Auto-select transfer currency when destination changes
   const handleDestinationChange = (newDestId: string) => {
@@ -340,6 +368,12 @@ export const TransactionForm = ({
             className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
+        {negativeWarning && (
+          <NegativeBalanceNotice
+            projected={negativeWarning.projected}
+            currency={negativeWarning.currency}
+          />
+        )}
       </div>
 
       {/* ── Date ─────────────────────────────────────────────────────────────── */}

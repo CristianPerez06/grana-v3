@@ -10,6 +10,7 @@ import {
   parseMovementLimit,
 } from '@/lib/transactions/filters'
 import { getGlobalMovementsPage, getMovementFilterOptions } from '@/lib/transactions/queries'
+import { getAccounts } from '@/lib/accounts/queries'
 import { PendingRecurrencesBlock } from '@/lib/recurrences/components/pending-recurrences-block'
 import { RecurrenceSuggestionBanner } from '@/lib/recurrences/components/recurrence-suggestion-banner'
 import {
@@ -48,15 +49,31 @@ const TransactionsPage = async ({ searchParams }: Props) => {
     movementsPage.movements.map((m) => m.id),
   )
 
+  // Available balance per cash/bank account (for the soft negative-balance
+  // warning when confirming a pending recurrence). Only needed when there are
+  // pending instances. Credit cards are off-ledger and never warn.
+  const availableByAccount: Record<string, Record<'ARS' | 'USD', number>> = {}
+  if (pendingRecurrences.length > 0) {
+    const { cash, bank } = await getAccounts()
+    for (const account of [...cash, ...bank]) {
+      availableByAccount[account.id] = account.balances
+    }
+  }
+
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <PageHeader
         title={t('title')}
         description={t('description')}
         actions={
-          <Button asChild variant="secondary">
-            <Link href="/transactions/recurring">{tRec('title')}</Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="secondary">
+              <Link href="/transactions/recurring">{tRec('title')}</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/transactions/new">{t('actions.register_movement')}</Link>
+            </Button>
+          </div>
         }
       />
 
@@ -64,7 +81,10 @@ const TransactionsPage = async ({ searchParams }: Props) => {
         <RecurrenceSuggestionBanner suggestion={topSuggestion} />
       )}
 
-      <PendingRecurrencesBlock pending={pendingRecurrences} />
+      <PendingRecurrencesBlock
+        pending={pendingRecurrences}
+        availableByAccount={availableByAccount}
+      />
 
       <MovementFilters
         filters={filters}

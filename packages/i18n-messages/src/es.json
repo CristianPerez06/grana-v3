@@ -592,6 +592,8 @@
     "installment_pair": "Cuota {n} de {total}",
     "fx_rate_template": "1 USD = ${rate} ARS",
     "installment_purchase_label": "Compra en cuotas",
+    "installments_count": "{count} cuotas",
+    "installment_recalc_hint": "Cambiar el monto recalcula las {count} cuotas (el resto en la primera).",
     "card_payment_label": "Pago de tarjeta",
     "tabs": {
       "income": "Ingreso",
@@ -701,7 +703,8 @@
       "delete": "Eliminar",
       "view_in_account": "Ver en cuenta",
       "register_purchase": "Registrar consumo",
-      "register_installments": "Registrar {count} cuotas"
+      "register_installments": "Registrar {count} cuotas",
+      "register_movement": "Registrar movimiento"
     },
     "confirmations": {
       "delete_title": "¿Eliminar este movimiento?",
@@ -710,6 +713,7 @@
       "delete_transfer_inline": "¿Eliminar esta transferencia? Se actualizarán los saldos de ambas cuentas.",
       "delete_adjustment_inline": "¿Eliminar este ajuste? Esta acción no se puede deshacer.",
       "delete_movement_inline": "¿Eliminar este movimiento? Esta acción no se puede deshacer.",
+      "delete_installment_parent_inline": "¿Eliminar esta compra en cuotas? Se borran todas sus cuotas. Solo es posible si ninguna fue pagada.",
       "delete_adjustment_body": "Se eliminará el ajuste y el saldo de la cuenta se actualizará."
     },
     "readonly": {

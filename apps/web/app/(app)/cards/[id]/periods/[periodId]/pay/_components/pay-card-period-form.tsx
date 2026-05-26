@@ -7,6 +7,8 @@ import { getTodayAR } from '@/lib/date'
 import { payCardPeriod } from '@/app/_actions/credit-cards'
 import { parseMoneyInput } from '@grana/validation'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
+import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
 
 const todayStr = () => {
   const d = getTodayAR()
@@ -56,6 +58,15 @@ export const PayCardPeriodForm = ({
   const [paymentDate, setPaymentDate] = useState(todayStr())
   const [nextEndDate, setNextEndDate] = useState(suggestedNextEndDate)
   const [nextDueDate, setNextDueDate] = useState(suggestedNextDueDate)
+
+  // Soft, non-blocking warning: paying from this account would leave its ARS
+  // available balance negative. Statement payments are always in ARS.
+  const selectedAccount = paymentAccounts.find((a) => a.id === paymentAccountId)
+  const parsedPaymentAmount = parseMoneyInput(amount)
+  const negativeWarning =
+    selectedAccount && parsedPaymentAmount !== null && parsedPaymentAmount > 0
+      ? checkNegativeBalance(selectedAccount.balanceARS, parsedPaymentAmount)
+      : null
 
   const validate = () => {
     const errs: Record<string, string> = {}
@@ -136,6 +147,9 @@ export const PayCardPeriodForm = ({
             ))}
           </select>
           {errors.paymentAccountId && <p className="text-xs text-destructive">{errors.paymentAccountId}</p>}
+          {negativeWarning?.negative && (
+            <NegativeBalanceNotice projected={negativeWarning.projected} currency="ARS" />
+          )}
         </div>
 
         <div className="flex flex-col gap-1.5">

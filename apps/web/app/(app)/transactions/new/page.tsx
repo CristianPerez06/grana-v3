@@ -1,0 +1,60 @@
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { PageHeader } from '@/components/ui/page-header'
+import { getAccounts } from '@/lib/accounts/queries'
+import { getAllCategories } from '@/lib/categories/queries'
+import { MovementForm, type MovementFormAccount } from './_components/movement-form'
+
+const activeCodes = (
+  currencies: Array<{ currency_code: string; is_active: boolean }>,
+): ('ARS' | 'USD')[] =>
+  currencies
+    .filter((c) => c.is_active && (c.currency_code === 'ARS' || c.currency_code === 'USD'))
+    .map((c) => c.currency_code as 'ARS' | 'USD')
+
+/**
+ * Global entry point to register a movement. The account is a field inside the
+ * form (chosen while loading the movement), not a pre-step. Cash/bank accounts
+ * show the income/expense/transfer/adjustment form; credit cards switch to the
+ * consumo form.
+ */
+const NewMovementPage = async () => {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const [{ cash, bank, credit }, categories] = await Promise.all([
+    getAccounts(),
+    getAllCategories(user.id),
+  ])
+
+  const accounts: MovementFormAccount[] = [
+    ...[...cash, ...bank].map((a) => ({
+      id: a.id,
+      name: a.name,
+      type: a.type as 'cash' | 'bank',
+      activeCurrencies: activeCodes(a.currencies),
+      balances: a.balances,
+    })),
+    ...credit.map((c) => ({
+      id: c.id,
+      name: c.name,
+      type: 'credit' as const,
+      activeCurrencies: activeCodes(c.currencies),
+      balances: { ARS: 0, USD: 0 },
+    })),
+  ]
+
+  return (
+    <div className="flex flex-col gap-6 max-w-lg">
+      <PageHeader
+        title="Registrar movimiento"
+        backLink={{ href: '/transactions', label: 'Movimientos' }}
+      />
+
+      <MovementForm accounts={accounts} categories={categories} />
+    </div>
+  )
+}
+
+export default NewMovementPage

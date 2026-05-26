@@ -1,11 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import type { TransactionWithDetails } from '@/lib/transactions/types'
-import { deleteTransaction, deleteTransfer, deleteAdjustment } from '@/app/_actions/transactions'
+import { TransactionActions } from '@/lib/transactions/components/transaction-actions'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 
@@ -35,9 +32,6 @@ type Props = {
 export const TransactionDetailHeader = ({ transaction, accountId, periodId, returnHref, showActions = true, installmentParent, installmentSiblings }: Props) => {
   const t = useTranslations('transactions')
   const showCents = useShowCents()
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
 
   const { type } = transaction
 
@@ -48,38 +42,9 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, retu
     adjustment: t('types.adjustment'),
   }
 
-  const confirmMessage =
-    type === 'transfer'
-      ? t('confirmations.delete_transfer_inline')
-      : type === 'adjustment'
-        ? t('confirmations.delete_adjustment_inline')
-        : t('confirmations.delete_movement_inline')
-
-  const handleDelete = () => {
-    if (!confirm(confirmMessage)) return
-    startTransition(async () => {
-      setError(null)
-
-      let result
-      if (type === 'transfer' && transaction.transfer_destination_account_id) {
-        result = await deleteTransfer(
-          transaction.id,
-          accountId,
-          transaction.transfer_destination_account_id,
-        )
-      } else if (type === 'adjustment') {
-        result = await deleteAdjustment(transaction.id, accountId)
-      } else {
-        result = await deleteTransaction(transaction.id, accountId)
-      }
-
-      if (!result.ok) {
-        setError(result.formError ?? t('errors.delete_failed'))
-        return
-      }
-      router.push(returnHref ?? (periodId ? `/cards/${accountId}/periods/${periodId}` : `/accounts/${accountId}`))
-    })
-  }
+  const resolvedReturnHref =
+    returnHref ?? (periodId ? `/cards/${accountId}/periods/${periodId}` : `/accounts/${accountId}`)
+  const editHref = `/accounts/${accountId}/transactions/${transaction.id}/edit`
 
   const isPositive = type === 'income' || (type === 'adjustment' && transaction.amount > 0) ||
     (type === 'transfer' && transaction.account_id !== accountId)
@@ -222,24 +187,13 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, retu
 
       {/* Actions */}
       {showActions && (
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/accounts/${accountId}/transactions/${transaction.id}/edit`}
-            className="inline-flex items-center rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
-          >
-            {t('actions.edit')}
-          </Link>
-          <button
-            onClick={handleDelete}
-            disabled={isPending}
-            className="inline-flex items-center rounded-md px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-          >
-            {t('actions.delete')}
-          </button>
-        </div>
+        <TransactionActions
+          transaction={transaction}
+          accountId={accountId}
+          returnHref={resolvedReturnHref}
+          editHref={editHref}
+        />
       )}
-
-      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   )
 }

@@ -12,10 +12,14 @@ import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import { parseMoneyInput } from '@grana/validation'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
+import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
 import type { PendingRecurrenceInstance } from '@/lib/recurrences/types'
 
 type Props = {
   pending: PendingRecurrenceInstance[]
+  /** Current available balance per account+currency, for the soft warning. */
+  availableByAccount?: Record<string, Record<'ARS' | 'USD', number>>
 }
 
 const isCardExpenseUSD = (instance: PendingRecurrenceInstance) =>
@@ -23,7 +27,7 @@ const isCardExpenseUSD = (instance: PendingRecurrenceInstance) =>
   instance.account?.type === 'credit' &&
   instance.currency_code === 'USD'
 
-export const PendingRecurrencesBlock = ({ pending }: Props) => {
+export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) => {
   const router = useRouter()
   const showCents = useShowCents()
   const [isPending, startTransition] = useTransition()
@@ -145,6 +149,28 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
     })
   }
 
+  // Soft, non-blocking warning: confirming this instance would leave the source
+  // account's available balance negative. Off-ledger credit consumptions and
+  // incomes never warn. Compared per account + currency. Uses the edited amount
+  // when the instance is being edited.
+  const computeWarning = (instance: PendingRecurrenceInstance) => {
+    if (!availableByAccount) return null
+    const movementType = instance.recurrence.movement_type
+    if (movementType !== 'expense' && movementType !== 'transfer') return null
+    if (movementType === 'expense' && instance.account?.type === 'credit') return null
+    if (!instance.account_id) return null
+
+    const currency = instance.currency_code as 'ARS' | 'USD'
+    let amount = Number(instance.amount)
+    if (editingId === instance.id) {
+      const parsed = parseMoneyInput(editAmount)
+      if (parsed !== null && parsed > 0) amount = parsed
+    }
+    const available = availableByAccount[instance.account_id]?.[currency] ?? 0
+    const check = checkNegativeBalance(available, amount)
+    return check.negative ? { projected: check.projected, currency } : null
+  }
+
   return (
     <section className="flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-4">
       <div className="flex items-center justify-between gap-2">
@@ -190,6 +216,7 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
           const error = errorByInstance[instance.id]
           const busy = isPending && activeId === instance.id
           const isEditing = editingId === instance.id
+          const warning = computeWarning(instance)
 
           return (
             <li
@@ -320,6 +347,13 @@ export const PendingRecurrencesBlock = ({ pending }: Props) => {
 
               {error && (
                 <p className="text-xs text-destructive">{error}</p>
+              )}
+
+              {warning && (
+                <NegativeBalanceNotice
+                  projected={warning.projected}
+                  currency={warning.currency}
+                />
               )}
 
               <div className="flex gap-2">

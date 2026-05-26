@@ -61,6 +61,7 @@ const NewTransactionPage = async ({ params }: Props) => {
           accountId={id}
           activeCurrencies={activeCurrencies}
           categories={categories}
+          availableBalances={account.balances}
           otherAccounts={otherAccounts.map((a) => ({
             id: a.id,
             name: a.name,
