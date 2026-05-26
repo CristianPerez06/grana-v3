@@ -155,12 +155,23 @@ export async function updateTransaction(
 
   const { data: existing } = await supabase
     .from('transactions')
-    .select('id')
+    .select('id, status')
     .eq('id', id)
     .eq('user_id', userId)
     .single()
 
   if (!existing) return { ok: false, formError: 'Transacción no encontrada.' }
+
+  // A paid credit-card consumption is immutable except for category/description.
+  if (
+    existing.status === 'paid' &&
+    (validation.data.amount !== undefined || validation.data.date !== undefined)
+  ) {
+    return {
+      ok: false,
+      formError: 'No podés modificar el monto ni la fecha de un consumo ya pagado.',
+    }
+  }
 
   const { error } = await supabase
     .from('transactions')

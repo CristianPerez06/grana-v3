@@ -592,6 +592,8 @@
     "installment_pair": "Installment {n} of {total}",
     "fx_rate_template": "1 USD = ${rate} ARS",
     "installment_purchase_label": "Installment purchase",
+    "installments_count": "{count} installments",
+    "installment_recalc_hint": "Changing the amount recalculates the {count} installments (the rest goes into the first one).",
     "card_payment_label": "Card payment",
     "tabs": {
       "income": "Income",
@@ -701,7 +703,8 @@
       "delete": "Delete",
       "view_in_account": "View in account",
       "register_purchase": "Record purchase",
-      "register_installments": "Record {count} installments"
+      "register_installments": "Record {count} installments",
+      "register_movement": "Record transaction"
     },
     "confirmations": {
       "delete_title": "Delete this transaction?",
@@ -710,6 +713,7 @@
       "delete_transfer_inline": "Delete this transfer? Balances of both accounts will be updated.",
       "delete_adjustment_inline": "Delete this adjustment? This action cannot be undone.",
       "delete_movement_inline": "Delete this transaction? This action cannot be undone.",
+      "delete_installment_parent_inline": "Delete this installment purchase? All of its installments will be removed. This is only possible if none of them have been paid.",
       "delete_adjustment_body": "The adjustment will be deleted and the account balance will be updated."
     },
     "readonly": {

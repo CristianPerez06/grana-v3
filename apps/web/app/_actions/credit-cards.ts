@@ -949,6 +949,31 @@ export async function updateInstallmentParent(
     childUpdates.description = safeInput.description
   }
 
+  // Amount change: re-split the new total across all children (residue on the
+  // first installment, matching registerInstallments). Only reachable when no
+  // child is paid, per the guard above. Child dates/periods are preserved.
+  if ('amount' in safeInput) {
+    const rawAmount = Number(safeInput.amount)
+    if (!Number.isFinite(rawAmount) || rawAmount <= 0) {
+      return { ok: false, formError: 'El monto debe ser mayor a cero.' }
+    }
+    const n = parent.installments_total ?? (children?.length ?? 0)
+    if (n <= 0) {
+      return { ok: false, formError: 'La compra no tiene cuotas para recalcular.' }
+    }
+    const amounts = splitAmountIntoInstallments(rawAmount, n)
+    parentUpdates.amount = rawAmount
+    for (const child of children ?? []) {
+      const idx = (child.installment_n ?? 0) - 1
+      if (idx < 0 || idx >= amounts.length) continue
+      const { error } = await supabase
+        .from('transactions')
+        .update({ amount: Money.toNumber(amounts[idx]) })
+        .eq('id', child.id)
+      if (error) return { ok: false, formError: error.message }
+    }
+  }
+
   // Update parent
   if (Object.keys(parentUpdates).length > 0) {
     const { error } = await supabase

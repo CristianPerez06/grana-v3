@@ -5,6 +5,7 @@ import { AlertTriangle } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
+import { TransactionActions } from '@/lib/transactions/components/transaction-actions'
 import type { FinancialMovement, MovementReviewFlag } from '@/lib/transactions/movements'
 import type { TransactionWithDetails } from '@/lib/transactions/types'
 
@@ -111,6 +112,13 @@ export const GlobalTransactionDetail = ({
     missing_fx_rate: t('review_flags.missing_fx_rate'),
   }
 
+  // Account used to edit/delete. For a normal movement it's its own account;
+  // for an installment parent (account_id=NULL) it's a child's card account.
+  const actionAccountId = transaction.account_id ?? installmentSiblings?.[0]?.account_id ?? null
+  const editHref = actionAccountId
+    ? `/accounts/${actionAccountId}/transactions/${transaction.id}/edit?from=transactions`
+    : null
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
@@ -196,6 +204,15 @@ export const GlobalTransactionDetail = ({
             ))}
           </div>
         </div>
+      )}
+
+      {actionAccountId && editHref && (
+        <TransactionActions
+          transaction={transaction}
+          accountId={actionAccountId}
+          returnHref="/transactions"
+          editHref={editHref}
+        />
       )}
 
       {transaction.account_id && (

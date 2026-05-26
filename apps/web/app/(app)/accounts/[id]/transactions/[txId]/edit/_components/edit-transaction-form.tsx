@@ -1,21 +1,36 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import type { TransactionWithDetails } from '@/lib/transactions/types'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 import { updateTransaction, updateTransfer, updateAdjustment } from '@/app/_actions/transactions'
-import { parseMoneyInput } from '@grana/validation'
+import { updateInstallmentParent } from '@/app/_actions/credit-cards'
+import { Money, parseMoneyInput } from '@grana/validation'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
+import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
 
 type Props = {
   transaction: TransactionWithDetails
   accountId: string
   categories: CategoryWithSubcategories[]
+  returnHref: string
+  /** Current available balance of the movement's own account, per currency. */
+  availableBalances: Record<'ARS' | 'USD', number>
+  /** False only for a paid credit-card purchase (single or installment). */
+  amountEditable: boolean
 }
 
-export const EditTransactionForm = ({ transaction, accountId, categories }: Props) => {
+export const EditTransactionForm = ({
+  transaction,
+  accountId,
+  categories,
+  returnHref,
+  availableBalances,
+  amountEditable,
+}: Props) => {
   const t = useTranslations('transactions')
   const tCommon = useTranslations('common')
   const TYPE_LABELS = {
@@ -29,6 +44,9 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
   const [formError, setFormError] = useState<string | null>(null)
 
   const { type } = transaction
+  // Installment parent (madre): only category/subcategory/description are
+  // editable, and they propagate to every child via updateInstallmentParent.
+  const isParent = transaction.is_parent === true
 
   // For income/expense, amount is always positive in DB
   // For adjustment, amount is signed — we show absolute value + direction radio
@@ -56,25 +74,78 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
   )
   const selectedCategory = filteredCategories.find((c) => c.id === categoryId)
 
+  // Soft, non-blocking warning. Compares against the available balance that
+  // EXCLUDES this movement's own current effect, so editing a movement does not
+  // "warn against itself". Only outflows (expense, outgoing transfer, downward
+  // adjustment) warn; income, upward adjustments and the installment parent do not.
+  const negativeWarning = useMemo(() => {
+    if (isParent) return null
+    // Credit-card movements (status pending/paid) are off-ledger → never warn.
+    if (transaction.status !== null) return null
+    if (type !== 'expense' && type !== 'transfer' && type !== 'adjustment') return null
+    const parsed = parseMoneyInput(amount)
+    if (parsed === null || parsed <= 0) return null
+
+    const currency = transaction.currency_code as 'ARS' | 'USD'
+    const current = availableBalances[currency] ?? 0
+
+    let baseline: number
+    let outflow: number
+    if (type === 'adjustment') {
+      // current already includes the old signed adjustment → remove it.
+      baseline = Money.toNumber(Money.subtract(Money.from(current), Money.from(transaction.amount)))
+      outflow = adjustmentDirection === 'decrease' ? parsed : 0
+    } else {
+      // current already includes -oldAmount (expense / outgoing transfer) → add it back.
+      baseline = Money.toNumber(Money.add(Money.from(current), Money.from(transaction.amount)))
+      outflow = parsed
+    }
+
+    const check = checkNegativeBalance(baseline, outflow)
+    return check.negative ? { projected: check.projected, currency } : null
+  }, [
+    isParent,
+    type,
+    amount,
+    adjustmentDirection,
+    availableBalances,
+    transaction.amount,
+    transaction.currency_code,
+    transaction.status,
+  ])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setFormError(null)
-    const parsedAmount = parseMoneyInput(amount)
-    if (parsedAmount === null || parsedAmount <= 0) {
-      setFormError(t('errors.amount_positive'))
-      return
+
+    let parsedAmount: number | null = null
+    if (amountEditable) {
+      parsedAmount = parseMoneyInput(amount)
+      if (parsedAmount === null || parsedAmount <= 0) {
+        setFormError(t('errors.amount_positive'))
+        return
+      }
     }
 
     startTransition(async () => {
       let result
 
-      if (type === 'transfer') {
+      if (isParent) {
+        // Installment parent: category/description always; amount only when no
+        // installment is paid (the action re-splits the children).
+        result = await updateInstallmentParent(transaction.id, {
+          category_id: categoryId || null,
+          subcategory_id: subcategoryId || null,
+          description: description || null,
+          ...(amountEditable && parsedAmount !== null ? { amount: parsedAmount } : {}),
+        })
+      } else if (type === 'transfer') {
         result = await updateTransfer(
           transaction.id,
           accountId,
           transaction.transfer_destination_account_id ?? '',
           {
-            amount: parsedAmount,
+            amount: parsedAmount!,
             date,
             description: description || null,
           },
@@ -82,17 +153,18 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
       } else if (type === 'adjustment') {
         const signedAmount =
           adjustmentDirection === 'decrease'
-            ? -Math.abs(parsedAmount)
-            : Math.abs(parsedAmount)
+            ? -Math.abs(parsedAmount!)
+            : Math.abs(parsedAmount!)
         result = await updateAdjustment(transaction.id, accountId, {
           amount: signedAmount,
           date,
           description: description || null,
         })
       } else {
+        // income / expense (incl. credit-card consumption). A paid consumption
+        // locks amount and date — send only category/description.
         result = await updateTransaction(transaction.id, accountId, {
-          amount: parsedAmount,
-          date,
+          ...(amountEditable && parsedAmount !== null ? { amount: parsedAmount, date } : {}),
           category_id: categoryId || null,
           subcategory_id: subcategoryId || null,
           description: description || null,
@@ -104,7 +176,7 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
         return
       }
 
-      router.push(`/accounts/${accountId}/transactions/${transaction.id}`)
+      router.push(returnHref)
     })
   }
 
@@ -115,7 +187,7 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
         <div className="flex justify-between">
           <span className="text-muted-foreground">{t('labels.type')}</span>
           <span>
-            {TYPE_LABELS[type]}
+            {isParent ? t('installment_purchase_label') : TYPE_LABELS[type]}
             <span className="ml-2 text-xs text-muted-foreground">{tCommon('not_editable')}</span>
           </span>
         </div>
@@ -126,6 +198,15 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
             <span className="ml-2 text-xs text-muted-foreground">{tCommon('not_editable')}</span>
           </span>
         </div>
+        {isParent && transaction.installments_total && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">{t('labels.installments')}</span>
+            <span>
+              {t('installments_count', { count: transaction.installments_total })}
+              <span className="ml-2 text-xs text-muted-foreground">{tCommon('not_editable')}</span>
+            </span>
+          </div>
+        )}
         {type === 'transfer' && (
           <>
             <div className="flex justify-between">
@@ -168,39 +249,56 @@ export const EditTransactionForm = ({ transaction, accountId, categories }: Prop
         </div>
       )}
 
-      {/* Amount */}
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="amount" className="text-sm font-medium">{t('labels.amount')}</label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-            {transaction.currency_code === 'ARS' ? '$' : 'U$D'}
-          </span>
-          <MoneyAmountInput
-            id="amount"
+      {/* Amount — editable unless a paid card purchase. For an unpaid
+          installment parent, changing it re-splits the children. */}
+      {amountEditable && (
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="amount" className="text-sm font-medium">{t('labels.amount')}</label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+              {transaction.currency_code === 'ARS' ? '$' : 'U$D'}
+            </span>
+            <MoneyAmountInput
+              id="amount"
+              required
+              value={amount}
+              onChange={setAmount}
+              className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+          {isParent && (
+            <p className="text-xs text-muted-foreground">
+              {t('installment_recalc_hint', { count: transaction.installments_total ?? 0 })}
+            </p>
+          )}
+          {negativeWarning && (
+            <NegativeBalanceNotice
+              projected={negativeWarning.projected}
+              currency={negativeWarning.currency}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Date — editable for normal/unpaid movements, never for an installment
+          parent (its date drives the cuotas' periods). */}
+      {!isParent && amountEditable && (
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="date" className="text-sm font-medium">{t('labels.date')}</label>
+          <input
+            id="date"
+            type="date"
             required
-            value={amount}
-            onChange={setAmount}
-            className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
-      </div>
+      )}
 
-      {/* Date */}
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="date" className="text-sm font-medium">{t('labels.date')}</label>
-        <input
-          id="date"
-          type="date"
-          required
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
-
-      {/* Category (income/expense only). Card payment expenses have no
-          category — payCardPeriod inserts them with category_id=null on
-          purpose, so hide the field entirely for them. */}
+      {/* Category (income/expense and installment parent). Card payment
+          expenses have no category — payCardPeriod inserts them with
+          category_id=null on purpose, so hide the field entirely for them. */}
       {(type === 'income' || type === 'expense') && !isCardPayment && (
         <div className="flex flex-col gap-1.5">
           <label htmlFor="category" className="text-sm font-medium">
