@@ -12,6 +12,13 @@ const AccountsPage = async () => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('mode')
+    .eq('id', user.id)
+    .single()
+  const isNovato = profile?.mode === 'novato'
+
   const t = await getTranslations('accounts')
   const grouped = await getAccounts({ includeArchived: true })
 
@@ -26,17 +33,19 @@ const AccountsPage = async () => {
       <PageHeader
         title={t('title')}
         actions={
-          <Link
-            href="/accounts/new"
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            {`+ ${t('actions.create')}`}
-          </Link>
+          isNovato ? undefined : (
+            <Link
+              href="/accounts/new"
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              {`+ ${t('actions.create')}`}
+            </Link>
+          )
         }
       />
 
       {activeTotal === 0 && archived.length === 0 ? (
-        <EmptyAccountsState />
+        <EmptyAccountsState showCreate={!isNovato} />
       ) : (
         <div className="flex flex-col gap-8">
           <AccountSection title={t('sections.cash')} accounts={activeCash} />
