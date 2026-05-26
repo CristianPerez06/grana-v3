@@ -1,10 +1,14 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
+import { computeRunningBalances, type RunningBalanceRow } from '@grana/money-logic'
 import { createClient } from '@/lib/supabase/server'
 import { getAccountDetail } from '@/lib/accounts/queries'
-import { getTransactions } from '@/lib/transactions/queries'
-import { TransactionList } from '@/lib/transactions/components/transaction-list'
+import { getAccountMovements } from '@/lib/transactions/queries'
+import { toFinancialMovement } from '@/lib/transactions/movements'
+import { MovementList } from '@/lib/transactions/components/movement-list'
+import { getRecurrenceLinkedTransactionIds } from '@/lib/recurrences/queries'
+import { getTodayAR, formatDateISO } from '@/lib/date'
 import { AccountDetailHeader } from './_components/account-detail-header'
 
 type Props = {
@@ -20,12 +24,23 @@ const AccountDetailPage = async ({ params }: Props) => {
 
   const t = await getTranslations('accounts')
 
-  const [account, transactions] = await Promise.all([
+  const [account, movementsAsc] = await Promise.all([
     getAccountDetail(id),
-    getTransactions(id, { limit: 20 }),
+    getAccountMovements(id),
   ])
   if (!account) notFound()
   if (account.type === 'credit') redirect(`/cards/${id}`)
+
+  // Running balance from the full history (ascending), per currency.
+  const initial = {
+    ARS: Number(account.currencies.find((c) => c.currency_code === 'ARS')?.initial_balance ?? 0),
+    USD: Number(account.currencies.find((c) => c.currency_code === 'USD')?.initial_balance ?? 0),
+  }
+  const runningBalances = computeRunningBalances(movementsAsc as RunningBalanceRow[], id, initial)
+
+  // Display order is most-recent-first.
+  const movements = movementsAsc.map(toFinancialMovement).reverse()
+  const recurrenceLinkedIds = await getRecurrenceLinkedTransactionIds(movements.map((m) => m.id))
 
   const inactiveCurrencies = account.currencies.filter((c) => !c.is_active)
   const allCurrencyCodes = new Set(account.currencies.map((c) => c.currency_code))
@@ -45,7 +60,7 @@ const AccountDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
 
-      <AccountDetailHeader account={account} hasTransactions={transactions.length > 0} />
+      <AccountDetailHeader account={account} hasTransactions={movements.length > 0} />
 
       {canAddCurrency && (
         <Link
@@ -68,7 +83,14 @@ const AccountDetailPage = async ({ params }: Props) => {
             {`+ ${t('actions.add_transaction')}`}
           </Link>
         </div>
-        <TransactionList transactions={transactions} accountId={account.id} />
+        <MovementList
+          movements={movements}
+          perspective={{ kind: 'account', accountId: account.id }}
+          todayISO={formatDateISO(getTodayAR())}
+          showAccount={false}
+          recurrenceLinkedIds={recurrenceLinkedIds}
+          runningBalances={runningBalances}
+        />
       </section>
     </div>
   )

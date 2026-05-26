@@ -58,6 +58,29 @@ export async function getTransactions(
   return (data ?? []) as TransactionWithDetails[]
 }
 
+// ── getAccountMovements ───────────────────────────────────────────────────────
+// All movements affecting an account, in calculation order (date/created_at/id
+// ASC). No pagination: the running balance needs the full history to be correct.
+// The caller reverses to display order and computes running balances.
+
+export async function getAccountMovements(
+  accountId: string,
+): Promise<TransactionWithDetails[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .select(TRANSACTION_SELECT)
+    .or(`account_id.eq.${accountId},transfer_destination_account_id.eq.${accountId}`)
+    .order('date', { ascending: true })
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
+
+  if (error) throw error
+
+  return (data ?? []) as TransactionWithDetails[]
+}
+
 // ── getTransactionDetail ──────────────────────────────────────────────────────
 
 export async function getGlobalMovements(

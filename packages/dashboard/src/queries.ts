@@ -58,9 +58,10 @@ async function getTransactionSums(
 
   // Exclude credit card child transactions (status IS NOT NULL) and
   // off-ledger parent rows (is_parent=true, account_id=NULL, auto-excluded by the or filter).
+  // destination_amount/currency feed the exchange leg in calculateTransactionSums.
   const { data, error } = await supabase
     .from('transactions')
-    .select('account_id, transfer_destination_account_id, currency_code, amount, type')
+    .select('account_id, transfer_destination_account_id, currency_code, amount, type, destination_amount, destination_currency')
     .or(
       `account_id.in.(${accountIds.join(',')}),transfer_destination_account_id.in.(${accountIds.join(',')})`,
     )

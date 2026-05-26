@@ -783,6 +783,8 @@
     },
     "list": {
       "global_empty_description": "Cuando registres ingresos, gastos, transferencias o consumos, van a aparecer acá.",
+      "today": "Hoy",
+      "yesterday": "Ayer",
       "review_short": "Revisar",
       "transfer_subtitle_unknown_source": "Cuenta origen",
       "transfer_subtitle_unknown_destination": "Cuenta destino",
