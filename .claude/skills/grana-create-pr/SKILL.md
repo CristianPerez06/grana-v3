@@ -107,4 +107,4 @@ Stop and explain instead of guessing if any of these fails:
 - **No commits ahead of main**: stop. Tell the user the branch has nothing to PR.
 - **Existing PR for this branch**: surface its URL instead of creating a duplicate.
 - **Repo has CI with required checks**: mention to the user that the PR will run CI on creation; they should wait for green before merging.
-- **Repo has branch protection requiring linear history**: mention that the merge will need to be squash or rebase, not a merge commit.
+- **Merge convention**: this repo merges to `main` with `git merge --no-ff` (one squashed work commit + one merge commit per unit of work) — see CLAUDE.md "Merging to `main`". If GitHub branch protection on this repo enforces a different strategy (e.g. linear history / squash-only), surface the conflict to the user rather than guessing.
