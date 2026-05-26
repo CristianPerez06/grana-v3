@@ -1,5 +1,5 @@
 ---
-name: checkpoint
+name: grana-checkpoint
 description: Audita el estado del proyecto contra su objetivo fundacional ("el repo es la memoria, una IA fresca puede continuar sin contexto de chat"). Detecta drift documental, deuda técnica concreta y falsos positivos típicos. Devuelve un reporte priorizado con recomendación SEGUIR / PIT-STOP / FRENAR. Usar periódicamente o al cerrar un módulo grande.
 ---
 
@@ -12,7 +12,7 @@ Este flujo replica formalmente el análisis que originó la change archivada `20
 ## Argumentos
 
 - Sin argumento → audita el repo completo.
-- Con argumento `<módulo>` (por ejemplo `/checkpoint cards`) → acota el análisis a esa capability + lo que la rodea.
+- Con argumento `<módulo>` (por ejemplo `/grana-checkpoint cards`) → acota el análisis a esa capability + lo que la rodea.
 
 ## Pasos
 
@@ -121,12 +121,12 @@ Algunas cosas que parecen deuda (ej.: `title?` legacy en mobile Button) están d
 ## Ejemplo de invocación
 
 ```
-Usuario: /checkpoint
+Usuario: /grana-checkpoint
 Claude: [snapshot] → [3 agentes en paralelo] → [verificaciones propias] → [reporte]
 ```
 
 ```
-Usuario: /checkpoint cards
+Usuario: /grana-checkpoint cards
 Claude: [snapshot acotado al módulo cards] → [3 agentes con foco en cards] → [verificaciones puntuales del módulo] → [reporte centrado en cards]
 ```
 
