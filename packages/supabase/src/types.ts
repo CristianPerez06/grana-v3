@@ -618,7 +618,6 @@ export type Database = {
           installment_n: number | null
           installments_total: number | null
           is_parent: boolean
-          is_verified: boolean
           parent_id: string | null
           status: string | null
           subcategory_id: string | null
@@ -643,7 +642,6 @@ export type Database = {
           installment_n?: number | null
           installments_total?: number | null
           is_parent?: boolean
-          is_verified?: boolean
           parent_id?: string | null
           status?: string | null
           subcategory_id?: string | null
@@ -668,7 +666,6 @@ export type Database = {
           installment_n?: number | null
           installments_total?: number | null
           is_parent?: boolean
-          is_verified?: boolean
           parent_id?: string | null
           status?: string | null
           subcategory_id?: string | null

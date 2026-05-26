@@ -16,7 +16,6 @@ const baseTx = (overrides: Partial<TransactionWithDetails>): TransactionWithDeta
   destination_currency: null,
   date: '2026-05-18',
   description: null,
-  is_verified: false,
   created_at: '2026-05-18T15:00:00.000Z',
   status: null,
   due_date: null,
