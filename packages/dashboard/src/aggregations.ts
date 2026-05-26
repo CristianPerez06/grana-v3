@@ -1,6 +1,7 @@
 import { Money } from '@grana/validation'
 import type {
   DashboardHero,
+  HeroAccountBalance,
   MonthBalanceDay,
   MonthBalanceSeries,
   UpcomingDirection,
@@ -10,6 +11,7 @@ import type {
 
 export type HeroAccountRow = {
   id: string
+  name: string
   currencies: Array<{
     currency_code: string
     initial_balance: number | string | null
@@ -20,25 +22,48 @@ export function aggregateHero(
   accounts: HeroAccountRow[],
   txSums: Map<string, { ARS: number; USD: number }>,
 ): DashboardHero {
-  let ars = Money.from(0)
-  let usd = Money.from(0)
+  let totalArs = Money.from(0)
+  let totalUsd = Money.from(0)
+  const breakdown: HeroAccountBalance[] = []
+
   for (const acc of accounts) {
     const sums = txSums.get(acc.id) ?? { ARS: 0, USD: 0 }
+    let accArs = Money.from(0)
+    let accUsd = Money.from(0)
     for (const c of acc.currencies) {
       if (c.currency_code === 'ARS') {
-        ars = Money.add(
-          ars,
+        accArs = Money.add(
+          accArs,
           Money.add(Money.from(c.initial_balance ?? 0), Money.from(sums.ARS)),
         )
       } else if (c.currency_code === 'USD') {
-        usd = Money.add(
-          usd,
+        accUsd = Money.add(
+          accUsd,
           Money.add(Money.from(c.initial_balance ?? 0), Money.from(sums.USD)),
         )
       }
     }
+    totalArs = Money.add(totalArs, accArs)
+    totalUsd = Money.add(totalUsd, accUsd)
+    breakdown.push({
+      id: acc.id,
+      name: acc.name,
+      ars: Money.toNumber(accArs),
+      usd: Money.toNumber(accUsd),
+    })
   }
-  return { ars: Money.toNumber(ars), usd: Money.toNumber(usd) }
+
+  // ARS is the primary currency (bimoneda): order the breakdown by ARS balance
+  // desc, then USD desc, then name for a deterministic top-N on the desktop Hero.
+  breakdown.sort(
+    (a, b) => b.ars - a.ars || b.usd - a.usd || a.name.localeCompare(b.name),
+  )
+
+  return {
+    ars: Money.toNumber(totalArs),
+    usd: Money.toNumber(totalUsd),
+    accounts: breakdown,
+  }
 }
 
 export type UpcomingCardPeriodInput = {

@@ -6,11 +6,11 @@
 
 ## 2. Dashboard desktop — header + layout multi-columna (dashboard, web)
 
-- [ ] 2.1 Header del dashboard: saludo `Hola, {name}.` (`dashboard.welcome`, fallback `dashboard.welcome_anon`) + fecha de hoy vía `getTodayAR()` (no `new Date()`); mantener el `eye toggle`.
-- [ ] 2.2 Botón primario "Nuevo movimiento" (estilo `positive`/emerald) → `/transactions/new`, con label desde i18n.
-- [ ] 2.3 Grid desktop (≥`lg`): Hero full-width arriba; debajo "Balance del mes" (crece) + rail "Lo que viene" (ancho acotado) lado a lado, alturas igualadas. Bajo `lg`, columna única mobile-first.
-- [ ] 2.4 Hero desktop: desglose de 2–3 cuentas `cash`/`bank` con saldo + enlace "Ver todas las cuentas" → `/accounts`; en mobile el Hero queda minimal (solo disponible total ARS + USD). Respetar bimoneda (sin merge).
-- [ ] 2.5 Asegurar que el `eye toggle` enmascara también los saldos del desglose de cuentas del Hero.
+- [x] 2.1 Header del dashboard: saludo `Hola, {name}.` (`dashboard.welcome`, fallback `dashboard.welcome_anon`) + fecha de hoy vía `getTodayAR()` (no `new Date()`); mantener el `eye toggle`.
+- [x] 2.2 Botón primario "Nuevo movimiento" (estilo `positive`/emerald) → `/transactions/new`, con label desde i18n.
+- [x] 2.3 Grid desktop (≥`lg`): Hero full-width arriba; debajo "Balance del mes" (crece) + rail "Lo que viene" (ancho acotado) lado a lado, alturas igualadas. Bajo `lg`, columna única mobile-first.
+- [x] 2.4 Hero desktop: desglose de 2–3 cuentas `cash`/`bank` con saldo + enlace "Ver todas las cuentas" → `/accounts`; en mobile el Hero queda minimal (solo disponible total ARS + USD). Respetar bimoneda (sin merge).
+- [x] 2.5 Asegurar que el `eye toggle` enmascara también los saldos del desglose de cuentas del Hero.
 
 ## 3. Quitar la sección Tarjetas del dashboard (dashboard, web + datos)
 
@@ -27,8 +27,8 @@
 
 ## 5. i18n
 
-- [ ] 5.1 Resolver el label del botón "Nuevo movimiento": reusar key existente (p. ej. `transactions.new`) o agregar una bajo `dashboard.*` en `es.json` y `en.json`.
-- [ ] 5.2 Confirmar que `dashboard.welcome` / `dashboard.welcome_anon` se consumen vía el helper i18n (sin strings hardcodeados).
+- [x] 5.1 Resolver el label del botón "Nuevo movimiento": reusar key existente (p. ej. `transactions.new`) o agregar una bajo `dashboard.*` en `es.json` y `en.json`. → se agregó `dashboard.new_movement` (es/en) + `dashboard.hero.view_all_accounts`.
+- [x] 5.2 Confirmar que `dashboard.welcome` / `dashboard.welcome_anon` se consumen vía el helper i18n (sin strings hardcodeados). → `DashboardHeader` los consume vía `useTranslations('dashboard')`.
 
 ## 6. Verificación
 

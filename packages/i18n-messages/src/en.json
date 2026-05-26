@@ -90,10 +90,12 @@
     "title": "Home",
     "welcome": "Hi, {name}.",
     "welcome_anon": "Hi.",
+    "new_movement": "New movement",
     "mask_show": "Show amounts",
     "mask_hide": "Hide amounts",
     "hero": {
-      "label": "To spend"
+      "label": "To spend",
+      "view_all_accounts": "View all accounts"
     },
     "upcoming": {
       "title": "What's coming",

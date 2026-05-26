@@ -46,7 +46,7 @@ export const MonthBalanceSection = async ({
   const isPositive = data.finalBalance >= 0
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <section className="flex h-full flex-col rounded-2xl border border-border bg-card p-6 shadow-sm">
       <header className="mb-4 flex items-center justify-between gap-4">
         <h2 className="text-lg font-semibold text-text">{t('title')}</h2>
         <MonthNavigator
@@ -57,7 +57,7 @@ export const MonthBalanceSection = async ({
         />
       </header>
 
-      <div className="mb-3 text-text-muted">
+      <div className="mb-3 flex-1 text-text-muted">
         <MonthBalanceChart days={data.days} />
       </div>
 

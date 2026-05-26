@@ -7,7 +7,7 @@ import {
 } from '@grana/dashboard'
 import { getCreditCards } from '@/lib/cards/queries'
 import { createClient } from '@/lib/supabase/server'
-import { getTodayAR } from '@/lib/date'
+import { formatDateISO, getTodayAR } from '@/lib/date'
 import { CardsSection } from './_components/cards-section'
 import { DashboardHeader } from './_components/dashboard-header'
 import { EyeMaskProvider } from './_components/eye-mask-context'
@@ -57,48 +57,73 @@ const DashboardPage = async ({ searchParams }: { searchParams: SearchParams }) =
   const t = await getTranslations('dashboard')
   const supabase = await createClient()
 
-  const [heroResult, upcomingResult, monthResult, cardsResult, hasMovementsResult] =
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const [heroResult, upcomingResult, monthResult, cardsResult, hasMovementsResult, profileResult] =
     await Promise.allSettled([
       getDashboardHero(supabase),
       getUpcomingFortnight(supabase, today),
       getMonthBalanceSeries(supabase, year, month),
       getCreditCards(),
       hasUserMovements(supabase),
+      user
+        ? supabase.from('profiles').select('full_name').eq('id', user.id).single()
+        : Promise.resolve({ data: null }),
     ])
+
+  const fullName =
+    profileResult.status === 'fulfilled' ? profileResult.value.data?.full_name : null
+  const firstName = fullName?.split(' ')[0] ?? ''
 
   const showWelcomeCard =
     hasMovementsResult.status === 'fulfilled' && hasMovementsResult.value === false
 
   return (
     <EyeMaskProvider>
-      <DashboardHeader />
+      <DashboardHeader name={firstName} todayISO={formatDateISO(today)} />
 
       <div className="flex flex-col gap-5">
         {showWelcomeCard && <WelcomeFirstMoveCard />}
 
+        {/* Hero — full width on top in every viewport. */}
         {heroResult.status === 'fulfilled' ? (
           <HeroSection data={heroResult.value} />
         ) : (
           <SectionFallback message={t('hero_error')} />
         )}
 
-        {upcomingResult.status === 'fulfilled' ? (
-          <UpcomingFortnightSection data={upcomingResult.value} />
-        ) : (
-          <SectionFallback message={t('upcoming.error')} />
-        )}
+        {/*
+          Below the Hero: single column on mobile (Lo que viene → Balance del mes);
+          on lg, two columns with equal heights — Balance del mes (grows, col 1) +
+          Lo que viene (acotado, col 2). DOM order keeps the mobile order; `lg:order-*`
+          flips the columns on desktop.
+        */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="lg:order-2">
+            {upcomingResult.status === 'fulfilled' ? (
+              <UpcomingFortnightSection data={upcomingResult.value} />
+            ) : (
+              <SectionFallback message={t('upcoming.error')} />
+            )}
+          </div>
 
-        {monthResult.status === 'fulfilled' ? (
-          <MonthBalanceSection
-            data={monthResult.value}
-            currentYear={currentYear}
-            currentMonth={currentMonth}
-            monthsBackLimit={MONTHS_BACK_LIMIT}
-          />
-        ) : (
-          <SectionFallback message={t('month.error')} />
-        )}
+          <div className="lg:order-1">
+            {monthResult.status === 'fulfilled' ? (
+              <MonthBalanceSection
+                data={monthResult.value}
+                currentYear={currentYear}
+                currentMonth={currentMonth}
+                monthsBackLimit={MONTHS_BACK_LIMIT}
+              />
+            ) : (
+              <SectionFallback message={t('month.error')} />
+            )}
+          </div>
+        </div>
 
+        {/* TODO(part 3): Tarjetas se quita del dashboard; vive solo en /cards. */}
         {cardsResult.status === 'fulfilled' ? (
           <CardsSection cards={cardsResult.value} />
         ) : (

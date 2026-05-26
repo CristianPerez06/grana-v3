@@ -130,7 +130,7 @@ export const UpcomingFortnightSection = async ({ data }: Props) => {
   const hasAny = data.toPay.length > 0 || data.toCollect.length > 0
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <section className="h-full rounded-2xl border border-border bg-card p-6 shadow-sm">
       <header className="mb-4 flex items-baseline justify-between">
         <h2 className="text-lg font-semibold text-text">{t('title')}</h2>
         <p className="text-xs text-text-muted">{t('subtitle')}</p>
@@ -138,7 +138,11 @@ export const UpcomingFortnightSection = async ({ data }: Props) => {
 
       {hasAny ? (
         <>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          {/*
+            Two sub-columns only while the section is full-width (md–lg single-column
+            dashboard). On mobile (<md) and inside the desktop rail (≥lg) they stack.
+          */}
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-1">
             <Column
               title={t('to_pay')}
               items={data.toPay}

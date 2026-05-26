@@ -90,10 +90,12 @@
     "title": "Inicio",
     "welcome": "Hola, {name}.",
     "welcome_anon": "Hola.",
+    "new_movement": "Nuevo movimiento",
     "mask_show": "Mostrar importes",
     "mask_hide": "Ocultar importes",
     "hero": {
-      "label": "Para gastar"
+      "label": "Para gastar",
+      "view_all_accounts": "Ver todas las cuentas"
     },
     "upcoming": {
       "title": "Lo que viene",

@@ -20,6 +20,7 @@ export {
 
 export type {
   DashboardHero,
+  HeroAccountBalance,
   MonthBalanceDay,
   MonthBalanceSeries,
   UpcomingDirection,

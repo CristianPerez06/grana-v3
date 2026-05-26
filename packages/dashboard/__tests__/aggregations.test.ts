@@ -15,6 +15,7 @@ describe('aggregateHero', () => {
     const accounts: HeroAccountRow[] = [
       {
         id: 'cash-1',
+        name: 'Billetera',
         currencies: [
           { currency_code: 'ARS', initial_balance: 100_000 },
           { currency_code: 'USD', initial_balance: 200 },
@@ -22,6 +23,7 @@ describe('aggregateHero', () => {
       },
       {
         id: 'bank-1',
+        name: 'Banco Galicia',
         currencies: [
           { currency_code: 'ARS', initial_balance: 50_000 },
           { currency_code: 'USD', initial_balance: 300 },
@@ -33,7 +35,33 @@ describe('aggregateHero', () => {
       ['bank-1', { ARS: -20_000, USD: 0 }],
     ])
 
-    expect(aggregateHero(accounts, txSums)).toEqual({ ars: 160_000, usd: 550 })
+    expect(aggregateHero(accounts, txSums)).toEqual({
+      ars: 160_000,
+      usd: 550,
+      accounts: [
+        { id: 'cash-1', name: 'Billetera', ars: 130_000, usd: 250 },
+        { id: 'bank-1', name: 'Banco Galicia', ars: 30_000, usd: 300 },
+      ],
+    })
+  })
+
+  it('orders the breakdown by ARS balance desc', () => {
+    const accounts: HeroAccountRow[] = [
+      {
+        id: 'small',
+        name: 'Caja chica',
+        currencies: [{ currency_code: 'ARS', initial_balance: 10_000 }],
+      },
+      {
+        id: 'big',
+        name: 'Sueldo',
+        currencies: [{ currency_code: 'ARS', initial_balance: 900_000 }],
+      },
+    ]
+    const txSums = new Map<string, { ARS: number; USD: number }>()
+
+    const result = aggregateHero(accounts, txSums)
+    expect(result.accounts.map((a) => a.id)).toEqual(['big', 'small'])
   })
 
   it('respects off-ledger credit invariant by ignoring credit accounts upstream', () => {
@@ -42,6 +70,7 @@ describe('aggregateHero', () => {
     const accounts: HeroAccountRow[] = [
       {
         id: 'cash-1',
+        name: 'Billetera',
         currencies: [{ currency_code: 'ARS', initial_balance: 100_000 }],
       },
     ]
@@ -49,13 +78,18 @@ describe('aggregateHero', () => {
     // expenses never appear here. We pass txSums that include no credit data.
     const txSums = new Map([['cash-1', { ARS: 0, USD: 0 }]])
 
-    expect(aggregateHero(accounts, txSums)).toEqual({ ars: 100_000, usd: 0 })
+    expect(aggregateHero(accounts, txSums)).toEqual({
+      ars: 100_000,
+      usd: 0,
+      accounts: [{ id: 'cash-1', name: 'Billetera', ars: 100_000, usd: 0 }],
+    })
   })
 
   it('handles accounts with currencies the user holds no transactions in', () => {
     const accounts: HeroAccountRow[] = [
       {
         id: 'cash-1',
+        name: 'Billetera',
         currencies: [
           { currency_code: 'ARS', initial_balance: 0 },
           { currency_code: 'USD', initial_balance: 0 },
@@ -64,23 +98,32 @@ describe('aggregateHero', () => {
     ]
     const txSums = new Map([['cash-1', { ARS: 0, USD: 0 }]])
 
-    expect(aggregateHero(accounts, txSums)).toEqual({ ars: 0, usd: 0 })
+    expect(aggregateHero(accounts, txSums)).toEqual({
+      ars: 0,
+      usd: 0,
+      accounts: [{ id: 'cash-1', name: 'Billetera', ars: 0, usd: 0 }],
+    })
   })
 
   it('returns zeros for users without any accounts', () => {
-    expect(aggregateHero([], new Map())).toEqual({ ars: 0, usd: 0 })
+    expect(aggregateHero([], new Map())).toEqual({ ars: 0, usd: 0, accounts: [] })
   })
 
   it('uses decimal math to avoid float drift', () => {
     const accounts: HeroAccountRow[] = [
       {
         id: 'cash-1',
+        name: 'Billetera',
         currencies: [{ currency_code: 'ARS', initial_balance: '0.10' }],
       },
     ]
     const txSums = new Map([['cash-1', { ARS: 0.2, USD: 0 }]])
 
-    expect(aggregateHero(accounts, txSums)).toEqual({ ars: 0.3, usd: 0 })
+    expect(aggregateHero(accounts, txSums)).toEqual({
+      ars: 0.3,
+      usd: 0,
+      accounts: [{ id: 'cash-1', name: 'Billetera', ars: 0.3, usd: 0 }],
+    })
   })
 })
 

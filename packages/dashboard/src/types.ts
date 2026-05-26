@@ -1,6 +1,18 @@
+export type HeroAccountBalance = {
+  id: string
+  name: string
+  ars: number
+  usd: number
+}
+
 export type DashboardHero = {
   ars: number
   usd: number
+  /**
+   * Per-account breakdown (cash/bank only), ordered by ARS balance desc.
+   * Consumed by the desktop Hero; mobile renders only the totals above.
+   */
+  accounts: HeroAccountBalance[]
 }
 
 export type UpcomingItemKind = 'card_period' | 'recurrence_instance'

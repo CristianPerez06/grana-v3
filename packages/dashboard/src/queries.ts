@@ -38,7 +38,7 @@ export async function getDashboardHero(
 ): Promise<DashboardHero> {
   const { data: accounts, error } = await supabase
     .from('accounts')
-    .select('id, currencies:account_currencies(currency_code, initial_balance)')
+    .select('id, name, currencies:account_currencies(currency_code, initial_balance)')
     .in('type', ['cash', 'bank'])
     .eq('is_active', true)
 
