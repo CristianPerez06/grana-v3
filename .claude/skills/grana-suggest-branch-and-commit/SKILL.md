@@ -1,5 +1,5 @@
 ---
-name: suggest-branch-and-commit
+name: grana-suggest-branch-and-commit
 description: Analyze uncommitted local changes and propose 3 branch names plus 3 concise commit titles, following the repo's branching convention and conventional-commits style.
 user_invocable: true
 allowed-tools: Bash

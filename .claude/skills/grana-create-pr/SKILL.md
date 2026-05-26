@@ -1,5 +1,5 @@
 ---
-name: create-pr
+name: grana-create-pr
 description: Create a GitHub pull request for the current branch, with title and body auto-drafted from the commits ahead of main, following the repo's PR template.
 user_invocable: true
 allowed-tools: Bash
@@ -34,7 +34,7 @@ Stop and explain instead of guessing if any of these fails:
    > - **Windows**: `winget install --id GitHub.cli` (or `choco install gh`), then `gh auth login`
    > - **Linux**: follow [https://github.com/cli/cli#installation](https://github.com/cli/cli#installation) for your distro, then `gh auth login`
    >
-   > After authenticating, verify with `gh auth status` and re-run `/create-pr`.
+   > After authenticating, verify with `gh auth status` and re-run `/grana-create-pr`.
 
    Do not attempt to install `gh` yourself — let the user do it (auth is browser-interactive and varies per platform).
 
