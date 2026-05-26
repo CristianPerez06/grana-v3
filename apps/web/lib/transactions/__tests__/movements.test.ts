@@ -12,6 +12,8 @@ const baseTx = (overrides: Partial<TransactionWithDetails>): TransactionWithDeta
   type: 'expense',
   amount: 100,
   currency_code: 'ARS',
+  destination_amount: null,
+  destination_currency: null,
   date: '2026-05-18',
   description: null,
   is_verified: false,

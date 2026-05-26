@@ -599,7 +599,8 @@
       "income": "Income",
       "expense": "Expense",
       "transfer": "Transfer",
-      "adjustment": "Adjustment"
+      "adjustment": "Adjustment",
+      "exchange": "Exchange"
     },
     "labels": {
       "amount": "Amount",
@@ -626,13 +627,15 @@
       "frequency": "Frequency",
       "make_recurrent": "Make recurring",
       "no_subcategory": "No subcategory",
-      "no_category": "No category"
+      "no_category": "No category",
+      "exchange_received": "Amount received"
     },
     "types": {
       "income": "Income",
       "expense": "Expense",
       "transfer": "Transfer",
-      "adjustment": "Adjustment"
+      "adjustment": "Adjustment",
+      "exchange": "Exchange"
     },
     "directions": {
       "increase": "Add",
@@ -715,7 +718,8 @@
       "view_in_account": "View in account",
       "register_purchase": "Record purchase",
       "register_installments": "Record {count} installments",
-      "register_movement": "Record transaction"
+      "register_movement": "Record transaction",
+      "register_exchange": "Record exchange"
     },
     "confirmations": {
       "delete_title": "Delete this transaction?",
@@ -752,6 +756,7 @@
       "expense": "Expenses",
       "card_payment": "Statement payments",
       "transfer": "Transfers",
+      "exchange": "Currency exchanges",
       "adjustment": "Adjustments",
       "installment_purchase": "Installment purchases"
     },

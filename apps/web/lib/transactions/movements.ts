@@ -48,6 +48,19 @@ export type AdjustmentMovement = BaseMovement & {
   sign: '+' | '-'
 }
 
+export type ExchangeMovement = BaseMovement & {
+  kind: 'exchange'
+  title: 'Cambio'
+  // The primary (source) leg is an outflow → negative. The received leg is
+  // shown separately as positive.
+  sign: '-'
+  // `amount` / `currency_code` (from BaseMovement) are the SOURCE leg.
+  destination_amount: number
+  destination_currency: 'ARS' | 'USD'
+  destination_account_id: string | null
+  destination_account_name: string | null
+}
+
 export type CardInstallmentMovement = BaseMovement & {
   kind: 'installment_purchase'
   title: string
@@ -62,6 +75,7 @@ export type FinancialMovement =
   | TransferMovement
   | AdjustmentMovement
   | CardInstallmentMovement
+  | ExchangeMovement
 
 const detailHref = (tx: TransactionWithDetails) => `/transactions/${tx.id}`
 
@@ -145,6 +159,19 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
       kind: 'transfer',
       title: 'Transferencia',
       sign: null,
+      destination_account_id: tx.transfer_destination_account_id,
+      destination_account_name: tx.destination_account?.name ?? null,
+    }
+  }
+
+  if (tx.type === 'exchange') {
+    return {
+      ...base,
+      kind: 'exchange',
+      title: 'Cambio',
+      sign: '-',
+      destination_amount: tx.destination_amount ?? 0,
+      destination_currency: tx.destination_currency ?? 'USD',
       destination_account_id: tx.transfer_destination_account_id,
       destination_account_name: tx.destination_account?.name ?? null,
     }

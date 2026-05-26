@@ -9,6 +9,7 @@ import {
   createExpense,
   createTransfer,
   createAdjustment,
+  createExchange,
 } from '@/app/_actions/transactions'
 import { registerCardPurchase, registerInstallments } from '@/app/_actions/credit-cards'
 import { createRecurrenceFromMovement } from '@/app/_actions/recurrences'
@@ -26,7 +27,7 @@ const todayStr = () => {
   return `${y}-${m}-${day}`
 }
 
-type Tab = 'income' | 'expense' | 'transfer' | 'adjustment'
+type Tab = 'income' | 'expense' | 'transfer' | 'adjustment' | 'exchange'
 
 export type MovementFormAccount = {
   id: string
@@ -59,6 +60,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
     expense: t('tabs.expense'),
     transfer: t('tabs.transfer'),
     adjustment: t('tabs.adjustment'),
+    exchange: t('tabs.exchange'),
   }
   const [isPending, startTransition] = useTransition()
   const [tab, setTab] = useState<Tab>('income')
@@ -78,6 +80,9 @@ export const MovementForm = ({ accounts, categories }: Props) => {
   const [subcategoryId, setSubcategoryId] = useState('')
 
   const [destinationAccountId, setDestinationAccountId] = useState('')
+  // Exchange: received-leg amount. Destination currency is derived (the other
+  // currency the destination account holds, ≠ source currency).
+  const [destinationAmount, setDestinationAmount] = useState('')
 
   const [adjustmentDirection, setAdjustmentDirection] = useState<'increase' | 'decrease'>('increase')
 
@@ -108,6 +113,13 @@ export const MovementForm = ({ accounts, categories }: Props) => {
     ? activeCurrencies.filter((c) => destinationAccount.activeCurrencies.includes(c))
     : []
 
+  // Exchange: destination account may be ANY cash/bank (including the source
+  // account itself). The destination currency is derived as the other currency
+  // that account holds (≠ source currency).
+  const exchangeDestAccount = cashBank.find((a) => a.id === destinationAccountId)
+  const exchangeDestCurrency =
+    exchangeDestAccount?.activeCurrencies.find((c) => c !== currencyCode) ?? null
+
   const isInstallments = isCredit && currencyCode === 'ARS' && parseInt(installments) >= 2
   const isUSDCard = isCredit && currencyCode === 'USD'
 
@@ -130,6 +142,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
     let currency: 'ARS' | 'USD'
     if (tab === 'expense') currency = currencyCode
     else if (tab === 'transfer') currency = effectiveCurrency
+    else if (tab === 'exchange') currency = currencyCode
     else if (tab === 'adjustment' && adjustmentDirection === 'decrease') currency = currencyCode
     else return null
 
@@ -146,14 +159,18 @@ export const MovementForm = ({ accounts, categories }: Props) => {
     setFxRate('')
     // Keep the account if still eligible, otherwise jump to the first eligible one.
     const eligible = eligibleFor(accounts, t)
-    if (!eligible.some((a) => a.id === accountId)) {
-      const next = eligible[0]
-      if (next) {
-        setAccountId(next.id)
-        if (!next.activeCurrencies.includes(currencyCode)) {
-          setCurrencyCode(next.activeCurrencies[0] ?? 'ARS')
-        }
+    const srcId = eligible.some((a) => a.id === accountId) ? accountId : eligible[0]?.id ?? ''
+    if (srcId !== accountId) {
+      setAccountId(srcId)
+      const next = accounts.find((a) => a.id === srcId)
+      if (next && !next.activeCurrencies.includes(currencyCode)) {
+        setCurrencyCode(next.activeCurrencies[0] ?? 'ARS')
       }
+    }
+    if (t === 'exchange') {
+      // Default to converting within the same account (the common case).
+      setDestinationAccountId(srcId)
+      setDestinationAmount('')
     }
   }
 
@@ -193,6 +210,22 @@ export const MovementForm = ({ accounts, categories }: Props) => {
       setFormError(t('errors.destination_required_short'))
       return
     }
+    let parsedDestinationAmount: number | null = null
+    if (tab === 'exchange') {
+      if (!destinationAccountId) {
+        setFormError('Seleccioná la cuenta destino.')
+        return
+      }
+      if (!exchangeDestCurrency) {
+        setFormError('La cuenta destino no tiene otra moneda para el cambio.')
+        return
+      }
+      parsedDestinationAmount = parseMoneyInput(destinationAmount)
+      if (parsedDestinationAmount === null || parsedDestinationAmount <= 0) {
+        setFormError('El monto recibido debe ser mayor a cero.')
+        return
+      }
+    }
     const parsedFxRate = fxRate ? parseMoneyInput(fxRate, { decimalPlaces: 6 }) : undefined
     if (isUSDCard && (parsedFxRate === null || parsedFxRate === undefined || parsedFxRate <= 0)) {
       setFormError(t('errors.exchange_rate_invalid'))
@@ -228,6 +261,17 @@ export const MovementForm = ({ accounts, categories }: Props) => {
           account_id: accountId,
           currency_code: currencyCode,
           amount: signedAmount,
+          date,
+          description: description || undefined,
+        })
+      } else if (tab === 'exchange') {
+        result = await createExchange({
+          account_id: accountId,
+          currency_code: currencyCode,
+          amount: parsedAmount,
+          transfer_destination_account_id: destinationAccountId,
+          destination_currency: exchangeDestCurrency!,
+          destination_amount: parsedDestinationAmount!,
           date,
           description: description || undefined,
         })
@@ -274,7 +318,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
       }
 
       // Recurrence: not for adjustments nor for installment purchases.
-      if (isRecurrent && tab !== 'adjustment' && !isInstallments && 'id' in result && result.id) {
+      if (isRecurrent && tab !== 'adjustment' && tab !== 'exchange' && !isInstallments && 'id' in result && result.id) {
         const recurrenceResult = await createRecurrenceFromMovement({
           transaction_id: result.id,
           frequency,
@@ -301,7 +345,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       {/* ── Type tabs ──────────────────────────────────────────────────────── */}
       <div className="flex rounded-md border border-border p-0.5 w-fit flex-wrap gap-y-1">
-        {(['income', 'expense', 'transfer', 'adjustment'] as Tab[]).map((t) => (
+        {(['income', 'expense', 'transfer', 'adjustment', 'exchange'] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
@@ -318,7 +362,7 @@ export const MovementForm = ({ accounts, categories }: Props) => {
       {/* ── Account (after the type, v2-style) ─────────────────────────────── */}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="account" className="text-sm font-medium">
-          {tab === 'transfer' ? t('labels.source_account') : t('labels.account')}
+          {tab === 'transfer' || tab === 'exchange' ? t('labels.source_account') : t('labels.account')}
         </label>
         <select
           id="account"
@@ -434,6 +478,57 @@ export const MovementForm = ({ accounts, categories }: Props) => {
         )}
       </div>
 
+      {/* ── Exchange: destination leg ──────────────────────────────────────── */}
+      {tab === 'exchange' && (
+        <>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="exchange-dest" className="text-sm font-medium">
+              Cuenta destino <span className="text-destructive">*</span>
+            </label>
+            <select
+              id="exchange-dest"
+              required
+              value={destinationAccountId}
+              onChange={(e) => setDestinationAccountId(e.target.value)}
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="">Seleccioná la cuenta destino</option>
+              {cashBank.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.id === accountId ? `${a.name} (misma cuenta)` : a.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {exchangeDestCurrency ? (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="exchange-dest-amount" className="text-sm font-medium">
+                Monto recibido ({exchangeDestCurrency})
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                  {CURRENCY_SYMBOL[exchangeDestCurrency]}
+                </span>
+                <MoneyAmountInput
+                  id="exchange-dest-amount"
+                  required
+                  value={destinationAmount}
+                  onChange={setDestinationAmount}
+                  placeholder="0,00"
+                  className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Esa cuenta no tiene activada otra moneda. Elegí una cuenta con{' '}
+              {currencyCode === 'ARS' ? 'USD' : 'ARS'} para poder cambiar.
+            </p>
+          )}
+        </>
+      )}
+
       {/* ── Installments (Gasto + tarjeta + ARS) ───────────────────────────── */}
       {tab === 'expense' && isCredit && currencyCode === 'ARS' && (
         <div className="flex flex-col gap-1.5">
@@ -542,8 +637,8 @@ export const MovementForm = ({ accounts, categories }: Props) => {
         />
       </div>
 
-      {/* ── Recurrente (no en ajuste ni en cuotas) ─────────────────────────── */}
-      {tab !== 'adjustment' && !isInstallments && (
+      {/* ── Recurrente (no en ajuste, cambio ni cuotas) ────────────────────── */}
+      {tab !== 'adjustment' && tab !== 'exchange' && !isInstallments && (
         <div className="flex flex-col gap-2 rounded-md border border-border p-3">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -584,7 +679,9 @@ export const MovementForm = ({ accounts, categories }: Props) => {
           ? tCommon('saving')
           : isInstallments
             ? t('actions.register_installments', { count: parseInt(installments) })
-            : t('actions.create')}
+            : tab === 'exchange'
+              ? t('actions.register_exchange')
+              : t('actions.create')}
       </button>
     </form>
   )

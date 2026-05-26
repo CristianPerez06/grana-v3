@@ -6,6 +6,7 @@ import { getAccountDetail } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
 import { PageHeader } from '@/components/ui/page-header'
 import { EditTransactionForm } from './_components/edit-transaction-form'
+import { EditExchangeForm } from './_components/edit-exchange-form'
 
 type Props = {
   params: Promise<{ id: string; txId: string }>
@@ -34,7 +35,8 @@ const EditTransactionPage = async ({ params, searchParams }: Props) => {
   const isParent = transaction.is_parent === true
   const isOwner = transaction.account_id === id
   const isDestination =
-    transaction.type === 'transfer' && transaction.transfer_destination_account_id === id
+    (transaction.type === 'transfer' || transaction.type === 'exchange') &&
+    transaction.transfer_destination_account_id === id
   if (!isParent && !isOwner && !isDestination) notFound()
   if (!isParent && !transaction.account_id) notFound()
 
@@ -70,14 +72,22 @@ const EditTransactionPage = async ({ params, searchParams }: Props) => {
         backLink={{ href: detailHref, label: t('detail_back_label') }}
       />
 
-      <EditTransactionForm
-        transaction={transaction}
-        accountId={transaction.account_id ?? id}
-        categories={categories}
-        returnHref={detailHref}
-        availableBalances={availableBalances}
-        amountEditable={amountEditable}
-      />
+      {transaction.type === 'exchange' ? (
+        <EditExchangeForm
+          transaction={transaction}
+          returnHref={detailHref}
+          availableBalances={availableBalances}
+        />
+      ) : (
+        <EditTransactionForm
+          transaction={transaction}
+          accountId={transaction.account_id ?? id}
+          categories={categories}
+          returnHref={detailHref}
+          availableBalances={availableBalances}
+          amountEditable={amountEditable}
+        />
+      )}
     </div>
   )
 }

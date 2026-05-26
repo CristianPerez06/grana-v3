@@ -599,7 +599,8 @@
       "income": "Ingreso",
       "expense": "Gasto",
       "transfer": "Transferencia",
-      "adjustment": "Ajuste"
+      "adjustment": "Ajuste",
+      "exchange": "Cambio"
     },
     "labels": {
       "amount": "Monto",
@@ -626,13 +627,15 @@
       "frequency": "Frecuencia",
       "make_recurrent": "Hacer recurrente",
       "no_subcategory": "Sin subcategoría",
-      "no_category": "Sin categoría"
+      "no_category": "Sin categoría",
+      "exchange_received": "Monto recibido"
     },
     "types": {
       "income": "Ingreso",
       "expense": "Gasto",
       "transfer": "Transferencia",
-      "adjustment": "Ajuste"
+      "adjustment": "Ajuste",
+      "exchange": "Cambio"
     },
     "directions": {
       "increase": "Suma",
@@ -715,7 +718,8 @@
       "view_in_account": "Ver en cuenta",
       "register_purchase": "Registrar consumo",
       "register_installments": "Registrar {count} cuotas",
-      "register_movement": "Registrar movimiento"
+      "register_movement": "Registrar movimiento",
+      "register_exchange": "Registrar cambio"
     },
     "confirmations": {
       "delete_title": "¿Eliminar este movimiento?",
@@ -752,6 +756,7 @@
       "expense": "Gastos",
       "card_payment": "Pagos de resumen",
       "transfer": "Transferencias",
+      "exchange": "Cambios de moneda",
       "adjustment": "Ajustes",
       "installment_purchase": "Compras en cuotas"
     },

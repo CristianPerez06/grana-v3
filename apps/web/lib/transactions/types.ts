@@ -1,4 +1,4 @@
-export type TransactionType = 'income' | 'expense' | 'transfer' | 'adjustment'
+export type TransactionType = 'income' | 'expense' | 'transfer' | 'adjustment' | 'exchange'
 
 export type Transaction = {
   id: string
@@ -10,6 +10,9 @@ export type Transaction = {
   type: TransactionType
   amount: number
   currency_code: 'ARS' | 'USD'
+  // Exchange (currency conversion) destination leg. Only set for type='exchange'.
+  destination_amount: number | null
+  destination_currency: 'ARS' | 'USD' | null
   date: string
   description: string | null
   is_verified: boolean

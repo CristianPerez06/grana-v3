@@ -40,6 +40,7 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, retu
     expense: t('types.expense'),
     transfer: t('types.transfer'),
     adjustment: t('types.adjustment'),
+    exchange: t('types.exchange'),
   }
 
   const resolvedReturnHref =
@@ -118,6 +119,39 @@ export const TransactionDetailHeader = ({ transaction, accountId, periodId, retu
             <dt className="text-muted-foreground">{t('labels.adjustment_type')}</dt>
             <dd>{transaction.amount > 0 ? t('directions.increase_full') : t('directions.decrease_full')}</dd>
           </div>
+        )}
+
+        {/* Exchange: source/destination accounts, received amount, derived rate */}
+        {type === 'exchange' && (
+          <>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">{t('labels.source_account')}</dt>
+              <dd>{transaction.source_account?.name ?? accountId}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">{t('labels.destination_account')}</dt>
+              <dd>{transaction.destination_account?.name ?? '—'}</dd>
+            </div>
+            {transaction.destination_amount != null && transaction.destination_currency && (
+              <>
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">{t('labels.exchange_received')}</dt>
+                  <dd className="text-green-600">
+                    +{formatBalance(transaction.destination_amount, transaction.destination_currency, showCents)}
+                  </dd>
+                </div>
+                {transaction.destination_amount > 0 && (
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">{t('labels.fx_rate')}</dt>
+                    <dd>
+                      1 {transaction.destination_currency} ={' '}
+                      {formatBalance(transaction.amount / transaction.destination_amount, transaction.currency_code, showCents)}
+                    </dd>
+                  </div>
+                )}
+              </>
+            )}
+          </>
         )}
 
         {transaction.description && (
