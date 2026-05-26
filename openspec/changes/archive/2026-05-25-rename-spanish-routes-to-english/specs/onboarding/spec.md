@@ -1,10 +1,4 @@
-# onboarding Specification
-
-## Purpose
-
-Define el wizard post-signup que toma a un usuario recién registrado y lo lleva a un estado inicial coherente del producto antes de aterrizar en el dashboard. Cubre cuatro pantallas (`welcome`, `profile`, `initial-balance`, `done`) con persistencia por paso (el progreso vive en la base, no en estado de cliente), captura el modo del usuario (`novato` / `experto`) y opcionalmente una cuenta bancaria inicial, y termina marcando `profiles.onboarding_completed_at`. El wizard no permite saltar pasos intermedios y se ofrece como espejo funcional en web (Server Components + server actions) y mobile (Expo + llamadas directas a Supabase).
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: El wizard de onboarding tiene cuatro pantallas con persistencia por paso
 

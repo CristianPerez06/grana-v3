@@ -2,7 +2,7 @@ import * as yup from 'yup'
 
 const MODE_VALUES = ['novato', 'experto'] as const
 
-export const perfilSchema = yup
+export const profileSchema = yup
   .object({
     mode: yup
       .string()
@@ -57,7 +57,7 @@ const requiredMoneyAmount = yup
   .min(0)
   .required()
 
-export const saldoActualSchema = yup
+export const initialBalanceSchema = yup
   .object({
     primary_account_id: yup
       .string()
@@ -77,5 +77,5 @@ export const saldoActualSchema = yup
   })
   .strict()
 
-export type PerfilInput = yup.InferType<typeof perfilSchema>
-export type SaldoActualInput = yup.InferType<typeof saldoActualSchema>
+export type ProfileInput = yup.InferType<typeof profileSchema>
+export type InitialBalanceInput = yup.InferType<typeof initialBalanceSchema>

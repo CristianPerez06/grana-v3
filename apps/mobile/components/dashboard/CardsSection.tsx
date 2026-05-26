@@ -25,7 +25,7 @@ export const CardsSection = ({ cards }: Props) => {
             {t('dashboard.cards.empty_title')}
           </Text>
           <Pressable
-            onPress={() => router.push('/tarjetas')}
+            onPress={() => router.push('/cards')}
             accessibilityRole="button"
             className="rounded-md bg-emerald px-4 py-2"
           >

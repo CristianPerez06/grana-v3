@@ -243,7 +243,7 @@
       "description": "Vamos a hacer un par de preguntas para que la app se ajuste a vos. Te toma menos de un minuto.",
       "cta": "Empezar"
     },
-    "perfil": {
+    "profile": {
       "title": "Para configurar tu Grana, contanos un poco",
       "mode_question": "¿Qué buscás en Grana?",
       "mode_simple_title": "Lo esencial",
@@ -259,7 +259,7 @@
       "account_name_placeholder": "Ej: Caja de ahorro",
       "continue": "Continuar"
     },
-    "saldoActual": {
+    "initialBalance": {
       "title": "¿Cuánta plata tenés hoy?",
       "description_novato": "Es solo para arrancar con un disponible real. Después lo ajustás con cualquier movimiento. Si no tenés plata, poné 0.",
       "description_experto": "Cargá cuánto tenés disponible en cada lugar. Lo que dejes en blanco arranca en cero. El monto en pesos es obligatorio (puede ser 0).",

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import { perfilSchema, ValidationError } from '@grana/validation'
+import { profileSchema, ValidationError } from '@grana/validation'
 import { Button } from '../../components/ui/Button'
 import { FormError } from '../../components/ui/FormError'
 import { TextInput } from '../../components/ui/TextInput'
@@ -20,7 +20,7 @@ type FieldErrors = Partial<
   Record<'mode' | 'has_bank_account' | 'institution_id' | 'bank_account_name', string>
 >
 
-export default function PerfilScreen() {
+export default function ProfileScreen() {
   const t = useT()
   const router = useRouter()
   const [mode, setMode] = useState<Mode | null>(null)
@@ -86,7 +86,7 @@ export default function PerfilScreen() {
     }
 
     try {
-      await perfilSchema.validate(values, { abortEarly: false })
+      await profileSchema.validate(values, { abortEarly: false })
     } catch (err) {
       if (err instanceof ValidationError) {
         const errs: FieldErrors = {}
@@ -158,7 +158,7 @@ export default function PerfilScreen() {
         }
       }
 
-      router.replace('/(onboarding)/saldo-actual')
+      router.replace('/(onboarding)/initial-balance')
     } finally {
       setLoading(false)
     }
@@ -176,23 +176,23 @@ export default function PerfilScreen() {
         >
         <View className="mx-auto w-full max-w-md gap-8">
           <Text className="text-center text-2xl font-bold tracking-tight text-text">
-            {t('onboarding.perfil.title')}
+            {t('onboarding.profile.title')}
           </Text>
 
           <View className="gap-3">
             <Text className="text-sm font-medium text-text">
-              {t('onboarding.perfil.mode_question')}
+              {t('onboarding.profile.mode_question')}
             </Text>
             <View className="gap-3">
               <SelectableCard
-                title={t('onboarding.perfil.mode_simple_title')}
-                description={t('onboarding.perfil.mode_simple_description')}
+                title={t('onboarding.profile.mode_simple_title')}
+                description={t('onboarding.profile.mode_simple_description')}
                 selected={mode === 'novato'}
                 onPress={() => handleModeChange('novato')}
               />
               <SelectableCard
-                title={t('onboarding.perfil.mode_detailed_title')}
-                description={t('onboarding.perfil.mode_detailed_description')}
+                title={t('onboarding.profile.mode_detailed_title')}
+                description={t('onboarding.profile.mode_detailed_description')}
                 selected={mode === 'experto'}
                 onPress={() => handleModeChange('experto')}
               />
@@ -207,19 +207,19 @@ export default function PerfilScreen() {
           {mode === 'experto' ? (
             <View className="gap-3">
               <Text className="text-sm font-medium text-text">
-                {t('onboarding.perfil.bank_question')}
+                {t('onboarding.profile.bank_question')}
               </Text>
               <View className="flex-row gap-2">
                 <View className="flex-1">
                   <Button
-                    title={t('onboarding.perfil.bank_yes')}
+                    title={t('onboarding.profile.bank_yes')}
                     variant={hasBankAccount ? 'primary' : 'secondary'}
                     onPress={handleBankYes}
                   />
                 </View>
                 <View className="flex-1">
                   <Button
-                    title={t('onboarding.perfil.bank_no')}
+                    title={t('onboarding.profile.bank_no')}
                     variant={!hasBankAccount ? 'primary' : 'secondary'}
                     onPress={handleBankNo}
                   />
@@ -230,7 +230,7 @@ export default function PerfilScreen() {
                 <View className="gap-3 pt-2">
                   <View>
                     <Text className="mb-1 text-sm font-medium text-text">
-                      {t('onboarding.perfil.institution_label')}
+                      {t('onboarding.profile.institution_label')}
                     </Text>
                     <Pressable
                       onPress={() => setPickerVisible(true)}
@@ -243,7 +243,7 @@ export default function PerfilScreen() {
                         }`}
                       >
                         {institutionName ??
-                          t('onboarding.perfil.institution_placeholder')}
+                          t('onboarding.profile.institution_placeholder')}
                       </Text>
                     </Pressable>
                     {fieldErrors.institution_id ? (
@@ -254,10 +254,10 @@ export default function PerfilScreen() {
                   </View>
 
                   <TextInput
-                    label={t('onboarding.perfil.account_name_label')}
+                    label={t('onboarding.profile.account_name_label')}
                     value={bankAccountName}
                     onChangeText={setBankAccountName}
-                    placeholder={t('onboarding.perfil.account_name_placeholder')}
+                    placeholder={t('onboarding.profile.account_name_placeholder')}
                     error={
                       fieldErrors.bank_account_name
                         ? fieldErrors.bank_account_name ??
@@ -273,7 +273,7 @@ export default function PerfilScreen() {
           <FormError message={formError} />
 
           <Button
-            title={t('onboarding.perfil.continue')}
+            title={t('onboarding.profile.continue')}
             onPress={handleSubmit}
             loading={loading}
           />
@@ -286,8 +286,8 @@ export default function PerfilScreen() {
           institutions={institutions}
           onSelect={handleSelectInstitution}
           selectedId={institutionId}
-          title={t('onboarding.perfil.institution_label')}
-          searchPlaceholder={t('onboarding.perfil.institution_placeholder')}
+          title={t('onboarding.profile.institution_label')}
+          searchPlaceholder={t('onboarding.profile.institution_placeholder')}
         />
       </KeyboardAvoidingView>
     </SafeAreaView>

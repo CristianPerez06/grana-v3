@@ -10,11 +10,11 @@ import { Button } from '@/components/ui/button'
 import { FormField } from '@/components/ui/form-field'
 import { SubmitButton } from '@/components/ui/submit-button'
 import {
-  perfilSchema,
-  type PerfilInput,
+  profileSchema,
+  type ProfileInput,
   translateFieldError,
 } from '@grana/validation'
-import { savePerfilAction } from '@/app/_actions/onboarding'
+import { saveProfileAction } from '@/app/_actions/onboarding'
 import { cn } from '@/lib/utils'
 
 type Institution = { id: string; name: string }
@@ -23,8 +23,8 @@ type Props = {
   institutions: Institution[]
 }
 
-export const PerfilForm = ({ institutions }: Props) => {
-  const t = useTranslations('onboarding.perfil')
+export const ProfileForm = ({ institutions }: Props) => {
+  const t = useTranslations('onboarding.profile')
   const tv = useTranslations('validation')
   const tErr = useTranslations('onboarding.errors')
   const fieldError = (msg: string | undefined) => translateFieldError(msg, tv)
@@ -40,9 +40,9 @@ export const PerfilForm = ({ institutions }: Props) => {
     setValue,
     formState: { errors, isSubmitting },
   } = useForm({
-    resolver: yupResolver(perfilSchema),
+    resolver: yupResolver(profileSchema),
     defaultValues: {
-      mode: undefined as unknown as PerfilInput['mode'],
+      mode: undefined as unknown as ProfileInput['mode'],
       has_bank_account: false,
       institution_id: null,
       bank_account_name: undefined,
@@ -54,14 +54,14 @@ export const PerfilForm = ({ institutions }: Props) => {
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null)
-    const result = await savePerfilAction(values)
+    const result = await saveProfileAction(values)
     if (result.ok) {
-      router.push('/onboarding/saldo-actual')
+      router.push('/onboarding/initial-balance')
       return
     }
     if (result.fieldErrors) {
       for (const [field, message] of Object.entries(result.fieldErrors)) {
-        if (message) setError(field as keyof PerfilInput, { message })
+        if (message) setError(field as keyof ProfileInput, { message })
       }
     }
     if (result.formError) setFormError(result.formError)

@@ -3,18 +3,18 @@
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import {
-  perfilSchema,
-  saldoActualSchema,
+  profileSchema,
+  initialBalanceSchema,
   validateActionInput,
-  type PerfilInput,
-  type SaldoActualInput,
+  type ProfileInput,
+  type InitialBalanceInput,
 } from '@grana/validation'
 import type { ActionResult } from './types'
 
-export const savePerfilAction = async (
+export const saveProfileAction = async (
   input: unknown,
-): Promise<ActionResult<PerfilInput>> => {
-  const validation = await validateActionInput(perfilSchema, input)
+): Promise<ActionResult<ProfileInput>> => {
+  const validation = await validateActionInput(profileSchema, input)
   if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
 
   const { mode, has_bank_account, institution_id, bank_account_name } = validation.data
@@ -71,10 +71,10 @@ export const savePerfilAction = async (
   return { ok: true }
 }
 
-export const saveSaldoActualAction = async (
+export const saveInitialBalanceAction = async (
   input: unknown,
-): Promise<ActionResult<SaldoActualInput>> => {
-  const validation = await validateActionInput(saldoActualSchema, input)
+): Promise<ActionResult<InitialBalanceInput>> => {
+  const validation = await validateActionInput(initialBalanceSchema, input)
   if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
 
   const {

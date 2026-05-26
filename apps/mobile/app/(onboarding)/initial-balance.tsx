@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import { parseMoneyInput, saldoActualSchema } from '@grana/validation'
+import { parseMoneyInput, initialBalanceSchema } from '@grana/validation'
 import { Button } from '../../components/ui/Button'
 import { FormError } from '../../components/ui/FormError'
 import { TextInput } from '../../components/ui/TextInput'
@@ -19,7 +19,7 @@ type ParsedAmounts = {
   cash_usd: number | undefined
 }
 
-export default function SaldoActualScreen() {
+export default function InitialBalanceScreen() {
   const t = useT()
   const router = useRouter()
   const [mode, setMode] = useState<Mode | null>(null)
@@ -126,7 +126,7 @@ export default function SaldoActualScreen() {
     }
 
     try {
-      await saldoActualSchema.validate(input)
+      await initialBalanceSchema.validate(input)
     } catch {
       setFormError(t('onboarding.errors.amount_invalid'))
       return
@@ -183,8 +183,8 @@ export default function SaldoActualScreen() {
   const showSecondaryCash = mode === 'experto' && secondaryCashAccount !== null
   const primaryLabel =
     mode === 'experto' && primaryAccount.type === 'bank'
-      ? t('onboarding.saldoActual.group_primary_bank', { accountName: primaryAccount.name })
-      : t('onboarding.saldoActual.group_novato')
+      ? t('onboarding.initialBalance.group_primary_bank', { accountName: primaryAccount.name })
+      : t('onboarding.initialBalance.group_novato')
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
@@ -199,30 +199,30 @@ export default function SaldoActualScreen() {
         <View className="mx-auto w-full max-w-md gap-8">
           <View className="gap-2">
             <Text className="text-center text-2xl font-bold tracking-tight text-text">
-              {t('onboarding.saldoActual.title')}
+              {t('onboarding.initialBalance.title')}
             </Text>
             <Text className="text-center text-sm text-text-muted">
               {showSecondaryCash
-                ? t('onboarding.saldoActual.description_experto')
-                : t('onboarding.saldoActual.description_novato')}
+                ? t('onboarding.initialBalance.description_experto')
+                : t('onboarding.initialBalance.description_novato')}
             </Text>
           </View>
 
           <View className="gap-3">
             <Text className="text-sm font-medium text-text">{primaryLabel}</Text>
             <TextInput
-              label={t('onboarding.saldoActual.ars_label')}
+              label={t('onboarding.initialBalance.ars_label')}
               value={primaryArsStr}
               onChangeText={setPrimaryArsStr}
-              placeholder={t('onboarding.saldoActual.amount_placeholder')}
+              placeholder={t('onboarding.initialBalance.amount_placeholder')}
               keyboardType="decimal-pad"
               inputMode="decimal"
             />
             <TextInput
-              label={t('onboarding.saldoActual.usd_label')}
+              label={t('onboarding.initialBalance.usd_label')}
               value={primaryUsdStr}
               onChangeText={setPrimaryUsdStr}
-              placeholder={t('onboarding.saldoActual.amount_placeholder')}
+              placeholder={t('onboarding.initialBalance.amount_placeholder')}
               keyboardType="decimal-pad"
               inputMode="decimal"
             />
@@ -231,21 +231,21 @@ export default function SaldoActualScreen() {
           {showSecondaryCash && secondaryCashAccount ? (
             <View className="gap-3">
               <Text className="text-sm font-medium text-text">
-                {t('onboarding.saldoActual.group_cash')}
+                {t('onboarding.initialBalance.group_cash')}
               </Text>
               <TextInput
-                label={t('onboarding.saldoActual.ars_label')}
+                label={t('onboarding.initialBalance.ars_label')}
                 value={cashArsStr}
                 onChangeText={setCashArsStr}
-                placeholder={t('onboarding.saldoActual.amount_placeholder')}
+                placeholder={t('onboarding.initialBalance.amount_placeholder')}
                 keyboardType="decimal-pad"
                 inputMode="decimal"
               />
               <TextInput
-                label={t('onboarding.saldoActual.usd_label')}
+                label={t('onboarding.initialBalance.usd_label')}
                 value={cashUsdStr}
                 onChangeText={setCashUsdStr}
-                placeholder={t('onboarding.saldoActual.amount_placeholder')}
+                placeholder={t('onboarding.initialBalance.amount_placeholder')}
                 keyboardType="decimal-pad"
                 inputMode="decimal"
               />
@@ -255,7 +255,7 @@ export default function SaldoActualScreen() {
           <FormError message={formError} />
 
           <Button
-            title={t('onboarding.saldoActual.continue')}
+            title={t('onboarding.initialBalance.continue')}
             onPress={handleSubmit}
             loading={submitting}
           />

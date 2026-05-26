@@ -20,7 +20,7 @@ export function AppMenu({ onClose }: Props) {
     await supabase.auth.signOut()
   }
 
-  const navigateAndClose = (path: '/tarjetas' | '/(app)/settings') => {
+  const navigateAndClose = (path: '/cards' | '/(app)/settings') => {
     onClose()
     router.push(path)
   }
@@ -49,7 +49,7 @@ export function AppMenu({ onClose }: Props) {
         <SheetItem
           Icon={CreditCard}
           label={t('nav.cards')}
-          onPress={() => navigateAndClose('/tarjetas')}
+          onPress={() => navigateAndClose('/cards')}
         />
         <SheetItem Icon={PiggyBank} label={t('nav.savings')} onPress={onClose} comingSoon />
         <SheetItem

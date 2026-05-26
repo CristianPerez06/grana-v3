@@ -19,7 +19,7 @@ const DonePage = async () => {
 
   // Aggregate initial_balance per currency across the user's active
   // cash + bank accounts. This is the "starting available" the user just
-  // declared in /saldo-actual.
+  // declared in /initial-balance.
   const { data: rows } = await supabase
     .from('account_currencies')
     .select('currency_code, initial_balance, accounts!inner(user_id, type, is_active)')

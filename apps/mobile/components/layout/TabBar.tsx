@@ -25,7 +25,7 @@ type SlotConfig = {
 
 const SLOT_CONFIG: Record<string, SlotConfig> = {
   dashboard: { kind: 'tab', icon: Home, labelKey: 'nav.dashboard' },
-  movimientos: { kind: 'tab', icon: List, labelKey: 'nav.movements' },
+  transactions: { kind: 'tab', icon: List, labelKey: 'nav.movements' },
   home: { kind: 'tab-disabled', icon: Users, labelKey: 'nav.home' },
   menu: { kind: 'menu' },
 }
