@@ -610,6 +610,8 @@ export type Database = {
           currency_code: string
           date: string
           description: string | null
+          destination_amount: number | null
+          destination_currency: string | null
           due_date: string | null
           fx_rate_to_ars: number | null
           id: string
@@ -633,6 +635,8 @@ export type Database = {
           currency_code: string
           date: string
           description?: string | null
+          destination_amount?: number | null
+          destination_currency?: string | null
           due_date?: string | null
           fx_rate_to_ars?: number | null
           id?: string
@@ -656,6 +660,8 @@ export type Database = {
           currency_code?: string
           date?: string
           description?: string | null
+          destination_amount?: number | null
+          destination_currency?: string | null
           due_date?: string | null
           fx_rate_to_ars?: number | null
           id?: string
@@ -731,7 +737,7 @@ export type Database = {
     }
     Enums: {
       account_type: "cash" | "bank" | "credit"
-      transaction_type: "income" | "expense" | "transfer" | "adjustment"
+      transaction_type: "income" | "expense" | "transfer" | "adjustment" | "exchange"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -860,7 +866,7 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["cash", "bank", "credit"],
-      transaction_type: ["income", "expense", "transfer", "adjustment"],
+      transaction_type: ["income", "expense", "transfer", "adjustment", "exchange"],
     },
   },
 } as const

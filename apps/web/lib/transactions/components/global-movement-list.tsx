@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   ArrowDownLeft,
   ArrowLeftRight,
+  Coins,
   CreditCard,
   Repeat,
   Scale,
@@ -22,6 +23,7 @@ const movementIcon = {
   transfer: ArrowLeftRight,
   adjustment: Scale,
   installment_purchase: CreditCard,
+  exchange: Coins,
 } satisfies Record<FinancialMovement['kind'], React.ComponentType<{ className?: string; size?: number }>>
 
 const movementTone = (movement: FinancialMovement) => {
@@ -74,6 +76,11 @@ export const GlobalMovementList = ({ movements, recurrenceLinkedIds }: Props) =>
       return movement.account_name
         ? t('list.card_payment_from', { accountName: movement.account_name })
         : t('card_payment_label')
+    }
+
+    if (movement.kind === 'exchange') {
+      // Source leg shows negative on the right; the received leg shows positive here.
+      return `+ ${formatAmount(movement.destination_amount, movement.destination_currency, showCents)}`
     }
 
     return movement.description ?? movement.account_name ?? null

@@ -31,6 +31,7 @@ export const MOVEMENT_TYPE_KEYS: ReadonlyArray<MovementTypeFilter> = [
   'expense',
   'card_payment',
   'transfer',
+  'exchange',
   'adjustment',
   'installment_purchase',
 ]

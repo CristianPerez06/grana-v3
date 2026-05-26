@@ -82,6 +82,14 @@ const detailRows = (
     ]
   }
 
+  if (movement.kind === 'exchange') {
+    return [
+      { label: t('labels.source_account'), value: movement.account_name },
+      { label: t('labels.destination_account'), value: movement.destination_account_name },
+      { label: t('labels.description'), value: movement.description },
+    ]
+  }
+
   return [
     { label: t('labels.account'), value: movement.account_name },
     { label: t('labels.category'), value: transaction.category?.name ?? null },
@@ -155,6 +163,27 @@ export const GlobalTransactionDetail = ({
               <dd className="text-right">{row.value}</dd>
             </div>
           ))}
+
+        {movement.kind === 'exchange' && (
+          <>
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">{t('labels.exchange_received')}</dt>
+              <dd className="text-right text-green-600">
+                +{formatBalance(movement.destination_amount, movement.destination_currency, showCents)}
+              </dd>
+            </div>
+            {movement.destination_amount > 0 && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">{t('labels.fx_rate')}</dt>
+                {/* Derived display rate (cosmetic, not persisted). */}
+                <dd className="text-right">
+                  1 {movement.destination_currency} ={' '}
+                  {formatBalance(movement.amount / movement.destination_amount, movement.currency_code, showCents)}
+                </dd>
+              </div>
+            )}
+          </>
+        )}
 
         {transaction.status && (
           <div className="flex justify-between gap-4">

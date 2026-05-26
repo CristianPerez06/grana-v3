@@ -8,7 +8,10 @@ export type BalanceTransactionRow = {
   transfer_destination_account_id: string | null
   currency_code: string
   amount: number | string
-  type: 'income' | 'expense' | 'transfer' | 'adjustment'
+  type: 'income' | 'expense' | 'transfer' | 'adjustment' | 'exchange'
+  /** Destination leg of an exchange (currency conversion). Only set for type='exchange'. */
+  destination_amount?: number | string | null
+  destination_currency?: string | null
 }
 
 function emptyBuckets(): BalanceBuckets {
@@ -63,6 +66,26 @@ export function calculateTransactionSums(
         ensure(row.transfer_destination_account_id)[currency] = Money.add(
           ensure(row.transfer_destination_account_id)[currency],
           amount,
+        )
+      }
+    } else if (row.type === 'exchange') {
+      // Currency conversion: subtract `amount` in `currency_code` from the source
+      // account, add `destination_amount` in `destination_currency` to the dest
+      // account (which may be the same account, a different currency bucket).
+      if (accountIdSet.has(row.account_id)) {
+        ensure(row.account_id)[currency] = Money.subtract(ensure(row.account_id)[currency], amount)
+      }
+      if (
+        row.transfer_destination_account_id &&
+        accountIdSet.has(row.transfer_destination_account_id) &&
+        row.destination_currency &&
+        isBalanceCurrency(row.destination_currency) &&
+        row.destination_amount != null
+      ) {
+        const destCurrency = row.destination_currency
+        ensure(row.transfer_destination_account_id)[destCurrency] = Money.add(
+          ensure(row.transfer_destination_account_id)[destCurrency],
+          Money.from(row.destination_amount),
         )
       }
     } else if (row.type === 'adjustment') {

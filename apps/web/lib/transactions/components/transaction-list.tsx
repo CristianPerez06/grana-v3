@@ -8,6 +8,8 @@ type RowMeta = {
   sign: '+' | '-'
   colorClass: string
   amount: number
+  /** Override the displayed currency (for an exchange seen from the destination account). */
+  currency?: 'ARS' | 'USD'
 }
 
 type Translator = (key: string, params?: Record<string, string | number>) => string
@@ -64,6 +66,30 @@ function getRowMeta(
       sign: isOutgoing ? '-' : '+',
       colorClass: isOutgoing ? 'text-foreground' : 'text-green-600',
       amount: absAmount,
+    }
+  }
+
+  if (tx.type === 'exchange') {
+    const isSource = tx.account_id === currentAccountId
+    if (isSource) {
+      // Money leaves this account (source leg). Intra-account exchanges land here too.
+      return {
+        label: t('types.exchange'),
+        secondaryLabel: tx.destination_account?.name ? `→ ${tx.destination_account.name}` : null,
+        sign: '-',
+        colorClass: 'text-foreground',
+        amount: absAmount,
+        currency: tx.currency_code,
+      }
+    }
+    // This account is the destination → money enters (received leg).
+    return {
+      label: t('types.exchange'),
+      secondaryLabel: tx.source_account?.name ? `← ${tx.source_account.name}` : null,
+      sign: '+',
+      colorClass: 'text-green-600',
+      amount: tx.destination_amount ?? 0,
+      currency: (tx.destination_currency ?? tx.currency_code) as 'ARS' | 'USD',
     }
   }
 
@@ -151,11 +177,11 @@ export const TransactionList = async ({ transactions, accountId }: Props) => {
                       {meta.sign}
                       {new Intl.NumberFormat(localeCode, {
                         style: 'currency',
-                        currency: tx.currency_code,
+                        currency: meta.currency ?? tx.currency_code,
                         minimumFractionDigits: 2,
                       }).format(meta.amount)}
                     </span>
-                    <span className="text-xs text-muted-foreground">{tx.currency_code}</span>
+                    <span className="text-xs text-muted-foreground">{meta.currency ?? tx.currency_code}</span>
                   </div>
                 </Link>
               )

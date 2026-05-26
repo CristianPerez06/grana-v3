@@ -43,6 +43,8 @@ export {
   createAdjustmentSchema,
   updateTransferSchema,
   updateAdjustmentSchema,
+  createExchangeSchema,
+  updateExchangeSchema,
   type CreateIncomeInput,
   type CreateExpenseInput,
   type UpdateTransactionInput,
@@ -50,6 +52,8 @@ export {
   type CreateAdjustmentInput,
   type UpdateTransferInput,
   type UpdateAdjustmentInput,
+  type CreateExchangeInput,
+  type UpdateExchangeInput,
 } from "./transactions";
 export {
   createIncomeRecurrenceSchema,

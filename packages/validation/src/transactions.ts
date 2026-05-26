@@ -108,6 +108,42 @@ export const updateAdjustmentSchema = yup
   })
   .strict()
 
+// Exchange = currency conversion. Source and destination accounts MAY be the
+// same (intra-account), so there is no "different accounts" test; the currencies
+// MUST differ.
+export const createExchangeSchema = yup
+  .object({
+    account_id: yup.string().label('account_id').uuid().required(),
+    currency_code: yup.string().label('currency_code').required().oneOf(SUPPORTED_CURRENCIES),
+    amount: yup.number().label('amount').required().positive(),
+    transfer_destination_account_id: yup
+      .string()
+      .label('transfer_destination_account_id')
+      .uuid()
+      .required(),
+    destination_currency: yup
+      .string()
+      .label('destination_currency')
+      .required()
+      .oneOf(SUPPORTED_CURRENCIES)
+      .test('different-currency', 'destination_currency_same_as_source', function (value) {
+        return value !== this.parent.currency_code
+      }),
+    destination_amount: yup.number().label('destination_amount').required().positive(),
+    date: yup.string().label('date').required(),
+    description: yup.string().label('description').optional(),
+  })
+  .strict()
+
+export const updateExchangeSchema = yup
+  .object({
+    amount: yup.number().label('amount').positive().optional(),
+    destination_amount: yup.number().label('destination_amount').positive().optional(),
+    date: yup.string().label('date').optional(),
+    description: yup.string().label('description').nullable().optional(),
+  })
+  .strict()
+
 export type CreateIncomeInput = yup.InferType<typeof createIncomeSchema>
 export type CreateExpenseInput = yup.InferType<typeof createExpenseSchema>
 export type UpdateTransactionInput = yup.InferType<typeof updateTransactionSchema>
@@ -115,3 +151,5 @@ export type CreateTransferInput = yup.InferType<typeof createTransferSchema>
 export type CreateAdjustmentInput = yup.InferType<typeof createAdjustmentSchema>
 export type UpdateTransferInput = yup.InferType<typeof updateTransferSchema>
 export type UpdateAdjustmentInput = yup.InferType<typeof updateAdjustmentSchema>
+export type CreateExchangeInput = yup.InferType<typeof createExchangeSchema>
+export type UpdateExchangeInput = yup.InferType<typeof updateExchangeSchema>

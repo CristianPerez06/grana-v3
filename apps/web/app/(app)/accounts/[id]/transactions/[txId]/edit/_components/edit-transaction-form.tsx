@@ -38,6 +38,7 @@ export const EditTransactionForm = ({
     expense: t('types.expense'),
     transfer: t('types.transfer'),
     adjustment: t('types.adjustment'),
+    exchange: t('types.exchange'),
   }
   const router = useRouter()
   const [isPending, startTransition] = useTransition()

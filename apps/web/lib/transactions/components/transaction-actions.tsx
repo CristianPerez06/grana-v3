@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import type { TransactionWithDetails } from '@/lib/transactions/types'
-import { deleteTransaction, deleteTransfer, deleteAdjustment } from '@/app/_actions/transactions'
+import { deleteTransaction, deleteTransfer, deleteAdjustment, deleteExchange } from '@/app/_actions/transactions'
 import { deleteInstallmentParent } from '@/app/_actions/credit-cards'
 
 type Props = {
@@ -58,6 +58,12 @@ export const TransactionActions = ({ transaction, accountId, returnHref, editHre
         )
       } else if (type === 'adjustment') {
         result = await deleteAdjustment(transaction.id, accountId)
+      } else if (type === 'exchange' && transaction.transfer_destination_account_id) {
+        result = await deleteExchange(
+          transaction.id,
+          accountId,
+          transaction.transfer_destination_account_id,
+        )
       } else {
         result = await deleteTransaction(transaction.id, accountId)
       }

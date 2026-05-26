@@ -10,6 +10,8 @@ import {
   createAdjustmentSchema,
   updateTransferSchema,
   updateAdjustmentSchema,
+  createExchangeSchema,
+  updateExchangeSchema,
   normalizeMoneyAmount,
   validateActionInput,
   type CreateIncomeInput,
@@ -19,6 +21,8 @@ import {
   type CreateAdjustmentInput,
   type UpdateTransferInput,
   type UpdateAdjustmentInput,
+  type CreateExchangeInput,
+  type UpdateExchangeInput,
 } from '@grana/validation'
 import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
@@ -464,5 +468,132 @@ export async function deleteAdjustment(
 
   revalidatePath('/accounts')
   revalidatePath(`/accounts/${accountId}`)
+  return { ok: true }
+}
+
+// ── createExchange ────────────────────────────────────────────────────────────
+
+export async function createExchange(
+  input: unknown,
+): Promise<ActionResult<CreateExchangeInput> & { id?: string }> {
+  const validation = await validateActionInput(createExchangeSchema, input)
+  if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
+
+  const userId = await getAuthenticatedUserId()
+  const supabase = await createClient()
+
+  const [sourceActive, destActive] = await Promise.all([
+    verifyActiveCurrency(supabase, validation.data.account_id, validation.data.currency_code),
+    verifyActiveCurrency(
+      supabase,
+      validation.data.transfer_destination_account_id,
+      validation.data.destination_currency,
+    ),
+  ])
+
+  if (!sourceActive) {
+    return { ok: false, formError: 'La moneda de origen no está activa en la cuenta de origen.' }
+  }
+  if (!destActive) {
+    return { ok: false, formError: 'La moneda de destino no está activa en la cuenta de destino.' }
+  }
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .insert({
+      user_id: userId,
+      account_id: validation.data.account_id,
+      transfer_destination_account_id: validation.data.transfer_destination_account_id,
+      type: 'exchange',
+      amount: normalizeActionMoney(validation.data.amount),
+      currency_code: validation.data.currency_code,
+      destination_amount: normalizeActionMoney(validation.data.destination_amount),
+      destination_currency: validation.data.destination_currency,
+      date: validation.data.date,
+      description: validation.data.description ?? null,
+    })
+    .select('id')
+    .single()
+
+  if (error || !data) {
+    return { ok: false, formError: error?.message ?? 'No se pudo registrar el cambio de moneda.' }
+  }
+
+  revalidatePath('/accounts')
+  revalidatePath(`/accounts/${validation.data.account_id}`)
+  revalidatePath(`/accounts/${validation.data.transfer_destination_account_id}`)
+  revalidatePath('/transactions')
+  return { ok: true, id: data.id }
+}
+
+// ── updateExchange ────────────────────────────────────────────────────────────
+
+export async function updateExchange(
+  id: string,
+  accountId: string,
+  destinationAccountId: string,
+  input: unknown,
+): Promise<ActionResult<UpdateExchangeInput>> {
+  const validation = await validateActionInput(updateExchangeSchema, input)
+  if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
+
+  const userId = await getAuthenticatedUserId()
+  const supabase = await createClient()
+
+  const { data: existing } = await supabase
+    .from('transactions')
+    .select('id, type')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .eq('type', 'exchange')
+    .single()
+
+  if (!existing) return { ok: false, formError: 'Cambio de moneda no encontrado.' }
+
+  const { error } = await supabase
+    .from('transactions')
+    .update({
+      ...(validation.data.amount !== undefined && { amount: normalizeActionMoney(validation.data.amount) }),
+      ...(validation.data.destination_amount !== undefined && {
+        destination_amount: normalizeActionMoney(validation.data.destination_amount),
+      }),
+      ...(validation.data.date !== undefined && { date: validation.data.date }),
+      ...('description' in validation.data && { description: validation.data.description ?? null }),
+    })
+    .eq('id', id)
+    .eq('user_id', userId)
+
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
+
+  revalidatePath('/accounts')
+  revalidatePath(`/accounts/${accountId}`)
+  revalidatePath(`/accounts/${destinationAccountId}`)
+  revalidatePath(`/accounts/${accountId}/transactions/${id}`)
+  revalidatePath('/transactions')
+  return { ok: true }
+}
+
+// ── deleteExchange ────────────────────────────────────────────────────────────
+
+export async function deleteExchange(
+  id: string,
+  accountId: string,
+  destinationAccountId: string,
+): Promise<ActionResult<never>> {
+  const userId = await getAuthenticatedUserId()
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('transactions')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId)
+
+  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
+
+  revalidatePath('/accounts')
+  revalidatePath(`/accounts/${accountId}`)
+  revalidatePath(`/accounts/${destinationAccountId}`)
+  revalidatePath('/transactions')
   return { ok: true }
 }

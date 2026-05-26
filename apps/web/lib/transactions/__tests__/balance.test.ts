@@ -42,6 +42,58 @@ describe('calculateTransactionSums', () => {
 
     expect(calculateTransactionSums(rows, ['account-a']).get('account-a')?.USD).toBe(-0.3)
   })
+
+  it('exchange moves value across currencies between two accounts', () => {
+    const rows: BalanceTransactionRow[] = [
+      tx({
+        account_id: 'galicia',
+        transfer_destination_account_id: 'caja',
+        currency_code: 'ARS',
+        amount: '150000',
+        type: 'exchange',
+        destination_currency: 'USD',
+        destination_amount: '100',
+      }),
+    ]
+
+    const result = calculateTransactionSums(rows, ['galicia', 'caja'])
+
+    expect(result.get('galicia')?.ARS).toBe(-150000)
+    expect(result.get('galicia')?.USD).toBe(0)
+    expect(result.get('caja')?.USD).toBe(100)
+    expect(result.get('caja')?.ARS).toBe(0)
+  })
+
+  it('exchange within the same account moves between its currency buckets', () => {
+    const rows: BalanceTransactionRow[] = [
+      tx({
+        account_id: 'billetera',
+        transfer_destination_account_id: 'billetera',
+        currency_code: 'ARS',
+        amount: '150000',
+        type: 'exchange',
+        destination_currency: 'USD',
+        destination_amount: '100',
+      }),
+    ]
+
+    const result = calculateTransactionSums(rows, ['billetera'])
+
+    expect(result.get('billetera')?.ARS).toBe(-150000)
+    expect(result.get('billetera')?.USD).toBe(100)
+  })
+
+  it('exchange uses decimal money math on both legs', () => {
+    const rows: BalanceTransactionRow[] = [
+      tx({ account_id: 'a', transfer_destination_account_id: 'b', currency_code: 'ARS', amount: '0.30', type: 'exchange', destination_currency: 'USD', destination_amount: '0.10' }),
+      tx({ account_id: 'a', transfer_destination_account_id: 'b', currency_code: 'ARS', amount: '0.30', type: 'exchange', destination_currency: 'USD', destination_amount: '0.20' }),
+    ]
+
+    const result = calculateTransactionSums(rows, ['a', 'b'])
+
+    expect(result.get('a')?.ARS).toBe(-0.6)
+    expect(result.get('b')?.USD).toBe(0.3)
+  })
 })
 
 function tx(overrides: Partial<BalanceTransactionRow>): BalanceTransactionRow {
