@@ -596,7 +596,8 @@
     "installment_recalc_hint": "Changing the amount recalculates the {count} installments (the rest goes into the first one).",
     "card_payment_label": "Card payment",
     "category_suggestion": {
-      "chip": "{category}? · you used it last time"
+      "chip": "{category}? · you used it last time",
+      "hint": "Next time you log \"{description}\" we'll suggest \"{category}\"."
     },
     "tabs": {
       "income": "Income",
