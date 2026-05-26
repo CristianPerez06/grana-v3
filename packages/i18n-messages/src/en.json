@@ -114,12 +114,6 @@
       "empty": "No transactions this month.",
       "error": "We couldn't load this month's balance."
     },
-    "cards": {
-      "title": "Cards",
-      "empty_title": "You haven't added any cards yet",
-      "empty_cta": "Add card",
-      "error": "We couldn't load your cards."
-    },
     "hero_error": "We couldn't load your available balance.",
     "welcome_card": {
       "title": "Record your first transaction",

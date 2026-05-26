@@ -5,10 +5,8 @@ import {
   getUpcomingFortnight,
   hasUserMovements,
 } from '@grana/dashboard'
-import { getCreditCards } from '@/lib/cards/queries'
 import { createClient } from '@/lib/supabase/server'
 import { formatDateISO, getTodayAR } from '@/lib/date'
-import { CardsSection } from './_components/cards-section'
 import { DashboardHeader } from './_components/dashboard-header'
 import { EyeMaskProvider } from './_components/eye-mask-context'
 import { HeroSection } from './_components/hero-section'
@@ -61,12 +59,11 @@ const DashboardPage = async ({ searchParams }: { searchParams: SearchParams }) =
     data: { user },
   } = await supabase.auth.getUser()
 
-  const [heroResult, upcomingResult, monthResult, cardsResult, hasMovementsResult, profileResult] =
+  const [heroResult, upcomingResult, monthResult, hasMovementsResult, profileResult] =
     await Promise.allSettled([
       getDashboardHero(supabase),
       getUpcomingFortnight(supabase, today),
       getMonthBalanceSeries(supabase, year, month),
-      getCreditCards(),
       hasUserMovements(supabase),
       user
         ? supabase.from('profiles').select('full_name').eq('id', user.id).single()
@@ -122,13 +119,6 @@ const DashboardPage = async ({ searchParams }: { searchParams: SearchParams }) =
             )}
           </div>
         </div>
-
-        {/* TODO(part 3): Tarjetas se quita del dashboard; vive solo en /cards. */}
-        {cardsResult.status === 'fulfilled' ? (
-          <CardsSection cards={cardsResult.value} />
-        ) : (
-          <SectionFallback message={t('cards.error')} />
-        )}
       </div>
     </EyeMaskProvider>
   )

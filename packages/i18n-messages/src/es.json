@@ -114,12 +114,6 @@
       "empty": "Sin movimientos este mes.",
       "error": "No pudimos cargar el balance del mes."
     },
-    "cards": {
-      "title": "Tarjetas",
-      "empty_title": "Todavía no agregaste ninguna tarjeta",
-      "empty_cta": "Agregar tarjeta",
-      "error": "No pudimos cargar las tarjetas."
-    },
     "hero_error": "No pudimos cargar tu disponible.",
     "welcome_card": {
       "title": "Cargá tu primer movimiento",

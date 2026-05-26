@@ -14,9 +14,9 @@
 
 ## 3. Quitar la sección Tarjetas del dashboard (dashboard, web + datos)
 
-- [ ] 3.1 Remover `CardsSection` / `CreditCardCarousel` de la pantalla `(app)/dashboard` web (quedan 3 secciones: Hero, Lo que viene, Balance del mes).
-- [ ] 3.2 Dejar de disparar `getCreditCards` en la carga del dashboard (en `@grana/dashboard` y/o en la page); la query sigue existiendo para `/cards`.
-- [ ] 3.3 Confirmar que `/cards` (web) sigue mostrando el carrusel/listado de resúmenes sin cambios funcionales.
+- [x] 3.1 Remover `CardsSection` / `CreditCardCarousel` de la pantalla `(app)/dashboard` web (quedan 3 secciones: Hero, Lo que viene, Balance del mes). → se borró el componente muerto `cards-section.tsx`; `CreditCardCarousel` sigue para `/cards`.
+- [x] 3.2 Dejar de disparar `getCreditCards` en la carga del dashboard (en `@grana/dashboard` y/o en la page); la query sigue existiendo para `/cards`. → se quitó del `Promise.allSettled` de la page; `getCreditCards` queda solo en `/cards` y `accounts/queries`.
+- [x] 3.3 Confirmar que `/cards` (web) sigue mostrando el carrusel/listado de resúmenes sin cambios funcionales. → `/cards` no se tocó (importa `getCreditCards` + `CreditCardCarousel` aparte, usa el namespace i18n `cards`).
 
 ## 4. Dashboard mobile + nativo (dashboard, mobile)
 
