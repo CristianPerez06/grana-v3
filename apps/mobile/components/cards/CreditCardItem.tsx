@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router'
 import { Money } from '@grana/validation'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import type { CreditCardSummary } from '../../lib/cards/queries'
-import { useEyeMask } from './EyeMaskContext'
+import { useEyeMask } from '../dashboard/EyeMaskContext'
 import { useShowCents } from '../../lib/preferences-context'
 
 type Props = {

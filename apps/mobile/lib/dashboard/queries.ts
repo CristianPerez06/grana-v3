@@ -6,7 +6,6 @@ import {
   hasUserMovements,
 } from '@grana/dashboard'
 import { supabase } from '../supabase'
-import { getCreditCards } from '../cards/queries'
 
 const ymdKey = (date: Date) => date.toISOString().slice(0, 10)
 
@@ -31,10 +30,22 @@ export function useMonthBalanceSeries(year: number, month: number) {
   })
 }
 
-export function useDashboardCards() {
+export function useProfileFirstName() {
   return useQuery({
-    queryKey: ['dashboard', 'cards'] as const,
-    queryFn: () => getCreditCards(),
+    queryKey: ['dashboard', 'profile-first-name'] as const,
+    queryFn: async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return ''
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+      const fullName = (data?.full_name as string | undefined) ?? ''
+      return fullName.split(' ')[0] ?? ''
+    },
   })
 }
 

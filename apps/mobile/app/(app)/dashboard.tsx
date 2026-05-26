@@ -4,16 +4,15 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { colors } from '../../lib/colors'
-import { getTodayAR } from '../../lib/date'
+import { formatDateISO, getTodayAR } from '../../lib/date'
 import { useT } from '../../lib/locale-context'
 import {
-  useDashboardCards,
   useDashboardHero,
   useHasMovements,
   useMonthBalanceSeries,
+  useProfileFirstName,
   useUpcomingFortnight,
 } from '../../lib/dashboard/queries'
-import { CardsSection } from '../../components/dashboard/CardsSection'
 import { DashboardHeader } from '../../components/dashboard/DashboardHeader'
 import { EyeMaskProvider } from '../../components/dashboard/EyeMaskContext'
 import { HeroSection } from '../../components/dashboard/HeroSection'
@@ -61,14 +60,13 @@ export default function DashboardScreen() {
   const hero = useDashboardHero()
   const upcoming = useUpcomingFortnight(today)
   const monthSeries = useMonthBalanceSeries(year, month)
-  const cards = useDashboardCards()
   const movements = useHasMovements()
+  const profileFirstName = useProfileFirstName()
 
   const isRefetching =
     hero.isFetching ||
     upcoming.isFetching ||
     monthSeries.isFetching ||
-    cards.isFetching ||
     movements.isFetching
 
   const onRefresh = useCallback(() => {
@@ -92,7 +90,6 @@ export default function DashboardScreen() {
     hero.isPending &&
     upcoming.isPending &&
     monthSeries.isPending &&
-    cards.isPending &&
     movements.isPending
 
   if (initialLoading) {
@@ -108,7 +105,10 @@ export default function DashboardScreen() {
   return (
     <EyeMaskProvider key={eyeMaskKey}>
       <View className="flex-1 bg-background">
-        <DashboardHeader />
+        <DashboardHeader
+          name={profileFirstName.data ?? ''}
+          todayISO={formatDateISO(today)}
+        />
         <ScrollView
           contentContainerClassName="px-6 py-6"
           refreshControl={
@@ -144,12 +144,6 @@ export default function DashboardScreen() {
               />
             ) : monthSeries.error ? (
               <SectionFallback message={t('dashboard.month.error')} />
-            ) : null}
-
-            {cards.data ? (
-              <CardsSection cards={cards.data} />
-            ) : cards.error ? (
-              <SectionFallback message={t('dashboard.cards.error')} />
             ) : null}
           </View>
         </ScrollView>
