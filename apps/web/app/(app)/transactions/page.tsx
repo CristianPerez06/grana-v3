@@ -1,9 +1,12 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
+import { createClient } from '@/lib/supabase/server'
+import { getTodayAR, formatDateISO } from '@/lib/date'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
 import { MovementFilters } from '@/lib/transactions/components/movement-filters'
-import { GlobalMovementList } from '@/lib/transactions/components/global-movement-list'
+import { MovementList } from '@/lib/transactions/components/movement-list'
 import {
   buildMovementLimitHref,
   parseMovementFilters,
@@ -27,6 +30,16 @@ type Props = {
 }
 
 const TransactionsPage = async ({ searchParams }: Props) => {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('mode')
+    .eq('id', user.id)
+    .single()
+  const showAccount = profile?.mode === 'experto'
+
   const resolvedSearchParams = await searchParams
   const filters = parseMovementFilters(resolvedSearchParams)
   const limit = parseMovementLimit(resolvedSearchParams)
@@ -92,8 +105,11 @@ const TransactionsPage = async ({ searchParams }: Props) => {
         categories={filterOptions.categories}
       />
 
-      <GlobalMovementList
+      <MovementList
         movements={movementsPage.movements}
+        perspective={{ kind: 'global' }}
+        todayISO={formatDateISO(getTodayAR())}
+        showAccount={showAccount}
         recurrenceLinkedIds={recurrenceLinkedIds}
       />
 

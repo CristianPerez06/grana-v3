@@ -1,3 +1,4 @@
+import type { MovementViewInput } from '@grana/money-logic'
 import type { TransactionWithDetails } from './types'
 
 export type MovementReviewFlag = 'missing_category' | 'missing_fx_rate'
@@ -11,6 +12,10 @@ type BaseMovement = {
   description: string | null
   account_id: string | null
   account_name: string | null
+  /** Category name/emoji/color for the row icon and subtitle (null when not categorized). */
+  category_name: string | null
+  category_icon: string | null
+  category_color: string | null
   detail_href: string | null
   review_flags: MovementReviewFlag[]
 }
@@ -110,6 +115,9 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
     description: tx.description,
     account_id: tx.account_id,
     account_name: tx.source_account?.name ?? null,
+    category_name: tx.category?.name ?? null,
+    category_icon: tx.category?.icon ?? null,
+    category_color: tx.category?.color ?? null,
     detail_href: detailHref(tx),
     review_flags: getReviewFlags(tx),
   }
@@ -184,3 +192,23 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
     sign: tx.amount >= 0 ? '+' : '-',
   }
 }
+
+/**
+ * Build the pure `resolveMovementView` input from a (already mapped)
+ * FinancialMovement. The neutral movement carries both ends; the resolver
+ * projects it onto a perspective. Keeps the perspective logic in money-logic.
+ */
+export const toMovementViewInput = (m: FinancialMovement): MovementViewInput => ({
+  kind: m.kind,
+  accountId: m.account_id,
+  accountName: m.account_name,
+  destinationAccountId:
+    m.kind === 'transfer' || m.kind === 'exchange' ? m.destination_account_id : null,
+  destinationAccountName:
+    m.kind === 'transfer' || m.kind === 'exchange' ? m.destination_account_name : null,
+  amount: m.amount,
+  currencyCode: m.currency_code,
+  destinationAmount: m.kind === 'exchange' ? m.destination_amount : null,
+  destinationCurrency: m.kind === 'exchange' ? m.destination_currency : null,
+  baseSign: m.sign,
+})

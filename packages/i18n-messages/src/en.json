@@ -783,6 +783,8 @@
     },
     "list": {
       "global_empty_description": "When you record income, expenses, transfers, or purchases, they'll appear here.",
+      "today": "Today",
+      "yesterday": "Yesterday",
       "review_short": "Review",
       "transfer_subtitle_unknown_source": "Source account",
       "transfer_subtitle_unknown_destination": "Destination account",

@@ -264,73 +264,7 @@ function parseISODay(iso: string): number {
   return Number(iso.split('-')[2])
 }
 
-// TODO(@grana/transactions): duplicación temporal — calculateTransactionSums
-// vive también en apps/web/lib/transactions/balance.ts. Cuando se prometa
-// transactions a un package compartido, esta copia se borra y se importa
-// desde ahí. Mantener firma sincronizada hasta entonces.
-type BalanceCurrency = 'ARS' | 'USD'
-
-export type BalanceTransactionRow = {
-  account_id: string | null
-  transfer_destination_account_id: string | null
-  currency_code: string
-  amount: number | string
-  type: 'income' | 'expense' | 'transfer' | 'adjustment'
-}
-
-function isBalanceCurrency(currency: string): currency is BalanceCurrency {
-  return currency === 'ARS' || currency === 'USD'
-}
-
-export function calculateTransactionSums(
-  rows: BalanceTransactionRow[],
-  accountIds: string[],
-): Map<string, Record<BalanceCurrency, number>> {
-  type Buckets = Record<BalanceCurrency, Money>
-  const emptyBuckets = (): Buckets => ({ ARS: Money.from(0), USD: Money.from(0) })
-  const accountIdSet = new Set(accountIds)
-  const result = new Map<string, Buckets>()
-
-  const ensure = (id: string) => {
-    if (!result.has(id)) result.set(id, emptyBuckets())
-    return result.get(id)!
-  }
-
-  for (const row of rows) {
-    if (!isBalanceCurrency(row.currency_code) || !row.account_id) continue
-
-    const currency = row.currency_code
-    const amount = Money.from(row.amount)
-
-    if (row.type === 'income') {
-      ensure(row.account_id)[currency] = Money.add(ensure(row.account_id)[currency], amount)
-    } else if (row.type === 'expense') {
-      ensure(row.account_id)[currency] = Money.subtract(ensure(row.account_id)[currency], amount)
-    } else if (row.type === 'transfer') {
-      if (accountIdSet.has(row.account_id)) {
-        ensure(row.account_id)[currency] = Money.subtract(ensure(row.account_id)[currency], amount)
-      }
-      if (
-        row.transfer_destination_account_id &&
-        accountIdSet.has(row.transfer_destination_account_id)
-      ) {
-        ensure(row.transfer_destination_account_id)[currency] = Money.add(
-          ensure(row.transfer_destination_account_id)[currency],
-          amount,
-        )
-      }
-    } else if (row.type === 'adjustment') {
-      ensure(row.account_id)[currency] = Money.add(ensure(row.account_id)[currency], amount)
-    }
-  }
-
-  return new Map(
-    [...result.entries()].map(([accountId, balances]) => [
-      accountId,
-      {
-        ARS: Money.toNumber(balances.ARS),
-        USD: Money.toNumber(balances.USD),
-      },
-    ]),
-  )
-}
+// `calculateTransactionSums` y su tipo viven en @grana/money-logic (fuente
+// única, reutilizable por web y mobile). Se re-exportan acá para no romper a
+// los consumidores que los importan vía `@grana/dashboard`.
+export { calculateTransactionSums, type BalanceTransactionRow } from '@grana/money-logic'

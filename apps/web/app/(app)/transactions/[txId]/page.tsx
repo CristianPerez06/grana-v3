@@ -10,10 +10,12 @@ import { GlobalTransactionDetail } from './_components/global-transaction-detail
 
 type Props = {
   params: Promise<{ txId: string }>
+  searchParams: Promise<{ from?: string }>
 }
 
-const GlobalTransactionDetailPage = async ({ params }: Props) => {
+const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
   const { txId } = await params
+  const { from } = await searchParams
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -22,8 +24,19 @@ const GlobalTransactionDetailPage = async ({ params }: Props) => {
   const transaction = await getTransactionDetail(txId)
   if (!transaction) notFound()
 
+  // "Volver" respeta el origen: from=account:<id> regresa a la cuenta; si no, a Movimientos.
+  const fromAccountId = from?.startsWith('account:') ? from.slice('account:'.length) : null
+  const backHref = fromAccountId ? `/accounts/${fromAccountId}` : '/transactions'
+
   const t = await getTranslations('transactions')
   const tRec = await getTranslations('recurrences')
+
+  const backLabel =
+    fromAccountId && transaction.source_account?.id === fromAccountId
+      ? transaction.source_account.name
+      : fromAccountId && transaction.destination_account?.id === fromAccountId
+        ? (transaction.destination_account?.name ?? t('back_label'))
+        : t('back_label')
 
   const getFrequencyLowerLabel = (freq: string) => {
     if (freq === 'weekly' || freq === 'biweekly' || freq === 'monthly' || freq === 'annual') {
@@ -46,10 +59,10 @@ const GlobalTransactionDetailPage = async ({ params }: Props) => {
     <div className="flex flex-col gap-8 max-w-lg">
       <div className="flex items-center gap-3">
         <Link
-          href="/transactions"
+          href={backHref}
           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          ← {t('back_label')}
+          ← {backLabel}
         </Link>
       </div>
 

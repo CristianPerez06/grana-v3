@@ -229,6 +229,9 @@ importers:
 
   packages/dashboard:
     dependencies:
+      '@grana/money-logic':
+        specifier: workspace:*
+        version: link:../money-logic
       '@grana/supabase':
         specifier: workspace:*
         version: link:../supabase
