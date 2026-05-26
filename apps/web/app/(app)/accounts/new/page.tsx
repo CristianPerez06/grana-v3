@@ -10,6 +10,15 @@ const NewAccountPage = async () => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Novato can't create accounts (UI-only gating; see accounts spec). Guards
+  // direct navigation to this route — the button is also hidden in the list.
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('mode')
+    .eq('id', user.id)
+    .single()
+  if (profile?.mode === 'novato') redirect('/accounts')
+
   const t = await getTranslations('accounts')
   const institutions = await getInstitutions()
 
