@@ -127,7 +127,7 @@ pnpm --filter mobile exec node -e "const c = require('./app.json'); console.log(
 
 Tiene que imprimir un objeto con tu username de Expo y un UUID. Si alguno es `undefined`, repetir `eas init`.
 
-El cambio en `app.json` va a un branch `feature/eas-bootstrap` (o similar — sigue las convenciones de branching del repo raíz) y se mergea con `--ff-only` siguiendo la convención del proyecto.
+El cambio en `app.json` va a un branch `feature/eas-bootstrap` (o similar — sigue las convenciones de branching del repo raíz) y se mergea con `--no-ff` siguiendo la convención del proyecto.
 
 ---
 

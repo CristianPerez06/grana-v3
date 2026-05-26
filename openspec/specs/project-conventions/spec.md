@@ -2,8 +2,7 @@
 
 ## Purpose
 
-Spec meta del proyecto: agrupa las convenciones transversales que aplican a todo el repo Grana V3 y que no pertenecen a ningún módulo de negocio en particular. Incluye el principio "el repo es la memoria del producto" (la app debe poder continuarse sin contexto de chat), el bilingüismo (documentación en español, código en inglés), las reglas de branching y merge `--ff-only` a `main`, el workflow obligatorio de OpenSpec (archive en la branch antes del merge, checklist post-archivado, `pnpm openspec:check` como gate) y la política web↔mobile de implementaciones paralelas con API idéntica.
-
+Spec meta del proyecto: agrupa las convenciones transversales que aplican a todo el repo Grana V3 y que no pertenecen a ningún módulo de negocio en particular. Incluye el principio "el repo es la memoria del producto" (la app debe poder continuarse sin contexto de chat), el bilingüismo (documentación en español, código en inglés), las reglas de branching y merge `--no-ff` a `main`, el workflow obligatorio de OpenSpec (archive en la branch antes del merge, checklist post-archivado, `pnpm openspec:check` como gate) y la política web↔mobile de implementaciones paralelas con API idéntica.
 ## Requirements
 ### Requirement: La V3 debe sostenerse desde el repo, no desde contexto de chat
 
@@ -173,45 +172,6 @@ El `CLAUDE.md` SHALL incluir, en su sección de branching, una cláusula que doc
 - **THEN** la sección de branching menciona los prefijos válidos
 - **AND** menciona explícitamente que el cuerpo del nombre no debe contener IDs random, hashes ni sufijos numéricos arbitrarios
 - **AND** incluye un ejemplo positivo y uno negativo
-
-### Requirement: Merge a main con un único commit y fast-forward
-
-Toda branch que se mergea a `main` SHALL contener exactamente un commit por encima de `main` al momento del merge. El merge SHALL ejecutarse con `git merge --ff-only` (nunca `--no-ff` ni `--squash` en el comando de merge). Si `main` se movió mientras la branch estaba en progreso, el colaborador SHALL primero rebasear su branch sobre `main` (`git rebase main`) y después mergear con `--ff-only`. El resultado en `main` SHALL ser una historia lineal sin merge commits — un commit por feature/fix/chore.
-
-Esta regla aplica tanto a humanos como a LLMs colaborando autónomamente. La historia previa de `main` (los merge commits anteriores a la adopción de esta regla) NO se reescribe — la regla aplica de acá en adelante.
-
-#### Scenario: Branch con un solo commit + main no se movió
-
-- **WHEN** un colaborador termina una branch que tiene 1 commit por encima de `main` y `main` no se movió desde que la branch arrancó
-- **THEN** ejecuta `git checkout main && git merge --ff-only <branch>`
-- **AND** el merge se aplica como fast-forward sin generar merge commit
-- **AND** `main` ahora apunta al commit de la feature
-
-#### Scenario: Branch con múltiples commits se squashea antes del merge
-
-- **WHEN** un colaborador termina una branch que tiene N commits por encima de `main` (con N > 1)
-- **THEN** antes de mergear, squashea los N commits en uno solo localmente (vía `git rebase -i` con fixups, o `git reset --soft main && git commit`)
-- **AND** después ejecuta `git merge --ff-only <branch>` desde `main`
-- **AND** `main` recibe un único commit nuevo, sin merge commit
-
-#### Scenario: main se movió mientras la branch estaba en progreso
-
-- **WHEN** un colaborador termina su branch y descubre que `main` avanzó mientras tanto (la branch ya no está fast-forwardable directamente)
-- **THEN** primero rebasea su branch sobre `main` (`git checkout <branch> && git rebase main`), resolviendo conflictos si los hay
-- **AND** después squashea a 1 commit (si hay más de 1)
-- **AND** después ejecuta `git merge --ff-only <branch>` desde `main`
-
-#### Scenario: Intento de merge sin --ff-only es violación
-
-- **WHEN** un colaborador intenta mergear con `git merge <branch>` (sin `--ff-only`) o `git merge --no-ff <branch>`
-- **THEN** la regla está violada
-- **AND** el reviewer (humano o el propio LLM al releer su comando) debe abortar y rehacer con `--ff-only`
-
-#### Scenario: LLM colaborando autónomamente respeta la regla
-
-- **WHEN** un LLM autónomo necesita mergear una branch que generó
-- **THEN** lee `CLAUDE.md` al inicio de la sesión y sigue el flow: squash si N > 1 → rebase si main se movió → `git merge --ff-only`
-- **AND** nunca usa `--no-ff` ni acepta merge commits automáticos
 
 ### Requirement: El repo está organizado como monorepo pnpm con apps/ y packages/
 
@@ -521,13 +481,13 @@ Este principio es complementario, no reemplazo, del principio "Bimoneda" listado
 
 ### Requirement: El archive de una change ocurre en la branch antes del merge a main
 
-Cuando una change implementada se considera completa, su archivado SHALL ocurrir como último commit de la branch de trabajo, **antes** del merge `--ff-only` a `main`. El archivado NO se difiere a un commit posterior ni a un PR separado.
+Cuando una change implementada se considera completa, su archivado SHALL ocurrir como último commit de la branch de trabajo, **antes** del merge `--no-ff` a `main`. El archivado NO se difiere a un commit posterior ni a un PR separado.
 
 Archivado significa: mover la carpeta de `openspec/changes/<name>/` a `openspec/changes/archive/YYYY-MM-DD-<name>/`, aplicar los deltas (`## ADDED Requirements`, `## MODIFIED Requirements`, `## REMOVED Requirements`, `## RENAMED Requirements`) al spec maestro de cada capability tocada en `openspec/specs/<capability>/spec.md`, completar el `Purpose` real del spec maestro reemplazando cualquier placeholder `TBD - created by archiving change ...`, y actualizar `CLAUDE.md` (secciones "Modules" y "Repo Layout") cuando corresponda.
 
 Esta regla sostiene tres invariantes del proyecto:
 
-- El merge a `main` SHALL ser atómico: en una sola commit aparecen el código, los specs maestros actualizados, los `Purpose` completados y los cambios consecuentes en `CLAUDE.md`.
+- El último commit de trabajo de la branch SHALL ser atómico: en una sola commit aparecen el código, los specs maestros actualizados, los `Purpose` completados y los cambios consecuentes en `CLAUDE.md`. Ese commit es el que luego entra a `main` bajo su merge commit `--no-ff`.
 - El estado de `main` SHALL cumplir que cada implementación tiene su spec maestro alineado.
 - Cualquier feedback de PR que requiera ajustar el spec MUST aplicarse en la misma branch sin abrir un segundo PR de "archive housekeeping".
 
@@ -536,8 +496,8 @@ El gate de validación SHALL ser el comando `pnpm openspec:check`, que falla si 
 #### Scenario: Branch lista para merge tiene la change archivada
 
 - **WHEN** un colaborador termina la implementación de una change y se prepara para mergear su branch a `main`
-- **THEN** la branch tiene como último commit el archivado de la change (mover carpeta + aplicar deltas al spec maestro + completar `Purpose` + actualizar `CLAUDE.md` Modules y Repo Layout si corresponde)
-- **AND** el merge a `main` se hace `--ff-only` sin commits adicionales
+- **THEN** la branch tiene como último commit de trabajo el archivado de la change (mover carpeta + aplicar deltas al spec maestro + completar `Purpose` + actualizar `CLAUDE.md` Modules y Repo Layout si corresponde)
+- **AND** el merge a `main` se hace `--no-ff`, generando el merge commit sobre ese único commit de trabajo
 
 #### Scenario: Merge a main rechazado si quedan TBD residuales
 
@@ -614,4 +574,43 @@ Esta regla NO aplica retroactivamente a rutas anteriores al change que introdujo
 - **WHEN** un colaborador crea una nueva pantalla `apps/mobile/app/(app)/<screen>.tsx` que invoca `useQuery({ ... })`
 - **THEN** el componente maneja `isPending` (renderizando `<Spinner size="lg" />`) y `error` (renderizando `<RouteError>`) antes de renderizar contenido
 - **AND** el PR no se mergea sin esa cobertura
+
+### Requirement: Merge a main con un único commit de trabajo y merge commit (--no-ff)
+
+Toda branch que se mergea a `main` SHALL contener exactamente un commit de trabajo por encima de `main` al momento del merge. El merge SHALL ejecutarse con `git merge --no-ff` (nunca `--ff-only`, nunca `--squash` en el comando de merge). `--no-ff` genera siempre un merge commit que agrupa la unidad de trabajo, marcando dónde empezó y terminó. Si `main` se movió mientras la branch estaba en progreso, el colaborador SHALL primero rebasear su branch sobre `main` (`git rebase main`) y después mergear con `--no-ff`. El resultado en `main` SHALL ser, por cada feature/fix/chore, un commit de trabajo más su merge commit. El mensaje del merge commit SHALL identificar la unidad de trabajo; un `Merge branch '...'` autogenerado que no la identifique NO es aceptable.
+
+Esta regla aplica tanto a humanos como a LLMs colaborando autónomamente. La historia previa de `main` (incluidos los merges fast-forward anteriores a la adopción de esta regla) NO se reescribe — la regla aplica de acá en adelante.
+
+#### Scenario: Branch con un solo commit + main no se movió
+
+- **WHEN** un colaborador termina una branch que tiene 1 commit por encima de `main` y `main` no se movió desde que la branch arrancó
+- **THEN** ejecuta `git checkout main && git merge --no-ff <branch>`
+- **AND** el merge genera un merge commit con mensaje que identifica la unidad de trabajo
+- **AND** `main` ahora contiene el commit de la feature más el merge commit
+
+#### Scenario: Branch con múltiples commits se squashea antes del merge
+
+- **WHEN** un colaborador termina una branch que tiene N commits por encima de `main` (con N > 1)
+- **THEN** antes de mergear, squashea los N commits en uno solo localmente (vía `git rebase -i` con fixups, o `git reset --soft main && git commit`)
+- **AND** después ejecuta `git merge --no-ff <branch>` desde `main`
+- **AND** `main` recibe el único commit de trabajo más un merge commit
+
+#### Scenario: main se movió mientras la branch estaba en progreso
+
+- **WHEN** un colaborador termina su branch y descubre que `main` avanzó mientras tanto
+- **THEN** primero rebasea su branch sobre `main` (`git checkout <branch> && git rebase main`), resolviendo conflictos si los hay
+- **AND** después squashea a 1 commit de trabajo (si hay más de 1)
+- **AND** después ejecuta `git merge --no-ff <branch>` desde `main`
+
+#### Scenario: Intento de merge con --ff-only o --squash es violación
+
+- **WHEN** un colaborador intenta mergear con `git merge --ff-only <branch>` o `git merge --squash <branch>`
+- **THEN** la regla está violada
+- **AND** el reviewer (humano o el propio LLM al releer su comando) debe abortar y rehacer con `--no-ff`
+
+#### Scenario: LLM colaborando autónomamente respeta la regla
+
+- **WHEN** un LLM autónomo necesita mergear una branch que generó
+- **THEN** lee `CLAUDE.md` al inicio de la sesión y sigue el flow: squash si N > 1 → rebase si main se movió → `git merge --no-ff` con mensaje descriptivo
+- **AND** nunca usa `--ff-only` ni `--squash` como comando de merge
 
