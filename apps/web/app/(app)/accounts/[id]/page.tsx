@@ -4,19 +4,27 @@ import { getTranslations } from 'next-intl/server'
 import { computeRunningBalances, type RunningBalanceRow } from '@grana/money-logic'
 import { createClient } from '@/lib/supabase/server'
 import { getAccountDetail } from '@/lib/accounts/queries'
-import { getAccountMovements } from '@/lib/transactions/queries'
+import { getAccountMovements, getMovementFilterOptions } from '@/lib/transactions/queries'
 import { toFinancialMovement } from '@/lib/transactions/movements'
+import {
+  hasContentFilters,
+  movementMatchesText,
+  parseMovementFilters,
+} from '@/lib/transactions/filters'
 import { MovementList } from '@/lib/transactions/components/movement-list'
+import { MovementFilters } from '@/lib/transactions/components/movement-filters'
 import { getRecurrenceLinkedTransactionIds } from '@/lib/recurrences/queries'
 import { getTodayAR, formatDateISO } from '@/lib/date'
 import { AccountDetailHeader } from './_components/account-detail-header'
 
 type Props = {
   params: Promise<{ id: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-const AccountDetailPage = async ({ params }: Props) => {
+const AccountDetailPage = async ({ params, searchParams }: Props) => {
   const { id } = await params
+  const filters = parseMovementFilters(await searchParams)
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -24,9 +32,10 @@ const AccountDetailPage = async ({ params }: Props) => {
 
   const t = await getTranslations('accounts')
 
-  const [account, movementsAsc] = await Promise.all([
+  const [account, movementsAsc, filterOptions] = await Promise.all([
     getAccountDetail(id),
     getAccountMovements(id),
+    getMovementFilterOptions(),
   ])
   if (!account) notFound()
   if (account.type === 'credit') redirect(`/cards/${id}`)
@@ -38,8 +47,22 @@ const AccountDetailPage = async ({ params }: Props) => {
   }
   const runningBalances = computeRunningBalances(movementsAsc as RunningBalanceRow[], id, initial)
 
-  // Display order is most-recent-first.
-  const movements = movementsAsc.map(toFinancialMovement).reverse()
+  // Display order is most-recent-first, then apply month + filters.
+  const allMovements = movementsAsc.map(toFinancialMovement).reverse()
+  const movements = allMovements.filter((m) => {
+    if (filters.from && m.date < filters.from) return false
+    if (filters.to && m.date > filters.to) return false
+    if (filters.type && m.kind !== filters.type) return false
+    if (filters.currency && m.currency_code !== filters.currency) return false
+    if (filters.categoryId && m.category_id !== filters.categoryId) return false
+    if (filters.amountMin != null && m.amount < filters.amountMin) return false
+    if (filters.amountMax != null && m.amount > filters.amountMax) return false
+    if (filters.query && !movementMatchesText(m, filters.query)) return false
+    return true
+  })
+
+  // Content filters skip rows → a running balance would mislead; month/currency don't.
+  const showRunningBalance = !hasContentFilters(filters)
   const recurrenceLinkedIds = await getRecurrenceLinkedTransactionIds(movements.map((m) => m.id))
 
   const inactiveCurrencies = account.currencies.filter((c) => !c.is_active)
@@ -60,7 +83,7 @@ const AccountDetailPage = async ({ params }: Props) => {
         </Link>
       </div>
 
-      <AccountDetailHeader account={account} hasTransactions={movements.length > 0} />
+      <AccountDetailHeader account={account} hasTransactions={allMovements.length > 0} />
 
       {canAddCurrency && (
         <Link
@@ -71,8 +94,8 @@ const AccountDetailPage = async ({ params }: Props) => {
         </Link>
       )}
 
-      <section>
-        <div className="mb-3 flex items-center justify-between">
+      <section className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
             {t('headers.movements')}
           </h2>
@@ -83,13 +106,22 @@ const AccountDetailPage = async ({ params }: Props) => {
             {`+ ${t('actions.add_transaction')}`}
           </Link>
         </div>
+
+        <MovementFilters
+          filters={filters}
+          accounts={filterOptions.accounts}
+          categories={filterOptions.categories}
+          isExpert={false}
+          showAccountFilter={false}
+        />
+
         <MovementList
           movements={movements}
           perspective={{ kind: 'account', accountId: account.id }}
           todayISO={formatDateISO(getTodayAR())}
           showAccount={false}
           recurrenceLinkedIds={recurrenceLinkedIds}
-          runningBalances={runningBalances}
+          runningBalances={showRunningBalance ? runningBalances : null}
         />
       </section>
     </div>

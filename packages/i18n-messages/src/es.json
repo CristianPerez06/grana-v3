@@ -761,7 +761,15 @@
       "apply": "Aplicar",
       "clear": "Limpiar",
       "all_masc": "Todos",
-      "all_fem": "Todas"
+      "all_fem": "Todas",
+      "filters_button": "Filtros",
+      "clear_all": "Limpiar todo",
+      "currency": "Moneda",
+      "amount_min": "Monto mínimo",
+      "amount_max": "Monto máximo",
+      "prev_month": "Mes anterior",
+      "next_month": "Mes siguiente",
+      "custom_range": "Rango personalizado"
     },
     "movement_kinds": {
       "income": "Ingresos",

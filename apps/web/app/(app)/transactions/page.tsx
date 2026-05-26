@@ -103,6 +103,7 @@ const TransactionsPage = async ({ searchParams }: Props) => {
         filters={filters}
         accounts={filterOptions.accounts}
         categories={filterOptions.categories}
+        isExpert={showAccount}
       />
 
       <MovementList

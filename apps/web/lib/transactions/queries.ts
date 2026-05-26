@@ -147,6 +147,7 @@ export async function getGlobalMovementsPage(
     if (filters.from) query = query.gte('date', filters.from)
     if (filters.to) query = query.lte('date', filters.to)
     if (filters.categoryId) query = query.eq('category_id', filters.categoryId)
+    if (filters.currency) query = query.eq('currency_code', filters.currency)
 
     if (filters.accountId) {
       const accountConditions = [
@@ -173,6 +174,8 @@ export async function getGlobalMovementsPage(
       .map(toFinancialMovement)
       .filter((movement) => !filters.type || movement.kind === filters.type)
       .filter((movement) => !filters.query || movementMatchesText(movement, filters.query))
+      .filter((movement) => filters.amountMin == null || movement.amount >= filters.amountMin)
+      .filter((movement) => filters.amountMax == null || movement.amount <= filters.amountMax)
 
     matchingMovements.push(...pageMovements)
 

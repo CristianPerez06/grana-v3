@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildMovementLimitHref,
+  hasContentFilters,
+  monthOf,
   movementMatchesText,
   parseMovementFilters,
   parseMovementLimit,
-  resolveMovementPeriod,
+  resolveMonthRange,
+  shiftMonth,
 } from '../filters'
 import type { FinancialMovement } from '../movements'
 
@@ -12,34 +15,44 @@ describe('parseMovementFilters', () => {
   it('parses valid URL filters and trims text values', () => {
     const filters = parseMovementFilters({
       q: '  supermercado  ',
-      period: 'custom',
       from: '2026-05-01',
       to: '2026-05-31',
       type: 'expense',
       account: 'account-1',
       category: 'category-1',
+      currency: 'USD',
+      amount_min: '1000',
     })
 
     expect(filters).toEqual({
       query: 'supermercado',
-      period: 'custom',
       from: '2026-05-01',
       to: '2026-05-31',
       type: 'expense',
       accountId: 'account-1',
       categoryId: 'category-1',
+      currency: 'USD',
+      amountMin: 1000,
     })
   })
 
-  it('ignores malformed enum values and dates', () => {
+  it('reads an explicit month and derives its range', () => {
+    const filters = parseMovementFilters({ month: '2026-03' })
+    expect(filters).toEqual({ month: '2026-03', from: '2026-03-01', to: '2026-03-31' })
+  })
+
+  it('ignores malformed values and defaults to the current month', () => {
     const filters = parseMovementFilters({
-      period: 'all-time',
       from: '05/01/2026',
       to: 'tomorrow',
       type: 'unknown',
+      currency: 'EUR',
     })
 
-    expect(filters).toEqual({})
+    expect(filters.type).toBeUndefined()
+    expect(filters.currency).toBeUndefined()
+    expect(filters.month).toMatch(/^\d{4}-\d{2}$/)
+    expect(filters).toMatchObject(resolveMonthRange(filters.month!))
   })
 
   it('accepts explicit date bounds without a preset period', () => {
@@ -84,28 +97,48 @@ describe('buildMovementLimitHref', () => {
   })
 })
 
-describe('resolveMovementPeriod', () => {
-  const today = new Date(2026, 4, 18)
-
-  it('resolves current month using financial dates', () => {
-    expect(resolveMovementPeriod('current_month', today)).toEqual({
-      from: '2026-05-01',
-      to: '2026-05-31',
-    })
+describe('resolveMonthRange', () => {
+  it('returns the first and last accounting date of a month', () => {
+    expect(resolveMonthRange('2026-05')).toEqual({ from: '2026-05-01', to: '2026-05-31' })
   })
 
-  it('resolves previous month across year boundaries', () => {
-    expect(resolveMovementPeriod('previous_month', new Date(2026, 0, 10))).toEqual({
-      from: '2025-12-01',
-      to: '2025-12-31',
-    })
+  it('handles February', () => {
+    expect(resolveMonthRange('2026-02')).toEqual({ from: '2026-02-01', to: '2026-02-28' })
+  })
+})
+
+describe('shiftMonth', () => {
+  it('navigates to the previous and next month', () => {
+    expect(shiftMonth('2026-05', -1)).toBe('2026-04')
+    expect(shiftMonth('2026-05', 1)).toBe('2026-06')
   })
 
-  it('resolves current year', () => {
-    expect(resolveMovementPeriod('current_year', today)).toEqual({
-      from: '2026-01-01',
-      to: '2026-12-31',
-    })
+  it('crosses year boundaries', () => {
+    expect(shiftMonth('2026-01', -1)).toBe('2025-12')
+    expect(shiftMonth('2026-12', 1)).toBe('2027-01')
+  })
+})
+
+describe('monthOf', () => {
+  it('formats a date as YYYY-MM', () => {
+    expect(monthOf(new Date(2026, 4, 18))).toBe('2026-05')
+    expect(monthOf(new Date(2026, 0, 1))).toBe('2026-01')
+  })
+})
+
+describe('hasContentFilters', () => {
+  it('is true for content filters (type, category, query, amount)', () => {
+    expect(hasContentFilters({ type: 'expense' })).toBe(true)
+    expect(hasContentFilters({ categoryId: 'c1' })).toBe(true)
+    expect(hasContentFilters({ query: 'coto' })).toBe(true)
+    expect(hasContentFilters({ amountMin: 1000 })).toBe(true)
+  })
+
+  it('is false for month navigation and currency (not content filters)', () => {
+    expect(hasContentFilters({ month: '2026-05' })).toBe(false)
+    expect(hasContentFilters({ currency: 'USD' })).toBe(false)
+    expect(hasContentFilters({ from: '2026-05-01', to: '2026-05-31' })).toBe(false)
+    expect(hasContentFilters({})).toBe(false)
   })
 })
 
@@ -122,6 +155,7 @@ describe('movementMatchesText', () => {
     description: 'Ahorro mensual',
     account_id: 'account-1',
     account_name: 'Galicia',
+    category_id: null,
     category_name: null,
     category_icon: null,
     category_color: null,
