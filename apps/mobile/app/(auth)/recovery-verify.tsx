@@ -2,7 +2,7 @@ import { View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { OtpVerifyForm } from '../../components/OtpVerifyForm'
 import { Button } from '../../components/ui/Button'
-import { CurvedNavyContainer } from '../../components/layout/CurvedNavyContainer'
+import { AuthShell } from '../../components/layout/AuthShell'
 
 export default function RecoveryVerifyScreen() {
   const router = useRouter()
@@ -10,11 +10,9 @@ export default function RecoveryVerifyScreen() {
 
   if (!email) {
     return (
-      <CurvedNavyContainer
+      <AuthShell
         title="Falta tu email"
         subtitle="Volvé a empezar para que podamos enviarte un código nuevo."
-        showBack
-        backHref="/(auth)/forgot-password"
       >
         <View className="mt-6">
           <Button
@@ -22,7 +20,7 @@ export default function RecoveryVerifyScreen() {
             onPress={() => router.replace('/(auth)/forgot-password')}
           />
         </View>
-      </CurvedNavyContainer>
+      </AuthShell>
     )
   }
 
@@ -31,13 +29,11 @@ export default function RecoveryVerifyScreen() {
   }
 
   return (
-    <CurvedNavyContainer
+    <AuthShell
       title="Verificá que sos vos"
       subtitle={`Ingresá el código de 8 dígitos que te enviamos a ${email}.`}
-      showBack
-      backHref="/(auth)/forgot-password"
     >
       <OtpVerifyForm email={email} type="recovery" onVerified={handleVerified} />
-    </CurvedNavyContainer>
+    </AuthShell>
   )
 }

@@ -5,7 +5,7 @@ import { resetSchema, ValidationError } from '@grana/validation'
 import { Button } from '../../components/ui/Button'
 import { FormError } from '../../components/ui/FormError'
 import { TextInput } from '../../components/ui/TextInput'
-import { CurvedNavyContainer } from '../../components/layout/CurvedNavyContainer'
+import { AuthShell } from '../../components/layout/AuthShell'
 import { AUTH_INPUT_CLASS } from '../../lib/auth-class-names'
 import { supabase } from '../../lib/supabase'
 import { hasRecoveryClaim } from '../../lib/recovery'
@@ -77,7 +77,7 @@ export default function NewPasswordScreen() {
 
   if (!hasRecovery) {
     return (
-      <CurvedNavyContainer
+      <AuthShell
         title="Sesión inválida"
         subtitle="Esta sesión de recuperación es inválida o ya expiró. Pedí un código nuevo."
       >
@@ -87,12 +87,12 @@ export default function NewPasswordScreen() {
             onPress={() => router.replace('/(auth)/forgot-password')}
           />
         </View>
-      </CurvedNavyContainer>
+      </AuthShell>
     )
   }
 
   return (
-    <CurvedNavyContainer
+    <AuthShell
       title="Nueva contraseña"
       subtitle="Elegí una contraseña nueva para tu cuenta."
     >
@@ -123,6 +123,6 @@ export default function NewPasswordScreen() {
       <View className="mt-4">
         <Button title="Guardar contraseña" onPress={handleSubmit} loading={loading} />
       </View>
-    </CurvedNavyContainer>
+    </AuthShell>
   )
 }
