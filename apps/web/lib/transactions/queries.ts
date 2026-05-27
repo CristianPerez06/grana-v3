@@ -426,3 +426,41 @@ export async function getPendingReimbursements(
     }
   })
 }
+
+// ── getReimbursementsForExpense ────────────────────────────────────────────────
+// All reimbursements linked to an expense, in EVERY state (pending / received /
+// cancelled), to show on the expense detail. Cancelled ones are otherwise
+// invisible and unreachable.
+
+export type ExpenseReimbursementVM = {
+  id: string
+  amount: number
+  currencyCode: 'ARS' | 'USD'
+  target: 'account' | 'statement'
+  state: 'pending' | 'received' | 'cancelled'
+  date: string
+}
+
+export async function getReimbursementsForExpense(
+  expenseId: string,
+): Promise<ExpenseReimbursementVM[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('id, amount, currency_code, reimbursement_target, received_at, cancelled_at, date')
+    .eq('type', 'reimbursement')
+    .eq('linked_transaction_id', expenseId)
+    .order('created_at', { ascending: true })
+
+  if (error) throw error
+
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    amount: r.amount,
+    currencyCode: r.currency_code as 'ARS' | 'USD',
+    target: r.reimbursement_target as 'account' | 'statement',
+    state: r.cancelled_at ? 'cancelled' : r.received_at ? 'received' : 'pending',
+    date: r.date,
+  }))
+}
