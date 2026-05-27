@@ -8,6 +8,7 @@ import { useShowCents } from '@/lib/preferences-context'
 import { TransactionActions } from '@/lib/transactions/components/transaction-actions'
 import type { FinancialMovement, MovementReviewFlag } from '@/lib/transactions/movements'
 import type { TransactionWithDetails } from '@/lib/transactions/types'
+import type { ExpenseReimbursementVM } from '@/lib/transactions/queries'
 
 const formatBalance = (amount: number, currency: 'ARS' | 'USD', showCents: boolean) =>
   currency === 'ARS' ? formatARS(Math.abs(amount), showCents) : formatUSD(Math.abs(amount), showCents)
@@ -123,6 +124,8 @@ type Props = {
   movement: FinancialMovement
   installmentParent?: TransactionWithDetails | null
   installmentSiblings?: TransactionWithDetails[] | null
+  /** Reimbursements linked to this expense (all states), for an expense detail. */
+  reimbursements?: ExpenseReimbursementVM[]
   /** Perspective origin (`account:<id>` / `transactions`), preserved on edit. */
   from?: string
 }
@@ -132,6 +135,7 @@ export const GlobalTransactionDetail = ({
   movement,
   installmentParent,
   installmentSiblings,
+  reimbursements = [],
   from,
 }: Props) => {
   const showCents = useShowCents()
@@ -287,6 +291,45 @@ export const GlobalTransactionDetail = ({
                   </span>
                 </span>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {reimbursements.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium">{t('reimbursement.section_title')}</p>
+          <div className="flex flex-col divide-y divide-border rounded-md border border-border">
+            {reimbursements.map((r) => (
+              <Link
+                key={r.id}
+                href={`/transactions/${r.id}`}
+                className="flex items-center justify-between gap-3 px-3 py-2 text-sm transition-colors hover:bg-muted/40"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <span
+                    className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
+                      r.state === 'received'
+                        ? 'bg-green-100 text-green-800'
+                        : r.state === 'cancelled'
+                          ? 'bg-muted text-muted-foreground line-through'
+                          : 'bg-amber-100 text-amber-800'
+                    }`}
+                  >
+                    {t(`reimbursement.state.${r.state}`)}
+                  </span>
+                  <span className="truncate text-muted-foreground">
+                    {t(`reimbursement.target.${r.target}`)}
+                  </span>
+                </span>
+                <span
+                  className={`shrink-0 tabular-nums ${
+                    r.state === 'cancelled' ? 'text-muted-foreground line-through' : 'text-green-600'
+                  }`}
+                >
+                  +{formatBalance(r.amount, r.currencyCode, showCents)}
+                </span>
+              </Link>
             ))}
           </div>
         </div>

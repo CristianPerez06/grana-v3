@@ -601,6 +601,7 @@
       "estimated_amount": "Monto del reintegro",
       "estimated_label": "Monto esperado",
       "linked_expense_title": "Reintegro de este gasto",
+      "section_title": "Reintegros de este gasto",
       "percent_hint": "Opcional: calculá el monto por porcentaje del gasto.",
       "percent_label": "% del gasto",
       "cap_label": "Tope (opcional)",

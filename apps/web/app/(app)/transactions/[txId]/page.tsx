@@ -3,7 +3,11 @@ import { notFound, redirect } from 'next/navigation'
 import { Repeat } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { getInstallmentFamily, getTransactionDetail } from '@/lib/transactions/queries'
+import {
+  getInstallmentFamily,
+  getReimbursementsForExpense,
+  getTransactionDetail,
+} from '@/lib/transactions/queries'
 import { toFinancialMovement } from '@/lib/transactions/movements'
 import { getRecurrenceLinkForTransaction } from '@/lib/recurrences/queries'
 import { GlobalTransactionDetail } from './_components/global-transaction-detail'
@@ -52,13 +56,21 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
     return freq
   }
 
-  const [installmentFamily, recurrenceLink] = await Promise.all([
+  // Reimbursements are linked to the simple expense or the installment parent
+  // (madre). For a child row, look them up on the parent.
+  const reimbursementExpenseId =
+    transaction.type === 'expense' ? (transaction.parent_id ?? transaction.id) : null
+
+  const [installmentFamily, recurrenceLink, reimbursements] = await Promise.all([
     transaction.is_parent
       ? getInstallmentFamily(transaction.id)
       : transaction.parent_id
         ? getInstallmentFamily(transaction.parent_id)
         : Promise.resolve(null),
     getRecurrenceLinkForTransaction(transaction.id),
+    reimbursementExpenseId
+      ? getReimbursementsForExpense(reimbursementExpenseId)
+      : Promise.resolve([]),
   ])
   const movement = toFinancialMovement(transaction)
 
@@ -91,6 +103,7 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
         movement={movement}
         installmentParent={installmentFamily?.parent ?? null}
         installmentSiblings={installmentFamily?.children ?? null}
+        reimbursements={reimbursements}
         from={from}
       />
     </div>
