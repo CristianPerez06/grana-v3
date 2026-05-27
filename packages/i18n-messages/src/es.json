@@ -595,6 +595,45 @@
     "installments_count": "{count} cuotas",
     "installment_recalc_hint": "Cambiar el monto recalcula las {count} cuotas (el resto en la primera).",
     "card_payment_label": "Pago de tarjeta",
+    "reimbursement": {
+      "label": "Reintegro",
+      "toggle": "Tiene reintegro",
+      "estimated_amount": "Monto del reintegro",
+      "estimated_label": "Monto esperado",
+      "linked_expense_title": "Reintegro de este gasto",
+      "target_label": "¿Cómo se acredita?",
+      "target": {
+        "account": "A una cuenta — el banco te deposita la plata",
+        "statement": "En el resumen — se descuenta de la tarjeta"
+      },
+      "credit_to": "Acreditar en",
+      "credit_to_placeholder": "Elegí una cuenta",
+      "received_now": "Ya me lo acreditaron",
+      "received_now_hint": "Se registra como reintegro recibido.",
+      "pending_hint": "Queda como reintegro pendiente. Lo confirmás cuando realmente llegue.",
+      "state": {
+        "pending": "Reintegro esperado",
+        "received": "Reintegro recibido",
+        "cancelled": "Reintegro cancelado"
+      },
+      "confirm": "Confirmar",
+      "cancel": "Cancelar",
+      "pending": {
+        "title": "Reintegros a confirmar",
+        "count": "{count} pendientes",
+        "real_amount": "Monto real",
+        "real_date": "Fecha",
+        "confirming": "Confirmando…",
+        "confirmed_success": "Reintegro confirmado.",
+        "cancelled_success": "Reintegro cancelado.",
+        "close_notice": "Cerrar aviso"
+      },
+      "errors": {
+        "amount_positive": "Ingresá un monto de reintegro válido.",
+        "account_required": "Elegí la cuenta donde se acredita el reintegro.",
+        "period_required": "Este reintegro no tiene un período de tarjeta asignado."
+      }
+    },
     "category_suggestion": {
       "chip": "¿{category}? · la última vez lo pusiste ahí",
       "hint": "La próxima vez que cargues «{description}» te vamos a sugerir «{category}»."

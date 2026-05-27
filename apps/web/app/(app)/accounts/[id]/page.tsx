@@ -4,8 +4,13 @@ import { getTranslations } from 'next-intl/server'
 import { computeRunningBalances, type RunningBalanceRow } from '@grana/money-logic'
 import { createClient } from '@/lib/supabase/server'
 import { getAccountDetail } from '@/lib/accounts/queries'
-import { getAccountMovements, getMovementFilterOptions } from '@/lib/transactions/queries'
+import {
+  getAccountMovements,
+  getMovementFilterOptions,
+  getPendingReimbursements,
+} from '@/lib/transactions/queries'
 import { toFinancialMovement } from '@/lib/transactions/movements'
+import { PendingReimbursementsBlock } from '@/lib/transactions/components/pending-reimbursements-block'
 import {
   buildFiltersClearedHref,
   buildSearchClearedHref,
@@ -36,10 +41,11 @@ const AccountDetailPage = async ({ params, searchParams }: Props) => {
 
   const t = await getTranslations('accounts')
 
-  const [account, movementsAsc, filterOptions] = await Promise.all([
+  const [account, movementsAsc, filterOptions, pendingReimbursements] = await Promise.all([
     getAccountDetail(id),
     getAccountMovements(id),
     getMovementFilterOptions(),
+    getPendingReimbursements(id),
   ])
   if (!account) notFound()
   if (account.type === 'credit') redirect(`/cards/${id}`)
@@ -88,6 +94,11 @@ const AccountDetailPage = async ({ params, searchParams }: Props) => {
       </div>
 
       <AccountDetailHeader account={account} hasTransactions={allMovements.length > 0} />
+
+      <PendingReimbursementsBlock
+        pending={pendingReimbursements}
+        todayISO={formatDateISO(getTodayAR())}
+      />
 
       {canAddCurrency && (
         <Link

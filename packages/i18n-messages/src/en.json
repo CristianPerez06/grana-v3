@@ -595,6 +595,45 @@
     "installments_count": "{count} installments",
     "installment_recalc_hint": "Changing the amount recalculates the {count} installments (the rest goes into the first one).",
     "card_payment_label": "Card payment",
+    "reimbursement": {
+      "label": "Reimbursement",
+      "toggle": "Has a reimbursement",
+      "estimated_amount": "Reimbursement amount",
+      "estimated_label": "Expected amount",
+      "linked_expense_title": "Reimbursement for this expense",
+      "target_label": "How is it credited?",
+      "target": {
+        "account": "To an account — the bank deposits the money",
+        "statement": "On the statement — discounted from the card"
+      },
+      "credit_to": "Credit to",
+      "credit_to_placeholder": "Choose an account",
+      "received_now": "Already credited to me",
+      "received_now_hint": "Recorded as a received reimbursement.",
+      "pending_hint": "It stays as an expected reimbursement. Confirm it when it actually arrives.",
+      "state": {
+        "pending": "Expected reimbursement",
+        "received": "Reimbursement received",
+        "cancelled": "Reimbursement cancelled"
+      },
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "pending": {
+        "title": "Reimbursements to confirm",
+        "count": "{count} pending",
+        "real_amount": "Actual amount",
+        "real_date": "Date",
+        "confirming": "Confirming…",
+        "confirmed_success": "Reimbursement confirmed.",
+        "cancelled_success": "Reimbursement cancelled.",
+        "close_notice": "Close notice"
+      },
+      "errors": {
+        "amount_positive": "Enter a valid reimbursement amount.",
+        "account_required": "Choose the account where the reimbursement is credited.",
+        "period_required": "This reimbursement has no card period assigned."
+      }
+    },
     "category_suggestion": {
       "chip": "{category}? · you used it last time",
       "hint": "Next time you log \"{description}\" we'll suggest \"{category}\"."

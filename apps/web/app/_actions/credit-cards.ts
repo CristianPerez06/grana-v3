@@ -35,6 +35,7 @@ import {
 import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
 import { getAuthenticatedUserId } from './_lib/auth'
+import { insertDeclaredReimbursement } from './_lib/reimbursements'
 
 function normalizeActionMoney(value: number): number {
   return normalizeMoneyAmount(value) ?? value
@@ -337,6 +338,26 @@ export async function registerCardPurchase(
 
   if (txError || !tx) {
     return { ok: false, formError: txError?.message ?? 'Error al registrar el consumo.' }
+  }
+
+  // Declared reimbursement: created atomically-with-rollback (design.md Decisión 9).
+  if (data.reimbursement) {
+    // A statement reimbursement nets in a card period; default it to the
+    // purchase's period (required when it is received now).
+    const declaration =
+      data.reimbursement.target === 'statement'
+        ? { ...data.reimbursement, card_period_id: data.reimbursement.card_period_id ?? periodId }
+        : data.reimbursement
+    const r = await insertDeclaredReimbursement(supabase, {
+      userId,
+      expenseId: tx.id,
+      currencyCode: data.currency_code,
+      declaration,
+    })
+    if (!r.ok) {
+      await supabase.from('transactions').delete().eq('id', tx.id).eq('user_id', userId)
+      return { ok: false, formError: `El consumo no se guardó (reintegro inválido): ${r.error}` }
+    }
   }
 
   revalidatePath('/cards')

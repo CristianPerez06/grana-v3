@@ -49,6 +49,8 @@ export type MovementFormAccount = {
   activeCurrencies: ('ARS' | 'USD')[]
   /** Current available balance per currency. {0,0} for credit (off-ledger). */
   balances: Record<'ARS' | 'USD', number>
+  /** Owning institution, used to default the reimbursement credit-to account. */
+  institutionId: string | null
 }
 
 /**
@@ -179,6 +181,22 @@ export const MovementForm = ({
   const [isRecurrent, setIsRecurrent] = useState(false)
   const [frequency, setFrequency] = useState<'weekly' | 'biweekly' | 'monthly' | 'annual'>('monthly')
 
+  // Reimbursement (reintegro / cashback) declared with the expense.
+  const [reimbursementEnabled, setReimbursementEnabled] = useState(false)
+  const [reimbursementTarget, setReimbursementTarget] = useState<'account' | 'statement'>('account')
+  const [reimbursementAmount, setReimbursementAmount] = useState('')
+  const [reimbursementReceivedNow, setReimbursementReceivedNow] = useState(false)
+  // Default the credit-to account to a bank account of the SAME institution as
+  // the expense account (paying with Visa Comafi → reimbursement to Comafi bank).
+  const pickReimbursementAccount = (expenseAccountId: string): string => {
+    const expenseAccount = accounts.find((a) => a.id === expenseAccountId)
+    const inst = expenseAccount?.institutionId ?? null
+    const cashBankAccounts = accounts.filter((a) => a.type !== 'credit')
+    const match = inst ? cashBankAccounts.find((a) => a.institutionId === inst) : undefined
+    return match?.id ?? cashBankAccounts[0]?.id ?? ''
+  }
+  const [reimbursementAccountId, setReimbursementAccountId] = useState('')
+
   if (accounts.length === 0 && !isEdit) {
     return (
       <p className="text-sm text-muted-foreground">{t('empty.no_accounts')}</p>
@@ -297,6 +315,8 @@ export const MovementForm = ({
     if (account && !account.activeCurrencies.includes(currencyCode)) {
       setCurrencyCode(account.activeCurrencies[0] ?? 'ARS')
     }
+    // Re-default the reimbursement credit-to account to the new account's institution.
+    setReimbursementAccountId(pickReimbursementAccount(id))
   }
 
   const handleDestinationChange = (id: string) => {
@@ -447,6 +467,37 @@ export const MovementForm = ({
       return
     }
 
+    // Declared reimbursement (expense tab, non-installment). Pending by default,
+    // or received now ("ya me lo acreditaron").
+    let reimbursementDecl:
+      | {
+          target: 'account' | 'statement'
+          estimated_amount: number
+          account_id: string
+          received_now: boolean
+        }
+      | undefined
+    if (reimbursementEnabled && tab === 'expense' && !isInstallments) {
+      const parsedReimb = parseMoneyInput(reimbursementAmount)
+      if (parsedReimb === null || parsedReimb <= 0) {
+        setFormError(t('reimbursement.errors.amount_positive'))
+        return
+      }
+      // "En resumen" only exists on a card expense; otherwise force "a cuenta".
+      const reimbTarget = isCredit ? reimbursementTarget : 'account'
+      const reimbAccount = reimbTarget === 'statement' ? accountId : reimbursementAccountId
+      if (!reimbAccount) {
+        setFormError(t('reimbursement.errors.account_required'))
+        return
+      }
+      reimbursementDecl = {
+        target: reimbTarget,
+        estimated_amount: parsedReimb,
+        account_id: reimbAccount,
+        received_now: reimbursementReceivedNow,
+      }
+    }
+
     startTransition(async () => {
       let result
 
@@ -513,6 +564,7 @@ export const MovementForm = ({
             subcategory_id: subcategoryId || undefined,
             description: description || undefined,
             fx_rate_to_ars: parsedFxRate ?? undefined,
+            reimbursement: reimbursementDecl,
           })
         }
       } else {
@@ -524,6 +576,7 @@ export const MovementForm = ({
           category_id: categoryId || undefined,
           subcategory_id: subcategoryId || undefined,
           description: description || undefined,
+          reimbursement: reimbursementDecl,
         })
       }
 
@@ -944,6 +997,102 @@ export const MovementForm = ({
                 <option value="monthly">{t('frequencies.monthly')}</option>
                 <option value="annual">{t('frequencies.annual')}</option>
               </select>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Reintegro / cashback (create only; Gasto, no cuotas) ───────────── */}
+      {!isEdit && tab === 'expense' && !isInstallments && (
+        <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={reimbursementEnabled}
+              onChange={(e) => {
+                const enabled = e.target.checked
+                setReimbursementEnabled(enabled)
+                if (enabled) setReimbursementAccountId(pickReimbursementAccount(accountId))
+              }}
+              className="accent-primary"
+            />
+            <span className="text-sm font-medium">{t('reimbursement.toggle')}</span>
+          </label>
+          {reimbursementEnabled && (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="reimb-amount" className="text-xs text-muted-foreground">
+                  {t('reimbursement.estimated_amount')}
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                    {CURRENCY_SYMBOL[currencyCode]}
+                  </span>
+                  <MoneyAmountInput
+                    id="reimb-amount"
+                    value={reimbursementAmount}
+                    onChange={setReimbursementAmount}
+                    placeholder={t('placeholders.amount')}
+                    className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </div>
+              </div>
+
+              {isCredit && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs text-muted-foreground">{t('reimbursement.target_label')}</span>
+                  <div className="flex flex-col gap-1.5">
+                    {(['account', 'statement'] as const).map((tg) => (
+                      <label key={tg} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="reimb-target"
+                          value={tg}
+                          checked={reimbursementTarget === tg}
+                          onChange={() => setReimbursementTarget(tg)}
+                          className="accent-primary mt-0.5"
+                        />
+                        <span className="text-sm">{t(`reimbursement.target.${tg}`)}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(!isCredit || reimbursementTarget === 'account') && (
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="reimb-account" className="text-xs text-muted-foreground">
+                    {t('reimbursement.credit_to')}
+                  </label>
+                  <select
+                    id="reimb-account"
+                    value={reimbursementAccountId}
+                    onChange={(e) => setReimbursementAccountId(e.target.value)}
+                    className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="">{t('reimbursement.credit_to_placeholder')}</option>
+                    {cashBank.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={reimbursementReceivedNow}
+                  onChange={(e) => setReimbursementReceivedNow(e.target.checked)}
+                  className="accent-primary"
+                />
+                <span className="text-sm">{t('reimbursement.received_now')}</span>
+              </label>
+
+              <p className="text-xs text-muted-foreground">
+                {reimbursementReceivedNow
+                  ? t('reimbursement.received_now_hint')
+                  : t('reimbursement.pending_hint')}
+              </p>
             </div>
           )}
         </div>

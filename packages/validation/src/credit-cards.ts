@@ -1,4 +1,5 @@
 import * as yup from 'yup'
+import { reimbursementDeclarationSchema } from './transactions'
 
 // ─── Shared ──────────────────────────────────────────────────────────────────
 
@@ -168,6 +169,7 @@ export const registerCardPurchaseSchema = yup
       .positive()
       .nullable()
       .optional(),
+    reimbursement: reimbursementDeclarationSchema.optional().default(undefined),
   })
   .strict()
   .test('fx-rate-required-for-usd', 'fx_rate_required_for_usd', function (value) {

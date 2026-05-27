@@ -31,6 +31,8 @@ const EditMovementPage = async ({ params, searchParams }: Props) => {
 
   const isParent = transaction.is_parent === true
   if (!isParent && !transaction.account_id) notFound()
+  // Reimbursements are not edited through this form — they use confirm/cancel.
+  if (transaction.type === 'reimbursement') notFound()
 
   // Canonical detail keeps the perspective via `?from=`.
   const fromQuery = from ? `?from=${encodeURIComponent(from)}` : ''
