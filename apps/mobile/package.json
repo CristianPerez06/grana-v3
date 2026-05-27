@@ -18,10 +18,10 @@
   "dependencies": {
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@grana/dashboard": "workspace:*",
+    "@grana/money-logic": "workspace:*",
     "@grana/supabase": "workspace:*",
     "@grana/ui-contracts": "workspace:*",
     "@grana/validation": "workspace:*",
-    "@grana/money-logic": "workspace:*",
     "@tanstack/react-query": "5.100.13",
     "expo": "~54.0.33",
     "expo-constants": "~18.0.13",

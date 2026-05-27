@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
-import { CurvedNavyContainer } from '@/components/layout/curved-navy-container'
+import { AuthShell } from '@/components/layout/auth-shell'
 import { redirectIfAuthenticated } from '@/lib/auth/guards'
 import { LoginForm } from './login-form'
 
@@ -22,7 +22,7 @@ const LoginPage = async ({
       : null
 
   return (
-    <CurvedNavyContainer title={t('header_title')} subtitle={t('description')}>
+    <AuthShell title={t('header_title')} subtitle={t('description')}>
       <LoginForm initialNotice={initialNotice} />
       <div className="mt-6 flex flex-col items-center gap-1">
         <Button variant="link" size="sm" asChild>
@@ -32,7 +32,7 @@ const LoginPage = async ({
           <Link href="/signup">{t('no_account')}</Link>
         </Button>
       </div>
-    </CurvedNavyContainer>
+    </AuthShell>
   )
 }
 

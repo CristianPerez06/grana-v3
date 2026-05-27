@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { PasswordField } from '@/components/ui/password-field'
 import { SubmitButton } from '@/components/ui/submit-button'
 import { Spinner } from '@/components/ui/spinner'
-import { CurvedNavyContainer } from '@/components/layout/curved-navy-container'
+import { AuthShell } from '@/components/layout/auth-shell'
 import { AUTH_INPUT_CLASS } from '@/lib/auth-class-names'
 import { createClient } from '@/lib/supabase/client'
 import { mapSupabaseError } from '@/lib/supabase/errors'
@@ -85,30 +85,30 @@ const ResetPasswordPage = () => {
 
   if (checkingSession) {
     return (
-      <CurvedNavyContainer title={t('title')} subtitle={t('description')}>
+      <AuthShell title={t('title')} subtitle={t('description')}>
         <div className="flex justify-center py-10">
           <Spinner />
         </div>
-      </CurvedNavyContainer>
+      </AuthShell>
     )
   }
 
   if (updated) {
     return (
-      <CurvedNavyContainer
+      <AuthShell
         title={t('success_title')}
         subtitle={t('success_body')}
       >
         <Button asChild className="w-full">
           <Link href="/login">{t('go_to_login')}</Link>
         </Button>
-      </CurvedNavyContainer>
+      </AuthShell>
     )
   }
 
   if (!hasRecovery) {
     return (
-      <CurvedNavyContainer
+      <AuthShell
         title={t('invalid_link_title')}
         subtitle={t('invalid_link')}
       >
@@ -117,12 +117,12 @@ const ResetPasswordPage = () => {
             <Link href="/forgot-password">{t('go_to_forgot')}</Link>
           </Button>
         </div>
-      </CurvedNavyContainer>
+      </AuthShell>
     )
   }
 
   return (
-    <CurvedNavyContainer title={t('title')} subtitle={t('description')}>
+    <AuthShell title={t('title')} subtitle={t('description')}>
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <PasswordField
           label={t('password_label')}
@@ -143,7 +143,7 @@ const ResetPasswordPage = () => {
           {t('submit')}
         </SubmitButton>
       </form>
-    </CurvedNavyContainer>
+    </AuthShell>
   )
 }
 
