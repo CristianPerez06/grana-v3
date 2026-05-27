@@ -2,10 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import { getTransactionSums } from '@/lib/transactions/balance'
 import { getCreditCards, type CreditCardSummary } from '@/lib/cards/queries'
 import { Money } from '@grana/validation'
+import { resolveAccountAvatar } from '@grana/ui-contracts'
 import type {
   AccountWithDetails,
   AccountWithBalances,
-  GroupedAccounts,
 } from './types'
 
 type GroupedAccountsWithBalances = {
@@ -62,6 +62,7 @@ export async function getAccounts(
         ]),
       ),
     } as Record<'ARS' | 'USD', number>,
+    avatar: resolveAccountAvatar(a, a.institution),
   }))
 
   return {
@@ -105,7 +106,7 @@ export async function getAccountDetail(id: string): Promise<AccountWithBalances 
     }
   }
 
-  return { ...account, balances }
+  return { ...account, balances, avatar: resolveAccountAvatar(account, account.institution) }
 }
 
 // ── getInstitutions ───────────────────────────────────────────────────────────

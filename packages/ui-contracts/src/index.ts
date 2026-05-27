@@ -243,3 +243,142 @@ export type RouteErrorProps = {
   onRetry: () => void
   className?: string
 }
+
+// ── AccountAvatar (account visual identity) ───────────────────────────────────
+
+/**
+ * Curated account color palette. Each key maps to a `--account-<key>` CSS var
+ * in @grana/ui-tokens (web utilities `bg-account-<key>`) and to
+ * `tokens.colors['account-<key>'].DEFAULT` (mobile, via @grana/ui-tokens/tokens).
+ * Keep this list in sync with theme.css — guarded by a token-sync test.
+ */
+export const ACCOUNT_COLOR_KEYS = [
+  'slate',
+  'indigo',
+  'violet',
+  'plum',
+  'magenta',
+  'teal',
+  'cyan',
+  'clay',
+] as const
+export type AccountColorKey = (typeof ACCOUNT_COLOR_KEYS)[number]
+
+/**
+ * Curated account icon set. Each key is a lucide icon name; each platform maps
+ * it to its own lucide implementation (`lucide-react` on web,
+ * `lucide-react-native` on mobile). Only the key (a string) is shared.
+ */
+export const ACCOUNT_ICON_KEYS = [
+  'wallet',
+  'banknote',
+  'piggy-bank',
+  'coins',
+  'vault',
+  'briefcase',
+  'dollar-sign',
+  'landmark',
+  'credit-card',
+  'building-2',
+  'house',
+  'car',
+  'plane',
+  'graduation-cap',
+  'gift',
+  'hand-coins',
+] as const
+export type AccountIconKey = (typeof ACCOUNT_ICON_KEYS)[number]
+
+/** Minimal account shape the resolver needs. */
+export type AccountAvatarInput = {
+  id: string
+  name: string
+  type: 'cash' | 'bank' | 'credit'
+  color_key: string | null
+  icon_key: string | null
+}
+
+/** Institution branding used for the live-inheritance path (bank accounts). */
+export type AccountInstitutionBranding = {
+  brand_color: string | null
+  /** 'bank' | 'wallet' in the catalog; any other value falls back to 'landmark'. */
+  icon_type: string | null
+}
+
+/**
+ * Fully resolved avatar. Color is expressed as EITHER a palette key (curated
+ * colors, rendered via token) OR a raw CSS color override (an institution's
+ * `brand_color`, which is not part of the curated palette). Exactly one of
+ * `colorKey` / `colorOverride` is non-null.
+ */
+export type ResolvedAccountAvatar = {
+  colorKey: AccountColorKey | null
+  colorOverride: string | null
+  /** Resolved icon key, or null to fall back to the monogram. */
+  iconKey: AccountIconKey | null
+  /** Single-letter fallback (uppercased first letter of the account name). */
+  monogram: string
+}
+
+/** Props for the platform `AccountAvatar` components — already resolved. */
+export type AccountAvatarSize = 'sm' | 'md'
+export type AccountAvatarProps = ResolvedAccountAvatar & {
+  size?: AccountAvatarSize
+  className?: string
+}
+
+function isAccountColorKey(value: string | null): value is AccountColorKey {
+  return value !== null && (ACCOUNT_COLOR_KEYS as readonly string[]).includes(value)
+}
+
+function isAccountIconKey(value: string | null): value is AccountIconKey {
+  return value !== null && (ACCOUNT_ICON_KEYS as readonly string[]).includes(value)
+}
+
+/** Deterministic FNV-1a hash → index, so the same id always maps to the same color. */
+function hashToIndex(id: string, modulo: number): number {
+  let hash = 2166136261
+  for (let i = 0; i < id.length; i++) {
+    hash ^= id.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return Math.abs(hash) % modulo
+}
+
+/**
+ * Pure resolver for an account's avatar. Resolution rules:
+ *  - color: explicit `color_key` (override) > bank live-inherits institution
+ *    `brand_color` > deterministic palette color from the account id.
+ *  - icon: explicit `icon_key` (override) > bank derives from institution
+ *    `icon_type` ('wallet' → wallet, else landmark) > cash default 'wallet'.
+ *  - monogram: uppercased first letter of the name (component fallback when
+ *    `iconKey` is null).
+ */
+export function resolveAccountAvatar(
+  account: AccountAvatarInput,
+  institution?: AccountInstitutionBranding | null,
+): ResolvedAccountAvatar {
+  const trimmed = account.name.trim()
+  const monogram = (trimmed.length > 0 ? trimmed[0] : '?').toUpperCase()
+
+  let colorKey: AccountColorKey | null = null
+  let colorOverride: string | null = null
+  if (isAccountColorKey(account.color_key)) {
+    colorKey = account.color_key
+  } else if (account.type === 'bank' && institution?.brand_color) {
+    colorOverride = institution.brand_color
+  } else {
+    colorKey = ACCOUNT_COLOR_KEYS[hashToIndex(account.id, ACCOUNT_COLOR_KEYS.length)]
+  }
+
+  let iconKey: AccountIconKey | null
+  if (isAccountIconKey(account.icon_key)) {
+    iconKey = account.icon_key
+  } else if (account.type === 'bank') {
+    iconKey = institution?.icon_type === 'wallet' ? 'wallet' : 'landmark'
+  } else {
+    iconKey = 'wallet'
+  }
+
+  return { colorKey, colorOverride, iconKey, monogram }
+}

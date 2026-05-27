@@ -1,3 +1,5 @@
+import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
+
 export type AccountType = 'cash' | 'bank' | 'credit'
 
 export type Account = {
@@ -8,6 +10,8 @@ export type Account = {
   institution_id: string | null
   is_active: boolean
   created_at: string
+  color_key: string | null
+  icon_key: string | null
 }
 
 export type AccountCurrency = {
@@ -36,6 +40,8 @@ export type AccountWithDetails = Account & {
 
 export type AccountWithBalances = AccountWithDetails & {
   balances: Record<'ARS' | 'USD', number>
+  /** Visual identity resolved server-side from color_key/icon_key + institution. */
+  avatar: ResolvedAccountAvatar
 }
 
 export type GroupedAccounts = {

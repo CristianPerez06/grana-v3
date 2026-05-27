@@ -69,6 +69,18 @@
   --cat-4: #B56A5A;
   --cat-5: #8A6E98;
 
+  /* Account avatar palette — decorative identity for cash/bank accounts.
+     Curated to stay clear of the semantic colors (emerald=income, terracotta/
+     error=negative). All carry a light glyph; same value in light + dark. */
+  --account-slate: #3A6B8A;
+  --account-indigo: #4C56C0;
+  --account-violet: #7B57C0;
+  --account-plum: #8A6E98;
+  --account-magenta: #C04D86;
+  --account-teal: #1F8F9C;
+  --account-cyan: #2C7FB8;
+  --account-clay: #A8794E;
+
   /* shadcn-style semantic tokens, re-pointed at v2 brand values */
   --background: var(--page);
   --foreground: var(--text);
@@ -184,6 +196,16 @@
   --color-cat-3: var(--cat-3);
   --color-cat-4: var(--cat-4);
   --color-cat-5: var(--cat-5);
+
+  /* Account avatar palette — utilities bg-account-slate, text-account-*, ... */
+  --color-account-slate: var(--account-slate);
+  --color-account-indigo: var(--account-indigo);
+  --color-account-violet: var(--account-violet);
+  --color-account-plum: var(--account-plum);
+  --color-account-magenta: var(--account-magenta);
+  --color-account-teal: var(--account-teal);
+  --color-account-cyan: var(--account-cyan);
+  --color-account-clay: var(--account-clay);
 
   /* shadcn-style semantic tokens kept for existing consumers */
   --color-background: var(--background);

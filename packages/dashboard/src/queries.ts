@@ -5,6 +5,7 @@ import {
   buildUpcomingFortnight,
   calculateTransactionSums,
   type BalanceTransactionRow,
+  type HeroAccountRow,
   type UpcomingCardPeriodInput,
   type UpcomingPeriodTxInput,
   type UpcomingRecurrenceInstanceInput,
@@ -38,7 +39,9 @@ export async function getDashboardHero(
 ): Promise<DashboardHero> {
   const { data: accounts, error } = await supabase
     .from('accounts')
-    .select('id, name, currencies:account_currencies(currency_code, initial_balance)')
+    .select(
+      'id, name, type, color_key, icon_key, institution:institutions(brand_color, icon_type), currencies:account_currencies(currency_code, initial_balance)',
+    )
     .in('type', ['cash', 'bank'])
     .eq('is_active', true)
 
@@ -47,7 +50,7 @@ export async function getDashboardHero(
   const accountIds = (accounts ?? []).map((a) => a.id)
   const txSums = await getTransactionSums(supabase, accountIds)
 
-  return aggregateHero(accounts ?? [], txSums)
+  return aggregateHero((accounts ?? []) as unknown as HeroAccountRow[], txSums)
 }
 
 async function getTransactionSums(

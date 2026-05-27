@@ -1,6 +1,23 @@
 import * as yup from 'yup'
+import { ACCOUNT_COLOR_KEYS, ACCOUNT_ICON_KEYS } from '@grana/ui-contracts'
 
 const SUPPORTED_CURRENCIES = ['ARS', 'USD'] as const
+
+// Avatar keys: optional everywhere (NULL = auto-derive). When present, they
+// MUST belong to the curated registry in @grana/ui-contracts.
+const colorKeySchema = yup
+  .string()
+  .label('color_key')
+  .oneOf([...ACCOUNT_COLOR_KEYS])
+  .nullable()
+  .optional()
+
+const iconKeySchema = yup
+  .string()
+  .label('icon_key')
+  .oneOf([...ACCOUNT_ICON_KEYS])
+  .nullable()
+  .optional()
 
 const currencySchema = yup
   .object({
@@ -47,6 +64,8 @@ export const createAccountSchema = yup
       .label('currencies')
       .required()
       .min(1),
+    color_key: colorKeySchema,
+    icon_key: iconKeySchema,
   })
   .strict()
 
@@ -65,6 +84,8 @@ export const updateAccountSchema = yup
       .uuid()
       .nullable()
       .optional(),
+    color_key: colorKeySchema,
+    icon_key: iconKeySchema,
   })
   .strict()
 

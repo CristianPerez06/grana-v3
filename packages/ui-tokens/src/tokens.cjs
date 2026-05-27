@@ -144,6 +144,30 @@ module.exports = {
     "cat-5": {
       "DEFAULT": "#8A6E98"
     },
+    "account-slate": {
+      "DEFAULT": "#3A6B8A"
+    },
+    "account-indigo": {
+      "DEFAULT": "#4C56C0"
+    },
+    "account-violet": {
+      "DEFAULT": "#7B57C0"
+    },
+    "account-plum": {
+      "DEFAULT": "#8A6E98"
+    },
+    "account-magenta": {
+      "DEFAULT": "#C04D86"
+    },
+    "account-teal": {
+      "DEFAULT": "#1F8F9C"
+    },
+    "account-cyan": {
+      "DEFAULT": "#2C7FB8"
+    },
+    "account-clay": {
+      "DEFAULT": "#A8794E"
+    },
     "background": {
       "DEFAULT": "var(--page)",
       "dark": "var(--page)"

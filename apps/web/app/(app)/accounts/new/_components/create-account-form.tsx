@@ -7,6 +7,8 @@ import { Alert } from '@/components/ui/alert'
 import { createAccount } from '@/app/_actions/accounts'
 import { parseMoneyInput } from '@grana/validation'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { AccountAvatarPicker } from '@/components/ui/account-avatar-picker'
+import type { AccountColorKey, AccountIconKey } from '@grana/ui-contracts'
 import type { Institution } from '@/lib/accounts/types'
 
 type Props = {
@@ -29,7 +31,15 @@ export const CreateAccountForm = ({ institutions }: Props) => {
   // Bimoneda por defecto: every account is provisioned with ARS + USD.
   // The user only edits the initial balance per currency; toggling is not allowed.
   const [balances, setBalances] = useState<Record<string, string>>({ ARS: '0', USD: '0' })
+  const [colorKey, setColorKey] = useState<AccountColorKey | null>(null)
+  const [iconKey, setIconKey] = useState<AccountIconKey | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const selectedInstitution = institutions.find((i) => i.id === institutionId) ?? null
+  const inheritedColor = type === 'bank' ? selectedInstitution?.brand_color ?? null : null
+  const autoIcon: AccountIconKey =
+    type === 'cash' ? 'wallet' : selectedInstitution?.icon_type === 'wallet' ? 'wallet' : 'landmark'
+  const monogram = (name.trim()[0] ?? '?').toUpperCase()
 
   const CURRENCIES = [
     { code: 'ARS', label: t('currency_options.ars') },
@@ -71,6 +81,8 @@ export const CreateAccountForm = ({ institutions }: Props) => {
         type,
         institution_id: type === 'bank' ? institutionId : undefined,
         currencies,
+        color_key: colorKey,
+        icon_key: iconKey,
       })
 
       if (!result.ok) {
@@ -155,6 +167,17 @@ export const CreateAccountForm = ({ institutions }: Props) => {
           )}
         </div>
       )}
+
+      {/* Appearance — color + icon avatar (auto when left unset) */}
+      <AccountAvatarPicker
+        colorKey={colorKey}
+        iconKey={iconKey}
+        onColorChange={setColorKey}
+        onIconChange={setIconKey}
+        inheritedColor={inheritedColor}
+        autoIcon={autoIcon}
+        monogram={monogram}
+      />
 
       {/* Currencies — bimoneda por defecto: ambas monedas siempre activas. */}
       <div className="flex flex-col gap-2">

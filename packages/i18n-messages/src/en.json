@@ -323,7 +323,11 @@
       "currencies": "Currencies",
       "balance": "Balance",
       "ars": "Pesos",
-      "usd": "Dollars"
+      "usd": "Dollars",
+      "appearance": "Appearance",
+      "color": "Color",
+      "icon": "Icon",
+      "avatar_auto": "Auto"
     },
     "types": {
       "cash": "Cash",

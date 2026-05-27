@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { MaskedAmount } from './masked-amount'
+import { AccountAvatar } from '@/components/ui/account-avatar'
 import type { DashboardHero } from '@grana/dashboard'
 
 type Props = {
@@ -39,10 +40,13 @@ export const HeroSection = async ({ data }: Props) => {
               {breakdown.map((account) => (
                 <li
                   key={account.id}
-                  className="flex items-baseline justify-between gap-4"
+                  className="flex items-center justify-between gap-4"
                 >
-                  <span className="truncate text-sm text-text">
-                    {account.name}
+                  <span className="flex min-w-0 items-center gap-2">
+                    <AccountAvatar {...account.avatar} size="sm" />
+                    <span className="truncate text-sm text-text">
+                      {account.name}
+                    </span>
                   </span>
                   <span className="shrink-0 text-sm font-semibold text-text">
                     <MaskedAmount amount={account.ars} currency="ARS" />

@@ -1,4 +1,5 @@
 import { Money } from '@grana/validation'
+import { resolveAccountAvatar } from '@grana/ui-contracts'
 import type {
   DashboardHero,
   HeroAccountBalance,
@@ -12,6 +13,10 @@ import type {
 export type HeroAccountRow = {
   id: string
   name: string
+  type: 'cash' | 'bank' | 'credit'
+  color_key: string | null
+  icon_key: string | null
+  institution: { brand_color: string | null; icon_type: string | null } | null
   currencies: Array<{
     currency_code: string
     initial_balance: number | string | null
@@ -50,6 +55,16 @@ export function aggregateHero(
       name: acc.name,
       ars: Money.toNumber(accArs),
       usd: Money.toNumber(accUsd),
+      avatar: resolveAccountAvatar(
+        {
+          id: acc.id,
+          name: acc.name,
+          type: acc.type,
+          color_key: acc.color_key,
+          icon_key: acc.icon_key,
+        },
+        acc.institution,
+      ),
     })
   }
 

@@ -43,6 +43,8 @@ export async function createAccount(
       name: validation.data.name,
       type: validation.data.type,
       institution_id: validation.data.institution_id ?? null,
+      color_key: validation.data.color_key ?? null,
+      icon_key: validation.data.icon_key ?? null,
     })
     .select('id')
     .single()
@@ -83,11 +85,19 @@ export async function updateAccount(
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
 
-  const updates: { name?: string; institution_id?: string | null } = {}
+  const updates: {
+    name?: string
+    institution_id?: string | null
+    color_key?: string | null
+    icon_key?: string | null
+  } = {}
   if (validation.data.name !== undefined) updates.name = validation.data.name
   if (validation.data.institution_id !== undefined) {
     updates.institution_id = validation.data.institution_id
   }
+  // undefined = leave unchanged; null = explicitly revert to auto.
+  if (validation.data.color_key !== undefined) updates.color_key = validation.data.color_key ?? null
+  if (validation.data.icon_key !== undefined) updates.icon_key = validation.data.icon_key ?? null
 
   const { error } = await supabase
     .from('accounts')
