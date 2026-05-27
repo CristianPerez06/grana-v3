@@ -1,26 +1,32 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
+import { buildCategorySlices } from '@grana/money-logic'
 import { createClient } from '@/lib/supabase/server'
 import { getTodayAR, formatDateISO } from '@/lib/date'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
 import { MovementFilters } from '@/lib/transactions/components/movement-filters'
 import { MovementList } from '@/lib/transactions/components/movement-list'
+import { CategorySpendingOverview } from '@/lib/transactions/components/category-spending-overview'
 import {
   buildFiltersClearedHref,
   buildMovementLimitHref,
   buildSearchClearedHref,
+  monthOf,
   parseMovementFilters,
   parseMovementLimit,
   resolveEmptyVariant,
+  shiftMonth,
 } from '@/lib/transactions/filters'
 import { QuickAddFab } from '@/lib/transactions/components/quick-add-fab'
 import { PendingReimbursementsBlock } from '@/lib/transactions/components/pending-reimbursements-block'
 import {
   getGlobalMovementsPage,
+  getMonthCategoryBreakdown,
   getMovementFilterOptions,
   getPendingReimbursements,
+  UNCATEGORIZED_ID,
 } from '@/lib/transactions/queries'
 import { getAccounts } from '@/lib/accounts/queries'
 import { PendingRecurrencesBlock } from '@/lib/recurrences/components/pending-recurrences-block'
@@ -84,6 +90,31 @@ const TransactionsPage = async ({ searchParams }: Props) => {
     }
   }
 
+  // Carta de presentación: gastos por categoría del mes (donut + ranking).
+  const month = filters.month ?? monthOf(getTodayAR())
+  const breakdown = await getMonthCategoryBreakdown(month)
+  const locale = await getLocale()
+  const [yy, mm] = month.split('-').map(Number)
+  const monthLabel = new Date(yy, mm - 1, 1).toLocaleDateString(
+    locale === 'en' ? 'en-US' : 'es-AR',
+    { month: 'long', year: 'numeric' },
+  )
+  const fillLabels = (inputs: typeof breakdown.ARS) =>
+    inputs.map((i) =>
+      i.categoryId === UNCATEGORIZED_ID ? { ...i, label: t('spending.uncategorized') } : i,
+    )
+  const arsBreakdown = buildCategorySlices(fillLabels(breakdown.ARS), {
+    othersLabel: t('spending.others'),
+  })
+  const usdBreakdown = buildCategorySlices(fillLabels(breakdown.USD), {
+    othersLabel: t('spending.others'),
+  })
+  // ARS is the default lens; USD is an explicit `?currency=USD` (shared with the
+  // list filter, so the whole page reads in the chosen currency).
+  const overviewCurrency: 'ARS' | 'USD' = filters.currency === 'USD' ? 'USD' : 'ARS'
+  const overviewBreakdown = overviewCurrency === 'USD' ? usdBreakdown : arsBreakdown
+  const curSuffix = overviewCurrency === 'USD' ? '&currency=USD' : ''
+
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <PageHeader
@@ -108,6 +139,20 @@ const TransactionsPage = async ({ searchParams }: Props) => {
         <RecurrenceSuggestionBanner suggestion={topSuggestion} />
       )}
 
+      <CategorySpendingOverview
+        title={t('spending.title')}
+        monthLabel={monthLabel}
+        prevHref={`/transactions?month=${shiftMonth(month, -1)}${curSuffix}`}
+        nextHref={`/transactions?month=${shiftMonth(month, 1)}${curSuffix}`}
+        emptyLabel={t('spending.empty')}
+        currency={overviewCurrency}
+        breakdown={overviewBreakdown}
+        hasUsd={usdBreakdown.slices.length > 0}
+        arsHref={`/transactions?month=${month}`}
+        usdHref={`/transactions?month=${month}&currency=USD`}
+        month={month}
+      />
+
       <PendingRecurrencesBlock
         pending={pendingRecurrences}
         availableByAccount={availableByAccount}
@@ -123,6 +168,7 @@ const TransactionsPage = async ({ searchParams }: Props) => {
         accounts={filterOptions.accounts}
         categories={filterOptions.categories}
         isExpert={showAccount}
+        showMonthNav={false}
       />
 
       <MovementList

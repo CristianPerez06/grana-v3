@@ -115,6 +115,10 @@
       "error": "We couldn't load this month's balance."
     },
     "hero_error": "We couldn't load your available balance.",
+    "spending": {
+      "title": "Where it went",
+      "view_all": "View breakdown"
+    },
     "welcome_card": {
       "title": "Record your first transaction",
       "description": "Once you record your first income or expense, you'll see here how much you have, what's coming, and how the month is going.",
@@ -595,6 +599,13 @@
     "installments_count": "{count} installments",
     "installment_recalc_hint": "Changing the amount recalculates the {count} installments (the rest goes into the first one).",
     "card_payment_label": "Card payment",
+    "spending": {
+      "title": "Where it went",
+      "others": "Other",
+      "uncategorized": "Uncategorized",
+      "empty": "No spending this month.",
+      "usd_heading": "In dollars"
+    },
     "reimbursement": {
       "label": "Reimbursement",
       "toggle": "Has a reimbursement",
