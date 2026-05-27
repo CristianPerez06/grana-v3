@@ -49,7 +49,8 @@ Las **props comunes** salen del contract y NO se renombran ni se re-tipean. Cada
 
 ## Lo que NO entra acá
 
-- **Componentes específicos de una plataforma** (`MoneyAmountInput` solo-web, `InstitutionPickerModal` solo-mobile, `FormError` solo-mobile). El contract solo cubre primitivos que existen como par equivalente en ambos lados.
+- **Componentes específicos de una plataforma** (`InstitutionPickerModal` solo-mobile, `FormError` solo-mobile). El contract solo cubre primitivos que existen como par equivalente en ambos lados.
+- **Primitivos cuya API pública es el callback nativo de cada plataforma** (`MoneyAmountInput` existe en web y mobile, pero la web emite `onChange` y la mobile `onChangeText`). Igual que `Input`/`FormField`, el contract deja el callback de valor fuera y cada implementación usa el atributo nativo de su stack; no hay *prop shape* común que forzar.
 - **Hooks de lógica** (`useEyeMask`, `useShowCents`, `useDisabled`). El alcance está acotado a *prop shapes* por ahora. Si más adelante hace falta unificar contratos de hooks, sumamos un sub-módulo `@grana/ui-contracts/hooks` en una change dedicada.
 - **Implementaciones**. El package es source-only de TypeScript y no contiene JSX, estilos, CSS, ni dependencias de React Native.
 

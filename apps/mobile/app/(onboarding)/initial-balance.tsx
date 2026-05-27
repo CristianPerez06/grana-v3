@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router'
 import { parseMoneyInput, initialBalanceSchema } from '@grana/validation'
 import { Button } from '../../components/ui/Button'
 import { FormError } from '../../components/ui/FormError'
-import { TextInput } from '../../components/ui/TextInput'
+import { MoneyAmountInput } from '../../components/ui/MoneyAmountInput'
 import { supabase } from '../../lib/supabase'
 import { useT } from '../../lib/locale-context'
 
@@ -210,21 +210,17 @@ export default function InitialBalanceScreen() {
 
           <View className="gap-3">
             <Text className="text-sm font-medium text-text">{primaryLabel}</Text>
-            <TextInput
+            <MoneyAmountInput
               label={t('onboarding.initialBalance.ars_label')}
               value={primaryArsStr}
               onChangeText={setPrimaryArsStr}
               placeholder={t('onboarding.initialBalance.amount_placeholder')}
-              keyboardType="decimal-pad"
-              inputMode="decimal"
             />
-            <TextInput
+            <MoneyAmountInput
               label={t('onboarding.initialBalance.usd_label')}
               value={primaryUsdStr}
               onChangeText={setPrimaryUsdStr}
               placeholder={t('onboarding.initialBalance.amount_placeholder')}
-              keyboardType="decimal-pad"
-              inputMode="decimal"
             />
           </View>
 
@@ -233,21 +229,17 @@ export default function InitialBalanceScreen() {
               <Text className="text-sm font-medium text-text">
                 {t('onboarding.initialBalance.group_cash')}
               </Text>
-              <TextInput
+              <MoneyAmountInput
                 label={t('onboarding.initialBalance.ars_label')}
                 value={cashArsStr}
                 onChangeText={setCashArsStr}
                 placeholder={t('onboarding.initialBalance.amount_placeholder')}
-                keyboardType="decimal-pad"
-                inputMode="decimal"
               />
-              <TextInput
+              <MoneyAmountInput
                 label={t('onboarding.initialBalance.usd_label')}
                 value={cashUsdStr}
                 onChangeText={setCashUsdStr}
                 placeholder={t('onboarding.initialBalance.amount_placeholder')}
-                keyboardType="decimal-pad"
-                inputMode="decimal"
               />
             </View>
           ) : null}
