@@ -34,6 +34,7 @@ import {
 } from '@/lib/cards/utils'
 import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
+import { getAuthenticatedUserId } from './_lib/auth'
 
 function normalizeActionMoney(value: number): number {
   return normalizeMoneyAmount(value) ?? value
@@ -41,15 +42,6 @@ function normalizeActionMoney(value: number): number {
 
 function normalizeActionFxRate(value: number): number {
   return normalizeMoneyAmount(value, { decimalPlaces: 6 }) ?? value
-}
-
-async function getAuthenticatedUserId(): Promise<string> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-  return user.id
 }
 
 // ── 4.1: createCreditCard (experto, 4 fechas) ─────────────────────────────────

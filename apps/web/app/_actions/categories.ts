@@ -17,13 +17,7 @@ import {
 } from '@grana/validation'
 import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
-
-async function getAuthenticatedUserId(): Promise<string> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-  return user.id
-}
+import { getAuthenticatedUserId } from './_lib/auth'
 
 // ── Categories ────────────────────────────────────────────────────────────────
 

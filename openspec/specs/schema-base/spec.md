@@ -1,3 +1,13 @@
+# schema-base Specification
+
+## Purpose
+
+El módulo `schema-base` reúne los cimientos transversales sobre los que se apoya el resto del dominio: los catálogos de sistema pre-cargados e inmutables (monedas, instituciones financieras argentinas, redes de tarjeta), el tipo `Money` que estandariza la aritmética monetaria sobre `decimal.js`, y la convención de fecha contable + zona horaria financiera (`America/Argentina/Buenos_Aires`).
+
+Ningún módulo financiero (`accounts`, `transactions`, `cards`, …) puede comportarse de forma correcta sin estas piezas: definen las monedas válidas, cómo se calcula con dinero sin perder precisión y qué significa "hoy" en términos contables.
+
+## Requirements
+
 ### Requirement: Monedas del sistema disponibles
 
 El sistema SHALL proveer un catálogo de monedas (`currencies`) pre-cargado. Las monedas del sistema son inmutables — ningún usuario puede crearlas, editarlas ni eliminarlas. El catálogo mínimo incluye ARS (peso argentino) y USD (dólar estadounidense).
