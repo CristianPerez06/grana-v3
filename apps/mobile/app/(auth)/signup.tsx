@@ -4,6 +4,7 @@ import { Link, useRouter } from 'expo-router'
 import { signupSchema, ValidationError } from '@grana/validation'
 import { Button } from '../../components/ui/Button'
 import { FormError } from '../../components/ui/FormError'
+import { PasswordField } from '../../components/ui/PasswordField'
 import { TextInput } from '../../components/ui/TextInput'
 import { AuthShell } from '../../components/layout/AuthShell'
 import { AUTH_INPUT_CLASS } from '../../lib/auth-class-names'
@@ -99,27 +100,29 @@ export default function SignupScreen() {
         className={AUTH_INPUT_CLASS}
       />
 
-      <TextInput
-        label="Contraseña"
-        value={password}
-        onChangeText={setPassword}
-        placeholder="••••••••"
-        secureTextEntry
-        autoComplete="new-password"
-        error={fieldErrors.password}
-        className={AUTH_INPUT_CLASS}
-      />
+      <View className="mb-4">
+        <PasswordField
+          label="Contraseña"
+          value={password}
+          onChangeText={setPassword}
+          placeholder="••••••••"
+          autoComplete="new-password"
+          error={fieldErrors.password}
+          className={AUTH_INPUT_CLASS}
+        />
+      </View>
 
-      <TextInput
-        label="Confirmar contraseña"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        placeholder="••••••••"
-        secureTextEntry
-        autoComplete="new-password"
-        error={fieldErrors.confirmPassword}
-        className={AUTH_INPUT_CLASS}
-      />
+      <View className="mb-4">
+        <PasswordField
+          label="Confirmar contraseña"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          placeholder="••••••••"
+          autoComplete="new-password"
+          error={fieldErrors.confirmPassword}
+          className={AUTH_INPUT_CLASS}
+        />
+      </View>
 
       <FormError message={formError} />
 

@@ -1,7 +1,6 @@
-import { View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { OtpVerifyForm } from '../../components/OtpVerifyForm'
-import { Button } from '../../components/ui/Button'
+import { OtpVerifyForm } from '../../components/auth/OtpVerifyForm'
+import { MissingEmailFallback } from '../../components/auth/MissingEmailFallback'
 import { AuthShell } from '../../components/layout/AuthShell'
 
 export default function RecoveryVerifyScreen() {
@@ -10,17 +9,10 @@ export default function RecoveryVerifyScreen() {
 
   if (!email) {
     return (
-      <AuthShell
-        title="Falta tu email"
-        subtitle="Volvé a empezar para que podamos enviarte un código nuevo."
-      >
-        <View className="mt-6">
-          <Button
-            title="Volver a recuperar contraseña"
-            onPress={() => router.replace('/(auth)/forgot-password')}
-          />
-        </View>
-      </AuthShell>
+      <MissingEmailFallback
+        buttonTitle="Volver a recuperar contraseña"
+        onPress={() => router.replace('/(auth)/forgot-password')}
+      />
     )
   }
 
