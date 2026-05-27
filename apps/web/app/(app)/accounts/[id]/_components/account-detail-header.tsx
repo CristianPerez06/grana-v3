@@ -7,6 +7,7 @@ import type { AccountWithBalances } from '@/lib/accounts/types'
 import { archiveAccount, reactivateAccount, deleteAccount } from '@/app/_actions/accounts'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
+import { AccountAvatar } from '@/components/ui/account-avatar'
 
 type Props = {
   account: AccountWithBalances
@@ -58,18 +59,21 @@ export const AccountDetailHeader = ({ account, hasTransactions }: Props) => {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold">{account.name}</h1>
-            {!account.is_active && (
-              <span className="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-800">
-                {t('badges.archived')}
-              </span>
+        <div className="flex items-start gap-3">
+          <AccountAvatar {...account.avatar} size="md" />
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-semibold">{account.name}</h1>
+              {!account.is_active && (
+                <span className="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-800">
+                  {t('badges.archived')}
+                </span>
+              )}
+            </div>
+            {account.type === 'bank' && account.institution && (
+              <p className="mt-1 text-sm text-muted-foreground">{account.institution.name}</p>
             )}
           </div>
-          {account.type === 'bank' && account.institution && (
-            <p className="mt-1 text-sm text-muted-foreground">{account.institution.name}</p>
-          )}
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">

@@ -61,8 +61,10 @@ export type Database = {
       }
       accounts: {
         Row: {
+          color_key: string | null
           created_at: string
           credit_limit: number | null
+          icon_key: string | null
           id: string
           institution_id: string | null
           is_active: boolean
@@ -73,8 +75,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          color_key?: string | null
           created_at?: string
           credit_limit?: number | null
+          icon_key?: string | null
           id?: string
           institution_id?: string | null
           is_active?: boolean
@@ -85,8 +89,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          color_key?: string | null
           created_at?: string
           credit_limit?: number | null
+          icon_key?: string | null
           id?: string
           institution_id?: string | null
           is_active?: boolean

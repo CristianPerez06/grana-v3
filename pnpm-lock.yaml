@@ -235,6 +235,9 @@ importers:
       '@grana/supabase':
         specifier: workspace:*
         version: link:../supabase
+      '@grana/ui-contracts':
+        specifier: workspace:*
+        version: link:../ui-contracts
       '@grana/validation':
         specifier: workspace:*
         version: link:../validation
@@ -274,6 +277,9 @@ importers:
 
   packages/validation:
     dependencies:
+      '@grana/ui-contracts':
+        specifier: workspace:*
+        version: link:../ui-contracts
       decimal.js:
         specifier: ^10.4.3
         version: 10.6.0

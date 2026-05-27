@@ -1,8 +1,11 @@
+import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
+
 export type HeroAccountBalance = {
   id: string
   name: string
   ars: number
   usd: number
+  avatar: ResolvedAccountAvatar
 }
 
 export type DashboardHero = {

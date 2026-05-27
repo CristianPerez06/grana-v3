@@ -11,24 +11,33 @@ import {
 } from '../src/aggregations'
 
 describe('aggregateHero', () => {
+  // Avatar resolution is covered in apps/web account-avatar tests; here we just
+  // tolerate the resolved `avatar` object on each breakdown entry.
+  const anyAvatar = expect.any(Object)
+  const row = (
+    id: string,
+    name: string,
+    currencies: HeroAccountRow['currencies'],
+  ): HeroAccountRow => ({
+    id,
+    name,
+    type: 'cash',
+    color_key: null,
+    icon_key: null,
+    institution: null,
+    currencies,
+  })
+
   it('sums initial balances and tx sums across ARS+USD accounts', () => {
     const accounts: HeroAccountRow[] = [
-      {
-        id: 'cash-1',
-        name: 'Billetera',
-        currencies: [
-          { currency_code: 'ARS', initial_balance: 100_000 },
-          { currency_code: 'USD', initial_balance: 200 },
-        ],
-      },
-      {
-        id: 'bank-1',
-        name: 'Banco Galicia',
-        currencies: [
-          { currency_code: 'ARS', initial_balance: 50_000 },
-          { currency_code: 'USD', initial_balance: 300 },
-        ],
-      },
+      row('cash-1', 'Billetera', [
+        { currency_code: 'ARS', initial_balance: 100_000 },
+        { currency_code: 'USD', initial_balance: 200 },
+      ]),
+      row('bank-1', 'Banco Galicia', [
+        { currency_code: 'ARS', initial_balance: 50_000 },
+        { currency_code: 'USD', initial_balance: 300 },
+      ]),
     ]
     const txSums = new Map<string, { ARS: number; USD: number }>([
       ['cash-1', { ARS: 30_000, USD: 50 }],
@@ -39,24 +48,16 @@ describe('aggregateHero', () => {
       ars: 160_000,
       usd: 550,
       accounts: [
-        { id: 'cash-1', name: 'Billetera', ars: 130_000, usd: 250 },
-        { id: 'bank-1', name: 'Banco Galicia', ars: 30_000, usd: 300 },
+        { id: 'cash-1', name: 'Billetera', ars: 130_000, usd: 250, avatar: anyAvatar },
+        { id: 'bank-1', name: 'Banco Galicia', ars: 30_000, usd: 300, avatar: anyAvatar },
       ],
     })
   })
 
   it('orders the breakdown by ARS balance desc', () => {
     const accounts: HeroAccountRow[] = [
-      {
-        id: 'small',
-        name: 'Caja chica',
-        currencies: [{ currency_code: 'ARS', initial_balance: 10_000 }],
-      },
-      {
-        id: 'big',
-        name: 'Sueldo',
-        currencies: [{ currency_code: 'ARS', initial_balance: 900_000 }],
-      },
+      row('small', 'Caja chica', [{ currency_code: 'ARS', initial_balance: 10_000 }]),
+      row('big', 'Sueldo', [{ currency_code: 'ARS', initial_balance: 900_000 }]),
     ]
     const txSums = new Map<string, { ARS: number; USD: number }>()
 
@@ -68,11 +69,7 @@ describe('aggregateHero', () => {
     // aggregateHero only sees the rows passed in; the SQL filter already
     // excludes type='credit'. We simulate that by passing only cash/bank.
     const accounts: HeroAccountRow[] = [
-      {
-        id: 'cash-1',
-        name: 'Billetera',
-        currencies: [{ currency_code: 'ARS', initial_balance: 100_000 }],
-      },
+      row('cash-1', 'Billetera', [{ currency_code: 'ARS', initial_balance: 100_000 }]),
     ]
     // getTransactionSums already filters status IS NULL, so credit card
     // expenses never appear here. We pass txSums that include no credit data.
@@ -81,27 +78,23 @@ describe('aggregateHero', () => {
     expect(aggregateHero(accounts, txSums)).toEqual({
       ars: 100_000,
       usd: 0,
-      accounts: [{ id: 'cash-1', name: 'Billetera', ars: 100_000, usd: 0 }],
+      accounts: [{ id: 'cash-1', name: 'Billetera', ars: 100_000, usd: 0, avatar: anyAvatar }],
     })
   })
 
   it('handles accounts with currencies the user holds no transactions in', () => {
     const accounts: HeroAccountRow[] = [
-      {
-        id: 'cash-1',
-        name: 'Billetera',
-        currencies: [
-          { currency_code: 'ARS', initial_balance: 0 },
-          { currency_code: 'USD', initial_balance: 0 },
-        ],
-      },
+      row('cash-1', 'Billetera', [
+        { currency_code: 'ARS', initial_balance: 0 },
+        { currency_code: 'USD', initial_balance: 0 },
+      ]),
     ]
     const txSums = new Map([['cash-1', { ARS: 0, USD: 0 }]])
 
     expect(aggregateHero(accounts, txSums)).toEqual({
       ars: 0,
       usd: 0,
-      accounts: [{ id: 'cash-1', name: 'Billetera', ars: 0, usd: 0 }],
+      accounts: [{ id: 'cash-1', name: 'Billetera', ars: 0, usd: 0, avatar: anyAvatar }],
     })
   })
 
@@ -111,18 +104,14 @@ describe('aggregateHero', () => {
 
   it('uses decimal math to avoid float drift', () => {
     const accounts: HeroAccountRow[] = [
-      {
-        id: 'cash-1',
-        name: 'Billetera',
-        currencies: [{ currency_code: 'ARS', initial_balance: '0.10' }],
-      },
+      row('cash-1', 'Billetera', [{ currency_code: 'ARS', initial_balance: '0.10' }]),
     ]
     const txSums = new Map([['cash-1', { ARS: 0.2, USD: 0 }]])
 
     expect(aggregateHero(accounts, txSums)).toEqual({
       ars: 0.3,
       usd: 0,
-      accounts: [{ id: 'cash-1', name: 'Billetera', ars: 0.3, usd: 0 }],
+      accounts: [{ id: 'cash-1', name: 'Billetera', ars: 0.3, usd: 0, avatar: anyAvatar }],
     })
   })
 })

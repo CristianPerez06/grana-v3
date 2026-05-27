@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Alert } from '@/components/ui/alert'
 import { updateAccount } from '@/app/_actions/accounts'
+import { AccountAvatarPicker } from '@/components/ui/account-avatar-picker'
+import type { AccountColorKey, AccountIconKey } from '@grana/ui-contracts'
 import type { AccountWithDetails, Institution } from '@/lib/accounts/types'
 
 type Props = {
@@ -21,11 +23,27 @@ export const EditAccountForm = ({ account, institutions }: Props) => {
   const [name, setName] = useState(account.name)
   const [institutionId, setInstitutionId] = useState(account.institution_id ?? '')
   const [institutionSearch, setInstitutionSearch] = useState(account.institution?.name ?? '')
+  const [colorKey, setColorKey] = useState<AccountColorKey | null>(
+    account.color_key as AccountColorKey | null,
+  )
+  const [iconKey, setIconKey] = useState<AccountIconKey | null>(
+    account.icon_key as AccountIconKey | null,
+  )
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const filteredInstitutions = institutions.filter((i) =>
     i.name.toLowerCase().includes(institutionSearch.toLowerCase()),
   )
+
+  const selectedInstitution = institutions.find((i) => i.id === institutionId) ?? null
+  const inheritedColor = account.type === 'bank' ? selectedInstitution?.brand_color ?? null : null
+  const autoIcon: AccountIconKey =
+    account.type === 'cash'
+      ? 'wallet'
+      : selectedInstitution?.icon_type === 'wallet'
+        ? 'wallet'
+        : 'landmark'
+  const monogram = (name.trim()[0] ?? '?').toUpperCase()
 
   const validate = () => {
     const errs: Record<string, string> = {}
@@ -44,7 +62,12 @@ export const EditAccountForm = ({ account, institutions }: Props) => {
     setIsSubmitting(true)
 
     try {
-      const payload: { name: string; institution_id?: string | null } = { name: name.trim() }
+      const payload: {
+        name: string
+        institution_id?: string | null
+        color_key: AccountColorKey | null
+        icon_key: AccountIconKey | null
+      } = { name: name.trim(), color_key: colorKey, icon_key: iconKey }
       if (account.type === 'bank') payload.institution_id = institutionId || null
 
       const result = await updateAccount(account.id, payload)
@@ -117,6 +140,17 @@ export const EditAccountForm = ({ account, institutions }: Props) => {
           )}
         </div>
       )}
+
+      {/* Appearance — color + icon avatar (auto when left unset) */}
+      <AccountAvatarPicker
+        colorKey={colorKey}
+        iconKey={iconKey}
+        onColorChange={setColorKey}
+        onIconChange={setIconKey}
+        inheritedColor={inheritedColor}
+        autoIcon={autoIcon}
+        monogram={monogram}
+      />
 
       {/* Initial balance — read-only */}
       <div className="flex flex-col gap-1.5">

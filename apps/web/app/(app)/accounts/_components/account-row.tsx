@@ -7,6 +7,7 @@ import type { AccountWithBalances } from '@/lib/accounts/types'
 import { reactivateAccount } from '@/app/_actions/accounts'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
+import { AccountAvatar } from '@/components/ui/account-avatar'
 
 type Props = {
   account: AccountWithBalances
@@ -31,11 +32,12 @@ export const AccountRow = ({ account }: Props) => {
 
   return (
     <div className="flex items-center gap-3 px-4 py-3">
+      <AccountAvatar {...account.avatar} size="sm" />
       <Link href={`/accounts/${account.id}`} className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-medium text-sm truncate">{account.name}</span>
           {account.type === 'bank' && account.institution && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+            <span className="text-xs text-muted-foreground truncate">
               {account.institution.name}
             </span>
           )}

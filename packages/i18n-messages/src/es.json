@@ -323,7 +323,11 @@
       "currencies": "Monedas",
       "balance": "Saldo",
       "ars": "Pesos",
-      "usd": "Dólares"
+      "usd": "Dólares",
+      "appearance": "Apariencia",
+      "color": "Color",
+      "icon": "Ícono",
+      "avatar_auto": "Automático"
     },
     "types": {
       "cash": "Efectivo",
