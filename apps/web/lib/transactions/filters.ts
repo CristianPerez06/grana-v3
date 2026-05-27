@@ -29,6 +29,7 @@ export const MAX_MOVEMENTS_LIMIT = 500
 export const MOVEMENT_TYPE_KEYS: ReadonlyArray<MovementTypeFilter> = [
   'income',
   'expense',
+  'reimbursement',
   'card_payment',
   'transfer',
   'exchange',

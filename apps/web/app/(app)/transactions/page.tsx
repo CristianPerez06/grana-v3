@@ -123,9 +123,6 @@ const TransactionsPage = async ({ searchParams }: Props) => {
         actions={
           <div className="flex items-center gap-2">
             <Button asChild variant="secondary">
-              <Link href="/transactions/reimbursements">{t('reimbursement.list.title')}</Link>
-            </Button>
-            <Button asChild variant="secondary">
               <Link href="/transactions/recurring">{tRec('title')}</Link>
             </Button>
             <Button asChild>

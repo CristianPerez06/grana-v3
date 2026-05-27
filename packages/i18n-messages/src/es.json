@@ -643,17 +643,6 @@
         "cancelled_success": "Reintegro cancelado.",
         "close_notice": "Cerrar aviso"
       },
-      "list": {
-        "title": "Reintegros",
-        "description": "Todos tus reintegros y en qué estado están.",
-        "empty": "No hay reintegros para mostrar.",
-        "filter": {
-          "all": "Todos",
-          "pending": "Esperados",
-          "received": "Recibidos",
-          "cancelled": "Cancelados"
-        }
-      },
       "errors": {
         "amount_positive": "Ingresá un monto de reintegro válido.",
         "account_required": "Elegí la cuenta donde se acredita el reintegro.",
@@ -843,6 +832,7 @@
     "movement_kinds": {
       "income": "Ingresos",
       "expense": "Gastos",
+      "reimbursement": "Reintegros",
       "card_payment": "Pagos de resumen",
       "transfer": "Transferencias",
       "exchange": "Cambios de moneda",
