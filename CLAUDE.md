@@ -42,6 +42,16 @@ Two native implementations, one shared API.
 - Naming convention: interaction callbacks are named `onPress` (RN-friendly) on both sides — not `onClick`. Other naming conventions are documented in `packages/ui-contracts/README.md`.
 - Supabase queries stay in each app's `lib/` because they depend on each app's Supabase client wrapper. Only the pure functions move to `packages/`.
 
+### Component layering (UI)
+
+UI components sit in three tiers by reusability. Each tier has a canonical location per platform:
+
+1. **UI primitives** — the most basic building blocks (`Button`, `Card`, `Input`, `FormField`, `PasswordField`, `Alert`, `Spinner`, …). Live in `apps/web/components/ui/` and `apps/mobile/components/ui/`, one implementation per platform, props shared via `@grana/ui-contracts`. Web primitives have a Storybook story; mobile has no Storybook and mirrors them by name. **Equivalent screens MUST use the equivalent primitive on each platform** — e.g. a password field uses `PasswordField` (with a show/hide toggle), never a raw input with `secureTextEntry`.
+2. **Composed components** — reusable across routes but not generic enough for `ui/` (no Storybook). Two kinds:
+   - **App / route-group shells:** `apps/<app>/components/layout/` (`AuthShell`, `TabBar`, `AppMenu`). Location matches across platforms.
+   - **Feature-shared:** shared across routes *within* a feature. Web colocates them under the route group at `apps/web/app/(group)/_components/` (Next.js ignores `_`-prefixed dirs). Mobile CANNOT colocate under `app/` (Expo Router treats `app/` as routes), so they live at `apps/mobile/components/<feature>/` (e.g. `components/auth/OtpVerifyForm.tsx`). This location asymmetry is router-driven and does NOT violate the Web ↔ Mobile policy — that policy bans sharing JSX and requires API parity via contracts, not identical folder paths.
+3. **Route/screen-local** — single-use, colocated with the route (`login/login-form.tsx` on web; inlined into the screen on mobile).
+
 ## Tech Stack (apps/web)
 
 - Next.js with App Router, TypeScript strict, Tailwind CSS v4, React Server Components by default.

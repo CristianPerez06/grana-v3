@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { Link, useLocalSearchParams, useRouter } from 'expo-router'
+import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
 import { FormError } from '../../components/ui/FormError'
+import { PasswordField } from '../../components/ui/PasswordField'
 import { TextInput } from '../../components/ui/TextInput'
 import { AuthShell } from '../../components/layout/AuthShell'
 import { AUTH_INPUT_CLASS } from '../../lib/auth-class-names'
@@ -71,8 +73,8 @@ export default function LoginScreen() {
       subtitle="Ingresá con tu email y contraseña."
     >
       {notice ? (
-        <View className="mb-4 rounded-lg border border-success/30 bg-success/10 p-3">
-          <Text className="text-sm text-success">{notice}</Text>
+        <View className="mb-4">
+          <Alert variant="success">{notice}</Alert>
         </View>
       ) : null}
 
@@ -88,15 +90,16 @@ export default function LoginScreen() {
         className={AUTH_INPUT_CLASS}
       />
 
-      <TextInput
-        label="Contraseña"
-        value={password}
-        onChangeText={setPassword}
-        placeholder="••••••••"
-        secureTextEntry
-        autoComplete="password"
-        className={AUTH_INPUT_CLASS}
-      />
+      <View className="mb-4">
+        <PasswordField
+          label="Contraseña"
+          value={password}
+          onChangeText={setPassword}
+          placeholder="••••••••"
+          autoComplete="password"
+          className={AUTH_INPUT_CLASS}
+        />
+      </View>
 
       <FormError message={error} />
       {unconfirmed ? (

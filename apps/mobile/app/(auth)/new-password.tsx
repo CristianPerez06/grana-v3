@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router'
 import { resetSchema, ValidationError } from '@grana/validation'
 import { Button } from '../../components/ui/Button'
 import { FormError } from '../../components/ui/FormError'
-import { TextInput } from '../../components/ui/TextInput'
+import { PasswordField } from '../../components/ui/PasswordField'
 import { AuthShell } from '../../components/layout/AuthShell'
 import { AUTH_INPUT_CLASS } from '../../lib/auth-class-names'
 import { supabase } from '../../lib/supabase'
@@ -96,27 +96,29 @@ export default function NewPasswordScreen() {
       title="Nueva contraseña"
       subtitle="Elegí una contraseña nueva para tu cuenta."
     >
-      <TextInput
-        label="Nueva contraseña"
-        value={password}
-        onChangeText={setPassword}
-        placeholder="••••••••"
-        secureTextEntry
-        autoComplete="new-password"
-        error={fieldErrors.password}
-        className={AUTH_INPUT_CLASS}
-      />
+      <View className="mb-4">
+        <PasswordField
+          label="Nueva contraseña"
+          value={password}
+          onChangeText={setPassword}
+          placeholder="••••••••"
+          autoComplete="new-password"
+          error={fieldErrors.password}
+          className={AUTH_INPUT_CLASS}
+        />
+      </View>
 
-      <TextInput
-        label="Confirmar contraseña"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        placeholder="••••••••"
-        secureTextEntry
-        autoComplete="new-password"
-        error={fieldErrors.confirmPassword}
-        className={AUTH_INPUT_CLASS}
-      />
+      <View className="mb-4">
+        <PasswordField
+          label="Confirmar contraseña"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          placeholder="••••••••"
+          autoComplete="new-password"
+          error={fieldErrors.confirmPassword}
+          className={AUTH_INPUT_CLASS}
+        />
+      </View>
 
       <FormError message={formError} />
 

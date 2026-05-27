@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { otpCodeSchema } from '@grana/validation'
-import { supabase } from '../lib/supabase'
-import { mapSupabaseError } from '../lib/supabase-errors'
-import { Button } from './ui/Button'
-import { FormError } from './ui/FormError'
-import { TextInput } from './ui/TextInput'
-import { AUTH_INPUT_CLASS } from '../lib/auth-class-names'
+import { supabase } from '../../lib/supabase'
+import { mapSupabaseError } from '../../lib/supabase-errors'
+import { Alert } from '../ui/Alert'
+import { Button } from '../ui/Button'
+import { FormError } from '../ui/FormError'
+import { TextInput } from '../ui/TextInput'
+import { AUTH_INPUT_CLASS } from '../../lib/auth-class-names'
 
 const RESEND_COOLDOWN_SECONDS = 60
 
@@ -92,7 +93,9 @@ export function OtpVerifyForm({ email, type, onVerified }: Props) {
 
       <FormError message={error} />
       {notice ? (
-        <Text className="mt-2 text-sm text-success">{notice}</Text>
+        <View className="mt-2">
+          <Alert variant="success">{notice}</Alert>
+        </View>
       ) : null}
 
       <View className="mt-4">
