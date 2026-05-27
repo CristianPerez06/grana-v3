@@ -18,40 +18,13 @@ import { WelcomeFirstMoveCard } from './_components/welcome-first-move-card'
 
 const MONTHS_BACK_LIMIT = 12
 
-type SearchParams = Promise<{ month?: string }>
-
-type MonthParam = {
-  year: number
-  month: number
-  currentYear: number
-  currentMonth: number
-}
-
-function parseMonthParam(raw: string | undefined, today: Date): MonthParam {
+const DashboardPage = async () => {
+  const today = getTodayAR()
+  // The dashboard always opens on the current month. Month navigation is
+  // client-side state inside MonthBalanceSection, so there is no `?month=`
+  // param to parse here anymore.
   const currentYear = today.getFullYear()
   const currentMonth = today.getMonth() + 1
-  const fallback = { year: currentYear, month: currentMonth, currentYear, currentMonth }
-  if (!raw) return fallback
-
-  const match = /^(\d{4})-(\d{2})$/.exec(raw)
-  if (!match) return fallback
-
-  const year = Number(match[1])
-  const month = Number(match[2])
-  if (month < 1 || month > 12) return fallback
-
-  const monthsBack = (currentYear - year) * 12 + (currentMonth - month)
-  if (monthsBack < 0 || monthsBack > MONTHS_BACK_LIMIT) return fallback
-
-  return { year, month, currentYear, currentMonth }
-}
-
-const DashboardPage = async ({ searchParams }: { searchParams: SearchParams }) => {
-  const today = getTodayAR()
-  const { year, month, currentYear, currentMonth } = parseMonthParam(
-    (await searchParams).month,
-    today,
-  )
 
   const t = await getTranslations('dashboard')
   const supabase = await createClient()
@@ -64,7 +37,7 @@ const DashboardPage = async ({ searchParams }: { searchParams: SearchParams }) =
     await Promise.allSettled([
       getDashboardHero(supabase),
       getUpcomingFortnight(supabase, today),
-      getMonthBalanceSeries(supabase, year, month),
+      getMonthBalanceSeries(supabase, currentYear, currentMonth),
       hasUserMovements(supabase),
       user
         ? supabase.from('profiles').select('full_name').eq('id', user.id).single()
@@ -110,7 +83,7 @@ const DashboardPage = async ({ searchParams }: { searchParams: SearchParams }) =
           <div className="lg:order-1">
             {monthResult.status === 'fulfilled' ? (
               <MonthBalanceSection
-                data={monthResult.value}
+                initialData={monthResult.value}
                 currentYear={currentYear}
                 currentMonth={currentMonth}
                 monthsBackLimit={MONTHS_BACK_LIMIT}
