@@ -37,7 +37,10 @@ const PeriodDetailPage = async ({ params }: Props) => {
   const canEditDates = !period.has_payment
   const totalAmount = period.has_payment ? period.paidAmountARS : period.pendingAmountARS
 
-  const t = await getTranslations('cards')
+  const [t, tTx] = await Promise.all([
+    getTranslations('cards'),
+    getTranslations('transactions'),
+  ])
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
@@ -98,9 +101,10 @@ const PeriodDetailPage = async ({ params }: Props) => {
         ) : (
           <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
             {period.transactions.map((tx) => {
+              const isReimbursement = tx.type === 'reimbursement'
               const label = tx.description
                 ?? (tx.subcategory?.name ? `${tx.category?.name} · ${tx.subcategory.name}` : tx.category?.name)
-                ?? '—'
+                ?? (isReimbursement ? tTx('reimbursement.label') : '—')
               return (
               <Link
                 key={tx.id}
@@ -119,7 +123,8 @@ const PeriodDetailPage = async ({ params }: Props) => {
                   <p className="text-xs text-muted-foreground">{formatDate(tx.date)}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-sm font-medium">
+                  <p className={`text-sm font-medium ${isReimbursement ? 'text-green-600' : ''}`}>
+                    {isReimbursement ? '−' : ''}
                     {tx.currency_code === 'ARS'
                       ? formatARS(Number(tx.amount), showCents)
                       : formatUSD(Number(tx.amount), showCents)}
@@ -129,9 +134,11 @@ const PeriodDetailPage = async ({ params }: Props) => {
                       TC {tx.fx_rate_to_ars}
                     </p>
                   )}
-                  <span className={`text-xs ${tx.status === 'paid' ? 'text-green-600' : 'text-muted-foreground'}`}>
-                    {tx.status === 'paid' ? t('period.paid') : t('period.pending_short')}
-                  </span>
+                  {!isReimbursement && (
+                    <span className={`text-xs ${tx.status === 'paid' ? 'text-green-600' : 'text-muted-foreground'}`}>
+                      {tx.status === 'paid' ? t('period.paid') : t('period.pending_short')}
+                    </span>
+                  )}
                 </div>
               </Link>
             )})}
