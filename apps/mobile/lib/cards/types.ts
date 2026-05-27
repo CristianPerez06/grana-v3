@@ -1,7 +1,7 @@
-// TODO(@grana/cards): duplicación temporal de apps/web/lib/cards/types.ts.
-// Cuando cards se prometa a package compartido, esta copia se borra y se
-// importa desde ahí. Mantener firma sincronizada con el archivo web hasta
-// entonces.
+// DB-row card types. They derive from @grana/supabase's `Database`, which the
+// pure @grana/money-logic package can't depend on, so they stay per-app — same
+// as the canonical mirror apps/web/lib/cards/types.ts. The PeriodStatus /
+// PeriodVariant unions also live in @grana/money-logic; kept here to match web.
 
 import type { Database } from '@grana/supabase'
 

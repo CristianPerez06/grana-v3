@@ -1,8 +1,8 @@
-// TODO(@grana/cards): duplicación temporal de apps/web/lib/cards/queries.ts
-// (solo getCreditCards y sus tipos asociados — los demás queries del módulo
-// cards web no se necesitan todavía en mobile). Cuando cards se prometa a un
-// package compartido, esta copia se borra y se importa desde ahí. Mantener
-// firma pública sincronizada con el archivo web hasta entonces.
+// getCreditCards for mobile. Supabase-coupled query glue stays per-app by repo
+// policy ("Supabase queries stay in each app's lib/"), same as the canonical
+// mirror apps/web/lib/cards/queries.ts — only getCreditCards is ported so far.
+// The pure period/money calculations come from @grana/money-logic via ./utils.
+// Keep the public shape in sync with web until a shared query layer exists.
 
 import { supabase } from '../supabase'
 import { getTodayAR } from '../date'
