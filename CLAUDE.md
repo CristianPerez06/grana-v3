@@ -188,7 +188,7 @@ Personal finance app for the Argentine market. Built by an accountant for people
 
 **Key differentials:** credit card installment tracking as a first-class citizen; bi-currency daily life (Argentines save in USD, spend in both); inflation context.
 
-**User modes:** `novato` — simplified UI, default accounts hidden, answers "how much do I have / where did it go / what came in?"; `experto` — full app, adds "where exactly is that money?" with account-level detail. Mode is stored in `users.mode` and is **UI-only** — server actions do not enforce it.
+**Single profile (no user modes):** every user gets the same app — there is no `novato`/`experto` flag. Depth follows from data, not a stored mode: a user who keeps everything in the default `Billetera` gets the simple experience (with a single account, account-level detail like the account filter/column stays hidden); creating more accounts surfaces the account dimension ("where exactly is that money?"). The accounts list shows a dismissible first-use hint explaining the choice. (The old `profiles.mode` flag was removed in the `remove-user-modes` change — do not reintroduce it.)
 
 ### Cross-cutting principles
 
@@ -223,13 +223,13 @@ Build order matters — each module generally depends on the ones above it. Cros
 |---|--------|--------|-------------|
 | 1 | `auth` | ✅ Done | Registro, login, recupero de contraseña, OTP, callbacks |
 | 2 | `schema-base` | ✅ Done | Monedas, instituciones, redes de tarjeta, tipo `Money`, fecha contable y zona horaria financiera |
-| 3 | `profiles` | ✅ Done | Perfil del usuario, modo novato/experto, zona horaria financiera, flag de onboarding |
+| 3 | `profiles` | ✅ Done | Perfil del usuario, zona horaria financiera, flag de onboarding |
 | 4 | `card-networks` | ✅ Done | Catálogo de redes de tarjeta con BIN ranges y branding |
 | 5 | `categories` | ✅ Done | 17 categorías sistema + subcategorías, categorías propias del usuario, i18n |
 | 6 | `i18n` | ✅ Done | Estrategia de mensajes (next-intl + helper RN), catálogos JSON compartidos, fallback |
 | 7 | `accounts` | ✅ Done | Cuentas efectivo (ARS/USD), cuentas bancarias/débito (las de crédito viven en `cards`) |
 | 8 | `transactions` | ✅ Done | Ingresos, gastos, transferencias, ajustes, cambios de moneda, reintegros/cashback; reglas de balance |
-| 9 | `cards` | ✅ Done | Tarjetas de crédito: alta experto/novato, períodos (resúmenes), consumos, cuotas en pesos, pago de resumen, reversión |
+| 9 | `cards` | ✅ Done | Tarjetas de crédito: alta de tarjeta (4 fechas), períodos (resúmenes), consumos, cuotas en pesos, pago de resumen, reversión |
 | 10 | `recurring-movements` | ✅ Done | Plantillas de recurrencias e instancias generadas; confirmar, saltar, posponer |
 | 11 | `dashboard` | ✅ Done | Landing universal post-login: Hero "Para gastar", Lo que viene, Balance del mes (3 secciones). Layout multi-columna en desktop (web), header con saludo + fecha + CTA. Tarjetas NO vive en el dashboard: el resumen vive en `/cards` |
 | 12 | `onboarding` | ✅ Done | Wizard post-signup (web + mobile), bimoneda default, gate logic |

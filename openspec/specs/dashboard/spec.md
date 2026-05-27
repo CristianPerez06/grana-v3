@@ -2,37 +2,26 @@
 
 ## Purpose
 
-Define la pantalla `/dashboard` como landing universal post-login y post-onboarding (idéntica para modo novato y experto, en web y mobile). Es read-only y se compone de tres secciones en orden fijo: Hero "Para gastar" con disponible bimoneda y eye toggle de privacidad, "Lo que viene" con compromisos firmes y recurrencias de los próximos 14 días, y Balance del mes con gráfico de línea y navegador mensual. En desktop (web) el dashboard reorganiza esas secciones en un layout multi-columna; el resumen de tarjetas NO vive en el dashboard sino en `/cards`. Toda interacción navega al módulo correspondiente; el dashboard no muta datos.
+Define la pantalla `/dashboard` como landing universal post-login y post-onboarding (idéntica en web y mobile). Es read-only y se compone de tres secciones en orden fijo: Hero "Para gastar" con disponible bimoneda y eye toggle de privacidad, "Lo que viene" con compromisos firmes y recurrencias de los próximos 14 días, y Balance del mes con gráfico de línea y navegador mensual. En desktop (web) el dashboard reorganiza esas secciones en un layout multi-columna; el resumen de tarjetas NO vive en el dashboard sino en `/cards`. Toda interacción navega al módulo correspondiente; el dashboard no muta datos.
 
 ## Requirements
 ### Requirement: La pantalla dashboard es la landing universal post-login y post-onboarding
 
-El sistema SHALL renderizar la pantalla principal de la app en la ruta `/dashboard` bajo el grupo `(app)`, tanto en web como en mobile. La pantalla SHALL ser la única landing tras tres flujos: login exitoso, signup confirmado con onboarding ya completado, y completar el onboarding (en ambos modos, novato y experto).
-
-El dashboard SHALL ser idéntico para los dos modos (`users.mode='novato'` y `users.mode='experto'`). El modo NO modifica ninguna sección, dato, layout ni componente del dashboard. El detalle adicional del modo experto vive en el módulo Cuentas, no en el dashboard.
+El sistema SHALL renderizar la pantalla principal de la app en la ruta `/dashboard` bajo el grupo `(app)`, tanto en web como en mobile. La pantalla SHALL ser la única landing tras tres flujos: login exitoso, signup confirmado con onboarding ya completado, y completar el onboarding.
 
 El dashboard SHALL renderizar **tres** secciones en orden vertical (mobile) o reorganizadas en desktop: Hero → Lo que viene → Balance del mes. La sección Tarjetas NO forma parte del dashboard; el resumen de tarjetas vive en `/cards` (web) y se navega desde el `AppMenu` → `/cards` (nativo).
 
-#### Scenario: Usuario novato aterriza en dashboard tras completar el onboarding
+#### Scenario: Usuario aterriza en dashboard tras completar el onboarding
 
-- **WHEN** un usuario completa el flujo de onboarding novato
-- **THEN** el sistema redirige a `/dashboard`
+- **WHEN** un usuario completa el flujo de onboarding
+- **THEN** el sistema lo redirige a `/dashboard`
+- **AND** la pantalla renderiza las tres secciones (Hero, Lo que viene, Balance del mes) en orden fijo
 - **AND** NO redirige a `/cards`
-
-#### Scenario: Usuario experto aterriza en dashboard tras completar el onboarding
-
-- **WHEN** un usuario completa el flujo de onboarding experto
-- **THEN** el sistema redirige a `/dashboard`
 
 #### Scenario: Login exitoso aterriza en dashboard
 
 - **WHEN** un usuario con onboarding completado hace login
 - **THEN** el sistema redirige a `/dashboard`
-
-#### Scenario: Dashboard se ve igual en novato y experto
-
-- **WHEN** dos usuarios con datos idénticos pero `users.mode` distinto cargan `/dashboard`
-- **THEN** la pantalla renderiza las mismas tres secciones (Hero, Lo que viene, Balance del mes), en el mismo orden, con los mismos componentes y los mismos importes
 
 #### Scenario: Arranque con sesión activa aterriza en /dashboard renderizado (mobile)
 
@@ -44,7 +33,7 @@ El dashboard SHALL renderizar **tres** secciones en orden vertical (mobile) o re
 
 ### Requirement: El dashboard usa un layout multi-columna en desktop (web)
 
-En viewports `lg` (≥1024px) y mayores, la pantalla `/dashboard` web SHALL reorganizar sus secciones en un layout multi-columna en lugar de la columna única mobile-first: el Hero ocupa el ancho completo arriba; debajo, "Balance del mes" y "Lo que viene" se muestran lado a lado, con "Balance del mes" creciendo para ocupar el ancho disponible y "Lo que viene" como rail de ancho acotado a la derecha. Ambas columnas SHALL igualar su altura. Por debajo de `lg`, el dashboard SHALL mantener la columna única mobile-first actual. El layout NO SHALL depender del modo (`novato`/`experto`).
+En viewports `lg` (≥1024px) y mayores, la pantalla `/dashboard` web SHALL reorganizar sus secciones en un layout multi-columna en lugar de la columna única mobile-first: el Hero ocupa el ancho completo arriba; debajo, "Balance del mes" y "Lo que viene" se muestran lado a lado, con "Balance del mes" creciendo para ocupar el ancho disponible y "Lo que viene" como rail de ancho acotado a la derecha. Ambas columnas SHALL igualar su altura. Por debajo de `lg`, el dashboard SHALL mantener la columna única mobile-first actual.
 
 #### Scenario: Desktop ancho muestra dos columnas con alturas igualadas
 
@@ -361,7 +350,7 @@ El dashboard SHALL renderizar las tres secciones aunque alguna(s) de ellas no te
 
 #### Scenario: Usuario nuevo sin transacciones ve dashboard funcional
 
-- **WHEN** un usuario recién creado por el onboarding novato carga `/dashboard` sin haber registrado ningún movimiento ni consumo
+- **WHEN** un usuario recién creado por el onboarding carga `/dashboard` sin haber registrado ningún movimiento ni consumo
 - **THEN** el Hero muestra `$ 0,00` y `u$s 0,00`
 - **AND** "Lo que viene" muestra el estado vacío
 - **AND** "Balance del mes" muestra la línea plana en 0

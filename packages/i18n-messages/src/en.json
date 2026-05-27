@@ -243,29 +243,10 @@
       "description": "We'll ask you a couple of questions so the app fits you. It takes less than a minute.",
       "cta": "Get started"
     },
-    "profile": {
-      "title": "To set up your Grana, tell us a bit about you",
-      "mode_question": "What are you looking for in Grana?",
-      "mode_simple_title": "The essentials",
-      "mode_simple_description": "See my available balance and where my money goes.",
-      "mode_detailed_title": "With more detail",
-      "mode_detailed_description": "See my available balance, where my money goes, and which accounts it's in.",
-      "bank_question": "Do you have a bank account?",
-      "bank_yes": "Yes",
-      "bank_no": "No",
-      "institution_label": "Bank",
-      "institution_placeholder": "Search bank or wallet…",
-      "account_name_label": "Account name",
-      "account_name_placeholder": "E.g. Savings account",
-      "continue": "Continue"
-    },
     "initialBalance": {
       "title": "How much money do you have today?",
-      "description_novato": "Just so you start with a real available balance. You can adjust it later with any transaction. If you have no money, enter 0.",
-      "description_experto": "Enter how much you have available in each place. Anything you leave blank starts at zero. The peso amount is required (can be 0).",
-      "group_novato": "In total",
-      "group_primary_bank": "In {accountName}",
-      "group_cash": "In cash (optional)",
+      "description": "Just so you start with a real available balance. You can adjust it later with any transaction. If you have no money, enter 0.",
+      "group_total": "In total",
       "ars_label": "Pesos (ARS)",
       "usd_label": "Dollars (USD)",
       "amount_placeholder": "0.00",
@@ -389,6 +370,11 @@
       "description": "Create your first account to start recording your transactions.",
       "cta": "Create account"
     },
+    "hint": {
+      "title": "All your money is in your Wallet",
+      "description": "If you want to see which accounts your money is in, create accounts; otherwise, keep everything here.",
+      "dismiss": "Got it"
+    },
     "movements_empty": "No transactions on this account yet.",
     "defaultCashName": "Wallet",
     "currency_options": {
@@ -405,7 +391,6 @@
     "back_label": "Cards",
     "new": {
       "title": "New credit card",
-      "subtitle_novato": "We only need the closing date of the next statement.",
       "subtitle_full": "Enter your card details and the current cycle dates."
     },
     "edit": {
@@ -425,8 +410,6 @@
       "next_period": "Next statement",
       "close_date": "Closing",
       "due_date": "Due",
-      "novato_close_date": "Next closing date",
-      "novato_close_helper": "Take it from the last statement your bank sent you. The app will generate the following statements automatically.",
       "creation_date": "Created on",
       "archived_date": "Archived",
       "movements": "Transactions",

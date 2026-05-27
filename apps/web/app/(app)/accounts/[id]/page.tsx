@@ -126,7 +126,7 @@ const AccountDetailPage = async ({ params, searchParams }: Props) => {
           filters={filters}
           accounts={filterOptions.accounts}
           categories={filterOptions.categories}
-          isExpert={false}
+          showAccount={false}
           showAccountFilter={false}
         />
 

@@ -33,7 +33,7 @@ const WelcomePage = async () => {
       </div>
 
       <Button asChild>
-        <Link href="/onboarding/profile">{t('cta')}</Link>
+        <Link href="/onboarding/initial-balance">{t('cta')}</Link>
       </Button>
     </div>
   )

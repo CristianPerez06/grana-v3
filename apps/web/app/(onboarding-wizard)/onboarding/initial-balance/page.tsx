@@ -9,42 +9,22 @@ const InitialBalancePage = async () => {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('mode')
-    .eq('id', user.id)
-    .single()
-
   const { data: accounts } = await supabase
     .from('accounts')
     .select('id, name, type')
     .eq('user_id', user.id)
     .eq('is_active', true)
-    .in('type', ['cash', 'bank'])
+    .eq('type', 'cash')
 
-  const list = accounts ?? []
-  const bank = list.find((a) => a.type === 'bank') ?? null
-  const cash = list.find((a) => a.type === 'cash') ?? null
+  const billetera = (accounts ?? [])[0] ?? null
 
-  if (!cash) {
-    // The default Billetera should always exist (created by trigger). If it
-    // is missing, something is wrong with the user setup — fail safe by
-    // bouncing them to done so they at least exit the wizard.
+  if (!billetera) {
+    // The default Billetera is created by trigger at signup. If it is missing,
+    // bounce to done so the user at least exits the wizard.
     redirect('/onboarding/done')
   }
 
-  // Experto with bank: primary = bank, secondary cash = Billetera.
-  // Otherwise: primary = Billetera, no secondary cash.
-  const primary = bank ?? cash
-  const secondaryCash = bank ? cash : null
-
-  return (
-    <InitialBalanceForm
-      mode={profile?.mode === 'experto' ? 'experto' : 'novato'}
-      primaryAccount={primary}
-      secondaryCashAccount={secondaryCash}
-    />
-  )
+  return <InitialBalanceForm primaryAccount={billetera} />
 }
 
 export default InitialBalancePage

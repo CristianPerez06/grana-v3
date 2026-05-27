@@ -32,7 +32,7 @@ type Props = {
   perspective: MovementPerspective
   /** Financial "today" (from getTodayAR) — used for the Hoy/Ayer group labels. */
   todayISO: string
-  /** Show the account in each row's subtitle (expert mode only). */
+  /** Show the account in each row's subtitle (only when the user has multiple accounts). */
   showAccount?: boolean
   recurrenceLinkedIds?: Set<string>
   /** Per-movement running balance snapshots (account view, no filters); null hides them. */

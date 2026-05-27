@@ -314,7 +314,6 @@ export type Database = {
           financial_timezone: string
           full_name: string
           id: string
-          mode: string
           onboarding_completed_at: string | null
         }
         Insert: {
@@ -323,7 +322,6 @@ export type Database = {
           financial_timezone?: string
           full_name: string
           id: string
-          mode?: string
           onboarding_completed_at?: string | null
         }
         Update: {
@@ -332,7 +330,6 @@ export type Database = {
           financial_timezone?: string
           full_name?: string
           id?: string
-          mode?: string
           onboarding_completed_at?: string | null
         }
         Relationships: []
