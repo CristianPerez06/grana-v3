@@ -1,4 +1,5 @@
-import Link from 'next/link'
+'use client'
+
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -20,8 +21,8 @@ const MONTH_NAMES_ES = [
 type Props = {
   year: number
   month: number
-  prevHref?: string
-  nextHref?: string
+  onPrev?: () => void
+  onNext?: () => void
 }
 
 const buttonClass = cn(
@@ -31,27 +32,27 @@ const buttonClass = cn(
 
 const disabledClass = 'opacity-30 cursor-not-allowed pointer-events-none'
 
-export const MonthNavigator = ({ year, month, prevHref, nextHref }: Props) => {
+export const MonthNavigator = ({ year, month, onPrev, onNext }: Props) => {
   const label = `${MONTH_NAMES_ES[month - 1]} ${year}`
 
   return (
-    <div className="flex items-center justify-center gap-3">
-      {prevHref ? (
-        <Link href={prevHref} aria-label="Mes anterior" className={buttonClass}>
+    <div className="flex shrink-0 items-center justify-center gap-2">
+      {onPrev ? (
+        <button type="button" onClick={onPrev} aria-label="Mes anterior" className={buttonClass}>
           <ChevronLeft size={18} />
-        </Link>
+        </button>
       ) : (
         <span aria-hidden className={cn(buttonClass, disabledClass)}>
           <ChevronLeft size={18} />
         </span>
       )}
-      <span className="min-w-[10rem] text-center text-sm font-medium uppercase tracking-wide text-text-muted">
+      <span className="min-w-[7rem] text-center text-sm font-medium uppercase tracking-wide text-text-muted">
         {label}
       </span>
-      {nextHref ? (
-        <Link href={nextHref} aria-label="Mes siguiente" className={buttonClass}>
+      {onNext ? (
+        <button type="button" onClick={onNext} aria-label="Mes siguiente" className={buttonClass}>
           <ChevronRight size={18} />
-        </Link>
+        </button>
       ) : (
         <span aria-hidden className={cn(buttonClass, disabledClass)}>
           <ChevronRight size={18} />

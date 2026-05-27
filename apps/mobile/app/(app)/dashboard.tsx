@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { RefreshControl, ScrollView, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useFocusEffect, useLocalSearchParams } from 'expo-router'
+import { useFocusEffect } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { colors } from '../../lib/colors'
 import { formatDateISO, getTodayAR } from '../../lib/date'
@@ -9,7 +9,6 @@ import { useT } from '../../lib/locale-context'
 import {
   useDashboardHero,
   useHasMovements,
-  useMonthBalanceSeries,
   useProfileFirstName,
   useUpcomingFortnight,
 } from '../../lib/dashboard/queries'
@@ -24,50 +23,22 @@ import { Spinner } from '../../components/ui/Spinner'
 
 const MONTHS_BACK_LIMIT = 12
 
-type MonthParam = {
-  year: number
-  month: number
-  currentYear: number
-  currentMonth: number
-}
-
-function parseMonthParam(raw: string | undefined, today: Date): MonthParam {
-  const currentYear = today.getFullYear()
-  const currentMonth = today.getMonth() + 1
-  const fallback = { year: currentYear, month: currentMonth, currentYear, currentMonth }
-  if (!raw) return fallback
-
-  const match = /^(\d{4})-(\d{2})$/.exec(raw)
-  if (!match) return fallback
-
-  const year = Number(match[1])
-  const month = Number(match[2])
-  if (month < 1 || month > 12) return fallback
-
-  const monthsBack = (currentYear - year) * 12 + (currentMonth - month)
-  if (monthsBack < 0 || monthsBack > MONTHS_BACK_LIMIT) return fallback
-
-  return { year, month, currentYear, currentMonth }
-}
-
 export default function DashboardScreen() {
   const t = useT()
-  const params = useLocalSearchParams<{ month?: string }>()
   const today = getTodayAR()
-  const { year, month, currentYear, currentMonth } = parseMonthParam(params.month, today)
+  // The dashboard always opens on the current month; MonthBalanceSection owns
+  // month navigation in local state (no `?month=` param).
+  const currentYear = today.getFullYear()
+  const currentMonth = today.getMonth() + 1
 
   const queryClient = useQueryClient()
   const hero = useDashboardHero()
   const upcoming = useUpcomingFortnight(today)
-  const monthSeries = useMonthBalanceSeries(year, month)
   const movements = useHasMovements()
   const profileFirstName = useProfileFirstName()
 
   const isRefetching =
-    hero.isFetching ||
-    upcoming.isFetching ||
-    monthSeries.isFetching ||
-    movements.isFetching
+    hero.isFetching || upcoming.isFetching || movements.isFetching
 
   const onRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['dashboard'] })
@@ -86,11 +57,9 @@ export default function DashboardScreen() {
     }, []),
   )
 
-  const initialLoading =
-    hero.isPending &&
-    upcoming.isPending &&
-    monthSeries.isPending &&
-    movements.isPending
+  // MonthBalanceSection self-manages its own loading/error in-card, so it no
+  // longer gates the screen-level initial spinner.
+  const initialLoading = hero.isPending && upcoming.isPending && movements.isPending
 
   if (initialLoading) {
     return (
@@ -135,16 +104,11 @@ export default function DashboardScreen() {
               <SectionFallback message={t('dashboard.upcoming.error')} />
             ) : null}
 
-            {monthSeries.data ? (
-              <MonthBalanceSection
-                data={monthSeries.data}
-                currentYear={currentYear}
-                currentMonth={currentMonth}
-                monthsBackLimit={MONTHS_BACK_LIMIT}
-              />
-            ) : monthSeries.error ? (
-              <SectionFallback message={t('dashboard.month.error')} />
-            ) : null}
+            <MonthBalanceSection
+              currentYear={currentYear}
+              currentMonth={currentMonth}
+              monthsBackLimit={MONTHS_BACK_LIMIT}
+            />
           </View>
         </ScrollView>
       </View>
