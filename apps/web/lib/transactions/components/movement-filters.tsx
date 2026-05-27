@@ -23,6 +23,8 @@ type MovementFiltersProps = {
   isExpert: boolean
   /** Account detail view hides the account filter (already scoped to one account). */
   showAccountFilter?: boolean
+  /** Hide the month navigator when another control (the spending overview) owns it. */
+  showMonthNav?: boolean
 }
 
 /** Filters that narrow content (the count shown on the "Filtros" button). */
@@ -37,6 +39,7 @@ export const MovementFilters = ({
   categories,
   isExpert,
   showAccountFilter = true,
+  showMonthNav = true,
 }: MovementFiltersProps) => {
   const t = useTranslations('transactions')
   const locale = useLocale()
@@ -124,27 +127,29 @@ export const MovementFilters = ({
           />
         </div>
 
-        <div className="flex items-center gap-1 rounded-md border border-border px-1">
-          <button
-            type="button"
-            aria-label={t('filters.prev_month')}
-            onClick={() => goToMonth(shiftMonth(month, -1))}
-            className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <span className="min-w-28 text-center text-sm font-medium capitalize">
-            {isCustomRange ? t('filters.custom_range') : monthLabel}
-          </span>
-          <button
-            type="button"
-            aria-label={t('filters.next_month')}
-            onClick={() => goToMonth(shiftMonth(month, 1))}
-            className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
+        {showMonthNav && (
+          <div className="flex items-center gap-1 rounded-md border border-border px-1">
+            <button
+              type="button"
+              aria-label={t('filters.prev_month')}
+              onClick={() => goToMonth(shiftMonth(month, -1))}
+              className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="min-w-28 text-center text-sm font-medium capitalize">
+              {isCustomRange ? t('filters.custom_range') : monthLabel}
+            </span>
+            <button
+              type="button"
+              aria-label={t('filters.next_month')}
+              onClick={() => goToMonth(shiftMonth(month, 1))}
+              className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
 
         <Button type="button" variant="secondary" onClick={() => setOpen((v) => !v)}>
           <SlidersHorizontal size={16} />

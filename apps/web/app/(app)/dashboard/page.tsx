@@ -5,9 +5,13 @@ import {
   getUpcomingFortnight,
   hasUserMovements,
 } from '@grana/dashboard'
+import { buildCategorySlices } from '@grana/money-logic'
 import { createClient } from '@/lib/supabase/server'
 import { formatDateISO, getTodayAR } from '@/lib/date'
+import { getMonthCategoryBreakdown, UNCATEGORIZED_ID } from '@/lib/transactions/queries'
+import { monthOf } from '@/lib/transactions/filters'
 import { DashboardHeader } from './_components/dashboard-header'
+import { CategoryTeaser } from './_components/category-teaser'
 import { QuickAddFab } from '@/lib/transactions/components/quick-add-fab'
 import { EyeMaskProvider } from './_components/eye-mask-context'
 import { HeroSection } from './_components/hero-section'
@@ -51,6 +55,17 @@ const DashboardPage = async () => {
   const showWelcomeCard =
     hasMovementsResult.status === 'fulfilled' && hasMovementsResult.value === false
 
+  // Teaser "en qué se fue": top-3 categorías del mes (ARS), gancho al desglose.
+  const monthStr = monthOf(today)
+  const breakdown = await getMonthCategoryBreakdown(monthStr)
+  const tTx = await getTranslations('transactions')
+  const teaserSlices = buildCategorySlices(
+    breakdown.ARS.map((i) =>
+      i.categoryId === UNCATEGORIZED_ID ? { ...i, label: tTx('spending.uncategorized') } : i,
+    ),
+    { topN: 3, othersLabel: tTx('spending.others') },
+  ).slices.slice(0, 3)
+
   return (
     <EyeMaskProvider>
       <DashboardHeader name={firstName} todayISO={formatDateISO(today)} />
@@ -93,6 +108,13 @@ const DashboardPage = async () => {
             )}
           </div>
         </div>
+
+        <CategoryTeaser
+          title={t('spending.title')}
+          viewAllLabel={t('spending.view_all')}
+          href="/transactions"
+          slices={teaserSlices}
+        />
       </div>
 
       <QuickAddFab />

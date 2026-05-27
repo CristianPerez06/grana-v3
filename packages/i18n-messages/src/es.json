@@ -115,6 +115,10 @@
       "error": "No pudimos cargar el balance del mes."
     },
     "hero_error": "No pudimos cargar tu disponible.",
+    "spending": {
+      "title": "En qué se fue",
+      "view_all": "Ver desglose"
+    },
     "welcome_card": {
       "title": "Cargá tu primer movimiento",
       "description": "Cuando registres tu primer ingreso o gasto, vas a ver acá cuánto tenés, qué viene y cómo va el mes.",
@@ -595,6 +599,13 @@
     "installments_count": "{count} cuotas",
     "installment_recalc_hint": "Cambiar el monto recalcula las {count} cuotas (el resto en la primera).",
     "card_payment_label": "Pago de tarjeta",
+    "spending": {
+      "title": "En qué se fue",
+      "others": "Otros",
+      "uncategorized": "Sin categoría",
+      "empty": "Sin gastos este mes.",
+      "usd_heading": "En dólares"
+    },
     "reimbursement": {
       "label": "Reintegro",
       "toggle": "Tiene reintegro",

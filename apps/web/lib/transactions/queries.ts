@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
+import { computeCategoryNet, type CategoryAggRow, type CategorySliceInput } from '@grana/money-logic'
 import {
   DEFAULT_MOVEMENTS_LIMIT,
   MAX_MOVEMENTS_LIMIT,
   MOVEMENTS_LIMIT_STEP,
   movementMatchesText,
+  resolveMonthRange,
   type MovementFilters,
 } from './filters'
 import { toFinancialMovement, type FinancialMovement } from './movements'
@@ -556,4 +558,127 @@ export async function getAllReimbursements(
       expenseDescription: linked?.description ?? null,
     }
   })
+}
+
+// ── getMonthCategoryBreakdown ──────────────────────────────────────────────────
+// Spending by category for a month: expenses (cash/debit + card consumos + the
+// installment cuota that accrues in the month) minus received reimbursements,
+// net per category and currency. Excludes installment parents (off-ledger) and
+// statement payments (the spend already counted as the consumos). Uncategorized
+// spend is bucketed under the `uncategorized` sentinel (the UI labels it).
+
+export const UNCATEGORIZED_ID = 'uncategorized'
+
+export type MonthCategoryBreakdown = {
+  ARS: CategorySliceInput[]
+  USD: CategorySliceInput[]
+}
+
+export async function getMonthCategoryBreakdown(month: string): Promise<MonthCategoryBreakdown> {
+  const supabase = await createClient()
+  const { from, to } = resolveMonthRange(month)
+
+  const [expensesResult, reimbursementsResult] = await Promise.all([
+    supabase
+      .from('transactions')
+      .select('category_id, currency_code, amount, is_parent, period_payments(id)')
+      .eq('type', 'expense')
+      .gte('date', from ?? '')
+      .lte('date', to ?? ''),
+    supabase
+      .from('transactions')
+      .select('amount, currency_code, linked_transaction_id, received_at, cancelled_at')
+      .eq('type', 'reimbursement')
+      .not('received_at', 'is', null)
+      .is('cancelled_at', null)
+      .gte('date', from ?? '')
+      .lte('date', to ?? ''),
+  ])
+  if (expensesResult.error) throw expensesResult.error
+  if (reimbursementsResult.error) throw reimbursementsResult.error
+
+  const expenseRows = (expensesResult.data ?? []) as unknown as Array<{
+    category_id: string | null
+    currency_code: string
+    amount: number
+    is_parent: boolean
+    period_payments: { id: string }[] | null
+  }>
+  const reimbRows = (reimbursementsResult.data ?? []) as unknown as Array<{
+    amount: number
+    currency_code: string
+    linked_transaction_id: string | null
+    received_at: string | null
+    cancelled_at: string | null
+  }>
+
+  // Derived category for the received reimbursements (from the linked expense).
+  const linkedIds = [
+    ...new Set(reimbRows.map((r) => r.linked_transaction_id).filter((id): id is string => Boolean(id))),
+  ]
+  const linkedCategoryById = new Map<string, string | null>()
+  if (linkedIds.length > 0) {
+    const { data: linked } = await supabase
+      .from('transactions')
+      .select('id, category_id')
+      .in('id', linkedIds)
+    for (const e of linked ?? []) linkedCategoryById.set(e.id, e.category_id)
+  }
+
+  const aggRows: CategoryAggRow[] = []
+  for (const e of expenseRows) {
+    if (e.is_parent) continue // installment parent is off-ledger; its cuotas count
+    if ((e.period_payments?.length ?? 0) > 0) continue // statement payment, not category spend
+    aggRows.push({
+      categoryId: e.category_id ?? UNCATEGORIZED_ID,
+      kind: 'expense',
+      currency_code: e.currency_code,
+      amount: e.amount,
+    })
+  }
+  for (const r of reimbRows) {
+    const derived = r.linked_transaction_id ? linkedCategoryById.get(r.linked_transaction_id) : null
+    aggRows.push({
+      categoryId: derived ?? UNCATEGORIZED_ID,
+      kind: 'reimbursement',
+      currency_code: r.currency_code,
+      amount: r.amount,
+      received_at: r.received_at,
+      cancelled_at: r.cancelled_at,
+    })
+  }
+
+  const netByCategory = computeCategoryNet(aggRows)
+
+  const realIds = [...netByCategory.keys()].filter((id) => id !== UNCATEGORIZED_ID)
+  const categoryById = new Map<string, { name: string; color: string | null; icon: string | null }>()
+  if (realIds.length > 0) {
+    const { data: cats } = await supabase
+      .from('categories')
+      .select('id, name, color, icon')
+      .in('id', realIds)
+    for (const c of cats ?? []) {
+      categoryById.set(c.id, { name: c.name, color: c.color, icon: c.icon })
+    }
+  }
+
+  const build = (currency: 'ARS' | 'USD'): CategorySliceInput[] => {
+    const out: CategorySliceInput[] = []
+    for (const [id, perCurrency] of netByCategory.entries()) {
+      const value = perCurrency[currency].neto
+      if (value <= 0) continue
+      const display = id === UNCATEGORIZED_ID ? null : categoryById.get(id)
+      // Uncategorized label is left empty; the UI fills it (i18n).
+      out.push({
+        categoryId: id,
+        label: display?.name ?? '',
+        color: display?.color ?? null,
+        icon: display?.icon ?? null,
+        value,
+      })
+    }
+    return out
+  }
+
+  return { ARS: build('ARS'), USD: build('USD') }
 }

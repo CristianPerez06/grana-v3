@@ -1,5 +1,6 @@
 export * from './balance'
 export * from './cards'
+export * from './category-breakdown'
 export * from './movements'
 export * from './recurrences'
 export * from './reimbursements'
