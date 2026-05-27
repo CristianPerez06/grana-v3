@@ -464,3 +464,96 @@ export async function getReimbursementsForExpense(
     date: r.date,
   }))
 }
+
+// ── getAllReimbursements ───────────────────────────────────────────────────────
+// Global list of reimbursements across EVERY state, optionally filtered. The
+// chronological movement list only shows received ones, so this is the single
+// place to see pending and cancelled reimbursements together.
+
+export type ReimbursementState = 'pending' | 'received' | 'cancelled'
+
+export type ReimbursementListItem = {
+  id: string
+  amount: number
+  currencyCode: 'ARS' | 'USD'
+  target: 'account' | 'statement'
+  state: ReimbursementState
+  date: string
+  accountName: string | null
+  categoryName: string | null
+  categoryIcon: string | null
+  categoryColor: string | null
+  expenseDescription: string | null
+}
+
+export async function getAllReimbursements(
+  state?: ReimbursementState,
+): Promise<ReimbursementListItem[]> {
+  const supabase = await createClient()
+
+  let query = supabase
+    .from('transactions')
+    .select(
+      'id, amount, currency_code, reimbursement_target, received_at, cancelled_at, date, linked_transaction_id, source_account:accounts!transactions_account_id_fkey(name)',
+    )
+    .eq('type', 'reimbursement')
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
+
+  if (state === 'pending') query = query.is('received_at', null).is('cancelled_at', null)
+  else if (state === 'received') query = query.not('received_at', 'is', null)
+  else if (state === 'cancelled') query = query.not('cancelled_at', 'is', null)
+
+  const { data, error } = await query
+  if (error) throw error
+
+  const rows = (data ?? []) as unknown as Array<{
+    id: string
+    amount: number
+    currency_code: 'ARS' | 'USD'
+    reimbursement_target: 'account' | 'statement'
+    received_at: string | null
+    cancelled_at: string | null
+    date: string
+    linked_transaction_id: string | null
+    source_account: { name: string } | null
+  }>
+
+  const linkedIds = [
+    ...new Set(rows.map((r) => r.linked_transaction_id).filter((id): id is string => Boolean(id))),
+  ]
+  const linkedMap = new Map<
+    string,
+    { description: string | null; category: TransactionCategory | null }
+  >()
+  if (linkedIds.length > 0) {
+    const { data: linked } = await supabase
+      .from('transactions')
+      .select('id, description, category:categories(id, name, canonical_name, color, icon)')
+      .in('id', linkedIds)
+    for (const e of (linked ?? []) as unknown as Array<{
+      id: string
+      description: string | null
+      category: TransactionCategory | null
+    }>) {
+      linkedMap.set(e.id, { description: e.description, category: e.category })
+    }
+  }
+
+  return rows.map((r) => {
+    const linked = r.linked_transaction_id ? linkedMap.get(r.linked_transaction_id) : undefined
+    return {
+      id: r.id,
+      amount: r.amount,
+      currencyCode: r.currency_code,
+      target: r.reimbursement_target,
+      state: r.cancelled_at ? 'cancelled' : r.received_at ? 'received' : 'pending',
+      date: r.date,
+      accountName: r.source_account?.name ?? null,
+      categoryName: linked?.category?.name ?? null,
+      categoryIcon: linked?.category?.icon ?? null,
+      categoryColor: linked?.category?.color ?? null,
+      expenseDescription: linked?.description ?? null,
+    }
+  })
+}
