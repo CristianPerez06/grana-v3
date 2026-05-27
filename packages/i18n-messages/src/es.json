@@ -601,6 +601,9 @@
       "estimated_amount": "Monto del reintegro",
       "estimated_label": "Monto esperado",
       "linked_expense_title": "Reintegro de este gasto",
+      "percent_hint": "Opcional: calculá el monto por porcentaje del gasto.",
+      "percent_label": "% del gasto",
+      "cap_label": "Tope (opcional)",
       "target_label": "¿Cómo se acredita?",
       "target": {
         "account": "A una cuenta — el banco te deposita la plata",

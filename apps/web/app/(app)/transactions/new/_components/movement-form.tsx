@@ -23,7 +23,12 @@ import {
 import { createRecurrenceFromMovement } from '@/app/_actions/recurrences'
 import { suggestCategoryFromHistory } from '@/app/_actions/category-suggestion'
 import { Money, parseMoneyInput } from '@grana/validation'
-import { getEditableFields, type EditableFields, type MovementType } from '@grana/money-logic'
+import {
+  getEditableFields,
+  suggestReimbursementAmount,
+  type EditableFields,
+  type MovementType,
+} from '@grana/money-logic'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
@@ -186,6 +191,20 @@ export const MovementForm = ({
   const [reimbursementTarget, setReimbursementTarget] = useState<'account' | 'statement'>('account')
   const [reimbursementAmount, setReimbursementAmount] = useState('')
   const [reimbursementReceivedNow, setReimbursementReceivedNow] = useState(false)
+  // Optional carry helper: compute the reimbursement amount as a % of the
+  // expense (capped). UI-only — only the resulting amount is persisted.
+  const [reimbursementPercent, setReimbursementPercent] = useState('')
+  const [reimbursementCap, setReimbursementCap] = useState('')
+
+  // Recompute the suggested reimbursement amount from %/cap and the expense amount.
+  const applyReimbursementPercent = (percentStr: string, capStr: string) => {
+    const expense = parseMoneyInput(amount)
+    const percent = parseMoneyInput(percentStr)
+    if (expense === null || expense <= 0 || percent === null || percent <= 0) return
+    const cap = parseMoneyInput(capStr)
+    const suggested = suggestReimbursementAmount(expense, percent, cap ?? undefined)
+    setReimbursementAmount(String(suggested))
+  }
   // Default the credit-to account to a bank account of the SAME institution as
   // the expense account (paying with Visa Comafi → reimbursement to Comafi bank).
   const pickReimbursementAccount = (expenseAccountId: string): string => {
@@ -1035,6 +1054,49 @@ export const MovementForm = ({
                     placeholder={t('placeholders.amount')}
                     className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
+                </div>
+              </div>
+
+              {/* Optional: compute the amount from a % of the expense, capped. */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs text-muted-foreground">{t('reimbursement.percent_hint')}</span>
+                <div className="flex items-end gap-2">
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor="reimb-percent" className="text-[11px] text-muted-foreground">
+                      {t('reimbursement.percent_label')}
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="reimb-percent"
+                        type="text"
+                        inputMode="decimal"
+                        value={reimbursementPercent}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(',', '.')
+                          setReimbursementPercent(v)
+                          applyReimbursementPercent(v, reimbursementCap)
+                        }}
+                        placeholder="0"
+                        className="w-20 rounded-md border border-input bg-background px-2 py-1 pr-6 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor="reimb-cap" className="text-[11px] text-muted-foreground">
+                      {t('reimbursement.cap_label')}
+                    </label>
+                    <MoneyAmountInput
+                      id="reimb-cap"
+                      value={reimbursementCap}
+                      onChange={(v) => {
+                        setReimbursementCap(v)
+                        applyReimbursementPercent(reimbursementPercent, v)
+                      }}
+                      placeholder={t('placeholders.amount')}
+                      className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  </div>
                 </div>
               </div>
 

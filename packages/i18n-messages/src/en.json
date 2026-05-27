@@ -601,6 +601,9 @@
       "estimated_amount": "Reimbursement amount",
       "estimated_label": "Expected amount",
       "linked_expense_title": "Reimbursement for this expense",
+      "percent_hint": "Optional: compute the amount as a percentage of the expense.",
+      "percent_label": "% of the expense",
+      "cap_label": "Cap (optional)",
       "target_label": "How is it credited?",
       "target": {
         "account": "To an account — the bank deposits the money",
