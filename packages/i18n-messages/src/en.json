@@ -643,17 +643,6 @@
         "cancelled_success": "Reimbursement cancelled.",
         "close_notice": "Close notice"
       },
-      "list": {
-        "title": "Reimbursements",
-        "description": "All your reimbursements and their state.",
-        "empty": "No reimbursements to show.",
-        "filter": {
-          "all": "All",
-          "pending": "Expected",
-          "received": "Received",
-          "cancelled": "Cancelled"
-        }
-      },
       "errors": {
         "amount_positive": "Enter a valid reimbursement amount.",
         "account_required": "Choose the account where the reimbursement is credited.",
@@ -843,6 +832,7 @@
     "movement_kinds": {
       "income": "Income",
       "expense": "Expenses",
+      "reimbursement": "Reimbursements",
       "card_payment": "Statement payments",
       "transfer": "Transfers",
       "exchange": "Currency exchanges",
