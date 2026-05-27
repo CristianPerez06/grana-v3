@@ -4,7 +4,7 @@ import { Link, useLocalSearchParams, useRouter } from 'expo-router'
 import { Button } from '../../components/ui/Button'
 import { FormError } from '../../components/ui/FormError'
 import { TextInput } from '../../components/ui/TextInput'
-import { CurvedNavyContainer } from '../../components/layout/CurvedNavyContainer'
+import { AuthShell } from '../../components/layout/AuthShell'
 import { AUTH_INPUT_CLASS } from '../../lib/auth-class-names'
 import { supabase } from '../../lib/supabase'
 import { mapSupabaseError } from '../../lib/supabase-errors'
@@ -66,7 +66,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <CurvedNavyContainer
+    <AuthShell
       title="Bienvenido"
       subtitle="Ingresá con tu email y contraseña."
     >
@@ -129,6 +129,6 @@ export default function LoginScreen() {
           ¿No tenés cuenta? Registrate
         </Link>
       </View>
-    </CurvedNavyContainer>
+    </AuthShell>
   )
 }

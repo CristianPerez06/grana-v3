@@ -5,7 +5,7 @@ import { forgotSchema, ValidationError } from '@grana/validation'
 import { Button } from '../../components/ui/Button'
 import { FormError } from '../../components/ui/FormError'
 import { TextInput } from '../../components/ui/TextInput'
-import { CurvedNavyContainer } from '../../components/layout/CurvedNavyContainer'
+import { AuthShell } from '../../components/layout/AuthShell'
 import { AUTH_INPUT_CLASS } from '../../lib/auth-class-names'
 import { supabase } from '../../lib/supabase'
 import { mapSupabaseError } from '../../lib/supabase-errors'
@@ -46,11 +46,9 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <CurvedNavyContainer
+    <AuthShell
       title="Recuperar contraseña"
       subtitle="Te enviaremos un código a tu email."
-      showBack
-      backHref="/(auth)/login"
     >
       <TextInput
         label="Email"
@@ -76,6 +74,6 @@ export default function ForgotPasswordScreen() {
           Volver a iniciar sesión
         </Link>
       </Pressable>
-    </CurvedNavyContainer>
+    </AuthShell>
   )
 }

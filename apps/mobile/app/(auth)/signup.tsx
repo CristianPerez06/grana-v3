@@ -5,7 +5,7 @@ import { signupSchema, ValidationError } from '@grana/validation'
 import { Button } from '../../components/ui/Button'
 import { FormError } from '../../components/ui/FormError'
 import { TextInput } from '../../components/ui/TextInput'
-import { CurvedNavyContainer } from '../../components/layout/CurvedNavyContainer'
+import { AuthShell } from '../../components/layout/AuthShell'
 import { AUTH_INPUT_CLASS } from '../../lib/auth-class-names'
 import { supabase } from '../../lib/supabase'
 import { mapSupabaseError } from '../../lib/supabase-errors'
@@ -71,11 +71,9 @@ export default function SignupScreen() {
   }
 
   return (
-    <CurvedNavyContainer
+    <AuthShell
       title="Creá tu cuenta"
       subtitle="Completá los datos para empezar."
-      showBack
-      backHref="/(auth)/login"
     >
       <TextInput
         label="Nombre completo"
@@ -134,6 +132,6 @@ export default function SignupScreen() {
           ¿Ya tenés cuenta? Iniciá sesión
         </Link>
       </Pressable>
-    </CurvedNavyContainer>
+    </AuthShell>
   )
 }
