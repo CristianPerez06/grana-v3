@@ -18,6 +18,7 @@ import {
 import { useTranslations } from "next-intl";
 import { logoutAction } from "@/app/_actions/logout";
 import { setSidebarCollapsed as setSidebarCollapsedAction } from "@/app/_actions/preferences";
+import { GranaIsotype, GranaLogo } from "@/components/ui/grana-logo";
 
 type NavItem = {
   href: string;
@@ -152,9 +153,9 @@ const SidebarContent = ({
           href="/dashboard"
           onClick={onNavigate}
           aria-label="grana"
-          className="text-2xl font-bold tracking-tight text-navy"
+          className="flex items-center"
         >
-          {collapsed ? "g" : "grana"}
+          {collapsed ? <GranaIsotype size={32} /> : <GranaLogo width={116} />}
         </Link>
       </div>
 

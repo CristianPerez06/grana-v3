@@ -226,6 +226,45 @@ export type LanguageSwitcherProps<TLocale extends string = string> = {
   className?: string
 }
 
+// ── GranaLogo / GranaIsotype ──────────────────────────────────────────────────
+
+// The brand logo. Two marks: the full `grana` wordmark and the square `$`
+// isotype used as app icon / avatar. Both render with Bricolage Grotesque 800,
+// which each app loads in its shell (next/font on web, expo-font on mobile).
+// Colors default to the brand palette (mirrors @grana/ui-tokens --navy/--emerald)
+// but stay overridable so the marks can be inverted on dark surfaces.
+
+export type GranaLogoProps = {
+  /** Render width in px. Height derives from the 540×260 viewBox. */
+  width?: number
+  /** Wordmark color. Defaults to brand navy. */
+  fg?: string
+  /** Color of the disc holding the `$` counter. Defaults to brand emerald. */
+  accent?: string
+  /** Color of the `$` glyph inside the disc. Defaults to white. */
+  glyph?: string
+  /** Accessible title announced by screen readers. */
+  title?: string
+  className?: string
+}
+
+export type GranaIsotypeProps = {
+  /** Square size in px. */
+  size?: number
+  /** Background color. Defaults to brand navy. */
+  bg?: string
+  /** Color of the `$` glyph. Defaults to brand emerald. */
+  fg?: string
+  /**
+   * Corner radius in px relative to `size`. Defaults to ~22.5% of size, the
+   * iOS app-icon standard — match it so the squircle reads as an app mark.
+   */
+  radius?: number
+  /** Accessible title announced by screen readers. */
+  title?: string
+  className?: string
+}
+
 // ── RouteError ──────────────────────────────────────────────────────────────
 
 export type RouteErrorProps = {

@@ -1,30 +1,23 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
-import { CurvedNavyContainer } from '@/components/layout/curved-navy-container'
+import { AuthShell } from '@/components/layout/auth-shell'
 import { redirectIfAuthenticated } from '@/lib/auth/guards'
 import { SignupForm } from './signup-form'
 
 const SignupPage = async () => {
   await redirectIfAuthenticated()
   const t = await getTranslations('auth.signup')
-  const tc = await getTranslations('common')
 
   return (
-    <CurvedNavyContainer
-      title={t('title')}
-      subtitle={t('description')}
-      showBack
-      backHref="/login"
-      backLabel={tc('back')}
-    >
+    <AuthShell title={t('title')} subtitle={t('description')}>
       <SignupForm />
       <div className="mt-6 flex justify-center">
         <Button variant="link" size="sm" asChild>
           <Link href="/login">{t('have_account')}</Link>
         </Button>
       </div>
-    </CurvedNavyContainer>
+    </AuthShell>
   )
 }
 
