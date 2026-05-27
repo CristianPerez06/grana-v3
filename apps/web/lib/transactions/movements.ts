@@ -1,5 +1,5 @@
 import type { MovementViewInput } from '@grana/money-logic'
-import type { TransactionWithDetails } from './types'
+import type { ReimbursementTarget, TransactionWithDetails } from './types'
 
 export type MovementReviewFlag = 'missing_category' | 'missing_fx_rate'
 
@@ -74,6 +74,19 @@ export type CardInstallmentMovement = BaseMovement & {
   installments_total: number | null
 }
 
+export type ReimbursementState = 'pending' | 'received' | 'cancelled'
+
+export type ReimbursementMovement = BaseMovement & {
+  kind: 'reimbursement'
+  title: string
+  // Always an inflow (it gives money back / reduces the card statement).
+  sign: '+'
+  target: ReimbursementTarget
+  state: ReimbursementState
+  // The origin expense this reimbursement is linked to.
+  linked_transaction_id: string | null
+}
+
 export type FinancialMovement =
   | IncomeMovement
   | ExpenseMovement
@@ -82,6 +95,7 @@ export type FinancialMovement =
   | AdjustmentMovement
   | CardInstallmentMovement
   | ExchangeMovement
+  | ReimbursementMovement
 
 const detailHref = (tx: TransactionWithDetails) => `/transactions/${tx.id}`
 
@@ -142,6 +156,29 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
       title: 'Pago de resumen',
       sign: '-',
       period_id: payment.period_id,
+    }
+  }
+
+  if (tx.type === 'reimbursement') {
+    // Category is DERIVED from the linked expense (the reimbursement stores none).
+    const linkedCat = tx.linked_expense?.category ?? null
+    const state: ReimbursementState = tx.cancelled_at
+      ? 'cancelled'
+      : tx.received_at
+        ? 'received'
+        : 'pending'
+    return {
+      ...base,
+      category_id: linkedCat?.id ?? null,
+      category_name: linkedCat?.name ?? null,
+      category_icon: linkedCat?.icon ?? null,
+      category_color: linkedCat?.color ?? null,
+      kind: 'reimbursement',
+      title: tx.description ?? 'Reintegro',
+      sign: '+',
+      target: tx.reimbursement_target ?? 'account',
+      state,
+      linked_transaction_id: tx.linked_transaction_id,
     }
   }
 

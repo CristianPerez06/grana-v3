@@ -8,6 +8,7 @@ export type MovementKind =
   | 'adjustment'
   | 'exchange'
   | 'installment_purchase'
+  | 'reimbursement'
 
 /**
  * From which point of view a movement is rendered:
@@ -59,7 +60,10 @@ export type MovementView = {
 const TWO_LEGGED = new Set<MovementKind>(['transfer', 'exchange'])
 
 const isCategorizedKind = (kind: MovementKind): boolean =>
-  kind === 'income' || kind === 'expense' || kind === 'installment_purchase'
+  kind === 'income' ||
+  kind === 'expense' ||
+  kind === 'installment_purchase' ||
+  kind === 'reimbursement'
 
 /**
  * Project a movement onto a perspective. Pure: same input → same output.

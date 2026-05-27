@@ -33,6 +33,7 @@ const categorizedFallbackIcon: Partial<Record<MovementKind, typeof Tag>> = {
   income: ArrowDownLeft,
   expense: Tag,
   installment_purchase: CreditCard,
+  reimbursement: ArrowDownLeft,
 }
 
 const typeLabelKey: Record<MovementKind, string> = {
@@ -43,10 +44,11 @@ const typeLabelKey: Record<MovementKind, string> = {
   exchange: 'types.exchange',
   card_payment: 'card_payment_label',
   installment_purchase: 'installment_purchase_label',
+  reimbursement: 'reimbursement.label',
 }
 
 const amountToneClass = (kind: MovementKind, sign: '+' | '-' | null): string => {
-  if (kind === 'income') return 'text-green-600'
+  if (kind === 'income' || kind === 'reimbursement') return 'text-green-600'
   if (kind === 'adjustment') return sign === '-' ? 'text-red-600' : 'text-green-600'
   if (kind === 'transfer' || kind === 'exchange') return 'text-foreground'
   // expense, card_payment, installment_purchase → it's spending, even on a card
@@ -135,6 +137,19 @@ export const MovementRow = ({
               <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-800">
                 <AlertTriangle size={12} />
                 {t('list.review_short')}
+              </span>
+            )}
+            {movement.kind === 'reimbursement' && (
+              <span
+                className={`inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
+                  movement.state === 'received'
+                    ? 'bg-green-100 text-green-800'
+                    : movement.state === 'cancelled'
+                      ? 'bg-muted text-muted-foreground line-through'
+                      : 'bg-amber-100 text-amber-800'
+                }`}
+              >
+                {t(`reimbursement.state.${movement.state}`)}
               </span>
             )}
           </div>

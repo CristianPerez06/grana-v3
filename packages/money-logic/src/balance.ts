@@ -8,10 +8,16 @@ export type BalanceTransactionRow = {
   transfer_destination_account_id: string | null
   currency_code: string
   amount: number | string
-  type: 'income' | 'expense' | 'transfer' | 'adjustment' | 'exchange'
+  type: 'income' | 'expense' | 'transfer' | 'adjustment' | 'exchange' | 'reimbursement'
   /** Destination leg of an exchange (currency conversion). Only set for type='exchange'. */
   destination_amount?: number | string | null
   destination_currency?: string | null
+  /** Reimbursement subtype. Only set for type='reimbursement'. */
+  reimbursement_target?: 'account' | 'statement' | null
+  /** Reimbursement confirmation instant. NULL = pending (never affects a balance). */
+  received_at?: string | null
+  /** Reimbursement cancellation instant. Set = cancelled (never affects a balance). */
+  cancelled_at?: string | null
 }
 
 function emptyBuckets(): BalanceBuckets {
@@ -23,6 +29,27 @@ function emptyBuckets(): BalanceBuckets {
 
 function isBalanceCurrency(currency: string): currency is BalanceCurrency {
   return currency === 'ARS' || currency === 'USD'
+}
+
+/** Exhaustiveness guard: a new transaction_type must be handled everywhere. */
+function assertNever(x: never): never {
+  throw new Error(`Unhandled transaction type: ${String(x)}`)
+}
+
+/**
+ * Whether a reimbursement credits a cash/bank account balance. Only a RECEIVED
+ * "a cuenta" reimbursement does (it behaves like income). Pending (`received_at`
+ * null), cancelled, or "en resumen" (statement) reimbursements never affect an
+ * account balance: the statement subtype reduces a card period total instead
+ * (see reimbursements.ts), and pending/cancelled are not contable facts yet.
+ */
+function reimbursementCreditsAccount(row: BalanceTransactionRow): boolean {
+  return (
+    row.type === 'reimbursement' &&
+    row.reimbursement_target === 'account' &&
+    row.received_at != null &&
+    row.cancelled_at == null
+  )
 }
 
 /**
@@ -90,6 +117,13 @@ export function calculateTransactionSums(
       }
     } else if (row.type === 'adjustment') {
       ensure(row.account_id)[currency] = Money.add(ensure(row.account_id)[currency], amount)
+    } else if (row.type === 'reimbursement') {
+      // Only a received "a cuenta" reimbursement credits its account, like income.
+      if (reimbursementCreditsAccount(row)) {
+        ensure(row.account_id)[currency] = Money.add(ensure(row.account_id)[currency], amount)
+      }
+    } else {
+      assertNever(row.type)
     }
   }
 
@@ -144,6 +178,13 @@ export function computeRunningBalances(
         } else if (row.type === 'adjustment') {
           // adjustment amount keeps its sign in the DB (may be negative)
           acc[currency] = Money.add(acc[currency], amount)
+        } else if (row.type === 'reimbursement') {
+          // Only a received "a cuenta" reimbursement affects this account's balance.
+          if (reimbursementCreditsAccount(row)) {
+            acc[currency] = Money.add(acc[currency], amount)
+          }
+        } else {
+          assertNever(row.type)
         }
       }
     }

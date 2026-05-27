@@ -53,6 +53,7 @@ const NewMovementPage = async ({ searchParams }: Props) => {
       type: a.type as 'cash' | 'bank',
       activeCurrencies: activeCodes(a.currencies),
       balances: a.balances,
+      institutionId: a.institution_id ?? null,
     })),
     ...credit.map((c) => ({
       id: c.id,
@@ -60,6 +61,7 @@ const NewMovementPage = async ({ searchParams }: Props) => {
       type: 'credit' as const,
       activeCurrencies: activeCodes(c.currencies),
       balances: { ARS: 0, USD: 0 },
+      institutionId: c.institution_id ?? null,
     })),
   ]
 

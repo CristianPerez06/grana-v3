@@ -7,7 +7,7 @@ import {
   type MovementFilters,
 } from './filters'
 import { toFinancialMovement, type FinancialMovement } from './movements'
-import type { TransactionWithDetails } from './types'
+import type { TransactionCategory, TransactionWithDetails } from './types'
 
 const TRANSACTION_SELECT = `
   *,
@@ -29,6 +29,53 @@ const TRANSACTION_SELECT = `
 `
 
 const GLOBAL_MOVEMENTS_QUERY_CHUNK_SIZE = 200
+
+// Reimbursements derive their category from the linked expense. PostgREST can't
+// reliably embed a self-referential FK (transactions → transactions), so we
+// stitch it in a second query (same approach grana-v2 used for cashback).
+async function attachLinkedExpenses(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rows: TransactionWithDetails[],
+): Promise<TransactionWithDetails[]> {
+  const linkedIds = [
+    ...new Set(
+      rows
+        .filter((r) => r.type === 'reimbursement' && r.linked_transaction_id)
+        .map((r) => r.linked_transaction_id as string),
+    ),
+  ]
+  if (linkedIds.length === 0) return rows
+
+  const { data } = await supabase
+    .from('transactions')
+    .select('id, description, amount, currency_code, date, category:categories(id, name, canonical_name, color, icon)')
+    .in('id', linkedIds)
+
+  type LinkedExpense = NonNullable<TransactionWithDetails['linked_expense']>
+  const map = new Map<string, LinkedExpense>()
+  for (const e of (data ?? []) as unknown as LinkedExpense[]) {
+    map.set(e.id, {
+      id: e.id,
+      description: e.description,
+      amount: e.amount,
+      currency_code: e.currency_code,
+      date: e.date,
+      category: e.category,
+    })
+  }
+
+  return rows.map((r) =>
+    r.type === 'reimbursement' && r.linked_transaction_id
+      ? { ...r, linked_expense: map.get(r.linked_transaction_id) ?? null }
+      : r,
+  )
+}
+
+// A pending reimbursement is an expectation, not history: it lives in the
+// "A confirmar" block, not in the chronological list. Cancelled ones are hidden
+// too. Only RECEIVED reimbursements are facts that belong in the history.
+const isHistoryRow = (r: TransactionWithDetails): boolean =>
+  r.type !== 'reimbursement' || (r.received_at != null && r.cancelled_at == null)
 
 // ── getTransactions ───────────────────────────────────────────────────────────
 
@@ -55,7 +102,10 @@ export async function getTransactions(
 
   if (error) throw error
 
-  return (data ?? []) as TransactionWithDetails[]
+  return attachLinkedExpenses(
+    supabase,
+    ((data ?? []) as unknown as TransactionWithDetails[]).filter(isHistoryRow),
+  )
 }
 
 // ── getAccountMovements ───────────────────────────────────────────────────────
@@ -78,7 +128,10 @@ export async function getAccountMovements(
 
   if (error) throw error
 
-  return (data ?? []) as TransactionWithDetails[]
+  return attachLinkedExpenses(
+    supabase,
+    ((data ?? []) as unknown as TransactionWithDetails[]).filter(isHistoryRow),
+  )
 }
 
 // ── getTransactionDetail ──────────────────────────────────────────────────────
@@ -170,7 +223,9 @@ export async function getGlobalMovementsPage(
 
     if (error) throw error
 
-    const pageMovements = ((data ?? []) as TransactionWithDetails[])
+    const historyRows = ((data ?? []) as unknown as TransactionWithDetails[]).filter(isHistoryRow)
+    const enrichedRows = await attachLinkedExpenses(supabase, historyRows)
+    const pageMovements = enrichedRows
       .map(toFinancialMovement)
       .filter((movement) => !filters.type || movement.kind === filters.type)
       .filter((movement) => !filters.query || movementMatchesText(movement, filters.query))
@@ -246,7 +301,10 @@ export async function getTransactionDetail(
     throw error
   }
 
-  return data as TransactionWithDetails | null
+  const [enriched] = await attachLinkedExpenses(supabase, [
+    data as unknown as TransactionWithDetails,
+  ])
+  return enriched ?? null
 }
 
 // ── getInstallmentFamily ──────────────────────────────────────────────────────
@@ -271,7 +329,100 @@ export async function getInstallmentFamily(parentId: string): Promise<{
   if (childrenResult.error) throw childrenResult.error
 
   return {
-    parent: parentResult.error ? null : (parentResult.data as TransactionWithDetails),
-    children: (childrenResult.data ?? []) as TransactionWithDetails[],
+    parent: parentResult.error ? null : (parentResult.data as unknown as TransactionWithDetails),
+    children: (childrenResult.data ?? []) as unknown as TransactionWithDetails[],
   }
+}
+
+// ── getPendingReimbursements ───────────────────────────────────────────────────
+// Pending reimbursements (expected, not yet received nor cancelled), surfaced in
+// the "A confirmar" block. Optionally scoped to one account (its account detail).
+
+export type PendingReimbursementVM = {
+  id: string
+  target: 'account' | 'statement'
+  estimatedAmount: number
+  currencyCode: 'ARS' | 'USD'
+  accountId: string | null
+  accountName: string | null
+  cardPeriodId: string | null
+  categoryName: string | null
+  categoryIcon: string | null
+  categoryColor: string | null
+  expenseDescription: string | null
+  /** Date of the linked consumption — the default date when confirming. */
+  expenseDate: string | null
+}
+
+export async function getPendingReimbursements(
+  accountId?: string,
+): Promise<PendingReimbursementVM[]> {
+  const supabase = await createClient()
+
+  let query = supabase
+    .from('transactions')
+    .select(
+      'id, reimbursement_target, estimated_amount, currency_code, account_id, card_period_id, linked_transaction_id, source_account:accounts!transactions_account_id_fkey(name)',
+    )
+    .eq('type', 'reimbursement')
+    .is('received_at', null)
+    .is('cancelled_at', null)
+    .order('date', { ascending: true })
+
+  if (accountId) query = query.eq('account_id', accountId)
+
+  const { data, error } = await query
+  if (error) throw error
+
+  const rows = (data ?? []) as unknown as Array<{
+    id: string
+    reimbursement_target: 'account' | 'statement'
+    estimated_amount: number
+    currency_code: 'ARS' | 'USD'
+    account_id: string | null
+    card_period_id: string | null
+    linked_transaction_id: string | null
+    source_account: { name: string } | null
+  }>
+
+  // Derived category + description from the linked expenses (one batched query).
+  const linkedIds = [
+    ...new Set(rows.map((r) => r.linked_transaction_id).filter((id): id is string => Boolean(id))),
+  ]
+  const linkedMap = new Map<
+    string,
+    { description: string | null; date: string; category: TransactionCategory | null }
+  >()
+  if (linkedIds.length > 0) {
+    const { data: linked } = await supabase
+      .from('transactions')
+      .select('id, description, date, category:categories(id, name, canonical_name, color, icon)')
+      .in('id', linkedIds)
+    for (const e of (linked ?? []) as unknown as Array<{
+      id: string
+      description: string | null
+      date: string
+      category: TransactionCategory | null
+    }>) {
+      linkedMap.set(e.id, { description: e.description, date: e.date, category: e.category })
+    }
+  }
+
+  return rows.map((r) => {
+    const linked = r.linked_transaction_id ? linkedMap.get(r.linked_transaction_id) : undefined
+    return {
+      id: r.id,
+      target: r.reimbursement_target,
+      estimatedAmount: r.estimated_amount,
+      currencyCode: r.currency_code,
+      accountId: r.account_id,
+      accountName: r.source_account?.name ?? null,
+      cardPeriodId: r.card_period_id,
+      categoryName: linked?.category?.name ?? null,
+      categoryIcon: linked?.category?.icon ?? null,
+      categoryColor: linked?.category?.color ?? null,
+      expenseDescription: linked?.description ?? null,
+      expenseDate: linked?.date ?? null,
+    }
+  })
 }

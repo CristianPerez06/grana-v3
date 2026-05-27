@@ -25,6 +25,11 @@ const baseTx = (overrides: Partial<TransactionWithDetails>): TransactionWithDeta
   installments_total: null,
   card_period_id: null,
   fx_rate_to_ars: null,
+  linked_transaction_id: null,
+  reimbursement_target: null,
+  estimated_amount: null,
+  received_at: null,
+  cancelled_at: null,
   category: null,
   subcategory: null,
   source_account: {

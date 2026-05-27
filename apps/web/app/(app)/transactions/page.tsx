@@ -16,7 +16,12 @@ import {
   resolveEmptyVariant,
 } from '@/lib/transactions/filters'
 import { QuickAddFab } from '@/lib/transactions/components/quick-add-fab'
-import { getGlobalMovementsPage, getMovementFilterOptions } from '@/lib/transactions/queries'
+import { PendingReimbursementsBlock } from '@/lib/transactions/components/pending-reimbursements-block'
+import {
+  getGlobalMovementsPage,
+  getMovementFilterOptions,
+  getPendingReimbursements,
+} from '@/lib/transactions/queries'
 import { getAccounts } from '@/lib/accounts/queries'
 import { PendingRecurrencesBlock } from '@/lib/recurrences/components/pending-recurrences-block'
 import { RecurrenceSuggestionBanner } from '@/lib/recurrences/components/recurrence-suggestion-banner'
@@ -55,12 +60,13 @@ const TransactionsPage = async ({ searchParams }: Props) => {
   // Generación lazy de instancias recurrentes: una pasada por carga de página.
   await generateDueRecurrenceInstances()
 
-  const [movementsPage, filterOptions, pendingRecurrences, topSuggestion] =
+  const [movementsPage, filterOptions, pendingRecurrences, topSuggestion, pendingReimbursements] =
     await Promise.all([
       getGlobalMovementsPage({ limit, filters }),
       getMovementFilterOptions(),
       getPendingRecurrenceInstances(),
       getTopRecurrenceSuggestion(),
+      getPendingReimbursements(),
     ])
 
   const recurrenceLinkedIds = await getRecurrenceLinkedTransactionIds(
@@ -102,6 +108,11 @@ const TransactionsPage = async ({ searchParams }: Props) => {
       <PendingRecurrencesBlock
         pending={pendingRecurrences}
         availableByAccount={availableByAccount}
+      />
+
+      <PendingReimbursementsBlock
+        pending={pendingReimbursements}
+        todayISO={formatDateISO(getTodayAR())}
       />
 
       <MovementFilters

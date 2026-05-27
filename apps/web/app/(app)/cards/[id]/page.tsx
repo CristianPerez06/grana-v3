@@ -54,11 +54,12 @@ const CardDetailPage = async ({ params }: Props) => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [cardDetail, periodsDesc, showCents, t] = await Promise.all([
+  const [cardDetail, periodsDesc, showCents, t, tTx] = await Promise.all([
     getCreditCardDetail(id),
     getCardPeriods(id),
     getShowCents(),
     getTranslations('cards'),
+    getTranslations('transactions'),
   ])
 
   if (!cardDetail || cardDetail.type !== 'credit') notFound()
@@ -297,9 +298,10 @@ const CardDetailPage = async ({ params }: Props) => {
         ) : (
           <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
             {txList.map((tx) => {
+              const isReimbursement = tx.type === 'reimbursement'
               const label = tx.description
                 ?? (tx.subcategory?.name ? `${tx.category?.name} · ${tx.subcategory.name}` : tx.category?.name)
-                ?? '—'
+                ?? (isReimbursement ? tTx('reimbursement.label') : '—')
               return (
                 <Link
                   key={tx.id}
@@ -318,7 +320,12 @@ const CardDetailPage = async ({ params }: Props) => {
                     <p className="text-xs text-muted-foreground">{formatDate(tx.date)}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-medium tabular-nums">
+                    <p
+                      className={`text-sm font-medium tabular-nums ${
+                        isReimbursement ? 'text-green-600' : ''
+                      }`}
+                    >
+                      {isReimbursement ? '−' : ''}
                       {tx.currency_code === 'ARS'
                         ? formatARS(Number(tx.amount), showCents)
                         : formatUSD(Number(tx.amount), showCents)}

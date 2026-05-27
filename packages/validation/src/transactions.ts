@@ -18,6 +18,44 @@ export const createIncomeSchema = yup
   })
   .strict()
 
+// Reimbursement (reintegro / cashback) declared while registering an expense.
+// `estimated_amount` is what the user expects; `amount` (received-now case) is
+// the real amount, defaulting to the estimate. `target='statement'` reduces a
+// card period; `target='account'` credits a cash/bank account at `account_id`.
+export const reimbursementDeclarationSchema = yup
+  .object({
+    target: yup.string().label('target').required().oneOf(['account', 'statement']),
+    estimated_amount: yup.number().label('estimated_amount').required().positive(),
+    // 'account': cash/bank account credited; 'statement': the card whose period it reduces.
+    account_id: yup.string().label('account_id').uuid().required(),
+    card_period_id: yup.string().label('card_period_id').uuid().optional(),
+    // when true, the reimbursement is already received at creation (a fact, not a pending).
+    received_now: yup.boolean().label('received_now').default(false),
+    // accounting date: expected date (pending) or real date (received). Defaults to today.
+    date: yup.string().label('date').optional(),
+    // real amount, only meaningful when received_now; defaults to estimated_amount.
+    amount: yup.number().label('amount').positive().optional(),
+    description: yup.string().label('description').optional(),
+  })
+  .strict()
+
+export const confirmReimbursementSchema = yup
+  .object({
+    id: yup.string().label('id').uuid().required(),
+    amount: yup.number().label('amount').required().positive(),
+    date: yup.string().label('date').required(),
+    // reconcile the real account ('account') or the period where it landed ('statement').
+    account_id: yup.string().label('account_id').uuid().optional(),
+    card_period_id: yup.string().label('card_period_id').uuid().optional(),
+  })
+  .strict()
+
+export const cancelReimbursementSchema = yup
+  .object({
+    id: yup.string().label('id').uuid().required(),
+  })
+  .strict()
+
 export const createExpenseSchema = yup
   .object({
     account_id: yup.string().label('account_id').uuid().required(),
@@ -31,6 +69,7 @@ export const createExpenseSchema = yup
     category_id: yup.string().label('category_id').uuid().required(),
     subcategory_id: yup.string().label('subcategory_id').uuid().optional(),
     description: yup.string().label('description').optional(),
+    reimbursement: reimbursementDeclarationSchema.optional().default(undefined),
   })
   .strict()
 
@@ -153,3 +192,6 @@ export type UpdateTransferInput = yup.InferType<typeof updateTransferSchema>
 export type UpdateAdjustmentInput = yup.InferType<typeof updateAdjustmentSchema>
 export type CreateExchangeInput = yup.InferType<typeof createExchangeSchema>
 export type UpdateExchangeInput = yup.InferType<typeof updateExchangeSchema>
+export type ReimbursementDeclarationInput = yup.InferType<typeof reimbursementDeclarationSchema>
+export type ConfirmReimbursementInput = yup.InferType<typeof confirmReimbursementSchema>
+export type CancelReimbursementInput = yup.InferType<typeof cancelReimbursementSchema>

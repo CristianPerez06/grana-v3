@@ -610,6 +610,7 @@ export type Database = {
         Row: {
           account_id: string | null
           amount: number
+          cancelled_at: string | null
           card_period_id: string | null
           category_id: string | null
           created_at: string
@@ -619,12 +620,16 @@ export type Database = {
           destination_amount: number | null
           destination_currency: string | null
           due_date: string | null
+          estimated_amount: number | null
           fx_rate_to_ars: number | null
           id: string
           installment_n: number | null
           installments_total: number | null
           is_parent: boolean
+          linked_transaction_id: string | null
           parent_id: string | null
+          received_at: string | null
+          reimbursement_target: string | null
           status: string | null
           subcategory_id: string | null
           transfer_destination_account_id: string | null
@@ -634,6 +639,7 @@ export type Database = {
         Insert: {
           account_id?: string | null
           amount: number
+          cancelled_at?: string | null
           card_period_id?: string | null
           category_id?: string | null
           created_at?: string
@@ -643,12 +649,16 @@ export type Database = {
           destination_amount?: number | null
           destination_currency?: string | null
           due_date?: string | null
+          estimated_amount?: number | null
           fx_rate_to_ars?: number | null
           id?: string
           installment_n?: number | null
           installments_total?: number | null
           is_parent?: boolean
+          linked_transaction_id?: string | null
           parent_id?: string | null
+          received_at?: string | null
+          reimbursement_target?: string | null
           status?: string | null
           subcategory_id?: string | null
           transfer_destination_account_id?: string | null
@@ -658,6 +668,7 @@ export type Database = {
         Update: {
           account_id?: string | null
           amount?: number
+          cancelled_at?: string | null
           card_period_id?: string | null
           category_id?: string | null
           created_at?: string
@@ -667,12 +678,16 @@ export type Database = {
           destination_amount?: number | null
           destination_currency?: string | null
           due_date?: string | null
+          estimated_amount?: number | null
           fx_rate_to_ars?: number | null
           id?: string
           installment_n?: number | null
           installments_total?: number | null
           is_parent?: boolean
+          linked_transaction_id?: string | null
           parent_id?: string | null
+          received_at?: string | null
+          reimbursement_target?: string | null
           status?: string | null
           subcategory_id?: string | null
           transfer_destination_account_id?: string | null
@@ -709,6 +724,20 @@ export type Database = {
             referencedColumns: ["code"]
           },
           {
+            foreignKeyName: "transactions_destination_currency_fkey"
+            columns: ["destination_currency"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "transactions_linked_transaction_id_fkey"
+            columns: ["linked_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "transactions_parent_id_fkey"
             columns: ["parent_id"]
             isOneToOne: false
@@ -740,7 +769,13 @@ export type Database = {
     }
     Enums: {
       account_type: "cash" | "bank" | "credit"
-      transaction_type: "income" | "expense" | "transfer" | "adjustment" | "exchange"
+      transaction_type:
+        | "income"
+        | "expense"
+        | "transfer"
+        | "adjustment"
+        | "exchange"
+        | "reimbursement"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -869,7 +904,14 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["cash", "bank", "credit"],
-      transaction_type: ["income", "expense", "transfer", "adjustment", "exchange"],
+      transaction_type: [
+        "income",
+        "expense",
+        "transfer",
+        "adjustment",
+        "exchange",
+        "reimbursement",
+      ],
     },
   },
 } as const

@@ -10,6 +10,7 @@ import {
   assignTransactionToPeriod,
   formatDateISO,
   sumMoneyValues,
+  subtractMoneyValues,
 } from './utils'
 import type { CardPeriodWithPayment, PeriodVariant } from './types'
 
@@ -49,6 +50,7 @@ export type CardPeriodDetail = CardPeriodWithPayment & {
   nextPeriodIsPaid: boolean
   transactions: Array<{
     id: string
+    type: string
     amount: number
     currency_code: string
     date: string
@@ -59,6 +61,8 @@ export type CardPeriodDetail = CardPeriodWithPayment & {
     installment_n: number | null
     installments_total: number | null
     fx_rate_to_ars: number | null
+    received_at: string | null
+    cancelled_at: string | null
     category?: { name: string } | null
     subcategory?: { name: string } | null
   }>
@@ -280,8 +284,8 @@ export async function getCreditCards(
 
   const periodIds = (allPeriods ?? []).map((p) => p.id)
 
-  // Parallel: payments + transaction sums per period
-  const [paymentsResult, txResult] = await Promise.all([
+  // Parallel: payments + pending charges + received reimbursements per period
+  const [paymentsResult, txResult, reimbResult] = await Promise.all([
     periodIds.length > 0
       ? supabase.from('period_payments').select('period_id').in('period_id', periodIds)
       : Promise.resolve({ data: [], error: null }),
@@ -293,14 +297,24 @@ export async function getCreditCards(
           .eq('is_parent', false)
           .eq('status', 'pending')
       : Promise.resolve({ data: [], error: null }),
+    periodIds.length > 0
+      ? supabase
+          .from('transactions')
+          .select('card_period_id, currency_code, amount')
+          .in('card_period_id', periodIds)
+          .eq('type', 'reimbursement')
+          .not('received_at', 'is', null)
+          .is('cancelled_at', null)
+      : Promise.resolve({ data: [], error: null }),
   ])
 
   if (paymentsResult.error) throw paymentsResult.error
   if (txResult.error) throw txResult.error
+  if (reimbResult.error) throw reimbResult.error
 
   const paidIds = new Set((paymentsResult.data ?? []).map((p) => p.period_id))
 
-  // Build amount sums per period
+  // Build amount sums per period: pending charges minus received reimbursements.
   type AmountByPeriod = { ARS: number; USD: number }
   const amountByPeriod = new Map<string, AmountByPeriod>()
   for (const tx of txResult.data ?? []) {
@@ -309,6 +323,13 @@ export async function getCreditCards(
     if (tx.currency_code === 'ARS') entry.ARS = sumMoneyValues([entry.ARS, tx.amount])
     if (tx.currency_code === 'USD') entry.USD = sumMoneyValues([entry.USD, tx.amount])
     amountByPeriod.set(tx.card_period_id, entry)
+  }
+  for (const r of reimbResult.data ?? []) {
+    if (!r.card_period_id) continue
+    const entry = amountByPeriod.get(r.card_period_id) ?? { ARS: 0, USD: 0 }
+    if (r.currency_code === 'ARS') entry.ARS = subtractMoneyValues(entry.ARS, r.amount)
+    if (r.currency_code === 'USD') entry.USD = subtractMoneyValues(entry.USD, r.amount)
+    amountByPeriod.set(r.card_period_id, entry)
   }
 
   return cards.map((card) => {
@@ -402,7 +423,7 @@ export async function getCardPeriods(accountId: string): Promise<CardPeriodDetai
   // Load transactions grouped by period
   const { data: txRows, error: txError } = await supabase
     .from('transactions')
-    .select('id, card_period_id, amount, currency_code, date, status, description, category_id, is_parent, installment_n, installments_total, fx_rate_to_ars')
+    .select('id, type, card_period_id, amount, currency_code, date, status, description, category_id, is_parent, installment_n, installments_total, fx_rate_to_ars, received_at, cancelled_at, category:categories(name), subcategory:subcategories(name)')
     .in('card_period_id', periodIds)
     .eq('is_parent', false)
     .order('date', { ascending: false })
@@ -439,16 +460,41 @@ export async function getCardPeriods(accountId: string): Promise<CardPeriodDetai
   }
 
   return periods.reverse().map((period) => {
-    const periodTxs = (txRows ?? []).filter((t) => t.card_period_id === period.id)
-    const pendingARS = sumMoneyValues(
+    const periodTxs = (txRows ?? [])
+      .filter((t) => t.card_period_id === period.id)
+      // Only RECEIVED reimbursements belong in the statement (they reduce it);
+      // pending/cancelled ones are not part of the resumen.
+      .filter(
+        (t) =>
+          t.type !== 'reimbursement' || (t.received_at != null && t.cancelled_at == null),
+      )
+
+    // Received statement reimbursements reduce the period total (they are credits).
+    const reimbARS = sumMoneyValues(
       periodTxs
-        .filter((t) => t.status === 'pending' && t.currency_code === 'ARS')
+        .filter((t) => t.type === 'reimbursement' && t.currency_code === 'ARS')
         .map((t) => t.amount),
     )
-    const pendingUSD = sumMoneyValues(
+    const reimbUSD = sumMoneyValues(
       periodTxs
-        .filter((t) => t.status === 'pending' && t.currency_code === 'USD')
+        .filter((t) => t.type === 'reimbursement' && t.currency_code === 'USD')
         .map((t) => t.amount),
+    )
+    const pendingARS = subtractMoneyValues(
+      sumMoneyValues(
+        periodTxs
+          .filter((t) => t.status === 'pending' && t.currency_code === 'ARS')
+          .map((t) => t.amount),
+      ),
+      reimbARS,
+    )
+    const pendingUSD = subtractMoneyValues(
+      sumMoneyValues(
+        periodTxs
+          .filter((t) => t.status === 'pending' && t.currency_code === 'USD')
+          .map((t) => t.amount),
+      ),
+      reimbUSD,
     )
     const paidARS = sumMoneyValues(
       periodTxs
@@ -495,7 +541,7 @@ export async function getCardPeriodDetail(periodId: string): Promise<CardPeriodD
     getCardPeriodsWithStatus(period.account_id),
     supabase
       .from('transactions')
-      .select('id, card_period_id, amount, currency_code, date, status, description, category_id, is_parent, installment_n, installments_total, fx_rate_to_ars, category:categories(name), subcategory:subcategories(name)')
+      .select('id, type, card_period_id, amount, currency_code, date, status, description, category_id, is_parent, installment_n, installments_total, fx_rate_to_ars, received_at, cancelled_at, category:categories(name), subcategory:subcategories(name)')
       .eq('card_period_id', periodId)
       .eq('is_parent', false)
       .order('date', { ascending: false })
@@ -519,16 +565,34 @@ export async function getCardPeriodDetail(periodId: string): Promise<CardPeriodD
     .sort((a, b) => a.start_date.localeCompare(b.start_date))[0] ?? null
 
   const today = getTodayAR()
-  const txRows = txResult.data ?? []
-  const pendingARS = sumMoneyValues(
+  const txRows = (txResult.data ?? []).filter(
+    (t) => t.type !== 'reimbursement' || (t.received_at != null && t.cancelled_at == null),
+  )
+  const reimbARS = sumMoneyValues(
     txRows
-      .filter((t) => t.status === 'pending' && t.currency_code === 'ARS')
+      .filter((t) => t.type === 'reimbursement' && t.currency_code === 'ARS')
       .map((t) => t.amount),
   )
-  const pendingUSD = sumMoneyValues(
+  const reimbUSD = sumMoneyValues(
     txRows
-      .filter((t) => t.status === 'pending' && t.currency_code === 'USD')
+      .filter((t) => t.type === 'reimbursement' && t.currency_code === 'USD')
       .map((t) => t.amount),
+  )
+  const pendingARS = subtractMoneyValues(
+    sumMoneyValues(
+      txRows
+        .filter((t) => t.status === 'pending' && t.currency_code === 'ARS')
+        .map((t) => t.amount),
+    ),
+    reimbARS,
+  )
+  const pendingUSD = subtractMoneyValues(
+    sumMoneyValues(
+      txRows
+        .filter((t) => t.status === 'pending' && t.currency_code === 'USD')
+        .map((t) => t.amount),
+    ),
+    reimbUSD,
   )
   const paidARS = sumMoneyValues(
     txRows

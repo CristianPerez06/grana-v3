@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { AlertTriangle } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -85,6 +86,26 @@ const detailRows = (
     return [
       { label: t('labels.source_account'), value: movement.account_name },
       { label: t('labels.destination_account'), value: movement.destination_account_name },
+      { label: t('labels.description'), value: movement.description },
+    ]
+  }
+
+  if (movement.kind === 'reimbursement') {
+    const stateKey = transaction.cancelled_at
+      ? 'cancelled'
+      : transaction.received_at
+        ? 'received'
+        : 'pending'
+    return [
+      {
+        label: t('reimbursement.target_label'),
+        value: transaction.reimbursement_target
+          ? t(`reimbursement.target.${transaction.reimbursement_target}`)
+          : null,
+      },
+      { label: t('labels.account'), value: movement.account_name },
+      { label: t('labels.status'), value: t(`reimbursement.state.${stateKey}`) },
+      { label: t('labels.category'), value: movement.category_name },
       { label: t('labels.description'), value: movement.description },
     ]
   }
@@ -207,7 +228,42 @@ export const GlobalTransactionDetail = ({
             <dd>{t('fx_rate_template', { rate: transaction.fx_rate_to_ars })}</dd>
           </div>
         )}
+
+        {movement.kind === 'reimbursement' &&
+          transaction.estimated_amount != null &&
+          transaction.received_at != null &&
+          Math.abs(transaction.estimated_amount - transaction.amount) > 0.005 && (
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">{t('reimbursement.estimated_label')}</dt>
+              <dd className="text-right tabular-nums text-muted-foreground">
+                {formatBalance(transaction.estimated_amount, movement.currency_code, showCents)}
+              </dd>
+            </div>
+          )}
       </dl>
+
+      {movement.kind === 'reimbursement' && transaction.linked_expense && (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium">{t('reimbursement.linked_expense_title')}</p>
+          <Link
+            href={`/transactions/${transaction.linked_expense.id}`}
+            className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm transition-colors hover:bg-muted/40"
+          >
+            <span className="min-w-0 truncate">
+              {transaction.linked_expense.description ??
+                transaction.linked_expense.category?.name ??
+                t('types.expense')}
+            </span>
+            <span className="shrink-0 tabular-nums text-red-600">
+              −{formatBalance(
+                transaction.linked_expense.amount,
+                transaction.linked_expense.currency_code,
+                showCents,
+              )}
+            </span>
+          </Link>
+        </div>
+      )}
 
       {installmentParent && installmentSiblings && installmentSiblings.length > 0 && (
         <div className="flex flex-col gap-2">

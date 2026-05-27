@@ -45,6 +45,9 @@ export {
   updateAdjustmentSchema,
   createExchangeSchema,
   updateExchangeSchema,
+  reimbursementDeclarationSchema,
+  confirmReimbursementSchema,
+  cancelReimbursementSchema,
   type CreateIncomeInput,
   type CreateExpenseInput,
   type UpdateTransactionInput,
@@ -54,6 +57,9 @@ export {
   type UpdateAdjustmentInput,
   type CreateExchangeInput,
   type UpdateExchangeInput,
+  type ReimbursementDeclarationInput,
+  type ConfirmReimbursementInput,
+  type CancelReimbursementInput,
 } from "./transactions";
 export {
   createIncomeRecurrenceSchema,

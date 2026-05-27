@@ -27,6 +27,7 @@ import {
 import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
 import { getAuthenticatedUserId } from './_lib/auth'
+import { insertDeclaredReimbursement } from './_lib/reimbursements'
 
 function normalizeActionMoney(value: number): number {
   return normalizeMoneyAmount(value) ?? value
@@ -133,8 +134,23 @@ export async function createExpense(
     return { ok: false, formError: error?.message ?? 'No se pudo registrar el gasto.' }
   }
 
+  // Declared reimbursement: created atomically-with-rollback (design.md Decisión 9).
+  if (validation.data.reimbursement) {
+    const r = await insertDeclaredReimbursement(supabase, {
+      userId,
+      expenseId: data.id,
+      currencyCode: validation.data.currency_code,
+      declaration: validation.data.reimbursement,
+    })
+    if (!r.ok) {
+      await supabase.from('transactions').delete().eq('id', data.id).eq('user_id', userId)
+      return { ok: false, formError: `El gasto no se guardó (reintegro inválido): ${r.error}` }
+    }
+  }
+
   revalidatePath('/accounts')
   revalidatePath(`/accounts/${validation.data.account_id}`)
+  revalidatePath('/transactions')
   return { ok: true, id: data.id }
 }
 

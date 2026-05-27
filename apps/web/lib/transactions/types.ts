@@ -1,4 +1,12 @@
-export type TransactionType = 'income' | 'expense' | 'transfer' | 'adjustment' | 'exchange'
+export type TransactionType =
+  | 'income'
+  | 'expense'
+  | 'transfer'
+  | 'adjustment'
+  | 'exchange'
+  | 'reimbursement'
+
+export type ReimbursementTarget = 'account' | 'statement'
 
 export type Transaction = {
   id: string
@@ -25,6 +33,12 @@ export type Transaction = {
   installments_total: number | null
   card_period_id: string | null
   fx_rate_to_ars: number | null
+  // Reimbursement (reintegro / cashback) fields. Only set for type='reimbursement'.
+  linked_transaction_id: string | null
+  reimbursement_target: ReimbursementTarget | null
+  estimated_amount: number | null
+  received_at: string | null
+  cancelled_at: string | null
 }
 
 export type TransactionCategory = {
@@ -64,6 +78,16 @@ export type TransactionWithDetails = Transaction & {
       account: TransactionAccount | null
     } | null
   }> | null
+  // For a reimbursement: the linked origin expense, used to derive its category
+  // and to show what the reimbursement is for.
+  linked_expense?: {
+    id: string
+    description: string | null
+    amount: number
+    currency_code: 'ARS' | 'USD'
+    date: string
+    category: TransactionCategory | null
+  } | null
 }
 
 export type CreateIncomeInput = {
