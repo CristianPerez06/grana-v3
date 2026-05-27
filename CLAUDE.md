@@ -157,10 +157,9 @@ The script fails if any master spec under `openspec/specs/` contains the placeho
 
 - Supabase email templates used by the app live versioned under `supabase/templates/` (`confirm-signup.html`, `reset-password.html`). The repo is the **source of truth**; the Supabase dashboard is a manual mirror until we adopt the Supabase CLI.
 - When you change a template: edit the file in the repo, commit, then paste the new content into the matching field in the Supabase dashboard. Never the other way around.
-- The `<a href="...">` URLs inside each template MUST match what `/auth/callback` expects:
-  - `confirm-signup.html` → `{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup`
-  - `reset-password.html` → `{{ .SiteURL }}/auth/callback?code={{ .Token }}&next=/reset-password`
-- Do not use the default `{{ .ConfirmationURL }}` helper for the recovery template — it omits `next=/reset-password` and breaks the recovery flow.
+- **The auth flow is OTP, not magic links.** Both templates render an 8-digit code via `{{ .Token }}` — never a confirmation link. There is no `/auth/callback` route in the app; do not add one, and do not reintroduce `{{ .ConfirmationURL }}`, `{{ .TokenHash }}`, `token_hash`/`code`/`next` query params, or any `<a href="...">` link into the templates. The code is what the user reads off the email and types into the in-app verify screen.
+  - `confirm-signup.html` → code from `{{ .Token }}`, verified by `supabase.auth.verifyOtp({ type: 'signup' })` in `apps/web/app/(auth)/_components/otp-verify-form.tsx`. Resend uses `supabase.auth.resend({ type: 'signup' })`.
+  - `reset-password.html` → code from `{{ .Token }}`, verified by `verifyOtp({ type: 'recovery' })`. The email is sent by `requestPasswordResetAction` (`app/_actions/request-password-reset.ts`), which **intentionally omits `redirectTo`** so there is no link to follow — only the code. Resend uses `supabase.auth.resetPasswordForEmail(email)`.
 - Subjects still live only in the dashboard for now; they'll be versioned when we adopt the Supabase CLI.
 
 ## Language conventions

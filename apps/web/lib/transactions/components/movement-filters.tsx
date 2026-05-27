@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getTodayAR } from '@/lib/date'
 import {
   MOVEMENT_TYPE_KEYS,
   monthOf,
@@ -66,7 +67,9 @@ export const MovementFilters = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search])
 
-  const month = filters.month ?? monthOf(new Date())
+  // Fallback only hit in custom-range mode (the server parser always sets
+  // `filters.month` otherwise). Use the financial timezone, never browser-local.
+  const month = filters.month ?? monthOf(getTodayAR())
   const isCustomRange = filters.month == null
   const monthLabel = (() => {
     const [y, m] = month.split('-').map(Number)
