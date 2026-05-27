@@ -26,15 +26,7 @@ import { createExpense, createIncome, createTransfer } from './transactions'
 import { registerCardPurchase } from './credit-cards'
 import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
-
-async function getAuthenticatedUserId(): Promise<string> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-  return user.id
-}
+import { getAuthenticatedUserId } from './_lib/auth'
 
 // ── 4.1: createRecurrenceFromMovement ─────────────────────────────────────────
 // Crea una regla recurrente a partir de un movimiento real ya registrado.

@@ -18,16 +18,10 @@ import {
 import { getCreditCardDebtCheck } from '@/lib/cards/queries'
 import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
+import { getAuthenticatedUserId } from './_lib/auth'
 
 function normalizeActionMoney(value: number): number {
   return normalizeMoneyAmount(value) ?? value
-}
-
-async function getAuthenticatedUserId(): Promise<string> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-  return user.id
 }
 
 // ── createAccount ─────────────────────────────────────────────────────────────
