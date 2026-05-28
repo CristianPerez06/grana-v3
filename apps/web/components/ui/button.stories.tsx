@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Eye } from 'lucide-react'
 import { Button } from './button'
 
 const meta: Meta<typeof Button> = {
@@ -11,7 +11,7 @@ const meta: Meta<typeof Button> = {
       control: 'select',
       options: ['primary', 'secondary', 'ghost', 'destructive', 'link'],
     },
-    size: { control: 'select', options: ['sm', 'md', 'lg'] },
+    size: { control: 'select', options: ['sm', 'md', 'lg', 'icon'] },
   },
 }
 export default meta
@@ -36,6 +36,9 @@ export const WithIcon: Story = {
   },
 }
 export const Disabled: Story = { args: { disabled: true, children: 'No disponible' } }
+export const Icon: Story = {
+  args: { variant: 'ghost', size: 'icon', 'aria-label': 'Mostrar', children: <Eye size={18} /> },
+}
 
 export const AllVariants: Story = {
   name: 'All variants',

@@ -36,12 +36,14 @@ const containerSize: Record<ButtonSize, string> = {
   sm: 'h-11 px-3',
   md: 'py-2.5 px-4',
   lg: 'py-3 px-5',
+  icon: 'h-9 w-9 p-0 rounded-full',
 }
 
 const textSize: Record<ButtonSize, string> = {
   sm: 'text-sm',
   md: 'text-sm',
   lg: 'text-base',
+  icon: 'text-sm',
 }
 
 export function Button({
