@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Cubre las tarjetas de crédito como módulo de primera clase del producto. Modela cada resumen como un período con cuatro fechas (apertura, cierre, vencimiento, próximo cierre) cuyo estado se deriva sin persistir, soporta el alta de tarjeta en modos novato y experto, el registro de consumos en una o varias cuotas (ARS only por invariante `I-CRED-9`), el pago del resumen como `expense` en una cuenta cash o bank (única transacción que reduce `disponible` por la regla off-ledger), la reversión del pago, y las vistas de carrusel y detalle.
+Cubre las tarjetas de crédito como módulo de primera clase del producto. Modela cada resumen como un período con cuatro fechas (apertura, cierre, vencimiento, próximo cierre) cuyo estado se deriva sin persistir, soporta el alta de tarjeta con su único flujo de cuatro fechas, el registro de consumos en una o varias cuotas (ARS only por invariante `I-CRED-9`), el pago del resumen como `expense` en una cuenta cash o bank (única transacción que reduce `disponible` por la regla off-ledger), la reversión del pago, y las vistas de carrusel y detalle.
 
 ## Requirements
 ### Requirement: El sistema modela cada resumen de tarjeta como un período con cuatro fechas
@@ -502,9 +502,9 @@ Cuando el usuario crea una tarjeta sin especificar `name` (campo opcional), el s
 - **WHEN** un usuario crea una tarjeta sin completar el campo nombre, con red "Visa" y banco "Galicia"
 - **THEN** `accounts.name` se popula con `"Visa Galicia"`
 
-#### Scenario: Alta sin nombre y sin banco (tarjeta default novato)
+#### Scenario: Alta sin nombre y sin banco
 
-- **WHEN** un usuario novato completa el onboarding y se crea su tarjeta default sin nombre ni banco
+- **WHEN** un usuario crea una tarjeta sin completar nombre, red ni banco
 - **THEN** `accounts.name` se popula con `"Mi tarjeta"`
 
 ---
@@ -537,7 +537,7 @@ Cuando el usuario paga el resumen de un período, el banco le entrega en ese mis
 
 | Evento | Períodos existentes antes | Acción | Períodos existentes después |
 |---|---|---|---|
-| Alta de tarjeta (experto) | — | Usuario ingresa fechas de P1 y P2 | P1, P2 |
+| Alta de tarjeta | — | Usuario ingresa fechas de P1 y P2 | P1, P2 |
 | Pagar P1 | P1 (closed/overdue), P2 | Usuario ingresa fechas de P3 | P1 (paid), P2, P3 |
 | Pagar P2 | P1 (paid), P2 (closed/overdue), P3 | Usuario ingresa fechas de P4 | P1 (paid), P2 (paid), P3, P4 |
 

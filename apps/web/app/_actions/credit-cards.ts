@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/server'
 import { getTodayAR } from '@/lib/date'
 import {
   createCreditCardSchema,
-  createNovatoCreditCardSchema,
   registerCardPurchaseSchema,
   registerInstallmentsSchema,
   payCardPeriodSchema,
@@ -14,7 +13,6 @@ import {
   Money,
   normalizeMoneyAmount,
   type CreateCreditCardInput,
-  type CreateNovatoCreditCardInput,
   type RegisterCardPurchaseInput,
   type RegisterInstallmentsInput,
   type PayCardPeriodInput,
@@ -45,7 +43,7 @@ function normalizeActionFxRate(value: number): number {
   return normalizeMoneyAmount(value, { decimalPlaces: 6 }) ?? value
 }
 
-// ── 4.1: createCreditCard (experto, 4 fechas) ─────────────────────────────────
+// ── 4.1: createCreditCard (4 fechas) ──────────────────────────────────────────
 
 export async function createCreditCard(
   input: unknown,
@@ -142,112 +140,6 @@ export async function createCreditCard(
       end_date: data.next_end_date,
       due_date: data.next_due_date,
       is_estimated: false,
-    },
-  ]
-
-  const { error: periodsError } = await supabase.from('card_periods').insert(periodRows)
-
-  if (periodsError) {
-    await supabase.from('accounts').delete().eq('id', account.id)
-    return { ok: false, formError: periodsError.message }
-  }
-
-  revalidatePath('/cards')
-  revalidatePath('/accounts')
-  return { ok: true, id: account.id }
-}
-
-// ── 4.2: createNovatoCreditCard (onboarding novato, 1 fecha) ──────────────────
-
-export async function createNovatoCreditCard(
-  input: unknown,
-): Promise<ActionResult<CreateNovatoCreditCardInput> & { id?: string }> {
-  const validation = await validateActionInput(createNovatoCreditCardSchema, input)
-  if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
-
-  const today = getTodayAR()
-  const todayStr = formatDateISO(today)
-  const data = validation.data
-  const { close_date } = data
-
-  // Sanity: close_date must not be before today - 7 days
-  if (close_date < addDaysToISO(todayStr, -7)) {
-    return {
-      ok: false,
-      formError: 'Tomá la fecha del próximo cierre que figura en tu resumen del banco.',
-    }
-  }
-
-  const userId = await getAuthenticatedUserId()
-  const supabase = await createClient()
-
-  // If the user didn't type a name, build it from "Red Banco" — same fallback
-  // the experto action uses, so a novato card never shows up as plain "Mi tarjeta"
-  // when institution + network are known.
-  let cardName = data.name?.trim() ?? ''
-  if (!cardName) {
-    let networkLabel = data.other_network_name?.trim() ?? ''
-    if (data.network_id) {
-      const { data: network } = await supabase
-        .from('card_networks')
-        .select('name')
-        .eq('id', data.network_id)
-        .single()
-      networkLabel = network?.name ?? ''
-    }
-    const { data: institution } = await supabase
-      .from('institutions')
-      .select('name')
-      .eq('id', data.institution_id)
-      .single()
-    cardName = [networkLabel, institution?.name].filter(Boolean).join(' ') || 'Mi tarjeta'
-  }
-
-  const { data: account, error: accountError } = await supabase
-    .from('accounts')
-    .insert({
-      user_id: userId,
-      name: cardName,
-      type: 'credit',
-      institution_id: data.institution_id,
-      network_id: data.network_id ?? null,
-      other_network_name: data.other_network_name?.trim() || null,
-      credit_limit: null,
-    })
-    .select('id')
-    .single()
-
-  if (accountError || !account) {
-    return { ok: false, formError: accountError?.message ?? 'Error al crear la tarjeta.' }
-  }
-
-  // Bimoneda por defecto: every credit card is provisioned with ARS + USD.
-  const { error: currencyError } = await supabase.from('account_currencies').insert([
-    { account_id: account.id, currency_code: 'ARS', initial_balance: 0, initial_balance_date: todayStr },
-    { account_id: account.id, currency_code: 'USD', initial_balance: 0, initial_balance_date: todayStr },
-  ])
-
-  if (currencyError) {
-    await supabase.from('accounts').delete().eq('id', account.id)
-    return { ok: false, formError: currencyError.message }
-  }
-
-  // P1: start=close_date-30d, end=close_date, due=close_date+15d
-  // P2: start=close_date+1d, end=close_date+30d, due=close_date+45d
-  const periodRows = [
-    {
-      account_id: account.id,
-      start_date: addDaysToISO(close_date, -30),
-      end_date: close_date,
-      due_date: addDaysToISO(close_date, 15),
-      is_estimated: true,
-    },
-    {
-      account_id: account.id,
-      start_date: addDaysToISO(close_date, 1),
-      end_date: addDaysToISO(close_date, 30),
-      due_date: addDaysToISO(close_date, 45),
-      is_estimated: true,
     },
   ]
 

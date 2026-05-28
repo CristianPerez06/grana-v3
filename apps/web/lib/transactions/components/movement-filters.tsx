@@ -19,8 +19,8 @@ type MovementFiltersProps = {
   filters: MovementFiltersState
   accounts: Array<{ id: string; name: string; type: 'cash' | 'bank' | 'credit' }>
   categories: Array<{ id: string; name: string; type: 'income' | 'expense' | 'both' }>
-  /** Expert mode shows the account filter; novato hides it. */
-  isExpert: boolean
+  /** Show the account filter only when there are multiple accounts to disambiguate. */
+  showAccount: boolean
   /** Account detail view hides the account filter (already scoped to one account). */
   showAccountFilter?: boolean
   /** Hide the month navigator when another control (the spending overview) owns it. */
@@ -37,7 +37,7 @@ export const MovementFilters = ({
   filters,
   accounts,
   categories,
-  isExpert,
+  showAccount,
   showAccountFilter = true,
   showMonthNav = true,
 }: MovementFiltersProps) => {
@@ -223,7 +223,7 @@ export const MovementFilters = ({
             </select>
           </div>
 
-          {isExpert && showAccountFilter && (
+          {showAccount && showAccountFilter && (
             <div className="space-y-2">
               <Label htmlFor="f-account">{t('filters.account')}</Label>
               <select

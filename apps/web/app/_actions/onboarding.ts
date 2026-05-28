@@ -3,73 +3,11 @@
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import {
-  profileSchema,
   initialBalanceSchema,
   validateActionInput,
-  type ProfileInput,
   type InitialBalanceInput,
 } from '@grana/validation'
 import type { ActionResult } from './types'
-
-export const saveProfileAction = async (
-  input: unknown,
-): Promise<ActionResult<ProfileInput>> => {
-  const validation = await validateActionInput(profileSchema, input)
-  if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
-
-  const { mode, has_bank_account, institution_id, bank_account_name } = validation.data
-
-  const supabase = await createClient()
-  const { data: userData, error: userError } = await supabase.auth.getUser()
-  if (userError || !userData.user) {
-    const t = await getTranslations('onboarding.errors')
-    return { ok: false, formError: t('generic') }
-  }
-
-  const { error: updateError } = await supabase
-    .from('profiles')
-    .update({ mode })
-    .eq('id', userData.user.id)
-
-  if (updateError) {
-    const t = await getTranslations('onboarding.errors')
-    return { ok: false, formError: t('generic') }
-  }
-
-  if (mode === 'experto' && has_bank_account && institution_id && bank_account_name) {
-    const { data: account, error: accountError } = await supabase
-      .from('accounts')
-      .insert({
-        user_id: userData.user.id,
-        name: bank_account_name,
-        type: 'bank',
-        institution_id,
-      })
-      .select('id')
-      .single()
-
-    if (accountError || !account) {
-      const t = await getTranslations('onboarding.errors')
-      return { ok: false, formError: t('generic') }
-    }
-
-    const { error: currenciesError } = await supabase
-      .from('account_currencies')
-      .insert([
-        { account_id: account.id, currency_code: 'ARS', initial_balance: 0 },
-        { account_id: account.id, currency_code: 'USD', initial_balance: 0 },
-      ])
-
-    if (currenciesError) {
-      // Rollback: delete the orphan account so the wizard can retry cleanly.
-      await supabase.from('accounts').delete().eq('id', account.id)
-      const t = await getTranslations('onboarding.errors')
-      return { ok: false, formError: t('generic') }
-    }
-  }
-
-  return { ok: true }
-}
 
 export const saveInitialBalanceAction = async (
   input: unknown,
@@ -77,14 +15,7 @@ export const saveInitialBalanceAction = async (
   const validation = await validateActionInput(initialBalanceSchema, input)
   if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
 
-  const {
-    primary_account_id,
-    primary_ars,
-    primary_usd,
-    cash_account_id,
-    cash_ars,
-    cash_usd,
-  } = validation.data
+  const { primary_account_id, primary_ars, primary_usd } = validation.data
 
   const supabase = await createClient()
   const { data: userData, error: userError } = await supabase.auth.getUser()
@@ -104,12 +35,6 @@ export const saveInitialBalanceAction = async (
   }
   if (primary_usd !== undefined && primary_usd > 0) {
     updates.push({ account_id: primary_account_id, currency_code: 'USD', amount: primary_usd })
-  }
-  if (cash_account_id && cash_ars !== undefined && cash_ars > 0) {
-    updates.push({ account_id: cash_account_id, currency_code: 'ARS', amount: cash_ars })
-  }
-  if (cash_account_id && cash_usd !== undefined && cash_usd > 0) {
-    updates.push({ account_id: cash_account_id, currency_code: 'USD', amount: cash_usd })
   }
 
   for (const u of updates) {
@@ -158,4 +83,3 @@ export const completeOnboardingAction = async (): Promise<ActionResult<never>> =
 
   return { ok: true }
 }
-

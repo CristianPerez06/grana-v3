@@ -577,10 +577,10 @@ El sistema SHALL renderizar un indicador visual (iconito 📅 o equivalente disc
 
 El indicador SHALL desaparecer cuando `is_estimated` pase a `false` (lo cual ocurre al confirmar las fechas via pago de resumen o edición manual).
 
-#### Scenario: Tarjeta novato recién creada muestra fechas marcadas como estimadas
+#### Scenario: Período estimado por rolling automático muestra fechas marcadas como estimadas
 
-- **WHEN** un usuario novato termina el onboarding y abre el detalle de "Mi tarjeta"
-- **THEN** las fechas del período actual y próximo se muestran con un iconito 📅 al lado
+- **WHEN** el sistema crea un período por rolling automático (`is_estimated=true`) y el usuario abre el detalle de la tarjeta
+- **THEN** las fechas de ese período se muestran con un iconito 📅 al lado
 
 #### Scenario: Confirmar fechas al pagar el resumen elimina el indicador
 
@@ -590,22 +590,17 @@ El indicador SHALL desaparecer cuando `is_estimated` pase a `false` (lo cual ocu
 
 ---
 
-### Requirement: El selector de "cuenta de pago" en el flujo de pago de resumen filtra según modo de usuario
+### Requirement: El selector de "cuenta de pago" en el flujo de pago de resumen lista las cuentas cash y bank con ARS
 
-El sistema SHALL adaptar el selector de "cuenta de pago" en el formulario de pago de resumen según el modo del usuario:
+El sistema SHALL mostrar en el selector de "cuenta de pago" del formulario de pago de resumen todas las cuentas `cash` y `bank` activas del usuario que tengan ARS habilitada. El sistema SHALL excluir las cuentas `credit` y las cuentas `bank` con función `ahorro` (cuando ese flag exista).
 
-- **Modo novato**: el selector SHALL fijarse a la cuenta `Billetera` (creada por el trigger `on_auth_user_created_default_account` al alta del usuario) sin permitir cambio, ya que en modo novato la UI no expone otras cuentas cash/bank al usuario.
-- **Modo experto**: el selector SHALL mostrar todas las cuentas `cash` y `bank` activas del usuario que tengan ARS habilitada.
+#### Scenario: El selector lista todas las cash/bank con ARS
 
-En ambos modos, el sistema SHALL excluir las cuentas `credit` y las cuentas `bank` con función `ahorro` (cuando ese flag exista).
-
-#### Scenario: Novato paga resumen desde Billetera fija
-
-- **WHEN** un usuario novato abre el flujo de pago de resumen
-- **THEN** el campo "Cuenta de pago" muestra "Billetera" en estado read-only
-
-#### Scenario: Experto elige entre todas sus cash/bank
-
-- **WHEN** un usuario experto con 3 cuentas (1 cash, 2 bank) abre el flujo de pago
+- **WHEN** un usuario con 3 cuentas (1 cash, 2 bank), todas con ARS habilitada, abre el flujo de pago de resumen
 - **THEN** el campo "Cuenta de pago" muestra un selector con las 3 cuentas como opciones
+
+#### Scenario: La Billetera default es una opción seleccionable
+
+- **WHEN** un usuario que solo tiene la cuenta `Billetera` abre el flujo de pago de resumen
+- **THEN** el campo "Cuenta de pago" ofrece la `Billetera` como opción seleccionable
 

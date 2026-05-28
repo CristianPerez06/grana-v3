@@ -48,12 +48,6 @@ const TransactionsPage = async ({ searchParams }: Props) => {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('mode')
-    .eq('id', user.id)
-    .single()
-  const showAccount = profile?.mode === 'experto'
 
   const resolvedSearchParams = await searchParams
   const filters = parseMovementFilters(resolvedSearchParams)
@@ -74,6 +68,10 @@ const TransactionsPage = async ({ searchParams }: Props) => {
       getTopRecurrenceSuggestion(),
       getPendingReimbursements(),
     ])
+
+  // Show the account filter and per-row account only when there are ≥2 accounts
+  // to disambiguate; with a single account it is noise.
+  const showAccount = filterOptions.accounts.length >= 2
 
   const recurrenceLinkedIds = await getRecurrenceLinkedTransactionIds(
     movementsPage.movements.map((m) => m.id),
@@ -164,7 +162,7 @@ const TransactionsPage = async ({ searchParams }: Props) => {
         filters={filters}
         accounts={filterOptions.accounts}
         categories={filterOptions.categories}
-        isExpert={showAccount}
+        showAccount={showAccount}
         showMonthNav={false}
       />
 

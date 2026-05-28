@@ -273,7 +273,7 @@ El sistema SHALL permitir filtrar el listado global de movimientos por texto, ti
 
 La UI de filtros SHALL ser una **barra compacta** (búsqueda + navegación por mes + botón "Filtros" con un contador de filtros activos); los filtros detallados (tipo, categoría, cuenta, moneda, rango de monto) SHALL vivir en un **panel desplegable**, y los filtros activos SHALL mostrarse como **chips removibles** bajo la barra, junto con una acción "Limpiar todo". La búsqueda SHALL ser **instantánea** (sin botón de aplicar, con un breve debounce) y SHALL buscar en **todo el historial** del usuario, no solo en los movimientos ya paginados.
 
-El período SHALL navegarse **por mes** (mes anterior / mes siguiente) como control primario; por defecto SHALL mostrarse el **mes actual** (computado en la zona horaria financiera con `getTodayAR()`), conservando una opción de rango personalizado que tiene prioridad sobre el mes. En **modo novato** el filtro por cuenta NO SHALL mostrarse.
+El período SHALL navegarse **por mes** (mes anterior / mes siguiente) como control primario; por defecto SHALL mostrarse el **mes actual** (computado en la zona horaria financiera con `getTodayAR()`), conservando una opción de rango personalizado que tiene prioridad sobre el mes. El filtro por cuenta SHALL mostrarse únicamente cuando el usuario tiene **dos o más cuentas**; con una sola cuenta no se ofrece.
 
 #### Scenario: Buscar por descripción de forma instantánea
 
@@ -301,11 +301,11 @@ El período SHALL navegarse **por mes** (mes anterior / mes siguiente) como cont
 - **THEN** el sistema muestra solo los movimientos de esa moneda
 - **AND** nunca combina ni convierte montos de monedas distintas
 
-#### Scenario: Filtrar por cuenta solo en modo experto
+#### Scenario: Filtrar por cuenta cuando hay dos o más cuentas
 
-- **WHEN** un usuario experto filtra por una cuenta específica
+- **WHEN** un usuario con dos o más cuentas filtra por una cuenta específica
 - **THEN** el sistema muestra movimientos donde esa cuenta participa como origen, destino, cuenta de pago o tarjeta relacionada según el tipo funcional del movimiento
-- **AND** en modo novato el filtro por cuenta no se ofrece
+- **AND** un usuario con una sola cuenta no ve el filtro por cuenta
 
 #### Scenario: Filtros activos como chips removibles
 
@@ -1322,11 +1322,11 @@ No SHALL existir lógica de presentación de fila duplicada entre las dos vistas
 El sistema SHALL renderizar cada fila de movimiento con la siguiente anatomía visual:
 
 - **Ícono** según dos familias: los movimientos categorizables (ingreso, gasto, compra en cuotas) SHALL mostrar el emoji y color de su categoría; los movimientos de estructura (transferencia, cambio de moneda, ajuste, pago de resumen) SHALL mostrar un ícono neutro propio de su tipo.
-- **Jerarquía** de texto invertida: el título primario SHALL ser la descripción que escribió el usuario; el subtítulo secundario SHALL ser la categoría y, en modo experto, la cuenta (`categoría · cuenta`). Si el movimiento no tiene descripción, el título primario SHALL caer a la categoría o al nombre funcional del tipo.
+- **Jerarquía** de texto invertida: el título primario SHALL ser la descripción que escribió el usuario; el subtítulo secundario SHALL ser la categoría y, cuando el usuario tiene dos o más cuentas, la cuenta (`categoría · cuenta`). Si el movimiento no tiene descripción, el título primario SHALL caer a la categoría o al nombre funcional del tipo.
 - **Color del monto** semántico: ingreso en verde; gasto (incluidos consumos y cuotas de tarjeta) en rojo; ajuste positivo en verde y negativo en rojo; transferencia y cambio de moneda en color neutro (no son ingreso ni gasto).
 - **Etiqueta de moneda** fiel al principio bimoneda: ARS no SHALL llevar etiqueta de moneda (es la primaria); USD SHALL mostrarse etiquetada.
 
-La cuenta en el subtítulo SHALL mostrarse únicamente en modo experto; en modo novato se omite.
+La cuenta en el subtítulo SHALL mostrarse únicamente cuando el usuario tiene dos o más cuentas; con una sola cuenta se omite.
 
 #### Scenario: Un gasto muestra el emoji y color de su categoría
 
@@ -1350,11 +1350,11 @@ La cuenta en el subtítulo SHALL mostrarse únicamente en modo experto; en modo 
 - **WHEN** el sistema renderiza un gasto sin descripción categorizado como "Transporte"
 - **THEN** la fila muestra "Transporte" como título primario
 
-#### Scenario: La cuenta en el subtítulo depende del modo
+#### Scenario: La cuenta en el subtítulo depende de la cantidad de cuentas
 
-- **WHEN** un usuario en modo experto ve un gasto en el listado global
+- **WHEN** un usuario con dos o más cuentas ve un gasto en el listado global
 - **THEN** el subtítulo incluye la cuenta (`categoría · cuenta`)
-- **AND** el mismo gasto para un usuario en modo novato muestra solo la categoría
+- **AND** el mismo gasto para un usuario con una sola cuenta muestra solo la categoría
 
 #### Scenario: La etiqueta de moneda respeta bimoneda
 
@@ -1437,7 +1437,7 @@ El saldo corriente SHALL mostrarse cuando se ven los movimientos de la cuenta en
 
 Al registrar un gasto, el usuario SHALL poder declarar opcionalmente que ese gasto tiene un reintegro asociado, mediante un bloque "Tiene reintegro". Al activarlo, el usuario SHALL indicar el **monto esperado**, el **subtipo** (a cuenta / en resumen) y si el reintegro **ya fue recibido** o queda pendiente. El sistema SHALL crear el gasto y el reintegro en una **operación atómica**: si la creación del reintegro falla, el gasto tampoco se crea.
 
-El subtipo "en resumen" SHALL ofrecerse únicamente cuando el gasto es sobre una tarjeta de crédito; "a cuenta" SHALL estar disponible para cualquier medio de pago, y SHALL ser el default. La disponibilidad del subtipo NO SHALL depender del modo de usuario.
+El subtipo "en resumen" SHALL ofrecerse únicamente cuando el gasto es sobre una tarjeta de crédito; "a cuenta" SHALL estar disponible para cualquier medio de pago, y SHALL ser el default.
 
 Para el subtipo "a cuenta", la cuenta de acreditación SHALL prerellenarse con una cuenta del **mismo banco/institución** que la cuenta del gasto, cuando exista (refleja el comportamiento real); el usuario puede cambiarla.
 

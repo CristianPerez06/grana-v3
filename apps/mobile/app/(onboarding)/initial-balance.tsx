@@ -9,28 +9,21 @@ import { MoneyAmountInput } from '../../components/ui/MoneyAmountInput'
 import { supabase } from '../../lib/supabase'
 import { useT } from '../../lib/locale-context'
 
-type Mode = 'novato' | 'experto'
 type Account = { id: string; name: string; type: string }
 
 type ParsedAmounts = {
   primary_ars: number | undefined
   primary_usd: number | undefined
-  cash_ars: number | undefined
-  cash_usd: number | undefined
 }
 
 export default function InitialBalanceScreen() {
   const t = useT()
   const router = useRouter()
-  const [mode, setMode] = useState<Mode | null>(null)
   const [primaryAccount, setPrimaryAccount] = useState<Account | null>(null)
-  const [secondaryCashAccount, setSecondaryCashAccount] = useState<Account | null>(null)
   const [loadingScreen, setLoadingScreen] = useState(true)
 
   const [primaryArsStr, setPrimaryArsStr] = useState('')
   const [primaryUsdStr, setPrimaryUsdStr] = useState('')
-  const [cashArsStr, setCashArsStr] = useState('')
-  const [cashUsdStr, setCashUsdStr] = useState('')
 
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -41,34 +34,23 @@ export default function InitialBalanceScreen() {
       const { data: { user } } = await supabase.auth.getUser()
       if (cancelled || !user) return
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('mode')
-        .eq('id', user.id)
-        .maybeSingle()
-
       const { data: accounts } = await supabase
         .from('accounts')
         .select('id, name, type')
         .eq('user_id', user.id)
         .eq('is_active', true)
-        .in('type', ['cash', 'bank'])
+        .eq('type', 'cash')
 
       if (cancelled) return
 
-      const list = (accounts ?? []) as Account[]
-      const bank = list.find((a) => a.type === 'bank') ?? null
-      const cash = list.find((a) => a.type === 'cash') ?? null
+      const billetera = ((accounts ?? []) as Account[])[0] ?? null
 
-      if (!cash) {
+      if (!billetera) {
         router.replace('/(onboarding)/done')
         return
       }
 
-      const resolvedMode: Mode = profile?.mode === 'experto' ? 'experto' : 'novato'
-      setMode(resolvedMode)
-      setPrimaryAccount(bank ?? cash)
-      setSecondaryCashAccount(bank ? cash : null)
+      setPrimaryAccount(billetera)
       setLoadingScreen(false)
     }
     load()
@@ -83,8 +65,6 @@ export default function InitialBalanceScreen() {
     const fields: [string, keyof ParsedAmounts][] = [
       [primaryArsStr, 'primary_ars'],
       [primaryUsdStr, 'primary_usd'],
-      [cashArsStr, 'cash_ars'],
-      [cashUsdStr, 'cash_usd'],
     ]
     const data: Partial<ParsedAmounts> = {}
     for (const [raw, dest] of fields) {
@@ -120,9 +100,6 @@ export default function InitialBalanceScreen() {
       primary_account_id: primaryAccount.id,
       primary_ars: parsed.data.primary_ars,
       primary_usd: parsed.data.primary_usd,
-      cash_account_id: secondaryCashAccount?.id ?? null,
-      cash_ars: parsed.data.cash_ars,
-      cash_usd: parsed.data.cash_usd,
     }
 
     try {
@@ -147,12 +124,6 @@ export default function InitialBalanceScreen() {
       if (input.primary_usd !== undefined && input.primary_usd > 0) {
         updates.push({ account_id: input.primary_account_id, currency_code: 'USD', amount: input.primary_usd })
       }
-      if (input.cash_account_id && input.cash_ars !== undefined && input.cash_ars > 0) {
-        updates.push({ account_id: input.cash_account_id, currency_code: 'ARS', amount: input.cash_ars })
-      }
-      if (input.cash_account_id && input.cash_usd !== undefined && input.cash_usd > 0) {
-        updates.push({ account_id: input.cash_account_id, currency_code: 'USD', amount: input.cash_usd })
-      }
 
       for (const u of updates) {
         const { error } = await supabase
@@ -172,19 +143,13 @@ export default function InitialBalanceScreen() {
     }
   }
 
-  if (loadingScreen || !primaryAccount || !mode) {
+  if (loadingScreen || !primaryAccount) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-page" edges={['top']}>
         <ActivityIndicator />
       </SafeAreaView>
     )
   }
-
-  const showSecondaryCash = mode === 'experto' && secondaryCashAccount !== null
-  const primaryLabel =
-    mode === 'experto' && primaryAccount.type === 'bank'
-      ? t('onboarding.initialBalance.group_primary_bank', { accountName: primaryAccount.name })
-      : t('onboarding.initialBalance.group_novato')
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
@@ -202,14 +167,14 @@ export default function InitialBalanceScreen() {
               {t('onboarding.initialBalance.title')}
             </Text>
             <Text className="text-center text-sm text-text-muted">
-              {showSecondaryCash
-                ? t('onboarding.initialBalance.description_experto')
-                : t('onboarding.initialBalance.description_novato')}
+              {t('onboarding.initialBalance.description')}
             </Text>
           </View>
 
           <View className="gap-3">
-            <Text className="text-sm font-medium text-text">{primaryLabel}</Text>
+            <Text className="text-sm font-medium text-text">
+              {t('onboarding.initialBalance.group_total')}
+            </Text>
             <MoneyAmountInput
               label={t('onboarding.initialBalance.ars_label')}
               value={primaryArsStr}
@@ -223,26 +188,6 @@ export default function InitialBalanceScreen() {
               placeholder={t('onboarding.initialBalance.amount_placeholder')}
             />
           </View>
-
-          {showSecondaryCash && secondaryCashAccount ? (
-            <View className="gap-3">
-              <Text className="text-sm font-medium text-text">
-                {t('onboarding.initialBalance.group_cash')}
-              </Text>
-              <MoneyAmountInput
-                label={t('onboarding.initialBalance.ars_label')}
-                value={cashArsStr}
-                onChangeText={setCashArsStr}
-                placeholder={t('onboarding.initialBalance.amount_placeholder')}
-              />
-              <MoneyAmountInput
-                label={t('onboarding.initialBalance.usd_label')}
-                value={cashUsdStr}
-                onChangeText={setCashUsdStr}
-                placeholder={t('onboarding.initialBalance.amount_placeholder')}
-              />
-            </View>
-          ) : null}
 
           <FormError message={formError} />
 

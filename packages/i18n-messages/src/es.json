@@ -243,29 +243,10 @@
       "description": "Vamos a hacer un par de preguntas para que la app se ajuste a vos. Te toma menos de un minuto.",
       "cta": "Empezar"
     },
-    "profile": {
-      "title": "Para configurar tu Grana, contanos un poco",
-      "mode_question": "¿Qué buscás en Grana?",
-      "mode_simple_title": "Lo esencial",
-      "mode_simple_description": "Ver mi disponible y en qué se va mi plata.",
-      "mode_detailed_title": "Con más detalle",
-      "mode_detailed_description": "Ver mi disponible, en qué se va mi plata y en qué cuentas la tengo.",
-      "bank_question": "¿Tenés cuenta en algún banco?",
-      "bank_yes": "Sí",
-      "bank_no": "No",
-      "institution_label": "Banco",
-      "institution_placeholder": "Buscar banco o billetera…",
-      "account_name_label": "Nombre de la cuenta",
-      "account_name_placeholder": "Ej: Caja de ahorro",
-      "continue": "Continuar"
-    },
     "initialBalance": {
       "title": "¿Cuánta plata tenés hoy?",
-      "description_novato": "Es solo para arrancar con un disponible real. Después lo ajustás con cualquier movimiento. Si no tenés plata, poné 0.",
-      "description_experto": "Cargá cuánto tenés disponible en cada lugar. Lo que dejes en blanco arranca en cero. El monto en pesos es obligatorio (puede ser 0).",
-      "group_novato": "En total",
-      "group_primary_bank": "En {accountName}",
-      "group_cash": "En efectivo (opcional)",
+      "description": "Es solo para arrancar con un disponible real. Después lo ajustás con cualquier movimiento. Si no tenés plata, poné 0.",
+      "group_total": "En total",
       "ars_label": "Pesos (ARS)",
       "usd_label": "Dólares (USD)",
       "amount_placeholder": "0,00",
@@ -389,6 +370,11 @@
       "description": "Creá tu primera cuenta para empezar a registrar tus movimientos.",
       "cta": "Crear cuenta"
     },
+    "hint": {
+      "title": "Tenés toda tu plata en la Billetera",
+      "description": "Si querés ver en qué cuentas está tu plata, creá cuentas; si no, dejá todo acá.",
+      "dismiss": "Entendido"
+    },
     "movements_empty": "Todavía no hay movimientos en esta cuenta.",
     "defaultCashName": "Billetera",
     "currency_options": {
@@ -405,7 +391,6 @@
     "back_label": "Tarjetas",
     "new": {
       "title": "Nueva tarjeta de crédito",
-      "subtitle_novato": "Solo necesitamos la fecha de cierre del próximo resumen.",
       "subtitle_full": "Ingresá los datos de tu tarjeta y las fechas del ciclo actual."
     },
     "edit": {
@@ -425,8 +410,6 @@
       "next_period": "Próximo resumen",
       "close_date": "Cierre",
       "due_date": "Vencimiento",
-      "novato_close_date": "Fecha del próximo cierre",
-      "novato_close_helper": "Tomala del último resumen que te mandó el banco. La app va a ir generando los resúmenes siguientes sola.",
       "creation_date": "Fecha de alta",
       "archived_date": "Archivada",
       "movements": "Movimientos",

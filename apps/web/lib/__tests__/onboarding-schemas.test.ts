@@ -1,82 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { profileSchema, initialBalanceSchema } from '@grana/validation'
+import { initialBalanceSchema } from '@grana/validation'
 
 // UUIDs need to match the v1-v5 shape (version nibble = 1-5, variant nibble = 8/9/a/b).
 const UUID_A = '11111111-1111-4111-8111-111111111111'
-const UUID_B = '22222222-2222-4222-9222-222222222222'
-
-describe('profileSchema', () => {
-  it('accepts novato with no bank fields', async () => {
-    const data = await profileSchema.validate({ mode: 'novato' })
-    expect(data.mode).toBe('novato')
-    // has_bank_account default kicks in on cast(); validate() leaves it as
-    // sent. Both undefined and false are acceptable here.
-    expect(data.has_bank_account ?? false).toBe(false)
-  })
-
-  it('accepts experto without bank account', async () => {
-    const data = await profileSchema.validate({
-      mode: 'experto',
-      has_bank_account: false,
-    })
-    expect(data.mode).toBe('experto')
-    expect(data.has_bank_account).toBe(false)
-  })
-
-  it('accepts experto with bank account fully filled', async () => {
-    const data = await profileSchema.validate({
-      mode: 'experto',
-      has_bank_account: true,
-      institution_id: UUID_A,
-      bank_account_name: 'Caja de ahorro',
-    })
-    expect(data.institution_id).toBe(UUID_A)
-    expect(data.bank_account_name).toBe('Caja de ahorro')
-  })
-
-  it('rejects mode missing', async () => {
-    await expect(profileSchema.validate({})).rejects.toThrow()
-  })
-
-  it('rejects mode with invalid value', async () => {
-    await expect(profileSchema.validate({ mode: 'admin' })).rejects.toThrow()
-  })
-
-  it('rejects experto + has_bank_account but no institution_id', async () => {
-    await expect(
-      profileSchema.validate({
-        mode: 'experto',
-        has_bank_account: true,
-        bank_account_name: 'Caja',
-      }),
-    ).rejects.toThrow()
-  })
-
-  it('rejects experto + has_bank_account but empty bank_account_name', async () => {
-    await expect(
-      profileSchema.validate({
-        mode: 'experto',
-        has_bank_account: true,
-        institution_id: UUID_A,
-        bank_account_name: '',
-      }),
-    ).rejects.toThrow()
-  })
-
-  it('does NOT require bank fields for novato + has_bank_account=true (defensive)', async () => {
-    // Even if the form somehow sends has_bank_account=true with mode=novato,
-    // the schema accepts it without bank fields because the .when() only
-    // demands them when mode='experto'.
-    const data = await profileSchema.validate({
-      mode: 'novato',
-      has_bank_account: true,
-    })
-    expect(data.mode).toBe('novato')
-  })
-})
 
 describe('initialBalanceSchema', () => {
-  it('rejects missing primary_ars (now required — no skip allowed)', async () => {
+  it('rejects missing primary_ars (required — no skip allowed)', async () => {
     await expect(
       initialBalanceSchema.validate({
         primary_account_id: UUID_A,
@@ -100,26 +29,6 @@ describe('initialBalanceSchema', () => {
       primary_ars: 0,
     })
     expect(data.primary_ars).toBe(0)
-  })
-
-  it('accepts secondary cash account with amounts', async () => {
-    const data = await initialBalanceSchema.validate({
-      primary_account_id: UUID_A,
-      primary_ars: 50000,
-      cash_account_id: UUID_B,
-      cash_ars: 10000,
-    })
-    expect(data.cash_account_id).toBe(UUID_B)
-    expect(data.cash_ars).toBe(10000)
-  })
-
-  it('still accepts secondary cash blank (only primary_ars is required)', async () => {
-    const data = await initialBalanceSchema.validate({
-      primary_account_id: UUID_A,
-      primary_ars: 0,
-    })
-    expect(data.cash_account_id).toBeUndefined()
-    expect(data.cash_ars).toBeUndefined()
   })
 
   it('rejects missing primary_account_id', async () => {

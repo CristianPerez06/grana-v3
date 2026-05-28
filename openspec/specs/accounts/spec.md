@@ -343,11 +343,11 @@ El sistema SHALL aplicar Row Level Security sobre `accounts` y `account_currenci
 
 ### Requirement: El usuario puede crear una tarjeta de crédito
 
-El sistema SHALL permitir crear una cuenta de `type='credit'` (tarjeta de crédito). Una tarjeta requiere: `name` (opcional 1–50 caracteres, trimmed; autogenerado si vacío), `institution_id` (referencia a fila activa de `institutions`; obligatorio en modo experto, opcional en alta automática de modo novato), red (referencia a `card_networks.id` o nombre custom 2–50 caracteres, exactamente uno), monedas activas (ARS obligatoria), `credit_limit` opcional en ARS positivo, y las fechas del ciclo inicial (cuatro fechas en modo experto, una sola fecha en modo novato — ver capability `auth`).
+El sistema SHALL permitir crear una cuenta de `type='credit'` (tarjeta de crédito). Una tarjeta requiere: `name` (opcional 1–50 caracteres, trimmed; autogenerado si vacío), `institution_id` (referencia a fila activa de `institutions`; obligatorio), red (referencia a `card_networks.id` o nombre custom 2–50 caracteres, exactamente uno), monedas activas (ARS obligatoria), `credit_limit` opcional en ARS positivo, y las cuatro fechas del ciclo inicial (cierre y vencimiento del período actual y del próximo).
 
 Una tarjeta tiene siempre `initial_balance=0` en todas sus `account_currencies` (enforced por constraint).
 
-#### Scenario: Tarjeta creada con datos completos (experto)
+#### Scenario: Tarjeta creada con datos completos
 
 - **WHEN** el usuario completa el formulario con banco, red (Visa), nombre opcional vacío, monedas (ARS+USD), `credit_limit=$1.500.000`, y cuatro fechas válidas
 - **THEN** el sistema inserta una fila en `accounts` con `type='credit'`, `name='Visa <Banco>'` autogenerado, `credit_limit=1500000`, `network_id` apuntando a Visa
@@ -359,9 +359,9 @@ Una tarjeta tiene siempre `initial_balance=0` en todas sus `account_currencies` 
 - **WHEN** el usuario selecciona "otra red" e ingresa `other_network_name='Cooperativa Local'`
 - **THEN** la tarjeta se crea con `network_id=NULL` y `other_network_name='Cooperativa Local'`
 
-#### Scenario: Tarjeta sin institución en modo experto es rechazada en validación
+#### Scenario: Tarjeta sin institución es rechazada en validación
 
-- **WHEN** el usuario en modo experto intenta crear una tarjeta sin elegir institución
+- **WHEN** el usuario intenta crear una tarjeta sin elegir institución
 - **THEN** la action retorna error de validación
 - **AND** no inserta nada
 
@@ -420,30 +420,6 @@ El sistema SHALL permitir eliminar una tarjeta sólo si nunca tuvo transacciones
 - **WHEN** el usuario intenta eliminar una tarjeta con al menos una transacción
 - **THEN** el sistema rechaza la operación
 - **AND** la UI ofrece archivar como alternativa
-
-### Requirement: En modo novato la creación de cuentas no está disponible en la UI
-
-En modo `novato`, la UI NO SHALL ofrecer la creación de cuentas: el punto de entrada ("Crear cuenta") no se muestra ni en el listado de cuentas ni en el estado vacío, y la ruta de creación redirige al listado. El modo es solo-UI: el server action de creación NO se modifica ni se gatea por modo. Crear cuentas adicionales es una capacidad del modo `experto`. (El nudge para sugerir pasar a experto y la ubicación del cambio de modo en el menú quedan fuera de alcance de este requirement.)
-
-#### Scenario: El novato no ve el botón de crear cuenta
-
-- **WHEN** un usuario en modo `novato` abre el listado de cuentas
-- **THEN** no ve la acción "Crear cuenta" (ni en el header del listado ni en el estado vacío)
-
-#### Scenario: El experto sí ve el botón de crear cuenta
-
-- **WHEN** un usuario en modo `experto` abre el listado de cuentas
-- **THEN** ve la acción "Crear cuenta"
-
-#### Scenario: El novato que navega a la ruta de creación es redirigido
-
-- **WHEN** un usuario en modo `novato` navega directamente a `/accounts/new`
-- **THEN** el sistema lo redirige al listado de cuentas sin permitir el alta
-
-#### Scenario: El gating es solo de UI
-
-- **WHEN** se considera la creación de cuentas a nivel de server action
-- **THEN** el comportamiento del server action no cambia según el modo (el modo no se enforcea en el servidor; el gating vive solo en la UI)
 
 ### Requirement: Cada cuenta tiene un avatar visual (color + ícono)
 

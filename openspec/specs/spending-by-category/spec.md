@@ -2,7 +2,7 @@
 
 ## Purpose
 
-"En qué se fue": el desglose de los gastos del mes agrupados por categoría, pesado por **neto** (gastos − reintegros recibidos) y **por moneda**. Es la carta de presentación del módulo Movimientos —un donut + ranking, con navegación por mes y drill-down al listado filtrado— y se asoma como un teaser de las categorías que más pesan en el dashboard. Responde una de las tres preguntas centrales del modo de usuario, complementando "cuánto tengo" y "qué viene".
+"En qué se fue": el desglose de los gastos del mes agrupados por categoría, pesado por **neto** (gastos − reintegros recibidos) y **por moneda**. Es la carta de presentación del módulo Movimientos —un donut + ranking, con navegación por mes y drill-down al listado filtrado— y se asoma como un teaser de las categorías que más pesan en el dashboard. Responde una de las tres preguntas centrales del usuario, complementando "cuánto tengo" y "qué viene".
 
 ## Requirements
 
