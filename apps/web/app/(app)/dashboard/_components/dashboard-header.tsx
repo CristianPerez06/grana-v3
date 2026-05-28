@@ -1,14 +1,14 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
+import { createClient } from '@/lib/supabase/client'
 import { EyeMaskToggle } from './eye-mask-toggle'
 
 type Props = {
-  /** First name from the profile, or empty string for the anonymous fallback. */
-  name: string
   /** Today's accounting date as `YYYY-MM-DD`, derived from `getTodayAR()`. */
   todayISO: string
 }
@@ -23,12 +23,43 @@ function formatToday(todayISO: string, localeCode: string): string {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1)
 }
 
-export const DashboardHeader = ({ name, todayISO }: Props) => {
+export const DashboardHeader = ({ todayISO }: Props) => {
   const t = useTranslations('dashboard')
   const locale = useLocale()
   const localeCode = locale === 'en' ? 'en-US' : 'es-AR'
 
-  const greeting = name ? t('welcome', { name }) : t('welcome_anon')
+  const [firstName, setFirstName] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const supabase = createClient()
+    let cancelled = false
+
+    void (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) {
+        if (!cancelled) setIsLoading(false)
+        return
+      }
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+      if (cancelled) return
+      setFirstName(data?.full_name?.split(' ')[0] ?? '')
+      setIsLoading(false)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const isDisabled = isLoading
+  const greeting = firstName ? t('welcome', { name: firstName }) : t('welcome_anon')
 
   return (
     <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -42,13 +73,20 @@ export const DashboardHeader = ({ name, todayISO }: Props) => {
       </div>
 
       <div className="flex items-center gap-2">
-        <EyeMaskToggle />
-        <Button asChild className="w-auto">
-          <Link href="/transactions/new">
+        <EyeMaskToggle disabled={isDisabled} />
+        {isDisabled ? (
+          <Button className="w-auto" disabled>
             <Plus size={18} strokeWidth={2} />
             {t('new_movement')}
-          </Link>
-        </Button>
+          </Button>
+        ) : (
+          <Button asChild className="w-auto">
+            <Link href="/transactions/new">
+              <Plus size={18} strokeWidth={2} />
+              {t('new_movement')}
+            </Link>
+          </Button>
+        )}
       </div>
     </header>
   )

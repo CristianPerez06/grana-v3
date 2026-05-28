@@ -43,7 +43,7 @@ export type ButtonVariant =
   | 'destructive'
   | 'link'
 
-export type ButtonSize = 'sm' | 'md' | 'lg'
+export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon'
 
 export type ButtonProps = {
   variant?: ButtonVariant
