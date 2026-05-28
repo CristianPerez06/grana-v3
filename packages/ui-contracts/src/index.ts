@@ -304,6 +304,33 @@ export const ACCOUNT_COLOR_KEYS = [
 export type AccountColorKey = (typeof ACCOUNT_COLOR_KEYS)[number]
 
 /**
+ * Hex value for each curated account color. Mirror of the `--account-<key>`
+ * CSS vars in @grana/ui-tokens (theme.css) — used by features that need to
+ * store the hex itself (e.g. `institutions.brand_color`), not just the key.
+ * Keep in sync with theme.css.
+ */
+export const ACCOUNT_COLOR_HEX: Record<AccountColorKey, string> = {
+  slate: '#3A6B8A',
+  indigo: '#4C56C0',
+  violet: '#7B57C0',
+  plum: '#8A6E98',
+  magenta: '#C04D86',
+  teal: '#1F8F9C',
+  cyan: '#2C7FB8',
+  clay: '#A8794E',
+}
+
+export const ACCOUNT_COLOR_HEX_VALUES = Object.values(ACCOUNT_COLOR_HEX) as readonly string[]
+
+/**
+ * Valid values for `institutions.icon_type`. Drives which lucide icon the
+ * avatar resolver picks for a bank account when no explicit `icon_key` is set
+ * (`bank` → landmark, `wallet` → wallet).
+ */
+export const INSTITUTION_ICON_TYPES = ['bank', 'wallet'] as const
+export type InstitutionIconType = (typeof INSTITUTION_ICON_TYPES)[number]
+
+/**
  * Curated account icon set. Each key is a lucide icon name; each platform maps
  * it to its own lucide implementation (`lucide-react` on web,
  * `lucide-react-native` on mobile). Only the key (a string) is shared.

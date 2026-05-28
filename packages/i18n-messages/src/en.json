@@ -365,6 +365,25 @@
       "save_failed": "Failed to save.",
       "generic": "Something went wrong. Please try again."
     },
+    "customInstitution": {
+      "add": "+ Add new institution…",
+      "add_with_query": "+ Add «{query}» as new",
+      "title_inline": "New institution",
+      "section_custom": "My institutions",
+      "section_catalog": "Catalog",
+      "name_label": "Name",
+      "name_placeholder": "E.g. Butterfly Bank",
+      "color_label": "Color",
+      "create": "Create",
+      "cancel": "Cancel",
+      "errors": {
+        "name_required": "Enter a name.",
+        "name_too_long": "Up to 50 characters.",
+        "duplicate": "You already have an institution with that name.",
+        "color_required": "Pick a color.",
+        "create_failed": "Failed to create the institution."
+      }
+    },
     "empty": {
       "title": "No accounts yet",
       "description": "Create your first account to start recording your transactions.",

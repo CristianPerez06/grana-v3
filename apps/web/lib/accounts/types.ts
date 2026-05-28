@@ -31,6 +31,8 @@ export type Institution = {
   brand_color: string | null
   icon_type: string | null
   is_active: boolean
+  /** NULL = catalog row (immutable, shared). Non-NULL = user-owned custom row. */
+  user_id: string | null
 }
 
 export type AccountWithDetails = Account & {
