@@ -19,7 +19,7 @@ Las queries de Supabase **no** viven acá — viven en el `lib/` de cada app, po
 
 ## Reglas
 
-- **`src/types.ts` es generado, no editado a mano.** Se regenera con `supabase gen types typescript --project-id <id>` contra el proyecto remoto. Ver "Migrations are the schema truth" y "Supabase is online-only" en `CLAUDE.md`.
+- **`src/types.ts` es generado, no editado a mano.** Se regenera con `supabase gen types typescript --project-id <id>` contra el proyecto remoto. Ver "Migrations are the schema truth" y "Supabase is online-only" en `AGENTS.md`.
 - **Sin queries ni server actions.** Eso es código de cada app.
 
 ## Cómo se consume

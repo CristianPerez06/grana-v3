@@ -6,7 +6,7 @@ Tipos de props compartidos entre las implementaciones nativas de los primitivos 
 
 JSX no se comparte entre web y React Native: `<div>` no existe en RN, `<View>` no existe en web. Por eso Grana mantiene **dos implementaciones nativas** de cada primitivo, una por plataforma. La paridad entre ambas se garantiza con **un tipo de props compartido**: si web le agrega una variante a `ButtonProps`, TypeScript rompe el build de mobile hasta que mobile la implemente (y viceversa).
 
-Política completa en `CLAUDE.md` → "Web ↔ Mobile policy" y en `openspec/specs/project-conventions/spec.md` → requirement "La paridad web↔mobile se sostiene por contratos de props compartidos".
+Política completa en `AGENTS.md` → "Web ↔ Mobile policy" y en `openspec/specs/project-conventions/spec.md` → requirement "La paridad web↔mobile se sostiene por contratos de props compartidos".
 
 ## Cómo se usa
 

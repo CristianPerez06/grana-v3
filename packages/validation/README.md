@@ -6,7 +6,7 @@ Esquemas de validación **Yup** + helpers, puros y cross-platform. Es la fuente 
 
 Las dos apps validan los mismos inputs (signup, alta de cuenta, consumo de tarjeta, recurrencia…). Si cada una reimplementa las reglas, divergen: un campo que web exige y mobile no, un mínimo distinto, un mensaje de error que no matchea. Centralizar los esquemas garantiza que ambas plataformas aceptan y rechazan exactamente lo mismo.
 
-Acá también vive el tipo `Money` (branded, backed por `decimal.js`) y sus parsers, porque toda la aritmética monetaria del repo arranca en ese tipo (ver principios cross-cutting en `CLAUDE.md`).
+Acá también vive el tipo `Money` (branded, backed por `decimal.js`) y sus parsers, porque toda la aritmética monetaria del repo arranca en ese tipo (ver principios cross-cutting en `AGENTS.md`).
 
 ## Qué exporta
 
