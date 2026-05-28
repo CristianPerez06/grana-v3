@@ -115,9 +115,16 @@ export const EditCreditCardForm = ({
                   setInstitutionId(inst.id)
                   setInstitutionSearch(inst.name)
                 }}
-                className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
               >
-                {inst.name}
+                <span
+                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-semibold text-white"
+                  style={{ backgroundColor: inst.brand_color ?? 'var(--account-slate)' }}
+                  aria-hidden
+                >
+                  {(inst.name[0] ?? '?').toUpperCase()}
+                </span>
+                <span>{inst.name}</span>
               </button>
             ))}
           </div>

@@ -81,8 +81,8 @@ export const CreateAccountForm = ({ institutions }: Props) => {
         type,
         institution_id: type === 'bank' ? institutionId : undefined,
         currencies,
-        color_key: colorKey,
-        icon_key: iconKey,
+        color_key: type === 'bank' ? null : colorKey,
+        icon_key: type === 'bank' ? null : iconKey,
       })
 
       if (!result.ok) {
@@ -154,11 +154,18 @@ export const CreateAccountForm = ({ institutions }: Props) => {
                   setInstitutionSearch(inst.name)
                 }}
                 className={[
-                  'w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors',
+                  'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted transition-colors',
                   institutionId === inst.id ? 'bg-muted font-medium' : '',
                 ].join(' ')}
               >
-                {inst.name}
+                <span
+                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-semibold text-white"
+                  style={{ backgroundColor: inst.brand_color ?? 'var(--account-slate)' }}
+                  aria-hidden
+                >
+                  {(inst.name[0] ?? '?').toUpperCase()}
+                </span>
+                <span>{inst.name}</span>
               </button>
             ))}
           </div>
@@ -168,16 +175,18 @@ export const CreateAccountForm = ({ institutions }: Props) => {
         </div>
       )}
 
-      {/* Appearance — color + icon avatar (auto when left unset) */}
-      <AccountAvatarPicker
-        colorKey={colorKey}
-        iconKey={iconKey}
-        onColorChange={setColorKey}
-        onIconChange={setIconKey}
-        inheritedColor={inheritedColor}
-        autoIcon={autoIcon}
-        monogram={monogram}
-      />
+      {/* Bank accounts derive color/icon from the institution; no override UI. */}
+      {type === 'cash' && (
+        <AccountAvatarPicker
+          colorKey={colorKey}
+          iconKey={iconKey}
+          onColorChange={setColorKey}
+          onIconChange={setIconKey}
+          inheritedColor={inheritedColor}
+          autoIcon={autoIcon}
+          monogram={monogram}
+        />
+      )}
 
       {/* Currencies — bimoneda por defecto: ambas monedas siempre activas. */}
       <div className="flex flex-col gap-2">

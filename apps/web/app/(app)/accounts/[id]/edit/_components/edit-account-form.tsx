@@ -127,11 +127,18 @@ export const EditAccountForm = ({ account, institutions }: Props) => {
                   setInstitutionSearch(inst.name)
                 }}
                 className={[
-                  'w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors',
+                  'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted transition-colors',
                   institutionId === inst.id ? 'bg-muted font-medium' : '',
                 ].join(' ')}
               >
-                {inst.name}
+                <span
+                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-semibold text-white"
+                  style={{ backgroundColor: inst.brand_color ?? 'var(--account-slate)' }}
+                  aria-hidden
+                >
+                  {(inst.name[0] ?? '?').toUpperCase()}
+                </span>
+                <span>{inst.name}</span>
               </button>
             ))}
           </div>
@@ -141,16 +148,18 @@ export const EditAccountForm = ({ account, institutions }: Props) => {
         </div>
       )}
 
-      {/* Appearance — color + icon avatar (auto when left unset) */}
-      <AccountAvatarPicker
-        colorKey={colorKey}
-        iconKey={iconKey}
-        onColorChange={setColorKey}
-        onIconChange={setIconKey}
-        inheritedColor={inheritedColor}
-        autoIcon={autoIcon}
-        monogram={monogram}
-      />
+      {/* Bank accounts derive color/icon from the institution; no override UI. */}
+      {account.type === 'cash' && (
+        <AccountAvatarPicker
+          colorKey={colorKey}
+          iconKey={iconKey}
+          onColorChange={setColorKey}
+          onIconChange={setIconKey}
+          inheritedColor={inheritedColor}
+          autoIcon={autoIcon}
+          monogram={monogram}
+        />
+      )}
 
       {/* Initial balance — read-only */}
       <div className="flex flex-col gap-1.5">
