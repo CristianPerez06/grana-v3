@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { buildCategorySlices, type CategorySliceInput } from '@grana/money-logic'
+import {
+  buildCategorySlices,
+  buildSliceMetaLine,
+  type CategorySliceInput,
+  type SliceMetaTemplates,
+} from '@grana/money-logic'
 
 const cat = (id: string, value: number): CategorySliceInput => ({
   categoryId: id,
@@ -53,5 +58,50 @@ describe('buildCategorySlices', () => {
     expect(slices).toHaveLength(1)
     expect(slices[0].percentage).toBe(100)
     expect(slices[0].offset).toBe(0)
+  })
+})
+
+describe('buildSliceMetaLine', () => {
+  const templates: SliceMetaTemplates = {
+    installments: (desc, share) => `${share}% · cuotas ${desc}`,
+    recurring: (n, share) => `${share}% · ${n} recurrentes`,
+    movements: (n, share) => `${share}% · ${n} movimientos`,
+  }
+
+  it('falls back to movement count when no enriched context', () => {
+    const line = buildSliceMetaLine({ percentage: 40 }, { movementCount: 8 }, templates)
+    expect(line).toBe('40% · 8 movimientos')
+  })
+
+  it('prefers installments when a dominant description is present', () => {
+    const line = buildSliceMetaLine(
+      { percentage: 25 },
+      { movementCount: 1, dominantInstallmentDescription: 'Sofá Sofías' },
+      templates,
+    )
+    expect(line).toBe('25% · cuotas Sofá Sofías')
+  })
+
+  it('prefers recurring count when no installments and recurringCount > 0', () => {
+    const line = buildSliceMetaLine(
+      { percentage: 11 },
+      { movementCount: 3, recurringCount: 3 },
+      templates,
+    )
+    expect(line).toBe('11% · 3 recurrentes')
+  })
+
+  it('treats empty/whitespace installment description as absent', () => {
+    const line = buildSliceMetaLine(
+      { percentage: 15 },
+      { movementCount: 14, dominantInstallmentDescription: '   ', recurringCount: 0 },
+      templates,
+    )
+    expect(line).toBe('15% · 14 movimientos')
+  })
+
+  it('rounds the percentage for display', () => {
+    const line = buildSliceMetaLine({ percentage: 24.6 }, { movementCount: 5 }, templates)
+    expect(line).toBe('25% · 5 movimientos')
   })
 })

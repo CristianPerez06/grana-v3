@@ -25,6 +25,15 @@ export type MovementEmptyState = {
   clearHref?: string
   /** The active search term, for the 'search' message. */
   query?: string
+  /**
+   * Optional overrides for the 'none' variant copy. Set by the page when it
+   * resolves between welcome (first time ever) and month-vacío (history
+   * elsewhere). When absent, the component falls back to the generic 'none'
+   * strings.
+   */
+  title?: string
+  body?: string
+  cta?: string
 }
 
 type Props = {
@@ -91,13 +100,16 @@ export const MovementList = ({
       )
     }
 
+    const noneTitle = emptyState?.title ?? t('empty.title')
+    const noneBody = emptyState?.body ?? t('list.global_empty_description')
+    const noneCta = emptyState?.cta ?? t('empty.cta')
     return (
       <div className={containerClass}>
-        <p className="text-sm font-medium text-foreground">{t('empty.title')}</p>
-        <p className="mt-1 text-sm text-muted-foreground">{t('list.global_empty_description')}</p>
+        <p className="text-sm font-medium text-foreground">{noneTitle}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{noneBody}</p>
         {emptyState?.addHref && (
           <div>
-            <Link href={emptyState.addHref} className={actionClass}>{t('empty.cta')}</Link>
+            <Link href={emptyState.addHref} className={actionClass}>{noneCta}</Link>
           </div>
         )}
       </div>

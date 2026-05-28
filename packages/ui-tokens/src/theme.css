@@ -43,6 +43,14 @@
   --positive: #10B981;
   --negative: #B56A5A;
 
+  /* Semantic — editorial amount tones (movement rows, breakdowns).
+     Aliases over the structural positive/negative + text/muted, so a future
+     tweak to the editorial palette doesn't disturb non-money consumers. */
+  --income: var(--positive);
+  --expense: var(--negative);
+  --neutral-amount: var(--text);
+  --pending: var(--text-muted);
+
   /* Semantic — warning */
   --warning: #C49A3C;
   --warning-deep: #B45309;
@@ -174,6 +182,12 @@
   /* Semantic raw */
   --color-positive: var(--positive);
   --color-negative: var(--negative);
+
+  /* Editorial amount tones */
+  --color-income: var(--income);
+  --color-expense: var(--expense);
+  --color-neutral-amount: var(--neutral-amount);
+  --color-pending: var(--pending);
   --color-warning: var(--warning);
   --color-warning-deep: var(--warning-deep);
   --color-warning-soft: var(--warning-soft);

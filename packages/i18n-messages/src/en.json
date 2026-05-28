@@ -603,10 +603,31 @@
     "card_payment_label": "Card payment",
     "spending": {
       "title": "Where it went",
+      "eyebrow": "Where it went",
+      "center_label": "Spent",
+      "categories_caption": "across {count} categories",
+      "off_ledger_note": "Credit card spending not yet paid is excluded",
+      "see_detail": "See the breakdown",
       "others": "Other",
+      "others_label": "+ {count} more categories",
+      "others_meta": "{share}% of total",
+      "see_all_categories": "See all categories",
+      "meta": {
+        "installments": "{share}% · installments {description}",
+        "recurring": "{share}% · {count} recurring",
+        "movements": "{share}% · {count} movements"
+      },
       "uncategorized": "Uncategorized",
       "empty": "No spending this month.",
       "usd_heading": "In dollars"
+    },
+    "header": {
+      "eyebrow": "Movements",
+      "movements_count": "{count, plural, =0 {No movements} one {1 movement} other {# movements}}",
+      "currencies_ars_usd": "ARS and USD",
+      "currencies_ars": "Only ARS",
+      "currencies_usd": "Only USD",
+      "see_recurrences": "See recurrences"
     },
     "reimbursement": {
       "label": "Reimbursement",
@@ -770,7 +791,17 @@
       "clear_search": "Clear search",
       "filter_title": "No results",
       "filter_description": "No movement matches the applied filters.",
-      "clear_filters": "Clear filters"
+      "clear_filters": "Clear filters",
+      "welcome": {
+        "title": "Every peso that moves will show up here.",
+        "body": "Start with the last thing you paid or got paid. As you log entries, the app learns and makes it easier.",
+        "cta": "Log the first one"
+      },
+      "month": {
+        "title": "Nothing logged in {month} yet.",
+        "body": "When you log something this month, it'll appear here.",
+        "cta": "Log a movement"
+      }
     },
     "account_groups": {
       "cash_bank": "Cash / Bank",
@@ -829,7 +860,11 @@
       "amount_max": "Max amount",
       "prev_month": "Previous month",
       "next_month": "Next month",
-      "custom_range": "Custom range"
+      "custom_range": "Custom range",
+      "cancel": "Cancel",
+      "clear_search": "Clear search",
+      "refine": "Refine",
+      "close": "Close"
     },
     "movement_kinds": {
       "income": "Income",
@@ -857,6 +892,7 @@
       "today": "Today",
       "yesterday": "Yesterday",
       "review_short": "Review",
+      "recurrent_short": "Recurring",
       "transfer_subtitle_unknown_source": "Source account",
       "transfer_subtitle_unknown_destination": "Destination account",
       "installment_subtitle": "{count} installments",
