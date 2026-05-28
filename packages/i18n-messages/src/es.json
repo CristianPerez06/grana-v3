@@ -365,6 +365,25 @@
       "save_failed": "Error al guardar.",
       "generic": "Algo salió mal. Intentá de nuevo."
     },
+    "customInstitution": {
+      "add": "+ Agregar nueva institución…",
+      "add_with_query": "+ Agregar «{query}» como nueva",
+      "title_inline": "Nueva institución",
+      "section_custom": "Mis instituciones",
+      "section_catalog": "Catálogo",
+      "name_label": "Nombre",
+      "name_placeholder": "Ej: Banco Mariposa",
+      "color_label": "Color",
+      "create": "Crear",
+      "cancel": "Cancelar",
+      "errors": {
+        "name_required": "Ingresá un nombre.",
+        "name_too_long": "Hasta 50 caracteres.",
+        "duplicate": "Ya tenés una institución con ese nombre.",
+        "color_required": "Elegí un color.",
+        "create_failed": "No se pudo crear la institución."
+      }
+    },
     "empty": {
       "title": "Todavía no tenés cuentas",
       "description": "Creá tu primera cuenta para empezar a registrar tus movimientos.",

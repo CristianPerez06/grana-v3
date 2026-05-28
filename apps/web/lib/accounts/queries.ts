@@ -114,11 +114,14 @@ export async function getAccountDetail(id: string): Promise<AccountWithBalances 
 export async function getInstitutions() {
   const supabase = await createClient()
 
+  // RLS already filters: each user sees the catalog (user_id NULL) plus their
+  // own custom rows. We order catalog first, custom last (each block alphabetic).
   const { data, error } = await supabase
     .from('institutions')
     .select('*')
     .eq('is_active', true)
-    .order('name')
+    .order('user_id', { ascending: true, nullsFirst: true })
+    .order('name', { ascending: true })
 
   if (error) throw error
   return data ?? []

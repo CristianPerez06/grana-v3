@@ -242,6 +242,10 @@ export type Database = {
         Relationships: []
       }
       institutions: {
+        // user_id was added in migration 0020_custom_institutions.sql. The
+        // hand-edit below mirrors what `supabase gen types` will emit after
+        // the migration runs against the remote project. Re-run the codegen
+        // to replace this manual patch with the real generated shape.
         Row: {
           brand_color: string | null
           country: string
@@ -250,6 +254,7 @@ export type Database = {
           is_active: boolean
           name: string
           slug: string
+          user_id: string | null
         }
         Insert: {
           brand_color?: string | null
@@ -259,6 +264,7 @@ export type Database = {
           is_active?: boolean
           name: string
           slug: string
+          user_id?: string | null
         }
         Update: {
           brand_color?: string | null
@@ -268,8 +274,18 @@ export type Database = {
           is_active?: boolean
           name?: string
           slug?: string
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "institutions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedSchema: "auth"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       period_payments: {
         Row: {

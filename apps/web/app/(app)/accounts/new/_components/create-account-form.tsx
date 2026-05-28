@@ -7,6 +7,7 @@ import { Alert } from '@/components/ui/alert'
 import { createAccount } from '@/app/_actions/accounts'
 import { parseMoneyInput } from '@grana/validation'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { InstitutionPicker } from '../../_components/institution-picker'
 import type { Institution } from '@/lib/accounts/types'
 
 type Props = {
@@ -25,8 +26,6 @@ export const CreateAccountForm = ({ institutions }: Props) => {
   const [type, setType] = useState<'cash' | 'bank'>('cash')
   const [name, setName] = useState('')
   const [institutionId, setInstitutionId] = useState('')
-  const [institutionSearch, setInstitutionSearch] = useState('')
-  const [institutionFocused, setInstitutionFocused] = useState(false)
   // Bimoneda por defecto: every account is provisioned with ARS + USD.
   // The user only edits the initial balance per currency; toggling is not allowed.
   const [balances, setBalances] = useState<Record<string, string>>({ ARS: '0', USD: '0' })
@@ -36,10 +35,6 @@ export const CreateAccountForm = ({ institutions }: Props) => {
     { code: 'ARS', label: t('currency_options.ars') },
     { code: 'USD', label: t('currency_options.usd') },
   ]
-
-  const filteredInstitutions = institutions.filter((i) =>
-    i.name.toLowerCase().includes(institutionSearch.toLowerCase()),
-  )
 
   const validate = () => {
     const errs: Record<string, string> = {}
@@ -128,63 +123,12 @@ export const CreateAccountForm = ({ institutions }: Props) => {
       {type === 'bank' && (
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-foreground">{t('labels.institution')}</label>
-          <div className="relative">
-            <input
-              type="text"
-              value={institutionSearch}
-              onChange={(e) => {
-                const value = e.target.value
-                setInstitutionSearch(value)
-                // Only invalidate the selection if the search no longer matches it.
-                if (institutionId) {
-                  const selected = institutions.find((i) => i.id === institutionId)
-                  if (selected && selected.name !== value) setInstitutionId('')
-                }
-              }}
-              onFocus={() => setInstitutionFocused(true)}
-              onBlur={() => {
-                // Delay blur so click on a dropdown option still registers.
-                setTimeout(() => setInstitutionFocused(false), 150)
-              }}
-              placeholder={t('placeholders.institutionSearch')}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-            {institutionFocused && !institutionId && (
-              <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded-md border border-input bg-background shadow-md">
-                {filteredInstitutions.map((inst) => (
-                  <button
-                    key={inst.id}
-                    type="button"
-                    onMouseDown={(e) => {
-                      // Prevent the input's onBlur from firing before the click.
-                      e.preventDefault()
-                    }}
-                    onClick={() => {
-                      setInstitutionId(inst.id)
-                      setInstitutionSearch(inst.name)
-                      setInstitutionFocused(false)
-                    }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
-                  >
-                    <span
-                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-semibold text-white"
-                      style={{ backgroundColor: inst.brand_color ?? 'var(--account-slate)' }}
-                      aria-hidden
-                    >
-                      {(inst.name[0] ?? '?').toUpperCase()}
-                    </span>
-                    <span>{inst.name}</span>
-                  </button>
-                ))}
-                {filteredInstitutions.length === 0 && (
-                  <p className="px-3 py-2 text-sm text-muted-foreground">{tCommon('no_results')}</p>
-                )}
-              </div>
-            )}
-          </div>
-          {errors.institution && (
-            <p className="text-xs text-destructive">{errors.institution}</p>
-          )}
+          <InstitutionPicker
+            institutions={institutions}
+            selectedId={institutionId}
+            onChange={(id) => setInstitutionId(id)}
+            errorText={errors.institution}
+          />
         </div>
       )}
 

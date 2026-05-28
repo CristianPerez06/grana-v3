@@ -75,6 +75,38 @@ El sistema SHALL permitir crear una cuenta de `type='bank'`. Una cuenta bank req
 
 ---
 
+### Requirement: Crear institución custom desde el form de cuenta
+
+El sistema SHALL permitir al usuario crear una institución propia ("custom") desde el dropdown del form de cuenta (`CreateAccountForm` y `EditAccountForm`) cuando el banco/billetera buscada no existe en el catálogo. La institución custom queda asociada al usuario (`user_id = auth.uid()`) y es indistinguible del catálogo aguas arriba: tiene los mismos campos (`name`, `brand_color`, `icon_type`) y el avatar de cuenta deriva de ella con las mismas reglas que el catálogo.
+
+La creación SHALL ocurrir vía un sub-form inline dentro del dropdown (no modal), que pide `name` (1–50 trimmed, único por usuario) y `brand_color` (de la paleta curada de cuentas `ACCOUNT_COLOR_HEX`). El `icon_type` se setea siempre a `'bank'` (ícono `landmark`) — la distinción `bank`/`wallet` fue evaluada y descartada como ruido cognitivo sin valor de producto; si en el futuro se necesita control fino del ícono, se expone como picker dedicado. El sub-form aparece al hacer click en un ítem "+ Agregar nueva institución…" que el dropdown expone siempre al final, promocionado con CTA cuando la búsqueda actual devuelve 0 matches (pre-rellenando el `name` con la búsqueda). Confirmar persiste la institución y la deja seleccionada en el form padre; cancelar vuelve al dropdown sin persistir.
+
+#### Scenario: El usuario crea una institución custom desde el alta de cuenta
+
+- **WHEN** un usuario crea una cuenta bancaria, busca en el dropdown un nombre que no matchea, y hace click en "+ Agregar «<query>» como nueva"
+- **THEN** aparece un sub-form inline con campos `name` y `color`
+- **AND** el `name` viene pre-rellenado con el texto buscado
+
+#### Scenario: La institución custom queda seleccionada al crearla
+
+- **WHEN** el usuario confirma la creación con datos válidos
+- **THEN** la institución se persiste con `user_id = auth.uid()` e `icon_type='bank'`
+- **AND** queda seleccionada en el dropdown del form padre con su chip de color a la izquierda del nombre
+- **AND** el sub-form se cierra
+
+#### Scenario: Cancelar el sub-form no persiste nada
+
+- **WHEN** el usuario abre el sub-form, ingresa datos, y hace click en Cancelar
+- **THEN** la institución no se persiste y el dropdown vuelve a su estado anterior
+
+#### Scenario: La cuenta bancaria con institución custom funciona como con catálogo
+
+- **WHEN** el usuario crea una cuenta `type='bank'` apuntada a una institución custom
+- **THEN** la cuenta se persiste con `institution_id` apuntando a la fila custom
+- **AND** el avatar de la cuenta (en lista, detalle y dashboard) usa el `brand_color` y `icon_type` de esa institución
+
+---
+
 ### Requirement: Una cuenta puede tener saldos en múltiples monedas
 
 El sistema SHALL modelar el saldo de cada cuenta como una colección de filas `account_currencies` (una por moneda). Cada fila representa un sub-saldo independiente para una moneda. Las únicas monedas soportadas son `ARS` y `USD` (enforced por `chk_account_currencies_supported`). El par `(account_id, currency_code)` es único.
@@ -436,10 +468,20 @@ La derivación automática (`NULL`) SHALL ser:
 - **WHEN** una cuenta `type='bank'` tiene `color_key=NULL` e `icon_key=NULL` y su institución tiene `brand_color` e `icon_type='bank'`
 - **THEN** el avatar usa el color de la institución y el ícono `landmark`
 
+#### Scenario: Banco con institución custom hereda su color e ícono
+
+- **WHEN** una cuenta `type='bank'` con `color_key=NULL` e `icon_key=NULL` apunta a una institución custom del usuario con `brand_color='#3A7D44'` e `icon_type='wallet'`
+- **THEN** el avatar usa color `#3A7D44` e ícono `wallet`
+
 #### Scenario: Cambiar la institución actualiza el avatar heredado
 
 - **WHEN** una cuenta `type='bank'` con `color_key=NULL` cambia su `institution_id` a otra institución con distinto `brand_color`
 - **THEN** el avatar pasa a reflejar el branding de la nueva institución (herencia viva), sin tocar `color_key`
+
+#### Scenario: Cambiar de institución del catálogo a una custom actualiza el avatar
+
+- **WHEN** una cuenta `type='bank'` con `color_key=NULL` cambia su `institution_id` del catálogo a una custom del usuario
+- **THEN** el avatar pasa a reflejar el branding de la custom, sin tocar `color_key`
 
 #### Scenario: Override explícito queda fijo
 

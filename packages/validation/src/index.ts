@@ -36,6 +36,10 @@ export {
   type AddCurrencyInput,
 } from "./accounts";
 export {
+  createCustomInstitutionSchema,
+  type CreateCustomInstitutionInput,
+} from "./institutions";
+export {
   createIncomeSchema,
   createExpenseSchema,
   updateTransactionSchema,
