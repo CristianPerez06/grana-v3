@@ -3,7 +3,7 @@ import { Money } from '@grana/validation'
 /**
  * Pure check backing the non-blocking negative-balance warning.
  *
- * Fase 0 decision (see CLAUDE.md "Negative balance allowed + soft warning"):
+ * Fase 0 decision (see AGENTS.md "Negative balance allowed + soft warning"):
  * a negative `disponible` is allowed and never blocked. This helper only tells
  * the UI whether a given outflow would push a single account's available
  * balance below zero, so the form can *inform* the user before they confirm.

@@ -24,7 +24,7 @@ Recopilar en paralelo (vía Bash directo, **no** vía sub-agente — esto es rá
 - `ls openspec/specs/` y `ls openspec/changes/` (excluyendo `archive/`).
 - `ls openspec/changes/archive/ | tail -10` para ver las últimas changes archivadas.
 - `ls supabase/migrations/` y `ls packages/` y `ls apps/`.
-- Leer `CLAUDE.md` completo. Es la fuente de verdad declarada; todo lo demás se contrasta contra esto.
+- Leer `AGENTS.md` completo. Es la fuente de verdad declarada; todo lo demás se contrasta contra esto.
 
 Anunciar al usuario en una línea qué se va a auditar y arrancar.
 
@@ -47,7 +47,7 @@ Un solo mensaje con tres `Agent` tool calls, `subagent_type: "Explore"`. Cada pr
 - 3-5 code smells concretos con `file:line` (archivos > 600 líneas, duplicaciones de helpers, etc.).
 
 **Agente 3 — Documentación funcional + técnica.**
-- `CLAUDE.md`: tabla "Modules" coincide con la realidad (módulos hechos vs marcados, `🚧 / ✅`). Sección "Repo Layout" coincide con `apps/` y `packages/`. Política web↔mobile escrita.
+- `AGENTS.md`: tabla "Modules" coincide con la realidad (módulos hechos vs marcados, `🚧 / ✅`). Sección "Repo Layout" coincide con `apps/` y `packages/`. Política web↔mobile escrita.
 - `README.md` y `SUPABASE_SETUP.md`: en español, mencionan las dos apps, instrucciones funcionan para un dev nuevo.
 - Cada `packages/<name>/` tiene `README.md` propio.
 - Migraciones tienen comentario inicial explicativo.
@@ -88,7 +88,7 @@ Los sub-agentes Explore tienen ventana de lectura acotada y pueden flaggear cosa
 
 ### G2. `new Date()` no siempre es bug
 
-CLAUDE.md dice que "any 'today' default in financial operations must be computed from the user's financial timezone". Eso aplica **solo a columnas `DATE` financieras**. Las columnas `TIMESTAMPTZ` (`created_at`, `resolved_at`, `onboarding_completed_at`, etc.) son timestamps técnicos de auditoría y `new Date().toISOString()` ES el valor correcto. **Verificar el tipo de columna en la migración correspondiente antes de flaggear.**
+AGENTS.md dice que "any 'today' default in financial operations must be computed from the user's financial timezone". Eso aplica **solo a columnas `DATE` financieras**. Las columnas `TIMESTAMPTZ` (`created_at`, `resolved_at`, `onboarding_completed_at`, etc.) son timestamps técnicos de auditoría y `new Date().toISOString()` ES el valor correcto. **Verificar el tipo de columna en la migración correspondiente antes de flaggear.**
 
 ### G3. Formato delta openspec vs flat
 
@@ -98,9 +98,9 @@ Los specs **vivos en `openspec/changes/<name>/specs/`** usan `## ADDED Requireme
 
 Algunos módulos no tienen su propia capability porque sus deltas fueron a una capability cross-cutting. Ejemplo: `recurring-movements` no tiene `openspec/specs/recurring-movements/` porque sus requirements viven en `openspec/specs/transactions/`. **Antes de reportar un spec faltante, buscar el nombre del módulo dentro de los specs existentes con grep.**
 
-### G5. Tabla "Modules" de CLAUDE.md como verdad declarada
+### G5. Tabla "Modules" de AGENTS.md como verdad declarada
 
-Es donde el repo declara qué módulos cree que están hechos. Si la realidad del código difiere, eso es drift documental (y el bug es CLAUDE.md, no el código). Anotar las diferencias precisas.
+Es donde el repo declara qué módulos cree que están hechos. Si la realidad del código difiere, eso es drift documental (y el bug es AGENTS.md, no el código). Anotar las diferencias precisas.
 
 ### G6. No inventar deuda
 
@@ -113,7 +113,7 @@ Algunas cosas que parecen deuda (ej.: `title?` legacy en mobile Button) están d
 ## Qué NO hacer en esta skill
 
 - **No escribir código**. La skill audita, no implementa. Si encuentra cosas para arreglar, recomienda crear una openspec change.
-- **No modificar specs, CLAUDE.md, README ni migraciones**. Solo leer.
+- **No modificar specs, AGENTS.md, README ni migraciones**. Solo leer.
 - **No crear branches ni commits**. El usuario decide qué hacer con el reporte.
 - **No correr `pnpm install` ni nada que toque `node_modules`** salvo que el typecheck/test inicial falle por una dep faltante (y avisar antes).
 - **No pasarse de 1500 palabras en el reporte final.** Conciso, accionable, citando `file:line`.

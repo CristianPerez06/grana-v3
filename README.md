@@ -187,7 +187,8 @@ grana-v3/
 │   └── dashboard/                 # @grana/dashboard — queries + agregaciones del dashboard
 ├── supabase/                      # SQL migrations + email templates (backend, no es una app)
 ├── openspec/                      # workflow spec-driven
-├── CLAUDE.md                      # contexto para Claude Code
+├── AGENTS.md                      # instrucciones canónicas para LLMs (Claude Code, Codex, Cursor, …)
+├── CLAUDE.md                      # stub que apunta a AGENTS.md (compat con tooling que carga CLAUDE.md)
 ├── SUPABASE_SETUP.md
 ├── README.md
 ├── package.json                   # orquestador con scripts para web y mobile
@@ -200,7 +201,7 @@ Reglas rápidas:
 - Código específico de una plataforma vive en `apps/<name>/`.
 - Código reutilizable entre apps **y sin deps de plataforma** vive en `packages/<name>/`.
 - La raíz **no tiene código de producto**.
-- Política web↔mobile: dos implementaciones nativas paralelas con API idéntica (ver `CLAUDE.md` → "Web ↔ Mobile policy"). No se comparte JSX entre web y React Native.
+- Política web↔mobile: dos implementaciones nativas paralelas con API idéntica (ver `AGENTS.md` → "Web ↔ Mobile policy"). No se comparte JSX entre web y React Native.
 
 ## Deploy en Vercel
 

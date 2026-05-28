@@ -20,7 +20,7 @@ Solo funciones **puras**:
 - **Sin acceso a I/O.** Las funciones reciben datos ya cargados y devuelven datos calculados.
 - **Sin estado global.** Cada llamada es determinística para los mismos inputs.
 
-`decimal.js` (vía `@grana/validation`) sí se usa — es la base del tipo `Money` y todos los cálculos monetarios pasan por él según los principios cross-cutting de `CLAUDE.md`.
+`decimal.js` (vía `@grana/validation`) sí se usa — es la base del tipo `Money` y todos los cálculos monetarios pasan por él según los principios cross-cutting de `AGENTS.md`.
 
 ## Qué NO entra acá
 

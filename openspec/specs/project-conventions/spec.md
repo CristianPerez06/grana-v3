@@ -8,7 +8,7 @@ Spec meta del proyecto: agrupa las convenciones transversales que aplican a todo
 
 Grana V3 SHALL tratar al repositorio como la memoria principal del producto. La V3 no es una reescritura por si misma: es una reconstruccion cuyo objetivo es que la app sea funcionalmente explicita, tecnicamente confiable y documentada al nivel de que una conversacion nueva con un LLM pueda continuar el trabajo sin depender de contexto oculto.
 
-Toda decision funcional o tecnica que afecte el comportamiento contable, financiero, de UX critica, de datos o de arquitectura SHALL quedar registrada en el lugar correspondiente del repo: specs, migraciones, `CLAUDE.md`, README, codigo y/o tests. Las decisiones importantes SHALL NOT quedar solamente en una conversacion, en memoria humana o implicitas dentro de una implementacion dificil de descubrir.
+Toda decision funcional o tecnica que afecte el comportamiento contable, financiero, de UX critica, de datos o de arquitectura SHALL quedar registrada en el lugar correspondiente del repo: specs, migraciones, `AGENTS.md`, README, codigo y/o tests. Las decisiones importantes SHALL NOT quedar solamente en una conversacion, en memoria humana o implicitas dentro de una implementacion dificil de descubrir.
 
 #### Scenario: Una regla contable nueva queda escrita antes o junto con el codigo
 
@@ -19,7 +19,7 @@ Toda decision funcional o tecnica que afecte el comportamiento contable, financi
 #### Scenario: Una conversacion nueva puede retomar el proyecto
 
 - **WHEN** un LLM nuevo lee el repo sin acceso al historial de chat anterior
-- **THEN** encuentra en `CLAUDE.md`, `openspec/specs/` y las migraciones las reglas necesarias para no inventar comportamiento
+- **THEN** encuentra en `AGENTS.md`, `openspec/specs/` y las migraciones las reglas necesarias para no inventar comportamiento
 - **AND** puede distinguir que decisiones son funcionales, cuales son tecnicas y cuales estan pendientes
 
 #### Scenario: Una decision importante no queda solo en el chat
@@ -42,7 +42,7 @@ La regla tiene dos excepciones explícitas:
   - Conectores de scenarios: `**WHEN**`, `**THEN**`, `**AND**`.
   - Operadores de delta: `FROM:`, `TO:`, `**Reason**:`, `**Migration**:`.
   - **Modales normativos** dentro del cuerpo de cada requirement: `SHALL`, `SHALL NOT`, `MUST`, `MUST NOT`, `SHOULD`, `MAY`. (El parser rechaza el archive si un requirement no contiene al menos un `SHALL` o `MUST`.)
-- **`CLAUDE.md`**: este archivo SHALL permanecer en inglés porque es una extensión del system prompt para LLMs (convención del ecosistema Claude Code).
+- **`AGENTS.md`**: este archivo SHALL permanecer en inglés porque es una extensión del system prompt para LLMs (convención cross-tool: lo leen Claude Code, OpenAI Codex, Cursor, Aider y otros agentes). `CLAUDE.md` SHALL permanecer como un stub que apunta a `AGENTS.md` para mantener compatibilidad con tooling que carga `CLAUDE.md` automáticamente.
 
 #### Scenario: Un nuevo proposal se escribe en español
 
@@ -57,9 +57,9 @@ La regla tiene dos excepciones explícitas:
 - **AND** los nombres después de `Requirement:` y `Scenario:` están en español
 - **AND** las descripciones de requirements y los pasos de scenarios están en español
 
-#### Scenario: CLAUDE.md no se traduce al español
+#### Scenario: AGENTS.md no se traduce al español
 
-- **WHEN** un colaborador modifica `CLAUDE.md`
+- **WHEN** un colaborador modifica `AGENTS.md`
 - **THEN** el archivo permanece en inglés
 - **AND** la spec acepta esta excepción explícitamente
 
@@ -108,7 +108,7 @@ La regla tiene una excepción explícita: los **valores** de las strings en los 
 
 ### Requirement: Los mensajes de commit deben estar en inglés
 
-Todos los mensajes de commit de git SHALL estar en inglés, siguiendo el formato de conventional commits ya descrito en `CLAUDE.md` (`type(scope): subject`). El cuerpo y el footer del commit, si los hay, también SHALL estar en inglés.
+Todos los mensajes de commit de git SHALL estar en inglés, siguiendo el formato de conventional commits ya descrito en `AGENTS.md` (`type(scope): subject`). El cuerpo y el footer del commit, si los hay, también SHALL estar en inglés.
 
 #### Scenario: Commit con título en inglés
 
@@ -124,7 +124,7 @@ Todos los mensajes de commit de git SHALL estar en inglés, siguiendo el formato
 
 ### Requirement: Los nombres de branches deben seguir el formato canónico sin sufijos random
 
-Los nombres de branches SHALL tener la forma `<prefijo>/<cuerpo-kebab-case>`, donde `<prefijo>` es uno de los listados en `CLAUDE.md` (`feature/`, `bugfix/`, `hotfix/`, `chore/`). El `<cuerpo-kebab-case>` SHALL ser un identificador descriptivo en inglés en formato kebab-case. El cuerpo **SHALL NOT** incluir IDs random, hashes, sufijos numéricos arbitrarios, ni prefijos similares que no aporten significado semántico.
+Los nombres de branches SHALL tener la forma `<prefijo>/<cuerpo-kebab-case>`, donde `<prefijo>` es uno de los listados en `AGENTS.md` (`feature/`, `bugfix/`, `hotfix/`, `chore/`). El `<cuerpo-kebab-case>` SHALL ser un identificador descriptivo en inglés en formato kebab-case. El cuerpo **SHALL NOT** incluir IDs random, hashes, sufijos numéricos arbitrarios, ni prefijos similares que no aporten significado semántico.
 
 Esta regla aplica especialmente cuando un LLM crea branches de forma autónoma — los LLMs tienden a agregar sufijos para evitar colisiones, y esa práctica está explícitamente prohibida en este proyecto. Si una branch necesita distinguirse de otra con nombre similar, debe usar un sufijo descriptivo y semántico (p. ej. `-v2`, `-rollback`, `-step-2`), no un identificador random.
 
@@ -162,13 +162,13 @@ El `README.md` SHALL incluir, antes de cualquier instrucción de `pnpm install` 
 - **WHEN** un colaborador lee el paso de instalación de pnpm
 - **THEN** encuentra `corepack enable pnpm` o un link a `https://pnpm.io/installation` (o ambos)
 
-### Requirement: CLAUDE.md documenta la regla de branch naming
+### Requirement: AGENTS.md documenta la regla de branch naming
 
-El `CLAUDE.md` SHALL incluir, en su sección de branching, una cláusula que documente explícitamente la prohibición de sufijos/prefijos con IDs random, hashes o números arbitrarios en los nombres de branches. La cláusula SHALL existir además de la lista actual de prefijos (`feature/*`, `bugfix/*`, `hotfix/*`, `chore/*`).
+El `AGENTS.md` SHALL incluir, en su sección de branching, una cláusula que documente explícitamente la prohibición de sufijos/prefijos con IDs random, hashes o números arbitrarios en los nombres de branches. La cláusula SHALL existir además de la lista actual de prefijos (`feature/*`, `bugfix/*`, `hotfix/*`, `chore/*`).
 
-#### Scenario: CLAUDE.md tiene la cláusula de no IDs random
+#### Scenario: AGENTS.md tiene la cláusula de no IDs random
 
-- **WHEN** un LLM lee `CLAUDE.md` al inicio de una sesión de Claude Code
+- **WHEN** un LLM lee `AGENTS.md` al inicio de una sesión de Claude Code
 - **THEN** la sección de branching menciona los prefijos válidos
 - **AND** menciona explícitamente que el cuerpo del nombre no debe contener IDs random, hashes ni sufijos numéricos arbitrarios
 - **AND** incluye un ejemplo positivo y uno negativo
@@ -179,7 +179,7 @@ El repo SHALL estar organizado como un monorepo manejado por pnpm workspaces, co
 
 - `apps/` SHALL contener una carpeta por aplicación desplegable. La app actual es `apps/web/` (Next.js). Apps futuras (p. ej. `apps/mobile/` cuando se haga el scaffold de la app móvil) SHALL agregarse bajo `apps/` siguiendo el mismo patrón. Cada `apps/<name>/` SHALL tener su propio `package.json`, su propio toolchain (Next config, Expo config, etc.), y SHALL ser autónomo a nivel build.
 - `packages/` SHALL contener una carpeta por paquete compartido entre apps. Los paquetes actuales son `packages/validation/` (schemas Yup), `packages/i18n-messages/` (catálogos JSON), `packages/supabase/` (cliente factory + tipos de DB), y `packages/ui-tokens/` (tokens de diseño). Cada `packages/<name>/` SHALL tener su propio `package.json` con `name: "@grana/<name>"` y SHALL exportar via `main`/`exports`.
-- La raíz del repo SHALL contener: `package.json` (scripts orquestadores + dev tooling compartido), `pnpm-workspace.yaml`, `tsconfig.base.json` si se usa una base compartida, `openspec/`, `supabase/` (backend, no es app), `CLAUDE.md`, y los archivos meta (`.gitignore`, `.env.example`, README, etc.).
+- La raíz del repo SHALL contener: `package.json` (scripts orquestadores + dev tooling compartido), `pnpm-workspace.yaml`, `tsconfig.base.json` si se usa una base compartida, `openspec/`, `supabase/` (backend, no es app), `AGENTS.md`, y los archivos meta (`.gitignore`, `.env.example`, README, etc.).
 - Código de producto SHALL NOT vivir en la raíz. Todo `app/`, `components/`, `lib/` y similares SHALL vivir dentro de un `apps/<name>/` o `packages/<name>/`.
 
 La regla de qué va en `apps/` vs `packages/`:
@@ -460,7 +460,7 @@ Esto se traduce concretamente a:
 - La UI de la app SHALL mostrar columnas y totales por separado para ARS y USD por defecto, en línea con el principio cross-cutting "Bimoneda" (ARS y USD son ledgers separados, nunca se convierten).
 - Cuando la próxima change del módulo `settings` agregue un toggle "ocultar USD" en preferencias del usuario, ese toggle SHALL afectar solo la presentación visual (esconder columnas USD, no mostrar el segundo input en formularios) y NO SHALL alterar las filas de `account_currencies` ni el ledger interno.
 
-Este principio es complementario, no reemplazo, del principio "Bimoneda" listado en la tabla de cross-cutting principles del `CLAUDE.md` (que prohíbe convertir automáticamente entre ARS y USD). "Bimoneda por defecto" agrega: ARS+USD están habilitados por defecto para todos.
+Este principio es complementario, no reemplazo, del principio "Bimoneda" listado en la tabla de cross-cutting principles del `AGENTS.md` (que prohíbe convertir automáticamente entre ARS y USD). "Bimoneda por defecto" agrega: ARS+USD están habilitados por defecto para todos.
 
 #### Scenario: Usuario nuevo tiene cuenta Billetera con ambas monedas tras signup
 
@@ -483,11 +483,11 @@ Este principio es complementario, no reemplazo, del principio "Bimoneda" listado
 
 Cuando una change implementada se considera completa, su archivado SHALL ocurrir como último commit de la branch de trabajo, **antes** del merge `--no-ff` a `main`. El archivado NO se difiere a un commit posterior ni a un PR separado.
 
-Archivado significa: mover la carpeta de `openspec/changes/<name>/` a `openspec/changes/archive/YYYY-MM-DD-<name>/`, aplicar los deltas (`## ADDED Requirements`, `## MODIFIED Requirements`, `## REMOVED Requirements`, `## RENAMED Requirements`) al spec maestro de cada capability tocada en `openspec/specs/<capability>/spec.md`, completar el `Purpose` real del spec maestro reemplazando cualquier placeholder `TBD - created by archiving change ...`, y actualizar `CLAUDE.md` (secciones "Modules" y "Repo Layout") cuando corresponda.
+Archivado significa: mover la carpeta de `openspec/changes/<name>/` a `openspec/changes/archive/YYYY-MM-DD-<name>/`, aplicar los deltas (`## ADDED Requirements`, `## MODIFIED Requirements`, `## REMOVED Requirements`, `## RENAMED Requirements`) al spec maestro de cada capability tocada en `openspec/specs/<capability>/spec.md`, completar el `Purpose` real del spec maestro reemplazando cualquier placeholder `TBD - created by archiving change ...`, y actualizar `AGENTS.md` (secciones "Modules" y "Repo Layout") cuando corresponda.
 
 Esta regla sostiene tres invariantes del proyecto:
 
-- El último commit de trabajo de la branch SHALL ser atómico: en una sola commit aparecen el código, los specs maestros actualizados, los `Purpose` completados y los cambios consecuentes en `CLAUDE.md`. Ese commit es el que luego entra a `main` bajo su merge commit `--no-ff`.
+- El último commit de trabajo de la branch SHALL ser atómico: en una sola commit aparecen el código, los specs maestros actualizados, los `Purpose` completados y los cambios consecuentes en `AGENTS.md`. Ese commit es el que luego entra a `main` bajo su merge commit `--no-ff`.
 - El estado de `main` SHALL cumplir que cada implementación tiene su spec maestro alineado.
 - Cualquier feedback de PR que requiera ajustar el spec MUST aplicarse en la misma branch sin abrir un segundo PR de "archive housekeeping".
 
@@ -496,7 +496,7 @@ El gate de validación SHALL ser el comando `pnpm openspec:check`, que falla si 
 #### Scenario: Branch lista para merge tiene la change archivada
 
 - **WHEN** un colaborador termina la implementación de una change y se prepara para mergear su branch a `main`
-- **THEN** la branch tiene como último commit de trabajo el archivado de la change (mover carpeta + aplicar deltas al spec maestro + completar `Purpose` + actualizar `CLAUDE.md` Modules y Repo Layout si corresponde)
+- **THEN** la branch tiene como último commit de trabajo el archivado de la change (mover carpeta + aplicar deltas al spec maestro + completar `Purpose` + actualizar `AGENTS.md` Modules y Repo Layout si corresponde)
 - **AND** el merge a `main` se hace `--no-ff`, generando el merge commit sobre ese único commit de trabajo
 
 #### Scenario: Merge a main rechazado si quedan TBD residuales
@@ -643,6 +643,6 @@ Esta regla aplica tanto a humanos como a LLMs colaborando autónomamente. La his
 #### Scenario: LLM colaborando autónomamente respeta la regla
 
 - **WHEN** un LLM autónomo necesita mergear una branch que generó
-- **THEN** lee `CLAUDE.md` al inicio de la sesión y sigue el flow: squash si N > 1 → rebase si main se movió → `git merge --no-ff` con mensaje descriptivo
+- **THEN** lee `AGENTS.md` al inicio de la sesión y sigue el flow: squash si N > 1 → rebase si main se movió → `git merge --no-ff` con mensaje descriptivo
 - **AND** nunca usa `--ff-only` ni `--squash` como comando de merge
 

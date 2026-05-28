@@ -5,7 +5,7 @@ import { resolve } from 'node:path'
 /**
  * Smoke tests that verify the DB-level invariants for the recurring movements
  * module are declared in the migration file. These do not exercise the live
- * Supabase project (the repo is online-only — see CLAUDE.md), but they catch
+ * Supabase project (the repo is online-only — see AGENTS.md), but they catch
  * a whole class of regressions: someone editing the migration without keeping
  * the invariants intact.
  *

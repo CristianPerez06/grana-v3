@@ -20,7 +20,7 @@ Las agregaciones (`aggregate*`/`build*`) son **puras** y testeables sin DB; las 
 
 - **Las queries reciben el client por parámetro**, no crean uno. Cada app le pasa su `GranaSupabaseClient`.
 - **El cálculo va en las funciones puras**, no en las queries — así se testea sin DB y se reusa entre plataformas. La aritmética monetaria pasa por `@grana/money-logic`.
-- **Tarjetas no vive en el dashboard:** el resumen de tarjetas vive en `/cards` (ver módulo `dashboard` en `CLAUDE.md`).
+- **Tarjetas no vive en el dashboard:** el resumen de tarjetas vive en `/cards` (ver módulo `dashboard` en `AGENTS.md`).
 
 ## Cómo se consume
 

@@ -20,7 +20,7 @@ El copy de usuario tiene que ser idéntico en ambas plataformas. Manteniendo un 
 
 - **Sin runtime de i18n.** El package solo provee datos (JSON) y formatters puros. La resolución de locale, el provider y los placeholders los maneja cada app.
 - **`es.json` es la forma canónica.** `en.json` debe tener las mismas keys; el tipo `Messages` sale de `es`.
-- **Único lugar del repo donde los strings van en español** (es copy de usuario, no código). Ver "Language conventions" en `CLAUDE.md`.
+- **Único lugar del repo donde los strings van en español** (es copy de usuario, no código). Ver "Language conventions" en `AGENTS.md`.
 
 ## Cómo se consume
 
