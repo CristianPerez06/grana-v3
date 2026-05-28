@@ -7,8 +7,6 @@ import { Alert } from '@/components/ui/alert'
 import { createAccount } from '@/app/_actions/accounts'
 import { parseMoneyInput } from '@grana/validation'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
-import { AccountAvatarPicker } from '@/components/ui/account-avatar-picker'
-import type { AccountColorKey, AccountIconKey } from '@grana/ui-contracts'
 import type { Institution } from '@/lib/accounts/types'
 
 type Props = {
@@ -28,18 +26,11 @@ export const CreateAccountForm = ({ institutions }: Props) => {
   const [name, setName] = useState('')
   const [institutionId, setInstitutionId] = useState('')
   const [institutionSearch, setInstitutionSearch] = useState('')
+  const [institutionFocused, setInstitutionFocused] = useState(false)
   // Bimoneda por defecto: every account is provisioned with ARS + USD.
   // The user only edits the initial balance per currency; toggling is not allowed.
   const [balances, setBalances] = useState<Record<string, string>>({ ARS: '0', USD: '0' })
-  const [colorKey, setColorKey] = useState<AccountColorKey | null>(null)
-  const [iconKey, setIconKey] = useState<AccountIconKey | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
-
-  const selectedInstitution = institutions.find((i) => i.id === institutionId) ?? null
-  const inheritedColor = type === 'bank' ? selectedInstitution?.brand_color ?? null : null
-  const autoIcon: AccountIconKey =
-    type === 'cash' ? 'wallet' : selectedInstitution?.icon_type === 'wallet' ? 'wallet' : 'landmark'
-  const monogram = (name.trim()[0] ?? '?').toUpperCase()
 
   const CURRENCIES = [
     { code: 'ARS', label: t('currency_options.ars') },
@@ -81,8 +72,8 @@ export const CreateAccountForm = ({ institutions }: Props) => {
         type,
         institution_id: type === 'bank' ? institutionId : undefined,
         currencies,
-        color_key: colorKey,
-        icon_key: iconKey,
+        color_key: null,
+        icon_key: null,
       })
 
       if (!result.ok) {
@@ -137,47 +128,65 @@ export const CreateAccountForm = ({ institutions }: Props) => {
       {type === 'bank' && (
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-foreground">{t('labels.institution')}</label>
-          <input
-            type="text"
-            value={institutionSearch}
-            onChange={(e) => setInstitutionSearch(e.target.value)}
-            placeholder={t('placeholders.institutionSearch')}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-          <div className="max-h-48 overflow-y-auto rounded-md border border-input">
-            {filteredInstitutions.map((inst) => (
-              <button
-                key={inst.id}
-                type="button"
-                onClick={() => {
-                  setInstitutionId(inst.id)
-                  setInstitutionSearch(inst.name)
-                }}
-                className={[
-                  'w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors',
-                  institutionId === inst.id ? 'bg-muted font-medium' : '',
-                ].join(' ')}
-              >
-                {inst.name}
-              </button>
-            ))}
+          <div className="relative">
+            <input
+              type="text"
+              value={institutionSearch}
+              onChange={(e) => {
+                const value = e.target.value
+                setInstitutionSearch(value)
+                // Only invalidate the selection if the search no longer matches it.
+                if (institutionId) {
+                  const selected = institutions.find((i) => i.id === institutionId)
+                  if (selected && selected.name !== value) setInstitutionId('')
+                }
+              }}
+              onFocus={() => setInstitutionFocused(true)}
+              onBlur={() => {
+                // Delay blur so click on a dropdown option still registers.
+                setTimeout(() => setInstitutionFocused(false), 150)
+              }}
+              placeholder={t('placeholders.institutionSearch')}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            {institutionFocused && !institutionId && (
+              <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded-md border border-input bg-background shadow-md">
+                {filteredInstitutions.map((inst) => (
+                  <button
+                    key={inst.id}
+                    type="button"
+                    onMouseDown={(e) => {
+                      // Prevent the input's onBlur from firing before the click.
+                      e.preventDefault()
+                    }}
+                    onClick={() => {
+                      setInstitutionId(inst.id)
+                      setInstitutionSearch(inst.name)
+                      setInstitutionFocused(false)
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
+                  >
+                    <span
+                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-semibold text-white"
+                      style={{ backgroundColor: inst.brand_color ?? 'var(--account-slate)' }}
+                      aria-hidden
+                    >
+                      {(inst.name[0] ?? '?').toUpperCase()}
+                    </span>
+                    <span>{inst.name}</span>
+                  </button>
+                ))}
+                {filteredInstitutions.length === 0 && (
+                  <p className="px-3 py-2 text-sm text-muted-foreground">{tCommon('no_results')}</p>
+                )}
+              </div>
+            )}
           </div>
           {errors.institution && (
             <p className="text-xs text-destructive">{errors.institution}</p>
           )}
         </div>
       )}
-
-      {/* Appearance — color + icon avatar (auto when left unset) */}
-      <AccountAvatarPicker
-        colorKey={colorKey}
-        iconKey={iconKey}
-        onColorChange={setColorKey}
-        onIconChange={setIconKey}
-        inheritedColor={inheritedColor}
-        autoIcon={autoIcon}
-        monogram={monogram}
-      />
 
       {/* Currencies — bimoneda por defecto: ambas monedas siempre activas. */}
       <div className="flex flex-col gap-2">
