@@ -2,6 +2,11 @@
 
 export type RecurrenceFrequency = 'weekly' | 'biweekly' | 'monthly' | 'annual'
 
+// Custom recurrences are modelled as a generic interval: `count` units of
+// `interval_unit`. The four named frequencies above are presets of this same
+// model (see presetToInterval), so date math has a single code path.
+export type IntervalUnit = 'day' | 'week' | 'month' | 'year'
+
 function parseISODate(isoDate: string): Date {
   const [year, month, day] = isoDate.split('-').map(Number)
   return new Date(year, month - 1, day)
@@ -39,15 +44,45 @@ function addMonthsClamped(
   return formatDateISO(new Date(targetYear, normalizedTargetMonth, targetDay))
 }
 
+// Resolve a named frequency preset to its (count, unit) interval. This is the
+// single source of truth that keeps presets and custom intervals on one path.
+export function presetToInterval(frequency: RecurrenceFrequency): {
+  count: number
+  unit: IntervalUnit
+} {
+  switch (frequency) {
+    case 'weekly':
+      return { count: 1, unit: 'week' }
+    case 'biweekly':
+      return { count: 2, unit: 'week' }
+    case 'monthly':
+      return { count: 1, unit: 'month' }
+    case 'annual':
+      return { count: 1, unit: 'year' }
+  }
+}
+
+// Advance a date by `count` units of `unit`. month/year apply end-of-month
+// clamping (31-Jan + 1 month → 28/29-Feb); week/day are plain day arithmetic.
+export function addInterval(
+  fromDate: string,
+  unit: IntervalUnit,
+  count: number,
+  options: { anchorDate?: string } = {},
+): string {
+  if (unit === 'day') return addDays(fromDate, count)
+  if (unit === 'week') return addDays(fromDate, count * 7)
+  if (unit === 'month') return addMonthsClamped(fromDate, count, options)
+  return addMonthsClamped(fromDate, count * 12, options) // 'year'
+}
+
 export function getNextRecurrenceDate(
   fromDate: string,
   frequency: RecurrenceFrequency,
   options: { anchorDate?: string } = {},
 ): string {
-  if (frequency === 'weekly') return addDays(fromDate, 7)
-  if (frequency === 'biweekly') return addDays(fromDate, 14)
-  if (frequency === 'monthly') return addMonthsClamped(fromDate, 1, options)
-  return addMonthsClamped(fromDate, 12, options)
+  const { count, unit } = presetToInterval(frequency)
+  return addInterval(fromDate, unit, count, options)
 }
 
 // ─── Generator decision (pure) ───────────────────────────────────────────────
@@ -63,35 +98,57 @@ export type RuleForDecision = {
   start_date: string
   end_date: string | null
   last_generated_date: string | null
-  frequency: RecurrenceFrequency
+  // Authoritative interval. When present it drives the calculation; `frequency`
+  // is kept as a backward-compatible fallback for callers that only carry the
+  // preset label.
+  interval_count?: number
+  interval_unit?: IntervalUnit
+  frequency?: RecurrenceFrequency
+  // Optional cap on how many occurrences the rule ever produces.
+  max_occurrences?: number | null
 }
 
 export type GenerationDecision =
-  | { generate: false; reason: 'has_pending' | 'not_due' | 'past_end_date' }
+  | {
+      generate: false
+      reason: 'has_pending' | 'not_due' | 'past_end_date' | 'max_occurrences_reached'
+    }
   | { generate: true; scheduled_date: string }
 
 export function decideRecurrenceInstance(
   rule: RuleForDecision,
   today: string,
   hasPending: boolean,
+  // Number of instances already materialized for the rule (any status). Used to
+  // enforce `max_occurrences`. Defaults to 0 for callers that don't track it.
+  materializedCount = 0,
 ): GenerationDecision {
   // 1. Skip if there's already a pending instance for this rule. The DB-level
   //    UNIQUE INDEX recurrence_instances_one_pending_per_rule enforces this
   //    invariant; we also short-circuit it here to avoid useless inserts.
   if (hasPending) return { generate: false, reason: 'has_pending' }
 
-  // 2. Compute the next occurrence anchored to start_date so the day-of-month
+  // 2. Stop once the rule has produced its maximum number of occurrences.
+  if (rule.max_occurrences != null && materializedCount >= rule.max_occurrences) {
+    return { generate: false, reason: 'max_occurrences_reached' }
+  }
+
+  // 3. Compute the next occurrence anchored to start_date so the day-of-month
   //    is preserved across short months (e.g. monthly rule starting on 31
   //    becomes 28/29 in February but goes back to 31 the next month).
+  const { count, unit } =
+    rule.interval_count != null && rule.interval_unit != null
+      ? { count: rule.interval_count, unit: rule.interval_unit }
+      : presetToInterval(rule.frequency ?? 'monthly')
   const baseDate = rule.last_generated_date ?? rule.start_date
-  const nextDate = getNextRecurrenceDate(baseDate, rule.frequency, {
+  const nextDate = addInterval(baseDate, unit, count, {
     anchorDate: rule.start_date,
   })
 
-  // 3. If the next date is still in the future, nothing to do yet.
+  // 4. If the next date is still in the future, nothing to do yet.
   if (nextDate > today) return { generate: false, reason: 'not_due' }
 
-  // 4. If the rule has an end_date and we've moved past it, the rule is
+  // 5. If the rule has an end_date and we've moved past it, the rule is
   //    finished — no more instances generated. Status remains 'active' in DB
   //    (the UI labels it "Finalizada" by comparing today vs end_date).
   if (rule.end_date != null && nextDate > rule.end_date) {

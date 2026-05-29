@@ -801,7 +801,8 @@
       "weekly": "Semanal",
       "biweekly": "Quincenal",
       "monthly": "Mensual",
-      "annual": "Anual"
+      "annual": "Anual",
+      "custom": "Personalizado"
     },
     "placeholders": {
       "amount": "0,00",
@@ -969,13 +970,25 @@
       "weekly": "Semanal",
       "biweekly": "Quincenal",
       "monthly": "Mensual",
-      "annual": "Anual"
+      "annual": "Anual",
+      "custom": "Personalizado"
     },
     "frequencies_lower": {
       "weekly": "semanal",
       "biweekly": "quincenal",
       "monthly": "mensual",
-      "annual": "anual"
+      "annual": "anual",
+      "custom": "personalizado"
+    },
+    "custom_interval": {
+      "every": "Cada",
+      "units": {
+        "day": "{count, plural, one {día} other {días}}",
+        "week": "{count, plural, one {semana} other {semanas}}",
+        "month": "{count, plural, one {mes} other {meses}}",
+        "year": "{count, plural, one {año} other {años}}"
+      },
+      "end_after_occurrences": "{count, plural, one {Termina tras # ocurrencia} other {Termina tras # ocurrencias}}"
     },
     "statuses": {
       "active": "Activa",
