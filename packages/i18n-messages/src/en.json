@@ -637,7 +637,8 @@
         "installment": "Installment",
         "linked_expense": "Linked expense",
         "estimated_amount": "Expected amount",
-        "reimbursement_target": "Credit to"
+        "reimbursement_target": "Credit to",
+        "description": "Description"
       },
       "context": {
         "card_pending": "This card spending won't reduce your available balance until you pay the {periodo} statement.",

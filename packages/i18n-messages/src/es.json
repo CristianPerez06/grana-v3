@@ -637,7 +637,8 @@
         "installment": "Cuota",
         "linked_expense": "Gasto vinculado",
         "estimated_amount": "Monto esperado",
-        "reimbursement_target": "Acredita en"
+        "reimbursement_target": "Acredita en",
+        "description": "Descripción"
       },
       "context": {
         "card_pending": "Este consumo no afecta tu disponible hasta que pagues el resumen del {periodo}.",
