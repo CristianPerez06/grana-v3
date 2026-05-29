@@ -4,8 +4,8 @@ import { Link, useRouter } from 'expo-router'
 import { signupSchema, ValidationError } from '@grana/validation'
 import { Button } from '../../components/ui/Button'
 import { FormError } from '../../components/ui/FormError'
+import { FormField } from '../../components/ui/FormField'
 import { PasswordField } from '../../components/ui/PasswordField'
-import { TextInput } from '../../components/ui/TextInput'
 import { AuthShell } from '../../components/layout/AuthShell'
 import { AUTH_INPUT_CLASS } from '../../lib/auth-class-names'
 import { supabase } from '../../lib/supabase'
@@ -76,7 +76,7 @@ export default function SignupScreen() {
       title="Creá tu cuenta"
       subtitle="Completá los datos para empezar."
     >
-      <TextInput
+      <FormField
         label="Nombre completo"
         value={fullName}
         onChangeText={setFullName}
@@ -87,7 +87,7 @@ export default function SignupScreen() {
         className={AUTH_INPUT_CLASS}
       />
 
-      <TextInput
+      <FormField
         label="Email"
         value={email}
         onChangeText={setEmail}
@@ -100,29 +100,25 @@ export default function SignupScreen() {
         className={AUTH_INPUT_CLASS}
       />
 
-      <View className="mb-4">
-        <PasswordField
-          label="Contraseña"
-          value={password}
-          onChangeText={setPassword}
-          placeholder="••••••••"
-          autoComplete="new-password"
-          error={fieldErrors.password}
-          className={AUTH_INPUT_CLASS}
-        />
-      </View>
+      <PasswordField
+        label="Contraseña"
+        value={password}
+        onChangeText={setPassword}
+        placeholder="••••••••"
+        autoComplete="new-password"
+        error={fieldErrors.password}
+        className={AUTH_INPUT_CLASS}
+      />
 
-      <View className="mb-4">
-        <PasswordField
-          label="Confirmar contraseña"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          placeholder="••••••••"
-          autoComplete="new-password"
-          error={fieldErrors.confirmPassword}
-          className={AUTH_INPUT_CLASS}
-        />
-      </View>
+      <PasswordField
+        label="Confirmar contraseña"
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        placeholder="••••••••"
+        autoComplete="new-password"
+        error={fieldErrors.confirmPassword}
+        className={AUTH_INPUT_CLASS}
+      />
 
       <FormError message={formError} />
 

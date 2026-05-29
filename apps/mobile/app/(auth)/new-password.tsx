@@ -96,29 +96,25 @@ export default function NewPasswordScreen() {
       title="Nueva contraseña"
       subtitle="Elegí una contraseña nueva para tu cuenta."
     >
-      <View className="mb-4">
-        <PasswordField
-          label="Nueva contraseña"
-          value={password}
-          onChangeText={setPassword}
-          placeholder="••••••••"
-          autoComplete="new-password"
-          error={fieldErrors.password}
-          className={AUTH_INPUT_CLASS}
-        />
-      </View>
+      <PasswordField
+        label="Nueva contraseña"
+        value={password}
+        onChangeText={setPassword}
+        placeholder="••••••••"
+        autoComplete="new-password"
+        error={fieldErrors.password}
+        className={AUTH_INPUT_CLASS}
+      />
 
-      <View className="mb-4">
-        <PasswordField
-          label="Confirmar contraseña"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          placeholder="••••••••"
-          autoComplete="new-password"
-          error={fieldErrors.confirmPassword}
-          className={AUTH_INPUT_CLASS}
-        />
-      </View>
+      <PasswordField
+        label="Confirmar contraseña"
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        placeholder="••••••••"
+        autoComplete="new-password"
+        error={fieldErrors.confirmPassword}
+        className={AUTH_INPUT_CLASS}
+      />
 
       <FormError message={formError} />
 

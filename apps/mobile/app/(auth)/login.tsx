@@ -4,8 +4,8 @@ import { Link, useLocalSearchParams, useRouter } from 'expo-router'
 import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
 import { FormError } from '../../components/ui/FormError'
+import { FormField } from '../../components/ui/FormField'
 import { PasswordField } from '../../components/ui/PasswordField'
-import { TextInput } from '../../components/ui/TextInput'
 import { AuthShell } from '../../components/layout/AuthShell'
 import { AUTH_INPUT_CLASS } from '../../lib/auth-class-names'
 import { supabase } from '../../lib/supabase'
@@ -72,13 +72,9 @@ export default function LoginScreen() {
       title="Bienvenido"
       subtitle="Ingresá con tu email y contraseña."
     >
-      {notice ? (
-        <View className="mb-4">
-          <Alert variant="success">{notice}</Alert>
-        </View>
-      ) : null}
+      {notice ? <Alert variant="success">{notice}</Alert> : null}
 
-      <TextInput
+      <FormField
         label="Email"
         value={email}
         onChangeText={setEmail}
@@ -90,16 +86,14 @@ export default function LoginScreen() {
         className={AUTH_INPUT_CLASS}
       />
 
-      <View className="mb-4">
-        <PasswordField
-          label="Contraseña"
-          value={password}
-          onChangeText={setPassword}
-          placeholder="••••••••"
-          autoComplete="password"
-          className={AUTH_INPUT_CLASS}
-        />
-      </View>
+      <PasswordField
+        label="Contraseña"
+        value={password}
+        onChangeText={setPassword}
+        placeholder="••••••••"
+        autoComplete="password"
+        className={AUTH_INPUT_CLASS}
+      />
 
       <FormError message={error} />
       {unconfirmed ? (

@@ -49,7 +49,7 @@ export function AuthShell({ title, subtitle, children }: Props) {
               </Text>
             ) : null}
           </View>
-          <View className="mt-8">{children}</View>
+          <View className="mt-8 flex-col gap-4">{children}</View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

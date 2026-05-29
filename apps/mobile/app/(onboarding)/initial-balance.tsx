@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router'
 import { parseMoneyInput, initialBalanceSchema } from '@grana/validation'
 import { Button } from '../../components/ui/Button'
 import { FormError } from '../../components/ui/FormError'
+import { Label } from '../../components/ui/Label'
 import { MoneyAmountInput } from '../../components/ui/MoneyAmountInput'
 import { supabase } from '../../lib/supabase'
 import { useT } from '../../lib/locale-context'
@@ -175,18 +176,22 @@ export default function InitialBalanceScreen() {
             <Text className="text-sm font-medium text-text">
               {t('onboarding.initialBalance.group_total')}
             </Text>
-            <MoneyAmountInput
-              label={t('onboarding.initialBalance.ars_label')}
-              value={primaryArsStr}
-              onChangeText={setPrimaryArsStr}
-              placeholder={t('onboarding.initialBalance.amount_placeholder')}
-            />
-            <MoneyAmountInput
-              label={t('onboarding.initialBalance.usd_label')}
-              value={primaryUsdStr}
-              onChangeText={setPrimaryUsdStr}
-              placeholder={t('onboarding.initialBalance.amount_placeholder')}
-            />
+            <View className="flex-col gap-1.5">
+              <Label>{t('onboarding.initialBalance.ars_label')}</Label>
+              <MoneyAmountInput
+                value={primaryArsStr}
+                onChangeText={setPrimaryArsStr}
+                placeholder={t('onboarding.initialBalance.amount_placeholder')}
+              />
+            </View>
+            <View className="flex-col gap-1.5">
+              <Label>{t('onboarding.initialBalance.usd_label')}</Label>
+              <MoneyAmountInput
+                value={primaryUsdStr}
+                onChangeText={setPrimaryUsdStr}
+                placeholder={t('onboarding.initialBalance.amount_placeholder')}
+              />
+            </View>
           </View>
 
           <FormError message={formError} />

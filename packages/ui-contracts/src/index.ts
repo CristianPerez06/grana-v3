@@ -83,6 +83,16 @@ export type InputProps = {
   className?: string
 }
 
+// ── MoneyAmountInput ────────────────────────────────────────────────────────
+
+// Bare input primitive for money fields. The contract intentionally does NOT
+// include the value callback — web uses `onChange` and mobile uses
+// `onChangeText`, same per-platform asymmetry as `Input`. Each implementation
+// intersects with its native value prop.
+export type MoneyAmountInputProps = {
+  className?: string
+}
+
 // ── Label ───────────────────────────────────────────────────────────────────
 
 export type LabelProps = {
