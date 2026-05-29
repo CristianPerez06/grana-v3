@@ -130,7 +130,7 @@ export const UpcomingFortnightSection = async ({ data }: Props) => {
   const hasAny = data.toPay.length > 0 || data.toCollect.length > 0
 
   return (
-    <section className="h-full rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <section className="h-full min-h-[20rem] rounded-2xl border border-border bg-card p-6 shadow-sm">
       <header className="mb-4 flex items-baseline justify-between">
         <h2 className="text-lg font-semibold text-text">{t('title')}</h2>
         <p className="text-xs text-text-muted">{t('subtitle')}</p>

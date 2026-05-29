@@ -104,6 +104,7 @@
       "to_collect": "To collect",
       "period_balance": "Period balance",
       "empty": "No upcoming transactions in the next 14 days.",
+      "loading": "Loading upcoming events…",
       "error": "We couldn't load upcoming events."
     },
     "month": {
@@ -112,12 +113,16 @@
       "expense": "Expenses",
       "final_balance": "Balance",
       "empty": "No transactions this month.",
+      "loading": "Loading this month's balance…",
       "error": "We couldn't load this month's balance."
     },
+    "hero_loading": "Loading your available balance…",
     "hero_error": "We couldn't load your available balance.",
     "spending": {
       "title": "Where it went",
-      "view_all": "View breakdown"
+      "view_all": "View breakdown",
+      "loading": "Loading the breakdown…",
+      "error": "We couldn't load this month's breakdown."
     },
     "welcome_card": {
       "title": "Record your first transaction",

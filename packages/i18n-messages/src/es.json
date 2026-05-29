@@ -104,6 +104,7 @@
       "to_collect": "A cobrar",
       "period_balance": "Balance del período",
       "empty": "No tenés movimientos previstos en los próximos 14 días.",
+      "loading": "Cargando los próximos eventos…",
       "error": "No pudimos cargar los próximos eventos."
     },
     "month": {
@@ -112,12 +113,16 @@
       "expense": "Gastos",
       "final_balance": "Balance",
       "empty": "Sin movimientos este mes.",
+      "loading": "Cargando el balance del mes…",
       "error": "No pudimos cargar el balance del mes."
     },
+    "hero_loading": "Cargando tu disponible…",
     "hero_error": "No pudimos cargar tu disponible.",
     "spending": {
       "title": "En qué se fue",
-      "view_all": "Ver desglose"
+      "view_all": "Ver desglose",
+      "loading": "Cargando el desglose…",
+      "error": "No pudimos cargar el desglose del mes."
     },
     "welcome_card": {
       "title": "Cargá tu primer movimiento",
