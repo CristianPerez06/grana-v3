@@ -137,7 +137,7 @@ const TransactionsPage = async ({ searchParams }: Props) => {
   }
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
+    <div className="flex max-w-3xl flex-col gap-6 pb-24 sm:pb-0">
       <PageHeader title={t('title')} />
 
       {topSuggestion && <RecurrenceSuggestionBanner suggestion={topSuggestion} />}
