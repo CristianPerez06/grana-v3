@@ -19,6 +19,7 @@ import { MonthBalanceSection } from '../../components/dashboard/MonthBalanceSect
 import { SectionFallback } from '../../components/dashboard/SectionFallback'
 import { UpcomingFortnightSection } from '../../components/dashboard/UpcomingFortnightSection'
 import { WelcomeFirstMoveCard } from '../../components/dashboard/WelcomeFirstMoveCard'
+import { QuickAddFab } from '../../components/transactions/QuickAddFab'
 import { Spinner } from '../../components/ui/Spinner'
 
 const MONTHS_BACK_LIMIT = 12
@@ -79,7 +80,7 @@ export default function DashboardScreen() {
           todayISO={formatDateISO(today)}
         />
         <ScrollView
-          contentContainerClassName="px-6 py-6"
+          contentContainerClassName="px-6 pt-6 pb-28"
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
@@ -111,6 +112,7 @@ export default function DashboardScreen() {
             />
           </View>
         </ScrollView>
+        <QuickAddFab />
       </View>
     </EyeMaskProvider>
   )

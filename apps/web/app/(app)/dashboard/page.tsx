@@ -9,8 +9,10 @@ const DashboardPage = () => {
 
   return (
     <EyeMaskProvider>
-      <DashboardHeader todayISO={todayISO} />
-      <DashboardContent />
+      <div className="pb-24 sm:pb-0">
+        <DashboardHeader todayISO={todayISO} />
+        <DashboardContent />
+      </div>
       <QuickAddFab />
     </EyeMaskProvider>
   )

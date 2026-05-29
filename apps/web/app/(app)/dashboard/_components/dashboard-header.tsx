@@ -62,7 +62,7 @@ export const DashboardHeader = ({ todayISO }: Props) => {
   const greeting = firstName ? t('welcome', { name: firstName }) : t('welcome_anon')
 
   return (
-    <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <header className="mb-6 flex flex-row items-start justify-between gap-4">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-text">
           {greeting}
@@ -75,12 +75,12 @@ export const DashboardHeader = ({ todayISO }: Props) => {
       <div className="flex items-center gap-2">
         <EyeMaskToggle disabled={isDisabled} />
         {isDisabled ? (
-          <Button className="w-auto" disabled>
+          <Button className="hidden w-auto sm:inline-flex" disabled>
             <Plus size={18} strokeWidth={2} />
             {t('new_movement')}
           </Button>
         ) : (
-          <Button asChild className="w-auto">
+          <Button asChild className="hidden w-auto sm:inline-flex">
             <Link href="/transactions/new">
               <Plus size={18} strokeWidth={2} />
               {t('new_movement')}
