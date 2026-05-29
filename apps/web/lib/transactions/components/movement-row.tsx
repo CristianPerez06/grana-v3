@@ -95,9 +95,16 @@ export const MovementRow = ({
     if (movement.kind === 'card_payment') {
       return movement.account_name ? t('list.card_payment_from', { accountName: movement.account_name }) : null
     }
-    // categorized: category, plus account when multiple accounts (skip if it duplicates the primary)
+    // Categorized line. The category only repeats here when the description
+    // already takes the primary slot; otherwise it's already the primary and
+    // the secondary leads with the subcategory (when set).
+    const taxonomy = movement.description
+      ? movement.subcategory_name
+        ? `${movement.category_name} › ${movement.subcategory_name}`
+        : movement.category_name
+      : movement.subcategory_name
     const parts: string[] = []
-    if (movement.category_name && movement.description) parts.push(movement.category_name)
+    if (taxonomy) parts.push(taxonomy)
     if (showAccount && movement.account_name) parts.push(movement.account_name)
     return parts.length > 0 ? parts.join(' · ') : null
   })()

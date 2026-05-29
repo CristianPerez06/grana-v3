@@ -17,6 +17,9 @@ type BaseMovement = {
   category_name: string | null
   category_icon: string | null
   category_color: string | null
+  /** Subcategory id/name for the row subtitle (null when not assigned or not applicable). */
+  subcategory_id: string | null
+  subcategory_name: string | null
   detail_href: string | null
   review_flags: MovementReviewFlag[]
 }
@@ -134,6 +137,8 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
     category_name: tx.category?.name ?? null,
     category_icon: tx.category?.icon ?? null,
     category_color: tx.category?.color ?? null,
+    subcategory_id: tx.subcategory_id ?? null,
+    subcategory_name: tx.subcategory?.name ?? null,
     detail_href: detailHref(tx),
     review_flags: getReviewFlags(tx),
   }
@@ -161,6 +166,8 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
 
   if (tx.type === 'reimbursement') {
     // Category is DERIVED from the linked expense (the reimbursement stores none).
+    // Subcategory is not derived — `linked_expense` query payload does not
+    // include it, and the reimbursement detail view follows the same rule.
     const linkedCat = tx.linked_expense?.category ?? null
     const state: ReimbursementState = tx.cancelled_at
       ? 'cancelled'
@@ -173,6 +180,8 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
       category_name: linkedCat?.name ?? null,
       category_icon: linkedCat?.icon ?? null,
       category_color: linkedCat?.color ?? null,
+      subcategory_id: null,
+      subcategory_name: null,
       kind: 'reimbursement',
       title: tx.description ?? 'Reintegro',
       sign: '+',
