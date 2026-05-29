@@ -6,7 +6,7 @@ import { mapSupabaseError } from '../../lib/supabase-errors'
 import { Alert } from '../ui/Alert'
 import { Button } from '../ui/Button'
 import { FormError } from '../ui/FormError'
-import { TextInput } from '../ui/TextInput'
+import { FormField } from '../ui/FormField'
 import { AUTH_INPUT_CLASS } from '../../lib/auth-class-names'
 
 const RESEND_COOLDOWN_SECONDS = 60
@@ -77,7 +77,7 @@ export function OtpVerifyForm({ email, type, onVerified }: Props) {
 
   return (
     <View>
-      <TextInput
+      <FormField
         label="Código"
         value={code}
         onChangeText={setCode}

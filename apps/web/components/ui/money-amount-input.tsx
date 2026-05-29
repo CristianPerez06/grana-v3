@@ -1,6 +1,7 @@
 'use client'
 
 import { forwardRef, type InputHTMLAttributes } from 'react'
+import type { MoneyAmountInputProps } from '@grana/ui-contracts'
 
 // MoneyAmountInput — money fields MUST use this instead of `<input type="number">`.
 //
@@ -14,13 +15,11 @@ import { forwardRef, type InputHTMLAttributes } from 'react'
 // Validation/parsing happens upstream via `parseMoneyInput` (decimal.js-backed).
 // This component only filters keystrokes so users can't type letters.
 
-type Props = Omit<
-  InputHTMLAttributes<HTMLInputElement>,
-  'type' | 'inputMode' | 'value' | 'onChange'
-> & {
-  value: string
-  onChange: (value: string) => void
-}
+type Props = MoneyAmountInputProps &
+  Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'inputMode' | 'value' | 'onChange' | 'className'> & {
+    value: string
+    onChange: (value: string) => void
+  }
 
 const sanitize = (raw: string): string => {
   const onlyNumericChars = raw.replace(/[^\d.,]/g, '')

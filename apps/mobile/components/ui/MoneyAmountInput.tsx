@@ -1,7 +1,8 @@
 import { type ComponentProps } from 'react'
-import { TextInput } from './TextInput'
+import type { MoneyAmountInputProps } from '@grana/ui-contracts'
+import { Input } from './Input'
 
-// Money fields MUST use this instead of a plain <TextInput> for currency.
+// Money fields MUST use this instead of a plain `<Input>` for currency.
 // It forces the decimal keypad and sanitizes keystrokes down to digits plus a
 // single decimal separator, so the value parsed at submit (via parseMoneyInput,
 // decimal.js-backed) can't be corrupted by stray separators or letters.
@@ -12,16 +13,18 @@ import { TextInput } from './TextInput'
 // TextInput has no spinner, but forcing `decimal-pad` + the same keystroke
 // sanitization keeps money input behaving identically across platforms.
 //
-// Not in @grana/ui-contracts on purpose: like Input/FormField, the value
-// callback is the platform-native one (web `onChange`, mobile `onChangeText`),
-// so there is no shared prop shape to enforce.
+// Bare input shape on purpose (no label/error/margin) — mirrors web's
+// abstraction level. Callers compose a `<Label>` + `<MoneyAmountInput>` + error
+// `<Text>` when they need a field shell; vertical rhythm between fields is
+// owned by the parent container (`flex-col gap-X`).
 
-type Props = Omit<
-  ComponentProps<typeof TextInput>,
-  'keyboardType' | 'inputMode' | 'onChangeText'
-> & {
-  onChangeText: (value: string) => void
-}
+type InputComponentProps = ComponentProps<typeof Input>
+
+type Props = MoneyAmountInputProps &
+  Omit<InputComponentProps, 'keyboardType' | 'inputMode' | 'onChangeText' | 'className'> & {
+    value: string
+    onChangeText: (value: string) => void
+  }
 
 // Keep digits and a single decimal separator ('.' or ','); drop everything else.
 const sanitize = (raw: string): string => {
@@ -35,7 +38,7 @@ const sanitize = (raw: string): string => {
 
 export function MoneyAmountInput({ onChangeText, ...rest }: Props) {
   return (
-    <TextInput
+    <Input
       {...rest}
       keyboardType="decimal-pad"
       inputMode="decimal"

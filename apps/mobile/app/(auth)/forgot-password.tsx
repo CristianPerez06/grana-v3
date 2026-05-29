@@ -4,7 +4,7 @@ import { Link, useRouter } from 'expo-router'
 import { forgotSchema, ValidationError } from '@grana/validation'
 import { Button } from '../../components/ui/Button'
 import { FormError } from '../../components/ui/FormError'
-import { TextInput } from '../../components/ui/TextInput'
+import { FormField } from '../../components/ui/FormField'
 import { AuthShell } from '../../components/layout/AuthShell'
 import { AUTH_INPUT_CLASS } from '../../lib/auth-class-names'
 import { supabase } from '../../lib/supabase'
@@ -50,7 +50,7 @@ export default function ForgotPasswordScreen() {
       title="Recuperar contraseña"
       subtitle="Te enviaremos un código a tu email."
     >
-      <TextInput
+      <FormField
         label="Email"
         value={email}
         onChangeText={setEmail}
