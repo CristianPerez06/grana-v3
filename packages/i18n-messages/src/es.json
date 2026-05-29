@@ -606,6 +606,55 @@
     "installments_count": "{count} cuotas",
     "installment_recalc_hint": "Cambiar el monto recalcula las {count} cuotas (el resto en la primera).",
     "card_payment_label": "Pago de tarjeta",
+    "detail": {
+      "actions": {
+        "menu_label": "Opciones",
+        "edit": "Editar",
+        "delete": "Eliminar",
+        "delete_confirm": "Sí, eliminar",
+        "cancel": "Cancelar",
+        "delete_warning_default": "Esta acción no se puede deshacer.",
+        "delete_warning_parent": "Se van a eliminar la compra y todas sus cuotas. Esta acción no se puede deshacer.",
+        "delete_warning_card_payment": "Al eliminar este pago, las cuotas del período volverán a pendientes. ¿Continuar?"
+      },
+      "groups": {
+        "details": "Detalles",
+        "card": "Tarjeta",
+        "installments": "Cuotas",
+        "reimbursements": "Reintegros"
+      },
+      "labels": {
+        "date": "Fecha",
+        "account": "Cuenta",
+        "destination_account": "Cuenta destino",
+        "category": "Categoría",
+        "subcategory": "Subcategoría",
+        "card": "Tarjeta",
+        "period": "Período",
+        "due_date": "Vence",
+        "fx_rate": "Cotización",
+        "first_payment": "Primer pago",
+        "installment": "Cuota",
+        "linked_expense": "Gasto vinculado",
+        "estimated_amount": "Monto esperado",
+        "reimbursement_target": "Acredita en"
+      },
+      "context": {
+        "card_pending": "Este consumo no afecta tu disponible hasta que pagues el resumen del {periodo}.",
+        "card_paid_installment": "Esta cuota ya está incluida en el resumen del {periodo} que pagaste.",
+        "card_payment": "Con este pago, las cuotas del período {periodo} quedaron en estado pagado.",
+        "reimbursement_pending": "Esperás que te lo devuelvan. Cuando llegue, marcalo como recibido y se va a sumar a tu disponible.",
+        "reimbursement_cancelled": "Marcaste este reintegro como cancelado. Si finalmente lo recibís, podés reabrirlo."
+      }
+    },
+    "installments": {
+      "position": "Cuota {n} de {total}",
+      "due": "Vence el {date}",
+      "status": {
+        "pending": "Pendiente",
+        "paid": "Pagada"
+      }
+    },
     "spending": {
       "title": "En qué se fue",
       "eyebrow": "En qué se fue",

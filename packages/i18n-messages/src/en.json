@@ -606,6 +606,55 @@
     "installments_count": "{count} installments",
     "installment_recalc_hint": "Changing the amount recalculates the {count} installments (the rest goes into the first one).",
     "card_payment_label": "Card payment",
+    "detail": {
+      "actions": {
+        "menu_label": "Options",
+        "edit": "Edit",
+        "delete": "Delete",
+        "delete_confirm": "Yes, delete",
+        "cancel": "Cancel",
+        "delete_warning_default": "This action can't be undone.",
+        "delete_warning_parent": "This will delete the purchase and all its installments. This action can't be undone.",
+        "delete_warning_card_payment": "If you delete this payment, the installments for the period will go back to pending. Continue?"
+      },
+      "groups": {
+        "details": "Details",
+        "card": "Card",
+        "installments": "Installments",
+        "reimbursements": "Reimbursements"
+      },
+      "labels": {
+        "date": "Date",
+        "account": "Account",
+        "destination_account": "Destination account",
+        "category": "Category",
+        "subcategory": "Subcategory",
+        "card": "Card",
+        "period": "Period",
+        "due_date": "Due",
+        "fx_rate": "Exchange rate",
+        "first_payment": "First payment",
+        "installment": "Installment",
+        "linked_expense": "Linked expense",
+        "estimated_amount": "Expected amount",
+        "reimbursement_target": "Credit to"
+      },
+      "context": {
+        "card_pending": "This card spending won't reduce your available balance until you pay the {periodo} statement.",
+        "card_paid_installment": "This installment is already included in the {periodo} statement you paid.",
+        "card_payment": "With this payment, the installments for the {periodo} period moved to paid.",
+        "reimbursement_pending": "You're expecting this refund. When it lands, mark it as received and it'll add to your available balance.",
+        "reimbursement_cancelled": "You marked this reimbursement as cancelled. If it does come in, you can reopen it."
+      }
+    },
+    "installments": {
+      "position": "Installment {n} of {total}",
+      "due": "Due {date}",
+      "status": {
+        "pending": "Pending",
+        "paid": "Paid"
+      }
+    },
     "spending": {
       "title": "Where it went",
       "eyebrow": "Where it went",
