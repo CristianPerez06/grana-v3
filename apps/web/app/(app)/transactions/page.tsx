@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
+import { ChevronRight } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { buildCategorySlices, buildSubcategorySlices } from '@grana/money-logic'
@@ -32,6 +33,7 @@ import {
   hasAnyTransaction,
   UNCATEGORIZED_ID,
 } from '@/lib/transactions/queries'
+import type { SubcategoryBreakdown } from '@grana/money-logic'
 import { SUBCATEGORY_NONE_MARKER } from '@/lib/transactions/filters'
 import { getAccounts } from '@/lib/accounts/queries'
 import { PendingRecurrencesBlock } from '@/lib/recurrences/components/pending-recurrences-block'
@@ -172,6 +174,26 @@ const TransactionsPage = async ({ searchParams }: Props) => {
         : null
   }
 
+  // Pre-fetch subcategory breakdowns for all drillable top-level categories so
+  // the spending overview can animate the drill-in in situ without a round-trip.
+  const drillableCategoryIds = arsCategoryBreakdown.slices
+    .filter((s) => s.categoryId !== null)
+    .map((s) => s.categoryId!)
+
+  const subBreakdownsByCategory: Record<string, { ARS: SubcategoryBreakdown; USD: SubcategoryBreakdown }> = {}
+  if (drillableCategoryIds.length > 0 && breakdownMode === 'category') {
+    const rawPairs = await Promise.all(
+      drillableCategoryIds.map((catId) => getMonthSubcategoryBreakdown(month, catId)),
+    )
+    drillableCategoryIds.forEach((catId, i) => {
+      const raw = rawPairs[i]
+      subBreakdownsByCategory[catId] = {
+        ARS: buildSubcategorySlices(raw.ARS),
+        USD: buildSubcategorySlices(raw.USD),
+      }
+    })
+  }
+
   // The month nav lives in the spending overview card below. The page header
   // stays minimalist: just the title and the recurrences shortcut in the
   // actions slot.
@@ -199,7 +221,27 @@ const TransactionsPage = async ({ searchParams }: Props) => {
 
   return (
     <div className="flex max-w-3xl flex-col gap-6 pb-24 sm:pb-0">
-      <PageHeader title={t('title')} />
+      <PageHeader
+        title={t('title')}
+        descriptionExtras={
+          <Link
+            href="/transactions/recurring"
+            className="inline-flex items-center gap-0.5 text-slate hover:opacity-80 transition-opacity font-medium"
+          >
+            {t('header.see_recurrences')}
+            <ChevronRight size={13} className="mt-px" />
+          </Link>
+        }
+        actions={
+          <Link
+            href="/transactions/new"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-[10px] bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <span className="text-base leading-none">+</span>
+            {t('actions.register_movement')}
+          </Link>
+        }
+      />
 
       {topSuggestion && <RecurrenceSuggestionBanner suggestion={topSuggestion} />}
 
@@ -214,6 +256,7 @@ const TransactionsPage = async ({ searchParams }: Props) => {
         usdHref={`/transactions?month=${month}&currency=USD`}
         month={month}
         getHref={overviewGetHref}
+        subBreakdownsByCategory={breakdownMode === 'category' ? subBreakdownsByCategory : undefined}
         labels={{
           eyebrow:
             activeCategory != null
