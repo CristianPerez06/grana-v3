@@ -122,7 +122,7 @@ const SidebarEdgeToggle = ({
       onClick={onToggle}
       aria-label={label}
       title={label}
-      className="absolute top-7 -right-3.5 z-10 hidden h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-border-soft bg-card text-text-soft shadow-sm transition-colors hover:bg-page hover:text-text md:flex"
+      className="absolute top-6 -right-4 z-10 hidden h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-border-soft bg-card text-text-soft shadow-sm transition-colors hover:bg-page hover:text-text md:flex"
     >
       {collapsed ? (
         <ChevronRight size={16} strokeWidth={2} />
@@ -155,7 +155,9 @@ const SidebarContent = ({
           aria-label="grana"
           className="flex items-center"
         >
-          {collapsed ? <GranaIsotype size={32} /> : <GranaLogo width={116} />}
+          <div className="h-[40px] flex items-center justify-center">
+            {collapsed ? <GranaIsotype size={32} /> : <GranaLogo width={116} />}
+          </div>
         </Link>
       </div>
 
