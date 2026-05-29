@@ -7,11 +7,20 @@ import type {
   UpcomingItemTarget,
 } from '@grana/dashboard'
 import { useT } from '../../lib/locale-context'
+import { useUpcomingFortnight } from '../../lib/dashboard/queries'
+import { Button } from '../ui/Button'
+import { Spinner } from '../ui/Spinner'
 import { MaskedAmount } from './MaskedAmount'
 
 type Props = {
-  data: UpcomingFortnight
+  today: Date
 }
+
+// The header (título + subtítulo) is fixed chrome; the body swaps between
+// spinner / error / data over a stable min-height so the card doesn't collapse
+// while loading. Item count makes the data state variable, so this floor only
+// bounds the loading/error states to a card-like height.
+const SWAP_MIN_HEIGHT = 200
 
 type TotalsByCurrency = { ARS: number; USD: number }
 
@@ -123,7 +132,9 @@ const Group = ({ title, items, direction }: GroupProps) => {
   )
 }
 
-export const UpcomingFortnightSection = ({ data }: Props) => {
+// Body for the resolved-data state: the two groups + period balance. Kept
+// separate so the parent can swap it against the spinner/error states.
+const UpcomingBody = ({ data }: { data: UpcomingFortnight }) => {
   const t = useT()
   const totalPayARS = sumByCurrency(data.toPay).ARS
   const totalPayUSD = sumByCurrency(data.toPay).USD
@@ -139,6 +150,88 @@ export const UpcomingFortnightSection = ({ data }: Props) => {
 
   const hasAny = data.toPay.length > 0 || data.toCollect.length > 0
 
+  if (!hasAny) {
+    return (
+      <Text className="text-sm text-text-muted">
+        {t('dashboard.upcoming.empty')}
+      </Text>
+    )
+  }
+
+  return (
+    <View className="flex-col gap-6">
+      <Group title={t('dashboard.upcoming.to_pay')} items={data.toPay} direction="pay" />
+      <Group title={t('dashboard.upcoming.to_collect')} items={data.toCollect} direction="collect" />
+
+      <View className="border-t border-border-soft pt-4">
+        <Text className="text-xs font-medium uppercase text-text-muted">
+          {t('dashboard.upcoming.period_balance')}
+        </Text>
+        <View className="mt-1 flex-row flex-wrap items-baseline gap-x-4 gap-y-1">
+          {(balanceARS !== 0 || (totalPayARS === 0 && totalCollectARS === 0)) && (
+            <View className="flex-row items-baseline">
+              <Text
+                className={`text-xl font-bold ${
+                  balanceARS > 0
+                    ? 'text-emerald'
+                    : balanceARS < 0
+                      ? 'text-negative'
+                      : 'text-text'
+                }`}
+              >
+                {balanceARS > 0 ? '+ ' : ''}
+              </Text>
+              <MaskedAmount
+                amount={balanceARS}
+                currency="ARS"
+                className={`text-xl font-bold ${
+                  balanceARS > 0
+                    ? 'text-emerald'
+                    : balanceARS < 0
+                      ? 'text-negative'
+                      : 'text-text'
+                }`}
+              />
+            </View>
+          )}
+          {balanceUSD !== 0 && (
+            <View className="flex-row items-baseline">
+              <Text
+                className={`text-sm font-semibold ${
+                  balanceUSD > 0
+                    ? 'text-emerald'
+                    : balanceUSD < 0
+                      ? 'text-negative'
+                      : 'text-text'
+                }`}
+              >
+                {balanceUSD > 0 ? '+ ' : ''}
+              </Text>
+              <MaskedAmount
+                amount={balanceUSD}
+                currency="USD"
+                showCentsOverride
+                className={`text-sm font-semibold ${
+                  balanceUSD > 0
+                    ? 'text-emerald'
+                    : balanceUSD < 0
+                      ? 'text-negative'
+                      : 'text-text'
+                }`}
+              />
+            </View>
+          )}
+        </View>
+      </View>
+    </View>
+  )
+}
+
+export const UpcomingFortnightSection = ({ today }: Props) => {
+  const t = useT()
+  const query = useUpcomingFortnight(today)
+  const data = query.data
+
   return (
     <View className="rounded-2xl border border-border bg-card p-6">
       <View className="mb-4 flex-row items-baseline justify-between">
@@ -150,77 +243,26 @@ export const UpcomingFortnightSection = ({ data }: Props) => {
         </Text>
       </View>
 
-      {hasAny ? (
-        <View className="flex-col gap-6">
-          <Group title={t('dashboard.upcoming.to_pay')} items={data.toPay} direction="pay" />
-          <Group title={t('dashboard.upcoming.to_collect')} items={data.toCollect} direction="collect" />
-
-          <View className="border-t border-border-soft pt-4">
-            <Text className="text-xs font-medium uppercase text-text-muted">
-              {t('dashboard.upcoming.period_balance')}
+      {/* Swappable region — header above stays fixed; only this area changes
+          between loading/error/data over a stable minimum height. */}
+      <View style={{ minHeight: SWAP_MIN_HEIGHT }} className="justify-center">
+        {data ? (
+          <UpcomingBody data={data} />
+        ) : query.isError ? (
+          <View className="items-center justify-center gap-3 px-4">
+            <Text className="text-center text-sm text-text-muted">
+              {t('dashboard.upcoming.error')}
             </Text>
-            <View className="mt-1 flex-row flex-wrap items-baseline gap-x-4 gap-y-1">
-              {(balanceARS !== 0 || (totalPayARS === 0 && totalCollectARS === 0)) && (
-                <View className="flex-row items-baseline">
-                  <Text
-                    className={`text-xl font-bold ${
-                      balanceARS > 0
-                        ? 'text-emerald'
-                        : balanceARS < 0
-                          ? 'text-negative'
-                          : 'text-text'
-                    }`}
-                  >
-                    {balanceARS > 0 ? '+ ' : ''}
-                  </Text>
-                  <MaskedAmount
-                    amount={balanceARS}
-                    currency="ARS"
-                    className={`text-xl font-bold ${
-                      balanceARS > 0
-                        ? 'text-emerald'
-                        : balanceARS < 0
-                          ? 'text-negative'
-                          : 'text-text'
-                    }`}
-                  />
-                </View>
-              )}
-              {balanceUSD !== 0 && (
-                <View className="flex-row items-baseline">
-                  <Text
-                    className={`text-sm font-semibold ${
-                      balanceUSD > 0
-                        ? 'text-emerald'
-                        : balanceUSD < 0
-                          ? 'text-negative'
-                          : 'text-text'
-                    }`}
-                  >
-                    {balanceUSD > 0 ? '+ ' : ''}
-                  </Text>
-                  <MaskedAmount
-                    amount={balanceUSD}
-                    currency="USD"
-                    showCentsOverride
-                    className={`text-sm font-semibold ${
-                      balanceUSD > 0
-                        ? 'text-emerald'
-                        : balanceUSD < 0
-                          ? 'text-negative'
-                          : 'text-text'
-                    }`}
-                  />
-                </View>
-              )}
-            </View>
+            <Button variant="secondary" size="sm" onPress={() => query.refetch()}>
+              {t('error.retry_action')}
+            </Button>
           </View>
-        </View>
-      ) : (
-        <Text className="text-sm text-text-muted">
-          {t('dashboard.upcoming.empty')}
-        </Text>
-      )}
+        ) : (
+          <View className="items-center justify-center">
+            <Spinner size="lg" />
+          </View>
+        )}
+      </View>
     </View>
   )
 }

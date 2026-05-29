@@ -2,10 +2,17 @@ import { Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Sparkles } from 'lucide-react-native'
 import { useT } from '../../lib/locale-context'
+import { useHasMovements } from '../../lib/dashboard/queries'
 
 export const WelcomeFirstMoveCard = () => {
   const t = useT()
   const router = useRouter()
+  const { data: hasMovements } = useHasMovements()
+
+  // Self-gating: stays absent while the query is pending or when the user
+  // already has movements; materializes only once we know there are none.
+  // The brief top-of-page shift when it appears is accepted (rarely seen).
+  if (hasMovements !== false) return null
 
   return (
     <View className="rounded-2xl border border-emerald/30 bg-emerald/5 p-6">

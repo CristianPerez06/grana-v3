@@ -1,31 +1,20 @@
 import { useCallback, useState } from 'react'
 import { RefreshControl, ScrollView, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { useFocusEffect } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { colors } from '../../lib/colors'
 import { formatDateISO, getTodayAR } from '../../lib/date'
-import { useT } from '../../lib/locale-context'
-import {
-  useDashboardHero,
-  useHasMovements,
-  useProfileFirstName,
-  useUpcomingFortnight,
-} from '../../lib/dashboard/queries'
 import { DashboardHeader } from '../../components/dashboard/DashboardHeader'
 import { EyeMaskProvider } from '../../components/dashboard/EyeMaskContext'
 import { HeroSection } from '../../components/dashboard/HeroSection'
 import { MonthBalanceSection } from '../../components/dashboard/MonthBalanceSection'
-import { SectionFallback } from '../../components/dashboard/SectionFallback'
 import { UpcomingFortnightSection } from '../../components/dashboard/UpcomingFortnightSection'
 import { WelcomeFirstMoveCard } from '../../components/dashboard/WelcomeFirstMoveCard'
 import { QuickAddFab } from '../../components/transactions/QuickAddFab'
-import { Spinner } from '../../components/ui/Spinner'
 
 const MONTHS_BACK_LIMIT = 12
 
 export default function DashboardScreen() {
-  const t = useT()
   const today = getTodayAR()
   // The dashboard always opens on the current month; MonthBalanceSection owns
   // month navigation in local state (no `?month=` param).
@@ -33,16 +22,23 @@ export default function DashboardScreen() {
   const currentMonth = today.getMonth() + 1
 
   const queryClient = useQueryClient()
-  const hero = useDashboardHero()
-  const upcoming = useUpcomingFortnight(today)
-  const movements = useHasMovements()
-  const profileFirstName = useProfileFirstName()
 
-  const isRefetching =
-    hero.isFetching || upcoming.isFetching || movements.isFetching
+  // The pull-to-refresh indicator is bound to the gesture, NOT to in-flight
+  // dashboard queries. Section-local fetches share the `['dashboard']` prefix
+  // (e.g. MonthBalanceSection's `balance-series` query when navigating months),
+  // so a `useIsFetching(['dashboard'])`-derived flag would falsely engage the
+  // top RefreshControl on every arrow tap and shove the scroll down. Instead we
+  // hold `refreshing` for exactly the pull: `invalidateQueries` resolves once
+  // the refetches settle.
+  const [refreshing, setRefreshing] = useState(false)
 
-  const onRefresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    } finally {
+      setRefreshing(false)
+    }
   }, [queryClient])
 
   // Reset EyeMaskProvider when leaving the tab: bump key so the provider
@@ -58,53 +54,28 @@ export default function DashboardScreen() {
     }, []),
   )
 
-  // MonthBalanceSection self-manages its own loading/error in-card, so it no
-  // longer gates the screen-level initial spinner.
-  const initialLoading = hero.isPending && upcoming.isPending && movements.isPending
-
-  if (initialLoading) {
-    return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-background" edges={['top']}>
-        <Spinner size="lg" />
-      </SafeAreaView>
-    )
-  }
-
-  const showWelcomeCard = movements.data === false
-
   return (
     <EyeMaskProvider key={eyeMaskKey}>
       <View className="flex-1 bg-background">
-        <DashboardHeader
-          name={profileFirstName.data ?? ''}
-          todayISO={formatDateISO(today)}
-        />
+        <DashboardHeader todayISO={formatDateISO(today)} />
         <ScrollView
           contentContainerClassName="px-6 pt-6 pb-28"
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
+              refreshing={refreshing}
               onRefresh={onRefresh}
               tintColor={colors.textSoft}
               colors={[colors.textSoft]}
             />
           }
         >
+          {/* Each section owns its query and its in-card loading/error state;
+              the shell only places them. A slow or failing section never
+              blocks the others. */}
           <View className="flex-col gap-5">
-            {showWelcomeCard && <WelcomeFirstMoveCard />}
-
-            {hero.data ? (
-              <HeroSection data={hero.data} />
-            ) : hero.error ? (
-              <SectionFallback message={t('dashboard.hero_error')} />
-            ) : null}
-
-            {upcoming.data ? (
-              <UpcomingFortnightSection data={upcoming.data} />
-            ) : upcoming.error ? (
-              <SectionFallback message={t('dashboard.upcoming.error')} />
-            ) : null}
-
+            <WelcomeFirstMoveCard />
+            <HeroSection />
+            <UpcomingFortnightSection today={today} />
             <MonthBalanceSection
               currentYear={currentYear}
               currentMonth={currentMonth}
