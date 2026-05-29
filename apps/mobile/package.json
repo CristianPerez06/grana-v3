@@ -13,7 +13,8 @@
     "build:android:local": "eas build --profile production --platform android --local",
     "build:ios": "eas build --profile production --platform ios",
     "build:ios:local": "eas build --profile production --platform ios --local",
-    "build:list": "eas build:list --limit 5"
+    "build:list": "eas build:list --limit 5",
+    "gen:icons": "node scripts/gen-icons.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
@@ -50,6 +51,7 @@
     "eas-cli": "^18.13.0",
     "eslint": "^9.39.4",
     "eslint-config-expo": "^55.0.1",
+    "sharp": "^0.33.5",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.9.2"
   },
