@@ -14,11 +14,6 @@ export const Wordmark: Story = {
   args: { width: 220 },
 }
 
-export const WordmarkInverse: Story = {
-  args: { width: 220, fg: '#FFFFFF', glyph: '#0B1A2B' },
-  decorators: [(Story) => <div className="rounded-lg bg-navy p-8">{Story()}</div>],
-}
-
 export const Isotype: StoryObj<typeof GranaIsotype> = {
   render: () => <GranaIsotype size={96} />,
 }
