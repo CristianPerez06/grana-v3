@@ -658,6 +658,8 @@
     "spending": {
       "title": "Where it went",
       "eyebrow": "Where it went",
+      "eyebrow_in_category": "Where it went within {category}",
+      "no_subcategory": "No subcategory",
       "center_label": "Spent",
       "categories_caption": "across {count} categories",
       "off_ledger_note": "Credit card spending not yet paid is excluded",
@@ -901,6 +903,9 @@
       "type": "Type",
       "account": "Account",
       "category": "Category",
+      "subcategory": "Subcategory",
+      "no_subcategory": "No subcategory",
+      "active_chip_subcategory": "Subcategory: {name}",
       "from": "From",
       "to": "To",
       "apply": "Apply",

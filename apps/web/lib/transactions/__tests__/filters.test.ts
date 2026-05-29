@@ -13,6 +13,7 @@ import {
   resolveEmptyVariant,
   resolveMonthRange,
   shiftMonth,
+  SUBCATEGORY_NONE_MARKER,
 } from '../filters'
 import type { FinancialMovement } from '../movements'
 
@@ -71,6 +72,40 @@ describe('parseMovementFilters', () => {
       to: '2026-05-31',
     })
   })
+
+  it('accepts a subcategory filter when a category is also set', () => {
+    const filters = parseMovementFilters({
+      from: '2026-05-01',
+      to: '2026-05-31',
+      category: 'cat-comida',
+      subcategory: 'subcat-almuerzo',
+    })
+
+    expect(filters.categoryId).toBe('cat-comida')
+    expect(filters.subcategoryId).toBe('subcat-almuerzo')
+  })
+
+  it('preserves the "no subcategory" marker', () => {
+    const filters = parseMovementFilters({
+      from: '2026-05-01',
+      to: '2026-05-31',
+      category: 'cat-comida',
+      subcategory: SUBCATEGORY_NONE_MARKER,
+    })
+
+    expect(filters.subcategoryId).toBe(SUBCATEGORY_NONE_MARKER)
+  })
+
+  it('silently drops subcategory when category is missing', () => {
+    const filters = parseMovementFilters({
+      from: '2026-05-01',
+      to: '2026-05-31',
+      subcategory: 'subcat-orphan',
+    })
+
+    expect(filters.subcategoryId).toBeUndefined()
+    expect(filters.categoryId).toBeUndefined()
+  })
 })
 
 describe('parseMovementLimit', () => {
@@ -99,6 +134,15 @@ describe('buildMovementLimitHref', () => {
     }, 100)
 
     expect(href).toBe('/transactions?q=super&type=expense&category=category-1&limit=100')
+  })
+
+  it('preserves the subcategory filter', () => {
+    const href = buildMovementLimitHref({
+      category: 'cat-comida',
+      subcategory: 'subcat-almuerzo',
+    }, 100)
+
+    expect(href).toContain('subcategory=subcat-almuerzo')
   })
 })
 
@@ -132,9 +176,10 @@ describe('monthOf', () => {
 })
 
 describe('hasContentFilters', () => {
-  it('is true for content filters (type, category, query, amount)', () => {
+  it('is true for content filters (type, category, subcategory, query, amount)', () => {
     expect(hasContentFilters({ type: 'expense' })).toBe(true)
     expect(hasContentFilters({ categoryId: 'c1' })).toBe(true)
+    expect(hasContentFilters({ subcategoryId: 'sc1' })).toBe(true)
     expect(hasContentFilters({ query: 'coto' })).toBe(true)
     expect(hasContentFilters({ amountMin: 1000 })).toBe(true)
   })
@@ -228,11 +273,20 @@ describe('buildFiltersClearedHref / buildSearchClearedHref', () => {
     expect(href).toContain('month=2026-05')
     expect(href).not.toContain('type=')
     expect(href).not.toContain('category=')
+    expect(href).not.toContain('subcategory=')
     expect(href).not.toContain('account=')
     expect(href).not.toContain('currency=')
     expect(href).not.toContain('amount_min=')
     expect(href).not.toContain('amount_max=')
     expect(href).not.toContain('limit=')
+  })
+
+  it('clear filters: also drops subcategory when present', () => {
+    const href = buildFiltersClearedHref('/transactions', {
+      ...params,
+      subcategory: 'subcat-almuerzo',
+    })
+    expect(href).not.toContain('subcategory=')
   })
 
   it('clear search: drops only q, keeps the filters and month', () => {
