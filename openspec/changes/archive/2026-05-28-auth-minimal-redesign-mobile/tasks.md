@@ -26,4 +26,4 @@
 
 ## 5. Cierre OpenSpec
 
-- [ ] 5.1 Archivar DESPUÉS del change web `auth-minimal-redesign`: integrar la requirement final (web+mobile) al master `openspec/specs/auth/spec.md`, `pnpm openspec:check` en verde (último commit del branch, antes del merge)
+- [x] 5.1 Archivar DESPUÉS del change web `auth-minimal-redesign`: integrar la requirement final (web+mobile) al master `openspec/specs/auth/spec.md`, `pnpm openspec:check` en verde (último commit del branch, antes del merge)

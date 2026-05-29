@@ -26,5 +26,5 @@
 
 ## 5. Cierre OpenSpec
 
-- [ ] 5.1 Archivar el change: mover a `openspec/changes/archive/YYYY-MM-DD-auth-minimal-redesign/`, integrar el delta al master spec `openspec/specs/auth/spec.md`, y `pnpm openspec:check` en verde (último commit del branch, antes del merge)
+- [x] 5.1 Archivar el change: mover a `openspec/changes/archive/YYYY-MM-DD-auth-minimal-redesign/`, integrar el delta al master spec `openspec/specs/auth/spec.md`, y `pnpm openspec:check` en verde (último commit del branch, antes del merge)
 - [ ] 5.2 (Cuando se reponga Paper) versionar los design-refs en `design-refs/` y pedir a Paper que cree los artboards mobile faltantes (signup / forgot)
