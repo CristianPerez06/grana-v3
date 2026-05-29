@@ -234,7 +234,7 @@ const LogoutButton = ({
       type="submit"
       aria-label={label}
       title={collapsed ? label : undefined}
-      className={`flex w-full items-center gap-3 rounded-[var(--radius-xl)] py-[11px] text-left text-[14px] font-semibold text-error transition-colors hover:bg-error/8 ${
+      className={`flex w-full cursor-pointer items-center gap-3 rounded-[var(--radius-xl)] py-[11px] text-left text-[14px] font-semibold text-error transition-colors hover:bg-error/8 ${
         collapsed ? "justify-center px-0" : "px-4"
       }`}
     >
@@ -252,7 +252,7 @@ const TopBarMobile = ({ onOpenDrawer }: { onOpenDrawer: () => void }) => {
         type="button"
         onClick={onOpenDrawer}
         aria-label={tNav("open_menu")}
-        className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-text-soft transition-colors hover:bg-page hover:text-text"
+        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-[var(--radius-md)] text-text-soft transition-colors hover:bg-page hover:text-text"
       >
         <Menu size={22} strokeWidth={1.9} />
       </button>
