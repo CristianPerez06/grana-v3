@@ -801,7 +801,8 @@
       "weekly": "Weekly",
       "biweekly": "Biweekly",
       "monthly": "Monthly",
-      "annual": "Yearly"
+      "annual": "Yearly",
+      "custom": "Custom"
     },
     "placeholders": {
       "amount": "0.00",
@@ -969,13 +970,25 @@
       "weekly": "Weekly",
       "biweekly": "Biweekly",
       "monthly": "Monthly",
-      "annual": "Yearly"
+      "annual": "Yearly",
+      "custom": "Custom"
     },
     "frequencies_lower": {
       "weekly": "weekly",
       "biweekly": "biweekly",
       "monthly": "monthly",
-      "annual": "yearly"
+      "annual": "yearly",
+      "custom": "custom"
+    },
+    "custom_interval": {
+      "every": "Every",
+      "units": {
+        "day": "{count, plural, one {day} other {days}}",
+        "week": "{count, plural, one {week} other {weeks}}",
+        "month": "{count, plural, one {month} other {months}}",
+        "year": "{count, plural, one {year} other {years}}"
+      },
+      "end_after_occurrences": "{count, plural, one {Ends after # occurrence} other {Ends after # occurrences}}"
     },
     "statuses": {
       "active": "Active",

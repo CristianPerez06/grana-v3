@@ -16,6 +16,7 @@ import {
   type DismissRecurrenceSuggestionInput,
   type UpdateRecurrenceInput,
 } from '@grana/validation'
+import { presetToInterval, type IntervalUnit } from '@grana/money-logic'
 import {
   mapInstanceToConfirmPlan,
   RecurrenceMapError,
@@ -44,7 +45,19 @@ export async function createRecurrenceFromMovement(
 
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
-  const { transaction_id, frequency, end_date } = validation.data
+  const {
+    transaction_id,
+    frequency,
+    end_date,
+    interval_count,
+    interval_unit,
+    max_occurrences,
+  } = validation.data
+  // Presets derive their interval; 'custom' carries it explicitly.
+  const interval =
+    frequency === 'custom'
+      ? { count: interval_count as number, unit: interval_unit as IntervalUnit }
+      : presetToInterval(frequency)
 
   const { data: tx, error: txError } = await supabase
     .from('transactions')
@@ -120,6 +133,9 @@ export async function createRecurrenceFromMovement(
       subcategory_id: movementType === 'transfer' ? null : tx.subcategory_id,
       description: tx.description,
       frequency,
+      interval_count: interval.count,
+      interval_unit: interval.unit,
+      max_occurrences: max_occurrences ?? null,
       start_date: tx.date,
       end_date: end_date ?? null,
       last_generated_date: tx.date,
@@ -436,7 +452,10 @@ export async function updateRecurrence(
     category_id?: string | null
     subcategory_id?: string | null
     description?: string | null
-    frequency?: 'weekly' | 'biweekly' | 'monthly' | 'annual'
+    frequency?: 'weekly' | 'biweekly' | 'monthly' | 'annual' | 'custom'
+    interval_count?: number
+    interval_unit?: IntervalUnit
+    max_occurrences?: number | null
     start_date?: string
     end_date?: string | null
   }
@@ -447,6 +466,23 @@ export async function updateRecurrence(
   if (updates.amount !== undefined) patch.amount = updates.amount
   if (updates.frequency !== undefined) {
     patch.frequency = updates.frequency as RecurrencePatch['frequency']
+    // Keep the interval in sync with the label: presets derive it; 'custom'
+    // takes the explicit interval from the same payload.
+    if (updates.frequency === 'custom') {
+      if (updates.interval_count !== undefined) {
+        patch.interval_count = updates.interval_count
+      }
+      if (updates.interval_unit !== undefined) {
+        patch.interval_unit = updates.interval_unit as IntervalUnit
+      }
+    } else {
+      const preset = presetToInterval(updates.frequency)
+      patch.interval_count = preset.count
+      patch.interval_unit = preset.unit
+    }
+  }
+  if ('max_occurrences' in updates) {
+    patch.max_occurrences = updates.max_occurrences ?? null
   }
   if (updates.start_date !== undefined) patch.start_date = updates.start_date
   if ('transfer_destination_account_id' in updates) {

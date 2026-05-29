@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { type RecurrenceFrequency } from './date'
-import { decideRecurrenceInstance } from './generator'
+import { decideRecurrenceInstance, type IntervalUnit } from './generator'
 import {
   detectRecurrenceSuggestions,
   type RecurrenceSuggestion,
@@ -221,6 +221,9 @@ export async function getRecurrenceLinkForTransaction(
 type RecurrenceRuleForGeneration = {
   id: string
   frequency: RecurrenceFrequency
+  interval_count: number
+  interval_unit: IntervalUnit
+  max_occurrences: number | null
   start_date: string
   end_date: string | null
   last_generated_date: string | null
@@ -247,7 +250,7 @@ export async function generateDueRecurrenceInstances(): Promise<{
   const { data: rules, error: rulesError } = await supabase
     .from('recurrences')
     .select(
-      'id, frequency, start_date, end_date, last_generated_date, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description',
+      'id, frequency, interval_count, interval_unit, max_occurrences, start_date, end_date, last_generated_date, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description',
     )
     .eq('user_id', user.id)
     .eq('status', 'active')
@@ -257,16 +260,21 @@ export async function generateDueRecurrenceInstances(): Promise<{
   const typedRules = rules as RecurrenceRuleForGeneration[]
   const ruleIds = typedRules.map((rule) => rule.id)
 
-  const { data: pendings } = await supabase
+  // Fetch every instance (any status) for these rules so we can: (a) skip rules
+  // that already have a pending instance, and (b) enforce `max_occurrences`.
+  const { data: instances } = await supabase
     .from('recurrence_instances')
-    .select('recurrence_id')
+    .select('recurrence_id, status')
     .eq('user_id', user.id)
-    .eq('status', 'pending')
     .in('recurrence_id', ruleIds)
 
-  const rulesWithPending = new Set(
-    (pendings ?? []).map((row) => row.recurrence_id as string),
-  )
+  const rulesWithPending = new Set<string>()
+  const materializedByRule = new Map<string, number>()
+  for (const row of instances ?? []) {
+    const ruleId = row.recurrence_id as string
+    materializedByRule.set(ruleId, (materializedByRule.get(ruleId) ?? 0) + 1)
+    if (row.status === 'pending') rulesWithPending.add(ruleId)
+  }
 
   let created = 0
 
@@ -276,10 +284,13 @@ export async function generateDueRecurrenceInstances(): Promise<{
         start_date: rule.start_date,
         end_date: rule.end_date,
         last_generated_date: rule.last_generated_date,
-        frequency: rule.frequency,
+        interval_count: rule.interval_count,
+        interval_unit: rule.interval_unit,
+        max_occurrences: rule.max_occurrences,
       },
       today,
       rulesWithPending.has(rule.id),
+      materializedByRule.get(rule.id) ?? 0,
     )
 
     if (!decision.generate) continue

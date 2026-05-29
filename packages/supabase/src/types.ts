@@ -490,7 +490,10 @@ export type Database = {
           end_date: string | null
           frequency: string
           id: string
+          interval_count: number
+          interval_unit: string
           last_generated_date: string | null
+          max_occurrences: number | null
           movement_type: string
           start_date: string
           status: string
@@ -509,7 +512,10 @@ export type Database = {
           end_date?: string | null
           frequency: string
           id?: string
+          interval_count?: number
+          interval_unit?: string
           last_generated_date?: string | null
+          max_occurrences?: number | null
           movement_type: string
           start_date: string
           status?: string
@@ -528,7 +534,10 @@ export type Database = {
           end_date?: string | null
           frequency?: string
           id?: string
+          interval_count?: number
+          interval_unit?: string
           last_generated_date?: string | null
+          max_occurrences?: number | null
           movement_type?: string
           start_date?: string
           status?: string

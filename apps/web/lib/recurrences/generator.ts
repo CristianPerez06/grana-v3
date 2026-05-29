@@ -4,6 +4,8 @@
 
 export {
   decideRecurrenceInstance,
+  presetToInterval,
   type RuleForDecision,
   type GenerationDecision,
+  type IntervalUnit,
 } from '@grana/money-logic'

@@ -1,7 +1,51 @@
 import * as yup from 'yup'
 
 const SUPPORTED_CURRENCIES = ['ARS', 'USD'] as const
-const RECURRENCE_FREQUENCIES = ['weekly', 'biweekly', 'monthly', 'annual'] as const
+// The four named presets are accepted everywhere; `custom` is only accepted by
+// the create/update/from-movement flows (suggestions always emit a preset).
+const RECURRENCE_PRESET_FREQUENCIES = [
+  'weekly',
+  'biweekly',
+  'monthly',
+  'annual',
+] as const
+const RECURRENCE_FREQUENCIES = [
+  ...RECURRENCE_PRESET_FREQUENCIES,
+  'custom',
+] as const
+const INTERVAL_UNITS = ['day', 'week', 'month', 'year'] as const
+
+// Custom-frequency fields. Required only when `frequency === 'custom'`; ignored
+// (derived from the preset) otherwise. `max_occurrences` is an optional cap on
+// how many occurrences the rule produces, complementary to `end_date`.
+const recurrenceIntervalFields = {
+  interval_count: yup
+    .number()
+    .label('interval_count')
+    .integer()
+    .min(1)
+    .when('frequency', {
+      is: 'custom',
+      then: (schema) => schema.required(),
+      otherwise: (schema) => schema.nullable().optional(),
+    }),
+  interval_unit: yup
+    .string()
+    .label('interval_unit')
+    .oneOf(INTERVAL_UNITS)
+    .when('frequency', {
+      is: 'custom',
+      then: (schema) => schema.required(),
+      otherwise: (schema) => schema.nullable().optional(),
+    }),
+  max_occurrences: yup
+    .number()
+    .label('max_occurrences')
+    .integer()
+    .min(1)
+    .nullable()
+    .optional(),
+}
 
 const recurrenceBaseSchema = {
   account_id: yup.string().label('account_id').uuid().required(),
@@ -17,6 +61,7 @@ const recurrenceBaseSchema = {
     .label('frequency')
     .required()
     .oneOf(RECURRENCE_FREQUENCIES),
+  ...recurrenceIntervalFields,
   start_date: yup.string().label('start_date').required(),
   end_date: yup
     .string()
@@ -98,6 +143,7 @@ export const createRecurrenceFromMovementSchema = yup
       .label('frequency')
       .required()
       .oneOf(RECURRENCE_FREQUENCIES),
+    ...recurrenceIntervalFields,
     end_date: yup.string().label('end_date').nullable().optional(),
   })
   .strict()
@@ -158,7 +204,7 @@ export const acceptRecurrenceSuggestionSchema = yup
       .string()
       .label('frequency')
       .required()
-      .oneOf(RECURRENCE_FREQUENCIES),
+      .oneOf(RECURRENCE_PRESET_FREQUENCIES),
     start_date: yup.string().label('start_date').required(),
     description: yup.string().label('description').nullable().optional(),
     fingerprint: yup.string().label('fingerprint').required(),
@@ -199,6 +245,7 @@ export const updateRecurrenceSchema = yup
       .label('frequency')
       .optional()
       .oneOf(RECURRENCE_FREQUENCIES),
+    ...recurrenceIntervalFields,
     start_date: yup.string().label('start_date').optional(),
     end_date: yup.string().label('end_date').nullable().optional(),
   })
