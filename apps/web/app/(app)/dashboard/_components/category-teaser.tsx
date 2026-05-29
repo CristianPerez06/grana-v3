@@ -19,7 +19,7 @@ export const CategoryTeaser = ({ title, viewAllLabel, href, slices }: Props) => 
   if (slices.length === 0) return null
 
   return (
-    <section className="flex flex-col gap-3 rounded-lg border border-border p-4">
+    <section className="flex min-h-[8rem] flex-col gap-3 rounded-lg border border-border p-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
         <Link href={href} className="text-xs font-medium text-primary hover:underline">

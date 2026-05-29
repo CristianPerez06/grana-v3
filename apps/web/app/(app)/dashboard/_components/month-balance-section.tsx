@@ -80,7 +80,7 @@ export const MonthBalanceSection = ({
   const isPositive = data.finalBalance >= 0
 
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <section className="flex h-full min-h-[26rem] flex-col overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-sm">
       <header className="mb-4 flex items-center justify-between gap-4">
         <h2 className="min-w-0 truncate text-lg font-semibold text-text">{t('title')}</h2>
         <MonthNavigator

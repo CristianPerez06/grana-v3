@@ -17,7 +17,7 @@ export const HeroSection = async ({ data }: Props) => {
   const breakdown = data.accounts.slice(0, MAX_BREAKDOWN_ACCOUNTS)
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <div className="min-h-[10rem] rounded-2xl border border-border bg-card p-6 shadow-sm">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <Link
           href="/accounts"
