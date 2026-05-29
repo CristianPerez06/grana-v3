@@ -41,14 +41,6 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
   const t = await getTranslations('transactions')
   const tRec = await getTranslations('recurrences')
 
-  const fromId = fromAccountId ?? fromCardId
-  const backLabel =
-    fromId && transaction.source_account?.id === fromId
-      ? transaction.source_account.name
-      : fromId && transaction.destination_account?.id === fromId
-        ? (transaction.destination_account?.name ?? t('back_label'))
-        : t('back_label')
-
   const getFrequencyLowerLabel = (freq: string) => {
     if (freq === 'weekly' || freq === 'biweekly' || freq === 'monthly' || freq === 'annual') {
       return tRec(`frequencies_lower.${freq}`)
@@ -75,20 +67,11 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
   const movement = toFinancialMovement(transaction)
 
   return (
-    <div className="flex flex-col gap-8 max-w-lg">
-      <div className="flex items-center gap-3">
-        <Link
-          href={backHref}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← {backLabel}
-        </Link>
-      </div>
-
+    <div className="flex flex-col gap-4 max-w-lg mx-auto">
       {recurrenceLink && (
         <Link
           href={`/transactions/recurring/${recurrenceLink.recurrence_id}`}
-          className="flex items-center gap-2 rounded-md border border-border bg-muted/30 p-3 text-sm hover:bg-muted/50 transition-colors"
+          className="mx-4 flex items-center gap-2 rounded-md border border-border bg-muted/30 p-3 text-sm hover:bg-muted/50 transition-colors"
         >
           <Repeat className="size-4 shrink-0 text-muted-foreground" aria-hidden />
           <span className="text-muted-foreground">{t('generated_by_rule')}</span>{' '}
@@ -105,6 +88,7 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
         installmentSiblings={installmentFamily?.children ?? null}
         reimbursements={reimbursements}
         from={from}
+        backHref={backHref}
       />
     </div>
   )
