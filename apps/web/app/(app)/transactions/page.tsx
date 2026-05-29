@@ -36,6 +36,10 @@ import {
 import type { SubcategoryBreakdown } from '@grana/money-logic'
 import { SUBCATEGORY_NONE_MARKER } from '@/lib/transactions/filters'
 import { getAccounts } from '@/lib/accounts/queries'
+import { getAllCategories } from '@/lib/categories/queries'
+import { MovementDrawerProvider } from './_components/movement-drawer'
+import type { MovementFormAccount } from './new/_components/movement-form'
+import { RegisterMovementButton } from '@/lib/transactions/components/register-movement-button'
 import { PendingRecurrencesBlock } from '@/lib/recurrences/components/pending-recurrences-block'
 import { RecurrenceSuggestionBanner } from '@/lib/recurrences/components/recurrence-suggestion-banner'
 import {
@@ -50,6 +54,13 @@ type SearchParams = Record<string, string | string[] | undefined>
 type Props = {
   searchParams: Promise<SearchParams>
 }
+
+const activeCodes = (
+  currencies: Array<{ currency_code: string; is_active: boolean }>,
+): ('ARS' | 'USD')[] =>
+  currencies
+    .filter((c) => c.is_active && (c.currency_code === 'ARS' || c.currency_code === 'USD'))
+    .map((c) => c.currency_code as 'ARS' | 'USD')
 
 const TransactionsPage = async ({ searchParams }: Props) => {
   const supabase = await createClient()
@@ -219,7 +230,33 @@ const TransactionsPage = async ({ searchParams }: Props) => {
     }
   }
 
+  // Drawer data: full account set (incl. credit) + category tree, reused by the
+  // in-context create form. The /transactions/new page remains the fallback.
+  const [
+    { cash: drawerCash, bank: drawerBank, credit: drawerCredit },
+    drawerCategories,
+  ] = await Promise.all([getAccounts(), getAllCategories(user.id)])
+  const drawerAccounts: MovementFormAccount[] = [
+    ...[...drawerCash, ...drawerBank].map((a) => ({
+      id: a.id,
+      name: a.name,
+      type: a.type as 'cash' | 'bank',
+      activeCurrencies: activeCodes(a.currencies),
+      balances: a.balances,
+      institutionId: a.institution_id ?? null,
+    })),
+    ...drawerCredit.map((c) => ({
+      id: c.id,
+      name: c.name,
+      type: 'credit' as const,
+      activeCurrencies: activeCodes(c.currencies),
+      balances: { ARS: 0, USD: 0 },
+      institutionId: c.institution_id ?? null,
+    })),
+  ]
+
   return (
+    <MovementDrawerProvider accounts={drawerAccounts} categories={drawerCategories}>
     <div className="flex max-w-3xl flex-col gap-6 pb-24 sm:pb-0">
       <PageHeader
         title={t('title')}
@@ -232,15 +269,7 @@ const TransactionsPage = async ({ searchParams }: Props) => {
             <ChevronRight size={13} className="mt-px" />
           </Link>
         }
-        actions={
-          <Link
-            href="/transactions/new"
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-[10px] bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            <span className="text-base leading-none">+</span>
-            {t('actions.register_movement')}
-          </Link>
-        }
+        actions={<RegisterMovementButton />}
       />
 
       {topSuggestion && <RecurrenceSuggestionBanner suggestion={topSuggestion} />}
@@ -330,6 +359,7 @@ const TransactionsPage = async ({ searchParams }: Props) => {
 
       <QuickAddFab />
     </div>
+    </MovementDrawerProvider>
   )
 }
 

@@ -24,6 +24,11 @@ type Props = {
   canDelete: boolean
   isParent: boolean
   isCardPayment: boolean
+  /**
+   * When provided, the "Editar" item opens the in-context edit drawer instead
+   * of navigating to the `/edit` page. The host renders the drawer.
+   */
+  onEdit?: () => void
 }
 
 export const TxActionsMenu = ({
@@ -33,6 +38,7 @@ export const TxActionsMenu = ({
   canDelete,
   isParent,
   isCardPayment,
+  onEdit,
 }: Props) => {
   const t = useTranslations('transactions.detail.actions')
   const router = useRouter()
@@ -81,7 +87,9 @@ export const TxActionsMenu = ({
           >
             {canEdit && (
               <DropdownMenu.Item
-                onSelect={() => router.push(`/transactions/${transactionId}/edit`)}
+                onSelect={() =>
+                  onEdit ? onEdit() : router.push(`/transactions/${transactionId}/edit`)
+                }
                 className="flex items-center gap-2 w-full px-4 py-2.5 text-left text-[13px] font-semibold text-text cursor-pointer outline-none data-[highlighted]:bg-muted/40"
               >
                 <Pencil size={15} strokeWidth={2} />

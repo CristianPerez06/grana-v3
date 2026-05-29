@@ -882,6 +882,9 @@
       "register_movement": "Record transaction",
       "register_exchange": "Record exchange"
     },
+    "drawer": {
+      "close": "Close"
+    },
     "confirmations": {
       "delete_title": "Delete this transaction?",
       "delete_body": "This action cannot be undone.",
@@ -989,7 +992,8 @@
         "month": "{count, plural, one {month} other {months}}",
         "year": "{count, plural, one {year} other {years}}"
       },
-      "end_after_occurrences": "{count, plural, one {Ends after # occurrence} other {Ends after # occurrences}}"
+      "end_after_occurrences": "{count, plural, one {Ends after # occurrence} other {Ends after # occurrences}}",
+      "end_label": "Occurrence limit (optional)"
     },
     "statuses": {
       "active": "Active",

@@ -100,6 +100,12 @@ type Props = {
   preselectAccountId?: string
   /** Create mode: where to return after saving. Defaults to `/transactions`. */
   createReturnHref?: string
+  /**
+   * When provided, the form is hosted in a drawer: after a successful save it
+   * refreshes the route and calls `onSuccess` (to close the drawer) instead of
+   * navigating to `returnHref`. Page usage omits it and keeps navigating.
+   */
+  onSuccess?: () => void
 }
 
 const CURRENCY_SYMBOL: Record<'ARS' | 'USD', string> = { ARS: '$', USD: 'U$D' }
@@ -116,10 +122,12 @@ export const MovementForm = ({
   edit,
   preselectAccountId,
   createReturnHref,
+  onSuccess,
 }: Props) => {
   const router = useRouter()
   const t = useTranslations('transactions')
   const tCommon = useTranslations('common')
+  const tRec = useTranslations('recurrences')
   const isEdit = edit !== undefined
   const editable = edit?.editableFields
   const returnHref = edit?.returnHref ?? createReturnHref ?? '/transactions'
@@ -184,7 +192,13 @@ export const MovementForm = ({
   const [fxRate, setFxRate] = useState('')
 
   const [isRecurrent, setIsRecurrent] = useState(false)
-  const [frequency, setFrequency] = useState<'weekly' | 'biweekly' | 'monthly' | 'annual'>('monthly')
+  const [frequency, setFrequency] = useState<
+    'weekly' | 'biweekly' | 'monthly' | 'annual' | 'custom'
+  >('monthly')
+  // Custom frequency: "every N units", with an optional cap on occurrences.
+  const [intervalCount, setIntervalCount] = useState(1)
+  const [intervalUnit, setIntervalUnit] = useState<'day' | 'week' | 'month' | 'year'>('month')
+  const [maxOccurrences, setMaxOccurrences] = useState('')
 
   // Reimbursement (reintegro / cashback) declared with the expense.
   const [reimbursementEnabled, setReimbursementEnabled] = useState(false)
@@ -439,7 +453,12 @@ export const MovementForm = ({
         setFormError(result.formError ?? t('errors.save_failed_short'))
         return
       }
-      router.push(returnHref)
+      if (onSuccess) {
+        router.refresh()
+        onSuccess()
+      } else {
+        router.push(returnHref)
+      }
     })
   }
 
@@ -606,9 +625,19 @@ export const MovementForm = ({
 
       // Recurrence: not for adjustments nor for installment purchases.
       if (isRecurrent && tab !== 'adjustment' && tab !== 'exchange' && !isInstallments && 'id' in result && result.id) {
+        const trimmedMax = maxOccurrences.trim()
         const recurrenceResult = await createRecurrenceFromMovement({
           transaction_id: result.id,
           frequency,
+          ...(frequency === 'custom'
+            ? {
+                interval_count: intervalCount,
+                interval_unit: intervalUnit,
+                ...(trimmedMax !== ''
+                  ? { max_occurrences: Math.max(1, Math.floor(Number(trimmedMax))) }
+                  : {}),
+              }
+            : {}),
         })
         if (!recurrenceResult.ok) {
           setFormError(
@@ -620,7 +649,12 @@ export const MovementForm = ({
         }
       }
 
-      router.push(returnHref)
+      if (onSuccess) {
+        router.refresh()
+        onSuccess()
+      } else {
+        router.push(returnHref)
+      }
     })
   }
 
@@ -1015,7 +1049,55 @@ export const MovementForm = ({
                 <option value="biweekly">{t('frequencies.biweekly')}</option>
                 <option value="monthly">{t('frequencies.monthly')}</option>
                 <option value="annual">{t('frequencies.annual')}</option>
+                <option value="custom">{t('frequencies.custom')}</option>
               </select>
+
+              {frequency === 'custom' && (
+                <div className="flex flex-col gap-2 pt-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {tRec('custom_interval.every')}
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      inputMode="numeric"
+                      value={intervalCount}
+                      onChange={(e) =>
+                        setIntervalCount(Math.max(1, Math.floor(Number(e.target.value) || 1)))
+                      }
+                      aria-label={tRec('custom_interval.every')}
+                      className="w-16 rounded-md border border-input bg-background px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                    <select
+                      value={intervalUnit}
+                      onChange={(e) =>
+                        setIntervalUnit(e.target.value as typeof intervalUnit)
+                      }
+                      aria-label={t('labels.frequency')}
+                      className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <option value="day">{tRec('custom_interval.units.day', { count: intervalCount })}</option>
+                      <option value="week">{tRec('custom_interval.units.week', { count: intervalCount })}</option>
+                      <option value="month">{tRec('custom_interval.units.month', { count: intervalCount })}</option>
+                      <option value="year">{tRec('custom_interval.units.year', { count: intervalCount })}</option>
+                    </select>
+                  </div>
+                  <label htmlFor="max-occurrences" className="text-xs text-muted-foreground">
+                    {tRec('custom_interval.end_label')}
+                  </label>
+                  <input
+                    id="max-occurrences"
+                    type="number"
+                    min={1}
+                    inputMode="numeric"
+                    value={maxOccurrences}
+                    onChange={(e) => setMaxOccurrences(e.target.value)}
+                    placeholder="—"
+                    className="w-24 rounded-md border border-input bg-background px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
