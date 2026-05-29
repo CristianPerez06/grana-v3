@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getLocale, getTranslations } from 'next-intl/server'
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
 import { MovementFilters } from '@/lib/transactions/components/movement-filters'
 import { MovementList } from '@/lib/transactions/components/movement-list'
+import { MovementListSkeleton } from '@/lib/transactions/components/movement-list-skeleton'
 import { CategorySpendingOverview } from '@/lib/transactions/components/category-spending-overview'
 import {
   buildFiltersClearedHref,
@@ -26,6 +28,7 @@ import {
   getMonthCategoryBreakdown,
   getMovementFilterOptions,
   getPendingReimbursements,
+  hasAnyTransaction,
   UNCATEGORIZED_ID,
 } from '@/lib/transactions/queries'
 import { getAccounts } from '@/lib/accounts/queries'
@@ -54,7 +57,6 @@ const TransactionsPage = async ({ searchParams }: Props) => {
   const emptyVariant = resolveEmptyVariant(filters)
   const limit = parseMovementLimit(resolvedSearchParams)
   const t = await getTranslations('transactions')
-  const tRec = await getTranslations('recurrences')
   const tCommon = await getTranslations('common')
 
   // Generación lazy de instancias recurrentes: una pasada por carga de página.
@@ -78,8 +80,7 @@ const TransactionsPage = async ({ searchParams }: Props) => {
   )
 
   // Available balance per cash/bank account (for the soft negative-balance
-  // warning when confirming a pending recurrence). Only needed when there are
-  // pending instances. Credit cards are off-ledger and never warn.
+  // warning when confirming a pending recurrence).
   const availableByAccount: Record<string, Record<'ARS' | 'USD', number>> = {}
   if (pendingRecurrences.length > 0) {
     const { cash, bank } = await getAccounts()
@@ -107,45 +108,61 @@ const TransactionsPage = async ({ searchParams }: Props) => {
   const usdBreakdown = buildCategorySlices(fillLabels(breakdown.USD), {
     othersLabel: t('spending.others'),
   })
-  // ARS is the default lens; USD is an explicit `?currency=USD` (shared with the
-  // list filter, so the whole page reads in the chosen currency).
   const overviewCurrency: 'ARS' | 'USD' = filters.currency === 'USD' ? 'USD' : 'ARS'
   const overviewBreakdown = overviewCurrency === 'USD' ? usdBreakdown : arsBreakdown
-  const curSuffix = overviewCurrency === 'USD' ? '&currency=USD' : ''
+
+  // The month nav lives in the spending overview card below. The page header
+  // stays minimalist: just the title and the recurrences shortcut in the
+  // actions slot.
+  const currencySuffix = overviewCurrency === 'USD' ? '&currency=USD' : ''
+  const overviewPrevHref = `/transactions?month=${shiftMonth(month, -1)}${currencySuffix}`
+  const overviewNextHref = `/transactions?month=${shiftMonth(month, +1)}${currencySuffix}`
+
+  // Empty state: split the `none` variant into welcome (first time ever) vs.
+  // month-vacío (has history elsewhere). Only one extra query, cheap.
+  let emptyTitle: string | undefined
+  let emptyBody: string | undefined
+  let emptyCta: string | undefined
+  if (emptyVariant === 'none' && movementsPage.movements.length === 0) {
+    const hasAny = await hasAnyTransaction()
+    if (hasAny) {
+      emptyTitle = t('empty.month.title', { month: monthLabel })
+      emptyBody = t('empty.month.body')
+      emptyCta = t('empty.month.cta')
+    } else {
+      emptyTitle = t('empty.welcome.title')
+      emptyBody = t('empty.welcome.body')
+      emptyCta = t('empty.welcome.cta')
+    }
+  }
 
   return (
     <div className="flex max-w-3xl flex-col gap-6">
-      <PageHeader
-        title={t('title')}
-        description={t('description')}
-        actions={
-          <div className="flex items-center gap-2">
-            <Button asChild variant="secondary">
-              <Link href="/transactions/recurring">{tRec('title')}</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/transactions/new">{t('actions.register_movement')}</Link>
-            </Button>
-          </div>
-        }
-      />
+      <PageHeader title={t('title')} />
 
-      {topSuggestion && (
-        <RecurrenceSuggestionBanner suggestion={topSuggestion} />
-      )}
+      {topSuggestion && <RecurrenceSuggestionBanner suggestion={topSuggestion} />}
 
       <CategorySpendingOverview
-        title={t('spending.title')}
         monthLabel={monthLabel}
-        prevHref={`/transactions?month=${shiftMonth(month, -1)}${curSuffix}`}
-        nextHref={`/transactions?month=${shiftMonth(month, 1)}${curSuffix}`}
-        emptyLabel={t('spending.empty')}
+        prevHref={overviewPrevHref}
+        nextHref={overviewNextHref}
         currency={overviewCurrency}
         breakdown={overviewBreakdown}
         hasUsd={usdBreakdown.slices.length > 0}
         arsHref={`/transactions?month=${month}`}
         usdHref={`/transactions?month=${month}&currency=USD`}
         month={month}
+        labels={{
+          eyebrow: t('spending.eyebrow'),
+          centerLabel: t('spending.center_label'),
+          categoriesCaptionTemplate: t.raw('spending.categories_caption') as string,
+          offLedgerNote: t('spending.off_ledger_note'),
+          seeDetail: t('spending.see_detail'),
+          othersLabelTemplate: t.raw('spending.others_label') as string,
+          seeAllCategories: t('spending.see_all_categories'),
+          emptyMessage: t('spending.empty'),
+        }}
+        // No `detailHref` until there's a real drill-down destination.
       />
 
       <PendingRecurrencesBlock
@@ -158,32 +175,39 @@ const TransactionsPage = async ({ searchParams }: Props) => {
         todayISO={formatDateISO(getTodayAR())}
       />
 
-      <MovementFilters
-        filters={filters}
-        accounts={filterOptions.accounts}
-        categories={filterOptions.categories}
-        showAccount={showAccount}
-        showMonthNav={false}
-      />
+      <div id="movement-list" className="scroll-mt-6 flex flex-col gap-6">
+        <MovementFilters
+          filters={filters}
+          accounts={filterOptions.accounts}
+          categories={filterOptions.categories}
+          showAccount={showAccount}
+          showMonthNav={false}
+        />
 
-      <MovementList
-        movements={movementsPage.movements}
-        perspective={{ kind: 'global' }}
-        todayISO={formatDateISO(getTodayAR())}
-        showAccount={showAccount}
-        recurrenceLinkedIds={recurrenceLinkedIds}
-        emptyState={{
-          variant: emptyVariant,
-          query: filters.query,
-          addHref: '/transactions/new',
-          clearHref:
-            emptyVariant === 'filter'
-              ? buildFiltersClearedHref('/transactions', resolvedSearchParams)
-              : emptyVariant === 'search'
-                ? buildSearchClearedHref('/transactions', resolvedSearchParams)
-                : undefined,
-        }}
-      />
+        <Suspense fallback={<MovementListSkeleton />}>
+        <MovementList
+          movements={movementsPage.movements}
+          perspective={{ kind: 'global' }}
+          todayISO={formatDateISO(getTodayAR())}
+          showAccount={showAccount}
+          recurrenceLinkedIds={recurrenceLinkedIds}
+          emptyState={{
+            variant: emptyVariant,
+            query: filters.query,
+            addHref: '/transactions/new',
+            clearHref:
+              emptyVariant === 'filter'
+                ? buildFiltersClearedHref('/transactions', resolvedSearchParams)
+                : emptyVariant === 'search'
+                  ? buildSearchClearedHref('/transactions', resolvedSearchParams)
+                  : undefined,
+            title: emptyTitle,
+            body: emptyBody,
+            cta: emptyCta,
+          }}
+        />
+        </Suspense>
+      </div>
 
       {movementsPage.hasMore && (
         <div className="flex justify-center">

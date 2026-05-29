@@ -145,6 +145,22 @@ export async function getGlobalMovements(
   return page.movements
 }
 
+// ── hasAnyTransaction ─────────────────────────────────────────────────────────
+// Lightweight check used by the empty-state copy in `/transactions`. Decides
+// between the welcome variant (first-time user) and the month-vacío variant
+// (user has history elsewhere, just navigated to an empty month). LIMIT 1 so
+// the cost is constant regardless of dataset size.
+
+export async function hasAnyTransaction(): Promise<boolean> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('id')
+    .limit(1)
+  if (error) throw error
+  return (data?.length ?? 0) > 0
+}
+
 export async function getGlobalMovementsPage(
   options: { limit?: number; offset?: number; filters?: MovementFilters } = {},
 ): Promise<{
@@ -490,6 +506,24 @@ export async function getMonthCategoryBreakdown(month: string): Promise<MonthCat
       .from('transactions')
       .select('category_id, currency_code, amount, is_parent, period_payments(id)')
       .eq('type', 'expense')
+      // Off-ledger: credit card consumos (direct + installment children) live
+      // on a card period (`card_period_id IS NOT NULL`) and don't actually
+      // reduce `disponible` until the statement is paid. Keep them out of
+      // "Gastado por categoría" so the donut matches what the user sees in
+      // their month list (and the footer note "Sin contar consumos en tarjeta
+      // sin pagar" is honest).
+      //
+      // TODO(spec follow-up): the correct behavior is "category + amount
+      // impact when the statement is PAID, distributed by the consumos that
+      // payment covered". Today statement payments are skipped via the
+      // `period_payments?.length > 0` check below, which means card spending
+      // never appears in the breakdown — neither when it devenga nor when
+      // it's paid. The right model walks the statement payment → its
+      // `card_period` → consumos in that period (parent of installment for
+      // cuotas, or the consumo itself) → their category, attributing the
+      // paid amount proportionally. Tracked as a separate change; see
+      // openspec/changes/redesign-transactions-visuals/proposal.md.
+      .is('card_period_id', null)
       .gte('date', from ?? '')
       .lte('date', to ?? ''),
     supabase

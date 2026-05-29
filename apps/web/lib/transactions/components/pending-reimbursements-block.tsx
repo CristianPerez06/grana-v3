@@ -130,7 +130,7 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
                     </span>
                   </div>
                 </div>
-                <span className="text-sm font-semibold text-green-600 tabular-nums">
+                <span className="text-sm font-semibold text-pending tabular-nums">
                   +{format(r.estimatedAmount, r.currencyCode)}
                 </span>
               </div>

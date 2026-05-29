@@ -603,10 +603,31 @@
     "card_payment_label": "Pago de tarjeta",
     "spending": {
       "title": "En qué se fue",
+      "eyebrow": "En qué se fue",
+      "center_label": "Gastado",
+      "categories_caption": "en {count} categorías",
+      "off_ledger_note": "Sin contar consumos en tarjeta sin pagar",
+      "see_detail": "Ver el detalle",
       "others": "Otros",
+      "others_label": "+ {count} categorías más",
+      "others_meta": "{share}% del total",
+      "see_all_categories": "Ver todas las categorías",
+      "meta": {
+        "installments": "{share}% · cuotas {description}",
+        "recurring": "{share}% · {count} recurrentes",
+        "movements": "{share}% · {count} movimientos"
+      },
       "uncategorized": "Sin categoría",
       "empty": "Sin gastos este mes.",
       "usd_heading": "En dólares"
+    },
+    "header": {
+      "eyebrow": "Movimientos",
+      "movements_count": "{count, plural, =0 {Sin movimientos} one {1 movimiento} other {# movimientos}}",
+      "currencies_ars_usd": "ARS y USD",
+      "currencies_ars": "Solo ARS",
+      "currencies_usd": "Solo USD",
+      "see_recurrences": "Ver recurrencias"
     },
     "reimbursement": {
       "label": "Reintegro",
@@ -770,7 +791,17 @@
       "clear_search": "Limpiar búsqueda",
       "filter_title": "Sin resultados",
       "filter_description": "Ningún movimiento cumple los filtros aplicados.",
-      "clear_filters": "Limpiar filtros"
+      "clear_filters": "Limpiar filtros",
+      "welcome": {
+        "title": "Acá va a aparecer cada peso que se mueva.",
+        "body": "Empezá con lo último que pagaste o cobraste. A medida que cargues, la app aprende y te lo hace más fácil.",
+        "cta": "Registrar el primero"
+      },
+      "month": {
+        "title": "No registraste nada en {month} todavía.",
+        "body": "Cuando registres algo este mes, lo vas a ver acá.",
+        "cta": "Registrar movimiento"
+      }
     },
     "account_groups": {
       "cash_bank": "Efectivo / Banco",
@@ -829,7 +860,11 @@
       "amount_max": "Monto máximo",
       "prev_month": "Mes anterior",
       "next_month": "Mes siguiente",
-      "custom_range": "Rango personalizado"
+      "custom_range": "Rango personalizado",
+      "cancel": "Cancelar",
+      "clear_search": "Limpiar búsqueda",
+      "refine": "Refinar",
+      "close": "Cerrar"
     },
     "movement_kinds": {
       "income": "Ingresos",
@@ -857,6 +892,7 @@
       "today": "Hoy",
       "yesterday": "Ayer",
       "review_short": "Revisar",
+      "recurrent_short": "Recurrente",
       "transfer_subtitle_unknown_source": "Cuenta origen",
       "transfer_subtitle_unknown_destination": "Cuenta destino",
       "installment_subtitle": "{count} cuotas",
@@ -865,7 +901,7 @@
   },
   "recurrences": {
     "title": "Recurrencias",
-    "description": "Reglas que generan movimientos pendientes para que confirmes o omitas.",
+    "description": "Reglas que generan movimientos pendientes para que confirmes u omitas.",
     "back_label": "Movimientos",
     "empty": "Todavía no tenés reglas recurrentes. Activá el toggle \"Hacer recurrente\" cuando registres un movimiento.",
     "pending_suffix": "pendiente",

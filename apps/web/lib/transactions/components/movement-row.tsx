@@ -47,12 +47,19 @@ const typeLabelKey: Record<MovementKind, string> = {
   reimbursement: 'reimbursement.label',
 }
 
-const amountToneClass = (kind: MovementKind, sign: '+' | '-' | null): string => {
-  if (kind === 'income' || kind === 'reimbursement') return 'text-green-600'
-  if (kind === 'adjustment') return sign === '-' ? 'text-red-600' : 'text-green-600'
-  if (kind === 'transfer' || kind === 'exchange') return 'text-foreground'
+const amountToneClass = (
+  kind: MovementKind,
+  sign: '+' | '-' | null,
+  isPendingReimbursement: boolean,
+): string => {
+  // A reimbursement that hasn't been received yet is an expectation, not income —
+  // mute it so we don't transmit confidence that the money already landed.
+  if (isPendingReimbursement) return 'text-pending'
+  if (kind === 'income' || kind === 'reimbursement') return 'text-income'
+  if (kind === 'adjustment') return sign === '-' ? 'text-expense' : 'text-income'
+  if (kind === 'transfer' || kind === 'exchange') return 'text-neutral-amount'
   // expense, card_payment, installment_purchase → it's spending, even on a card
-  return 'text-red-600'
+  return 'text-expense'
 }
 
 const formatAmount = (amount: number, currency: 'ARS' | 'USD', showCents: boolean) =>
@@ -82,6 +89,8 @@ export const MovementRow = ({
   const view = resolveMovementView(toMovementViewInput(movement), perspective)
   const typeLabel = t(typeLabelKey[movement.kind])
   const runningBalance = runningBalanceSnapshot ? runningBalanceSnapshot[view.currencyCode] : null
+  const isPendingReimbursement =
+    movement.kind === 'reimbursement' && movement.state !== 'received'
 
   // Primary line: what the user wrote; falls back to the category or type name.
   const fallbackLabel = view.isCategorized ? movement.category_name ?? typeLabel : typeLabel
@@ -131,7 +140,13 @@ export const MovementRow = ({
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-medium">{primary}</span>
             {isRecurrent && (
-              <Repeat size={12} className="shrink-0 text-muted-foreground" aria-label={t('generated_by_rule')} />
+              <span
+                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-soft px-1.5 py-0.5 text-[11px] font-semibold text-slate"
+                aria-label={t('generated_by_rule')}
+              >
+                <Repeat size={10} />
+                {t('list.recurrent_short')}
+              </span>
             )}
             {movement.review_flags.length > 0 && (
               <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-800">
@@ -158,7 +173,7 @@ export const MovementRow = ({
       </div>
 
       <div className="shrink-0 text-right">
-        <p className={`text-sm font-semibold tabular-nums ${amountToneClass(movement.kind, view.sign)}`}>
+        <p className={`text-sm font-semibold tabular-nums ${amountToneClass(movement.kind, view.sign, isPendingReimbursement)}`}>
           {view.sign}
           {formatAmount(view.amount, view.currencyCode, showCents)}
         </p>

@@ -79,3 +79,45 @@ export function buildCategorySlices(
 
   return { total, slices }
 }
+
+// ── buildSliceMetaLine ────────────────────────────────────────────────────────
+
+export type SliceMetaContext = {
+  /** Movements in this category for the period. */
+  movementCount: number
+  /** Description of a dominant installment purchase, if any. Empty string is
+   *  treated as absent so the caller can pass DB nulls converted to ''. */
+  dominantInstallmentDescription?: string | null
+  /** Movements in this category that came from a recurring rule. */
+  recurringCount?: number
+}
+
+export type SliceMetaTemplates = {
+  installments: (description: string, share: number) => string
+  recurring: (count: number, share: number) => string
+  movements: (count: number, share: number) => string
+}
+
+/**
+ * Pick the enriched meta line for a slice. Priority:
+ *   1. A dominant installment purchase (e.g. "25% · cuotas Sofá Sofías")
+ *   2. Recurring movements present (e.g. "11% · 3 recurrentes")
+ *   3. Plain movement count fallback (e.g. "40% · 8 movimientos")
+ *
+ * The templates are passed in so the helper stays i18n-agnostic — the caller
+ * resolves the locale once and feeds the strings here.
+ */
+export function buildSliceMetaLine(
+  slice: Pick<CategorySlice, 'percentage'>,
+  ctx: SliceMetaContext,
+  templates: SliceMetaTemplates,
+): string {
+  const share = Math.round(slice.percentage)
+  if (ctx.dominantInstallmentDescription && ctx.dominantInstallmentDescription.trim().length > 0) {
+    return templates.installments(ctx.dominantInstallmentDescription.trim(), share)
+  }
+  if (ctx.recurringCount && ctx.recurringCount > 0) {
+    return templates.recurring(ctx.recurringCount, share)
+  }
+  return templates.movements(ctx.movementCount, share)
+}

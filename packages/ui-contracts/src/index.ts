@@ -129,6 +129,11 @@ export type PageHeaderBackLink = {
 export type PageHeaderProps = {
   /**
    * Title rendered as the page-level heading. Required.
+   *
+   * In the **narrative** variant (when `monthLabel` is set), the title is
+   * NOT shown as a top-level heading on its own line — instead the
+   * `monthLabel` takes the display role. The `title` is still used for
+   * accessibility (skip links, `<title>` resolution, ARIA labels).
    */
   title: string
   /**
@@ -137,6 +142,44 @@ export type PageHeaderProps = {
    * wrapper's gap does not separate them). Use sentence case, no period.
    */
   description?: string
+  /**
+   * Editorial eyebrow shown above the display (small caps, muted, tracked).
+   * Activates the **narrative** variant together with `monthLabel`.
+   * Common pattern: `eyebrow="Movimientos" + monthLabel="Mayo 2026"`.
+   */
+  eyebrow?: string
+  /**
+   * Display month label for the narrative variant (e.g. "Mayo 2026").
+   * When set, the header switches from the classic title/actions layout to
+   * the narrative editorial layout (eyebrow + display + month nav + subtitle).
+   *
+   * For a more refined editorial treatment, prefer `monthLabelParts` over a
+   * single string — it lets the renderer give the month name display weight
+   * and the year a smaller caption next to it.
+   */
+  monthLabel?: string
+  /**
+   * Split presentation of the month label. When provided, takes precedence
+   * over `monthLabel` and renders the month name with full display weight
+   * and the year as a small subordinate caption beside it. The two still
+   * move together as a single navigation unit — the year is informational,
+   * not a separate control.
+   */
+  monthLabelParts?: { month: string; year: string }
+  /**
+   * href to the previous month, used by the narrative variant's `‹` arrow.
+   * Required when `monthLabel` is set, optional otherwise.
+   */
+  prevMonthHref?: string
+  /** href to the next month, used by the narrative variant's `›` arrow. */
+  nextMonthHref?: string
+  /**
+   * Optional inline node appended at the end of the `description` (web only).
+   * Used by the narrative variant for contextual links like
+   * "· Ver recurrencias →". Mobile MAY ignore this prop and surface the same
+   * affordance through a platform-native control if needed.
+   */
+  descriptionExtras?: ReactNode
   /**
    * Optional back link rendered above the title. When provided, both `href`
    * and `label` are required — the object shape forbids the half-defined
@@ -147,6 +190,11 @@ export type PageHeaderProps = {
    * Optional slot rendered on the right side of the title row. Intended for
    * page-level actions (a button, a dropdown, a small action group). Not a
    * general right-side slot; the contract narrows it to actions on purpose.
+   *
+   * In the **narrative** variant the actions slot is intentionally NOT
+   * rendered next to the display — the editorial layout reserves that zone
+   * for the month nav. Use page-level primary CTAs via a FAB or via the
+   * `descriptionExtras` link pattern instead.
    */
   actions?: ReactNode
   className?: string

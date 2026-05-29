@@ -24,8 +24,8 @@ const formatDate = (dateStr: string) => {
 }
 
 const movementTone = (movement: FinancialMovement) => {
-  if (movement.kind === 'income') return 'text-green-600'
-  if (movement.kind === 'adjustment' && movement.sign === '+') return 'text-green-600'
+  if (movement.kind === 'income') return 'text-income'
+  if (movement.kind === 'adjustment' && movement.sign === '+') return 'text-income'
   return 'text-foreground'
 }
 
@@ -194,7 +194,7 @@ export const GlobalTransactionDetail = ({
           <>
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">{t('labels.exchange_received')}</dt>
-              <dd className="text-right text-green-600">
+              <dd className="text-right text-income">
                 +{formatBalance(movement.destination_amount, movement.destination_currency, showCents)}
               </dd>
             </div>
@@ -258,7 +258,7 @@ export const GlobalTransactionDetail = ({
                 transaction.linked_expense.category?.name ??
                 t('types.expense')}
             </span>
-            <span className="shrink-0 tabular-nums text-red-600">
+            <span className="shrink-0 tabular-nums text-expense">
               −{formatBalance(
                 transaction.linked_expense.amount,
                 transaction.linked_expense.currency_code,
@@ -286,7 +286,7 @@ export const GlobalTransactionDetail = ({
                 <span>{t('installment_label', { number: sibling.installment_n ?? 0 })}</span>
                 <span className="flex items-center gap-2">
                   {formatBalance(sibling.amount, sibling.currency_code, showCents)}
-                  <span className={`text-xs ${sibling.status === 'paid' ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  <span className={`text-xs ${sibling.status === 'paid' ? 'text-income' : 'text-muted-foreground'}`}>
                     {sibling.status === 'paid' ? t('statuses.installment_paid') : t('statuses.pending')}
                   </span>
                 </span>
@@ -324,7 +324,7 @@ export const GlobalTransactionDetail = ({
                 </span>
                 <span
                   className={`shrink-0 tabular-nums ${
-                    r.state === 'cancelled' ? 'text-muted-foreground line-through' : 'text-green-600'
+                    r.state === 'cancelled' ? 'text-muted-foreground line-through' : 'text-income'
                   }`}
                 >
                   +{formatBalance(r.amount, r.currencyCode, showCents)}
