@@ -4,6 +4,14 @@ import type { FinancialMovement } from './movements'
 export type MovementTypeFilter = FinancialMovement['kind']
 export type MovementCurrencyFilter = 'ARS' | 'USD'
 
+/**
+ * URL marker for the "no subcategory assigned" filter. Used instead of an empty
+ * value so the param is unambiguous on parse: `subcategory=` could mean "no
+ * filter" or "empty string", whereas `subcategory=__none__` is explicit and
+ * won't collide with any real UUID.
+ */
+export const SUBCATEGORY_NONE_MARKER = '__none__'
+
 export type MovementFilters = {
   query?: string
   /** Selected month as `YYYY-MM` (period navigation). Absent when a custom range is used. */
@@ -14,6 +22,11 @@ export type MovementFilters = {
   type?: MovementTypeFilter
   accountId?: string
   categoryId?: string
+  /**
+   * Subcategory id, or `SUBCATEGORY_NONE_MARKER` for "no subcategory assigned".
+   * Only set when `categoryId` is also set — the parser drops it otherwise.
+   */
+  subcategoryId?: string
   currency?: MovementCurrencyFilter
   amountMin?: number
   amountMax?: number
@@ -75,7 +88,7 @@ export const shiftMonth = (month: string, delta: number): string => {
  * and currency only narrows a dimension the balance already keeps separate.
  */
 export const hasContentFilters = (filters: MovementFilters): boolean =>
-  Boolean(filters.query || filters.type || filters.categoryId) ||
+  Boolean(filters.query || filters.type || filters.categoryId || filters.subcategoryId) ||
   filters.amountMin != null ||
   filters.amountMax != null
 
@@ -89,7 +102,7 @@ export const hasSearch = (filters: MovementFilters): boolean => Boolean(filters.
  * (a time window, not a filter).
  */
 export const hasOtherContentFilters = (filters: MovementFilters): boolean =>
-  Boolean(filters.type || filters.categoryId || filters.accountId || filters.currency) ||
+  Boolean(filters.type || filters.categoryId || filters.subcategoryId || filters.accountId || filters.currency) ||
   filters.amountMin != null ||
   filters.amountMax != null
 
@@ -139,6 +152,14 @@ export const parseMovementFilters = (params: SearchParamsLike): MovementFilters 
   const categoryId = getParam(params, 'category')?.trim()
   if (categoryId) filters.categoryId = categoryId
 
+  // Subcategory is a child filter of category. Without `categoryId` it has no
+  // meaning, so drop it silently to keep URLs from accidentally narrowing the
+  // result by a UUID copy-paste with no category.
+  const subcategoryId = getParam(params, 'subcategory')?.trim()
+  if (subcategoryId && filters.categoryId) {
+    filters.subcategoryId = subcategoryId
+  }
+
   const currency = getParam(params, 'currency')
   if (currency === 'ARS' || currency === 'USD') filters.currency = currency
 
@@ -171,12 +192,21 @@ const FILTER_PARAM_KEYS = [
   'type',
   'account',
   'category',
+  'subcategory',
   'currency',
   'amount_min',
   'amount_max',
 ]
 
-const CONTENT_FILTER_PARAM_KEYS = ['type', 'account', 'category', 'currency', 'amount_min', 'amount_max']
+const CONTENT_FILTER_PARAM_KEYS = [
+  'type',
+  'account',
+  'category',
+  'subcategory',
+  'currency',
+  'amount_min',
+  'amount_max',
+]
 
 /**
  * Rebuild the list href dropping some filter params (and always the pagination

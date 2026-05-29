@@ -1,11 +1,18 @@
 import { createClient } from '@/lib/supabase/server'
-import { computeCategoryNet, type CategoryAggRow, type CategorySliceInput } from '@grana/money-logic'
+import { getSubcategoriesByCategoryId } from '@/lib/categories/queries'
+import {
+  computeCategoryNet,
+  type CategoryAggRow,
+  type CategorySliceInput,
+  type SubcategorySliceInput,
+} from '@grana/money-logic'
 import {
   DEFAULT_MOVEMENTS_LIMIT,
   MAX_MOVEMENTS_LIMIT,
   MOVEMENTS_LIMIT_STEP,
   movementMatchesText,
   resolveMonthRange,
+  SUBCATEGORY_NONE_MARKER,
   type MovementFilters,
 } from './filters'
 import { toFinancialMovement, type FinancialMovement } from './movements'
@@ -218,6 +225,11 @@ export async function getGlobalMovementsPage(
     if (filters.from) query = query.gte('date', filters.from)
     if (filters.to) query = query.lte('date', filters.to)
     if (filters.categoryId) query = query.eq('category_id', filters.categoryId)
+    if (filters.subcategoryId === SUBCATEGORY_NONE_MARKER) {
+      query = query.is('subcategory_id', null)
+    } else if (filters.subcategoryId) {
+      query = query.eq('subcategory_id', filters.subcategoryId)
+    }
     if (filters.currency) query = query.eq('currency_code', filters.currency)
 
     if (filters.accountId) {
@@ -265,13 +277,17 @@ export async function getGlobalMovementsPage(
   }
 }
 
-export async function getMovementFilterOptions(): Promise<{
+export async function getMovementFilterOptions(
+  options: { categoryId?: string } = {},
+): Promise<{
   accounts: Array<{ id: string; name: string; type: 'cash' | 'bank' | 'credit' }>
   categories: Array<{ id: string; name: string; type: 'income' | 'expense' | 'both' }>
+  /** Subcategories of the active category, or [] when no category is filtered. */
+  subcategories: Array<{ id: string; name: string; category_id: string }>
 }> {
   const supabase = await createClient()
 
-  const [accountsResult, categoriesResult] = await Promise.all([
+  const [accountsResult, categoriesResult, subcategories] = await Promise.all([
     supabase
       .from('accounts')
       .select('id, name, type')
@@ -284,6 +300,7 @@ export async function getMovementFilterOptions(): Promise<{
       .eq('is_active', true)
       .order('type')
       .order('name'),
+    options.categoryId ? getSubcategoriesByCategoryId(options.categoryId) : Promise.resolve([]),
   ])
 
   if (accountsResult.error) throw accountsResult.error
@@ -300,6 +317,11 @@ export async function getMovementFilterOptions(): Promise<{
       name: string
       type: 'income' | 'expense' | 'both'
     }>,
+    subcategories: subcategories.map((s) => ({
+      id: s.id,
+      name: s.name,
+      category_id: s.category_id,
+    })),
   }
 }
 
@@ -615,6 +637,154 @@ export async function getMonthCategoryBreakdown(month: string): Promise<MonthCat
         label: display?.name ?? '',
         color: display?.color ?? null,
         icon: display?.icon ?? null,
+        value,
+      })
+    }
+    return out
+  }
+
+  return { ARS: build('ARS'), USD: build('USD') }
+}
+
+// ── getMonthSubcategoryBreakdown ───────────────────────────────────────────────
+// Same logic as `getMonthCategoryBreakdown`, but scoped to one category and
+// keyed by subcategory. Used when the user filters by a single category — the
+// donut switches to show the in-category composition. Transactions without a
+// subcategory aggregate under `SUBCATEGORY_UNCATEGORIZED_ID`; the UI labels
+// it via i18n.
+
+/** Marker used as the aggregation key for "no subcategory assigned" rows.
+ *  Distinct from the URL marker SUBCATEGORY_NONE_MARKER to avoid collisions in
+ *  the aggregation; the UI translates this to the URL marker for drill-down. */
+export const SUBCATEGORY_UNCATEGORIZED_ID = '__no_subcategory__'
+
+export type MonthSubcategoryBreakdown = {
+  ARS: SubcategorySliceInput[]
+  USD: SubcategorySliceInput[]
+}
+
+export async function getMonthSubcategoryBreakdown(
+  month: string,
+  categoryId: string,
+): Promise<MonthSubcategoryBreakdown> {
+  const supabase = await createClient()
+  const { from, to } = resolveMonthRange(month)
+
+  const [expensesResult, reimbursementsResult, categoryResult] = await Promise.all([
+    supabase
+      .from('transactions')
+      .select('subcategory_id, currency_code, amount, is_parent, period_payments(id)')
+      .eq('type', 'expense')
+      .eq('category_id', categoryId)
+      .is('card_period_id', null) // off-ledger consistency with category breakdown
+      .gte('date', from ?? '')
+      .lte('date', to ?? ''),
+    supabase
+      .from('transactions')
+      .select('amount, currency_code, linked_transaction_id, received_at, cancelled_at')
+      .eq('type', 'reimbursement')
+      .not('received_at', 'is', null)
+      .is('cancelled_at', null)
+      .gte('date', from ?? '')
+      .lte('date', to ?? ''),
+    supabase.from('categories').select('color').eq('id', categoryId).single(),
+  ])
+  if (expensesResult.error) throw expensesResult.error
+  if (reimbursementsResult.error) throw reimbursementsResult.error
+  // categoryResult error tolerated: a missing category just leaves the slice
+  // color null and the UI falls back to a neutral palette.
+
+  const parentCategoryColor = (categoryResult.data?.color as string | null) ?? null
+
+  const expenseRows = (expensesResult.data ?? []) as unknown as Array<{
+    subcategory_id: string | null
+    currency_code: string
+    amount: number
+    is_parent: boolean
+    period_payments: { id: string }[] | null
+  }>
+  const reimbRows = (reimbursementsResult.data ?? []) as unknown as Array<{
+    amount: number
+    currency_code: string
+    linked_transaction_id: string | null
+    received_at: string | null
+    cancelled_at: string | null
+  }>
+
+  // Reimbursements net against their linked expense's subcategory. Filter to
+  // only those linked to expenses in the active category — others belong to a
+  // different category breakdown.
+  const linkedIds = [
+    ...new Set(reimbRows.map((r) => r.linked_transaction_id).filter((id): id is string => Boolean(id))),
+  ]
+  const linkedSubcategoryById = new Map<string, { subcategoryId: string | null; categoryId: string | null }>()
+  if (linkedIds.length > 0) {
+    const { data: linked } = await supabase
+      .from('transactions')
+      .select('id, category_id, subcategory_id')
+      .in('id', linkedIds)
+    for (const e of linked ?? []) {
+      linkedSubcategoryById.set(e.id, {
+        subcategoryId: e.subcategory_id,
+        categoryId: e.category_id,
+      })
+    }
+  }
+
+  // Reuse computeCategoryNet by feeding subcategoryId as the key (with a
+  // sentinel for nulls). The function is agnostic to what the key means.
+  const aggRows: CategoryAggRow[] = []
+  for (const e of expenseRows) {
+    if (e.is_parent) continue
+    if ((e.period_payments?.length ?? 0) > 0) continue
+    aggRows.push({
+      categoryId: e.subcategory_id ?? SUBCATEGORY_UNCATEGORIZED_ID,
+      kind: 'expense',
+      currency_code: e.currency_code,
+      amount: e.amount,
+    })
+  }
+  for (const r of reimbRows) {
+    const linked = r.linked_transaction_id ? linkedSubcategoryById.get(r.linked_transaction_id) : null
+    if (!linked || linked.categoryId !== categoryId) continue
+    aggRows.push({
+      categoryId: linked.subcategoryId ?? SUBCATEGORY_UNCATEGORIZED_ID,
+      kind: 'reimbursement',
+      currency_code: r.currency_code,
+      amount: r.amount,
+      received_at: r.received_at,
+      cancelled_at: r.cancelled_at,
+    })
+  }
+
+  const netBySubcategory = computeCategoryNet(aggRows)
+
+  const realIds = [...netBySubcategory.keys()].filter((id) => id !== SUBCATEGORY_UNCATEGORIZED_ID)
+  const subcategoryById = new Map<string, { name: string }>()
+  if (realIds.length > 0) {
+    const { data: subs } = await supabase
+      .from('subcategories')
+      .select('id, name')
+      .in('id', realIds)
+    for (const s of subs ?? []) {
+      subcategoryById.set(s.id, { name: s.name })
+    }
+  }
+
+  const build = (currency: 'ARS' | 'USD'): SubcategorySliceInput[] => {
+    const out: SubcategorySliceInput[] = []
+    for (const [id, perCurrency] of netBySubcategory.entries()) {
+      const value = perCurrency[currency].neto
+      if (value <= 0) continue
+      const isNone = id === SUBCATEGORY_UNCATEGORIZED_ID
+      out.push({
+        subcategoryId: isNone ? null : id,
+        // Label resolved by the UI for i18n. Real subcategories get their
+        // name from the DB; the "Sin subcategoría" bucket comes back with
+        // an empty label.
+        label: isNone ? '' : subcategoryById.get(id)?.name ?? '',
+        color: parentCategoryColor,
+        icon: null,
         value,
       })
     }

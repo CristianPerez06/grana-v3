@@ -658,6 +658,8 @@
     "spending": {
       "title": "En qué se fue",
       "eyebrow": "En qué se fue",
+      "eyebrow_in_category": "En qué se fue dentro de {category}",
+      "no_subcategory": "Sin subcategoría",
       "center_label": "Gastado",
       "categories_caption": "en {count} categorías",
       "off_ledger_note": "Sin contar consumos en tarjeta sin pagar",
@@ -901,6 +903,9 @@
       "type": "Tipo",
       "account": "Cuenta",
       "category": "Categoría",
+      "subcategory": "Subcategoría",
+      "no_subcategory": "Sin subcategoría",
+      "active_chip_subcategory": "Subcategoría: {name}",
       "from": "Desde",
       "to": "Hasta",
       "apply": "Aplicar",

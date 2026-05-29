@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getLocale, getTranslations } from 'next-intl/server'
-import { buildCategorySlices } from '@grana/money-logic'
+import { buildCategorySlices, buildSubcategorySlices } from '@grana/money-logic'
 import { createClient } from '@/lib/supabase/server'
 import { getTodayAR, formatDateISO } from '@/lib/date'
 import { Button } from '@/components/ui/button'
@@ -26,11 +26,13 @@ import { PendingReimbursementsBlock } from '@/lib/transactions/components/pendin
 import {
   getGlobalMovementsPage,
   getMonthCategoryBreakdown,
+  getMonthSubcategoryBreakdown,
   getMovementFilterOptions,
   getPendingReimbursements,
   hasAnyTransaction,
   UNCATEGORIZED_ID,
 } from '@/lib/transactions/queries'
+import { SUBCATEGORY_NONE_MARKER } from '@/lib/transactions/filters'
 import { getAccounts } from '@/lib/accounts/queries'
 import { PendingRecurrencesBlock } from '@/lib/recurrences/components/pending-recurrences-block'
 import { RecurrenceSuggestionBanner } from '@/lib/recurrences/components/recurrence-suggestion-banner'
@@ -65,7 +67,7 @@ const TransactionsPage = async ({ searchParams }: Props) => {
   const [movementsPage, filterOptions, pendingRecurrences, topSuggestion, pendingReimbursements] =
     await Promise.all([
       getGlobalMovementsPage({ limit, filters }),
-      getMovementFilterOptions(),
+      getMovementFilterOptions({ categoryId: filters.categoryId }),
       getPendingRecurrenceInstances(),
       getTopRecurrenceSuggestion(),
       getPendingReimbursements(),
@@ -89,27 +91,86 @@ const TransactionsPage = async ({ searchParams }: Props) => {
     }
   }
 
-  // Carta de presentación: gastos por categoría del mes (donut + ranking).
+  // Carta de presentación: gastos por categoría (o por subcategoría dentro de
+  // una categoría cuando hay filtro de categoría activo, ver §B del change
+  // add-subcategory-filter-and-breakdown).
   const month = filters.month ?? monthOf(getTodayAR())
-  const breakdown = await getMonthCategoryBreakdown(month)
   const locale = await getLocale()
   const [yy, mm] = month.split('-').map(Number)
   const monthLabel = new Date(yy, mm - 1, 1).toLocaleDateString(
     locale === 'en' ? 'en-US' : 'es-AR',
     { month: 'long', year: 'numeric' },
   )
-  const fillLabels = (inputs: typeof breakdown.ARS) =>
+
+  // Mode resolution: when the user filtered to exactly one category (and didn't
+  // narrow further to a subcategory), the donut switches to in-category mode.
+  // With a subcategory also filtered, the donut would be "100% in X" — pointless
+  // — so it falls back to the category mode (which renders the single parent
+  // category as a full donut, coherent with the rest of the module).
+  const breakdownMode: 'category' | 'subcategory' =
+    filters.categoryId && !filters.subcategoryId ? 'subcategory' : 'category'
+
+  const overviewCurrency: 'ARS' | 'USD' = filters.currency === 'USD' ? 'USD' : 'ARS'
+
+  // Build the slices for both modes (category mode always runs; subcategory
+  // mode runs only when triggered). The component renders both via the same
+  // CategoryBreakdown shape — for subcategory mode, the page projects each
+  // SubcategorySlice into a CategorySlice where `categoryId` holds either the
+  // real subcategory uuid or `SUBCATEGORY_NONE_MARKER` for the "no subcategory"
+  // bucket. Labels are resolved here (i18n).
+  const categoryBreakdownRaw = await getMonthCategoryBreakdown(month)
+  const fillCategoryLabels = (inputs: typeof categoryBreakdownRaw.ARS) =>
     inputs.map((i) =>
       i.categoryId === UNCATEGORIZED_ID ? { ...i, label: t('spending.uncategorized') } : i,
     )
-  const arsBreakdown = buildCategorySlices(fillLabels(breakdown.ARS), {
+  const arsCategoryBreakdown = buildCategorySlices(fillCategoryLabels(categoryBreakdownRaw.ARS), {
     othersLabel: t('spending.others'),
   })
-  const usdBreakdown = buildCategorySlices(fillLabels(breakdown.USD), {
+  const usdCategoryBreakdown = buildCategorySlices(fillCategoryLabels(categoryBreakdownRaw.USD), {
     othersLabel: t('spending.others'),
   })
-  const overviewCurrency: 'ARS' | 'USD' = filters.currency === 'USD' ? 'USD' : 'ARS'
-  const overviewBreakdown = overviewCurrency === 'USD' ? usdBreakdown : arsBreakdown
+  const hasUsd = usdCategoryBreakdown.slices.length > 0
+
+  const activeCategory =
+    breakdownMode === 'subcategory' && filters.categoryId
+      ? filterOptions.categories.find((c) => c.id === filters.categoryId) ?? null
+      : null
+
+  let overviewBreakdown = overviewCurrency === 'USD' ? usdCategoryBreakdown : arsCategoryBreakdown
+  let overviewGetHref: ((slice: { categoryId: string | null }) => string | null) | undefined
+
+  if (breakdownMode === 'subcategory' && filters.categoryId) {
+    const subcategoryBreakdownRaw = await getMonthSubcategoryBreakdown(month, filters.categoryId)
+    const fillSubLabels = (inputs: typeof subcategoryBreakdownRaw.ARS) =>
+      inputs.map((i) => ({
+        ...i,
+        label: i.subcategoryId === null ? t('spending.no_subcategory') : i.label,
+      }))
+    const arsSubBreakdown = buildSubcategorySlices(fillSubLabels(subcategoryBreakdownRaw.ARS))
+    const usdSubBreakdown = buildSubcategorySlices(fillSubLabels(subcategoryBreakdownRaw.USD))
+    const selectedSub = overviewCurrency === 'USD' ? usdSubBreakdown : arsSubBreakdown
+    // Project SubcategorySlice → CategorySlice for the component (same shape).
+    // null subcategoryId becomes SUBCATEGORY_NONE_MARKER in the projected
+    // `categoryId` so the drill-down href can map it back to the URL marker.
+    overviewBreakdown = {
+      total: selectedSub.total,
+      slices: selectedSub.slices.map((s) => ({
+        categoryId: s.subcategoryId ?? SUBCATEGORY_NONE_MARKER,
+        label: s.label,
+        color: s.color,
+        icon: s.icon,
+        value: s.value,
+        percentage: s.percentage,
+        offset: s.offset,
+      })),
+    }
+    // Drill-down: preserves the parent category, adds the subcategory.
+    const parentCategoryId = filters.categoryId
+    overviewGetHref = (slice) =>
+      slice.categoryId
+        ? `/transactions?month=${month}&category=${parentCategoryId}&subcategory=${slice.categoryId}&currency=${overviewCurrency}`
+        : null
+  }
 
   // The month nav lives in the spending overview card below. The page header
   // stays minimalist: just the title and the recurrences shortcut in the
@@ -148,12 +209,16 @@ const TransactionsPage = async ({ searchParams }: Props) => {
         nextHref={overviewNextHref}
         currency={overviewCurrency}
         breakdown={overviewBreakdown}
-        hasUsd={usdBreakdown.slices.length > 0}
+        hasUsd={hasUsd}
         arsHref={`/transactions?month=${month}`}
         usdHref={`/transactions?month=${month}&currency=USD`}
         month={month}
+        getHref={overviewGetHref}
         labels={{
-          eyebrow: t('spending.eyebrow'),
+          eyebrow:
+            activeCategory != null
+              ? t('spending.eyebrow_in_category', { category: activeCategory.name })
+              : t('spending.eyebrow'),
           centerLabel: t('spending.center_label'),
           categoriesCaptionTemplate: t.raw('spending.categories_caption') as string,
           offLedgerNote: t('spending.off_ledger_note'),
@@ -180,6 +245,7 @@ const TransactionsPage = async ({ searchParams }: Props) => {
           filters={filters}
           accounts={filterOptions.accounts}
           categories={filterOptions.categories}
+          subcategories={filterOptions.subcategories}
           showAccount={showAccount}
           showMonthNav={false}
         />

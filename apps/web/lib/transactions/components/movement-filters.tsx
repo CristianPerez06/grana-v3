@@ -12,6 +12,7 @@ import {
   MOVEMENT_TYPE_KEYS,
   monthOf,
   shiftMonth,
+  SUBCATEGORY_NONE_MARKER,
   type MovementFilters as MovementFiltersState,
 } from '../filters'
 
@@ -19,6 +20,8 @@ type MovementFiltersProps = {
   filters: MovementFiltersState
   accounts: Array<{ id: string; name: string; type: 'cash' | 'bank' | 'credit' }>
   categories: Array<{ id: string; name: string; type: 'income' | 'expense' | 'both' }>
+  /** Subcategories of the active category (empty when no category is filtered, or when the host view chooses not to support this filter). */
+  subcategories?: Array<{ id: string; name: string; category_id: string }>
   /** Show the account filter only when there are multiple accounts to disambiguate. */
   showAccount: boolean
   /** Account detail view hides the account filter (already scoped to one account). */
@@ -29,7 +32,7 @@ type MovementFiltersProps = {
 
 /** Filters that narrow content (the count shown on the "Filtros" button badge). */
 const activeContentCount = (f: MovementFiltersState) =>
-  [f.type, f.categoryId, f.accountId, f.currency, f.amountMin, f.amountMax].filter(
+  [f.type, f.categoryId, f.subcategoryId, f.accountId, f.currency, f.amountMin, f.amountMax].filter(
     (v) => v != null,
   ).length
 
@@ -47,6 +50,7 @@ export const MovementFilters = ({
   filters,
   accounts,
   categories,
+  subcategories = [],
   showAccount,
   showAccountFilter = true,
   showMonthNav = true,
@@ -128,8 +132,22 @@ export const MovementFilters = ({
     const c = categories.find((x) => x.id === filters.categoryId)
     chips.push({
       key: 'category',
+      // Clearing the category also clears subcategory — a subcategory without
+      // its parent category has no meaning and the parser would drop it anyway.
       label: c?.name ?? t('filters.category'),
-      clear: () => setParams({ category: null }),
+      clear: () => setParams({ category: null, subcategory: null }),
+    })
+  }
+  if (filters.subcategoryId) {
+    const name =
+      filters.subcategoryId === SUBCATEGORY_NONE_MARKER
+        ? t('filters.no_subcategory')
+        : subcategories.find((s) => s.id === filters.subcategoryId)?.name ??
+          t('filters.subcategory')
+    chips.push({
+      key: 'subcategory',
+      label: t('filters.active_chip_subcategory', { name }),
+      clear: () => setParams({ subcategory: null }),
     })
   }
   if (filters.accountId) {
@@ -365,7 +383,12 @@ export const MovementFilters = ({
                 <select
                   id="f-category"
                   value={filters.categoryId ?? ''}
-                  onChange={(e) => setParams({ category: e.target.value || null })}
+                  onChange={(e) =>
+                    // Changing the parent category invalidates the active
+                    // subcategory: subcategories belong to a single category,
+                    // so the previously selected one is no longer reachable.
+                    setParams({ category: e.target.value || null, subcategory: null })
+                  }
                   className="h-11 w-full rounded-[12px] border border-input bg-background px-3 text-sm"
                 >
                   <option value="">{t('filters.all_fem')}</option>
@@ -376,6 +399,26 @@ export const MovementFilters = ({
                   ))}
                 </select>
               </div>
+
+              {filters.categoryId && (
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="f-subcategory">{t('filters.subcategory')}</Label>
+                  <select
+                    id="f-subcategory"
+                    value={filters.subcategoryId ?? ''}
+                    onChange={(e) => setParams({ subcategory: e.target.value || null })}
+                    className="h-11 w-full rounded-[12px] border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="">{t('filters.all_fem')}</option>
+                    {subcategories.map((subcategory) => (
+                      <option key={subcategory.id} value={subcategory.id}>
+                        {subcategory.name}
+                      </option>
+                    ))}
+                    <option value={SUBCATEGORY_NONE_MARKER}>{t('filters.no_subcategory')}</option>
+                  </select>
+                </div>
+              )}
 
               {showAccount && showAccountFilter && (
                 <div className="flex flex-col gap-2">

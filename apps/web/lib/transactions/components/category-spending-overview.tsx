@@ -44,6 +44,12 @@ type Props = {
   /** Month, for category drill-down hrefs. */
   month: string
   /**
+   * Optional href builder for each slice. The default builds a category
+   * drill-down (`?category=<id>`). The page overrides this to build a
+   * subcategory drill-down when the donut is in "in-category" mode.
+   */
+  getHref?: (slice: CategorySlice) => string | null
+  /**
    * i18n-resolved labels for the editorial chrome. Templates carry `{key}`
    * placeholders that the component fills with runtime values — the page is
    * expected to pass them via `t.raw(...)` so next-intl doesn't try to format
@@ -119,6 +125,7 @@ export const CategorySpendingOverview = ({
   month,
   labels,
   detailHref,
+  getHref,
 }: Props) => {
   const showCents = useShowCents()
   const fmt = (n: number) => (currency === 'ARS' ? formatARS(n, showCents) : formatUSD(n, showCents))
@@ -217,7 +224,7 @@ export const CategorySpendingOverview = ({
               meta lines. */}
           <ul className="flex flex-1 flex-col gap-2.5 min-w-0">
             {named.map((s, i) => {
-              const href = categoryHref(month, currency, s.categoryId)
+              const href = getHref ? getHref(s) : categoryHref(month, currency, s.categoryId)
               const share = Math.round(s.percentage)
               const row = (
                 <div className="flex items-center gap-3 min-w-0">
