@@ -47,6 +47,14 @@ Las **props comunes** salen del contract y NO se renombran ni se re-tipean. Cada
 - **Tamaños** comunes: `sm | md | lg`.
 - **Callbacks de dominio** llevan nombre del dominio, no `onPress`. Ejemplo: `RouteErrorProps.onRetry` (reintentar la operación fallida) no `onPress`. La regla `onPress` aplica a *wrappers genéricos de interacción* (presionar un botón); cuando el callback tiene una semántica explícita ("retry", "submit", "dismiss"), ese nombre gana. Web sigue mapeando la interacción interna a `onClick`.
 
+## Primitivos de overlay (Drawer, Popover, Segmented, Switch)
+
+Cuatro primitivos controlados que comparten contract (`DrawerProps`, `PopoverProps`, `SegmentedProps` + `SegmentedOption`, `SwitchProps`). Web los implementa sobre Radix (`apps/web/components/ui/{drawer,popover,segmented,switch}.tsx`); mobile sobre primitivos RN (`apps/mobile/components/ui/{Drawer,Popover,Segmented,Switch}.tsx`).
+
+- **Controlados, sin estado propio.** El host gobierna `open`/`value`/`checked` y recibe los cambios por callback. Los nombres de callback siguen la convención: cierre del drawer = `onClose`; apertura/cierre del popover = `onOpenChange(next)`; selección/toggle = `onValueChange(next)`.
+- **`ariaLabel` obligatorio** en Drawer, Segmented y Switch (nombre accesible del dialog/grupo/switch).
+- **Divergencia de placement permitida.** El `Popover` web se ancla al trigger con flip/clamp; mobile lo presenta como bottom sheet. La policy garantiza paridad de **API**, no de placement pixel a pixel.
+
 ## Lo que NO entra acá
 
 - **Componentes específicos de una plataforma** (`InstitutionPickerModal` solo-mobile, `FormError` solo-mobile). El contract solo cubre primitivos que existen como par equivalente en ambos lados.

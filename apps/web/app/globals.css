@@ -6,3 +6,31 @@ body {
   color: var(--foreground);
   font-family: var(--font-jakarta), var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
+
+/* ── Overlay primitives (Drawer / Popover) enter & exit animations ────────────
+   Radix toggles [data-state="open"|"closed"] and waits for animationend before
+   unmounting, so both enter and exit animate. */
+@keyframes grana-scrim-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes grana-scrim-out { from { opacity: 1 } to { opacity: 0 } }
+@keyframes grana-drawer-in-right { from { transform: translateX(100%) } to { transform: translateX(0) } }
+@keyframes grana-drawer-out-right { from { transform: translateX(0) } to { transform: translateX(100%) } }
+@keyframes grana-drawer-in-left { from { transform: translateX(-100%) } to { transform: translateX(0) } }
+@keyframes grana-drawer-out-left { from { transform: translateX(0) } to { transform: translateX(-100%) } }
+@keyframes grana-pop-in { from { opacity: 0; transform: translateY(-6px) scale(0.98) } to { opacity: 1; transform: translateY(0) scale(1) } }
+@keyframes grana-pop-out { from { opacity: 1; transform: translateY(0) scale(1) } to { opacity: 0; transform: translateY(-6px) scale(0.98) } }
+
+.grana-scrim[data-state='open'] { animation: grana-scrim-in 0.28s ease both }
+.grana-scrim[data-state='closed'] { animation: grana-scrim-out 0.28s ease both }
+.grana-drawer-right[data-state='open'] { animation: grana-drawer-in-right 0.34s cubic-bezier(0.32, 0.72, 0, 1) both }
+.grana-drawer-right[data-state='closed'] { animation: grana-drawer-out-right 0.34s cubic-bezier(0.32, 0.72, 0, 1) both }
+.grana-drawer-left[data-state='open'] { animation: grana-drawer-in-left 0.34s cubic-bezier(0.32, 0.72, 0, 1) both }
+.grana-drawer-left[data-state='closed'] { animation: grana-drawer-out-left 0.34s cubic-bezier(0.32, 0.72, 0, 1) both }
+.grana-popover[data-state='open'] { animation: grana-pop-in 0.16s ease-out both }
+.grana-popover[data-state='closed'] { animation: grana-pop-out 0.12s ease-in both }
+
+@media (prefers-reduced-motion: reduce) {
+  .grana-scrim,
+  .grana-drawer-right,
+  .grana-drawer-left,
+  .grana-popover { animation-duration: 0.01ms !important }
+}
