@@ -2,12 +2,12 @@
 
 > Depende de `add-custom-recurrence-frequency` (fase 1) y `add-overlay-primitives` (fase 2). No empezar grupos 4–7 hasta que esas fases estén mergeadas.
 
-## Grupo 1 · Drawer wrapper (web) reusando el form actual
+## Grupo 1 · Drawer wrapper (web) reusando el form actual — ✅ slice 1
 
-- [ ] 1.1. Montar `movement-form.tsx` existente dentro del primitivo `Drawer` en `apps/web/app/(app)/transactions/_components/movement-drawer.tsx`. Sin tocar la lógica del form todavía.
-- [ ] 1.2. Estado de apertura del drawer (creación/edición) elevado a un provider o store en el shell de `/transactions`.
-- [ ] 1.3. Wire de openers: FAB, botón "Registrar movimiento" del header, click en `MovementRow` → abrir drawer en vez de navegar (manteniendo la ruta como fallback).
-- [ ] 1.4. Header del drawer: eyebrow + título dinámico (Nuevo/Editar), botón cerrar, botón eliminar (solo edición). Footer: CTA dinámico + "+ Otro".
+- [x] 1.1. Montar `movement-form.tsx` existente dentro del primitivo `Drawer` en `apps/web/app/(app)/transactions/_components/movement-drawer.tsx`. Reusa la lógica intacta; se agregó solo un prop opcional `onSuccess` al form (cerrar+refrescar en vez de navegar).
+- [x] 1.2. Estado de apertura elevado a `MovementDrawerProvider` (context en `lib/transactions/movement-drawer-context.ts`, provider en `_components/movement-drawer.tsx`) montado en el shell de `/transactions`.
+- [x] 1.3. Wire de openers: **FAB** (mobile) y **CTA desktop** (`RegisterMovementButton` en el `PageHeader`) abren el drawer en create; ambos caen a `/transactions/new` si no hay provider (p. ej. dashboard). **Edición** (decisión de producto, opción 3): la fila sigue yendo a la página de **detalle** (reintegros/cuotas), y el botón "Editar" del detalle abre el **drawer de edición** en vez de navegar a `/[txId]/edit` (que queda como fallback).
+- [~] 1.4. Header del drawer: título + botón cerrar ✅. **Pendiente:** eyebrow, título dinámico Nuevo/Editar, botón eliminar (edición) y footer fijo con CTA + "+ Otro" (hoy el CTA es el del form, inline).
 
 ## Grupo 2 · Estructura visual e interacciones del prototipo (web)
 
@@ -31,12 +31,12 @@
 
 - [ ] 5.1. Cuotas card: aparece con cuenta de crédito en Gasto; pills 1×–24×; breakdown "N cuotas de $X · primera vence …". Reusa `registerInstallments`/`registerCardPurchase`.
 - [ ] 5.2. Panel de reintegro: usa `reimbursementDeclarationSchema` anidado en el gasto.
-- [ ] 5.3. Panel de Repetir: freq-pills Semanal/Quincenal/Mensual/Anual/**Personalizado**; el control de Personalizado (`cada N · unidad` + fin) consume `add-custom-recurrence-frequency`. Al guardar, `createRecurrenceFromMovement`.
+- [x] 5.3. Repetir con **Personalizado**: el selector de frecuencia suma "Personalizado", que despliega el control `cada N · unidad` (día/semana/mes/año) + límite de ocurrencias opcional, consumiendo `add-custom-recurrence-frequency`. Al guardar, `createRecurrenceFromMovement` recibe `interval_count`/`interval_unit`/`max_occurrences`. (UI = select + inputs; el restyle a freq-pills hi-fi va con el slice de restyle.)
 
 ## Grupo 6 · "+ Otro", edición y atajos
 
 - [ ] 6.1. "+ Otro": guarda, limpia monto+descripción, mantiene cuenta/fecha/tipo, refoca el monto. Oculto en edición.
-- [ ] 6.2. Modo edición: precarga el movimiento real, `editableFields`, tipo deshabilitado, reglas de borrado, CTA "Guardar cambios".
+- [x] 6.2. Modo edición en el drawer (desde el detalle): reusa el `MovementForm` en modo edit con `editableFields`, tipo deshabilitado, CTA "Guardar cambios". El contexto se arma con `buildMovementEditContext` (compartido entre la página `/edit` y el drawer). Borrado: sigue en el menú del detalle (`TxActionsMenu`) con sus reglas. Cierra+refresca al guardar.
 - [ ] 6.3. Atajos: Esc (popover → drawer) y ⌘/Ctrl+Enter (submit).
 
 ## Grupo 7 · Extracción de lógica compartida + mobile

@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import {
   AlertTriangle,
@@ -18,6 +18,7 @@ import {
   Scale,
   Tag,
   Wallet,
+  X,
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -34,6 +35,12 @@ import { TxDetailGroup } from './tx-detail-group'
 import { TxDetailRow } from './tx-detail-row'
 import { TxInstallmentRows } from './tx-installment-rows'
 import { TxActionsMenu } from './tx-actions-menu'
+import { Drawer } from '@/components/ui/drawer'
+import type { CategoryWithSubcategories } from '@/lib/categories/types'
+import {
+  MovementForm,
+  type MovementEditContext,
+} from '../../new/_components/movement-form'
 
 const formatBalance = (amount: number, currency: 'ARS' | 'USD', showCents: boolean) =>
   currency === 'ARS' ? formatARS(Math.abs(amount), showCents) : formatUSD(Math.abs(amount), showCents)
@@ -143,6 +150,12 @@ type Props = {
   from?: string
   /** Where the back arrow takes the user. Resolved by page.tsx. */
   backHref: string
+  /**
+   * Edit context + categories for the in-context edit drawer. When present, the
+   * "Editar" action opens the drawer instead of navigating to the `/edit` page.
+   */
+  edit?: MovementEditContext | null
+  editCategories?: CategoryWithSubcategories[]
 }
 
 export const GlobalTransactionDetail = ({
@@ -153,9 +166,13 @@ export const GlobalTransactionDetail = ({
   reimbursements = [],
   from,
   backHref,
+  edit,
+  editCategories,
 }: Props) => {
   const showCents = useShowCents()
   const t = useTranslations('transactions')
+  const [editOpen, setEditOpen] = useState(false)
+  const canUseEditDrawer = edit != null && editCategories != null
 
   const reviewLabel: Record<MovementReviewFlag, string> = {
     missing_category: t('review_flags.missing_category'),
@@ -304,6 +321,35 @@ export const GlobalTransactionDetail = ({
 
   return (
     <div className="flex flex-col gap-4">
+      {canUseEditDrawer && (
+        <Drawer
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          ariaLabel={t('edit_title')}
+        >
+          <div className="flex items-center justify-between border-b border-border bg-card px-6 py-5">
+            <h2 className="text-xl font-extrabold tracking-tight text-text">
+              {t('edit_title')}
+            </h2>
+            <button
+              type="button"
+              onClick={() => setEditOpen(false)}
+              aria-label={t('drawer.close')}
+              className="inline-flex size-9 items-center justify-center rounded-[11px] border border-border text-text-muted transition-colors hover:bg-border-soft"
+            >
+              <X className="size-4" aria-hidden />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            <MovementForm
+              accounts={[]}
+              categories={editCategories!}
+              edit={edit!}
+              onSuccess={() => setEditOpen(false)}
+            />
+          </div>
+        </Drawer>
+      )}
       <TxHeader
         backHref={backHref}
         backLabel={t('back_label')}
@@ -316,6 +362,7 @@ export const GlobalTransactionDetail = ({
               canDelete={canDelete}
               isParent={transaction.is_parent}
               isCardPayment={!!payment}
+              onEdit={canUseEditDrawer ? () => setEditOpen(true) : undefined}
             />
           )
         }

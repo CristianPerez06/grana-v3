@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Storybook build output (regenerable artifact).
+    "storybook-static/**",
   ]),
   ...storybook.configs["flat/recommended"]
 ]);

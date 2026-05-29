@@ -882,6 +882,9 @@
       "register_movement": "Registrar movimiento",
       "register_exchange": "Registrar cambio"
     },
+    "drawer": {
+      "close": "Cerrar"
+    },
     "confirmations": {
       "delete_title": "¿Eliminar este movimiento?",
       "delete_body": "Esta acción no se puede deshacer.",
@@ -989,7 +992,8 @@
         "month": "{count, plural, one {mes} other {meses}}",
         "year": "{count, plural, one {año} other {años}}"
       },
-      "end_after_occurrences": "{count, plural, one {Termina tras # ocurrencia} other {Termina tras # ocurrencias}}"
+      "end_after_occurrences": "{count, plural, one {Termina tras # ocurrencia} other {Termina tras # ocurrencias}}",
+      "end_label": "Límite de ocurrencias (opcional)"
     },
     "statuses": {
       "active": "Activa",

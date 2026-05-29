@@ -10,6 +10,7 @@ import {
 } from '@/lib/transactions/queries'
 import { toFinancialMovement } from '@/lib/transactions/movements'
 import { getRecurrenceLinkForTransaction } from '@/lib/recurrences/queries'
+import { buildMovementEditContext } from '@/lib/transactions/edit-context'
 import { GlobalTransactionDetail } from './_components/global-transaction-detail'
 
 type Props = {
@@ -53,17 +54,21 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
   const reimbursementExpenseId =
     transaction.type === 'expense' ? (transaction.parent_id ?? transaction.id) : null
 
-  const [installmentFamily, recurrenceLink, reimbursements] = await Promise.all([
-    transaction.is_parent
-      ? getInstallmentFamily(transaction.id)
-      : transaction.parent_id
-        ? getInstallmentFamily(transaction.parent_id)
-        : Promise.resolve(null),
-    getRecurrenceLinkForTransaction(transaction.id),
-    reimbursementExpenseId
-      ? getReimbursementsForExpense(reimbursementExpenseId)
-      : Promise.resolve([]),
-  ])
+  const detailHref = `/transactions/${txId}${from ? `?from=${encodeURIComponent(from)}` : ''}`
+
+  const [installmentFamily, recurrenceLink, reimbursements, editData] =
+    await Promise.all([
+      transaction.is_parent
+        ? getInstallmentFamily(transaction.id)
+        : transaction.parent_id
+          ? getInstallmentFamily(transaction.parent_id)
+          : Promise.resolve(null),
+      getRecurrenceLinkForTransaction(transaction.id),
+      reimbursementExpenseId
+        ? getReimbursementsForExpense(reimbursementExpenseId)
+        : Promise.resolve([]),
+      buildMovementEditContext(txId, detailHref),
+    ])
   const movement = toFinancialMovement(transaction)
 
   return (
@@ -89,6 +94,8 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
         reimbursements={reimbursements}
         from={from}
         backHref={backHref}
+        edit={editData?.edit ?? null}
+        editCategories={editData?.categories}
       />
     </div>
   )
