@@ -164,6 +164,8 @@ describe('movementMatchesText', () => {
     category_name: null,
     category_icon: null,
     category_color: null,
+    subcategory_id: null,
+    subcategory_name: null,
     destination_account_id: 'account-2',
     destination_account_name: 'Efectivo',
     detail_href: '/accounts/account-1/transactions/tx-1',

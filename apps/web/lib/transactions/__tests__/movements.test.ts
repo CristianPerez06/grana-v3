@@ -123,4 +123,31 @@ describe('toFinancialMovement', () => {
       detail_href: '/transactions/11111111-1111-1111-1111-111111111111',
     })
   })
+
+  it('carries subcategory id and name when assigned', () => {
+    const movement = toFinancialMovement(baseTx({
+      type: 'expense',
+      category_id: 'cat-1',
+      subcategory_id: 'subcat-1',
+      category: { id: 'cat-1', name: 'Comida', canonical_name: 'comida', icon: '🍔', color: '#B56A5A' },
+      subcategory: {
+        id: 'subcat-1',
+        name: 'Almuerzo',
+        canonical_name: 'almuerzo',
+        category_id: 'cat-1',
+      },
+    }))
+
+    expect(movement).toMatchObject({
+      subcategory_id: 'subcat-1',
+      subcategory_name: 'Almuerzo',
+    })
+  })
+
+  it('leaves subcategory null when not assigned', () => {
+    const movement = toFinancialMovement(baseTx({ type: 'expense' }))
+
+    expect(movement.subcategory_id).toBeNull()
+    expect(movement.subcategory_name).toBeNull()
+  })
 })
