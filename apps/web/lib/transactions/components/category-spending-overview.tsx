@@ -1,14 +1,11 @@
 'use client'
 
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
-import type { CategoryBreakdown, CategorySlice } from '@grana/money-logic'
+import type { CategoryBreakdown, CategorySlice, SubcategoryBreakdown } from '@grana/money-logic'
 
-// Replace `{key}` placeholders in a template. ICU-free on purpose: the page
-// resolves the raw template via `t.raw(...)` so next-intl doesn't try to format
-// it server-side (where the runtime values aren't known yet), and we do the
-// substitution here once the values exist.
 const fillTemplate = (template: string, values: Record<string, string | number>): string => {
   let out = template
   for (const [key, value] of Object.entries(values)) {
@@ -18,100 +15,154 @@ const fillTemplate = (template: string, values: Record<string, string | number>)
 }
 import { useShowCents } from '@/lib/preferences-context'
 
-// Hybrid spending-by-category overview: a large static SVG donut (~200px) plus
-// an enriched ranking, weighted by net spend, for ONE currency at a time
-// (bimoneda: ARS and USD are never merged — the user toggles via the page).
-// Donut math: circle of circumference 100 (r = 15.915) so each slice's
-// dasharray maps 1:1 to its percentage; dashoffset positions it after the
-// previous slice; rotate -90° to start at 12 o'clock.
-
 const DONUT_FALLBACK = '#9CA3AF'
 const RANKING_TOP = 5
+// Max subcategory slices pre-created in the SVG pool (keeps DOM stable).
+const MAX_SUB_SLICES = 8
+// Lock duration (ms) matching the CSS transition so clicks mid-animation are ignored.
+const DRILL_LOCK_MS = 380
+
+// ── Color tinting ─────────────────────────────────────────────────────────────
+
+function hexToHSL(hex: string): { h: number; s: number; l: number } {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  if (!result) return { h: 0, s: 0, l: 50 }
+  const r = parseInt(result[1], 16) / 255
+  const g = parseInt(result[2], 16) / 255
+  const b = parseInt(result[3], 16) / 255
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const l = (max + min) / 2
+  if (max === min) return { h: 0, s: 0, l: l * 100 }
+  const d = max - min
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+  let h = 0
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6
+  else if (max === g) h = ((b - r) / d + 2) / 6
+  else h = ((r - g) / d + 4) / 6
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) }
+}
+
+// Generates N monochromatic tints of the parent color, varying lightness from
+// 70% (lightest, largest slice) to 34% (darkest, smallest slice), clamping
+// saturation at 62% so colours don't blow out on bright hues.
+function generateSubTints(parentColor: string, n: number): string[] {
+  if (n === 0) return []
+  const { h, s } = hexToHSL(parentColor)
+  const sc = Math.min(s, 62)
+  if (n === 1) return [`hsl(${h} ${sc}% 52%)`]
+  return Array.from({ length: n }, (_, j) => {
+    const l = 70 - (70 - 34) * (j / (n - 1))
+    return `hsl(${h} ${sc}% ${Math.round(l)}%)`
+  })
+}
+
+// ── Types ────────────────────────────────────────────────────────────────────
 
 type Props = {
   monthLabel: string
-  /** href to the previous month — drives the `‹` arrow next to the label. */
   prevHref: string
-  /** href to the next month — drives the `›` arrow next to the label. */
   nextHref: string
-  /** Selected currency + its breakdown. */
   currency: 'ARS' | 'USD'
   breakdown: CategoryBreakdown
-  /** Currency toggle: shown only when there is USD spend to switch to. */
   hasUsd: boolean
   arsHref: string
   usdHref: string
-  /** Month, for category drill-down hrefs. */
   month: string
-  /**
-   * Optional href builder for each slice. The default builds a category
-   * drill-down (`?category=<id>`). The page overrides this to build a
-   * subcategory drill-down when the donut is in "in-category" mode.
-   */
   getHref?: (slice: CategorySlice) => string | null
   /**
-   * i18n-resolved labels for the editorial chrome. Templates carry `{key}`
-   * placeholders that the component fills with runtime values — the page is
-   * expected to pass them via `t.raw(...)` so next-intl doesn't try to format
-   * them server-side. Plain labels are static strings.
+   * Pre-fetched subcategory breakdowns by category id, for both currencies.
+   * When present, clicking a category with sub-data triggers an animated in-situ
+   * drill-down instead of navigating to a new URL.
    */
+  subBreakdownsByCategory?: Record<string, { ARS: SubcategoryBreakdown; USD: SubcategoryBreakdown }>
   labels: {
     eyebrow: string
     centerLabel: string
-    /** Template: `"en {count} categorías"`. */
     categoriesCaptionTemplate: string
     offLedgerNote: string
     seeDetail: string
-    /** Template: `"+ {count} categorías más"`. */
     othersLabelTemplate: string
     seeAllCategories: string
     emptyMessage: string
   }
-  /**
-   * Optional href for the "Ver el detalle →" link. When absent (current
-   * default), the link is not rendered — we'd rather omit it than promise
-   * navigation that doesn't add value. Reintroduce once a real drill-down
-   * destination exists (e.g. an expanded breakdown page).
-   */
   detailHref?: string
 }
 
 const categoryHref = (month: string, currency: 'ARS' | 'USD', categoryId: string | null) =>
   categoryId ? `/transactions?month=${month}&category=${categoryId}&currency=${currency}` : null
 
-const Donut = ({ slices, size = 200 }: { slices: CategorySlice[]; size?: number }) => (
-  <svg
-    viewBox="0 0 36 36"
-    width={size}
-    height={size}
-    role="img"
-    className="shrink-0"
-    aria-hidden
-  >
-    <circle
-      cx="18"
-      cy="18"
-      r="15.915"
-      fill="none"
-      stroke="var(--border-soft, #EEF1F4)"
-      strokeWidth="4"
-    />
-    {slices.map((s, i) => (
+// ── Animated donut SVG ────────────────────────────────────────────────────────
+
+type DonutProps = {
+  parentSlices: CategorySlice[]
+  childSlices: Array<{ percentage: number; offset: number; color: string }>
+  childrenVisible: boolean
+  size?: number
+}
+
+const AnimatedDonut = ({ parentSlices, childSlices, childrenVisible, size = 200 }: DonutProps) => {
+  const arcStyle: React.CSSProperties = {
+    transition:
+      'stroke-dasharray .34s cubic-bezier(.65,0,.35,1), stroke-dashoffset .34s cubic-bezier(.65,0,.35,1), opacity .26s ease',
+  }
+
+  return (
+    <svg viewBox="0 0 36 36" width={size} height={size} role="img" className="shrink-0" aria-hidden>
+      {/* Track ring */}
       <circle
-        key={s.categoryId ?? `otros-${i}`}
         cx="18"
         cy="18"
         r="15.915"
         fill="none"
-        stroke={s.color ?? DONUT_FALLBACK}
+        stroke="var(--border-soft, #EEF1F4)"
         strokeWidth="4"
-        strokeDasharray={`${s.percentage} ${100 - s.percentage}`}
-        strokeDashoffset={-s.offset}
-        transform="rotate(-90 18 18)"
       />
-    ))}
-  </svg>
-)
+
+      {/* Parent slices — fade out on drill-in */}
+      {parentSlices.map((s, i) => (
+        <circle
+          key={s.categoryId ?? `otros-${i}`}
+          cx="18"
+          cy="18"
+          r="15.915"
+          fill="none"
+          stroke={s.color ?? DONUT_FALLBACK}
+          strokeWidth="4"
+          strokeDasharray={`${s.percentage} ${100 - s.percentage}`}
+          strokeDashoffset={-s.offset}
+          transform="rotate(-90 18 18)"
+          style={{ ...arcStyle, opacity: childrenVisible ? 0 : 1 }}
+        />
+      ))}
+
+      {/* Child slices pool — pre-created, animate from/to sweep 0 */}
+      {Array.from({ length: MAX_SUB_SLICES }, (_, i) => {
+        const s = childSlices[i]
+        const pct = s && childrenVisible ? s.percentage : 0
+        const off = s && childrenVisible ? s.offset : 0
+        const color = s ? s.color : 'transparent'
+        return (
+          <circle
+            key={`sub-${i}`}
+            cx="18"
+            cy="18"
+            r="15.915"
+            fill="none"
+            stroke={color}
+            strokeWidth="4"
+            strokeDasharray={`${pct} ${100 - pct}`}
+            strokeDashoffset={-off}
+            transform="rotate(-90 18 18)"
+            style={{ ...arcStyle, opacity: childrenVisible && s ? 1 : 0 }}
+          />
+        )
+      })}
+    </svg>
+  )
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export const CategorySpendingOverview = ({
   monthLabel,
@@ -126,31 +177,146 @@ export const CategorySpendingOverview = ({
   labels,
   detailHref,
   getHref,
+  subBreakdownsByCategory,
 }: Props) => {
   const showCents = useShowCents()
   const fmt = (n: number) => (currency === 'ARS' ? formatARS(n, showCents) : formatUSD(n, showCents))
 
-  // Collapse the tail beyond RANKING_TOP into a single "+ N categorías más"
-  // line so the ranking stays scannable at ~5 rows.
+  // ── Drill-down state ───────────────────────────────────────────────────────
+  const [drilledId, setDrilledId] = useState<string | null>(null)
+  const [rankingVisible, setRankingVisible] = useState(true)
+  const busyRef = useRef(false)
+
+  // Resolve the drilled category slice and its sub-breakdown.
+  const drilledSlice = drilledId ? breakdown.slices.find((s) => s.categoryId === drilledId) ?? null : null
+  const drilledSub = drilledId && subBreakdownsByCategory
+    ? (subBreakdownsByCategory[drilledId]?.[currency] ?? null)
+    : null
+
+  // Child slices with tinted colors derived from the parent color.
+  const childSlices = useMemo(() => {
+    if (!drilledSlice || !drilledSub || drilledSub.slices.length === 0) return []
+    const tints = generateSubTints(drilledSlice.color ?? DONUT_FALLBACK, drilledSub.slices.length)
+    return drilledSub.slices.map((s, i) => ({
+      percentage: s.percentage,
+      offset: s.offset,
+      color: tints[i] ?? DONUT_FALLBACK,
+      label: s.label,
+      value: s.value,
+    }))
+  }, [drilledSlice, drilledSub])
+
+  const drillIn = useCallback(
+    (categoryId: string) => {
+      if (busyRef.current) return
+      if (!subBreakdownsByCategory) return
+      const sub = subBreakdownsByCategory[categoryId]?.[currency]
+      if (!sub || sub.slices.length === 0) return // not drillable
+
+      busyRef.current = true
+      setRankingVisible(false)
+      setTimeout(() => {
+        setDrilledId(categoryId)
+        setRankingVisible(true)
+        setTimeout(() => { busyRef.current = false }, DRILL_LOCK_MS)
+      }, 170) // crossfade: fade out → swap → fade in
+    },
+    [subBreakdownsByCategory, currency],
+  )
+
+  const drillOut = useCallback(() => {
+    if (busyRef.current) return
+    busyRef.current = true
+    setRankingVisible(false)
+    setTimeout(() => {
+      setDrilledId(null)
+      setRankingVisible(true)
+      setTimeout(() => { busyRef.current = false }, DRILL_LOCK_MS)
+    }, 170)
+  }, [])
+
+  // Reset drill when currency changes (sub-data reloads for the new currency,
+  // so the previously drilled view no longer maps cleanly). Mirrors the
+  // URL-sync pattern used elsewhere in the module.
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setDrilledId(null)
+    setRankingVisible(true)
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [currency])
+
+  // ── Ranking rows ───────────────────────────────────────────────────────────
   const named = breakdown.slices.slice(0, RANKING_TOP)
   const tail = breakdown.slices.slice(RANKING_TOP)
   const tailValue = tail.reduce((acc, s) => acc + s.value, 0)
   const tailPct = tail.reduce((acc, s) => acc + s.percentage, 0)
+
+  // ── Breadcrumb ─────────────────────────────────────────────────────────────
+  const breadcrumb = drilledId && drilledSlice ? (
+    <span className="text-[11px] font-semibold uppercase tracking-[0.08em]">
+      <button
+        type="button"
+        onClick={drillOut}
+        className="text-slate hover:underline cursor-pointer"
+      >
+        {labels.eyebrow}
+      </button>
+      <span className="mx-1 text-text-soft">›</span>
+      <span className="text-text">{drilledSlice.label}</span>
+    </span>
+  ) : (
+    <span
+      id="spending-overview-title"
+      className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-soft"
+    >
+      {labels.eyebrow}
+    </span>
+  )
+
+  // ── Center label ───────────────────────────────────────────────────────────
+  const centerLabel = drilledSlice && drilledSub ? (
+    <>
+      <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-soft leading-none">
+        {drilledSlice.label}
+      </span>
+      <span className="text-2xl font-bold tabular-nums tracking-[-0.025em] text-text leading-none mt-0.5">
+        {fmt(drilledSub.total)}
+      </span>
+      <span className="mt-1 text-[10px] text-text-soft leading-none">
+        {drilledSub.slices.length} subcategorías
+      </span>
+      <button
+        type="button"
+        onClick={drillOut}
+        className="mt-1 text-[10px] font-semibold text-slate hover:underline leading-none"
+        aria-label="Volver a categorías"
+      >
+        ‹ Volver
+      </button>
+    </>
+  ) : (
+    <>
+      <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-soft">
+        {labels.centerLabel}
+      </span>
+      <span className="text-2xl font-bold tabular-nums tracking-[-0.025em] text-text leading-none">
+        {fmt(breakdown.total)}
+      </span>
+      <span className="mt-1 text-[11px] text-text-soft">
+        {fillTemplate(labels.categoriesCaptionTemplate, { count: breakdown.slices.length })}
+      </span>
+    </>
+  )
 
   return (
     <section
       aria-labelledby="spending-overview-title"
       className="flex flex-col gap-5 rounded-2xl border border-border bg-card px-7 py-6"
     >
-      {/* Header: eyebrow + month nav (with arrows), ARS/USD switcher on the right */}
+      {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1.5 min-w-0">
-          <span
-            id="spending-overview-title"
-            className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-soft"
-          >
-            {labels.eyebrow}
-          </span>
+          {breadcrumb}
           <div className="flex items-center gap-2">
             <Link
               href={prevHref}
@@ -201,87 +367,135 @@ export const CategorySpendingOverview = ({
         <p className="py-6 text-center text-sm text-muted-foreground">{labels.emptyMessage}</p>
       ) : (
         <div className="flex flex-col items-center gap-7 sm:flex-row sm:items-center">
-          {/* Donut with centered amount + categories caption */}
-          <div className="relative flex shrink-0 items-center justify-center">
-            <Donut slices={breakdown.slices} size={200} />
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-soft">
-                {labels.centerLabel}
-              </span>
-              <span className="text-2xl font-bold tabular-nums tracking-[-0.025em] text-text leading-none">
-                {fmt(breakdown.total)}
-              </span>
-              <span className="mt-1 text-[11px] text-text-soft">
-                {fillTemplate(labels.categoriesCaptionTemplate, {
-                  count: breakdown.slices.length,
-                })}
-              </span>
+          {/* Donut + center label */}
+          <div
+            className="relative flex shrink-0 items-center justify-center cursor-pointer"
+            onClick={drilledId ? drillOut : undefined}
+            role={drilledId ? 'button' : undefined}
+            aria-label={drilledId ? 'Volver a categorías' : undefined}
+          >
+            <AnimatedDonut
+              parentSlices={breakdown.slices}
+              childSlices={childSlices}
+              childrenVisible={drilledId !== null}
+              size={200}
+            />
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-0.5">
+              {centerLabel}
             </div>
           </div>
 
-          {/* Compact ranking: one row per slice. Share % sits inline next to
-              the amount so we don't grow the card vertically with stacked
-              meta lines. */}
-          <ul className="flex flex-1 flex-col gap-2.5 min-w-0">
-            {named.map((s, i) => {
-              const href = getHref ? getHref(s) : categoryHref(month, currency, s.categoryId)
-              const share = Math.round(s.percentage)
-              const row = (
-                <div className="flex items-center gap-3 min-w-0">
-                  <span
-                    className="size-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: s.color ?? DONUT_FALLBACK }}
-                  />
-                  <span className="truncate text-sm font-medium text-text flex-1">
-                    {s.icon ? `${s.icon} ` : ''}
-                    {s.label}
-                  </span>
-                  <span className="shrink-0 w-10 text-right text-xs text-text-soft tabular-nums">
-                    {share}%
-                  </span>
-                  <span className="shrink-0 text-sm font-semibold tabular-nums tracking-[-0.01em] text-text">
-                    {fmt(s.value)}
-                  </span>
-                </div>
-              )
-              return (
-                <li key={s.categoryId ?? `otros-${i}`}>
-                  {href ? (
-                    <Link
-                      href={href}
-                      className="block rounded-md hover:bg-muted/40 transition-colors"
-                    >
-                      {row}
-                    </Link>
-                  ) : (
-                    row
-                  )}
+          {/* Ranking */}
+          <ul
+            className="flex flex-1 flex-col gap-2.5 min-w-0"
+            style={{
+              opacity: rankingVisible ? 1 : 0,
+              transition: 'opacity .18s ease',
+            }}
+          >
+            {drilledId && drilledSub ? (
+              // Subcategory ranking
+              childSlices.map((s, i) => (
+                <li key={`sub-rank-${i}`}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: s.color }}
+                    />
+                    <span className="truncate text-sm font-medium text-text flex-1">
+                      {s.label}
+                    </span>
+                    <span className="shrink-0 w-10 text-right text-xs text-text-soft tabular-nums">
+                      {Math.round(s.percentage)}%
+                    </span>
+                    <span className="shrink-0 text-sm font-semibold tabular-nums tracking-[-0.01em] text-text">
+                      {fmt(s.value)}
+                    </span>
+                  </div>
                 </li>
-              )
-            })}
+              ))
+            ) : (
+              // Category ranking
+              <>
+                {named.map((s, i) => {
+                  const href = getHref ? getHref(s) : categoryHref(month, currency, s.categoryId)
+                  const share = Math.round(s.percentage)
+                  const isDrillable =
+                    subBreakdownsByCategory && s.categoryId
+                      ? (subBreakdownsByCategory[s.categoryId]?.[currency]?.slices.length ?? 0) > 0
+                      : false
 
-            {tail.length > 0 && (
-              <li>
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="size-2.5 shrink-0 rounded-full bg-border" />
-                  <span className="truncate text-sm font-medium text-text-muted flex-1">
-                    {fillTemplate(labels.othersLabelTemplate, { count: tail.length })}
-                  </span>
-                  <span className="shrink-0 w-10 text-right text-xs text-text-soft tabular-nums">
-                    {Math.round(tailPct)}%
-                  </span>
-                  <span className="shrink-0 text-sm font-semibold tabular-nums text-text-muted">
-                    {fmt(tailValue)}
-                  </span>
-                </div>
-              </li>
+                  const row = (
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className="size-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: s.color ?? DONUT_FALLBACK }}
+                      />
+                      <span className="truncate text-sm font-medium text-text flex-1">
+                        {s.icon ? `${s.icon} ` : ''}
+                        {s.label}
+                        {isDrillable && (
+                          <span className="ml-1 text-text-soft text-xs">›</span>
+                        )}
+                      </span>
+                      <span className="shrink-0 w-10 text-right text-xs text-text-soft tabular-nums">
+                        {share}%
+                      </span>
+                      <span className="shrink-0 text-sm font-semibold tabular-nums tracking-[-0.01em] text-text">
+                        {fmt(s.value)}
+                      </span>
+                    </div>
+                  )
+
+                  return (
+                    <li key={s.categoryId ?? `otros-${i}`}>
+                      {isDrillable && s.categoryId ? (
+                        <button
+                          type="button"
+                          onClick={() => drillIn(s.categoryId!)}
+                          className="block w-full rounded-md hover:bg-muted/40 transition-colors text-left"
+                          aria-label={`Ver subcategorías de ${s.label}`}
+                          aria-expanded={drilledId === s.categoryId}
+                        >
+                          {row}
+                        </button>
+                      ) : href ? (
+                        <Link
+                          href={href}
+                          className="block rounded-md hover:bg-muted/40 transition-colors"
+                        >
+                          {row}
+                        </Link>
+                      ) : (
+                        row
+                      )}
+                    </li>
+                  )
+                })}
+
+                {tail.length > 0 && (
+                  <li>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="size-2.5 shrink-0 rounded-full bg-border" />
+                      <span className="truncate text-sm font-medium text-text-muted flex-1">
+                        {fillTemplate(labels.othersLabelTemplate, { count: tail.length })}
+                      </span>
+                      <span className="shrink-0 w-10 text-right text-xs text-text-soft tabular-nums">
+                        {Math.round(tailPct)}%
+                      </span>
+                      <span className="shrink-0 text-sm font-semibold tabular-nums text-text-muted">
+                        {fmt(tailValue)}
+                      </span>
+                    </div>
+                  </li>
+                )}
+              </>
             )}
           </ul>
         </div>
       )}
 
-      {/* Footer: off-ledger note. The see-detail link is rendered only when
-          a real drill-down destination is passed in. */}
+      {/* Footer */}
       <div
         className={`flex items-center gap-2 border-t border-border-soft pt-4 ${
           detailHref ? 'justify-between' : ''
