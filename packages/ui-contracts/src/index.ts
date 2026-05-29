@@ -506,3 +506,88 @@ export function resolveAccountAvatar(
 
   return { colorKey, colorOverride, iconKey, monogram }
 }
+
+// ── Drawer ────────────────────────────────────────────────────────────────────
+
+export type DrawerSide = 'right' | 'left'
+
+/**
+ * Side panel that slides in over a scrim. Controlled (`open` + `onClose`).
+ * Web closes on scrim click and Esc, traps focus while open and restores it on
+ * close. Mobile presents it as a full-height native modal sliding from `side`.
+ */
+export type DrawerProps = {
+  open: boolean
+  onClose: () => void
+  /** Side the panel is anchored to. Defaults to 'right'. */
+  side?: DrawerSide
+  /** Web panel width in px. Defaults to 528. Mobile may render full-width. */
+  widthPx?: number
+  /** Accessible name for the dialog. */
+  ariaLabel: string
+  children?: ReactNode
+  className?: string
+}
+
+// ── Popover ─────────────────────────────────────────────────────────────────
+
+export type PopoverAlign = 'start' | 'center' | 'end'
+
+/**
+ * Content anchored to a `trigger`. Controlled (`open` + `onOpenChange`). Web
+ * positions it under the trigger and flips above when it doesn't fit, closing
+ * on outside click, Esc and scroll. Mobile presents the content as a sheet
+ * anchored to the trigger (API parity; exact placement may differ per platform
+ * per the Web↔Mobile policy).
+ */
+export type PopoverProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  /** The anchor element the popover is attached to. */
+  trigger: ReactNode
+  /** Alignment of the content relative to the trigger. Defaults to 'start'. */
+  align?: PopoverAlign
+  /** Min content width in px. Defaults to 280. */
+  minWidthPx?: number
+  /** Max content width in px. Defaults to 340. */
+  maxWidthPx?: number
+  children?: ReactNode
+  className?: string
+}
+
+// ── Segmented ─────────────────────────────────────────────────────────────────
+
+export type SegmentedOption = {
+  value: string
+  label: string
+  /** A disabled option cannot be selected; it never fires onValueChange. */
+  disabled?: boolean
+}
+
+/**
+ * Single-select segmented control. Controlled (`value` + `onValueChange`).
+ * Exactly one option is active and visually elevated.
+ */
+export type SegmentedProps = {
+  value: string
+  options: SegmentedOption[]
+  onValueChange: (value: string) => void
+  /** Accessible name for the group (radiogroup). */
+  ariaLabel: string
+  className?: string
+}
+
+// ── Switch ──────────────────────────────────────────────────────────────────
+
+/**
+ * On/off switch. Controlled (`checked` + `onValueChange`). `on` uses the
+ * positive accent. Respects `disabled` (never fires onValueChange).
+ */
+export type SwitchProps = {
+  checked: boolean
+  onValueChange: (next: boolean) => void
+  disabled?: boolean
+  /** Accessible name for the switch. */
+  ariaLabel: string
+  className?: string
+}
