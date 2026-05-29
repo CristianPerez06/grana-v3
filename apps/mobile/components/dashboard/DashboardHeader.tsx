@@ -1,11 +1,10 @@
 import { Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocale, useT } from '../../lib/locale-context'
+import { useProfileFirstName } from '../../lib/dashboard/queries'
 import { EyeMaskToggle } from './EyeMaskToggle'
 
 type Props = {
-  /** First name from the profile, or empty string for the anonymous fallback. */
-  name: string
   /** Today's accounting date as `YYYY-MM-DD`, derived from `getTodayAR()`. */
   todayISO: string
 }
@@ -20,10 +19,14 @@ function formatToday(todayISO: string, localeCode: string): string {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1)
 }
 
-export const DashboardHeader = ({ name, todayISO }: Props) => {
+export const DashboardHeader = ({ todayISO }: Props) => {
   const t = useT()
   const locale = useLocale()
   const localeCode = locale === 'en' ? 'en-US' : 'es-AR'
+
+  // The header paints from the first frame with the anon greeting; the name
+  // query resolves async (and may fail) without ever blocking the header.
+  const { data: name } = useProfileFirstName()
 
   const greeting = name
     ? t('dashboard.welcome', { name })
