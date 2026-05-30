@@ -18,7 +18,6 @@ import {
   Scale,
   Tag,
   Wallet,
-  X,
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -327,27 +326,14 @@ export const GlobalTransactionDetail = ({
           onClose={() => setEditOpen(false)}
           ariaLabel={t('edit_title')}
         >
-          <div className="flex items-center justify-between border-b border-border bg-card px-6 py-5">
-            <h2 className="text-xl font-extrabold tracking-tight text-text">
-              {t('edit_title')}
-            </h2>
-            <button
-              type="button"
-              onClick={() => setEditOpen(false)}
-              aria-label={t('drawer.close')}
-              className="inline-flex size-9 items-center justify-center rounded-[11px] border border-border text-text-muted transition-colors hover:bg-border-soft"
-            >
-              <X className="size-4" aria-hidden />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto px-6 py-6">
-            <MovementForm
-              accounts={[]}
-              categories={editCategories!}
-              edit={edit!}
-              onSuccess={() => setEditOpen(false)}
-            />
-          </div>
+          <MovementForm
+            variant="drawer"
+            accounts={[]}
+            categories={editCategories!}
+            edit={edit!}
+            onClose={() => setEditOpen(false)}
+            onSuccess={() => setEditOpen(false)}
+          />
         </Drawer>
       )}
       <TxHeader

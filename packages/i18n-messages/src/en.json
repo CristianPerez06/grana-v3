@@ -883,7 +883,38 @@
       "register_exchange": "Record exchange"
     },
     "drawer": {
-      "close": "Close"
+      "close": "Close",
+      "eyebrow_new": "New",
+      "eyebrow_edit": "Edit",
+      "account_from": "From",
+      "account_to": "To account",
+      "account_to_adjust": "Account to adjust",
+      "account_toward": "To",
+      "credit_badge": "Credit",
+      "credit_hint": "Uses the card's available balance",
+      "swap": "Swap accounts",
+      "today": "Today",
+      "whole_category": "Whole category",
+      "helper_income": "+ Goes into your accounts",
+      "helper_adjustment": "Positive raises the balance · negative lowers it",
+      "adjust_banner_title": "Manual adjustment.",
+      "adjust_banner_body": "Correct the gap between your real balance and Grana's. It doesn't create an income or an expense.",
+      "adjust_reason": "Adjustment reason",
+      "adjust_reason_placeholder": "E.g. There was less cash than recorded",
+      "adjust_reason_required": "Required — helps make sense of the adjustment later.",
+      "balance_will_be": "Balance will be",
+      "installments_breakdown": "{count} installments of ${amount}",
+      "repeat_note": "Grana will ask you to confirm before logging it each time.",
+      "repeat_question": "How often?",
+      "add_another": "Another",
+      "cta": {
+        "expense": "Register expense",
+        "income": "Register income",
+        "transfer": "Register transfer",
+        "adjustment": "Register adjustment",
+        "exchange": "Register exchange"
+      },
+      "repeat_until": "Repeat until (optional)"
     },
     "confirmations": {
       "delete_title": "Delete this transaction?",
