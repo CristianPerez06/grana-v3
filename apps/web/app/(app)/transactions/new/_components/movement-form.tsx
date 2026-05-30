@@ -1,8 +1,30 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { forwardRef, useEffect, useRef, useState, useTransition, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import {
+  ArrowLeftRight,
+  Calendar,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  CreditCard,
+  FileText,
+  Plus,
+  Repeat,
+  Scale,
+  Tag,
+  Undo2,
+  Wallet,
+  X,
+} from 'lucide-react'
+import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
+import { AccountAvatar } from '@/components/ui/account-avatar'
+import { Segmented } from '@/components/ui/segmented'
+import { Switch } from '@/components/ui/switch'
+import { Popover } from '@/components/ui/popover'
 import { getTodayAR } from '@/lib/date'
 import {
   createIncome,
@@ -24,7 +46,6 @@ import { createRecurrenceFromMovement } from '@/app/_actions/recurrences'
 import { suggestCategoryFromHistory } from '@/app/_actions/category-suggestion'
 import { Money, parseMoneyInput } from '@grana/validation'
 import {
-  getEditableFields,
   suggestReimbursementAmount,
   type EditableFields,
   type MovementType,
@@ -56,6 +77,8 @@ export type MovementFormAccount = {
   balances: Record<'ARS' | 'USD', number>
   /** Owning institution, used to default the reimbursement credit-to account. */
   institutionId: string | null
+  /** Visual identity resolved server-side; drives the row avatar in the drawer. */
+  avatar?: ResolvedAccountAvatar
 }
 
 /**
@@ -106,6 +129,15 @@ type Props = {
    * navigating to `returnHref`. Page usage omits it and keeps navigating.
    */
   onSuccess?: () => void
+  /**
+   * Presentation chrome. `'drawer'` renders the hi-fi shell (fixed header with
+   * eyebrow/title/close + scroll body + fixed footer CTA). `'page'` (default)
+   * renders the same body inline for the standalone `/new` and `/edit` routes,
+   * where the page already provides its own header.
+   */
+  variant?: 'page' | 'drawer'
+  /** Drawer chrome: close handler for the header ✕ and footer cancel paths. */
+  onClose?: () => void
 }
 
 const CURRENCY_SYMBOL: Record<'ARS' | 'USD', string> = { ARS: '$', USD: 'U$D' }
@@ -116,6 +148,75 @@ const INSTALLMENT_OPTIONS = [1, 2, 3, 6, 9, 12, 18, 24]
 const eligibleFor = (accounts: MovementFormAccount[], tab: Tab) =>
   tab === 'expense' ? accounts : accounts.filter((a) => a.type !== 'credit')
 
+// Field-bg literal: the canonical drawer field surface (#FAFBFC sits between
+// white card and the page bg; no token maps to it exactly — see HANDOFF tokens).
+const FIELD_BG = '#FAFBFC'
+const ROW_HOVER = '#FBFCFD'
+const ROW_DIVIDER = '#F1F3F6'
+
+const fmtBalance = (n: number) =>
+  n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+
+// One clickable row inside a field-group card: icon chip + label/value stack +
+// optional trailing node + chevron affordance. Used as a Popover trigger, so it
+// forwards the ref/props Radix injects.
+type RowProps = {
+  icon: ReactNode
+  label: string
+  value: ReactNode
+  hint?: ReactNode
+  trailing?: ReactNode
+  disabled?: boolean
+}
+// Omit the native button `value` attr so our richer `value: ReactNode` wins.
+const FieldRow = forwardRef<HTMLButtonElement, RowProps & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'value'>>(
+  ({ icon, label, value, hint, trailing, disabled, ...rest }, ref) => (
+    <button
+      ref={ref}
+      type="button"
+      disabled={disabled}
+      className="group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors enabled:hover:bg-[var(--row-hover)] disabled:cursor-default"
+      style={{ '--row-hover': ROW_HOVER } as React.CSSProperties}
+      {...rest}
+    >
+      <span
+        className="flex size-9 shrink-0 items-center justify-center rounded-[11px] text-text-muted"
+        style={{ backgroundColor: FIELD_BG }}
+      >
+        {icon}
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">{label}</span>
+        <span className="truncate text-[15px] font-semibold leading-snug text-text">{value}</span>
+        {hint && <span className="text-xs leading-snug text-text-muted">{hint}</span>}
+      </span>
+      {trailing}
+      {!disabled && (
+        <ChevronRight className="size-4 shrink-0 text-text-soft/60" aria-hidden />
+      )}
+    </button>
+  ),
+)
+FieldRow.displayName = 'FieldRow'
+
+// Avatar + name (+ credit badge) + balance, used as the value of an account row
+// and the rows inside the account popover.
+const AccountValue = ({ account }: { account: MovementFormAccount | undefined }) => {
+  if (!account) return <span className="text-text-soft">—</span>
+  const avatar: ResolvedAccountAvatar = account.avatar ?? {
+    colorKey: null,
+    colorOverride: null,
+    iconKey: account.type === 'credit' ? 'credit-card' : 'wallet',
+    monogram: account.name.charAt(0).toUpperCase(),
+  }
+  return (
+    <span className="flex items-center gap-2">
+      <AccountAvatar {...avatar} size="sm" />
+      <span className="truncate text-text">{account.name}</span>
+    </span>
+  )
+}
+
 export const MovementForm = ({
   accounts,
   categories,
@@ -123,6 +224,8 @@ export const MovementForm = ({
   preselectAccountId,
   createReturnHref,
   onSuccess,
+  variant = 'page',
+  onClose,
 }: Props) => {
   const router = useRouter()
   const t = useTranslations('transactions')
@@ -152,7 +255,8 @@ export const MovementForm = ({
   const preselect = preselectAccountId
     ? accounts.find((a) => a.id === preselectAccountId)
     : undefined
-  const initialTab: Tab = edit?.type ?? (preselect?.type === 'credit' ? 'expense' : 'income')
+  // Create mode defaults to Gasto (the most frequent movement); edit keeps its type.
+  const initialTab: Tab = edit?.type ?? 'expense'
 
   const [tab, setTab] = useState<Tab>(initialTab)
   const [formError, setFormError] = useState<string | null>(null)
@@ -198,7 +302,8 @@ export const MovementForm = ({
   // Custom frequency: "every N units", with an optional cap on occurrences.
   const [intervalCount, setIntervalCount] = useState(1)
   const [intervalUnit, setIntervalUnit] = useState<'day' | 'week' | 'month' | 'year'>('month')
-  const [maxOccurrences, setMaxOccurrences] = useState('')
+  // Optional "repeat until" end date for the recurrence (any frequency).
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
 
   // Reimbursement (reintegro / cashback) declared with the expense.
   const [reimbursementEnabled, setReimbursementEnabled] = useState(false)
@@ -230,6 +335,29 @@ export const MovementForm = ({
   }
   const [reimbursementAccountId, setReimbursementAccountId] = useState('')
 
+  // UI-only state for the hi-fi shell.
+  const isDrawer = variant === 'drawer'
+  // Only one popover open at a time: 'account' | 'destination' | 'category' | 'date'.
+  const [activePopover, setActivePopover] = useState<string | null>(null)
+  // Category popover drill: the category whose subcategories are being shown.
+  const [catDrill, setCatDrill] = useState<string | null>(null)
+  const amountRef = useRef<HTMLInputElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
+  // "+ Otro": when true, a successful save resets amount+description and keeps
+  // the drawer open (instead of closing) and refocuses the amount.
+  const addAnotherRef = useRef(false)
+
+  // Autofocus the amount after the drawer slide-in settles (≈360ms), matching
+  // the prototype. On the page variant focus lands immediately.
+  useEffect(() => {
+    if (amount !== '' && isEdit) return
+    const delay = isDrawer ? 360 : 0
+    const id = setTimeout(() => amountRef.current?.focus(), delay)
+    return () => clearTimeout(id)
+    // Run once per mount (the drawer remounts the form on each open via `key`).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   if (accounts.length === 0 && !isEdit) {
     return (
       <p className="text-sm text-muted-foreground">{t('empty.no_accounts')}</p>
@@ -242,7 +370,6 @@ export const MovementForm = ({
   const activeCurrencies = selectedAccount?.activeCurrencies ?? ['ARS']
 
   const cashBank = accounts.filter((a) => a.type !== 'credit')
-  const creditCards = accounts.filter((a) => a.type === 'credit')
 
   // Transfer destinations: the other cash/bank accounts.
   const otherAccounts = cashBank.filter((a) => a.id !== selectedAccount?.id)
@@ -625,19 +752,14 @@ export const MovementForm = ({
 
       // Recurrence: not for adjustments nor for installment purchases.
       if (isRecurrent && tab !== 'adjustment' && tab !== 'exchange' && !isInstallments && 'id' in result && result.id) {
-        const trimmedMax = maxOccurrences.trim()
+        const trimmedEnd = recurrenceEndDate.trim()
         const recurrenceResult = await createRecurrenceFromMovement({
           transaction_id: result.id,
           frequency,
           ...(frequency === 'custom'
-            ? {
-                interval_count: intervalCount,
-                interval_unit: intervalUnit,
-                ...(trimmedMax !== ''
-                  ? { max_occurrences: Math.max(1, Math.floor(Number(trimmedMax))) }
-                  : {}),
-              }
+            ? { interval_count: intervalCount, interval_unit: intervalUnit }
             : {}),
+          ...(trimmedEnd !== '' ? { end_date: trimmedEnd } : {}),
         })
         if (!recurrenceResult.ok) {
           setFormError(
@@ -647,6 +769,23 @@ export const MovementForm = ({
           )
           return
         }
+      }
+
+      // "+ Otro": keep the drawer open, clear amount + description (keep type,
+      // account, date, currency), refresh the list and refocus the amount.
+      if (addAnotherRef.current) {
+        addAnotherRef.current = false
+        router.refresh()
+        setAmount('')
+        setDescription('')
+        setSuggestion(null)
+        setDescriptionHasNoHistory(false)
+        setReimbursementEnabled(false)
+        setIsRecurrent(false)
+        setRecurrenceEndDate('')
+        setFormError(null)
+        setTimeout(() => amountRef.current?.focus(), 0)
+        return
       }
 
       if (onSuccess) {
@@ -689,393 +828,874 @@ export const MovementForm = ({
       .map((c) => `${CURRENCY_SYMBOL[c]}${account.balances[c].toLocaleString('es-AR')}`)
       .join(' · ')
 
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      {/* ── Type tabs (create only) ────────────────────────────────────────── */}
-      {!isEdit && (
-        <div className="flex rounded-md border border-border p-0.5 w-fit flex-wrap gap-y-1">
-          {(['income', 'expense', 'transfer', 'adjustment', 'exchange'] as Tab[]).map((tabKey) => (
-            <button
-              key={tabKey}
-              type="button"
-              onClick={() => handleTabChange(tabKey)}
-              className={`px-4 py-1.5 text-sm font-medium rounded transition-colors ${
-                tab === tabKey ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {TAB_LABELS[tabKey]}
-            </button>
-          ))}
+  // ── Derived presentation values + handlers for the hi-fi shell ──────────────
+
+  const eyebrow = isEdit ? t('drawer.eyebrow_edit') : t('drawer.eyebrow_new')
+  const title = isEdit ? t('edit_title') : t('actions.register_movement')
+
+  // Amount tint + leading sign by type.
+  const amountColor = tab === 'income' ? 'text-emerald-deep' : 'text-text'
+  const signChar =
+    tab === 'income'
+      ? '+'
+      : tab === 'expense'
+        ? '−'
+        : tab === 'adjustment'
+          ? adjustmentDirection === 'decrease' ? '−' : '+'
+          : ''
+
+  const ctaLabel = isPending
+    ? tCommon('saving')
+    : isEdit
+      ? tCommon('save_changes')
+      : isInstallments
+        ? t('actions.register_installments', { count: parseInt(installments) })
+        : t(`drawer.cta.${tab}`)
+
+  // Account row label by type (HANDOFF: Desde / A la cuenta / Cuenta a ajustar).
+  const accountLabel =
+    tab === 'income'
+      ? t('drawer.account_to')
+      : tab === 'adjustment'
+        ? t('drawer.account_to_adjust')
+        : t('drawer.account_from')
+
+  const avatarOf = (a: MovementFormAccount): ResolvedAccountAvatar =>
+    a.avatar ?? {
+      colorKey: null,
+      colorOverride: null,
+      iconKey: a.type === 'credit' ? 'credit-card' : 'wallet',
+      monogram: a.name.charAt(0).toUpperCase(),
+    }
+
+  const subcategoryName =
+    selectedCategory?.subcategories.find((s) => s.id === subcategoryId)?.name ?? null
+
+  const pickCategory = (catId: string, subId: string) => {
+    setCategoryId(catId)
+    setSubcategoryId(subId)
+    setSuggestion(null)
+    setDescriptionHasNoHistory(false)
+    setCatDrill(null)
+    setActivePopover(null)
+  }
+
+  const handleSwap = () => {
+    setAccountId(destinationAccountId)
+    setDestinationAccountId(accountId)
+  }
+
+  const handleAddAnother = () => {
+    addAnotherRef.current = true
+    formRef.current?.requestSubmit()
+  }
+
+  const cycleCurrency = () => {
+    if (currencyOptions.length < 2) return
+    const idx = currencyOptions.indexOf(effectiveCurrency)
+    const next = currencyOptions[(idx + 1) % currencyOptions.length]
+    setCurrencyCode(next)
+    setInstallments('1')
+    setFxRate('')
+  }
+
+  // ⌘/Ctrl+Enter submits from anywhere in the form.
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+      formRef.current?.requestSubmit()
+    }
+  }
+
+  const formatDateValue = (d: string) => {
+    const [y, m, day] = d.split('-').map(Number)
+    const label = new Date(y, m - 1, day).toLocaleDateString('es-AR', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    })
+    return d === todayStr() ? `${t('drawer.today')} · ${label}` : label
+  }
+
+  // Adjustment balance preview (create only — edit lacks the live balance set).
+  const adjustmentPreview = (() => {
+    if (isEdit || tab !== 'adjustment' || !selectedAccount) return null
+    const parsed = parseMoneyInput(amount)
+    const current = selectedAccount.balances[currencyCode] ?? 0
+    if (parsed === null) return { current, next: current }
+    const next =
+      adjustmentDirection === 'decrease'
+        ? Money.toNumber(Money.subtract(Money.from(current), Money.from(parsed)))
+        : Money.toNumber(Money.add(Money.from(current), Money.from(parsed)))
+    return { current, next }
+  })()
+
+  // Per-installment breakdown for the cuotas card.
+  const perInstallment = (() => {
+    if (!isInstallments) return null
+    const parsed = parseMoneyInput(amount)
+    if (parsed === null || parsed <= 0) return null
+    return Money.toNumber(Money.divide(Money.from(parsed), parseInt(installments)))
+  })()
+
+  // Account picker list content (origin / destination / exchange destination).
+  const renderAccountPicker = (
+    list: MovementFormAccount[],
+    selectedId: string,
+    onPick: (id: string) => void,
+  ) => (
+    <div className="flex flex-col gap-0.5">
+      {list.map((a) => (
+        <button
+          key={a.id}
+          type="button"
+          onClick={() => onPick(a.id)}
+          className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-page"
+        >
+          <AccountAvatar {...avatarOf(a)} size="sm" />
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="flex items-center gap-1.5 truncate text-sm font-semibold text-text">
+              {a.name}
+              {a.type === 'credit' && (
+                <span className="rounded px-1 py-0.5 text-[10px] font-bold uppercase tracking-wide text-terracotta" style={{ backgroundColor: 'var(--terracotta-soft)' }}>
+                  {t('drawer.credit_badge')}
+                </span>
+              )}
+            </span>
+            {a.type !== 'credit' && (
+              <span className="text-xs tabular-nums text-text-muted">{formatBalance(a)}</span>
+            )}
+          </span>
+          {selectedId === a.id && <Check className="size-4 shrink-0 text-emerald" aria-hidden />}
+        </button>
+      ))}
+    </div>
+  )
+
+  // Category picker with one level of subcategory drill.
+  const drillCategory = catDrill
+    ? transactionCategories.find((c) => c.id === catDrill) ?? null
+    : null
+  const categoryPickerContent = drillCategory ? (
+    <div className="flex flex-col gap-0.5">
+      <button
+        type="button"
+        onClick={() => setCatDrill(null)}
+        className="flex items-center gap-1.5 rounded-[10px] px-2.5 py-2 text-left text-sm font-semibold text-text-muted transition-colors hover:bg-page"
+      >
+        <ChevronLeft className="size-4" aria-hidden />
+        <span>
+          {drillCategory.icon ? `${drillCategory.icon} ` : ''}
+          {drillCategory.name}
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={() => pickCategory(drillCategory.id, '')}
+        className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-page"
+      >
+        {drillCategory.color && (
+          <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: drillCategory.color }} />
+        )}
+        <span className="flex-1 text-sm font-medium text-text">{t('drawer.whole_category')}</span>
+        {categoryId === drillCategory.id && !subcategoryId && (
+          <Check className="size-4 shrink-0 text-emerald" aria-hidden />
+        )}
+      </button>
+      {drillCategory.subcategories.map((s) => (
+        <button
+          key={s.id}
+          type="button"
+          onClick={() => pickCategory(drillCategory.id, s.id)}
+          className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-page"
+        >
+          <span className="size-3 shrink-0 rounded-full opacity-70" style={{ backgroundColor: drillCategory.color ?? '#9CA3AF' }} />
+          <span className="flex-1 truncate text-sm text-text">{s.name}</span>
+          {subcategoryId === s.id && <Check className="size-4 shrink-0 text-emerald" aria-hidden />}
+        </button>
+      ))}
+    </div>
+  ) : (
+    <div className="flex flex-col gap-0.5">
+      {transactionCategories.map((c) => {
+        const drillable = c.subcategories.length > 0
+        return (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => (drillable ? setCatDrill(c.id) : pickCategory(c.id, ''))}
+            className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-page"
+          >
+            {c.color && <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: c.color }} />}
+            <span className="flex-1 truncate text-sm font-medium text-text">
+              {c.icon ? `${c.icon} ` : ''}
+              {c.name}
+            </span>
+            {drillable ? (
+              <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
+            ) : (
+              categoryId === c.id && <Check className="size-4 shrink-0 text-emerald" aria-hidden />
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+
+  const categoryValue = selectedCategory ? (
+    <span className="flex items-center gap-1.5">
+      {selectedCategory.color && (
+        <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: selectedCategory.color }} />
+      )}
+      <span className="truncate">
+        {selectedCategory.icon ? `${selectedCategory.icon} ` : ''}
+        {selectedCategory.name}
+      </span>
+      {subcategoryName && (
+        <>
+          <span className="text-text-soft">{'›'}</span>
+          <span className="truncate text-text-muted">{subcategoryName}</span>
+        </>
+      )}
+    </span>
+  ) : (
+    <span className="text-text-soft">{t('placeholders.category')}</span>
+  )
+
+  // ── Type selector (Segmented). Disabled in edit: type is immutable. ─────────
+  const typeSelector = (
+    <Segmented
+      ariaLabel={t('labels.type')}
+      value={tab}
+      onValueChange={(v) => handleTabChange(v as Tab)}
+      options={(['expense', 'income', 'transfer', 'adjustment', 'exchange'] as Tab[]).map((k) => ({
+        value: k,
+        label: TAB_LABELS[k],
+        disabled: isEdit,
+      }))}
+    />
+  )
+
+  // ── Amount hero ─────────────────────────────────────────────────────────────
+  const showAmountHero = isEdit ? editable?.amount : true
+  const hero = showAmountHero ? (
+    <div className="rounded-[18px] border border-border bg-card px-[22px] pb-[22px] pt-5 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+          {t('labels.amount')}
+        </span>
+        <button
+          type="button"
+          onClick={cycleCurrency}
+          disabled={currencyOptions.length < 2}
+          className="inline-flex items-center gap-1 rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
+          style={{ backgroundColor: FIELD_BG }}
+        >
+          {effectiveCurrency}
+          {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
+        </button>
+      </div>
+      <div className="mt-2 flex items-baseline gap-1.5">
+        {signChar && (
+          <span className={`text-[46px] font-bold leading-none ${amountColor}`}>{signChar}</span>
+        )}
+        <span className={`text-[27px] font-semibold leading-none opacity-50 ${amountColor}`}>
+          {CURRENCY_SYMBOL[effectiveCurrency]}
+        </span>
+        <MoneyAmountInput
+          ref={amountRef}
+          id="amount"
+          required
+          value={amount}
+          onChange={setAmount}
+          placeholder="0"
+          className={`w-full min-w-0 bg-transparent text-[46px] font-bold leading-none tracking-[-0.045em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
+        />
+      </div>
+      {tab === 'income' && (
+        <p className="mt-2.5 text-[12.5px] font-medium text-emerald-deep">{t('drawer.helper_income')}</p>
+      )}
+      {tab === 'adjustment' && (
+        <p className="mt-2.5 text-[12.5px] text-text-muted">{t('drawer.helper_adjustment')}</p>
+      )}
+      {isEdit && edit?.isParent && (
+        <p className="mt-2 text-xs text-text-muted">
+          {t('installment_recalc_hint', { count: edit.installmentsTotal ?? 0 })}
+        </p>
+      )}
+      {negativeWarning && (
+        <div className="mt-3">
+          <NegativeBalanceNotice projected={negativeWarning.projected} currency={negativeWarning.currency} />
         </div>
       )}
+    </div>
+  ) : null
 
-      {/* ── Immutable context (edit only) ──────────────────────────────────── */}
-      {isEdit && (
-        <div className="flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-4 text-sm">
+  // ── Adjustment sign toggle + banner ─────────────────────────────────────────
+  const showAdjustmentControls = isEdit ? !!editable?.adjustmentDirection : tab === 'adjustment'
+  const adjustmentSign = showAdjustmentControls ? (
+    <div className="grid grid-cols-2 gap-2">
+      {(['increase', 'decrease'] as const).map((dir) => (
+        <button
+          key={dir}
+          type="button"
+          onClick={() => setAdjustmentDirection(dir)}
+          className={`rounded-[11px] border px-3 py-2.5 text-sm font-bold transition-colors ${
+            adjustmentDirection === dir
+              ? 'border-transparent bg-navy text-white'
+              : 'border-border bg-card text-text-muted hover:text-text'
+          }`}
+        >
+          {dir === 'increase' ? `${t('directions.increase')} (+)` : `${t('directions.decrease')} (−)`}
+        </button>
+      ))}
+    </div>
+  ) : null
+
+  const adjustmentBanner = (isEdit ? edit?.type === 'adjustment' : tab === 'adjustment') ? (
+    <div
+      className="flex items-start gap-2.5 rounded-[13px] border px-3.5 py-3 text-[13px] leading-snug"
+      style={{
+        borderColor: 'rgba(196,154,60,0.35)',
+        backgroundColor: 'var(--warning-bg)',
+        color: 'var(--warning-deep)',
+      }}
+    >
+      <Scale className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <span>
+        <strong className="font-bold">{t('drawer.adjust_banner_title')}</strong>{' '}
+        {t('drawer.adjust_banner_body')}
+      </span>
+    </div>
+  ) : null
+
+  // ── Field group (clickable rows → popovers) ─────────────────────────────────
+  const dateContent = (
+    <div className="flex w-[252px] flex-col gap-2 p-1">
+      <button
+        type="button"
+        onClick={() => {
+          setDate(todayStr())
+          setActivePopover(null)
+        }}
+        className="flex items-center justify-between rounded-[10px] px-2.5 py-2 text-sm font-semibold text-text transition-colors hover:bg-page"
+      >
+        {t('drawer.today')}
+        {date === todayStr() && <Check className="size-4 text-emerald" aria-hidden />}
+      </button>
+      <input
+        type="date"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+        className="w-full rounded-[10px] border border-border bg-card px-3 py-2 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      />
+    </div>
+  )
+
+  const categoryRow = (
+    <Popover
+      open={activePopover === 'category'}
+      onOpenChange={(o) => {
+        setActivePopover(o ? 'category' : null)
+        if (!o) setCatDrill(null)
+      }}
+      trigger={
+        <FieldRow icon={<Tag className="size-[18px]" />} label={t('labels.category')} value={categoryValue} />
+      }
+    >
+      {categoryPickerContent}
+    </Popover>
+  )
+
+  const dateRow = (
+    <Popover
+      open={activePopover === 'date'}
+      onOpenChange={(o) => setActivePopover(o ? 'date' : null)}
+      trigger={
+        <FieldRow icon={<Calendar className="size-[18px]" />} label={t('labels.date')} value={formatDateValue(date)} />
+      }
+    >
+      {dateContent}
+    </Popover>
+  )
+
+  const fieldGroup = (
+    <div className="overflow-hidden rounded-[15px] border border-border bg-card [&>*+*]:border-t [&>*+*]:border-[#F1F3F6]">
+      {isEdit ? (
+        <>
           {contextRows.map((row) => (
-            <div key={row.label} className="flex justify-between gap-4">
-              <span className="text-muted-foreground">{row.label}</span>
-              <span className="text-right">
+            <div key={row.label} className="flex items-center justify-between gap-3 px-4 py-3">
+              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">{row.label}</span>
+              <span className="truncate text-right text-[15px] font-semibold text-text">
                 {row.value}
-                <span className="ml-2 text-xs text-muted-foreground">{tCommon('not_editable')}</span>
+                <span className="ml-1.5 text-xs font-normal text-text-muted">{tCommon('not_editable')}</span>
               </span>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* ── Account (create only — immutable in edit, shown in context) ─────── */}
-      {!isEdit && (
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="account" className="text-sm font-medium">
-            {tab === 'transfer' || tab === 'exchange' ? t('labels.source_account') : t('labels.account')}
-          </label>
-          <select
-            id="account"
-            value={selectedAccount?.id ?? ''}
-            onChange={(e) => handleAccountChange(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {cashBank.length > 0 && (
-              <optgroup label={t('account_groups.cash_bank')}>
-                {cashBank.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name} — {formatBalance(a)}</option>
-                ))}
-              </optgroup>
-            )}
-            {tab === 'expense' && creditCards.length > 0 && (
-              <optgroup label={t('account_groups.credit_cards')}>
-                {creditCards.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
-                ))}
-              </optgroup>
-            )}
-          </select>
-        </div>
-      )}
-
-      {/* ── Transfer: destination account (create only) ────────────────────── */}
-      {!isEdit && tab === 'transfer' && (
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="destination" className="text-sm font-medium">
-            {t('labels.destination_account')} <span className="text-destructive">*</span>
-          </label>
-          {otherAccounts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t('errors.no_other_accounts')}</p>
-          ) : (
-            <select
-              id="destination"
-              required
-              value={destinationAccountId}
-              onChange={(e) => handleDestinationChange(e.target.value)}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="">{t('placeholders.destination_account')}</option>
-              {otherAccounts.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
-          )}
-        </div>
-      )}
-
-      {/* ── Currency (create only) ─────────────────────────────────────────── */}
-      {!isEdit && currencyOptions.length > 1 && (
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">{t('labels.currency')}</label>
-          <div className="flex gap-2">
-            {currencyOptions.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => { setCurrencyCode(c); setInstallments('1'); setFxRate('') }}
-                className={`px-3 py-1.5 text-sm rounded border transition-colors ${
-                  effectiveCurrency === c
-                    ? 'border-primary bg-primary/10 text-primary font-medium'
-                    : 'border-border text-muted-foreground hover:border-foreground'
-                }`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── Adjustment direction ───────────────────────────────────────────── */}
-      {(isEdit ? editable?.adjustmentDirection : tab === 'adjustment') && (
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">{t('labels.direction')}</label>
-          <div className="flex gap-3">
-            {(['increase', 'decrease'] as const).map((dir) => (
-              <label key={dir} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="direction"
-                  value={dir}
-                  checked={adjustmentDirection === dir}
-                  onChange={() => setAdjustmentDirection(dir)}
-                  className="accent-primary"
+          {editable?.category && categoryRow}
+          {editable?.date && dateRow}
+        </>
+      ) : (
+        <>
+          {/* Source account (+ swap for transfer) */}
+          <div className="relative">
+            <Popover
+              open={activePopover === 'account'}
+              onOpenChange={(o) => setActivePopover(o ? 'account' : null)}
+              trigger={
+                <FieldRow
+                  icon={isCredit ? <CreditCard className="size-[18px]" /> : <Wallet className="size-[18px]" />}
+                  label={accountLabel}
+                  value={<AccountValue account={selectedAccount} />}
+                  hint={isCredit && tab === 'expense' ? t('drawer.credit_hint') : undefined}
                 />
-                <span className="text-sm">{dir === 'increase' ? t('directions.increase') : t('directions.decrease')}</span>
-              </label>
-            ))}
+              }
+            >
+              {renderAccountPicker(eligibleAccounts, accountId, (id) => {
+                handleAccountChange(id)
+                setActivePopover(null)
+              })}
+            </Popover>
+            {tab === 'transfer' && (
+              <button
+                type="button"
+                onClick={handleSwap}
+                aria-label={t('drawer.swap')}
+                className="absolute bottom-0 right-4 z-10 flex size-8 translate-y-1/2 items-center justify-center rounded-full bg-navy text-white shadow-md transition-transform hover:rotate-180"
+              >
+                <ArrowLeftRight className="size-4" aria-hidden />
+              </button>
+            )}
           </div>
-        </div>
-      )}
 
-      {/* ── Amount ─────────────────────────────────────────────────────────── */}
-      {(isEdit ? editable?.amount : true) && (
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="amount" className="text-sm font-medium">{t('labels.amount')}</label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-              {CURRENCY_SYMBOL[effectiveCurrency]}
-            </span>
-            <MoneyAmountInput
-              id="amount"
-              required
-              value={amount}
-              onChange={setAmount}
-              placeholder={t('placeholders.amount')}
-              className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
-          {isEdit && edit?.isParent && (
-            <p className="text-xs text-muted-foreground">
-              {t('installment_recalc_hint', { count: edit.installmentsTotal ?? 0 })}
-            </p>
+          {/* Destination (transfer / exchange) */}
+          {(tab === 'transfer' || tab === 'exchange') && (
+            <Popover
+              open={activePopover === 'destination'}
+              onOpenChange={(o) => setActivePopover(o ? 'destination' : null)}
+              trigger={
+                <FieldRow
+                  icon={<Wallet className="size-[18px]" />}
+                  label={t('drawer.account_toward')}
+                  value={<AccountValue account={tab === 'transfer' ? destinationAccount : exchangeDestAccount} />}
+                />
+              }
+            >
+              {tab === 'transfer'
+                ? renderAccountPicker(otherAccounts, destinationAccountId, (id) => {
+                    handleDestinationChange(id)
+                    setActivePopover(null)
+                  })
+                : renderAccountPicker(cashBank, destinationAccountId, (id) => {
+                    setDestinationAccountId(id)
+                    setActivePopover(null)
+                  })}
+            </Popover>
           )}
-          {negativeWarning && (
-            <NegativeBalanceNotice projected={negativeWarning.projected} currency={negativeWarning.currency} />
-          )}
-        </div>
-      )}
 
-      {/* ── Exchange: destination account (create) + received amount (both) ── */}
-      {!isEdit && tab === 'exchange' && (
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="exchange-dest" className="text-sm font-medium">
-            {t('labels.destination_account')} <span className="text-destructive">*</span>
+          {/* Category (income / expense) */}
+          {(tab === 'income' || tab === 'expense') && categoryRow}
+
+          {/* Date (always) */}
+          {dateRow}
+        </>
+      )}
+    </div>
+  )
+
+  // ── Exchange: no-other-currency hint + received amount ──────────────────────
+  // Destination currency shown on the received-amount card.
+  const receivedCurrency: 'ARS' | 'USD' =
+    (isEdit ? edit?.destinationCurrency : exchangeDestCurrency) ?? 'USD'
+  // Implicit rate "1 {received} = ${origin}", derived from both amounts (read-only).
+  const exchangeRate = (() => {
+    if (tab !== 'exchange') return null
+    const src = parseMoneyInput(amount)
+    const dst = parseMoneyInput(destinationAmount)
+    if (src === null || dst === null || src <= 0 || dst <= 0) return null
+    return Money.toNumber(Money.divide(Money.from(src), dst))
+  })()
+  const exchangeReceived =
+    (!isEdit && tab === 'exchange' && exchangeDestCurrency) || (isEdit && editable?.destinationAmount) ? (
+      <div className="rounded-[18px] border border-border bg-card px-[22px] pb-[22px] pt-5 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]">
+        <div className="flex items-center justify-between">
+          <label htmlFor="exchange-dest-amount" className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+            {t('labels.exchange_received')}
           </label>
-          <select
-            id="exchange-dest"
-            required
-            value={destinationAccountId}
-            onChange={(e) => setDestinationAccountId(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          <span
+            className="inline-flex items-center rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text"
+            style={{ backgroundColor: FIELD_BG }}
           >
-            <option value="">{t('placeholders.destination_account')}</option>
-            {cashBank.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.id === accountId ? t('labels.same_account_option', { name: a.name }) : a.name}
-              </option>
-            ))}
-          </select>
+            {receivedCurrency}
+          </span>
         </div>
-      )}
-
-      {!isEdit && tab === 'exchange' && !exchangeDestCurrency && (
-        <p className="text-sm text-muted-foreground">
-          {t('exchange.no_other_currency_hint', { currency: currencyCode === 'ARS' ? 'USD' : 'ARS' })}
-        </p>
-      )}
-
-      {/* Received leg amount: create (when dest currency known) or edit. */}
-      {((!isEdit && tab === 'exchange' && exchangeDestCurrency) ||
-        (isEdit && editable?.destinationAmount)) && (
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="exchange-dest-amount" className="text-sm font-medium">
-            {t('labels.exchange_received')} ({isEdit ? edit?.destinationCurrency : exchangeDestCurrency})
-          </label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-              {CURRENCY_SYMBOL[(isEdit ? edit?.destinationCurrency : exchangeDestCurrency) ?? 'USD']}
-            </span>
-            <MoneyAmountInput
-              id="exchange-dest-amount"
-              required
-              value={destinationAmount}
-              onChange={setDestinationAmount}
-              placeholder="0,00"
-              className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
+        <div className="mt-2 flex items-baseline gap-1.5">
+          <span className="text-[27px] font-semibold leading-none opacity-50 text-text">
+            {CURRENCY_SYMBOL[receivedCurrency]}
+          </span>
+          <MoneyAmountInput
+            id="exchange-dest-amount"
+            required
+            value={destinationAmount}
+            onChange={setDestinationAmount}
+            placeholder="0"
+            className="w-full min-w-0 bg-transparent text-[46px] font-bold leading-none tracking-[-0.045em] tabular-nums text-text outline-none placeholder:text-text-soft/40"
+          />
         </div>
-      )}
+        {exchangeRate !== null && (
+          <p className="mt-2.5 text-[12.5px] text-text-muted tabular-nums">
+            1 {receivedCurrency} = {CURRENCY_SYMBOL[currencyCode]}
+            {fmtBalance(exchangeRate)} {currencyCode}
+          </p>
+        )}
+      </div>
+    ) : null
 
-      {/* ── Installments (create + Gasto + tarjeta + ARS) ──────────────────── */}
-      {!isEdit && tab === 'expense' && isCredit && currencyCode === 'ARS' && (
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">{t('labels.installments')}</label>
-          <div className="flex gap-2 flex-wrap">
-            {INSTALLMENT_OPTIONS.map((n) => (
+  const exchangeNoCurrencyHint =
+    !isEdit && tab === 'exchange' && !exchangeDestCurrency ? (
+      <p className="text-sm text-text-muted">
+        {t('exchange.no_other_currency_hint', { currency: currencyCode === 'ARS' ? 'USD' : 'ARS' })}
+      </p>
+    ) : null
+
+  // ── FX rate (create + Gasto + USD card) ─────────────────────────────────────
+  const fxRateField =
+    !isEdit && tab === 'expense' && isUSDCard ? (
+      <div className="rounded-[15px] border border-border bg-card px-4 py-3">
+        <label htmlFor="fx_rate" className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+          {t('labels.fx_rate_label')}
+        </label>
+        <MoneyAmountInput
+          id="fx_rate"
+          required
+          value={fxRate}
+          onChange={setFxRate}
+          placeholder={t('labels.fx_rate_daily')}
+          className="mt-1 w-full bg-transparent text-[15px] font-semibold text-text outline-none placeholder:text-text-soft/50"
+        />
+      </div>
+    ) : null
+
+  // ── Cuotas card (create + Gasto + credit + ARS) ─────────────────────────────
+  const cuotasCard =
+    !isEdit && tab === 'expense' && isCredit && currencyCode === 'ARS' ? (
+      <div className="rounded-[15px] border border-border bg-card p-4">
+        <div className="flex items-center gap-2.5">
+          <span
+            className="flex size-9 items-center justify-center rounded-[11px] text-terracotta"
+            style={{ backgroundColor: 'var(--terracotta-soft)' }}
+          >
+            <CreditCard className="size-[18px]" aria-hidden />
+          </span>
+          <span className="text-[15px] font-semibold text-text">{t('labels.installments')}</span>
+        </div>
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          {INSTALLMENT_OPTIONS.map((n) => {
+            const active = installments === String(n)
+            return (
               <button
                 key={n}
                 type="button"
                 onClick={() => setInstallments(String(n))}
-                className={`px-3 py-1.5 text-sm rounded border transition-colors ${
-                  installments === String(n)
-                    ? 'border-primary bg-primary/10 text-primary font-medium'
-                    : 'border-border text-muted-foreground hover:border-foreground'
+                className={`shrink-0 rounded-[10px] px-3.5 py-1.5 text-sm font-bold transition-colors ${
+                  active ? 'bg-navy text-white' : 'text-text-muted'
                 }`}
+                style={active ? undefined : { backgroundColor: FIELD_BG }}
               >
-                {n === 1 ? t('installments_options.none') : t('installments_options.count', { n })}
+                {n}×
               </button>
-            ))}
+            )
+          })}
+        </div>
+        {isInstallments && perInstallment !== null && (
+          <div className="mt-3 rounded-[11px] px-3 py-2 text-[13px] text-text-muted" style={{ backgroundColor: FIELD_BG }}>
+            {t('drawer.installments_breakdown', {
+              count: parseInt(installments),
+              amount: fmtBalance(perInstallment),
+            })}
           </div>
-          <p className="text-xs text-muted-foreground">{t('installments_options.ars_only_hint')}</p>
-        </div>
-      )}
-
-      {/* ── FX rate (create + Gasto + tarjeta + USD) ───────────────────────── */}
-      {!isEdit && tab === 'expense' && isUSDCard && (
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="fx_rate" className="text-sm font-medium">{t('labels.fx_rate_label')}</label>
-          <MoneyAmountInput
-            id="fx_rate"
-            required
-            value={fxRate}
-            onChange={setFxRate}
-            placeholder={t('labels.fx_rate_daily')}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-        </div>
-      )}
-
-      {/* ── Date ───────────────────────────────────────────────────────────── */}
-      {(isEdit ? editable?.date : true) && (
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="date" className="text-sm font-medium">{t('labels.date')}</label>
-          <input
-            id="date"
-            type="date"
-            required
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-        </div>
-      )}
-
-      {/* ── Category ───────────────────────────────────────────────────────── */}
-      {(isEdit ? editable?.category : (tab === 'income' || tab === 'expense')) && (
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="category" className="text-sm font-medium">
-            {t('labels.category')}{' '}
-            {(isEdit ? edit?.type === 'expense' : tab === 'expense')
-              ? <span className="text-destructive">*</span>
-              : <span className="text-muted-foreground text-xs">{tCommon('optional')}</span>}
-          </label>
-          {!isEdit && suggestion && !categoryId && (
-            <CategorySuggestionChip suggestion={suggestion} onApply={applySuggestion} />
-          )}
-          <select
-            id="category"
-            required={isEdit ? edit?.type === 'expense' : true}
-            value={categoryId}
-            onChange={(e) => { setCategoryId(e.target.value); setSubcategoryId(''); setSuggestion(null) }}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="">{isEdit ? t('placeholders.no_category') : t('placeholders.category')}</option>
-            {transactionCategories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* ── Subcategory ────────────────────────────────────────────────────── */}
-      {(isEdit ? editable?.subcategory : true) && selectedCategory && selectedCategory.subcategories.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="subcategory" className="text-sm font-medium">
-            {t('labels.subcategory')} <span className="text-muted-foreground text-xs">{tCommon('optional')}</span>
-          </label>
-          <select
-            id="subcategory"
-            value={subcategoryId}
-            onChange={(e) => setSubcategoryId(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="">{t('placeholders.no_subcategory')}</option>
-            {selectedCategory.subcategories.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* ── Description ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="description" className="text-sm font-medium">
-          {t('labels.description')} <span className="text-muted-foreground text-xs">{tCommon('optional')}</span>
-        </label>
-        <input
-          id="description"
-          type="text"
-          value={description}
-          onChange={(e) => { setDescription(e.target.value); setSuggestion(null); setDescriptionHasNoHistory(false) }}
-          onBlur={handleDescriptionBlur}
-          placeholder={t('placeholders.description')}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-        {!isEdit && (tab === 'income' || tab === 'expense') && descriptionHasNoHistory && selectedCategory && (
-          <CategorySuggestionHint description={description} categoryName={selectedCategory.name} />
         )}
+        <p className="mt-2 text-xs text-text-soft">{t('installments_options.ars_only_hint')}</p>
       </div>
+    ) : null
 
-      {/* ── Recurrente (create only; no en ajuste, cambio ni cuotas) ───────── */}
-      {!isEdit && tab !== 'adjustment' && tab !== 'exchange' && !isInstallments && (
-        <div className="flex flex-col gap-2 rounded-md border border-border p-3">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isRecurrent}
-              onChange={(e) => setIsRecurrent(e.target.checked)}
-              className="accent-primary"
-            />
-            <span className="text-sm font-medium">{t('labels.make_recurrent')}</span>
+  // ── Description ──────────────────────────────────────────────────────────────
+  const isAdjustment = isEdit ? edit?.type === 'adjustment' : tab === 'adjustment'
+  const descriptionField = (
+    <div className="rounded-[15px] border border-border bg-card px-4 py-3">
+      <div className="flex items-center gap-3">
+        <span
+          className="flex size-9 shrink-0 items-center justify-center rounded-[11px] text-text-muted"
+          style={{ backgroundColor: FIELD_BG }}
+        >
+          <FileText className="size-[18px]" aria-hidden />
+        </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <label htmlFor="description" className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+            {isAdjustment ? t('drawer.adjust_reason') : t('labels.description')}
           </label>
-          {isRecurrent && (
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="frequency" className="text-xs text-muted-foreground">{t('labels.frequency')}</label>
-              <select
-                id="frequency"
-                value={frequency}
-                onChange={(e) => setFrequency(e.target.value as typeof frequency)}
-                className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="weekly">{t('frequencies.weekly')}</option>
-                <option value="biweekly">{t('frequencies.biweekly')}</option>
-                <option value="monthly">{t('frequencies.monthly')}</option>
-                <option value="annual">{t('frequencies.annual')}</option>
-                <option value="custom">{t('frequencies.custom')}</option>
-              </select>
+          <input
+            id="description"
+            type="text"
+            value={description}
+            onChange={(e) => {
+              setDescription(e.target.value)
+              setSuggestion(null)
+              setDescriptionHasNoHistory(false)
+            }}
+            onBlur={handleDescriptionBlur}
+            placeholder={isAdjustment ? t('drawer.adjust_reason_placeholder') : t('placeholders.description')}
+            className="w-full bg-transparent text-[15px] font-semibold text-text outline-none placeholder:font-normal placeholder:text-text-soft/60"
+          />
+        </div>
+      </div>
+      {isAdjustment && <p className="mt-2 pl-12 text-xs text-text-muted">{t('drawer.adjust_reason_required')}</p>}
+      {!isEdit && (tab === 'income' || tab === 'expense') && descriptionHasNoHistory && selectedCategory && (
+        <div className="mt-2 pl-12">
+          <CategorySuggestionHint description={description} categoryName={selectedCategory.name} />
+        </div>
+      )}
+    </div>
+  )
 
-              {frequency === 'custom' && (
-                <div className="flex flex-col gap-2 pt-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {tRec('custom_interval.every')}
+  // ── Adjustment balance preview (create only) ────────────────────────────────
+  const adjustmentPreviewRow = adjustmentPreview ? (
+    <div className="flex items-center justify-between rounded-[15px] border border-border bg-card px-4 py-3">
+      <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+        {t('drawer.balance_will_be')}
+      </span>
+      <span className="text-[15px] font-semibold tabular-nums text-text">
+        <span className="text-text-soft">
+          {CURRENCY_SYMBOL[currencyCode]}
+          {fmtBalance(adjustmentPreview.current)}
+        </span>
+        <span className="mx-1.5 text-text-soft">→</span>
+        {CURRENCY_SYMBOL[currencyCode]}
+        {fmtBalance(adjustmentPreview.next)}
+      </span>
+    </div>
+  ) : null
+
+  // ── Category suggestion chip (create, income/expense, no category yet) ───────
+  const suggestionChip =
+    !isEdit && suggestion && !categoryId && (tab === 'income' || tab === 'expense') ? (
+      <CategorySuggestionChip suggestion={suggestion} onApply={applySuggestion} />
+    ) : null
+
+  // ── Toggles: reintegro + repetir (create only) ──────────────────────────────
+  const showReimbursementToggle = !isEdit && tab === 'expense' && !isInstallments
+  const showRepeatToggle =
+    !isEdit && tab !== 'adjustment' && tab !== 'exchange' && !isInstallments
+
+  const togglesGroup =
+    showReimbursementToggle || showRepeatToggle ? (
+      <div className="overflow-hidden rounded-[15px] border border-border bg-card [&>*+*]:border-t [&>*+*]:border-[#F1F3F6]">
+        {showReimbursementToggle && (
+          <div className="px-4 py-3.5">
+            <div className="flex items-center gap-3">
+              <span
+                className={`flex size-9 shrink-0 items-center justify-center rounded-[11px] transition-colors ${
+                  reimbursementEnabled ? 'text-emerald-deep' : 'text-text-muted'
+                }`}
+                style={{ backgroundColor: reimbursementEnabled ? 'var(--emerald-soft)' : FIELD_BG }}
+              >
+                <Undo2 className="size-[18px]" aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-semibold text-text">{t('reimbursement.toggle')}</p>
+                <p className="text-xs text-text-muted">{t('reimbursement.pending_hint')}</p>
+              </div>
+              <Switch
+                checked={reimbursementEnabled}
+                ariaLabel={t('reimbursement.toggle')}
+                onValueChange={(on) => {
+                  setReimbursementEnabled(on)
+                  if (on) setReimbursementAccountId(pickReimbursementAccount(accountId))
+                }}
+              />
+            </div>
+            {reimbursementEnabled && (
+              <div className="mt-3.5 flex flex-col gap-3 border-t pt-3.5" style={{ borderColor: ROW_DIVIDER }}>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="reimb-amount" className="text-xs font-semibold text-text-muted">
+                    {t('reimbursement.estimated_amount')}
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-soft">
+                      {CURRENCY_SYMBOL[currencyCode]}
                     </span>
+                    <MoneyAmountInput
+                      id="reimb-amount"
+                      value={reimbursementAmount}
+                      onChange={setReimbursementAmount}
+                      placeholder={t('placeholders.amount')}
+                      className="w-full rounded-[10px] border border-border bg-card py-2 pl-9 pr-3 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      style={{ backgroundColor: FIELD_BG }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs text-text-muted">{t('reimbursement.percent_hint')}</span>
+                  <div className="flex items-end gap-2">
+                    <div className="flex flex-col gap-1">
+                      <label htmlFor="reimb-percent" className="text-[11px] text-text-muted">
+                        {t('reimbursement.percent_label')}
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="reimb-percent"
+                          type="text"
+                          inputMode="decimal"
+                          value={reimbursementPercent}
+                          onChange={(e) => {
+                            const v = e.target.value.replace(',', '.')
+                            setReimbursementPercent(v)
+                            applyReimbursementPercent(v, reimbursementCap)
+                          }}
+                          placeholder="0"
+                          className="w-20 rounded-[10px] border border-border py-1.5 pl-2.5 pr-6 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          style={{ backgroundColor: FIELD_BG }}
+                        />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-text-muted">%</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label htmlFor="reimb-cap" className="text-[11px] text-text-muted">
+                        {t('reimbursement.cap_label')}
+                      </label>
+                      <MoneyAmountInput
+                        id="reimb-cap"
+                        value={reimbursementCap}
+                        onChange={(v) => {
+                          setReimbursementCap(v)
+                          applyReimbursementPercent(reimbursementPercent, v)
+                        }}
+                        placeholder={t('placeholders.amount')}
+                        className="w-28 rounded-[10px] border border-border px-2.5 py-1.5 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        style={{ backgroundColor: FIELD_BG }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {isCredit && (
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-xs text-text-muted">{t('reimbursement.target_label')}</span>
+                    {(['account', 'statement'] as const).map((tg) => (
+                      <label key={tg} className="flex items-center gap-2 text-sm text-text">
+                        <input
+                          type="radio"
+                          name="reimb-target"
+                          value={tg}
+                          checked={reimbursementTarget === tg}
+                          onChange={() => setReimbursementTarget(tg)}
+                          className="accent-emerald"
+                        />
+                        {t(`reimbursement.target.${tg}`)}
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {(!isCredit || reimbursementTarget === 'account') && (
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="reimb-account" className="text-xs text-text-muted">
+                      {t('reimbursement.credit_to')}
+                    </label>
+                    <select
+                      id="reimb-account"
+                      value={reimbursementAccountId}
+                      onChange={(e) => setReimbursementAccountId(e.target.value)}
+                      className="rounded-[10px] border border-border bg-card px-3 py-2 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <option value="">{t('reimbursement.credit_to_placeholder')}</option>
+                      {cashBank.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <label className="flex items-center gap-2 text-sm text-text">
+                  <input
+                    type="checkbox"
+                    checked={reimbursementReceivedNow}
+                    onChange={(e) => setReimbursementReceivedNow(e.target.checked)}
+                    className="accent-emerald"
+                  />
+                  {t('reimbursement.received_now')}
+                </label>
+                <p className="text-xs text-text-muted">
+                  {reimbursementReceivedNow ? t('reimbursement.received_now_hint') : t('reimbursement.pending_hint')}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {showRepeatToggle && (
+          <div className="px-4 py-3.5">
+            <div className="flex items-center gap-3">
+              <span
+                className={`flex size-9 shrink-0 items-center justify-center rounded-[11px] transition-colors ${
+                  isRecurrent ? 'text-emerald-deep' : 'text-text-muted'
+                }`}
+                style={{ backgroundColor: isRecurrent ? 'var(--emerald-soft)' : FIELD_BG }}
+              >
+                <Repeat className="size-[18px]" aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-semibold text-text">{t('labels.make_recurrent')}</p>
+                <p className="text-xs text-text-muted">{t('drawer.repeat_note')}</p>
+              </div>
+              <Switch
+                checked={isRecurrent}
+                ariaLabel={t('labels.make_recurrent')}
+                onValueChange={setIsRecurrent}
+              />
+            </div>
+            {isRecurrent && (
+              <div className="mt-3.5 flex flex-col gap-3 border-t pt-3.5" style={{ borderColor: ROW_DIVIDER }}>
+                <span className="text-xs font-semibold text-text-muted">{t('drawer.repeat_question')}</span>
+                <div className="flex flex-wrap gap-2">
+                  {(['weekly', 'biweekly', 'monthly', 'annual', 'custom'] as const).map((f) => {
+                    const active = frequency === f
+                    return (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => setFrequency(f)}
+                        className={`rounded-[10px] px-3 py-1.5 text-sm font-bold transition-colors ${
+                          active ? 'bg-navy text-white' : 'text-text-muted'
+                        }`}
+                        style={active ? undefined : { backgroundColor: FIELD_BG }}
+                      >
+                        {t(`frequencies.${f}`)}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {frequency === 'custom' && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-text-muted">{tRec('custom_interval.every')}</span>
                     <input
                       type="number"
                       min={1}
                       inputMode="numeric"
                       value={intervalCount}
-                      onChange={(e) =>
-                        setIntervalCount(Math.max(1, Math.floor(Number(e.target.value) || 1)))
-                      }
+                      onChange={(e) => setIntervalCount(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
                       aria-label={tRec('custom_interval.every')}
-                      className="w-16 rounded-md border border-input bg-background px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="w-16 rounded-[10px] border border-border bg-card px-2 py-2 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     />
                     <select
                       value={intervalUnit}
-                      onChange={(e) =>
-                        setIntervalUnit(e.target.value as typeof intervalUnit)
-                      }
+                      onChange={(e) => setIntervalUnit(e.target.value as typeof intervalUnit)}
                       aria-label={t('labels.frequency')}
-                      className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="rounded-[10px] border border-border bg-card px-3 py-2 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <option value="day">{tRec('custom_interval.units.day', { count: intervalCount })}</option>
                       <option value="week">{tRec('custom_interval.units.week', { count: intervalCount })}</option>
@@ -1083,182 +1703,123 @@ export const MovementForm = ({
                       <option value="year">{tRec('custom_interval.units.year', { count: intervalCount })}</option>
                     </select>
                   </div>
-                  <label htmlFor="max-occurrences" className="text-xs text-muted-foreground">
-                    {tRec('custom_interval.end_label')}
+                )}
+
+                {/* Optional end date — applies to any frequency. */}
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="recurrence-until" className="text-xs text-text-muted">
+                    {t('drawer.repeat_until')}
                   </label>
                   <input
-                    id="max-occurrences"
-                    type="number"
-                    min={1}
-                    inputMode="numeric"
-                    value={maxOccurrences}
-                    onChange={(e) => setMaxOccurrences(e.target.value)}
-                    placeholder="—"
-                    className="w-24 rounded-md border border-input bg-background px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Reintegro / cashback (create only; Gasto, no cuotas) ───────────── */}
-      {!isEdit && tab === 'expense' && !isInstallments && (
-        <div className="flex flex-col gap-2 rounded-md border border-border p-3">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={reimbursementEnabled}
-              onChange={(e) => {
-                const enabled = e.target.checked
-                setReimbursementEnabled(enabled)
-                if (enabled) setReimbursementAccountId(pickReimbursementAccount(accountId))
-              }}
-              className="accent-primary"
-            />
-            <span className="text-sm font-medium">{t('reimbursement.toggle')}</span>
-          </label>
-          {reimbursementEnabled && (
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="reimb-amount" className="text-xs text-muted-foreground">
-                  {t('reimbursement.estimated_amount')}
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                    {CURRENCY_SYMBOL[currencyCode]}
-                  </span>
-                  <MoneyAmountInput
-                    id="reimb-amount"
-                    value={reimbursementAmount}
-                    onChange={setReimbursementAmount}
-                    placeholder={t('placeholders.amount')}
-                    className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    id="recurrence-until"
+                    type="date"
+                    value={recurrenceEndDate}
+                    min={date}
+                    onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                    className="w-44 rounded-[10px] border border-border bg-card px-3 py-2 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
               </div>
+            )}
+          </div>
+        )}
+      </div>
+    ) : null
 
-              {/* Optional: compute the amount from a % of the expense, capped. */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs text-muted-foreground">{t('reimbursement.percent_hint')}</span>
-                <div className="flex items-end gap-2">
-                  <div className="flex flex-col gap-1">
-                    <label htmlFor="reimb-percent" className="text-[11px] text-muted-foreground">
-                      {t('reimbursement.percent_label')}
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="reimb-percent"
-                        type="text"
-                        inputMode="decimal"
-                        value={reimbursementPercent}
-                        onChange={(e) => {
-                          const v = e.target.value.replace(',', '.')
-                          setReimbursementPercent(v)
-                          applyReimbursementPercent(v, reimbursementCap)
-                        }}
-                        placeholder="0"
-                        className="w-20 rounded-md border border-input bg-background px-2 py-1 pr-6 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label htmlFor="reimb-cap" className="text-[11px] text-muted-foreground">
-                      {t('reimbursement.cap_label')}
-                    </label>
-                    <MoneyAmountInput
-                      id="reimb-cap"
-                      value={reimbursementCap}
-                      onChange={(v) => {
-                        setReimbursementCap(v)
-                        applyReimbursementPercent(reimbursementPercent, v)
-                      }}
-                      placeholder={t('placeholders.amount')}
-                      className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
-                  </div>
-                </div>
-              </div>
+  // ── Shared body ──────────────────────────────────────────────────────────────
+  const body = (
+    <>
+      {hero}
+      {adjustmentSign}
+      {adjustmentBanner}
+      {exchangeNoCurrencyHint}
+      {suggestionChip}
+      {fieldGroup}
+      {exchangeReceived}
+      {fxRateField}
+      {cuotasCard}
+      {descriptionField}
+      {adjustmentPreviewRow}
+      {togglesGroup}
+    </>
+  )
 
-              {isCredit && (
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-xs text-muted-foreground">{t('reimbursement.target_label')}</span>
-                  <div className="flex flex-col gap-1.5">
-                    {(['account', 'statement'] as const).map((tg) => (
-                      <label key={tg} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="reimb-target"
-                          value={tg}
-                          checked={reimbursementTarget === tg}
-                          onChange={() => setReimbursementTarget(tg)}
-                          className="accent-primary mt-0.5"
-                        />
-                        <span className="text-sm">{t(`reimbursement.target.${tg}`)}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
+  // ── Footer buttons ───────────────────────────────────────────────────────────
+  const submitButton = (
+    <button
+      type="submit"
+      disabled={isPending}
+      className={`flex h-[52px] flex-1 items-center justify-center gap-2 rounded-[14px] text-[15px] font-bold text-white transition-opacity disabled:opacity-50 ${
+        tab === 'income'
+          ? 'bg-emerald shadow-[0_8px_20px_-4px_rgba(16,185,129,0.35)]'
+          : 'bg-navy shadow-[0_8px_20px_-4px_rgba(11,26,43,0.30)]'
+      }`}
+    >
+      {ctaLabel}
+      {!isEdit && <kbd className="hidden font-semibold opacity-70 sm:inline">⌘↵</kbd>}
+    </button>
+  )
 
-              {(!isCredit || reimbursementTarget === 'account') && (
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="reimb-account" className="text-xs text-muted-foreground">
-                    {t('reimbursement.credit_to')}
-                  </label>
-                  <select
-                    id="reimb-account"
-                    value={reimbursementAccountId}
-                    onChange={(e) => setReimbursementAccountId(e.target.value)}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <option value="">{t('reimbursement.credit_to_placeholder')}</option>
-                    {cashBank.map((a) => (
-                      <option key={a.id} value={a.id}>{a.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
+  const otroButton = !isEdit ? (
+    <button
+      type="button"
+      onClick={handleAddAnother}
+      disabled={isPending}
+      className="flex h-[52px] shrink-0 items-center gap-1.5 rounded-[14px] border border-border bg-card px-4 text-sm font-bold text-text-muted transition-colors hover:bg-border-soft disabled:opacity-50"
+    >
+      <Plus className="size-4" aria-hidden />
+      {t('drawer.add_another')}
+    </button>
+  ) : null
 
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={reimbursementReceivedNow}
-                  onChange={(e) => setReimbursementReceivedNow(e.target.checked)}
-                  className="accent-primary"
-                />
-                <span className="text-sm">{t('reimbursement.received_now')}</span>
-              </label>
-
-              <p className="text-xs text-muted-foreground">
-                {reimbursementReceivedNow
-                  ? t('reimbursement.received_now_hint')
-                  : t('reimbursement.pending_hint')}
-              </p>
+  // ── Render: drawer shell vs inline page ─────────────────────────────────────
+  if (isDrawer) {
+    return (
+      <form ref={formRef} onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="flex min-h-0 flex-1 flex-col">
+        <header className="shrink-0 border-b border-border bg-card px-7 pb-4 pt-[22px]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-text-soft">{eyebrow}</p>
+              <h2 className="truncate text-[25px] font-extrabold leading-tight tracking-[-0.03em] text-text">
+                {title}
+              </h2>
             </div>
-          )}
-        </div>
-      )}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t('drawer.close')}
+              className="inline-flex size-[38px] shrink-0 items-center justify-center rounded-[11px] border border-border text-text-muted transition-colors hover:bg-border-soft"
+            >
+              <X className="size-4" aria-hidden />
+            </button>
+          </div>
+          <div className="mt-4">{typeSelector}</div>
+        </header>
 
+        <div className="min-h-0 flex-1 overflow-y-auto px-7 py-5">
+          <div className="flex flex-col gap-4">{body}</div>
+        </div>
+
+        <footer className="shrink-0 border-t border-border bg-card px-7 py-4">
+          {formError && <p className="mb-3 text-sm text-destructive">{formError}</p>}
+          <div className="flex gap-3">
+            {submitButton}
+            {otroButton}
+          </div>
+        </footer>
+      </form>
+    )
+  }
+
+  return (
+    <form ref={formRef} onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="flex flex-col gap-4">
+      {typeSelector}
+      {body}
       {formError && <p className="text-sm text-destructive">{formError}</p>}
-
-      <button
-        type="submit"
-        disabled={isPending}
-        className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
-      >
-        {isPending
-          ? tCommon('saving')
-          : isEdit
-            ? tCommon('save_changes')
-            : isInstallments
-              ? t('actions.register_installments', { count: parseInt(installments) })
-              : tab === 'exchange'
-                ? t('actions.register_exchange')
-                : t('actions.create')}
-      </button>
+      <div className="flex gap-3">
+        {submitButton}
+        {otroButton}
+      </div>
     </form>
   )
 }
