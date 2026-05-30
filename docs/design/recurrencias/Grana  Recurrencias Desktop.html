@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>grana · Recurrencias</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #F6F7F9;
+    --card: #FFFFFF;
+    --navy: #0B1A2B;
+    --muted: #6B7683;
+    --soft: #8C97A4;
+    --border: #E6EAEF;
+    --border-soft: #EEF1F4;
+    --field: #F1F3F6;
+    --emerald: #10B981;
+    --emerald-deep: #0E9F73;
+    --emerald-soft: #E4F5EE;
+    --terracota: #B56A5A;
+    --slate: #3A6B8A;
+    --plum: #8C7AA0;
+    --teal: #2A8F7B;
+    --amber: #B58A1E;
+    --amber-soft: #FBF3DE;
+    --rose: #D9534F;
+    --brand: #15B981;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: #DDE1E6;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    color: var(--navy);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+
+  /* ---------- Page frame ---------- */
+  .screen {
+    width: 1440px;
+    min-height: 1024px;
+    margin: 0 auto;
+    background: var(--bg);
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    position: relative;
+  }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    padding: 36px 24px 28px;
+    display: flex; flex-direction: column;
+    position: sticky; top: 0;
+    height: 100vh; min-height: 1024px;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; padding: 0 8px 0 4px; margin-bottom: 44px; }
+  .brand .mark {
+    width: 44px; height: 44px; border-radius: 13px;
+    background: var(--brand); color: #fff;
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 26px; line-height: 1; letter-spacing: -0.03em;
+  }
+  .brand .word { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .nav { display: flex; flex-direction: column; gap: 4px; }
+  .nav a {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 16px; border-radius: 12px;
+    color: var(--muted); text-decoration: none;
+    font-size: 16px; font-weight: 600;
+    transition: background .15s, color .15s;
+  }
+  .nav a:hover { background: #F1F3F6; color: var(--navy); }
+  .nav a.active { background: var(--navy); color: #fff; }
+  .nav a svg { width: 20px; height: 20px; flex: none; }
+  .sidebar .spacer { flex: 1; }
+  .user {
+    display: flex; align-items: center; gap: 13px;
+    padding: 14px 12px 0; border-top: 1px solid var(--border); margin-top: 8px;
+  }
+  .user .avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--slate); color: #fff;
+    display: grid; place-items: center; font-weight: 700; font-size: 14px; letter-spacing: 0.02em;
+  }
+  .user .name { font-size: 15px; font-weight: 700; line-height: 1.2; }
+  .user .sub { font-size: 13px; color: var(--muted); font-weight: 500; }
+
+  /* ---------- Main ---------- */
+  .main { padding: 40px 0 140px; }
+  .content { max-width: 1040px; margin: 0 auto; padding: 0 40px; }
+
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.16em; font-size: 12px; font-weight: 700; color: var(--muted); }
+  .sec-label {
+    text-transform: uppercase; letter-spacing: 0.14em;
+    font-size: 12px; font-weight: 700; color: var(--soft);
+    display: flex; align-items: center; gap: 9px;
+    padding: 0 4px 14px;
+  }
+  .sec-label .dot-accent { width: 7px; height: 7px; border-radius: 50%; }
+
+  /* Header */
+  .page-head { margin-bottom: 34px; }
+  .head-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+  .head-left h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+  .head-left .sub { margin-top: 12px; color: var(--muted); font-size: 15px; font-weight: 500; }
+  .head-left .sub a { color: var(--slate); font-weight: 600; text-decoration: none; }
+  .head-left .sub a:hover { text-decoration: underline; }
+
+  .btn-primary {
+    background: var(--navy); color: #fff; border: none; cursor: pointer;
+    font-family: inherit; font-size: 15px; font-weight: 700;
+    padding: 13px 22px; border-radius: 12px; transition: opacity .15s, transform .12s;
+    display: inline-flex; align-items: center; gap: 10px; white-space: nowrap;
+  }
+  .btn-primary:hover { opacity: .92; }
+  .btn-primary:active { transform: translateY(1px); }
+  .btn-primary svg { width: 19px; height: 19px; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 22px; }
+
+  /* ---------- Pendientes (the hub) ---------- */
+  .pending-card {
+    border: 1px solid #EAD9A8;
+    box-shadow: 0 0 0 4px rgba(181,138,30,0.06);
+    border-radius: 22px; background: var(--card);
+    overflow: hidden; margin-bottom: 18px;
+  }
+  .pending-head {
+    display: flex; align-items: center; gap: 14px;
+    padding: 22px 26px 18px;
+  }
+  .pending-head .ph-icon {
+    width: 44px; height: 44px; border-radius: 13px; flex: none;
+    background: var(--amber-soft); color: var(--amber);
+    display: grid; place-items: center;
+  }
+  .pending-head .ph-icon svg { width: 22px; height: 22px; }
+  .pending-head .ph-title { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; }
+  .pending-head .ph-sub { font-size: 14px; color: var(--muted); font-weight: 500; margin-top: 3px; }
+  .pending-head .ph-count {
+    margin-left: auto; flex: none;
+    font-size: 13px; font-weight: 700; color: var(--amber);
+    background: var(--amber-soft); border-radius: 999px; padding: 7px 14px;
+  }
+
+  .pending-row {
+    display: grid; grid-template-columns: 46px 1fr auto auto;
+    align-items: center; gap: 18px;
+    padding: 18px 26px;
+    border-top: 1px solid var(--border-soft);
+    transition: background .12s;
+  }
+  .pending-row.gone { display: none; }
+  .rec-icon {
+    width: 46px; height: 46px; border-radius: 13px;
+    display: grid; place-items: center; font-size: 21px; line-height: 1; flex: none; position: relative;
+  }
+  .rec-icon .repeat-badge {
+    position: absolute; right: -4px; bottom: -4px;
+    width: 19px; height: 19px; border-radius: 50%;
+    background: var(--card); border: 1.5px solid var(--bg);
+    display: grid; place-items: center; color: var(--muted);
+  }
+  .rec-icon .repeat-badge svg { width: 10px; height: 10px; }
+  .pending-mid .pm-title { font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .pending-mid .pm-sub { font-size: 14px; color: var(--muted); font-weight: 500; margin-top: 3px; }
+  .pending-mid .pm-when {
+    margin-top: 7px; font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--amber); display: inline-flex; align-items: center; gap: 6px;
+  }
+  .pending-mid .pm-when.overdue { color: var(--rose); }
+  .pending-mid .pm-when .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--rose); }
+  .pending-amt { font-size: 18px; font-weight: 700; letter-spacing: -0.025em; text-align: right; }
+  .amt-neg { color: var(--terracota); }
+  .amt-pos { color: var(--emerald-deep); }
+  .amt-neu { color: var(--navy); }
+
+  .pending-actions { display: flex; align-items: center; gap: 10px; }
+  .btn-confirm {
+    background: var(--emerald); color: #fff; border: none; cursor: pointer;
+    font-family: inherit; font-size: 14px; font-weight: 700;
+    padding: 11px 18px; border-radius: 11px;
+    display: inline-flex; align-items: center; gap: 7px;
+    box-shadow: 0 4px 12px rgba(16,185,129,0.28); transition: transform .12s, opacity .15s;
+  }
+  .btn-confirm:hover { opacity: .93; }
+  .btn-confirm:active { transform: translateY(1px); }
+  .btn-confirm svg { width: 15px; height: 15px; }
+  .btn-omit {
+    background: var(--card); color: var(--muted); border: 1px solid var(--border); cursor: pointer;
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    padding: 11px 16px; border-radius: 11px;
+    display: inline-flex; align-items: center; gap: 7px; transition: background .15s, color .15s;
+  }
+  .btn-omit:hover { background: var(--field); color: var(--navy); }
+  .btn-omit svg { width: 14px; height: 14px; }
+
+  .pending-empty {
+    display: none; align-items: center; gap: 14px;
+    padding: 24px 26px; border-top: 1px solid var(--border-soft);
+    color: var(--emerald-deep); font-size: 15px; font-weight: 600;
+  }
+  .pending-empty svg { width: 20px; height: 20px; }
+  .pending-card.cleared .pending-empty { display: flex; }
+  .pending-card.cleared .pending-head .ph-count { display: none; }
+
+  /* ---------- Upcoming (informativo) ---------- */
+  .upcoming-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 44px; }
+  .up-card { padding: 8px 6px 6px; }
+  .up-card-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 14px 20px 10px;
+  }
+  .up-card-head .uh-title { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+  .up-card-head .uh-note { font-size: 12.5px; color: var(--soft); font-weight: 500; }
+  .up-row {
+    display: grid; grid-template-columns: 38px 1fr auto; align-items: center; gap: 14px;
+    padding: 13px 20px; transition: background .12s;
+  }
+  .up-row + .up-row { border-top: 1px solid var(--border-soft); }
+  .up-row:hover { background: #FAFBFC; }
+  .up-row .ur-icon { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; font-size: 18px; flex: none; }
+  .up-row .ur-name { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  .up-row .ur-sub { font-size: 13px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+  .up-row .ur-amt { font-size: 15.5px; font-weight: 700; letter-spacing: -0.02em; text-align: right; }
+  .up-row .ur-when { font-size: 12px; color: var(--soft); font-weight: 600; margin-top: 2px; text-align: right; }
+
+  /* ---------- Impact strip ---------- */
+  .impact-strip {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    background: var(--card); border: 1px solid var(--border); border-radius: 22px;
+    overflow: hidden; margin-bottom: 22px;
+  }
+  .impact-cell { padding: 24px 28px; }
+  .impact-cell + .impact-cell { border-left: 1px solid var(--border); }
+  .impact-cell .ic-label { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--soft); }
+  .impact-cell .ic-amt { font-size: 27px; font-weight: 800; letter-spacing: -0.03em; margin-top: 10px; }
+  .impact-cell .ic-note { font-size: 13px; color: var(--muted); font-weight: 500; margin-top: 6px; }
+
+  /* ---------- Tabs ---------- */
+  .list-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 18px; }
+  .seg { display: flex; gap: 4px; background: var(--field); border-radius: 12px; padding: 4px; }
+  .seg button {
+    border: none; cursor: pointer; font-family: inherit;
+    font-size: 14px; font-weight: 700; color: var(--muted);
+    padding: 9px 18px; border-radius: 9px; background: transparent;
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: background .15s, color .15s;
+  }
+  .seg button .seg-n {
+    font-size: 11.5px; font-weight: 800; color: var(--soft);
+    background: rgba(11,26,43,0.06); border-radius: 6px; padding: 1px 7px;
+  }
+  .seg button.on { background: var(--navy); color: #fff; }
+  .seg button.on .seg-n { background: rgba(255,255,255,0.18); color: rgba(255,255,255,0.85); }
+
+  /* ---------- Recurrence list ---------- */
+  .rec-list { display: none; }
+  .rec-list.on { display: block; }
+  .rec-card { overflow: hidden; }
+  .rec-row {
+    display: grid; grid-template-columns: 46px 1fr auto 22px; align-items: center; gap: 18px;
+    padding: 17px 26px; cursor: pointer; transition: background .12s;
+  }
+  .rec-row + .rec-row { border-top: 1px solid var(--border-soft); }
+  .rec-row:hover { background: #FAFBFC; }
+  .rec-row.muted { opacity: 0.62; }
+  .rec-mid { min-width: 0; }
+  .rec-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .rec-name { font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .freq-badge {
+    font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em;
+    padding: 3px 8px; border-radius: 6px;
+    background: var(--field); color: var(--muted); border: 1px solid var(--border);
+  }
+  .status-badge {
+    font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 6px;
+  }
+  .status-badge.pausada { background: var(--amber-soft); color: var(--amber); }
+  .status-badge.finalizada { background: var(--field); color: var(--muted); }
+  .rec-meta { font-size: 14px; color: var(--muted); font-weight: 500; margin-top: 4px; }
+  .rec-meta .next-date { color: var(--navy); font-weight: 600; }
+  .rec-amt { font-size: 18px; font-weight: 700; letter-spacing: -0.025em; text-align: right; }
+  .rec-chev { color: #C2CAD3; display: grid; place-items: center; }
+  .rec-chev svg { width: 18px; height: 18px; }
+
+  /* Tinted icon backgrounds */
+  .ic-work   { background: #DEF1E7; }
+  .ic-home   { background: #DEEAF3; }
+  .ic-stream { background: #ECE6F3; }
+  .ic-util   { background: #FBF3DE; }
+  .ic-water  { background: #DEEAF3; }
+  .ic-save   { background: #DEF1E7; }
+  .ic-gym    { background: #F6E2DD; }
+  .ic-news   { background: #ECE6F3; }
+  .ic-shield { background: #E3ECF3; }
+
+  /* ---------- FAB ---------- */
+  .fab {
+    position: fixed; right: calc(50% - 720px + 48px); bottom: 48px;
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--navy); color: #fff; border: none; cursor: pointer;
+    display: grid; place-items: center;
+    box-shadow: 0 14px 30px -8px rgba(11,26,43,.45), 0 4px 10px -2px rgba(11,26,43,.25);
+    transition: transform .15s, box-shadow .15s; z-index: 30;
+  }
+  .fab:hover { transform: translateY(-2px); box-shadow: 0 18px 36px -8px rgba(11,26,43,.5); }
+  .fab svg { width: 28px; height: 28px; }
+  @media (max-width: 1460px) { .fab { right: 48px; } }
+
+  /* ---------- Overlay (drawer + modal) ---------- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(11,26,43,0.42);
+    opacity: 0; pointer-events: none; transition: opacity .22s ease; z-index: 40;
+    backdrop-filter: blur(1.5px);
+  }
+  .overlay.show { opacity: 1; pointer-events: auto; }
+
+  /* ---------- Drawer (detalle) ---------- */
+  .drawer {
+    position: fixed; top: 0; right: 0; height: 100vh; width: 480px;
+    background: var(--bg); box-shadow: -24px 0 60px -20px rgba(11,26,43,0.4);
+    transform: translateX(100%); transition: transform .28s cubic-bezier(.3,.7,.3,1);
+    z-index: 50; display: flex; flex-direction: column;
+  }
+  .drawer.show { transform: translateX(0); }
+  .drawer-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 26px 16px; flex: none;
+  }
+  .icon-btn {
+    width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--border);
+    background: var(--card); color: var(--navy); cursor: pointer;
+    display: grid; place-items: center; transition: background .15s;
+  }
+  .icon-btn:hover { background: var(--field); }
+  .icon-btn svg { width: 18px; height: 18px; }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 0 26px 30px; }
+
+  .d-hero { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 6px 0 22px; }
+  .d-hero .dh-icon {
+    width: 70px; height: 70px; border-radius: 20px; display: grid; place-items: center;
+    font-size: 32px; position: relative; box-shadow: 0 10px 24px -8px rgba(11,26,43,0.18);
+  }
+  .d-hero .dh-icon .repeat-badge {
+    position: absolute; right: -5px; bottom: -5px; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--card); border: 2px solid var(--bg); display: grid; place-items: center; color: var(--emerald-deep);
+  }
+  .d-hero .dh-icon .repeat-badge svg { width: 13px; height: 13px; }
+  .d-hero .dh-amt { font-size: 38px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20px; line-height: 1; }
+  .d-hero .dh-name { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-top: 12px; }
+  .d-hero .dh-status {
+    margin-top: 12px; display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 13px; border-radius: 999px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .d-hero .dh-status.activa { background: var(--emerald-soft); color: var(--emerald-deep); }
+  .d-hero .dh-status.pausada { background: var(--amber-soft); color: var(--amber); }
+  .d-hero .dh-status .sdot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .d-section-label { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--soft); padding: 4px 4px 10px; display: flex; align-items: baseline; justify-content: space-between; }
+  .d-section-label a { font-size: 12px; font-weight: 700; color: var(--emerald-deep); text-decoration: none; text-transform: none; letter-spacing: 0; }
+
+  .next-card { background: var(--emerald-soft); border: 1px solid rgba(16,185,129,0.22); border-radius: 18px; padding: 18px; margin-bottom: 22px; }
+  .next-card .nc-top { display: flex; align-items: center; gap: 14px; }
+  .next-card .nc-ico { width: 46px; height: 46px; border-radius: 13px; background: var(--card); color: var(--emerald-deep); display: grid; place-items: center; box-shadow: 0 3px 8px rgba(16,185,129,0.18); flex: none; }
+  .next-card .nc-ico svg { width: 22px; height: 22px; }
+  .next-card .nc-date { font-size: 16px; font-weight: 800; letter-spacing: -0.02em; }
+  .next-card .nc-desc { font-size: 13px; color: var(--emerald-deep); font-weight: 600; margin-top: 3px; }
+  .next-card .nc-foot { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(16,185,129,0.18); display: flex; align-items: center; justify-content: space-between; }
+  .next-card .nc-foot .nf-when { font-size: 13px; color: var(--muted); }
+  .next-card .nc-foot .nf-when b { color: var(--navy); }
+  .next-card .nc-foot a { font-size: 13px; font-weight: 700; color: var(--emerald-deep); text-decoration: none; }
+
+  .config-card, .history-card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; margin-bottom: 22px; }
+  .cfg-row { display: flex; align-items: center; gap: 14px; padding: 14px 18px; }
+  .cfg-row + .cfg-row { border-top: 1px solid var(--border-soft); }
+  .cfg-row .cfg-ico { width: 36px; height: 36px; border-radius: 11px; background: var(--field); color: var(--muted); display: grid; place-items: center; flex: none; }
+  .cfg-row .cfg-ico svg { width: 18px; height: 18px; }
+  .cfg-row .cfg-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--soft); }
+  .cfg-row .cfg-val { font-size: 15px; font-weight: 600; margin-top: 3px; display: flex; align-items: center; gap: 8px; }
+  .cfg-row .cfg-val .mini-dot { width: 11px; height: 11px; border-radius: 50%; }
+  .cfg-row .cfg-tag { font-size: 10px; font-weight: 800; letter-spacing: 0.06em; padding: 2px 7px; border-radius: 5px; background: var(--field); color: var(--muted); }
+
+  .hist-row { display: flex; align-items: center; gap: 14px; padding: 12px 18px; }
+  .hist-row + .hist-row { border-top: 1px solid var(--border-soft); }
+  .hist-row .h-mark { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+  .hist-row .h-mark svg { width: 13px; height: 13px; }
+  .hist-row .h-mark.ok { background: var(--emerald-soft); color: var(--emerald-deep); }
+  .hist-row .h-mark.skip { background: var(--field); color: var(--soft); }
+  .hist-row .h-date { flex: 1; font-size: 14.5px; font-weight: 600; }
+  .hist-row .h-tag { font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 5px; }
+  .hist-row .h-tag.ok { background: var(--emerald-soft); color: var(--emerald-deep); }
+  .hist-row .h-tag.skip { background: var(--field); color: var(--muted); }
+  .hist-row .h-amt { font-size: 14.5px; font-weight: 700; letter-spacing: -0.02em; min-width: 92px; text-align: right; color: var(--emerald-deep); }
+  .hist-row .h-amt.skip { color: var(--soft); text-decoration: line-through; }
+
+  .drawer-foot { flex: none; padding: 16px 26px; background: var(--bg); border-top: 1px solid var(--border); display: flex; gap: 10px; }
+  .btn-ghost {
+    flex: 1; height: 48px; border-radius: 13px; background: var(--card); border: 1px solid var(--border);
+    cursor: pointer; font-family: inherit; font-size: 14.5px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: background .15s;
+  }
+  .btn-ghost:hover { background: var(--field); }
+  .btn-ghost svg { width: 16px; height: 16px; }
+  .btn-ghost.warn { color: var(--amber); }
+  .btn-ghost.dark { color: var(--navy); }
+
+  /* ---------- Modal (crear) ---------- */
+  .modal {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -46%) scale(.98);
+    width: 560px; max-height: 90vh; background: var(--bg); border-radius: 24px;
+    box-shadow: 0 40px 100px -30px rgba(11,26,43,0.5); z-index: 50;
+    opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .modal.show { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 22px 26px 16px; flex: none; }
+  .modal-head h2 { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+  .modal-body { flex: 1; overflow-y: auto; padding: 0 26px 26px; }
+
+  .type-tabs { display: flex; gap: 4px; background: var(--field); border: 1px solid var(--border); border-radius: 12px; padding: 4px; margin-bottom: 20px; }
+  .type-tabs button {
+    flex: 1; border: none; cursor: pointer; font-family: inherit; background: transparent;
+    padding: 11px 6px; border-radius: 9px; font-size: 14px; font-weight: 700; color: var(--muted);
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px; transition: background .15s, color .15s;
+  }
+  .type-tabs button .tt-sign { font-weight: 800; }
+  .type-tabs button.on { background: var(--card); box-shadow: 0 1px 3px rgba(11,26,43,0.1); color: var(--navy); }
+  .type-tabs button.on.ingreso .tt-sign { color: var(--emerald-deep); }
+  .type-tabs button.on.gasto .tt-sign { color: var(--terracota); }
+  .type-tabs button.on.transfer .tt-sign { color: var(--navy); }
+
+  .amount-box { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 20px; margin-bottom: 22px; }
+  .amount-box .ab-top { display: flex; align-items: center; margin-bottom: 10px; }
+  .amount-box .ab-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--soft); }
+  .amount-box .ab-cur { margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; color: var(--navy); background: var(--field); border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px; }
+  .amount-box .ab-amt { font-size: 40px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: var(--emerald-deep); display: flex; align-items: baseline; }
+  .amount-box .ab-amt .ab-pre { font-size: 26px; margin-right: 4px; }
+  .amount-box .ab-amt .ab-cents { font-size: 22px; opacity: .8; align-self: flex-start; margin-top: 4px; }
+
+  .m-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--soft); padding: 0 2px 10px; display: flex; align-items: center; gap: 8px; }
+  .m-label svg { width: 14px; height: 14px; color: var(--emerald-deep); }
+  .form-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 22px; }
+  .form-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+  .form-row + .form-row { border-top: 1px solid var(--border-soft); }
+  .form-row .fr-ico { width: 36px; height: 36px; border-radius: 11px; background: var(--field); color: var(--muted); display: grid; place-items: center; flex: none; }
+  .form-row .fr-ico svg { width: 18px; height: 18px; }
+  .form-row .fr-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--soft); }
+  .form-row .fr-val { font-size: 15px; font-weight: 600; margin-top: 3px; display: flex; align-items: center; gap: 8px; }
+  .form-row .fr-val .mini-dot { width: 11px; height: 11px; border-radius: 50%; }
+  .form-row .fr-chev { color: #C2CAD3; flex: none; }
+  .form-row .fr-chev svg { width: 16px; height: 16px; }
+
+  .freq-block { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 22px; }
+  .freq-block .fb-label { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 10px; }
+  .freq-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .freq-pills button {
+    border: 1px solid var(--border); background: var(--card); cursor: pointer; font-family: inherit;
+    padding: 9px 15px; border-radius: 10px; font-size: 13.5px; font-weight: 600; color: var(--navy); transition: all .15s;
+  }
+  .freq-pills button.on { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .freq-divider { height: 1px; background: var(--border-soft); margin: 16px -16px 0; }
+  .toggle-row { display: flex; align-items: center; gap: 12px; padding: 14px 0 2px; }
+  .toggle-row .tr-ico { width: 36px; height: 36px; border-radius: 11px; background: var(--field); color: var(--muted); display: grid; place-items: center; flex: none; }
+  .toggle-row .tr-ico svg { width: 18px; height: 18px; }
+  .toggle-row .tr-title { font-size: 15px; font-weight: 700; }
+  .toggle-row .tr-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .switch { width: 44px; height: 26px; border-radius: 13px; background: var(--emerald); position: relative; flex: none; cursor: pointer; transition: background .18s; }
+  .switch .knob { position: absolute; top: 3px; left: 21px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: left .18s; }
+  .switch.off { background: var(--border); }
+  .switch.off .knob { left: 3px; }
+
+  .preview-block { display: flex; gap: 13px; background: var(--emerald-soft); border: 1px solid rgba(16,185,129,0.22); border-radius: 16px; padding: 16px 18px; }
+  .preview-block .pb-ico { width: 36px; height: 36px; border-radius: 11px; background: var(--card); color: var(--emerald-deep); display: grid; place-items: center; flex: none; box-shadow: 0 2px 6px rgba(16,185,129,0.2); }
+  .preview-block .pb-ico svg { width: 18px; height: 18px; }
+  .preview-block .pb-text { font-size: 14px; line-height: 1.55; color: var(--emerald-deep); font-weight: 500; text-wrap: pretty; }
+  .preview-block .pb-text b { font-weight: 800; }
+
+  .modal-foot { flex: none; padding: 18px 26px; background: var(--bg); border-top: 1px solid var(--border); }
+  .btn-create { width: 100%; height: 52px; border-radius: 14px; border: none; cursor: pointer; background: var(--emerald); color: #fff; font-family: inherit; font-size: 15.5px; font-weight: 800; box-shadow: 0 10px 26px rgba(16,185,129,0.32); transition: transform .12s, opacity .15s; }
+  .btn-create:hover { opacity: .94; }
+  .btn-create:active { transform: translateY(1px); }
+</style>
+</head>
+<body>
+  <div class="screen">
+    <!-- ===================== SIDEBAR ===================== -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="mark">g</div>
+        <div class="word">grana</div>
+      </div>
+      <nav class="nav">
+        <a href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+          Inicio
+        </a>
+        <a href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="17" x2="18" y2="17"/></svg>
+          Movimientos
+        </a>
+        <a href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Cuentas
+        </a>
+        <a href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2.5"/><line x1="3" y1="11" x2="21" y2="11"/><line x1="7" y1="15" x2="11" y2="15"/></svg>
+          Tarjetas
+        </a>
+        <a href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18z"/></svg>
+          Categorías
+        </a>
+        <a href="#" class="active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          Recurrencias
+        </a>
+      </nav>
+      <div class="spacer"></div>
+      <div class="user">
+        <div class="avatar">CA</div>
+        <div>
+          <div class="name">Cristian</div>
+          <div class="sub">Configuración</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ===================== MAIN ===================== -->
+    <main class="main">
+      <div class="content">
+
+        <!-- Header -->
+        <header class="page-head">
+          <div class="head-top">
+            <div class="head-left">
+              <h1>Recurrencias</h1>
+              <div class="sub">Movimientos que se repiten · <a href="#">Ver movimientos →</a></div>
+            </div>
+            <button class="btn-primary" id="openCreate">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nueva recurrencia
+            </button>
+          </div>
+        </header>
+
+        <!-- ===== Próximas / Pendientes ===== -->
+        <div class="sec-label"><span class="dot-accent" style="background:var(--rose)"></span>Próximas</div>
+
+        <section class="pending-card" id="pendingCard">
+          <div class="pending-head">
+            <div class="ph-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            </div>
+            <div>
+              <div class="ph-title">Pendientes de confirmar</div>
+              <div class="ph-sub">Grana espera tu acción antes de registrarlas</div>
+            </div>
+            <div class="ph-count" id="pendingCount">2 pendientes</div>
+          </div>
+          <div id="pendingList"></div>
+          <div class="pending-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+            Todo al día — no hay recurrencias esperando tu confirmación.
+          </div>
+        </section>
+
+        <div class="upcoming-grid">
+          <div class="card up-card">
+            <div class="up-card-head">
+              <span class="uh-title">Próximos 7 días</span>
+              <span class="uh-note">Solo informativo</span>
+            </div>
+            <div id="upcoming7"></div>
+          </div>
+          <div class="card up-card">
+            <div class="up-card-head">
+              <span class="uh-title">Más adelante este mes</span>
+              <span class="uh-note">Mayo</span>
+            </div>
+            <div id="upcomingMonth"></div>
+          </div>
+        </div>
+
+        <!-- ===== Todas tus recurrencias ===== -->
+        <div class="sec-label"><span class="dot-accent" style="background:var(--emerald)"></span>Todas tus recurrencias</div>
+
+        <div class="impact-strip">
+          <div class="impact-cell">
+            <div class="ic-label">Ingresos recurrentes</div>
+            <div class="ic-amt amt-pos tnum">+$ 520.000</div>
+            <div class="ic-note">1 ingreso mensual</div>
+          </div>
+          <div class="impact-cell">
+            <div class="ic-label">Gastos fijos</div>
+            <div class="ic-amt amt-neg tnum">−$ 271.790</div>
+            <div class="ic-note">7 reglas · servicios, alquiler, ahorro</div>
+          </div>
+          <div class="impact-cell">
+            <div class="ic-label">Neto mensual</div>
+            <div class="ic-amt amt-neu tnum">+$ 248.210</div>
+            <div class="ic-note">Impacto estimado en tus cuentas</div>
+          </div>
+        </div>
+
+        <div class="list-head">
+          <div class="seg" id="statusTabs">
+            <button class="on" data-tab="activas">Activas<span class="seg-n tnum">8</span></button>
+            <button data-tab="pausadas">Pausadas<span class="seg-n tnum">2</span></button>
+            <button data-tab="finalizadas">Finalizadas<span class="seg-n tnum">5</span></button>
+          </div>
+        </div>
+
+        <div class="card rec-card rec-list on" id="list-activas"></div>
+        <div class="card rec-card rec-list" id="list-pausadas"></div>
+        <div class="card rec-card rec-list" id="list-finalizadas"></div>
+
+      </div>
+    </main>
+
+    <!-- FAB -->
+    <button class="fab" id="fabCreate" aria-label="Nueva recurrencia">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+
+    <!-- ===================== OVERLAY ===================== -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- ===================== DRAWER (detalle) ===================== -->
+    <aside class="drawer" id="drawer" aria-hidden="true">
+      <div class="drawer-head">
+        <button class="icon-btn" id="drawerClose" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 5 12 12 19"/></svg>
+        </button>
+        <button class="icon-btn" aria-label="Más">
+          <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+        </button>
+      </div>
+      <div class="drawer-body">
+        <div class="d-hero">
+          <div class="dh-icon" id="dHeroIcon">
+            💼
+            <div class="repeat-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
+          </div>
+          <div class="dh-amt tnum" id="dHeroAmt">+$ 520.000</div>
+          <div class="dh-name" id="dHeroName">Sueldo ACME S.A.</div>
+          <div class="dh-status activa" id="dHeroStatus"><span class="sdot"></span><span id="dHeroStatusText">Mensual · activa</span></div>
+        </div>
+
+        <div class="d-section-label">Próxima ejecución</div>
+        <div class="next-card">
+          <div class="nc-top">
+            <div class="nc-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+            <div>
+              <div class="nc-date" id="dNextDate">1 de mayo de 2026</div>
+              <div class="nc-desc">Te vamos a pedir confirmar antes de registrarlo.</div>
+            </div>
+          </div>
+          <div class="nc-foot">
+            <div class="nf-when">En <b id="dNextIn">2 días</b></div>
+            <a href="#">Ver próximas →</a>
+          </div>
+        </div>
+
+        <div class="d-section-label">Configuración</div>
+        <div class="config-card" id="dConfig"></div>
+
+        <div class="d-section-label">Historial <a href="#">Ver todo →</a></div>
+        <div class="history-card">
+          <div class="hist-row"><div class="h-mark ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></div><div class="h-date">1 de abril de 2026</div><div class="h-tag ok">confirmada</div><div class="h-amt tnum" id="hAmt1">+$ 520.000</div></div>
+          <div class="hist-row"><div class="h-mark ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></div><div class="h-date">1 de marzo de 2026</div><div class="h-tag ok">confirmada</div><div class="h-amt tnum" id="hAmt2">+$ 520.000</div></div>
+          <div class="hist-row"><div class="h-mark skip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></div><div class="h-date">1 de febrero de 2026</div><div class="h-tag skip">omitida</div><div class="h-amt skip tnum" id="hAmt3">+$ 520.000</div></div>
+          <div class="hist-row"><div class="h-mark ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></div><div class="h-date">1 de enero de 2026</div><div class="h-tag ok">confirmada</div><div class="h-amt tnum" id="hAmt4">+$ 520.000</div></div>
+        </div>
+      </div>
+      <div class="drawer-foot">
+        <button class="btn-ghost warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>Pausar</button>
+        <button class="btn-ghost dark">Editar recurrencia</button>
+      </div>
+    </aside>
+
+    <!-- ===================== MODAL (crear) ===================== -->
+    <div class="modal" id="modal" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="modal-head">
+        <h2>Nueva recurrencia</h2>
+        <button class="icon-btn" id="modalClose" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="type-tabs" id="typeTabs">
+          <button class="on ingreso" data-type="ingreso"><span class="tt-sign">+</span>Ingreso</button>
+          <button class="gasto" data-type="gasto"><span class="tt-sign">−</span>Gasto</button>
+          <button class="transfer" data-type="transfer"><span class="tt-sign">↔</span>Transferencia</button>
+        </div>
+
+        <div class="amount-box">
+          <div class="ab-top">
+            <span class="ab-label">Monto</span>
+            <span class="ab-cur">ARS</span>
+          </div>
+          <div class="ab-amt tnum"><span class="ab-pre" id="abSign">+</span><span class="ab-pre">$</span>520.000<span class="ab-cents">,00</span></div>
+        </div>
+
+        <div class="m-label">Movimiento</div>
+        <div class="form-card">
+          <div class="form-row">
+            <div class="fr-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v2H5a2 2 0 0 0-2 2V7z"/><path d="M3 11h17a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7z"/><circle cx="17" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg></div>
+            <div style="flex:1"><div class="fr-label">Cuenta destino</div><div class="fr-val"><span class="mini-dot" style="background:var(--slate)"></span>Galicia · Caja de ahorro</div></div>
+            <div class="fr-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+          </div>
+          <div class="form-row">
+            <div class="fr-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 12.6l-8 8a2 2 0 0 1-2.8 0L3 14V4h10l7.6 7.6a2 2 0 0 1 0 1z"/><circle cx="8" cy="8" r="1.2"/></svg></div>
+            <div style="flex:1"><div class="fr-label">Categoría</div><div class="fr-val"><span class="mini-dot" style="background:var(--emerald-deep)"></span>Sueldo</div></div>
+            <div class="fr-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+          </div>
+          <div class="form-row">
+            <div class="fr-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18v10H3z"/><circle cx="12" cy="12" r="2.5"/><path d="M7 7v10M17 7v10"/></svg></div>
+            <div style="flex:1"><div class="fr-label">Descripción</div><div class="fr-val">Sueldo ACME S.A.</div></div>
+            <div class="fr-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+          </div>
+        </div>
+
+        <div class="m-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>Cuándo se repite</div>
+        <div class="freq-block">
+          <div class="fb-label">Frecuencia</div>
+          <div class="freq-pills" id="freqPills">
+            <button data-freq="semanal">Semanal</button>
+            <button data-freq="quincenal">Quincenal</button>
+            <button class="on" data-freq="mensual">Mensual</button>
+            <button data-freq="anual">Anual</button>
+            <button data-freq="personalizado">Personalizado</button>
+          </div>
+          <div class="freq-divider"></div>
+          <div class="form-row" style="padding-left:0;padding-right:0">
+            <div class="fr-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+            <div style="flex:1"><div class="fr-label">Empieza</div><div class="fr-val">1 de mayo de 2026</div></div>
+            <div class="fr-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+          </div>
+          <div class="toggle-row">
+            <div class="tr-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 12c0-2.5-2-4-4-4-3 0-5 8-8 8-2.5 0-4-1.5-4-4s1.5-4 4-4c3 0 5 8 8 8 2 0 4-1.5 4-4z"/></svg></div>
+            <div style="flex:1"><div class="tr-title">Sin fecha de fin</div><div class="tr-sub">Se repite indefinidamente hasta que la pauses</div></div>
+            <div class="switch" id="endSwitch"><div class="knob"></div></div>
+          </div>
+        </div>
+
+        <div class="preview-block">
+          <div class="pb-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
+          <div class="pb-text">Grana te va a pedir confirmar este ingreso <b>cada mes</b> empezando el <b>1 de mayo</b>. Podés pausarlo o cancelarlo cuando quieras.</div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-create" id="modalClose2">Crear recurrencia</button>
+      </div>
+    </div>
+  </div>
+
+  <template id="__bundler_thumbnail">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100" height="100" rx="22" fill="#0B1A2B"/>
+      <g fill="none" stroke="#15B981" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="62 30 72 40 62 50"/>
+        <path d="M30 44v-4a10 10 0 0 1 10-10h32"/>
+        <polyline points="38 70 28 60 38 50"/>
+        <path d="M70 56v4a10 10 0 0 1-10 10H28"/>
+      </g>
+    </svg>
+  </template>
+
+  <script>
+  (function () {
+    // ── Helpers ─────────────────────────────────────────────
+    function money(n) {
+      var abs = Math.abs(n);
+      var s = abs.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      return s;
+    }
+    function signedAmt(amount, tone) {
+      var pre = tone === 'ingreso' ? '+$ ' : (tone === 'transfer' ? '$ ' : '−$ ');
+      var cls = tone === 'ingreso' ? 'amt-pos' : (tone === 'transfer' ? 'amt-neu' : 'amt-neg');
+      return { txt: pre + money(amount), cls: cls };
+    }
+    var FREQ = { mensual: 'MENSUAL', semanal: 'SEMANAL', quincenal: 'QUINCENAL', anual: 'ANUAL' };
+
+    // ── Data ────────────────────────────────────────────────
+    var ACTIVAS = [
+      { emoji:'💼', tint:'ic-work',   name:'Sueldo ACME S.A.', freq:'mensual', next:'1 de mayo',  amount:520000,  tone:'ingreso',  account:'Galicia · Caja de ahorro', cat:'Sueldo',         catColor:'var(--emerald-deep)' },
+      { emoji:'🏠', tint:'ic-home',   name:'Alquiler',         freq:'mensual', next:'5 de mayo',  amount:180000,  tone:'gasto',    account:'Galicia · Débito',         cat:'Vivienda',       catColor:'var(--slate)' },
+      { emoji:'🎬', tint:'ic-stream', name:'Netflix',          freq:'mensual', next:'12 de mayo', amount:4500,    tone:'gasto',    account:'Visa Galicia',             cat:'Streaming',      catColor:'var(--plum)' },
+      { emoji:'🎧', tint:'ic-stream', name:'Spotify',          freq:'mensual', next:'14 de mayo', amount:2890,    tone:'gasto',    account:'Visa Galicia',             cat:'Streaming',      catColor:'var(--plum)' },
+      { emoji:'⚡', tint:'ic-util',   name:'Edenor',           freq:'mensual', next:'18 de mayo', amount:15200,   tone:'gasto',    account:'Visa Galicia',             cat:'Servicios',      catColor:'var(--amber)' },
+      { emoji:'💧', tint:'ic-water',  name:'Aysa',             freq:'mensual', next:'22 de mayo', amount:6800,    tone:'gasto',    account:'Visa Galicia',             cat:'Servicios',      catColor:'var(--teal)' },
+      { emoji:'📶', tint:'ic-water',  name:'Fibertel',         freq:'mensual', next:'25 de mayo', amount:12400,   tone:'gasto',    account:'Galicia · Débito',         cat:'Servicios',      catColor:'var(--slate)' },
+      { emoji:'🐷', tint:'ic-save',   name:'Aporte chanchito', freq:'mensual', next:'1 de mayo',  amount:50000,   tone:'transfer', account:'Galicia → Viaje 2026',     cat:'Ahorro',         catColor:'var(--emerald)' }
+    ];
+    var PAUSADAS = [
+      { emoji:'🏋️', tint:'ic-gym',  name:'Gimnasio Sportclub', freq:'mensual', metaText:'Pausada desde marzo', amount:8500,  tone:'gasto', status:'pausada', account:'Visa Galicia',   cat:'Salud',  catColor:'var(--terracota)' },
+      { emoji:'📰', tint:'ic-news', name:'Suscripción NYT',    freq:'anual',   metaText:'Pausada desde abril', amount:32000, tone:'gasto', status:'pausada', account:'Visa Galicia',   cat:'Educación', catColor:'var(--plum)' }
+    ];
+    var FINALIZADAS = [
+      { emoji:'🛡️', tint:'ic-shield', name:'Seguro auto Galicia', freq:'mensual', metaText:'Terminó: marzo 2026',    amount:18500, tone:'gasto', status:'finalizada' },
+      { emoji:'🎬', tint:'ic-stream', name:'HBO Max',             freq:'mensual', metaText:'Terminó: febrero 2026',  amount:3990,  tone:'gasto', status:'finalizada' },
+      { emoji:'📺', tint:'ic-stream', name:'Disney+',             freq:'mensual', metaText:'Terminó: enero 2026',    amount:2700,  tone:'gasto', status:'finalizada' },
+      { emoji:'💻', tint:'ic-news',   name:'Cuotas notebook',     freq:'mensual', metaText:'12/12 · finalizó dic 2025', amount:45000, tone:'gasto', status:'finalizada' },
+      { emoji:'📚', tint:'ic-news',   name:'Curso de inglés',     freq:'mensual', metaText:'Terminó: noviembre 2025', amount:15000, tone:'gasto', status:'finalizada' }
+    ];
+    var PENDIENTES = [
+      { emoji:'🎬', tint:'ic-stream', name:'Netflix',  sub:'Mensual · Visa Galicia',     when:'Vence hoy',          urgency:'today',   amount:4500,  tone:'gasto' },
+      { emoji:'📶', tint:'ic-water',  name:'Fibertel', sub:'Mensual · Galicia Débito',   when:'Vencido hace 2 días', urgency:'overdue', amount:12400, tone:'gasto' }
+    ];
+    var UP7 = [
+      { emoji:'💼', tint:'ic-work', name:'Sueldo ACME S.A.', sub:'Ingreso · Galicia',         when:'En 2 días', amount:520000, tone:'ingreso' },
+      { emoji:'🏠', tint:'ic-home', name:'Alquiler',         sub:'Vivienda · Galicia Débito', when:'En 5 días', amount:180000, tone:'gasto' },
+      { emoji:'🐷', tint:'ic-save', name:'Aporte chanchito', sub:'Galicia → Viaje 2026',      when:'En 2 días', amount:50000,  tone:'transfer' }
+    ];
+    var UPM = [
+      { emoji:'🎧', tint:'ic-stream', name:'Spotify', sub:'Visa Galicia', when:'14 may', amount:2890,  tone:'gasto' },
+      { emoji:'⚡', tint:'ic-util',   name:'Edenor',  sub:'Visa Galicia', when:'18 may', amount:15200, tone:'gasto' }
+    ];
+
+    var repeatSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
+    var chevSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>';
+
+    // ── Render recurrence lists ─────────────────────────────
+    function recRowHtml(it) {
+      var a = signedAmt(it.amount, it.tone);
+      var badges = '<span class="freq-badge">' + (FREQ[it.freq] || 'MENSUAL') + '</span>';
+      if (it.status === 'pausada')    badges += '<span class="status-badge pausada">PAUSADA</span>';
+      if (it.status === 'finalizada') badges += '<span class="status-badge finalizada">FINALIZADA</span>';
+      var meta = it.next ? 'próximo: <span class="next-date">' + it.next + '</span>' : (it.metaText || '');
+      var muted = it.status ? ' muted' : '';
+      var data = encodeURIComponent(JSON.stringify(it));
+      return '<div class="rec-row' + muted + '" data-rec="' + data + '">' +
+        '<div class="rec-icon ' + it.tint + '">' + it.emoji +
+          '<div class="repeat-badge">' + repeatSvg + '</div></div>' +
+        '<div class="rec-mid">' +
+          '<div class="rec-title-row"><span class="rec-name">' + it.name + '</span>' + badges + '</div>' +
+          '<div class="rec-meta">' + meta + '</div></div>' +
+        '<div class="rec-amt ' + a.cls + ' tnum">' + a.txt + '</div>' +
+        '<div class="rec-chev">' + chevSvg + '</div></div>';
+    }
+    function fillList(id, arr) {
+      document.getElementById(id).innerHTML = arr.map(recRowHtml).join('');
+    }
+    fillList('list-activas', ACTIVAS);
+    fillList('list-pausadas', PAUSADAS);
+    fillList('list-finalizadas', FINALIZADAS);
+
+    // ── Render upcoming ─────────────────────────────────────
+    function upRowHtml(it) {
+      var a = signedAmt(it.amount, it.tone);
+      return '<div class="up-row">' +
+        '<div class="ur-icon ' + it.tint + '">' + it.emoji + '</div>' +
+        '<div style="min-width:0"><div class="ur-name">' + it.name + '</div><div class="ur-sub">' + it.sub + '</div></div>' +
+        '<div><div class="ur-amt ' + a.cls + ' tnum">' + a.txt + '</div><div class="ur-when tnum">' + it.when + '</div></div></div>';
+    }
+    document.getElementById('upcoming7').innerHTML = UP7.map(upRowHtml).join('');
+    document.getElementById('upcomingMonth').innerHTML = UPM.map(upRowHtml).join('');
+
+    // ── Render pendientes ───────────────────────────────────
+    function pendingRowHtml(it, i) {
+      var a = signedAmt(it.amount, it.tone);
+      var whenCls = it.urgency === 'overdue' ? 'pm-when overdue' : 'pm-when';
+      var pulse = it.urgency === 'overdue' ? '<span class="pulse"></span>' : '';
+      return '<div class="pending-row" data-pi="' + i + '">' +
+        '<div class="rec-icon ' + it.tint + '">' + it.emoji +
+          '<div class="repeat-badge">' + repeatSvg + '</div></div>' +
+        '<div class="pending-mid"><div class="pm-title">' + it.name + '</div>' +
+          '<div class="pm-sub">' + it.sub + '</div>' +
+          '<div class="' + whenCls + '">' + pulse + it.when + '</div></div>' +
+        '<div class="pending-amt ' + a.cls + ' tnum">' + a.txt + '</div>' +
+        '<div class="pending-actions">' +
+          '<button class="btn-confirm" data-act="confirm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>Confirmar</button>' +
+          '<button class="btn-omit" data-act="omit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>Omitir</button>' +
+        '</div></div>';
+    }
+    var pendingList = document.getElementById('pendingList');
+    pendingList.innerHTML = PENDIENTES.map(pendingRowHtml).join('');
+    var pendingLeft = PENDIENTES.length;
+
+    function resolvePending(row) {
+      row.classList.add('gone');
+      pendingLeft--;
+      var countEl = document.getElementById('pendingCount');
+      if (pendingLeft <= 0) {
+        document.getElementById('pendingCard').classList.add('cleared');
+      } else {
+        countEl.textContent = pendingLeft + (pendingLeft === 1 ? ' pendiente' : ' pendientes');
+      }
+    }
+    pendingList.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-act]');
+      if (!btn) return;
+      resolvePending(btn.closest('.pending-row'));
+    });
+
+    // ── Tabs ────────────────────────────────────────────────
+    var tabs = document.getElementById('statusTabs');
+    tabs.addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-tab]');
+      if (!btn) return;
+      tabs.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b === btn); });
+      var tab = btn.getAttribute('data-tab');
+      document.querySelectorAll('.rec-list').forEach(function (l) {
+        l.classList.toggle('on', l.id === 'list-' + tab);
+      });
+    });
+
+    // ── Drawer (detalle) ────────────────────────────────────
+    var overlay = document.getElementById('overlay');
+    var drawer = document.getElementById('drawer');
+    var modal = document.getElementById('modal');
+
+    function openOverlay() { overlay.classList.add('show'); }
+    function maybeCloseOverlay() {
+      if (!drawer.classList.contains('show') && !modal.classList.contains('show')) {
+        overlay.classList.remove('show');
+      }
+    }
+    function openDrawer(it) {
+      // Hero
+      var heroIcon = document.getElementById('dHeroIcon');
+      heroIcon.firstChild.textContent = it.emoji;
+      heroIcon.className = 'dh-icon ' + (it.tint || 'ic-work');
+      var a = signedAmt(it.amount, it.tone);
+      var heroAmt = document.getElementById('dHeroAmt');
+      heroAmt.textContent = a.txt;
+      heroAmt.className = 'dh-amt tnum ' + a.cls;
+      document.getElementById('dHeroName').textContent = it.name;
+      var statusKey = it.status === 'pausada' ? 'pausada' : 'activa';
+      var statusWord = it.status === 'pausada' ? 'pausada' : (it.status === 'finalizada' ? 'finalizada' : 'activa');
+      var st = document.getElementById('dHeroStatus');
+      st.className = 'dh-status ' + statusKey;
+      document.getElementById('dHeroStatusText').textContent =
+        (FREQ[it.freq] ? FREQ[it.freq].charAt(0) + FREQ[it.freq].slice(1).toLowerCase() : 'Mensual') + ' · ' + statusWord;
+      // Next exec
+      document.getElementById('dNextDate').textContent = it.next ? (it.next + ' de 2026') : '—';
+      // Config rows
+      var cfg = document.getElementById('dConfig');
+      var freqLabel = (it.freq === 'anual') ? 'Anual · una vez al año' : 'Mensual · cada 1° del mes';
+      var account = it.account || 'Galicia · Caja de ahorro';
+      var cat = it.cat || 'Otros';
+      var catColor = it.catColor || 'var(--muted)';
+      cfg.innerHTML =
+        cfgRow('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>', 'Frecuencia', freqLabel, null) +
+        cfgRow('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>', 'Empezó', '1 de enero de 2026', null) +
+        cfgRow('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 12c0-2.5-2-4-4-4-3 0-5 8-8 8-2.5 0-4-1.5-4-4s1.5-4 4-4c3 0 5 8 8 8 2 0 4-1.5 4-4z"/></svg>', 'Termina', 'Sin fecha de fin', 'INDEFINIDA') +
+        cfgRow('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v2H5a2 2 0 0 0-2 2V7z"/><path d="M3 11h17a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7z"/></svg>', 'Cuenta', account, null, 'var(--slate)') +
+        cfgRow('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 12.6l-8 8a2 2 0 0 1-2.8 0L3 14V4h10l7.6 7.6a2 2 0 0 1 0 1z"/><circle cx="8" cy="8" r="1.2"/></svg>', 'Categoría', cat, null, catColor);
+      // History amounts match this recurrence
+      ['hAmt1','hAmt2','hAmt3','hAmt4'].forEach(function (id) {
+        document.getElementById(id).textContent = (it.tone === 'ingreso' ? '+$ ' : '$ ') + money(it.amount);
+      });
+      openOverlay();
+      drawer.classList.add('show');
+      drawer.setAttribute('aria-hidden', 'false');
+    }
+    function cfgRow(icon, label, val, tag, dotColor) {
+      var dot = dotColor ? '<span class="mini-dot" style="background:' + dotColor + '"></span>' : '';
+      var tagHtml = tag ? '<span class="cfg-tag">' + tag + '</span>' : '';
+      return '<div class="cfg-row"><div class="cfg-ico">' + icon + '</div>' +
+        '<div style="flex:1"><div class="cfg-label">' + label + '</div>' +
+        '<div class="cfg-val">' + dot + val + ' ' + tagHtml + '</div></div></div>';
+    }
+    function closeDrawer() {
+      drawer.classList.remove('show');
+      drawer.setAttribute('aria-hidden', 'true');
+      maybeCloseOverlay();
+    }
+    document.querySelectorAll('.rec-list').forEach(function (list) {
+      list.addEventListener('click', function (e) {
+        var row = e.target.closest('.rec-row');
+        if (!row) return;
+        try { openDrawer(JSON.parse(decodeURIComponent(row.getAttribute('data-rec')))); } catch (err) {}
+      });
+    });
+    document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+
+    // ── Modal (crear) ───────────────────────────────────────
+    function openModal() { openOverlay(); modal.classList.add('show'); modal.setAttribute('aria-hidden', 'false'); }
+    function closeModal() { modal.classList.remove('show'); modal.setAttribute('aria-hidden', 'true'); maybeCloseOverlay(); }
+    document.getElementById('openCreate').addEventListener('click', openModal);
+    document.getElementById('fabCreate').addEventListener('click', openModal);
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+    document.getElementById('modalClose2').addEventListener('click', closeModal);
+
+    // Modal interactions
+    var typeTabs = document.getElementById('typeTabs');
+    typeTabs.addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-type]');
+      if (!btn) return;
+      typeTabs.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b === btn); });
+      var t = btn.getAttribute('data-type');
+      document.getElementById('abSign').textContent = t === 'ingreso' ? '+' : (t === 'gasto' ? '−' : '↔');
+    });
+    var freqPills = document.getElementById('freqPills');
+    freqPills.addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-freq]');
+      if (!btn) return;
+      freqPills.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b === btn); });
+    });
+    document.getElementById('endSwitch').addEventListener('click', function () { this.classList.toggle('off'); });
+
+    // ── Overlay + ESC close ─────────────────────────────────
+    overlay.addEventListener('click', function () { closeDrawer(); closeModal(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { closeDrawer(); closeModal(); }
+    });
+  })();
+  </script>
+</body>
+</html>
