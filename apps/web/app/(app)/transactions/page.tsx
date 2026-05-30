@@ -244,6 +244,7 @@ const TransactionsPage = async ({ searchParams }: Props) => {
       activeCurrencies: activeCodes(a.currencies),
       balances: a.balances,
       institutionId: a.institution_id ?? null,
+      avatar: a.avatar,
     })),
     ...drawerCredit.map((c) => ({
       id: c.id,

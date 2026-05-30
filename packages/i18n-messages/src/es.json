@@ -883,7 +883,38 @@
       "register_exchange": "Registrar cambio"
     },
     "drawer": {
-      "close": "Cerrar"
+      "close": "Cerrar",
+      "eyebrow_new": "Nuevo",
+      "eyebrow_edit": "Editar",
+      "account_from": "Desde",
+      "account_to": "A la cuenta",
+      "account_to_adjust": "Cuenta a ajustar",
+      "account_toward": "Hacia",
+      "credit_badge": "Crédito",
+      "credit_hint": "Consume saldo disponible de la tarjeta",
+      "swap": "Invertir cuentas",
+      "today": "Hoy",
+      "whole_category": "Toda la categoría",
+      "helper_income": "+ Entra a tus cuentas",
+      "helper_adjustment": "Positivo aumenta el saldo · negativo lo reduce",
+      "adjust_banner_title": "Ajuste manual.",
+      "adjust_banner_body": "Corregí la diferencia entre tu saldo real y el de Grana. No crea un ingreso ni un gasto.",
+      "adjust_reason": "Motivo del ajuste",
+      "adjust_reason_placeholder": "Ej: Había menos efectivo del registrado",
+      "adjust_reason_required": "Requerido — ayuda a entender el ajuste después.",
+      "balance_will_be": "Saldo quedará",
+      "installments_breakdown": "{count} cuotas de ${amount}",
+      "repeat_note": "Grana te va a pedir confirmar antes de registrarlo cada vez.",
+      "repeat_question": "¿Cada cuánto?",
+      "add_another": "Otro",
+      "cta": {
+        "expense": "Registrar gasto",
+        "income": "Registrar ingreso",
+        "transfer": "Registrar transferencia",
+        "adjustment": "Registrar ajuste",
+        "exchange": "Registrar cambio"
+      },
+      "repeat_until": "Repetir hasta (opcional)"
     },
     "confirmations": {
       "delete_title": "¿Eliminar este movimiento?",
