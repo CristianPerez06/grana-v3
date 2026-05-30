@@ -1304,25 +1304,50 @@ export const MovementForm = ({
   )
 
   // ── Exchange: no-other-currency hint + received amount ──────────────────────
+  // Destination currency shown on the received-amount card.
+  const receivedCurrency: 'ARS' | 'USD' =
+    (isEdit ? edit?.destinationCurrency : exchangeDestCurrency) ?? 'USD'
+  // Implicit rate "1 {received} = ${origin}", derived from both amounts (read-only).
+  const exchangeRate = (() => {
+    if (tab !== 'exchange') return null
+    const src = parseMoneyInput(amount)
+    const dst = parseMoneyInput(destinationAmount)
+    if (src === null || dst === null || src <= 0 || dst <= 0) return null
+    return Money.toNumber(Money.divide(Money.from(src), dst))
+  })()
   const exchangeReceived =
     (!isEdit && tab === 'exchange' && exchangeDestCurrency) || (isEdit && editable?.destinationAmount) ? (
-      <div className="rounded-[15px] border border-border bg-card px-4 py-3">
-        <label htmlFor="exchange-dest-amount" className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
-          {t('labels.exchange_received')} ({isEdit ? edit?.destinationCurrency : exchangeDestCurrency})
-        </label>
-        <div className="mt-1 flex items-baseline gap-1.5">
-          <span className="text-xl font-semibold text-text-soft">
-            {CURRENCY_SYMBOL[(isEdit ? edit?.destinationCurrency : exchangeDestCurrency) ?? 'USD']}
+      <div className="rounded-[18px] border border-border bg-card px-[22px] pb-[22px] pt-5 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]">
+        <div className="flex items-center justify-between">
+          <label htmlFor="exchange-dest-amount" className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+            {t('labels.exchange_received')}
+          </label>
+          <span
+            className="inline-flex items-center rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text"
+            style={{ backgroundColor: FIELD_BG }}
+          >
+            {receivedCurrency}
+          </span>
+        </div>
+        <div className="mt-2 flex items-baseline gap-1.5">
+          <span className="text-[27px] font-semibold leading-none opacity-50 text-text">
+            {CURRENCY_SYMBOL[receivedCurrency]}
           </span>
           <MoneyAmountInput
             id="exchange-dest-amount"
             required
             value={destinationAmount}
             onChange={setDestinationAmount}
-            placeholder="0,00"
-            className="w-full min-w-0 bg-transparent text-2xl font-bold tabular-nums text-text outline-none placeholder:text-text-soft/40"
+            placeholder="0"
+            className="w-full min-w-0 bg-transparent text-[46px] font-bold leading-none tracking-[-0.045em] tabular-nums text-text outline-none placeholder:text-text-soft/40"
           />
         </div>
+        {exchangeRate !== null && (
+          <p className="mt-2.5 text-[12.5px] text-text-muted tabular-nums">
+            1 {receivedCurrency} = {CURRENCY_SYMBOL[currencyCode]}
+            {fmtBalance(exchangeRate)} {currencyCode}
+          </p>
+        )}
       </div>
     ) : null
 

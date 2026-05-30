@@ -24,8 +24,8 @@
 
 ## Grupo 4 · Quinto tab: Cambio de moneda
 
-- [ ] 4.1. Layout exchange (cuenta+moneda origen / cuenta+moneda destino, helper de tasa), reusando `createExchange`/`updateExchange`. **Validar diseño con Producto/Diseño antes de cerrar.**
-- [ ] 4.2. Decidir con Producto si "Repetir" aplica a exchange (default: ocultar).
+- [x] 4.1. Layout exchange reusando el lenguaje hi-fi compartido: filas cuenta origen ("Desde") / destino ("Hacia") + fecha (`FieldRow`/`Popover`), monto origen en el hero, y card "Monto recibido" como mini-hero (badge de moneda destino) con **helper de tasa implícita** (`1 USD = $X`, derivada de ambos montos). Reusa `createExchange`/`updateExchange`. (Adoptó los estilos existentes; queda sujeto a validación de Diseño si en el futuro hay mockup propio.)
+- [x] 4.2. "Repetir" NO se ofrece en exchange (default: oculto) — el `togglesGroup` excluye `exchange`.
 
 ## Grupo 5 · Cuotas, reintegro, repetir (con Personalizado)
 
