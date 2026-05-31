@@ -2,7 +2,7 @@
 
 ### Requirement: El usuario puede ver la lista de sus cuentas agrupadas por tipo
 
-El sistema SHALL mostrar las cuentas del usuario agrupadas por `type` — un grupo para `cash` ("Efectivo") y otro para `bank` ("Bancos"). Las cuentas `type='credit'` (tarjetas) NO se listan en esta pantalla: viven en su propia capability `cards`. Por defecto la lista excluye las cuentas con `is_active=false`. El orden dentro de cada grupo es por `created_at` ascendente. Cada cuenta SHALL renderizarse con su avatar visual (ver requirement "Cada cuenta tiene un avatar visual").
+El sistema SHALL mostrar las cuentas del usuario agrupadas por `type` — un grupo para `cash` y otro para `bank`. Las cuentas `type='credit'` (tarjetas) NO se listan en esta pantalla: viven en su propia capability `cards`. Por defecto la lista excluye las cuentas con `is_active=false`. El orden dentro de cada grupo es por `created_at` ascendente. Cada cuenta SHALL renderizarse con su avatar visual (ver requirement "Cada cuenta tiene un avatar visual").
 
 La pantalla SHALL adoptar el lenguaje visual del shell de `(app)`:
 - Header con `PageHeader` (título + acción "+ Nueva cuenta" como `actions`).
@@ -14,7 +14,7 @@ Las cuentas archivadas se siguen omitiendo del listado por default, pero cuando 
 #### Scenario: Cuentas agrupadas por tipo
 
 - **WHEN** el usuario tiene 2 cuentas cash y 3 cuentas bank activas
-- **THEN** la pantalla muestra dos secciones: "Efectivo" con 2 y "Bancos" con 3
+- **THEN** la pantalla muestra dos secciones: "Efectivo" con 2 y "Bancarias" con 3
 
 #### Scenario: Las tarjetas no aparecen en la lista de cuentas
 
@@ -29,7 +29,7 @@ Las cuentas archivadas se siguen omitiendo del listado por default, pero cuando 
 #### Scenario: Estado vacío de un grupo
 
 - **WHEN** el usuario no tiene cuentas activas de un tipo
-- **THEN** esa sección se omite (por ejemplo, no se muestra "Bancos" si no hay cuentas bank activas)
+- **THEN** esa sección se omite (por ejemplo, no se muestra "Bancarias" si no hay cuentas bank activas)
 
 #### Scenario: Header de la pantalla usa `PageHeader`
 
