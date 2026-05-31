@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server'
 import { getRecurrenceDetail } from '@/lib/recurrences/queries'
 import { PageHeader } from '@/components/ui/page-header'
 import { RecurrenceDetailForm } from './_components/recurrence-detail-form'
+import { RecurrenceInstancesList } from './_components/recurrence-instances-list'
 
 type Props = {
   params: Promise<{ id: string }>
@@ -39,6 +40,15 @@ const RecurrenceDetailPage = async ({ params }: Props) => {
       ? `${accountName} → ${destinationName ?? '—'}`
       : accountName
 
+  // Creation date: created_at is a timestamptz; show the calendar day.
+  const createdLabel = rule.created_at
+    ? new Date(rule.created_at).toLocaleDateString('es-AR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : null
+
   return (
     <div className="flex max-w-2xl flex-col gap-8">
       <PageHeader
@@ -47,7 +57,18 @@ const RecurrenceDetailPage = async ({ params }: Props) => {
         backLink={{ href: '/transactions/recurring', label: tRec('title') }}
       />
 
+      {createdLabel && (
+        <p className="-mt-4 text-sm text-text-muted">
+          {tRec('created_on', { date: createdLabel })}
+        </p>
+      )}
+
       <RecurrenceDetailForm rule={rule} />
+
+      <RecurrenceInstancesList
+        instances={rule.instances}
+        currencyCode={rule.currency_code}
+      />
     </div>
   )
 }

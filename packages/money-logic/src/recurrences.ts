@@ -140,10 +140,17 @@ export function decideRecurrenceInstance(
     rule.interval_count != null && rule.interval_unit != null
       ? { count: rule.interval_count, unit: rule.interval_unit }
       : presetToInterval(rule.frequency ?? 'monthly')
-  const baseDate = rule.last_generated_date ?? rule.start_date
-  const nextDate = addInterval(baseDate, unit, count, {
-    anchorDate: rule.start_date,
-  })
+  // First instance of a directly-created rule (no seed transaction): when
+  // last_generated_date is null, the first occurrence falls ON start_date — we
+  // do NOT add an interval. Rules created from a movement or a suggestion carry
+  // a non-null last_generated_date (the seed already covers start_date), so they
+  // advance by one interval as before.
+  const nextDate =
+    rule.last_generated_date == null
+      ? rule.start_date
+      : addInterval(rule.last_generated_date, unit, count, {
+          anchorDate: rule.start_date,
+        })
 
   // 4. If the next date is still in the future, nothing to do yet.
   if (nextDate > today) return { generate: false, reason: 'not_due' }
@@ -156,6 +163,68 @@ export function decideRecurrenceInstance(
   }
 
   return { generate: true, scheduled_date: nextDate }
+}
+
+// ── Upcoming projection (pure) ───────────────────────────────────────────────
+//
+// Project the next occurrences of a set of active rules within a date window,
+// WITHOUT touching the database or generating instances. Used by the recurring
+// screen's "next 7 days / later this month" informational cards. Amounts are
+// NOT summed (bimoneda invariant): each occurrence carries its own currency.
+
+export type RuleForProjection = {
+  id: string
+  start_date: string
+  end_date: string | null
+  interval_count: number
+  interval_unit: IntervalUnit
+  max_occurrences: number | null
+}
+
+export type ProjectedOccurrence = {
+  rule_id: string
+  scheduled_date: string
+}
+
+// All occurrences of one rule whose date is within [windowStart, windowEnd]
+// (inclusive). Walks from start_date forward, honoring end_date and
+// max_occurrences. Bounded by a hard cap to avoid pathological loops.
+export function projectRuleOccurrences(
+  rule: RuleForProjection,
+  windowStart: string,
+  windowEnd: string,
+): string[] {
+  const out: string[] = []
+  let current = rule.start_date
+  let produced = 0
+  // Safety cap: at most ~750 steps (e.g. >2 years of daily) before bailing.
+  for (let i = 0; i < 750; i++) {
+    if (rule.max_occurrences != null && produced >= rule.max_occurrences) break
+    if (current > windowEnd) break
+    if (rule.end_date != null && current > rule.end_date) break
+    if (current >= windowStart) out.push(current)
+    produced++
+    current = addInterval(current, rule.interval_unit, rule.interval_count, {
+      anchorDate: rule.start_date,
+    })
+  }
+  return out
+}
+
+// Flatten every rule's in-window occurrences into a single date-sorted list.
+export function projectUpcomingOccurrences(
+  rules: RuleForProjection[],
+  windowStart: string,
+  windowEnd: string,
+): ProjectedOccurrence[] {
+  const all: ProjectedOccurrence[] = []
+  for (const rule of rules) {
+    for (const date of projectRuleOccurrences(rule, windowStart, windowEnd)) {
+      all.push({ rule_id: rule.id, scheduled_date: date })
+    }
+  }
+  all.sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
+  return all
 }
 
 // ─── Suggestion detection (pure) ─────────────────────────────────────────────
