@@ -26,14 +26,16 @@ import { QuickAddFab } from '@/lib/transactions/components/quick-add-fab'
 import { PendingReimbursementsBlock } from '@/lib/transactions/components/pending-reimbursements-block'
 import {
   getGlobalMovementsPage,
+  hasUsdActivityInMonth,
   getMonthCategoryBreakdown,
+  getMonthIncomeBreakdown,
   getMonthSubcategoryBreakdown,
   getMovementFilterOptions,
   getPendingReimbursements,
   hasAnyTransaction,
   UNCATEGORIZED_ID,
 } from '@/lib/transactions/queries'
-import type { SubcategoryBreakdown } from '@grana/money-logic'
+import type { CategoryBreakdown, SubcategoryBreakdown } from '@grana/money-logic'
 import { SUBCATEGORY_NONE_MARKER } from '@/lib/transactions/filters'
 import { getAccounts } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
@@ -115,102 +117,140 @@ const TransactionsPage = async ({ searchParams }: Props) => {
     { month: 'long', year: 'numeric' },
   )
 
+  // Overview mode (design handoff: selector Egresos / Ingresos). URL-driven like
+  // the currency toggle; defaults to egresos. Income is a flat by-category view.
+  const rawOverview = Array.isArray(resolvedSearchParams.overview)
+    ? resolvedSearchParams.overview[0]
+    : resolvedSearchParams.overview
+  const overviewMode: 'egresos' | 'ingresos' = rawOverview === 'ingresos' ? 'ingresos' : 'egresos'
+
   // Mode resolution: when the user filtered to exactly one category (and didn't
   // narrow further to a subcategory), the donut switches to in-category mode.
   // With a subcategory also filtered, the donut would be "100% in X" — pointless
   // — so it falls back to the category mode (which renders the single parent
-  // category as a full donut, coherent with the rest of the module).
+  // category as a full donut, coherent with the rest of the module). The
+  // in-category subcategory drill is an expenses-only feature, so it never
+  // applies in the income view.
   const breakdownMode: 'category' | 'subcategory' =
-    filters.categoryId && !filters.subcategoryId ? 'subcategory' : 'category'
+    overviewMode === 'egresos' && filters.categoryId && !filters.subcategoryId
+      ? 'subcategory'
+      : 'category'
 
   const overviewCurrency: 'ARS' | 'USD' = filters.currency === 'USD' ? 'USD' : 'ARS'
 
-  // Build the slices for both modes (category mode always runs; subcategory
-  // mode runs only when triggered). The component renders both via the same
-  // CategoryBreakdown shape — for subcategory mode, the page projects each
-  // SubcategorySlice into a CategorySlice where `categoryId` holds either the
-  // real subcategory uuid or `SUBCATEGORY_NONE_MARKER` for the "no subcategory"
-  // bucket. Labels are resolved here (i18n).
-  const categoryBreakdownRaw = await getMonthCategoryBreakdown(month)
-  const fillCategoryLabels = (inputs: typeof categoryBreakdownRaw.ARS) =>
-    inputs.map((i) =>
-      i.categoryId === UNCATEGORIZED_ID ? { ...i, label: t('spending.uncategorized') } : i,
-    )
-  const arsCategoryBreakdown = buildCategorySlices(fillCategoryLabels(categoryBreakdownRaw.ARS), {
-    othersLabel: t('spending.others'),
-  })
-  const usdCategoryBreakdown = buildCategorySlices(fillCategoryLabels(categoryBreakdownRaw.USD), {
-    othersLabel: t('spending.others'),
-  })
-  const hasUsd = usdCategoryBreakdown.slices.length > 0
+  // Active-mode data: the donut renders a single CategoryBreakdown. Egresos
+  // keeps the existing expense logic (in-category subcategory drill-down + the
+  // pre-fetched sub-breakdowns); ingresos shows income by category — a flat
+  // ranking, green palette, no drill-down (per the design handoff). Labels are
+  // resolved here (i18n).
+  let overviewBreakdown: CategoryBreakdown
+  // Currency toggle visibility is decided per-month (not per-mode) so it stays
+  // put when the user switches between Egresos and Ingresos.
+  const hasUsd = await hasUsdActivityInMonth(month)
+  // Parent category id when the donut is in the expenses in-category subcategory
+  // mode; the component uses it to build drill-in hrefs (serializable, no fn).
+  let overviewParentCategoryId: string | undefined
+  let activeCategory: { id: string; name: string } | null = null
+  let subBreakdownsByCategory:
+    | Record<string, { ARS: SubcategoryBreakdown; USD: SubcategoryBreakdown }>
+    | undefined
 
-  const activeCategory =
-    breakdownMode === 'subcategory' && filters.categoryId
-      ? filterOptions.categories.find((c) => c.id === filters.categoryId) ?? null
-      : null
-
-  let overviewBreakdown = overviewCurrency === 'USD' ? usdCategoryBreakdown : arsCategoryBreakdown
-  let overviewGetHref: ((slice: { categoryId: string | null }) => string | null) | undefined
-
-  if (breakdownMode === 'subcategory' && filters.categoryId) {
-    const subcategoryBreakdownRaw = await getMonthSubcategoryBreakdown(month, filters.categoryId)
-    const fillSubLabels = (inputs: typeof subcategoryBreakdownRaw.ARS) =>
-      inputs.map((i) => ({
-        ...i,
-        label: i.subcategoryId === null ? t('spending.no_subcategory') : i.label,
-      }))
-    const arsSubBreakdown = buildSubcategorySlices(fillSubLabels(subcategoryBreakdownRaw.ARS))
-    const usdSubBreakdown = buildSubcategorySlices(fillSubLabels(subcategoryBreakdownRaw.USD))
-    const selectedSub = overviewCurrency === 'USD' ? usdSubBreakdown : arsSubBreakdown
-    // Project SubcategorySlice → CategorySlice for the component (same shape).
-    // null subcategoryId becomes SUBCATEGORY_NONE_MARKER in the projected
-    // `categoryId` so the drill-down href can map it back to the URL marker.
-    overviewBreakdown = {
-      total: selectedSub.total,
-      slices: selectedSub.slices.map((s) => ({
-        categoryId: s.subcategoryId ?? SUBCATEGORY_NONE_MARKER,
-        label: s.label,
-        color: s.color,
-        icon: s.icon,
-        value: s.value,
-        percentage: s.percentage,
-        offset: s.offset,
-      })),
-    }
-    // Drill-down: preserves the parent category, adds the subcategory.
-    const parentCategoryId = filters.categoryId
-    overviewGetHref = (slice) =>
-      slice.categoryId
-        ? `/transactions?month=${month}&category=${parentCategoryId}&subcategory=${slice.categoryId}&currency=${overviewCurrency}`
-        : null
-  }
-
-  // Pre-fetch subcategory breakdowns for all drillable top-level categories so
-  // the spending overview can animate the drill-in in situ without a round-trip.
-  const drillableCategoryIds = arsCategoryBreakdown.slices
-    .filter((s) => s.categoryId !== null)
-    .map((s) => s.categoryId!)
-
-  const subBreakdownsByCategory: Record<string, { ARS: SubcategoryBreakdown; USD: SubcategoryBreakdown }> = {}
-  if (drillableCategoryIds.length > 0 && breakdownMode === 'category') {
-    const rawPairs = await Promise.all(
-      drillableCategoryIds.map((catId) => getMonthSubcategoryBreakdown(month, catId)),
-    )
-    drillableCategoryIds.forEach((catId, i) => {
-      const raw = rawPairs[i]
-      subBreakdownsByCategory[catId] = {
-        ARS: buildSubcategorySlices(raw.ARS),
-        USD: buildSubcategorySlices(raw.USD),
-      }
+  if (overviewMode === 'ingresos') {
+    const incomeRaw = await getMonthIncomeBreakdown(month)
+    const fillIncomeLabels = (inputs: typeof incomeRaw.ARS) =>
+      inputs.map((i) =>
+        i.categoryId === UNCATEGORIZED_ID ? { ...i, label: t('spending.uncategorized') } : i,
+      )
+    const arsIncome = buildCategorySlices(fillIncomeLabels(incomeRaw.ARS), {
+      othersLabel: t('spending.others'),
     })
+    const usdIncome = buildCategorySlices(fillIncomeLabels(incomeRaw.USD), {
+      othersLabel: t('spending.others'),
+    })
+    overviewBreakdown = overviewCurrency === 'USD' ? usdIncome : arsIncome
+    // Income row hrefs are built inside the component (mode === 'ingresos').
+  } else {
+    const categoryBreakdownRaw = await getMonthCategoryBreakdown(month)
+    const fillCategoryLabels = (inputs: typeof categoryBreakdownRaw.ARS) =>
+      inputs.map((i) =>
+        i.categoryId === UNCATEGORIZED_ID ? { ...i, label: t('spending.uncategorized') } : i,
+      )
+    const arsCategoryBreakdown = buildCategorySlices(fillCategoryLabels(categoryBreakdownRaw.ARS), {
+      othersLabel: t('spending.others'),
+    })
+    const usdCategoryBreakdown = buildCategorySlices(fillCategoryLabels(categoryBreakdownRaw.USD), {
+      othersLabel: t('spending.others'),
+    })
+
+    activeCategory =
+      breakdownMode === 'subcategory' && filters.categoryId
+        ? filterOptions.categories.find((c) => c.id === filters.categoryId) ?? null
+        : null
+
+    overviewBreakdown = overviewCurrency === 'USD' ? usdCategoryBreakdown : arsCategoryBreakdown
+
+    if (breakdownMode === 'subcategory' && filters.categoryId) {
+      const subcategoryBreakdownRaw = await getMonthSubcategoryBreakdown(month, filters.categoryId)
+      const fillSubLabels = (inputs: typeof subcategoryBreakdownRaw.ARS) =>
+        inputs.map((i) => ({
+          ...i,
+          label: i.subcategoryId === null ? t('spending.no_subcategory') : i.label,
+        }))
+      const arsSubBreakdown = buildSubcategorySlices(fillSubLabels(subcategoryBreakdownRaw.ARS))
+      const usdSubBreakdown = buildSubcategorySlices(fillSubLabels(subcategoryBreakdownRaw.USD))
+      const selectedSub = overviewCurrency === 'USD' ? usdSubBreakdown : arsSubBreakdown
+      // Project SubcategorySlice → CategorySlice for the component (same shape).
+      // null subcategoryId becomes SUBCATEGORY_NONE_MARKER in the projected
+      // `categoryId` so the drill-down href can map it back to the URL marker.
+      overviewBreakdown = {
+        total: selectedSub.total,
+        slices: selectedSub.slices.map((s) => ({
+          categoryId: s.subcategoryId ?? SUBCATEGORY_NONE_MARKER,
+          label: s.label,
+          color: s.color,
+          icon: s.icon,
+          value: s.value,
+          percentage: s.percentage,
+          offset: s.offset,
+        })),
+      }
+      // Drill-down: the component builds row hrefs from this parent id.
+      overviewParentCategoryId = filters.categoryId
+    }
+
+    // Pre-fetch subcategory breakdowns for all drillable top-level categories so
+    // the spending overview can animate the drill-in in situ without a round-trip.
+    const drillableCategoryIds = arsCategoryBreakdown.slices
+      .filter((s) => s.categoryId !== null)
+      .map((s) => s.categoryId!)
+
+    if (drillableCategoryIds.length > 0 && breakdownMode === 'category') {
+      const prefetched: Record<string, { ARS: SubcategoryBreakdown; USD: SubcategoryBreakdown }> = {}
+      const rawPairs = await Promise.all(
+        drillableCategoryIds.map((catId) => getMonthSubcategoryBreakdown(month, catId)),
+      )
+      drillableCategoryIds.forEach((catId, i) => {
+        const raw = rawPairs[i]
+        prefetched[catId] = {
+          ARS: buildSubcategorySlices(raw.ARS),
+          USD: buildSubcategorySlices(raw.USD),
+        }
+      })
+      subBreakdownsByCategory = prefetched
+    }
   }
 
   // The month nav lives in the spending overview card below. The page header
   // stays minimalist: just the title and the recurrences shortcut in the
   // actions slot.
   const currencySuffix = overviewCurrency === 'USD' ? '&currency=USD' : ''
-  const overviewPrevHref = `/transactions?month=${shiftMonth(month, -1)}${currencySuffix}`
-  const overviewNextHref = `/transactions?month=${shiftMonth(month, +1)}${currencySuffix}`
+  const overviewSuffix = overviewMode === 'ingresos' ? '&overview=ingresos' : ''
+  const overviewPrevHref = `/transactions?month=${shiftMonth(month, -1)}${currencySuffix}${overviewSuffix}`
+  const overviewNextHref = `/transactions?month=${shiftMonth(month, +1)}${currencySuffix}${overviewSuffix}`
+  // Mode selector hrefs preserve the current currency; the currency toggle
+  // hrefs (below) preserve the current mode.
+  const egresosHref = `/transactions?month=${month}${currencySuffix}`
+  const ingresosHref = `/transactions?month=${month}${currencySuffix}&overview=ingresos`
 
   // Empty state: split the `none` variant into welcome (first time ever) vs.
   // month-vacío (has history elsewhere). Only one extra query, cheap.
@@ -280,25 +320,40 @@ const TransactionsPage = async ({ searchParams }: Props) => {
         prevHref={overviewPrevHref}
         nextHref={overviewNextHref}
         currency={overviewCurrency}
+        mode={overviewMode}
+        egresosHref={egresosHref}
+        ingresosHref={ingresosHref}
         breakdown={overviewBreakdown}
         hasUsd={hasUsd}
-        arsHref={`/transactions?month=${month}`}
-        usdHref={`/transactions?month=${month}&currency=USD`}
+        arsHref={`/transactions?month=${month}${overviewSuffix}`}
+        usdHref={`/transactions?month=${month}&currency=USD${overviewSuffix}`}
         month={month}
-        getHref={overviewGetHref}
-        subBreakdownsByCategory={breakdownMode === 'category' ? subBreakdownsByCategory : undefined}
+        parentCategoryId={overviewParentCategoryId}
+        subBreakdownsByCategory={subBreakdownsByCategory}
         labels={{
           eyebrow:
-            activeCategory != null
-              ? t('spending.eyebrow_in_category', { category: activeCategory.name })
-              : t('spending.eyebrow'),
-          centerLabel: t('spending.center_label'),
+            overviewMode === 'ingresos'
+              ? t('spending.income_eyebrow')
+              : activeCategory != null
+                ? t('spending.eyebrow_in_category', { category: activeCategory.name })
+                : t('spending.eyebrow'),
+          centerLabel:
+            overviewMode === 'ingresos'
+              ? t('spending.income_center_label')
+              : t('spending.center_label'),
           categoriesCaptionTemplate: t.raw('spending.categories_caption') as string,
           offLedgerNote: t('spending.off_ledger_note'),
           seeDetail: t('spending.see_detail'),
           othersLabelTemplate: t.raw('spending.others_label') as string,
           seeAllCategories: t('spending.see_all_categories'),
-          emptyMessage: t('spending.empty'),
+          emptyMessage:
+            overviewMode === 'ingresos' ? t('spending.income_empty') : t('spending.empty'),
+          modeEgresos: t('spending.mode_egresos'),
+          modeIngresos: t('spending.mode_ingresos'),
+          subtitle:
+            overviewMode === 'ingresos'
+              ? t('spending.income_subtitle')
+              : t('spending.subtitle_egresos'),
         }}
         // No `detailHref` until there's a real drill-down destination.
       />
