@@ -998,8 +998,20 @@
     "title": "Recurring",
     "description": "Rules that generate pending transactions for you to confirm or skip.",
     "back_label": "Transactions",
-    "empty": "No recurring rules yet. Toggle \"Make recurring\" when recording a transaction.",
+    "empty": "No recurring rules yet. Create one with the \"Create recurrence\" button or toggle \"Make recurring\" when recording a transaction.",
+    "empty_active": "No active rules. Create one with the \"Create recurrence\" button.",
+    "empty_paused": "No paused rules.",
+    "empty_finished": "No finished rules.",
     "pending_suffix": "pending",
+    "history": {
+      "title": "History",
+      "empty": "No instances generated yet."
+    },
+    "instance_statuses": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "skipped": "Skipped"
+    },
     "until_template": "until {date}",
     "frequencies": {
       "weekly": "Weekly",
@@ -1042,7 +1054,8 @@
       "pause": "Pause",
       "resume": "Resume",
       "delete": "Delete",
-      "save_changes": "Save changes"
+      "save_changes": "Save changes",
+      "create": "Create recurrence"
     },
     "messages": {
       "changes_saved": "Changes saved.",
@@ -1082,7 +1095,12 @@
       "confirming": "Confirming…",
       "skip": "Skip",
       "confirmed_success": "Transaction confirmed.",
-      "skipped_success": "Transaction skipped."
+      "skipped_success": "Transaction skipped.",
+      "subtitle": "Grana is waiting for you before recording them",
+      "all_clear": "All caught up — no recurrences waiting for your confirmation.",
+      "overdue": "{count, plural, one {Overdue by # day} other {Overdue by # days}}",
+      "due_today": "Due today",
+      "due_in": "{count, plural, one {Due in # day} other {Due in # days}}"
     },
     "suggestion": {
       "title": "Looks like this is recurring",
@@ -1101,7 +1119,46 @@
     "transfer_subtitle_unknown_destination": "—",
     "labels_extra": {
       "date": "Date"
-    }
+    },
+    "create": {
+      "title": "New recurrence",
+      "eyebrow": "Recurring rule",
+      "account_from": "From account",
+      "account_to": "To account",
+      "account_toward": "To account",
+      "category": "Category",
+      "start_date": "Starts on",
+      "repeat_until": "Repeat until",
+      "max_occurrences": "Max occurrences",
+      "frequency_question": "How often does it repeat?",
+      "credit_fx_note": "The exchange rate will be requested when you confirm each movement.",
+      "preview": "{type} · {frequency} · starts on {date}",
+      "placeholders": {
+        "select_account": "Choose an account",
+        "select_category": "Choose a category",
+        "whole_category": "Whole category",
+        "description": "Optional"
+      },
+      "errors": {
+        "category_required": "Choose a category",
+        "destination_required": "Choose the destination account",
+        "destination_same": "Source and destination accounts can't be the same",
+        "create_failed": "Couldn't create the recurrence"
+      },
+      "today": "Today",
+      "section_movement": "Movement",
+      "section_when": "When it repeats",
+      "has_end_date": "Has end date",
+      "no_end_hint": "Repeats indefinitely until you pause it"
+    },
+    "next_prefix": "next:",
+    "upcoming": {
+      "next_7_days": "Next 7 days",
+      "later_this_month": "Later this month",
+      "info_only": "Info only",
+      "empty": "Nothing here."
+    },
+    "created_on": "Created on {date}"
   },
   "subcategories": {
     "supermercado": "Supermarket",

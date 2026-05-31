@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
+import { ChevronRight, Repeat } from 'lucide-react'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
 
@@ -42,7 +43,7 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
   }
 
   const getFrequencyLabel = (freq: string) => {
-    if (freq === 'weekly' || freq === 'biweekly' || freq === 'monthly' || freq === 'annual') {
+    if (freq === 'weekly' || freq === 'biweekly' || freq === 'monthly' || freq === 'annual' || freq === 'custom') {
       return tRec(`frequencies.${freq}`)
     }
     return freq
@@ -55,95 +56,125 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
   ]
 
   const rules = tab === 'active' ? active : tab === 'paused' ? paused : finished
+  const emptyMessage =
+    tab === 'active'
+      ? tRec('empty_active')
+      : tab === 'paused'
+        ? tRec('empty_paused')
+        : tRec('empty_finished')
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Tabs */}
-      <div className="flex items-center gap-1 rounded-[12px] border border-border bg-card p-1">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-[9px] py-2 px-3 text-sm font-semibold transition-colors ${
-              tab === t.id
-                ? 'bg-page text-text shadow-sm'
-                : 'text-text-muted hover:text-text'
-            }`}
-          >
-            {t.label}
-            {t.count > 0 && (
-              <span
-                className={`inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-semibold ${
-                  tab === t.id ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-text-muted'
-                }`}
-              >
-                {t.count}
-              </span>
-            )}
-          </button>
-        ))}
+      {/* Segmented tabs */}
+      <div className="inline-flex w-fit gap-1 rounded-[11px] border border-border bg-[#F1F3F6] p-1">
+        {tabs.map((t) => {
+          const on = tab === t.id
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={`inline-flex items-center gap-2 rounded-[8px] px-4 py-2 text-sm font-bold transition-colors ${
+                on ? 'bg-card text-navy shadow-[0_1px_3px_rgba(11,26,43,0.1)]' : 'text-text-muted hover:text-text'
+              }`}
+            >
+              {t.label}
+              {t.count > 0 && <span className="text-xs tabular-nums opacity-60">{t.count}</span>}
+            </button>
+          )
+        })}
       </div>
 
       {/* List */}
       {rules.length === 0 ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">
-          {tRec('empty')}
-        </p>
+        <div className="rounded-[18px] border border-border bg-card p-6">
+          <p className="text-center text-sm text-text-muted">{emptyMessage}</p>
+        </div>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <div className="overflow-hidden rounded-[18px] border border-border bg-card p-1.5 [&>a+a]:border-t [&>a+a]:border-[#EEF1F4]">
           {rules.map((rule) => {
             const movementLabel = getMovementLabel(rule.movement_type)
             const freqLabel = getFrequencyLabel(rule.frequency)
             const accountName = rule.account?.name ?? '—'
             const destinationName = rule.destination_account?.name
+            const isInactive = rule.status === 'paused' || tab === 'finished'
 
-            const typeColorClass =
-              rule.movement_type === 'income'
-                ? 'text-positive'
-                : rule.movement_type === 'expense'
-                  ? 'text-negative'
-                  : 'text-text-muted'
+            // Tone → amount sign + color (income emerald, expense/transfer navy).
+            const sign =
+              rule.movement_type === 'income' ? '+' : rule.movement_type === 'expense' ? '−' : ''
+            const amtClass =
+            rule.movement_type === 'income'
+              ? 'text-emerald-deep'
+              : rule.movement_type === 'transfer'
+                ? 'text-navy'
+                : 'text-terracotta'
+
+            // Category-tinted tile with its emoji icon; transfers fall back to a repeat glyph.
+            const tileColor = rule.category?.color ?? '#8C97A4'
+            const tileIcon = rule.category?.icon
+
+            // Meta line: active → next occurrence + account; otherwise status hint.
+            const nextDate = rule.pending_instance
+              ? formatDate(rule.pending_instance.scheduled_date)
+              : formatDate(rule.start_date)
+            const accountLine =
+              rule.movement_type === 'transfer'
+                ? `${accountName} → ${destinationName ?? '—'}`
+                : accountName
+            const meta =
+              tab === 'finished'
+                ? rule.end_date
+                  ? tRec('until_template', { date: formatDate(rule.end_date) ?? rule.end_date })
+                  : accountLine
+                : rule.status === 'paused'
+                  ? `${tRec('statuses.paused')} · ${accountLine}`
+                  : accountLine
 
             return (
-              <li
+              <Link
                 key={rule.id}
-                className="rounded-2xl border border-border bg-card"
+                href={`/transactions/recurring/${rule.id}`}
+                className="flex items-center gap-4 rounded-[14px] px-3.5 py-3.5 transition-colors hover:bg-page"
               >
-                <Link
-                  href={`/transactions/recurring/${rule.id}`}
-                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 hover:bg-muted/30 rounded-2xl transition-colors"
+                <span
+                  className={`flex size-[46px] shrink-0 items-center justify-center rounded-[13px] text-[22px] ${
+                    isInactive ? 'opacity-60' : ''
+                  }`}
+                  style={{ backgroundColor: `${tileColor}1A` }}
                 >
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="text-sm font-semibold text-text truncate">
+                  {tileIcon ?? <Repeat className="size-5" style={{ color: tileColor }} aria-hidden />}
+                </span>
+
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-[15px] font-bold tracking-[-0.01em] text-text">
                       {rule.description || rule.category?.name || movementLabel}
                     </span>
-                    <span className="text-xs text-text-muted">
-                      {rule.movement_type === 'transfer'
-                        ? `${accountName} → ${destinationName ?? '—'}`
-                        : accountName}
-                      {' · '}
+                    <span className="shrink-0 rounded-[6px] bg-[#F1F3F6] px-2 py-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-text-muted">
                       {freqLabel}
-                      {rule.end_date &&
-                        ` · hasta ${formatDate(rule.end_date) ?? rule.end_date}`}
                     </span>
                   </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className={`text-sm font-bold tabular-nums tracking-tight ${typeColorClass}`}>
-                      {rule.movement_type === 'income' ? '+' : rule.movement_type === 'expense' ? '−' : ''}
+                  <span className="truncate text-[13px] font-medium text-text-muted">{meta}</span>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-4">
+                  <div className="flex flex-col items-end">
+                    <span className={`text-[16px] font-extrabold tracking-[-0.02em] tabular-nums ${amtClass}`}>
+                      {sign}
                       {formatRuleAmount(rule)}
                     </span>
-                    {rule.pending_instance && (
-                      <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                        {tRec('pending_suffix')}
+                    {tab === 'active' && nextDate && (
+                      <span className="text-[12px] font-semibold text-text-soft">
+                        {tRec('next_prefix')} {nextDate}
                       </span>
                     )}
                   </div>
-                </Link>
-              </li>
+                  <ChevronRight className="size-5 shrink-0 text-text-soft/50" aria-hidden />
+                </div>
+              </Link>
             )
           })}
-        </ul>
+        </div>
       )}
     </div>
   )

@@ -998,8 +998,20 @@
     "title": "Recurrencias",
     "description": "Reglas que generan movimientos pendientes para que confirmes u omitas.",
     "back_label": "Movimientos",
-    "empty": "Todavía no tenés reglas recurrentes. Activá el toggle \"Hacer recurrente\" cuando registres un movimiento.",
+    "empty": "Todavía no tenés reglas recurrentes. Creá una con el botón \"Crear recurrencia\" o activá el toggle \"Hacer recurrente\" cuando registres un movimiento.",
+    "empty_active": "No tenés reglas activas. Creá una con el botón \"Crear recurrencia\".",
+    "empty_paused": "No tenés reglas pausadas.",
+    "empty_finished": "No tenés reglas finalizadas.",
     "pending_suffix": "pendiente",
+    "history": {
+      "title": "Historial",
+      "empty": "Todavía no se generó ninguna instancia."
+    },
+    "instance_statuses": {
+      "pending": "Pendiente",
+      "confirmed": "Confirmada",
+      "skipped": "Omitida"
+    },
     "until_template": "hasta {date}",
     "frequencies": {
       "weekly": "Semanal",
@@ -1042,7 +1054,8 @@
       "pause": "Pausar",
       "resume": "Reanudar",
       "delete": "Eliminar",
-      "save_changes": "Guardar cambios"
+      "save_changes": "Guardar cambios",
+      "create": "Crear recurrencia"
     },
     "messages": {
       "changes_saved": "Cambios guardados.",
@@ -1082,7 +1095,12 @@
       "confirming": "Confirmando…",
       "skip": "Omitir",
       "confirmed_success": "Movimiento confirmado.",
-      "skipped_success": "Movimiento omitido."
+      "skipped_success": "Movimiento omitido.",
+      "subtitle": "Grana espera tu acción antes de registrarlas",
+      "all_clear": "Todo al día — no hay recurrencias esperando tu confirmación.",
+      "overdue": "{count, plural, one {Vencido hace # día} other {Vencido hace # días}}",
+      "due_today": "Vence hoy",
+      "due_in": "{count, plural, one {Vence en # día} other {Vence en # días}}"
     },
     "suggestion": {
       "title": "Parece que esto se repite",
@@ -1101,7 +1119,46 @@
     "transfer_subtitle_unknown_destination": "—",
     "labels_extra": {
       "date": "Fecha"
-    }
+    },
+    "create": {
+      "title": "Nueva recurrencia",
+      "eyebrow": "Regla recurrente",
+      "account_from": "Desde la cuenta",
+      "account_to": "A la cuenta",
+      "account_toward": "Hacia la cuenta",
+      "category": "Categoría",
+      "start_date": "Empieza el",
+      "repeat_until": "Repetir hasta",
+      "max_occurrences": "Máximo de ocurrencias",
+      "frequency_question": "¿Con qué frecuencia se repite?",
+      "credit_fx_note": "El tipo de cambio se pedirá al confirmar cada movimiento.",
+      "preview": "{type} · {frequency} · empieza el {date}",
+      "placeholders": {
+        "select_account": "Elegí una cuenta",
+        "select_category": "Elegí una categoría",
+        "whole_category": "Toda la categoría",
+        "description": "Opcional"
+      },
+      "errors": {
+        "category_required": "Elegí una categoría",
+        "destination_required": "Elegí la cuenta destino",
+        "destination_same": "La cuenta origen y destino no pueden ser iguales",
+        "create_failed": "No se pudo crear la recurrencia"
+      },
+      "today": "Hoy",
+      "section_movement": "Movimiento",
+      "section_when": "Cuándo se repite",
+      "has_end_date": "Tiene fecha de fin",
+      "no_end_hint": "Se repite indefinidamente hasta que la pauses"
+    },
+    "next_prefix": "próximo:",
+    "upcoming": {
+      "next_7_days": "Próximos 7 días",
+      "later_this_month": "Más adelante este mes",
+      "info_only": "Solo informativo",
+      "empty": "Nada por aquí."
+    },
+    "created_on": "Creada el {date}"
   },
   "subcategories": {
     "supermercado": "Supermercado",

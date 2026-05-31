@@ -7,12 +7,16 @@ import {
   acceptRecurrenceSuggestionSchema,
   confirmRecurrenceInstanceSchema,
   createRecurrenceFromMovementSchema,
+  createIncomeRecurrenceSchema,
+  createExpenseRecurrenceSchema,
+  createTransferRecurrenceSchema,
   dismissRecurrenceSuggestionSchema,
   updateRecurrenceSchema,
   validateActionInput,
   type AcceptRecurrenceSuggestionInput,
   type ConfirmRecurrenceInstanceInput,
   type CreateRecurrenceFromMovementInput,
+  type CreateRecurrenceInput,
   type DismissRecurrenceSuggestionInput,
   type UpdateRecurrenceInput,
 } from '@grana/validation'
@@ -28,6 +32,36 @@ import { registerCardPurchase } from './credit-cards'
 import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
 import { getAuthenticatedUserId } from './_lib/auth'
+
+// Verifica que la cuenta pertenezca al usuario, esté activa y tenga la moneda
+// activa (la activación de moneda vive en account_currencies, no en accounts).
+// Devuelve un mensaje de error o null si la cuenta es usable.
+async function assertAccountUsable(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  accountId: string,
+  currencyCode: string,
+  labels: { notFound: string; archived: string; currency: string },
+): Promise<string | null> {
+  const { data: account, error } = await supabase
+    .from('accounts')
+    .select('id, is_active')
+    .eq('id', accountId)
+    .eq('user_id', userId)
+    .single()
+  if (error || !account) return labels.notFound
+  if (!account.is_active) return labels.archived
+
+  const { data: currency } = await supabase
+    .from('account_currencies')
+    .select('id')
+    .eq('account_id', accountId)
+    .eq('currency_code', currencyCode)
+    .eq('is_active', true)
+    .single()
+  if (!currency) return labels.currency
+  return null
+}
 
 // ── 4.1: createRecurrenceFromMovement ─────────────────────────────────────────
 // Crea una regla recurrente a partir de un movimiento real ya registrado.
@@ -153,6 +187,126 @@ export async function createRecurrenceFromMovement(
   }
 
   revalidatePath('/transactions')
+  return { ok: true, id: recurrence.id }
+}
+
+// ── createRecurrence ──────────────────────────────────────────────────────────
+// Crea una regla recurrente desde cero, sin movimiento de origen. A diferencia
+// de createRecurrenceFromMovement no hay transacción semilla, así que
+// last_generated_date queda en null: el generador produce la PRIMERA instancia
+// para start_date (ver decideRecurrenceInstance). created_from_transaction_id es
+// siempre null. No crea ninguna transacción real ni instancia en este momento.
+
+export async function createRecurrence(
+  input: unknown,
+): Promise<ActionResult<CreateRecurrenceInput> & { id?: string }> {
+  const movementType = (input as { movement_type?: unknown } | null)?.movement_type
+
+  let data: CreateRecurrenceInput
+  if (movementType === 'income') {
+    const validation = await validateActionInput(createIncomeRecurrenceSchema, input)
+    if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
+    data = validation.data
+  } else if (movementType === 'expense') {
+    const validation = await validateActionInput(createExpenseRecurrenceSchema, input)
+    if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
+    data = validation.data
+  } else if (movementType === 'transfer') {
+    const validation = await validateActionInput(createTransferRecurrenceSchema, input)
+    if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
+    data = validation.data
+  } else {
+    // Excluye adjustment/exchange y cualquier tipo no soportado por recurrencia.
+    return { ok: false, formError: 'Tipo de movimiento inválido para una recurrencia.' }
+  }
+
+  const userId = await getAuthenticatedUserId()
+  const supabase = await createClient()
+
+  // Invariantes por tipo (el schema cubre la forma; acá reforzamos pertenencia).
+  if (data.movement_type === 'transfer') {
+    if (data.transfer_destination_account_id === data.account_id) {
+      return { ok: false, formError: 'La cuenta origen y destino no pueden ser iguales.' }
+    }
+  }
+
+  // Cuenta origen: pertenencia + estado + moneda activa (bimoneda: nunca mezclar).
+  const originError = await assertAccountUsable(
+    supabase,
+    userId,
+    data.account_id,
+    data.currency_code,
+    {
+      notFound: 'Cuenta no encontrada.',
+      archived: 'La cuenta está archivada.',
+      currency: 'La cuenta no tiene esa moneda activa.',
+    },
+  )
+  if (originError) return { ok: false, formError: originError }
+
+  // Cuenta destino (solo transfer): misma validación.
+  if (data.movement_type === 'transfer') {
+    const destError = await assertAccountUsable(
+      supabase,
+      userId,
+      data.transfer_destination_account_id,
+      data.currency_code,
+      {
+        notFound: 'La cuenta destino no existe.',
+        archived: 'La cuenta destino está archivada.',
+        currency: 'La cuenta destino no tiene esa moneda activa.',
+      },
+    )
+    if (destError) return { ok: false, formError: destError }
+  }
+
+  // Presets derivan su intervalo; 'custom' lo trae explícito.
+  const interval =
+    data.frequency === 'custom'
+      ? { count: data.interval_count as number, unit: data.interval_unit as IntervalUnit }
+      : presetToInterval(data.frequency)
+
+  const destinationAccountId =
+    data.movement_type === 'transfer' ? data.transfer_destination_account_id : null
+  const categoryId = data.movement_type === 'transfer' ? null : data.category_id
+  const subcategoryId =
+    data.movement_type === 'transfer' ? null : data.subcategory_id ?? null
+
+  const { data: recurrence, error: insertError } = await supabase
+    .from('recurrences')
+    .insert({
+      user_id: userId,
+      movement_type: data.movement_type,
+      account_id: data.account_id,
+      transfer_destination_account_id: destinationAccountId,
+      currency_code: data.currency_code,
+      amount: data.amount,
+      category_id: categoryId,
+      subcategory_id: subcategoryId,
+      description: data.description ?? null,
+      frequency: data.frequency,
+      interval_count: interval.count,
+      interval_unit: interval.unit,
+      max_occurrences: data.max_occurrences ?? null,
+      start_date: data.start_date,
+      end_date: data.end_date ?? null,
+      // No hay ocurrencia semilla: la primera instancia se genera para start_date.
+      last_generated_date: null,
+      status: 'active',
+      created_from_transaction_id: null,
+    })
+    .select('id')
+    .single()
+
+  if (insertError || !recurrence) {
+    return {
+      ok: false,
+      formError: insertError?.message ?? 'No se pudo crear la regla recurrente.',
+    }
+  }
+
+  revalidatePath('/transactions')
+  revalidatePath('/transactions/recurring')
   return { ok: true, id: recurrence.id }
 }
 

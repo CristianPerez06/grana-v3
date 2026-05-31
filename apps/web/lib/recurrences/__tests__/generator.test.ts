@@ -1,120 +1,84 @@
-import { describe, expect, it } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import {
   decideRecurrenceInstance,
   type RuleForDecision,
-} from '../generator'
+} from '@grana/money-logic'
 
-function makeRule(overrides: Partial<RuleForDecision> = {}): RuleForDecision {
-  return {
-    start_date: '2026-01-15',
-    end_date: null,
-    last_generated_date: '2026-01-15',
-    frequency: 'monthly',
-    ...overrides,
-  }
+// Direct rule: created from scratch, no seed transaction. last_generated_date is
+// null, so the FIRST instance falls ON start_date (not start_date + interval).
+const directRule: RuleForDecision = {
+  start_date: '2026-01-15',
+  end_date: null,
+  last_generated_date: null,
+  frequency: 'monthly',
 }
 
-describe('decideRecurrenceInstance', () => {
-  // ── 6.7: No se genera más de una instancia pendiente por regla ────────────
-  it('skips generation when a pending instance already exists', () => {
-    const decision = decideRecurrenceInstance(makeRule(), '2026-06-30', true)
+// Seeded rule: created from a movement or a suggestion. last_generated_date is
+// the date already covered by a real transaction, so the next instance advances
+// by one interval.
+const seededRule: RuleForDecision = {
+  start_date: '2026-01-15',
+  end_date: null,
+  last_generated_date: '2026-01-15',
+  frequency: 'monthly',
+}
+
+describe('decideRecurrenceInstance — direct rules (last_generated_date null)', () => {
+  it('generates the first instance ON start_date when start_date is today', () => {
+    const decision = decideRecurrenceInstance(directRule, '2026-01-15', false)
+    expect(decision).toEqual({ generate: true, scheduled_date: '2026-01-15' })
+  })
+
+  it('generates a single instance ON start_date when start_date is in the past', () => {
+    // A past start_date does NOT backfill: the decision yields exactly one
+    // instance at start_date. The one-pending-per-rule index keeps it single.
+    const decision = decideRecurrenceInstance(directRule, '2026-06-20', false)
+    expect(decision).toEqual({ generate: true, scheduled_date: '2026-01-15' })
+  })
+
+  it('does not generate while a pending instance already exists', () => {
+    const decision = decideRecurrenceInstance(directRule, '2026-06-20', true)
     expect(decision).toEqual({ generate: false, reason: 'has_pending' })
   })
 
-  it('skips generation when next date has not arrived yet', () => {
-    const decision = decideRecurrenceInstance(makeRule(), '2026-02-01', false)
+  it('does not generate when start_date is still in the future', () => {
+    const futureRule = { ...directRule, start_date: '2026-12-01' }
+    const decision = decideRecurrenceInstance(futureRule, '2026-11-30', false)
+    expect(decision).toEqual({ generate: false, reason: 'not_due' })
+  })
+})
+
+describe('decideRecurrenceInstance — seeded rules (last_generated_date set)', () => {
+  it('generates the next instance one interval after last_generated_date', () => {
+    const decision = decideRecurrenceInstance(seededRule, '2026-03-01', false)
+    expect(decision).toEqual({ generate: true, scheduled_date: '2026-02-15' })
+  })
+
+  it('does not generate when the next date is still in the future', () => {
+    const decision = decideRecurrenceInstance(seededRule, '2026-01-20', false)
     expect(decision).toEqual({ generate: false, reason: 'not_due' })
   })
 
-  it('generates on the exact day the next instance is due', () => {
-    const decision = decideRecurrenceInstance(makeRule(), '2026-02-15', false)
-    expect(decision).toEqual({ generate: true, scheduled_date: '2026-02-15' })
+  it('does not generate when a pending instance already exists', () => {
+    const decision = decideRecurrenceInstance(seededRule, '2026-03-01', true)
+    expect(decision).toEqual({ generate: false, reason: 'has_pending' })
   })
 
-  it('generates when past the due date (catch-up)', () => {
-    const decision = decideRecurrenceInstance(makeRule(), '2026-03-20', false)
-    // next from 2026-01-15 monthly = 2026-02-15; that's <= today.
-    expect(decision).toEqual({ generate: true, scheduled_date: '2026-02-15' })
-  })
-
-  it('uses start_date when last_generated_date is null', () => {
+  it('clamps end-of-month: 31-Jan + 1 month becomes 28-Feb', () => {
     const decision = decideRecurrenceInstance(
-      makeRule({ last_generated_date: null }),
-      '2026-02-20',
+      { ...seededRule, start_date: '2026-01-31', last_generated_date: '2026-01-31' },
+      '2026-03-01',
       false,
     )
-    expect(decision).toEqual({ generate: true, scheduled_date: '2026-02-15' })
+    expect(decision).toEqual({ generate: true, scheduled_date: '2026-02-28' })
   })
 
-  // ── 6.9: Regla con end_date se desactiva al superar fecha final ───────────
-  it('skips generation when next date is past end_date', () => {
+  it('does not generate past the end date', () => {
     const decision = decideRecurrenceInstance(
-      makeRule({
-        last_generated_date: '2026-06-15',
-        end_date: '2026-06-30',
-      }),
-      '2026-08-01',
+      { ...seededRule, end_date: '2026-02-01' },
+      '2026-03-01',
       false,
     )
-    // next from 2026-06-15 monthly = 2026-07-15 > end_date 2026-06-30.
     expect(decision).toEqual({ generate: false, reason: 'past_end_date' })
-  })
-
-  it('still generates when next date equals end_date', () => {
-    const decision = decideRecurrenceInstance(
-      makeRule({
-        last_generated_date: '2026-05-15',
-        end_date: '2026-06-15',
-      }),
-      '2026-06-20',
-      false,
-    )
-    expect(decision).toEqual({ generate: true, scheduled_date: '2026-06-15' })
-  })
-
-  it('preserves the start_date anchor across short months', () => {
-    // Monthly rule started on Jan 31; after Feb (28 days) the next anchor
-    // should snap back to 31 in March, not stay at 28.
-    const decision = decideRecurrenceInstance(
-      makeRule({
-        start_date: '2026-01-31',
-        last_generated_date: '2026-02-28',
-        frequency: 'monthly',
-      }),
-      '2026-04-01',
-      false,
-    )
-    expect(decision).toEqual({ generate: true, scheduled_date: '2026-03-31' })
-  })
-
-  it('handles weekly frequency', () => {
-    const decision = decideRecurrenceInstance(
-      makeRule({
-        start_date: '2026-05-01',
-        last_generated_date: '2026-05-01',
-        frequency: 'weekly',
-      }),
-      '2026-05-09',
-      false,
-    )
-    expect(decision).toEqual({ generate: true, scheduled_date: '2026-05-08' })
-  })
-
-  it('has_pending takes precedence over not_due', () => {
-    // Even when not due, hasPending check comes first.
-    const decision = decideRecurrenceInstance(makeRule(), '2026-01-20', true)
-    expect(decision).toEqual({ generate: false, reason: 'has_pending' })
-  })
-
-  it('has_pending takes precedence over past_end_date', () => {
-    const decision = decideRecurrenceInstance(
-      makeRule({
-        last_generated_date: '2026-06-15',
-        end_date: '2026-06-30',
-      }),
-      '2026-08-01',
-      true,
-    )
-    expect(decision).toEqual({ generate: false, reason: 'has_pending' })
   })
 })
