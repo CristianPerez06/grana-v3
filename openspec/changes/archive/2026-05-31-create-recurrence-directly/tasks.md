@@ -40,7 +40,7 @@
 - [x] 6.1 Validación OpenSpec en verde vía `npx openspec validate create-recurrence-directly --strict` ("is valid") + sin placeholders TBD en `specs/`. NOTA: el script `pnpm openspec:check` falla en Windows porque usa `grep -rE` (bash) que cmd.exe no entiende — problema de portabilidad PREEXISTENTE del script, no del change. Correr en bash/CI.
 - [x] 6.2 `pnpm build` (7/7 tasks, Compiled successfully) y `tsc --noEmit` (web, exit 0) en verde. `pnpm lint`: 0 errores; queda 1 warning PREEXISTENTE en `credit-cards.ts:207` ('today' sin usar), ajeno a este change. Archivos nuevos sin warnings.
 - [x] 6.3 Verificación manual end-to-end (usuario, app real): creó reglas, confirmó que la 1ª instancia aparece para `start_date` y que un `start_date` pasado NO hace backfill (una sola instancia). FUNCIONA OK. ✅
-- [ ] 6.4 Archivar el change OpenSpec (`/opsx:archive`) tras el merge.
+- [x] 6.4 Archivar el change OpenSpec (`/opsx:archive`) tras el merge. ✅ (mergeado a main `b3e60c7` + pusheado)
 
 ## 7. Mejoras halladas en la verificación runtime del usuario (incluidas en este change)
 
