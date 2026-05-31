@@ -7,6 +7,7 @@ import { MonthBalanceChart } from './month-balance-chart'
 import { MonthNavigator } from './month-navigator'
 import { fetchMonthBalanceSeries } from '@/app/_actions/dashboard'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import type { MonthBalanceSeries } from '@grana/dashboard'
 import { cn } from '@/lib/utils'
@@ -80,8 +81,8 @@ export const MonthBalanceSection = ({
   const isPositive = data.finalBalance >= 0
 
   return (
-    <section className="flex h-full min-h-[26rem] flex-col overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-sm">
-      <header className="mb-4 flex items-center justify-between gap-4">
+    <Card className="flex h-full min-h-[26rem] flex-col overflow-hidden">
+      <CardHeader className="flex-row items-center justify-between gap-4">
         <h2 className="min-w-0 truncate text-lg font-semibold text-text">{t('title')}</h2>
         <MonthNavigator
           year={selected.year}
@@ -89,63 +90,65 @@ export const MonthBalanceSection = ({
           onPrev={onPrev}
           onNext={onNext}
         />
-      </header>
+      </CardHeader>
 
       {/* Swappable region — only the graph + footer change between states; the
           card keeps its size because this region always fills the card body
           (flex-1) with a stable minimum height. */}
-      {status === 'loading' ? (
-        <div
-          className="flex min-h-[17.5rem] flex-1 items-center justify-center"
-          aria-busy="true"
-        >
-          <Spinner size="lg" />
-        </div>
-      ) : status === 'error' ? (
-        <div className="flex min-h-[17.5rem] flex-1 flex-col items-center justify-center gap-3 text-center">
-          <p className="text-sm text-text-muted">{t('error')}</p>
-          <Button variant="secondary" size="sm" className="w-auto px-4" onPress={() => load(selected)}>
-            {tError('retry_action')}
-          </Button>
-        </div>
-      ) : (
-        <div className="flex min-h-[17.5rem] flex-1 flex-col">
-          <div className="mb-3 flex-1 text-text-muted">
-            <MonthBalanceChart days={data.days} />
+      <CardContent className="flex flex-1 flex-col">
+        {status === 'loading' ? (
+          <div
+            className="flex min-h-[17.5rem] flex-1 items-center justify-center"
+            aria-busy="true"
+          >
+            <Spinner size="lg" />
           </div>
+        ) : status === 'error' ? (
+          <div className="flex min-h-[17.5rem] flex-1 flex-col items-center justify-center gap-3 text-center">
+            <p className="text-sm text-text-muted">{t('error')}</p>
+            <Button variant="secondary" size="sm" className="w-auto px-4" onPress={() => load(selected)}>
+              {tError('retry_action')}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex min-h-[17.5rem] flex-1 flex-col">
+            <div className="mb-3 flex-1 text-text-muted">
+              <MonthBalanceChart days={data.days} />
+            </div>
 
-          <div className="mt-4 flex flex-wrap items-baseline justify-between gap-3 border-t border-border-soft pt-4">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
-                {t('final_balance')}
-              </p>
-              <p
-                className={cn(
-                  'mt-1 text-2xl font-bold tabular-nums',
-                  isPositive ? 'text-emerald' : 'text-negative',
-                )}
-              >
-                {isPositive && data.finalBalance > 0 ? '+ ' : ''}
-                <MaskedAmount amount={data.finalBalance} currency="ARS" />
-              </p>
-            </div>
-            <div className="flex gap-4 text-xs text-text-muted">
-              <span>
-                {t('income')}{' '}
-                <span className="font-semibold text-text">
-                  <MaskedAmount amount={data.totalIncome} currency="ARS" />
+            <div className="mt-4 flex flex-wrap items-baseline justify-between gap-3 border-t border-border-soft pt-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+                  {t('final_balance')}
+                </p>
+                <p
+                  className={cn(
+                    'mt-1 text-2xl font-bold tabular-nums',
+                    isPositive ? 'text-emerald' : 'text-negative',
+                  )}
+                >
+                  {isPositive && data.finalBalance > 0 ? '+ ' : ''}
+                  <MaskedAmount amount={data.finalBalance} currency="ARS" />
+                </p>
+              </div>
+              <div className="flex gap-4 text-xs text-text-muted">
+                <span>
+                  {t('income')}{' '}
+                  <span className="font-semibold text-text">
+                    <MaskedAmount amount={data.totalIncome} currency="ARS" />
+                  </span>
                 </span>
-              </span>
-              <span>
-                {t('expense')}{' '}
-                <span className="font-semibold text-text">
-                  <MaskedAmount amount={data.totalExpense} currency="ARS" />
+                <span>
+                  {t('expense')}{' '}
+                  <span className="font-semibold text-text">
+                    <MaskedAmount amount={data.totalExpense} currency="ARS" />
+                  </span>
                 </span>
-              </span>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </section>
+        )}
+      </CardContent>
+    </Card>
   )
 }

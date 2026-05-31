@@ -29,6 +29,16 @@ export const Default: Story = {
   ),
 }
 
+export const Emerald: Story = {
+  render: () => (
+    <Card variant="emerald">
+      <CardContent className="pt-6">
+        An emphasis card using the <code>emerald</code> variant.
+      </CardContent>
+    </Card>
+  ),
+}
+
 export const FullComposition: Story = {
   render: () => (
     <Card>
