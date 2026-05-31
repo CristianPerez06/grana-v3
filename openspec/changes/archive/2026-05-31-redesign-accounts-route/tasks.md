@@ -40,6 +40,6 @@
 
 ## 8. Cierre del change
 
-- [ ] 8.1 `openspec validate redesign-accounts-route --strict` pasa.
+- [x] 8.1 `openspec validate redesign-accounts-route --strict` pasa.
 - [ ] 8.2 Squash + branch ready para PR (no merge a main — eso lo hace el usuario).
 - [ ] 8.3 Cuando vuelva la cuota de Paper: exportar `MM-0` y `R5-0` (PNG + SVG + JSX representativo) a `openspec/changes/redesign-accounts-route/design-refs/` con README no-autoritativo, siguiendo el patrón de `auth-minimal-redesign`.
