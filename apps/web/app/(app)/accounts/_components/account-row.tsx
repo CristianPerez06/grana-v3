@@ -21,6 +21,8 @@ export const AccountRow = ({ account }: Props) => {
 
   const balances = account.balances
   const activeCurrencies = account.currencies.filter((c) => c.is_active)
+  const hasARS = activeCurrencies.some((c) => c.currency_code === 'ARS')
+  const hasUSD = activeCurrencies.some((c) => c.currency_code === 'USD')
 
   const handleReactivate = () => {
     startTransition(async () => {
@@ -31,49 +33,60 @@ export const AccountRow = ({ account }: Props) => {
   }
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3">
-      <AccountAvatar {...account.avatar} size="sm" />
-      <Link href={`/accounts/${account.id}`} className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-medium text-sm truncate">{account.name}</span>
+    <div className="flex items-center gap-4 px-5 py-4">
+      <AccountAvatar {...account.avatar} size="md" />
+
+      <Link
+        href={`/accounts/${account.id}`}
+        className="flex flex-1 items-center gap-4 min-w-0"
+      >
+        <div className="flex flex-1 flex-col gap-1 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="truncate text-[15px] font-semibold text-text">
+              {account.name}
+            </span>
+            {!account.is_active && (
+              <span className="shrink-0 rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-warning">
+                {t('badges.archived')}
+              </span>
+            )}
+          </div>
           {account.type === 'bank' && account.institution && (
-            <span className="text-xs text-muted-foreground truncate">
+            <span className="truncate text-[13px] text-text-soft">
               {account.institution.name}
             </span>
           )}
-          {!account.is_active && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-800">
-              {t('badges.archived')}
+          {error && <p className="text-[13px] text-destructive">{error}</p>}
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-0.5 tabular-nums">
+          {hasARS && (
+            <span className="text-[15px] font-semibold text-text">
+              {formatARS(balances.ARS, showCents)}
+            </span>
+          )}
+          {hasUSD && (
+            <span className="text-[13px] text-text-soft">
+              {formatUSD(balances.USD, showCents)}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-3 mt-1">
-          {activeCurrencies.map((c) => (
-            <span key={c.currency_code} className="text-xs text-muted-foreground">
-              {c.currency_code === 'ARS' ? (
-                <span className="font-medium">{formatARS(balances.ARS, showCents)}</span>
-              ) : (
-                <span>{formatUSD(balances.USD, showCents)}</span>
-              )}
-            </span>
-          ))}
-        </div>
-        {error && <p className="text-xs text-destructive mt-1">{error}</p>}
       </Link>
 
-      <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="flex w-20 shrink-0 items-center justify-end">
         {account.is_active ? (
           <Link
             href={`/accounts/${account.id}/edit`}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="text-[13px] font-medium text-text-soft transition-colors hover:text-text"
           >
             {t('actions.edit')}
           </Link>
         ) : (
           <button
+            type="button"
             onClick={handleReactivate}
             disabled={isPending}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            className="text-[13px] font-semibold text-positive transition-opacity hover:opacity-80 disabled:opacity-50 cursor-pointer"
           >
             {t('actions.reactivate')}
           </button>

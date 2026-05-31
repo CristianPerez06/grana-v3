@@ -11,11 +11,18 @@ export const AccountSection = ({ title, accounts, archived = false }: Props) => 
   if (accounts.length === 0) return null
 
   return (
-    <section className={archived ? 'opacity-70' : ''}>
-      <h2 className="mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wide">
-        {title} ({accounts.length})
-      </h2>
-      <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
+    <section className="flex flex-col gap-3">
+      <div className="flex items-baseline gap-2 px-1">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-text-soft">
+          {title}
+        </h2>
+        <span className="text-xs font-medium text-text-soft/80">· {accounts.length}</span>
+      </div>
+      <div
+        className={`flex flex-col divide-y divide-border-soft rounded-2xl bg-card ${
+          archived ? 'border border-dashed border-border-soft' : 'border border-border-soft'
+        }`}
+      >
         {accounts.map((account) => (
           <AccountRow key={account.id} account={account} />
         ))}

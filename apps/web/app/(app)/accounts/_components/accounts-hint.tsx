@@ -31,13 +31,13 @@ export const AccountsHint = () => {
   if (dismissed) return null
 
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/40 p-4">
-      <p className="text-sm font-medium text-foreground">{t('title')}</p>
-      <p className="text-sm text-muted-foreground">{t('description')}</p>
+    <div className="flex flex-col gap-2 rounded-2xl border border-border-soft bg-card p-4">
+      <p className="text-sm font-semibold text-text">{t('title')}</p>
+      <p className="text-sm text-text-soft">{t('description')}</p>
       <button
         type="button"
         onClick={dismiss}
-        className="self-start text-sm font-medium text-primary hover:underline"
+        className="self-start text-sm font-semibold text-positive transition-opacity hover:opacity-80 cursor-pointer"
       >
         {t('dismiss')}
       </button>

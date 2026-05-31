@@ -4,9 +4,9 @@ import { getTranslations } from 'next-intl/server'
 export const EmptyAccountsState = async () => {
   const t = await getTranslations('accounts')
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <p className="text-lg font-medium text-foreground">{t('empty.title')}</p>
-      <p className="mt-2 text-sm text-muted-foreground max-w-sm">
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-border-soft bg-card px-6 py-16 text-center">
+      <p className="text-lg font-semibold text-text">{t('empty.title')}</p>
+      <p className="mt-2 max-w-sm text-sm text-text-soft">
         {t('empty.description')}
       </p>
       <Link
