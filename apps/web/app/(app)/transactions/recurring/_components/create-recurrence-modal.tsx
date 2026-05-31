@@ -366,7 +366,6 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
             onClick={() => (drillable ? setCatDrill(c.id) : pickCategory(c.id, ''))}
             className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-page"
           >
-            {c.color && <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: c.color }} />}
             <span className="flex-1 truncate text-sm font-medium text-text">
               {c.icon ? `${c.icon} ` : ''}{c.name}
             </span>
@@ -383,9 +382,6 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
 
   const categoryValue = selectedCategory ? (
     <span className="flex items-center gap-1.5">
-      {selectedCategory.color && (
-        <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: selectedCategory.color }} />
-      )}
       <span className="truncate">{selectedCategory.icon ? `${selectedCategory.icon} ` : ''}{selectedCategory.name}</span>
       {subcategoryName && (
         <>
