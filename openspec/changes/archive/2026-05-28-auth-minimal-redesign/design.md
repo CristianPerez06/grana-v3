@@ -52,7 +52,7 @@ Tras migrar las 6 páginas quedan sin uso. Se borran en el mismo change para no 
 - **Regresión visual en alguna de las 6 rutas (las OTP/reset son menos obvias)** → Mitigación: revisar las 6 rutas (`/login`, `/signup`, `/signup/verify`, `/forgot-password`, `/forgot-password/verify`, `/reset-password`) tras el swap; `reset-password` además tiene estados de card de éxito/error que deben verse bien dentro del nuevo shell.
 - **`AUTH_INPUT_CLASS` afinado para la era navy** (`focus:border-navy`, `border-slate-300`) puede verse subóptimo sobre tarjeta blanca → Mitigación: ajuste mínimo de clases si hace falta, sin tocar `Input`.
 - **Branch apilado sobre `feature/grana-logo`** (dependencia de `GranaLogo`) → Mitigación: al aterrizar, el usuario mergea primero el branch del logo a `main`; luego se rebasa este branch con `git rebase --onto main feature/grana-logo feature/auth-minimal-redesign` para replayar solo el commit del rediseño.
-- **Design-refs de Paper aún no versionados** (cuota agotada) → Mitigación: se agregan a `design-refs/` cuando se reponga la cuota; el diseño ya está aprobado y descrito aquí.
+- ~~**Design-refs de Paper aún no versionados** (cuota agotada)~~ → Resuelto el 2026-05-31: PNG+SVG de los 6 artboards (Desktop 1440 + Web Mobile 390) y un JSX de referencia para Signup desktop quedaron en `design-refs/` (no autoritativos — ver `design-refs/README.md`).
 
 ## Migration Plan
 
