@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>grana · Selector Egresos / Ingresos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #F6F7F9;
+    --card: #FFFFFF;
+    --navy: #0B1A2B;
+    --muted: #6B7683;
+    --border: #E6EAEF;
+    --emerald: #10B981;
+    --terracota: #B56A5A;
+    --slate: #3A6B8A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    color: var(--navy);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+
+  /* ---------- Card ---------- */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 22px; }
+  .spend-card { padding: 32px 36px 34px; }
+
+  .spend-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 24px; margin-bottom: 26px;
+  }
+  .spend-head-left { min-width: 0; }
+  .spend-sub { margin-top: 12px; font-size: 14px; color: var(--muted); font-weight: 500; }
+
+  /* selector — base */
+  .mode-tabs { display: inline-flex; }
+  .mode-tabs button {
+    border: none; cursor: pointer; font-family: inherit;
+    transition: background .18s, color .18s;
+  }
+
+  /* Variation A — pill */
+  .mt-pill { gap: 4px; background: #EEF1F5; border-radius: 12px; padding: 4px; }
+  .mt-pill button {
+    font-size: 15px; font-weight: 700; color: var(--muted);
+    padding: 9px 22px; border-radius: 9px; background: transparent;
+  }
+  .mt-pill button:hover:not(.on) { color: var(--navy); }
+
+  /* Variation B — underline */
+  .mt-underline { gap: 28px; }
+  .mt-underline button {
+    font-size: 21px; font-weight: 800; letter-spacing: -0.02em;
+    color: #AEB6C0; padding: 2px 2px 10px; background: transparent;
+    position: relative;
+  }
+  .mt-underline button:hover:not(.on) { color: var(--navy); }
+  .mt-underline button.on::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px;
+    border-radius: 3px; background: var(--bar, var(--navy));
+  }
+
+  /* currency toggle */
+  .seg { display: flex; gap: 4px; background: #EEF1F5; border-radius: 11px; padding: 4px; flex: none; }
+  .seg button {
+    border: none; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 700;
+    color: var(--muted); padding: 7px 15px; border-radius: 8px; background: transparent;
+    transition: background .15s, color .15s;
+  }
+  .seg button.on { background: var(--navy); color: #fff; }
+
+  /* body */
+  .spend-body { display: flex; align-items: center; gap: 48px; animation: fadeUp .32s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .donut-wrap { flex: none; position: relative; width: 228px; height: 228px; }
+  .donut {
+    width: 228px; height: 228px; border-radius: 50%;
+    -webkit-mask: radial-gradient(circle, transparent 58%, #000 58.5%);
+    mask: radial-gradient(circle, transparent 58%, #000 58.5%);
+    animation: donutIn .4s ease;
+  }
+  @keyframes donutIn { from { transform: rotate(-12deg) scale(.94); opacity: .4; } to { transform: none; opacity: 1; } }
+  .donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+  .donut-center .dc-eyebrow { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; }
+  .donut-center .dc-amount { font-size: 36px; font-weight: 800; letter-spacing: -0.035em; line-height: 1; margin-top: 2px; white-space: nowrap; }
+  .donut-center .dc-sub { font-size: 13px; color: var(--muted); font-weight: 500; }
+
+  .ranking { flex: 1; display: flex; flex-direction: column; }
+  .rank-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 16px; padding: 12px 0; }
+  .rank-row + .rank-row { border-top: 1px solid var(--border); }
+  .rank-left { display: flex; align-items: center; gap: 14px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; flex: none; }
+  .rank-emoji { font-size: 20px; line-height: 1; }
+  .rank-name { font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .rank-cap { font-size: 13px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+  .rank-amt { font-size: 18px; font-weight: 700; letter-spacing: -0.025em; text-align: right; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="spend-card.jsx"></script>
+  <script type="text/babel">
+    const { createRoot } = ReactDOM;
+    function App() {
+      return (
+        <DesignCanvas>
+          <DCSection id="selector" title="Selector Egresos / Ingresos"
+                     subtitle="Tarjeta del módulo Movimientos · ambas opciones son interactivas (tocá las pestañas y ARS/USD)">
+            <DCArtboard id="pill" label="Variación A · Pestañas pill" width={780}>
+              <div style={{ background: 'var(--bg)', padding: 36 }}>
+                <SpendCard variant="pill" />
+              </div>
+            </DCArtboard>
+            <DCArtboard id="underline" label="Variación B · Pestañas subrayadas" width={780}>
+              <div style={{ background: 'var(--bg)', padding: 36 }}>
+                <SpendCard variant="underline" />
+              </div>
+            </DCArtboard>
+          </DCSection>
+        </DesignCanvas>
+      );
+    }
+    createRoot(document.getElementById('root')).render(<App />);
+  </script>
+
+  <template id="__bundler_thumbnail">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100" height="100" rx="22" fill="#0B1A2B"/>
+      <text x="50" y="68" font-family="Plus Jakarta Sans, sans-serif" font-size="58" font-weight="800" fill="#15B981" text-anchor="middle">g</text>
+    </svg>
+  </template>
+</body>
+</html>

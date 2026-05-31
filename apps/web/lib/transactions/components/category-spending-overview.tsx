@@ -17,6 +17,17 @@ import { useShowCents } from '@/lib/preferences-context'
 
 const DONUT_FALLBACK = '#9CA3AF'
 const RANKING_TOP = 5
+
+// ── Mode palette / accent (design handoff: selector Egresos / Ingresos) ────────
+// Egresos keeps each category's own DB colour (multicolour by design); Ingresos
+// uses a fixed green palette assigned by ranking position so income categories
+// read as a single tonal family even when they have no colour set.
+const INCOME_PALETTE = ['#0E9E6E', '#16B981', '#4FC79A', '#86D9B8']
+// Accent drives the eyebrow title, the donut centre label and the active tab.
+const MODE_ACCENT: Record<'egresos' | 'ingresos', string> = {
+  egresos: '#0B1A2B',
+  ingresos: '#0E9E6E',
+}
 // Max subcategory slices pre-created in the SVG pool (keeps DOM stable).
 const MAX_SUB_SLICES = 8
 // Lock duration (ms) matching the CSS transition so clicks mid-animation are ignored.
@@ -64,12 +75,23 @@ type Props = {
   prevHref: string
   nextHref: string
   currency: 'ARS' | 'USD'
+  /** Overview mode: expenses ("En qué se fue") or income ("De dónde vino"). */
+  mode: 'egresos' | 'ingresos'
+  /** URL-driven mode selector hrefs (preserve current month + currency). */
+  egresosHref: string
+  ingresosHref: string
   breakdown: CategoryBreakdown
   hasUsd: boolean
   arsHref: string
   usdHref: string
   month: string
-  getHref?: (slice: CategorySlice) => string | null
+  /**
+   * Parent category id when the donut is in the in-category subcategory mode
+   * (expenses only). Used to build each row's href so it drills into the parent
+   * category + the clicked subcategory. Serializable — passed instead of a
+   * function so it crosses the Server→Client boundary cleanly.
+   */
+  parentCategoryId?: string
   /**
    * Pre-fetched subcategory breakdowns by category id, for both currencies.
    * When present, clicking a category with sub-data triggers an animated in-situ
@@ -85,12 +107,38 @@ type Props = {
     othersLabelTemplate: string
     seeAllCategories: string
     emptyMessage: string
+    /** Mode selector tab labels. */
+    modeEgresos: string
+    modeIngresos: string
+    /** Mode-specific subtitle shown under the selector. */
+    subtitle: string
   }
   detailHref?: string
 }
 
-const categoryHref = (month: string, currency: 'ARS' | 'USD', categoryId: string | null) =>
-  categoryId ? `/transactions?month=${month}&category=${categoryId}&currency=${currency}` : null
+// Builds a ranking row's href. Three cases:
+//   • ingresos → that income category's movements for the month
+//   • egresos in-category (parentCategoryId set) → parent category + subcategory
+//   • egresos default → that category's movements
+const buildRowHref = (
+  categoryId: string | null,
+  ctx: {
+    month: string
+    currency: 'ARS' | 'USD'
+    mode: 'egresos' | 'ingresos'
+    parentCategoryId?: string
+  },
+): string | null => {
+  if (!categoryId) return null
+  const { month, currency, mode, parentCategoryId } = ctx
+  if (mode === 'ingresos') {
+    return `/transactions?month=${month}&category=${categoryId}&type=income&currency=${currency}&overview=ingresos`
+  }
+  if (parentCategoryId) {
+    return `/transactions?month=${month}&category=${parentCategoryId}&subcategory=${categoryId}&currency=${currency}`
+  }
+  return `/transactions?month=${month}&category=${categoryId}&currency=${currency}`
+}
 
 // ── Animated donut SVG ────────────────────────────────────────────────────────
 
@@ -169,6 +217,9 @@ export const CategorySpendingOverview = ({
   prevHref,
   nextHref,
   currency,
+  mode,
+  egresosHref,
+  ingresosHref,
   breakdown,
   hasUsd,
   arsHref,
@@ -176,11 +227,27 @@ export const CategorySpendingOverview = ({
   month,
   labels,
   detailHref,
-  getHref,
+  parentCategoryId,
   subBreakdownsByCategory,
 }: Props) => {
   const showCents = useShowCents()
   const fmt = (n: number) => (currency === 'ARS' ? formatARS(n, showCents) : formatUSD(n, showCents))
+
+  // Mode visuals: accent colours the title/centre label/active tab; income
+  // segments take a positional green palette, expenses keep their DB colour.
+  const accent = MODE_ACCENT[mode]
+  const sliceColor = useCallback(
+    (slice: CategorySlice, index: number): string =>
+      mode === 'ingresos'
+        ? INCOME_PALETTE[index % INCOME_PALETTE.length]
+        : slice.color ?? DONUT_FALLBACK,
+    [mode],
+  )
+  // Slices recoloured for the donut (the SVG reads `color` off each slice).
+  const donutSlices = useMemo(
+    () => breakdown.slices.map((s, i) => ({ ...s, color: sliceColor(s, i) })),
+    [breakdown.slices, sliceColor],
+  )
 
   // ── Drill-down state ───────────────────────────────────────────────────────
   const [drilledId, setDrilledId] = useState<string | null>(null)
@@ -267,7 +334,8 @@ export const CategorySpendingOverview = ({
   ) : (
     <span
       id="spending-overview-title"
-      className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-soft"
+      className="text-[11px] font-bold uppercase tracking-[0.08em]"
+      style={{ color: accent }}
     >
       {labels.eyebrow}
     </span>
@@ -296,7 +364,10 @@ export const CategorySpendingOverview = ({
     </>
   ) : (
     <>
-      <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-soft">
+      <span
+        className="text-[11px] font-bold uppercase tracking-[0.14em]"
+        style={{ color: accent }}
+      >
         {labels.centerLabel}
       </span>
       <span className="text-2xl font-bold tabular-nums tracking-[-0.025em] text-text leading-none">
@@ -363,8 +434,45 @@ export const CategorySpendingOverview = ({
         )}
       </div>
 
+      {/* Mode selector (Egresos / Ingresos) — same "pill" family as the currency
+          toggle; the active tab adopts the mode's accent (navy / emerald). */}
+      <div className="flex flex-col gap-2">
+        <div
+          className="inline-flex w-fit gap-1 rounded-xl p-1"
+          style={{ backgroundColor: '#EEF1F5' }}
+          role="tablist"
+          aria-label={labels.eyebrow}
+        >
+          {([
+            { key: 'egresos', href: egresosHref, label: labels.modeEgresos },
+            { key: 'ingresos', href: ingresosHref, label: labels.modeIngresos },
+          ] as const).map(({ key, href, label }) => {
+            const active = mode === key
+            return (
+              <Link
+                key={key}
+                href={href}
+                role="tab"
+                aria-selected={active}
+                className="rounded-lg px-4 py-1.5 text-sm font-bold transition-colors"
+                style={
+                  active
+                    ? { backgroundColor: MODE_ACCENT[key], color: '#fff' }
+                    : { color: '#6B7683' }
+                }
+              >
+                {label}
+              </Link>
+            )
+          })}
+        </div>
+        <p className="text-sm font-medium text-text-soft">{labels.subtitle}</p>
+      </div>
+
       {breakdown.slices.length === 0 ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">{labels.emptyMessage}</p>
+        <div className="rounded-lg border border-dashed border-border px-6 py-10 text-center">
+          <p className="text-sm font-medium text-text-muted">{labels.emptyMessage}</p>
+        </div>
       ) : (
         <div className="flex flex-col items-center gap-7 sm:flex-row sm:items-center">
           {/* Donut + center label */}
@@ -375,7 +483,7 @@ export const CategorySpendingOverview = ({
             aria-label={drilledId ? 'Volver a categorías' : undefined}
           >
             <AnimatedDonut
-              parentSlices={breakdown.slices}
+              parentSlices={donutSlices}
               childSlices={childSlices}
               childrenVisible={drilledId !== null}
               size={200}
@@ -418,7 +526,7 @@ export const CategorySpendingOverview = ({
               // Category ranking
               <>
                 {named.map((s, i) => {
-                  const href = getHref ? getHref(s) : categoryHref(month, currency, s.categoryId)
+                  const href = buildRowHref(s.categoryId, { month, currency, mode, parentCategoryId })
                   const share = Math.round(s.percentage)
                   const isDrillable =
                     subBreakdownsByCategory && s.categoryId
@@ -427,10 +535,6 @@ export const CategorySpendingOverview = ({
 
                   const row = (
                     <div className="flex items-center gap-3 min-w-0">
-                      <span
-                        className="size-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: s.color ?? DONUT_FALLBACK }}
-                      />
                       <span className="truncate text-sm font-medium text-text flex-1">
                         {s.icon ? `${s.icon} ` : ''}
                         {s.label}
@@ -476,7 +580,6 @@ export const CategorySpendingOverview = ({
                 {tail.length > 0 && (
                   <li>
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className="size-2.5 shrink-0 rounded-full bg-border" />
                       <span className="truncate text-sm font-medium text-text-muted flex-1">
                         {fillTemplate(labels.othersLabelTemplate, { count: tail.length })}
                       </span>
@@ -495,23 +598,28 @@ export const CategorySpendingOverview = ({
         </div>
       )}
 
-      {/* Footer */}
-      <div
-        className={`flex items-center gap-2 border-t border-border-soft pt-4 ${
-          detailHref ? 'justify-between' : ''
-        }`}
-      >
-        <span className="text-xs text-muted-foreground">{labels.offLedgerNote}</span>
-        {detailHref && (
-          <Link
-            href={detailHref}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-emerald hover:text-emerald-deep transition-colors"
-          >
-            {labels.seeDetail}
-            <ChevronRight size={12} />
-          </Link>
-        )}
-      </div>
+      {/* Footer. The off-ledger disclaimer only applies to expenses (income is
+          never on a card statement), so it is hidden in the Ingresos mode. */}
+      {(mode === 'egresos' || detailHref) && (
+        <div
+          className={`flex items-center gap-2 border-t border-border-soft pt-4 ${
+            detailHref ? 'justify-between' : ''
+          }`}
+        >
+          {mode === 'egresos' && (
+            <span className="text-xs text-muted-foreground">{labels.offLedgerNote}</span>
+          )}
+          {detailHref && (
+            <Link
+              href={detailHref}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-emerald hover:text-emerald-deep transition-colors"
+            >
+              {labels.seeDetail}
+              <ChevronRight size={12} />
+            </Link>
+          )}
+        </div>
+      )}
     </section>
   )
 }

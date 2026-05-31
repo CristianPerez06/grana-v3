@@ -6,6 +6,7 @@ import {
   type CategorySliceInput,
   type SubcategorySliceInput,
 } from '@grana/money-logic'
+import { Money } from '@grana/validation'
 import {
   DEFAULT_MOVEMENTS_LIMIT,
   MAX_MOVEMENTS_LIMIT,
@@ -514,6 +515,24 @@ export async function getReimbursementsForExpense(
 
 export const UNCATEGORIZED_ID = 'uncategorized'
 
+// Whether the user has any USD income/expense activity in the month. Drives the
+// ARS/USD toggle visibility in the spending overview so it stays consistent
+// across the Egresos/Ingresos modes (the toggle shouldn't appear/disappear just
+// because you switched mode). A single lightweight count query (head: true).
+export async function hasUsdActivityInMonth(month: string): Promise<boolean> {
+  const supabase = await createClient()
+  const { from, to } = resolveMonthRange(month)
+  const { count, error } = await supabase
+    .from('transactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('currency_code', 'USD')
+    .in('type', ['income', 'expense'])
+    .gte('date', from ?? '')
+    .lte('date', to ?? '')
+  if (error) throw error
+  return (count ?? 0) > 0
+}
+
 export type MonthCategoryBreakdown = {
   ARS: CategorySliceInput[]
   USD: CategorySliceInput[]
@@ -629,6 +648,78 @@ export async function getMonthCategoryBreakdown(month: string): Promise<MonthCat
     const out: CategorySliceInput[] = []
     for (const [id, perCurrency] of netByCategory.entries()) {
       const value = perCurrency[currency].neto
+      if (value <= 0) continue
+      const display = id === UNCATEGORIZED_ID ? null : categoryById.get(id)
+      // Uncategorized label is left empty; the UI fills it (i18n).
+      out.push({
+        categoryId: id,
+        label: display?.name ?? '',
+        color: display?.color ?? null,
+        icon: display?.icon ?? null,
+        value,
+      })
+    }
+    return out
+  }
+
+  return { ARS: build('ARS'), USD: build('USD') }
+}
+
+// ── getMonthIncomeBreakdown ────────────────────────────────────────────────────
+// Income by category for a month: the twin of getMonthCategoryBreakdown but for
+// the "De dónde vino" (Ingresos) mode of the spending overview. Aggregates
+// `type='income'` rows by category and currency. Deliberately does NOT include
+// reimbursements: per the domain rules a reimbursement is `type='reimbursement'`
+// and is never income (it derives an expense's category and only reduces spend),
+// so mixing it here would double-count money already netted out of the egresos
+// donut. Uncategorized income is bucketed under the `uncategorized` sentinel
+// (the UI labels it via i18n).
+
+export async function getMonthIncomeBreakdown(month: string): Promise<MonthCategoryBreakdown> {
+  const supabase = await createClient()
+  const { from, to } = resolveMonthRange(month)
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('category_id, currency_code, amount')
+    .eq('type', 'income')
+    .gte('date', from ?? '')
+    .lte('date', to ?? '')
+  if (error) throw error
+
+  const rows = (data ?? []) as unknown as Array<{
+    category_id: string | null
+    currency_code: string
+    amount: number
+  }>
+
+  // Net per category and currency (income amounts are positive; Money keeps the
+  // arithmetic exact instead of raw JS addition).
+  const byCategory = new Map<string, { ARS: number; USD: number }>()
+  for (const r of rows) {
+    const id = r.category_id ?? UNCATEGORIZED_ID
+    const currency = r.currency_code === 'USD' ? 'USD' : 'ARS'
+    const entry = byCategory.get(id) ?? { ARS: 0, USD: 0 }
+    entry[currency] = Money.toNumber(Money.add(Money.from(entry[currency]), Money.from(r.amount)))
+    byCategory.set(id, entry)
+  }
+
+  const realIds = [...byCategory.keys()].filter((id) => id !== UNCATEGORIZED_ID)
+  const categoryById = new Map<string, { name: string; color: string | null; icon: string | null }>()
+  if (realIds.length > 0) {
+    const { data: cats } = await supabase
+      .from('categories')
+      .select('id, name, color, icon')
+      .in('id', realIds)
+    for (const c of cats ?? []) {
+      categoryById.set(c.id, { name: c.name, color: c.color, icon: c.icon })
+    }
+  }
+
+  const build = (currency: 'ARS' | 'USD'): CategorySliceInput[] => {
+    const out: CategorySliceInput[] = []
+    for (const [id, perCurrency] of byCategory.entries()) {
+      const value = perCurrency[currency]
       if (value <= 0) continue
       const display = id === UNCATEGORIZED_ID ? null : categoryById.get(id)
       // Uncategorized label is left empty; the UI fills it (i18n).

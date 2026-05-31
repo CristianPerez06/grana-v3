@@ -994,9 +994,6 @@ export const MovementForm = ({
         onClick={() => pickCategory(drillCategory.id, '')}
         className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-page"
       >
-        {drillCategory.color && (
-          <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: drillCategory.color }} />
-        )}
         <span className="flex-1 text-sm font-medium text-text">{t('drawer.whole_category')}</span>
         {categoryId === drillCategory.id && !subcategoryId && (
           <Check className="size-4 shrink-0 text-emerald" aria-hidden />
@@ -1009,7 +1006,6 @@ export const MovementForm = ({
           onClick={() => pickCategory(drillCategory.id, s.id)}
           className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-page"
         >
-          <span className="size-3 shrink-0 rounded-full opacity-70" style={{ backgroundColor: drillCategory.color ?? '#9CA3AF' }} />
           <span className="flex-1 truncate text-sm text-text">{s.name}</span>
           {subcategoryId === s.id && <Check className="size-4 shrink-0 text-emerald" aria-hidden />}
         </button>
@@ -1026,7 +1022,6 @@ export const MovementForm = ({
             onClick={() => (drillable ? setCatDrill(c.id) : pickCategory(c.id, ''))}
             className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-page"
           >
-            {c.color && <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: c.color }} />}
             <span className="flex-1 truncate text-sm font-medium text-text">
               {c.icon ? `${c.icon} ` : ''}
               {c.name}
@@ -1044,9 +1039,6 @@ export const MovementForm = ({
 
   const categoryValue = selectedCategory ? (
     <span className="flex items-center gap-1.5">
-      {selectedCategory.color && (
-        <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: selectedCategory.color }} />
-      )}
       <span className="truncate">
         {selectedCategory.icon ? `${selectedCategory.icon} ` : ''}
         {selectedCategory.name}
