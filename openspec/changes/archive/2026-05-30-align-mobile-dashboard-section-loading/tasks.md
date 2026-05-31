@@ -27,6 +27,6 @@
 ## Grupo 5 · Verificación
 
 - [x] 5.1. `pnpm --filter mobile typecheck` y lint OK (firmas de props nuevas propagadas).
-- [ ] 5.2. Verificación manual en device/simulator: shell + header visibles desde el primer paint; cada sección muestra su spinner in-card y luego sus datos sin layout shift; una query lenta no bloquea a las demás; pull-to-refresh muestra el indicador; salir del tab y volver resetea el eye toggle.
-- [ ] 5.3. Caso fallo parcial: forzar error en una query (p. ej. Upcoming) y confirmar que solo esa sección muestra error+retry mientras las demás funcionan.
+- [x] 5.2. Verificación manual en device/simulator: shell + header visibles desde el primer paint; cada sección muestra su spinner in-card y luego sus datos sin layout shift; una query lenta no bloquea a las demás; pull-to-refresh muestra el indicador; salir del tab y volver resetea el eye toggle.
+- [x] 5.3. Caso fallo parcial: forzar error en una query (p. ej. Upcoming) y confirmar que solo esa sección muestra error+retry mientras las demás funcionan.
 - [x] 5.4. `pnpm openspec:check` OK.
