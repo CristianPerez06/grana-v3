@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>grana · Editar tarjeta — Estilos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; height: 100%; background: #f0eee9; }
+  #root { height: 100vh; }
+  .cap { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #4A4136; padding: 16px 6px 0; max-width: 1380px; }
+  .cap .cap-title { font-size: 15px; font-weight: 800; color: #2a2114; letter-spacing: -0.01em; }
+  .cap p { font-size: 13px; line-height: 1.5; margin: 7px 0 0; color: #5a4f42; }
+  .cap .tags { display: flex; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
+  .cap .tag { font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: #e6e1d6; color: #6a5d49; }
+  .cap .tag.good { background: #dcefe2; color: #2f7a52; }
+  .frame { width: 100%; border: none; display: block; background: #F6F7F9; border-radius: 10px; }
+  .blurb { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1A2B; padding: 22px 26px; }
+  .blurb .b-eyebrow { font-size: 11px; font-weight: 800; color: #0E9E6E; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px; }
+  .blurb h3 { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 8px; }
+  .blurb p { font-size: 13.5px; line-height: 1.6; color: #5a5346; margin: 0 0 12px; }
+  .blurb ul { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 9px; }
+  .blurb li { font-size: 13px; line-height: 1.45; color: #3a3528; padding-left: 22px; position: relative; }
+  .blurb li b { color: #0B1A2B; }
+  .blurb li::before { content: ""; position: absolute; left: 4px; top: 6px; width: 8px; height: 8px; border-radius: 2px; }
+  .blurb li.la::before { background: #F4A024; }
+  .blurb li.lb::before { background: #3A6B8A; }
+  .blurb li.lc::before { background: #B56A5A; }
+  .blurb .note { font-size: 12px; color: #8a7d68; margin-top: 14px; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="editar-estilos/design-canvas.jsx"></script>
+
+  <script type="text/babel">
+    function Frame({ src, h }) {
+      return <iframe className="frame" src={src} style={{ height: h }} scrolling="no" />;
+    }
+    function Caption({ title, children, tags }) {
+      return (
+        <div className="cap">
+          <div className="cap-title">{title}</div>
+          <p>{children}</p>
+          <div className="tags">{tags.map((t, i) => <span key={i} className={'tag' + (t.good ? ' good' : '')}>{t.label}</span>)}</div>
+        </div>
+      );
+    }
+    function Blurb() {
+      return (
+        <div className="blurb">
+          <div className="b-eyebrow">El eje a decidir</div>
+          <h3>¿Drawer rápido o pantalla de ajustes?</h3>
+          <p>Las tres editan los mismos campos de Visa Galicia: <b>nombre, banco, red, día de cierre, día de vencimiento, límite (opcional) y moneda</b>, más archivar / eliminar. El <b>color lo define la institución</b> (read-only). Lo que cambia es <b>dónde vive el formulario</b> y cuánto feedback visual da mientras editás.</p>
+          <ul>
+            <li className="la"><b>A · Drawer canónico</b> — panel lateral 540px, idéntico en vocabulario a “Registrar movimiento”. Rápido, sin salir del detalle. Sin preview.</li>
+            <li className="lb"><b>B · Drawer + preview en vivo</b> — mismo drawer, con una tarjeta de vista previa arriba que se actualiza al tipear (nombre, inicial, ciclo, límite).</li>
+            <li className="lc"><b>C · Página de ajustes</b> — pantalla completa a dos columnas: form a la izquierda, preview + diagrama del ciclo fijos a la derecha. Más aire, más deliberada.</li>
+          </ul>
+          <p className="note">Editá los campos en cualquiera de las tres — los segmentados y (en B y C) la vista previa son interactivos. Doble clic en una para verla en grande.</p>
+        </div>
+      );
+    }
+
+    function App() {
+      return (
+        <DesignCanvas>
+          <DCSection id="intro" title="Editar tarjeta · Direcciones" subtitle="Mismos campos — distinto contenedor y feedback">
+            <DCArtboard id="notes" label="Cómo elegir" width={820} height={440}>
+              <Blurb/>
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="dirs" title="Las 3 direcciones" subtitle="Doble clic para ver en grande (←/→/Esc) · los forms son interactivos">
+            <DCArtboard id="a" label="A · Drawer canónico" width={1440} height={1024}>
+              <Frame src="editar-estilos/dir-a.html" h={1024} />
+              <Caption title="A · Drawer canónico — consistente y rápido"
+                tags={[{label:'Patrón de grana', good:true}, {label:'Sin salir del detalle'}, {label:'Sin preview'}]}>
+                Reusa exacto el drawer de “Registrar movimiento”: header con eyebrow + título, filas de campo, límite opcional, footer con Guardar. La opción más segura y barata de construir. El usuario no ve cómo queda la tarjeta hasta guardar.
+              </Caption>
+            </DCArtboard>
+
+            <DCArtboard id="b" label="B · Drawer + preview en vivo" width={1440} height={1024}>
+              <Frame src="editar-estilos/dir-b.html" h={1024} />
+              <Caption title="B · Drawer + preview — con feedback"
+                tags={[{label:'Vista previa viva', good:true}, {label:'Identidad al frente'}, {label:'Mismo costo de UI'}]}>
+                Igual de rápido que A pero con una tarjeta de preview arriba que refleja nombre, inicial, color, ciclo y límite en tiempo real. Ideal porque acá se edita sobre todo la identidad visual (nombre + color + marca).
+              </Caption>
+            </DCArtboard>
+
+            <DCArtboard id="c" label="C · Página de ajustes" width={1440} height={1024}>
+              <Frame src="editar-estilos/dir-c.html" h={1024} />
+              <Caption title="C · Página dos columnas — deliberada"
+                tags={[{label:'Más aire'}, {label:'Diagrama del ciclo', good:true}, {label:'Pantalla propia'}]}>
+                Pantalla completa /tarjetas/:id/editar: form en cards a la izquierda, preview + diagrama del ciclo (cierra → vence) fijos a la derecha. Más cómoda para editar con calma, pero rompe el patrón de drawer del resto de la app.
+              </Caption>
+            </DCArtboard>
+          </DCSection>
+        </DesignCanvas>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+
+  <template id="__bundler_thumbnail">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100" height="100" rx="22" fill="#0B1A2B"/>
+      <rect x="22" y="30" width="56" height="40" rx="6" fill="none" stroke="#F4A024" stroke-width="4"/>
+      <path d="M40 60 L60 40" stroke="#15B981" stroke-width="5" stroke-linecap="round"/>
+    </svg>
+  </template>
+</body>
+</html>

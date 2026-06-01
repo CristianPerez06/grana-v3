@@ -1,15 +1,24 @@
-import { notFound, redirect } from 'next/navigation'
+import { redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardNetworks } from '@/lib/cards/queries'
 import { getInstitutions } from '@/lib/accounts/queries'
+import { getTodayAR } from '@/lib/date'
+import { formatDateISO } from '@/lib/cards/utils'
 import { PageHeader } from '@/components/ui/page-header'
-import { EditCreditCardForm } from './_components/edit-credit-card-form'
+import { cardAccent, resolveEditCycle } from '../../_components/card-presentation'
+import { EditCardForm } from '../_components/edit-card-form'
 
 type Props = {
   params: Promise<{ id: string }>
 }
 
+/**
+ * No-JS / deep-link fallback for editing a card. The primary path is the
+ * EditCardDrawer opened from the card detail; this route renders the same
+ * EditCardForm inline (`variant="page"`).
+ */
 const EditCardPage = async ({ params }: Props) => {
   const { id } = await params
 
@@ -17,33 +26,53 @@ const EditCardPage = async ({ params }: Props) => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [cardDetail, institutions, networks] = await Promise.all([
+  const [cardDetail, institutions, networks, t] = await Promise.all([
     getCreditCardDetail(id),
     getInstitutions(),
     getCardNetworks(),
+    getTranslations('cards'),
   ])
 
   if (!cardDetail || cardDetail.type !== 'credit') notFound()
 
-  const t = await getTranslations('cards')
+  const todayISO = formatDateISO(getTodayAR())
 
-  const networkLabel = cardDetail.network_id
-    ? (networks.find((n) => n.id === cardDetail.network_id)?.name ?? t('labels.network_unknown'))
-    : (cardDetail.other_network_name ?? t('labels.network_custom'))
+  const network = cardDetail.network_id
+    ? networks.find((n) => n.id === cardDetail.network_id) ?? null
+    : null
+  const networkLabel = network
+    ? network.name
+    : cardDetail.other_network_name ?? t('labels.network_custom')
+  const networkColor = network?.brand_color ?? null
+
+  const accent = cardAccent({
+    id: cardDetail.id,
+    name: cardDetail.name,
+    color_key: cardDetail.color_key,
+    icon_key: cardDetail.icon_key,
+  })
+
+  const hasMovements = cardDetail.periods.some((p) => p.has_payment || p.tx_count > 0)
 
   return (
-    <div className="flex flex-col gap-6 max-w-lg">
+    <div className="flex max-w-lg flex-col gap-6">
       <PageHeader
         title={t('edit.title')}
         backLink={{ href: `/cards/${id}`, label: cardDetail.name }}
       />
 
-      <EditCreditCardForm
+      <EditCardForm
+        variant="page"
         cardId={id}
         initialName={cardDetail.name}
         initialInstitutionId={cardDetail.institution_id}
         initialCreditLimit={cardDetail.credit_limit}
         networkLabel={networkLabel}
+        networkColor={networkColor}
+        accent={accent}
+        committedARS={0}
+        cycle={resolveEditCycle(cardDetail.periods, todayISO)}
+        hasMovements={hasMovements}
         institutions={institutions}
       />
     </div>

@@ -6,16 +6,19 @@ import {
   getCreditCardDetail,
   getCardPeriods,
   getActiveInstallments,
+  getCardNetworks,
 } from '@/lib/cards/queries'
+import { getInstitutions } from '@/lib/accounts/queries'
 import { classifyPeriodsLifecycle, formatDateISO } from '@/lib/cards/utils'
 import { getTodayAR } from '@/lib/date'
 import { getShowCents } from '@/lib/preferences'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { CardActions } from './_components/card-actions'
+import { EditCardDrawerProvider } from './_components/edit-card-drawer'
 import { CardDetailHeader } from '../_components/card-detail-header'
 import { CardDetailView } from '../_components/card-detail-view'
-import { cardAccent, pillTone } from '../_components/card-presentation'
+import { cardAccent, pillTone, resolveEditCycle } from '../_components/card-presentation'
 import { CardDetailsSection } from '../_components/card-details-section'
 import type { CardDetailViewModel } from '../_components/card-detail-types'
 import type { CardPeriodDetail } from '@/lib/cards/queries'
@@ -45,13 +48,16 @@ const CardDetailPage = async ({ params }: Props) => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [cardDetail, periodsDesc, installments, showCents, t] = await Promise.all([
-    getCreditCardDetail(id),
-    getCardPeriods(id),
-    getActiveInstallments(id),
-    getShowCents(),
-    getTranslations('cards'),
-  ])
+  const [cardDetail, periodsDesc, installments, institutions, networks, showCents, t] =
+    await Promise.all([
+      getCreditCardDetail(id),
+      getCardPeriods(id),
+      getActiveInstallments(id),
+      getInstitutions(),
+      getCardNetworks(),
+      getShowCents(),
+      getTranslations('cards'),
+    ])
 
   if (!cardDetail || cardDetail.type !== 'credit') notFound()
 
@@ -72,25 +78,50 @@ const CardDetailPage = async ({ params }: Props) => {
 
   const cardHasHistory = cardDetail.periods.some((p) => p.has_payment || p.tx_count > 0)
 
+  // ── Edit-drawer data (network is immutable; cycle shown read-only) ──────────
+  const network = cardDetail.network_id
+    ? networks.find((n) => n.id === cardDetail.network_id) ?? null
+    : null
+  const networkLabel = network
+    ? network.name
+    : cardDetail.other_network_name ?? t('labels.network_custom')
+  const networkColor = network?.brand_color ?? null
+
+  const editCardData = (committedARS: number) => ({
+    cardId: id,
+    initialName: cardDetail.name,
+    initialInstitutionId: cardDetail.institution_id,
+    initialCreditLimit: cardDetail.credit_limit,
+    networkLabel,
+    networkColor,
+    accent,
+    committedARS,
+    cycle: resolveEditCycle(cardDetail.periods, todayISO),
+    hasMovements: cardHasHistory,
+    institutions,
+  })
+
   // ── Empty state: tarjeta nueva (no history) ─────────────────────────────────
   if (!cardHasHistory && cardDetail.is_active) {
     return (
-      <div className="flex max-w-3xl flex-col gap-6">
-        <Breadcrumb label={t('back_label')} />
-        <CardDetailHeader name={cardDetail.name} bank={institutionName} accent={accent} tone="ok" />
-        <Card className="flex flex-col gap-4 p-7">
-          <div className="flex flex-col gap-1">
-            <p className="text-lg font-bold">{t('detail.ready_title')}</p>
-            <p className="text-sm text-text-muted">{t('detail.ready_description')}</p>
-          </div>
-          <Button asChild size="lg">
-            <Link href={`/transactions/new?account=${id}&from=card:${id}`}>
-              {t('actions.register_first_purchase')}
-            </Link>
-          </Button>
-        </Card>
-        <AdminFooter cardId={id} isActive hasMovements={false} createdAt={cardDetail.created_at} archivedAt={null} />
-      </div>
+      <EditCardDrawerProvider card={editCardData(0)}>
+        <div className="flex max-w-3xl flex-col gap-6">
+          <Breadcrumb label={t('back_label')} />
+          <CardDetailHeader name={cardDetail.name} bank={institutionName} accent={accent} tone="ok" />
+          <Card className="flex flex-col gap-4 p-7">
+            <div className="flex flex-col gap-1">
+              <p className="text-lg font-bold">{t('detail.ready_title')}</p>
+              <p className="text-sm text-text-muted">{t('detail.ready_description')}</p>
+            </div>
+            <Button asChild size="lg">
+              <Link href={`/transactions/new?account=${id}&from=card:${id}`}>
+                {t('actions.register_first_purchase')}
+              </Link>
+            </Button>
+          </Card>
+          <AdminFooter cardId={id} isActive hasMovements={false} createdAt={cardDetail.created_at} archivedAt={null} />
+        </div>
+      </EditCardDrawerProvider>
     )
   }
 
@@ -165,28 +196,30 @@ const CardDetailPage = async ({ params }: Props) => {
   )
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
-      <Breadcrumb label={t('back_label')} />
-      <CardDetailHeader name={cardDetail.name} bank={institutionName} accent={accent} tone={headerTone} />
+    <EditCardDrawerProvider card={editCardData(committedARS)}>
+      <div className="flex max-w-3xl flex-col gap-6">
+        <Breadcrumb label={t('back_label')} />
+        <CardDetailHeader name={cardDetail.name} bank={institutionName} accent={accent} tone={headerTone} />
 
-      {!cardDetail.is_active && <CardActions cardId={id} isActive={false} hasMovements={cardHasHistory} />}
+        {!cardDetail.is_active && <CardActions cardId={id} isActive={false} hasMovements={cardHasHistory} />}
 
-      <CardDetailView vm={vm} todayISO={todayISO} showCents={showCents} />
+        <CardDetailView vm={vm} todayISO={todayISO} showCents={showCents} />
 
-      <section className="flex flex-col gap-2 border-t border-border pt-4">
-        <Link href={`/cards/${id}/periods`} className="text-sm font-semibold text-text-muted transition-colors hover:text-text">
-          {t('actions.view_all_periods')}
-        </Link>
-      </section>
+        <section className="flex flex-col gap-2 border-t border-border pt-4">
+          <Link href={`/cards/${id}/periods`} className="text-sm font-semibold text-text-muted transition-colors hover:text-text">
+            {t('actions.view_all_periods')}
+          </Link>
+        </section>
 
-      <AdminFooter
-        cardId={id}
-        isActive={cardDetail.is_active}
-        hasMovements={cardHasHistory}
-        createdAt={cardDetail.created_at}
-        archivedAt={cardDetail.is_active ? null : cardDetail.created_at}
-      />
-    </div>
+        <AdminFooter
+          cardId={id}
+          isActive={cardDetail.is_active}
+          hasMovements={cardHasHistory}
+          createdAt={cardDetail.created_at}
+          archivedAt={cardDetail.is_active ? null : cardDetail.created_at}
+        />
+      </div>
+    </EditCardDrawerProvider>
   )
 }
 

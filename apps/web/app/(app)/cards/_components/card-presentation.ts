@@ -51,3 +51,38 @@ export const formatDayMonth = (iso: string | null): string => {
   const [, m, d] = iso.split('-')
   return `${d}/${m}`
 }
+
+type CyclePeriodInput = {
+  id: string
+  start_date: string
+  end_date: string
+  due_date: string
+  has_payment: boolean
+}
+
+/**
+ * Resolve the editable billing cycle for a card from its periods: the "resumen
+ * actual" (period covering today, else the latest unpaid, else the most recent)
+ * plus the "próximo resumen" (the period immediately after it). Returns the
+ * shape consumed by `EditCardForm`'s `cycle` prop — these are the 4 dates the
+ * create form sets, now editable post-creation via `updatePeriodDates`.
+ */
+export const resolveEditCycle = (periods: CyclePeriodInput[], todayISO: string) => {
+  const sorted = [...periods].sort((a, b) => (a.start_date < b.start_date ? -1 : 1))
+  const current =
+    sorted.find((p) => p.start_date <= todayISO && todayISO <= p.end_date) ??
+    sorted.find((p) => !p.has_payment) ??
+    sorted[0] ??
+    null
+  const idx = current ? sorted.findIndex((p) => p.id === current.id) : -1
+  const next = idx >= 0 ? (sorted[idx + 1] ?? null) : null
+  return {
+    currentPeriodId: current?.id ?? null,
+    currentEndDate: current?.end_date ?? null,
+    currentDueDate: current?.due_date ?? null,
+    nextPeriodId: next?.id ?? null,
+    nextEndDate: next?.end_date ?? null,
+    nextDueDate: next?.due_date ?? null,
+    nextPeriodIsPaid: next?.has_payment ?? false,
+  }
+}
