@@ -652,6 +652,15 @@
       "empty_body": "Agregá tu primera tarjeta para llevar el control de tus resúmenes y cuotas.",
       "empty_cta": "Agregar tarjeta"
     },
+    "route": {
+      "subtitle_loading": "- tarjetas de crédito · resúmenes de {month}",
+      "hero_loading": "Cargando el resumen del mes…",
+      "hero_error": "No pudimos cargar el resumen del mes.",
+      "wallet_loading": "Cargando tus tarjetas…",
+      "wallet_error": "No pudimos cargar tus tarjetas.",
+      "archived_loading": "Cargando archivadas…",
+      "archived_error": "No pudimos cargar las archivadas."
+    },
     "month_hero": {
       "eyebrow": "A pagar este mes",
       "next_due_label": "Próximo vencimiento",

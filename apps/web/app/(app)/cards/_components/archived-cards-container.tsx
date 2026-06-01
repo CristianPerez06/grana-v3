@@ -1,0 +1,15 @@
+import { getTranslations } from 'next-intl/server'
+import { getCreditCards, type CreditCardSummary } from '@/lib/cards/queries'
+import { ArchivedCardsSection } from './archived-cards-section'
+import { SectionFallback } from '../../dashboard/_components/section-fallback'
+
+export const ArchivedCardsContainer = async () => {
+  let archived: CreditCardSummary[]
+  try {
+    archived = await getCreditCards({ archivedOnly: true })
+  } catch {
+    const t = await getTranslations('cards.route')
+    return <SectionFallback message={t('archived_error')} />
+  }
+  return <ArchivedCardsSection cards={archived} />
+}

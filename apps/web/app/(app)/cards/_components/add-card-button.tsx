@@ -17,9 +17,11 @@ import type { Institution } from '@/lib/accounts/types'
 export function AddCardButton({
   institutions,
   networks,
+  disabled = false,
 }: {
   institutions: Institution[]
   networks: CardNetwork[]
+  disabled?: boolean
 }) {
   const t = useTranslations('cards')
   const [open, setOpen] = useState(false)
@@ -29,7 +31,9 @@ export function AddCardButton({
     <>
       <Button
         className="w-auto"
+        disabled={disabled}
         onClick={() => {
+          if (disabled) return
           setFormInstance((n) => n + 1)
           setOpen(true)
         }}
