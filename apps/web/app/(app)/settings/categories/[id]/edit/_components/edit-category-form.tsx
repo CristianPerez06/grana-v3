@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { useTranslations } from 'next-intl'
 import { FormField } from '@/components/ui/form-field'
@@ -11,6 +11,8 @@ import { Alert } from '@/components/ui/alert'
 import { updateCategory } from '@/app/_actions/categories'
 import { updateCategorySchema } from '@grana/validation'
 import type { Category } from '@/lib/categories/types'
+import { IconPicker } from '../../../_components/icon-picker'
+import { ColorPicker } from '../../../_components/color-picker'
 
 type Props = { category: Category }
 
@@ -21,6 +23,7 @@ export const EditCategoryForm = ({ category }: Props) => {
 
   const {
     register,
+    control,
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
@@ -59,18 +62,23 @@ export const EditCategoryForm = ({ category }: Props) => {
         error={errors.name?.message}
         {...register('name')}
       />
-      <FormField
-        label={t('form.icon_label')}
-        placeholder={t('form.icon_placeholder')}
-        error={errors.icon?.message}
-        {...register('icon')}
+      <Controller
+        control={control}
+        name="icon"
+        render={({ field }) => (
+          <IconPicker value={field.value ?? ''} onChange={field.onChange} />
+        )}
       />
-      <FormField
-        label={t('form.color_label')}
-        placeholder={t('form.color_placeholder')}
-        error={errors.color?.message}
-        {...register('color')}
+      <Controller
+        control={control}
+        name="color"
+        render={({ field }) => (
+          <ColorPicker value={field.value ?? ''} onChange={field.onChange} />
+        )}
       />
+      {errors.color?.message && (
+        <p className="text-xs text-destructive">{errors.color.message}</p>
+      )}
       {formError && <Alert variant="error">{formError}</Alert>}
       <SubmitButton pending={isSubmitting} className="w-full">
         {t('form.submit_update')}
