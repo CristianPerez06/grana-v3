@@ -116,23 +116,32 @@ No exceptions. This check is non-negotiable even when the user says "commit this
 
 ### Merging to `main`
 
-Each feature/fix/chore lands on `main` as **one work commit plus one `--no-ff` merge commit** that groups the unit of work.
+`main` has linear history enforced. Every feature/fix/chore lands as **one squashed commit** on top of the previous one. No merge commits exist on `main` going forward.
 
-- A branch being merged into `main` MUST have exactly **one work commit** on top of `main` at merge time. If your branch has N > 1 commits, squash them locally first (`git rebase -i main` with fixups, or `git reset --soft main && git commit`).
-- The merge MUST use `git merge --no-ff`. Never use `--ff-only`, never use `--squash` as the merge command. `--no-ff` always creates a merge commit; its message MUST identify the unit of work — a bare auto-generated `Merge branch '...'` that doesn't identify it is not acceptable.
-- If `main` moved while you were working, rebase your branch onto `main` first (`git rebase main`), resolve conflicts, then merge with `--no-ff`.
-- This applies to humans and to LLMs collaborating autonomously. The pre-existing fast-forward merges in `main`'s history are NOT rewritten; the rule applies going forward.
+The **method** for producing that result is up to whoever merges. Acceptable paths:
 
-Happy-path example (branch has 3 commits, `main` moved):
+- Click **Squash and merge** on the PR (easiest path, recommended for non-dev contributors).
+- Squash locally and push the resulting single commit (e.g. `git merge --squash <branch>` from `main`, or `git reset --soft main && git commit` on the branch, then push).
+- Any other sequence that produces a single squashed commit on linear history and that GitHub's branch protection accepts.
 
-```bash
-git checkout my-branch
-git rebase -i main           # squash the 3 commits into 1 (rebase onto main as a bonus)
-git checkout main
-git pull --ff-only origin main   # fast-forward your local main to the remote (not a merge of a feature branch)
-git merge --no-ff my-branch -m "feat(scope): describe the unit of work"
-git push origin main
-```
+Not acceptable (rejected by branch protection):
+
+- Merge commits (`git merge --no-ff`, "Create a merge commit" on GitHub).
+- "Rebase and merge" or `git rebase main` + push of N commits — preserves intermediate commits on `main` and breaks "one commit per unit of work".
+
+Other rules:
+
+- The commit message that lands on `main` MUST be **title only — no body, no trailers** per the general commit rule. Conventional commits format (`type(scope): subject`).
+- The branch can have any number of commits during the work — WIP, fixups, mid-apply corrections, anything. They all collapse on merge.
+- LLMs collaborating autonomously MUST NOT merge to `main` — the existing "the user does the merge" rule stands. LLMs leave the branch in the right state (work done, archive applied, `pnpm openspec:check` passing) and stop; the user picks the method.
+- The pre-existing `--no-ff` merge commits and fast-forward merges in `main`'s history are NOT rewritten; the rule applies going forward.
+
+**Required GitHub branch protection on `main`** (these are what enforce the invariants mechanically):
+
+- Require linear history → ON
+- Allow merge commits → OFF
+- Allow squash merging → ON, default commit title "Pull request title", default commit body blank
+- Allow rebase merging → OFF
 
 ## OpenSpec — workflow obligatorio
 
@@ -140,7 +149,7 @@ The repo uses [OpenSpec](https://github.com/Fission-AI/OpenSpec) for spec-driven
 
 ### Archive happens in the branch, before merge to main
 
-When a change implementation is complete, archive it as the **last work commit of the working branch, before the `--no-ff` merge to `main`**. Not after. This keeps that work commit atomic: in a single commit `main` receives (under its merge commit) the code, the updated master specs, the completed `Purpose` fields, and the consequent `AGENTS.md` edits.
+When a change implementation is complete, archive it on the working branch **before** the merge to `main`, regardless of merge method. The branch as a whole MUST contain the archive (folder moved, master specs synced, `Purpose` completed, `AGENTS.md` updated when applicable) at merge time, so that the single squashed commit that lands on `main` carries those edits. Do not defer the archive to a follow-up PR.
 
 ### Post-archive checklist — MANDATORY before merge
 
@@ -153,7 +162,7 @@ When archiving a change:
 3. Update `AGENTS.md` when applicable:
    - Section "Modules" if the change completes or adds a module.
    - Section "Repo Layout" if the change adds a package or app.
-4. Run `pnpm openspec:check`. It MUST pass before the merge.
+4. Run `pnpm openspec:check` locally on the branch. It MUST pass before the merge to `main`.
 
 ### Pre-change check
 

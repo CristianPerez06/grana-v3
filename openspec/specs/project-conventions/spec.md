@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Spec meta del proyecto: agrupa las convenciones transversales que aplican a todo el repo Grana V3 y que no pertenecen a ningún módulo de negocio en particular. Incluye el principio "el repo es la memoria del producto" (la app debe poder continuarse sin contexto de chat), el bilingüismo (documentación en español, código en inglés), las reglas de branching y merge `--no-ff` a `main`, el workflow obligatorio de OpenSpec (archive en la branch antes del merge, checklist post-archivado, `pnpm openspec:check` como gate) y la política web↔mobile de implementaciones paralelas con API idéntica.
+Spec meta del proyecto: agrupa las convenciones transversales que aplican a todo el repo Grana V3 y que no pertenecen a ningún módulo de negocio en particular. Incluye el principio "el repo es la memoria del producto" (la app debe poder continuarse sin contexto de chat), el bilingüismo (documentación en español, código en inglés), las reglas de branching y merge a `main` vía squash-and-merge con historia lineal, el workflow obligatorio de OpenSpec (archive en la branch antes del merge, checklist post-archivado, `pnpm openspec:check` como gate) y la política web↔mobile de implementaciones paralelas con API idéntica.
 ## Requirements
 ### Requirement: La V3 debe sostenerse desde el repo, no desde contexto de chat
 
@@ -481,23 +481,30 @@ Este principio es complementario, no reemplazo, del principio "Bimoneda" listado
 
 ### Requirement: El archive de una change ocurre en la branch antes del merge a main
 
-Cuando una change implementada se considera completa, su archivado SHALL ocurrir como último commit de la branch de trabajo, **antes** del merge `--no-ff` a `main`. El archivado NO se difiere a un commit posterior ni a un PR separado.
+Cuando una change implementada se considera completa, su archivado SHALL aplicarse a la branch de trabajo **antes** del merge a `main`, por cualquier método de merge aceptable. El archivado NO se difiere a un PR posterior ni a un commit post-merge sobre `main`.
 
-Archivado significa: mover la carpeta de `openspec/changes/<name>/` a `openspec/changes/archive/YYYY-MM-DD-<name>/`, aplicar los deltas (`## ADDED Requirements`, `## MODIFIED Requirements`, `## REMOVED Requirements`, `## RENAMED Requirements`) al spec maestro de cada capability tocada en `openspec/specs/<capability>/spec.md`, completar el `Purpose` real del spec maestro reemplazando cualquier placeholder `TBD - created by archiving change ...`, y actualizar `AGENTS.md` (secciones "Modules" y "Repo Layout") cuando corresponda.
+Archivado significa:
 
-Esta regla sostiene tres invariantes del proyecto:
+- Mover la carpeta de `openspec/changes/<name>/` a `openspec/changes/archive/YYYY-MM-DD-<name>/`.
+- Aplicar los deltas (`## ADDED Requirements`, `## MODIFIED Requirements`, `## REMOVED Requirements`, `## RENAMED Requirements`) al spec maestro de cada capability tocada en `openspec/specs/<capability>/spec.md`.
+- Completar el `Purpose` real del spec maestro reemplazando cualquier placeholder `TBD - created by archiving change ...`.
+- Actualizar `AGENTS.md` (secciones "Modules" y "Repo Layout") cuando corresponda.
 
-- El último commit de trabajo de la branch SHALL ser atómico: en una sola commit aparecen el código, los specs maestros actualizados, los `Purpose` completados y los cambios consecuentes en `AGENTS.md`. Ese commit es el que luego entra a `main` bajo su merge commit `--no-ff`.
-- El estado de `main` SHALL cumplir que cada implementación tiene su spec maestro alineado.
-- Cualquier feedback de PR que requiera ajustar el spec MUST aplicarse en la misma branch sin abrir un segundo PR de "archive housekeeping".
+Como el merge a `main` produce un único commit squasheado (ver "Merge a main produce un único commit squasheado sobre historia lineal"), "la branch como un todo" SHALL contener estas modificaciones al momento del merge. NO importa en qué commit individual de la branch viven; el squash los colapsa. Lo que importa es que el commit que llega a `main` incluya el move + el sync de specs maestros + el `Purpose` completado + las edits a `AGENTS.md`.
 
-El gate de validación SHALL ser el comando `pnpm openspec:check`, que falla si encuentra `TBD - created by archiving` o `Purpose: TBD` dentro de `openspec/specs/`. Este comando MUST correrse antes de cualquier merge a `main` y MUST pasar.
+Esta regla sostiene dos invariantes del proyecto:
+
+- El estado de `main` post-merge SHALL cumplir que cada implementación tiene su spec maestro alineado.
+- Cualquier feedback de PR que requiera ajustar el spec MUST aplicarse en la misma branch (commit adicional, lo colapsa el squash). NO se abre un segundo PR de "archive housekeeping".
+
+El gate de validación SHALL ser el comando `pnpm openspec:check`, que falla si encuentra `TBD - created by archiving` o `Purpose: TBD` dentro de `openspec/specs/`. Este comando MUST correrse sobre la branch (con el archive ya aplicado) antes del merge, y MUST pasar.
 
 #### Scenario: Branch lista para merge tiene la change archivada
 
-- **WHEN** un colaborador termina la implementación de una change y se prepara para mergear su branch a `main`
-- **THEN** la branch tiene como último commit de trabajo el archivado de la change (mover carpeta + aplicar deltas al spec maestro + completar `Purpose` + actualizar `AGENTS.md` Modules y Repo Layout si corresponde)
-- **AND** el merge a `main` se hace `--no-ff`, generando el merge commit sobre ese único commit de trabajo
+- **WHEN** un colaborador termina la implementación de una change y se prepara para mergear
+- **THEN** la branch contiene la carpeta movida a `openspec/changes/archive/YYYY-MM-DD-<name>/`, los deltas aplicados al spec maestro, `Purpose` completado y `AGENTS.md` actualizado si corresponde
+- **AND** `pnpm openspec:check` corre localmente sobre la branch y pasa con exit code 0
+- **AND** el merge a `main` (por el método elegido) produce un commit squasheado que contiene todo eso
 
 #### Scenario: Merge a main rechazado si quedan TBD residuales
 
@@ -516,6 +523,12 @@ El gate de validación SHALL ser el comando `pnpm openspec:check`, que falla si 
 - **WHEN** un colaborador va a crear una nueva change que toca una capability `X`
 - **THEN** verifica que no exista otra change activa en `openspec/changes/` (excluyendo `archive/`) que también toque la capability `X`
 - **AND** si existe, decide el orden de merge y las dependencias antes de empezar la nueva
+
+#### Scenario: Feedback de PR sobre el archive se aplica en la misma branch
+
+- **WHEN** durante el review de un PR el reviewer pide ajustar un delta de spec o un `Purpose`
+- **THEN** el colaborador aplica la corrección como un commit adicional en la misma branch (el squash lo colapsará)
+- **AND** NO abre un segundo PR de "archive fixup" ni difiere la corrección a un commit post-merge sobre `main`
 
 ### Requirement: La paridad web↔mobile se sostiene por contratos de props compartidos
 
@@ -621,44 +634,71 @@ Esta regla NO aplica retroactivamente a rutas anteriores al change que introdujo
 - **THEN** el componente maneja `isPending` (renderizando `<Spinner size="lg" />`) y `error` (renderizando `<RouteError>`) antes de renderizar contenido
 - **AND** el PR no se mergea sin esa cobertura
 
-### Requirement: Merge a main con un único commit de trabajo y merge commit (--no-ff)
+### Requirement: Merge a main produce un único commit squasheado sobre historia lineal
 
-Toda branch que se mergea a `main` SHALL contener exactamente un commit de trabajo por encima de `main` al momento del merge. El merge SHALL ejecutarse con `git merge --no-ff` (nunca `--ff-only`, nunca `--squash` en el comando de merge). `--no-ff` genera siempre un merge commit que agrupa la unidad de trabajo, marcando dónde empezó y terminó. Si `main` se movió mientras la branch estaba en progreso, el colaborador SHALL primero rebasear su branch sobre `main` (`git rebase main`) y después mergear con `--no-ff`. El resultado en `main` SHALL ser, por cada feature/fix/chore, un commit de trabajo más su merge commit. El mensaje del merge commit SHALL identificar la unidad de trabajo; un `Merge branch '...'` autogenerado que no la identifique NO es aceptable.
+El estado de `main`, de aquí en adelante, SHALL cumplir dos invariantes:
 
-Esta regla aplica tanto a humanos como a LLMs colaborando autónomamente. La historia previa de `main` (incluidos los merges fast-forward anteriores a la adopción de esta regla) NO se reescribe — la regla aplica de acá en adelante.
+- **Historia lineal**: NO SHALL existir merge commits en `main`. Cada feature/fix/chore aparece como un único commit linealmente apilado sobre el commit anterior.
+- **Un commit por unidad de trabajo**: la branch de trabajo, sin importar cuántos commits internos haya acumulado durante el desarrollo (WIP, fixups, correcciones in-flight, etc.), SHALL colapsarse a un único commit al aterrizar en `main`.
 
-#### Scenario: Branch con un solo commit + main no se movió
+El **método** para producir ese resultado queda a discreción de quien mergea. Métodos aceptables incluyen, entre otros:
 
-- **WHEN** un colaborador termina una branch que tiene 1 commit por encima de `main` y `main` no se movió desde que la branch arrancó
-- **THEN** ejecuta `git checkout main && git merge --no-ff <branch>`
-- **AND** el merge genera un merge commit con mensaje que identifica la unidad de trabajo
-- **AND** `main` ahora contiene el commit de la feature más el merge commit
+- Apretar "Squash and merge" en la UI de GitHub. Recomendado para colaboradores que prefieran no operar git localmente.
+- Squashear localmente y pushear el commit resultante (p. ej. `git merge --squash <branch>` desde `main`, o `git reset --soft main && git commit` en la branch + push).
+- Cualquier otra secuencia que produzca el mismo outcome y pase la branch protection de GitHub.
 
-#### Scenario: Branch con múltiples commits se squashea antes del merge
+Métodos **NO aceptables** (rechazados por la branch protection):
 
-- **WHEN** un colaborador termina una branch que tiene N commits por encima de `main` (con N > 1)
-- **THEN** antes de mergear, squashea los N commits en uno solo localmente (vía `git rebase -i` con fixups, o `git reset --soft main && git commit`)
-- **AND** después ejecuta `git merge --no-ff <branch>` desde `main`
-- **AND** `main` recibe el único commit de trabajo más un merge commit
+- Merge commits — `git merge --no-ff`, "Create a merge commit" en GitHub.
+- "Rebase and merge" / `git rebase main` + push directo de N commits — preserva los commits intermedios en `main` y rompe la regla de "un commit por unidad de trabajo".
 
-#### Scenario: main se movió mientras la branch estaba en progreso
+La configuración de branch protection requerida en GitHub para la branch `main` SHALL ser:
 
-- **WHEN** un colaborador termina su branch y descubre que `main` avanzó mientras tanto
-- **THEN** primero rebasea su branch sobre `main` (`git checkout <branch> && git rebase main`), resolviendo conflictos si los hay
-- **AND** después squashea a 1 commit de trabajo (si hay más de 1)
-- **AND** después ejecuta `git merge --no-ff <branch>` desde `main`
+- **Require linear history** → ON.
+- **Allow merge commits** → OFF.
+- **Allow squash merging** → ON.
+  - Default to PR title for squash commits → ON.
+  - Default to blank body for squash commits → ON (alineado con la regla "title only, no body, no trailers").
+- **Allow rebase merging** → OFF.
 
-#### Scenario: Intento de merge con --ff-only o --squash es violación
+Esa configuración enforce los invariantes de forma mecánica: cualquier intento de pushear merge commits o N commits separados a `main` falla. El "método" queda libre dentro de lo que la protección acepta.
 
-- **WHEN** un colaborador intenta mergear con `git merge --ff-only <branch>` o `git merge --squash <branch>`
-- **THEN** la regla está violada
-- **AND** el reviewer (humano o el propio LLM al releer su comando) debe abortar y rehacer con `--no-ff`
+El mensaje del commit que llega a `main` SHALL cumplir la regla general de commits del repo: inglés, formato conventional commits (`type(scope): subject`), title only, sin body, sin trailers.
 
-#### Scenario: LLM colaborando autónomamente respeta la regla
+Esta regla aplica a humanos. Los LLMs colaborando autónomamente NO SHALL mergear a `main` — la regla existente "el merge a `main` lo hace el usuario" se preserva. Los LLMs SHALL dejar la branch en el estado correcto (commits del trabajo acumulados, archive aplicado, `pnpm openspec:check` pasando) y parar; quien mergea elige el método.
 
-- **WHEN** un LLM autónomo necesita mergear una branch que generó
-- **THEN** lee `AGENTS.md` al inicio de la sesión y sigue el flow: squash si N > 1 → rebase si main se movió → `git merge --no-ff` con mensaje descriptivo
-- **AND** nunca usa `--ff-only` ni `--squash` como comando de merge
+La historia previa de `main` (incluidos los merge commits y fast-forwards anteriores a la adopción de esta regla) NO se reescribe — la regla aplica de aquí en adelante.
+
+#### Scenario: Branch con N commits aterriza como un único commit en main
+
+- **WHEN** un colaborador termina una branch con varios commits (WIP, fixups, archive) y la mergea a `main` por el método que prefiera (botón de GitHub o squash local + push)
+- **THEN** `main` recibe un único commit linealmente apilado sobre el anterior
+- **AND** ese commit lleva como mensaje un título conventional commits (`type(scope): subject`) sin body ni trailers
+
+#### Scenario: Configuración de GitHub con "Create a merge commit" habilitado es violación
+
+- **WHEN** se inspecciona la configuración de branch protection de `main` en GitHub y se ve que "Allow merge commits" está ON o "Require linear history" está OFF
+- **THEN** la configuración viola la regla y debe corregirse antes del próximo merge
+- **AND** si bajo esa configuración rota se mergeó un PR y se creó un merge commit en `main`, el merge commit queda como deuda histórica (no se reescribe), pero la configuración SHALL corregirse antes del siguiente merge
+
+#### Scenario: Configuración de GitHub con "Rebase and merge" habilitado es violación
+
+- **WHEN** se inspecciona la configuración de branch protection de `main` y "Allow rebase merging" está ON
+- **THEN** la configuración viola la regla — "Rebase and merge" preservaría todos los commits intermedios de la branch en `main`, lo opuesto a lo que se busca
+- **AND** la configuración SHALL corregirse para que los métodos válidos queden restringidos a squash
+
+#### Scenario: LLM autónomo no mergea a main
+
+- **WHEN** un LLM autónomo termina una branch y considera que está lista para merge
+- **THEN** NO SHALL ejecutar `git merge`, `git rebase main && git push`, ni cualquier otra forma de aterrizar la branch en `main` directamente
+- **AND** SHALL parar después de aplicar el archive y verificar que `pnpm openspec:check` pasa
+- **AND** SHALL indicarle al usuario que la branch está lista, dejando al usuario elegir el método de merge
+
+#### Scenario: El mensaje del commit que llega a main cumple la regla de commits
+
+- **WHEN** un colaborador mergea un PR titulado `feat(transactions): add egresos/ingresos selector to spending overview` por cualquier método aceptable
+- **THEN** el commit que llega a `main` tiene como mensaje exactamente ese título (o equivalente conventional commits acordado por el colaborador)
+- **AND** NO incluye body, ni trailers, ni `Co-Authored-By`, ni footer de tooling
 
 ### Requirement: Las superficies tipo tarjeta componen el primitivo `Card`, no recrean su shell
 
