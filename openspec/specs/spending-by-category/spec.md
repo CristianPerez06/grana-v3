@@ -3,9 +3,7 @@
 ## Purpose
 
 "En qué se fue": el desglose de los gastos del mes agrupados por categoría, pesado por **neto** (gastos − reintegros recibidos) y **por moneda**. Es la carta de presentación del módulo Movimientos —un donut + ranking, con navegación por mes y drill-down al listado filtrado— y se asoma como un teaser de las categorías que más pesan en el dashboard. Responde una de las tres preguntas centrales del usuario, complementando "cuánto tengo" y "qué viene".
-
 ## Requirements
-
 ### Requirement: El módulo Movimientos abre con un desglose de gastos por categoría del mes
 
 El módulo de movimientos (`/transactions`) SHALL presentar, como carta de presentación arriba del listado, un **desglose de los gastos del mes agrupados por categoría**, que responde "¿en qué se fue?". El listado de movimientos SHALL seguir accesible (el desglose lo antecede, no lo reemplaza). La navegación por mes de la página SHALL estar unificada en un único selector (el del desglose); el bar de filtros del listado no duplica el selector de mes.
@@ -80,8 +78,34 @@ El desglose SHALL permitir navegar entre meses, mostrando por defecto el mes act
 
 El dashboard SHALL mostrar un teaser con las **3 categorías que más pesan** del mes, que enlaza al desglose completo en Movimientos. El teaser NO SHALL ser el desglose completo (ese vive en Movimientos).
 
+El teaser SHALL mostrarse en **ambas plataformas** (web y mobile) con el mismo contrato: por cada categoría, su `icon + label`, una **barra de proporción** y el **porcentaje** que representa. El teaser SHALL mostrar proporciones, NO montos — por lo tanto NO participa del eye-mask del dashboard. Si no hay gasto del mes (cero slices), el teaser NO SHALL renderizarse.
+
+El peso y el orden de las categorías del teaser SHALL derivarse del mismo cálculo neto-por-moneda del desglose completo (vía `buildCategorySlices` con `topN: 3` sobre el breakdown del mes), de modo que web y mobile muestren las mismas 3 categorías y los mismos porcentajes ante los mismos datos.
+
 #### Scenario: El teaser linkea al desglose
 
 - **WHEN** el usuario ve el teaser de categorías en el dashboard
 - **THEN** ve las 3 categorías que más pesan del mes
 - **AND** al tocarlo llega al desglose completo en Movimientos
+
+#### Scenario: El teaser muestra proporciones, no montos
+
+- **WHEN** el usuario ve el teaser de categorías
+- **THEN** cada categoría muestra una barra de proporción y su porcentaje
+- **AND** NO muestra importes en pesos ni dólares
+- **AND** el eye-mask del dashboard no lo afecta (no hay montos que enmascarar)
+
+#### Scenario: El teaser se renderiza en el dashboard mobile (mobile)
+
+- **WHEN** un usuario con gastos del mes abre el dashboard en la app nativa
+- **THEN** el teaser se renderiza al final del dashboard (después de "Balance del mes")
+- **AND** muestra hasta 3 categorías con barra de proporción y porcentaje
+- **AND** el link "Ver desglose" del header navega a Movimientos mobile (`/transactions`); el cuerpo del card no es pressable, en paridad con web
+- **AND** mientras el desglose completo no exista en Movimientos mobile, el destino es la lista de movimientos (decisión transitoria documentada en código)
+
+#### Scenario: Sin gastos del mes el teaser no aparece (mobile)
+
+- **WHEN** el usuario no tuvo gastos en el mes
+- **THEN** el teaser no se renderiza (cero slices)
+- **AND** el resto del dashboard mobile renderiza normalmente
+

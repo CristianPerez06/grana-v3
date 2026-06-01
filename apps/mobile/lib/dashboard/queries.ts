@@ -2,12 +2,16 @@ import { useQuery } from '@tanstack/react-query'
 import {
   getDashboardHero,
   getMonthBalanceSeries,
+  getMonthCategoryBreakdown,
   getUpcomingFortnight,
   hasUserMovements,
 } from '@grana/dashboard'
 import { supabase } from '../supabase'
 
 const ymdKey = (date: Date) => date.toISOString().slice(0, 10)
+
+const monthOf = (date: Date): string =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 
 export function useDashboardHero() {
   return useQuery({
@@ -53,5 +57,13 @@ export function useHasMovements() {
   return useQuery({
     queryKey: ['dashboard', 'has-movements'] as const,
     queryFn: () => hasUserMovements(supabase),
+  })
+}
+
+export function useMonthCategoryBreakdown(today: Date) {
+  const month = monthOf(today)
+  return useQuery({
+    queryKey: ['dashboard', 'category-breakdown', month] as const,
+    queryFn: () => getMonthCategoryBreakdown(supabase, month),
   })
 }

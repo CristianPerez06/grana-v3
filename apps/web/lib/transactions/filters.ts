@@ -1,5 +1,8 @@
-import { formatDateISO, getTodayAR } from '@/lib/date'
+import { resolveMonthRange } from '@grana/dashboard'
+import { getTodayAR } from '@/lib/date'
 import type { FinancialMovement } from './movements'
+
+export { resolveMonthRange }
 
 export type MovementTypeFilter = FinancialMovement['kind']
 export type MovementCurrencyFilter = 'ARS' | 'USD'
@@ -66,14 +69,6 @@ const isMonth = (value: string): boolean => /^\d{4}-\d{2}$/.test(value)
 /** `YYYY-MM` of a date. */
 export const monthOf = (date: Date): string =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-
-/** First/last accounting date of a `YYYY-MM` month. */
-export const resolveMonthRange = (month: string): Pick<MovementFilters, 'from' | 'to'> => {
-  const [year, m] = month.split('-').map(Number)
-  const from = formatDateISO(new Date(year, m - 1, 1))
-  const to = formatDateISO(new Date(year, m, 0))
-  return { from, to }
-}
 
 /** Shift a `YYYY-MM` month by `delta` months. */
 export const shiftMonth = (month: string, delta: number): string => {

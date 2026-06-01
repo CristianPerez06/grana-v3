@@ -123,6 +123,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@grana/dashboard':
+        specifier: workspace:*
+        version: link:../../packages/dashboard
       '@grana/i18n-messages':
         specifier: workspace:*
         version: link:../../packages/i18n-messages

@@ -28,7 +28,8 @@ El peso y el orden de las categorías del teaser SHALL derivarse del mismo cálc
 - **WHEN** un usuario con gastos del mes abre el dashboard en la app nativa
 - **THEN** el teaser se renderiza al final del dashboard (después de "Balance del mes")
 - **AND** muestra hasta 3 categorías con barra de proporción y porcentaje
-- **AND** al tocarlo navega a Movimientos mobile (`/transactions`); mientras el desglose completo no exista en Movimientos mobile, el destino es la lista de movimientos (decisión transitoria documentada en código)
+- **AND** el link "Ver desglose" del header navega a Movimientos mobile (`/transactions`); el cuerpo del card no es pressable, en paridad con web
+- **AND** mientras el desglose completo no exista en Movimientos mobile, el destino es la lista de movimientos (decisión transitoria documentada en código)
 
 #### Scenario: Sin gastos del mes el teaser no aparece (mobile)
 

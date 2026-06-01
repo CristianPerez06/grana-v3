@@ -4,6 +4,7 @@ import { useFocusEffect } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { colors } from '../../lib/colors'
 import { formatDateISO, getTodayAR } from '../../lib/date'
+import { CategoryTeaser } from '../../components/dashboard/CategoryTeaser'
 import { DashboardHeader } from '../../components/dashboard/DashboardHeader'
 import { EyeMaskProvider } from '../../components/dashboard/EyeMaskContext'
 import { HeroSection } from '../../components/dashboard/HeroSection'
@@ -81,6 +82,7 @@ export default function DashboardScreen() {
               currentMonth={currentMonth}
               monthsBackLimit={MONTHS_BACK_LIMIT}
             />
+            <CategoryTeaser today={today} />
           </View>
         </ScrollView>
         <QuickAddFab />

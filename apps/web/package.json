@@ -14,6 +14,7 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@grana/dashboard": "workspace:*",
     "@grana/i18n-messages": "workspace:*",
     "@grana/money-logic": "workspace:*",
     "@grana/supabase": "workspace:*",

@@ -21,7 +21,7 @@ El trabajo real es la **data**: la query `getMonthCategoryBreakdown` vive web-on
 
 ### C — El teaser entra al dashboard mobile
 
-- **MODIFIED** la spec del teaser para hacer explícita la paridad web + mobile, con su scenario nativo: el teaser se renderiza al final del dashboard mobile (después de "Balance del mes") y al tocarlo navega a Movimientos mobile (`/transactions`). Carga in-card con alto estable, siguiendo el patrón de las demás secciones (ver dependencia).
+- **MODIFIED** la spec del teaser para hacer explícita la paridad web + mobile, con su scenario nativo: el teaser se renderiza al final del dashboard mobile (después de "Balance del mes"); solo el link "Ver desglose" navega a Movimientos mobile (`/transactions`), en paridad con web (el cuerpo del card no es pressable). Carga in-card con alto estable, siguiendo el patrón de las demás secciones (ver dependencia).
 
 ## Dependencies & ordering
 

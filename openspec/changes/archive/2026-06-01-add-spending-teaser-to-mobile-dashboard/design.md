@@ -66,7 +66,9 @@ Filas con slots de ancho fijo para el `%` y la barra (no depender solo de `gap`)
 
 El teaser carga su breakdown async y muestra su estado in-card (loading/error) sobre un alto estable, consistente con el patrón de `align-mobile-dashboard-section-loading`. Como no expone montos y suele ser corto, su loading puede ser un placeholder mínimo; el contrato es "sin layout shift abrupto", no un alto fijo grande.
 
-Al tocar el teaser, `router.push('/transactions')`. El donut completo todavía no vive en Movimientos mobile, así que es un destino transitorio (el usuario llega a la lista, no al desglose completo). Se documenta en código como las demás decisiones transitorias del dashboard mobile. Cuando aterrice el desglose completo mobile, el destino ya es correcto sin tocar el teaser.
+**Tap target en paridad con web.** Solo el link "Ver desglose" del header navega — el cuerpo del card no es pressable, igual que el `<Link>` web. Para que el link no sea un objetivo táctil pobre (texto ~12–14px → ~28–32pt de alto), el `Pressable` aplica `hitSlop` (~12pt en los 4 lados) para llegar a ~44pt sin agrandar el visual. El resto del card queda como contenido informativo, sin gesture.
+
+Al tocar "Ver desglose", `router.push('/transactions')`. El donut completo todavía no vive en Movimientos mobile, así que es un destino transitorio (el usuario llega a la lista, no al desglose completo). Se documenta en código como las demás decisiones transitorias del dashboard mobile. Cuando aterrice el desglose completo mobile, el destino ya es correcto sin tocar el teaser.
 
 ## Riesgos
 

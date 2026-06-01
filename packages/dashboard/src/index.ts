@@ -2,7 +2,11 @@ export {
   getDashboardHero,
   getUpcomingFortnight,
   getMonthBalanceSeries,
+  getMonthCategoryBreakdown,
   hasUserMovements,
+  resolveMonthRange,
+  UNCATEGORIZED_ID,
+  type MonthCategoryBreakdown,
 } from './queries'
 
 export {
