@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getInstitutions } from '@/lib/accounts/queries'
 import { getCardNetworks } from '@/lib/cards/queries'
 import { PageHeader } from '@/components/ui/page-header'
-import { CreateCreditCardForm } from './_components/create-credit-card-form'
+import { CreateCardForm } from '../_components/create-card-form'
 
 const NewCardPage = async () => {
   const supabase = await createClient()
@@ -26,7 +26,7 @@ const NewCardPage = async () => {
         backLink={{ href: '/cards', label: t('back_label') }}
       />
 
-      <CreateCreditCardForm institutions={institutions} networks={networks} />
+      <CreateCardForm institutions={institutions} networks={networks} variant="page" />
     </div>
   )
 }

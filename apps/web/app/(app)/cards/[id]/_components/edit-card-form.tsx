@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Building2, CreditCard, Info, Lock, X } from 'lucide-react'
+import { CreditCard, Lock, X } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
@@ -15,23 +15,19 @@ import {
 } from '@/app/_actions/credit-cards'
 import { deleteAccount } from '@/app/_actions/accounts'
 import { cardMonogram } from '../../_components/card-presentation'
+import {
+  BankSelectorField,
+  CardPreview,
+  DateField,
+  FieldIcon,
+  FieldLabel,
+  Hint,
+  SectionLabel,
+  dayMonth,
+  fmtMoney,
+} from '../../_components/card-form-ui'
 import { DeactivateBlockDialog } from '../../_components/deactivate-block-dialog'
 import type { Institution } from '@/lib/accounts/types'
-
-// Canonical drawer field surface (#FAFBFC sits between white card and page bg);
-// no token maps to it exactly — same literal used by the movement-form drawer.
-const FIELD_BG = '#FAFBFC'
-const BAR_TRACK = '#EDF0F4'
-
-const fmtMoney = (n: number) =>
-  n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
-
-/** "DD/MM" from a `YYYY-MM-DD` ISO date (empty string → null). */
-const dayMonth = (iso: string): string | null => {
-  if (!iso) return null
-  const [, m, d] = iso.split('-')
-  return `${d}/${m}`
-}
 
 /**
  * Editable billing-cycle dates. Backend models the cycle as periods (statements),
@@ -102,7 +98,6 @@ export const EditCardForm = ({
   const [institutionSearch, setInstitutionSearch] = useState(
     institutions.find((i) => i.id === initialInstitutionId)?.name ?? '',
   )
-  const [institutionFocused, setInstitutionFocused] = useState(false)
   const [creditLimit, setCreditLimit] = useState(
     initialCreditLimit != null ? String(initialCreditLimit) : '',
   )
@@ -119,10 +114,6 @@ export const EditCardForm = ({
   // Archive / delete share a transition + the pending-debt block dialog.
   const [isActionPending, startAction] = useTransition()
   const [blockDialogOpen, setBlockDialogOpen] = useState(false)
-
-  const filteredInstitutions = institutions.filter((i) =>
-    i.name.toLowerCase().includes(institutionSearch.toLowerCase()),
-  )
 
   // ── Derived live-preview values ─────────────────────────────────────────────
   const previewName = name.trim() || initialName
@@ -285,62 +276,28 @@ export const EditCardForm = ({
     <div className="flex flex-col gap-0">
       {/* Live preview */}
       <div className="mb-[22px]">
-        <p className="mx-0.5 mb-[9px] flex items-center gap-[7px] text-[11px] font-extrabold uppercase tracking-[0.09em] text-text-soft">
-          <span className="size-1.5 rounded-full bg-emerald" aria-hidden />
-          {t('edit.preview')}
-        </p>
-        <div className="relative overflow-hidden rounded-[20px] border border-border bg-card px-6 pb-5 pt-[22px]">
-          <span className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: accent }} aria-hidden />
-          <div className="mb-[18px] flex items-start gap-3">
-            <span
-              className="flex size-11 shrink-0 items-center justify-center rounded-[12px] text-[19px] font-extrabold text-white"
-              style={{ backgroundColor: accent }}
-              aria-hidden
-            >
-              {monogram}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[17px] font-bold tracking-[-0.015em] text-text">{previewName}</p>
-              <p className="mt-0.5 truncate text-[13px] text-text-muted">{previewMeta}</p>
-            </div>
-          </div>
-          <div className="mt-0.5">
-            <div className="mb-2 flex items-baseline justify-between">
-              <span className="text-[12.5px] text-text-muted">
-                {t('labels.limit')}{' '}
-                <b className="font-bold tabular-nums text-text">{limitDisplay}</b>
-              </span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-[5px]" style={{ backgroundColor: BAR_TRACK }}>
-              <div
-                className="h-full rounded-[5px]"
-                style={{ width: `${limitPct}%`, backgroundColor: accent }}
-              />
-            </div>
-          </div>
-          <div className="mt-[15px] flex items-center gap-3 border-t border-dashed border-border pt-3.5 text-[13px] font-semibold text-text-muted">
-            {previewCloseLabel && previewDueLabel ? (
-              <>
-                <span className="inline-flex items-center gap-[7px]">
-                  <span className="size-2 rounded-full" style={{ backgroundColor: accent }} aria-hidden />
-                  {t('period.close_prefix')} <b className="font-extrabold tabular-nums text-text">{previewCloseLabel}</b>
-                </span>
-                <span className="font-extrabold text-text-soft" aria-hidden>→</span>
-                <span className="inline-flex items-center gap-[7px]">
-                  <span className="size-2 rounded-full bg-terracotta" aria-hidden />
-                  {t('period.due_prefix')} <b className="font-extrabold tabular-nums text-text">{previewDueLabel}</b>
-                </span>
-              </>
-            ) : (
-              <span>{t('edit.cycle_unknown')}</span>
-            )}
-          </div>
-        </div>
+        <CardPreview
+          caption={t('edit.preview')}
+          accent={accent}
+          monogram={monogram}
+          name={previewName}
+          meta={previewMeta}
+          limitLabel={t('labels.limit')}
+          limitValue={limitDisplay}
+          limitPct={limitPct}
+          closeLabel={previewCloseLabel}
+          dueLabel={previewDueLabel}
+          cycleUnknownLabel={t('edit.cycle_unknown')}
+          closePrefix={t('period.close_prefix')}
+          duePrefix={t('period.due_prefix')}
+        />
       </div>
 
       {/* Identidad */}
       <SectionLabel>{t('edit.section_identity')}</SectionLabel>
-      <div className="overflow-hidden rounded-[15px] border border-border [&>*+*]:border-t [&>*+*]:border-[#F1F3F6]">
+      {/* No overflow-hidden here: the bank dropdown is absolutely positioned and
+          would be clipped. Round the edge rows instead to keep the framed look. */}
+      <div className="rounded-[15px] border border-border [&>*+*]:border-t [&>*+*]:border-[#F1F3F6] [&>*:first-child]:rounded-t-[14px] [&>*:last-child]:rounded-b-[14px]">
         <div className="flex items-center gap-[13px] bg-card px-4 py-3">
           <FieldIcon><CreditCard className="size-[18px]" /></FieldIcon>
           <div className="min-w-0 flex-1">
@@ -354,57 +311,25 @@ export const EditCardForm = ({
             />
           </div>
         </div>
-        <div className="relative flex items-center gap-[13px] bg-card px-4 py-3">
-          <FieldIcon><Building2 className="size-[18px]" /></FieldIcon>
-          <div className="min-w-0 flex-1">
-            <FieldLabel>{t('edit.bank_field_label')}</FieldLabel>
-            <input
-              value={institutionSearch}
-              onChange={(e) => {
-                const value = e.target.value
-                setInstitutionSearch(value)
-                if (institutionId) {
-                  const selected = institutions.find((i) => i.id === institutionId)
-                  if (selected && selected.name !== value) setInstitutionId('')
-                }
-              }}
-              onFocus={() => setInstitutionFocused(true)}
-              onBlur={() => setTimeout(() => setInstitutionFocused(false), 150)}
-              placeholder={t('placeholders.bank_search_short')}
-              aria-label={t('edit.bank_field_label')}
-              className="w-full border-none bg-transparent p-0 text-[15px] font-semibold tracking-[-0.01em] text-text outline-none placeholder:font-medium placeholder:text-text-soft"
-            />
-          </div>
-          {institutionFocused && !institutionId && (
-            <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-44 overflow-y-auto rounded-md border border-border bg-card shadow-md">
-              {filteredInstitutions.map((inst) => (
-                <button
-                  key={inst.id}
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    setInstitutionId(inst.id)
-                    setInstitutionSearch(inst.name)
-                    setInstitutionFocused(false)
-                  }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-page"
-                >
-                  <span
-                    className="inline-flex size-6 shrink-0 items-center justify-center rounded text-[10px] font-semibold text-white"
-                    style={{ backgroundColor: inst.brand_color ?? 'var(--account-slate)' }}
-                    aria-hidden
-                  >
-                    {(inst.name[0] ?? '?').toUpperCase()}
-                  </span>
-                  <span>{inst.name}</span>
-                </button>
-              ))}
-              {filteredInstitutions.length === 0 && (
-                <p className="px-3 py-2 text-sm text-text-muted">{tCommon('no_results')}</p>
-              )}
-            </div>
-          )}
-        </div>
+        <BankSelectorField
+          institutions={institutions}
+          institutionId={institutionId}
+          search={institutionSearch}
+          onSearchChange={(value) => {
+            setInstitutionSearch(value)
+            if (institutionId) {
+              const selected = institutions.find((i) => i.id === institutionId)
+              if (selected && selected.name !== value) setInstitutionId('')
+            }
+          }}
+          onSelect={(inst) => {
+            setInstitutionId(inst.id)
+            setInstitutionSearch(inst.name)
+          }}
+          label={t('edit.bank_field_label')}
+          placeholder={t('placeholders.bank_search_short')}
+          noResultsLabel={tCommon('no_results')}
+        />
       </div>
       {errors.name && <p className="mt-1.5 px-0.5 text-xs text-destructive">{errors.name}</p>}
 
@@ -436,12 +361,14 @@ export const EditCardForm = ({
                   value={currentEnd}
                   onChange={setCurrentEnd}
                   error={errors.currentEnd}
+                  dotColor={accent}
                 />
                 <DateField
                   label={t('labels.due_date')}
                   value={currentDue}
                   onChange={setCurrentDue}
                   error={errors.currentDue}
+                  dotColor="var(--terracotta)"
                 />
               </div>
             </div>
@@ -551,9 +478,10 @@ export const EditCardForm = ({
       </Button>
       <Button
         type="submit"
+        variant="primary"
         loading={isSubmitting}
         disabled={!dirty}
-        className="h-[52px] flex-1 rounded-[14px] bg-navy text-[15.5px] font-bold tracking-[-0.01em] text-white shadow-[0_8px_20px_-4px_rgba(11,26,43,0.30)] hover:bg-navy active:bg-navy"
+        className="h-[52px] flex-1 rounded-[14px] text-[15.5px] font-bold tracking-[-0.01em]"
       >
         {isSubmitting ? tCommon('saving') : tCommon('save_changes')}
       </Button>
@@ -606,54 +534,3 @@ export const EditCardForm = ({
     </>
   )
 }
-
-// ── Small presentational helpers (match the prototype's form primitives) ───────
-
-const SectionLabel = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-  <p className={`mx-0.5 mb-2.5 text-[11px] font-extrabold uppercase tracking-[0.09em] text-text-soft ${className}`}>
-    {children}
-  </p>
-)
-
-const FieldLabel = ({ children }: { children: React.ReactNode }) => (
-  <p className="mb-0.5 text-[11px] font-bold uppercase tracking-[0.05em] text-text-soft">{children}</p>
-)
-
-const FieldIcon = ({ children }: { children: React.ReactNode }) => (
-  <span
-    className="flex size-9 shrink-0 items-center justify-center rounded-[11px] text-text-muted"
-    style={{ backgroundColor: FIELD_BG }}
-  >
-    {children}
-  </span>
-)
-
-const Hint = ({ children }: { children: React.ReactNode }) => (
-  <p className="mx-0.5 mt-[9px] flex items-start gap-1.5 text-xs leading-snug text-text-muted">
-    <Info className="mt-0.5 size-3.5 shrink-0 text-text-soft" aria-hidden />
-    {children}
-  </p>
-)
-
-const DateField = ({
-  label,
-  value,
-  onChange,
-  error,
-}: {
-  label: string
-  value: string
-  onChange: (v: string) => void
-  error?: string
-}) => (
-  <div className="flex flex-col gap-1">
-    <label className="text-[11px] font-bold uppercase tracking-[0.05em] text-text-soft">{label}</label>
-    <input
-      type="date"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-[10px] border border-border bg-card px-3 py-2 text-sm tabular-nums text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    />
-    {error && <p className="text-xs text-destructive">{error}</p>}
-  </div>
-)

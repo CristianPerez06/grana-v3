@@ -415,7 +415,15 @@
     "back_label": "Tarjetas",
     "new": {
       "title": "Nueva tarjeta de crédito",
-      "subtitle_full": "Ingresá los datos de tu tarjeta y las fechas del ciclo actual."
+      "subtitle_full": "Ingresá los datos de tu tarjeta y las fechas del ciclo actual.",
+      "eyebrow": "Nueva tarjeta",
+      "drawer_title": "Agregá una tarjeta",
+      "preview_ghost_name": "Tu nueva tarjeta",
+      "preview_ghost_meta": "Elegí institución y red",
+      "bank_hint": "El color de la tarjeta se toma de la institución.",
+      "cycle_hint": "Con el ciclo actual y el próximo, Grana ubica cada consumo en su resumen.",
+      "limit_hint": "El límite aplica en pesos. Los consumos en dólares se convierten al TC del día.",
+      "submit": "Crear tarjeta"
     },
     "edit": {
       "title": "Editar tarjeta",

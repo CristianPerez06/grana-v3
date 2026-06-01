@@ -1,26 +1,26 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Plus } from 'lucide-react'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCreditCards, getCardsMonthSummary, getCardNetworks } from '@/lib/cards/queries'
+import { getInstitutions } from '@/lib/accounts/queries'
 import { getShowCents } from '@/lib/preferences'
 import { getTodayAR } from '@/lib/date'
-import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
 import { CardsMonthHero } from './_components/cards-month-hero'
 import { WalletGrid } from './_components/wallet-grid'
 import { ArchivedCardsSection } from './_components/archived-cards-section'
+import { AddCardButton } from './_components/add-card-button'
 
 const CardsPage = async () => {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [allCards, monthSummary, networks, showCents, locale, t] = await Promise.all([
+  const [allCards, monthSummary, networks, institutions, showCents, locale, t] = await Promise.all([
     getCreditCards({ includeArchived: true }),
     getCardsMonthSummary(),
     getCardNetworks(),
+    getInstitutions(),
     getShowCents(),
     getLocale(),
     getTranslations('cards'),
@@ -47,14 +47,7 @@ const CardsPage = async () => {
       <PageHeader
         title={t('title')}
         description={t('wallet.subtitle', { count: activeCards.length, month: monthLabel })}
-        actions={
-          <Button asChild className="w-auto">
-            <Link href="/cards/new">
-              <Plus className="size-4" aria-hidden />
-              {t('actions.add_label')}
-            </Link>
-          </Button>
-        }
+        actions={<AddCardButton institutions={institutions} networks={networks} />}
       />
 
       <CardsMonthHero summary={monthSummary} showCents={showCents} />
