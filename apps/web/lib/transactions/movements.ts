@@ -22,6 +22,8 @@ type BaseMovement = {
   subcategory_name: string | null
   detail_href: string | null
   review_flags: MovementReviewFlag[]
+  /** Part of a shared household expense — drives the "Compartido" row marker. */
+  isShared: boolean
 }
 
 export type IncomeMovement = BaseMovement & {
@@ -143,6 +145,7 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
     subcategory_name: tx.subcategory?.name ?? null,
     detail_href: detailHref(tx),
     review_flags: getReviewFlags(tx),
+    isShared: tx.is_shared ?? false,
   }
 
   if (tx.is_parent) {

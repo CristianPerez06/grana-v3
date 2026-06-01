@@ -215,6 +215,7 @@ describe('movementMatchesText', () => {
     destination_account_name: 'Efectivo',
     detail_href: '/accounts/account-1/transactions/tx-1',
     review_flags: [],
+    isShared: false,
   }
 
   it('matches visible functional text case-insensitively', () => {

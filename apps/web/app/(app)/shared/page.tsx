@@ -77,14 +77,10 @@ export default async function SharedPage() {
     return d?.kind === 'owes' && d.from === userId
   })
 
+  const hasAnyDebt = CURRENCIES.some((c) => debt?.[c]?.kind === 'owes')
+
   const renderBalance = (currency: BalanceCurrency, d: PairwiseDebt) => {
-    if (d.kind === 'settled') {
-      return (
-        <p key={currency} className="text-sm text-muted-foreground">
-          {t('dashboard.settled')} · {currency}
-        </p>
-      )
-    }
+    if (d.kind === 'settled') return null
     const youOwe = d.from === userId
     return (
       <div key={currency} className="flex items-baseline justify-between">
@@ -116,7 +112,10 @@ export default async function SharedPage() {
         <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {t('dashboard.balance_title')}
         </h2>
-        {CURRENCIES.map((c) => debt && renderBalance(c, debt[c]))}
+        {debt && !hasAnyDebt && (
+          <p className="text-sm text-muted-foreground">{t('dashboard.settled')}</p>
+        )}
+        {debt && hasAnyDebt && CURRENCIES.map((c) => renderBalance(c, debt[c]))}
         {youOweSomething && (
           <Link
             href="/shared/settle"

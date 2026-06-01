@@ -106,6 +106,7 @@ describe('toFinancialMovement', () => {
       sign: '-',
       period_id: '66666666-6666-6666-6666-666666666666',
       review_flags: [],
+      isShared: false,
     })
   })
 

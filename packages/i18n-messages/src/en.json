@@ -1111,6 +1111,7 @@
       "yesterday": "Yesterday",
       "review_short": "Review",
       "recurrent_short": "Recurring",
+      "shared_short": "Shared",
       "transfer_subtitle_unknown_source": "Source account",
       "transfer_subtitle_unknown_destination": "Destination account",
       "installment_subtitle": "{count} installments",

@@ -9,6 +9,7 @@ import {
   Repeat,
   Scale,
   Tag,
+  Users,
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -153,6 +154,12 @@ export const MovementRow = ({
               <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-800">
                 <AlertTriangle size={12} />
                 {t('list.review_short')}
+              </span>
+            )}
+            {movement.isShared && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-border-soft px-1.5 py-0.5 text-[11px] font-semibold text-text-muted">
+                <Users size={10} />
+                {t('list.shared_short')}
               </span>
             )}
             {movement.kind === 'reimbursement' && (

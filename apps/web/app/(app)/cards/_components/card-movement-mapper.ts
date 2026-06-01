@@ -32,6 +32,9 @@ export const cardPeriodTransactionToMovement = (tx: CardTx): FinancialMovement =
     subcategory_name: tx.subcategory?.name ?? null,
     detail_href: `/transactions/${tx.id}`,
     review_flags: [] as never[],
+    // The card-statement pane does not surface the shared marker (the global
+    // movements list does); the card-period query doesn't carry is_shared.
+    isShared: false,
   }
 
   if (tx.type === 'reimbursement') {

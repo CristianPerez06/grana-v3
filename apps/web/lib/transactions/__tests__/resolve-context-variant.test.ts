@@ -61,6 +61,7 @@ const mv = (kind: FinancialMovement['kind'], extra: Record<string, unknown> = {}
     category_color: null,
     detail_href: '/transactions/tx-1',
     review_flags: [],
+    isShared: false,
     kind,
     sign: '-',
     ...extra,
