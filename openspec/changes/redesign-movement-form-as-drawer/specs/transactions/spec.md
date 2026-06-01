@@ -4,7 +4,7 @@
 
 ### Requirement: El alta y edición de movimientos se presenta como drawer lateral en desktop
 
-El sistema SHALL presentar el formulario de carga y edición de movimientos en un drawer lateral derecho que se desliza sobre el listado de Movimientos en desktop, sin perder el contexto del listado. El drawer SHALL abrirse desde el FAB de alta, el botón "Registrar movimiento" del header del listado y el click en una fila del listado (modo edición). El drawer SHALL tener header fijo, body scrolleable y footer fijo. Al abrir en modo creación, el campo de monto SHALL recibir el foco automáticamente una vez completada la animación de entrada.
+El sistema SHALL presentar el formulario de carga y edición de movimientos en un drawer lateral derecho que se desliza sobre el listado de Movimientos en desktop, sin perder el contexto del listado. El drawer SHALL abrirse en modo creación desde el FAB de alta y el botón "Registrar movimiento" del header del listado. El modo edición NO SHALL abrirse desde la fila del listado: el click en una fila navega a la página de **detalle** del movimiento (donde viven reintegros/cuotas), y es el botón "Editar" de ese detalle el que abre el drawer en modo edición (la ruta `/transactions/[txId]/edit` queda como fallback). El drawer SHALL tener header fijo, body scrolleable y footer fijo. Al abrir en modo creación, el campo de monto SHALL recibir el foco automáticamente una vez completada la animación de entrada.
 
 La lógica del formulario (estado, validaciones, server actions) SHALL ser la misma que la del formulario existente — el drawer es una capa de presentación, no una reimplementación. Las rutas `/transactions/new` y `/transactions/[txId]/edit` SHALL seguir resolviendo y renderizando el mismo formulario para deep-link y clientes sin JS.
 
@@ -15,9 +15,11 @@ La lógica del formulario (estado, validaciones, server actions) SHALL ser la mi
 - **AND** el listado permanece visible detrás del scrim
 - **AND** el campo de monto toma el foco al terminar la animación
 
-#### Scenario: Abrir el drawer de edición desde una fila
+#### Scenario: Abrir el drawer de edición desde el detalle
 
 - **WHEN** el usuario hace click en una fila del listado de movimientos
+- **THEN** navega a la página de detalle de ese movimiento (no al drawer de edición)
+- **WHEN** en el detalle activa el botón "Editar"
 - **THEN** el drawer abre en modo edición precargado con los datos reales de ese movimiento
 
 #### Scenario: La ruta directa sigue funcionando

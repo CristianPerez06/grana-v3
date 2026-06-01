@@ -81,6 +81,62 @@ async function requireUserId(): Promise<string> {
   return user.id
 }
 
+// Tables that reference a category/subcategory with a nullable FK. The DB enforces
+// ON DELETE RESTRICT on all of them (migration 0026); this guard mirrors that check
+// to return a useful "archive instead" message rather than a raw FK error. Keep in
+// sync with the web guard in apps/web/app/_actions/categories.ts.
+const CATEGORY_REF_TABLES = ['transactions', 'recurrences', 'recurrence_instances'] as const
+
+async function isCategoryColumnInUse(
+  column: 'category_id' | 'subcategory_id',
+  id: string,
+  userId: string,
+): Promise<{ inUse: boolean; failed: boolean }> {
+  for (const table of CATEGORY_REF_TABLES) {
+    const { count, error } = await supabase
+      .from(table)
+      .select('id', { count: 'exact', head: true })
+      .eq(column, id)
+      .eq('user_id', userId)
+    if (error) return { inUse: false, failed: true }
+    if ((count ?? 0) > 0) return { inUse: true, failed: false }
+  }
+  return { inUse: false, failed: false }
+}
+
+// A category counts as "in use" if it is referenced directly (category_id) OR if
+// any of its child subcategories is referenced (subcategory_id). The DB doesn't
+// force a row with subcategory_id to also carry category_id and updates move them
+// independently, so the parent delete could otherwise hit the child's RESTRICT FK
+// and surface a raw error instead of our message. Keep in sync with the web guard.
+async function isCategoryInUse(
+  categoryId: string,
+  userId: string,
+): Promise<{ inUse: boolean; failed: boolean }> {
+  const direct = await isCategoryColumnInUse('category_id', categoryId, userId)
+  if (direct.failed || direct.inUse) return direct
+
+  const { data: subs, error: subsError } = await supabase
+    .from('subcategories')
+    .select('id')
+    .eq('category_id', categoryId)
+  if (subsError) return { inUse: false, failed: true }
+
+  const subIds = (subs ?? []).map((s) => s.id)
+  if (subIds.length === 0) return { inUse: false, failed: false }
+
+  for (const table of CATEGORY_REF_TABLES) {
+    const { count, error } = await supabase
+      .from(table)
+      .select('id', { count: 'exact', head: true })
+      .in('subcategory_id', subIds)
+      .eq('user_id', userId)
+    if (error) return { inUse: false, failed: true }
+    if ((count ?? 0) > 0) return { inUse: true, failed: false }
+  }
+  return { inUse: false, failed: false }
+}
+
 // ── Queries ──────────────────────────────────────────────────────────────────
 
 export async function getAllCategories(userId: string): Promise<CategoryWithSubcategories[]> {
@@ -188,6 +244,14 @@ export async function archiveCategory(id: string): Promise<ActionResult> {
 
 export async function deleteCategory(id: string): Promise<ActionResult> {
   const userId = await requireUserId()
+
+  // Hard delete only when unused — directly or via any child subcategory;
+  // otherwise archive (is_active=false) instead so historical classification is
+  // not lost. The DB also enforces ON DELETE RESTRICT (migration 0026).
+  const usage = await isCategoryInUse(id, userId)
+  if (usage.failed) return { ok: false, errorKey: 'settings.categories.errors.delete_failed' }
+  if (usage.inUse) return { ok: false, errorKey: 'settings.categories.errors.delete_in_use_category' }
+
   const { error } = await supabase
     .from('categories')
     .delete()
@@ -260,6 +324,14 @@ export async function archiveSubcategory(id: string): Promise<ActionResult> {
 
 export async function deleteSubcategory(id: string): Promise<ActionResult> {
   const userId = await requireUserId()
+
+  // Hard delete only when unused; otherwise archive (is_active=false) instead so
+  // historical classification is not lost. The DB also enforces ON DELETE RESTRICT
+  // (migration 0026).
+  const usage = await isCategoryColumnInUse('subcategory_id', id, userId)
+  if (usage.failed) return { ok: false, errorKey: 'settings.categories.errors.delete_failed' }
+  if (usage.inUse) return { ok: false, errorKey: 'settings.categories.errors.delete_in_use_subcategory' }
+
   const { error } = await supabase
     .from('subcategories')
     .delete()

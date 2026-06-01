@@ -109,6 +109,7 @@ export async function getTransactions(
     .or(`account_id.eq.${accountId},transfer_destination_account_id.eq.${accountId}`)
     .order('date', { ascending: false })
     .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
     .range(offset, offset + limit - 1)
 
   if (currencyCode) {

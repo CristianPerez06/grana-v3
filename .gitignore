@@ -49,3 +49,6 @@ storybook-static
 
 # supabase cli local cache
 supabase/.temp/
+
+# local checkpoint reports (temporary repo-health snapshots, not versioned docs)
+/CHECKPOINT-*.md

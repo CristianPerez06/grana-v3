@@ -89,27 +89,27 @@ Un usuario SHALL poder editar el `name`, `icon`, y `color` de sus propias catego
 
 Un usuario SHALL poder archivar (soft delete: `is_active = false`) sus propias categorías. Una categoría archivada no aparece en selectores de nuevas transacciones, pero permanece visible en transacciones históricas que la referencian.
 
-Una categoría que tiene transacciones asociadas puede archivarse. Una categoría que tiene transacciones asociadas NO puede eliminarse (hard delete).
+Una categoría que está **en uso** puede archivarse. Una categoría en uso NO puede eliminarse (hard delete). Se considera "en uso" cuando es referenciada por al menos una fila en `transactions`, `recurrences` o `recurrence_instances`, ya sea directamente (por `category_id`) o a través de cualquiera de sus subcategorías hijas (por `subcategory_id`). Esta garantía SHALL estar enforced en la DB: los FK de `category_id` y `subcategory_id` en esas tablas son `ON DELETE RESTRICT`, de modo que el bloqueo aplica a todos los clientes (web, mobile, SQL manual) y no depende de que cada frontend lo recuerde. Los clientes SHALL además consultar esas tablas antes de borrar (incluyendo las referencias a las subcategorías hijas al borrar una categoría) para devolver un mensaje accionable ("archivá en lugar de eliminar") en vez de un error de FK crudo.
 
-Una categoría sin ninguna transacción asociada puede eliminarse definitivamente.
+Una categoría sin ninguna referencia directa ni a través de sus subcategorías puede eliminarse definitivamente.
 
-#### Scenario: Archivar categoría propia sin transacciones
+#### Scenario: Archivar categoría propia sin uso
 
-- **WHEN** un usuario archiva una categoría propia que no tiene transacciones
+- **WHEN** un usuario archiva una categoría propia que no está en uso
 - **THEN** `is_active` pasa a `false`
 - **AND** la categoría ya no aparece en selectores de registro de movimientos
 - **AND** la categoría puede eliminarse definitivamente a continuación
 
-#### Scenario: Archivar categoría propia con transacciones
+#### Scenario: Archivar categoría propia en uso
 
-- **WHEN** un usuario archiva una categoría propia que tiene transacciones asociadas
+- **WHEN** un usuario archiva una categoría propia que tiene transacciones o recurrencias asociadas
 - **THEN** `is_active` pasa a `false`
-- **AND** las transacciones existentes siguen mostrando el nombre de la categoría
+- **AND** las transacciones y recurrencias existentes siguen mostrando el nombre de la categoría
 
-#### Scenario: Eliminar categoría con transacciones bloqueado
+#### Scenario: Eliminar categoría en uso bloqueado
 
-- **WHEN** un usuario intenta eliminar definitivamente una categoría que tiene transacciones
-- **THEN** la operación es rechazada
+- **WHEN** un usuario intenta eliminar definitivamente una categoría referenciada por una transacción, una recurrencia o una instancia de recurrencia
+- **THEN** la operación es rechazada (por el guard de aplicación y, como última barrera, por el FK `ON DELETE RESTRICT`)
 - **AND** el sistema sugiere archivar en lugar de eliminar
 
 ---
@@ -197,7 +197,7 @@ Las categorías del sistema se muestran sin acciones de edición/archivar. Las c
 
 ### Requirement: Visualización y administración de categorías en mobile (mobile)
 
-`apps/mobile` SHALL exponer una pantalla `/(app)/settings/categories` que lista todas las categorías activas (sistema + propias) agrupadas por tipo (`income`, `expense`, `both`), con acciones contextuales según el tipo. Las categorías de sistema SHALL mostrarse sin acciones de editar/archivar/eliminar. Las categorías propias SHALL mostrar acciones de editar y archivar (y eliminar definitivo cuando no tienen transacciones asociadas, una vez que ese check esté implementado en backend).
+`apps/mobile` SHALL exponer una pantalla `/(app)/settings/categories` que lista todas las categorías activas (sistema + propias) agrupadas por tipo (`income`, `expense`, `both`), con acciones contextuales según el tipo. Las categorías de sistema SHALL mostrarse sin acciones de editar/archivar/eliminar. Las categorías propias SHALL mostrar acciones de editar y archivar (y eliminar definitivo cuando no están en uso). El check de uso contra `transactions`, `recurrences` y `recurrence_instances` está implementado en `apps/mobile/lib/categories.ts` y respaldado por los FK `ON DELETE RESTRICT` de la DB.
 
 Las queries SHALL ir contra el cliente Supabase de mobile (`apps/mobile/lib/supabase.ts`) directamente, sin server actions. La validación de inputs SHALL usar los schemas de `@grana/validation` ya compartidos con web (`createCategorySchema`, `updateCategorySchema`, `createSubcategorySchema`, `updateSubcategorySchema`).
 

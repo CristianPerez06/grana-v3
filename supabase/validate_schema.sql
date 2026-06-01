@@ -287,6 +287,50 @@ end $$;
 
 
 -- =============================================================================
+-- 8.1G — INVARIANTE: FK de category_id/subcategory_id son ON DELETE RESTRICT
+-- (migración 0026). Protege la clasificación histórica: no se puede borrar una
+-- categoría/subcategoría en uso. Deben existir exactamente los 6 FK esperados.
+-- =============================================================================
+
+do $$
+declare
+  v_missing text;
+begin
+  -- Validar triple por triple (tabla, columna, tabla_referenciada) en lugar de
+  -- contar == 6, para que "uno falta y otro sobra" no pase el check.
+  select string_agg(format('%s.%s->%s', e.tbl, e.col, e.ref), ', ') into v_missing
+    from (values
+      ('transactions', 'category_id', 'categories'),
+      ('transactions', 'subcategory_id', 'subcategories'),
+      ('recurrences', 'category_id', 'categories'),
+      ('recurrences', 'subcategory_id', 'subcategories'),
+      ('recurrence_instances', 'category_id', 'categories'),
+      ('recurrence_instances', 'subcategory_id', 'subcategories')
+    ) as e(tbl, col, ref)
+   where not exists (
+     select 1
+       from pg_constraint con
+       join pg_class rel on rel.oid = con.conrelid
+       join pg_class refc on refc.oid = con.confrelid
+       join pg_attribute att on att.attrelid = con.conrelid and att.attnum = any (con.conkey)
+      where con.contype = 'f'
+        and con.confdeltype = 'r' -- 'r' = RESTRICT
+        and rel.relnamespace = 'public'::regnamespace
+        and rel.relname = e.tbl
+        and att.attname = e.col
+        and refc.relname = e.ref
+        and array_length(con.conkey, 1) = 1
+   );
+
+  if v_missing is not null then
+    raise exception 'FK category/subcategory ON DELETE RESTRICT faltantes o incorrectos: %', v_missing;
+  end if;
+
+  raise notice '✓ 8.1G — los 6 FK category_id/subcategory_id existen y son ON DELETE RESTRICT';
+end $$;
+
+
+-- =============================================================================
 -- 8.2 — RLS: políticas en todas las tablas
 -- =============================================================================
 

@@ -982,13 +982,13 @@ El sistema SHALL validar mediante constraint `CHECK` y/o lógica de action que `
 
 ### Requirement: Las transacciones de pago de resumen y reversión preservan el orden determinístico
 
-El sistema SHALL preservar el ordering determinístico (`date ASC, created_at ASC, id ASC`) en todas las queries de listados de movimientos, incluyendo movimientos generados por el pago de resumen y por la reversión. Los `expense` de pago SHALL aparecer en la cuenta de pago con la fecha del pago.
+El sistema SHALL preservar el ordering determinístico de los movimientos generados por el pago de resumen y por la reversión, según la regla general del proyecto (ver `project-conventions`): las queries de **cálculo** (saldos, totales corrientes) usan `date ASC, created_at ASC, id ASC` y las queries de **display** (listados mostrados al usuario) usan `date DESC, created_at DESC, id DESC`. Los `expense` de pago SHALL aparecer en la cuenta de pago con la fecha del pago.
 
 #### Scenario: Lista de movimientos de "Galicia" muestra el pago como expense ordinario
 
 - **WHEN** el usuario abre el detalle de "Galicia" después de pagar un resumen
 - **THEN** la lista muestra ese `expense` en la posición correspondiente a su `date` (no agrupado aparte)
-- **AND** el ordering respeta `date ASC, created_at ASC, id ASC`
+- **AND** el ordering del listado (display) respeta `date DESC, created_at DESC, id DESC`
 
 ---
 

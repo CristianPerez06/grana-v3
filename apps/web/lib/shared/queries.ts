@@ -281,6 +281,7 @@ export async function getSharedExpenses(limit = 20): Promise<SharedExpenseItem[]
     .is('parent_id', null)
     .order('date', { ascending: false })
     .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
     .limit(limit)
   if (!txs?.length) return []
 

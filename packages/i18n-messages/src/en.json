@@ -176,6 +176,8 @@
         "duplicate_subcategory": "A subcategory with that name already exists in this category.",
         "archive_failed": "Failed to archive.",
         "delete_failed": "Failed to delete.",
+        "delete_in_use_category": "This category has linked movements or recurrences. Archive it instead of deleting it.",
+        "delete_in_use_subcategory": "This subcategory has linked movements or recurrences. Archive it instead of deleting it.",
         "system_readonly": "System categories cannot be edited.",
         "not_found": "Category not found.",
         "generic": "Something went wrong. Please try again."

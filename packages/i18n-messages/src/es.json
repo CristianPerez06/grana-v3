@@ -176,6 +176,8 @@
         "duplicate_subcategory": "Ya existe una subcategoría con ese nombre en esta categoría.",
         "archive_failed": "Error al archivar.",
         "delete_failed": "Error al eliminar.",
+        "delete_in_use_category": "Esta categoría tiene movimientos o recurrencias asociadas. Archivala en lugar de eliminarla.",
+        "delete_in_use_subcategory": "Esta subcategoría tiene movimientos o recurrencias asociadas. Archivala en lugar de eliminarla.",
         "system_readonly": "Las categorías del sistema no se pueden editar.",
         "not_found": "Categoría no encontrada.",
         "generic": "Algo salió mal. Intentá de nuevo."

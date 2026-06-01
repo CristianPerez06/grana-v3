@@ -19,6 +19,69 @@ import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
 import { getAuthenticatedUserId } from './_lib/auth'
 
+// ── Usage guard ─────────────────────────────────────────────────────────────────
+
+type ServerClient = Awaited<ReturnType<typeof createClient>>
+
+// Tables that reference a category/subcategory with a nullable FK. The DB enforces
+// ON DELETE RESTRICT on all of them (migration 0026), so a hard delete of something
+// still in use is blocked at the source for every client. This guard mirrors that
+// check in the app only to return a useful "archive instead" message instead of a
+// raw FK error.
+const CATEGORY_REF_TABLES = ['transactions', 'recurrences', 'recurrence_instances'] as const
+
+async function isCategoryColumnInUse(
+  supabase: ServerClient,
+  column: 'category_id' | 'subcategory_id',
+  id: string,
+  userId: string,
+): Promise<{ inUse: boolean; errorCode?: string }> {
+  for (const table of CATEGORY_REF_TABLES) {
+    const { count, error } = await supabase
+      .from(table)
+      .select('id', { count: 'exact', head: true })
+      .eq(column, id)
+      .eq('user_id', userId)
+    if (error) return { inUse: false, errorCode: error.code }
+    if ((count ?? 0) > 0) return { inUse: true }
+  }
+  return { inUse: false }
+}
+
+// A category counts as "in use" if it is referenced directly (category_id) OR if
+// any of its child subcategories is referenced (subcategory_id). The DB doesn't
+// force a row with subcategory_id to also carry its parent category_id, and
+// updates can move the two independently — so deleting the parent could otherwise
+// hit the child's RESTRICT FK and surface a raw FK error instead of our message.
+async function isCategoryInUse(
+  supabase: ServerClient,
+  categoryId: string,
+  userId: string,
+): Promise<{ inUse: boolean; errorCode?: string }> {
+  const direct = await isCategoryColumnInUse(supabase, 'category_id', categoryId, userId)
+  if (direct.errorCode || direct.inUse) return direct
+
+  const { data: subs, error: subsError } = await supabase
+    .from('subcategories')
+    .select('id')
+    .eq('category_id', categoryId)
+  if (subsError) return { inUse: false, errorCode: subsError.code }
+
+  const subIds = (subs ?? []).map((s) => s.id)
+  if (subIds.length === 0) return { inUse: false }
+
+  for (const table of CATEGORY_REF_TABLES) {
+    const { count, error } = await supabase
+      .from(table)
+      .select('id', { count: 'exact', head: true })
+      .in('subcategory_id', subIds)
+      .eq('user_id', userId)
+    if (error) return { inUse: false, errorCode: error.code }
+    if ((count ?? 0) > 0) return { inUse: true }
+  }
+  return { inUse: false }
+}
+
 // ── Categories ────────────────────────────────────────────────────────────────
 
 export async function createCategory(
@@ -99,8 +162,20 @@ export async function deleteCategory(id: string): Promise<ActionResult<never>> {
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
 
-  // TODO: when transactions module is added, check for associated transactions here
-  // and return error if count > 0 before allowing delete.
+  // Hard delete only when the category is unused — directly (category_id) or via
+  // any of its child subcategories (subcategory_id) — across transactions,
+  // recurrences and recurrence instances. Deleting a used category would destroy
+  // historical classification; the user should archive (is_active=false) instead
+  // — see archiveCategory. The DB also enforces this via ON DELETE RESTRICT (0026).
+  const usage = await isCategoryInUse(supabase, id, userId)
+  if (usage.errorCode) {
+    const t = await getTranslations('settings.categories.errors')
+    return { ok: false, formError: t('delete_failed'), errorCode: usage.errorCode }
+  }
+  if (usage.inUse) {
+    const t = await getTranslations('settings.categories.errors')
+    return { ok: false, formError: t('delete_in_use_category'), errorCode: 'in_use' }
+  }
 
   const { error } = await supabase
     .from('categories')
@@ -193,7 +268,20 @@ export async function deleteSubcategory(id: string): Promise<ActionResult<never>
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
 
-  // TODO: when transactions module is added, check for associated transactions here.
+  // Hard delete only when the subcategory is unused (transactions, recurrences or
+  // recurrence instances). Deleting a used subcategory would silently strip the
+  // classification off historical rows; the user should archive (is_active=false)
+  // instead — see archiveSubcategory. The DB also enforces this via ON DELETE
+  // RESTRICT (0026).
+  const usage = await isCategoryColumnInUse(supabase, 'subcategory_id', id, userId)
+  if (usage.errorCode) {
+    const t = await getTranslations('settings.categories.errors')
+    return { ok: false, formError: t('delete_failed'), errorCode: usage.errorCode }
+  }
+  if (usage.inUse) {
+    const t = await getTranslations('settings.categories.errors')
+    return { ok: false, formError: t('delete_in_use_subcategory'), errorCode: 'in_use' }
+  }
 
   const { error } = await supabase
     .from('subcategories')
