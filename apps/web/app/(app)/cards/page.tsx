@@ -7,7 +7,7 @@ import { ArchivedCardsContainer } from './_components/archived-cards-container'
 import { CardsErrorBoundary } from './_components/cards-error-boundary'
 import { CardsHeader } from './_components/cards-header'
 import { CardsMonthHeroContainer } from './_components/cards-month-hero-container'
-import { WalletGridContainer } from './_components/wallet-grid-container'
+import { WalletContainer } from './_components/wallet-container'
 
 const CardsPage = async () => {
   const supabase = await createClient()
@@ -43,7 +43,7 @@ const CardsPage = async () => {
               />
             }
           >
-            <WalletGridContainer />
+            <WalletContainer />
           </Suspense>
 
           <Suspense

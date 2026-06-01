@@ -659,6 +659,7 @@
       "empty_cta": "Add card"
     },
     "route": {
+      "subtitle": "{count} credit cards · {month} statements",
       "subtitle_loading": "- credit cards · {month} statements",
       "hero_loading": "Loading this month's summary…",
       "hero_error": "We couldn't load this month's summary.",

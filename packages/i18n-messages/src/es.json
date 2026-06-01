@@ -659,6 +659,7 @@
       "empty_cta": "Agregar tarjeta"
     },
     "route": {
+      "subtitle": "{count} tarjetas de crédito · resúmenes de {month}",
       "subtitle_loading": "- tarjetas de crédito · resúmenes de {month}",
       "hero_loading": "Cargando el resumen del mes…",
       "hero_error": "No pudimos cargar el resumen del mes.",

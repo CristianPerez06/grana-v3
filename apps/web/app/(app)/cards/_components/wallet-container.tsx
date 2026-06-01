@@ -7,11 +7,11 @@ import {
 } from '@/lib/cards/queries'
 import { getShowCents } from '@/lib/preferences'
 import { getTodayAR } from '@/lib/date'
-import { WalletGrid } from './wallet-grid'
-import { WalletGridSection } from './wallet-grid-section'
+import { Wallet } from './wallet'
+import { WalletSection } from './wallet-section'
 import { SectionFallback } from '../../dashboard/_components/section-fallback'
 
-export const WalletGridContainer = async () => {
+export const WalletContainer = async () => {
   let activeCards: CreditCardSummary[]
   let networks: CardNetwork[]
   let showCents: boolean
@@ -38,13 +38,13 @@ export const WalletGridContainer = async () => {
   )
 
   return (
-    <WalletGridSection hasCards={activeCards.length > 0}>
-      <WalletGrid
+    <WalletSection hasCards={activeCards.length > 0}>
+      <Wallet
         cards={activeCards}
         networkNames={networkNames}
         monthLabel={monthShort}
         showCents={showCents}
       />
-    </WalletGridSection>
+    </WalletSection>
   )
 }

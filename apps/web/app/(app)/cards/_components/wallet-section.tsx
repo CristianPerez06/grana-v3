@@ -6,7 +6,7 @@ type Props = {
   children: ReactNode
 }
 
-export const WalletGridSection = ({ hasCards, children }: Props) => {
+export const WalletSection = ({ hasCards, children }: Props) => {
   const t = useTranslations('cards')
   return (
     <section className="flex flex-col gap-4">

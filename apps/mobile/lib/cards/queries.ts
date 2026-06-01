@@ -9,6 +9,9 @@ import { getTodayAR } from '../date'
 import { derivePeriodVariant, formatDateISO, sumMoneyValues } from './utils'
 import type { CardPeriodWithPayment, PeriodVariant } from './types'
 
+// Mirror of apps/web/lib/cards/queries.ts. Public shape (CreditCardSummary,
+// CardsMonthSummary, UpcomingDue) MUST stay in sync across platforms.
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type CardPeriodAlert = 'red' | 'amber' | 'none'
@@ -51,7 +54,7 @@ function derivePeriodAlert(
 // ─── getCreditCards ──────────────────────────────────────────────────────────
 
 export async function getCreditCards(
-  options: { includeArchived?: boolean } = {},
+  options: { includeArchived?: boolean; archivedOnly?: boolean } = {},
 ): Promise<CreditCardSummary[]> {
   let query = supabase
     .from('accounts')
@@ -59,7 +62,9 @@ export async function getCreditCards(
     .eq('type', 'credit')
     .order('created_at', { ascending: true })
 
-  if (!options.includeArchived) {
+  if (options.archivedOnly) {
+    query = query.eq('is_active', false)
+  } else if (!options.includeArchived) {
     query = query.eq('is_active', true)
   }
 
@@ -151,4 +156,79 @@ export async function getCreditCards(
       activePeriod: activePeriodWithMeta,
     }
   })
+}
+
+// ─── Listing-level aggregate: "A pagar este mes" + próximos vencimientos ──────
+// Mirror of apps/web/lib/cards/queries.ts → getCardsMonthSummary. Keep shapes in
+// sync (UpcomingDue, CardsMonthSummary) so both platforms render the same data.
+
+export type UpcomingDue = {
+  cardId: string
+  cardName: string
+  endDate: string
+  dueDate: string
+  amountARS: number
+  amountUSD: number
+  alert: CardPeriodAlert
+  isToPay: boolean
+}
+
+export type CardsMonthSummary = {
+  toPayARS: number
+  toPayUSD: number
+  hasUSD: boolean
+  hasToPay: boolean
+  nextDue: UpcomingDue | null
+  upcoming: UpcomingDue[]
+}
+
+export async function getCardsMonthSummary(): Promise<CardsMonthSummary> {
+  const cards = await getCreditCards({ includeArchived: false })
+  const today = getTodayAR()
+  const todayStr = formatDateISO(today)
+
+  const upcoming: UpcomingDue[] = []
+  let toPayARS = 0
+  let toPayUSD = 0
+  let hasUSD = false
+  let hasToPay = false
+
+  for (const card of cards) {
+    if (card.currencies.some((c) => c.currency_code === 'USD' && c.is_active)) {
+      hasUSD = true
+    }
+    const period = card.activePeriod
+    if (!period || period.has_payment) continue
+
+    const isToPay =
+      (period.end_date < todayStr || period.due_date < todayStr) && period.tx_count > 0
+
+    if (isToPay) {
+      hasToPay = true
+      toPayARS = sumMoneyValues([toPayARS, period.pendingAmountARS])
+      toPayUSD = sumMoneyValues([toPayUSD, period.pendingAmountUSD])
+    }
+
+    upcoming.push({
+      cardId: card.id,
+      cardName: card.name,
+      endDate: period.end_date,
+      dueDate: period.due_date,
+      amountARS: period.pendingAmountARS,
+      amountUSD: period.pendingAmountUSD,
+      alert: period.alert,
+      isToPay,
+    })
+  }
+
+  upcoming.sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+
+  return {
+    toPayARS,
+    toPayUSD,
+    hasUSD,
+    hasToPay,
+    nextDue: upcoming[0] ?? null,
+    upcoming,
+  }
 }

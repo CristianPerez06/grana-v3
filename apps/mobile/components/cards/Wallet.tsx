@@ -11,7 +11,7 @@ const CARD_MAX_WIDTH = 280
 const HORIZONTAL_INSET = 24 // matches dashboard screen px-6
 const PEEK = 24 // visible portion of the next card
 
-export const CreditCardCarousel = ({ cards }: Props) => {
+export const Wallet = ({ cards }: Props) => {
   const t = useT()
   const { width: screenWidth } = useWindowDimensions()
   const cardWidth = Math.min(CARD_MAX_WIDTH, screenWidth - HORIZONTAL_INSET * 2 - PEEK)

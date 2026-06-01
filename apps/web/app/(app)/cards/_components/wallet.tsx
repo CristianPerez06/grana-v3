@@ -12,7 +12,7 @@ type Props = {
   showCents?: boolean
 }
 
-export const WalletGrid = ({ cards, networkNames, monthLabel, showCents = false }: Props) => {
+export const Wallet = ({ cards, networkNames, monthLabel, showCents = false }: Props) => {
   const t = useTranslations('cards')
 
   if (cards.length === 0) {
