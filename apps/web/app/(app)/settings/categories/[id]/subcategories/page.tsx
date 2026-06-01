@@ -21,7 +21,6 @@ const SubcategoriesPage = async ({ params }: Props) => {
 
   const t = await getTranslations()
   const rawSubcategories = await getSubcategoriesByCategoryId(id)
-  const isSystem = category.user_id === null
   const categoryDisplayName = getCategoryName(category, t)
   const subcategories = rawSubcategories.map((sub) => ({
     ...sub,
@@ -38,21 +37,15 @@ const SubcategoriesPage = async ({ params }: Props) => {
           label: t('settings.categories.label'),
         }}
         actions={
-          !isSystem && (
-            <Link
-              href={`/settings/categories/${id}/subcategories/new`}
-              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              {t('settings.categories.actions.add')}
-            </Link>
-          )
+          <Link
+            href={`/settings/categories/${id}/subcategories/new`}
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            {t('settings.categories.actions.add')}
+          </Link>
         }
       />
-      <SubcategoryList
-        subcategories={subcategories}
-        categoryId={id}
-        isSystem={isSystem}
-      />
+      <SubcategoryList subcategories={subcategories} />
     </div>
   )
 }

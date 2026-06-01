@@ -9,11 +9,9 @@ type SubcategoryWithName = Subcategory & { displayName: string }
 
 type Props = {
   subcategories: SubcategoryWithName[]
-  categoryId: string
-  isSystem: boolean
 }
 
-export const SubcategoryList = ({ subcategories, isSystem }: Props) => {
+export const SubcategoryList = ({ subcategories }: Props) => {
   const t = useTranslations('settings.categories.subcategories')
   if (subcategories.length === 0) {
     return (
@@ -30,7 +28,6 @@ export const SubcategoryList = ({ subcategories, isSystem }: Props) => {
           key={sub.id}
           subcategory={sub}
           displayName={sub.displayName}
-          isSystem={isSystem}
         />
       ))}
     </div>
@@ -40,11 +37,14 @@ export const SubcategoryList = ({ subcategories, isSystem }: Props) => {
 type RowProps = {
   subcategory: Subcategory
   displayName: string
-  isSystem: boolean
 }
 
-const SubcategoryRow = ({ subcategory, displayName, isSystem }: RowProps) => {
+const SubcategoryRow = ({ subcategory, displayName }: RowProps) => {
   const t = useTranslations('settings.categories')
+  // Gate actions on the subcategory's OWN ownership, not the parent category's:
+  // a user's custom subcategory under a system category is still theirs to
+  // archive/delete; system subcategories (user_id === null) stay read-only.
+  const isSystem = subcategory.user_id === null
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 

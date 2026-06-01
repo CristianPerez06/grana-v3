@@ -15,7 +15,10 @@ const NewSubcategoryPage = async ({ params }: Props) => {
   if (!user) redirect('/login')
 
   const category = await getCategoryById(id)
-  if (!category || category.user_id !== user.id) notFound()
+  // Allow adding a subcategory under the user's own categories AND under system
+  // categories (user_id === null) — per the categories spec. Only another user's
+  // category is off-limits.
+  if (!category || (category.user_id !== null && category.user_id !== user.id)) notFound()
 
   const t = await getTranslations('settings.categories')
 
