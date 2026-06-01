@@ -559,7 +559,8 @@ export type PopoverProps = {
 
 export type SegmentedOption = {
   value: string
-  label: string
+  /** Label content — plain text, or an icon + text node (web). */
+  label: ReactNode
   /** A disabled option cannot be selected; it never fires onValueChange. */
   disabled?: boolean
 }

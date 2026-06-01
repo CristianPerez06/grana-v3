@@ -8,6 +8,7 @@ import { archiveAccount, reactivateAccount, deleteAccount } from '@/app/_actions
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import { AccountAvatar } from '@/components/ui/account-avatar'
+import { useEditAccountDrawer } from './edit-account-drawer'
 
 type Props = {
   account: AccountWithBalances
@@ -18,6 +19,7 @@ export const AccountDetailHeader = ({ account, hasTransactions }: Props) => {
   const t = useTranslations('accounts')
   const showCents = useShowCents()
   const router = useRouter()
+  const editDrawer = useEditAccountDrawer()
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -77,12 +79,23 @@ export const AccountDetailHeader = ({ account, hasTransactions }: Props) => {
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          <a
-            href={`/accounts/${account.id}/edit`}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {t('actions.edit')}
-          </a>
+          {/* Opens the edit drawer when available; the /edit page is the no-JS fallback. */}
+          {editDrawer ? (
+            <button
+              type="button"
+              onClick={editDrawer.openEdit}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {t('actions.edit')}
+            </button>
+          ) : (
+            <a
+              href={`/accounts/${account.id}/edit`}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {t('actions.edit')}
+            </a>
+          )}
           {!account.is_active ? (
             <button
               onClick={handleReactivate}

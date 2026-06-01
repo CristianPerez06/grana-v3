@@ -213,6 +213,7 @@
     "logout": "Sign out",
     "back": "Back",
     "cancel": "Cancel",
+    "close": "Close",
     "save": "Save",
     "save_changes": "Save changes",
     "saving": "Saving…",
@@ -409,7 +410,23 @@
     "readonly": {
       "type": "Account type cannot be changed.",
       "initialBalance": "Opening balance cannot be modified. Record an adjustment once the transactions module is available."
-    }
+    },
+    "new": {
+      "eyebrow": "New account"
+    },
+    "preview": {
+      "caption": "Preview",
+      "name_placeholder": "Account name",
+      "badge_cash": "Cash",
+      "badge_bank": "Debit",
+      "meta_cash": "Cash",
+      "meta_bank": "Debit · {bank}",
+      "meta_bank_empty": "pick a bank"
+    },
+    "hints": {
+      "initialBalance": "This is the balance the account starts with today. It adjusts with your movements afterward."
+    },
+    "discard_confirm": "You have unsaved changes. Discard them?"
   },
   "cards": {
     "title": "Cards",

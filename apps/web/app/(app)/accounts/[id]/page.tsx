@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { computeRunningBalances, type RunningBalanceRow } from '@grana/money-logic'
 import { createClient } from '@/lib/supabase/server'
-import { getAccountDetail } from '@/lib/accounts/queries'
+import { getAccountDetail, getInstitutions } from '@/lib/accounts/queries'
 import {
   getAccountMovements,
   getMovementFilterOptions,
@@ -24,6 +24,7 @@ import { MovementFilters } from '@/lib/transactions/components/movement-filters'
 import { getRecurrenceLinkedTransactionIds } from '@/lib/recurrences/queries'
 import { getTodayAR, formatDateISO } from '@/lib/date'
 import { AccountDetailHeader } from './_components/account-detail-header'
+import { EditAccountDrawerProvider } from './_components/edit-account-drawer'
 
 type Props = {
   params: Promise<{ id: string }>
@@ -41,12 +42,14 @@ const AccountDetailPage = async ({ params, searchParams }: Props) => {
 
   const t = await getTranslations('accounts')
 
-  const [account, movementsAsc, filterOptions, pendingReimbursements] = await Promise.all([
-    getAccountDetail(id),
-    getAccountMovements(id),
-    getMovementFilterOptions(),
-    getPendingReimbursements(id),
-  ])
+  const [account, movementsAsc, filterOptions, pendingReimbursements, institutions] =
+    await Promise.all([
+      getAccountDetail(id),
+      getAccountMovements(id),
+      getMovementFilterOptions(),
+      getPendingReimbursements(id),
+      getInstitutions(),
+    ])
   if (!account) notFound()
   if (account.type === 'credit') redirect(`/cards/${id}`)
 
@@ -83,7 +86,8 @@ const AccountDetailPage = async ({ params, searchParams }: Props) => {
     inactiveCurrencies.length > 0
 
   return (
-    <div className="flex flex-col gap-8 max-w-2xl">
+    <EditAccountDrawerProvider account={account} institutions={institutions}>
+      <div className="flex flex-col gap-8 max-w-2xl">
       <div className="flex items-center gap-3">
         <Link
           href="/accounts"
@@ -150,7 +154,8 @@ const AccountDetailPage = async ({ params, searchParams }: Props) => {
           }}
         />
       </section>
-    </div>
+      </div>
+    </EditAccountDrawerProvider>
   )
 }
 

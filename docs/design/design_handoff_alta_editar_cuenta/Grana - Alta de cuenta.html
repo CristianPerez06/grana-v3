@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>grana · Alta de cuenta · Drawer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #F6F7F9; --card: #FFFFFF; --navy: #0B1A2B; --muted: #6B7683; --border: #E6EAEF;
+    --emerald: #10B981; --emerald-deep: #0E9E6E; --emerald-soft: #ECFDF5;
+    --terracota: #B56A5A; --terracota-soft: #FBEFEA; --slate: #3A6B8A; --slate-soft: #EAF1F6;
+    --brand: #15B981; --field-bg: #FAFBFC; --faint: #AEB6C0; --soft-text: #8A94A3;
+    --acc: var(--terracota); --acc-soft: var(--terracota-soft);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: var(--navy); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  .tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+  input { font-family: inherit; }
+
+  /* ---- dimmed context ---- */
+  .screen { width: 1440px; min-height: 1024px; margin: 0 auto; background: var(--bg); display: grid; grid-template-columns: 300px 1fr; position: relative; }
+  .sidebar { background: var(--card); border-right: 1px solid var(--border); padding: 36px 24px 28px; display: flex; flex-direction: column; min-height: 1024px; }
+  .brand { display: flex; align-items: center; gap: 14px; padding: 0 8px 0 4px; margin-bottom: 44px; }
+  .brand .mark { width: 44px; height: 44px; border-radius: 13px; background: var(--brand); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 26px; line-height: 1; letter-spacing: -0.03em; }
+  .brand .word { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .nav { display: flex; flex-direction: column; gap: 4px; }
+  .nav a { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 12px; color: var(--muted); text-decoration: none; font-size: 16px; font-weight: 600; }
+  .nav a.active { background: var(--navy); color: #fff; }
+  .nav a svg { width: 20px; height: 20px; flex: none; }
+  .sidebar .spacer { flex: 1; }
+  .user { display: flex; align-items: center; gap: 13px; padding: 14px 12px 0; border-top: 1px solid var(--border); margin-top: 8px; }
+  .user .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--slate); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+  .user .name { font-size: 15px; font-weight: 700; line-height: 1.2; }
+  .user .sub { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .main { padding: 40px 0 80px; }
+  .content { max-width: 1040px; margin: 0 auto; padding: 0 40px; }
+  .head-top { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 30px; }
+  .head-left h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+  .head-left .head-sub { margin-top: 12px; color: var(--muted); font-size: 15px; font-weight: 500; }
+  .btn-add { display: inline-flex; align-items: center; gap: 10px; background: var(--navy); color: #fff; border: none; font-family: inherit; font-size: 15px; font-weight: 700; padding: 13px 22px; border-radius: 12px; }
+  .btn-add svg { width: 19px; height: 19px; }
+  .wallet { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .acc-ctx { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 20px 22px 18px; }
+  .acc-head { display: flex; align-items: center; gap: 13px; }
+  .acc-mark { width: 44px; height: 44px; border-radius: 13px; flex: none; display: grid; place-items: center; font-weight: 800; font-size: 19px; }
+  .acc-mark svg { width: 21px; height: 21px; }
+  .acc-name { font-size: 16px; font-weight: 700; letter-spacing: -0.015em; }
+  .acc-meta { font-size: 12.5px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+  .acc-bal { margin-top: 16px; display: flex; align-items: baseline; gap: 9px; }
+  .acc-bal .ab-cur { font-size: 13px; font-weight: 600; opacity: .55; }
+  .acc-bal .ab-num { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .acc-bal .ab-num .dec { font-size: .58em; vertical-align: .55em; opacity: .8; }
+  .acc-bal-sub { margin-top: 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .ctx-wrap { filter: blur(1px); opacity: .5; pointer-events: none; user-select: none; }
+
+  /* ===== Drawer ===== */
+  .scrim { position: fixed; inset: 0; background: rgba(11,26,43,.34); backdrop-filter: blur(2px); z-index: 40; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 540px; background: var(--bg); box-shadow: -24px 0 60px -20px rgba(11,26,43,.34); z-index: 50; display: flex; flex-direction: column; }
+  .dw-head { background: var(--card); border-bottom: 1px solid var(--border); padding: 22px 28px 20px; flex: none; }
+  .dw-head-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .dw-eyebrow { text-transform: uppercase; letter-spacing: .15em; font-size: 11px; font-weight: 700; color: var(--emerald-deep); margin-bottom: 7px; }
+  .dw-title { font-size: 25px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; }
+  .dw-iconbtn { width: 38px; height: 38px; border-radius: 11px; border: 1px solid var(--border); background: var(--card); display: grid; place-items: center; cursor: pointer; color: var(--navy); flex: none; }
+  .dw-iconbtn svg { width: 18px; height: 18px; }
+  .dw-body { flex: 1; overflow-y: auto; padding: 22px 28px 28px; }
+  .dw-body::-webkit-scrollbar { width: 10px; }
+  .dw-body::-webkit-scrollbar-thumb { background: #DCE1E7; border-radius: 6px; border: 3px solid var(--bg); }
+  .dw-foot { flex: none; background: var(--card); border-top: 1px solid var(--border); padding: 16px 28px; display: flex; align-items: center; gap: 12px; }
+
+  /* ---- live preview ---- */
+  .preview { margin-bottom: 24px; }
+  .preview-cap { font-size: 11px; font-weight: 800; color: var(--soft-text); letter-spacing: .09em; text-transform: uppercase; margin: 0 2px 9px; display: flex; align-items: center; gap: 7px; }
+  .preview-cap .lp-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--emerald); }
+  .pcard { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 20px 22px 18px; transition: border-color .2s; }
+  .pcard.ghost { border-style: dashed; }
+  .pcard .acc-mark { background: var(--acc); color: #fff; transition: background .2s, color .2s; }
+  .pcard .acc-mark.empty { background: var(--acc-soft); color: var(--acc); }
+  .ghosted { color: var(--faint); font-weight: 600; }
+  .pv-badge { margin-left: auto; font-size: 10px; font-weight: 700; padding: 4px 9px; border-radius: 6px; letter-spacing: .05em; text-transform: uppercase; background: var(--acc-soft); color: var(--acc); flex: none; align-self: flex-start; transition: background .2s, color .2s; }
+
+  /* ---- form primitives ---- */
+  .form-section-label { font-size: 11px; font-weight: 800; color: var(--soft-text); letter-spacing: .09em; text-transform: uppercase; margin: 4px 2px 10px; }
+  .field-group + .form-section-label, .seg + .form-section-label, .bank-select + .form-section-label, .hint + .form-section-label, .money-group + .form-section-label { margin-top: 22px; }
+  .field-group { border-radius: 15px; overflow: hidden; border: 1px solid var(--border); }
+  .field-row { background: var(--card); padding: 12px 16px; display: flex; align-items: center; gap: 13px; }
+  .fr-icon { width: 36px; height: 36px; border-radius: 11px; background: var(--field-bg); display: grid; place-items: center; color: var(--muted); flex: none; }
+  .fr-icon svg { width: 18px; height: 18px; }
+  .fr-main { flex: 1; min-width: 0; }
+  .fr-label { font-size: 11px; font-weight: 700; color: var(--soft-text); letter-spacing: .05em; text-transform: uppercase; margin-bottom: 3px; }
+  .fr-input { border: none; outline: none; background: none; font-size: 15px; font-weight: 600; color: var(--navy); width: 100%; padding: 0; letter-spacing: -0.01em; }
+  .fr-input::placeholder { color: var(--faint); font-weight: 500; }
+
+  .seg { display: flex; gap: 4px; background: #EEF1F5; border-radius: 13px; padding: 5px; }
+  .seg button { flex: 1; border: none; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 700; color: var(--muted); padding: 12px 12px; border-radius: 9px; background: transparent; transition: background .15s, color .15s, box-shadow .15s; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 9px; }
+  .seg button svg { width: 17px; height: 17px; }
+  .seg button.on { background: var(--card); color: var(--navy); box-shadow: 0 1px 3px rgba(11,26,43,.10); }
+
+  /* money fields */
+  .money-group { border-radius: 15px; overflow: hidden; border: 1px solid var(--border); }
+  .money-row { background: var(--card); padding: 13px 16px; display: flex; align-items: center; gap: 13px; }
+  .money-row + .money-row { border-top: 1px solid var(--border); }
+  .money-row .mr-icon { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex: none; font-weight: 800; font-size: 14px; }
+  .money-row.ars .mr-icon { background: var(--slate-soft); color: var(--slate); }
+  .money-row.usd .mr-icon { background: var(--emerald-soft); color: var(--emerald-deep); }
+  .money-row .mr-label { font-size: 14px; font-weight: 700; color: var(--navy); letter-spacing: -0.01em; }
+  .money-row .mr-sub { font-size: 11.5px; font-weight: 600; color: var(--faint); margin-top: 1px; }
+  .money-row .mr-amt { margin-left: auto; display: flex; align-items: center; gap: 6px; flex: none; }
+  .money-row .mr-amt .mr-cur { font-size: 14px; font-weight: 700; color: var(--faint); }
+  .money-row .mr-amt input { border: 1px solid var(--border); border-radius: 10px; background: var(--field-bg); width: 132px; text-align: right; font-size: 16px; font-weight: 700; color: var(--navy); padding: 9px 12px; outline: none; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; transition: border-color .14s, box-shadow .14s; }
+  .money-row .mr-amt input:focus { border-color: #C9CFD7; box-shadow: 0 0 0 3px rgba(58,107,138,.12); }
+  .money-row .mr-amt input::placeholder { color: var(--faint); font-weight: 600; }
+
+  .hint { font-size: 12px; color: var(--muted); margin: 9px 2px 0; line-height: 1.45; display: flex; align-items: flex-start; gap: 6px; }
+  .hint svg { width: 14px; height: 14px; flex: none; margin-top: 1px; color: var(--faint); }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  /* bank selector */
+  .bank-select { position: relative; }
+  .bank-select.hidden { display: none; }
+  .bank-trigger { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 15px; padding: 12px 16px; display: flex; align-items: center; gap: 13px; cursor: pointer; font-family: inherit; text-align: left; transition: border-color .14s, box-shadow .14s; }
+  .bank-trigger:hover { border-color: #C9CFD7; }
+  .bank-trigger.open { border-color: #C9CFD7; box-shadow: 0 0 0 3px rgba(58,107,138,.12); }
+  .bank-dot { width: 36px; height: 36px; border-radius: 11px; flex: none; display: grid; place-items: center; background: var(--field-bg); color: var(--faint); font-weight: 800; font-size: 15px; transition: background .2s, color .2s; }
+  .bank-dot.has { color: #fff; }
+  .bank-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; color: var(--navy); letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bank-name.ph { color: var(--faint); font-weight: 500; }
+  .bank-chev { width: 18px; height: 18px; color: var(--faint); flex: none; transition: transform .18s; }
+  .bank-trigger.open .bank-chev { transform: rotate(180deg); }
+  .bank-menu { position: absolute; left: 0; right: 0; top: calc(100% + 8px); background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 22px 54px -18px rgba(11,26,43,.38); z-index: 20; overflow: hidden; display: none; }
+  .bank-menu.open { display: block; animation: fadeUp .16s ease; }
+  .bank-search { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 9px; }
+  .bank-search svg { width: 16px; height: 16px; color: var(--faint); flex: none; }
+  .bank-search input { border: none; outline: none; background: none; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--navy); width: 100%; }
+  .bank-list { max-height: 264px; overflow-y: auto; padding: 6px; }
+  .bank-list::-webkit-scrollbar { width: 9px; }
+  .bank-list::-webkit-scrollbar-thumb { background: #DCE1E7; border-radius: 6px; border: 3px solid var(--card); }
+  .bank-opt { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 11px; cursor: pointer; }
+  .bank-opt:hover { background: var(--field-bg); }
+  .bank-opt.sel { background: rgba(16,185,129,.08); }
+  .bank-opt .bo-dot { width: 28px; height: 28px; border-radius: 9px; flex: none; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 13px; }
+  .bank-opt .bo-name { font-size: 14px; font-weight: 700; color: var(--navy); flex: 1; letter-spacing: -0.01em; }
+  .bank-opt .bo-check { width: 16px; height: 16px; color: var(--emerald); opacity: 0; flex: none; }
+  .bank-opt.sel .bo-check { opacity: 1; }
+  .bank-empty { padding: 20px; text-align: center; color: var(--muted); font-size: 13px; font-weight: 600; }
+
+  .dw-submit { flex: 1; height: 52px; border: none; border-radius: 14px; cursor: pointer; font-family: inherit; font-size: 15.5px; font-weight: 700; letter-spacing: -0.01em; background: var(--navy); color: #fff; box-shadow: 0 8px 20px -4px rgba(11,26,43,.30); transition: filter .15s; }
+  .dw-submit:hover { filter: brightness(1.08); }
+  .dw-cancel { height: 52px; padding: 0 22px; border-radius: 14px; cursor: pointer; border: 1px solid var(--border); background: var(--card); color: var(--navy); font-family: inherit; font-size: 14px; font-weight: 700; flex: none; }
+  .conditional { transition: opacity .15s; }
+  .conditional.hidden { display: none; }
+</style>
+</head>
+<body>
+  <!-- ===== dimmed context: Cuentas ===== -->
+  <div class="screen" data-screen-label="Cuentas (contexto)">
+    <aside class="sidebar">
+      <div class="brand"><div class="mark">g</div><div class="word">grana</div></div>
+      <nav class="nav">
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Inicio</a>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="17" x2="18" y2="17"/></svg>Movimientos</a>
+        <a href="#" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Cuentas</a>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2.5"/><line x1="3" y1="11" x2="21" y2="11"/><line x1="7" y1="15" x2="11" y2="15"/></svg>Tarjetas</a>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18z"/></svg>Categorías</a>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>Recurrencias</a>
+      </nav>
+      <div class="spacer"></div>
+      <div class="user"><div class="avatar">CA</div><div><div class="name">Cristian</div><div class="sub">Configuración</div></div></div>
+    </aside>
+    <main class="main">
+      <div class="content ctx-wrap">
+        <div class="head-top">
+          <div class="head-left"><h1>Cuentas</h1><div class="head-sub">3 cuentas · saldo total $2.388.200</div></div>
+          <button class="btn-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Crear cuenta</button>
+        </div>
+        <div class="wallet">
+          <div class="acc-ctx">
+            <div class="acc-head"><div class="acc-mark" style="background:#F4A024;color:#fff;">G</div><div><div class="acc-name">Galicia</div><div class="acc-meta">Caja de ahorro · ****4218</div></div></div>
+            <div class="acc-bal"><span class="ab-num tnum">$2.340.000<span class="dec">,00</span></span></div>
+          </div>
+          <div class="acc-ctx">
+            <div class="acc-head"><div class="acc-mark" style="background:var(--terracota-soft);color:var(--terracota);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h13a2 2 0 012 2v2H5a2 2 0 00-2 2V7z"/><path d="M3 11h17a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-7z"/></svg></div><div><div class="acc-name">Efectivo</div><div class="acc-meta">Billetera</div></div></div>
+            <div class="acc-bal"><span class="ab-num tnum">$48.200<span class="dec">,00</span></span></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===== Drawer: alta de cuenta ===== -->
+  <div class="scrim"></div>
+  <aside class="drawer" data-screen-label="Alta de cuenta · Drawer">
+    <div class="dw-head">
+      <div class="dw-head-top">
+        <div>
+          <div class="dw-eyebrow">Nueva cuenta</div>
+          <div class="dw-title">Crear cuenta</div>
+        </div>
+        <button class="dw-iconbtn" title="Cerrar (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+    </div>
+
+    <div class="dw-body">
+      <!-- LIVE PREVIEW -->
+      <div class="preview">
+        <div class="preview-cap"><span class="lp-dot"></span>Vista previa</div>
+        <div class="pcard ghost" id="pvCard">
+          <div class="acc-head">
+            <div class="acc-mark empty" id="pvMark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h13a2 2 0 012 2v2H5a2 2 0 00-2 2V7z"/><path d="M3 11h17a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-7z"/></svg></div>
+            <div style="min-width:0;">
+              <div class="acc-name ghosted" id="pvName">Nombre de la cuenta</div>
+              <div class="acc-meta" id="pvMeta">Efectivo</div>
+            </div>
+            <span class="pv-badge" id="pvBadge">Efectivo</span>
+          </div>
+          <div class="acc-bal"><span class="ab-cur" id="pvCurMain">$</span><span class="ab-num tnum" id="pvMain">0<span class="dec">,00</span></span></div>
+          <div class="acc-bal-sub" id="pvUsd" style="display:none;">US$ <span class="tnum" id="pvUsdNum">0,00</span></div>
+        </div>
+      </div>
+
+      <!-- TIPO -->
+      <div class="form-section-label">Tipo de cuenta</div>
+      <div class="seg" id="segTipo">
+        <button class="on" data-v="efectivo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h13a2 2 0 012 2v2H5a2 2 0 00-2 2V7z"/><path d="M3 11h17a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-7z"/></svg>
+          Efectivo
+        </button>
+        <button data-v="bancaria">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v9M19 10v9M9 10v9M15 10v9"/><path d="M3 21h18"/></svg>
+          Bancaria / Débito
+        </button>
+      </div>
+
+      <!-- INSTITUCIÓN (solo bancaria) -->
+      <div class="form-section-label conditional hidden" id="lblInst">Banco / institución</div>
+      <div class="bank-select conditional hidden" id="bankSelect">
+        <button type="button" class="bank-trigger" id="bankTrigger">
+          <span class="bank-dot" id="bankDot">?</span>
+          <span class="bank-name ph" id="bankName">Elegí el banco…</span>
+          <svg class="bank-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="bank-menu" id="bankMenu">
+          <div class="bank-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="bankSearch" placeholder="Buscar institución…" autocomplete="off" />
+          </div>
+          <div class="bank-list" id="bankList"></div>
+        </div>
+      </div>
+
+      <!-- NOMBRE -->
+      <div class="form-section-label">Nombre</div>
+      <div class="field-group">
+        <div class="field-row">
+          <div class="fr-icon" id="nameIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h13a2 2 0 012 2v2H5a2 2 0 00-2 2V7z"/><path d="M3 11h17a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-7z"/></svg></div>
+          <div class="fr-main"><div class="fr-label">Nombre de la cuenta</div><input class="fr-input" id="fName" placeholder="Ej: Billetera, Caja chica" /></div>
+        </div>
+      </div>
+
+      <!-- SALDO INICIAL -->
+      <div class="form-section-label">Saldo inicial</div>
+      <div class="money-group">
+        <div class="money-row ars">
+          <div class="mr-icon">$</div>
+          <div><div class="mr-label">Pesos</div><div class="mr-sub">ARS</div></div>
+          <div class="mr-amt"><span class="mr-cur">$</span><input class="tnum" id="fArs" inputmode="decimal" placeholder="0" /></div>
+        </div>
+        <div class="money-row usd">
+          <div class="mr-icon">U$</div>
+          <div><div class="mr-label">Dólares</div><div class="mr-sub">USD</div></div>
+          <div class="mr-amt"><span class="mr-cur">US$</span><input class="tnum" id="fUsd" inputmode="decimal" placeholder="0" /></div>
+        </div>
+      </div>
+      <div class="hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span>Es el saldo con el que arranca la cuenta hoy. Después se ajusta con tus movimientos.</span></div>
+    </div>
+
+    <div class="dw-foot">
+      <button class="dw-cancel">Cancelar</button>
+      <button class="dw-submit">Crear cuenta</button>
+    </div>
+  </aside>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const drawer = document.querySelector('.drawer');
+    const fName = $('fName'), fArs = $('fArs'), fUsd = $('fUsd');
+    const pvCard = $('pvCard'), pvMark = $('pvMark'), pvName = $('pvName'), pvMeta = $('pvMeta'),
+          pvBadge = $('pvBadge'), pvMain = $('pvMain'), pvCurMain = $('pvCurMain'),
+          pvUsd = $('pvUsd'), pvUsdNum = $('pvUsdNum'), nameIcon = $('nameIcon');
+
+    const WALLET_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h13a2 2 0 012 2v2H5a2 2 0 00-2 2V7z"/><path d="M3 11h17a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-7z"/></svg>';
+    const BANK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v9M19 10v9M9 10v9M15 10v9"/><path d="M3 21h18"/></svg>';
+
+    let tipo = 'efectivo', bank = '', bankColor = null;
+
+    const BANKS = [
+      { n: 'Banco Galicia', c: '#F4A024' }, { n: 'Banco Santander', c: '#C9332E' },
+      { n: 'BBVA', c: '#1464A5' }, { n: 'Banco Nación', c: '#1B4D9B' },
+      { n: 'Banco Macro', c: '#0A4C8B' }, { n: 'Banco Provincia', c: '#159A5B' },
+      { n: 'Banco Ciudad', c: '#C9332E' }, { n: 'ICBC', c: '#C8102E' },
+      { n: 'HSBC', c: '#C8102E' }, { n: 'Banco Credicoop', c: '#1B4D9B' },
+      { n: 'Banco Supervielle', c: '#C9332E' }, { n: 'Banco Comafi', c: '#1B4D9B' },
+      { n: 'Banco Patagonia', c: '#159A5B' }, { n: 'Brubank', c: '#6C4BD9' },
+      { n: 'Ualá', c: '#7A4BD9' }, { n: 'Naranja X', c: '#E25522' },
+      { n: 'Mercado Pago', c: '#2D8FD6' }, { n: 'Otra institución', c: null },
+    ];
+    const shortName = n => n.replace(/^banco\s+/i, '').trim();
+    const initialOf = n => (shortName(n)[0] || '?').toUpperCase();
+
+    function fmtMoney(raw) {
+      const clean = (raw || '').toString().replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.');
+      const num = parseFloat(clean);
+      if (isNaN(num)) return null;
+      const [i, d = '00'] = num.toFixed(2).split('.');
+      return { int: i.replace(/\B(?=(\d{3})+(?!\d))/g, '.'), dec: d };
+    }
+
+    // ---- bank selector ----
+    const trigger = $('bankTrigger'), menu = $('bankMenu'), search = $('bankSearch'),
+          bankDot = $('bankDot'), bankName = $('bankName');
+    function renderBanks(filter) {
+      const f = (filter || '').trim().toLowerCase();
+      const items = BANKS.filter(b => b.n.toLowerCase().includes(f));
+      const list = $('bankList');
+      if (!items.length) { list.innerHTML = '<div class="bank-empty">Sin resultados</div>'; return; }
+      list.innerHTML = items.map(b => {
+        const dot = b.c
+          ? '<span class="bo-dot" style="background:' + b.c + ';">' + initialOf(b.n) + '</span>'
+          : '<span class="bo-dot" style="background:#E6EAEF;color:var(--faint);">+</span>';
+        return '<div class="bank-opt' + (b.n === bank ? ' sel' : '') + '" data-n="' + b.n + '" data-c="' + (b.c || '') + '">' +
+          dot + '<span class="bo-name">' + b.n + '</span>' +
+          '<svg class="bo-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>';
+      }).join('');
+      list.querySelectorAll('.bank-opt').forEach(o =>
+        o.addEventListener('click', () => selectBank(o.dataset.n, o.dataset.c || null)));
+    }
+    function selectBank(name, c) {
+      bank = name; bankColor = c;
+      bankDot.textContent = c ? initialOf(name) : '?';
+      bankDot.classList.toggle('has', !!c);
+      bankDot.style.background = c || 'var(--field-bg)';
+      bankName.textContent = name;
+      bankName.classList.remove('ph');
+      closeMenu();
+      sync();
+    }
+    function openMenu() { trigger.classList.add('open'); menu.classList.add('open'); search.value = ''; renderBanks(); setTimeout(() => search.focus(), 30); }
+    function closeMenu() { trigger.classList.remove('open'); menu.classList.remove('open'); }
+    trigger.addEventListener('click', () => menu.classList.contains('open') ? closeMenu() : openMenu());
+    search.addEventListener('input', () => renderBanks(search.value));
+    document.addEventListener('click', e => { if (!$('bankSelect').contains(e.target)) closeMenu(); });
+
+    // ---- tipo segmented ----
+    $('segTipo').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      $('segTipo').querySelectorAll('button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      tipo = b.dataset.v;
+      const isBank = tipo === 'bancaria';
+      ['lblInst', 'bankSelect'].forEach(id => $(id).classList.toggle('hidden', !isBank));
+      fName.placeholder = isBank ? 'Ej: Galicia, Sueldo' : 'Ej: Billetera, Caja chica';
+      nameIcon.innerHTML = isBank ? BANK_SVG : WALLET_SVG;
+      sync();
+    }));
+
+    // ---- live preview ----
+    function sync() {
+      const isBank = tipo === 'bancaria';
+      const name = fName.value.trim();
+      const auto = isBank && bank && bank !== 'Otra institución' ? shortName(bank) : '';
+      const display = name || auto;
+      const hasAny = name || (isBank && bank && bank !== 'Otra institución');
+
+      // accent
+      const acc = isBank && bankColor ? bankColor : 'var(--terracota)';
+      const accSoft = isBank && bankColor ? 'rgba(0,0,0,0)' : 'var(--terracota-soft)';
+      drawer.style.setProperty('--acc', isBank && bankColor ? bankColor : 'var(--terracota)');
+      drawer.style.setProperty('--acc-soft', isBank && bankColor ? hexA(bankColor, 0.12) : 'var(--terracota-soft)');
+
+      // mark
+      pvMark.classList.toggle('empty', !hasAny || (isBank && !bankColor));
+      if (isBank && bankColor) {
+        pvMark.textContent = initialOf(bank);
+        pvMark.style.background = bankColor; pvMark.style.color = '#fff';
+      } else if (isBank) {
+        pvMark.innerHTML = BANK_SVG; pvMark.style.background = ''; pvMark.style.color = '';
+      } else {
+        pvMark.innerHTML = WALLET_SVG; pvMark.style.background = ''; pvMark.style.color = '';
+      }
+
+      pvName.textContent = display || (isBank ? 'Nombre de la cuenta' : 'Nombre de la cuenta');
+      pvName.classList.toggle('ghosted', !hasAny);
+      pvMeta.textContent = isBank ? ('Débito · ' + (bank ? shortName(bank) : 'elegí banco')) : 'Efectivo';
+      pvBadge.textContent = isBank ? 'Débito' : 'Efectivo';
+      pvBadge.style.background = isBank && bankColor ? hexA(bankColor, 0.12) : 'var(--terracota-soft)';
+      pvBadge.style.color = isBank && bankColor ? bankColor : 'var(--terracota)';
+      pvCard.classList.toggle('ghost', !hasAny);
+
+      const ars = fmtMoney(fArs.value);
+      pvMain.innerHTML = ars ? (ars.int + '<span class="dec">,' + ars.dec + '</span>') : '0<span class="dec">,00</span>';
+      const usd = fmtMoney(fUsd.value);
+      if (usd && parseFloat(fUsd.value.replace(/\./g,'').replace(',','.')) > 0) {
+        pvUsd.style.display = '';
+        pvUsdNum.textContent = usd.int + ',' + usd.dec;
+      } else { pvUsd.style.display = 'none'; }
+    }
+    function hexA(hex, a) {
+      const h = hex.replace('#',''); const n = parseInt(h.length === 3 ? h.split('').map(c=>c+c).join('') : h, 16);
+      return 'rgba(' + ((n>>16)&255) + ',' + ((n>>8)&255) + ',' + (n&255) + ',' + a + ')';
+    }
+    [fName, fArs, fUsd].forEach(el => el.addEventListener('input', sync));
+
+    renderBanks();
+    sync();
+  </script>
+</body>
+</html>

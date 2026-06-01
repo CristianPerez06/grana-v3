@@ -1,19 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { Building2, Info } from 'lucide-react'
+import { Building2 } from 'lucide-react'
+import { FieldIcon, FieldLabel } from '@/components/ui/form-primitives'
 import type { Institution } from '@/lib/accounts/types'
 
 /**
- * Shared hi-fi form primitives for the card drawer forms (Alta + Editar). These
- * live here — not inline in a single form — so the create and edit drawers stay
- * pixel-identical: the handoff requires the two screens to look the same, and a
- * shared module is what keeps them from drifting apart on the next tweak.
+ * Card-specific drawer form pieces (Alta + Editar). The neutral primitives
+ * (SectionLabel/FieldLabel/FieldIcon/Hint/FIELD_BG) now live in
+ * `components/ui/form-primitives` and are re-exported here so existing card
+ * imports keep working; this module keeps only the card-shaped parts.
  */
 
-// Canonical drawer field surface (#FAFBFC sits between white card and page bg);
-// no token maps to it exactly — same literal used by the movement-form drawer.
-export const FIELD_BG = '#FAFBFC'
+export { FIELD_BG, FieldIcon, FieldLabel, Hint, SectionLabel } from '@/components/ui/form-primitives'
+
 export const BAR_TRACK = '#EDF0F4'
 // README `--faint`; there is no Tailwind token for it, so it stays a literal,
 // used only by the preview's ghost (empty) state.
@@ -29,40 +29,6 @@ export const dayMonth = (iso: string): string | null => {
   const [, m, d] = iso.split('-')
   return `${d}/${m}`
 }
-
-export const SectionLabel = ({
-  children,
-  className = '',
-}: {
-  children: React.ReactNode
-  className?: string
-}) => (
-  <p
-    className={`mx-0.5 mb-2.5 text-[11px] font-extrabold uppercase tracking-[0.09em] text-text-soft ${className}`}
-  >
-    {children}
-  </p>
-)
-
-export const FieldLabel = ({ children }: { children: React.ReactNode }) => (
-  <p className="mb-0.5 text-[11px] font-bold uppercase tracking-[0.05em] text-text-soft">{children}</p>
-)
-
-export const FieldIcon = ({ children }: { children: React.ReactNode }) => (
-  <span
-    className="flex size-9 shrink-0 items-center justify-center rounded-[11px] text-text-muted"
-    style={{ backgroundColor: FIELD_BG }}
-  >
-    {children}
-  </span>
-)
-
-export const Hint = ({ children }: { children: React.ReactNode }) => (
-  <p className="mx-0.5 mt-[9px] flex items-start gap-1.5 text-xs leading-snug text-text-muted">
-    <Info className="mt-0.5 size-3.5 shrink-0 text-text-soft" aria-hidden />
-    {children}
-  </p>
-)
 
 export const DateField = ({
   label,

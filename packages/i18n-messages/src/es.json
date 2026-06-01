@@ -213,6 +213,7 @@
     "logout": "Cerrar sesión",
     "back": "Volver",
     "cancel": "Cancelar",
+    "close": "Cerrar",
     "save": "Guardar",
     "save_changes": "Guardar cambios",
     "saving": "Guardando…",
@@ -409,7 +410,23 @@
     "readonly": {
       "type": "El tipo de cuenta no se puede cambiar.",
       "initialBalance": "El saldo inicial no se puede modificar. Registrá un ajuste cuando exista el módulo de transacciones."
-    }
+    },
+    "new": {
+      "eyebrow": "Nueva cuenta"
+    },
+    "preview": {
+      "caption": "Vista previa",
+      "name_placeholder": "Nombre de la cuenta",
+      "badge_cash": "Efectivo",
+      "badge_bank": "Débito",
+      "meta_cash": "Efectivo",
+      "meta_bank": "Débito · {bank}",
+      "meta_bank_empty": "elegí banco"
+    },
+    "hints": {
+      "initialBalance": "Es el saldo con el que arranca la cuenta hoy. Después se ajusta con tus movimientos."
+    },
+    "discard_confirm": "Tenés cambios sin guardar. ¿Descartarlos?"
   },
   "cards": {
     "title": "Tarjetas",

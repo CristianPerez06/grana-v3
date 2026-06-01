@@ -37,7 +37,7 @@ export function Segmented({
           value={option.value}
           disabled={option.disabled}
           className={cn(
-            'flex-1 cursor-pointer rounded-[10px] px-3 py-1.5 text-sm font-bold text-text-muted transition-colors duration-[var(--duration-fast)]',
+            'flex flex-1 cursor-pointer items-center justify-center gap-[9px] rounded-[10px] px-3 py-1.5 text-sm font-bold text-text-muted transition-colors duration-[var(--duration-fast)]',
             'data-[state=on]:bg-card data-[state=on]:text-text data-[state=on]:shadow-[0_1px_3px_rgba(11,26,43,0.10),0_0_0_0.5px_rgba(11,26,43,0.04)]',
             'disabled:cursor-not-allowed disabled:opacity-40',
           )}

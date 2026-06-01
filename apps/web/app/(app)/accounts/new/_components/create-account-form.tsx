@@ -3,48 +3,109 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Alert } from '@/components/ui/alert'
-import { createAccount } from '@/app/_actions/accounts'
+import { Landmark, Wallet, X } from 'lucide-react'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { parseMoneyInput } from '@grana/validation'
-import { MoneyAmountInput } from '@/components/ui/money-amount-input'
-import { InstitutionPicker } from '../../_components/institution-picker'
+import { Alert } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Segmented } from '@/components/ui/segmented'
+import { SectionLabel, Hint } from '@/components/ui/form-primitives'
+import { useShowCents } from '@/lib/preferences-context'
+import { createAccount } from '@/app/_actions/accounts'
+import {
+  AccountPreview,
+  EditableMoneyGroup,
+  type PreviewAvatar,
+} from '../../_components/account-form-ui'
+import { BankSelector } from '../../_components/bank-selector'
+import { accountAccent, shortBankName, softFromHex } from '../../_components/account-presentation'
 import type { Institution } from '@/lib/accounts/types'
 
 type Props = {
   institutions: Institution[]
+  /** `'drawer'` renders the hi-fi shell; `'page'` renders the body inline (fallback route). */
+  variant?: 'drawer' | 'page'
+  /** Drawer chrome: close handler for the header ✕ / footer cancel. */
+  onClose?: () => void
+  /** When provided, a successful create refreshes the route and calls this instead of navigating. */
+  onSuccess?: () => void
 }
 
 const CURRENCY_CODES = ['ARS', 'USD'] as const
 
-export const CreateAccountForm = ({ institutions }: Props) => {
+export const CreateAccountForm = ({ institutions, variant = 'page', onClose, onSuccess }: Props) => {
   const t = useTranslations('accounts')
   const tCommon = useTranslations('common')
   const router = useRouter()
-  const [formError, setFormError] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const showCents = useShowCents()
+  const isDrawer = variant === 'drawer'
 
   const [type, setType] = useState<'cash' | 'bank'>('cash')
   const [name, setName] = useState('')
   const [institutionId, setInstitutionId] = useState('')
-  // Bimoneda por defecto: every account is provisioned with ARS + USD.
-  // The user only edits the initial balance per currency; toggling is not allowed.
-  const [balances, setBalances] = useState<Record<string, string>>({ ARS: '0', USD: '0' })
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [institutionSearch, setInstitutionSearch] = useState('')
+  // Bimoneda por defecto: every account is provisioned with ARS + USD; the user
+  // only edits the initial balance per currency (both rows always shown).
+  const [arsValue, setArsValue] = useState('0')
+  const [usdValue, setUsdValue] = useState('0')
 
-  const CURRENCIES = [
-    { code: 'ARS', label: t('currency_options.ars') },
-    { code: 'USD', label: t('currency_options.usd') },
-  ]
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [formError, setFormError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const isBank = type === 'bank'
+
+  // ── Derived live-preview values ─────────────────────────────────────────────
+  const selectedInstitution = institutions.find((i) => i.id === institutionId) ?? null
+  const brandColor = selectedInstitution?.brand_color ?? null
+  const bankShort = selectedInstitution ? shortBankName(selectedInstitution.name) : ''
+  const autoName = isBank ? bankShort : ''
+  const displayName = name.trim() || autoName
+  const hasContent = !!name.trim() || (isBank && !!institutionId)
+
+  const accent = accountAccent(type, brandColor)
+  const accentSoft = isBank && brandColor ? softFromHex(brandColor) : 'var(--terracotta-soft)'
+
+  const avatar: PreviewAvatar = isBank
+    ? brandColor
+      ? { kind: 'monogram', monogram: (bankShort[0] ?? '?').toUpperCase(), bg: brandColor, fg: '#fff' }
+      : { kind: 'bank', bg: 'var(--border)', fg: 'var(--text-soft)' }
+    : hasContent
+      ? { kind: 'wallet', bg: 'var(--terracotta)', fg: '#fff' }
+      : { kind: 'wallet', bg: 'var(--terracotta-soft)', fg: 'var(--terracotta)' }
+
+  const badgeLabel = isBank ? t('preview.badge_bank') : t('preview.badge_cash')
+  const badgeBg = isBank ? (brandColor ? accentSoft : 'var(--border-soft)') : 'var(--terracotta-soft)'
+  const badgeColor = isBank ? (brandColor ? accent : 'var(--text-muted)') : 'var(--terracotta)'
+
+  const meta = isBank
+    ? t('preview.meta_bank', { bank: bankShort || t('preview.meta_bank_empty') })
+    : t('preview.meta_cash')
+
+  const arsNum = parseMoneyInput(arsValue) ?? 0
+  const usdNum = parseMoneyInput(usdValue) ?? 0
+  const arsLabel = formatARS(arsNum, showCents).replace(/^\$\s?/, '')
+  const usdLabel = usdNum > 0 ? formatUSD(usdNum, showCents) : null
+
+  // ── Form gating + validation ────────────────────────────────────────────────
+  const balancesValid = CURRENCY_CODES.every((code) => {
+    const v = parseMoneyInput(code === 'ARS' ? arsValue : usdValue)
+    return v !== null && v >= 0
+  })
+  const canSubmit = (isBank ? !!institutionId : !!name.trim()) && balancesValid
+  const dirty =
+    !!name.trim() || isBank || !!institutionId || arsValue !== '0' || usdValue !== '0'
 
   const validate = () => {
     const errs: Record<string, string> = {}
-    if (!name.trim()) errs.name = t('errors.name_required')
+    // Name: required for cash; optional for bank (falls back to the bank name).
+    if (!isBank && !name.trim()) errs.name = t('errors.name_required')
     if (name.trim().length > 50) errs.name = t('errors.name_too_long')
-    if (type === 'bank' && !institutionId) errs.institution = t('errors.institution_required_short')
-    for (const code of CURRENCY_CODES) {
-      const value = parseMoneyInput(balances[code] ?? '0')
-      if (value === null || value < 0) errs[`balance_${code}`] = t('errors.balance_negative')
-    }
+    if (isBank && !institutionId) errs.institution = t('errors.institution_required_short')
+    if (parseMoneyInput(arsValue) === null || (parseMoneyInput(arsValue) ?? 0) < 0)
+      errs.balance_ARS = t('errors.balance_negative')
+    if (parseMoneyInput(usdValue) === null || (parseMoneyInput(usdValue) ?? 0) < 0)
+      errs.balance_USD = t('errors.balance_negative')
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -55,17 +116,18 @@ export const CreateAccountForm = ({ institutions }: Props) => {
 
     setFormError(null)
     setIsSubmitting(true)
-
     try {
-      const currencies = CURRENCY_CODES.map((code) => ({
-        currency_code: code,
-        initial_balance: parseMoneyInput(balances[code] ?? '0') ?? 0,
-      }))
+      const currencies = [
+        { currency_code: 'ARS', initial_balance: parseMoneyInput(arsValue) ?? 0 },
+        { currency_code: 'USD', initial_balance: parseMoneyInput(usdValue) ?? 0 },
+      ]
+      // Bank with no explicit name falls back to the (short) institution name.
+      const finalName = name.trim() || (isBank ? bankShort || (selectedInstitution?.name ?? '') : '')
 
       const result = await createAccount({
-        name: name.trim(),
+        name: finalName,
         type,
-        institution_id: type === 'bank' ? institutionId : undefined,
+        institution_id: isBank ? institutionId : undefined,
         currencies,
         color_key: null,
         icon_key: null,
@@ -76,94 +138,215 @@ export const CreateAccountForm = ({ institutions }: Props) => {
         return
       }
 
-      if (result.id) router.push(`/accounts/${result.id}`)
+      if (onSuccess) {
+        router.refresh()
+        onSuccess()
+        if (result.id) router.push(`/accounts/${result.id}`)
+      } else if (result.id) {
+        router.push(`/accounts/${result.id}`)
+      } else {
+        router.push('/accounts')
+      }
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
-      {/* Type selector */}
-      <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-foreground">{t('labels.type')}</label>
-        <div className="flex rounded-md border border-input overflow-hidden">
-          {(['cash', 'bank'] as const).map((opt) => (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => setType(opt)}
-              className={[
-                'flex-1 py-2 text-sm font-medium transition-colors',
-                type === opt
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-background text-muted-foreground hover:text-foreground',
-              ].join(' ')}
-            >
-              {opt === 'cash' ? t('types.cash') : t('types.bank')}
-            </button>
-          ))}
-        </div>
-      </div>
+  const requestClose = () => {
+    if (dirty && !window.confirm(t('discard_confirm'))) return
+    if (onClose) onClose()
+    else router.back()
+  }
 
-      {/* Name */}
-      <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-foreground">{t('labels.name')}</label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={type === 'cash' ? t('placeholders.name') : t('placeholders.name_bank')}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+  // ── Body ─────────────────────────────────────────────────────────────────────
+  const body = (
+    <div className="flex flex-col gap-0">
+      {/* Live preview */}
+      <div className="mb-6">
+        <AccountPreview
+          caption={t('preview.caption')}
+          avatar={avatar}
+          name={displayName || t('preview.name_placeholder')}
+          nameGhost={!displayName}
+          meta={meta}
+          badgeLabel={badgeLabel}
+          badgeBg={badgeBg}
+          badgeColor={badgeColor}
+          arsLabel={arsLabel}
+          usdLabel={usdLabel}
+          ghost={!hasContent}
         />
-        {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
       </div>
 
-      {/* Institution (bank only) */}
-      {type === 'bank' && (
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-foreground">{t('labels.institution')}</label>
-          <InstitutionPicker
-            institutions={institutions}
-            selectedId={institutionId}
-            onChange={(id) => setInstitutionId(id)}
-            errorText={errors.institution}
-          />
-        </div>
+      {/* Tipo de cuenta */}
+      <SectionLabel>{t('labels.type')}</SectionLabel>
+      <Segmented
+        value={type}
+        ariaLabel={t('labels.type')}
+        onValueChange={(v) => setType(v as 'cash' | 'bank')}
+        options={[
+          {
+            value: 'cash',
+            label: (
+              <>
+                <Wallet className="size-[17px]" aria-hidden />
+                {t('types.cash')}
+              </>
+            ),
+          },
+          {
+            value: 'bank',
+            label: (
+              <>
+                <Landmark className="size-[17px]" aria-hidden />
+                {t('types.bank')}
+              </>
+            ),
+          },
+        ]}
+      />
+
+      {/* Banco / institución (solo bancaria) */}
+      {isBank && (
+        <>
+          <SectionLabel className="mt-[22px]">{t('labels.institution')}</SectionLabel>
+          <div className="rounded-[15px] border border-border">
+            <BankSelector
+              institutions={institutions}
+              institutionId={institutionId}
+              search={institutionSearch}
+              onSearchChange={(value) => {
+                setInstitutionSearch(value)
+                if (institutionId && selectedInstitution && selectedInstitution.name !== value) {
+                  setInstitutionId('')
+                }
+              }}
+              onSelect={(inst) => {
+                setInstitutionId(inst.id)
+                setInstitutionSearch(inst.name)
+              }}
+              label={t('labels.institution')}
+              placeholder={t('placeholders.institutionSearch')}
+            />
+          </div>
+          {errors.institution && (
+            <p className="mt-1.5 px-0.5 text-xs text-destructive">{errors.institution}</p>
+          )}
+        </>
       )}
 
-      {/* Currencies — bimoneda por defecto: ambas monedas siempre activas. */}
-      <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-foreground">{t('labels.initialBalance')}</label>
-        {CURRENCIES.map(({ code, label }) => (
-          <div key={code} className="flex items-center gap-3 rounded-md border border-input p-3">
-            <span className="text-sm font-medium flex-1">{label}</span>
-            <div className="flex flex-col gap-1">
-              <MoneyAmountInput
-                value={balances[code] ?? '0'}
-                onChange={(value) =>
-                  setBalances((prev) => ({ ...prev, [code]: value }))
-                }
-                placeholder="0.00"
-                className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-              {errors[`balance_${code}`] && (
-                <p className="text-xs text-destructive">{errors[`balance_${code}`]}</p>
-              )}
-            </div>
-          </div>
-        ))}
+      {/* Nombre */}
+      <SectionLabel className="mt-[22px]">{t('labels.name')}</SectionLabel>
+      <div className="flex items-center gap-[13px] rounded-[15px] border border-border bg-card px-4 py-3">
+        <span
+          className="flex size-9 shrink-0 items-center justify-center rounded-[11px] bg-[#FAFBFC] text-text-muted"
+          aria-hidden
+        >
+          {isBank ? <Landmark className="size-[18px]" /> : <Wallet className="size-[18px]" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="mb-0.5 text-[11px] font-bold uppercase tracking-[0.05em] text-text-soft">
+            {t('labels.name')}
+          </p>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={50}
+            placeholder={isBank ? t('placeholders.name_bank') : t('placeholders.name')}
+            aria-label={t('labels.name')}
+            className="w-full border-none bg-transparent p-0 text-[15px] font-semibold tracking-[-0.01em] text-text outline-none placeholder:font-medium placeholder:text-text-soft"
+          />
+        </div>
       </div>
+      {errors.name && <p className="mt-1.5 px-0.5 text-xs text-destructive">{errors.name}</p>}
 
-      {formError && <Alert variant="error">{formError}</Alert>}
+      {/* Saldo inicial — ARS + USD (ambos para todo tipo, incl. Efectivo) */}
+      <SectionLabel className="mt-[22px]">{t('labels.initialBalance')}</SectionLabel>
+      <EditableMoneyGroup
+        arsLabel={t('labels.ars')}
+        usdLabel={t('labels.usd')}
+        arsSub="ARS"
+        usdSub="USD"
+        arsValue={arsValue}
+        usdValue={usdValue}
+        onArsChange={setArsValue}
+        onUsdChange={setUsdValue}
+      />
+      {errors.balance_ARS || errors.balance_USD ? (
+        <p className="mt-1.5 px-0.5 text-xs text-destructive">
+          {errors.balance_ARS ?? errors.balance_USD}
+        </p>
+      ) : (
+        <Hint>{t('hints.initialBalance')}</Hint>
+      )}
+    </div>
+  )
 
-      <button
+  const footer = (
+    <div className="flex items-center gap-3">
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={requestClose}
+        className="h-[52px] w-auto shrink-0 rounded-[14px] px-[22px] text-sm font-bold"
+      >
+        {tCommon('cancel')}
+      </Button>
+      <Button
         type="submit"
-        disabled={isSubmitting}
-        className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+        variant="primary"
+        loading={isSubmitting}
+        disabled={!canSubmit}
+        className="h-[52px] flex-1 rounded-[14px] text-[15.5px] font-bold tracking-[-0.01em]"
       >
         {isSubmitting ? tCommon('creating') : t('actions.create')}
-      </button>
+      </Button>
+    </div>
+  )
+
+  if (isDrawer) {
+    return (
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+        <header className="shrink-0 border-b border-border bg-card px-7 pb-5 pt-[22px]">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-emerald-deep">
+                {t('new.eyebrow')}
+              </p>
+              <h2 className="truncate text-[25px] font-extrabold leading-tight tracking-[-0.03em] text-text">
+                {t('actions.create')}
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={requestClose}
+              aria-label={tCommon('close')}
+              className="inline-flex size-[38px] shrink-0 items-center justify-center rounded-[11px] border border-border text-text transition-colors hover:bg-border-soft"
+            >
+              <X className="size-[18px]" aria-hidden />
+            </button>
+          </div>
+        </header>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-7 pb-7 pt-[22px]">
+          {formError && (
+            <Alert variant="error" className="mb-4">
+              {formError}
+            </Alert>
+          )}
+          {body}
+        </div>
+
+        <footer className="shrink-0 border-t border-border bg-card px-7 py-4">{footer}</footer>
+      </form>
+    )
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {formError && <Alert variant="error">{formError}</Alert>}
+      {body}
+      {footer}
     </form>
   )
 }
