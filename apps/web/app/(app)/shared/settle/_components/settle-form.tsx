@@ -4,10 +4,17 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Alert } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Segmented } from '@/components/ui/segmented'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { parseMoneyInput } from '@grana/validation'
 import type { BalanceCurrency } from '@grana/money-logic'
 import { registerSettlement } from '@/app/_actions/shared'
+
+// Native <select> styled to match the Input primitive (no Select primitive yet).
+const SELECT_CLASS =
+  'flex h-11 w-full rounded-[var(--radius-md)] border border-border bg-card px-3 py-2 text-sm text-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
 
 type Props = {
   owed: Partial<Record<BalanceCurrency, number>>
@@ -58,41 +65,34 @@ export function SettleForm({ owed, accounts, partnerName }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
-      <p className="text-sm text-muted-foreground">{t('settle.receiver_info', { name: partnerName })}</p>
+      <p className="text-sm text-text-muted">{t('settle.receiver_info', { name: partnerName })}</p>
 
       {error && <Alert variant="error">{error}</Alert>}
 
       {currencies.length > 1 && (
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-foreground">{t('settle.currency_label')}</label>
-          <div className="flex rounded-md border border-input overflow-hidden">
-            {currencies.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => onCurrencyChange(c)}
-                className={`flex-1 px-3 py-2 text-sm font-medium ${
-                  currency === c ? 'bg-primary text-primary-foreground' : 'bg-background'
-                }`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
+          <Label>{t('settle.currency_label')}</Label>
+          <Segmented
+            value={currency}
+            onValueChange={(c) => onCurrencyChange(c as BalanceCurrency)}
+            ariaLabel={t('settle.currency_label')}
+            options={currencies.map((c) => ({ value: c, label: c }))}
+          />
         </div>
       )}
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-foreground">{t('settle.amount_label')}</label>
-        <MoneyAmountInput value={amount} onChange={setAmount} />
+        <Label htmlFor="settle-amount">{t('settle.amount_label')}</Label>
+        <MoneyAmountInput id="settle-amount" value={amount} onChange={setAmount} />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-foreground">{t('settle.account_label')}</label>
+        <Label htmlFor="settle-account">{t('settle.account_label')}</Label>
         <select
+          id="settle-account"
           value={accountId}
           onChange={(e) => setAccountId(e.target.value)}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+          className={SELECT_CLASS}
         >
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>
@@ -102,13 +102,9 @@ export function SettleForm({ owed, accounts, partnerName }: Props) {
         </select>
       </div>
 
-      <button
-        type="submit"
-        disabled={submitting || !accountId}
-        className="inline-flex w-fit items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-      >
+      <Button type="submit" loading={submitting} disabled={!accountId}>
         {t('settle.submit')}
-      </button>
+      </Button>
     </form>
   )
 }

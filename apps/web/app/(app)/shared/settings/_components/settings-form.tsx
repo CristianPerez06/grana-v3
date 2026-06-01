@@ -4,6 +4,10 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Alert } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { leaveHousehold, updateHouseholdConfig } from '@/app/_actions/shared'
 import type { Household } from '@/lib/shared/types'
 import { InviteCard } from '../../_components/invite-card'
@@ -66,70 +70,78 @@ export function SettingsForm({ household }: { household: Household }) {
 
       {/* Name */}
       <section className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-foreground">{t('settings.name_label')}</label>
+        <Label htmlFor="household-name">{t('settings.name_label')}</Label>
         <div className="flex gap-2">
-          <input
+          <Input
+            id="household-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={50}
-            className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="flex-1"
           />
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             onClick={saveName}
-            disabled={busy || !name.trim()}
-            className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+            loading={busy}
+            disabled={!name.trim()}
+            className="w-auto shrink-0 px-4"
           >
             OK
-          </button>
+          </Button>
         </div>
       </section>
 
       {/* Members */}
       <section className="flex flex-col gap-2">
-        <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-text-soft">
           {t('settings.members_title')}
         </h2>
-        <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
-          {household.members.map((m) => (
-            <li key={m.userId} className="flex items-center justify-between p-3 text-sm">
-              <span>{m.fullName}</span>
-              <span className="text-xs text-muted-foreground">
-                {m.isCreator ? t('settings.creator_badge') : t('settings.member_badge')}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <Card asChild>
+          <ul className="flex flex-col divide-y divide-border-soft">
+            {household.members.map((m) => (
+              <li key={m.userId} className="flex items-center justify-between p-4 text-sm">
+                <span className="font-medium text-text">{m.fullName}</span>
+                <span className="text-xs text-text-muted">
+                  {m.isCreator ? t('settings.creator_badge') : t('settings.member_badge')}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
       </section>
 
       {/* Default split */}
       {twoMembers && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-text-soft">
             {t('settings.default_split_title')}
           </h2>
-          <p className="text-xs text-muted-foreground">{t('settings.default_split_hint')}</p>
+          <p className="text-xs text-text-muted">{t('settings.default_split_hint')}</p>
           <div className="flex items-center gap-3">
-            <span className="text-sm">{nameOf(household.members[0].userId)}</span>
-            <input
+            <span className="text-sm text-text">{nameOf(household.members[0].userId)}</span>
+            <Input
               type="number"
               min={1}
               max={99}
               value={firstPct}
               onChange={(e) => setFirstPct(Math.max(1, Math.min(99, Number(e.target.value) || 1)))}
-              className="w-20 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="w-20"
             />
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-text-muted">
               · {nameOf(household.members[1].userId)} {100 - firstPct}%
             </span>
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={saveSplit}
-              disabled={busy}
-              className="ml-auto rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+              loading={busy}
+              className="ml-auto w-auto shrink-0 px-4"
             >
               OK
-            </button>
+            </Button>
           </div>
         </section>
       )}
@@ -137,7 +149,7 @@ export function SettingsForm({ household }: { household: Household }) {
       {/* Invite */}
       {!twoMembers && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-text-soft">
             {t('invite.title')}
           </h2>
           <InviteCard />
@@ -146,14 +158,15 @@ export function SettingsForm({ household }: { household: Household }) {
 
       {/* Leave */}
       <section className="flex flex-col gap-2 border-t border-border pt-6">
-        <button
+        <Button
           type="button"
+          variant="destructive"
           onClick={onLeave}
-          disabled={busy}
-          className="w-fit rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-600 disabled:opacity-50"
+          loading={busy}
+          className="w-auto self-start px-4"
         >
           {t('settings.leave_action')}
-        </button>
+        </Button>
       </section>
     </div>
   )

@@ -4,9 +4,15 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Alert } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import { assignSettlementAccount } from '@/app/_actions/shared'
 import type { PendingSettlement } from '@/lib/shared/types'
 import { fmtMoney } from './money'
+
+// Native <select> styled to match the Input primitive (no Select primitive yet).
+const SELECT_CLASS =
+  'flex h-11 w-full rounded-[var(--radius-md)] border border-border bg-card px-3 py-2 text-sm text-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
 
 type Props = {
   settlement: PendingSettlement
@@ -40,36 +46,40 @@ export function PendingSettlementCard({ settlement, accounts }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4">
-      <p className="text-sm font-medium text-foreground">
+    <div className="flex flex-col gap-3 rounded-2xl border border-warning/30 bg-warning-soft p-4 shadow-sm">
+      <p className="text-sm font-semibold text-text">
         {t('settle.pending_from', {
           amount: fmtMoney(settlement.amount, settlement.currencyCode),
           name: settlement.fromName,
         })}
       </p>
       {error && <Alert variant="error">{error}</Alert>}
-      <label className="text-xs font-medium text-muted-foreground">
-        {t('settle.receiver_account_label')}
-      </label>
-      <select
-        value={accountId}
-        onChange={(e) => setAccountId(e.target.value)}
-        className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-      >
-        {accounts.map((a) => (
-          <option key={a.id} value={a.id}>
-            {a.name}
-          </option>
-        ))}
-      </select>
-      <button
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={`pending-account-${settlement.id}`} className="text-xs text-text-muted">
+          {t('settle.receiver_account_label')}
+        </Label>
+        <select
+          id={`pending-account-${settlement.id}`}
+          value={accountId}
+          onChange={(e) => setAccountId(e.target.value)}
+          className={SELECT_CLASS}
+        >
+          {accounts.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <Button
         type="button"
         onClick={onConfirm}
-        disabled={submitting || !accountId}
-        className="inline-flex w-fit items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        loading={submitting}
+        disabled={!accountId}
+        className="w-auto self-start px-4"
       >
         {t('settle.receiver_confirm')}
-      </button>
+      </Button>
     </div>
   )
 }

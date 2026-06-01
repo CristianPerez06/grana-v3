@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Copy, Share2 } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import { createInvite } from '@/app/_actions/shared'
 
 export function InviteCard() {
@@ -55,14 +56,9 @@ export function InviteCard() {
     return (
       <div className="flex flex-col gap-2">
         {error && <Alert variant="error">{error}</Alert>}
-        <button
-          type="button"
-          onClick={generate}
-          disabled={busy}
-          className="w-fit rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-        >
+        <Button type="button" onClick={generate} loading={busy} className="w-auto self-start px-4">
           {t('invite.generate_action')}
-        </button>
+        </Button>
       </div>
     )
   }
@@ -70,38 +66,41 @@ export function InviteCard() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
-        <code className="flex-1 rounded-md border border-border bg-muted px-3 py-2 text-center font-mono text-base tracking-widest">
+        <code className="flex-1 rounded-[var(--radius-md)] border border-border bg-border-soft px-3 py-2.5 text-center font-mono text-base tracking-widest text-text">
           {code}
         </code>
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           onClick={copy}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted"
+          className="w-auto shrink-0 px-3"
         >
           <Copy className="size-4" aria-hidden />
           {copied ? t('invite.copied') : t('invite.copy_action')}
-        </button>
+        </Button>
       </div>
       <div className="flex gap-2">
-        <button
+        <Button
           type="button"
           onClick={() =>
             window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank')
           }
-          className="inline-flex items-center gap-1.5 rounded-md bg-[#25D366] px-4 py-2 text-sm font-medium text-white"
+          className="w-auto px-4 bg-[#25D366] text-white hover:bg-[#1fb855] active:bg-[#1fb855]"
         >
           {t('invite.whatsapp_action')}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="secondary"
           onClick={share}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
+          className="w-auto px-4"
         >
           <Share2 className="size-4" aria-hidden />
           {t('invite.share_action')}
-        </button>
+        </Button>
       </div>
-      <p className="text-xs text-muted-foreground">{t('invite.hint')}</p>
+      <p className="text-xs text-text-muted">{t('invite.hint')}</p>
     </div>
   )
 }

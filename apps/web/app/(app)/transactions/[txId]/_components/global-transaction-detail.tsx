@@ -373,12 +373,12 @@ export const GlobalTransactionDetail = ({
       <TxContextNote copy={contextCopy} />
 
       {sharedInfo && (
-        <div className="mx-4 flex flex-col gap-1 rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm">
-          <div className="flex items-center gap-2 font-medium text-foreground">
-            <Users size={16} className="text-muted-foreground" aria-hidden />
+        <div className="mx-4 flex flex-col gap-1 rounded-xl border border-emerald/20 bg-emerald-soft px-3 py-2.5 text-sm">
+          <div className="flex items-center gap-2 font-semibold text-text">
+            <Users size={16} className="text-emerald-deep" aria-hidden />
             {tShared('split.shared_label')}
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-text-muted">
             {tShared('dashboard.your_share', {
               amount:
                 movement.currency_code === 'ARS'
