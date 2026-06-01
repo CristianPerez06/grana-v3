@@ -27,8 +27,12 @@ export type CreditCardSummary = {
   network_id: string | null
   other_network_name: string | null
   institution_id: string | null
+  color_key: string | null
+  icon_key: string | null
   created_at: string
   currencies: Array<{ currency_code: string; is_active: boolean }>
+  /** Count of active installment purchases (parents with ≥1 pending child). */
+  activeInstallmentsCount: number
   activePeriod: (CardPeriodWithPayment & {
     pendingAmountARS: number
     pendingAmountUSD: number
@@ -63,7 +67,7 @@ export type CardPeriodDetail = CardPeriodWithPayment & {
     fx_rate_to_ars: number | null
     received_at: string | null
     cancelled_at: string | null
-    category?: { name: string } | null
+    category?: { name: string; icon: string | null; color: string | null } | null
     subcategory?: { name: string } | null
   }>
 }
@@ -258,7 +262,7 @@ export async function getCreditCards(
 
   let query = supabase
     .from('accounts')
-    .select('id, name, type, is_active, credit_limit, network_id, other_network_name, institution_id, created_at, currencies:account_currencies(currency_code, is_active)')
+    .select('id, name, type, is_active, credit_limit, network_id, other_network_name, institution_id, color_key, icon_key, created_at, currencies:account_currencies(currency_code, is_active)')
     .eq('type', 'credit')
     .order('created_at', { ascending: true })
 
@@ -273,14 +277,36 @@ export async function getCreditCards(
   const cardIds = cards.map((c) => c.id)
   const today = getTodayAR()
 
-  // Load all periods for all cards
-  const { data: allPeriods, error: periodsError } = await supabase
-    .from('card_periods')
-    .select('*')
-    .in('account_id', cardIds)
-    .order('start_date', { ascending: true })
+  // Load all periods for all cards + active installment children (per card).
+  // An "active installment purchase" = a parent (is_parent=true) with at least
+  // one pending child. Children carry account_id=card and parent_id=parent.
+  const [periodsResult, installmentChildrenResult] = await Promise.all([
+    supabase
+      .from('card_periods')
+      .select('*')
+      .in('account_id', cardIds)
+      .order('start_date', { ascending: true }),
+    supabase
+      .from('transactions')
+      .select('account_id, parent_id')
+      .in('account_id', cardIds)
+      .eq('is_parent', false)
+      .eq('status', 'pending')
+      .not('parent_id', 'is', null),
+  ])
 
+  const { data: allPeriods, error: periodsError } = periodsResult
   if (periodsError) throw periodsError
+  if (installmentChildrenResult.error) throw installmentChildrenResult.error
+
+  // Distinct parents with pending children, grouped by card.
+  const installmentParentsByCard = new Map<string, Set<string>>()
+  for (const child of installmentChildrenResult.data ?? []) {
+    if (!child.account_id || !child.parent_id) continue
+    const set = installmentParentsByCard.get(child.account_id) ?? new Set<string>()
+    set.add(child.parent_id)
+    installmentParentsByCard.set(child.account_id, set)
+  }
 
   const periodIds = (allPeriods ?? []).map((p) => p.id)
 
@@ -368,9 +394,212 @@ export async function getCreditCards(
     return {
       ...card,
       type: 'credit' as const,
+      activeInstallmentsCount: installmentParentsByCard.get(card.id)?.size ?? 0,
       activePeriod: activePeriodWithMeta,
     }
   })
+}
+
+// ─── Listing-level aggregate: "A pagar este mes" + próximos vencimientos ──────
+
+export type UpcomingDue = {
+  cardId: string
+  cardName: string
+  /** Statement close date (ISO). */
+  endDate: string
+  /** Statement due date (ISO). */
+  dueDate: string
+  amountARS: number
+  amountUSD: number
+  /** Derived alert from days until due (red ≤3, amber ≤7, none otherwise). */
+  alert: CardPeriodAlert
+  /** Whether this statement already closed and is unpaid (counts toward "a pagar"). */
+  isToPay: boolean
+}
+
+export type CardsMonthSummary = {
+  /** Sum of all cards' "a pagar" (closed/overdue, unpaid) statements, per currency. */
+  toPayARS: number
+  toPayUSD: number
+  /** Whether any active card has a USD ledger (drives showing the USD line). */
+  hasUSD: boolean
+  /** Whether at least one card has a statement to pay this month. */
+  hasToPay: boolean
+  /** Closest upcoming due date among all active cards, or null. */
+  nextDue: UpcomingDue | null
+  /** Next due date of EVERY active card with an active period, by due date asc. */
+  upcoming: UpcomingDue[]
+}
+
+/**
+ * Listing-level summary for the cards hero. Two distinct concepts:
+ *
+ * - "A pagar este mes" (`toPayARS`/`toPayUSD`): the sum of statements that
+ *   already CLOSED and are unpaid (`closed`/`overdue` with charges). ARS and
+ *   USD are summed SEPARATELY, never converted (Bimoneda).
+ * - "Próximos vencimientos" (`upcoming`): the next due date of EVERY active
+ *   card that has an active period — including cards that are up to date (only
+ *   accruing in the open statement). Each row is flagged `isToPay` so the UI
+ *   can distinguish a statement already due from one still open.
+ *
+ * Built on the same per-card data as `getCreditCards` to avoid an N+1.
+ */
+export async function getCardsMonthSummary(): Promise<CardsMonthSummary> {
+  const cards = await getCreditCards({ includeArchived: false })
+  const today = getTodayAR()
+  const todayStr = formatDateISO(today)
+
+  const upcoming: UpcomingDue[] = []
+  let toPayARS = 0
+  let toPayUSD = 0
+  let hasUSD = false
+  let hasToPay = false
+
+  for (const card of cards) {
+    if (card.currencies.some((c) => c.currency_code === 'USD' && c.is_active)) {
+      hasUSD = true
+    }
+    const period = card.activePeriod
+    if (!period || period.has_payment) continue
+
+    // A statement counts as "a pagar" once it has closed and remains unpaid.
+    const isToPay =
+      (period.end_date < todayStr || period.due_date < todayStr) && period.tx_count > 0
+
+    if (isToPay) {
+      hasToPay = true
+      toPayARS = sumMoneyValues([toPayARS, period.pendingAmountARS])
+      toPayUSD = sumMoneyValues([toPayUSD, period.pendingAmountUSD])
+    }
+
+    // Every active card with an active period contributes its next due date.
+    upcoming.push({
+      cardId: card.id,
+      cardName: card.name,
+      endDate: period.end_date,
+      dueDate: period.due_date,
+      amountARS: period.pendingAmountARS,
+      amountUSD: period.pendingAmountUSD,
+      alert: period.alert,
+      isToPay,
+    })
+  }
+
+  upcoming.sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+
+  return {
+    toPayARS,
+    toPayUSD,
+    hasUSD,
+    hasToPay,
+    nextDue: upcoming[0] ?? null,
+    upcoming,
+  }
+}
+
+// ─── Active installments (cuotas en curso) per card ───────────────────────────
+
+export type ActiveInstallment = {
+  /** Parent transaction id. */
+  parentId: string
+  /** Purchase name (description or category fallback). */
+  name: string
+  /** Category name, or null. */
+  categoryName: string | null
+  /** Purchase date (the parent's accounting date, ISO). */
+  purchaseDate: string
+  /** Installments already paid. */
+  paidCount: number
+  /** Total installments. */
+  total: number
+  /** Per-installment amount (ARS). */
+  perInstallment: number
+  /** Remaining amount (sum of pending children, ARS). */
+  remaining: number
+  /** Next pending installment due date (ISO), or null. */
+  nextDueDate: string | null
+}
+
+export type ActiveInstallmentsResult = {
+  items: ActiveInstallment[]
+  /** Aggregate remaining across all active installment purchases (ARS). */
+  totalRemaining: number
+}
+
+/**
+ * Active installment purchases for a card: every parent (`is_parent=true`) with
+ * at least one pending child on this card. Installments are ARS-only
+ * (`I-CRED-9`). For each purchase, derive paid/total, per-installment amount,
+ * remaining (sum of pending children) and the next pending due date.
+ */
+export async function getActiveInstallments(
+  accountId: string,
+): Promise<ActiveInstallmentsResult> {
+  const supabase = await createClient()
+
+  // All installment children on this card (parent_id set), with their parent's
+  // identity fields. Children carry account_id=card; the parent is off-ledger.
+  const { data: children, error } = await supabase
+    .from('transactions')
+    .select(
+      'id, parent_id, amount, status, date, due_date, installment_n, installments_total, parent:transactions!parent_id(id, description, date, category:categories(name))',
+    )
+    .eq('account_id', accountId)
+    .eq('is_parent', false)
+    .not('parent_id', 'is', null)
+    .eq('currency_code', 'ARS')
+
+  if (error) throw error
+  if (!children || children.length === 0) return { items: [], totalRemaining: 0 }
+
+  type Child = (typeof children)[number]
+  const byParent = new Map<string, Child[]>()
+  for (const child of children) {
+    if (!child.parent_id) continue
+    const list = byParent.get(child.parent_id) ?? []
+    list.push(child)
+    byParent.set(child.parent_id, list)
+  }
+
+  const items: ActiveInstallment[] = []
+  for (const [parentId, group] of byParent) {
+    // Only "active" purchases: at least one pending child remains.
+    const pending = group.filter((c) => c.status === 'pending')
+    if (pending.length === 0) continue
+
+    const parent = (group[0].parent as unknown as {
+      description: string | null
+      date: string
+      category: { name: string } | null
+    } | null)
+    const paidCount = group.filter((c) => c.status === 'paid').length
+    const total = group[0].installments_total ?? group.length
+    const perInstallment = Number(group[0].amount)
+    const remaining = sumMoneyValues(pending.map((c) => c.amount))
+    const nextDueDate =
+      [...pending]
+        .sort((a, b) => (a.installment_n ?? 0) - (b.installment_n ?? 0))[0]?.due_date ?? null
+
+    items.push({
+      parentId,
+      name: parent?.description ?? parent?.category?.name ?? 'Compra en cuotas',
+      categoryName: parent?.category?.name ?? null,
+      purchaseDate: parent?.date ?? group[0].date,
+      paidCount,
+      total,
+      perInstallment,
+      remaining,
+      nextDueDate,
+    })
+  }
+
+  // Most recent purchase first.
+  items.sort((a, b) => b.purchaseDate.localeCompare(a.purchaseDate))
+
+  return {
+    items,
+    totalRemaining: sumMoneyValues(items.map((i) => i.remaining)),
+  }
 }
 
 // ─── Task 5.2: getCreditCardDetail ────────────────────────────────────────────
@@ -423,7 +652,7 @@ export async function getCardPeriods(accountId: string): Promise<CardPeriodDetai
   // Load transactions grouped by period
   const { data: txRows, error: txError } = await supabase
     .from('transactions')
-    .select('id, type, card_period_id, amount, currency_code, date, status, description, category_id, is_parent, installment_n, installments_total, fx_rate_to_ars, received_at, cancelled_at, category:categories(name), subcategory:subcategories(name)')
+    .select('id, type, card_period_id, amount, currency_code, date, status, description, category_id, is_parent, installment_n, installments_total, fx_rate_to_ars, received_at, cancelled_at, category:categories(name, icon, color), subcategory:subcategories(name)')
     .in('card_period_id', periodIds)
     .eq('is_parent', false)
     .order('date', { ascending: false })
@@ -541,7 +770,7 @@ export async function getCardPeriodDetail(periodId: string): Promise<CardPeriodD
     getCardPeriodsWithStatus(period.account_id),
     supabase
       .from('transactions')
-      .select('id, type, card_period_id, amount, currency_code, date, status, description, category_id, is_parent, installment_n, installments_total, fx_rate_to_ars, received_at, cancelled_at, category:categories(name), subcategory:subcategories(name)')
+      .select('id, type, card_period_id, amount, currency_code, date, status, description, category_id, is_parent, installment_n, installments_total, fx_rate_to_ars, received_at, cancelled_at, category:categories(name, icon, color), subcategory:subcategories(name)')
       .eq('card_period_id', periodId)
       .eq('is_parent', false)
       .order('date', { ascending: false })

@@ -1,3 +1,4 @@
+import { Slot } from '@radix-ui/react-slot'
 import { forwardRef, type HTMLAttributes } from 'react'
 import type {
   CardContentProps as ContractCardContentProps,
@@ -14,10 +15,15 @@ type DivProps<T extends HTMLElement = HTMLDivElement> = Omit<
   'className' | 'children'
 >
 
-// `variant` is a web-local extension (intersection over the shared contract):
-// it stays out of `@grana/ui-contracts` so mobile is not forced to implement
-// it. Promote it to the contract when mobile needs the same surface variant.
-type CardProps = ContractCardProps & { variant?: 'default' | 'emerald' } & DivProps
+// `variant` and `asChild` are web-local extensions (intersection over the
+// shared contract): they stay out of `@grana/ui-contracts` so mobile is not
+// forced to implement them. `asChild` lets a clickable surface (a `<Link>` or
+// `<button>`) BE the card shell without re-typing `rounded-* border bg-card`
+// inline — the action twin of composing `Card`. Promote when mobile needs it.
+type CardProps = ContractCardProps & {
+  variant?: 'default' | 'emerald'
+  asChild?: boolean
+} & DivProps
 type CardHeaderProps = ContractCardHeaderProps & DivProps
 type CardTitleProps = ContractCardTitleProps & DivProps<HTMLHeadingElement>
 type CardDescriptionProps = ContractCardDescriptionProps &
@@ -35,17 +41,20 @@ const CARD_VARIANTS: Record<NonNullable<CardProps['variant']>, string> = {
 }
 
 const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ className, variant = 'default', ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn(
-        'rounded-2xl border text-foreground shadow-sm',
-        CARD_VARIANTS[variant],
-        className,
-      )}
-      {...props}
-    />
-  ),
+  ({ className, variant = 'default', asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : 'div'
+    return (
+      <Comp
+        ref={ref}
+        className={cn(
+          'rounded-2xl border text-foreground shadow-sm',
+          CARD_VARIANTS[variant],
+          className,
+        )}
+        {...props}
+      />
+    )
+  },
 )
 Card.displayName = 'Card'
 

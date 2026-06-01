@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>grana · Tarjeta — Detalle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #F6F7F9; --card: #FFFFFF; --navy: #0B1A2B; --muted: #6B7683; --border: #E6EAEF;
+    --emerald: #10B981; --emerald-deep: #0E9E6E; --terracota: #B56A5A; --slate: #3A6B8A;
+    --brand: #15B981; --amber: #9A7B22; --cc-accent: #F4A024;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #DDE1E6; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: var(--navy); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  .tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+
+  .screen { width: 1440px; min-height: 1024px; margin: 0 auto; background: var(--bg); display: grid; grid-template-columns: 300px 1fr; position: relative; }
+
+  /* Sidebar */
+  .sidebar { background: var(--card); border-right: 1px solid var(--border); padding: 36px 24px 28px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; min-height: 1024px; }
+  .brand { display: flex; align-items: center; gap: 14px; padding: 0 8px 0 4px; margin-bottom: 44px; }
+  .brand .mark { width: 44px; height: 44px; border-radius: 13px; background: var(--brand); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 26px; line-height: 1; letter-spacing: -0.03em; }
+  .brand .word { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .nav { display: flex; flex-direction: column; gap: 4px; }
+  .nav a { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 12px; color: var(--muted); text-decoration: none; font-size: 16px; font-weight: 600; transition: background .15s, color .15s; }
+  .nav a:hover { background: #F1F3F6; color: var(--navy); }
+  .nav a.active { background: var(--navy); color: #fff; }
+  .nav a svg { width: 20px; height: 20px; flex: none; }
+  .sidebar .spacer { flex: 1; }
+  .user { display: flex; align-items: center; gap: 13px; padding: 14px 12px 0; border-top: 1px solid var(--border); margin-top: 8px; }
+  .user .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--slate); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+  .user .name { font-size: 15px; font-weight: 700; line-height: 1.2; }
+  .user .sub { font-size: 13px; color: var(--muted); font-weight: 500; }
+
+  /* Main */
+  .main { padding: 32px 0 100px; }
+  .content { max-width: 1040px; margin: 0 auto; padding: 0 40px; }
+
+  .back { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 600; padding: 6px 10px 6px 6px; border-radius: 9px; transition: background .14s, color .14s; margin-bottom: 18px; }
+  .back:hover { background: #F1F3F6; color: var(--navy); }
+  .back svg { width: 16px; height: 16px; }
+
+  .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+  .ph-left { display: flex; align-items: center; gap: 16px; }
+  .ph-mark { width: 54px; height: 54px; border-radius: 15px; flex: none; background: var(--cc-accent); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 24px; letter-spacing: -0.02em; }
+  .ph-title-row { display: flex; align-items: center; gap: 13px; }
+  .ph-title-row h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; white-space: nowrap; }
+  .ph-sub { margin-top: 9px; color: var(--muted); font-size: 14.5px; font-weight: 500; }
+
+  .estado { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
+  .estado .e-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .estado.due { background: #F6E7E2; color: #9A4B38; } .estado.due .e-dot { background: #B56A5A; }
+  .estado.soon { background: #FBF3DE; color: var(--amber); } .estado.soon .e-dot { background: #C99A2E; }
+  .estado.ok { background: #DEF1E7; color: var(--emerald-deep); } .estado.ok .e-dot { background: var(--emerald); }
+
+  .switcher { display: inline-flex; gap: 4px; background: #EEF1F5; border-radius: 12px; padding: 4px; flex: none; }
+  .switcher button { display: inline-flex; align-items: center; gap: 8px; border: none; cursor: pointer; font-family: inherit; font-size: 13.5px; font-weight: 700; color: var(--muted); padding: 8px 14px; border-radius: 9px; background: transparent; white-space: nowrap; transition: background .15s, color .15s; }
+  .switcher button .sw-dot { width: 9px; height: 9px; border-radius: 50%; }
+  .switcher button.on { background: var(--card); color: var(--navy); box-shadow: 0 1px 3px rgba(11,26,43,.1); }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 22px; }
+
+  /* ===== Timeline ciclo de vida ===== */
+  .timeline { display: flex; align-items: flex-start; margin-bottom: 22px; padding: 2px 4px; }
+  .tl-step { display: flex; flex-direction: column; gap: 6px; flex: none; cursor: pointer; outline: none; }
+  .tl-step .tl-dot { width: 13px; height: 13px; border-radius: 50%; background: #D7DCE3; border: 3px solid var(--bg); box-shadow: 0 0 0 1px #D7DCE3; transition: transform .15s; }
+  .tl-step:hover .tl-dot { transform: scale(1.15); }
+  .tl-step.done .tl-dot { background: var(--emerald); box-shadow: 0 0 0 1px var(--emerald); }
+  .tl-step.pay .tl-dot { background: var(--terracota); box-shadow: 0 0 0 1px var(--terracota); }
+  .tl-step.curso .tl-dot { background: var(--cc-accent); box-shadow: 0 0 0 1px var(--cc-accent); }
+  .tl-step.sel .tl-dot { box-shadow: 0 0 0 1px currentColor, 0 0 0 5px rgba(0,0,0,.06); }
+  .tl-cap { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .tl-step.pay .tl-cap { color: var(--terracota); }
+  .tl-step.curso .tl-cap { color: var(--cc-accent); }
+  .tl-date { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .tl-line { height: 2px; background: #E0E4E9; flex: 1; margin: 6px 4px 0; min-width: 40px; }
+  .tl-line.green { background: var(--emerald); }
+
+  /* ===== A PAGAR · hero ===== */
+  .pay-hero { padding: 28px 32px 30px; margin-bottom: 16px; background: linear-gradient(180deg, #FBF1ED 0%, #FFFFFF 100%); border: 1px solid #EEDAD2; box-shadow: inset 0 0 0 2px var(--terracota); cursor: pointer; outline: none; }
+  .pay-hero.sel { box-shadow: inset 0 0 0 2px var(--terracota), 0 10px 28px -18px rgba(154,75,56,.5); }
+  .ph-grid { display: grid; grid-template-columns: 1fr auto; gap: 30px; align-items: center; }
+  .ph-eyebrow { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .ph-eyebrow .phe-ic { width: 30px; height: 30px; border-radius: 9px; background: #F1D9D0; color: #9A4B38; display: grid; place-items: center; }
+  .ph-eyebrow .phe-ic svg { width: 16px; height: 16px; }
+  .ph-eyebrow .phe-label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; color: #9A4B38; white-space: nowrap; }
+  .pay-big { font-size: 56px; font-weight: 800; letter-spacing: -0.045em; line-height: 1; color: #5E2B1F; }
+  .pay-big .pb-usd { font-size: 18px; font-weight: 700; color: #9A4B38; margin-left: 10px; letter-spacing: -0.02em; }
+  .pay-sub { font-size: 14.5px; font-weight: 600; color: #9A6457; margin-top: 14px; }
+  .pay-sub b { color: #6E3325; font-weight: 800; }
+  .pay-right { display: flex; flex-direction: column; align-items: flex-end; gap: 14px; flex: none; }
+  .pay-countdown { text-align: right; }
+  .pay-countdown .pc-num { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; color: #6E3325; }
+  .pay-countdown .pc-lbl { font-size: 12.5px; font-weight: 700; color: #9A6457; margin-top: 4px; }
+  .btn-pay-lg { background: var(--terracota); color: #fff; border: none; cursor: pointer; font-family: inherit; font-size: 15.5px; font-weight: 700; padding: 14px 30px; border-radius: 12px; white-space: nowrap; transition: opacity .15s; }
+  .btn-pay-lg:hover { opacity: .9; }
+
+  /* ===== EN CURSO · card con cuerpo ===== */
+  .curso { padding: 24px 28px 26px; margin-bottom: 16px; cursor: pointer; outline: none; transition: box-shadow .16s; }
+  .card.curso.sel { box-shadow: inset 0 0 0 2px var(--cc-accent); }
+  .card.curso.is-hero { box-shadow: inset 0 0 0 2px var(--cc-accent); }
+  .curso-grid { display: grid; grid-template-columns: 1fr 290px; gap: 32px; align-items: center; }
+  .curso-top { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .ct-label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; color: var(--cc-accent); }
+  .ct-live { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; color: var(--muted); background: #F1F3F6; padding: 4px 11px; border-radius: 999px; }
+  .ct-live .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--emerald); box-shadow: 0 0 0 0 rgba(16,185,129,.5); animation: pulse 2s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16,185,129,.45);} 70% { box-shadow: 0 0 0 7px rgba(16,185,129,0);} 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0);} }
+  .curso-amt { display: flex; align-items: baseline; gap: 4px; }
+  .curso-amt .ca-big { font-size: 40px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+  .card.curso.is-hero .curso-amt .ca-big { font-size: 52px; }
+  .curso-amt .ca-usd { font-size: 16px; font-weight: 700; color: var(--muted); margin-left: 10px; }
+  .curso-amt .ca-usd b { color: var(--navy); }
+  .curso-acc { font-size: 14px; font-weight: 500; color: var(--muted); margin-top: 11px; }
+  .curso-stats { display: flex; gap: 24px; margin-top: 18px; }
+  .cs-v { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; }
+  .cs-l { font-size: 12.5px; color: var(--muted); font-weight: 500; margin-top: 3px; }
+  .ciclo { background: #F8FAFB; border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; }
+  .cy-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+  .cy-cierra { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; margin-top: 8px; }
+  .cy-dias { font-size: 13px; font-weight: 600; color: var(--cc-accent); margin-top: 2px; }
+  .cy-track { height: 7px; background: #E6EAEF; border-radius: 4px; overflow: hidden; margin: 16px 0 8px; }
+  .cy-fill { height: 100%; border-radius: 4px; background: var(--cc-accent); }
+  .cy-ends { display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 600; color: var(--muted); }
+
+  /* ===== PRÓXIMO · mini ===== */
+  .prox { display: flex; align-items: center; gap: 16px; padding: 16px 22px; border-radius: 16px; border: 1px dashed var(--border); margin-bottom: 26px; cursor: pointer; outline: none; transition: background .15s, border-color .15s; }
+  .prox:hover { background: #F8FAFB; border-color: #D7DCE3; }
+  .prox.sel { border-style: solid; border-color: var(--cc-accent); box-shadow: inset 0 0 0 1px var(--cc-accent); }
+  .px-label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); flex: none; }
+  .px-info { font-size: 13.5px; color: var(--muted); font-weight: 500; }
+  .px-info b { color: var(--navy); font-weight: 700; }
+  .px-amt { margin-left: auto; font-size: 17px; font-weight: 800; letter-spacing: -0.02em; flex: none; }
+  .px-amt.zero { color: #C0C7D0; }
+  .px-chev { color: #C0C7D0; display: grid; place-items: center; flex: none; }
+  .px-chev svg { width: 16px; height: 16px; }
+
+  /* Límite */
+  .limit-card { padding: 18px 24px; margin-bottom: 28px; }
+  .limit-loaded .limit-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+  .limit-loaded .lt-label { font-size: 14px; font-weight: 600; color: var(--muted); }
+  .limit-loaded .lt-label b { color: var(--navy); font-weight: 700; }
+  .limit-loaded .lt-pct { font-size: 15px; font-weight: 800; }
+  .limit-bar { height: 9px; background: #EDF0F4; border-radius: 5px; overflow: hidden; }
+  .limit-bar .lb-fill { height: 100%; border-radius: 5px; background: var(--cc-accent); }
+  .limit-loaded .limit-disp { font-size: 13px; color: var(--muted); font-weight: 500; margin-top: 10px; }
+  .limit-loaded .limit-disp b { color: var(--emerald-deep); font-weight: 700; }
+  .limit-cta { display: flex; align-items: center; gap: 14px; }
+  .limit-cta .lc-ic { width: 42px; height: 42px; border-radius: 12px; background: #F1F3F6; color: var(--muted); display: grid; place-items: center; flex: none; }
+  .limit-cta .lc-ic svg { width: 21px; height: 21px; }
+  .limit-cta .lc-text { font-size: 14.5px; font-weight: 600; color: var(--navy); }
+  .limit-cta .lc-text span { color: var(--muted); font-weight: 500; }
+  .limit-cta .lc-btn { margin-left: auto; flex: none; background: var(--card); color: var(--navy); border: 1px solid var(--border); cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 700; padding: 10px 20px; border-radius: 10px; transition: background .15s, border-color .15s; }
+  .limit-cta .lc-btn:hover { background: #F1F3F6; border-color: #D7DCE3; }
+
+  /* Tabs */
+  .tabs { display: inline-flex; gap: 4px; background: #EEF1F5; border-radius: 12px; padding: 4px; margin-bottom: 20px; }
+  .tabs button { border: none; cursor: pointer; font-family: inherit; font-size: 14.5px; font-weight: 700; color: var(--muted); padding: 10px 20px; border-radius: 9px; background: transparent; transition: background .16s, color .16s; }
+  .tabs button:hover:not(.on) { color: var(--navy); }
+  .tabs button.on { background: var(--navy); color: #fff; }
+
+  .mov-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; padding: 0 2px; }
+  .mov-head h2 { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; }
+  .mov-head .mh-count { font-size: 14px; color: var(--muted); font-weight: 500; }
+
+  .day-sub { font-size: 13px; font-weight: 700; color: var(--muted); padding: 4px 4px 10px; letter-spacing: -0.01em; }
+  .tx-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 18px; }
+  .tx-row { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 16px; padding: 15px 20px; transition: background .12s; }
+  .tx-row:hover { background: #FAFBFC; }
+  .tx-row + .tx-row { border-top: 1px solid var(--border); }
+  .tx-icon { width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; font-size: 19px; line-height: 1; flex: none; }
+  .tx-mid { min-width: 0; }
+  .tx-title-row { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  .tx-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+  .tx-cap { font-size: 13.5px; color: var(--muted); font-weight: 500; margin-top: 3px; }
+  .tx-cap .sub-sep { color: #AEB6C0; margin: 0 5px; font-weight: 600; }
+  .tx-amt-wrap { text-align: right; }
+  .tx-amt { font-size: 17px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.15; }
+  .tx-amt.neg { color: var(--terracota); }
+  .tx-amt.usd { color: var(--navy); }
+  .tx-amt-sub { font-size: 12px; color: var(--muted); font-weight: 500; margin-top: 3px; letter-spacing: 0.02em; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; line-height: 1.3; white-space: nowrap; }
+  .chip.cuotas { background: #EEF1F5; color: var(--muted); }
+  .chip.recurrent { background: #E8F0F5; color: var(--slate); }
+  .ic-food { background: #F6EBDD; } .ic-subs { background: #ECE6F3; } .ic-home { background: #DEEAF3; }
+  .ic-market { background: #DEF1E7; } .ic-tech { background: #E1E9F2; } .ic-fuel { background: #F6E7E2; }
+  .ic-health { background: #E8F0F5; } .ic-shop { background: #F1ECE4; }
+
+  .empty { text-align: center; padding: 52px 20px; border: 1px dashed var(--border); border-radius: 16px; }
+  .empty .em-ic { width: 52px; height: 52px; border-radius: 15px; background: #EEF1F5; color: var(--muted); display: grid; place-items: center; margin: 0 auto 14px; }
+  .empty .em-ic svg { width: 24px; height: 24px; }
+  .empty .em-title { font-size: 16px; font-weight: 700; }
+  .empty .em-sub { font-size: 14px; color: var(--muted); font-weight: 500; margin-top: 6px; line-height: 1.45; max-width: 400px; margin-left: auto; margin-right: auto; }
+
+  /* Cuotas cronograma */
+  .cuota-intro { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; background: #F8FAFB; border: 1px solid var(--border); border-radius: 14px; margin-bottom: 18px; }
+  .cuota-intro .ci-text { font-size: 14px; color: var(--muted); font-weight: 500; line-height: 1.4; }
+  .cuota-intro .ci-text b { color: var(--navy); font-weight: 700; }
+  .cuota-intro .ci-amt { text-align: right; flex: none; }
+  .cuota-intro .ci-amt .ca-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+  .cuota-intro .ci-amt .ca-val { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; margin-top: 4px; }
+  .cuota-list { display: flex; flex-direction: column; gap: 14px; }
+  .cuota-item { border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; }
+  .cuota-top { display: flex; align-items: center; gap: 14px; }
+  .cuota-icon { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; flex: none; }
+  .cuota-name-wrap { flex: 1; min-width: 0; }
+  .cuota-name { font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .cuota-name-sub { font-size: 13px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+  .cuota-progress-num { font-size: 14px; font-weight: 800; text-align: right; flex: none; }
+  .cuota-progress-num span { color: var(--muted); font-weight: 600; }
+  .cuota-dots { display: flex; gap: 5px; margin: 16px 0 14px; flex-wrap: wrap; }
+  .cuota-dots .qd { height: 7px; flex: 1; min-width: 8px; border-radius: 4px; background: #E6EAEF; }
+  .cuota-dots .qd.paid { background: var(--cc-accent); }
+  .cuota-dots .qd.next { background: var(--cc-accent); opacity: .4; }
+  .cuota-foot { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .cuota-foot .cf-item .cf-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .cuota-foot .cf-item .cf-val { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; margin-top: 4px; }
+  .cuota-foot .cf-item .cf-val.restante { color: var(--terracota); }
+</style>
+</head>
+<body>
+  <div class="screen">
+    <aside class="sidebar">
+      <div class="brand"><div class="mark">g</div><div class="word">grana</div></div>
+      <nav class="nav">
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Inicio</a>
+        <a href="Grana - Movimientos v3.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="17" x2="18" y2="17"/></svg>Movimientos</a>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Cuentas</a>
+        <a href="Grana - Tarjetas.html" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2.5"/><line x1="3" y1="11" x2="21" y2="11"/><line x1="7" y1="15" x2="11" y2="15"/></svg>Tarjetas</a>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18z"/></svg>Categorías</a>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>Recurrencias</a>
+      </nav>
+      <div class="spacer"></div>
+      <div class="user"><div class="avatar">CA</div><div><div class="name">Cristian</div><div class="sub">Configuración</div></div></div>
+    </aside>
+
+    <main class="main">
+      <div class="content">
+        <a href="Grana - Tarjetas.html" class="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Tarjetas</a>
+
+        <header class="page-head">
+          <div class="ph-left">
+            <div class="ph-mark" id="phMark">G</div>
+            <div>
+              <div class="ph-title-row"><h1 id="phName">Visa Galicia</h1><span class="estado" id="phEstado"></span></div>
+              <div class="ph-sub" id="phSub">Banco Galicia</div>
+            </div>
+          </div>
+          <div class="switcher" id="switcher">
+            <button data-card="visa" class="on"><span class="sw-dot" style="background:#F4A024"></span>Visa Galicia</button>
+            <button data-card="amex"><span class="sw-dot" style="background:#3A6B8A"></span>Amex</button>
+            <button data-card="naranja"><span class="sw-dot" style="background:#8C7AA0"></span>Naranja X</button>
+          </div>
+        </header>
+
+        <div class="timeline" id="timeline"></div>
+        <div id="heroes"></div>
+
+        <section class="card limit-card" id="limitCard"></section>
+
+        <div class="tabs" id="tabs"></div>
+        <div class="mov-head" id="movHead"></div>
+        <div id="pane"></div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+  (function () {
+    const CARDS = {
+      visa: {
+        name: 'Visa Galicia', bank: 'Banco Galicia', accent: '#F4A024', mark: 'G',
+        estado: { cls: 'due', txt: 'Vence en 10 días' },
+        limit: { loaded: true, usado: '$ 1,22M', total: '$ 2M', pct: 61, disp: '$ 782K' },
+        apagar: {
+          amt: '$ 540.300', usd: 'US$ 9,99', cerro: '28/05', vence: '10/06', dias: 10,
+          groups: [
+            { day: 'Cierre del período · 28 de mayo', items: [
+              { ic: 'ic-home', emoji: '🛋️', name: 'Sofá Sofías', cap: 'Hogar › Muebles', chip: 'Cuota 1 de 3', amt: '−$ 180.000' },
+              { ic: 'ic-market', emoji: '🛒', name: 'Coto', cap: 'Supermercado › Almacén', amt: '−$ 48.500' },
+            ]},
+            { day: '20 – 24 de mayo', items: [
+              { ic: 'ic-fuel', emoji: '⛽', name: 'YPF Full', cap: 'Transporte › Combustible', amt: '−$ 32.000' },
+              { ic: 'ic-shop', emoji: '🎾', name: 'Decathlon', cap: 'Compras › Deporte', amt: '−$ 66.000' },
+              { ic: 'ic-food', emoji: '🛵', name: 'Rappi', cap: 'Comida y bebida › Delivery', amt: '−$ 24.000' },
+            ]},
+            { day: '8 – 15 de mayo', items: [
+              { ic: 'ic-tech', emoji: '💻', name: 'Notebook Lenovo', cap: 'Tecnología › Equipos', chip: 'Cuota 4 de 12', amt: '−$ 100.000' },
+              { ic: 'ic-subs', emoji: '🎧', name: 'Spotify Family', cap: 'Suscripciones › Streaming', chipR: 'Recurrente', amt: '−US$ 9,99', usd: true },
+              { ic: 'ic-health', emoji: '💊', name: 'Farmacity', cap: 'Salud › Farmacia', amt: '−$ 18.300' },
+              { ic: 'ic-shop', emoji: '📦', name: 'Mercado Libre', cap: 'Compras › Varios', amt: '−$ 43.500' },
+              { ic: 'ic-home', emoji: '💧', name: 'Aysa', cap: 'Servicios › Agua', amt: '−$ 28.000' },
+            ]},
+          ],
+        },
+        curso: {
+          amt: '$ 374.800', usd: null, cierra: '28/06', dias: 'en 28 días', cicloDia: 3, cicloTotal: 30, nConsumos: 6, enCuotas: '$ 280.000',
+          groups: [
+            { day: '29 – 31 de mayo', items: [
+              { ic: 'ic-home', emoji: '🛋️', name: 'Sofá Sofías', cap: 'Hogar › Muebles', chip: 'Cuota 2 de 3', amt: '−$ 180.000' },
+              { ic: 'ic-tech', emoji: '💻', name: 'Notebook Lenovo', cap: 'Tecnología › Equipos', chip: 'Cuota 5 de 12', amt: '−$ 100.000' },
+              { ic: 'ic-market', emoji: '🛒', name: 'Carrefour', cap: 'Supermercado › Almacén', amt: '−$ 42.000' },
+              { ic: 'ic-fuel', emoji: '⛽', name: 'YPF Full', cap: 'Transporte › Combustible', amt: '−$ 28.000' },
+              { ic: 'ic-food', emoji: '🛵', name: 'Rappi', cap: 'Comida y bebida › Delivery', amt: '−$ 14.800' },
+              { ic: 'ic-food', emoji: '☕', name: 'Café Martínez', cap: 'Comida y bebida › Cafetería', amt: '−$ 10.000' },
+            ]},
+          ],
+        },
+        prox: {
+          amt: '$ 280.000', cierra: '28/07', note: 'ya comprometido en cuotas',
+          groups: [
+            { day: 'Cuotas que caen en este período', items: [
+              { ic: 'ic-home', emoji: '🛋️', name: 'Sofá Sofías', cap: 'Hogar › Muebles', chip: 'Cuota 3 de 3', amt: '−$ 180.000' },
+              { ic: 'ic-tech', emoji: '💻', name: 'Notebook Lenovo', cap: 'Tecnología › Equipos', chip: 'Cuota 6 de 12', amt: '−$ 100.000' },
+            ]},
+          ],
+        },
+        cuotasTotal: '$ 1.160.000', cuotasMeta: '2 compras en cuotas',
+        cuotas: [
+          { ic: 'ic-home', emoji: '🛋️', name: 'Sofá Sofías', sub: 'Comprado el 27/05 · Hogar', cur: 1, total: 3, porCuota: '$ 180.000', restante: '$ 360.000', prox: '10/06' },
+          { ic: 'ic-tech', emoji: '💻', name: 'Notebook Lenovo', sub: 'Comprado el 15/02 · Tecnología', cur: 4, total: 12, porCuota: '$ 100.000', restante: '$ 800.000', prox: '10/06' },
+        ],
+      },
+      amex: {
+        name: 'American Express', bank: 'American Express', accent: '#3A6B8A', mark: 'A',
+        estado: { cls: 'soon', txt: 'Cierra en 3 días' },
+        limit: { loaded: false },
+        apagar: null,
+        curso: {
+          amt: 'US$ 712', usd: null, cierra: '03/06', dias: 'en 3 días', cicloDia: 27, cicloTotal: 30, nConsumos: 7, enCuotas: null,
+          groups: [
+            { day: '22 – 26 de mayo', items: [
+              { ic: 'ic-subs', emoji: '☁️', name: 'AWS', cap: 'Software › Cloud', amt: '−US$ 184', usd: true },
+              { ic: 'ic-tech', emoji: '🤖', name: 'OpenAI', cap: 'Software › IA', chipR: 'Recurrente', amt: '−US$ 20', usd: true },
+            ]},
+            { day: '14 – 19 de mayo', items: [
+              { ic: 'ic-subs', emoji: '🎬', name: 'Netflix', cap: 'Suscripciones › Streaming', chipR: 'Recurrente', amt: '−US$ 15,99', usd: true },
+              { ic: 'ic-shop', emoji: '✈️', name: 'Despegar', cap: 'Viajes › Pasajes', amt: '−US$ 410', usd: true },
+              { ic: 'ic-tech', emoji: '💾', name: 'GitHub', cap: 'Software › Dev', chipR: 'Recurrente', amt: '−US$ 21', usd: true },
+            ]},
+            { day: '5 – 10 de mayo', items: [
+              { ic: 'ic-shop', emoji: '🛍️', name: 'Amazon', cap: 'Compras › Varios', amt: '−US$ 41', usd: true },
+              { ic: 'ic-subs', emoji: '🎵', name: 'Apple One', cap: 'Suscripciones › Apple', chipR: 'Recurrente', amt: '−US$ 19,95', usd: true },
+            ]},
+          ],
+        },
+        prox: { amt: 'US$ 0', cierra: '03/07', note: 'sin cuotas comprometidas', groups: [] },
+        cuotasTotal: null, cuotasMeta: null, cuotas: [],
+      },
+      naranja: {
+        name: 'Naranja X', bank: 'Naranja X', accent: '#8C7AA0', mark: 'N',
+        estado: { cls: 'ok', txt: 'Al día' },
+        limit: { loaded: true, usado: '$ 312K', total: '$ 800K', pct: 39, disp: '$ 488K' },
+        apagar: null,
+        curso: {
+          amt: '$ 186.400', usd: null, cierra: '12/06', dias: 'en 12 días', cicloDia: 18, cicloTotal: 30, nConsumos: 5, enCuotas: '$ 62.400',
+          groups: [
+            { day: '24 – 28 de mayo', items: [
+              { ic: 'ic-tech', emoji: '❄️', name: 'Heladera Samsung', cap: 'Hogar › Electro', chip: 'Cuota 5 de 12', amt: '−$ 62.400' },
+              { ic: 'ic-market', emoji: '🛒', name: 'Carrefour', cap: 'Supermercado › Almacén', amt: '−$ 38.200' },
+            ]},
+            { day: '15 – 20 de mayo', items: [
+              { ic: 'ic-shop', emoji: '👕', name: 'Dexter', cap: 'Compras › Indumentaria', amt: '−$ 45.800' },
+              { ic: 'ic-food', emoji: '🍕', name: 'Muzzarella Bar', cap: 'Comida y bebida › Restaurante', amt: '−$ 22.000' },
+              { ic: 'ic-fuel', emoji: '⛽', name: 'Shell', cap: 'Transporte › Combustible', amt: '−$ 18.000' },
+            ]},
+          ],
+        },
+        prox: {
+          amt: '$ 62.400', cierra: '12/07', note: 'ya comprometido en cuotas',
+          groups: [
+            { day: 'Cuotas que caen en este período', items: [
+              { ic: 'ic-tech', emoji: '❄️', name: 'Heladera Samsung', cap: 'Hogar › Electro', chip: 'Cuota 6 de 12', amt: '−$ 62.400' },
+            ]},
+          ],
+        },
+        cuotasTotal: '$ 436.800', cuotasMeta: '1 compra en cuotas',
+        cuotas: [
+          { ic: 'ic-tech', emoji: '❄️', name: 'Heladera Samsung', sub: 'Comprado el 12/01 · Hogar › Electro · Plan Z', cur: 5, total: 12, porCuota: '$ 62.400', restante: '$ 436.800', prox: '25/06' },
+        ],
+      },
+    };
+
+    let active = 'visa';
+    let period = 'apagar';   // default focus = lo que hay que pagar
+    let tab = 'movs';
+    const $ = (id) => document.getElementById(id);
+
+    function timelineHTML(c) {
+      const steps = [];
+      steps.push({ key: '_pagado', cls: 'done', cap: 'Pagado', date: 'abr', line: 'green' });
+      if (c.apagar) steps.push({ key: 'apagar', cls: 'pay', cap: 'A pagar', date: 'vence ' + c.apagar.vence });
+      steps.push({ key: 'curso', cls: 'curso', cap: 'En curso', date: 'cierra ' + c.curso.cierra });
+      steps.push({ key: 'prox', cls: '', cap: 'Próximo', date: 'cierra ' + c.prox.cierra });
+      let html = '';
+      steps.forEach((s, i) => {
+        const selectable = (s.key !== '_pagado');
+        const sel = (s.key === period) ? ' sel' : '';
+        html += '<div class="tl-step ' + s.cls + sel + '"' + (selectable ? ' data-period="' + s.key + '"' : '') + ' style="color:' + (s.cls === 'pay' ? 'var(--terracota)' : s.cls === 'curso' ? 'var(--cc-accent)' : 'var(--muted)') + '">' +
+          '<span class="tl-dot"></span><span class="tl-cap">' + s.cap + '</span><span class="tl-date">' + s.date + '</span></div>';
+        if (i < steps.length - 1) html += '<div class="tl-line ' + (s.line || '') + '"></div>';
+      });
+      return html;
+    }
+
+    function payHeroHTML(a) {
+      const usd = a.usd ? '<span class="pb-usd">+ ' + a.usd + '</span>' : '';
+      return '<section class="card pay-hero' + (period === 'apagar' ? ' sel' : '') + '" data-period="apagar">' +
+        '<div class="ph-grid"><div>' +
+          '<div class="ph-eyebrow"><span class="phe-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z"/></svg></span><span class="phe-label">Resumen a pagar</span></div>' +
+          '<div class="pay-big tnum">' + a.amt + usd + '</div>' +
+          '<div class="pay-sub">Cerró el <b>' + a.cerro + '</b> · vence el <b>' + a.vence + '</b></div>' +
+        '</div><div class="pay-right">' +
+          '<div class="pay-countdown"><div class="pc-num tnum">' + a.dias + '</div><div class="pc-lbl">días para el vencimiento</div></div>' +
+          '<button class="btn-pay-lg">Registrar pago</button>' +
+        '</div></div></section>';
+    }
+
+    function cursoHTML(cu, isHero) {
+      const cuUsd = cu.usd ? '<span class="ca-usd">+ <b>' + cu.usd + '</b></span>' : '';
+      const pct = Math.round(cu.cicloDia / cu.cicloTotal * 100);
+      const cuotasStat = cu.enCuotas ? '<div><div class="cs-v tnum">' + cu.enCuotas + '</div><div class="cs-l">en cuotas este ciclo</div></div>' : '';
+      return '<section class="card curso' + (isHero ? ' is-hero' : '') + (period === 'curso' ? ' sel' : '') + '" data-period="curso">' +
+        '<div class="curso-grid"><div>' +
+          '<div class="curso-top"><span class="ct-label">Resumen en curso</span><span class="ct-live"><span class="live-dot"></span>Sumando consumos</span></div>' +
+          '<div class="curso-amt tnum"><span class="ca-big">' + cu.amt + '</span>' + cuUsd + '</div>' +
+          '<div class="curso-acc">Acumulado hasta hoy' + (cu.enCuotas ? ' · incluye cuotas del período' : '') + '</div>' +
+          '<div class="curso-stats"><div><div class="cs-v tnum">' + cu.nConsumos + '</div><div class="cs-l">movimientos</div></div>' + cuotasStat + '</div>' +
+        '</div><div class="ciclo">' +
+          '<div class="cy-label">Cierra</div><div class="cy-cierra tnum">' + cu.cierra + '</div><div class="cy-dias">' + cu.dias + '</div>' +
+          '<div class="cy-track"><div class="cy-fill" style="width:' + pct + '%"></div></div>' +
+          '<div class="cy-ends"><span>Día ' + cu.cicloDia + ' del ciclo</span><span>' + cu.cicloTotal + ' días</span></div>' +
+        '</div></div></section>';
+    }
+
+    function proxHTML(px) {
+      const zero = !px.groups.length;
+      return '<div class="prox' + (period === 'prox' ? ' sel' : '') + '" data-period="prox">' +
+        '<span class="px-label">Próximo</span>' +
+        '<span class="px-info">cierra <b>' + px.cierra + '</b> · ' + px.note + '</span>' +
+        '<span class="px-amt' + (zero ? ' zero' : '') + ' tnum">' + px.amt + '</span>' +
+        '<span class="px-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>';
+    }
+
+    function heroesHTML(c) {
+      let html = '';
+      if (c.apagar) {
+        html += payHeroHTML(c.apagar);
+        html += cursoHTML(c.curso, false);
+      } else {
+        html += cursoHTML(c.curso, true);
+      }
+      html += proxHTML(c.prox);
+      return html;
+    }
+
+    function limitHTML(c) {
+      if (c.limit.loaded) {
+        return '<div class="limit-loaded">' +
+          '<div class="limit-top"><span class="lt-label">Límite usado <b class="tnum">' + c.limit.usado + '</b> de ' + c.limit.total + '</span><span class="lt-pct tnum">' + c.limit.pct + '%</span></div>' +
+          '<div class="limit-bar"><div class="lb-fill" style="width:' + c.limit.pct + '%"></div></div>' +
+          '<div class="limit-disp">Disponible <b class="tnum">' + c.limit.disp + '</b></div>' +
+        '</div>';
+      }
+      return '<div class="limit-cta">' +
+        '<div class="lc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg></div>' +
+        '<div class="lc-text">Cargá el límite <span>para ver cuánto te queda disponible.</span></div>' +
+        '<button class="lc-btn">Cargar límite</button>' +
+      '</div>';
+    }
+
+    function movHTML(p) {
+      if (!p.groups.length) {
+        return '<div class="empty"><div class="em-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div><div class="em-title">Sin movimientos</div><div class="em-sub">Este período todavía no tiene consumos. Las compras y las cuotas que caigan acá van a aparecer a medida que sucedan.</div></div>';
+      }
+      return p.groups.map(g => {
+        const rows = g.items.map(it => {
+          const chips = [];
+          if (it.chip)  chips.push('<span class="chip cuotas">' + it.chip + '</span>');
+          if (it.chipR) chips.push('<span class="chip recurrent"><span>🔄</span>' + it.chipR + '</span>');
+          const sub = it.usd ? '<div class="tx-amt-sub">USD</div>' : '';
+          return '<div class="tx-row"><div class="tx-icon ' + it.ic + '">' + it.emoji + '</div>' +
+            '<div class="tx-mid"><div class="tx-title-row"><span class="tx-title">' + it.name + '</span>' + chips.join('') + '</div>' +
+            '<div class="tx-cap">' + it.cap.replace(/›/g, '<span class="sub-sep">›</span>') + '</div></div>' +
+            '<div class="tx-amt-wrap"><div class="tx-amt ' + (it.usd ? 'usd' : 'neg') + ' tnum">' + it.amt + '</div>' + sub + '</div></div>';
+        }).join('');
+        return '<div class="day-sub">' + g.day + '</div><div class="tx-list">' + rows + '</div>';
+      }).join('');
+    }
+
+    function cuotasHTML(c) {
+      if (!c.cuotas.length) {
+        return '<div class="empty"><div class="em-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div><div class="em-title">Sin compras en cuotas</div><div class="em-sub">Cuando hagas una compra en cuotas con esta tarjeta vas a ver acá cuántas pagaste y cuánto te queda.</div></div>';
+      }
+      const intro = '<div class="cuota-intro"><div class="ci-text">Tenés <b>' + c.cuotasMeta + '</b> con esta tarjeta. Esto es lo que queda comprometido a futuro.</div>' +
+        '<div class="ci-amt"><div class="ca-label">Total restante</div><div class="ca-val tnum">' + c.cuotasTotal + '</div></div></div>';
+      const items = c.cuotas.map(q => {
+        let dots = '';
+        for (let i = 1; i <= q.total; i++) {
+          const cls = i <= q.cur ? 'paid' : (i === q.cur + 1 ? 'next' : '');
+          dots += '<span class="qd ' + cls + '"></span>';
+        }
+        return '<div class="cuota-item"><div class="cuota-top">' +
+          '<div class="cuota-icon ' + q.ic + '">' + q.emoji + '</div>' +
+          '<div class="cuota-name-wrap"><div class="cuota-name">' + q.name + '</div><div class="cuota-name-sub">' + q.sub + '</div></div>' +
+          '<div class="cuota-progress-num tnum">' + q.cur + '<span>/' + q.total + '</span></div></div>' +
+          '<div class="cuota-dots">' + dots + '</div>' +
+          '<div class="cuota-foot">' +
+            '<div class="cf-item"><div class="cf-label">Por cuota</div><div class="cf-val tnum">' + q.porCuota + '</div></div>' +
+            '<div class="cf-item"><div class="cf-label">Restante</div><div class="cf-val restante tnum">' + q.restante + '</div></div>' +
+            '<div class="cf-item"><div class="cf-label">Próxima cae</div><div class="cf-val tnum">' + q.prox + '</div></div>' +
+          '</div></div>';
+      }).join('');
+      return intro + '<div class="cuota-list">' + items + '</div>';
+    }
+
+    function countItems(p) { return p.groups.reduce((n, g) => n + g.items.length, 0); }
+
+    function bindPeriods() {
+      document.querySelectorAll('[data-period]').forEach(el => el.addEventListener('click', () => {
+        period = el.dataset.period; tab = 'movs'; render();
+      }));
+      const payBtn = document.querySelector('.btn-pay-lg');
+      if (payBtn) payBtn.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    function render() {
+      const c = CARDS[active];
+      document.documentElement.style.setProperty('--cc-accent', c.accent);
+      // si la tarjeta no tiene 'a pagar' y el período activo era apagar, caer a curso
+      if (period === 'apagar' && !c.apagar) period = 'curso';
+
+      $('phMark').textContent = c.mark;
+      $('phMark').style.background = c.accent;
+      $('phName').textContent = c.name;
+      $('phSub').textContent = c.bank;
+      const est = $('phEstado');
+      est.className = 'estado ' + c.estado.cls;
+      est.innerHTML = '<span class="e-dot"></span>' + c.estado.txt;
+
+      $('timeline').innerHTML = timelineHTML(c);
+      $('heroes').innerHTML = heroesHTML(c);
+      bindPeriods();
+
+      $('limitCard').innerHTML = limitHTML(c);
+
+      const nCuotas = c.cuotas.length;
+      $('tabs').innerHTML =
+        '<button data-tab="movs"' + (tab === 'movs' ? ' class="on"' : '') + '>Movimientos del período</button>' +
+        '<button data-tab="cuotas"' + (tab === 'cuotas' ? ' class="on"' : '') + '>Cuotas en curso' + (nCuotas ? ' · ' + nCuotas : '') + '</button>';
+      $('tabs').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+        if (tab === b.dataset.tab) return; tab = b.dataset.tab; render();
+      }));
+
+      if (tab === 'movs') {
+        const p = c[period];
+        const labelMap = { apagar: 'Resumen a pagar', curso: 'En curso', prox: 'Próximo período' };
+        const n = countItems(p);
+        $('movHead').style.display = '';
+        $('movHead').innerHTML = '<h2>Movimientos · ' + labelMap[period] + '</h2><span class="mh-count">' + (n ? n + (n === 1 ? ' movimiento' : ' movimientos') : 'sin movimientos') + '</span>';
+        $('pane').innerHTML = movHTML(p);
+      } else {
+        $('movHead').style.display = 'none';
+        $('pane').innerHTML = cuotasHTML(c);
+      }
+    }
+
+    $('switcher').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      if (active === b.dataset.card) return;
+      active = b.dataset.card;
+      period = CARDS[active].apagar ? 'apagar' : 'curso';
+      tab = 'movs';
+      $('switcher').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.card === active));
+      render();
+    }));
+
+    render();
+  })();
+  </script>
+
+  <template id="__bundler_thumbnail">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100" height="100" rx="22" fill="#0B1A2B"/>
+      <rect x="22" y="32" width="56" height="36" rx="6" fill="none" stroke="#F4A024" stroke-width="4"/>
+      <line x1="22" y1="43" x2="78" y2="43" stroke="#F4A024" stroke-width="4"/>
+    </svg>
+  </template>
+</body>
+</html>

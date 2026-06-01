@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Cubre las tarjetas de crédito como módulo de primera clase del producto. Modela cada resumen como un período con cuatro fechas (apertura, cierre, vencimiento, próximo cierre) cuyo estado se deriva sin persistir, soporta el alta de tarjeta con su único flujo de cuatro fechas, el registro de consumos en una o varias cuotas (ARS only por invariante `I-CRED-9`), el pago del resumen como `expense` en una cuenta cash o bank (única transacción que reduce `disponible` por la regla off-ledger), la reversión del pago, y las vistas de carrusel y detalle.
+Cubre las tarjetas de crédito como módulo de primera clase del producto. Modela cada resumen como un período con cuatro fechas (apertura, cierre, vencimiento, próximo cierre) cuyo estado se deriva sin persistir, soporta el alta de tarjeta con su único flujo de cuatro fechas, el registro de consumos en una o varias cuotas (ARS only por invariante `I-CRED-9`), el pago del resumen como `expense` en una cuenta cash o bank (única transacción que reduce `disponible` por la regla off-ledger), la reversión del pago, y las vistas de listado (wallet en grilla con hero de pago mensual) y de detalle (organizado por el ciclo de vida del resumen: a pagar / en curso / próximo, con movimientos y cuotas en curso).
 
 ## Requirements
 ### Requirement: El sistema modela cada resumen de tarjeta como un período con cuatro fechas
@@ -184,168 +184,179 @@ El sistema SHALL permitir editar `end_date` y `due_date` de un `card_periods` cu
 - **WHEN** un usuario o llamada API intenta editar las fechas de un período cuyo estado derivado es `paid`
 - **THEN** la action retorna error explícito y no modifica nada
 
-### Requirement: El listado de tarjetas se muestra como carrusel horizontal con resumen actual
+### Requirement: El listado de tarjetas se muestra como wallet en grilla con hero de pago mensual
 
-El sistema SHALL renderizar el listado de tarjetas de crédito del usuario como un carrusel horizontal. Cada card SHALL mostrar: nombre, banco, red, monto del resumen del período actual, porcentaje de límite disponible (si hay `credit_limit`), fecha de cierre y de vencimiento, y alertas visuales según los días al vencimiento (rojo ≤3, ámbar ≤7, normal >7). El orden de las cards SHALL ser por fecha de cierre del período activo ascendente; las tarjetas sin ciclo configurado SHALL ir al final ordenadas alfabéticamente.
+El sistema SHALL renderizar el listado de tarjetas de crédito (`/cards`) con esta estructura, de arriba hacia abajo:
 
-El carrusel SHALL incluir únicamente tarjetas activas (`is_active=true`). Las tarjetas archivadas (`is_active=false`) NO aparecen en el carrusel, pero el sistema SHALL exponerlas en una sección secundaria **"Archivadas"** debajo del carrusel, para que la acción `[Reactivar]` (que vive en el detalle de la tarjeta) sea alcanzable. Sin esta sección, una tarjeta archivada quedaría inaccesible desde la UI y no habría forma de reactivarla.
+1. **Header**: título "Tarjetas" + subtítulo ("N tarjetas de crédito · resúmenes de <mes>"). Acciones a la derecha: "Resúmenes anteriores" (ghost) y "Agregar tarjeta" (primario, → `/cards/new`).
+2. **Hero "A pagar este mes"**: agrega el total a pagar de **todas** las tarjetas activas (períodos sin pago `closed`/`overdue`). El monto ARS se muestra como primario en tipografía grande; el total USD se muestra **subordinado y por separado**, NUNCA sumado ni convertido (principio Bimoneda). El hero destaca el próximo vencimiento más cercano. A la derecha, una lista "Próximos vencimientos" con filas (día/mes + tarjeta + "cierra/vence" + monto).
+3. **Sección "Mis tarjetas"** + hint "Tocá una para ver el resumen".
+4. **Wallet en grilla** (2 columnas en desktop, 1 columna bajo `md`): una card por tarjeta activa.
 
-La sección "Archivadas":
-- SHALL renderizarse solo cuando existe al menos una tarjeta archivada; si no hay ninguna, NO se renderiza nada.
-- SHALL ser colapsable (cerrada por defecto) para no competir con el contenido principal, con un encabezado que indique la cantidad (`Archivadas (N)`).
-- SHALL listar cada tarjeta archivada con su nombre y un enlace a su detalle (`/cards/[id]`), donde el usuario puede reactivarla.
+Cada **card del wallet** SHALL mostrar: una franja lateral con el acento de la tarjeta (`--cc-accent` derivado de `resolveAccountAvatar`, no hardcodeado por marca), avatar con la inicial del banco, nombre, meta "Crédito · <red>" (**sin número de tarjeta** — la app no lo almacena), un pill de estado (a pagar / cierra pronto / al día), stats (resumen del mes · cierra · vence), barra de límite teñida con el acento **solo si `credit_limit` está cargado**, y un footer con la cantidad de compras en cuotas activas ("N compras en cuotas" o "Sin cuotas activas") + link "Ver resumen". El click en una card SHALL navegar a `/cards/[id]`.
 
-#### Scenario: Listado con tres tarjetas activas
+El orden de las cards SHALL ser por fecha de cierre del período activo ascendente; las tarjetas sin ciclo configurado van al final, alfabéticas.
 
-- **WHEN** el usuario abre el listado y tiene tres tarjetas activas con cierres `2026-05-20`, `2026-05-25`, `2026-06-05`
-- **THEN** el carrusel muestra las tres en orden ascendente por fecha de cierre
+El wallet SHALL incluir únicamente tarjetas activas (`is_active=true`). Las archivadas (`is_active=false`) NO aparecen en el wallet, pero el sistema SHALL exponerlas en una sección secundaria **"Archivadas"** debajo, colapsable (cerrada por defecto), con encabezado `Archivadas (N)`, solo cuando existe al menos una, listando cada una con enlace a su detalle (`/cards/[id]`) para que `[Reactivar]` sea alcanzable.
 
-#### Scenario: Tarjeta con vencimiento en 2 días muestra alerta roja
+#### Scenario: Hero agrega el total a pagar con ARS y USD separados
 
-- **WHEN** una tarjeta tiene `due_date='2026-05-15'` y `today='2026-05-13'`, sin `period_payment`
-- **THEN** la card del carrusel se renderiza con footer rojo y "Vence DD-mm" en peso bold
+- **WHEN** el usuario tiene dos tarjetas con resúmenes a pagar: una con `$120.000` ARS y otra con `$80.000` ARS + `US$ 200`
+- **THEN** el hero "A pagar este mes" muestra `$200.000` como monto ARS primario
+- **AND** muestra `US$ 200` como total USD subordinado y por separado
+- **AND** en ningún caso suma ni convierte ARS y USD en un solo número
 
-#### Scenario: Tarjeta sin ciclo configurado va al final
+#### Scenario: Hero destaca el próximo vencimiento y lista los siguientes
 
-- **WHEN** el usuario tiene tres tarjetas, una de ellas sin períodos creados
-- **THEN** el carrusel muestra primero las dos con ciclo (ordenadas por cierre) y al final la sin ciclo
+- **WHEN** el usuario tiene tarjetas con vencimientos `10/06`, `18/06` y `25/06`
+- **THEN** el hero destaca el vencimiento del `10/06`
+- **AND** la lista "Próximos vencimientos" muestra las tres filas con día/mes, tarjeta y monto
 
-#### Scenario: Tarjeta archivada aparece en la sección "Archivadas" y no en el carrusel
+#### Scenario: Wallet en grilla con dos tarjetas activas
+
+- **WHEN** el usuario abre `/cards` con dos tarjetas activas
+- **THEN** se renderiza una grilla de cards (no un carrusel horizontal), ordenadas por fecha de cierre ascendente
+- **AND** cada card muestra franja de acento, avatar, nombre, meta sin número de tarjeta, pill de estado, stats, y footer de cuotas
+
+#### Scenario: Card sin límite cargado omite la barra de límite
+
+- **WHEN** una tarjeta tiene `credit_limit=null`
+- **THEN** su card del wallet no renderiza la barra de límite
+
+#### Scenario: Card muestra la cantidad de compras en cuotas activas
+
+- **WHEN** una tarjeta tiene 2 compras en cuotas con cuotas pendientes y otra tarjeta no tiene ninguna
+- **THEN** la primera card muestra "2 compras en cuotas" en el footer
+- **AND** la segunda muestra "Sin cuotas activas"
+
+#### Scenario: Tarjeta archivada aparece en la sección "Archivadas" y no en el wallet
 
 - **WHEN** el usuario tiene una tarjeta activa y una archivada
-- **THEN** el carrusel muestra solo la activa
-- **AND** debajo se renderiza la sección colapsable "Archivadas (1)" con un enlace al detalle de la tarjeta archivada
+- **THEN** el wallet muestra solo la activa
+- **AND** debajo se renderiza la sección colapsable "Archivadas (1)" con enlace al detalle de la archivada
 
 #### Scenario: Usuario sin tarjetas archivadas no ve la sección
 
 - **WHEN** el usuario tiene solo tarjetas activas (o ninguna)
 - **THEN** la sección "Archivadas" NO se renderiza
 
-#### Scenario: Usuario llega al detalle de la archivada y la reactiva
-
-- **WHEN** el usuario abre la sección "Archivadas" y toca el enlace de una tarjeta
-- **THEN** navega al detalle de esa tarjeta (`/cards/[id]`)
-- **AND** desde ahí puede tocar `[Reactivar]`, lo que la devuelve al carrusel activo
-
 ---
 
 ### Requirement: El detalle de tarjeta muestra el resumen actual, próximo, y acciones primarias
 
-El sistema SHALL renderizar la pantalla de detalle de una tarjeta de crédito (`/cards/[id]`) con la siguiente estructura, de arriba hacia abajo:
+El sistema SHALL renderizar el detalle de una tarjeta (`/cards/[id]`) organizado alrededor del **ciclo de vida del resumen**, derivado con `classifyPeriodsLifecycle(periods, today)` en `{ apagar?, curso, prox }`. NO mezcla los resúmenes: el "a pagar" (cerró y no venció), el "en curso" (abierto) y el "próximo" se muestran como entidades distintas. La estructura, de arriba hacia abajo:
 
-1. **Breadcrumb** "← Tarjetas".
-2. **Identidad**: nombre de la tarjeta, banco (si lo hay), y `Límite $X` formateado en ARS. El segmento "Límite $X" SHALL omitirse cuando `credit_limit` es `null`.
-3. **Banner contextual de pago** arriba del termómetro cuando el período activo requiere pago. Combina el texto de alerta y el CTA de pago **integrado a la derecha** (no hay botón de pago ancho debajo del termómetro). Dos tonos:
-   - `vencido` (`overdue`): banner **rojo**, texto "Resumen vencido — evitá cargos por mora", CTA `[Pagar ahora]`.
-   - `cerrado_esperando_pago` (`closed`): banner **ámbar**, texto "Resumen cerrado — vence el DD/MM", CTA `[Pagar resumen]`.
+1. **Back link** "‹ Tarjetas".
+2. **Header de identidad**: avatar de marca (acento de la tarjeta), nombre, pill de estado, y subtítulo banco/emisor.
+3. **Timeline de ciclo de vida** horizontal: pasos `Pagado → [A pagar] → En curso → Próximo`, cada uno con dot de color (verde=pagado, terracota=a pagar, acento=en curso, gris=próximo), label y fecha ("vence DD/MM" / "cierra DD/MM"). El paso "A pagar" SHALL aparecer solo si existe ese resumen. Los pasos (excepto "Pagado") SHALL ser clickeables y seleccionar el período que se muestra abajo.
+4. **Zona de resúmenes**, con la jerarquía puesta en lo que hay que pagar:
+   - **Si hay "a pagar"**: una card hero terracota con eyebrow "RESUMEN A PAGAR", monto grande (ARS + USD aparte, nunca sumados), "Cerró el X · vence el Y", una cuenta regresiva ("N días para el vencimiento") y un CTA "Registrar pago" que navega a `/cards/[id]/periods/[periodId]/pay`. Debajo, la card "En curso" subordinada.
+   - **Si NO hay "a pagar"**: la card "En curso" pasa a ser el hero (con ring de acento).
+   - **Card "En curso"**: eyebrow "RESUMEN EN CURSO" + badge "Sumando consumos" (dot verde con pulso), monto acumulado hasta hoy (incluye las cuotas que caen en ese ciclo), stats (N movimientos · $ en cuotas del ciclo), y un panel de ciclo ("CIERRA", fecha, "en N días", barra de progreso del ciclo, "Día X de N").
+   - **Mini "Próximo"**: fila con borde punteado "PRÓXIMO · cierra X · ya comprometido en cuotas" + monto + chevron, clickeable.
+5. **Panel de límite (opcional)**:
+   - Si `credit_limit` está cargado: "Límite usado $X de $Y" + "%" + barra (teñida con acento) + "Disponible $Z". El cálculo es ARS-only (Bimoneda + `I-CRED-9`).
+   - Si `credit_limit` es `null`: un CTA "Cargá el límite para ver cuánto te queda disponible." + botón "Cargar límite" → `/cards/[id]/edit`.
 
-   Para los demás estados (`actual`, `pagado`, futuro) no se renderiza banner. NO existe un banner separado de "se acerca el vencimiento": cuando el período está `closed`, el banner ámbar de POR PAGAR ya comunica el vencimiento próximo y ofrece el pago.
-4. **Termómetro "Cómo viene tu tarjeta"** con tres columnas siempre presentes — `EN CURSO`, `PRÓXIMO`, `SIGUIENTE`. Cada columna SHALL mostrar:
-   - `cierra DD/MM` y `vence DD/MM` arriba.
-   - Barra horizontal con `% usado = pendingARS_de_esa_columna / credit_limit` (solo si hay límite cargado). Color: ≤69% primario, 70%-89% ámbar, ≥90% rojo.
-   - Monto ARS pendiente formateado.
-   - Monto USD subordinado (`USD X,XX` chiquito) **solo cuando el monto USD pendiente de esa columna es > 0**. Si la columna no tiene USD pendiente, no se renderiza la línea USD (evita repetir `USD 0,00` como ruido en tarjetas con USD activo pero sin consumos en dólares).
-   - Texto `"sin movimientos"` debajo del monto cuando la columna no tiene ni ARS ni USD pendientes (`pendingARS = 0` y `pendingUSD = 0`).
+El **período por defecto** al entrar SHALL ser "A pagar" si existe; si no, "En curso" (consistente con el requirement de priorización de deuda). El termómetro de tres columnas de la versión anterior se reemplaza por esta organización por ciclo de vida.
 
-   La columna 1 (período activo) SHALL etiquetarse según el estado derivado del período activo: `EN CURSO` (`actual`, neutral), `POR PAGAR` (`closed`, ámbar), `VENCIDO` (`overdue`, rojo), `PAGADO` (`paid`, gris/verde). Las columnas 2 y 3 SHALL etiquetarse `PRÓXIMO` y `SIGUIENTE` siempre (estado típico: `futuro` o vacío).
+El caso `tarjeta_nueva` (sin movimientos ni pagos en ningún período) NO renderiza timeline ni zona de resúmenes: muestra un estado vacío con CTA "Registrar primer consumo".
 
-   El termómetro NO se renderiza en el caso `tarjeta_nueva` (ver requirement de estado vacío); en su lugar se renderiza el estado vacío específico.
+El sistema SHALL mantener un único link "Ver todos los resúmenes →" hacia `/cards/[id]/periods` (sin links duplicados). El footer admin (Detalles, Editar, Archivar/Eliminar/Reactivar) se mantiene al pie.
 
-5. **Línea total de disponible** debajo del termómetro, con cuatro variantes mutuamente excluyentes:
-   - Normal: `Disponible $X de $Y` donde `X = credit_limit − Σ(pendingARS de las 3 columnas)` y `Y = credit_limit`.
-   - Sin compromisos (`X == Y`): `Disponible $Y de $Y`.
-   - Excede el límite (`X < 0`): `Comprometido $|monto_total_comprometido| — $|X| por encima del límite` en color de alerta.
-   - Sin límite cargado (`credit_limit` es `null`): `"Cargá el límite para ver cuánto te queda"` con link `[Cargar]` que navega al editor de la tarjeta.
+#### Scenario: Detalle con resumen "a pagar" muestra hero terracota y countdown
 
-   El cálculo es ARS-only: los montos USD subordinados NO entran (principio Bimoneda + `I-CRED-9`).
+- **WHEN** la tarjeta tiene un período `closed` sin pago con `$340.000` ARS, que cerró el `28/05` y vence el `10/06`, y `today='2026-06-01'`
+- **THEN** se renderiza una card hero terracota "RESUMEN A PAGAR" con `$340.000`
+- **AND** muestra "Cerró el 28/05 · vence el 10/06" y una cuenta regresiva "9 días para el vencimiento"
+- **AND** el CTA "Registrar pago" navega a `/cards/[id]/periods/[periodId]/pay`
+- **AND** debajo aparece la card "En curso" subordinada
 
-6. **CTAs por estado del período activo**. El CTA de pago vive SIEMPRE dentro del banner contextual (punto 3), no como botón ancho debajo del termómetro. Debajo del termómetro y la línea de disponible se renderiza, como máximo, `[Registrar consumo]`:
-   - `actual`, `pagado`: solo `[Registrar consumo]` (sin banner).
-   - `cerrado_esperando_pago`: banner ámbar con `[Pagar resumen]` integrado (punto 3) + `[Registrar consumo]` debajo.
-   - `vencido`: banner rojo con `[Pagar ahora]` integrado (punto 3) + `[Registrar consumo]` debajo.
-   - `tarjeta_nueva`: estado vacío sin termómetro + `[Registrar primer consumo]` (ver scenario).
-   - Tarjeta archivada (`inactiva`): estado vacío "Tarjeta archivada · sin pendientes" con `[Reactivar]` como única acción. Por la regla de archivado (no se archiva una tarjeta con deuda — ver requirement "El usuario puede archivar una tarjeta sin deuda"), una tarjeta inactiva NUNCA tiene consumos pendientes; por eso el detalle de una archivada es siempre este estado vacío, sin termómetro ni CTA de pago. El sistema NO ofrece `[Eliminar definitivamente]` porque la action `deleteAccount` bloquea el borrado de toda cuenta con historial transaccional (regla de integridad contable preexistente en `accounts`).
+#### Scenario: Detalle sin resumen "a pagar" usa "En curso" como hero
 
-   El sistema SHALL NOT renderizar un botón "Cuotas — Próximamente". La feature de cuotas, cuando exista, agregará su CTA mediante un nuevo requirement.
+- **WHEN** la tarjeta no tiene ningún período `closed`/`overdue` sin pago (todo al día), con un período `open` en curso
+- **THEN** la card "En curso" se renderiza como hero (ring de acento), sin card de pago terracota
+- **AND** el timeline no muestra el paso "A pagar"
 
-7. **Sección "Movimientos del resumen actual"**: lista completa sin paginación de las transacciones imputadas al período activo, ordenadas por `date DESC, created_at DESC, id DESC` (orden de display). El encabezado de la sección SHALL incluir un único link `"Ver todos los resúmenes →"` apuntando a `/cards/[id]/periods`. NO se muestran links duplicados con labels distintos.
+#### Scenario: La card "En curso" muestra el panel de ciclo
 
-8. **Footer admin** discreto al pie con links: `Detalles` (fecha de alta, fecha de archivado), `Editar`, y `Archivar` (si activa con movimientos) / `Eliminar` (si activa sin movimientos) / `Reactivar` (si inactiva).
+- **WHEN** el período en curso cierra el `28/06`, faltan 12 días, y va por el día 18 de un ciclo de 30
+- **THEN** la card "En curso" muestra "CIERRA 28/06", "en 12 días", una barra de progreso del ciclo, y "Día 18 de 30"
+- **AND** el badge "Sumando consumos" tiene un dot verde con pulso
 
-#### Scenario: Detalle con período `actual` y límite cargado muestra termómetro normal
+#### Scenario: ARS y USD se muestran separados en el detalle
 
-- **WHEN** el usuario abre el detalle de una tarjeta activa con período actual `open` (sin pago), `credit_limit=$200.000`, `pendingARS_actual=$156.000`, `pendingARS_próximo=$40.000` (cuotas), `pendingARS_siguiente=$25.000` (cuotas)
-- **THEN** el termómetro muestra columna `EN CURSO` (neutral, 78%, $156.000), columna `PRÓXIMO` (20%, $40.000), columna `SIGUIENTE` (13%, $25.000)
-- **AND** la línea total dice `Disponible $-21.000 de $200.000` formateado como `Comprometido $221.000 — $21.000 por encima del límite` en color de alerta
-- **AND** el CTA primario es `[Registrar consumo]`
+- **WHEN** el resumen a pagar tiene `$340.000` ARS y `US$ 150`
+- **THEN** el monto ARS se muestra como primario grande y `US$ 150` subordinado y por separado
+- **AND** no se muestra ningún total que sume o convierta ARS y USD
 
-#### Scenario: Detalle con período `cerrado_esperando_pago` muestra banner ámbar y etiqueta POR PAGAR
+#### Scenario: Panel de límite sin límite cargado muestra CTA "Cargar límite"
 
-- **WHEN** el período activo tiene `end_date < today ≤ due_date` sin pago
-- **THEN** se renderiza un banner ámbar "Resumen cerrado — vence el DD/MM" arriba del termómetro, con `[Pagar resumen]` integrado a la derecha
-- **AND** la columna 1 del termómetro se etiqueta `POR PAGAR` con color ámbar
-- **AND** debajo del termómetro el único CTA es `[Registrar consumo]`
+- **WHEN** la tarjeta tiene `credit_limit=null`
+- **THEN** el panel de límite muestra "Cargá el límite para ver cuánto te queda disponible." con un botón "Cargar límite" hacia `/cards/[id]/edit`
+- **AND** no se renderiza barra de uso ni "Disponible $Z"
 
-#### Scenario: Detalle con período `vencido` muestra banner rojo, etiqueta VENCIDO y CTA Pagar ahora
+#### Scenario: Panel de límite cargado muestra usado, % y disponible
 
-- **WHEN** el período activo está `overdue` (`due_date < today` sin pago)
-- **THEN** se renderiza un banner rojo "Resumen vencido — evitá cargos por mora" arriba del termómetro, con `[Pagar ahora]` integrado a la derecha
-- **AND** la columna 1 se etiqueta `VENCIDO` en color rojo
-- **AND** debajo del termómetro el único CTA es `[Registrar consumo]`
+- **WHEN** la tarjeta tiene `credit_limit=$1.000.000` y `$650.000` comprometidos en ARS
+- **THEN** el panel muestra "Límite usado $650.000 de $1.000.000", "65%", barra teñida con el acento, y "Disponible $350.000"
 
-#### Scenario: Detalle de tarjeta nueva muestra estado vacío sin termómetro
+#### Scenario: Período por defecto al entrar es "A pagar" si existe
 
-- **WHEN** el usuario abre el detalle de una tarjeta que nunca tuvo movimientos ni pagos en ningún período (todos los períodos tienen `tx_count=0` y ningún `period_payments`)
-- **THEN** la pantalla NO renderiza el termómetro
-- **AND** muestra el copy "Tu tarjeta está lista. Registrá el primer consumo para empezar a ver cómo viene cada resumen."
-- **AND** el CTA primario es `[Registrar primer consumo]`
+- **WHEN** el usuario abre el detalle de una tarjeta que tiene resumen "a pagar"
+- **THEN** el período seleccionado por defecto es "A pagar" y la pestaña activa es "Movimientos del período"
 
-#### Scenario: Detalle sin credit_limit muestra hint para cargarlo
+#### Scenario: Tarjeta nueva muestra estado vacío sin timeline
 
-- **WHEN** el usuario abre el detalle de una tarjeta con `credit_limit=null` y al menos un movimiento
-- **THEN** el termómetro renderiza las 3 columnas sin barras horizontales (solo monto ARS, USD subordinado solo si esa columna tiene USD > 0, y "sin movimientos" cuando la columna está vacía)
-- **AND** la línea total dice `"Cargá el límite para ver cuánto te queda"` con link `[Cargar]` al editor
+- **WHEN** el usuario abre el detalle de una tarjeta sin movimientos ni pagos en ningún período
+- **THEN** la pantalla NO renderiza timeline ni zona de resúmenes
+- **AND** muestra un estado vacío con CTA "Registrar primer consumo"
 
-#### Scenario: Columna PRÓXIMO sin compromisos muestra "sin movimientos"
+---
 
-- **WHEN** el período `PRÓXIMO` existe pero `pendingARS=0` y `pendingUSD=0` y la tarjeta tiene `credit_limit` cargado
-- **THEN** la columna se renderiza con barra al 0% (vacía), `$0` como monto y copy `"sin movimientos"` debajo
+### Requirement: El detalle de tarjeta muestra movimientos del período y cuotas en curso en pestañas
 
-#### Scenario: USD subordinado se muestra solo en columnas con USD pendiente > 0
+El sistema SHALL ofrecer en el detalle de tarjeta (`/cards/[id]`) dos pestañas: **"Movimientos del período"** y **"Cuotas en curso · N"** (donde N es la cantidad de compras en cuotas activas de la tarjeta).
 
-- **WHEN** la tarjeta tiene USD activo, la columna `EN CURSO` tiene `pendingUSD = 50` y las columnas `PRÓXIMO` y `SIGUIENTE` tienen `pendingUSD = 0`
-- **THEN** solo la columna `EN CURSO` muestra la línea `USD 50,00` subordinada
-- **AND** `PRÓXIMO` y `SIGUIENTE` no muestran línea USD
+**Selección de período.** El click en un paso del timeline, en la card "a pagar", en la card "en curso" o en la mini fila "próximo" SHALL cambiar el período mostrado en "Movimientos del período" y volver a esa pestaña. El elemento activo recibe un ring con el acento de la tarjeta. La transición NO usa `scrollIntoView` ni animación de entrada del pane.
 
-#### Scenario: USD no se muestra cuando ninguna columna tiene USD pendiente
+**Pane "Movimientos del período".** SHALL listar los movimientos imputados al período seleccionado, agrupados por fecha, reutilizando el componente de fila de movimiento del módulo de transacciones. Cada fila muestra ícono de categoría con tint, comercio/descripción, caption "Categoría › Subcategoría", chips ("Cuota X de Y" y/o "Recurrente"), y el monto (ARS gasto en terracota; USD con etiqueta "USD" subordinada, nunca convertido). Cuando el período no tiene consumos, SHALL mostrar el estado vacío "Sin movimientos".
 
-- **WHEN** la tarjeta tiene USD activo pero sin consumos en dólares (todas las columnas `pendingUSD = 0`), o la tarjeta solo tiene `ARS` activo
-- **THEN** ninguna columna del termómetro muestra línea USD (no se renderiza `USD 0,00`)
+**Pane "Cuotas en curso".** SHALL mostrar una card intro con la cantidad de compras en cuotas y el total restante, y luego una card por compra con: ícono, nombre, sub ("Comprado el X · Categoría"), "cuota actual / total", una fila de dots de progreso (pagadas en acento, próxima en acento atenuado, futuras en gris), y un footer (Por cuota / Restante / Próxima cae). Cuando no hay compras en cuotas activas, SHALL mostrar el estado vacío "Sin compras en cuotas". Las cuotas son ARS-only (`I-CRED-9`).
 
-#### Scenario: Tarjeta archivada muestra siempre el estado vacío "sin pendientes"
+#### Scenario: Cambiar de período actualiza los movimientos mostrados
 
-- **WHEN** la tarjeta está inactiva (`is_active=false`)
-- **THEN** se renderiza un estado vacío "Tarjeta archivada · sin pendientes" sin termómetro
-- **AND** se muestra la opción `[Reactivar]` (vía banner inactiva)
-- **AND** el sistema NO ofrece `[Eliminar definitivamente]` (la regla de integridad de `accounts` impide borrar cuentas con historial)
-- **AND** no existe un estado "archivada con pendientes": la regla de archivado garantiza que una tarjeta inactiva no tiene consumos pendientes (ver requirement "El usuario puede archivar una tarjeta sin deuda")
+- **WHEN** el usuario está viendo los movimientos del resumen "a pagar" y hace click en el paso "En curso" del timeline
+- **THEN** el pane "Movimientos del período" pasa a mostrar los movimientos del período en curso
+- **AND** la pestaña activa vuelve a ser "Movimientos del período"
+- **AND** el paso "En curso" recibe el ring de acento
 
-#### Scenario: Sección Movimientos muestra un único link "Ver todos los resúmenes"
+#### Scenario: Movimiento en cuotas muestra el chip "Cuota X de Y"
 
-- **WHEN** el termómetro se renderiza (cualquier caso que no sea tarjeta nueva)
-- **THEN** la sección "Movimientos del resumen actual" muestra exactamente un link en su encabezado, con label `"Ver todos los resúmenes →"`, apuntando a `/cards/[id]/periods`
-- **AND** la sección NO incluye otro link con label `"Ver historial"` ni `"Ver resúmenes"` ni similares
+- **WHEN** el período seleccionado contiene la cuota 2 de 6 de una compra
+- **THEN** la fila del movimiento muestra el chip "Cuota 2 de 6"
 
-#### Scenario: Movimientos del período actual se muestran todos sin paginación
+#### Scenario: Período sin movimientos muestra el estado vacío
 
-- **WHEN** el período activo tiene 25 movimientos imputados
-- **THEN** la sección Movimientos los muestra todos en una sola lista, sin botón "Ver más" ni paginación
-- **AND** el orden es por `date DESC, created_at DESC, id DESC`
+- **WHEN** el período seleccionado no tiene consumos imputados
+- **THEN** el pane muestra "Sin movimientos"
 
-#### Scenario: Página no incluye botón "Cuotas — Próximamente"
+#### Scenario: La pestaña de cuotas muestra el contador y el total restante
 
-- **WHEN** el usuario abre el detalle de cualquier tarjeta
-- **THEN** la pantalla NO renderiza ningún botón etiquetado "Cuotas" en estado disabled o con badge "Próximamente"
+- **WHEN** la tarjeta tiene 2 compras en cuotas activas con un total restante de `$1.160.000`
+- **THEN** la pestaña se titula "Cuotas en curso · 2"
+- **AND** el pane muestra una card intro con el total restante `$1.160.000`
+
+#### Scenario: Card de cuota muestra los dots de progreso
+
+- **WHEN** una compra va por la cuota 1 de 3
+- **THEN** su card muestra 3 dots: el primero en acento (pagada/actual), el segundo en acento atenuado (próxima), el tercero en gris (futura)
+- **AND** el footer muestra "Por cuota", "Restante" y "Próxima cae"
+
+#### Scenario: Tarjeta sin cuotas muestra el estado vacío
+
+- **WHEN** la tarjeta no tiene compras en cuotas activas
+- **THEN** la pestaña se titula "Cuotas en curso · 0" y el pane muestra "Sin compras en cuotas"
 
 ---
 
@@ -403,30 +414,23 @@ El sistema SHALL renderizar una pantalla `/cards/[id]/periods/[periodId]` con: r
 
 El sistema SHALL diferenciar visualmente los períodos `overdue` (vencidos sin pago) en todas las pantallas relevantes:
 
-- **Listado de tarjetas**: card con footer rojo y texto "Vencido hace N días" en peso bold.
-- **Detalle de tarjeta** (`/cards/[id]`): banner contextual **rojo** "Resumen vencido — evitá cargos por mora" arriba del termómetro, con `[Pagar ahora]` integrado; la columna `EN CURSO` se etiqueta `VENCIDO` en color rojo. El sistema SHALL NOT mostrar un banner separado de "El vencimiento se acerca": cuando el período está `closed` (cerrado pero no vencido), se muestra el banner contextual **ámbar** de POR PAGAR ("Resumen cerrado — vence el DD/MM", con `[Pagar resumen]`), que ya comunica el vencimiento próximo y ofrece el pago.
+- **Listado de tarjetas** (`/cards`): la card del wallet muestra el pill de estado en tono "a pagar/urgente" (terracota) y el hero "A pagar este mes" incluye el monto vencido.
+- **Detalle de tarjeta** (`/cards/[id]`): el paso "A pagar" del timeline aparece en color terracota y la card hero terracota "RESUMEN A PAGAR" comunica el vencimiento ("cerró el X · vence el Y" + cuenta regresiva, que pasa a negativo/"vencido hace N días" cuando `due_date < today`).
 - **Pantalla de resúmenes** (`/cards/[id]/periods`): badge `Vencido` en color de error.
 
 La cantidad de días vencido SHALL calcularse como `today − due_date`.
 
-#### Scenario: Tarjeta vencida hace 3 días en el listado
+#### Scenario: Tarjeta vencida en el wallet muestra estado urgente
 
 - **WHEN** una tarjeta tiene `due_date='2026-05-15'` y `today='2026-05-18'`, sin pago
-- **THEN** la card del listado muestra footer rojo con "Vencido hace 3 días"
+- **THEN** su card del wallet muestra el pill de estado en tono terracota (a pagar/urgente)
+- **AND** el hero "A pagar este mes" incluye el monto de esa tarjeta
 
-#### Scenario: Detalle de tarjeta vencida muestra banner rojo con CTA Pagar ahora integrado
+#### Scenario: Detalle de tarjeta vencida muestra el hero terracota con vencimiento pasado
 
-- **WHEN** el usuario abre el detalle de una tarjeta cuyo período activo está `overdue` hace 5 días
-- **THEN** se renderiza un banner contextual rojo "Resumen vencido — evitá cargos por mora" arriba del termómetro, con `[Pagar ahora]` integrado a la derecha
-- **AND** la columna `EN CURSO` se etiqueta `VENCIDO` con color rojo
-- **AND** debajo del termómetro el único CTA es `[Registrar consumo]`
-
-#### Scenario: Detalle de tarjeta `closed` muestra banner ámbar POR PAGAR (no el rojo de vencido)
-
-- **WHEN** el período activo está `closed` (`end_date < today < due_date`), sin pago, faltan 2 días al `due_date`
-- **THEN** se renderiza el banner contextual ámbar "Resumen cerrado — vence el DD/MM" con `[Pagar resumen]` integrado, NO el banner rojo de vencido
-- **AND** la columna 1 se etiqueta `POR PAGAR` (ámbar)
-- **AND** no existe un banner separado de "El vencimiento se acerca"
+- **WHEN** el usuario abre el detalle de una tarjeta cuyo resumen a pagar venció hace 5 días
+- **THEN** el paso "A pagar" del timeline está en terracota
+- **AND** la card hero terracota indica el vencimiento pasado ("vencido hace 5 días") y mantiene el CTA "Registrar pago"
 
 ---
 
