@@ -34,6 +34,7 @@ import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
 import { getAuthenticatedUserId } from './_lib/auth'
 import { insertDeclaredReimbursement } from './_lib/reimbursements'
+import { applySharedSplits } from './_lib/shared-splits'
 
 function normalizeActionMoney(value: number): number {
   return normalizeMoneyAmount(value) ?? value
@@ -204,7 +205,6 @@ export async function registerCardPurchase(
     }
   }
 
-  const today = getTodayAR()
   const dueDate = targetPeriod?.due_date ?? null
 
   const { data: tx, error: txError } = await supabase
@@ -245,6 +245,7 @@ export async function registerCardPurchase(
       expenseId: tx.id,
       currencyCode: data.currency_code,
       declaration,
+      shared: data.shared,
     })
     if (!r.ok) {
       await supabase.from('transactions').delete().eq('id', tx.id).eq('user_id', userId)
@@ -252,8 +253,23 @@ export async function registerCardPurchase(
     }
   }
 
+  // Shared card consumption: split the single consumo (off-ledger until the
+  // statement is paid; the debt counts it in the period of its due_date).
+  if (data.shared) {
+    const s = await applySharedSplits(
+      supabase,
+      { household_id: data.shared.household_id, splits: data.shared.splits },
+      [{ transactionId: tx.id, amount: normalizeActionMoney(data.amount) }],
+    )
+    if (!s.ok) {
+      await supabase.from('transactions').delete().eq('id', tx.id).eq('user_id', userId)
+      return { ok: false, formError: `El consumo no se guardó (compartido inválido): ${s.error}` }
+    }
+  }
+
   revalidatePath('/cards')
   revalidatePath('/transactions')
+  revalidatePath('/shared')
   return { ok: true, id: tx.id }
 }
 
@@ -336,6 +352,8 @@ export async function registerInstallments(
       description: data.description ?? null,
       is_parent: true,
       installments_total: n,
+      // The parent carries the shared flag for listing; splits live on the children.
+      ...(data.shared ? { is_shared: true, household_id: data.shared.household_id } : {}),
     })
     .select('id')
     .single()
@@ -370,15 +388,34 @@ export async function registerInstallments(
     }
   })
 
-  const { error: childrenError } = await supabase.from('transactions').insert(childRows)
+  const { data: insertedChildren, error: childrenError } = await supabase
+    .from('transactions')
+    .insert(childRows)
+    .select('id, amount')
 
-  if (childrenError) {
+  if (childrenError || !insertedChildren) {
     await supabase.from('transactions').delete().eq('id', parent.id)
-    return { ok: false, formError: childrenError.message }
+    return { ok: false, formError: childrenError?.message ?? 'Error al crear las cuotas.' }
+  }
+
+  // Shared installments: each child cuota carries its own split, so every cuota
+  // adds its share of debt in the month it falls due.
+  if (data.shared) {
+    const s = await applySharedSplits(
+      supabase,
+      { household_id: data.shared.household_id, splits: data.shared.splits },
+      insertedChildren.map((c) => ({ transactionId: c.id, amount: Number(c.amount) })),
+    )
+    if (!s.ok) {
+      await supabase.from('transactions').delete().eq('parent_id', parent.id)
+      await supabase.from('transactions').delete().eq('id', parent.id)
+      return { ok: false, formError: `Las cuotas no se guardaron (compartido inválido): ${s.error}` }
+    }
   }
 
   revalidatePath('/cards')
   revalidatePath('/transactions')
+  revalidatePath('/shared')
   return { ok: true, parentId: parent.id }
 }
 

@@ -230,6 +230,7 @@
     "accounts": "Accounts",
     "cards": "Cards",
     "movements": "Transactions",
+    "shared": "Shared",
     "home": "Home",
     "savings": "Savings",
     "settings": "Settings",
@@ -1314,5 +1315,77 @@
     "comision-compra-usd": "USD Purchase Fee",
     "constitucion-plazo-fijo": "Fixed-Term Deposit",
     "intereses-cuenta-remunerada": "Savings Account Interest"
+  },
+  "shared": {
+    "title": "Shared",
+    "setup": {
+      "title": "Share expenses",
+      "description": "Create a household and invite the other person, or join with a code.",
+      "create_action": "Create household",
+      "join_action": "Join with a code",
+      "name_label": "Household name",
+      "name_placeholder": "Home",
+      "code_label": "Invite code",
+      "code_placeholder": "GRANA-XXXX"
+    },
+    "dashboard": {
+      "balance_title": "Balance",
+      "you_are_owed": "{name} owes you",
+      "you_owe": "You owe {name}",
+      "settled": "You're all settled",
+      "settle_action": "Settle debt",
+      "recent_title": "Recent shared expenses",
+      "your_share": "Your share: {amount}",
+      "paid_by_you": "You paid",
+      "paid_by": "{name} paid",
+      "reimbursement_label": "Reimbursement",
+      "empty": "No shared expenses yet.",
+      "waiting_title": "Waiting for the other person to join",
+      "waiting_hint": "Share this code. The other person joins from Shared → \"Join with a code\"."
+    },
+    "split": {
+      "toggle_label": "Share",
+      "toggle_hint": "Split with {name}",
+      "title": "Split",
+      "default_prefix": "Default",
+      "edit_action": "Change the split for this expense",
+      "sum_error": "Percentages must add up to 100.",
+      "shared_label": "Shared expense"
+    },
+    "invite": {
+      "title": "Invite a member",
+      "hint": "The code expires in 48 hours.",
+      "generate_action": "Generate code",
+      "copy_action": "Copy",
+      "share_action": "Share",
+      "whatsapp_action": "WhatsApp",
+      "copied": "Copied!",
+      "share_message": "Join my household on grana with the code {code}"
+    },
+    "settle": {
+      "title": "Settle debt",
+      "amount_label": "Amount to pay",
+      "currency_label": "Currency",
+      "account_label": "From which account?",
+      "total_action": "Total",
+      "submit": "Register payment",
+      "receiver_info": "{name} will choose which account they received it in.",
+      "pending_title": "Payments to receive",
+      "pending_from": "You received {amount} from {name}",
+      "receiver_account_label": "Which account did you receive it in?",
+      "receiver_confirm": "Confirm receipt",
+      "over_debt_error": "The amount can't exceed the debt."
+    },
+    "settings": {
+      "title": "Household settings",
+      "name_label": "Name",
+      "members_title": "Members",
+      "creator_badge": "Creator",
+      "member_badge": "Member",
+      "default_split_title": "Default split",
+      "default_split_hint": "Applied to every new expense. You can change it per expense.",
+      "leave_action": "Leave household",
+      "leave_blocked": "Settle the debt before leaving the household."
+    }
   }
 }

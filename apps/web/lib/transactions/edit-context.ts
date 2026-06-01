@@ -37,7 +37,9 @@ export async function buildMovementEditContext(
   const isParent = transaction.is_parent === true
   if (!isParent && !transaction.account_id) return null
   // Reimbursements are not edited through this form — they use confirm/cancel.
-  if (transaction.type === 'reimbursement') return null
+  // Reimbursements and debt settlements are not edited via the movement form;
+  // they are managed from their own flows (reintegros / Compartido).
+  if (transaction.type === 'reimbursement' || transaction.type === 'settlement') return null
 
   // Installment parent (madre): account_id is NULL; resolve a child's card
   // account and whether any child is paid (locks the amount).

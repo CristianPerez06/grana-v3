@@ -230,6 +230,7 @@
     "accounts": "Cuentas",
     "cards": "Tarjetas",
     "movements": "Movimientos",
+    "shared": "Compartido",
     "home": "Hogar",
     "savings": "Ahorros",
     "settings": "Configuración",
@@ -1314,5 +1315,77 @@
     "comision-compra-usd": "Comisión compra USD",
     "constitucion-plazo-fijo": "Constitución plazo fijo",
     "intereses-cuenta-remunerada": "Intereses cuenta remunerada"
+  },
+  "shared": {
+    "title": "Compartido",
+    "setup": {
+      "title": "Compartí gastos",
+      "description": "Creá un hogar e invitá a la otra persona, o unite con un código.",
+      "create_action": "Crear hogar",
+      "join_action": "Unirme con un código",
+      "name_label": "Nombre del hogar",
+      "name_placeholder": "Casa",
+      "code_label": "Código de invitación",
+      "code_placeholder": "GRANA-XXXX"
+    },
+    "dashboard": {
+      "balance_title": "Balance",
+      "you_are_owed": "{name} te debe",
+      "you_owe": "Le debés a {name}",
+      "settled": "Están al día",
+      "settle_action": "Saldar deuda",
+      "recent_title": "Gastos compartidos recientes",
+      "your_share": "Tu parte: {amount}",
+      "paid_by_you": "Pagaste",
+      "paid_by": "Pagó {name}",
+      "reimbursement_label": "Reintegro",
+      "empty": "Todavía no hay gastos compartidos.",
+      "waiting_title": "Falta que se sume la otra persona",
+      "waiting_hint": "Compartí este código. La otra persona se une desde Compartido → \"Unirme con un código\"."
+    },
+    "split": {
+      "toggle_label": "Compartir",
+      "toggle_hint": "Dividir con {name}",
+      "title": "División",
+      "default_prefix": "Default",
+      "edit_action": "Cambiar división para este gasto",
+      "sum_error": "Los porcentajes deben sumar 100.",
+      "shared_label": "Gasto compartido"
+    },
+    "invite": {
+      "title": "Invitar miembro",
+      "hint": "El código expira en 48 horas.",
+      "generate_action": "Generar código",
+      "copy_action": "Copiar",
+      "share_action": "Compartir",
+      "whatsapp_action": "WhatsApp",
+      "copied": "¡Copiado!",
+      "share_message": "Sumate a mi hogar en grana con el código {code}"
+    },
+    "settle": {
+      "title": "Saldar deuda",
+      "amount_label": "Monto a pagar",
+      "currency_label": "Moneda",
+      "account_label": "¿De qué cuenta sale?",
+      "total_action": "Total",
+      "submit": "Registrar pago",
+      "receiver_info": "{name} va a elegir en qué cuenta lo recibió.",
+      "pending_title": "Pagos por recibir",
+      "pending_from": "Recibiste {amount} de {name}",
+      "receiver_account_label": "¿En qué cuenta lo recibiste?",
+      "receiver_confirm": "Confirmar recepción",
+      "over_debt_error": "El monto no puede superar la deuda."
+    },
+    "settings": {
+      "title": "Configuración del hogar",
+      "name_label": "Nombre",
+      "members_title": "Miembros",
+      "creator_badge": "Creador/a",
+      "member_badge": "Miembro",
+      "default_split_title": "División por defecto",
+      "default_split_hint": "Se aplica a cada gasto nuevo. Podés cambiarla gasto por gasto.",
+      "leave_action": "Salir del hogar",
+      "leave_blocked": "Saldá la deuda antes de salir del hogar."
+    }
   }
 }

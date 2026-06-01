@@ -1,6 +1,7 @@
 import type { createClient } from '@/lib/supabase/server'
 import { normalizeMoneyAmount, type ReimbursementDeclarationInput } from '@grana/validation'
 import { formatDateISO, getTodayAR } from '@/lib/date'
+import { applySharedSplits, type SharedSplitSpec } from './shared-splits'
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
@@ -26,9 +27,11 @@ export async function insertDeclaredReimbursement(
     expenseId: string
     currencyCode: string
     declaration: ReimbursementDeclarationInput
+    /** When the origin expense is shared, the reimbursement inherits the split. */
+    shared?: SharedSplitSpec
   },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const { userId, expenseId, currencyCode, declaration: d } = params
+  const { userId, expenseId, currencyCode, declaration: d, shared } = params
 
   const estimated = normalizeMoneyAmount(d.estimated_amount) ?? d.estimated_amount
   const receivedNow = d.received_now === true
@@ -37,21 +40,39 @@ export async function insertDeclaredReimbursement(
     : estimated
   const date = d.date ?? formatDateISO(getTodayAR())
 
-  const { error } = await supabase.from('transactions').insert({
-    user_id: userId,
-    account_id: d.account_id,
-    type: 'reimbursement',
-    amount,
-    currency_code: currencyCode,
-    date,
-    linked_transaction_id: expenseId,
-    reimbursement_target: d.target,
-    estimated_amount: estimated,
-    received_at: receivedNow ? new Date().toISOString() : null,
-    card_period_id: d.target === 'statement' ? d.card_period_id ?? null : null,
-    description: d.description ?? null,
-  })
+  const { data: reimbursement, error } = await supabase
+    .from('transactions')
+    .insert({
+      user_id: userId,
+      account_id: d.account_id,
+      type: 'reimbursement',
+      amount,
+      currency_code: currencyCode,
+      date,
+      linked_transaction_id: expenseId,
+      reimbursement_target: d.target,
+      estimated_amount: estimated,
+      received_at: receivedNow ? new Date().toISOString() : null,
+      card_period_id: d.target === 'statement' ? d.card_period_id ?? null : null,
+      description: d.description ?? null,
+    })
+    .select('id')
+    .single()
 
-  if (error) return { ok: false, error: error.message }
+  if (error || !reimbursement) return { ok: false, error: error?.message ?? 'reimbursement insert failed' }
+
+  // Shared expense → the reimbursement inherits the same split (the debt formula
+  // subtracts it once received). Splits on a pending reimbursement are harmless:
+  // getHouseholdDebt only counts received ones.
+  if (shared) {
+    const s = await applySharedSplits(supabase, shared, [
+      { transactionId: reimbursement.id, amount },
+    ])
+    if (!s.ok) {
+      await supabase.from('transactions').delete().eq('id', reimbursement.id).eq('user_id', userId)
+      return { ok: false, error: s.error }
+    }
+  }
+
   return { ok: true }
 }

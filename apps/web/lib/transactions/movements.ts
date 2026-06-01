@@ -53,7 +53,9 @@ export type TransferMovement = BaseMovement & {
 
 export type AdjustmentMovement = BaseMovement & {
   kind: 'adjustment'
-  title: 'Ajuste'
+  // 'Ajuste' for real adjustments; settlement legs reuse this structure kind
+  // with their own label ("Saldar deuda" / "Pago recibido").
+  title: string
   sign: '+' | '-'
 }
 
@@ -169,6 +171,9 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
     // Subcategory is not derived — `linked_expense` query payload does not
     // include it, and the reimbursement detail view follows the same rule.
     const linkedCat = tx.linked_expense?.category ?? null
+    // Inherit the origin expense's description so the reimbursement reads the
+    // same as its expense in the list (the row's primary line uses `description`).
+    const inheritedDesc = tx.linked_expense?.description ?? tx.description
     const state: ReimbursementState = tx.cancelled_at
       ? 'cancelled'
       : tx.received_at
@@ -176,6 +181,7 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
         : 'pending'
     return {
       ...base,
+      description: inheritedDesc,
       category_id: linkedCat?.id ?? null,
       category_name: linkedCat?.name ?? null,
       category_icon: linkedCat?.icon ?? null,
@@ -183,7 +189,7 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
       subcategory_id: null,
       subcategory_name: null,
       kind: 'reimbursement',
-      title: tx.description ?? 'Reintegro',
+      title: inheritedDesc ?? 'Reintegro',
       sign: '+',
       target: tx.reimbursement_target ?? 'account',
       state,
@@ -230,6 +236,18 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
       destination_currency: tx.destination_currency ?? 'USD',
       destination_account_id: tx.transfer_destination_account_id,
       destination_account_name: tx.destination_account?.name ?? null,
+    }
+  }
+
+  if (tx.type === 'settlement') {
+    // A debt settlement leg. Renders as a structure movement (like adjustment)
+    // but with its own label and a direction-driven sign.
+    const isIn = tx.settlement_direction === 'in'
+    return {
+      ...base,
+      kind: 'adjustment',
+      title: isIn ? 'Pago recibido' : 'Saldar deuda',
+      sign: isIn ? '+' : '-',
     }
   }
 

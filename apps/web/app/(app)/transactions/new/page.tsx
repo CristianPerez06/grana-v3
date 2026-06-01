@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/ui/page-header'
 import { getAccounts } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
+import { getHousehold } from '@/lib/shared/queries'
 import { MovementForm, type MovementFormAccount } from './_components/movement-form'
 
 const activeCodes = (
@@ -41,9 +42,10 @@ const NewMovementPage = async ({ searchParams }: Props) => {
 
   const t = await getTranslations('transactions')
 
-  const [{ cash, bank, credit }, categories] = await Promise.all([
+  const [{ cash, bank, credit }, categories, household] = await Promise.all([
     getAccounts(),
     getAllCategories(user.id),
+    getHousehold(),
   ])
 
   const accounts: MovementFormAccount[] = [
@@ -78,6 +80,7 @@ const NewMovementPage = async ({ searchParams }: Props) => {
         categories={categories}
         preselectAccountId={preselectAccountId}
         createReturnHref={resolveReturnHref(from)}
+        household={household}
       />
     </div>
   )

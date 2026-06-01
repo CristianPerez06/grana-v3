@@ -39,6 +39,7 @@ import type { CategoryBreakdown, SubcategoryBreakdown } from '@grana/money-logic
 import { SUBCATEGORY_NONE_MARKER } from '@/lib/transactions/filters'
 import { getAccounts } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
+import { getHousehold } from '@/lib/shared/queries'
 import { MovementDrawerProvider } from './_components/movement-drawer'
 import type { MovementFormAccount } from './new/_components/movement-form'
 import { RegisterMovementButton } from '@/lib/transactions/components/register-movement-button'
@@ -275,7 +276,8 @@ const TransactionsPage = async ({ searchParams }: Props) => {
   const [
     { cash: drawerCash, bank: drawerBank, credit: drawerCredit },
     drawerCategories,
-  ] = await Promise.all([getAccounts(), getAllCategories(user.id)])
+    drawerHousehold,
+  ] = await Promise.all([getAccounts(), getAllCategories(user.id), getHousehold()])
   const drawerAccounts: MovementFormAccount[] = [
     ...[...drawerCash, ...drawerBank].map((a) => ({
       id: a.id,
@@ -297,7 +299,7 @@ const TransactionsPage = async ({ searchParams }: Props) => {
   ]
 
   return (
-    <MovementDrawerProvider accounts={drawerAccounts} categories={drawerCategories}>
+    <MovementDrawerProvider accounts={drawerAccounts} categories={drawerCategories} household={drawerHousehold}>
     <div className="flex max-w-3xl flex-col gap-6 pb-24 sm:pb-0">
       <PageHeader
         title={t('title')}

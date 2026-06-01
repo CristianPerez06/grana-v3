@@ -1,4 +1,5 @@
 import * as yup from 'yup'
+import { sharedExpenseSchema } from './shared'
 
 const SUPPORTED_CURRENCIES = ['ARS', 'USD'] as const
 
@@ -70,6 +71,8 @@ export const createExpenseSchema = yup
     subcategory_id: yup.string().label('subcategory_id').uuid().optional(),
     description: yup.string().label('description').optional(),
     reimbursement: reimbursementDeclarationSchema.optional().default(undefined),
+    // Optional: mark this expense as shared with a household and split it.
+    shared: sharedExpenseSchema.optional().default(undefined),
   })
   .strict()
 

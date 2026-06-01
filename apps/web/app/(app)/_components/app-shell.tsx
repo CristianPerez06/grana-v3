@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   Settings,
+  Users,
   Wallet,
   X,
 } from "lucide-react";
@@ -22,7 +23,7 @@ import { GranaIsotype, GranaLogo } from "@/components/ui/grana-logo";
 
 type NavItem = {
   href: string;
-  labelKey: "dashboard" | "accounts" | "cards" | "movements";
+  labelKey: "dashboard" | "accounts" | "cards" | "movements" | "shared";
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
 };
 
@@ -31,6 +32,7 @@ const PRIMARY_NAV: NavItem[] = [
   { href: "/accounts", labelKey: "accounts", icon: Wallet },
   { href: "/cards", labelKey: "cards", icon: CreditCard },
   { href: "/transactions", labelKey: "movements", icon: List },
+  { href: "/shared", labelKey: "shared", icon: Users },
 ];
 
 const isActive = (pathname: string, href: string) => {

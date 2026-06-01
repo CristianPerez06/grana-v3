@@ -1,5 +1,6 @@
 import * as yup from 'yup'
 import { reimbursementDeclarationSchema } from './transactions'
+import { sharedExpenseSchema } from './shared'
 
 // ─── Shared ──────────────────────────────────────────────────────────────────
 
@@ -130,6 +131,7 @@ export const registerCardPurchaseSchema = yup
       .nullable()
       .optional(),
     reimbursement: reimbursementDeclarationSchema.optional().default(undefined),
+    shared: sharedExpenseSchema.optional().default(undefined),
   })
   .strict()
   .test('fx-rate-required-for-usd', 'fx_rate_required_for_usd', function (value) {
@@ -172,6 +174,7 @@ export const registerInstallmentsSchema = yup
     category_id: yup.string().label('category_id').uuid().required(),
     subcategory_id: yup.string().label('subcategory_id').uuid().optional(),
     description: yup.string().label('description').optional(),
+    shared: sharedExpenseSchema.optional().default(undefined),
   })
   .strict()
 

@@ -17,6 +17,7 @@ import {
   Scale,
   Tag,
   Undo2,
+  Users,
   Wallet,
   X,
 } from 'lucide-react'
@@ -57,6 +58,7 @@ import { CategorySuggestionChip } from '@/lib/transactions/components/category-s
 import { CategorySuggestionHint } from '@/lib/transactions/components/category-suggestion-hint'
 import { normalizeDescription, type CategorySuggestion } from '@/lib/transactions/category-suggestion'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
+import type { Household } from '@/lib/shared/types'
 
 const todayStr = () => {
   const d = getTodayAR()
@@ -138,6 +140,8 @@ type Props = {
   variant?: 'page' | 'drawer'
   /** Drawer chrome: close handler for the header ✕ and footer cancel paths. */
   onClose?: () => void
+  /** The user's household when it has two members — enables the "Compartir" toggle. */
+  household?: Household | null
 }
 
 const CURRENCY_SYMBOL: Record<'ARS' | 'USD', string> = { ARS: '$', USD: 'U$D' }
@@ -226,11 +230,13 @@ export const MovementForm = ({
   onSuccess,
   variant = 'page',
   onClose,
+  household,
 }: Props) => {
   const router = useRouter()
   const t = useTranslations('transactions')
   const tCommon = useTranslations('common')
   const tRec = useTranslations('recurrences')
+  const tShared = useTranslations('shared')
   const isEdit = edit !== undefined
   const editable = edit?.editableFields
   const returnHref = edit?.returnHref ?? createReturnHref ?? '/transactions'
@@ -334,6 +340,15 @@ export const MovementForm = ({
     return match?.id ?? cashBankAccounts[0]?.id ?? ''
   }
   const [reimbursementAccountId, setReimbursementAccountId] = useState('')
+
+  // Shared expense (Compartido): only available with a two-member household.
+  const sharedMembers =
+    household && household.members.length === 2 ? household.members : null
+  const [sharedEnabled, setSharedEnabled] = useState(false)
+  const [splitFirstPct, setSplitFirstPct] = useState<number>(() => {
+    const stored = household?.defaultSplit.find((s) => s.user_id === household.members[0]?.userId)
+    return stored?.percentage ?? 50
+  })
 
   // UI-only state for the hi-fi shell.
   const isDrawer = variant === 'drawer'
@@ -663,6 +678,21 @@ export const MovementForm = ({
       }
     }
 
+    // Shared split: only for a cash/debit expense (the credit/installment paths
+    // are not wired yet). Builds the per-member percentages from the toggle.
+    let sharedDecl:
+      | { household_id: string; splits: { user_id: string; percentage: number }[] }
+      | undefined
+    if (sharedEnabled && tab === 'expense' && sharedMembers && household) {
+      sharedDecl = {
+        household_id: household.id,
+        splits: [
+          { user_id: sharedMembers[0].userId, percentage: splitFirstPct },
+          { user_id: sharedMembers[1].userId, percentage: 100 - splitFirstPct },
+        ],
+      }
+    }
+
     startTransition(async () => {
       let result
 
@@ -718,6 +748,7 @@ export const MovementForm = ({
             subcategory_id: subcategoryId || undefined,
             description: description || undefined,
             installments_total: parseInt(installments),
+            shared: sharedDecl,
           })
         } else {
           result = await registerCardPurchase({
@@ -730,6 +761,7 @@ export const MovementForm = ({
             description: description || undefined,
             fx_rate_to_ars: parsedFxRate ?? undefined,
             reimbursement: reimbursementDecl,
+            shared: sharedDecl,
           })
         }
       } else {
@@ -742,6 +774,7 @@ export const MovementForm = ({
           subcategory_id: subcategoryId || undefined,
           description: description || undefined,
           reimbursement: reimbursementDecl,
+          shared: sharedDecl,
         })
       }
 
@@ -1476,11 +1509,12 @@ export const MovementForm = ({
 
   // ── Toggles: reintegro + repetir (create only) ──────────────────────────────
   const showReimbursementToggle = !isEdit && tab === 'expense' && !isInstallments
+  const showSharedToggle = !isEdit && tab === 'expense' && !!sharedMembers
   const showRepeatToggle =
     !isEdit && tab !== 'adjustment' && tab !== 'exchange' && !isInstallments
 
   const togglesGroup =
-    showReimbursementToggle || showRepeatToggle ? (
+    showReimbursementToggle || showSharedToggle || showRepeatToggle ? (
       <div className="overflow-hidden rounded-[15px] border border-border bg-card [&>*+*]:border-t [&>*+*]:border-[#F1F3F6]">
         {showReimbursementToggle && (
           <div className="px-4 py-3.5">
@@ -1623,6 +1657,63 @@ export const MovementForm = ({
                 <p className="text-xs text-text-muted">
                   {reimbursementReceivedNow ? t('reimbursement.received_now_hint') : t('reimbursement.pending_hint')}
                 </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {showSharedToggle && sharedMembers && (
+          <div className="px-4 py-3.5">
+            <div className="flex items-center gap-3">
+              <span
+                className={`flex size-9 shrink-0 items-center justify-center rounded-[11px] transition-colors ${
+                  sharedEnabled ? 'text-emerald-deep' : 'text-text-muted'
+                }`}
+                style={{ backgroundColor: sharedEnabled ? 'var(--emerald-soft)' : FIELD_BG }}
+              >
+                <Users className="size-[18px]" aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-semibold text-text">{tShared('split.toggle_label')}</p>
+                <p className="text-xs text-text-muted">
+                  {tShared('split.toggle_hint', { name: sharedMembers[1].fullName })}
+                </p>
+              </div>
+              <Switch
+                checked={sharedEnabled}
+                ariaLabel={tShared('split.toggle_label')}
+                onValueChange={setSharedEnabled}
+              />
+            </div>
+            {sharedEnabled && (
+              <div
+                className="mt-3.5 flex flex-col gap-2 border-t pt-3.5"
+                style={{ borderColor: ROW_DIVIDER }}
+              >
+                <span className="text-xs text-text-muted">{tShared('split.title')}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-text">{sharedMembers[0].fullName}</span>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={String(splitFirstPct)}
+                      onChange={(e) => {
+                        const n = parseInt(e.target.value.replace(/\D/g, ''), 10)
+                        setSplitFirstPct(Number.isNaN(n) ? 1 : Math.max(1, Math.min(99, n)))
+                      }}
+                      aria-label={sharedMembers[0].fullName}
+                      className="w-16 rounded-[10px] border border-border py-1.5 pl-2.5 pr-6 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      style={{ backgroundColor: FIELD_BG }}
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-text-muted">
+                      %
+                    </span>
+                  </div>
+                  <span className="text-sm text-text-muted">
+                    · {sharedMembers[1].fullName} {100 - splitFirstPct}%
+                  </span>
+                </div>
               </div>
             )}
           </div>

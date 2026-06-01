@@ -241,11 +241,104 @@ export type Database = {
         }
         Relationships: []
       }
+      household: {
+        Row: {
+          created_at: string
+          created_by: string
+          default_split: Json
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          default_split?: Json
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          default_split?: Json
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
+      household_invite: {
+        Row: {
+          code: string
+          created_at: string
+          expires_at: string
+          household_id: string
+          id: string
+          invited_by: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expires_at: string
+          household_id: string
+          id?: string
+          invited_by: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expires_at?: string
+          household_id?: string
+          id?: string
+          invited_by?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "household_invite_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "household"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      household_member: {
+        Row: {
+          household_id: string
+          id: string
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          household_id: string
+          id?: string
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          household_id?: string
+          id?: string
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "household_member_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "household"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       institutions: {
-        // user_id was added in migration 0020_custom_institutions.sql. The
-        // hand-edit below mirrors what `supabase gen types` will emit after
-        // the migration runs against the remote project. Re-run the codegen
-        // to replace this manual patch with the real generated shape.
         Row: {
           brand_color: string | null
           country: string
@@ -276,16 +369,7 @@ export type Database = {
           slug?: string
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "institutions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedSchema: "auth"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       period_payments: {
         Row: {
@@ -590,6 +674,122 @@ export type Database = {
           },
         ]
       }
+      settlement: {
+        Row: {
+          amount: number
+          created_at: string
+          currency_code: string
+          household_id: string
+          id: string
+          payer_id: string
+          payer_movement_id: string
+          receiver_id: string
+          receiver_movement_id: string | null
+          resolved_at: string | null
+          status: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency_code: string
+          household_id: string
+          id?: string
+          payer_id: string
+          payer_movement_id: string
+          receiver_id: string
+          receiver_movement_id?: string | null
+          resolved_at?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency_code?: string
+          household_id?: string
+          id?: string
+          payer_id?: string
+          payer_movement_id?: string
+          receiver_id?: string
+          receiver_movement_id?: string | null
+          resolved_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlement_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "settlement_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "household"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlement_payer_movement_id_fkey"
+            columns: ["payer_movement_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlement_receiver_movement_id_fkey"
+            columns: ["receiver_movement_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shared_expense_split: {
+        Row: {
+          amount_assigned: number
+          created_at: string
+          household_id: string
+          id: string
+          percentage: number
+          transaction_id: string
+          user_id: string
+        }
+        Insert: {
+          amount_assigned: number
+          created_at?: string
+          household_id: string
+          id?: string
+          percentage: number
+          transaction_id: string
+          user_id: string
+        }
+        Update: {
+          amount_assigned?: number
+          created_at?: string
+          household_id?: string
+          id?: string
+          percentage?: number
+          transaction_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_expense_split_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "household"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_expense_split_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subcategories: {
         Row: {
           canonical_name: string
@@ -644,14 +844,17 @@ export type Database = {
           due_date: string | null
           estimated_amount: number | null
           fx_rate_to_ars: number | null
+          household_id: string | null
           id: string
           installment_n: number | null
           installments_total: number | null
           is_parent: boolean
+          is_shared: boolean
           linked_transaction_id: string | null
           parent_id: string | null
           received_at: string | null
           reimbursement_target: string | null
+          settlement_direction: string | null
           status: string | null
           subcategory_id: string | null
           transfer_destination_account_id: string | null
@@ -673,14 +876,17 @@ export type Database = {
           due_date?: string | null
           estimated_amount?: number | null
           fx_rate_to_ars?: number | null
+          household_id?: string | null
           id?: string
           installment_n?: number | null
           installments_total?: number | null
           is_parent?: boolean
+          is_shared?: boolean
           linked_transaction_id?: string | null
           parent_id?: string | null
           received_at?: string | null
           reimbursement_target?: string | null
+          settlement_direction?: string | null
           status?: string | null
           subcategory_id?: string | null
           transfer_destination_account_id?: string | null
@@ -702,14 +908,17 @@ export type Database = {
           due_date?: string | null
           estimated_amount?: number | null
           fx_rate_to_ars?: number | null
+          household_id?: string | null
           id?: string
           installment_n?: number | null
           installments_total?: number | null
           is_parent?: boolean
+          is_shared?: boolean
           linked_transaction_id?: string | null
           parent_id?: string | null
           received_at?: string | null
           reimbursement_target?: string | null
+          settlement_direction?: string | null
           status?: string | null
           subcategory_id?: string | null
           transfer_destination_account_id?: string | null
@@ -753,6 +962,13 @@ export type Database = {
             referencedColumns: ["code"]
           },
           {
+            foreignKeyName: "transactions_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "household"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "transactions_linked_transaction_id_fkey"
             columns: ["linked_transaction_id"]
             isOneToOne: false
@@ -787,7 +1003,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_household_member: {
+        Args: { p_household_id: string }
+        Returns: boolean
+      }
+      reverse_settlement: {
+        Args: { p_settlement_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       account_type: "cash" | "bank" | "credit"
@@ -798,6 +1021,7 @@ export type Database = {
         | "adjustment"
         | "exchange"
         | "reimbursement"
+        | "settlement"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -933,6 +1157,7 @@ export const Constants = {
         "adjustment",
         "exchange",
         "reimbursement",
+        "settlement",
       ],
     },
   },

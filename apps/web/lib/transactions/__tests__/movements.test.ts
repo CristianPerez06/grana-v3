@@ -30,6 +30,9 @@ const baseTx = (overrides: Partial<TransactionWithDetails>): TransactionWithDeta
   estimated_amount: null,
   received_at: null,
   cancelled_at: null,
+  settlement_direction: null,
+  is_shared: false,
+  household_id: null,
   category: null,
   subcategory: null,
   source_account: {

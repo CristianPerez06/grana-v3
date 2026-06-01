@@ -8,7 +8,7 @@ export type BalanceTransactionRow = {
   transfer_destination_account_id: string | null
   currency_code: string
   amount: number | string
-  type: 'income' | 'expense' | 'transfer' | 'adjustment' | 'exchange' | 'reimbursement'
+  type: 'income' | 'expense' | 'transfer' | 'adjustment' | 'exchange' | 'reimbursement' | 'settlement'
   /** Destination leg of an exchange (currency conversion). Only set for type='exchange'. */
   destination_amount?: number | string | null
   destination_currency?: string | null
@@ -18,6 +18,13 @@ export type BalanceTransactionRow = {
   received_at?: string | null
   /** Reimbursement cancellation instant. Set = cancelled (never affects a balance). */
   cancelled_at?: string | null
+  /**
+   * Debt-settlement leg direction. Only set for type='settlement': 'out' debits
+   * the payer's account (like expense), 'in' credits the receiver's (like income).
+   * A settlement impacts `disponible` but is never a categorized spending/income
+   * fact (it is excluded from analytics — see summarizePeriod / category breakdowns).
+   */
+  settlement_direction?: 'out' | 'in' | null
 }
 
 function emptyBuckets(): BalanceBuckets {
@@ -122,6 +129,14 @@ export function calculateTransactionSums(
       if (reimbursementCreditsAccount(row)) {
         ensure(row.account_id)[currency] = Money.add(ensure(row.account_id)[currency], amount)
       }
+    } else if (row.type === 'settlement') {
+      // Debt settlement leg: 'out' debits the payer's account, 'in' credits the
+      // receiver's. Impacts the balance but is not an expense/income for analytics.
+      if (row.settlement_direction === 'out') {
+        ensure(row.account_id)[currency] = Money.subtract(ensure(row.account_id)[currency], amount)
+      } else if (row.settlement_direction === 'in') {
+        ensure(row.account_id)[currency] = Money.add(ensure(row.account_id)[currency], amount)
+      }
     } else {
       assertNever(row.type)
     }
@@ -181,6 +196,13 @@ export function computeRunningBalances(
         } else if (row.type === 'reimbursement') {
           // Only a received "a cuenta" reimbursement affects this account's balance.
           if (reimbursementCreditsAccount(row)) {
+            acc[currency] = Money.add(acc[currency], amount)
+          }
+        } else if (row.type === 'settlement') {
+          // 'out' debits the payer's account, 'in' credits the receiver's.
+          if (row.settlement_direction === 'out') {
+            acc[currency] = Money.subtract(acc[currency], amount)
+          } else if (row.settlement_direction === 'in') {
             acc[currency] = Money.add(acc[currency], amount)
           }
         } else {

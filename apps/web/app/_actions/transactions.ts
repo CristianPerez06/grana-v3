@@ -28,6 +28,7 @@ import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
 import { getAuthenticatedUserId } from './_lib/auth'
 import { insertDeclaredReimbursement } from './_lib/reimbursements'
+import { applySharedSplits } from './_lib/shared-splits'
 
 function normalizeActionMoney(value: number): number {
   return normalizeMoneyAmount(value) ?? value
@@ -141,6 +142,7 @@ export async function createExpense(
       expenseId: data.id,
       currencyCode: validation.data.currency_code,
       declaration: validation.data.reimbursement,
+      shared: validation.data.shared,
     })
     if (!r.ok) {
       await supabase.from('transactions').delete().eq('id', data.id).eq('user_id', userId)
@@ -148,9 +150,24 @@ export async function createExpense(
     }
   }
 
+  // Shared expense: mark it + insert per-member splits. Rollback the whole
+  // expense (cascades reimbursement + splits) if the split fails. design.md D12.
+  if (validation.data.shared) {
+    const s = await applySharedSplits(
+      supabase,
+      { household_id: validation.data.shared.household_id, splits: validation.data.shared.splits },
+      [{ transactionId: data.id, amount: normalizeActionMoney(validation.data.amount) }],
+    )
+    if (!s.ok) {
+      await supabase.from('transactions').delete().eq('id', data.id).eq('user_id', userId)
+      return { ok: false, formError: `El gasto no se guardó (compartido inválido): ${s.error}` }
+    }
+  }
+
   revalidatePath('/accounts')
   revalidatePath(`/accounts/${validation.data.account_id}`)
   revalidatePath('/transactions')
+  revalidatePath('/shared')
   return { ok: true, id: data.id }
 }
 

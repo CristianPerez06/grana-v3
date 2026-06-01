@@ -5,6 +5,7 @@ export type TransactionType =
   | 'adjustment'
   | 'exchange'
   | 'reimbursement'
+  | 'settlement'
 
 export type ReimbursementTarget = 'account' | 'statement'
 
@@ -39,6 +40,12 @@ export type Transaction = {
   estimated_amount: number | null
   received_at: string | null
   cancelled_at: string | null
+  // Debt-settlement leg direction. Only set for type='settlement'.
+  settlement_direction: 'out' | 'in' | null
+  // Shared module (Compartido): a shared expense impacts the owner's balance and
+  // carries per-member splits; the household it belongs to.
+  is_shared: boolean
+  household_id: string | null
 }
 
 export type TransactionCategory = {

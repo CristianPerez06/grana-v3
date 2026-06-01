@@ -17,6 +17,7 @@ import {
   Receipt,
   Scale,
   Tag,
+  Users,
   Wallet,
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
@@ -25,6 +26,7 @@ import { useShowCents } from '@/lib/preferences-context'
 import type { FinancialMovement, MovementReviewFlag } from '@/lib/transactions/movements'
 import type { TransactionWithDetails } from '@/lib/transactions/types'
 import type { ExpenseReimbursementVM } from '@/lib/transactions/queries'
+import type { MovementSharedInfo } from '@/lib/shared/queries'
 import { resolveTone, toneToClass } from '@/lib/transactions/components/tone'
 import { resolveContextVariant } from '@/lib/transactions/components/resolve-context-variant'
 import { TxHeader } from './tx-header'
@@ -155,6 +157,8 @@ type Props = {
    */
   edit?: MovementEditContext | null
   editCategories?: CategoryWithSubcategories[]
+  /** Split info when the movement is shared (null otherwise). */
+  sharedInfo?: MovementSharedInfo | null
 }
 
 export const GlobalTransactionDetail = ({
@@ -167,9 +171,11 @@ export const GlobalTransactionDetail = ({
   backHref,
   edit,
   editCategories,
+  sharedInfo,
 }: Props) => {
   const showCents = useShowCents()
   const t = useTranslations('transactions')
+  const tShared = useTranslations('shared')
   const [editOpen, setEditOpen] = useState(false)
   const canUseEditDrawer = edit != null && editCategories != null
 
@@ -365,6 +371,32 @@ export const GlobalTransactionDetail = ({
       />
 
       <TxContextNote copy={contextCopy} />
+
+      {sharedInfo && (
+        <div className="mx-4 flex flex-col gap-1 rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm">
+          <div className="flex items-center gap-2 font-medium text-foreground">
+            <Users size={16} className="text-muted-foreground" aria-hidden />
+            {tShared('split.shared_label')}
+          </div>
+          <p className="text-muted-foreground">
+            {tShared('dashboard.your_share', {
+              amount:
+                movement.currency_code === 'ARS'
+                  ? formatARS(sharedInfo.ownShare)
+                  : formatUSD(sharedInfo.ownShare),
+            })}
+            {sharedInfo.bySplit.length > 1 &&
+              ` · ${sharedInfo.bySplit
+                .map(
+                  (s) =>
+                    `${s.name || '—'} ${
+                      movement.currency_code === 'ARS' ? formatARS(s.amount) : formatUSD(s.amount)
+                    }`,
+                )
+                .join(' · ')}`}
+          </p>
+        </div>
+      )}
 
       {movement.review_flags.length > 0 && (
         <div className="mx-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">

@@ -5,11 +5,13 @@ import { useTranslations } from 'next-intl'
 import { Drawer } from '@/components/ui/drawer'
 import { MovementDrawerContext } from '@/lib/transactions/movement-drawer-context'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
+import type { Household } from '@/lib/shared/types'
 import { MovementForm, type MovementFormAccount } from '../new/_components/movement-form'
 
 type Props = {
   accounts: MovementFormAccount[]
   categories: CategoryWithSubcategories[]
+  household?: Household | null
   children: ReactNode
 }
 
@@ -18,7 +20,7 @@ type Props = {
  * the exact same MovementForm (and its server actions/validation) as the
  * `/transactions/new` page. The page route stays as a deep-link/no-JS fallback.
  */
-export function MovementDrawerProvider({ accounts, categories, children }: Props) {
+export function MovementDrawerProvider({ accounts, categories, household, children }: Props) {
   const t = useTranslations('transactions')
   const [open, setOpen] = useState(false)
   const [preselectAccountId, setPreselectAccountId] = useState<string | undefined>(
@@ -46,6 +48,7 @@ export function MovementDrawerProvider({ accounts, categories, children }: Props
           variant="drawer"
           accounts={accounts}
           categories={categories}
+          household={household}
           preselectAccountId={preselectAccountId}
           onClose={() => setOpen(false)}
           onSuccess={() => setOpen(false)}

@@ -10,6 +10,7 @@ import {
 } from '@/lib/transactions/queries'
 import { toFinancialMovement } from '@/lib/transactions/movements'
 import { getRecurrenceLinkForTransaction } from '@/lib/recurrences/queries'
+import { getMovementSharedInfo } from '@/lib/shared/queries'
 import { buildMovementEditContext } from '@/lib/transactions/edit-context'
 import { GlobalTransactionDetail } from './_components/global-transaction-detail'
 
@@ -70,6 +71,9 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
       buildMovementEditContext(txId, detailHref),
     ])
   const movement = toFinancialMovement(transaction)
+  const sharedInfo = transaction.is_shared
+    ? await getMovementSharedInfo(transaction.id, transaction.is_parent)
+    : null
 
   return (
     <div className="flex flex-col gap-4 max-w-lg mx-auto">
@@ -96,6 +100,7 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
         backHref={backHref}
         edit={editData?.edit ?? null}
         editCategories={editData?.categories}
+        sharedInfo={sharedInfo}
       />
     </div>
   )

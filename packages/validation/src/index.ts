@@ -101,6 +101,22 @@ export {
   initialBalanceSchema,
   type InitialBalanceInput,
 } from "./onboarding";
+export {
+  createHouseholdSchema,
+  joinHouseholdSchema,
+  sharedSplitSchema,
+  sharedExpenseSchema,
+  updateHouseholdConfigSchema,
+  settlementSchema,
+  assignSettlementSchema,
+  type CreateHouseholdInput,
+  type JoinHouseholdInput,
+  type SharedSplitInput,
+  type SharedExpenseInput,
+  type UpdateHouseholdConfigInput,
+  type SettlementInput,
+  type AssignSettlementInput,
+} from "./shared";
 export { translateFieldError } from "./translate-error";
 export {
   validateActionInput,
