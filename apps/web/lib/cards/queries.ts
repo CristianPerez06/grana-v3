@@ -256,7 +256,7 @@ function derivePeriodAlert(
 // ─── Task 5.1: getCreditCards ─────────────────────────────────────────────────
 
 export async function getCreditCards(
-  options: { includeArchived?: boolean } = {},
+  options: { includeArchived?: boolean; archivedOnly?: boolean } = {},
 ): Promise<CreditCardSummary[]> {
   const supabase = await createClient()
 
@@ -266,7 +266,9 @@ export async function getCreditCards(
     .eq('type', 'credit')
     .order('created_at', { ascending: true })
 
-  if (!options.includeArchived) {
+  if (options.archivedOnly) {
+    query = query.eq('is_active', false)
+  } else if (!options.includeArchived) {
     query = query.eq('is_active', true)
   }
 

@@ -635,6 +635,15 @@
       "empty_body": "Add your first card to keep track of your statements and installments.",
       "empty_cta": "Add card"
     },
+    "route": {
+      "subtitle_loading": "- credit cards · {month} statements",
+      "hero_loading": "Loading this month's summary…",
+      "hero_error": "We couldn't load this month's summary.",
+      "wallet_loading": "Loading your cards…",
+      "wallet_error": "We couldn't load your cards.",
+      "archived_loading": "Loading archived…",
+      "archived_error": "We couldn't load archived cards."
+    },
     "month_hero": {
       "eyebrow": "To pay this month",
       "next_due_label": "Next due date",
