@@ -60,6 +60,8 @@ type Props = {
   isRecurrent?: boolean
   /** Running balance after this movement, per currency (account view, no filters). */
   runningBalanceSnapshot?: Record<'ARS' | 'USD', number> | null
+  /** Installment chip label (e.g. "Cuota 2 de 6"); shown on card-statement rows. */
+  installmentChip?: string | null
 }
 
 export const MovementRow = ({
@@ -68,6 +70,7 @@ export const MovementRow = ({
   showAccount = false,
   isRecurrent = false,
   runningBalanceSnapshot = null,
+  installmentChip = null,
 }: Props) => {
   const t = useTranslations('transactions')
   const showCents = useShowCents()
@@ -132,6 +135,11 @@ export const MovementRow = ({
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-bold">{primary}</span>
+            {installmentChip && (
+              <span className="inline-flex shrink-0 items-center rounded-full bg-border-soft px-1.5 py-0.5 text-[11px] font-semibold text-text-muted">
+                {installmentChip}
+              </span>
+            )}
             {isRecurrent && (
               <span
                 className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-soft px-1.5 py-0.5 text-[11px] font-semibold text-slate"

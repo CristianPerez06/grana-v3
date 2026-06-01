@@ -46,6 +46,8 @@ type Props = {
   recurrenceLinkedIds?: Set<string>
   /** Per-movement running balance snapshots (account view, no filters); null hides them. */
   runningBalances?: Map<string, Record<'ARS' | 'USD', number>> | null
+  /** Per-movement installment chip labels (e.g. "Cuota 2 de 6"), keyed by id. */
+  installmentChips?: Map<string, string>
   /** Empty-state reason + actions. Absent ⇒ generic "no movements". */
   emptyState?: MovementEmptyState
 }
@@ -57,6 +59,7 @@ export const MovementList = ({
   showAccount = false,
   recurrenceLinkedIds,
   runningBalances = null,
+  installmentChips,
   emptyState,
 }: Props) => {
   const t = useTranslations('transactions')
@@ -154,6 +157,7 @@ export const MovementList = ({
                   showAccount={showAccount}
                   isRecurrent={recurrenceLinkedIds?.has(movement.id) ?? false}
                   runningBalanceSnapshot={runningBalances?.get(movement.id) ?? null}
+                  installmentChip={installmentChips?.get(movement.id) ?? null}
                 />
               )
 

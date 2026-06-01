@@ -4,6 +4,7 @@ import { Money } from '@grana/validation'
 // columns (id, account_id, is_estimated, etc.) — the pure functions only need
 // the date fields plus the derived flags from related tables.
 export type CardPeriodWithPayment = {
+  id: string
   start_date: string
   end_date: string
   due_date: string
@@ -53,6 +54,70 @@ export function derivePeriodVariant(
   if (period.start_date > todayStr) return 'futuro'
   if (txCount === 0) return 'tarjeta_nueva'
   return 'actual'
+}
+
+// ─── Statement lifecycle classification ───────────────────────────────────────
+
+/**
+ * Classify a card's periods into the three coexisting statements of an
+ * Argentine credit card lifecycle, around which the detail screen is built:
+ *
+ * - `apagar`: a statement that already CLOSED but is not yet paid (`closed` or
+ *   `overdue`) and has transactions imputed — what the user must pay now.
+ *   `null` when everything is up to date.
+ * - `curso`: the OPEN statement that contains `today` — still accruing charges.
+ *   Falls back to the latest unpaid period when no open period contains today
+ *   (so the screen always has a "current" anchor).
+ * - `prox`: the first period chronologically AFTER `curso` (real row), or
+ *   `null` when none exists yet (the caller may project one with
+ *   `suggestNextPeriodDates`, which this pure function does not do).
+ *
+ * The three are mutually exclusive: a period chosen as `apagar` is never also
+ * `curso` or `prox`. Pure: same input → same output.
+ */
+export function classifyPeriodsLifecycle<P extends CardPeriodWithPayment>(
+  periods: P[],
+  today: Date,
+): { apagar: P | null; curso: P | null; prox: P | null } {
+  if (periods.length === 0) return { apagar: null, curso: null, prox: null }
+
+  const sorted = [...periods].sort((a, b) => a.start_date.localeCompare(b.start_date))
+  const todayStr = formatDateISO(today)
+  const unpaid = sorted.filter((p) => !p.has_payment)
+
+  // "A pagar": prefer overdue-with-debt, then closed-with-debt. Most urgent first.
+  const apagar =
+    unpaid.find(
+      (p) => derivePeriodStatus(p, today, false) === 'overdue' && p.tx_count > 0,
+    ) ??
+    unpaid.find(
+      (p) => derivePeriodStatus(p, today, false) === 'closed' && p.tx_count > 0,
+    ) ??
+    null
+
+  // "En curso": the open period containing today; fallback to the latest unpaid
+  // period that is not the one already taken by `apagar`.
+  const openNow = unpaid.find(
+    (p) => p.start_date <= todayStr && todayStr <= p.end_date,
+  )
+  const curso =
+    openNow ??
+    [...unpaid].reverse().find((p) => p.id !== apagar?.id) ??
+    null
+
+  // "Próximo": first period chronologically after `curso` (or after `apagar`
+  // when there is no `curso`), excluding the ones already picked.
+  const anchor = curso ?? apagar
+  const prox = anchor
+    ? sorted.find(
+        (p) =>
+          p.start_date > anchor.start_date &&
+          p.id !== apagar?.id &&
+          p.id !== curso?.id,
+      ) ?? null
+    : null
+
+  return { apagar, curso, prox }
 }
 
 // ─── Next-period date suggestion ──────────────────────────────────────────────

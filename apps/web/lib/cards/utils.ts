@@ -5,6 +5,7 @@
 export {
   derivePeriodStatus,
   derivePeriodVariant,
+  classifyPeriodsLifecycle,
   suggestNextPeriodDates,
   assignTransactionToPeriod,
   splitAmountIntoInstallments,
