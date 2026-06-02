@@ -14,7 +14,12 @@ import type { Institution } from '@/lib/accounts/types'
  * state directly — no context needed. The `/accounts/new` page stays as the
  * no-JS fallback. The form remounts on each open (`key`) to reset to clean state.
  */
-export function CreateAccountButton({ institutions }: { institutions: Institution[] }) {
+type Props = {
+  institutions: Institution[]
+  disabled?: boolean
+}
+
+export function CreateAccountButton({ institutions, disabled = false }: Props) {
   const t = useTranslations('accounts')
   const [open, setOpen] = useState(false)
   const [formInstance, setFormInstance] = useState(0)
@@ -23,6 +28,7 @@ export function CreateAccountButton({ institutions }: { institutions: Institutio
     <>
       <Button
         className="w-auto"
+        disabled={disabled}
         onClick={() => {
           setFormInstance((n) => n + 1)
           setOpen(true)

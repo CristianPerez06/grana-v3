@@ -3,7 +3,7 @@ import { buildCategorySlices, type CategorySlice } from '@grana/money-logic'
 import { monthOf } from '@/lib/transactions/filters'
 import { getMonthCategoryBreakdown, UNCATEGORIZED_ID } from '@/lib/transactions/queries'
 import { CategoryTeaser } from './category-teaser'
-import { SectionFallback } from './section-fallback'
+import { SectionFallback } from '@/components/ui/section-fallback'
 
 type Props = {
   today: Date

@@ -432,7 +432,13 @@
     "hints": {
       "initialBalance": "This is the balance the account starts with today. It adjusts with your movements afterward."
     },
-    "discard_confirm": "You have unsaved changes. Discard them?"
+    "discard_confirm": "You have unsaved changes. Discard them?",
+    "route": {
+      "active_loading": "Loading your accounts…",
+      "active_error": "We couldn't load your accounts.",
+      "archived_loading": "Loading archived…",
+      "archived_error": "We couldn't load archived accounts."
+    }
   },
   "cards": {
     "title": "Cards",

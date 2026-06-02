@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server'
 import { getUpcomingFortnight, type UpcomingFortnight } from '@grana/dashboard'
 import { createClient } from '@/lib/supabase/server'
-import { SectionFallback } from './section-fallback'
+import { SectionFallback } from '@/components/ui/section-fallback'
 import { UpcomingFortnightSection } from './upcoming-fortnight-section'
 
 type Props = {

@@ -2,7 +2,7 @@ import { getTranslations } from 'next-intl/server'
 import { getDashboardHero, type DashboardHero } from '@grana/dashboard'
 import { createClient } from '@/lib/supabase/server'
 import { HeroSection } from './hero-section'
-import { SectionFallback } from './section-fallback'
+import { SectionFallback } from '@/components/ui/section-fallback'
 
 export const HeroSectionContainer = async () => {
   const supabase = await createClient()

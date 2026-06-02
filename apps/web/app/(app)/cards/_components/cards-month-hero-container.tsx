@@ -2,7 +2,7 @@ import { getTranslations } from 'next-intl/server'
 import { getCardsMonthSummary, type CardsMonthSummary } from '@/lib/cards/queries'
 import { getShowCents } from '@/lib/preferences'
 import { CardsMonthHero } from './cards-month-hero'
-import { SectionFallback } from '../../dashboard/_components/section-fallback'
+import { SectionFallback } from '@/components/ui/section-fallback'
 
 export const CardsMonthHeroContainer = async () => {
   let summary: CardsMonthSummary

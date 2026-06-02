@@ -432,7 +432,13 @@
     "hints": {
       "initialBalance": "Es el saldo con el que arranca la cuenta hoy. Después se ajusta con tus movimientos."
     },
-    "discard_confirm": "Tenés cambios sin guardar. ¿Descartarlos?"
+    "discard_confirm": "Tenés cambios sin guardar. ¿Descartarlos?",
+    "route": {
+      "active_loading": "Cargando tus cuentas…",
+      "active_error": "No pudimos cargar tus cuentas.",
+      "archived_loading": "Cargando archivadas…",
+      "archived_error": "No pudimos cargar las archivadas."
+    }
   },
   "cards": {
     "title": "Tarjetas",

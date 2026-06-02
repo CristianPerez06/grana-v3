@@ -9,7 +9,7 @@ import { getShowCents } from '@/lib/preferences'
 import { getTodayAR } from '@/lib/date'
 import { Wallet } from './wallet'
 import { WalletSection } from './wallet-section'
-import { SectionFallback } from '../../dashboard/_components/section-fallback'
+import { SectionFallback } from '@/components/ui/section-fallback'
 
 export const WalletContainer = async () => {
   let activeCards: CreditCardSummary[]

@@ -5,7 +5,7 @@ import { CategoryTeaserContainer } from './category-teaser-container'
 import { DashboardErrorBoundary } from './dashboard-error-boundary'
 import { HeroSectionContainer } from './hero-section-container'
 import { MonthBalanceSectionContainer } from './month-balance-section-container'
-import { SectionFallback } from './section-fallback'
+import { SectionFallback } from '@/components/ui/section-fallback'
 import { UpcomingFortnightSectionContainer } from './upcoming-fortnight-section-container'
 import { WelcomeFirstMoveCardContainer } from './welcome-first-move-card-container'
 

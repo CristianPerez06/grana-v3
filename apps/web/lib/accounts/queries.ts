@@ -72,6 +72,58 @@ export async function getAccounts(
   }
 }
 
+// ── getCashAndBankAccounts ────────────────────────────────────────────────────
+
+type GroupedCashAndBank = {
+  cash: AccountWithBalances[]
+  bank: AccountWithBalances[]
+}
+
+export async function getCashAndBankAccounts(
+  options: { archivedOnly?: boolean } = {},
+): Promise<GroupedCashAndBank> {
+  const supabase = await createClient()
+
+  let query = supabase
+    .from('accounts')
+    .select(`
+      *,
+      institution:institutions(*),
+      currencies:account_currencies(*)
+    `)
+    .in('type', ['cash', 'bank'])
+    .order('created_at', { ascending: true })
+
+  query = options.archivedOnly ? query.eq('is_active', false) : query.eq('is_active', true)
+
+  const { data, error } = await query
+  if (error) throw error
+
+  const accounts = (data ?? []) as AccountWithDetails[]
+  const accountIds = accounts.map((a) => a.id)
+  const txSumsMap = await getTransactionSums(accountIds)
+
+  const withBalances = accounts.map((a) => ({
+    ...a,
+    balances: {
+      ARS: a.currencies.find((c) => c.currency_code === 'ARS')?.initial_balance ?? 0,
+      USD: a.currencies.find((c) => c.currency_code === 'USD')?.initial_balance ?? 0,
+      ...Object.fromEntries(
+        Object.entries(txSumsMap.get(a.id) ?? {}).map(([k, v]) => [
+          k,
+          addMoneyAmounts(a.currencies.find((c) => c.currency_code === k)?.initial_balance ?? 0, v),
+        ]),
+      ),
+    } as Record<'ARS' | 'USD', number>,
+    avatar: resolveAccountAvatar(a, a.institution),
+  }))
+
+  return {
+    cash: withBalances.filter((a) => a.type === 'cash'),
+    bank: withBalances.filter((a) => a.type === 'bank'),
+  }
+}
+
 // ── getAccountDetail ──────────────────────────────────────────────────────────
 
 export async function getAccountDetail(id: string): Promise<AccountWithBalances | null> {

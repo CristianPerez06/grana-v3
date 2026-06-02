@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite'
 import { SectionFallback } from './section-fallback'
 
 const meta: Meta<typeof SectionFallback> = {
-  title: 'Dashboard/SectionFallback',
+  title: 'UI/SectionFallback',
   component: SectionFallback,
   parameters: { layout: 'padded' },
   decorators: [(Story) => <div className="w-[480px]">{Story()}</div>],
