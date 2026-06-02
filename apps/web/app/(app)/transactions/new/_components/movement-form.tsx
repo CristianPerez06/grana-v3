@@ -1393,6 +1393,7 @@ export const MovementForm = ({
         <MoneyAmountInput
           id="fx_rate"
           required
+          groupThousands={false}
           value={fxRate}
           onChange={setFxRate}
           placeholder={t('labels.fx_rate_daily')}

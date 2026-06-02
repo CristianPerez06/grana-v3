@@ -399,6 +399,7 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
                   </label>
                   <MoneyAmountInput
                     id={`fx-${instance.id}`}
+                    groupThousands={false}
                     value={fxByInstance[instance.id] ?? ''}
                     onChange={(value) =>
                       setFxByInstance((prev) => ({

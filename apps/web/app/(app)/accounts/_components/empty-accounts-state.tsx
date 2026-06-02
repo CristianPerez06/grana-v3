@@ -1,5 +1,7 @@
 import Link from 'next/link'
+import { Plus } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
+import { Button } from '@/components/ui/button'
 
 export const EmptyAccountsState = async () => {
   const t = await getTranslations('accounts')
@@ -9,12 +11,12 @@ export const EmptyAccountsState = async () => {
       <p className="mt-2 max-w-sm text-sm text-text-soft">
         {t('empty.description')}
       </p>
-      <Link
-        href="/accounts/new"
-        className="mt-6 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-      >
-        {`+ ${t('actions.create')}`}
-      </Link>
+      <Button asChild variant="primary" className="mt-6 w-auto">
+        <Link href="/accounts/new">
+          <Plus className="size-4" aria-hidden />
+          {t('actions.create')}
+        </Link>
+      </Button>
     </div>
   )
 }

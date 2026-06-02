@@ -1,6 +1,8 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
+import { Plus } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
+import { Button } from '@/components/ui/button'
 import { computeRunningBalances, type RunningBalanceRow } from '@grana/money-logic'
 import { createClient } from '@/lib/supabase/server'
 import { getAccountDetail, getInstitutions } from '@/lib/accounts/queries'
@@ -118,12 +120,12 @@ const AccountDetailPage = async ({ params, searchParams }: Props) => {
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
             {t('headers.movements')}
           </h2>
-          <Link
-            href={`/transactions/new?account=${account.id}&from=account:${account.id}`}
-            className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            {`+ ${t('actions.add_transaction')}`}
-          </Link>
+          <Button asChild size="sm" className="w-auto">
+            <Link href={`/transactions/new?account=${account.id}&from=account:${account.id}`}>
+              <Plus size={16} strokeWidth={2} aria-hidden />
+              {t('actions.add_transaction')}
+            </Link>
+          </Button>
         </div>
 
         <MovementFilters

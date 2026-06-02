@@ -3,12 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Landmark, Wallet, X } from 'lucide-react'
+import { Landmark, X } from 'lucide-react'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { parseMoneyInput } from '@grana/validation'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Segmented } from '@/components/ui/segmented'
 import { SectionLabel, Hint } from '@/components/ui/form-primitives'
 import { useShowCents } from '@/lib/preferences-context'
 import { createAccount } from '@/app/_actions/accounts'
@@ -40,7 +39,9 @@ export const CreateAccountForm = ({ institutions, variant = 'page', onClose, onS
   const showCents = useShowCents()
   const isDrawer = variant === 'drawer'
 
-  const [type, setType] = useState<'cash' | 'bank'>('cash')
+  // Cash accounts exist only as the onboarding-provisioned Billetera, so this
+  // form creates bank/debit accounts only — the type is fixed, no selector.
+  const type = 'bank' as const
   const [name, setName] = useState('')
   const [institutionId, setInstitutionId] = useState('')
   const [institutionSearch, setInstitutionSearch] = useState('')
@@ -53,34 +54,26 @@ export const CreateAccountForm = ({ institutions, variant = 'page', onClose, onS
   const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const isBank = type === 'bank'
-
   // ── Derived live-preview values ─────────────────────────────────────────────
   const selectedInstitution = institutions.find((i) => i.id === institutionId) ?? null
   const brandColor = selectedInstitution?.brand_color ?? null
   const bankShort = selectedInstitution ? shortBankName(selectedInstitution.name) : ''
-  const autoName = isBank ? bankShort : ''
+  const autoName = bankShort
   const displayName = name.trim() || autoName
-  const hasContent = !!name.trim() || (isBank && !!institutionId)
+  const hasContent = !!name.trim() || !!institutionId
 
   const accent = accountAccent(type, brandColor)
-  const accentSoft = isBank && brandColor ? softFromHex(brandColor) : 'var(--terracotta-soft)'
+  const accentSoft = brandColor ? softFromHex(brandColor) : 'var(--terracotta-soft)'
 
-  const avatar: PreviewAvatar = isBank
-    ? brandColor
-      ? { kind: 'monogram', monogram: (bankShort[0] ?? '?').toUpperCase(), bg: brandColor, fg: '#fff' }
-      : { kind: 'bank', bg: 'var(--border)', fg: 'var(--text-soft)' }
-    : hasContent
-      ? { kind: 'wallet', bg: 'var(--terracotta)', fg: '#fff' }
-      : { kind: 'wallet', bg: 'var(--terracotta-soft)', fg: 'var(--terracotta)' }
+  const avatar: PreviewAvatar = brandColor
+    ? { kind: 'monogram', monogram: (bankShort[0] ?? '?').toUpperCase(), bg: brandColor, fg: '#fff' }
+    : { kind: 'bank', bg: 'var(--border)', fg: 'var(--text-soft)' }
 
-  const badgeLabel = isBank ? t('preview.badge_bank') : t('preview.badge_cash')
-  const badgeBg = isBank ? (brandColor ? accentSoft : 'var(--border-soft)') : 'var(--terracotta-soft)'
-  const badgeColor = isBank ? (brandColor ? accent : 'var(--text-muted)') : 'var(--terracotta)'
+  const badgeLabel = t('preview.badge_bank')
+  const badgeBg = brandColor ? accentSoft : 'var(--border-soft)'
+  const badgeColor = brandColor ? accent : 'var(--text-muted)'
 
-  const meta = isBank
-    ? t('preview.meta_bank', { bank: bankShort || t('preview.meta_bank_empty') })
-    : t('preview.meta_cash')
+  const meta = t('preview.meta_bank', { bank: bankShort || t('preview.meta_bank_empty') })
 
   const arsNum = parseMoneyInput(arsValue) ?? 0
   const usdNum = parseMoneyInput(usdValue) ?? 0
@@ -92,16 +85,14 @@ export const CreateAccountForm = ({ institutions, variant = 'page', onClose, onS
     const v = parseMoneyInput(code === 'ARS' ? arsValue : usdValue)
     return v !== null && v >= 0
   })
-  const canSubmit = (isBank ? !!institutionId : !!name.trim()) && balancesValid
-  const dirty =
-    !!name.trim() || isBank || !!institutionId || arsValue !== '0' || usdValue !== '0'
+  const canSubmit = !!institutionId && balancesValid
+  const dirty = !!name.trim() || !!institutionId || arsValue !== '0' || usdValue !== '0'
 
   const validate = () => {
     const errs: Record<string, string> = {}
-    // Name: required for cash; optional for bank (falls back to the bank name).
-    if (!isBank && !name.trim()) errs.name = t('errors.name_required')
+    // Name is optional — it falls back to the (short) institution name.
     if (name.trim().length > 50) errs.name = t('errors.name_too_long')
-    if (isBank && !institutionId) errs.institution = t('errors.institution_required_short')
+    if (!institutionId) errs.institution = t('errors.institution_required_short')
     if (parseMoneyInput(arsValue) === null || (parseMoneyInput(arsValue) ?? 0) < 0)
       errs.balance_ARS = t('errors.balance_negative')
     if (parseMoneyInput(usdValue) === null || (parseMoneyInput(usdValue) ?? 0) < 0)
@@ -121,13 +112,13 @@ export const CreateAccountForm = ({ institutions, variant = 'page', onClose, onS
         { currency_code: 'ARS', initial_balance: parseMoneyInput(arsValue) ?? 0 },
         { currency_code: 'USD', initial_balance: parseMoneyInput(usdValue) ?? 0 },
       ]
-      // Bank with no explicit name falls back to the (short) institution name.
-      const finalName = name.trim() || (isBank ? bankShort || (selectedInstitution?.name ?? '') : '')
+      // No explicit name falls back to the (short) institution name.
+      const finalName = name.trim() || bankShort || (selectedInstitution?.name ?? '')
 
       const result = await createAccount({
         name: finalName,
         type,
-        institution_id: isBank ? institutionId : undefined,
+        institution_id: institutionId,
         currencies,
         color_key: null,
         icon_key: null,
@@ -178,61 +169,29 @@ export const CreateAccountForm = ({ institutions, variant = 'page', onClose, onS
         />
       </div>
 
-      {/* Tipo de cuenta */}
-      <SectionLabel>{t('labels.type')}</SectionLabel>
-      <Segmented
-        value={type}
-        ariaLabel={t('labels.type')}
-        onValueChange={(v) => setType(v as 'cash' | 'bank')}
-        options={[
-          {
-            value: 'cash',
-            label: (
-              <>
-                <Wallet className="size-[17px]" aria-hidden />
-                {t('types.cash')}
-              </>
-            ),
-          },
-          {
-            value: 'bank',
-            label: (
-              <>
-                <Landmark className="size-[17px]" aria-hidden />
-                {t('types.bank')}
-              </>
-            ),
-          },
-        ]}
-      />
-
-      {/* Banco / institución (solo bancaria) */}
-      {isBank && (
-        <>
-          <SectionLabel className="mt-[22px]">{t('labels.institution')}</SectionLabel>
-          <div className="rounded-[15px] border border-border">
-            <BankSelector
-              institutions={institutions}
-              institutionId={institutionId}
-              search={institutionSearch}
-              onSearchChange={(value) => {
-                setInstitutionSearch(value)
-                if (institutionId && selectedInstitution && selectedInstitution.name !== value) {
-                  setInstitutionId('')
-                }
-              }}
-              onSelect={(inst) => {
-                setInstitutionId(inst.id)
-                setInstitutionSearch(inst.name)
-              }}
-              label={t('labels.institution')}
-              placeholder={t('placeholders.institutionSearch')}
-            />
-          </div>
-          {errors.institution && (
-            <p className="mt-1.5 px-0.5 text-xs text-destructive">{errors.institution}</p>
-          )}
-        </>
+      {/* Banco / institución */}
+      <SectionLabel>{t('labels.institution')}</SectionLabel>
+      <div className="rounded-[15px] border border-border">
+        <BankSelector
+          institutions={institutions}
+          institutionId={institutionId}
+          search={institutionSearch}
+          onSearchChange={(value) => {
+            setInstitutionSearch(value)
+            if (institutionId && selectedInstitution && selectedInstitution.name !== value) {
+              setInstitutionId('')
+            }
+          }}
+          onSelect={(inst) => {
+            setInstitutionId(inst.id)
+            setInstitutionSearch(inst.name)
+          }}
+          label={t('labels.institution')}
+          placeholder={t('placeholders.institutionSearch')}
+        />
+      </div>
+      {errors.institution && (
+        <p className="mt-1.5 px-0.5 text-xs text-destructive">{errors.institution}</p>
       )}
 
       {/* Nombre */}
@@ -242,7 +201,7 @@ export const CreateAccountForm = ({ institutions, variant = 'page', onClose, onS
           className="flex size-9 shrink-0 items-center justify-center rounded-[11px] bg-[#FAFBFC] text-text-muted"
           aria-hidden
         >
-          {isBank ? <Landmark className="size-[18px]" /> : <Wallet className="size-[18px]" />}
+          <Landmark className="size-[18px]" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="mb-0.5 text-[11px] font-bold uppercase tracking-[0.05em] text-text-soft">
@@ -252,7 +211,7 @@ export const CreateAccountForm = ({ institutions, variant = 'page', onClose, onS
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={50}
-            placeholder={isBank ? t('placeholders.name_bank') : t('placeholders.name')}
+            placeholder={t('placeholders.name_bank')}
             aria-label={t('labels.name')}
             className="w-full border-none bg-transparent p-0 text-[15px] font-semibold tracking-[-0.01em] text-text outline-none placeholder:font-medium placeholder:text-text-soft"
           />

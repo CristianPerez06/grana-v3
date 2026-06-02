@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 import {
   CreateRecurrenceModal,
@@ -23,15 +24,15 @@ export const CreateRecurrenceButton = ({ accounts, categories }: Props) => {
 
   return (
     <>
-      <button
-        type="button"
+      <Button
+        variant="primary"
+        className="w-auto"
         onClick={() => setOpen(true)}
         disabled={accounts.length === 0}
-        className="inline-flex items-center gap-2 rounded-[var(--radius-lg)] bg-emerald px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-deep disabled:opacity-50"
       >
         <Plus className="size-4" aria-hidden />
         {tRec('actions.create')}
-      </button>
+      </Button>
       <CreateRecurrenceModal
         open={open}
         onClose={() => setOpen(false)}

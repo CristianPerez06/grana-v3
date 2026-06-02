@@ -2,11 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm, type Control } from 'react-hook-form'
 import { useTranslations } from 'next-intl'
 import { Alert } from '@/components/ui/alert'
-import { FormField } from '@/components/ui/form-field'
+import { Label } from '@/components/ui/label'
+import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { SubmitButton } from '@/components/ui/submit-button'
+import { cn } from '@/lib/utils'
 import {
   initialBalanceSchema,
   type InitialBalanceInput,
@@ -32,7 +34,7 @@ export const InitialBalanceForm = ({ primaryAccount }: Props) => {
   const [formError, setFormError] = useState<string | null>(null)
 
   const {
-    register,
+    control,
     handleSubmit,
     formState: { isSubmitting },
   } = useForm<FormShape>({
@@ -89,17 +91,17 @@ export const InitialBalanceForm = ({ primaryAccount }: Props) => {
 
       <section className="flex flex-col gap-3">
         <p className="text-sm font-medium">{t('group_total')}</p>
-        <FormField
+        <MoneyField
+          name="primary_ars_str"
+          control={control}
           label={t('ars_label')}
           placeholder={t('amount_placeholder')}
-          inputMode="decimal"
-          {...register('primary_ars_str')}
         />
-        <FormField
+        <MoneyField
+          name="primary_usd_str"
+          control={control}
           label={t('usd_label')}
           placeholder={t('amount_placeholder')}
-          inputMode="decimal"
-          {...register('primary_usd_str')}
         />
       </section>
 
@@ -107,6 +109,46 @@ export const InitialBalanceForm = ({ primaryAccount }: Props) => {
 
       <SubmitButton pending={isSubmitting}>{t('continue')}</SubmitButton>
     </form>
+  )
+}
+
+const moneyInputClass = cn(
+  'flex h-11 w-full rounded-[var(--radius-md)] border border-border bg-card px-3 py-2 text-sm text-text transition-colors duration-[var(--duration-fast)]',
+  'placeholder:text-text-soft',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+)
+
+const MoneyField = ({
+  name,
+  control,
+  label,
+  placeholder,
+}: {
+  name: keyof FormShape
+  control: Control<FormShape>
+  label: string
+  placeholder: string
+}) => {
+  const id = `onboarding-${name}`
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <Controller
+        control={control}
+        name={name}
+        render={({ field }) => (
+          <MoneyAmountInput
+            id={id}
+            placeholder={placeholder}
+            className={moneyInputClass}
+            value={field.value}
+            onChange={field.onChange}
+            onBlur={field.onBlur}
+            ref={field.ref}
+          />
+        )}
+      />
+    </div>
   )
 }
 
