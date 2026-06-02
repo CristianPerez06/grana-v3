@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { Repeat, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import {
@@ -10,6 +11,7 @@ import {
 } from '@/app/_actions/recurrences'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
+import { invalidateAfterSuggestionMutation } from '@/lib/transactions/invalidation'
 
 type EnrichedSuggestion = {
   fingerprint: string
@@ -34,6 +36,7 @@ type Props = {
 
 export const RecurrenceSuggestionBanner = ({ suggestion }: Props) => {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const showCents = useShowCents()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -77,6 +80,7 @@ export const RecurrenceSuggestionBanner = ({ suggestion }: Props) => {
         setError(result.formError ?? t('errors_extra.create_rule_failed'))
         return
       }
+      invalidateAfterSuggestionMutation(queryClient)
       router.refresh()
     })
   }
@@ -91,6 +95,7 @@ export const RecurrenceSuggestionBanner = ({ suggestion }: Props) => {
         setError(result.formError ?? t('errors_extra.dismiss_failed'))
         return
       }
+      invalidateAfterSuggestionMutation(queryClient)
       router.refresh()
     })
   }

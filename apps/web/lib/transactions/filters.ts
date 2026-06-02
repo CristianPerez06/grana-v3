@@ -167,18 +167,6 @@ export const parseMovementFilters = (params: SearchParamsLike): MovementFilters 
   return filters
 }
 
-export const parseMovementLimit = (params: SearchParamsLike): number => {
-  const rawLimit = getParam(params, 'limit')
-  if (!rawLimit) return DEFAULT_MOVEMENTS_LIMIT
-
-  const parsed = Number(rawLimit)
-  if (!Number.isInteger(parsed) || parsed < DEFAULT_MOVEMENTS_LIMIT) {
-    return DEFAULT_MOVEMENTS_LIMIT
-  }
-
-  return Math.min(parsed, MAX_MOVEMENTS_LIMIT)
-}
-
 const FILTER_PARAM_KEYS = [
   'q',
   'month',
@@ -230,22 +218,6 @@ export const buildFiltersClearedHref = (basePath: string, params: SearchParamsLi
 /** Href with the text search cleared. */
 export const buildSearchClearedHref = (basePath: string, params: SearchParamsLike): string =>
   buildClearedHref(basePath, params, ['q'])
-
-export const buildMovementLimitHref = (
-  params: SearchParamsLike,
-  nextLimit: number,
-): string => {
-  const searchParams = new URLSearchParams()
-
-  for (const key of FILTER_PARAM_KEYS) {
-    const value = getParam(params, key)
-    if (value) searchParams.set(key, value)
-  }
-
-  searchParams.set('limit', String(Math.min(nextLimit, MAX_MOVEMENTS_LIMIT)))
-
-  return `/transactions?${searchParams.toString()}`
-}
 
 export const movementMatchesText = (movement: FinancialMovement, query: string): boolean => {
   const normalizedQuery = query.trim().toLocaleLowerCase('es-AR')

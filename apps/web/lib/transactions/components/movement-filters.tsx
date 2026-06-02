@@ -13,8 +13,29 @@ import {
   monthOf,
   shiftMonth,
   SUBCATEGORY_NONE_MARKER,
+  type MovementCurrencyFilter,
   type MovementFilters as MovementFiltersState,
+  type MovementTypeFilter,
 } from '../filters'
+
+/**
+ * Controller delegates every filter mutation to the caller. When omitted, the
+ * component falls back to its legacy behavior (pushing to URL search params).
+ * The /transactions shell uses this to plug filters into React state; the
+ * /accounts/[id] route still uses the URL fallback unchanged.
+ */
+export type MovementFiltersController = {
+  onSetQuery: (query: string) => void
+  onSetType: (type: MovementTypeFilter | null) => void
+  onSetAccount: (accountId: string | null) => void
+  onSetCategory: (categoryId: string | null) => void
+  onSetSubcategory: (subcategoryId: string | null) => void
+  onSetCurrency: (currency: MovementCurrencyFilter | null) => void
+  onSetAmountMin: (min: number | null) => void
+  onSetAmountMax: (max: number | null) => void
+  onSetMonth: (month: string) => void
+  onClearAll: () => void
+}
 
 type MovementFiltersProps = {
   filters: MovementFiltersState
@@ -28,6 +49,16 @@ type MovementFiltersProps = {
   showAccountFilter?: boolean
   /** Hide the month navigator when another control (the spending overview) owns it. */
   showMonthNav?: boolean
+  /** Optional controller; when present, every mutation routes through it instead of pushing to URL. */
+  controller?: MovementFiltersController
+  /**
+   * When true the toolbar (search / filter sheet / chip clears / clear-all)
+   * renders visually disabled and stops accepting clicks. The shell uses this
+   * while the movement list query is pending so the user gets clear feedback
+   * that the list is loading. Active chips still render so the current filter
+   * state stays legible.
+   */
+  disabled?: boolean
 }
 
 /** Filters that narrow content (the count shown on the "Filtros" button badge). */
@@ -54,6 +85,8 @@ export const MovementFilters = ({
   showAccount,
   showAccountFilter = true,
   showMonthNav = true,
+  controller,
+  disabled = false,
 }: MovementFiltersProps) => {
   const t = useTranslations('transactions')
   const locale = useLocale()
@@ -76,7 +109,8 @@ export const MovementFilters = ({
   }, [filters.query])
 
   // Update one or more params in the URL (resets pagination). null/'' clears.
-  const setParams = (updates: Record<string, string | null>) => {
+  // Used in legacy mode (no controller).
+  const setParamsUrl = (updates: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString())
     for (const [key, value] of Object.entries(updates)) {
       if (value) params.set(key, value)
@@ -84,6 +118,44 @@ export const MovementFilters = ({
     }
     params.delete('limit')
     router.replace(`${pathname}?${params.toString()}`)
+  }
+
+  // Single dispatch point for filter mutations. When a `controller` was passed
+  // by the host, the patch routes through its callbacks (React-state filters
+  // on /transactions); otherwise it falls back to the URL-based path.
+  const setParams = (updates: Record<string, string | null>) => {
+    if (!controller) {
+      setParamsUrl(updates)
+      return
+    }
+    if ('q' in updates) controller.onSetQuery(updates.q ?? '')
+    if ('type' in updates)
+      controller.onSetType((updates.type as MovementTypeFilter | null) ?? null)
+    if ('account' in updates) controller.onSetAccount(updates.account ?? null)
+    if ('category' in updates) {
+      controller.onSetCategory(updates.category ?? null)
+      // The legacy URL builder always sent `subcategory: null` alongside a
+      // category clear; the reducer enforces the same invariant, so we don't
+      // need to forward an explicit subcategory clear when category changes.
+    }
+    if ('subcategory' in updates) controller.onSetSubcategory(updates.subcategory ?? null)
+    if ('currency' in updates) {
+      const c = updates.currency
+      controller.onSetCurrency(
+        c === 'ARS' || c === 'USD' ? (c as MovementCurrencyFilter) : null,
+      )
+    }
+    if ('amount_min' in updates) {
+      const raw = updates.amount_min
+      const parsed = raw == null || raw === '' ? null : Number(raw)
+      controller.onSetAmountMin(Number.isFinite(parsed as number) ? (parsed as number) : null)
+    }
+    if ('amount_max' in updates) {
+      const raw = updates.amount_max
+      const parsed = raw == null || raw === '' ? null : Number(raw)
+      controller.onSetAmountMax(Number.isFinite(parsed as number) ? (parsed as number) : null)
+    }
+    if ('month' in updates && updates.month) controller.onSetMonth(updates.month)
   }
 
   // Instant search: debounce the input, then push `q` to the URL.
@@ -180,7 +252,8 @@ export const MovementFilters = ({
   const clearAll = () => {
     setSearch('')
     setSearchMode(false)
-    router.replace(pathname)
+    if (controller) controller.onClearAll()
+    else router.replace(pathname)
   }
 
   const enterSearch = () => {
@@ -201,6 +274,8 @@ export const MovementFilters = ({
   // adapted to the light page surface — border-border + hover bg-muted.
   const iconButtonCls =
     'inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-border bg-card text-text-muted hover:text-text hover:bg-muted/40 transition-colors'
+  const iconButtonDisabledCls =
+    'inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-border bg-card text-text-soft opacity-60 cursor-not-allowed'
 
   return (
     <div className="flex flex-col gap-3">
@@ -273,22 +348,30 @@ export const MovementFilters = ({
             <button
               type="button"
               onClick={enterSearch}
-              className={iconButtonCls}
+              disabled={disabled}
+              className={disabled ? iconButtonDisabledCls : iconButtonCls}
               aria-label={t('filters.search')}
             >
               <Search size={16} />
             </button>
-            <Link
-              href="/transactions/recurring"
-              className={iconButtonCls}
-              aria-label={t('header.see_recurrences')}
-            >
-              <Repeat size={16} />
-            </Link>
+            {disabled ? (
+              <span className={iconButtonDisabledCls} aria-disabled aria-label={t('header.see_recurrences')}>
+                <Repeat size={16} />
+              </span>
+            ) : (
+              <Link
+                href="/transactions/recurring"
+                className={iconButtonCls}
+                aria-label={t('header.see_recurrences')}
+              >
+                <Repeat size={16} />
+              </Link>
+            )}
             <button
               type="button"
               onClick={() => setSheetOpen(true)}
-              className={`${iconButtonCls} relative`}
+              disabled={disabled}
+              className={`${disabled ? iconButtonDisabledCls : iconButtonCls} relative`}
               aria-label={t('filters.filters_button')}
             >
               <SlidersHorizontal size={16} />
@@ -310,7 +393,10 @@ export const MovementFilters = ({
               key={chip.key}
               type="button"
               onClick={chip.clear}
-              className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs hover:bg-muted transition-colors"
+              disabled={disabled}
+              className={`inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs transition-colors ${
+                disabled ? 'opacity-60 cursor-not-allowed' : 'hover:bg-muted'
+              }`}
             >
               {chip.label}
               <X size={12} />
@@ -319,7 +405,12 @@ export const MovementFilters = ({
           <button
             type="button"
             onClick={clearAll}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            disabled={disabled}
+            className={`text-xs transition-colors ${
+              disabled
+                ? 'text-muted-foreground opacity-60 cursor-not-allowed'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
           >
             {t('filters.clear_all')}
           </button>

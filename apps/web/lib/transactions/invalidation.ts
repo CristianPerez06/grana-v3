@@ -1,0 +1,59 @@
+import type { QueryClient } from '@tanstack/react-query'
+
+// Keep this list in sync with the revalidatePath helpers in
+// `app/_actions/_helpers.ts` (group 9 of the migration). Client-side
+// invalidations refetch the TanStack cache for the active /transactions
+// route; the server-side revalidatePath helpers ensure the other RSC routes
+// (/dashboard, /accounts, /cards) refetch on next navigation.
+//
+// Helpers below take a QueryClient (which the caller obtains via
+// `useQueryClient()`) and call `invalidateQueries` by KEY PREFIX, which
+// matches every nested key beneath. New queries that join an existing prefix
+// (e.g. another `['transactions','breakdown', ...]` variant) inherit the
+// invalidation automatically — keys without an existing prefix must be added
+// here explicitly.
+
+export function invalidateAfterMovementMutation(qc: QueryClient): void {
+  // A movement was created, edited, or deleted. Affects the list, the month
+  // breakdowns, the filter-options universe (if a new account/category combo
+  // was introduced), the has-any signal (first-ever movement), the pending
+  // reimbursements (if linked), the top recurrence suggestion, and the
+  // accounts (balances changed).
+  qc.invalidateQueries({ queryKey: ['transactions', 'page'] })
+  qc.invalidateQueries({ queryKey: ['transactions', 'breakdown'] })
+  qc.invalidateQueries({ queryKey: ['transactions', 'filter-options'] })
+  qc.invalidateQueries({ queryKey: ['transactions', 'has-any'] })
+  qc.invalidateQueries({ queryKey: ['transactions', 'pending-reimbursements'] })
+  qc.invalidateQueries({ queryKey: ['transactions', 'linked-recurrence-ids'] })
+  qc.invalidateQueries({ queryKey: ['recurrences', 'top-suggestion'] })
+  qc.invalidateQueries({ queryKey: ['accounts', 'list'] })
+}
+
+export function invalidateAfterRecurrenceInstanceMutation(
+  qc: QueryClient,
+  opts: { confirmed: boolean },
+): void {
+  // Skipping just removes the pending instance; confirming additionally
+  // creates a real movement, so it ripples through everything a regular
+  // movement mutation would touch.
+  qc.invalidateQueries({ queryKey: ['recurrences', 'pending-instances'] })
+  if (opts.confirmed) invalidateAfterMovementMutation(qc)
+}
+
+export function invalidateAfterReimbursementMutation(qc: QueryClient): void {
+  // Confirming a reimbursement marks the existing expense as received (state
+  // flips on the row); cancelling just removes it from the pending list.
+  // Both change the list rendering, the pending block, and breakdowns when
+  // the affected month is currently visible. Account balances also change.
+  qc.invalidateQueries({ queryKey: ['transactions', 'pending-reimbursements'] })
+  qc.invalidateQueries({ queryKey: ['transactions', 'page'] })
+  qc.invalidateQueries({ queryKey: ['transactions', 'breakdown'] })
+  qc.invalidateQueries({ queryKey: ['accounts', 'list'] })
+}
+
+export function invalidateAfterSuggestionMutation(qc: QueryClient): void {
+  // Accepting or dismissing the top suggestion consumes it; the next one (if
+  // any) takes its place. No movement is created by the action itself, so the
+  // list / breakdowns don't change here.
+  qc.invalidateQueries({ queryKey: ['recurrences', 'top-suggestion'] })
+}

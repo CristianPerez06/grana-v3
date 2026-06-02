@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -9,6 +10,7 @@ import { parseMoneyInput } from '@grana/validation'
 import { confirmReimbursement, cancelReimbursement } from '@/app/_actions/reimbursements'
 import { useShowCents } from '@/lib/preferences-context'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { invalidateAfterReimbursementMutation } from '../invalidation'
 import type { PendingReimbursementVM } from '../queries'
 
 type Props = {
@@ -19,6 +21,7 @@ type Props = {
 
 export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const showCents = useShowCents()
   const t = useTranslations('transactions')
   const [isPending, startTransition] = useTransition()
@@ -56,6 +59,7 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
         return
       }
       setSuccessMessage(t('reimbursement.pending.confirmed_success'))
+      invalidateAfterReimbursementMutation(queryClient)
       router.refresh()
     })
   }
@@ -71,6 +75,7 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
         return
       }
       setSuccessMessage(t('reimbursement.pending.cancelled_success'))
+      invalidateAfterReimbursementMutation(queryClient)
       router.refresh()
     })
   }

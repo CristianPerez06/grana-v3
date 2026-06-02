@@ -10,8 +10,6 @@ import { deleteInstallmentParent } from '@/app/_actions/credit-cards'
 
 type Props = {
   transaction: TransactionWithDetails
-  /** Account used to revalidate after the action (for the madre, a child's card account). */
-  accountId: string
   /** Where to land after a successful delete. */
   returnHref: string
   /** Target of the "Editar" link (already includes any `?from=` origin). */
@@ -26,7 +24,7 @@ type Props = {
  * child is pending; paid credit-card consumptions and individual children are
  * rejected by the action.
  */
-export const TransactionActions = ({ transaction, accountId, returnHref, editHref }: Props) => {
+export const TransactionActions = ({ transaction, returnHref, editHref }: Props) => {
   const router = useRouter()
   const t = useTranslations('transactions')
   const [isPending, startTransition] = useTransition()
@@ -51,21 +49,13 @@ export const TransactionActions = ({ transaction, accountId, returnHref, editHre
       if (transaction.is_parent) {
         result = await deleteInstallmentParent(transaction.id)
       } else if (type === 'transfer' && transaction.transfer_destination_account_id) {
-        result = await deleteTransfer(
-          transaction.id,
-          accountId,
-          transaction.transfer_destination_account_id,
-        )
+        result = await deleteTransfer(transaction.id)
       } else if (type === 'adjustment') {
-        result = await deleteAdjustment(transaction.id, accountId)
+        result = await deleteAdjustment(transaction.id)
       } else if (type === 'exchange' && transaction.transfer_destination_account_id) {
-        result = await deleteExchange(
-          transaction.id,
-          accountId,
-          transaction.transfer_destination_account_id,
-        )
+        result = await deleteExchange(transaction.id)
       } else {
-        result = await deleteTransaction(transaction.id, accountId)
+        result = await deleteTransaction(transaction.id)
       }
 
       if (!result.ok) {

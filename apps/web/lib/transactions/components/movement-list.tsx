@@ -21,8 +21,12 @@ export type MovementEmptyState = {
   variant: 'none' | 'search' | 'filter'
   /** CTA to register the first movement (variant 'none'). */
   addHref?: string
+  /** Alternative to `addHref`: callback handler when the host owns the click. */
+  onAdd?: () => void
   /** URL that clears the search ('search') or the filters ('filter'). */
   clearHref?: string
+  /** Alternative to `clearHref`: callback handler when the host owns the click. */
+  onClear?: () => void
   /** The active search term, for the 'search' message. */
   query?: string
   /**
@@ -73,6 +77,28 @@ export const MovementList = ({
       'mt-4 inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors'
     const clearClass = 'mt-4 inline-flex items-center text-sm font-medium text-primary hover:underline'
 
+    const renderClearAction = (label: string) => {
+      if (emptyState?.onClear) {
+        return (
+          <div>
+            <button type="button" onClick={emptyState.onClear} className={clearClass}>
+              {label}
+            </button>
+          </div>
+        )
+      }
+      if (emptyState?.clearHref) {
+        return (
+          <div>
+            <Link href={emptyState.clearHref} className={clearClass}>
+              {label}
+            </Link>
+          </div>
+        )
+      }
+      return null
+    }
+
     if (variant === 'search') {
       return (
         <div className={containerClass}>
@@ -80,11 +106,7 @@ export const MovementList = ({
           <p className="mt-1 text-sm text-muted-foreground">
             {t('empty.search_description', { query: emptyState?.query ?? '' })}
           </p>
-          {emptyState?.clearHref && (
-            <div>
-              <Link href={emptyState.clearHref} className={clearClass}>{t('empty.clear_search')}</Link>
-            </div>
-          )}
+          {renderClearAction(t('empty.clear_search'))}
         </div>
       )
     }
@@ -94,11 +116,7 @@ export const MovementList = ({
         <div className={containerClass}>
           <p className="text-sm font-medium text-foreground">{t('empty.filter_title')}</p>
           <p className="mt-1 text-sm text-muted-foreground">{t('empty.filter_description')}</p>
-          {emptyState?.clearHref && (
-            <div>
-              <Link href={emptyState.clearHref} className={clearClass}>{t('empty.clear_filters')}</Link>
-            </div>
-          )}
+          {renderClearAction(t('empty.clear_filters'))}
         </div>
       )
     }
@@ -110,10 +128,20 @@ export const MovementList = ({
       <div className={containerClass}>
         <p className="text-sm font-medium text-foreground">{noneTitle}</p>
         <p className="mt-1 text-sm text-muted-foreground">{noneBody}</p>
-        {emptyState?.addHref && (
+        {emptyState?.onAdd ? (
           <div>
-            <Link href={emptyState.addHref} className={actionClass}>{noneCta}</Link>
+            <button type="button" onClick={emptyState.onAdd} className={actionClass}>
+              {noneCta}
+            </button>
           </div>
+        ) : (
+          emptyState?.addHref && (
+            <div>
+              <Link href={emptyState.addHref} className={actionClass}>
+                {noneCta}
+              </Link>
+            </div>
+          )
         )}
       </div>
     )

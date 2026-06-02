@@ -70,6 +70,25 @@ function generateSubTints(parentColor: string, n: number): string[] {
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+/**
+ * When provided, every navigation interaction routes through these callbacks
+ * instead of through `<Link>`s on the URL props. The shell on /transactions
+ * uses this to drive its React-state filters; legacy callers that still
+ * navigate via URL leave it undefined and the URL props apply.
+ */
+export type CategorySpendingOverviewController = {
+  onPrevMonth: () => void
+  onNextMonth: () => void
+  onSetCurrency: (currency: 'ARS' | 'USD') => void
+  onSetMode: (mode: 'egresos' | 'ingresos') => void
+  /**
+   * Drill into a ranking row. When the donut is in subcategory mode
+   * (`parentCategoryId` is set), `categoryId` is the subcategoryId.
+   */
+  onSelectCategory: (categoryId: string) => void
+  onSeeDetail?: () => void
+}
+
 type Props = {
   monthLabel: string
   prevHref: string
@@ -85,6 +104,8 @@ type Props = {
   arsHref: string
   usdHref: string
   month: string
+  /** Optional controller; when present, click handlers replace the URL links. */
+  controller?: CategorySpendingOverviewController
   /**
    * Parent category id when the donut is in the in-category subcategory mode
    * (expenses only). Used to build each row's href so it drills into the parent
@@ -229,6 +250,7 @@ export const CategorySpendingOverview = ({
   detailHref,
   parentCategoryId,
   subBreakdownsByCategory,
+  controller,
 }: Props) => {
   const showCents = useShowCents()
   const fmt = (n: number) => (currency === 'ARS' ? formatARS(n, showCents) : formatUSD(n, showCents))
@@ -389,47 +411,74 @@ export const CategorySpendingOverview = ({
         <div className="flex flex-col gap-1.5 min-w-0">
           {breadcrumb}
           <div className="flex items-center gap-2">
-            <Link
-              href={prevHref}
-              aria-label="Mes anterior"
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-text-muted hover:text-text transition-colors"
-            >
-              <ChevronLeft size={14} />
-            </Link>
+            {controller ? (
+              <button
+                type="button"
+                onClick={controller.onPrevMonth}
+                aria-label="Mes anterior"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-text-muted hover:text-text transition-colors"
+              >
+                <ChevronLeft size={14} />
+              </button>
+            ) : (
+              <Link
+                href={prevHref}
+                aria-label="Mes anterior"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-text-muted hover:text-text transition-colors"
+              >
+                <ChevronLeft size={14} />
+              </Link>
+            )}
             <span className="text-lg font-bold tracking-tight text-text capitalize">
               {monthLabel}
             </span>
-            <Link
-              href={nextHref}
-              aria-label="Mes siguiente"
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-text-muted hover:text-text transition-colors"
-            >
-              <ChevronRight size={14} />
-            </Link>
+            {controller ? (
+              <button
+                type="button"
+                onClick={controller.onNextMonth}
+                aria-label="Mes siguiente"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-text-muted hover:text-text transition-colors"
+              >
+                <ChevronRight size={14} />
+              </button>
+            ) : (
+              <Link
+                href={nextHref}
+                aria-label="Mes siguiente"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-text-muted hover:text-text transition-colors"
+              >
+                <ChevronRight size={14} />
+              </Link>
+            )}
           </div>
         </div>
         {hasUsd && (
           <div className="flex items-center gap-1">
-            <Link
-              href={arsHref}
-              className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
-                currency === 'ARS'
+            {(['ARS', 'USD'] as const).map((code) => {
+              const active = currency === code
+              const className = `rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                active
                   ? 'bg-primary text-primary-foreground'
                   : 'border border-border bg-card text-text-muted hover:text-text'
-              }`}
-            >
-              ARS
-            </Link>
-            <Link
-              href={usdHref}
-              className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
-                currency === 'USD'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'border border-border bg-card text-text-muted hover:text-text'
-              }`}
-            >
-              USD
-            </Link>
+              }`
+              if (controller) {
+                return (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => controller.onSetCurrency(code)}
+                    className={className}
+                  >
+                    {code}
+                  </button>
+                )
+              }
+              return (
+                <Link key={code} href={code === 'ARS' ? arsHref : usdHref} className={className}>
+                  {code}
+                </Link>
+              )
+            })}
           </div>
         )}
       </div>
@@ -448,18 +497,33 @@ export const CategorySpendingOverview = ({
             { key: 'ingresos', href: ingresosHref, label: labels.modeIngresos },
           ] as const).map(({ key, href, label }) => {
             const active = mode === key
+            const className = 'rounded-lg px-4 py-1.5 text-sm font-bold transition-colors'
+            const style = active
+              ? { backgroundColor: MODE_ACCENT[key], color: '#fff' }
+              : { color: '#6B7683' }
+            if (controller) {
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => controller.onSetMode(key)}
+                  role="tab"
+                  aria-selected={active}
+                  className={className}
+                  style={style}
+                >
+                  {label}
+                </button>
+              )
+            }
             return (
               <Link
                 key={key}
                 href={href}
                 role="tab"
                 aria-selected={active}
-                className="rounded-lg px-4 py-1.5 text-sm font-bold transition-colors"
-                style={
-                  active
-                    ? { backgroundColor: MODE_ACCENT[key], color: '#fff' }
-                    : { color: '#6B7683' }
-                }
+                className={className}
+                style={style}
               >
                 {label}
               </Link>
@@ -563,6 +627,14 @@ export const CategorySpendingOverview = ({
                         >
                           {row}
                         </button>
+                      ) : controller && s.categoryId ? (
+                        <button
+                          type="button"
+                          onClick={() => controller.onSelectCategory(s.categoryId!)}
+                          className="block w-full rounded-md hover:bg-muted/40 transition-colors text-left"
+                        >
+                          {row}
+                        </button>
                       ) : href ? (
                         <Link
                           href={href}
@@ -609,14 +681,25 @@ export const CategorySpendingOverview = ({
           {mode === 'egresos' && (
             <span className="text-xs text-muted-foreground">{labels.offLedgerNote}</span>
           )}
-          {detailHref && (
-            <Link
-              href={detailHref}
+          {controller && controller.onSeeDetail ? (
+            <button
+              type="button"
+              onClick={controller.onSeeDetail}
               className="inline-flex items-center gap-1 text-xs font-semibold text-emerald hover:text-emerald-deep transition-colors"
             >
               {labels.seeDetail}
               <ChevronRight size={12} />
-            </Link>
+            </button>
+          ) : (
+            detailHref && (
+              <Link
+                href={detailHref}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-emerald hover:text-emerald-deep transition-colors"
+              >
+                {labels.seeDetail}
+                <ChevronRight size={12} />
+              </Link>
+            )
           )}
         </div>
       )}

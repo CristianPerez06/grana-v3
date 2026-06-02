@@ -1,7 +1,7 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { revalidateAfterMovementMutation } from './_helpers'
 import {
   createIncomeSchema,
   createExpenseSchema,
@@ -90,8 +90,7 @@ export async function createIncome(
     return { ok: false, formError: error?.message ?? 'No se pudo registrar el ingreso.' }
   }
 
-  revalidatePath('/accounts')
-  revalidatePath(`/accounts/${validation.data.account_id}`)
+  revalidateAfterMovementMutation()
   return { ok: true, id: data.id }
 }
 
@@ -164,10 +163,7 @@ export async function createExpense(
     }
   }
 
-  revalidatePath('/accounts')
-  revalidatePath(`/accounts/${validation.data.account_id}`)
-  revalidatePath('/transactions')
-  revalidatePath('/shared')
+  revalidateAfterMovementMutation()
   return { ok: true, id: data.id }
 }
 
@@ -218,19 +214,13 @@ export async function updateTransaction(
 
   if (error) return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
 
-  revalidatePath('/accounts')
-  revalidatePath(`/accounts/${accountId}`)
-  revalidatePath('/transactions')
-  revalidatePath(`/transactions/${id}`)
+  revalidateAfterMovementMutation()
   return { ok: true }
 }
 
 // ── deleteTransaction ─────────────────────────────────────────────────────────
 
-export async function deleteTransaction(
-  id: string,
-  accountId: string,
-): Promise<ActionResult<never>> {
+export async function deleteTransaction(id: string): Promise<ActionResult<never>> {
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
 
@@ -265,9 +255,7 @@ export async function deleteTransaction(
 
   if (error) return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
 
-  revalidatePath('/accounts')
-  revalidatePath(`/accounts/${accountId}`)
-  revalidatePath('/cards')
+  revalidateAfterMovementMutation()
   return { ok: true }
 }
 
@@ -320,9 +308,7 @@ export async function createTransfer(
     return { ok: false, formError: error?.message ?? 'No se pudo registrar la transferencia.' }
   }
 
-  revalidatePath('/accounts')
-  revalidatePath(`/accounts/${validation.data.account_id}`)
-  revalidatePath(`/accounts/${validation.data.transfer_destination_account_id}`)
+  revalidateAfterMovementMutation()
   return { ok: true, id: data.id }
 }
 
@@ -364,8 +350,7 @@ export async function createAdjustment(
     return { ok: false, formError: error?.message ?? 'No se pudo registrar el ajuste.' }
   }
 
-  revalidatePath('/accounts')
-  revalidatePath(`/accounts/${validation.data.account_id}`)
+  revalidateAfterMovementMutation()
   return { ok: true, id: data.id }
 }
 
@@ -405,11 +390,7 @@ export async function updateTransfer(
 
   if (error) return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
 
-  revalidatePath('/accounts')
-  revalidatePath(`/accounts/${accountId}`)
-  revalidatePath(`/accounts/${destinationAccountId}`)
-  revalidatePath('/transactions')
-  revalidatePath(`/transactions/${id}`)
+  revalidateAfterMovementMutation()
   return { ok: true }
 }
 
@@ -448,10 +429,7 @@ export async function updateAdjustment(
 
   if (error) return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
 
-  revalidatePath('/accounts')
-  revalidatePath(`/accounts/${accountId}`)
-  revalidatePath('/transactions')
-  revalidatePath(`/transactions/${id}`)
+  revalidateAfterMovementMutation()
   return { ok: true }
 }
 
@@ -459,8 +437,6 @@ export async function updateAdjustment(
 
 export async function deleteTransfer(
   id: string,
-  accountId: string,
-  destinationAccountId: string,
 ): Promise<ActionResult<never>> {
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
@@ -473,18 +449,13 @@ export async function deleteTransfer(
 
   if (error) return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
 
-  revalidatePath('/accounts')
-  revalidatePath(`/accounts/${accountId}`)
-  revalidatePath(`/accounts/${destinationAccountId}`)
+  revalidateAfterMovementMutation()
   return { ok: true }
 }
 
 // ── deleteAdjustment ──────────────────────────────────────────────────────────
 
-export async function deleteAdjustment(
-  id: string,
-  accountId: string,
-): Promise<ActionResult<never>> {
+export async function deleteAdjustment(id: string): Promise<ActionResult<never>> {
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
 
@@ -496,8 +467,7 @@ export async function deleteAdjustment(
 
   if (error) return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
 
-  revalidatePath('/accounts')
-  revalidatePath(`/accounts/${accountId}`)
+  revalidateAfterMovementMutation()
   return { ok: true }
 }
 
@@ -549,10 +519,7 @@ export async function createExchange(
     return { ok: false, formError: error?.message ?? 'No se pudo registrar el cambio de moneda.' }
   }
 
-  revalidatePath('/accounts')
-  revalidatePath(`/accounts/${validation.data.account_id}`)
-  revalidatePath(`/accounts/${validation.data.transfer_destination_account_id}`)
-  revalidatePath('/transactions')
+  revalidateAfterMovementMutation()
   return { ok: true, id: data.id }
 }
 
@@ -560,8 +527,6 @@ export async function createExchange(
 
 export async function updateExchange(
   id: string,
-  accountId: string,
-  destinationAccountId: string,
   input: unknown,
 ): Promise<ActionResult<UpdateExchangeInput>> {
   const validation = await validateActionInput(updateExchangeSchema, input)
@@ -595,22 +560,13 @@ export async function updateExchange(
 
   if (error) return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
 
-  revalidatePath('/accounts')
-  revalidatePath(`/accounts/${accountId}`)
-  revalidatePath(`/accounts/${destinationAccountId}`)
-  revalidatePath('/transactions')
-  revalidatePath(`/transactions/${id}`)
-  revalidatePath('/transactions')
+  revalidateAfterMovementMutation()
   return { ok: true }
 }
 
 // ── deleteExchange ────────────────────────────────────────────────────────────
 
-export async function deleteExchange(
-  id: string,
-  accountId: string,
-  destinationAccountId: string,
-): Promise<ActionResult<never>> {
+export async function deleteExchange(id: string): Promise<ActionResult<never>> {
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
 
@@ -622,9 +578,6 @@ export async function deleteExchange(
 
   if (error) return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
 
-  revalidatePath('/accounts')
-  revalidatePath(`/accounts/${accountId}`)
-  revalidatePath(`/accounts/${destinationAccountId}`)
-  revalidatePath('/transactions')
+  revalidateAfterMovementMutation()
   return { ok: true }
 }

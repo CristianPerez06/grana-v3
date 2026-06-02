@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidateAfterReimbursementMutation } from './_helpers'
 import { createClient } from '@/lib/supabase/server'
 import {
   confirmReimbursementSchema,
@@ -14,11 +14,7 @@ import type { ActionResult } from './types'
 import { getAuthenticatedUserId } from './_lib/auth'
 import { getOrCreatePeriodForDate } from '@/lib/cards/queries'
 
-function revalidateReimbursementPaths() {
-  revalidatePath('/transactions')
-  revalidatePath('/accounts')
-  revalidatePath('/cards')
-}
+// Use shared `revalidateAfterReimbursementMutation` directly at the callsite.
 
 // ── confirmReimbursement (reconcile) ────────────────────────────────────────────
 
@@ -102,7 +98,7 @@ export async function confirmReimbursement(
 
   if (error) return { ok: false, formError: error.message }
 
-  revalidateReimbursementPaths()
+  revalidateAfterReimbursementMutation()
   return { ok: true }
 }
 
@@ -143,6 +139,6 @@ export async function cancelReimbursement(
 
   if (error) return { ok: false, formError: error.message }
 
-  revalidateReimbursementPaths()
+  revalidateAfterReimbursementMutation()
   return { ok: true }
 }

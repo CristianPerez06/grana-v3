@@ -1,6 +1,10 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import {
+  revalidateAfterMovementMutation,
+  revalidateAfterRecurrenceMutation,
+  revalidateAfterSuggestionMutation,
+} from './_helpers'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import {
@@ -186,7 +190,7 @@ export async function createRecurrenceFromMovement(
     }
   }
 
-  revalidatePath('/transactions')
+  revalidateAfterRecurrenceMutation()
   return { ok: true, id: recurrence.id }
 }
 
@@ -305,8 +309,7 @@ export async function createRecurrence(
     }
   }
 
-  revalidatePath('/transactions')
-  revalidatePath('/transactions/recurring')
+  revalidateAfterRecurrenceMutation()
   return { ok: true, id: recurrence.id }
 }
 
@@ -471,8 +474,10 @@ export async function confirmRecurrenceInstance(
   }
   await supabase.from('recurrences').update(ruleUpdates).eq('id', rule.id)
 
-  revalidatePath('/transactions')
-  revalidatePath('/transactions/recurring')
+  // Confirming creates a movement linked to the instance — invalidate both
+  // the recurrence-related routes and the movement-affected routes.
+  revalidateAfterRecurrenceMutation()
+  revalidateAfterMovementMutation()
   return { ok: true, transactionId }
 }
 
@@ -527,8 +532,7 @@ export async function skipRecurrenceInstance(
     .eq('id', instance.recurrence_id)
     .eq('user_id', userId)
 
-  revalidatePath('/transactions')
-  revalidatePath('/transactions/recurring')
+  revalidateAfterRecurrenceMutation()
   return { ok: true }
 }
 
@@ -660,8 +664,7 @@ export async function updateRecurrence(
 
   if (updateError) return { ok: false, formError: updateError.message }
 
-  revalidatePath('/transactions')
-  revalidatePath('/transactions/recurring')
+  revalidateAfterRecurrenceMutation()
   return { ok: true }
 }
 
@@ -698,8 +701,7 @@ export async function pauseRecurrence(id: string): Promise<ActionResult<never>> 
 
   if (error) return { ok: false, formError: await translatePostgresError(error.code, 'recurrence') }
 
-  revalidatePath('/transactions')
-  revalidatePath('/transactions/recurring')
+  revalidateAfterRecurrenceMutation()
   return { ok: true }
 }
 
@@ -733,8 +735,7 @@ export async function resumeRecurrence(id: string): Promise<ActionResult<never>>
 
   if (error) return { ok: false, formError: await translatePostgresError(error.code, 'recurrence') }
 
-  revalidatePath('/transactions')
-  revalidatePath('/transactions/recurring')
+  revalidateAfterRecurrenceMutation()
   return { ok: true }
 }
 
@@ -780,8 +781,7 @@ export async function deleteRecurrence(id: string): Promise<ActionResult<never>>
     return { ok: false, formError: deleteError.message }
   }
 
-  revalidatePath('/transactions')
-  revalidatePath('/transactions/recurring')
+  revalidateAfterRecurrenceMutation()
   return { ok: true }
 }
 
@@ -847,8 +847,11 @@ export async function acceptRecurrenceSuggestion(
     }
   }
 
-  revalidatePath('/transactions')
-  revalidatePath('/transactions/recurring')
+  // Accepting a suggestion creates a rule from it (the rule itself is the
+  // suggestion's confirmation), so invalidate both the recurrence routes and
+  // the suggestion banner.
+  revalidateAfterRecurrenceMutation()
+  revalidateAfterSuggestionMutation()
   return { ok: true, id: recurrence.id }
 }
 
@@ -880,6 +883,7 @@ export async function dismissRecurrenceSuggestion(
 
   if (error) return { ok: false, formError: await translatePostgresError(error.code, 'recurrence') }
 
-  revalidatePath('/transactions')
+  // Dismissing only updates the suggestion list; no rule or movement change.
+  revalidateAfterSuggestionMutation()
   return { ok: true }
 }

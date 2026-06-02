@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { Check, Clock, Pencil, Repeat, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatDateISO, getTodayAR } from '@/lib/date'
@@ -15,6 +16,7 @@ import { parseMoneyInput } from '@grana/validation'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
+import { invalidateAfterRecurrenceInstanceMutation } from '@/lib/transactions/invalidation'
 import type { PendingRecurrenceInstance } from '@/lib/recurrences/types'
 
 type Props = {
@@ -30,6 +32,7 @@ const isCardExpenseUSD = (instance: PendingRecurrenceInstance) =>
 
 export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) => {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const showCents = useShowCents()
   const [isPending, startTransition] = useTransition()
   const t = useTranslations('recurrences')
@@ -133,6 +136,7 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
       setActiveId(null)
       setEditingId(null)
       setSuccessMessage(t('pending.confirmed_success'))
+      invalidateAfterRecurrenceInstanceMutation(queryClient, { confirmed: true })
       router.refresh()
     })
   }
@@ -152,6 +156,7 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
       }
       setActiveId(null)
       setSuccessMessage(t('pending.skipped_success'))
+      invalidateAfterRecurrenceInstanceMutation(queryClient, { confirmed: false })
       router.refresh()
     })
   }

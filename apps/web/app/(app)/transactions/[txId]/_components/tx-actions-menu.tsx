@@ -2,11 +2,13 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import * as AlertDialog from '@radix-ui/react-alert-dialog'
 import { useTranslations } from 'next-intl'
 import { deleteTransaction } from '@/app/_actions/transactions'
+import { invalidateAfterMovementMutation } from '@/lib/transactions/invalidation'
 
 // Kebab menu (`⋯`) anchored at the top-right of the detail header. Items
 // rendered conditionally on the edit/delete capabilities and the kind of
@@ -18,8 +20,6 @@ import { deleteTransaction } from '@/app/_actions/transactions'
 
 type Props = {
   transactionId: string
-  /** Account the transaction lives on — required by the delete server action. */
-  accountId: string
   canEdit: boolean
   canDelete: boolean
   isParent: boolean
@@ -33,7 +33,6 @@ type Props = {
 
 export const TxActionsMenu = ({
   transactionId,
-  accountId,
   canEdit,
   canDelete,
   isParent,
@@ -42,6 +41,7 @@ export const TxActionsMenu = ({
 }: Props) => {
   const t = useTranslations('transactions.detail.actions')
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -57,8 +57,9 @@ export const TxActionsMenu = ({
   const handleDelete = () => {
     setError(null)
     startTransition(async () => {
-      const result = await deleteTransaction(transactionId, accountId)
+      const result = await deleteTransaction(transactionId)
       if (result.ok) {
+        invalidateAfterMovementMutation(queryClient)
         setDeleteOpen(false)
         router.push('/transactions')
       } else {

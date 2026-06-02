@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildFiltersClearedHref,
-  buildMovementLimitHref,
   buildSearchClearedHref,
   hasContentFilters,
   hasOtherContentFilters,
@@ -9,7 +8,6 @@ import {
   monthOf,
   movementMatchesText,
   parseMovementFilters,
-  parseMovementLimit,
   resolveEmptyVariant,
   resolveMonthRange,
   shiftMonth,
@@ -105,44 +103,6 @@ describe('parseMovementFilters', () => {
 
     expect(filters.subcategoryId).toBeUndefined()
     expect(filters.categoryId).toBeUndefined()
-  })
-})
-
-describe('parseMovementLimit', () => {
-  it('uses the default page size when the URL has no limit', () => {
-    expect(parseMovementLimit({})).toBe(50)
-  })
-
-  it('accepts valid limits and clamps excessive values', () => {
-    expect(parseMovementLimit({ limit: '150' })).toBe(150)
-    expect(parseMovementLimit({ limit: '9999' })).toBe(500)
-  })
-
-  it('ignores malformed or too-small limits', () => {
-    expect(parseMovementLimit({ limit: 'abc' })).toBe(50)
-    expect(parseMovementLimit({ limit: '10' })).toBe(50)
-  })
-})
-
-describe('buildMovementLimitHref', () => {
-  it('preserves movement filters and updates the limit', () => {
-    const href = buildMovementLimitHref({
-      q: 'super',
-      type: 'expense',
-      category: 'category-1',
-      limit: '50',
-    }, 100)
-
-    expect(href).toBe('/transactions?q=super&type=expense&category=category-1&limit=100')
-  })
-
-  it('preserves the subcategory filter', () => {
-    const href = buildMovementLimitHref({
-      category: 'cat-comida',
-      subcategory: 'subcat-almuerzo',
-    }, 100)
-
-    expect(href).toContain('subcategory=subcat-almuerzo')
   })
 })
 

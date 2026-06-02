@@ -2,7 +2,9 @@
 
 import { forwardRef, useEffect, useRef, useState, useTransition, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
+import { invalidateAfterMovementMutation } from '@/lib/transactions/invalidation'
 import {
   ArrowLeftRight,
   Calendar,
@@ -233,6 +235,7 @@ export const MovementForm = ({
   household,
 }: Props) => {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const t = useTranslations('transactions')
   const tCommon = useTranslations('common')
   const tRec = useTranslations('recurrences')
@@ -574,7 +577,7 @@ export const MovementForm = ({
           description: description || null,
         })
       } else if (edit.type === 'exchange') {
-        result = await updateExchange(edit.id, edit.accountId, edit.destinationAccountId ?? '', {
+        result = await updateExchange(edit.id, {
           amount: parsedAmount!,
           destination_amount: parsedDestinationAmount!,
           date,
@@ -595,6 +598,7 @@ export const MovementForm = ({
         setFormError(result.formError ?? t('errors.save_failed_short'))
         return
       }
+      invalidateAfterMovementMutation(queryClient)
       if (onSuccess) {
         router.refresh()
         onSuccess()
@@ -803,6 +807,8 @@ export const MovementForm = ({
           return
         }
       }
+
+      invalidateAfterMovementMutation(queryClient)
 
       // "+ Otro": keep the drawer open, clear amount + description (keep type,
       // account, date, currency), refresh the list and refocus the amount.

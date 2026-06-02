@@ -349,7 +349,6 @@ export const GlobalTransactionDetail = ({
           actionAccountId && (
             <TxActionsMenu
               transactionId={transaction.id}
-              accountId={actionAccountId}
               canEdit={canEdit}
               canDelete={canDelete}
               isParent={transaction.is_parent}

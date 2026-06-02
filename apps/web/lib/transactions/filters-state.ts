@@ -1,0 +1,238 @@
+import { getTodayAR } from '@/lib/date'
+import {
+  DEFAULT_MOVEMENTS_LIMIT,
+  MAX_MOVEMENTS_LIMIT,
+  MOVEMENTS_LIMIT_STEP,
+  monthOf,
+  shiftMonth,
+  type MovementCurrencyFilter,
+  type MovementTypeFilter,
+} from './filters'
+
+export type OverviewMode = 'egresos' | 'ingresos'
+
+export type TransactionsFilters = {
+  /** Selected month as `YYYY-MM`. Ignored when `customRange` is set. */
+  month: string
+  /** Custom date range; when present, takes priority over `month`. */
+  customRange: { from?: string; to?: string } | null
+  /**
+   * Active currency filter. `null` means "show both currencies" (matches the
+   * legacy URL behavior where `?currency=` absent = no filter); the spending
+   * overview falls back to ARS visualization in that case.
+   */
+  currency: MovementCurrencyFilter | null
+  overviewMode: OverviewMode
+  type: MovementTypeFilter | null
+  accountId: string | null
+  categoryId: string | null
+  /** Only meaningful when `categoryId` is set; reducer enforces this. */
+  subcategoryId: string | null
+  /** Search query (free text). */
+  query: string
+  amountMin: number | null
+  amountMax: number | null
+  limit: number
+}
+
+export type TransactionsFiltersAction =
+  | { type: 'setMonth'; month: string }
+  | { type: 'prevMonth' }
+  | { type: 'nextMonth' }
+  | { type: 'setCustomRange'; range: { from?: string; to?: string } | null }
+  | { type: 'setCurrency'; currency: MovementCurrencyFilter | null }
+  | { type: 'setOverviewMode'; mode: OverviewMode }
+  | { type: 'setType'; movementType: MovementTypeFilter | null }
+  | { type: 'setAccount'; accountId: string | null }
+  | { type: 'setCategory'; categoryId: string | null }
+  | { type: 'setSubcategory'; subcategoryId: string | null }
+  | { type: 'setQuery'; query: string }
+  | { type: 'setAmountRange'; min: number | null; max: number | null }
+  | { type: 'setLimit'; limit: number }
+  | { type: 'incrementLimit' }
+  | { type: 'clearSearch' }
+  | { type: 'clearFilters' }
+  | { type: 'clearAll' }
+  | { type: 'reset' }
+
+/**
+ * Build the initial filters state. Pure factory — does not read any global
+ * mutable state; the only "now" it depends on is `getTodayAR()` for the
+ * default month. Callers (FiltersProvider, tests) pass it in for full
+ * determinism.
+ */
+export function createInitialFilters(
+  options: { today?: Date } = {},
+): TransactionsFilters {
+  const today = options.today ?? getTodayAR()
+  return {
+    month: monthOf(today),
+    customRange: null,
+    currency: null,
+    overviewMode: 'egresos',
+    type: null,
+    accountId: null,
+    categoryId: null,
+    subcategoryId: null,
+    query: '',
+    amountMin: null,
+    amountMax: null,
+    limit: DEFAULT_MOVEMENTS_LIMIT,
+  }
+}
+
+const clampLimit = (n: number): number =>
+  Math.max(DEFAULT_MOVEMENTS_LIMIT, Math.min(n, MAX_MOVEMENTS_LIMIT))
+
+export function transactionsFiltersReducer(
+  state: TransactionsFilters,
+  action: TransactionsFiltersAction,
+): TransactionsFilters {
+  switch (action.type) {
+    case 'setMonth':
+      // Setting a month clears a custom range, since they're mutually exclusive.
+      return { ...state, month: action.month, customRange: null, limit: DEFAULT_MOVEMENTS_LIMIT }
+    case 'prevMonth':
+      // Month nav while a custom range is active is a no-op — the user has to
+      // clear the range first (matches the contract that customRange wins).
+      if (state.customRange) return state
+      return {
+        ...state,
+        month: shiftMonth(state.month, -1),
+        limit: DEFAULT_MOVEMENTS_LIMIT,
+      }
+    case 'nextMonth':
+      if (state.customRange) return state
+      return {
+        ...state,
+        month: shiftMonth(state.month, +1),
+        limit: DEFAULT_MOVEMENTS_LIMIT,
+      }
+    case 'setCustomRange':
+      return { ...state, customRange: action.range, limit: DEFAULT_MOVEMENTS_LIMIT }
+    case 'setCurrency':
+      return { ...state, currency: action.currency, limit: DEFAULT_MOVEMENTS_LIMIT }
+    case 'setOverviewMode':
+      // Mode toggle (Egresos / Ingresos) does NOT reset the movement list
+      // limit because it only affects the spending overview card.
+      return { ...state, overviewMode: action.mode }
+    case 'setType':
+      return { ...state, type: action.movementType, limit: DEFAULT_MOVEMENTS_LIMIT }
+    case 'setAccount':
+      return { ...state, accountId: action.accountId, limit: DEFAULT_MOVEMENTS_LIMIT }
+    case 'setCategory':
+      // Category change invalidates subcategory (a subcategory belongs to one
+      // category — keeping it across category changes leaks state).
+      return {
+        ...state,
+        categoryId: action.categoryId,
+        subcategoryId: null,
+        limit: DEFAULT_MOVEMENTS_LIMIT,
+      }
+    case 'setSubcategory':
+      // Subcategory without a parent category is meaningless; drop silently.
+      if (!state.categoryId) return state
+      return { ...state, subcategoryId: action.subcategoryId, limit: DEFAULT_MOVEMENTS_LIMIT }
+    case 'setQuery':
+      return { ...state, query: action.query, limit: DEFAULT_MOVEMENTS_LIMIT }
+    case 'setAmountRange':
+      return {
+        ...state,
+        amountMin: action.min,
+        amountMax: action.max,
+        limit: DEFAULT_MOVEMENTS_LIMIT,
+      }
+    case 'setLimit':
+      return { ...state, limit: clampLimit(action.limit) }
+    case 'incrementLimit':
+      return { ...state, limit: clampLimit(state.limit + MOVEMENTS_LIMIT_STEP) }
+    case 'clearSearch':
+      return { ...state, query: '', limit: DEFAULT_MOVEMENTS_LIMIT }
+    case 'clearFilters':
+      // Clears chip-removable filters (type, account, category/subcategory,
+      // currency, amount). Keeps period navigation, search, overview mode.
+      return {
+        ...state,
+        type: null,
+        accountId: null,
+        categoryId: null,
+        subcategoryId: null,
+        currency: null,
+        amountMin: null,
+        amountMax: null,
+        limit: DEFAULT_MOVEMENTS_LIMIT,
+      }
+    case 'clearAll':
+      // Same as clearFilters but also wipes search.
+      return {
+        ...state,
+        type: null,
+        accountId: null,
+        categoryId: null,
+        subcategoryId: null,
+        currency: null,
+        amountMin: null,
+        amountMax: null,
+        query: '',
+        limit: DEFAULT_MOVEMENTS_LIMIT,
+      }
+    case 'reset':
+      // Full reset including period navigation, currency, overview mode.
+      return createInitialFilters()
+  }
+}
+
+/**
+ * Whether the current filter set has at least one non-default content filter
+ * active. Drives the "Filtros (N)" chip counter and the visibility of
+ * "Limpiar filtros".
+ */
+export function hasActiveContentFilters(filters: TransactionsFilters): boolean {
+  return Boolean(
+    filters.type ||
+      filters.accountId ||
+      filters.categoryId ||
+      filters.subcategoryId ||
+      filters.currency != null ||
+      filters.amountMin != null ||
+      filters.amountMax != null,
+  )
+}
+
+/**
+ * Whether the user has a search term active. Drives the empty-state variant
+ * picker (along with `hasActiveContentFilters`).
+ */
+export function hasActiveSearch(filters: TransactionsFilters): boolean {
+  return filters.query.trim().length > 0
+}
+
+/**
+ * Project the React-state filters onto the URL-style `MovementFilters` shape
+ * the underlying query expects. Empty fields stay absent (undefined) instead
+ * of explicit null, matching the query's "absent ⇒ no constraint" contract.
+ *
+ * Shared by both the filters container and the list container so they hit the
+ * exact same TanStack queryKey (the projection is the cache identity), and so
+ * a single source of truth governs how state translates into a fetch.
+ */
+export function adaptFiltersForQuery(
+  filters: TransactionsFilters,
+): import('./filters').MovementFilters {
+  const out: import('./filters').MovementFilters = {}
+  if (filters.customRange) {
+    if (filters.customRange.from) out.from = filters.customRange.from
+    if (filters.customRange.to) out.to = filters.customRange.to
+  } else {
+    out.month = filters.month
+  }
+  if (filters.query) out.query = filters.query
+  if (filters.type) out.type = filters.type
+  if (filters.accountId) out.accountId = filters.accountId
+  if (filters.categoryId) out.categoryId = filters.categoryId
+  if (filters.subcategoryId) out.subcategoryId = filters.subcategoryId
+  if (filters.currency) out.currency = filters.currency
+  if (filters.amountMin != null) out.amountMin = filters.amountMin
+  if (filters.amountMax != null) out.amountMax = filters.amountMax
+  return out
+}

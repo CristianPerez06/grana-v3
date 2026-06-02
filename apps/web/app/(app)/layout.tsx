@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getShowCents, getSidebarCollapsed } from '@/lib/preferences'
 import { PreferencesProvider } from '@/lib/preferences-context'
+import { AppQueryProvider } from './_components/app-query-provider'
 import { AppShell } from './_components/app-shell'
 
 const AppLayout = async ({ children }: { children: React.ReactNode }) => {
@@ -17,9 +18,11 @@ const AppLayout = async ({ children }: { children: React.ReactNode }) => {
   ])
 
   return (
-    <PreferencesProvider showCents={showCents}>
-      <AppShell initialCollapsed={sidebarCollapsed}>{children}</AppShell>
-    </PreferencesProvider>
+    <AppQueryProvider>
+      <PreferencesProvider showCents={showCents}>
+        <AppShell initialCollapsed={sidebarCollapsed}>{children}</AppShell>
+      </PreferencesProvider>
+    </AppQueryProvider>
   )
 }
 
