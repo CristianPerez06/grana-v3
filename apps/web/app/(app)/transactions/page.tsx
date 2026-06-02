@@ -317,6 +317,11 @@ const TransactionsPage = async ({ searchParams }: Props) => {
 
       {topSuggestion && <RecurrenceSuggestionBanner suggestion={topSuggestion} />}
 
+      <PendingRecurrencesBlock
+        pending={pendingRecurrences}
+        availableByAccount={availableByAccount}
+      />
+
       <CategorySpendingOverview
         monthLabel={monthLabel}
         prevHref={overviewPrevHref}
@@ -358,11 +363,6 @@ const TransactionsPage = async ({ searchParams }: Props) => {
               : t('spending.subtitle_egresos'),
         }}
         // No `detailHref` until there's a real drill-down destination.
-      />
-
-      <PendingRecurrencesBlock
-        pending={pendingRecurrences}
-        availableByAccount={availableByAccount}
       />
 
       <PendingReimbursementsBlock
