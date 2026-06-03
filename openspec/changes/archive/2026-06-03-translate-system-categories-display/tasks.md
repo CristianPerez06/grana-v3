@@ -30,5 +30,5 @@
 ## 5. Verificación
 
 - [x] 5.1 `pnpm typecheck`, `pnpm lint`, `pnpm --filter web test`, `pnpm --filter @grana/dashboard test`, `pnpm --filter @grana/money-logic test`.
-- [ ] 5.2 Manual: cambiar idioma a `en` y verificar que las categorías/subcategorías de **sistema** se traducen en detalle, lista, filtros, form, "En qué se fue" y spending; y que una categoría **propia** sigue mostrando su `name` literal.
-- [ ] 5.3 Confirmar contra los scenarios del requirement "Nombres de categorías del sistema son traducibles" (spec `categories`).
+- [x] 5.2 Manual: cambiar idioma a `en` y verificar que las categorías/subcategorías de **sistema** se traducen en detalle, lista, filtros, form, "En qué se fue" y spending; y que una categoría **propia** sigue mostrando su `name` literal.
+- [x] 5.3 Confirmar contra los scenarios del requirement "Nombres de categorías del sistema son traducibles" (spec `categories`).

@@ -302,7 +302,7 @@ Creación **solo bancaria**; institución custom; herencia de avatar; guardas de
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| SET-N2-01 | Cambio de idioma a inglés | — | Cambiar a English → recorrer dashboard/Cuentas/Settings → recargar | Labels de producto en inglés; **nombres cargados por el usuario** (ej. `Galicia sueldo`) no se traducen; las **categorías/subcategorías de sistema SÍ** deberían traducirse; persiste (web: cookie) | ⚠️ | Todo traduce OK salvo **categorías/subcategorías de sistema**: el helper `getCategoryName` y las claves i18n ya existen pero solo se usan en Settings; el resto (detalle, lista, "en qué se fue", spending, filtros) muestra el `name` español crudo, y `toFinancialMovement` no arrastra `canonical_name`/`user_id`. Cambio cross-cutting al contrato de datos → **candidato a change dedicado**, no fix de esta tanda. Decisión del usuario pendiente. |
+| SET-N2-01 | Cambio de idioma a inglés | — | Cambiar a English → recorrer dashboard/Cuentas/Movimientos/Settings → recargar | Labels de producto en inglés; **nombres cargados por el usuario** (ej. `Galicia sueldo`) y **categorías propias** no se traducen; las **categorías/subcategorías de sistema SÍ** se traducen en todos los displays; persiste (web: cookie) | ✅ | Resuelto con el change `translate-system-categories-display` (merge squash `dcbfd28`): canonical_name+user_id por el contrato de datos y label resuelto vía i18n en lista, detalle, filtros, form, spending, cuotas, recurrencias, reintegros y compartido. Verificado en app. |
 
 ### N3 · Avanzado / inusual
 
@@ -522,7 +522,7 @@ liquidación (handshake liviano), primer caso de RLS cross-user.
 | 2026-06-03 | Detalle de movimiento | Editar/Eliminar pasan de estar tras el kebab `⋯` a iconos directos (lápiz/papelera), consistente con cuentas; borrar sigue con diálogo de confirmación | `1140f31` |
 | 2026-06-03 | DASH-N2-04 | Dashboard bimoneda: "Balance del mes" pasa a gráfico de doble eje (ARS izq / USD der) + totales USD; "En qué se fue" muestra lista USD subordinada. Antes el USD se filtraba/descartaba | `a00b32f` |
 | 2026-06-03 | DASH-N3-01 | El label del navegador de mes no parte el año a otra línea en mobile (`whitespace-nowrap`) | `74c9a4b` |
-| 2026-06-03 | SET-N2-01 | Traducción de categorías de sistema → change dedicado `translate-system-categories-display` (branch `feat/i18n-system-categories`); es conformance fix del spec `categories` ya existente | (propuesta) |
+| 2026-06-03 | SET-N2-01 | Traducción de categorías de sistema implementada (change `translate-system-categories-display`, archivado): canonical_name+user_id por contratos de datos + label i18n en todos los displays | `dcbfd28` |
 | 2026-06-03 | CARD-N2-01 (obs.) | Detalle de tarjeta: botón "Registrar consumo" + ícono lápiz en el header (antes no había forma de agregar consumo con historial y "Editar" era texto al pie) | `168a679` |
 | 2026-06-03 | CARD-N2-01 | "Cuotas en curso": fecha de compra y nombre correctos (el embed self-referencial del parent fallaba → mostraba la fecha de la última cuota y el nombre fallback); lápiz apilado abajo del botón | `57284f4` |
 | 2026-06-03 | CARD-N2-01 (obs.) | Las compras en cuotas muestran chip "N cuotas" en las listas de movimientos (antes ninguna referencia fuera de la vista de período) | `1a3d0c2` |
