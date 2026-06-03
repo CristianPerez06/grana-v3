@@ -17,9 +17,14 @@ type BaseMovement = {
   category_name: string | null
   category_icon: string | null
   category_color: string | null
+  /** Translation handles: system categories (is_system) render `categories.{canonical_name}` instead of the raw name. */
+  category_canonical_name: string | null
+  category_is_system: boolean
   /** Subcategory id/name for the row subtitle (null when not assigned or not applicable). */
   subcategory_id: string | null
   subcategory_name: string | null
+  subcategory_canonical_name: string | null
+  subcategory_is_system: boolean
   detail_href: string | null
   review_flags: MovementReviewFlag[]
   /** Part of a shared household expense — drives the "Compartido" row marker. */
@@ -141,8 +146,12 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
     category_name: tx.category?.name ?? null,
     category_icon: tx.category?.icon ?? null,
     category_color: tx.category?.color ?? null,
+    category_canonical_name: tx.category?.canonical_name ?? null,
+    category_is_system: tx.category != null && tx.category.user_id === null,
     subcategory_id: tx.subcategory_id ?? null,
     subcategory_name: tx.subcategory?.name ?? null,
+    subcategory_canonical_name: tx.subcategory?.canonical_name ?? null,
+    subcategory_is_system: tx.subcategory != null && tx.subcategory.user_id === null,
     detail_href: detailHref(tx),
     review_flags: getReviewFlags(tx),
     isShared: tx.is_shared ?? false,
@@ -189,6 +198,8 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
       category_name: linkedCat?.name ?? null,
       category_icon: linkedCat?.icon ?? null,
       category_color: linkedCat?.color ?? null,
+      category_canonical_name: linkedCat?.canonical_name ?? null,
+      category_is_system: linkedCat != null && linkedCat.user_id === null,
       subcategory_id: null,
       subcategory_name: null,
       kind: 'reimbursement',

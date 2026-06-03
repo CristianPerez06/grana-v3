@@ -6,6 +6,7 @@ import { getCreditCardDetail, getCardPeriodDetail } from '@/lib/cards/queries'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { getShowCents } from '@/lib/preferences'
 import { PageHeader } from '@/components/ui/page-header'
+import { translateCategoryLabel, translateSubcategoryLabel } from '@/lib/categories/display'
 import { EditDatesSheet } from './_components/edit-dates-sheet'
 
 const formatDate = (iso: string) => {
@@ -37,9 +38,10 @@ const PeriodDetailPage = async ({ params }: Props) => {
   const canEditDates = !period.has_payment
   const totalAmount = period.has_payment ? period.paidAmountARS : period.pendingAmountARS
 
-  const [t, tTx] = await Promise.all([
+  const [t, tTx, tRoot] = await Promise.all([
     getTranslations('cards'),
     getTranslations('transactions'),
+    getTranslations(),
   ])
 
   return (
@@ -102,8 +104,24 @@ const PeriodDetailPage = async ({ params }: Props) => {
           <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
             {period.transactions.map((tx) => {
               const isReimbursement = tx.type === 'reimbursement'
+              const categoryLabel = tx.category
+                ? translateCategoryLabel(
+                    tx.category.name,
+                    tx.category.canonical_name,
+                    tx.category.user_id === null,
+                    tRoot,
+                  )
+                : null
+              const subcategoryLabel = tx.subcategory
+                ? translateSubcategoryLabel(
+                    tx.subcategory.name,
+                    tx.subcategory.canonical_name,
+                    tx.subcategory.user_id === null,
+                    tRoot,
+                  )
+                : null
               const label = tx.description
-                ?? (tx.subcategory?.name ? `${tx.category?.name} · ${tx.subcategory.name}` : tx.category?.name)
+                ?? (subcategoryLabel ? `${categoryLabel} · ${subcategoryLabel}` : categoryLabel)
                 ?? (isReimbursement ? tTx('reimbursement.label') : '—')
               return (
               <Link

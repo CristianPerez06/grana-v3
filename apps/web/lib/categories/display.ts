@@ -19,3 +19,28 @@ export function getSubcategoryName(
   }
   return subcategory.name
 }
+
+// ── Flattened variants ─────────────────────────────────────────────────────────
+// For rows shaped like FinancialMovement / breakdown slices, where the category
+// travels as loose fields instead of an object. Same contract: system entries
+// translate via canonical_name; user-owned ones show their literal name.
+
+export function translateCategoryLabel(
+  name: string | null,
+  canonicalName: string | null,
+  isSystem: boolean,
+  t: TranslateFn,
+): string | null {
+  if (isSystem && canonicalName) return t(`categories.${canonicalName}`)
+  return name
+}
+
+export function translateSubcategoryLabel(
+  name: string | null,
+  canonicalName: string | null,
+  isSystem: boolean,
+  t: TranslateFn,
+): string | null {
+  if (isSystem && canonicalName) return t(`subcategories.${canonicalName}`)
+  return name
+}

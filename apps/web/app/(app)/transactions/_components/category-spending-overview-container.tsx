@@ -24,6 +24,11 @@ import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import { UNCATEGORIZED_ID } from '@grana/dashboard'
 import { SUBCATEGORY_NONE_MARKER } from '@/lib/transactions/filters'
 import { useTransactionsFilters } from '@/lib/transactions/filters-context'
+import {
+  getCategoryName,
+  translateCategoryLabel,
+  translateSubcategoryLabel,
+} from '@/lib/categories/display'
 
 /**
  * Client container for `<CategorySpendingOverview>`. Reads filters from the
@@ -44,6 +49,7 @@ import { useTransactionsFilters } from '@/lib/transactions/filters-context'
 export function CategorySpendingOverviewContainer() {
   const { filters, dispatch } = useTransactionsFilters()
   const t = useTranslations('transactions')
+  const tRoot = useTranslations()
   const locale = useLocale()
 
   const month = filters.month
@@ -91,13 +97,24 @@ export function CategorySpendingOverviewContainer() {
 
   // ── Active breakdown (the donut's data) ────────────────────────────────────
   const overviewBreakdown = useMemo<CategoryBreakdown | null>(() => {
+    // Uncategorized sentinel → i18n; system categories → localized label.
+    const relabel = <
+      T extends { categoryId: string; label: string; canonicalName?: string | null; isSystem?: boolean },
+    >(
+      i: T,
+    ): T =>
+      i.categoryId === UNCATEGORIZED_ID
+        ? { ...i, label: t('spending.uncategorized') }
+        : {
+            ...i,
+            label:
+              translateCategoryLabel(i.label, i.canonicalName ?? null, i.isSystem ?? false, tRoot) ??
+              i.label,
+          }
     if (overviewMode === 'ingresos') {
       const raw = incomeBreakdownQ.data
       if (!raw) return null
-      const fill = (rows: typeof raw.ARS) =>
-        rows.map((i) =>
-          i.categoryId === UNCATEGORIZED_ID ? { ...i, label: t('spending.uncategorized') } : i,
-        )
+      const fill = (rows: typeof raw.ARS) => rows.map(relabel)
       const ars = buildCategorySlices(fill(raw.ARS), { othersLabel: t('spending.others') })
       const usd = buildCategorySlices(fill(raw.USD), { othersLabel: t('spending.others') })
       return overviewCurrency === 'USD' ? usd : ars
@@ -105,10 +122,7 @@ export function CategorySpendingOverviewContainer() {
     // egresos
     const raw = categoryBreakdownQ.data
     if (!raw) return null
-    const fill = (rows: typeof raw.ARS) =>
-      rows.map((i) =>
-        i.categoryId === UNCATEGORIZED_ID ? { ...i, label: t('spending.uncategorized') } : i,
-      )
+    const fill = (rows: typeof raw.ARS) => rows.map(relabel)
     const arsCategory = buildCategorySlices(fill(raw.ARS), { othersLabel: t('spending.others') })
     const usdCategory = buildCategorySlices(fill(raw.USD), { othersLabel: t('spending.others') })
 
@@ -117,7 +131,15 @@ export function CategorySpendingOverviewContainer() {
       const fillSub = (rows: typeof subRaw.ARS) =>
         rows.map((i) => ({
           ...i,
-          label: i.subcategoryId === null ? t('spending.no_subcategory') : i.label,
+          label:
+            i.subcategoryId === null
+              ? t('spending.no_subcategory')
+              : translateSubcategoryLabel(
+                  i.label,
+                  i.canonicalName ?? null,
+                  i.isSystem ?? false,
+                  tRoot,
+                ) ?? i.label,
         }))
       const arsSub = buildSubcategorySlices(fillSub(subRaw.ARS))
       const usdSub = buildSubcategorySlices(fillSub(subRaw.USD))
@@ -147,6 +169,7 @@ export function CategorySpendingOverviewContainer() {
     categoryBreakdownQ.data,
     subcategoryDrillQ.data,
     t,
+    tRoot,
   ])
 
   // Pre-fetched subcategory breakdowns for in-place drill-down (category mode
@@ -178,7 +201,9 @@ export function CategorySpendingOverviewContainer() {
         overviewMode === 'ingresos'
           ? t('spending.income_eyebrow')
           : activeCategory != null
-            ? t('spending.eyebrow_in_category', { category: activeCategory.name })
+            ? t('spending.eyebrow_in_category', {
+                category: getCategoryName(activeCategory, tRoot),
+              })
             : t('spending.eyebrow'),
       centerLabel:
         overviewMode === 'ingresos'
@@ -198,7 +223,7 @@ export function CategorySpendingOverviewContainer() {
           ? t('spending.income_subtitle')
           : t('spending.subtitle_egresos'),
     }),
-    [overviewMode, activeCategory, t],
+    [overviewMode, activeCategory, t, tRoot],
   )
 
   // ── Controller: filters dispatch ───────────────────────────────────────────

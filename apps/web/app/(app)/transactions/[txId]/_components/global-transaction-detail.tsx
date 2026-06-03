@@ -23,6 +23,11 @@ import {
 import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
+import {
+  getCategoryName,
+  getSubcategoryName,
+  translateCategoryLabel,
+} from '@/lib/categories/display'
 import type { FinancialMovement, MovementReviewFlag } from '@/lib/transactions/movements'
 import type { TransactionWithDetails } from '@/lib/transactions/types'
 import type { ExpenseReimbursementVM } from '@/lib/transactions/queries'
@@ -175,6 +180,7 @@ export const GlobalTransactionDetail = ({
 }: Props) => {
   const showCents = useShowCents()
   const t = useTranslations('transactions')
+  const tRoot = useTranslations()
   const tShared = useTranslations('shared')
   const [editOpen, setEditOpen] = useState(false)
   const canUseEditDrawer = edit != null && editCategories != null
@@ -195,12 +201,18 @@ export const GlobalTransactionDetail = ({
   const canEdit = actionAccountId != null && transaction.status !== 'paid'
   const canDelete = actionAccountId != null && !transaction.parent_id && transaction.status !== 'paid'
 
+  // System categories/subcategories render localized; user-owned keep their name.
+  const categoryLabel = transaction.category ? getCategoryName(transaction.category, tRoot) : null
+  const subcategoryLabel = transaction.subcategory
+    ? getSubcategoryName(transaction.subcategory, tRoot)
+    : null
+
   // Hero: description carries the narrative; the context line carries date +
   // (when relevant) a second piece of identity.
   const heroDesc =
     movement.description ??
     movement.title ??
-    transaction.category?.name ??
+    categoryLabel ??
     t(`types.${transaction.type}`)
   const heroContext: ReactNode = (
     <>
@@ -279,8 +291,8 @@ export const GlobalTransactionDetail = ({
     const cardName = installmentSiblings?.find((s) => s.source_account)?.source_account?.name ?? null
     rows.push(
       { key: 'card', label: t('detail.labels.card'), value: cardName },
-      { key: 'category', label: t('detail.labels.category'), value: transaction.category?.name ?? null },
-      { key: 'subcategory', label: t('detail.labels.subcategory'), value: transaction.subcategory?.name ?? null },
+      { key: 'category', label: t('detail.labels.category'), value: categoryLabel },
+      { key: 'subcategory', label: t('detail.labels.subcategory'), value: subcategoryLabel },
     )
   } else if (movement.kind === 'reimbursement') {
     rows.push(
@@ -292,7 +304,17 @@ export const GlobalTransactionDetail = ({
           : null,
       },
       { key: 'account', label: t('detail.labels.account'), value: movement.account_name },
-      { key: 'category', label: t('detail.labels.category'), value: movement.category_name },
+      {
+        key: 'category',
+        label: t('detail.labels.category'),
+        // Derived from the linked expense → comes flattened on the movement.
+        value: translateCategoryLabel(
+          movement.category_name,
+          movement.category_canonical_name,
+          movement.category_is_system,
+          tRoot,
+        ),
+      },
     )
     if (
       transaction.estimated_amount != null &&
@@ -309,8 +331,8 @@ export const GlobalTransactionDetail = ({
     // income / expense
     rows.push(
       { key: 'account', label: t('detail.labels.account'), value: movement.account_name },
-      { key: 'category', label: t('detail.labels.category'), value: transaction.category?.name ?? null },
-      { key: 'subcategory', label: t('detail.labels.subcategory'), value: transaction.subcategory?.name ?? null },
+      { key: 'category', label: t('detail.labels.category'), value: categoryLabel },
+      { key: 'subcategory', label: t('detail.labels.subcategory'), value: subcategoryLabel },
     )
   }
 

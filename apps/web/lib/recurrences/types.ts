@@ -21,6 +21,8 @@ export type RecurrenceCategory = {
   canonical_name: string
   color: string | null
   icon: string | null
+  /** NULL = system category (translatable via `categories.{canonical_name}`). */
+  user_id: string | null
 }
 
 export type RecurrenceSubcategory = {
@@ -28,6 +30,8 @@ export type RecurrenceSubcategory = {
   name: string
   canonical_name: string
   category_id: string
+  /** NULL = system subcategory (translatable via `subcategories.{canonical_name}`). */
+  user_id: string | null
 }
 
 export type Recurrence = Omit<

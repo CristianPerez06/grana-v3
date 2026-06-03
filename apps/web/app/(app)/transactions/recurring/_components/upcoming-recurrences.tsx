@@ -7,6 +7,7 @@ import {
   type RuleForProjection,
 } from '@grana/money-logic'
 import { formatDateISO, getTodayAR } from '@/lib/date'
+import { getCategoryName } from '@/lib/categories/display'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
 
 type Props = {
@@ -33,6 +34,7 @@ const endOfMonthISO = (iso: string) => {
  */
 export const UpcomingRecurrences = async ({ rules }: Props) => {
   const tRec = await getTranslations('recurrences')
+  const tRoot = await getTranslations()
 
   const today = formatDateISO(getTodayAR())
   const in7 = addDaysISO(today, 7)
@@ -80,7 +82,11 @@ export const UpcomingRecurrences = async ({ rules }: Props) => {
           : 'text-terracotta'
     const tileColor = rule.category?.color ?? '#8C97A4'
     const tileIcon = rule.category?.icon
-    const name = rule.description || rule.category?.name || rule.account?.name || '—'
+    const name =
+      rule.description ||
+      (rule.category ? getCategoryName(rule.category, tRoot) : null) ||
+      rule.account?.name ||
+      '—'
 
     return (
       <div

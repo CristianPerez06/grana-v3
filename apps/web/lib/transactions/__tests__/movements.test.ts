@@ -133,12 +133,20 @@ describe('toFinancialMovement', () => {
       type: 'expense',
       category_id: 'cat-1',
       subcategory_id: 'subcat-1',
-      category: { id: 'cat-1', name: 'Comida', canonical_name: 'comida', icon: '🍔', color: '#B56A5A' },
+      category: {
+        id: 'cat-1',
+        name: 'Comida',
+        canonical_name: 'comida',
+        icon: '🍔',
+        color: '#B56A5A',
+        user_id: null,
+      },
       subcategory: {
         id: 'subcat-1',
         name: 'Almuerzo',
         canonical_name: 'almuerzo',
         category_id: 'cat-1',
+        user_id: null,
       },
     }))
 

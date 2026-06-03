@@ -2,6 +2,7 @@ import { useTranslations } from 'next-intl'
 import { CreditCard } from 'lucide-react'
 import { formatARS } from '@grana/i18n-messages'
 import { Card } from '@/components/ui/card'
+import { translateCategoryLabel } from '@/lib/categories/display'
 import type { ActiveInstallment } from '@/lib/cards/queries'
 import { CuotaProgressDots } from './cuota-progress-dots'
 import { formatDayMonth } from './card-presentation'
@@ -20,6 +21,11 @@ type Props = {
  */
 export const CuotasEnCursoPane = ({ items, totalRemaining, accent, showCents = false }: Props) => {
   const t = useTranslations('cards')
+  const tRoot = useTranslations()
+
+  // System categories render localized; user-owned keep their literal name.
+  const categoryLabelOf = (q: ActiveInstallment) =>
+    translateCategoryLabel(q.categoryName, q.categoryCanonicalName, q.categoryIsSystem, tRoot)
 
   if (items.length === 0) {
     return (
@@ -59,10 +65,14 @@ export const CuotasEnCursoPane = ({ items, totalRemaining, accent, showCents = f
                 <CreditCard size={18} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold">{q.name}</p>
+                <p className="truncate text-sm font-bold">
+                  {q.description ??
+                    categoryLabelOf(q) ??
+                    tRoot('transactions.installment_purchase_label')}
+                </p>
                 <p className="truncate text-xs text-text-muted">
                   {t('detail.cuotas_purchased', { date: formatDayMonth(q.purchaseDate) })}
-                  {q.categoryName ? ` · ${q.categoryName}` : ''}
+                  {categoryLabelOf(q) ? ` · ${categoryLabelOf(q)}` : ''}
                 </p>
               </div>
               <p className="shrink-0 text-sm font-extrabold tabular-nums">

@@ -2,6 +2,7 @@
 
 import { Sparkles } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { translateCategoryLabel } from '@/lib/categories/display'
 import type { CategorySuggestion } from '@/lib/transactions/category-suggestion'
 
 type Props = {
@@ -16,6 +17,14 @@ type Props = {
  */
 export const CategorySuggestionChip = ({ suggestion, onApply }: Props) => {
   const t = useTranslations('transactions')
+  const tRoot = useTranslations()
+  const category =
+    translateCategoryLabel(
+      suggestion.categoryName,
+      suggestion.categoryCanonicalName,
+      suggestion.categoryIsSystem,
+      tRoot,
+    ) ?? suggestion.categoryName
 
   return (
     <button
@@ -24,7 +33,7 @@ export const CategorySuggestionChip = ({ suggestion, onApply }: Props) => {
       className="flex w-fit items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
     >
       <Sparkles size={13} aria-hidden />
-      {t('category_suggestion.chip', { category: suggestion.categoryName })}
+      {t('category_suggestion.chip', { category })}
     </button>
   )
 }

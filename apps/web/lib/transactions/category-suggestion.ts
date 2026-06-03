@@ -4,8 +4,13 @@
 export type CategorySuggestion = {
   categoryId: string
   categoryName: string
+  /** Translation handles: system categories render `categories.{canonical_name}`. */
+  categoryCanonicalName: string
+  categoryIsSystem: boolean
   subcategoryId: string | null
   subcategoryName: string | null
+  subcategoryCanonicalName: string | null
+  subcategoryIsSystem: boolean
 }
 
 /**

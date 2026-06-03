@@ -273,7 +273,7 @@ export async function getSharedExpenses(limit = 20): Promise<SharedExpenseItem[]
   const { data: txs } = await supabase
     .from('transactions')
     .select(
-      'id, type, description, date, amount, currency_code, user_id, is_parent, installments_total, linked_transaction_id, category:categories(name)',
+      'id, type, description, date, amount, currency_code, user_id, is_parent, installments_total, linked_transaction_id, category:categories(name, canonical_name, user_id)',
     )
     .eq('household_id', household.id)
     .eq('is_shared', true)
@@ -294,16 +294,20 @@ export async function getSharedExpenses(limit = 20): Promise<SharedExpenseItem[]
         .map((t) => t.linked_transaction_id as string),
     ),
   ]
-  const linkedById = new Map<string, { description: string | null; categoryName: string | null }>()
+  type CategoryHandle = { name: string; canonical_name: string; user_id: string | null } | null
+  const linkedById = new Map<
+    string,
+    { description: string | null; category: CategoryHandle }
+  >()
   if (linkedIds.length) {
     const { data: linked } = await supabase
       .from('transactions')
-      .select('id, description, category:categories(name)')
+      .select('id, description, category:categories(name, canonical_name, user_id)')
       .in('id', linkedIds)
     for (const e of linked ?? []) {
       linkedById.set(e.id, {
         description: e.description,
-        categoryName: (e.category as { name: string } | null)?.name ?? null,
+        category: (e.category as CategoryHandle) ?? null,
       })
     }
   }
@@ -352,14 +356,17 @@ export async function getSharedExpenses(limit = 20): Promise<SharedExpenseItem[]
     if (!isBalanceCurrency(t.currency_code)) return []
     const linked = t.linked_transaction_id ? linkedById.get(t.linked_transaction_id) : undefined
     const isReimbursement = t.type === 'reimbursement'
+    const category = isReimbursement
+      ? linked?.category ?? null
+      : ((t.category as unknown as CategoryHandle) ?? null)
     return [
       {
         id: t.id,
         kind: isReimbursement ? ('reimbursement' as const) : ('expense' as const),
         description: isReimbursement ? linked?.description ?? null : t.description,
-        categoryName: isReimbursement
-          ? linked?.categoryName ?? null
-          : (t.category as { name: string } | null)?.name ?? null,
+        categoryName: category?.name ?? null,
+        categoryCanonicalName: category?.canonical_name ?? null,
+        categoryIsSystem: category != null && category.user_id === null,
         date: t.date,
         amount: Number(t.amount),
         currencyCode: t.currency_code,

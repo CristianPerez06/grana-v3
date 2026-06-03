@@ -14,6 +14,7 @@ import {
   getSharedExpenses,
 } from '@/lib/shared/queries'
 import type { BalanceCurrency, PairwiseDebt } from '@grana/money-logic'
+import { translateCategoryLabel } from '@/lib/categories/display'
 import { fmtMoney } from './_components/money'
 import { InviteCard } from './_components/invite-card'
 import { PendingSettlementCard } from './_components/pending-settlement-card'
@@ -23,6 +24,7 @@ const CURRENCIES: BalanceCurrency[] = ['ARS', 'USD']
 
 export default async function SharedPage() {
   const t = await getTranslations('shared')
+  const tRoot = await getTranslations()
   const household = await getHousehold()
 
   // No household yet → create or join, both visible inline.
@@ -145,7 +147,14 @@ export default async function SharedPage() {
                 <li key={e.id} className="flex items-center justify-between gap-3 p-4">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-text">
-                      {e.description || e.categoryName || t('split.shared_label')}
+                      {e.description ||
+                        translateCategoryLabel(
+                          e.categoryName,
+                          e.categoryCanonicalName,
+                          e.categoryIsSystem,
+                          tRoot,
+                        ) ||
+                        t('split.shared_label')}
                     </p>
                     <p className="text-xs text-text-muted">
                       {e.kind === 'reimbursement'

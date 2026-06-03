@@ -28,8 +28,12 @@ export const cardPeriodTransactionToMovement = (tx: CardTx): FinancialMovement =
     category_name: tx.category?.name ?? null,
     category_icon: tx.category?.icon ?? null,
     category_color: tx.category?.color ?? null,
+    category_canonical_name: tx.category?.canonical_name ?? null,
+    category_is_system: tx.category != null && tx.category.user_id === null,
     subcategory_id: null,
     subcategory_name: tx.subcategory?.name ?? null,
+    subcategory_canonical_name: tx.subcategory?.canonical_name ?? null,
+    subcategory_is_system: tx.subcategory != null && tx.subcategory.user_id === null,
     detail_href: `/transactions/${tx.id}`,
     review_flags: [] as never[],
     // The card-statement pane does not surface the shared marker (the global

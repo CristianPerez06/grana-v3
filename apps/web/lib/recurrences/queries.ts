@@ -20,8 +20,8 @@ const RECURRENCE_SELECT = `
   *,
   account:accounts!recurrences_account_id_fkey(id, name, type),
   destination_account:accounts!recurrences_transfer_destination_account_id_fkey(id, name, type),
-  category:categories(id, name, canonical_name, color, icon),
-  subcategory:subcategories(id, name, canonical_name, category_id)
+  category:categories(id, name, canonical_name, color, icon, user_id),
+  subcategory:subcategories(id, name, canonical_name, category_id, user_id)
 `
 
 const INSTANCE_SELECT = `
@@ -29,8 +29,8 @@ const INSTANCE_SELECT = `
   recurrence:recurrences(*),
   account:accounts!recurrence_instances_account_id_fkey(id, name, type),
   destination_account:accounts!recurrence_instances_transfer_destination_account_id_fkey(id, name, type),
-  category:categories(id, name, canonical_name, color, icon),
-  subcategory:subcategories(id, name, canonical_name, category_id)
+  category:categories(id, name, canonical_name, color, icon, user_id),
+  subcategory:subcategories(id, name, canonical_name, category_id, user_id)
 `
 
 type RecurrenceRow = Omit<RecurrenceSummary, 'pending_instance'>
@@ -334,7 +334,7 @@ export async function getTopRecurrenceSuggestion(): Promise<
   (RecurrenceSuggestion & {
     account: { id: string; name: string; type: 'cash' | 'bank' | 'credit' } | null
     destination_account: { id: string; name: string; type: 'cash' | 'bank' | 'credit' } | null
-    category: { id: string; name: string } | null
+    category: { id: string; name: string; canonical_name: string; user_id: string | null } | null
   })
   | null
 > {
@@ -448,7 +448,7 @@ export async function getTopRecurrenceSuggestion(): Promise<
     top.category_id
       ? supabase
           .from('categories')
-          .select('id, name')
+          .select('id, name, canonical_name, user_id')
           .eq('id', top.category_id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -468,7 +468,12 @@ export async function getTopRecurrenceSuggestion(): Promise<
       ? (byId.get(top.destination_account_id) ?? null)
       : null,
     category: category
-      ? { id: category.id as string, name: category.name as string }
+      ? {
+          id: category.id as string,
+          name: category.name as string,
+          canonical_name: category.canonical_name as string,
+          user_id: (category.user_id as string | null) ?? null,
+        }
       : null,
   }
 }

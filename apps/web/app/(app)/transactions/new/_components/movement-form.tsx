@@ -60,6 +60,7 @@ import { CategorySuggestionChip } from '@/lib/transactions/components/category-s
 import { CategorySuggestionHint } from '@/lib/transactions/components/category-suggestion-hint'
 import { normalizeDescription, type CategorySuggestion } from '@/lib/transactions/category-suggestion'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
+import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
 import type { Household } from '@/lib/shared/types'
 
 const todayStr = () => {
@@ -240,6 +241,7 @@ export const MovementForm = ({
   const tCommon = useTranslations('common')
   const tRec = useTranslations('recurrences')
   const tShared = useTranslations('shared')
+  const tRoot = useTranslations()
   const isEdit = edit !== undefined
   const editable = edit?.editableFields
   const returnHref = edit?.returnHref ?? createReturnHref ?? '/transactions'
@@ -907,8 +909,11 @@ export const MovementForm = ({
       monogram: a.name.charAt(0).toUpperCase(),
     }
 
-  const subcategoryName =
-    selectedCategory?.subcategories.find((s) => s.id === subcategoryId)?.name ?? null
+  const selectedSubcategory =
+    selectedCategory?.subcategories.find((s) => s.id === subcategoryId) ?? null
+  const subcategoryName = selectedSubcategory
+    ? getSubcategoryName(selectedSubcategory, tRoot)
+    : null
 
   const pickCategory = (catId: string, subId: string) => {
     setCategoryId(catId)
@@ -1025,7 +1030,7 @@ export const MovementForm = ({
         <ChevronLeft className="size-4" aria-hidden />
         <span>
           {drillCategory.icon ? `${drillCategory.icon} ` : ''}
-          {drillCategory.name}
+          {getCategoryName(drillCategory, tRoot)}
         </span>
       </button>
       <button
@@ -1045,7 +1050,7 @@ export const MovementForm = ({
           onClick={() => pickCategory(drillCategory.id, s.id)}
           className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-page"
         >
-          <span className="flex-1 truncate text-sm text-text">{s.name}</span>
+          <span className="flex-1 truncate text-sm text-text">{getSubcategoryName(s, tRoot)}</span>
           {subcategoryId === s.id && <Check className="size-4 shrink-0 text-emerald" aria-hidden />}
         </button>
       ))}
@@ -1063,7 +1068,7 @@ export const MovementForm = ({
           >
             <span className="flex-1 truncate text-sm font-medium text-text">
               {c.icon ? `${c.icon} ` : ''}
-              {c.name}
+              {getCategoryName(c, tRoot)}
             </span>
             {drillable ? (
               <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
@@ -1080,7 +1085,7 @@ export const MovementForm = ({
     <span className="flex items-center gap-1.5">
       <span className="truncate">
         {selectedCategory.icon ? `${selectedCategory.icon} ` : ''}
-        {selectedCategory.name}
+        {getCategoryName(selectedCategory, tRoot)}
       </span>
       {subcategoryName && (
         <>
@@ -1484,7 +1489,10 @@ export const MovementForm = ({
       {isAdjustment && <p className="mt-2 pl-12 text-xs text-text-muted">{t('drawer.adjust_reason_required')}</p>}
       {!isEdit && (tab === 'income' || tab === 'expense') && descriptionHasNoHistory && selectedCategory && (
         <div className="mt-2 pl-12">
-          <CategorySuggestionHint description={description} categoryName={selectedCategory.name} />
+          <CategorySuggestionHint
+            description={description}
+            categoryName={getCategoryName(selectedCategory, tRoot)}
+          />
         </div>
       )}
     </div>

@@ -27,7 +27,9 @@ export async function suggestCategoryFromHistory(
 
   const { data } = await supabase
     .from('transactions')
-    .select('category:categories(id, name, type), subcategory:subcategories(id, name)')
+    .select(
+      'category:categories(id, name, type, canonical_name, user_id), subcategory:subcategories(id, name, canonical_name, user_id)',
+    )
     .eq('user_id', user.id)
     .ilike('description', normalized)
     .not('category_id', 'is', null)
@@ -38,14 +40,29 @@ export async function suggestCategoryFromHistory(
   const row = data?.[0]
   if (!row) return null
 
-  const category = row.category as unknown as { id: string; name: string; type: string } | null
-  const subcategory = row.subcategory as unknown as { id: string; name: string } | null
+  const category = row.category as unknown as {
+    id: string
+    name: string
+    type: string
+    canonical_name: string
+    user_id: string | null
+  } | null
+  const subcategory = row.subcategory as unknown as {
+    id: string
+    name: string
+    canonical_name: string
+    user_id: string | null
+  } | null
   if (!category || !categoryTypeMatches(category.type, type)) return null
 
   return {
     categoryId: category.id,
     categoryName: category.name,
+    categoryCanonicalName: category.canonical_name,
+    categoryIsSystem: category.user_id === null,
     subcategoryId: subcategory?.id ?? null,
     subcategoryName: subcategory?.name ?? null,
+    subcategoryCanonicalName: subcategory?.canonical_name ?? null,
+    subcategoryIsSystem: subcategory != null && subcategory.user_id === null,
   }
 }

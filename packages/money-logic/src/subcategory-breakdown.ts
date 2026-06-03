@@ -21,6 +21,9 @@ export type SubcategorySliceInput = {
   icon: string | null
   /** Pre-aggregated value for this subcategory (e.g. net spend in the period). */
   value: number
+  /** Translation handles (optional) — see CategorySliceInput; consumers relabel before rendering. */
+  canonicalName?: string | null
+  isSystem?: boolean
 }
 
 export type SubcategorySlice = {

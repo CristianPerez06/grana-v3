@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { ChevronRight, Repeat } from 'lucide-react'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
+import { getCategoryName } from '@/lib/categories/display'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
 
 type Tab = 'active' | 'paused' | 'finished'
@@ -34,6 +35,7 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
   const [tab, setTab] = useState<Tab>('active')
   const tRec = useTranslations('recurrences')
   const tTx = useTranslations('transactions')
+  const tRoot = useTranslations()
 
   const getMovementLabel = (type: string) => {
     if (type === 'income' || type === 'expense' || type === 'transfer' || type === 'adjustment') {
@@ -148,7 +150,9 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <span className="truncate text-[15px] font-bold tracking-[-0.01em] text-text">
-                      {rule.description || rule.category?.name || movementLabel}
+                      {rule.description ||
+                        (rule.category ? getCategoryName(rule.category, tRoot) : null) ||
+                        movementLabel}
                     </span>
                     <span className="shrink-0 rounded-[6px] bg-[#F1F3F6] px-2 py-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-text-muted">
                       {freqLabel}

@@ -67,8 +67,14 @@ export type CardPeriodDetail = CardPeriodWithPayment & {
     fx_rate_to_ars: number | null
     received_at: string | null
     cancelled_at: string | null
-    category?: { name: string; icon: string | null; color: string | null } | null
-    subcategory?: { name: string } | null
+    category?: {
+      name: string
+      icon: string | null
+      color: string | null
+      canonical_name: string
+      user_id: string | null
+    } | null
+    subcategory?: { name: string; canonical_name: string; user_id: string | null } | null
   }>
 }
 
@@ -506,8 +512,13 @@ export type ActiveInstallment = {
   parentId: string
   /** Purchase name (description or category fallback). */
   name: string
+  /** Purchase description as typed by the user, or null. */
+  description: string | null
   /** Category name, or null. */
   categoryName: string | null
+  /** Translation handles: system categories render `categories.{canonical_name}`. */
+  categoryCanonicalName: string | null
+  categoryIsSystem: boolean
   /** Purchase date (the parent's accounting date, ISO). */
   purchaseDate: string
   /** Installments already paid. */
@@ -569,7 +580,7 @@ export async function getActiveInstallments(
   // Stitch the parents (purchase identity: description, purchase date, category).
   const { data: parents, error: parentsError } = await supabase
     .from('transactions')
-    .select('id, description, date, category:categories(name)')
+    .select('id, description, date, category:categories(name, canonical_name, user_id)')
     .in('id', [...byParent.keys()])
 
   if (parentsError) throw parentsError
@@ -577,7 +588,7 @@ export async function getActiveInstallments(
     id: string
     description: string | null
     date: string
-    category: { name: string } | null
+    category: { name: string; canonical_name: string; user_id: string | null } | null
   }
   const parentById = new Map<string, ParentRow>(
     ((parents ?? []) as unknown as ParentRow[]).map((p) => [p.id, p]),
@@ -603,7 +614,10 @@ export async function getActiveInstallments(
     items.push({
       parentId,
       name: parent?.description ?? parent?.category?.name ?? 'Compra en cuotas',
+      description: parent?.description ?? null,
       categoryName: parent?.category?.name ?? null,
+      categoryCanonicalName: parent?.category?.canonical_name ?? null,
+      categoryIsSystem: parent?.category != null && parent.category.user_id === null,
       // Fallback: first cuota's date (≈ purchase date), never an arbitrary one.
       purchaseDate: parent?.date ?? firstChild.date,
       paidCount,
@@ -673,7 +687,7 @@ export async function getCardPeriods(accountId: string): Promise<CardPeriodDetai
   // Load transactions grouped by period
   const { data: txRows, error: txError } = await supabase
     .from('transactions')
-    .select('id, type, card_period_id, amount, currency_code, date, status, description, category_id, is_parent, installment_n, installments_total, fx_rate_to_ars, received_at, cancelled_at, category:categories(name, icon, color), subcategory:subcategories(name)')
+    .select('id, type, card_period_id, amount, currency_code, date, status, description, category_id, is_parent, installment_n, installments_total, fx_rate_to_ars, received_at, cancelled_at, category:categories(name, icon, color, canonical_name, user_id), subcategory:subcategories(name, canonical_name, user_id)')
     .in('card_period_id', periodIds)
     .eq('is_parent', false)
     .order('date', { ascending: false })
@@ -791,7 +805,7 @@ export async function getCardPeriodDetail(periodId: string): Promise<CardPeriodD
     getCardPeriodsWithStatus(period.account_id),
     supabase
       .from('transactions')
-      .select('id, type, card_period_id, amount, currency_code, date, status, description, category_id, is_parent, installment_n, installments_total, fx_rate_to_ars, received_at, cancelled_at, category:categories(name, icon, color), subcategory:subcategories(name)')
+      .select('id, type, card_period_id, amount, currency_code, date, status, description, category_id, is_parent, installment_n, installments_total, fx_rate_to_ars, received_at, cancelled_at, category:categories(name, icon, color, canonical_name, user_id), subcategory:subcategories(name, canonical_name, user_id)')
       .eq('card_period_id', periodId)
       .eq('is_parent', false)
       .order('date', { ascending: false })

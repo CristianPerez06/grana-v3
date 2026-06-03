@@ -28,8 +28,8 @@ import type { TransactionCategory, TransactionWithDetails } from './types'
 
 const TRANSACTION_SELECT = `
   *,
-  category:categories(id, name, canonical_name, color, icon),
-  subcategory:subcategories(id, name, canonical_name, category_id),
+  category:categories(id, name, canonical_name, color, icon, user_id),
+  subcategory:subcategories(id, name, canonical_name, category_id, user_id),
   destination_account:accounts!transactions_transfer_destination_account_id_fkey(id, name, type),
   source_account:accounts!transactions_account_id_fkey(id, name, type),
   period_payments(
@@ -65,7 +65,7 @@ async function attachLinkedExpenses(
 
   const { data } = await supabase
     .from('transactions')
-    .select('id, description, amount, currency_code, date, category:categories(id, name, canonical_name, color, icon)')
+    .select('id, description, amount, currency_code, date, category:categories(id, name, canonical_name, color, icon, user_id)')
     .in('id', linkedIds)
 
   type LinkedExpense = NonNullable<TransactionWithDetails['linked_expense']>
@@ -292,9 +292,21 @@ export async function getMovementFilterOptions(
   options: { categoryId?: string } = {},
 ): Promise<{
   accounts: Array<{ id: string; name: string; type: 'cash' | 'bank' | 'credit' }>
-  categories: Array<{ id: string; name: string; type: 'income' | 'expense' | 'both' }>
+  categories: Array<{
+    id: string
+    name: string
+    type: 'income' | 'expense' | 'both'
+    canonical_name: string
+    user_id: string | null
+  }>
   /** Subcategories of the active category, or [] when no category is filtered. */
-  subcategories: Array<{ id: string; name: string; category_id: string }>
+  subcategories: Array<{
+    id: string
+    name: string
+    category_id: string
+    canonical_name: string
+    user_id: string | null
+  }>
 }> {
   const supabase = await createClient()
 
@@ -307,7 +319,7 @@ export async function getMovementFilterOptions(
       .order('name'),
     supabase
       .from('categories')
-      .select('id, name, type')
+      .select('id, name, type, canonical_name, user_id')
       .eq('is_active', true)
       .order('type')
       .order('name'),
@@ -327,11 +339,15 @@ export async function getMovementFilterOptions(
       id: string
       name: string
       type: 'income' | 'expense' | 'both'
+      canonical_name: string
+      user_id: string | null
     }>,
     subcategories: subcategories.map((s) => ({
       id: s.id,
       name: s.name,
       category_id: s.category_id,
+      canonical_name: s.canonical_name,
+      user_id: s.user_id,
     })),
   }
 }
@@ -398,6 +414,9 @@ export type PendingReimbursementVM = {
   accountName: string | null
   cardPeriodId: string | null
   categoryName: string | null
+  /** Translation handles: system categories render `categories.{canonical_name}`. */
+  categoryCanonicalName: string | null
+  categoryIsSystem: boolean
   categoryIcon: string | null
   categoryColor: string | null
   expenseDescription: string | null
@@ -447,7 +466,7 @@ export async function getPendingReimbursements(
   if (linkedIds.length > 0) {
     const { data: linked } = await supabase
       .from('transactions')
-      .select('id, description, date, category:categories(id, name, canonical_name, color, icon)')
+      .select('id, description, date, category:categories(id, name, canonical_name, color, icon, user_id)')
       .in('id', linkedIds)
     for (const e of (linked ?? []) as unknown as Array<{
       id: string
@@ -470,6 +489,8 @@ export async function getPendingReimbursements(
       accountName: r.source_account?.name ?? null,
       cardPeriodId: r.card_period_id,
       categoryName: linked?.category?.name ?? null,
+      categoryCanonicalName: linked?.category?.canonical_name ?? null,
+      categoryIsSystem: linked?.category != null && linked.category.user_id === null,
       categoryIcon: linked?.category?.icon ?? null,
       categoryColor: linked?.category?.color ?? null,
       expenseDescription: linked?.description ?? null,
@@ -584,14 +605,29 @@ export async function getMonthIncomeBreakdown(month: string): Promise<MonthCateg
   }
 
   const realIds = [...byCategory.keys()].filter((id) => id !== UNCATEGORIZED_ID)
-  const categoryById = new Map<string, { name: string; color: string | null; icon: string | null }>()
+  const categoryById = new Map<
+    string,
+    {
+      name: string
+      color: string | null
+      icon: string | null
+      canonical_name: string
+      user_id: string | null
+    }
+  >()
   if (realIds.length > 0) {
     const { data: cats } = await supabase
       .from('categories')
-      .select('id, name, color, icon')
+      .select('id, name, color, icon, canonical_name, user_id')
       .in('id', realIds)
     for (const c of cats ?? []) {
-      categoryById.set(c.id, { name: c.name, color: c.color, icon: c.icon })
+      categoryById.set(c.id, {
+        name: c.name,
+        color: c.color,
+        icon: c.icon,
+        canonical_name: c.canonical_name,
+        user_id: c.user_id,
+      })
     }
   }
 
@@ -601,13 +637,16 @@ export async function getMonthIncomeBreakdown(month: string): Promise<MonthCateg
       const value = perCurrency[currency]
       if (value <= 0) continue
       const display = id === UNCATEGORIZED_ID ? null : categoryById.get(id)
-      // Uncategorized label is left empty; the UI fills it (i18n).
+      // Uncategorized label is left empty; the UI fills it (i18n). System
+      // categories carry translation handles so consumers relabel via i18n.
       out.push({
         categoryId: id,
         label: display?.name ?? '',
         color: display?.color ?? null,
         icon: display?.icon ?? null,
         value,
+        canonicalName: display?.canonical_name ?? null,
+        isSystem: display != null && display.user_id === null,
       })
     }
     return out
@@ -730,14 +769,21 @@ export async function getMonthSubcategoryBreakdown(
   const netBySubcategory = computeCategoryNet(aggRows)
 
   const realIds = [...netBySubcategory.keys()].filter((id) => id !== SUBCATEGORY_UNCATEGORIZED_ID)
-  const subcategoryById = new Map<string, { name: string }>()
+  const subcategoryById = new Map<
+    string,
+    { name: string; canonical_name: string; user_id: string | null }
+  >()
   if (realIds.length > 0) {
     const { data: subs } = await supabase
       .from('subcategories')
-      .select('id, name')
+      .select('id, name, canonical_name, user_id')
       .in('id', realIds)
     for (const s of subs ?? []) {
-      subcategoryById.set(s.id, { name: s.name })
+      subcategoryById.set(s.id, {
+        name: s.name,
+        canonical_name: s.canonical_name,
+        user_id: s.user_id,
+      })
     }
   }
 
@@ -747,15 +793,18 @@ export async function getMonthSubcategoryBreakdown(
       const value = perCurrency[currency].neto
       if (value <= 0) continue
       const isNone = id === SUBCATEGORY_UNCATEGORIZED_ID
+      const display = isNone ? null : subcategoryById.get(id) ?? null
       out.push({
         subcategoryId: isNone ? null : id,
         // Label resolved by the UI for i18n. Real subcategories get their
         // name from the DB; the "Sin subcategoría" bucket comes back with
-        // an empty label.
-        label: isNone ? '' : subcategoryById.get(id)?.name ?? '',
+        // an empty label. System rows carry translation handles.
+        label: display?.name ?? '',
         color: parentCategoryColor,
         icon: null,
         value,
+        canonicalName: display?.canonical_name ?? null,
+        isSystem: display != null && display.user_id === null,
       })
     }
     return out

@@ -19,6 +19,7 @@ import {
   type MovementKind,
 } from '@grana/money-logic'
 import { useShowCents } from '@/lib/preferences-context'
+import { translateCategoryLabel, translateSubcategoryLabel } from '@/lib/categories/display'
 import { toMovementViewInput, type FinancialMovement } from '../movements'
 import { resolveTone, toneToClass } from './tone'
 
@@ -74,10 +75,25 @@ export const MovementRow = ({
   installmentChip = null,
 }: Props) => {
   const t = useTranslations('transactions')
+  const tRoot = useTranslations()
   const showCents = useShowCents()
 
   const view = resolveMovementView(toMovementViewInput(movement), perspective)
   const typeLabel = t(typeLabelKey[movement.kind])
+
+  // System categories/subcategories render localized; user-owned keep their name.
+  const categoryLabel = translateCategoryLabel(
+    movement.category_name,
+    movement.category_canonical_name,
+    movement.category_is_system,
+    tRoot,
+  )
+  const subcategoryLabel = translateSubcategoryLabel(
+    movement.subcategory_name,
+    movement.subcategory_canonical_name,
+    movement.subcategory_is_system,
+    tRoot,
+  )
 
   // Installment purchases always carry their cuotas count as a chip, so the
   // list says "en cuotas" even when the host doesn't inject per-row chips
@@ -92,7 +108,7 @@ export const MovementRow = ({
     movement.kind === 'reimbursement' && movement.state !== 'received'
 
   // Primary line: what the user wrote; falls back to the category or type name.
-  const fallbackLabel = view.isCategorized ? movement.category_name ?? typeLabel : typeLabel
+  const fallbackLabel = view.isCategorized ? categoryLabel ?? typeLabel : typeLabel
   const primary = movement.description ?? fallbackLabel
 
   // Secondary line depends on the family.
@@ -112,10 +128,10 @@ export const MovementRow = ({
     // already takes the primary slot; otherwise it's already the primary and
     // the secondary leads with the subcategory (when set).
     const taxonomy = movement.description
-      ? movement.subcategory_name
-        ? `${movement.category_name} › ${movement.subcategory_name}`
-        : movement.category_name
-      : movement.subcategory_name
+      ? subcategoryLabel
+        ? `${categoryLabel} › ${subcategoryLabel}`
+        : categoryLabel
+      : subcategoryLabel
     const parts: string[] = []
     if (taxonomy) parts.push(taxonomy)
     if (showAccount && movement.account_name) parts.push(movement.account_name)

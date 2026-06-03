@@ -9,6 +9,7 @@ import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { parseMoneyInput } from '@grana/validation'
 import { confirmReimbursement, cancelReimbursement } from '@/app/_actions/reimbursements'
 import { useShowCents } from '@/lib/preferences-context'
+import { translateCategoryLabel } from '@/lib/categories/display'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { invalidateAfterReimbursementMutation } from '../invalidation'
 import type { PendingReimbursementVM } from '../queries'
@@ -24,6 +25,7 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
   const queryClient = useQueryClient()
   const showCents = useShowCents()
   const t = useTranslations('transactions')
+  const tRoot = useTranslations()
   const [isPending, startTransition] = useTransition()
 
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -109,7 +111,15 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
         {pending.map((r) => {
           const busy = isPending && activeId === r.id
           const error = errorById[r.id]
-          const primary = r.expenseDescription ?? r.categoryName ?? t('reimbursement.label')
+          const primary =
+            r.expenseDescription ??
+            translateCategoryLabel(
+              r.categoryName,
+              r.categoryCanonicalName,
+              r.categoryIsSystem,
+              tRoot,
+            ) ??
+            t('reimbursement.label')
           const targetLabel = t(`reimbursement.target.${r.target}`)
 
           return (

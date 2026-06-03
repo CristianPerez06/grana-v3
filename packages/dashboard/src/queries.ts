@@ -322,15 +322,27 @@ export async function getMonthCategoryBreakdown(
   const realIds = [...netByCategory.keys()].filter((id) => id !== UNCATEGORIZED_ID)
   const categoryById = new Map<
     string,
-    { name: string; color: string | null; icon: string | null }
+    {
+      name: string
+      color: string | null
+      icon: string | null
+      canonical_name: string
+      user_id: string | null
+    }
   >()
   if (realIds.length > 0) {
     const { data: cats } = await supabase
       .from('categories')
-      .select('id, name, color, icon')
+      .select('id, name, color, icon, canonical_name, user_id')
       .in('id', realIds)
     for (const c of cats ?? []) {
-      categoryById.set(c.id, { name: c.name, color: c.color, icon: c.icon })
+      categoryById.set(c.id, {
+        name: c.name,
+        color: c.color,
+        icon: c.icon,
+        canonical_name: c.canonical_name,
+        user_id: c.user_id,
+      })
     }
   }
 
@@ -340,13 +352,16 @@ export async function getMonthCategoryBreakdown(
       const value = perCurrency[currency].neto
       if (value <= 0) continue
       const display = id === UNCATEGORIZED_ID ? null : categoryById.get(id)
-      // Uncategorized label is left empty; the UI fills it (i18n).
+      // Uncategorized label is left empty; the UI fills it (i18n). System
+      // categories carry translation handles so consumers relabel via i18n.
       out.push({
         categoryId: id,
         label: display?.name ?? '',
         color: display?.color ?? null,
         icon: display?.icon ?? null,
         value,
+        canonicalName: display?.canonical_name ?? null,
+        isSystem: display != null && display.user_id === null,
       })
     }
     return out

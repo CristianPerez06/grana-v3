@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getTodayAR } from '@/lib/date'
+import { translateCategoryLabel, translateSubcategoryLabel } from '@/lib/categories/display'
 import {
   MOVEMENT_TYPE_KEYS,
   monthOf,
@@ -38,9 +39,21 @@ export type MovementFiltersController = {
 type MovementFiltersProps = {
   filters: MovementFiltersState
   accounts: Array<{ id: string; name: string; type: 'cash' | 'bank' | 'credit' }>
-  categories: Array<{ id: string; name: string; type: 'income' | 'expense' | 'both' }>
+  categories: Array<{
+    id: string
+    name: string
+    type: 'income' | 'expense' | 'both'
+    canonical_name: string
+    user_id: string | null
+  }>
   /** Subcategories of the active category (empty when no category is filtered, or when the host view chooses not to support this filter). */
-  subcategories?: Array<{ id: string; name: string; category_id: string }>
+  subcategories?: Array<{
+    id: string
+    name: string
+    category_id: string
+    canonical_name: string
+    user_id: string | null
+  }>
   /** Show the account filter only when there are multiple accounts to disambiguate. */
   showAccount: boolean
   /** Account detail view hides the account filter (already scoped to one account). */
@@ -87,7 +100,14 @@ export const MovementFilters = ({
   disabled = false,
 }: MovementFiltersProps) => {
   const t = useTranslations('transactions')
+  const tRoot = useTranslations()
   const locale = useLocale()
+
+  // System categories/subcategories render localized; user-owned keep their name.
+  const categoryLabel = (c: { name: string; canonical_name: string; user_id: string | null }) =>
+    translateCategoryLabel(c.name, c.canonical_name, c.user_id === null, tRoot) ?? c.name
+  const subcategoryLabel = (s: { name: string; canonical_name: string; user_id: string | null }) =>
+    translateSubcategoryLabel(s.name, s.canonical_name, s.user_id === null, tRoot) ?? s.name
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [searchMode, setSearchMode] = useState((filters.query ?? '').length > 0)
@@ -184,16 +204,18 @@ export const MovementFilters = ({
       key: 'category',
       // Clearing the category also clears subcategory — a subcategory without
       // its parent category has no meaning and the parser would drop it anyway.
-      label: c?.name ?? t('filters.category'),
+      label: c ? categoryLabel(c) : t('filters.category'),
       clear: () => setParams({ category: null, subcategory: null }),
     })
   }
   if (filters.subcategoryId) {
+    const activeSub = subcategories.find((s) => s.id === filters.subcategoryId)
     const name =
       filters.subcategoryId === SUBCATEGORY_NONE_MARKER
         ? t('filters.no_subcategory')
-        : subcategories.find((s) => s.id === filters.subcategoryId)?.name ??
-          t('filters.subcategory')
+        : activeSub
+          ? subcategoryLabel(activeSub)
+          : t('filters.subcategory')
     chips.push({
       key: 'subcategory',
       label: t('filters.active_chip_subcategory', { name }),
@@ -462,7 +484,7 @@ export const MovementFilters = ({
                   <option value="">{t('filters.all_fem')}</option>
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
-                      {category.name}
+                      {categoryLabel(category)}
                     </option>
                   ))}
                 </select>
@@ -480,7 +502,7 @@ export const MovementFilters = ({
                     <option value="">{t('filters.all_fem')}</option>
                     {subcategories.map((subcategory) => (
                       <option key={subcategory.id} value={subcategory.id}>
-                        {subcategory.name}
+                        {subcategoryLabel(subcategory)}
                       </option>
                     ))}
                     <option value={SUBCATEGORY_NONE_MARKER}>{t('filters.no_subcategory')}</option>

@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Check, Clock, Pencil, Repeat, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatDateISO, getTodayAR } from '@/lib/date'
+import { getCategoryName } from '@/lib/categories/display'
 import {
   confirmRecurrenceInstance,
   skipRecurrenceInstance,
@@ -37,6 +38,7 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
   const [isPending, startTransition] = useTransition()
   const t = useTranslations('recurrences')
   const tTx = useTranslations('transactions')
+  const tRoot = useTranslations()
 
   // Urgency relative to today (accounting date). Drives the colored "Vence hoy /
   // Vencido hace N días / Vence en N días" line on each pending row.
@@ -289,7 +291,9 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
 
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="truncate text-[16px] font-bold tracking-[-0.01em] text-text">
-                    {instance.description || instance.category?.name || movementLabel}
+                    {instance.description ||
+                      (instance.category ? getCategoryName(instance.category, tRoot) : null) ||
+                      movementLabel}
                   </span>
                   <span className="truncate text-[14px] font-medium text-text-muted">
                     {freqLabel} ·{' '}

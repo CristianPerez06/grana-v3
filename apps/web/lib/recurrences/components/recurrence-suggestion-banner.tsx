@@ -11,6 +11,7 @@ import {
 } from '@/app/_actions/recurrences'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
+import { getCategoryName } from '@/lib/categories/display'
 import { invalidateAfterSuggestionMutation } from '@/lib/transactions/invalidation'
 
 type EnrichedSuggestion = {
@@ -27,7 +28,7 @@ type EnrichedSuggestion = {
   occurrence_count: number
   account: { id: string; name: string; type: 'cash' | 'bank' | 'credit' } | null
   destination_account: { id: string; name: string } | null
-  category: { id: string; name: string } | null
+  category: { id: string; name: string; canonical_name: string; user_id: string | null } | null
 }
 
 type Props = {
@@ -42,6 +43,7 @@ export const RecurrenceSuggestionBanner = ({ suggestion }: Props) => {
   const [error, setError] = useState<string | null>(null)
   const t = useTranslations('recurrences')
   const tTx = useTranslations('transactions')
+  const tRoot = useTranslations()
 
   const formatted =
     suggestion.currency_code === 'ARS'
@@ -56,7 +58,7 @@ export const RecurrenceSuggestionBanner = ({ suggestion }: Props) => {
   )
   const title =
     suggestion.description ||
-    suggestion.category?.name ||
+    (suggestion.category ? getCategoryName(suggestion.category, tRoot) : null) ||
     movementLabel
   const accountName = suggestion.account?.name ?? '—'
   const destinationName = suggestion.destination_account?.name

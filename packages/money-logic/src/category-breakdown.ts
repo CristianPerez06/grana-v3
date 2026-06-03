@@ -12,6 +12,13 @@ export type CategorySliceInput = {
   icon: string | null
   /** The category's value for the relevant currency (e.g. its net spend). */
   value: number
+  /**
+   * Translation handles (optional): system categories (`isSystem`) can be
+   * relabeled by the consumer via `categories.{canonicalName}` BEFORE building
+   * slices. This module never translates — `label` is what gets rendered.
+   */
+  canonicalName?: string | null
+  isSystem?: boolean
 }
 
 export type CategorySlice = {

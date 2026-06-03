@@ -30,6 +30,9 @@ export type SharedExpenseItem = {
   kind: 'expense' | 'reimbursement'
   description: string | null
   categoryName: string | null
+  /** Translation handles: system categories render `categories.{canonical_name}`. */
+  categoryCanonicalName: string | null
+  categoryIsSystem: boolean
   date: string
   amount: number
   currencyCode: BalanceCurrency

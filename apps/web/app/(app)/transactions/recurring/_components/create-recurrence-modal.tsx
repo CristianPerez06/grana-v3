@@ -26,6 +26,7 @@ import { parseMoneyInput } from '@grana/validation'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { createRecurrence } from '@/app/_actions/recurrences'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
+import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
 
 export type RecurrenceAccount = {
   id: string
@@ -112,6 +113,7 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
   const tRec = useTranslations('recurrences')
   const tTx = useTranslations('transactions')
   const tCommon = useTranslations('common')
+  const tRoot = useTranslations()
   const [isPending, startTransition] = useTransition()
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -153,8 +155,11 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
     [categories, type],
   )
   const selectedCategory = categoryList.find((c) => c.id === categoryId)
-  const subcategoryName =
-    selectedCategory?.subcategories.find((s) => s.id === subcategoryId)?.name ?? null
+  const selectedSubcategory =
+    selectedCategory?.subcategories.find((s) => s.id === subcategoryId) ?? null
+  const subcategoryName = selectedSubcategory
+    ? getSubcategoryName(selectedSubcategory, tRoot)
+    : null
   const transferDestinations = accounts.filter((a) => a.type !== 'credit' && a.id !== accountId)
   const destinationAccount = transferDestinations.find((a) => a.id === destinationAccountId)
 
@@ -333,7 +338,7 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
         className="flex items-center gap-1.5 rounded-[10px] px-2.5 py-2 text-left text-sm font-semibold text-text-muted transition-colors hover:bg-page"
       >
         <ChevronLeft className="size-4" aria-hidden />
-        <span>{drillCategory.icon ? `${drillCategory.icon} ` : ''}{drillCategory.name}</span>
+        <span>{drillCategory.icon ? `${drillCategory.icon} ` : ''}{getCategoryName(drillCategory, tRoot)}</span>
       </button>
       <button
         type="button"
@@ -350,7 +355,7 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
           onClick={() => pickCategory(drillCategory.id, s.id)}
           className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-page"
         >
-          <span className="flex-1 truncate text-sm text-text">{s.name}</span>
+          <span className="flex-1 truncate text-sm text-text">{getSubcategoryName(s, tRoot)}</span>
           {subcategoryId === s.id && <Check className="size-4 text-emerald" aria-hidden />}
         </button>
       ))}
@@ -367,7 +372,7 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
             className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-page"
           >
             <span className="flex-1 truncate text-sm font-medium text-text">
-              {c.icon ? `${c.icon} ` : ''}{c.name}
+              {c.icon ? `${c.icon} ` : ''}{getCategoryName(c, tRoot)}
             </span>
             {drillable ? (
               <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
@@ -382,7 +387,7 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
 
   const categoryValue = selectedCategory ? (
     <span className="flex items-center gap-1.5">
-      <span className="truncate">{selectedCategory.icon ? `${selectedCategory.icon} ` : ''}{selectedCategory.name}</span>
+      <span className="truncate">{selectedCategory.icon ? `${selectedCategory.icon} ` : ''}{getCategoryName(selectedCategory, tRoot)}</span>
       {subcategoryName && (
         <>
           <span className="text-text-soft">›</span>
