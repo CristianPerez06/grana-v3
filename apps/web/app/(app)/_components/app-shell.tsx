@@ -79,8 +79,8 @@ export const AppShell = ({
       <Sidebar collapsed={collapsed} onToggle={toggleCollapsed} />
       <TopBarMobile onOpenDrawer={() => setDrawerOpen(true)} />
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-8 py-8 md:overflow-y-auto">
-        {children}
+      <main className="flex-1 md:overflow-y-auto">
+        <div className="mx-auto w-full max-w-5xl px-8 py-8">{children}</div>
       </main>
     </div>
   );
