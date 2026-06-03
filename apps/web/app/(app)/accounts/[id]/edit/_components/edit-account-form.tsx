@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Landmark, Wallet, X } from 'lucide-react'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { Alert } from '@/components/ui/alert'
@@ -10,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { SectionLabel, Hint } from '@/components/ui/form-primitives'
 import { useShowCents } from '@/lib/preferences-context'
 import { updateAccount } from '@/app/_actions/accounts'
+import { invalidateAfterAccountMutation } from '@/lib/transactions/invalidation'
 import {
   AccountPreview,
   LockedField,
@@ -41,6 +43,7 @@ export const EditAccountForm = ({
   const t = useTranslations('accounts')
   const tCommon = useTranslations('common')
   const router = useRouter()
+  const qc = useQueryClient()
   const showCents = useShowCents()
   const isDrawer = variant === 'drawer'
   const isBank = account.type === 'bank'
@@ -110,6 +113,8 @@ export const EditAccountForm = ({
         setFormError(result.formError ?? t('errors.save_failed'))
         return
       }
+
+      invalidateAfterAccountMutation(qc)
 
       if (onSuccess) {
         router.refresh()

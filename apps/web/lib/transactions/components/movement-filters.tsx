@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Repeat, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Input } from '@/components/ui/input'
@@ -19,10 +18,9 @@ import {
 } from '../filters'
 
 /**
- * Controller delegates every filter mutation to the caller. When omitted, the
- * component falls back to its legacy behavior (pushing to URL search params).
- * The /transactions shell uses this to plug filters into React state; the
- * /accounts/[id] route still uses the URL fallback unchanged.
+ * Controller delegates every filter mutation to the caller. Required: the
+ * /transactions and /accounts/[id] shells both pass one, plugging filter
+ * mutations into their reducer.
  */
 export type MovementFiltersController = {
   onSetQuery: (query: string) => void
@@ -49,8 +47,8 @@ type MovementFiltersProps = {
   showAccountFilter?: boolean
   /** Hide the month navigator when another control (the spending overview) owns it. */
   showMonthNav?: boolean
-  /** Optional controller; when present, every mutation routes through it instead of pushing to URL. */
-  controller?: MovementFiltersController
+  /** Required controller — every filter mutation dispatches through it. */
+  controller: MovementFiltersController
   /**
    * When true the toolbar (search / filter sheet / chip clears / clear-all)
    * renders visually disabled and stops accepting clicks. The shell uses this
@@ -90,17 +88,14 @@ export const MovementFilters = ({
 }: MovementFiltersProps) => {
   const t = useTranslations('transactions')
   const locale = useLocale()
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [searchMode, setSearchMode] = useState((filters.query ?? '').length > 0)
   const [search, setSearch] = useState(filters.query ?? '')
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  // Sync local draft with URL when external navigation happens (e.g. the
-  // user clears a chip, the URL changes, we need to mirror it locally).
+  // Sync local draft when external state changes (e.g. a chip is cleared,
+  // which mutates the filters and so should mirror to the local search box).
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
     setSearch(filters.query ?? '')
@@ -108,26 +103,9 @@ export const MovementFilters = ({
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [filters.query])
 
-  // Update one or more params in the URL (resets pagination). null/'' clears.
-  // Used in legacy mode (no controller).
-  const setParamsUrl = (updates: Record<string, string | null>) => {
-    const params = new URLSearchParams(searchParams.toString())
-    for (const [key, value] of Object.entries(updates)) {
-      if (value) params.set(key, value)
-      else params.delete(key)
-    }
-    params.delete('limit')
-    router.replace(`${pathname}?${params.toString()}`)
-  }
-
-  // Single dispatch point for filter mutations. When a `controller` was passed
-  // by the host, the patch routes through its callbacks (React-state filters
-  // on /transactions); otherwise it falls back to the URL-based path.
+  // Single dispatch point for filter mutations. Every patch routes through
+  // the controller's callbacks (React-state filters on the host route).
   const setParams = (updates: Record<string, string | null>) => {
-    if (!controller) {
-      setParamsUrl(updates)
-      return
-    }
     if ('q' in updates) controller.onSetQuery(updates.q ?? '')
     if ('type' in updates)
       controller.onSetType((updates.type as MovementTypeFilter | null) ?? null)
@@ -252,8 +230,7 @@ export const MovementFilters = ({
   const clearAll = () => {
     setSearch('')
     setSearchMode(false)
-    if (controller) controller.onClearAll()
-    else router.replace(pathname)
+    controller.onClearAll()
   }
 
   const enterSearch = () => {

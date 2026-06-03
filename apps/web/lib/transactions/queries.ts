@@ -126,12 +126,14 @@ export async function getTransactions(
   )
 }
 
-// ── getAccountMovements ───────────────────────────────────────────────────────
+// ── getAccountMovementsAscending ──────────────────────────────────────────────
 // All movements affecting an account, in calculation order (date/created_at/id
-// ASC). No pagination: the running balance needs the full history to be correct.
-// The caller reverses to display order and computes running balances.
+// ASC). No pagination, no filtering: the running balance needs the full history
+// to be correct, and /accounts/[id] applies the user-facing filters + slice
+// client-side over this dataset (the visible page and the balance share the
+// same underlying data — TanStack caches one fetch, not two).
 
-export async function getAccountMovements(
+export async function getAccountMovementsAscending(
   accountId: string,
 ): Promise<TransactionWithDetails[]> {
   const supabase = await createClient()

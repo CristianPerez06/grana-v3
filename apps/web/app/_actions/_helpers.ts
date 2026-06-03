@@ -76,3 +76,25 @@ export function revalidateAfterSuggestionMutation(): void {
   revalidatePath('/transactions', 'layout')
   revalidatePath('/dashboard')
 }
+
+/**
+ * Invalidate routes affected by an account mutation that does not touch
+ * movements (archive, reactivate, delete, edit, currency add/deactivate).
+ *
+ * Affected routes:
+ *   /accounts           — list (active + archived sections), and per-account
+ *                         detail under /accounts/[id] (the `'layout'` flag
+ *                         covers nested segments).
+ *   /cards              — credit accounts surface here too; archive flows
+ *                         under the credit-card sub-section read the same
+ *                         account state.
+ *   /dashboard          — hero balances + per-account chip breakdowns.
+ *
+ * Movement mutations should call `revalidateAfterMovementMutation` instead —
+ * it already covers `/accounts` (layout) plus the movement-side routes.
+ */
+export function revalidateAfterAccountMutation(): void {
+  revalidatePath('/accounts', 'layout')
+  revalidatePath('/cards', 'layout')
+  revalidatePath('/dashboard')
+}

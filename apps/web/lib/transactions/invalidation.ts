@@ -1,10 +1,10 @@
 import type { QueryClient } from '@tanstack/react-query'
 
 // Keep this list in sync with the revalidatePath helpers in
-// `app/_actions/_helpers.ts` (group 9 of the migration). Client-side
-// invalidations refetch the TanStack cache for the active /transactions
-// route; the server-side revalidatePath helpers ensure the other RSC routes
-// (/dashboard, /accounts, /cards) refetch on next navigation.
+// `app/_actions/_helpers.ts`. Client-side invalidations refetch the TanStack
+// cache for the active client routes (/transactions, /accounts/[id]); the
+// server-side revalidatePath helpers ensure the other RSC routes (/dashboard,
+// /cards, /accounts list, etc.) refetch on next navigation.
 //
 // Helpers below take a QueryClient (which the caller obtains via
 // `useQueryClient()`) and call `invalidateQueries` by KEY PREFIX, which
@@ -18,7 +18,8 @@ export function invalidateAfterMovementMutation(qc: QueryClient): void {
   // breakdowns, the filter-options universe (if a new account/category combo
   // was introduced), the has-any signal (first-ever movement), the pending
   // reimbursements (if linked), the top recurrence suggestion, and the
-  // accounts (balances changed).
+  // accounts (balances changed). Account-scoped views read these keys
+  // explicitly because they don't share a prefix with the global list.
   qc.invalidateQueries({ queryKey: ['transactions', 'page'] })
   qc.invalidateQueries({ queryKey: ['transactions', 'breakdown'] })
   qc.invalidateQueries({ queryKey: ['transactions', 'filter-options'] })
@@ -27,6 +28,25 @@ export function invalidateAfterMovementMutation(qc: QueryClient): void {
   qc.invalidateQueries({ queryKey: ['transactions', 'linked-recurrence-ids'] })
   qc.invalidateQueries({ queryKey: ['recurrences', 'top-suggestion'] })
   qc.invalidateQueries({ queryKey: ['accounts', 'list'] })
+  // /accounts/[id] shell: detail balances + ascending history + scoped
+  // pending reimbursements. We invalidate by the `account` / `reimbursements`
+  // prefixes so each account's slice refreshes without callers needing to
+  // know which `accountId` was touched.
+  qc.invalidateQueries({ queryKey: ['account', 'detail'] })
+  qc.invalidateQueries({ queryKey: ['account', 'movements-ascending'] })
+  qc.invalidateQueries({ queryKey: ['reimbursements', 'pending', 'account'] })
+}
+
+/**
+ * Invalidate the account-scoped keys after a mutation that affects the
+ * account itself (archive, reactivate, delete, edit, currency add/deactivate).
+ * Movement mutations should call `invalidateAfterMovementMutation` instead —
+ * it already covers everything this helper does plus the movement-side keys.
+ */
+export function invalidateAfterAccountMutation(qc: QueryClient): void {
+  qc.invalidateQueries({ queryKey: ['account', 'detail'] })
+  qc.invalidateQueries({ queryKey: ['accounts', 'list'] })
+  qc.invalidateQueries({ queryKey: ['institutions'] })
 }
 
 export function invalidateAfterRecurrenceInstanceMutation(
@@ -49,6 +69,10 @@ export function invalidateAfterReimbursementMutation(qc: QueryClient): void {
   qc.invalidateQueries({ queryKey: ['transactions', 'page'] })
   qc.invalidateQueries({ queryKey: ['transactions', 'breakdown'] })
   qc.invalidateQueries({ queryKey: ['accounts', 'list'] })
+  // Account detail view: balances + ascending history + scoped pending list.
+  qc.invalidateQueries({ queryKey: ['account', 'detail'] })
+  qc.invalidateQueries({ queryKey: ['account', 'movements-ascending'] })
+  qc.invalidateQueries({ queryKey: ['reimbursements', 'pending', 'account'] })
 }
 
 export function invalidateAfterSuggestionMutation(qc: QueryClient): void {

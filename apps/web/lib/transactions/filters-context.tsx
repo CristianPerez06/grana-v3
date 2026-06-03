@@ -6,7 +6,7 @@ import {
   transactionsFiltersReducer,
   type TransactionsFilters,
   type TransactionsFiltersAction,
-} from '@/lib/transactions/filters-state'
+} from './filters-state'
 
 type FiltersContextValue = {
   filters: TransactionsFilters

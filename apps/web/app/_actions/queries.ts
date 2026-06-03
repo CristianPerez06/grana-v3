@@ -10,18 +10,24 @@ import {
   hasUsdActivityInMonth,
   hasAnyTransaction,
   getPendingReimbursements,
+  getAccountMovementsAscending,
   type MonthCategoryBreakdown,
   type MonthSubcategoryBreakdown,
 } from '@/lib/transactions/queries'
 import type { MovementFilters } from '@/lib/transactions/filters'
 import type { FinancialMovement } from '@/lib/transactions/movements'
+import type { TransactionWithDetails } from '@/lib/transactions/types'
 import {
   getPendingRecurrenceInstances,
   getTopRecurrenceSuggestion,
   getRecurrenceLinkedTransactionIds,
   generateDueRecurrenceInstances,
 } from '@/lib/recurrences/queries'
-import { getAccounts } from '@/lib/accounts/queries'
+import {
+  getAccounts,
+  getAccountDetail,
+  getInstitutions,
+} from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
 import { getHousehold } from '@/lib/shared/queries'
 
@@ -126,4 +132,31 @@ export async function getHouseholdAction(): Promise<
 > {
   await getAuthenticatedUserId()
   return getHousehold()
+}
+
+// ── /accounts/[id] wrappers ───────────────────────────────────────────────────
+// Same thin-wrapper contract as the queries above: delegate to the underlying
+// function, expose it to the client via TanStack. The /accounts/[id] shell uses
+// these to hydrate its header, drawer, movement list (filtered + sliced
+// client-side) and the running-balance source.
+
+export async function getAccountDetailAction(
+  id: string,
+): Promise<Awaited<ReturnType<typeof getAccountDetail>>> {
+  await getAuthenticatedUserId()
+  return getAccountDetail(id)
+}
+
+export async function getAccountMovementsAscendingAction(
+  accountId: string,
+): Promise<TransactionWithDetails[]> {
+  await getAuthenticatedUserId()
+  return getAccountMovementsAscending(accountId)
+}
+
+export async function getInstitutionsAction(): Promise<
+  Awaited<ReturnType<typeof getInstitutions>>
+> {
+  await getAuthenticatedUserId()
+  return getInstitutions()
 }

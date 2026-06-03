@@ -1,6 +1,5 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { getTransactionSums } from '@/lib/transactions/balance'
@@ -19,6 +18,7 @@ import { getCreditCardDebtCheck } from '@/lib/cards/queries'
 import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
 import { getAuthenticatedUserId } from './_lib/auth'
+import { revalidateAfterAccountMutation } from './_helpers'
 
 function normalizeActionMoney(value: number): number {
   return normalizeMoneyAmount(value) ?? value
@@ -69,7 +69,7 @@ export async function createAccount(
     return { ok: false, formError: currencyError.message }
   }
 
-  revalidatePath('/accounts')
+  revalidateAfterAccountMutation()
   return { ok: true, id: account.id }
 }
 
@@ -107,7 +107,7 @@ export async function updateAccount(
 
   if (error) return { ok: false, formError: await translatePostgresError(error.code, 'account') }
 
-  revalidatePath('/accounts')
+  revalidateAfterAccountMutation()
   return { ok: true }
 }
 
@@ -142,8 +142,7 @@ export async function archiveAccount(
 
   if (error) return { ok: false, formError: await translatePostgresError(error.code, 'account') }
 
-  revalidatePath('/accounts')
-  revalidatePath('/cards')
+  revalidateAfterAccountMutation()
   return { ok: true }
 }
 
@@ -161,7 +160,7 @@ export async function reactivateAccount(id: string): Promise<ActionResult<never>
 
   if (error) return { ok: false, formError: await translatePostgresError(error.code, 'account') }
 
-  revalidatePath('/accounts')
+  revalidateAfterAccountMutation()
   return { ok: true }
 }
 
@@ -197,7 +196,7 @@ export async function deleteAccount(id: string): Promise<ActionResult<never>> {
 
   if (error) return { ok: false, formError: await translatePostgresError(error.code, 'account') }
 
-  revalidatePath('/accounts')
+  revalidateAfterAccountMutation()
   return { ok: true }
 }
 
@@ -236,7 +235,7 @@ export async function addCurrencyToAccount(
 
   if (error) return { ok: false, formError: await translatePostgresError(error.code, 'account') }
 
-  revalidatePath('/accounts')
+  revalidateAfterAccountMutation()
   return { ok: true }
 }
 
@@ -296,6 +295,6 @@ export async function deactivateCurrencyFromAccount(
 
   if (error) return { ok: false, formError: await translatePostgresError(error.code, 'account') }
 
-  revalidatePath('/accounts')
+  revalidateAfterAccountMutation()
   return { ok: true }
 }

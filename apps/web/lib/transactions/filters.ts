@@ -1,5 +1,4 @@
 import { resolveMonthRange } from '@grana/dashboard'
-import { getTodayAR } from '@/lib/date'
 import type { FinancialMovement } from './movements'
 
 export { resolveMonthRange }
@@ -8,13 +7,18 @@ export type MovementTypeFilter = FinancialMovement['kind']
 export type MovementCurrencyFilter = 'ARS' | 'USD'
 
 /**
- * URL marker for the "no subcategory assigned" filter. Used instead of an empty
- * value so the param is unambiguous on parse: `subcategory=` could mean "no
- * filter" or "empty string", whereas `subcategory=__none__` is explicit and
- * won't collide with any real UUID.
+ * Sentinel for the "no subcategory assigned" filter. Distinct from `null` so
+ * the query layer can disambiguate "no filter" (absent) from "rows whose
+ * `subcategory_id IS NULL`" (this marker). Used by both the filter UI sheet
+ * and the server-side queries that translate it into the right SQL.
  */
 export const SUBCATEGORY_NONE_MARKER = '__none__'
 
+/**
+ * Shape the queries expect — the projection of the React-state filters onto
+ * the underlying server contract. `adaptFiltersForQuery` in `filters-state.ts`
+ * is the canonical translator.
+ */
 export type MovementFilters = {
   query?: string
   /** Selected month as `YYYY-MM` (period navigation). Absent when a custom range is used. */
@@ -27,16 +31,13 @@ export type MovementFilters = {
   categoryId?: string
   /**
    * Subcategory id, or `SUBCATEGORY_NONE_MARKER` for "no subcategory assigned".
-   * Only set when `categoryId` is also set — the parser drops it otherwise.
+   * Only set when `categoryId` is also set — the filter UI enforces this.
    */
   subcategoryId?: string
   currency?: MovementCurrencyFilter
   amountMin?: number
   amountMax?: number
 }
-
-type SearchParamValue = string | string[] | undefined
-type SearchParamsLike = Record<string, SearchParamValue> | URLSearchParams
 
 export const DEFAULT_MOVEMENTS_LIMIT = 50
 export const MOVEMENTS_LIMIT_STEP = 50
@@ -53,19 +54,6 @@ export const MOVEMENT_TYPE_KEYS: ReadonlyArray<MovementTypeFilter> = [
   'installment_purchase',
 ]
 
-const VALID_MOVEMENT_TYPES = new Set<string>(MOVEMENT_TYPE_KEYS)
-
-const getParam = (params: SearchParamsLike, key: string) => {
-  if (params instanceof URLSearchParams) return params.get(key)
-
-  const value = params[key]
-  if (Array.isArray(value)) return value[0] ?? null
-  return value ?? null
-}
-
-const isIsoDate = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(value)
-const isMonth = (value: string): boolean => /^\d{4}-\d{2}$/.test(value)
-
 /** `YYYY-MM` of a date. */
 export const monthOf = (date: Date): string =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
@@ -77,148 +65,11 @@ export const shiftMonth = (month: string, delta: number): string => {
 }
 
 /**
- * Content filters narrow WHICH movements show (skipping rows), so a per-row
- * running balance would be misleading and must hide. Month navigation and the
- * currency filter are NOT content filters: the month shows a consecutive slice,
- * and currency only narrows a dimension the balance already keeps separate.
+ * Free-text match against a movement's user-visible fields (title, description,
+ * account, destination account on transfers). Used by both server-side query
+ * filtering (`getGlobalMovementsPage`) and client-side filtering on the
+ * /accounts/[id] shell.
  */
-export const hasContentFilters = (filters: MovementFilters): boolean =>
-  Boolean(filters.query || filters.type || filters.categoryId || filters.subcategoryId) ||
-  filters.amountMin != null ||
-  filters.amountMax != null
-
-/** Active text search. */
-export const hasSearch = (filters: MovementFilters): boolean => Boolean(filters.query)
-
-/**
- * Active content filters OTHER than text search. Unlike `hasContentFilters`,
- * this drives the empty-state classification, so it INCLUDES the currency filter
- * (an explicit narrowing the user can clear) but still excludes month navigation
- * (a time window, not a filter).
- */
-export const hasOtherContentFilters = (filters: MovementFilters): boolean =>
-  Boolean(filters.type || filters.categoryId || filters.subcategoryId || filters.accountId || filters.currency) ||
-  filters.amountMin != null ||
-  filters.amountMax != null
-
-export type MovementEmptyVariant = 'none' | 'search' | 'filter'
-
-/**
- * Why a movement list came back empty, for the right empty state. Precedence
- * `filter > search > none`: when both search and filters are active, the filter
- * message wins (clearing filters is the likelier way back to results).
- */
-export const resolveEmptyVariant = (filters: MovementFilters): MovementEmptyVariant => {
-  if (hasOtherContentFilters(filters)) return 'filter'
-  if (hasSearch(filters)) return 'search'
-  return 'none'
-}
-
-export const parseMovementFilters = (params: SearchParamsLike): MovementFilters => {
-  const filters: MovementFilters = {}
-
-  const query = getParam(params, 'q')?.trim()
-  if (query) filters.query = query
-
-  // Period: a custom from/to range takes priority; otherwise the selected month;
-  // otherwise the current month (financial timezone).
-  const from = getParam(params, 'from')
-  const to = getParam(params, 'to')
-  const hasCustomRange = (from && isIsoDate(from)) || (to && isIsoDate(to))
-
-  if (hasCustomRange) {
-    if (from && isIsoDate(from)) filters.from = from
-    if (to && isIsoDate(to)) filters.to = to
-  } else {
-    const rawMonth = getParam(params, 'month')
-    const month = rawMonth && isMonth(rawMonth) ? rawMonth : monthOf(getTodayAR())
-    filters.month = month
-    Object.assign(filters, resolveMonthRange(month))
-  }
-
-  const rawType = getParam(params, 'type')
-  if (rawType && VALID_MOVEMENT_TYPES.has(rawType)) {
-    filters.type = rawType as MovementTypeFilter
-  }
-
-  const accountId = getParam(params, 'account')?.trim()
-  if (accountId) filters.accountId = accountId
-
-  const categoryId = getParam(params, 'category')?.trim()
-  if (categoryId) filters.categoryId = categoryId
-
-  // Subcategory is a child filter of category. Without `categoryId` it has no
-  // meaning, so drop it silently to keep URLs from accidentally narrowing the
-  // result by a UUID copy-paste with no category.
-  const subcategoryId = getParam(params, 'subcategory')?.trim()
-  if (subcategoryId && filters.categoryId) {
-    filters.subcategoryId = subcategoryId
-  }
-
-  const currency = getParam(params, 'currency')
-  if (currency === 'ARS' || currency === 'USD') filters.currency = currency
-
-  const amountMin = Number(getParam(params, 'amount_min'))
-  if (Number.isFinite(amountMin) && amountMin > 0) filters.amountMin = amountMin
-
-  const amountMax = Number(getParam(params, 'amount_max'))
-  if (Number.isFinite(amountMax) && amountMax > 0) filters.amountMax = amountMax
-
-  return filters
-}
-
-const FILTER_PARAM_KEYS = [
-  'q',
-  'month',
-  'from',
-  'to',
-  'type',
-  'account',
-  'category',
-  'subcategory',
-  'currency',
-  'amount_min',
-  'amount_max',
-]
-
-const CONTENT_FILTER_PARAM_KEYS = [
-  'type',
-  'account',
-  'category',
-  'subcategory',
-  'currency',
-  'amount_min',
-  'amount_max',
-]
-
-/**
- * Rebuild the list href dropping some filter params (and always the pagination
- * `limit`, since the result set changes). Keeps the rest (e.g. the month) so
- * "clear filters"/"clear search" stay within the current period.
- */
-const buildClearedHref = (
-  basePath: string,
-  params: SearchParamsLike,
-  dropKeys: string[],
-): string => {
-  const searchParams = new URLSearchParams()
-  for (const key of FILTER_PARAM_KEYS) {
-    if (dropKeys.includes(key)) continue
-    const value = getParam(params, key)
-    if (value) searchParams.set(key, value)
-  }
-  const qs = searchParams.toString()
-  return qs ? `${basePath}?${qs}` : basePath
-}
-
-/** Href with every content filter (except text search) cleared. */
-export const buildFiltersClearedHref = (basePath: string, params: SearchParamsLike): string =>
-  buildClearedHref(basePath, params, CONTENT_FILTER_PARAM_KEYS)
-
-/** Href with the text search cleared. */
-export const buildSearchClearedHref = (basePath: string, params: SearchParamsLike): string =>
-  buildClearedHref(basePath, params, ['q'])
-
 export const movementMatchesText = (movement: FinancialMovement, query: string): boolean => {
   const normalizedQuery = query.trim().toLocaleLowerCase('es-AR')
   if (!normalizedQuery) return true

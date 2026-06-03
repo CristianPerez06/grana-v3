@@ -1,6 +1,6 @@
 'use client'
 
-import { FiltersProvider } from './filters-context'
+import { FiltersProvider } from '@/lib/transactions/filters-context'
 import { TransactionsContent } from './transactions-content'
 
 /**

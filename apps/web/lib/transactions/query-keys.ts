@@ -36,4 +36,14 @@ export const QUERY_KEYS = {
   // Recurrences side-car queries.
   recurrencesPendingInstances: ['recurrences', 'pending-instances'] as const,
   recurrencesTopSuggestion: ['recurrences', 'top-suggestion'] as const,
+
+  // /accounts/[id] shell — header detail, full ascending history (drives the
+  // running balance + the visible list since both are sliced client-side),
+  // institutions catalog (drawer), pending reimbursements scoped to the account.
+  accountDetail: (accountId: string) => ['account', 'detail', accountId] as const,
+  accountMovementsAscending: (accountId: string) =>
+    ['account', 'movements-ascending', accountId] as const,
+  accountPendingReimbursements: (accountId: string) =>
+    ['reimbursements', 'pending', 'account', accountId] as const,
+  institutions: ['institutions'] as const,
 } as const

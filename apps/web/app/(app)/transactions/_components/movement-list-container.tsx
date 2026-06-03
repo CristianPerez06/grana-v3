@@ -21,7 +21,7 @@ import {
   hasActiveSearch,
   type TransactionsFilters,
 } from '@/lib/transactions/filters-state'
-import { useTransactionsFilters } from './filters-context'
+import { useTransactionsFilters } from '@/lib/transactions/filters-context'
 
 function resolveEmptyVariant(filters: TransactionsFilters): 'none' | 'search' | 'filter' {
   if (hasActiveContentFilters(filters)) return 'filter'

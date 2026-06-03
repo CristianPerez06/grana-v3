@@ -28,6 +28,10 @@ const STALE_TIME_BY_KEY_PREFIX: Array<{ prefix: readonly unknown[]; staleTime: n
   // movement is created.
   { prefix: ['transactions', 'has-any'], staleTime: Infinity },
   { prefix: ['recurrences', 'top-suggestion'], staleTime: 5 * MINUTE },
+  // /accounts/[id] shell — institutions is a slow-changing catalog; the rest
+  // (account detail, ascending history, pending reimbursements scoped) refetch
+  // on mount and rely on explicit invalidations after mutations.
+  { prefix: ['institutions'], staleTime: 15 * MINUTE },
 ]
 
 export function createQueryClient(): QueryClient {

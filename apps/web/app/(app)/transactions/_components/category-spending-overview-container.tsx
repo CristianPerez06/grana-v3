@@ -23,7 +23,7 @@ import {
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import { UNCATEGORIZED_ID } from '@grana/dashboard'
 import { SUBCATEGORY_NONE_MARKER } from '@/lib/transactions/filters'
-import { useTransactionsFilters } from './filters-context'
+import { useTransactionsFilters } from '@/lib/transactions/filters-context'
 
 /**
  * Client container for `<CategorySpendingOverview>`. Reads filters from the

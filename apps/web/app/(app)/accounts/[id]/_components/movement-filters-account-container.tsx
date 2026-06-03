@@ -7,33 +7,31 @@ import {
   type MovementFiltersController,
 } from '@/lib/transactions/components/movement-filters'
 import {
+  getAccountMovementsAscendingAction,
   getMovementFilterOptionsAction,
-  getMovementsPageAction,
 } from '@/app/_actions/queries'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import { adaptFiltersForQuery } from '@/lib/transactions/filters-state'
 import { useTransactionsFilters } from '@/lib/transactions/filters-context'
 
+type Props = {
+  accountId: string
+}
+
 /**
- * Client container for `<MovementFilters>`. Reads the React-state filters,
- * fetches the per-category filter-options (accounts, categories, subcategories)
- * via TanStack Query, and wires a controller that dispatches reducer actions
- * for every mutation (chip removal, search debounce, sheet selectors, etc.).
- *
- * The legacy `<MovementFilters>` component supports both modes (URL fallback
- * vs controller); we always pass the controller here so URL navigation never
- * fires from this route.
+ * /accounts/[id] variant of the MovementFilters container. Behaves like the
+ * /transactions one (controller dispatches to the reducer) but:
+ * - hides the account filter (`showAccountFilter={false}` — already scoped),
+ * - reads the list's loading state from the ascending-history query (same
+ *   key the list container uses, so TanStack dedupes — zero extra fetch),
+ * - renders its own month nav (this route has no overview card that owns it).
  */
-export function MovementFiltersContainer() {
+export function MovementFiltersAccountContainer({ accountId }: Props) {
   const { filters, dispatch } = useTransactionsFilters()
 
-  // Filter-options change when the active categoryId changes (subcategory list
-  // depends on it); the queryKey includes it so each category fetches its own
-  // option set. The movement page query is also read here — TanStack dedupes
-  // it with the list container by queryKey, so this is a free lookup that lets
-  // the toolbar buttons reflect the list's loading state without adding I/O.
   const adapted = useMemo(() => adaptFiltersForQuery(filters), [filters])
-  const [filterOptionsQ, pageQ] = useQueries({
+
+  const [filterOptionsQ, ascendingQ] = useQueries({
     queries: [
       {
         queryKey: QUERY_KEYS.transactionsFilterOptions(filters.categoryId),
@@ -41,13 +39,13 @@ export function MovementFiltersContainer() {
           getMovementFilterOptionsAction({ categoryId: filters.categoryId ?? undefined }),
       },
       {
-        queryKey: QUERY_KEYS.transactionsPage(filters.limit, adapted),
-        queryFn: () => getMovementsPageAction({ limit: filters.limit, filters: adapted }),
+        queryKey: QUERY_KEYS.accountMovementsAscending(accountId),
+        queryFn: () => getAccountMovementsAscendingAction(accountId),
       },
     ],
   })
   const filterOptions = filterOptionsQ.data
-  const listLoading = pageQ.isPending
+  const listLoading = ascendingQ.isPending
 
   const controller: MovementFiltersController = useMemo(
     () => ({
@@ -68,18 +66,15 @@ export function MovementFiltersContainer() {
     [dispatch, filters.amountMin, filters.amountMax],
   )
 
-  // Until filter options resolve, render the filters with empty option arrays —
-  // the search input still works (it doesn't depend on options) and the sheet
-  // selectors fall back to empty selects. The first paint cost is well worth
-  // not blocking the search affordance behind a skeleton.
   return (
     <MovementFilters
       filters={adapted}
       accounts={filterOptions?.accounts ?? []}
       categories={filterOptions?.categories ?? []}
       subcategories={filterOptions?.subcategories ?? []}
-      showAccount={(filterOptions?.accounts.length ?? 0) >= 2}
-      showMonthNav={false}
+      showAccount={false}
+      showAccountFilter={false}
+      showMonthNav
       controller={controller}
       disabled={listLoading}
     />

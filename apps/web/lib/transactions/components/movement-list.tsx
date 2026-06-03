@@ -16,16 +16,14 @@ const addDaysISO = (iso: string, days: number): string => {
   return `${yy}-${mm}-${dd}`
 }
 
-/** Why the list is empty + the relevant action href. Absent ⇒ 'none'. */
+/** Why the list is empty + the relevant action callbacks. Absent ⇒ 'none'. */
 export type MovementEmptyState = {
   variant: 'none' | 'search' | 'filter'
-  /** CTA to register the first movement (variant 'none'). */
+  /** CTA target for the "register first movement" affordance (variant 'none'). */
   addHref?: string
   /** Alternative to `addHref`: callback handler when the host owns the click. */
   onAdd?: () => void
-  /** URL that clears the search ('search') or the filters ('filter'). */
-  clearHref?: string
-  /** Alternative to `clearHref`: callback handler when the host owns the click. */
+  /** Callback that clears the search ('search') or the filters ('filter'). */
   onClear?: () => void
   /** The active search term, for the 'search' message. */
   query?: string
@@ -78,25 +76,14 @@ export const MovementList = ({
     const clearClass = 'mt-4 inline-flex items-center text-sm font-medium text-primary hover:underline'
 
     const renderClearAction = (label: string) => {
-      if (emptyState?.onClear) {
-        return (
-          <div>
-            <button type="button" onClick={emptyState.onClear} className={clearClass}>
-              {label}
-            </button>
-          </div>
-        )
-      }
-      if (emptyState?.clearHref) {
-        return (
-          <div>
-            <Link href={emptyState.clearHref} className={clearClass}>
-              {label}
-            </Link>
-          </div>
-        )
-      }
-      return null
+      if (!emptyState?.onClear) return null
+      return (
+        <div>
+          <button type="button" onClick={emptyState.onClear} className={clearClass}>
+            {label}
+          </button>
+        </div>
+      )
     }
 
     if (variant === 'search') {
