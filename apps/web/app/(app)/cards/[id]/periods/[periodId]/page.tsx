@@ -63,11 +63,17 @@ const PeriodDetailPage = async ({ params }: Props) => {
         }
       />
 
-      {/* Amount summary */}
+      {/* Amount summary — paid periods show what WAS paid, per currency. */}
       <div className="rounded-lg border border-border bg-card p-4 flex flex-col gap-1">
         <p className="text-3xl font-bold">{formatARS(totalAmount, showCents)}</p>
         {hasUSD && (
-          <p className="text-sm text-muted-foreground">{formatUSD(period.pendingAmountUSD, showCents)} USD</p>
+          <p className="text-sm text-muted-foreground">
+            {formatUSD(
+              period.has_payment ? period.paidAmountUSD : period.pendingAmountUSD,
+              showCents,
+            )}{' '}
+            USD
+          </p>
         )}
         {period.has_payment && period.paymentDate && (
           <p className="text-xs text-green-700 mt-1">

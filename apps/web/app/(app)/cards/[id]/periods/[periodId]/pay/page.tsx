@@ -40,6 +40,13 @@ const PayPeriodPage = async ({ params }: Props) => {
     today,
   )
 
+  // The next period must start after the furthest known close — surfaced in the
+  // form so the user doesn't type dates that overlap the running statement.
+  const lastKnownEndDate = cardDetail.periods.reduce(
+    (max, p) => (p.end_date > max ? p.end_date : max),
+    period.end_date,
+  )
+
   // Payment accounts: cash + bank with ARS active
   const paymentAccounts = [
     ...accountGroups.cash,
@@ -65,8 +72,10 @@ const PayPeriodPage = async ({ params }: Props) => {
         periodId={periodId}
         cardId={id}
         pendingAmountARS={period.pendingAmountARS}
+        pendingAmountUSD={period.pendingAmountUSD}
         suggestedNextEndDate={suggestedEndDate}
         suggestedNextDueDate={suggestedDueDate}
+        lastKnownEndDate={lastKnownEndDate}
         paymentAccounts={paymentAccounts}
       />
     </div>

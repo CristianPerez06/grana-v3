@@ -489,6 +489,39 @@ export async function payCardPeriod(
     return { ok: false, formError: 'No podés pagar un resumen desde otra tarjeta.' }
   }
 
+  // USD debt requires the payment-day cotización (the only point where the
+  // conversion is real). Mirrors the pendingAmountUSD math of getCardPeriods:
+  // pending USD consumos minus received USD statement reimbursements.
+  const { data: periodTxRows, error: periodTxError } = await supabase
+    .from('transactions')
+    .select('type, amount, currency_code, status, received_at, cancelled_at')
+    .eq('card_period_id', data.period_id)
+
+  if (periodTxError) {
+    return { ok: false, formError: 'No se pudo verificar la deuda del período.' }
+  }
+
+  const usdPending = (periodTxRows ?? [])
+    .filter((r) => r.type !== 'reimbursement' && r.status === 'pending' && r.currency_code === 'USD')
+    .reduce((sum, r) => Money.toNumber(Money.add(Money.from(sum), Money.from(Math.abs(Number(r.amount))))), 0)
+  const usdReimbursed = (periodTxRows ?? [])
+    .filter(
+      (r) =>
+        r.type === 'reimbursement' &&
+        r.currency_code === 'USD' &&
+        r.received_at != null &&
+        r.cancelled_at == null,
+    )
+    .reduce((sum, r) => Money.toNumber(Money.add(Money.from(sum), Money.from(Math.abs(Number(r.amount))))), 0)
+  const pendingUSD = Money.toNumber(Money.subtract(Money.from(usdPending), Money.from(usdReimbursed)))
+
+  if (pendingUSD > 0 && (data.fx_rate_to_ars == null || data.fx_rate_to_ars <= 0)) {
+    return {
+      ok: false,
+      formError: 'El resumen tiene deuda en dólares: falta la cotización del día de pago.',
+    }
+  }
+
   // Find the last known period for this card (to determine where to append the new one)
   const { data: lastPeriodRow, error: lastPeriodError } = await supabase
     .from('card_periods')
@@ -502,15 +535,18 @@ export async function payCardPeriod(
     return { ok: false, formError: 'No se pudo determinar el último período de la tarjeta.' }
   }
 
-  // Sanity: new end_date must be after the last known period's end
+  // Sanity: new end_date must be after the last known period's end. Spell out
+  // the anchor date so the user knows which close they must come after.
+  const lastEndDisplay = lastPeriodRow.end_date.split('-').reverse().join('/')
   if (data.next_end_date <= lastPeriodRow.end_date) {
     return {
       ok: false,
-      formError: 'La fecha de cierre debe ser posterior al último resumen conocido.',
+      formError: `El cierre del próximo resumen debe ser posterior al ${lastEndDisplay} (fin del último resumen conocido de la tarjeta).`,
     }
   }
 
-  // 1. INSERT expense on payment account
+  // 1. INSERT expense on payment account. The payment-day fx (when the period
+  // had USD debt) is persisted on the expense for traceability.
   const { data: expense, error: expenseError } = await supabase
     .from('transactions')
     .insert({
@@ -525,6 +561,7 @@ export async function payCardPeriod(
       is_parent: false,
       status: null,
       card_period_id: null,
+      fx_rate_to_ars: data.fx_rate_to_ars != null ? normalizeActionFxRate(data.fx_rate_to_ars) : null,
     })
     .select('id')
     .single()
@@ -585,7 +622,12 @@ export async function payCardPeriod(
       .eq('card_period_id', data.period_id)
       .eq('status', 'paid')
     await supabase.from('transactions').delete().eq('id', expense.id)
-    return { ok: false, formError: nextPeriodError.message }
+    // Never leak raw Postgres text: the realistic failure here is the period
+    // dates check/overlap (chk_period_dates) — explain it with the anchor date.
+    return {
+      ok: false,
+      formError: `No se pudo crear el próximo resumen: las fechas son inválidas o se superponen con un resumen existente. El cierre debe ser posterior al ${lastEndDisplay} y el vencimiento posterior al cierre.`,
+    }
   }
 
   revalidatePath('/cards')

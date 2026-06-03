@@ -26,10 +26,6 @@ type Props = {
   availableByAccount?: Record<string, Record<'ARS' | 'USD', number>>
 }
 
-const isCardExpenseUSD = (instance: PendingRecurrenceInstance) =>
-  instance.recurrence.movement_type === 'expense' &&
-  instance.account?.type === 'credit' &&
-  instance.currency_code === 'USD'
 
 export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) => {
   const router = useRouter()
@@ -57,7 +53,6 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
     return { label: t('pending.due_in', { count: diff }), overdue: false }
   }
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [fxByInstance, setFxByInstance] = useState<Record<string, string>>({})
   const [errorByInstance, setErrorByInstance] = useState<Record<string, string>>({})
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
@@ -83,20 +78,8 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
     setActiveId(instance.id)
     setErrorByInstance((prev) => ({ ...prev, [instance.id]: '' }))
 
-    let fxRate: number | undefined
-    if (isCardExpenseUSD(instance)) {
-      const raw = fxByInstance[instance.id]?.trim()
-      const parsed = raw ? Number(raw.replace(',', '.')) : NaN
-      if (!parsed || parsed <= 0) {
-        setErrorByInstance((prev) => ({
-          ...prev,
-          [instance.id]: t('errors_extra.fx_required'),
-        }))
-        setActiveId(null)
-        return
-      }
-      fxRate = parsed
-    }
+    // Cotización is no longer collected here: USD card consumos convert at
+    // statement-payment time (payment-day rate).
 
     // Build overrides from edit state if this instance is being edited.
     const overrides: Record<string, unknown> = {}
@@ -122,8 +105,6 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
         overrides.description = trimmedDescription || null
       }
     }
-
-    if (fxRate !== undefined) overrides.fx_rate_to_ars = fxRate
 
     startTransition(async () => {
       const result = await confirmRecurrenceInstance(instance.id, overrides)
@@ -252,7 +233,6 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
           const freqLabel = t(
             `frequencies.${instance.recurrence.frequency}` as 'frequencies.weekly',
           )
-          const showFxInput = isCardExpenseUSD(instance)
           const error = errorByInstance[instance.id]
           const busy = isPending && activeId === instance.id
           const isEditing = editingId === instance.id
@@ -395,30 +375,6 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
                       className="rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     />
                   </div>
-                </div>
-              )}
-
-              {showFxInput && (
-                <div className="flex flex-col gap-1">
-                  <label
-                    htmlFor={`fx-${instance.id}`}
-                    className="text-xs text-muted-foreground"
-                  >
-                    {t('pending.fx_rate_label')}
-                  </label>
-                  <MoneyAmountInput
-                    id={`fx-${instance.id}`}
-                    groupThousands={false}
-                    value={fxByInstance[instance.id] ?? ''}
-                    onChange={(value) =>
-                      setFxByInstance((prev) => ({
-                        ...prev,
-                        [instance.id]: value,
-                      }))
-                    }
-                    placeholder={t('pending.fx_rate_placeholder')}
-                    className="w-32 rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
                 </div>
               )}
 

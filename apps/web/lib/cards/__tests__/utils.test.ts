@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  computeStatementPaymentTotal,
   derivePeriodStatus,
   derivePeriodVariant,
   subtractMoneyValues,
@@ -96,5 +97,27 @@ describe('money helpers', () => {
 
   it('subtracts available credit with decimal math', () => {
     expect(subtractMoneyValues('1000.30', '0.10')).toBe(1000.2)
+  })
+})
+
+describe('computeStatementPaymentTotal', () => {
+  it('returns the ARS pending untouched when there is no USD debt', () => {
+    expect(computeStatementPaymentTotal(10000.5, 0, null)).toBe(10000.5)
+    expect(computeStatementPaymentTotal(10000.5, 0, 1200)).toBe(10000.5)
+  })
+
+  it('returns null while USD debt has no usable rate', () => {
+    expect(computeStatementPaymentTotal(10000.5, 50, null)).toBeNull()
+    expect(computeStatementPaymentTotal(10000.5, 50, 0)).toBeNull()
+    expect(computeStatementPaymentTotal(10000.5, 50, -1)).toBeNull()
+  })
+
+  it('converts USD at the payment-day rate and keeps the centavo exact', () => {
+    // 50 × 1230.50 = 61525 → 10000.50 + 61525 = 71525.50
+    expect(computeStatementPaymentTotal(10000.5, 50, 1230.5)).toBe(71525.5)
+    // Rounding to centavos: 33.33 × 1234.567 = 41148.118... → 41148.12
+    expect(computeStatementPaymentTotal(0, 33.33, 1234.567)).toBe(41148.12)
+    // Float-hostile pair: 0.1 + (0.2 × 1) = 0.3 exactly (Money, not IEEE754)
+    expect(computeStatementPaymentTotal(0.1, 0.2, 1)).toBe(0.3)
   })
 })

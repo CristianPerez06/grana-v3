@@ -124,34 +124,24 @@ export const registerCardPurchaseSchema = yup
     category_id: yup.string().label('category_id').uuid().required(),
     subcategory_id: yup.string().label('subcategory_id').uuid().optional(),
     description: yup.string().label('description').optional(),
+    // Optional and informational: the REAL conversion happens at statement
+    // payment (the cotización of the payment day) — the purchase never requires
+    // it. Kept nullable so historical callers can still record an estimate.
     fx_rate_to_ars: yup
       .number()
       .label('fx_rate_to_ars')
       .positive()
       .nullable()
-      .optional(),
+      .optional()
+      .test('fx-rate-null-for-ars', 'fx_rate_must_be_null_for_ars', function (value) {
+        const { currency_code } = this.parent
+        if (currency_code !== 'USD' && value != null) return false
+        return true
+      }),
     reimbursement: reimbursementDeclarationSchema.optional().default(undefined),
     shared: sharedExpenseSchema.optional().default(undefined),
   })
   .strict()
-  .test('fx-rate-required-for-usd', 'fx_rate_required_for_usd', function (value) {
-    if (value.currency_code === 'USD') {
-      if (!value.fx_rate_to_ars || value.fx_rate_to_ars <= 0) {
-        return this.createError({
-          path: 'fx_rate_to_ars',
-          message: 'fx_rate_required_for_usd',
-        })
-      }
-    } else {
-      if (value.fx_rate_to_ars != null) {
-        return this.createError({
-          path: 'fx_rate_to_ars',
-          message: 'fx_rate_must_be_null_for_ars',
-        })
-      }
-    }
-    return true
-  })
 
 // ─── Task 2.4: Registrar compra en cuotas (ARS only, N ≥ 2) ─────────────────
 
@@ -186,6 +176,15 @@ export const payCardPeriodSchema = yup
     amount: yup.number().label('amount').required().positive(),
     payment_account_id: yup.string().label('payment_account_id').uuid().required(),
     payment_date: yup.string().label('payment_date').required(),
+    // Cotización del día de pago. Optional at the schema level; the action
+    // requires it (> 0) when the period has pending USD debt and persists it
+    // on the payment expense for traceability.
+    fx_rate_to_ars: yup
+      .number()
+      .label('fx_rate_to_ars')
+      .positive()
+      .nullable()
+      .optional(),
     next_end_date: yup.string().label('next_end_date').required(),
     next_due_date: yup
       .string()

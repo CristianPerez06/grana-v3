@@ -87,22 +87,25 @@ describe('mapInstanceToConfirmPlan', () => {
     expect(plan.input.fx_rate_to_ars).toBe(1234.5)
   })
 
-  it('rejects a USD expense on a credit account when fx rate is missing', () => {
-    expect(() =>
-      mapInstanceToConfirmPlan(
-        buildInstance({ currency_code: 'USD' }),
-        { movementType: 'expense', accountType: 'credit' },
-      ),
-    ).toThrow(RecurrenceMapError)
+  it('confirms a USD expense on a credit account WITHOUT fx rate (cotización lives at payment)', () => {
+    const plan = mapInstanceToConfirmPlan(
+      buildInstance({ currency_code: 'USD' }),
+      { movementType: 'expense', accountType: 'credit' },
+    )
+    expect(plan.kind).toBe('card_purchase')
+    if (plan.kind !== 'card_purchase') throw new Error('expected card_purchase')
+    expect(plan.input.currency_code).toBe('USD')
+    expect(plan.input).not.toHaveProperty('fx_rate_to_ars')
   })
 
-  it('rejects a USD expense on a credit account when fx rate is non-positive', () => {
-    expect(() =>
-      mapInstanceToConfirmPlan(
-        buildInstance({ currency_code: 'USD' }),
-        { movementType: 'expense', accountType: 'credit', fxRateToArs: 0 },
-      ),
-    ).toThrow(RecurrenceMapError)
+  it('omits a non-positive fx rate instead of failing', () => {
+    const plan = mapInstanceToConfirmPlan(
+      buildInstance({ currency_code: 'USD' }),
+      { movementType: 'expense', accountType: 'credit', fxRateToArs: 0 },
+    )
+    expect(plan.kind).toBe('card_purchase')
+    if (plan.kind !== 'card_purchase') throw new Error('expected card_purchase')
+    expect(plan.input).not.toHaveProperty('fx_rate_to_ars')
   })
 
   it('rejects fx rate on an ARS card purchase', () => {

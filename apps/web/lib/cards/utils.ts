@@ -11,6 +11,7 @@ export {
   splitAmountIntoInstallments,
   sumMoneyValues,
   subtractMoneyValues,
+  computeStatementPaymentTotal,
   formatDateISO,
   addDaysToISO,
   addMonthsToISO,

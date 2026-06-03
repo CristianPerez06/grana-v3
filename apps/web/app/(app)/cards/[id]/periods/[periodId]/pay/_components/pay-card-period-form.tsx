@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { getTodayAR } from '@/lib/date'
 import { payCardPeriod } from '@/app/_actions/credit-cards'
+import { computeStatementPaymentTotal } from '@/lib/cards/utils'
 import { parseMoneyInput } from '@grana/validation'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
@@ -23,6 +24,8 @@ const formatARS = (amount: number) =>
     maximumFractionDigits: 2,
   }).format(amount)
 
+const formatShortDate = (iso: string) => iso.split('-').reverse().join('/')
+
 type PaymentAccount = {
   id: string
   name: string
@@ -33,8 +36,12 @@ type Props = {
   periodId: string
   cardId: string
   pendingAmountARS: number
+  /** Pending USD debt of the period; > 0 requires the payment-day fx rate. */
+  pendingAmountUSD: number
   suggestedNextEndDate: string
   suggestedNextDueDate: string
+  /** Furthest known statement close — the next period must close after it. */
+  lastKnownEndDate: string
   paymentAccounts: PaymentAccount[]
 }
 
@@ -42,8 +49,10 @@ export const PayCardPeriodForm = ({
   periodId,
   cardId,
   pendingAmountARS,
+  pendingAmountUSD,
   suggestedNextEndDate,
   suggestedNextDueDate,
+  lastKnownEndDate,
   paymentAccounts,
 }: Props) => {
   const router = useRouter()
@@ -53,11 +62,33 @@ export const PayCardPeriodForm = ({
   const [formError, setFormError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  const hasUsdDebt = pendingAmountUSD > 0
+
   const [amount, setAmount] = useState(String(pendingAmountARS))
+  const [fxRate, setFxRate] = useState('')
   const [paymentAccountId, setPaymentAccountId] = useState(paymentAccounts[0]?.id ?? '')
   const [paymentDate, setPaymentDate] = useState(todayStr())
   const [nextEndDate, setNextEndDate] = useState(suggestedNextEndDate)
   const [nextDueDate, setNextDueDate] = useState(suggestedNextDueDate)
+
+  // Payment-day conversion: total ARS = pendiente ARS + pendiente USD × fx
+  // (exact Money arithmetic in computeStatementPaymentTotal). Typing the fx
+  // auto-fills the amount with the computed total (still editable).
+  const parsedFx = fxRate ? parseMoneyInput(fxRate, { decimalPlaces: 6 }) : null
+  const computedTotal = hasUsdDebt
+    ? computeStatementPaymentTotal(pendingAmountARS, pendingAmountUSD, parsedFx)
+    : null
+  const usdConvertedARS =
+    computedTotal !== null && hasUsdDebt
+      ? Math.round((computedTotal - pendingAmountARS) * 100) / 100
+      : null
+
+  const handleFxChange = (value: string) => {
+    setFxRate(value)
+    const fx = value ? parseMoneyInput(value, { decimalPlaces: 6 }) : null
+    const total = computeStatementPaymentTotal(pendingAmountARS, pendingAmountUSD, fx)
+    if (hasUsdDebt && total !== null) setAmount(String(total))
+  }
 
   // Soft, non-blocking warning: paying from this account would leave its ARS
   // available balance negative. Statement payments are always in ARS.
@@ -72,10 +103,20 @@ export const PayCardPeriodForm = ({
     const errs: Record<string, string> = {}
     const parsedAmount = parseMoneyInput(amount)
     if (parsedAmount === null || parsedAmount <= 0) errs.amount = t('errors.limit_invalid')
+    if (hasUsdDebt && (parsedFx === null || parsedFx <= 0)) {
+      errs.fxRate = t('errors.fx_required')
+    }
     if (!paymentAccountId) errs.paymentAccountId = t('errors.account_required')
     if (!paymentDate) errs.paymentDate = tCommon('required_short')
     if (!nextEndDate) errs.nextEndDate = tCommon('required_short')
     if (!nextDueDate) errs.nextDueDate = tCommon('required_short')
+    // The next close must fall AFTER every known statement — otherwise the new
+    // period would overlap the one still running.
+    if (nextEndDate && nextEndDate <= lastKnownEndDate) {
+      errs.nextEndDate = t('errors.next_end_before_known', {
+        date: formatShortDate(lastKnownEndDate),
+      })
+    }
     if (nextEndDate && nextDueDate && nextDueDate <= nextEndDate) {
       errs.nextDueDate = t('errors.due_after_close')
     }
@@ -96,6 +137,9 @@ export const PayCardPeriodForm = ({
         payment_date: paymentDate,
         next_end_date: nextEndDate,
         next_due_date: nextDueDate,
+        ...(hasUsdDebt && parsedFx !== null && parsedFx > 0
+          ? { fx_rate_to_ars: parsedFx }
+          : {}),
       })
 
       if (!result.ok) {
@@ -115,10 +159,49 @@ export const PayCardPeriodForm = ({
           {t('payment.section_payment_data')}
         </h2>
 
+        {hasUsdDebt && (
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="pay-fx" className="text-sm font-medium">
+              {t('payment.fx_label')}
+            </label>
+            <p className="text-xs text-muted-foreground mb-1">{t('payment.fx_helper')}</p>
+            <MoneyAmountInput
+              id="pay-fx"
+              required
+              groupThousands={false}
+              value={fxRate}
+              onChange={handleFxChange}
+              placeholder={t('payment.fx_placeholder')}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            {errors.fxRate && <p className="text-xs text-destructive">{errors.fxRate}</p>}
+
+            {/* Breakdown: ARS pendiente + USD × fx = total */}
+            <div className="mt-1 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground tabular-nums">
+              <div className="flex justify-between">
+                <span>{t('payment.breakdown_ars')}</span>
+                <span>{formatARS(pendingAmountARS)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>
+                  {t('payment.breakdown_usd', { usd: pendingAmountUSD })}
+                  {parsedFx !== null && parsedFx > 0 ? ` × ${fxRate}` : ''}
+                </span>
+                <span>{usdConvertedARS !== null ? formatARS(usdConvertedARS) : '—'}</span>
+              </div>
+              <div className="mt-1 flex justify-between border-t border-border pt-1 font-semibold text-foreground">
+                <span>{t('payment.breakdown_total')}</span>
+                <span>{computedTotal !== null ? formatARS(computedTotal) : '—'}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">{t('labels.amount_to_pay')}</label>
           <p className="text-xs text-muted-foreground mb-1">
-            {t('labels.amount_to_pay_helper')} ({formatARS(pendingAmountARS)})
+            {t('labels.amount_to_pay_helper')} (
+            {computedTotal !== null ? formatARS(computedTotal) : formatARS(pendingAmountARS)})
           </p>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
@@ -173,6 +256,11 @@ export const PayCardPeriodForm = ({
           </h2>
           <p className="text-xs text-muted-foreground mt-1">
             {t('labels.next_period_helper')}
+          </p>
+          {/* Anchor: where the running statement ends, so the user knows the
+              next close must come after it. */}
+          <p className="mt-1 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+            {t('payment.next_period_context', { date: formatShortDate(lastKnownEndDate) })}
           </p>
         </div>
 

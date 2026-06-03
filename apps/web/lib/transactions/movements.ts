@@ -1,7 +1,7 @@
 import type { MovementViewInput } from '@grana/money-logic'
 import type { ReimbursementTarget, TransactionWithDetails } from './types'
 
-export type MovementReviewFlag = 'missing_category' | 'missing_fx_rate'
+export type MovementReviewFlag = 'missing_category'
 
 type BaseMovement = {
   id: string
@@ -120,14 +120,8 @@ const getReviewFlags = (tx: TransactionWithDetails): MovementReviewFlag[] => {
     flags.push('missing_category')
   }
 
-  if (
-    tx.source_account?.type === 'credit' &&
-    tx.currency_code !== 'ARS' &&
-    tx.type === 'expense' &&
-    !tx.fx_rate_to_ars
-  ) {
-    flags.push('missing_fx_rate')
-  }
+  // No fx flag: a USD card consumo without cotización is the NORMAL state —
+  // the conversion happens at statement payment (payment-day rate).
 
   return flags
 }

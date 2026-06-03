@@ -190,6 +190,24 @@ export function subtractMoneyValues(a: number | string, b: number | string): num
   return Money.toNumber(Money.subtract(Money.from(a), Money.from(b)))
 }
 
+/**
+ * Total ARS suggested when paying a statement: pending ARS + pending USD
+ * converted at the payment-day fx rate, rounded to centavos. Returns null when
+ * there is USD debt but no usable rate yet (the form shows "—" until typed).
+ * Exact arithmetic via Money so the centavo never drifts.
+ */
+export function computeStatementPaymentTotal(
+  pendingARS: number,
+  pendingUSD: number,
+  fxRate: number | null,
+): number | null {
+  if (pendingUSD <= 0) return Money.toNumber(Money.from(pendingARS))
+  if (fxRate == null || fxRate <= 0) return null
+  // Money.multiply rounds to centavos by contract.
+  const usdInArs = Money.multiply(Money.from(pendingUSD), fxRate)
+  return Money.toNumber(Money.add(Money.from(pendingARS), usdInArs))
+}
+
 // ─── ISO date arithmetic helpers ──────────────────────────────────────────────
 
 export function formatDateISO(date: Date): string {
