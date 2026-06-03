@@ -56,3 +56,15 @@ export type MonthBalanceSeries = {
   totalExpense: number
   finalBalance: number
 }
+
+/**
+ * Per-currency month balance. ARS and USD are never summed (bimoneda): the
+ * dashboard renders both series on a dual-axis chart, each against its own
+ * scale. USD is shown subordinate / only when it has activity.
+ */
+export type MonthBalanceByCurrency = {
+  year: number
+  month: number
+  ARS: MonthBalanceSeries
+  USD: MonthBalanceSeries
+}

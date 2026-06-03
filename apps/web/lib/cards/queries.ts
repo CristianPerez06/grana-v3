@@ -539,12 +539,15 @@ export async function getActiveInstallments(
 ): Promise<ActiveInstallmentsResult> {
   const supabase = await createClient()
 
-  // All installment children on this card (parent_id set), with their parent's
-  // identity fields. Children carry account_id=card; the parent is off-ledger.
+  // All installment children on this card (parent_id set). Children carry
+  // account_id=card; the parent is off-ledger and fetched in a second query —
+  // PostgREST can't reliably embed a self-referential FK (same caveat as the
+  // reimbursement → linked expense stitch), and the broken embed made the UI
+  // fall back to an arbitrary child's date as the "purchase date".
   const { data: children, error } = await supabase
     .from('transactions')
     .select(
-      'id, parent_id, amount, status, date, due_date, installment_n, installments_total, parent:transactions!parent_id(id, description, date, category:categories(name))',
+      'id, parent_id, amount, status, date, due_date, installment_n, installments_total',
     )
     .eq('account_id', accountId)
     .eq('is_parent', false)
@@ -563,17 +566,32 @@ export async function getActiveInstallments(
     byParent.set(child.parent_id, list)
   }
 
+  // Stitch the parents (purchase identity: description, purchase date, category).
+  const { data: parents, error: parentsError } = await supabase
+    .from('transactions')
+    .select('id, description, date, category:categories(name)')
+    .in('id', [...byParent.keys()])
+
+  if (parentsError) throw parentsError
+  type ParentRow = {
+    id: string
+    description: string | null
+    date: string
+    category: { name: string } | null
+  }
+  const parentById = new Map<string, ParentRow>(
+    ((parents ?? []) as unknown as ParentRow[]).map((p) => [p.id, p]),
+  )
+
   const items: ActiveInstallment[] = []
   for (const [parentId, group] of byParent) {
     // Only "active" purchases: at least one pending child remains.
     const pending = group.filter((c) => c.status === 'pending')
     if (pending.length === 0) continue
 
-    const parent = (group[0].parent as unknown as {
-      description: string | null
-      date: string
-      category: { name: string } | null
-    } | null)
+    const parent = parentById.get(parentId) ?? null
+    const firstChild =
+      [...group].sort((a, b) => (a.installment_n ?? 0) - (b.installment_n ?? 0))[0]
     const paidCount = group.filter((c) => c.status === 'paid').length
     const total = group[0].installments_total ?? group.length
     const perInstallment = Number(group[0].amount)
@@ -586,7 +604,8 @@ export async function getActiveInstallments(
       parentId,
       name: parent?.description ?? parent?.category?.name ?? 'Compra en cuotas',
       categoryName: parent?.category?.name ?? null,
-      purchaseDate: parent?.date ?? group[0].date,
+      // Fallback: first cuota's date (≈ purchase date), never an arbitrary one.
+      purchaseDate: parent?.date ?? firstChild.date,
       paidCount,
       total,
       perInstallment,

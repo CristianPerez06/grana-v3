@@ -59,6 +59,22 @@ export const MoneyAmountInput = forwardRef<HTMLInputElement, Props>(
       )
     }
 
+    // Grouping dots are inserted by the formatter, never typed — so a typed `.`
+    // can only mean "decimal". Map the `.` key (incl. the numeric keypad's) to
+    // the es-AR decimal `,` at the caret so numpad users get cents instead of a
+    // silently-100x-larger integer. Paste is untouched (it still flows through
+    // toCanonical, where `.` is grouping), so pasting "1.000" stays 1000.
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      rest.onKeyDown?.(e)
+      if (e.defaultPrevented || e.key !== '.') return
+      e.preventDefault()
+      const input = e.currentTarget
+      const start = input.selectionStart ?? input.value.length
+      const end = input.selectionEnd ?? input.value.length
+      const next = `${input.value.slice(0, start)},${input.value.slice(end)}`
+      onChange(toCanonical(next))
+    }
+
     return (
       <input
         ref={ref}
@@ -68,6 +84,7 @@ export const MoneyAmountInput = forwardRef<HTMLInputElement, Props>(
         value={formatForDisplay(value)}
         onChange={(e) => onChange(toCanonical(e.target.value))}
         {...rest}
+        onKeyDown={handleKeyDown}
       />
     )
   },

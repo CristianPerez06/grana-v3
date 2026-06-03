@@ -34,7 +34,7 @@ const buildDays = (
 
 export const HappyMonth: Story = {
   args: {
-    days: buildDays(31, (d) => {
+    ars: buildDays(31, (d) => {
       if (d === 15) return { income: 850_000, expense: 0 }
       if (d % 3 === 0) return { income: 0, expense: 18_000 }
       return { income: 0, expense: 6_000 }
@@ -44,13 +44,13 @@ export const HappyMonth: Story = {
 
 export const FlatZeroMonth: Story = {
   args: {
-    days: buildDays(31, () => ({ income: 0, expense: 0 })),
+    ars: buildDays(31, () => ({ income: 0, expense: 0 })),
   },
 }
 
 export const NegativeMonth: Story = {
   args: {
-    days: buildDays(30, (d) => {
+    ars: buildDays(30, (d) => {
       if (d === 10) return { income: 200_000, expense: 0 }
       return { income: 0, expense: 12_000 }
     }),
@@ -59,9 +59,23 @@ export const NegativeMonth: Story = {
 
 export const ShortMonth: Story = {
   args: {
-    days: buildDays(28, (d) => ({
+    ars: buildDays(28, (d) => ({
       income: d === 5 ? 500_000 : 0,
       expense: d % 2 === 0 ? 10_000 : 5_000,
+    })),
+  },
+}
+
+export const Bimoneda: Story = {
+  args: {
+    ars: buildDays(31, (d) => {
+      if (d === 15) return { income: 850_000, expense: 0 }
+      if (d % 3 === 0) return { income: 0, expense: 18_000 }
+      return { income: 0, expense: 6_000 }
+    }),
+    usd: buildDays(31, (d) => ({
+      income: d === 10 ? 300 : 0,
+      expense: d === 20 ? 45 : 0,
     })),
   },
 }

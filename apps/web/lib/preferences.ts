@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 
 export const SHOW_CENTS_COOKIE = 'show_cents'
 export const SIDEBAR_COLLAPSED_COOKIE = 'sidebar_collapsed'
+export const EYE_MASKED_COOKIE = 'eye_masked'
 
 export const getShowCents = async (): Promise<boolean> => {
   const cookieStore = await cookies()
@@ -11,4 +12,9 @@ export const getShowCents = async (): Promise<boolean> => {
 export const getSidebarCollapsed = async (): Promise<boolean> => {
   const cookieStore = await cookies()
   return cookieStore.get(SIDEBAR_COLLAPSED_COOKIE)?.value === 'true'
+}
+
+export const getEyeMasked = async (): Promise<boolean> => {
+  const cookieStore = await cookies()
+  return cookieStore.get(EYE_MASKED_COOKIE)?.value === 'true'
 }

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { cardMonogram } from './card-presentation'
 import { CardStatusPill } from './card-status-pill'
 import type { CardPillTone } from './card-status-pill'
@@ -7,13 +8,15 @@ type Props = {
   bank: string | null
   accent: string
   tone: CardPillTone
+  /** Right-side actions (e.g. register purchase + edit icon). */
+  actions?: ReactNode
 }
 
 /**
  * Compound detail header (avatar + name + status pill + bank). A permitted
  * exception to `PageHeader`, like CardHero / AccountDetailHeader.
  */
-export const CardDetailHeader = ({ name, bank, accent, tone }: Props) => (
+export const CardDetailHeader = ({ name, bank, accent, tone, actions }: Props) => (
   <div className="flex items-center gap-4">
     <span
       className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-[15px] text-2xl font-extrabold text-white"
@@ -29,5 +32,6 @@ export const CardDetailHeader = ({ name, bank, accent, tone }: Props) => (
       </div>
       {bank && <p className="truncate text-sm text-text-muted">{bank}</p>}
     </div>
+    {actions && <div className="flex shrink-0 flex-col items-end gap-2">{actions}</div>}
   </div>
 )

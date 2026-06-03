@@ -3,14 +3,14 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
+import { Pencil, Trash2 } from 'lucide-react'
 import * as AlertDialog from '@radix-ui/react-alert-dialog'
 import { useTranslations } from 'next-intl'
 import { deleteTransaction } from '@/app/_actions/transactions'
 import { invalidateAfterMovementMutation } from '@/lib/transactions/invalidation'
 
-// Kebab menu (`⋯`) anchored at the top-right of the detail header. Items
+// Edit / delete icon actions anchored at the top-right of the detail header.
+// Only ever up to two actions, so they show as direct icon buttons (no kebab),
 // rendered conditionally on the edit/delete capabilities and the kind of
 // movement. Delete opens a Radix AlertDialog with copy contextual to the
 // kind (parent of installment / card payment / default).
@@ -70,48 +70,32 @@ export const TxActionsMenu = ({
 
   return (
     <>
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger asChild>
+      <div className="flex items-center gap-1">
+        {canEdit && (
           <button
             type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-lg)] text-text hover:bg-muted/40 transition-colors"
-            aria-label={t('menu_label')}
+            onClick={() =>
+              onEdit ? onEdit() : router.push(`/transactions/${transactionId}/edit`)
+            }
+            aria-label={t('edit')}
+            title={t('edit')}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-lg)] text-text-muted hover:bg-muted/40 hover:text-text transition-colors"
           >
-            <MoreHorizontal size={20} strokeWidth={2} />
+            <Pencil size={17} strokeWidth={2} aria-hidden />
           </button>
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Portal>
-          <DropdownMenu.Content
-            align="end"
-            sideOffset={6}
-            className="min-w-[180px] rounded-[14px] border border-border bg-card overflow-hidden shadow-lg z-50"
+        )}
+        {canDelete && (
+          <button
+            type="button"
+            onClick={() => setDeleteOpen(true)}
+            aria-label={t('delete')}
+            title={t('delete')}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-lg)] text-expense hover:bg-expense/10 transition-colors"
           >
-            {canEdit && (
-              <DropdownMenu.Item
-                onSelect={() =>
-                  onEdit ? onEdit() : router.push(`/transactions/${transactionId}/edit`)
-                }
-                className="flex items-center gap-2 w-full px-4 py-2.5 text-left text-[13px] font-semibold text-text cursor-pointer outline-none data-[highlighted]:bg-muted/40"
-              >
-                <Pencil size={15} strokeWidth={2} />
-                {t('edit')}
-              </DropdownMenu.Item>
-            )}
-            {canDelete && (
-              <DropdownMenu.Item
-                onSelect={(e) => {
-                  e.preventDefault() // keep menu open until the dialog handles it
-                  setDeleteOpen(true)
-                }}
-                className="flex items-center gap-2 w-full px-4 py-2.5 text-left text-[13px] font-semibold text-expense cursor-pointer outline-none data-[highlighted]:bg-expense/10"
-              >
-                <Trash2 size={15} strokeWidth={2} />
-                {t('delete')}
-              </DropdownMenu.Item>
-            )}
-          </DropdownMenu.Content>
-        </DropdownMenu.Portal>
-      </DropdownMenu.Root>
+            <Trash2 size={17} strokeWidth={2} aria-hidden />
+          </button>
+        )}
+      </div>
 
       <AlertDialog.Root open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialog.Portal>

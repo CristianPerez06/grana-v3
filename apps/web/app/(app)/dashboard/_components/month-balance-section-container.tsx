@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server'
-import { getMonthBalanceSeries, type MonthBalanceSeries } from '@grana/dashboard'
+import { getMonthBalanceSeries, type MonthBalanceByCurrency } from '@grana/dashboard'
 import { createClient } from '@/lib/supabase/server'
 import { MonthBalanceSection } from './month-balance-section'
 import { SectionFallback } from '@/components/ui/section-fallback'
@@ -16,7 +16,7 @@ export const MonthBalanceSectionContainer = async ({
   monthsBackLimit,
 }: Props) => {
   const supabase = await createClient()
-  let data: MonthBalanceSeries
+  let data: MonthBalanceByCurrency
   try {
     data = await getMonthBalanceSeries(supabase, currentYear, currentMonth)
   } catch {

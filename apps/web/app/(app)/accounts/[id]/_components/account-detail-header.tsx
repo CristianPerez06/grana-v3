@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { Pencil, Archive, Trash2 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { archiveAccount, reactivateAccount, deleteAccount } from '@/app/_actions/accounts'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -156,23 +157,27 @@ export const AccountDetailHeader = ({ accountId }: Props) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-1 flex-shrink-0">
           {/* Opens the edit drawer when ready; the /edit page is the fallback
               path while the drawer's data is still loading or failed. */}
           {editDrawer ? (
             <button
               type="button"
               onClick={editDrawer.openEdit}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={t('actions.edit')}
+              title={t('actions.edit')}
+              className="inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-border-soft hover:text-foreground transition-colors"
             >
-              {t('actions.edit')}
+              <Pencil className="size-[17px]" aria-hidden />
             </button>
           ) : (
             <a
               href={`/accounts/${accountId}/edit`}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={t('actions.edit')}
+              title={t('actions.edit')}
+              className="inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-border-soft hover:text-foreground transition-colors"
             >
-              {t('actions.edit')}
+              <Pencil className="size-[17px]" aria-hidden />
             </a>
           )}
 
@@ -193,17 +198,21 @@ export const AccountDetailHeader = ({ accountId }: Props) => {
             <button
               onClick={handleArchive}
               disabled={isPending}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+              aria-label={t('actions.archive')}
+              title={t('actions.archive')}
+              className="inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-border-soft hover:text-foreground transition-colors disabled:opacity-50"
             >
-              {t('actions.archive')}
+              <Archive className="size-[17px]" aria-hidden />
             </button>
           ) : (
             <button
               onClick={handleDelete}
               disabled={isPending}
-              className="text-xs text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
+              aria-label={t('actions.delete')}
+              title={t('actions.delete')}
+              className="inline-flex size-9 items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 hover:text-destructive/80 transition-colors disabled:opacity-50"
             >
-              {t('actions.delete')}
+              <Trash2 className="size-[17px]" aria-hidden />
             </button>
           )}
         </div>

@@ -46,7 +46,7 @@ export const MonthNavigator = ({ year, month, onPrev, onNext }: Props) => {
           <ChevronLeft size={18} />
         </span>
       )}
-      <span className="min-w-[7rem] text-center text-sm font-medium uppercase tracking-wide text-text-muted">
+      <span className="min-w-[7rem] whitespace-nowrap text-center text-sm font-medium uppercase tracking-wide text-text-muted">
         {label}
       </span>
       {onNext ? (

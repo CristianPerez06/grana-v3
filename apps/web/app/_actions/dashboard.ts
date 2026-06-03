@@ -1,6 +1,6 @@
 'use server'
 
-import { getMonthBalanceSeries, type MonthBalanceSeries } from '@grana/dashboard'
+import { getMonthBalanceSeries, type MonthBalanceByCurrency } from '@grana/dashboard'
 import { createClient } from '@/lib/supabase/server'
 
 /**
@@ -13,7 +13,7 @@ import { createClient } from '@/lib/supabase/server'
 export async function fetchMonthBalanceSeries(
   year: number,
   month: number,
-): Promise<MonthBalanceSeries> {
+): Promise<MonthBalanceByCurrency> {
   const supabase = await createClient()
   return getMonthBalanceSeries(supabase, year, month)
 }

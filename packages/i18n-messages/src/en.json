@@ -112,6 +112,8 @@
       "income": "Income",
       "expense": "Expenses",
       "final_balance": "Balance",
+      "legend_ars": "ARS (left)",
+      "legend_usd": "USD (right)",
       "empty": "No transactions this month.",
       "loading": "Loading this month's balance…",
       "error": "We couldn't load this month's balance."

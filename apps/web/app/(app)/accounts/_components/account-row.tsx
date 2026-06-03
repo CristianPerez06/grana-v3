@@ -3,11 +3,13 @@
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
+import { Pencil } from 'lucide-react'
 import type { AccountWithBalances } from '@/lib/accounts/types'
 import { reactivateAccount } from '@/app/_actions/accounts'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import { AccountAvatar } from '@/components/ui/account-avatar'
+import { useAccountsEditDrawer } from './accounts-edit-drawer'
 
 type Props = {
   account: AccountWithBalances
@@ -16,6 +18,7 @@ type Props = {
 export const AccountRow = ({ account }: Props) => {
   const t = useTranslations('accounts')
   const showCents = useShowCents()
+  const editDrawer = useAccountsEditDrawer()
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -75,12 +78,27 @@ export const AccountRow = ({ account }: Props) => {
 
       <div className="flex w-20 shrink-0 items-center justify-end">
         {account.is_active ? (
-          <Link
-            href={`/accounts/${account.id}/edit`}
-            className="text-[13px] font-medium text-text-soft transition-colors hover:text-text"
-          >
-            {t('actions.edit')}
-          </Link>
+          // Opens the shared edit drawer; the /edit route is the no-JS fallback.
+          editDrawer ? (
+            <button
+              type="button"
+              onClick={() => editDrawer.openEdit(account)}
+              aria-label={t('actions.edit')}
+              title={t('actions.edit')}
+              className="inline-flex size-9 items-center justify-center rounded-lg text-text-soft transition-colors hover:bg-border-soft hover:text-text cursor-pointer"
+            >
+              <Pencil className="size-[17px]" aria-hidden />
+            </button>
+          ) : (
+            <Link
+              href={`/accounts/${account.id}/edit`}
+              aria-label={t('actions.edit')}
+              title={t('actions.edit')}
+              className="inline-flex size-9 items-center justify-center rounded-lg text-text-soft transition-colors hover:bg-border-soft hover:text-text"
+            >
+              <Pencil className="size-[17px]" aria-hidden />
+            </Link>
+          )
         ) : (
           <button
             type="button"

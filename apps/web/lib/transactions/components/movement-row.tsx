@@ -78,6 +78,15 @@ export const MovementRow = ({
 
   const view = resolveMovementView(toMovementViewInput(movement), perspective)
   const typeLabel = t(typeLabelKey[movement.kind])
+
+  // Installment purchases always carry their cuotas count as a chip, so the
+  // list says "en cuotas" even when the host doesn't inject per-row chips
+  // (the card-period view injects "Cuota X de Y" for the children instead).
+  const chip =
+    installmentChip ??
+    (movement.kind === 'installment_purchase' && movement.installments_total
+      ? t('installments_count', { count: movement.installments_total })
+      : null)
   const runningBalance = runningBalanceSnapshot ? runningBalanceSnapshot[view.currencyCode] : null
   const isPendingReimbursement =
     movement.kind === 'reimbursement' && movement.state !== 'received'
@@ -136,9 +145,9 @@ export const MovementRow = ({
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-bold">{primary}</span>
-            {installmentChip && (
+            {chip && (
               <span className="inline-flex shrink-0 items-center rounded-full bg-border-soft px-1.5 py-0.5 text-[11px] font-semibold text-text-muted">
-                {installmentChip}
+                {chip}
               </span>
             )}
             {isRecurrent && (

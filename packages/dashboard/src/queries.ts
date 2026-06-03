@@ -18,7 +18,7 @@ import {
 } from './aggregations'
 import type {
   DashboardHero,
-  MonthBalanceSeries,
+  MonthBalanceByCurrency,
   UpcomingFortnight,
 } from './types'
 
@@ -151,7 +151,7 @@ export async function getMonthBalanceSeries(
   supabase: SupabaseClient,
   year: number,
   month: number,
-): Promise<MonthBalanceSeries> {
+): Promise<MonthBalanceByCurrency> {
   const firstDay = new Date(year, month - 1, 1)
   const lastDay = new Date(year, month, 0)
   const fromISO = formatDateISO(firstDay)
@@ -164,14 +164,23 @@ export async function getMonthBalanceSeries(
 
   if (accsErr) throw accsErr
   const accIds = (accs ?? []).map((a) => a.id)
-  if (accIds.length === 0) return buildMonthBalanceSeries(year, month, [], [])
+  if (accIds.length === 0) {
+    return {
+      year,
+      month,
+      ARS: buildMonthBalanceSeries(year, month, [], []),
+      USD: buildMonthBalanceSeries(year, month, [], []),
+    }
+  }
 
+  // Fetch both currencies and partition by currency_code — bimoneda is never
+  // summed, so each currency builds its own accumulated series.
   const { data: txs, error: txsErr } = await supabase
     .from('transactions')
     .select(
-      'id, date, type, amount, account_id, transfer_destination_account_id, created_at',
+      'id, date, type, amount, currency_code, account_id, transfer_destination_account_id, created_at',
     )
-    .eq('currency_code', 'ARS')
+    .in('currency_code', ['ARS', 'USD'])
     .gte('date', fromISO)
     .lte('date', toISO)
     .is('status', null)
@@ -184,7 +193,16 @@ export async function getMonthBalanceSeries(
 
   if (txsErr) throw txsErr
 
-  return buildMonthBalanceSeries(year, month, (txs ?? []) as unknown as MonthBalanceTxInput[], accIds)
+  const rows = (txs ?? []) as unknown as Array<MonthBalanceTxInput & { currency_code: string }>
+  const arsTxs = rows.filter((t) => t.currency_code === 'ARS')
+  const usdTxs = rows.filter((t) => t.currency_code === 'USD')
+
+  return {
+    year,
+    month,
+    ARS: buildMonthBalanceSeries(year, month, arsTxs, accIds),
+    USD: buildMonthBalanceSeries(year, month, usdTxs, accIds),
+  }
 }
 
 // ── getMonthCategoryBreakdown ──────────────────────────────────────────────────

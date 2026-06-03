@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import { Plus } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import type { MovementPerspective } from '@grana/money-logic'
+import { Button } from '@/components/ui/button'
 import type { FinancialMovement } from '../movements'
 import { MovementRow } from './movement-row'
 
@@ -71,8 +73,6 @@ export const MovementList = ({
   if (movements.length === 0) {
     const variant = emptyState?.variant ?? 'none'
     const containerClass = 'rounded-lg border border-dashed border-border p-12 text-center'
-    const actionClass =
-      'mt-4 inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors'
     const clearClass = 'mt-4 inline-flex items-center text-sm font-medium text-primary hover:underline'
 
     const renderClearAction = (label: string) => {
@@ -116,17 +116,21 @@ export const MovementList = ({
         <p className="text-sm font-medium text-foreground">{noneTitle}</p>
         <p className="mt-1 text-sm text-muted-foreground">{noneBody}</p>
         {emptyState?.onAdd ? (
-          <div>
-            <button type="button" onClick={emptyState.onAdd} className={actionClass}>
+          <div className="mt-4 flex justify-center">
+            <Button size="sm" className="w-auto" onClick={emptyState.onAdd}>
+              <Plus size={16} strokeWidth={2} aria-hidden />
               {noneCta}
-            </button>
+            </Button>
           </div>
         ) : (
           emptyState?.addHref && (
-            <div>
-              <Link href={emptyState.addHref} className={actionClass}>
-                {noneCta}
-              </Link>
+            <div className="mt-4 flex justify-center">
+              <Button asChild size="sm" className="w-auto">
+                <Link href={emptyState.addHref}>
+                  <Plus size={16} strokeWidth={2} aria-hidden />
+                  {noneCta}
+                </Link>
+              </Button>
             </div>
           )
         )}

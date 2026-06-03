@@ -112,6 +112,8 @@
       "income": "Ingresos",
       "expense": "Gastos",
       "final_balance": "Balance",
+      "legend_ars": "ARS (izq.)",
+      "legend_usd": "USD (der.)",
       "empty": "Sin movimientos este mes.",
       "loading": "Cargando el balance del mes…",
       "error": "No pudimos cargar el balance del mes."

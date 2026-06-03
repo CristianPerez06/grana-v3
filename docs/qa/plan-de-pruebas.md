@@ -4,8 +4,8 @@ Documento vivo. Reemplaza el enfoque por "instancias" de `instancia-01-base-func
 (que queda como borrador de origen). Acá los casos se organizan **por módulo** y dentro
 de cada módulo por **nivel**, del happy path a los casos inusuales / borde.
 
-- **Versión del doc:** 2026-06-02
-- **Referencia contable de la suite:** `2026-06-01`, zona `America/Argentina/Buenos_Aires`
+- **Versión del doc:** 2026-06-03 (cierre tanda 2: datasets reforzados para todo lo pendiente)
+- **Referencia contable de la suite:** `2026-06-03`, zona `America/Argentina/Buenos_Aires`
 - **Alcance:** web completo. Mobile solo en casos marcados `cross-platform` (la paridad
   mobile está diferida; no se trata como defecto salvo que el caso lo indique).
 
@@ -46,8 +46,10 @@ Esto evita escribir casos imposibles (aprendizaje del doc anterior):
 - **Cuentas:** desde "crear cuenta" **solo se crean Bancarias/débito**. La única cuenta de
   **Efectivo** es la `Billetera` que provisiona el onboarding. → Para probar borrado de cuenta
   sin historial se usa una **cuenta bancaria** descartable, no una de efectivo.
-- **Dinero (input):** los miles se agrupan con punto al tipear (`1.000`), el **decimal se carga
-  con coma** (`1.000,50`). Un punto se interpreta como separador de miles, no como decimal.
+- **Dinero (input):** los miles se agrupan solos con punto al tipear (`1.000`). El **decimal se
+  carga con coma `,` o con la tecla `.`** (incl. la del teclado numérico): al tipear, el `.` se
+  mapea al separador decimal `,` (un numpad sin coma ya no produce un entero 100× más grande).
+  El **pegado** sigue tratando el `.` como miles (pegar `1.000` = 1000).
 - **Dinero (display):** con "Mostrar centavos" ON, ARS y USD muestran **siempre 2 decimales**.
 - **Bimoneda:** todo usuario arranca con ARS + USD. No se suman ni se convierten entre sí.
 - **Saldo inicial:** se persiste como `initial_balance`; **no** crea un movimiento falso.
@@ -92,22 +94,87 @@ reciba aliases `+`.
 | Nombre | `Visa Galicia` |
 | Red | Visa |
 | Límite | `500.000` (ARS) |
-| Cierre / Vencimiento | según wizard (período actual) |
+| Cierre período actual | `28/06/2026` |
+| Vencimiento período actual | `07/07/2026` |
+| Cierre período siguiente | `28/07/2026` |
+| Vencimiento período siguiente | `06/08/2026` |
+
+> Las fechas cumplen las validaciones del wizard (vencimiento > cierre; siguiente > actual) y
+> dejan la fecha de referencia de la suite **dentro del período actual** → un consumo de hoy
+> cae en el período actual (lo que CARD-N1-02 espera).
+
+**Segunda tarjeta — para pago de resumen (CARD-N2-03 / N3-01).** La Visa Galicia no sirve
+para probar el pago hasta fin de mes (su período no cerró). Esta se crea con el período
+actual **ya cerrado** (el wizard acepta cierres hasta 40 días atrás):
+
+| Campo | Valor |
+|---|---|
+| Nombre | `Master QA Pagos` |
+| Red | Mastercard |
+| Límite | `300.000` (ARS) |
+| Cierre período actual | `01/06/2026` (**ya cerrado**) |
+| Vencimiento período actual | `10/06/2026` |
+| Cierre período siguiente | `01/07/2026` |
+| Vencimiento período siguiente | `10/07/2026` |
+| Consumo para generar deuda | gasto `10.000,50` ARS **retro-fechado al `28/05/2026`** (cae en el período cerrado) |
+
+> Con eso el período cerrado tiene deuda y el botón de pagar se habilita **hoy** (el pago
+> exige período cerrado o vencido). El monto con centavos es a propósito: CARD-N2-03
+> verifica que el centavo no se pierda.
 
 ### Dataset para movimientos (módulo Movimientos)
 
-| Concepto | Tipo | Cuenta | Moneda | Monto | Categoría |
+> Las categorías deben ser las del **seed del sistema** (Comida, Transporte, Sueldo, etc.).
+> ⚠️ La versión anterior decía "Alimentos"/"Ingresos", que **no existen** — corregido.
+
+| Concepto | Tipo | Cuenta | Moneda | Monto | Categoría / Subcategoría |
 |---|---|---|---|---:|---|
-| Sueldo | Ingreso | Galicia sueldo | ARS | `800.000` | Ingresos/Sueldo |
-| Supermercado | Gasto | Billetera | ARS | `45.500,75` | Alimentos |
-| Ahorro USD | Ingreso | Galicia sueldo | USD | `300` | Ingresos |
+| Sueldo | Ingreso | Galicia sueldo | ARS | `800.000` | Sueldo |
+| Supermercado | Gasto | Billetera | ARS | `45.500,75` | Comida / Supermercado |
+| Ahorro USD | Ingreso | Galicia sueldo | USD | `300` | Inversiones |
 | Transferencia | Transferencia | Galicia → Billetera | ARS | `50.000` | — |
+
+### Dataset para spending-by-category (módulo 11) — números redondos verificables
+
+Cargar estos 4 gastos ARS **en el mes corriente** (además del dataset anterior). Los `%`
+esperados valen si estos son los únicos gastos del mes en esas categorías; si hay otros,
+validar contra los **montos**, no contra los %.
+
+| Concepto | Categoría / Sub | Monto | Cuenta |
+|---|---|---:|---|
+| Súper redondo | Comida / Supermercado | `10.000` | Billetera |
+| Restaurante | Comida / Restaurante | `5.000` | Billetera |
+| Nafta | Transporte / Nafta | `4.000` | Galicia sueldo |
+| Cine | Entretenimiento / Cine | `1.000` | Billetera |
+
+**Esperado del set (total `20.000`):** Comida `15.000` (75%) · Transporte `4.000` (20%) ·
+Entretenimiento `1.000` (5%). Desglose Comida: Supermercado `10.000` / Restaurante `5.000`.
+
+### Dataset para recurrencias y reintegros
+
+| Pieza | Valor |
+|---|---|
+| Regla recurrente | "Gimnasio", gasto mensual `15.000` ARS, Billetera, categoría Salud, `start_date` = hoy |
+| Regla custom | "Verdulería", gasto cada `10` días, `5.000` ARS, Billetera, Comida |
+| Gasto con reintegro | "Farmacia", `20.000` ARS, Billetera, Salud/Farmacia, reintegro esperado `10.000` |
+| Conciliación | monto real `9.500` (REI-N2-01) · tope `12.000` (REI-N2-02) · real `25.000` > gasto (REI-N3-01) |
+
+### Dataset para Compartido (módulo 12 — requiere QA-B registrado)
+
+| Pieza | Valor |
+|---|---|
+| Gasto compartido ARS | "Cena", `10.000` ARS, Billetera de QA-A, split 50/50 → deuda QA-B→QA-A `5.000` |
+| Gasto compartido USD | "Streaming anual", `100` USD, Galicia de QA-A, split 50/50 → deuda USD `50` separada |
 
 ---
 
 ## Módulo 1 — Autenticación
 
 OTP de 8 dígitos, sin magic link. Mensajes localizados; sin filtrado de información.
+
+> **Corrida de usuario nuevo:** este módulo + Onboarding + DASH-N3-02 se ejecutan juntos al
+> registrar QA-B (que además habilita el módulo Compartido). Para re-probar con QA-A, resetear
+> según `memory/qa-user-reset-sql.md` (cuidado FKs RESTRICT: `period_payments` y Compartido).
 
 ### N1 · Básico
 
@@ -152,7 +219,7 @@ Wizard no salteable; provisión bimoneda; saldo inicial sin movimiento falso.
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
 | ONB-N2-01 | Separador de miles al tipear | USD | En saldo USD tipear `1` y tres ceros | Muestra `1.000` (= 1000 USD); con cuatro ceros `10.000`; **nunca** aparece un decimal fantasma (regresión del fix) | ⬜ | |
-| ONB-N2-02 | Decimal con coma | ARS | Tipear `125000,50` | Muestra `125.000,50`; un punto tipeado se trata como miles | ⬜ | |
+| ONB-N2-02 | Decimal con coma **o punto** | ARS | Tipear `125000,50`; luego probar `125000.50` (con la tecla `.`) | Ambos muestran `125.000,50`: la coma y la **tecla `.` (numpad)** producen el decimal. Pegar `1.000` sigue siendo 1000 (punto = miles solo en paste) | ⬜ | Cambio de comportamiento: antes el `.` tipeado se trataba como miles; ahora mapea a decimal (fix `0de436d`). |
 | ONB-N2-03 | Saldo inicial no genera movimiento | — | Tras onboarding, abrir movimientos de Billetera | Lista de movimientos **vacía**; el saldo viene de `initial_balance`, no de una transacción | ⬜ | |
 
 ### N3 · Avanzado / inusual
@@ -172,26 +239,27 @@ Creación **solo bancaria**; institución custom; herencia de avatar; guardas de
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| ACC-N1-01 | Alta de cuenta bancaria bimoneda | `Galicia sueldo`, Galicia, ARS `450.000`, USD `1.000` | Cuentas → crear → completar → guardar | Aparece en **Bancarias**; avatar con branding Galicia; ARS y USD por separado | ⬜ | |
-| ACC-N1-02 | Lista agrupada, sin tarjetas | — | Abrir `/accounts` | Sección **Efectivo** (Billetera) y **Bancarias** (Galicia); filas con avatar/nombre/saldos/acción; tarjetas de crédito **no** están acá | ⬜ | |
+| ACC-N1-01 | Alta de cuenta bancaria bimoneda | `Galicia sueldo`, Galicia, ARS `450.000`, USD `1.000` | Cuentas → crear → completar → guardar | Aparece en **Bancarias**; avatar con branding Galicia; ARS y USD por separado | ✅ | OK funcional. Observación de UX: ver ACC-N1-OBS (afordances de editar/eliminar y consistencia drawer vs ruta). |
+| ACC-N1-02 | Lista agrupada, sin tarjetas | — | Abrir `/accounts` | Sección **Efectivo** (Billetera) y **Bancarias** (Galicia); filas con avatar/nombre/saldos/acción; tarjetas de crédito **no** están acá | ✅ | OK funcional. Observación de UX en ACC-N1-OBS. |
+| ACC-N1-OBS | Afordances de editar/eliminar (UX) | — | `/accounts` y detalle de cuenta | (1) Fila: "Editar" texto → **ícono lápiz**. (2) Detalle: Editar/Archivar/Eliminar texto → **iconos** (lápiz/archivo/papelera). (3) **Inconsistencia:** "Editar" en la fila iba a la ruta `/edit` mientras el detalle abría drawer → ahora **ambos abren el mismo drawer** (drawer everywhere; `/edit` queda como fallback no-JS). (4) Eliminar sigue solo en el detalle (correcto). | 🔧 | Resuelto en `996bacf`. Pendiente verificación visual del usuario. |
 
 ### N2 · Intermedio
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| ACC-N2-01 | Crear **solo** permite Bancaria/débito | — | Abrir "crear cuenta" | **No** existe opción Efectivo; el form es bancario; el nombre es **opcional** (hereda del banco) | ⬜ | |
-| ACC-N2-02 | Institución custom desde el form | `Cooperativa Barrio Norte`, `#3A7D44`, `wallet` | En alta, crear institución desde el selector → crear `Cooperativa ahorro` | La institución queda disponible solo para QA-A; la cuenta usa el branding custom (color + icono) | ⬜ | |
-| ACC-N2-03 | Editar institución → avatar heredado en vivo | `Galicia sueldo` sin override | Editar → cambiar institución a Cooperativa Barrio Norte → guardar | Conserva nombre; el avatar pasa al branding nuevo por herencia, sin override manual | ⬜ | |
+| ACC-N2-01 | Crear **solo** permite Bancaria/débito | — | Abrir "crear cuenta" | **No** existe opción Efectivo; el form es bancario; el nombre es **opcional** (hereda del banco) | ✅ | OK. |
+| ACC-N2-02 | Institución custom desde el form | `Cooperativa Barrio Norte`, `#3A7D44`, `wallet` | En alta, crear institución desde el selector → crear `Cooperativa ahorro` | La institución queda disponible solo para QA-A; la cuenta usa el branding custom (color + icono) | ✅ | OK. |
+| ACC-N2-03 | Editar institución → avatar heredado en vivo | `Galicia sueldo` sin override | Editar → cambiar institución a Cooperativa Barrio Norte → guardar | Conserva nombre; el avatar pasa al branding nuevo por herencia, sin override manual | 🔧 | Edición funciona, pero el selector no abría el listado al click (había que borrar la institución actual primero). Resuelto en `078ba85`: el dropdown abre al click y lista todas las instituciones para cambiar. |
 | ACC-N2-04 | Borrar cuenta bancaria sin historial | `Cuenta descartable` (bank, sin movimientos) | Crear → detalle → eliminar | La UI ofrece **Eliminar** (no Archivar); borrado permanente; desaparece de la lista | ⬜ | |
 
 ### N3 · Avanzado / inusual
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| ACC-N3-01 | No desactivar moneda con saldo ≠ 0 | Billetera USD `250` | Editar Billetera → intentar desactivar USD | Rechazado; USD sigue activa; mensaje **localizado** que orienta | ⬜ | |
-| ACC-N3-02 | Archivar cuenta **con** movimientos | Galicia (con movimientos) | Detalle → acción | La UI ofrece **Archivar** (no Eliminar); al archivar puede reactivarse | ⬜ | |
-| ACC-N3-03 | Botón "agregar movimiento" es de la librería | dentro de una cuenta | Abrir detalle de cuenta | El botón usa el componente `Button` (primario emerald + ícono), consistente con el dashboard | ⬜ | |
-| ACC-N3-04 | Nombre demasiado largo | >50 chars | Intentar guardar | Validación localizada; no persiste | ⬜ | |
+| ACC-N3-01 | No desactivar moneda con saldo ≠ 0 | Billetera USD `250` | Editar Billetera → intentar desactivar USD | Rechazado; USD sigue activa; mensaje **localizado** que orienta | ⛔ | No aplica: por decisión de **bimoneda por defecto** no hay UI para desactivar monedas en ninguna cuenta; ARS+USD están siempre activas. El invariante "USD sigue activa" se cumple por diseño (no por un guard de rechazo). |
+| ACC-N3-02 | Archivar cuenta **con** movimientos | Galicia (con movimientos) | Detalle → acción | La UI ofrece **Archivar** (no Eliminar); al archivar puede reactivarse | ✅ | OK. |
+| ACC-N3-03 | Botón "agregar movimiento" es de la librería | dentro de una cuenta | Abrir detalle de cuenta | El botón usa el componente `Button` (primario emerald + ícono), consistente con el dashboard | 🔧 | El botón del **empty-state** ("Todavía no hay movimientos") era **negro** (`bg-primary` crudo). Resuelto en `16a1364`: ahora usa el `Button` (emerald + ícono Plus). Afecta empty-state en detalle de cuenta y en transactions. |
+| ACC-N3-04 | Nombre demasiado largo | >50 chars | Intentar guardar | Validación localizada; no persiste | ✅ | El input corta en 50 chars (`maxLength`), no deja exceder al tipear → válido/mejor que validar al guardar. |
 
 ---
 
@@ -201,22 +269,23 @@ Creación **solo bancaria**; institución custom; herencia de avatar; guardas de
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| DASH-N1-01 | Hero bimoneda contra dataset | dataset base sin movimientos | Abrir dashboard | ARS `$ 575.000,50` y USD `u$s 1.250,00`; ARS primario, USD subordinado; sin conversión ni total unificado | ⬜ | |
+| DASH-N1-01 | Hero bimoneda contra dataset | dataset base sin movimientos | Abrir dashboard | ARS `$ 575.000,50` y USD `u$s 1.250,00`; ARS primario, USD subordinado; sin conversión ni total unificado | ✅ | Importes difieren del doc solo por dataset distinto cargado en esta corrida; lógica bimoneda OK. |
 
 ### N2 · Intermedio
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| DASH-N2-01 | Toggle del ojo | — | Activar ojo → recorrer → salir a Cuentas y volver | Enmascara importes sin ocultar labels; al volver se ven; **no persiste** fuera del dashboard | ⬜ | |
-| DASH-N2-02 | Hero con datos | tras cargar movimientos | Volver al dashboard | Totales reflejan movimientos por moneda; sigue sin sumar monedas | ⬜ | |
-| DASH-N2-03 | Navegador de mes | meses con/sin datos | Usar prev/next | Cambia el período; deshabilita extremos sin datos | ⬜ | |
+| DASH-N2-01 | Toggle del ojo | — | Activar ojo → recorrer → salir a Cuentas y volver | Enmascara importes sin ocultar labels; **el estado persiste** (navegación + recarga) hasta que el user lo vuelva a cambiar | 🔧 | **Cambio de producto** (antes: "no persiste fuera del dashboard"). El estado vivía en estado local del dashboard → se reseteaba al volver. Resuelto en `d8f2644`: persiste como cookie per-device (como sidebar/centavos); el server renderiza el estado correcto sin flash de importes reales. |
+| DASH-N2-02 | Hero con datos (ambas monedas) | al menos **un movimiento ARS** y **uno USD** (el tipo da igual: ej. gasto Súper 45.500,75 ARS + ingreso Ahorro 300 USD en Galicia) | Volver al dashboard | El hero ARS varía por el movimiento ARS y el USD por el USD, **cada ledger por separado**; nunca se suman ni convierten | ⬜ | Caso reescrito: antes pedía verificar "por moneda" pero el dataset sugerido era solo ARS → no se podía comprobar la separación. Lo que importa es tener 1 movimiento por moneda; ingreso o gasto es indistinto. |
+| DASH-N2-03 | Navegador de mes | meses con/sin datos | Usar prev/next | Cambia el período; deshabilita extremos sin datos | ✅ | El navegador de mes vive **dentro del gráfico de balance mensual** (no es un control global aparte). Funciona OK. |
+| DASH-N2-04 | Bimoneda en "Balance del mes" y "En qué se fue" | movimientos ARS y USD del mes | Cargar gasto USD y mirar ambas secciones | Ambas muestran el USD por separado del ARS, sin sumar ni convertir | 🔧 | **Bug encontrado:** "Balance del mes" filtraba solo ARS (la query con `.eq('currency_code','ARS')`) y "En qué se fue" descartaba el USD que la query ya devolvía → el gasto USD no aparecía (aunque "Para gastar" sí lo reflejaba). Resuelto en `a00b32f`: gráfico de doble eje (ARS izq, USD der punteado) + totales USD subordinados; teaser con lista USD subordinada. USD se muestra solo si hay actividad USD. |
 
 ### N3 · Avanzado / inusual
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| DASH-N3-01 | Desktop vs mobile-web | `1440x900` y `390x844` | Abrir en ambos | Desktop: hero arriba + dos columnas, **sin FAB**, "Nuevo movimiento" en header. Mobile-web: secciones apiladas, **FAB** y sin botón en header | ⬜ | cross-platform parcial |
-| DASH-N3-02 | Tarjeta de bienvenida (sin movimientos) | usuario nuevo | Dashboard recién onboarded | CTA "primer movimiento" usa el componente `Button` | ⬜ | |
+| DASH-N3-01 | Desktop vs mobile-web | `1440x900` y `390x844` (o emulación de un teléfono en DevTools) | Abrir en ambos | Desktop: hero arriba + dos columnas, **sin FAB**, "Nuevo movimiento" en header. Mobile-web: secciones apiladas, **FAB** y sin botón en header | 🔧 | Botones OK en ambos viewports. Defecto menor: en mobile el navegador de mes partía el año a una segunda línea ("junio" / "2026"). Resuelto en `74c9a4b` (`whitespace-nowrap`; el título de la card trunca). |
+| DASH-N3-02 | Tarjeta de bienvenida (sin movimientos) | usuario nuevo | Dashboard recién onboarded | CTA "primer movimiento" usa el componente `Button` | ⬜ | Pendiente: se ejecuta cuando se registre un usuario nuevo (junto con Auth/Onboarding). |
 
 ---
 
@@ -226,14 +295,14 @@ Creación **solo bancaria**; institución custom; herencia de avatar; guardas de
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| SET-N1-01 | Toggle de centavos | — | Settings → desactivar centavos → dashboard → reactivar y recargar | Oculta/muestra centavos según preferencia; **persiste** tras recargar; el ledger no cambia | ⬜ | |
-| SET-N1-02 | Centavos ON muestra 2 decimales | ARS con decimales | Activar centavos | ARS muestra **2 decimales** siempre (ej. `$ 125.000,50`), no uno solo (regresión del fix) | ⬜ | |
+| SET-N1-01 | Toggle de centavos | — | Settings → desactivar centavos → dashboard → reactivar y recargar | Oculta/muestra centavos según preferencia; **persiste** tras recargar; el ledger no cambia | ✅ | OK. |
+| SET-N1-02 | Centavos ON muestra 2 decimales | ARS con decimales | Activar centavos | ARS muestra **2 decimales** siempre (ej. `$ 125.000,50`), no uno solo (regresión del fix) | ✅ | OK. |
 
 ### N2 · Intermedio
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| SET-N2-01 | Cambio de idioma a inglés | — | Cambiar a English → recorrer dashboard/Cuentas/Settings → recargar | Labels de producto en inglés; **nombres cargados por el usuario** (ej. `Galicia sueldo`) no se traducen; persiste (web: cookie) | ⬜ | |
+| SET-N2-01 | Cambio de idioma a inglés | — | Cambiar a English → recorrer dashboard/Cuentas/Settings → recargar | Labels de producto en inglés; **nombres cargados por el usuario** (ej. `Galicia sueldo`) no se traducen; las **categorías/subcategorías de sistema SÍ** deberían traducirse; persiste (web: cookie) | ⚠️ | Todo traduce OK salvo **categorías/subcategorías de sistema**: el helper `getCategoryName` y las claves i18n ya existen pero solo se usan en Settings; el resto (detalle, lista, "en qué se fue", spending, filtros) muestra el `name` español crudo, y `toFinancialMovement` no arrastra `canonical_name`/`user_id`. Cambio cross-cutting al contrato de datos → **candidato a change dedicado**, no fix de esta tanda. Decisión del usuario pendiente. |
 
 ### N3 · Avanzado / inusual
 
@@ -249,13 +318,13 @@ Creación **solo bancaria**; institución custom; herencia de avatar; guardas de
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| SHELL-N1-01 | Navegación desktop | `1440x900` | Recorrer Dashboard/Cuentas/Tarjetas/Movimientos/Settings | El item activo del sidebar marca la ruta actual | ⬜ | |
+| SHELL-N1-01 | Navegación desktop | `1440x900` | Recorrer Dashboard/Cuentas/Tarjetas/Movimientos/Settings | El item activo del sidebar marca la ruta actual | ✅ | OK. |
 
 ### N2 · Intermedio
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| SHELL-N2-01 | Colapso de sidebar persiste | desktop | Colapsar sidebar → recargar | El colapso se mantiene tras recarga | ⬜ | |
+| SHELL-N2-01 | Colapso de sidebar persiste | desktop | Click en el **botoncito circular con flecha `‹`** que flota sobre el borde derecho del sidebar (arriba) → el sidebar se achica a solo iconos → recargar la página | El colapso se mantiene tras recarga (cookie); con `›` vuelve a expandirse | ⬜ | Pasos aclarados: "colapsar" = achicar el sidebar a modo solo-iconos con el toggle del borde. |
 | SHELL-N2-02 | Hamburger mobile-web | `390x844` | Abrir hamburger → Escape | Drawer full-screen; Escape lo cierra; sin sidebar desktop | ⬜ | |
 
 ### N3 · Avanzado / inusual
@@ -274,28 +343,28 @@ Ingresos/gastos cash y bank, transferencia, ajuste, cambio de moneda, filtros, d
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| MOV-N1-01 | Ingreso ARS | Sueldo `800.000` en Galicia | Nuevo movimiento → ingreso → guardar | Aparece en la lista; saldo ARS de la cuenta sube; importe con miles y color de ingreso | ⬜ | |
-| MOV-N1-02 | Gasto ARS | Súper `45.500,75` en Billetera | Nuevo gasto → guardar | Saldo baja; importe con color de gasto; decimal con coma | ⬜ | |
-| MOV-N1-03 | Movimiento en USD | Ahorro USD `300` en Galicia | Nuevo ingreso USD | Impacta el ledger USD; no toca ARS | ⬜ | |
+| MOV-N1-01 | Ingreso ARS | Sueldo `800.000` en Galicia (categoría **Sueldo**) | Nuevo movimiento → ingreso → guardar | Aparece en la lista; saldo ARS de la cuenta sube; importe con miles y color de ingreso | ⬜ | Si ya se cargó durante la corrida del dashboard, validar sobre el existente. |
+| MOV-N1-02 | Gasto ARS | Súper `45.500,75` en Billetera (**Comida/Supermercado**) | Nuevo gasto → guardar (probar el decimal con la tecla `.` del numpad) | Saldo baja; color de gasto; decimal con coma o tecla `.` (fix `0de436d`) | ⬜ | Ídem nota anterior. |
+| MOV-N1-03 | Movimiento en USD | Ahorro USD `300` en Galicia (**Inversiones**) | Nuevo ingreso USD | Impacta el ledger USD; no toca ARS | ⬜ | Ídem. |
 
 ### N2 · Intermedio
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| MOV-N2-01 | Editar movimiento | Súper | Abrir detalle → editar monto/categoría → guardar | Cambios persisten; saldos recalculan | ⬜ | |
-| MOV-N2-02 | Borrar movimiento | Súper | Detalle → borrar | Desaparece; saldo se revierte | ⬜ | |
-| MOV-N2-03 | Filtros y búsqueda | varios movimientos | Filtrar por tipo/categoría/fecha; buscar texto | Lista filtra correctamente; búsqueda matchea descripción | ⬜ | |
-| MOV-N2-04 | Transferencia entre cuentas | Galicia → Billetera ARS `50.000` | Nuevo → transferencia | Sale de origen, entra a destino; no cuenta como gasto/ingreso neto | ⬜ | |
-| MOV-N2-05 | Detalle de movimiento | cualquiera | Abrir detalle | Muestra campos correctos según tipo (cuenta, categoría, fecha contable AR) | ⬜ | |
+| MOV-N2-01 | Editar movimiento | Supermercado (`45.500,75`) | Abrir detalle → editar: monto a `46.000` y subcategoría a Restaurante → guardar | Cambios persisten; el saldo de Billetera recalcula (−499,25 adicionales) | ⬜ | |
+| MOV-N2-02 | Borrar movimiento | el gasto "Cine" `1.000` del dataset de spending | Detalle → borrar | Desaparece; saldo de Billetera se revierte (+`1.000`); el % de spending recalcula | ⬜ | Borrar Cine y no Supermercado, para no romper el dataset de los demás casos. |
+| MOV-N2-03 | Filtros y búsqueda | dataset cargado | (1) Buscar texto `Súper`; (2) filtrar tipo = Gasto; (3) categoría = Comida; (4) rango = mes actual | Cada filtro reduce la lista correctamente; la búsqueda matchea descripción; combinados se acumulan | ⬜ | |
+| MOV-N2-04 | Transferencia entre cuentas | Galicia → Billetera ARS `50.000` | Nuevo → transferencia | Sale de origen, entra a destino; no cuenta como gasto/ingreso neto (el balance del mes no la suma) | ⬜ | |
+| MOV-N2-05 | Detalle de movimiento | uno por tipo: Sueldo (ingreso), Supermercado (gasto), la transferencia | Abrir detalle de cada uno | Muestra campos correctos según tipo (cuenta, categoría, fecha contable AR); acciones editar/eliminar como iconos | ⬜ | |
 
 ### N3 · Avanzado / inusual
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| MOV-N3-01 | Aviso de saldo negativo (no bloqueante) | gasto > saldo | Cargar gasto que deja negativo | Aparece **aviso** no bloqueante; permite guardar igual | ⬜ | |
-| MOV-N3-02 | Ajuste de saldo | reconciliación | Crear ajuste | Ajusta el saldo sin ser ingreso/gasto común | ⬜ | |
-| MOV-N3-03 | Cambio de moneda (exchange) | ARS↔USD con cotización | Nuevo → exchange → cotización | Crea las dos piernas; respeta cotización; no mezcla ledgers | ⬜ | |
-| MOV-N3-04 | Orden de display estable | misma fecha | Cargar varios el mismo día | Orden consistente y legible | ⬜ | |
+| MOV-N3-01 | Aviso de saldo negativo (no bloqueante) | gasto ARS por **más que el saldo actual de Billetera** (mirar el saldo y sumarle `10.000`) | Cargar el gasto → observar → guardar igual → borrarlo después | Aparece **aviso** no bloqueante antes de guardar; permite guardar; el saldo queda negativo y se muestra | ⬜ | Borrar el gasto al terminar para no contaminar los demás casos. |
+| MOV-N3-02 | Ajuste de saldo | Billetera ARS | Nuevo → ajuste → fijar el saldo (ej. redondearlo al millar más cercano) | Ajusta el saldo sin ser ingreso/gasto común; en la lista se distingue como ajuste | ⬜ | |
+| MOV-N3-03 | Cambio de moneda (exchange) | vender `100` USD de Galicia a cotización `1.250` | Nuevo → cambio de moneda → cotización `1.250` | Crea las dos piernas: −`u$s 100` y +`$ 125.000` en Galicia; respeta cotización; no mezcla ledgers | ⬜ | |
+| MOV-N3-04 | Orden de display estable | 3 gastos hoy mismo: `1.000`, `2.000`, `3.000` (descr. A, B, C) | Cargarlos seguidos → mirar la lista → recargar | Orden consistente y estable entre recargas (no se reordenan al azar) | ⬜ | Borrarlos al terminar. |
 
 ---
 
@@ -307,23 +376,23 @@ Períodos, consumos, cuotas, USD con cotización, pago de resumen.
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| CARD-N1-01 | Alta de tarjeta | `Visa Galicia`, Visa, límite `500.000` | Tarjetas → crear → guardar | Aparece en Tarjetas (no en Cuentas); saldo inicial 0; período actual creado | ⬜ | |
-| CARD-N1-02 | Consumo simple | gasto ARS en la tarjeta | Nuevo gasto con tarjeta | Se asigna al período correcto; suma a la deuda del período | ⬜ | |
+| CARD-N1-01 | Alta de tarjeta | `Visa Galicia`, Visa, límite `500.000` | Tarjetas → crear → guardar | Aparece en Tarjetas (no en Cuentas); saldo inicial 0; período actual creado | ✅ | OK. |
+| CARD-N1-02 | Consumo simple | gasto ARS en la tarjeta | Nuevo gasto con tarjeta | Se asigna al período correcto; suma a la deuda del período | ✅ | OK. |
 
 ### N2 · Intermedio
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| CARD-N2-01 | Consumo en cuotas | gasto ARS en N cuotas | Cargar con cuotas | Genera fila padre off-ledger + cuotas; las cuotas caen en períodos sucesivos | ⬜ | |
-| CARD-N2-02 | Consumo en USD con cotización | gasto USD + `fx_rate` | Cargar gasto USD en tarjeta | Pide cotización; el campo de cotización **no** agrupa miles ni fuerza 2 decimales (admite 6) | ⬜ | |
-| CARD-N2-03 | Pago de resumen | período con deuda | Pagar período desde otra cuenta | Crea el pago; el centavo no se pierde (input es text/decimal, no number) | ⬜ | |
+| CARD-N2-01 | Consumo en cuotas | gasto ARS en N cuotas | Cargar con cuotas | Genera fila padre off-ledger + cuotas; las cuotas caen en períodos sucesivos; "Cuotas en curso" muestra nombre y **fecha de compra** correctos; la lista de movimientos marca la compra con chip "N cuotas" | ✅ | Funcional OK tras fixes: header `168a679`/`57284f4`; fecha de compra `57284f4` (embed self-referencial → stitch); chip "N cuotas" en listas `1a3d0c2` (antes no había referencia a cuotas en el listado). |
+| CARD-N2-02 | Consumo en USD | gasto USD `50` en Visa Galicia | Cargar gasto USD en tarjeta | **Comportamiento objetivo (decidido en QA):** el alta NO pide cotización — la cotización real es la del día de pago del resumen y se captura ahí. Hoy el alta la exige (comportamiento viejo) | ⚠️ | Decisión de producto: la cotización se mueve al pago del resumen → change dedicado `card-fx-at-statement-payment` (branch `feat/card-fx-at-payment`). Reescribir/ejecutar al implementarlo. |
+| CARD-N2-03 | Pago de resumen | `Master QA Pagos` (ver dataset: período cerrado 01/06 con deuda `10.000,50`) | Detalle de la tarjeta → período a pagar → pagar desde `Galicia sueldo` | Crea el gasto de pago en la cuenta; el período queda pago; **el centavo no se pierde** (input text/decimal, no number); pide fechas del próximo período | ⬜ | Caso reescrito: con la Visa Galicia era imposible (período abierto hasta 28/06). Requiere crear la 2ª tarjeta del dataset. |
 
 ### N3 · Avanzado / inusual
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| CARD-N3-01 | Período estimado vs cerrado | fechas de cierre | Recorrer períodos | Distingue estimado de cerrado; fechas contables AR | ⬜ | |
-| CARD-N3-02 | Borrar consumo con cuotas | consumo en cuotas | Intentar borrar | Maneja consistencia (padre + cuotas) sin dejar huérfanos | ⬜ | |
+| CARD-N3-01 | Período estimado vs cerrado | `Master QA Pagos` tras pagar CARD-N2-03 | "Ver todos los resúmenes" → recorrer períodos | Distingue período pagado / cerrado / en curso / estimado; fechas contables AR | ⬜ | Se ejecuta después de CARD-N2-03 (el pago crea el período siguiente y deja historial para comparar estados). |
+| CARD-N3-02 | Borrar consumo con cuotas | una de las compras en cuotas ya cargadas en Visa Galicia | Detalle del movimiento (compra padre) → eliminar | Maneja consistencia (padre + cuotas) sin dejar huérfanos; la deuda de los períodos se recalcula | ⬜ | Usar la compra de 6 cuotas (la de 3 conservarla para regresiones de "Cuotas en curso"). |
 
 ---
 
@@ -333,22 +402,22 @@ Períodos, consumos, cuotas, USD con cotización, pago de resumen.
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| REC-N1-01 | Crear recurrencia directa | gasto mensual, `start_date` hoy | Crear regla desde cero | **Primera instancia en `start_date`** (no en start+intervalo) | ⬜ | |
-| REC-N1-02 | Confirmar instancia pendiente | recurrencia activa | Bloque de pendientes → confirmar | Genera el movimiento real; sale de pendientes | ⬜ | |
+| REC-N1-01 | Crear recurrencia directa | regla "Gimnasio" (ver dataset: `15.000` mensual, Billetera, Salud, start hoy) | Crear regla desde cero | **Primera instancia pendiente HOY** (en `start_date`, no en start+intervalo) | ⬜ | |
+| REC-N1-02 | Confirmar instancia pendiente | la instancia de hoy de "Gimnasio" | Bloque de pendientes → confirmar | Genera el movimiento real (`15.000` en Billetera, marcado recurrente); sale de pendientes | ⬜ | |
 
 ### N2 · Intermedio
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| REC-N2-01 | Editar monto al confirmar | instancia pendiente | Editar monto → confirmar | Usa el override; no rompe la regla | ⬜ | |
-| REC-N2-02 | Recurrencia USD en tarjeta con fx | pendiente USD card | Cargar cotización → confirmar | El campo fx admite coma/decimales; no agrupa miles | ⬜ | |
+| REC-N2-01 | Editar monto al confirmar | la próxima instancia de "Gimnasio" (o crear regla "Verdulería" del dataset y usar la de hoy) | Editar monto a `16.000` → confirmar | Usa el override (`16.000`); la regla sigue en `15.000` para las siguientes | ⬜ | |
+| REC-N2-02 | Recurrencia USD en tarjeta con fx | pendiente USD card | Cargar cotización → confirmar | El campo fx admite coma/decimales; no agrupa miles | ⛔ | En pausa: el change `card-fx-at-statement-payment` elimina la cotización del confirm (se captura al pagar el resumen). Reescribir y ejecutar al implementarlo. |
 
 ### N3 · Avanzado / inusual
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| REC-N3-01 | Frecuencia custom | cada N días/meses | Crear con frecuencia custom | Genera instancias en el intervalo correcto | ⬜ | |
-| REC-N3-02 | Pausar / reactivar | regla activa | Cambiar estado | Deja de generar al pausar; retoma al reactivar | ⬜ | |
+| REC-N3-01 | Frecuencia custom | regla "Verdulería" (ver dataset: cada `10` días, `5.000`, start hoy) | Crear con frecuencia custom → mirar próximas fechas | Instancia hoy y la siguiente a +10 días (no mensual) | ⬜ | |
+| REC-N3-02 | Pausar / reactivar | regla "Gimnasio" | Pausar → verificar que no genera → reactivar | Deja de generar al pausar; retoma al reactivar sin duplicar instancias | ⬜ | |
 
 ---
 
@@ -358,20 +427,20 @@ Períodos, consumos, cuotas, USD con cotización, pago de resumen.
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| REI-N1-01 | Reintegro simple | gasto con reintegro esperado | Cargar gasto marcando reintegro | Queda como pendiente de reintegro con monto estimado | ⬜ | |
+| REI-N1-01 | Reintegro simple | gasto "Farmacia" (ver dataset: `20.000`, Salud/Farmacia, reintegro esperado `10.000`) | Cargar gasto marcando reintegro | Queda como pendiente de reintegro con monto estimado `10.000` | ⬜ | |
 
 ### N2 · Intermedio
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| REI-N2-01 | Conciliar reintegro | pendiente | Bloque pendientes → conciliar con monto real | Ajusta el neto; sale de pendientes | ⬜ | |
-| REI-N2-02 | Cap de reintegro | reintegro con tope | Cargar con cap | Respeta el tope; no excede | ⬜ | |
+| REI-N2-01 | Conciliar reintegro | el pendiente de "Farmacia" | Bloque pendientes → conciliar con monto real `9.500` | Ajusta el neto (gasto efectivo `10.500`); sale de pendientes | ⬜ | |
+| REI-N2-02 | Cap de reintegro | nuevo gasto `30.000` con reintegro esperado/tope `12.000` | Cargar con cap → intentar conciliar por `15.000` | Respeta el tope `12.000`; no permite exceder | ⬜ | |
 
 ### N3 · Avanzado / inusual
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| REI-N3-01 | Reintegro mayor al gasto | monto real > gasto | Conciliar | Maneja el caso sin saldo inconsistente | ⬜ | |
+| REI-N3-01 | Reintegro mayor al gasto | nuevo gasto `20.000` con reintegro esperado `20.000`; conciliar con real `25.000` | Conciliar | Maneja el caso sin saldo inconsistente (rechaza el exceso o lo registra como neto positivo, pero **consistente** y localizado) | ⬜ | |
 
 ---
 
@@ -381,15 +450,15 @@ Períodos, consumos, cuotas, USD con cotización, pago de resumen.
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| SPEND-N1-01 | Gasto por categoría | varios gastos | Abrir spending-by-category | Agrupa por categoría; montos coinciden con el dataset | ⬜ | |
-| SPEND-N1-02 | Balance mensual | ingresos y gastos del mes | Ver balance del mes | Ingreso − gasto por moneda, sin convertir | ⬜ | |
+| SPEND-N1-01 | Gasto por categoría | **dataset de spending** (4 gastos redondos, ver "Datos") | Abrir spending-by-category | Agrupa por categoría; con solo ese set: Comida `15.000` (75%) · Transporte `4.000` (20%) · Entretenimiento `1.000` (5%) | ⬜ | Si hay otros gastos del mes en esas categorías, validar montos (no %). |
+| SPEND-N1-02 | Balance mensual | ingresos y gastos del mes cargados | Ver balance del mes | Ingreso − gasto **por moneda**, sin convertir; coincide con los totales del gráfico del dashboard | ⬜ | |
 
 ### N2 · Intermedio
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| SPEND-N2-01 | Desglose por subcategoría | gastos con subcategoría | Expandir categoría | Muestra breakdown por subcategoría | ⬜ | |
-| SPEND-N2-02 | Filtro por subcategoría | — | Filtrar | La lista y el total responden al filtro | ⬜ | |
+| SPEND-N2-01 | Desglose por subcategoría | dataset de spending | Expandir Comida | Breakdown: Supermercado `10.000` / Restaurante `5.000` | ⬜ | |
+| SPEND-N2-02 | Filtro por subcategoría | dataset de spending | Filtrar por Comida/Supermercado | La lista muestra solo Súper redondo (+ Supermercado del dataset base si está) y el total responde | ⬜ | |
 
 ---
 
@@ -398,19 +467,22 @@ Períodos, consumos, cuotas, USD con cotización, pago de resumen.
 Hogar de 2 miembros, gasto compartido = transacción real + split, deuda derivada por moneda,
 liquidación (handshake liviano), primer caso de RLS cross-user.
 
+> **Requiere QA-B registrado** (corrida de usuario nuevo: Auth + Onboarding de QA-B primero).
+> Dataset en "Datos → Dataset para Compartido".
+
 ### N1 · Básico
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
 | SHA-N1-01 | Crear hogar e invitar | QA-A + QA-B | Crear hogar → invitar → QA-B acepta | Hogar con 2 miembros; split por defecto | ⬜ | |
-| SHA-N1-02 | Gasto compartido | gasto ARS dividido | QA-A carga gasto compartido | Crea transacción real + split por miembro; deuda derivada por moneda | ⬜ | |
+| SHA-N1-02 | Gasto compartido | "Cena" `10.000` ARS, Billetera de QA-A, split 50/50 | QA-A carga gasto compartido | Crea transacción real + split por miembro; deuda QA-B→QA-A `5.000` ARS | ⬜ | |
 
 ### N2 · Intermedio
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| SHA-N2-01 | Deuda por moneda | gastos ARS y USD | Ver deuda | Deuda separada por moneda; nunca sumada/convertida | ⬜ | |
-| SHA-N2-02 | Liquidación | deuda pendiente | QA-A liquida → QA-B asigna cuenta | Dos movimientos `settlement`; handshake liviano; deuda se salda | ⬜ | |
+| SHA-N2-01 | Deuda por moneda | + "Streaming anual" `100` USD split 50/50 | Ver deuda | Deuda separada: `5.000` ARS y `u$s 50`; nunca sumada/convertida | ⬜ | |
+| SHA-N2-02 | Liquidación | la deuda ARS pendiente | QA-A liquida → QA-B asigna cuenta | Dos movimientos `settlement`; handshake liviano; la deuda ARS se salda (la USD sigue) | ⬜ | |
 
 ### N3 · Avanzado / inusual
 
@@ -442,11 +514,44 @@ liquidación (handshake liviano), primer caso de RLS cross-user.
 | 2026-06-02 | Crear cuenta | Solo Bancaria/débito (sin Efectivo); nombre opcional | `4b26357` |
 | 2026-06-02 | CTAs | 3 CTAs primarios migrados a `Button` | `608cb48` |
 | 2026-06-02 | Input dinero | Agrupado robusto (sin decimal fantasma al tipear montos grandes) | `d74f2d8` |
+| 2026-06-03 | ACC-N1-OBS | Iconos lápiz/papelera/archivo en fila y detalle; "Editar" de la fila abre el drawer compartido (ruta `/edit` = fallback no-JS); eliminar solo en detalle | `996bacf` |
+| 2026-06-03 | ACC-N2-03 | El selector de institución abre el listado al click aunque haya una ya seleccionada (antes había que borrar el texto); lista todas para cambiar + resalta la actual | `078ba85` |
+| 2026-06-03 | ACC-N3-03 | Empty-state de movimientos usa el `Button` de la librería (emerald + ícono) en vez de `bg-primary` crudo (negro) | `16a1364` |
+| 2026-06-03 | DASH-N2-01 | El toggle del ojo (esconder importes) persiste per-device (cookie) en vez de resetearse al navegar; sin flash de importes reales | `d8f2644` |
+| 2026-06-03 | Input dinero | La tecla `.` (incl. numpad) ahora produce el separador decimal en campos agrupados; antes se descartaba y convertía `45500.75` en `4550075` | `0de436d` |
+| 2026-06-03 | Detalle de movimiento | Editar/Eliminar pasan de estar tras el kebab `⋯` a iconos directos (lápiz/papelera), consistente con cuentas; borrar sigue con diálogo de confirmación | `1140f31` |
+| 2026-06-03 | DASH-N2-04 | Dashboard bimoneda: "Balance del mes" pasa a gráfico de doble eje (ARS izq / USD der) + totales USD; "En qué se fue" muestra lista USD subordinada. Antes el USD se filtraba/descartaba | `a00b32f` |
+| 2026-06-03 | DASH-N3-01 | El label del navegador de mes no parte el año a otra línea en mobile (`whitespace-nowrap`) | `74c9a4b` |
+| 2026-06-03 | SET-N2-01 | Traducción de categorías de sistema → change dedicado `translate-system-categories-display` (branch `feat/i18n-system-categories`); es conformance fix del spec `categories` ya existente | (propuesta) |
+| 2026-06-03 | CARD-N2-01 (obs.) | Detalle de tarjeta: botón "Registrar consumo" + ícono lápiz en el header (antes no había forma de agregar consumo con historial y "Editar" era texto al pie) | `168a679` |
+| 2026-06-03 | CARD-N2-01 | "Cuotas en curso": fecha de compra y nombre correctos (el embed self-referencial del parent fallaba → mostraba la fecha de la última cuota y el nombre fallback); lápiz apilado abajo del botón | `57284f4` |
+| 2026-06-03 | CARD-N2-01 (obs.) | Las compras en cuotas muestran chip "N cuotas" en las listas de movimientos (antes ninguna referencia fuera de la vista de período) | `1a3d0c2` |
+| 2026-06-03 | CARD-N2-02 / REC-N2-02 | La cotización USD se mueve del alta de consumo al pago del resumen → change dedicado `card-fx-at-statement-payment` (branch `feat/card-fx-at-payment`) | (propuesta) |
+| 2026-06-03 | Cierre tanda 2 | Refuerzo del doc: dataset de spending con números redondos, 2ª tarjeta con período cerrado para CARD-N2-03 (antes era imposible de probar), categorías corregidas al seed real (Comida, no "Alimentos"), datos concretos en MOV/REC/REI/SHA, corrida de usuario nuevo agrupada | (doc) |
 
 ---
 
 ## Próximos pasos / huecos conocidos
 
+**Pendiente de ejecutar (con datasets ya preparados en este doc):**
+
+- **Corrida de usuario nuevo (QA-B):** Módulo 1 (Auth) + Módulo 2 (Onboarding) + DASH-N3-02 +
+  Módulo 12 (Compartido). Todo en una sesión: registrar QA-B → onboarding → hogar con QA-A.
+- **Módulo 6 N2/N3:** colapso de sidebar (pasos ya aclarados), hamburger mobile, loading/error.
+- **Módulo 7 (Movimientos):** completo — N1 puede validarse sobre lo ya cargado.
+- **Módulo 8:** CARD-N2-03 + N3 con la 2ª tarjeta `Master QA Pagos` (dataset nuevo).
+- **Módulo 9 (Recurrencias):** todo salvo REC-N2-02 (⛔ hasta el change de FX).
+- **Módulos 10, 11, 13:** datasets concretos agregados en esta versión.
+- **DASH-N2-02:** re-correr con 1 movimiento por moneda (caso reescrito).
+
+**Changes dedicados surgidos de esta tanda (propuestos, sin implementar):**
+
+- `translate-system-categories-display` (branch `feat/i18n-system-categories`): traducir
+  categorías/subcategorías de sistema en todos los displays — conformance del spec `categories`.
+- `card-fx-at-statement-payment` (branch `feat/card-fx-at-payment`): la cotización USD se
+  captura al pagar el resumen, no al cargar el consumo. Desbloquea CARD-N2-02 y REC-N2-02.
+
+**Huecos estructurales:**
+
 - Paridad mobile (cards, drawer de movimientos, accounts) está diferida.
 - Casos de concurrencia/optimistic UI no cubiertos en profundidad.
-- Falta dataset reproducible para spending-by-category con números "redondos" verificables.

@@ -42,10 +42,16 @@ export const BankSelector = ({
   const [mode, setMode] = useState<'list' | 'create'>('list')
   const [createPrefill, setCreatePrefill] = useState('')
 
-  const filtered = institutions.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()))
-  const noMatches = filtered.length === 0 && search.trim().length > 0
-  const showDropdown = focused && !institutionId && mode === 'list'
   const selected = institutionId ? institutions.find((i) => i.id === institutionId) ?? null : null
+  // While the field still shows the already-selected institution's name (no new
+  // query typed yet), list everything so a click opens the full list to switch;
+  // once the user starts typing, filter by the query.
+  const isPristineSelection = selected != null && search.trim() === selected.name
+  const filtered = isPristineSelection
+    ? institutions
+    : institutions.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()))
+  const noMatches = filtered.length === 0 && search.trim().length > 0
+  const showDropdown = focused && mode === 'list'
 
   const openCreate = (prefill: string) => {
     setCreatePrefill(prefill)
@@ -86,7 +92,11 @@ export const BankSelector = ({
         <input
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          onFocus={() => setFocused(true)}
+          onFocus={(e) => {
+            setFocused(true)
+            // Pre-select the prefilled name so typing replaces it when switching.
+            if (isPristineSelection) e.target.select()
+          }}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           placeholder={placeholder}
           aria-label={label}
@@ -104,7 +114,9 @@ export const BankSelector = ({
                 onSelect(inst)
                 setFocused(false)
               }}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-page"
+              className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-page ${
+                inst.id === institutionId ? 'bg-page font-semibold' : ''
+              }`}
             >
               <span
                 className="inline-flex size-6 shrink-0 items-center justify-center rounded text-[10px] font-semibold text-white"

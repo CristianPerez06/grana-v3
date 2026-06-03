@@ -15,6 +15,7 @@ import { getShowCents } from '@/lib/preferences'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { CardActions } from './_components/card-actions'
+import { CardHeaderActions } from './_components/card-header-actions'
 import { EditCardDrawerProvider } from './_components/edit-card-drawer'
 import { CardDetailHeader } from '../_components/card-detail-header'
 import { CardDetailView } from '../_components/card-detail-view'
@@ -107,7 +108,14 @@ const CardDetailPage = async ({ params }: Props) => {
       <EditCardDrawerProvider card={editCardData(0)}>
         <div className="flex max-w-3xl flex-col gap-6">
           <Breadcrumb label={t('back_label')} />
-          <CardDetailHeader name={cardDetail.name} bank={institutionName} accent={accent} tone="ok" />
+          <CardDetailHeader
+            name={cardDetail.name}
+            bank={institutionName}
+            accent={accent}
+            tone="ok"
+            // The big "register first purchase" CTA below already covers add.
+            actions={<CardHeaderActions cardId={id} showAdd={false} />}
+          />
           <Card className="flex flex-col gap-4 p-7">
             <div className="flex flex-col gap-1">
               <p className="text-lg font-bold">{t('detail.ready_title')}</p>
@@ -119,7 +127,7 @@ const CardDetailPage = async ({ params }: Props) => {
               </Link>
             </Button>
           </Card>
-          <AdminFooter cardId={id} isActive hasMovements={false} createdAt={cardDetail.created_at} archivedAt={null} />
+          <AdminFooter createdAt={cardDetail.created_at} archivedAt={null} />
         </div>
       </EditCardDrawerProvider>
     )
@@ -199,7 +207,13 @@ const CardDetailPage = async ({ params }: Props) => {
     <EditCardDrawerProvider card={editCardData(committedARS)}>
       <div className="flex max-w-3xl flex-col gap-6">
         <Breadcrumb label={t('back_label')} />
-        <CardDetailHeader name={cardDetail.name} bank={institutionName} accent={accent} tone={headerTone} />
+        <CardDetailHeader
+          name={cardDetail.name}
+          bank={institutionName}
+          accent={accent}
+          tone={headerTone}
+          actions={cardDetail.is_active ? <CardHeaderActions cardId={id} /> : undefined}
+        />
 
         {!cardDetail.is_active && <CardActions cardId={id} isActive={false} hasMovements={cardHasHistory} />}
 
@@ -212,9 +226,6 @@ const CardDetailPage = async ({ params }: Props) => {
         </section>
 
         <AdminFooter
-          cardId={id}
-          isActive={cardDetail.is_active}
-          hasMovements={cardHasHistory}
           createdAt={cardDetail.created_at}
           archivedAt={cardDetail.is_active ? null : cardDetail.created_at}
         />
@@ -231,22 +242,16 @@ const Breadcrumb = ({ label }: { label: string }) => (
   </div>
 )
 
+// Edit moved to the header (pencil icon); the footer keeps only the metadata.
 const AdminFooter = ({
-  cardId,
-  isActive,
-  hasMovements,
   createdAt,
   archivedAt,
 }: {
-  cardId: string
-  isActive: boolean
-  hasMovements: boolean
   createdAt: string
   archivedAt: string | null
 }) => (
   <div className="flex flex-col gap-3 border-t border-border pt-4">
     <CardDetailsSection createdAt={createdAt} archivedAt={archivedAt} />
-    {isActive && <CardActions cardId={cardId} isActive={isActive} hasMovements={hasMovements} />}
   </div>
 )
 
