@@ -41,9 +41,9 @@
 
 - [x] 7.1 `pnpm typecheck` desde la raíz limpia.
 - [x] 7.2 `pnpm lint` desde la raíz limpia.
-- [ ] 7.3 Correr el dev server web (`pnpm --filter @grana/web dev`) y throttlear network a "Slow 3G" en DevTools para ver los 4 skeletons en `/dashboard`. Verificar: shape-match, animate-pulse, `min-h` matcheado al real, label en el inspector de accesibilidad, streaming independiente por sección.
-- [ ] 7.4 Correr la app mobile (`pnpm --filter @grana/mobile start`) en un device/simulador. Verificar los 4 skeletons en `/dashboard` durante el cold start. Validar `prefers-reduced-motion` activando "Reduce Motion" en el OS.
-- [ ] 7.5 Correr el scenario "Navegar de mes en Balance del mes" en mobile: el `MonthBalanceSkeleton` aparece en swap region sin disparar el `RefreshControl` superior.
+- [x] 7.3 Correr el dev server web (`pnpm --filter @grana/web dev`) y throttlear network a "Slow 3G" en DevTools para ver los 4 skeletons en `/dashboard`. Verificar: shape-match, animate-pulse, `min-h` matcheado al real, label en el inspector de accesibilidad, streaming independiente por sección.
+- [x] 7.4 Correr la app mobile (`pnpm --filter @grana/mobile start`) en un device/simulador. Verificar los 4 skeletons en `/dashboard` durante el cold start. Validar `prefers-reduced-motion` activando "Reduce Motion" en el OS.
+- [x] 7.5 Correr el scenario "Navegar de mes en Balance del mes" en mobile: el `MonthBalanceSkeleton` aparece en swap region sin disparar el `RefreshControl` superior.
 - [x] 7.6 `openspec validate add-dashboard-section-skeletons --strict` desde la raíz.
 
 ## 8. Cierre
