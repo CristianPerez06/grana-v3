@@ -1,7 +1,6 @@
 import { getTranslations } from 'next-intl/server'
 import { getUpcomingFortnight, type UpcomingFortnight } from '@grana/dashboard'
 import { createClient } from '@/lib/supabase/server'
-import { SectionFallback } from '@/components/ui/section-fallback'
 import { UpcomingFortnightSection } from './upcoming-fortnight-section'
 
 type Props = {
@@ -15,7 +14,11 @@ export const UpcomingFortnightSectionContainer = async ({ today }: Props) => {
     data = await getUpcomingFortnight(supabase, today)
   } catch {
     const t = await getTranslations('dashboard.upcoming')
-    return <SectionFallback message={t('error')} />
+    return (
+      <div className="flex h-full min-h-[20rem] items-center justify-center rounded-2xl border border-dashed border-border bg-card p-6 text-center text-sm text-text-muted shadow-sm">
+        {t('error')}
+      </div>
+    )
   }
   return <UpcomingFortnightSection data={data} />
 }

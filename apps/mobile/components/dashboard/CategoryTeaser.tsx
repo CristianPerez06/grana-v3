@@ -8,7 +8,7 @@ import { UNCATEGORIZED_ID } from '@grana/dashboard'
 import { useT } from '../../lib/locale-context'
 import { useMonthCategoryBreakdown } from '../../lib/dashboard/queries'
 import { Button } from '../ui/Button'
-import { Spinner } from '../ui/Spinner'
+import { CategoryTeaserSkeleton } from './CategoryTeaserSkeleton'
 
 type Props = {
   today: Date
@@ -120,9 +120,7 @@ export const CategoryTeaser = ({ today }: Props) => {
             </Button>
           </View>
         ) : (
-          <View className="items-center justify-center">
-            <Spinner size="lg" />
-          </View>
+          <CategoryTeaserSkeleton />
         )}
       </View>
     </View>

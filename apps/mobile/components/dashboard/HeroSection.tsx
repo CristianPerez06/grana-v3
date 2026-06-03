@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router'
 import { useT } from '../../lib/locale-context'
 import { useDashboardHero } from '../../lib/dashboard/queries'
 import { Button } from '../ui/Button'
-import { Spinner } from '../ui/Spinner'
+import { HeroSkeleton } from './HeroSkeleton'
 import { MaskedAmount } from './MaskedAmount'
 
 // The label is fixed chrome; only the amounts region swaps between
@@ -53,9 +53,7 @@ export const HeroSection = () => {
             </Button>
           </View>
         ) : (
-          <View className="items-center justify-center">
-            <Spinner size="lg" />
-          </View>
+          <HeroSkeleton />
         )}
       </View>
     </Pressable>

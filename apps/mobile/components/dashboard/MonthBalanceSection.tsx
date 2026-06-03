@@ -3,9 +3,9 @@ import { Text, View } from 'react-native'
 import { useT } from '../../lib/locale-context'
 import { useMonthBalanceSeries } from '../../lib/dashboard/queries'
 import { Button } from '../ui/Button'
-import { Spinner } from '../ui/Spinner'
 import { MaskedAmount } from './MaskedAmount'
 import { MonthBalanceChart } from './MonthBalanceChart'
+import { MonthBalanceSkeleton } from './MonthBalanceSkeleton'
 import { MonthNavigator } from './MonthNavigator'
 
 type Props = {
@@ -132,9 +132,7 @@ export const MonthBalanceSection = ({
             </Button>
           </View>
         ) : (
-          <View className="items-center justify-center">
-            <Spinner size="lg" />
-          </View>
+          <MonthBalanceSkeleton />
         )}
       </View>
     </View>

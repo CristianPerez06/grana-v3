@@ -9,8 +9,8 @@ import type {
 import { useT } from '../../lib/locale-context'
 import { useUpcomingFortnight } from '../../lib/dashboard/queries'
 import { Button } from '../ui/Button'
-import { Spinner } from '../ui/Spinner'
 import { MaskedAmount } from './MaskedAmount'
+import { UpcomingFortnightSkeleton } from './UpcomingFortnightSkeleton'
 
 type Props = {
   today: Date
@@ -258,9 +258,7 @@ export const UpcomingFortnightSection = ({ today }: Props) => {
             </Button>
           </View>
         ) : (
-          <View className="items-center justify-center">
-            <Spinner size="lg" />
-          </View>
+          <UpcomingFortnightSkeleton />
         )}
       </View>
     </View>

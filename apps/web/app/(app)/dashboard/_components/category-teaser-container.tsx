@@ -8,7 +8,6 @@ import { monthOf } from '@/lib/transactions/filters'
 import { getMonthCategoryBreakdown, UNCATEGORIZED_ID } from '@/lib/transactions/queries'
 import { translateCategoryLabel } from '@/lib/categories/display'
 import { CategoryTeaser } from './category-teaser'
-import { SectionFallback } from '@/components/ui/section-fallback'
 
 type Props = {
   today: Date
@@ -43,7 +42,11 @@ export const CategoryTeaserContainer = async ({ today }: Props) => {
     arsSlices = topSlices(breakdown.ARS)
     usdSlices = topSlices(breakdown.USD)
   } catch {
-    return <SectionFallback message={t('spending.error')} />
+    return (
+      <div className="flex h-full min-h-[8rem] items-center justify-center rounded-2xl border border-dashed border-border bg-card p-6 text-center text-sm text-text-muted shadow-sm">
+        {t('spending.error')}
+      </div>
+    )
   }
 
   return (
