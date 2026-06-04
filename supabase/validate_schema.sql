@@ -283,14 +283,14 @@ begin
     raise exception 'subcategories: % filas con category_id inválido', n;
   end if;
 
-  -- comida tiene exactamente 5 subcategorías
+  -- comida tiene exactamente 8 subcategorías
   select count(*) into n
   from subcategories s
   join categories c on c.id = s.category_id
   where c.canonical_name = 'comida' and c.user_id is null and s.user_id is null;
 
-  if n <> 5 then
-    raise exception 'comida debería tener 5 subcategorías del sistema, tiene %', n;
+  if n <> 8 then
+    raise exception 'comida debería tener 8 subcategorías del sistema, tiene %', n;
   end if;
 
   raise notice '✓ 8.1F — integridad referencial subcategories → categories OK';
