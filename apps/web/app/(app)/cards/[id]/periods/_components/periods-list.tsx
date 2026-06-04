@@ -48,7 +48,9 @@ export const PeriodsList = ({ periods, cardId, hasUSD = false, showCents = false
   return (
     <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
       {periods.map((period) => {
+        // Paid periods show what WAS paid; unpaid show what's pending — per currency.
         const totalAmount = period.has_payment ? period.paidAmountARS : period.pendingAmountARS
+        const totalUSD = period.has_payment ? period.paidAmountUSD : period.pendingAmountUSD
 
         return (
           <Link
@@ -68,9 +70,9 @@ export const PeriodsList = ({ periods, cardId, hasUSD = false, showCents = false
               </div>
               <div className="mt-0.5">
                 <span className="font-medium text-sm">{formatARS(totalAmount, showCents)}</span>
-                {hasUSD && (
+                {hasUSD && totalUSD > 0 && (
                   <span className="ml-2 text-xs text-muted-foreground">
-                    {formatUSD(period.pendingAmountUSD, showCents)}
+                    {formatUSD(totalUSD, showCents)}
                   </span>
                 )}
               </div>

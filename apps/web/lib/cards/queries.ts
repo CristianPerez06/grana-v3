@@ -47,6 +47,7 @@ export type CardPeriodDetail = CardPeriodWithPayment & {
   pendingAmountARS: number
   pendingAmountUSD: number
   paidAmountARS: number
+  paidAmountUSD: number
   paymentDate: string | null
   paymentRecordId: string | null
   paymentExpenseId: string | null
@@ -765,6 +766,11 @@ export async function getCardPeriods(accountId: string): Promise<CardPeriodDetai
         .filter((t) => t.status === 'paid' && t.currency_code === 'ARS')
         .map((t) => t.amount),
     )
+    const paidUSD = sumMoneyValues(
+      periodTxs
+        .filter((t) => t.status === 'paid' && t.currency_code === 'USD')
+        .map((t) => t.amount),
+    )
     const paymentInfo = paymentByPeriod.get(period.id)
     const nextInfo = nextByPeriodId.get(period.id) ?? null
 
@@ -775,6 +781,7 @@ export async function getCardPeriods(accountId: string): Promise<CardPeriodDetai
       pendingAmountARS: pendingARS,
       pendingAmountUSD: pendingUSD,
       paidAmountARS: paidARS,
+      paidAmountUSD: paidUSD,
       paymentDate: paymentInfo?.date ?? null,
       paymentRecordId: paymentInfo?.recordId ?? null,
       paymentExpenseId: paymentInfo?.expenseId ?? null,
@@ -863,6 +870,11 @@ export async function getCardPeriodDetail(periodId: string): Promise<CardPeriodD
       .filter((t) => t.status === 'paid' && t.currency_code === 'ARS')
       .map((t) => t.amount),
   )
+  const paidUSD = sumMoneyValues(
+    txRows
+      .filter((t) => t.status === 'paid' && t.currency_code === 'USD')
+      .map((t) => t.amount),
+  )
 
   const payment = paymentResult.data
   const paymentTxDate = (payment?.transactions as unknown as { date: string } | null)?.date ?? null
@@ -874,6 +886,7 @@ export async function getCardPeriodDetail(periodId: string): Promise<CardPeriodD
     pendingAmountARS: pendingARS,
     pendingAmountUSD: pendingUSD,
     paidAmountARS: paidARS,
+    paidAmountUSD: paidUSD,
     paymentDate: paymentTxDate,
     paymentRecordId: payment?.id ?? null,
     paymentExpenseId: payment?.transaction_id ?? null,

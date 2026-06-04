@@ -9,6 +9,7 @@ import {
   getTransactionDetail,
 } from '@/lib/transactions/queries'
 import { toFinancialMovement } from '@/lib/transactions/movements'
+import { getCardPeriodDetail } from '@/lib/cards/queries'
 import { getRecurrenceLinkForTransaction } from '@/lib/recurrences/queries'
 import { getMovementSharedInfo } from '@/lib/shared/queries'
 import { buildMovementEditContext } from '@/lib/transactions/edit-context'
@@ -75,6 +76,19 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
     ? await getMovementSharedInfo(transaction.id, transaction.is_parent)
     : null
 
+  // Card payments show the statement composition (ARS + USD portions) instead
+  // of repeating the period info the context note already carries.
+  let paymentComposition: { paidARS: number; paidUSD: number } | null = null
+  if (movement.kind === 'card_payment') {
+    const periodDetail = await getCardPeriodDetail(movement.period_id)
+    if (periodDetail) {
+      paymentComposition = {
+        paidARS: periodDetail.paidAmountARS,
+        paidUSD: periodDetail.paidAmountUSD,
+      }
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4 max-w-lg mx-auto">
       {recurrenceLink && (
@@ -101,6 +115,7 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
         edit={editData?.edit ?? null}
         editCategories={editData?.categories}
         sharedInfo={sharedInfo}
+        paymentComposition={paymentComposition}
       />
     </div>
   )

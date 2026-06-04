@@ -6,7 +6,9 @@ import { Plus } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
+import { useDashboardMonth } from './dashboard-month-context'
 import { EyeMaskToggle } from './eye-mask-toggle'
+import { MonthNavigator } from './month-navigator'
 
 type Props = {
   /** Today's accounting date as `YYYY-MM-DD`, derived from `getTodayAR()`. */
@@ -27,6 +29,8 @@ export const DashboardHeader = ({ todayISO }: Props) => {
   const t = useTranslations('dashboard')
   const locale = useLocale()
   const localeCode = locale === 'en' ? 'en-US' : 'es-AR'
+
+  const { selected, goPrev, goNext } = useDashboardMonth()
 
   const [firstName, setFirstName] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -62,8 +66,8 @@ export const DashboardHeader = ({ todayISO }: Props) => {
   const greeting = firstName ? t('welcome', { name: firstName }) : t('welcome_anon')
 
   return (
-    <header className="mb-6 flex flex-row items-start justify-between gap-4">
-      <div>
+    <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0">
         <h1 className="text-2xl font-semibold tracking-tight text-text">
           {greeting}
         </h1>
@@ -72,7 +76,15 @@ export const DashboardHeader = ({ todayISO }: Props) => {
         </p>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2">
+        <div className="flex-1 sm:flex-none">
+          <MonthNavigator
+            year={selected.year}
+            month={selected.month}
+            onPrev={isDisabled ? undefined : goPrev}
+            onNext={isDisabled ? undefined : goNext}
+          />
+        </div>
         <EyeMaskToggle disabled={isDisabled} />
         {isDisabled ? (
           <Button className="hidden w-auto sm:inline-flex" disabled>

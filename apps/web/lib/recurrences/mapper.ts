@@ -38,7 +38,6 @@ export type RecurrenceMapErrorCode =
   | 'invalid_transfer_source'
   | 'invalid_income_account'
   | 'missing_category'
-  | 'missing_fx_rate'
   | 'fx_rate_not_allowed'
 
 export type InstanceSnapshot = Pick<
@@ -124,15 +123,11 @@ export function mapInstanceToConfirmPlan(
   }
 
   if (accountType === 'credit') {
+    // Cotización is NOT collected at confirm time: the real conversion happens
+    // when the statement is paid (payment-day rate). Any provided fx for an
+    // ARS instance is still rejected as inconsistent input.
     const fx = context.fxRateToArs
-    if (instance.currency_code === 'USD') {
-      if (fx == null || fx <= 0) {
-        throw new RecurrenceMapError(
-          'missing_fx_rate',
-          'Las recurrencias en USD en tarjeta requieren cotización al confirmar.',
-        )
-      }
-    } else if (fx != null) {
+    if (instance.currency_code !== 'USD' && fx != null) {
       throw new RecurrenceMapError(
         'fx_rate_not_allowed',
         'No se debe enviar cotización para recurrencias en ARS.',
@@ -148,7 +143,7 @@ export function mapInstanceToConfirmPlan(
         subcategory_id: instance.subcategory_id,
       }),
       ...(instance.description != null && { description: instance.description }),
-      ...(instance.currency_code === 'USD' && { fx_rate_to_ars: fx as number }),
+      ...(instance.currency_code === 'USD' && fx != null && fx > 0 && { fx_rate_to_ars: fx }),
     }
     return { kind: 'card_purchase', input }
   }

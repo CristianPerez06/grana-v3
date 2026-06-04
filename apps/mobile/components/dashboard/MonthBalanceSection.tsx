@@ -44,7 +44,7 @@ export const MonthBalanceSection = ({
   })
 
   const query = useMonthBalanceSeries(selected.year, selected.month)
-  const series = query.data
+  const data = query.data
 
   const monthsBack = diffMonths(currentYear, currentMonth, selected.year, selected.month)
   const canGoBack = monthsBack < monthsBackLimit
@@ -57,8 +57,13 @@ export const MonthBalanceSection = ({
     ? () => setSelected((s) => addMonth(s.year, s.month, +1))
     : undefined
 
-  const isPositive = series ? series.finalBalance >= 0 : true
+  const ars = data?.ARS
+  const usd = data?.USD
+  const hasUsd = !!usd && (usd.totalIncome !== 0 || usd.totalExpense !== 0)
+  const isPositive = ars ? ars.finalBalance >= 0 : true
+  const usdIsPositive = usd ? usd.finalBalance >= 0 : true
   const balanceColor = isPositive ? 'text-emerald' : 'text-negative'
+  const usdBalanceColor = usdIsPositive ? 'text-emerald' : 'text-negative'
 
   return (
     <View className="rounded-2xl border border-border bg-card p-6">
@@ -80,12 +85,38 @@ export const MonthBalanceSection = ({
       {/* Swappable region — only the graph + footer change between states; the
           card keeps its size via a stable minimum height. */}
       <View style={{ minHeight: SWAP_MIN_HEIGHT }} className="justify-center">
-        {series ? (
+        {ars ? (
           <>
             <View className="mb-3">
-              <MonthBalanceChart days={series.days} />
+              <MonthBalanceChart ars={ars.days} usd={hasUsd ? usd!.days : null} />
             </View>
 
+            {/* Legend — only when both currencies are on the chart. */}
+            {hasUsd && (
+              <View className="flex-row items-center gap-4">
+                <View className="flex-row items-center gap-1.5">
+                  <View
+                    className="h-0.5 w-4 rounded bg-emerald"
+                    accessibilityElementsHidden
+                  />
+                  <Text className="text-[11px] text-text-muted">
+                    {t('dashboard.month.legend_ars')}
+                  </Text>
+                </View>
+                <View className="flex-row items-center gap-1.5">
+                  <View
+                    className="h-0 w-4 border-t-2 border-dashed"
+                    style={{ borderColor: '#0EA5E9' }}
+                    accessibilityElementsHidden
+                  />
+                  <Text className="text-[11px] text-text-muted">
+                    {t('dashboard.month.legend_usd')}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* ARS totals (primary) */}
             <View className="mt-4 flex-row flex-wrap items-baseline justify-between gap-3 border-t border-border-soft pt-4">
               <View>
                 <Text className="text-xs font-medium uppercase text-text-muted">
@@ -93,10 +124,10 @@ export const MonthBalanceSection = ({
                 </Text>
                 <View className="mt-1 flex-row items-baseline">
                   <Text className={`text-2xl font-bold ${balanceColor}`}>
-                    {isPositive && series.finalBalance > 0 ? '+ ' : ''}
+                    {isPositive && ars.finalBalance > 0 ? '+ ' : ''}
                   </Text>
                   <MaskedAmount
-                    amount={series.finalBalance}
+                    amount={ars.finalBalance}
                     currency="ARS"
                     className={`text-2xl font-bold ${balanceColor}`}
                   />
@@ -106,7 +137,7 @@ export const MonthBalanceSection = ({
                 <View className="flex-row items-baseline">
                   <Text className="text-xs text-text-muted">{t('dashboard.month.income')} </Text>
                   <MaskedAmount
-                    amount={series.totalIncome}
+                    amount={ars.totalIncome}
                     currency="ARS"
                     className="text-xs font-semibold text-text"
                   />
@@ -114,13 +145,55 @@ export const MonthBalanceSection = ({
                 <View className="flex-row items-baseline">
                   <Text className="text-xs text-text-muted">{t('dashboard.month.expense')} </Text>
                   <MaskedAmount
-                    amount={series.totalExpense}
+                    amount={ars.totalExpense}
                     currency="ARS"
                     className="text-xs font-semibold text-text"
                   />
                 </View>
               </View>
             </View>
+
+            {/* USD totals (subordinate) — only when there's USD activity. */}
+            {hasUsd && usd && (
+              <View className="mt-3 flex-row flex-wrap items-baseline justify-between gap-3 border-t border-border-soft pt-3">
+                <View className="flex-row items-baseline gap-2">
+                  <Text className="text-[11px] font-semibold uppercase" style={{ color: '#0EA5E9' }}>
+                    USD
+                  </Text>
+                  <View className="flex-row items-baseline">
+                    <Text className={`text-base font-bold ${usdBalanceColor}`}>
+                      {usdIsPositive && usd.finalBalance > 0 ? '+ ' : ''}
+                    </Text>
+                    <MaskedAmount
+                      amount={usd.finalBalance}
+                      currency="USD"
+                      showCentsOverride
+                      className={`text-base font-bold ${usdBalanceColor}`}
+                    />
+                  </View>
+                </View>
+                <View className="flex-row gap-4">
+                  <View className="flex-row items-baseline">
+                    <Text className="text-xs text-text-muted">{t('dashboard.month.income')} </Text>
+                    <MaskedAmount
+                      amount={usd.totalIncome}
+                      currency="USD"
+                      showCentsOverride
+                      className="text-xs font-semibold text-text"
+                    />
+                  </View>
+                  <View className="flex-row items-baseline">
+                    <Text className="text-xs text-text-muted">{t('dashboard.month.expense')} </Text>
+                    <MaskedAmount
+                      amount={usd.totalExpense}
+                      currency="USD"
+                      showCentsOverride
+                      className="text-xs font-semibold text-text"
+                    />
+                  </View>
+                </View>
+              </View>
+            )}
           </>
         ) : query.isError ? (
           <View className="items-center justify-center gap-3 px-4">

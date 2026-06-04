@@ -164,6 +164,8 @@ type Props = {
   editCategories?: CategoryWithSubcategories[]
   /** Split info when the movement is shared (null otherwise). */
   sharedInfo?: MovementSharedInfo | null
+  /** Card payments: the paid statement's composition per currency. */
+  paymentComposition?: { paidARS: number; paidUSD: number } | null
 }
 
 export const GlobalTransactionDetail = ({
@@ -177,6 +179,7 @@ export const GlobalTransactionDetail = ({
   edit,
   editCategories,
   sharedInfo,
+  paymentComposition = null,
 }: Props) => {
   const showCents = useShowCents()
   const t = useTranslations('transactions')
@@ -187,7 +190,6 @@ export const GlobalTransactionDetail = ({
 
   const reviewLabel: Record<MovementReviewFlag, string> = {
     missing_category: t('review_flags.missing_category'),
-    missing_fx_rate: t('review_flags.missing_fx_rate'),
   }
 
   const isPendingReimbursement =
@@ -271,22 +273,27 @@ export const GlobalTransactionDetail = ({
       { key: 'account', label: t('labels.account'), value: movement.account_name },
     )
   } else if (movement.kind === 'card_payment') {
+    // The context note already names the paid period — instead of repeating it,
+    // show what the payment was made of: the statement's ARS and USD portions
+    // (the fx row below carries the payment-day rate used to convert the USD).
     rows.push(
       { key: 'account', label: t('detail.labels.account'), value: movement.account_name },
       { key: 'card', label: t('detail.labels.card'), value: payment?.period?.account?.name ?? null },
-      {
-        key: 'period',
-        label: t('detail.labels.period'),
-        value: payment?.period
-          ? `${formatShortDate(payment.period.start_date)} – ${formatShortDate(payment.period.end_date)}`
-          : null,
-      },
-      {
-        key: 'due_date',
-        label: t('detail.labels.due_date'),
-        value: payment?.period?.due_date ? formatShortDate(payment.period.due_date) : null,
-      },
     )
+    if (paymentComposition) {
+      rows.push({
+        key: 'composition_ars',
+        label: t('detail.labels.composition_ars'),
+        value: formatBalance(paymentComposition.paidARS, 'ARS', showCents),
+      })
+      if (paymentComposition.paidUSD > 0) {
+        rows.push({
+          key: 'composition_usd',
+          label: t('detail.labels.composition_usd'),
+          value: formatBalance(paymentComposition.paidUSD, 'USD', showCents),
+        })
+      }
+    }
   } else if (movement.kind === 'installment_purchase') {
     const cardName = installmentSiblings?.find((s) => s.source_account)?.source_account?.name ?? null
     rows.push(

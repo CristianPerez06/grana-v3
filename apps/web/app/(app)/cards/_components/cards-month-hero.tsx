@@ -34,7 +34,9 @@ export const CardsMonthHero = ({ summary, showCents = false }: Props) => {
                 {formatARS(summary.toPayARS, showCents)}
               </p>
               {summary.hasUSD && summary.toPayUSD > 0 && (
-                <p className="text-lg font-bold text-text-muted tabular-nums">
+                // Both currencies are obligations here, so the USD reads as an
+                // amount, not a footnote — still subordinate to the ARS figure.
+                <p className="text-2xl font-extrabold tracking-[-0.02em] text-text-muted tabular-nums">
                   {formatUSD(summary.toPayUSD, showCents)}
                 </p>
               )}
@@ -89,9 +91,14 @@ export const CardsMonthHero = ({ summary, showCents = false }: Props) => {
                       : t('month_hero.upcoming_open', { date: formatDayMonth(due.endDate) })}
                   </p>
                 </div>
-                <p className="shrink-0 text-sm font-bold tabular-nums">
-                  {formatARS(due.amountARS, showCents)}
-                </p>
+                <div className="shrink-0 text-right tabular-nums">
+                  <p className="text-sm font-bold">{formatARS(due.amountARS, showCents)}</p>
+                  {due.amountUSD > 0 && (
+                    <p className="text-xs font-semibold text-text-muted">
+                      {formatUSD(due.amountUSD, showCents)}
+                    </p>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

@@ -95,7 +95,9 @@
     "mask_hide": "Hide amounts",
     "hero": {
       "label": "To spend",
-      "view_all_accounts": "View all accounts"
+      "view_all_accounts": "View all accounts",
+      "eyebrow": "To spend · today",
+      "caption": "What you have available today, in pesos and dollars."
     },
     "upcoming": {
       "title": "What's coming",
@@ -124,13 +126,21 @@
       "title": "Where it went",
       "view_all": "View breakdown",
       "loading": "Loading the breakdown…",
-      "error": "We couldn't load this month's breakdown."
+      "error": "We couldn't load this month's breakdown.",
+      "center_label": "Spent",
+      "empty": "No spending this month in this currency."
     },
     "welcome_card": {
       "title": "Record your first transaction",
       "description": "Once you record your first income or expense, you'll see here how much you have, what's coming, and how the month is going.",
       "cta": "Record transaction"
-    }
+    },
+    "accounts": {
+      "title": "Where it is",
+      "view_all": "View all",
+      "usd_row": "In dollars"
+    },
+    "net_this_month": "you're at <amount>{net}</amount> this month"
   },
   "settings": {
     "title": "Settings",
@@ -702,7 +712,14 @@
       "title": "Pay statement",
       "back_label": "Statement",
       "usd_note_prefix": "Dollar purchases:",
-      "usd_note_description": "USD purchases are shown for reference. The ARS amount to pay already includes the conversion at the FX rate used on each purchase.",
+      "usd_note_description": "This statement has USD debt. Enter the payment-day rate below: the ARS total to pay is computed with it.",
+      "fx_label": "Payment-day rate (ARS per 1 USD)",
+      "fx_helper": "USD debt converts at the rate of the day you pay the statement.",
+      "fx_placeholder": "E.g. 1230.50",
+      "breakdown_ars": "Pending ARS",
+      "breakdown_usd": "Pending u$s {usd}",
+      "breakdown_total": "Total to pay",
+      "next_period_context": "This card's furthest known statement closes on {date}. The next close must be after that date.",
       "section_payment_data": "Payment details",
       "section_next_period": "Next statement",
       "warning": "Once confirmed, the payment cannot be reverted. If you recorded a wrong amount or account, fix it with a balance adjustment."
@@ -734,6 +751,8 @@
       "reactivate_failed": "Failed to reactivate.",
       "delete_failed": "Failed to delete.",
       "payment_failed": "Failed to record the payment.",
+      "fx_required": "Enter the payment-day rate.",
+      "next_end_before_known": "The close must be after {date} (the furthest known statement close).",
       "register_purchase_failed": "Failed to record the purchase.",
       "edit_dates_failed": "Failed to update dates.",
       "account_required": "Select an account.",
@@ -791,6 +810,8 @@
         "period": "Period",
         "due_date": "Due",
         "fx_rate": "Exchange rate",
+        "composition_ars": "Statement pesos",
+        "composition_usd": "Statement dollars",
         "first_payment": "First payment",
         "installment": "Installment",
         "linked_expense": "Linked expense",
@@ -953,8 +974,7 @@
       "installment_paid": "Paid"
     },
     "review_flags": {
-      "missing_category": "Missing category",
-      "missing_fx_rate": "Review FX rate"
+      "missing_category": "Missing category"
     },
     "installments_options": {
       "none": "No installments",
@@ -1244,7 +1264,6 @@
       "invalid_transfer_source": "The source account of the transfer doesn't allow this type of movement.",
       "invalid_income_account": "The selected account doesn't accept income.",
       "missing_category": "A category is required for this transaction.",
-      "missing_fx_rate": "The day's FX rate is required to confirm this transaction.",
       "fx_rate_not_allowed": "An FX rate is not applicable to this transaction."
     },
     "pending": {
@@ -1254,8 +1273,6 @@
       "edit_aria": "Edit before confirming",
       "cancel_edit_aria": "Cancel editing",
       "amount_changes_rule": "If it changes, the recurring rule will be updated too.",
-      "fx_rate_label": "ARS rate per 1 USD",
-      "fx_rate_placeholder": "E.g. 1230.50",
       "description_placeholder": "Optional",
       "confirm": "Confirm",
       "confirming": "Confirming…",
@@ -1276,7 +1293,6 @@
       "dismiss": "Dismiss"
     },
     "errors_extra": {
-      "fx_required": "Enter the day's ARS/USD rate.",
       "confirm_failed": "Couldn't confirm the instance.",
       "skip_failed": "Couldn't skip the instance.",
       "create_rule_failed": "Couldn't create the rule.",

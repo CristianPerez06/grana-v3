@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
 import { AccountAvatar } from '@/components/ui/account-avatar'
+import { Button } from '@/components/ui/button'
 import { Segmented } from '@/components/ui/segmented'
 import { Switch } from '@/components/ui/switch'
 import { Popover } from '@/components/ui/popover'
@@ -304,7 +305,6 @@ export const MovementForm = ({
   )
 
   const [installments, setInstallments] = useState('1')
-  const [fxRate, setFxRate] = useState('')
 
   const [isRecurrent, setIsRecurrent] = useState(false)
   const [frequency, setFrequency] = useState<
@@ -406,7 +406,6 @@ export const MovementForm = ({
     exchangeDestAccount?.activeCurrencies.find((c) => c !== currencyCode) ?? null
 
   const isInstallments = isCredit && currencyCode === 'ARS' && parseInt(installments) >= 2
-  const isUSDCard = isCredit && currencyCode === 'USD'
 
   const expenseCategories = categories.filter((c) => c.type === 'expense' || c.type === 'both')
   const incomeCategories = categories.filter((c) => c.type === 'income' || c.type === 'both')
@@ -469,7 +468,6 @@ export const MovementForm = ({
     setDescriptionHasNoHistory(false)
     setFormError(null)
     setInstallments('1')
-    setFxRate('')
     // Keep the account if still eligible, otherwise jump to the first eligible one.
     const eligible = eligibleFor(accounts, t)
     const srcId = eligible.some((a) => a.id === accountId) ? accountId : eligible[0]?.id ?? ''
@@ -490,7 +488,6 @@ export const MovementForm = ({
   const handleAccountChange = (id: string) => {
     setAccountId(id)
     setInstallments('1')
-    setFxRate('')
     const account = accounts.find((a) => a.id === id)
     if (account && !account.activeCurrencies.includes(currencyCode)) {
       setCurrencyCode(account.activeCurrencies[0] ?? 'ARS')
@@ -647,12 +644,6 @@ export const MovementForm = ({
         return
       }
     }
-    const parsedFxRate = fxRate ? parseMoneyInput(fxRate, { decimalPlaces: 6 }) : undefined
-    if (isUSDCard && (parsedFxRate === null || parsedFxRate === undefined || parsedFxRate <= 0)) {
-      setFormError(t('errors.exchange_rate_invalid'))
-      return
-    }
-
     // Declared reimbursement (expense tab, non-installment). Pending by default,
     // or received now ("ya me lo acreditaron").
     let reimbursementDecl:
@@ -765,7 +756,8 @@ export const MovementForm = ({
             category_id: categoryId,
             subcategory_id: subcategoryId || undefined,
             description: description || undefined,
-            fx_rate_to_ars: parsedFxRate ?? undefined,
+            // Cotización omitted by design: the conversion happens at statement
+            // payment (payment-day rate), not at purchase.
             reimbursement: reimbursementDecl,
             shared: sharedDecl,
           })
@@ -940,7 +932,6 @@ export const MovementForm = ({
     const next = currencyOptions[(idx + 1) % currencyOptions.length]
     setCurrencyCode(next)
     setInstallments('1')
-    setFxRate('')
   }
 
   // ⌘/Ctrl+Enter submits from anywhere in the form.
@@ -1394,25 +1385,6 @@ export const MovementForm = ({
       </p>
     ) : null
 
-  // ── FX rate (create + Gasto + USD card) ─────────────────────────────────────
-  const fxRateField =
-    !isEdit && tab === 'expense' && isUSDCard ? (
-      <div className="rounded-[15px] border border-border bg-card px-4 py-3">
-        <label htmlFor="fx_rate" className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
-          {t('labels.fx_rate_label')}
-        </label>
-        <MoneyAmountInput
-          id="fx_rate"
-          required
-          groupThousands={false}
-          value={fxRate}
-          onChange={setFxRate}
-          placeholder={t('labels.fx_rate_daily')}
-          className="mt-1 w-full bg-transparent text-[15px] font-semibold text-text outline-none placeholder:text-text-soft/50"
-        />
-      </div>
-    ) : null
-
   // ── Cuotas card (create + Gasto + credit + ARS) ─────────────────────────────
   const cuotasCard =
     !isEdit && tab === 'expense' && isCredit && currencyCode === 'ARS' ? (
@@ -1834,7 +1806,6 @@ export const MovementForm = ({
       {suggestionChip}
       {fieldGroup}
       {exchangeReceived}
-      {fxRateField}
       {cuotasCard}
       {descriptionField}
       {adjustmentPreviewRow}
@@ -1843,7 +1814,19 @@ export const MovementForm = ({
   )
 
   // ── Footer buttons ───────────────────────────────────────────────────────────
-  const submitButton = (
+  // Edit uses the library Button (primary emerald), matching the other edit
+  // drawers (cuenta/tarjeta). Create keeps the handoff styling: emerald for
+  // income, navy for the rest.
+  const submitButton = isEdit ? (
+    <Button
+      type="submit"
+      variant="primary"
+      loading={isPending}
+      className="h-[52px] flex-1 rounded-[14px] text-[15.5px] font-bold tracking-[-0.01em]"
+    >
+      {ctaLabel}
+    </Button>
+  ) : (
     <button
       type="submit"
       disabled={isPending}
@@ -1854,7 +1837,7 @@ export const MovementForm = ({
       }`}
     >
       {ctaLabel}
-      {!isEdit && <kbd className="hidden font-semibold opacity-70 sm:inline">⌘↵</kbd>}
+      <kbd className="hidden font-semibold opacity-70 sm:inline">⌘↵</kbd>
     </button>
   )
 

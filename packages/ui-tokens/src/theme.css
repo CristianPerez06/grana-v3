@@ -76,6 +76,8 @@
   --cat-3: #3A6B8A;
   --cat-4: #B56A5A;
   --cat-5: #8A6E98;
+  --cat-6: #D9952F;
+  --cat-7: #C05C84;
 
   /* Account avatar palette — decorative identity for cash/bank accounts.
      Curated to stay clear of the semantic colors (emerald=income, terracotta/
@@ -210,6 +212,8 @@
   --color-cat-3: var(--cat-3);
   --color-cat-4: var(--cat-4);
   --color-cat-5: var(--cat-5);
+  --color-cat-6: var(--cat-6);
+  --color-cat-7: var(--cat-7);
 
   /* Account avatar palette — utilities bg-account-slate, text-account-*, ... */
   --color-account-slate: var(--account-slate);

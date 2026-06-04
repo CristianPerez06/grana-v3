@@ -95,7 +95,9 @@
     "mask_hide": "Ocultar importes",
     "hero": {
       "label": "Para gastar",
-      "view_all_accounts": "Ver todas las cuentas"
+      "view_all_accounts": "Ver todas las cuentas",
+      "eyebrow": "Para gastar · hoy",
+      "caption": "Lo que tenés disponible hoy, en pesos y dólares."
     },
     "upcoming": {
       "title": "Lo que viene",
@@ -124,13 +126,21 @@
       "title": "En qué se fue",
       "view_all": "Ver desglose",
       "loading": "Cargando el desglose…",
-      "error": "No pudimos cargar el desglose del mes."
+      "error": "No pudimos cargar el desglose del mes.",
+      "center_label": "Gastos",
+      "empty": "Sin gastos este mes en esta moneda."
     },
     "welcome_card": {
       "title": "Cargá tu primer movimiento",
       "description": "Cuando registres tu primer ingreso o gasto, vas a ver acá cuánto tenés, qué viene y cómo va el mes.",
       "cta": "Cargar movimiento"
-    }
+    },
+    "accounts": {
+      "title": "Dónde está",
+      "view_all": "Ver todas",
+      "usd_row": "En dólares"
+    },
+    "net_this_month": "vas <amount>{net}</amount> este mes"
   },
   "settings": {
     "title": "Configuración",
@@ -702,7 +712,14 @@
       "title": "Pagar resumen",
       "back_label": "Resumen",
       "usd_note_prefix": "Consumos en dólares:",
-      "usd_note_description": "Los consumos en USD se muestran informativamente. El monto a pagar en ARS ya incluye la conversión al TC utilizado en cada compra.",
+      "usd_note_description": "Este resumen tiene deuda en USD. Cargá la cotización del día de pago abajo: el total a pagar en ARS se calcula con ella.",
+      "fx_label": "Cotización del día (ARS por 1 USD)",
+      "fx_helper": "La deuda en dólares se convierte con la cotización del día en que pagás el resumen.",
+      "fx_placeholder": "Ej: 1230,50",
+      "breakdown_ars": "Pendiente ARS",
+      "breakdown_usd": "Pendiente u$s {usd}",
+      "breakdown_total": "Total a pagar",
+      "next_period_context": "El último resumen conocido de esta tarjeta cierra el {date}. El próximo cierre tiene que ser posterior a esa fecha.",
       "section_payment_data": "Datos del pago",
       "section_next_period": "Próximo resumen",
       "warning": "Una vez confirmado, el pago no se puede revertir. Si registraste un monto o cuenta incorrectos, podés corregirlo con un ajuste de saldo."
@@ -734,6 +751,8 @@
       "reactivate_failed": "Error al reactivar.",
       "delete_failed": "Error al eliminar.",
       "payment_failed": "Error al registrar el pago.",
+      "fx_required": "Ingresá la cotización del día de pago.",
+      "next_end_before_known": "El cierre debe ser posterior al {date} (fin del último resumen conocido).",
       "register_purchase_failed": "Error al registrar el consumo.",
       "edit_dates_failed": "Error al actualizar fechas.",
       "account_required": "Seleccioná una cuenta.",
@@ -791,6 +810,8 @@
         "period": "Período",
         "due_date": "Vence",
         "fx_rate": "Cotización",
+        "composition_ars": "Pesos del resumen",
+        "composition_usd": "Dólares del resumen",
         "first_payment": "Primer pago",
         "installment": "Cuota",
         "linked_expense": "Gasto vinculado",
@@ -953,8 +974,7 @@
       "installment_paid": "Pagada"
     },
     "review_flags": {
-      "missing_category": "Sin categoría",
-      "missing_fx_rate": "Revisar cotización"
+      "missing_category": "Sin categoría"
     },
     "installments_options": {
       "none": "Sin cuotas",
@@ -1244,7 +1264,6 @@
       "invalid_transfer_source": "La cuenta origen de la transferencia no permite este tipo de movimiento.",
       "invalid_income_account": "La cuenta seleccionada no admite ingresos.",
       "missing_category": "Falta seleccionar una categoría para este movimiento.",
-      "missing_fx_rate": "Falta la cotización del día para confirmar este movimiento.",
       "fx_rate_not_allowed": "No corresponde cargar una cotización para este movimiento."
     },
     "pending": {
@@ -1254,8 +1273,6 @@
       "edit_aria": "Editar antes de confirmar",
       "cancel_edit_aria": "Cancelar edición",
       "amount_changes_rule": "Si cambia, también se actualiza la regla recurrente.",
-      "fx_rate_label": "Cotización ARS por 1 USD",
-      "fx_rate_placeholder": "Ej: 1230.50",
       "description_placeholder": "Opcional",
       "confirm": "Confirmar",
       "confirming": "Confirmando…",
@@ -1276,7 +1293,6 @@
       "dismiss": "Descartar"
     },
     "errors_extra": {
-      "fx_required": "Ingresá la cotización ARS/USD del día.",
       "confirm_failed": "No se pudo confirmar la instancia.",
       "skip_failed": "No se pudo omitir la instancia.",
       "create_rule_failed": "No se pudo crear la regla.",

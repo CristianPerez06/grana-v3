@@ -384,8 +384,9 @@ Períodos, consumos, cuotas, USD con cotización, pago de resumen.
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
 | CARD-N2-01 | Consumo en cuotas | gasto ARS en N cuotas | Cargar con cuotas | Genera fila padre off-ledger + cuotas; las cuotas caen en períodos sucesivos; "Cuotas en curso" muestra nombre y **fecha de compra** correctos; la lista de movimientos marca la compra con chip "N cuotas" | ✅ | Funcional OK tras fixes: header `168a679`/`57284f4`; fecha de compra `57284f4` (embed self-referencial → stitch); chip "N cuotas" en listas `1a3d0c2` (antes no había referencia a cuotas en el listado). |
-| CARD-N2-02 | Consumo en USD | gasto USD `50` en Visa Galicia | Cargar gasto USD en tarjeta | **Comportamiento objetivo (decidido en QA):** el alta NO pide cotización — la cotización real es la del día de pago del resumen y se captura ahí. Hoy el alta la exige (comportamiento viejo) | ⚠️ | Decisión de producto: la cotización se mueve al pago del resumen → change dedicado `card-fx-at-statement-payment` (branch `feat/card-fx-at-payment`). Reescribir/ejecutar al implementarlo. |
-| CARD-N2-03 | Pago de resumen | `Master QA Pagos` (ver dataset: período cerrado 01/06 con deuda `10.000,50`) | Detalle de la tarjeta → período a pagar → pagar desde `Galicia sueldo` | Crea el gasto de pago en la cuenta; el período queda pago; **el centavo no se pierde** (input text/decimal, no number); pide fechas del próximo período | ⬜ | Caso reescrito: con la Visa Galicia era imposible (período abierto hasta 28/06). Requiere crear la 2ª tarjeta del dataset. |
+| CARD-N2-02 | Consumo en USD sin cotización | gasto USD `50` en Visa Galicia | Cargar gasto USD en tarjeta | El alta **NO pide cotización** (la conversión real es al pagar el resumen); el consumo suma a la deuda USD del período, separada de la ARS; **no** aparece marca de "revisar cotización" en la lista | ✅ | OK con el flujo nuevo (requirió la migración `0027` que relajó I-CRED-11 a nivel DB). |
+| CARD-N2-03 | Pago de resumen (centavos) | `Master QA Pagos`, deuda ARS `10.000,50` | Pagar el período desde `Galicia sueldo` | Crea el gasto de pago; el período queda pago; **el centavo no se pierde**; el form de fechas del próximo período muestra el último cierre conocido y valida contra él | ✅ | Verificado en la corrida del change FX (el detalle del pago muestra $ 10.000,50 exactos). Fix asociado: error crudo `chk_period_dates` → mensaje localizado + contexto de fechas en el form. |
+| CARD-N2-04 | Pago de resumen con deuda USD | `Master QA Pagos` + consumo USD `50` retro-fechado al 28/05 | Pagar el período | El form pide la **cotización del día**; desglose pendiente ARS + USD×cotización = total; monto autocompletado (editable); la cotización persiste en el gasto de pago; el detalle del pago muestra la **composición** (pesos/dólares del resumen) y los resúmenes pagados muestran el USD pagado | ✅ | Verificado en la corrida del change FX. Fixes asociados en la misma corrida: reasignación de período al editar fecha, `paidAmountUSD`, composición en el detalle del pago, USD más visible en el hero de tarjetas. |
 
 ### N3 · Avanzado / inusual
 
@@ -410,7 +411,7 @@ Períodos, consumos, cuotas, USD con cotización, pago de resumen.
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
 | REC-N2-01 | Editar monto al confirmar | la próxima instancia de "Gimnasio" (o crear regla "Verdulería" del dataset y usar la de hoy) | Editar monto a `16.000` → confirmar | Usa el override (`16.000`); la regla sigue en `15.000` para las siguientes | ⬜ | |
-| REC-N2-02 | Recurrencia USD en tarjeta con fx | pendiente USD card | Cargar cotización → confirmar | El campo fx admite coma/decimales; no agrupa miles | ⛔ | En pausa: el change `card-fx-at-statement-payment` elimina la cotización del confirm (se captura al pagar el resumen). Reescribir y ejecutar al implementarlo. |
+| REC-N2-02 | Recurrencia USD en tarjeta confirma sin cotización | regla de gasto USD mensual sobre Visa Galicia, start hoy → instancia pendiente | Confirmar la instancia | El confirm **no pide cotización**; genera el consumo USD en el período correspondiente; la conversión queda para el pago del resumen | ⬜ | Reescrito por el change `card-fx-at-statement-payment` (antes pedía fx al confirmar). |
 
 ### N3 · Avanzado / inusual
 
@@ -526,8 +527,14 @@ liquidación (handshake liviano), primer caso de RLS cross-user.
 | 2026-06-03 | CARD-N2-01 (obs.) | Detalle de tarjeta: botón "Registrar consumo" + ícono lápiz en el header (antes no había forma de agregar consumo con historial y "Editar" era texto al pie) | `168a679` |
 | 2026-06-03 | CARD-N2-01 | "Cuotas en curso": fecha de compra y nombre correctos (el embed self-referencial del parent fallaba → mostraba la fecha de la última cuota y el nombre fallback); lápiz apilado abajo del botón | `57284f4` |
 | 2026-06-03 | CARD-N2-01 (obs.) | Las compras en cuotas muestran chip "N cuotas" en las listas de movimientos (antes ninguna referencia fuera de la vista de período) | `1a3d0c2` |
-| 2026-06-03 | CARD-N2-02 / REC-N2-02 | La cotización USD se mueve del alta de consumo al pago del resumen → change dedicado `card-fx-at-statement-payment` (branch `feat/card-fx-at-payment`) | (propuesta) |
+| 2026-06-03 | CARD-N2-02 / REC-N2-02 | Implementado `card-fx-at-statement-payment`: el alta de consumo USD y el confirm de recurrencias ya no piden cotización (flag de revisión eliminado); el pago de resumen con deuda USD pide la cotización del día, computa el total con desglose y la persiste en el gasto de pago. Casos reescritos + CARD-N2-04 nuevo | (branch `feat/card-fx-at-payment`) |
 | 2026-06-03 | Cierre tanda 2 | Refuerzo del doc: dataset de spending con números redondos, 2ª tarjeta con período cerrado para CARD-N2-03 (antes era imposible de probar), categorías corregidas al seed real (Comida, no "Alimentos"), datos concretos en MOV/REC/REI/SHA, corrida de usuario nuevo agrupada | (doc) |
+| 2026-06-04 | CARD-N2-02 (DB) | Migración `0027`: el trigger I-CRED-11 exigía cotización en consumos USD a nivel DB (bloqueaba el flujo nuevo) y habría rechazado persistir la cotización en el gasto de pago. Relajado al modelo nuevo; aplicada al remoto | `9bec9e5` |
+| 2026-06-04 | Editar consumo de tarjeta | Cambiar la fecha de un consumo ahora **reasigna el resumen** (`card_period_id` + `due_date`) al período que cubre la nueva fecha; mover a un resumen ya pagado se bloquea. Antes la fecha cambiaba pero el consumo no se movía de resumen | (branch fx) |
+| 2026-06-04 | Pago de resumen (UX) | Form de pago: contexto del último cierre conocido + validación de fechas con mensaje claro; el error crudo de Postgres `chk_period_dates` se reemplaza por copy localizada | (branch fx) |
+| 2026-06-04 | Resúmenes pagados | `paidAmountUSD` nuevo: la lista de resúmenes y el detalle del período muestran el USD pagado (antes `u$s 0`); el detalle del movimiento de pago muestra la **composición** pesos/dólares en vez de repetir período/vencimiento | (branch fx) |
+| 2026-06-04 | Hero de tarjetas | USD de "A pagar este mes" sube a 24px (era nota al pie); filas de "Próximos vencimientos" muestran su USD pendiente | (branch fx) |
+| 2026-06-04 | Editar movimiento | "Guardar cambios" usa el `Button` de la librería (era botón crudo navy) | (branch fx) |
 
 ---
 
@@ -540,7 +547,8 @@ liquidación (handshake liviano), primer caso de RLS cross-user.
 - **Módulo 6 N2/N3:** colapso de sidebar (pasos ya aclarados), hamburger mobile, loading/error.
 - **Módulo 7 (Movimientos):** completo — N1 puede validarse sobre lo ya cargado.
 - **Módulo 8:** CARD-N2-03 + N3 con la 2ª tarjeta `Master QA Pagos` (dataset nuevo).
-- **Módulo 9 (Recurrencias):** todo salvo REC-N2-02 (⛔ hasta el change de FX).
+- **Módulo 9 (Recurrencias):** completo — REC-N2-02 ya reescrito al flujo nuevo (confirm USD en tarjeta sin cotización), pendiente de ejecutar.
+- **Follow-up de UX (sin caso):** evaluar filas clickeables + mini-CTA "Pagar →" en "Próximos vencimientos" del hero de tarjetas (el hero agrega varias tarjetas, por eso no lleva botón único de pagar).
 - **Módulos 10, 11, 13:** datasets concretos agregados en esta versión.
 - **DASH-N2-02:** re-correr con 1 movimiento por moneda (caso reescrito).
 

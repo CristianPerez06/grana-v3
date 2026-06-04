@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getCardPeriodsWithStatus, getOrCreatePeriodForDate } from '@/lib/cards/queries'
 import { revalidateAfterMovementMutation } from './_helpers'
 import {
   createIncomeSchema,
@@ -182,7 +183,7 @@ export async function updateTransaction(
 
   const { data: existing } = await supabase
     .from('transactions')
-    .select('id, status')
+    .select('id, status, account_id, card_period_id')
     .eq('id', id)
     .eq('user_id', userId)
     .single()
@@ -200,6 +201,50 @@ export async function updateTransaction(
     }
   }
 
+  // Card consumos: the statement assignment is date-derived, so a date change
+  // moves the consumo to the period that covers the new date (same resolution
+  // as the insert). Moving into an already-paid statement is blocked.
+  let periodReassignment: { card_period_id: string; due_date: string | null } | null = null
+  if (
+    validation.data.date !== undefined &&
+    existing.card_period_id &&
+    existing.account_id
+  ) {
+    const newDate = validation.data.date
+    const periods = await getCardPeriodsWithStatus(existing.account_id)
+    const current = periods.find((p) => p.id === existing.card_period_id)
+    const currentStillCovers =
+      current != null &&
+      !current.has_payment &&
+      current.start_date <= newDate &&
+      newDate <= current.end_date
+
+    if (!currentStillCovers) {
+      const paidCover = periods.find(
+        (p) => p.has_payment && p.start_date <= newDate && newDate <= p.end_date,
+      )
+      if (paidCover) {
+        return {
+          ok: false,
+          formError:
+            'La nueva fecha cae en un resumen ya pagado. Elegí otra fecha o registrá un ajuste.',
+        }
+      }
+      const newPeriodId = await getOrCreatePeriodForDate(existing.account_id, newDate)
+      if (newPeriodId !== existing.card_period_id) {
+        const { data: targetPeriod } = await supabase
+          .from('card_periods')
+          .select('due_date')
+          .eq('id', newPeriodId)
+          .single()
+        periodReassignment = {
+          card_period_id: newPeriodId,
+          due_date: targetPeriod?.due_date ?? null,
+        }
+      }
+    }
+  }
+
   const { error } = await supabase
     .from('transactions')
     .update({
@@ -208,6 +253,7 @@ export async function updateTransaction(
       ...('description' in validation.data && { description: validation.data.description ?? null }),
       ...('category_id' in validation.data && { category_id: validation.data.category_id ?? null }),
       ...('subcategory_id' in validation.data && { subcategory_id: validation.data.subcategory_id ?? null }),
+      ...(periodReassignment ?? {}),
     })
     .eq('id', id)
     .eq('user_id', userId)
