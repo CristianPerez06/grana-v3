@@ -27,7 +27,13 @@ import {
   movementMatchesText,
   SUBCATEGORY_NONE_MARKER,
 } from '@/lib/transactions/filters'
-import { toFinancialMovement, type FinancialMovement } from '@/lib/transactions/movements'
+import {
+  INITIAL_BALANCE_ID_PREFIX,
+  isInitialBalanceMovement,
+  toFinancialMovement,
+  toInitialBalanceMovement,
+  type FinancialMovement,
+} from '@/lib/transactions/movements'
 import { useTransactionsFilters } from '@/lib/transactions/filters-context'
 
 type Props = {
@@ -101,6 +107,7 @@ function resolveRange(filters: TransactionsFilters): { from?: string; to?: strin
 export function MovementListAccountContainer({ accountId }: Props) {
   const { filters, dispatch } = useTransactionsFilters()
   const tCommon = useTranslations('common')
+  const tAccounts = useTranslations('accounts')
 
   const [ascendingQ, accountQ] = useQueries({
     queries: [
@@ -128,18 +135,53 @@ export function MovementListAccountContainer({ accountId }: Props) {
         account.currencies.find((c) => c.currency_code === 'USD')?.initial_balance ?? 0,
       ),
     }
-    return computeRunningBalances(
+    const snapshots = computeRunningBalances(
       ascendingQ.data as RunningBalanceRow[],
       accountId,
       initial,
     )
+    // The synthetic "saldo inicial" rows snapshot the starting balance itself
+    // (their row displays the per-currency value before any movement).
+    for (const c of account.currencies) {
+      if (Number(c.initial_balance) === 0) continue
+      snapshots.set(`${INITIAL_BALANCE_ID_PREFIX}${c.currency_code}`, initial)
+    }
+    return snapshots
   }, [ascendingQ.data, accountQ.data, accountId])
 
   // Display order (most recent first) + user filters + client-side pagination.
+  // The per-currency "saldo inicial" is injected here as a synthetic row (it is
+  // NOT a transaction), so it only ever exists in this account-scoped list.
   const allDisplayMovements = useMemo<FinancialMovement[]>(() => {
     if (!ascendingQ.data) return []
-    return ascendingQ.data.map(toFinancialMovement).reverse()
-  }, [ascendingQ.data])
+    const ascending = ascendingQ.data.map(toFinancialMovement)
+    const account = accountQ.data
+    if (account) {
+      for (const c of account.currencies) {
+        const initialBalance = Number(c.initial_balance)
+        if (initialBalance === 0) continue
+        ascending.push(
+          toInitialBalanceMovement({
+            accountId,
+            accountName: account.name,
+            currencyCode: c.currency_code,
+            initialBalance,
+            date: c.initial_balance_date,
+            createdAt: c.created_at,
+            label: tAccounts('labels.initialBalance'),
+          }),
+        )
+      }
+      // Re-establish calculation order (the server already sorts the real
+      // rows; the synthetic ones land by date + created_at, stable otherwise).
+      ascending.sort((a, b) =>
+        a.date === b.date
+          ? a.created_at.localeCompare(b.created_at)
+          : a.date.localeCompare(b.date),
+      )
+    }
+    return ascending.reverse()
+  }, [ascendingQ.data, accountQ.data, accountId, tAccounts])
 
   const range = useMemo(() => resolveRange(filters), [filters])
 
@@ -154,7 +196,12 @@ export function MovementListAccountContainer({ accountId }: Props) {
   )
   const hasMore = filteredMovements.length > pagedMovements.length
 
-  const movementIds = useMemo(() => pagedMovements.map((m) => m.id), [pagedMovements])
+  // Synthetic rows are not transactions — their ids must never reach the
+  // server (the recurrence lookup casts them to uuid).
+  const movementIds = useMemo(
+    () => pagedMovements.filter((m) => !isInitialBalanceMovement(m)).map((m) => m.id),
+    [pagedMovements],
+  )
 
   const linkedQ = useQuery({
     queryKey: QUERY_KEYS.transactionsLinkedRecurrenceIds(movementIds),

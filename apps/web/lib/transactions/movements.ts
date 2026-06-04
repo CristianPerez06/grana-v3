@@ -111,6 +111,60 @@ export type FinancialMovement =
 
 const detailHref = (tx: TransactionWithDetails) => `/transactions/${tx.id}`
 
+/**
+ * Synthetic-id prefix for the per-currency "saldo inicial" rows the account
+ * detail injects at display time. These are NOT `transactions` rows — never
+ * send their ids to the server (they would fail the uuid cast).
+ */
+export const INITIAL_BALANCE_ID_PREFIX = 'initial-balance:'
+
+export const isInitialBalanceMovement = (m: FinancialMovement): boolean =>
+  m.id.startsWith(INITIAL_BALANCE_ID_PREFIX)
+
+/**
+ * Build the synthetic "Saldo inicial" row for one account currency. Shaped as
+ * an adjustment so it flows through the shared list (grouping, filters, tone)
+ * without a new kind; `detail_href: null` keeps it non-navigable. Only the
+ * account detail synthesizes these — the global movements list never sees them.
+ */
+export const toInitialBalanceMovement = (args: {
+  accountId: string
+  accountName: string
+  currencyCode: 'ARS' | 'USD'
+  initialBalance: number
+  /** `account_currencies.initial_balance_date` — the account/currency creation day. */
+  date: string
+  /** `account_currencies.created_at` — sorts the row before same-day transactions. */
+  createdAt: string
+  /** Localized "Saldo inicial" label (the row's primary line). */
+  label: string
+}): AdjustmentMovement => ({
+  id: `${INITIAL_BALANCE_ID_PREFIX}${args.currencyCode}`,
+  date: args.date,
+  created_at: args.createdAt,
+  amount: Math.abs(args.initialBalance),
+  currency_code: args.currencyCode,
+  description: args.label,
+  account_id: args.accountId,
+  account_name: args.accountName,
+  category_id: null,
+  category_name: null,
+  category_icon: null,
+  category_color: null,
+  category_canonical_name: null,
+  category_is_system: false,
+  subcategory_id: null,
+  subcategory_name: null,
+  subcategory_canonical_name: null,
+  subcategory_is_system: false,
+  detail_href: null,
+  review_flags: [],
+  isShared: false,
+  kind: 'adjustment',
+  title: args.label,
+  sign: args.initialBalance < 0 ? '-' : '+',
+})
+
 const getReviewFlags = (tx: TransactionWithDetails): MovementReviewFlag[] => {
   const flags: MovementReviewFlag[] = []
 

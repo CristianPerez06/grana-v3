@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { toFinancialMovement } from '../movements'
+import {
+  isInitialBalanceMovement,
+  toFinancialMovement,
+  toInitialBalanceMovement,
+} from '../movements'
 import type { TransactionWithDetails } from '../types'
 
 const baseTx = (overrides: Partial<TransactionWithDetails>): TransactionWithDetails => ({
@@ -161,5 +165,46 @@ describe('toFinancialMovement', () => {
 
     expect(movement.subcategory_id).toBeNull()
     expect(movement.subcategory_name).toBeNull()
+  })
+})
+
+describe('toInitialBalanceMovement', () => {
+  const args = {
+    accountId: '33333333-3333-3333-3333-333333333333',
+    accountName: 'Galicia',
+    currencyCode: 'ARS' as const,
+    initialBalance: 1500,
+    date: '2026-05-18',
+    createdAt: '2026-05-18T15:00:00.000Z',
+    label: 'Saldo inicial',
+  }
+
+  it('builds a non-navigable adjustment-shaped row with a synthetic id', () => {
+    const movement = toInitialBalanceMovement(args)
+
+    expect(movement).toMatchObject({
+      id: 'initial-balance:ARS',
+      kind: 'adjustment',
+      title: 'Saldo inicial',
+      description: 'Saldo inicial',
+      sign: '+',
+      amount: 1500,
+      currency_code: 'ARS',
+      date: '2026-05-18',
+      detail_href: null,
+      category_id: null,
+    })
+    expect(isInitialBalanceMovement(movement)).toBe(true)
+  })
+
+  it('renders a negative initial balance as an outflow with absolute amount', () => {
+    const movement = toInitialBalanceMovement({ ...args, initialBalance: -200 })
+
+    expect(movement.sign).toBe('-')
+    expect(movement.amount).toBe(200)
+  })
+
+  it('never marks real transactions as synthetic', () => {
+    expect(isInitialBalanceMovement(toFinancialMovement(baseTx({})))).toBe(false)
   })
 })
