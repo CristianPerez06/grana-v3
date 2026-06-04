@@ -1,71 +1,49 @@
 import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
-import { MaskedAmount } from './masked-amount'
-import { AccountAvatar } from '@/components/ui/account-avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import type { DashboardHero } from '@grana/dashboard'
+import { MaskedAmount } from './masked-amount'
+import { MaskedAmountDisplay } from './masked-amount-display'
 
 type Props = {
   data: DashboardHero
 }
 
-// Desktop breakdown shows the top cash/bank accounts; the rest live in /accounts.
-const MAX_BREAKDOWN_ACCOUNTS = 3
-
+// "Para gastar · hoy" — the dark hero card of the dashboard redesign: today's
+// available balance, ARS as the headline and USD as a subordinate chip line.
+// The per-account breakdown lives in the sibling AccountsCard ("Dónde está").
 export const HeroSection = async ({ data }: Props) => {
   const t = await getTranslations('dashboard.hero')
-  const breakdown = data.accounts.slice(0, MAX_BREAKDOWN_ACCOUNTS)
 
   return (
-    <Card className="min-h-[10rem]">
-      <CardContent className="pt-6">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+    <Card className="flex min-h-[13rem] flex-col border-transparent bg-surface-dark text-white">
+      <CardContent className="flex flex-1 flex-col p-6">
+        {/* The amounts block centers vertically in the space above the caption
+            (the card stretches to match the accounts card next to it). */}
+        <div className="flex flex-1 flex-col justify-center">
           <Link
             href="/accounts"
-            className="block rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:flex-1"
+            className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
-              {t('label')}
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-white/55">
+              {t('eyebrow')}
             </p>
-            <p className="mt-2 text-4xl font-bold tracking-tight text-text">
-              <MaskedAmount amount={data.ars} currency="ARS" />
+            <p className="mt-2 text-[clamp(2.125rem,4.6vw,2.875rem)] font-extrabold leading-none tracking-tight">
+              <MaskedAmountDisplay amount={data.ars} currency="ARS" />
             </p>
-            <p className="mt-1 text-sm text-text-muted">
-              <MaskedAmount amount={data.usd} currency="USD" showCentsOverride />
+            <p className="mt-3 flex items-center gap-2">
+              <span className="rounded-full bg-emerald/20 px-2.5 py-0.5 text-[11px] font-extrabold text-emerald">
+                USD
+              </span>
+              <span className="text-[15.5px] font-bold text-white/90">
+                <MaskedAmount amount={data.usd} currency="USD" showCentsOverride />
+              </span>
             </p>
           </Link>
-
-          {breakdown.length > 0 && (
-            <div className="hidden lg:flex lg:w-72 lg:shrink-0 lg:flex-col lg:gap-3 lg:border-l lg:border-border-soft lg:pl-6">
-              <ul className="flex flex-col gap-2">
-                {breakdown.map((account) => (
-                  <li
-                    key={account.id}
-                    className="flex items-center justify-between gap-4"
-                  >
-                    <span className="flex min-w-0 items-center gap-2">
-                      <AccountAvatar {...account.avatar} size="sm" />
-                      <span className="truncate text-sm text-text">
-                        {account.name}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-sm font-semibold text-text">
-                      <MaskedAmount amount={account.ars} currency="ARS" />
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/accounts"
-                className="inline-flex items-center gap-1 text-sm font-medium text-emerald transition-colors hover:text-emerald-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-              >
-                {t('view_all_accounts')}
-                <ArrowRight size={16} strokeWidth={2} />
-              </Link>
-            </div>
-          )}
         </div>
+        <p className="pt-5 text-[12.5px] font-semibold text-white/50">
+          {t('caption')}
+        </p>
       </CardContent>
     </Card>
   )

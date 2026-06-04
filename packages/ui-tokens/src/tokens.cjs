@@ -144,6 +144,12 @@ module.exports = {
     "cat-5": {
       "DEFAULT": "#8A6E98"
     },
+    "cat-6": {
+      "DEFAULT": "#D9952F"
+    },
+    "cat-7": {
+      "DEFAULT": "#C05C84"
+    },
     "account-slate": {
       "DEFAULT": "#3A6B8A"
     },

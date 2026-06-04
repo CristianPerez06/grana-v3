@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>grana · Inicio · V_A</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="def3.css" />
+</head>
+<body>
+  <div class="app" data-screen-label="Inicio · V_A (tarjetas)">
+    <main class="main">
+      <div class="content">
+        <div class="grid-main">
+          <!-- 1 · PARA GASTAR + CUENTAS (mismo nivel) -->
+          <div class="r-top">
+            <section class="pg">
+              <div class="pl">Para gastar · hoy</div>
+              <div class="pv tnum"><span class="cur">$</span>2.454.499<span class="dec">,75</span></div>
+              <div class="pg-usd"><span class="uchip">USD</span><span class="uv tnum">US$ 1.240,00</span></div>
+              <div class="pcap">Lo que tenés disponible hoy, en pesos y dólares.</div>
+            </section>
+            <section class="card card-pad acct-card">
+              <div class="card-h"><h2>Dónde está</h2><a href="#" class="link">Ver todas</a></div>
+              <div class="acct-row"><span class="d" style="background:var(--terracota)"></span><span class="nm">Billetera</span><span class="am tnum">$1.254.499</span></div>
+              <div class="acct-row"><span class="d" style="background:var(--amber)"></span><span class="nm">Galicia Sueldo</span><span class="am tnum">$1.200.000</span></div>
+              <div class="acct-row"><span class="d" style="background:var(--violet)"></span><span class="nm">Cooperativa ahorros</span><span class="am tnum zero">$0,00</span></div>
+              <div class="acct-row usd"><span class="d"></span><span class="nm">En dólares</span><span class="am tnum">US$1.240,00</span></div>
+            </section>
+          </div>
+
+          <!-- 2 · BALANCE DEL MES -->
+          <section class="card card-pad">
+            <div class="card-h"><h2>Balance del mes</h2></div>
+            <div class="bal-net"><span class="lbl">Balance</span><span class="num tnum">+ $504.499<span class="dec">,75</span></span></div>
+            <div class="flow">
+              <div class="flow-row"><div class="ft"><span class="k"><span class="dt" style="background:var(--emerald)"></span>Ingresos</span><span class="v">$800.000,00</span></div><div class="track"><div class="f" style="width:100%;background:var(--emerald)"></div></div></div>
+              <div class="flow-row"><div class="ft"><span class="k"><span class="dt" style="background:var(--terracota)"></span>Gastos</span><span class="v">$295.500,25</span></div><div class="track"><div class="f" style="width:36.9%;background:var(--terracota)"></div></div></div>
+            </div>
+            <div class="usd-strip"><span class="usd-chip">USD</span><span class="un tnum">+ US$140,00</span><span class="um">Ingresos US$150,00 · Gastos US$10,00</span></div>
+          </section>
+
+          <!-- 3 · EN QUÉ SE FUE -->
+          <section class="card card-pad">
+            <div class="card-h"><h2>En qué se fue</h2><div class="seg"><button class="on">ARS</button><button>USD</button></div></div>
+            <div class="spend">
+              <div class="donut" style="background:conic-gradient(var(--amber) 0 38%, var(--slate) 38% 61.1%, var(--violet) 61.1% 75.7%, var(--emerald) 75.7% 89.8%, var(--rose) 89.8% 100%)">
+                <div class="ctr"><div><div class="tt">Gastos</div><div class="vv tnum">$295.500</div></div></div>
+              </div>
+              <div class="legc">
+                <div class="r"><span class="d" style="background:var(--amber)"></span><span class="nm">Comida</span><span class="am tnum">$112.300</span><span class="pc">38%</span></div>
+                <div class="r"><span class="d" style="background:var(--slate)"></span><span class="nm">Servicios</span><span class="am tnum">$68.400</span><span class="pc">23%</span></div>
+                <div class="r"><span class="d" style="background:var(--violet)"></span><span class="nm">Transporte</span><span class="am tnum">$43.200</span><span class="pc">15%</span></div>
+                <div class="r"><span class="d" style="background:var(--emerald)"></span><span class="nm">Súper</span><span class="am tnum">$41.600</span><span class="pc">14%</span></div>
+                <div class="r"><span class="d" style="background:var(--rose)"></span><span class="nm">Salud</span><span class="am tnum">$30.000</span><span class="pc">10%</span></div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="def3-chrome.js"></script>
+</body>
+</html>

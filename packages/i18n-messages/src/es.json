@@ -95,7 +95,9 @@
     "mask_hide": "Ocultar importes",
     "hero": {
       "label": "Para gastar",
-      "view_all_accounts": "Ver todas las cuentas"
+      "view_all_accounts": "Ver todas las cuentas",
+      "eyebrow": "Para gastar · hoy",
+      "caption": "Lo que tenés disponible hoy, en pesos y dólares."
     },
     "upcoming": {
       "title": "Lo que viene",
@@ -124,13 +126,21 @@
       "title": "En qué se fue",
       "view_all": "Ver desglose",
       "loading": "Cargando el desglose…",
-      "error": "No pudimos cargar el desglose del mes."
+      "error": "No pudimos cargar el desglose del mes.",
+      "center_label": "Gastos",
+      "empty": "Sin gastos este mes en esta moneda."
     },
     "welcome_card": {
       "title": "Cargá tu primer movimiento",
       "description": "Cuando registres tu primer ingreso o gasto, vas a ver acá cuánto tenés, qué viene y cómo va el mes.",
       "cta": "Cargar movimiento"
-    }
+    },
+    "accounts": {
+      "title": "Dónde está",
+      "view_all": "Ver todas",
+      "usd_row": "En dólares"
+    },
+    "net_this_month": "vas <amount>{net}</amount> este mes"
   },
   "settings": {
     "title": "Configuración",

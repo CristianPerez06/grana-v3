@@ -95,7 +95,9 @@
     "mask_hide": "Hide amounts",
     "hero": {
       "label": "To spend",
-      "view_all_accounts": "View all accounts"
+      "view_all_accounts": "View all accounts",
+      "eyebrow": "To spend · today",
+      "caption": "What you have available today, in pesos and dollars."
     },
     "upcoming": {
       "title": "What's coming",
@@ -124,13 +126,21 @@
       "title": "Where it went",
       "view_all": "View breakdown",
       "loading": "Loading the breakdown…",
-      "error": "We couldn't load this month's breakdown."
+      "error": "We couldn't load this month's breakdown.",
+      "center_label": "Spent",
+      "empty": "No spending this month in this currency."
     },
     "welcome_card": {
       "title": "Record your first transaction",
       "description": "Once you record your first income or expense, you'll see here how much you have, what's coming, and how the month is going.",
       "cta": "Record transaction"
-    }
+    },
+    "accounts": {
+      "title": "Where it is",
+      "view_all": "View all",
+      "usd_row": "In dollars"
+    },
+    "net_this_month": "you're at <amount>{net}</amount> this month"
   },
   "settings": {
     "title": "Settings",

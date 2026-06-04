@@ -1,9 +1,166 @@
-# dashboard Specification
+# dashboard — Delta (redesign-dashboard-home)
 
-## Purpose
+## ADDED Requirements
 
-Define la pantalla `/dashboard` como landing universal post-login y post-onboarding. Es read-only; toda interacción navega al módulo correspondiente y el resumen de tarjetas NO vive en el dashboard sino en `/cards`. La composición difiere por plataforma tras el rediseño web (`redesign-dashboard-home`): **web** renderiza la fila superior "Para gastar · hoy" (card navy bimoneda) + "Dónde está" (cuentas), "Balance del mes" (neto + barras + strip USD) y "En qué se fue" (dona por categoría con toggle ARS/USD), gobernadas las dos últimas por un selector de mes compartido en el header; **mobile** conserva el diseño anterior (Hero, "Lo que viene", Balance del mes con gráfico de línea + teaser de categorías) hasta que la paridad del rediseño se aborde como trabajo propio. El eye toggle de privacidad enmascara los importes en ambas plataformas.
-## Requirements
+### Requirement: La card "Dónde está" desglosa las cuentas del usuario (web)
+
+Junto al Hero "Para gastar · hoy", el dashboard web SHALL renderizar una card "Dónde está" que desglosa dónde vive el disponible. La card SHALL listar las cuentas activas `type IN ('cash','bank')` ordenadas por saldo ARS descendente (el orden que ya devuelve `getDashboardHero`), cada fila con el `AccountAvatar` chico de la cuenta + nombre + saldo ARS alineado a la derecha. Un saldo ARS de cero SHALL pintarse atenuado (`text-faint` o equivalente). La card SHALL truncar el listado a un máximo de 6 cuentas; el resto se ve en `/accounts`.
+
+Como fila final, separada del resto, la card SHALL mostrar la tenencia "En dólares": el total USD del usuario (el mismo `usd` del Hero) destacado en emerald. Esta fila representa el stock total en USD, NO un desglose por cuenta.
+
+El header de la card SHALL incluir un link "Ver todas" → `/accounts`. Los datos SHALL salir de la misma llamada a `getDashboardHero` que alimenta el Hero (un único container para la fila superior; sin doble fetch). Todos los importes de la card participan del eye-mask.
+
+#### Scenario: Cuentas ordenadas con la tenencia USD al final
+
+- **WHEN** el usuario tiene Billetera $1.254.499, Galicia $1.200.000, Cooperativa $0 y un total USD de u$s 1.240
+- **THEN** la card lista Billetera, Galicia y Cooperativa en ese orden con sus saldos ARS
+- **AND** el saldo $0 de Cooperativa se pinta atenuado
+- **AND** la fila final "En dólares" muestra u$s 1.240 en emerald
+
+#### Scenario: Más de 6 cuentas se truncan
+
+- **WHEN** el usuario tiene 9 cuentas cash/bank activas
+- **THEN** la card muestra las 6 de mayor saldo ARS + la fila "En dólares"
+- **AND** el link "Ver todas" navega a `/accounts` donde está el listado completo
+
+#### Scenario: Una sola llamada alimenta la fila superior
+
+- **WHEN** se inspecciona el container de la fila superior del dashboard web
+- **THEN** un único container async llama a `getDashboardHero` y renderiza ambas cards (Hero + "Dónde está") con esa data
+- **AND** NO hay una segunda llamada a `getDashboardHero` para la card de cuentas
+
+---
+
+### Requirement: El selector de mes del header gobierna las secciones mensuales (web)
+
+El header del dashboard web SHALL incluir un navegador mensual `‹ Mes Año ›` (el componente `MonthNavigator` existente) cuyo estado vive en un context client-side compartido (`DashboardMonthProvider`), inicializado en el mes actual derivado de `getTodayAR()`.
+
+Cambiar el mes seleccionado SHALL actualizar **en simultáneo** las secciones "Balance del mes" y "En qué se fue". El selector NO SHALL afectar al Hero "Para gastar · hoy" ni a la card "Dónde está" (son saldo de hoy) ni a la línea "vas {neto} este mes" del header de la card "Balance del mes" (que es siempre del mes en curso).
+
+La navegación de mes NO SHALL modificar la URL ni provocar una navegación de ruta; el mes seleccionado NO se persiste (al re-montar, abre en el mes actual). Las flechas SHALL permitir navegar hasta 12 meses hacia atrás; la flecha derecha SHALL deshabilitarse en el mes actual (no se navega al futuro). Cada sección mensual SHALL obtener los datos del mes no-actual client-side (vía server action) mostrando su propio estado de carga in-card; el mes actual llega server-rendered como initial data.
+
+#### Scenario: Cambiar el mes actualiza las dos secciones mensuales
+
+- **WHEN** el usuario en junio 2026 toca la flecha izquierda del navegador del header
+- **THEN** "Balance del mes" y "En qué se fue" muestran los datos de mayo 2026
+- **AND** "Para gastar · hoy" y "Dónde está" no cambian
+- **AND** la URL no cambia y la página no se recarga
+
+#### Scenario: El selector no afecta el ancla del mes en curso
+
+- **WHEN** el usuario navega el selector a un mes anterior
+- **THEN** la línea "vas {neto} este mes" de la card "Balance del mes" sigue mostrando el neto del mes en curso
+
+#### Scenario: Límites de navegación
+
+- **WHEN** el usuario está en el mes actual
+- **THEN** la flecha derecha está deshabilitada
+- **AND** tras navegar 12 meses hacia atrás, la flecha izquierda se deshabilita
+
+#### Scenario: Mes no-actual se fetchea client-side con loading in-card
+
+- **WHEN** el usuario navega a un mes cuyos datos no están cargados
+- **THEN** cada sección mensual muestra su skeleton in-card (título y chrome visibles) mientras su fetch resuelve
+- **AND** una falla en el fetch de una sección muestra error compacto con reintento en esa sección sin romper la otra
+
+---
+
+### Requirement: La sección "Balance del mes" web muestra el neto del mes con barras de ingresos y gastos (web)
+
+En el dashboard web, la sección "Balance del mes" SHALL mostrar, para el mes seleccionado en el header: un eyebrow "BALANCE" y debajo el neto ARS del mes en tipografía grande con signo y color (positivo → emerald, negativo → terracota/expense); debajo, dos filas Ingresos y Gastos, cada una con dot de color + label + monto y una barra horizontal proporcional.
+
+El header de la card SHALL mostrar a la derecha del título la línea "vas {neto} este mes" referida **siempre al mes en curso** (no sigue al selector: ancla el contexto de hoy mientras se navegan meses pasados), con el monto coloreado por signo y enmascarable por el eye-mask. El dato SHALL salir del mes actual ya server-rendered (sin fetch adicional).
+
+Los anchos de las barras SHALL calcularse de los datos: la serie de mayor valor absoluto entre ingresos y gastos ocupa el 100% del track y la otra escala proporcionalmente (`menor / mayor`); con ambos en cero, ambas barras quedan vacías. Los anchos NO SHALL hardcodearse. Ingresos usa el color emerald; Gastos el terracota.
+
+Al pie, un strip USD SHALL mostrar el chip "USD", el neto USD del mes con signo y color, y el detalle "Ingresos US$X · Gastos US$Y". El strip SHALL mostrarse siempre (bimoneda por defecto: sin actividad USD muestra ceros). ARS y USD nunca se combinan ni convierten.
+
+Los datos SHALL salir de `getMonthBalanceSeries` (totales por moneda); la sección NO SHALL renderizar el gráfico de línea acumulada en web (ese requirement queda mobile-only). El gráfico de línea (`MonthBalanceChart`) y su story SHALL eliminarse de `apps/web`. Todos los importes participan del eye-mask.
+
+#### Scenario: Neto positivo con barras proporcionales
+
+- **WHEN** el mes seleccionado tiene ingresos ARS $800.000 y gastos ARS $295.500,25
+- **THEN** el neto muestra `+$504.499,75` en emerald
+- **AND** la barra de Ingresos ocupa el 100% del track y la de Gastos ~36,9%
+- **AND** el strip USD muestra el neto USD del mes con su detalle de ingresos y gastos
+
+#### Scenario: Gastos mayores que ingresos invierten la proporción
+
+- **WHEN** el mes tiene ingresos ARS $100.000 y gastos ARS $250.000
+- **THEN** el neto muestra `−$150.000` en tono expense
+- **AND** la barra de Gastos ocupa el 100% y la de Ingresos el 40%
+
+#### Scenario: Mes sin movimientos muestra ceros
+
+- **WHEN** el mes seleccionado no tiene movimientos confirmados
+- **THEN** el neto muestra `$0` y ambas barras quedan vacías
+- **AND** el strip USD muestra `US$0` con ingresos y gastos en cero
+
+#### Scenario: El header de la card ancla el neto del mes en curso
+
+- **WHEN** el usuario va `+$504.499,75` en el mes en curso y navega el selector a un mes anterior
+- **THEN** el header de la card sigue mostrando "vas +$504.499,75 este mes" (mes en curso) mientras el cuerpo muestra el mes navegado
+- **AND** activar el eye-mask enmascara ese monto
+
+#### Scenario: El chart de línea ya no existe en web
+
+- **WHEN** se busca `MonthBalanceChart` en `apps/web`
+- **THEN** no existe el componente ni su story (el gráfico de línea vive solo en mobile)
+
+---
+
+### Requirement: La sección "En qué se fue" muestra el desglose de gastos por categoría con dona y toggle de moneda (web)
+
+El dashboard web SHALL renderizar como tercera sección "En qué se fue": una dona SVG con los gastos del mes seleccionado por categoría + una leyenda, con un control `Segmented` ARS/USD (default ARS) en el header de la card.
+
+- Los datos SHALL salir de `getMonthCategoryBreakdown` procesados con `buildCategorySlices` de `@grana/money-logic` con `topN: 5` y bucket "Otros" — la matemática del neto por categoría no se duplica.
+- Los tramos de la dona SHALL derivarse de los porcentajes calculados; NO SHALL hardcodearse. La dona SHALL implementarse como SVG (técnica de strokes circulares, mismo idioma que el desglose de Movimientos), con el centro mostrando el label "GASTOS" y el total del mes en la moneda activa.
+- Cada tramo/fila SHALL usar el color de la categoría en DB (`slice.color`), con fallback posicional a la paleta `--cat-*` — la misma categoría se ve del mismo color que en el desglose de Movimientos. Los colores del handoff son ilustrativos.
+- La leyenda SHALL mostrar por categoría: dot de color + nombre traducido (`translateCategoryLabel`; el sentinel uncategorized usa su label i18n) + monto + porcentaje. Cada fila SHALL linkear al desglose completo en Movimientos (`/transactions`, que abre con el desglose del mes). La preselección de categoría/mes/moneda vía URL NO existe: los filtros de `/transactions` viven en estado React por diseño y no se hidratan de la URL.
+- El toggle ARS/USD SHALL alternar el desglose entre monedas sin refetch (el breakdown ya trae ambas) y sin tocar las otras secciones.
+- El header de la card SHALL incluir un link "Ver desglose" al desglose completo en Movimientos (`/transactions`).
+- Si el mes no tiene gastos en la moneda activa, la card SHALL mostrar un estado vacío neutral; la card NO SHALL desaparecer del layout.
+- Los montos (leyenda y centro de la dona) participan del eye-mask; los porcentajes no se enmascaran.
+
+Esta sección reemplaza en web al teaser de 3 categorías (ver delta de `spending-by-category`); los componentes web del teaser SHALL eliminarse.
+
+#### Scenario: Dona calculada de los datos con colores de DB
+
+- **WHEN** el mes tiene gastos ARS en Comida 38%, Servicios 23%, Transporte 15%, Súper 14% y Salud 10%
+- **THEN** la dona renderiza 5 tramos cuyos ángulos corresponden a esos porcentajes
+- **AND** cada tramo usa el color de su categoría en DB
+- **AND** el centro muestra "GASTOS" + el total ARS del mes
+
+#### Scenario: Toggle a USD alterna el desglose
+
+- **WHEN** el usuario activa "USD" en el segmented y el mes tiene un único gasto USD en Entretenimiento de US$10
+- **THEN** la dona muestra un tramo único (100%) y la leyenda "Entretenimiento — US$10 — 100%"
+- **AND** no se dispara un nuevo fetch ni cambian las otras secciones
+
+#### Scenario: Más de 5 categorías se agrupan en Otros
+
+- **WHEN** el mes tiene gastos ARS en 8 categorías
+- **THEN** la dona y la leyenda muestran las 5 de mayor peso + un tramo "Otros" con el resto agregado
+
+#### Scenario: Sin gastos en la moneda activa
+
+- **WHEN** el mes seleccionado no tiene gastos en la moneda activa
+- **THEN** la card muestra un estado vacío neutral y permanece en el layout
+
+#### Scenario: Una fila navega al desglose de Movimientos
+
+- **WHEN** el usuario hace click en la fila "Comida" de la leyenda
+- **THEN** navega a `/transactions`, que abre con el desglose completo del mes
+- **AND** NO se ejecuta ninguna mutación
+
+#### Scenario: "Ver desglose" navega al desglose completo
+
+- **WHEN** el usuario hace click en "Ver desglose" en el header de la card
+- **THEN** navega a `/transactions`, que abre con el desglose completo del mes
+- **AND** NO se ejecuta ninguna mutación
+
+## MODIFIED Requirements
+
 ### Requirement: La pantalla dashboard es la landing universal post-login y post-onboarding
 
 El sistema SHALL renderizar la pantalla principal de la app en la ruta `/dashboard` bajo el grupo `(app)`, tanto en web como en mobile. La pantalla SHALL ser la única landing tras tres flujos: login exitoso, signup confirmado con onboarding ya completado, y completar el onboarding.
@@ -120,71 +277,6 @@ La fecha del header NO SHALL depender de esa query: SHALL calcularse en el serve
 
 ---
 
-### Requirement: El selector de mes del header gobierna las secciones mensuales (web)
-
-El header del dashboard web SHALL incluir un navegador mensual `‹ Mes Año ›` (el componente `MonthNavigator` existente) cuyo estado vive en un context client-side compartido (`DashboardMonthProvider`), inicializado en el mes actual derivado de `getTodayAR()`.
-
-Cambiar el mes seleccionado SHALL actualizar **en simultáneo** las secciones "Balance del mes" y "En qué se fue". El selector NO SHALL afectar al Hero "Para gastar · hoy" ni a la card "Dónde está" (son saldo de hoy) ni a la línea "vas {neto} este mes" del header de la card "Balance del mes" (que es siempre del mes en curso).
-
-La navegación de mes NO SHALL modificar la URL ni provocar una navegación de ruta; el mes seleccionado NO se persiste (al re-montar, abre en el mes actual). Las flechas SHALL permitir navegar hasta 12 meses hacia atrás; la flecha derecha SHALL deshabilitarse en el mes actual (no se navega al futuro). Cada sección mensual SHALL obtener los datos del mes no-actual client-side (vía server action) mostrando su propio estado de carga in-card; el mes actual llega server-rendered como initial data.
-
-#### Scenario: Cambiar el mes actualiza las dos secciones mensuales
-
-- **WHEN** el usuario en junio 2026 toca la flecha izquierda del navegador del header
-- **THEN** "Balance del mes" y "En qué se fue" muestran los datos de mayo 2026
-- **AND** "Para gastar · hoy" y "Dónde está" no cambian
-- **AND** la URL no cambia y la página no se recarga
-
-#### Scenario: El selector no afecta el ancla del mes en curso
-
-- **WHEN** el usuario navega el selector a un mes anterior
-- **THEN** la línea "vas {neto} este mes" de la card "Balance del mes" sigue mostrando el neto del mes en curso
-
-#### Scenario: Límites de navegación
-
-- **WHEN** el usuario está en el mes actual
-- **THEN** la flecha derecha está deshabilitada
-- **AND** tras navegar 12 meses hacia atrás, la flecha izquierda se deshabilita
-
-#### Scenario: Mes no-actual se fetchea client-side con loading in-card
-
-- **WHEN** el usuario navega a un mes cuyos datos no están cargados
-- **THEN** cada sección mensual muestra su skeleton in-card (título y chrome visibles) mientras su fetch resuelve
-- **AND** una falla en el fetch de una sección muestra error compacto con reintento en esa sección sin romper la otra
-
----
-
-### Requirement: El header del dashboard ofrece un acceso primario para registrar un movimiento (web)
-
-En web **desktop** (viewport `≥sm`), el header del dashboard SHALL incluir un botón primario "Nuevo movimiento" (estilo `positive`/emerald) que navega a la creación de movimiento (`/transactions/new`). El label del botón SHALL leerse del catálogo i18n (no hardcodeado). En web **mobile** (viewport `<sm`), el botón NO SHALL renderizarse en el header: el acceso primario en ese viewport es el FAB definido en la spec de `transactions` (mobile-only en web). En la app nativa este acceso NO es parte del header del dashboard; en native el acceso primario es el FAB nativo definido en la spec de `transactions`.
-
-Mientras el header esté en su estado de carga (ver requirement del saludo), el botón "Nuevo movimiento" — cuando se renderice en el viewport activo — SHALL renderizarse en estado **disabled**: SHALL aparecer con su tipografía e ícono completos pero sin envolver un `<Link>` (ni equivalente navegable), y SHALL no responder a clicks. Cuando el header sale del estado de carga, el botón SHALL pasar a su rendering normal (`<Button asChild><Link href="/transactions/new">…</Link></Button>` o equivalente).
-
-#### Scenario: El botón navega a la creación de movimiento (desktop-web)
-
-- **WHEN** un usuario web en viewport `≥sm` toca "Nuevo movimiento" en el header del dashboard una vez habilitado
-- **THEN** navega a `/transactions/new`
-
-#### Scenario: El label del botón es traducible
-
-- **WHEN** un desarrollador inspecciona el botón "Nuevo movimiento"
-- **THEN** su label se obtiene del catálogo i18n, sin string hardcodeado
-
-#### Scenario: El botón se renderiza disabled mientras el header carga (desktop-web)
-
-- **WHEN** el header del dashboard está en su estado de carga en viewport `≥sm` (query del nombre sin resolver)
-- **THEN** "Nuevo movimiento" se muestra con su label e ícono pero deshabilitado
-- **AND** no responde a clicks
-- **AND** NO envuelve a un `<Link>` (no es navegable mientras está disabled)
-
-#### Scenario: El botón no se renderiza en mobile-web
-
-- **WHEN** un usuario web en viewport `<sm` abre `/dashboard`
-- **THEN** el header NO contiene el botón "Nuevo movimiento" en ningún estado (loading o habilitado)
-- **AND** el acceso primario para registrar un movimiento en ese viewport es el FAB definido en la spec de `transactions`
-
----
-
 ### Requirement: La pantalla dashboard es read-only
 
 El dashboard SHALL NOT exponer formularios, botones de creación, edición, eliminación, archivado ni confirmación de movimientos pendientes. Toda interacción que requiera modificar datos SHALL ocurrir en el módulo correspondiente (Cuentas, Tarjetas, Movimientos). Los elementos visibles en el dashboard PUEDEN ser clickeables como atajos de navegación a esos módulos, pero NO ejecutan mutaciones en sí mismos.
@@ -253,35 +345,6 @@ En **web**, el Hero SHALL renderizarse como una card oscura (navy de marca vía 
 - **THEN** el Hero se pinta como card navy con eyebrow "PARA GASTAR · HOY", el importe ARS grande y el chip USD
 - **AND** el desglose por cuenta NO está dentro del Hero (vive en la card "Dónde está" contigua)
 - **AND** el color navy proviene del token de tema, no de un hex inline
-
----
-
-### Requirement: La card "Dónde está" desglosa las cuentas del usuario (web)
-
-Junto al Hero "Para gastar · hoy", el dashboard web SHALL renderizar una card "Dónde está" que desglosa dónde vive el disponible. La card SHALL listar las cuentas activas `type IN ('cash','bank')` ordenadas por saldo ARS descendente (el orden que ya devuelve `getDashboardHero`), cada fila con el `AccountAvatar` chico de la cuenta + nombre + saldo ARS alineado a la derecha. Un saldo ARS de cero SHALL pintarse atenuado (`text-faint` o equivalente). La card SHALL truncar el listado a un máximo de 6 cuentas; el resto se ve en `/accounts`.
-
-Como fila final, separada del resto, la card SHALL mostrar la tenencia "En dólares": el total USD del usuario (el mismo `usd` del Hero) destacado en emerald. Esta fila representa el stock total en USD, NO un desglose por cuenta.
-
-El header de la card SHALL incluir un link "Ver todas" → `/accounts`. Los datos SHALL salir de la misma llamada a `getDashboardHero` que alimenta el Hero (un único container para la fila superior; sin doble fetch). Todos los importes de la card participan del eye-mask.
-
-#### Scenario: Cuentas ordenadas con la tenencia USD al final
-
-- **WHEN** el usuario tiene Billetera $1.254.499, Galicia $1.200.000, Cooperativa $0 y un total USD de u$s 1.240
-- **THEN** la card lista Billetera, Galicia y Cooperativa en ese orden con sus saldos ARS
-- **AND** el saldo $0 de Cooperativa se pinta atenuado
-- **AND** la fila final "En dólares" muestra u$s 1.240 en emerald
-
-#### Scenario: Más de 6 cuentas se truncan
-
-- **WHEN** el usuario tiene 9 cuentas cash/bank activas
-- **THEN** la card muestra las 6 de mayor saldo ARS + la fila "En dólares"
-- **AND** el link "Ver todas" navega a `/accounts` donde está el listado completo
-
-#### Scenario: Una sola llamada alimenta la fila superior
-
-- **WHEN** se inspecciona el container de la fila superior del dashboard web
-- **THEN** un único container async llama a `getDashboardHero` y renderiza ambas cards (Hero + "Dónde está") con esa data
-- **AND** NO hay una segunda llamada a `getDashboardHero` para la card de cuentas
 
 ---
 
@@ -405,50 +468,6 @@ El total de cada agrupación se renderiza al pie de su lista y el balance del pe
 
 ---
 
-### Requirement: La sección "Balance del mes" web muestra el neto del mes con barras de ingresos y gastos (web)
-
-En el dashboard web, la sección "Balance del mes" SHALL mostrar, para el mes seleccionado en el header: un eyebrow "BALANCE" y debajo el neto ARS del mes en tipografía grande con signo y color (positivo → emerald, negativo → terracota/expense); debajo, dos filas Ingresos y Gastos, cada una con dot de color + label + monto y una barra horizontal proporcional.
-
-El header de la card SHALL mostrar a la derecha del título la línea "vas {neto} este mes" referida **siempre al mes en curso** (no sigue al selector: ancla el contexto de hoy mientras se navegan meses pasados), con el monto coloreado por signo y enmascarable por el eye-mask. El dato SHALL salir del mes actual ya server-rendered (sin fetch adicional).
-
-Los anchos de las barras SHALL calcularse de los datos: la serie de mayor valor absoluto entre ingresos y gastos ocupa el 100% del track y la otra escala proporcionalmente (`menor / mayor`); con ambos en cero, ambas barras quedan vacías. Los anchos NO SHALL hardcodearse. Ingresos usa el color emerald; Gastos el terracota.
-
-Al pie, un strip USD SHALL mostrar el chip "USD", el neto USD del mes con signo y color, y el detalle "Ingresos US$X · Gastos US$Y". El strip SHALL mostrarse siempre (bimoneda por defecto: sin actividad USD muestra ceros). ARS y USD nunca se combinan ni convierten.
-
-Los datos SHALL salir de `getMonthBalanceSeries` (totales por moneda); la sección NO SHALL renderizar el gráfico de línea acumulada en web (ese requirement queda mobile-only). El gráfico de línea (`MonthBalanceChart`) y su story SHALL eliminarse de `apps/web`. Todos los importes participan del eye-mask.
-
-#### Scenario: Neto positivo con barras proporcionales
-
-- **WHEN** el mes seleccionado tiene ingresos ARS $800.000 y gastos ARS $295.500,25
-- **THEN** el neto muestra `+$504.499,75` en emerald
-- **AND** la barra de Ingresos ocupa el 100% del track y la de Gastos ~36,9%
-- **AND** el strip USD muestra el neto USD del mes con su detalle de ingresos y gastos
-
-#### Scenario: Gastos mayores que ingresos invierten la proporción
-
-- **WHEN** el mes tiene ingresos ARS $100.000 y gastos ARS $250.000
-- **THEN** el neto muestra `−$150.000` en tono expense
-- **AND** la barra de Gastos ocupa el 100% y la de Ingresos el 40%
-
-#### Scenario: Mes sin movimientos muestra ceros
-
-- **WHEN** el mes seleccionado no tiene movimientos confirmados
-- **THEN** el neto muestra `$0` y ambas barras quedan vacías
-- **AND** el strip USD muestra `US$0` con ingresos y gastos en cero
-
-#### Scenario: El header de la card ancla el neto del mes en curso
-
-- **WHEN** el usuario va `+$504.499,75` en el mes en curso y navega el selector a un mes anterior
-- **THEN** el header de la card sigue mostrando "vas +$504.499,75 este mes" (mes en curso) mientras el cuerpo muestra el mes navegado
-- **AND** activar el eye-mask enmascara ese monto
-
-#### Scenario: El chart de línea ya no existe en web
-
-- **WHEN** se busca `MonthBalanceChart` en `apps/web`
-- **THEN** no existe el componente ni su story (el gráfico de línea vive solo en mobile)
-
----
-
 ### Requirement: La sección "Balance del mes" muestra un gráfico de línea acumulada con navegador mensual
 
 Este requirement SHALL aplicar únicamente al dashboard **mobile** (en web, "Balance del mes" se rige por el requirement "La sección 'Balance del mes' web muestra el neto del mes con barras de ingresos y gastos (web)").
@@ -523,58 +542,6 @@ El cálculo SHALL usar exclusivamente la moneda ARS. El gráfico NO renderiza da
 
 ---
 
-### Requirement: La sección "En qué se fue" muestra el desglose de gastos por categoría con dona y toggle de moneda (web)
-
-El dashboard web SHALL renderizar como tercera sección "En qué se fue": una dona SVG con los gastos del mes seleccionado por categoría + una leyenda, con un control `Segmented` ARS/USD (default ARS) en el header de la card.
-
-- Los datos SHALL salir de `getMonthCategoryBreakdown` procesados con `buildCategorySlices` de `@grana/money-logic` con `topN: 5` y bucket "Otros" — la matemática del neto por categoría no se duplica.
-- Los tramos de la dona SHALL derivarse de los porcentajes calculados; NO SHALL hardcodearse. La dona SHALL implementarse como SVG (técnica de strokes circulares, mismo idioma que el desglose de Movimientos), con el centro mostrando el label "GASTOS" y el total del mes en la moneda activa.
-- Cada tramo/fila SHALL usar el color de la categoría en DB (`slice.color`), con fallback posicional a la paleta `--cat-*` — la misma categoría se ve del mismo color que en el desglose de Movimientos. Los colores del handoff son ilustrativos.
-- La leyenda SHALL mostrar por categoría: dot de color + nombre traducido (`translateCategoryLabel`; el sentinel uncategorized usa su label i18n) + monto + porcentaje. Cada fila SHALL linkear al desglose completo en Movimientos (`/transactions`, que abre con el desglose del mes). La preselección de categoría/mes/moneda vía URL NO existe: los filtros de `/transactions` viven en estado React por diseño y no se hidratan de la URL.
-- El toggle ARS/USD SHALL alternar el desglose entre monedas sin refetch (el breakdown ya trae ambas) y sin tocar las otras secciones.
-- El header de la card SHALL incluir un link "Ver desglose" al desglose completo en Movimientos (`/transactions`).
-- Si el mes no tiene gastos en la moneda activa, la card SHALL mostrar un estado vacío neutral; la card NO SHALL desaparecer del layout.
-- Los montos (leyenda y centro de la dona) participan del eye-mask; los porcentajes no se enmascaran.
-
-Esta sección reemplaza en web al teaser de 3 categorías (ver delta de `spending-by-category`); los componentes web del teaser SHALL eliminarse.
-
-#### Scenario: Dona calculada de los datos con colores de DB
-
-- **WHEN** el mes tiene gastos ARS en Comida 38%, Servicios 23%, Transporte 15%, Súper 14% y Salud 10%
-- **THEN** la dona renderiza 5 tramos cuyos ángulos corresponden a esos porcentajes
-- **AND** cada tramo usa el color de su categoría en DB
-- **AND** el centro muestra "GASTOS" + el total ARS del mes
-
-#### Scenario: Toggle a USD alterna el desglose
-
-- **WHEN** el usuario activa "USD" en el segmented y el mes tiene un único gasto USD en Entretenimiento de US$10
-- **THEN** la dona muestra un tramo único (100%) y la leyenda "Entretenimiento — US$10 — 100%"
-- **AND** no se dispara un nuevo fetch ni cambian las otras secciones
-
-#### Scenario: Más de 5 categorías se agrupan en Otros
-
-- **WHEN** el mes tiene gastos ARS en 8 categorías
-- **THEN** la dona y la leyenda muestran las 5 de mayor peso + un tramo "Otros" con el resto agregado
-
-#### Scenario: Sin gastos en la moneda activa
-
-- **WHEN** el mes seleccionado no tiene gastos en la moneda activa
-- **THEN** la card muestra un estado vacío neutral y permanece en el layout
-
-#### Scenario: Una fila navega al desglose de Movimientos
-
-- **WHEN** el usuario hace click en la fila "Comida" de la leyenda
-- **THEN** navega a `/transactions`, que abre con el desglose completo del mes
-- **AND** NO se ejecuta ninguna mutación
-
-#### Scenario: "Ver desglose" navega al desglose completo
-
-- **WHEN** el usuario hace click en "Ver desglose" en el header de la card
-- **THEN** navega a `/transactions`, que abre con el desglose completo del mes
-- **AND** NO se ejecuta ninguna mutación
-
----
-
 ### Requirement: El dashboard tolera datos parciales sin romperse
 
 El dashboard SHALL renderizar todas sus secciones aunque alguna(s) de ellas no tengan datos o sus queries devuelvan vacío. Cada sección SHALL manejar su propio estado vacío con un mensaje neutral y nunca dejar la pantalla en blanco.
@@ -619,195 +586,6 @@ Los skeletons SHALL anticipar visualmente la anatomía de la sección (ver requi
 - **AND** el `MonthBalanceSkeleton` declara un `aria-label` derivado de `dashboard.month.loading`
 - **AND** el `SpendingSkeleton` declara un `aria-label` derivado de `dashboard.spending.loading`
 - **AND** NO se reusa un label genérico tipo "Cargando…" sin contexto
-
----
-
-### Requirement: Las queries y agregaciones del dashboard viven en un package compartido
-
-Las queries de lectura del dashboard (`getDashboardHero`, `getUpcomingFortnight`, `getMonthBalanceSeries`, `hasUserMovements`, `getMonthCategoryBreakdown`) y las funciones puras de agregación (`aggregateHero`, `buildUpcomingFortnight`, `buildMonthBalanceSeries`) SHALL vivir en `packages/dashboard/` bajo el nombre `@grana/dashboard`. El package SHALL exponer su `src/index.ts` sin paso de build, siguiendo la convención del monorepo. El package SHALL ser RN-compatible: NO depende de `react`, `next`, APIs del DOM, ni APIs de Node específicas.
-
-Todas esas queries SHALL recibir el cliente de Supabase por parámetro (client-injected), de modo que cada plataforma inyecte el suyo (server client en web, client mobile en mobile). En particular, `getMonthCategoryBreakdown(supabase, month)` SHALL netear los reintegros recibidos contra la categoría derivada de su gasto de origen y respetar el invariante "Off-ledger credit cards", reusando la matemática pura de `@grana/money-logic` (`computeCategoryNet`, `buildCategorySlices`); el package NO SHALL duplicar esa matemática.
-
-Ambas apps (web y mobile) SHALL consumir esas queries y tipos desde `@grana/dashboard`. La app web NO SHALL retener copias locales de esos módulos: ni en `apps/web/lib/dashboard/`, ni la definición de `getMonthCategoryBreakdown` en `apps/web/lib/transactions/queries.ts` (que pasa a delegar en el package). El `getMonthSubcategoryBreakdown` (drill de subcategorías), usado solo por el desglose completo, PUEDE permanecer fuera del package hasta que el desglose completo aterrice en mobile.
-
-#### Scenario: Web importa queries desde el package
-
-- **WHEN** un componente del dashboard web necesita los saldos del Hero
-- **THEN** el componente importa `getDashboardHero` desde `@grana/dashboard`
-- **AND** NO importa desde `@/lib/dashboard/queries`
-
-#### Scenario: Mobile importa queries desde el mismo package
-
-- **WHEN** la pantalla del dashboard mobile necesita los saldos del Hero
-- **THEN** el componente importa `getDashboardHero` desde `@grana/dashboard`
-- **AND** la build de Metro resuelve el módulo sin errores
-
-#### Scenario: El package no rompe la build de mobile por dependencias DOM
-
-- **WHEN** se ejecuta `pnpm --filter mobile typecheck` y un build de Metro tras agregar un import desde `@grana/dashboard`
-- **THEN** ningún archivo del package referencia APIs del DOM ni de Node específicas
-- **AND** la build no reporta `Unable to resolve module` ni errores de tipo
-
-#### Scenario: El breakdown por categoría se consume compartido desde ambas plataformas
-
-- **WHEN** el teaser de categorías del dashboard necesita el breakdown del mes (web o mobile)
-- **THEN** obtiene los datos vía `getMonthCategoryBreakdown(supabase, month)` desde `@grana/dashboard`
-- **AND** la app web ya no define su propia copia en `apps/web/lib/transactions/queries.ts`
-- **AND** ambas plataformas obtienen el mismo neto por categoría ante los mismos datos
-
----
-
-### Requirement: `UpcomingItem` expone destino de navegación de forma neutral a la plataforma
-
-El tipo `UpcomingItem` que devuelve `getUpcomingFortnight` SHALL exponer información semántica suficiente para que cada plataforma construya su propia URL. El tipo SHALL NOT incluir un campo `href: string` con una URL hardcodeada de una plataforma específica.
-
-Cada plataforma (web, mobile) SHALL implementar localmente un helper `routeForUpcomingItem(target)` que mapea el destino semántico a la URL/ruta concreta.
-
-#### Scenario: El tipo expone identificadores, no URLs
-
-- **WHEN** una query devuelve un `UpcomingItem` para un `card_period`
-- **THEN** el ítem incluye campos como `kind='card_period'`, `accountId`, `periodId`
-- **AND** NO incluye una propiedad `href` con un path tipo `/cards/...` ni `/tarjetas/...`
-
-#### Scenario: Web construye la URL a partir del destino semántico
-
-- **WHEN** el componente `UpcomingFortnightSection` web recibe un ítem con `target.kind='card_period'`
-- **THEN** el componente construye el `href` del `<Link>` como `/cards/${target.accountId}/periods/${target.periodId}`
-
-#### Scenario: Mobile construye la ruta a partir del mismo destino semántico
-
-- **WHEN** el componente `UpcomingFortnightSection` mobile recibe un ítem con `target.kind='card_period'`
-- **THEN** el componente llama a `router.push(...)` con la ruta mobile equivalente al detalle de período (o, mientras esa ruta no exista, `/tarjetas` como ruta transitoria)
-
----
-
-### Requirement: Los componentes del dashboard mobile siguen la convención de naming espejo del web
-
-La convención de naming espejo (mismo export PascalCase en ambas plataformas, props públicas coincidentes cuando es técnicamente posible) SHALL aplicar a los componentes del dashboard que existen en **ambas** plataformas: `HeroSection`, `HeroSkeleton`, `MonthBalanceSection`, `MonthBalanceSkeleton`, `MonthNavigator`, `MaskedAmount`, `EyeMaskToggle`, `EyeMaskProvider`, `useEyeMask`, `DashboardHeader`.
-
-Tras el rediseño web (`redesign-dashboard-home`), un subconjunto de componentes existe en una sola plataforma hasta que la paridad mobile del rediseño se aborde como trabajo propio:
-
-- **Solo web**: `AccountsCard` ("Dónde está"), `SpendingSection`/`SpendingDonut`/`SpendingSkeleton` ("En qué se fue"), `DashboardMonthProvider`.
-- **Solo mobile**: `UpcomingFortnightSection`, `UpcomingFortnightSkeleton`, `MonthBalanceChart`, `CategoryTeaser`, `CategoryTeaserSkeleton`, `WelcomeFirstMoveCard`.
-
-Estos componentes single-platform SHALL conservar el naming PascalCase de la convención para que la futura paridad los espeje sin renombres. El carrusel de tarjetas (`CreditCardCarousel`, `CreditCardItem`) ya no es parte del dashboard: vive en el módulo cards (`apps/mobile/components/cards/`) y lo consume la pantalla `/cards`.
-
-Cada componente mobile SHALL usar las primitivas idiomáticas de RN/Expo (`View`, `Text`, `Pressable`, `FlatList`, `react-native-svg`, `useRouter` de `expo-router`, NativeWind classes) en vez de las primitivas del DOM. Los skeletons mobile SHALL componer el primitivo `SkeletonBlock` (de `apps/mobile/components/ui/`) en vez de re-implementar la animación pulse en cada caso. NO se exige que el código se comparta entre plataformas; solo el contrato semántico de naming y comportamiento.
-
-`SectionFallback` ya NO forma parte del set de componentes espejados del **dashboard** — los containers del dashboard (web y mobile) ya no lo importan, ni para loading ni para error states. El archivo en sí permanece en ambas plataformas (`apps/web/components/ui/section-fallback.tsx`, `apps/mobile/components/dashboard/SectionFallback.tsx`) porque sigue siendo utility compartida por otras rutas (`accounts`, `cards`); su migración eventual a skeletons queda fuera del scope de este change.
-
-#### Scenario: Mismo nombre de componente entre web y mobile para el set compartido
-
-- **WHEN** se inspecciona la lista de componentes del dashboard web y mobile
-- **THEN** los componentes presentes en ambas plataformas exportan el mismo nombre PascalCase
-- **AND** la única diferencia entre versiones es la implementación interna (primitivas, layout específico de pantalla)
-
-#### Scenario: Componente mobile usa primitivas RN
-
-- **WHEN** se inspecciona `apps/mobile/components/dashboard/HeroSection.tsx`
-- **THEN** el componente usa `View`/`Text`/`Pressable` y NO usa elementos del DOM como `div`, `span`, ni `<Link>` de Next
-- **AND** la navegación usa `useRouter()` de `expo-router`
-
-#### Scenario: Skeletons mobile componen el primitivo `SkeletonBlock`
-
-- **WHEN** se inspecciona cualquiera de los skeletons mobile (`HeroSkeleton`, `UpcomingFortnightSkeleton`, `MonthBalanceSkeleton`, `CategoryTeaserSkeleton`)
-- **THEN** los bloques pulsantes se renderizan vía `<SkeletonBlock className="…"/>` importado de `apps/mobile/components/ui/SkeletonBlock`
-- **AND** ningún skeleton mobile usa `Animated.View` ni `useSharedValue` directamente (la animación está encapsulada en el primitivo)
-
-#### Scenario: Los componentes del dashboard no importan `SectionFallback`
-
-- **WHEN** se busca `SectionFallback` con grep dentro de los directorios del dashboard (`apps/web/app/(app)/dashboard/` y `apps/mobile/components/dashboard/` + `apps/mobile/app/(app)/dashboard.tsx`)
-- **THEN** ningún archivo del dashboard lo importa, ni como `<Suspense>` fallback ni como error state
-- **AND** los archivos `apps/web/components/ui/section-fallback.tsx` y `apps/mobile/components/dashboard/SectionFallback.tsx` siguen existiendo porque otras rutas (`accounts`, `cards`) aún los consumen
-
----
-
-### Requirement: El dashboard nativo pinta el header y la status bar con el navy de marca (mobile)
-
-En la app nativa, el header del dashboard (que contiene el saludo y el `eye toggle`) y la status bar SHALL pintarse con el navy de marca (`--navy` / `#0B1A2B`) leído desde el mirror de tokens, sin hex hardcodeado, y la status bar SHALL usar estilo `light`. El header navy SHALL respetar el safe-area top del dispositivo.
-
-#### Scenario: Header navy con status bar light
-
-- **WHEN** un usuario abre el dashboard en la app nativa
-- **THEN** el header del dashboard se pinta con el navy de marca
-- **AND** la status bar usa estilo light (íconos/hora en claro)
-- **AND** el header respeta el safe-area top
-
-#### Scenario: El color navy no está hardcodeado
-
-- **WHEN** un desarrollador inspecciona el componente del header nativo
-- **THEN** el color proviene del mirror de tokens, no de un literal hex
-
----
-
-### Requirement: La pantalla `(app)/dashboard` mobile renderiza las secciones del dashboard con tolerancia a fallas parciales
-
-La pantalla `apps/mobile/app/(app)/dashboard.tsx` SHALL renderizar las secciones del dashboard en orden vertical (Hero → Lo que viene → Balance del mes) envueltas en `EyeMaskProvider`. La pantalla SHALL ser un **shell**: monta el header y coloca las secciones, pero NO SHALL orquestar las queries de las secciones ni decidir su render en función de `data`/`error` desde el padre. Cada sección SHALL poseer su propia query (vía TanStack Query) y manejar su propio loading/error in-card.
-
-La pantalla NO SHALL renderizar una sección Tarjetas ni disparar `getCreditCards` como parte de la carga del dashboard. SHALL usar `getTodayAR()` (o su equivalente mobile) para todo cálculo de "hoy", calculado una vez en el shell y pasado por prop a las secciones que lo necesiten.
-
-**Shell visible desde el primer paint.** La pantalla NO SHALL bloquear el render con un spinner a pantalla completa que espere a que resuelvan las queries. El header (saludo + fecha + `eye toggle`) y el frame scrolleable SHALL renderizarse desde el primer paint, antes de que cualquier query resuelva. El saludo SHALL usar el fallback `dashboard.welcome_anon` ("Hola.") hasta que la query del nombre del perfil resuelva, momento en el que SHALL actualizarse al saludo personalizado; si esa query falla, el saludo SHALL permanecer en el fallback anon sin bloquear la pantalla. La fecha del header NO SHALL depender de ninguna query: SHALL derivarse de `getTodayAR()` y mantenerse estable.
-
-**Carga independiente por sección, sin layout shift.** Cada sección SHALL renderizar su chrome (título/label, y en Balance del mes el navegador mensual) de forma persistente, y SHALL delegar únicamente su región de datos a un intercambio entre tres estados: carga (**skeleton shape-matched**), error (mensaje localizado + acción de reintentar) y datos. Esa región SHALL declarar un alto mínimo estable de modo que el alto de la sección NO cambie entre los estados de carga, datos y error (sin layout shift). Una query lenta o fallida en una sección NO SHALL bloquear ni desplazar a las demás. Esta es la misma arquitectura que `MonthBalanceSection` ya implementa; las secciones Hero y "Lo que viene" SHALL seguirla. El skeleton SHALL vivir **dentro** de la swap region (en la misma posición donde antes vivía el `<Spinner/>`), NO SHALL reemplazar el chrome de la card.
-
-**Card de bienvenida auto-gateada.** `WelcomeFirstMoveCard` SHALL poseer la query `hasUserMovements` y renderizar `null` mientras la query no resuelve o si el usuario ya tiene movimientos; SHALL materializarse solo cuando el usuario no tiene movimientos. Por ser condicional y rara vez visible, se acepta el layout shift breve al aparecer (misma excepción que web).
-
-**Pull-to-refresh.** El `RefreshControl` de la pantalla SHALL ligar su estado `refreshing` al **gesto de pull**, no a objetos de query retenidos en el shell ni al conteo de queries en vuelo del prefijo `['dashboard']`. En particular, los fetches internos de una sección que comparten ese prefijo (p. ej. la query `balance-series` que dispara `MonthBalanceSection` al navegar de mes) NO SHALL encender el `RefreshControl`. El gesto de pull SHALL invalidar las queries bajo el prefijo `['dashboard']`, y el indicador SHALL permanecer encendido mientras esos refetches del pull no terminen.
-
-La pantalla SHALL respetar el principio "Off-ledger credit cards" idéntico al spec web (las queries ya lo encapsulan).
-
-#### Scenario: El shell y el header se ven desde el primer paint (mobile)
-
-- **WHEN** la pantalla `dashboard` mobile monta con un usuario logueado y onboarding completado, antes de que resuelva cualquier query
-- **THEN** el header (saludo, fecha y `eye toggle`) y el frame del dashboard ya están visibles
-- **AND** NO se muestra un spinner a pantalla completa que oculte header y secciones
-- **AND** el saludo muestra el fallback anon ("Hola.") y la fecha de hoy correcta
-
-#### Scenario: El nombre del perfil llega async y actualiza el saludo (mobile)
-
-- **WHEN** la query del nombre del perfil resuelve con `full_name = "Cristian Perez"` después del primer paint
-- **THEN** el saludo pasa de "Hola." a "Hola, Cristian."
-- **AND** la fecha del header no cambió
-
-#### Scenario: Las secciones cargan independientemente sin layout shift (mobile)
-
-- **WHEN** la query de `getDashboardHero` resuelve antes que la de `getUpcomingFortnight`
-- **THEN** el Hero pinta sus importes en cuanto su query resuelve, sin esperar a "Lo que viene"
-- **AND** "Lo que viene" sigue mostrando su `UpcomingFortnightSkeleton` in-card sobre su alto mínimo estable
-- **AND** cuando "Lo que viene" resuelve, su contenido aparece dentro del alto que ya ocupaba, sin empujar al Hero ni a "Balance del mes"
-
-#### Scenario: Falla en una query no rompe la pantalla mobile
-
-- **WHEN** la query `getUpcomingFortnight` falla (timeout, error de DB) en mobile
-- **THEN** `UpcomingFortnightSection` muestra in-card un mensaje de error localizado con acción de reintentar, dentro de su alto estable
-- **AND** Hero y Balance del mes renderizan normalmente
-- **AND** NO se dispara `getCreditCards` para el dashboard
-
-#### Scenario: La card de bienvenida se auto-gatea (mobile)
-
-- **WHEN** un usuario sin movimientos carga `/dashboard` y la query `hasUserMovements` aún no resolvió
-- **THEN** la card de bienvenida no se renderiza todavía (`null`), sin reservar espacio
-- **AND** cuando la query resuelve con "sin movimientos", la card aparece arriba de las secciones (shift breve aceptado)
-- **AND** si el usuario tiene movimientos, la card nunca se renderiza
-
-#### Scenario: Pull-to-refresh muestra el indicador solo durante el gesto (mobile)
-
-- **WHEN** el usuario hace pull-to-refresh en el dashboard
-- **THEN** se invalidan las queries bajo `['dashboard']` y vuelven a fetchearse
-- **AND** el `RefreshControl` muestra el indicador hasta que esos refetches terminan (ligado al gesto, no a objetos de query del shell)
-
-#### Scenario: Navegar de mes en "Balance del mes" no enciende el refresh superior (mobile)
-
-- **WHEN** el usuario toca una flecha del navegador mensual de "Balance del mes" y se dispara la query `balance-series` del nuevo mes
-
-- **THEN** solo el `MonthBalanceSkeleton` in-card de "Balance del mes" se muestra mientras esa query carga
-- **AND** el `RefreshControl` superior NO se enciende
-- **AND** la posición de scroll no se desplaza
-
-#### Scenario: Salir del tab dashboard y volver resetea el eye toggle (mobile)
-
-- **WHEN** el usuario mobile activa el eye toggle, cambia al tab "movimientos" y luego vuelve a "dashboard"
-- **THEN** los importes están visibles nuevamente (el provider se desmonta y se vuelve a montar)
 
 ---
 
@@ -892,3 +670,44 @@ Los bloques internos NO SHALL declarar atributos de accesibilidad (heredan al wr
 - **WHEN** un usuario con lector de pantalla aterriza en el dashboard mientras una sección está en loading
 - **THEN** el lector anuncia el label localizado de la sección ("Cargando tu disponible…" o equivalente como label de accesibilidad)
 - **AND** los bloques individuales del skeleton no son leídos uno por uno
+
+---
+
+### Requirement: Los componentes del dashboard mobile siguen la convención de naming espejo del web
+
+La convención de naming espejo (mismo export PascalCase en ambas plataformas, props públicas coincidentes cuando es técnicamente posible) SHALL aplicar a los componentes del dashboard que existen en **ambas** plataformas: `HeroSection`, `HeroSkeleton`, `MonthBalanceSection`, `MonthBalanceSkeleton`, `MonthNavigator`, `MaskedAmount`, `EyeMaskToggle`, `EyeMaskProvider`, `useEyeMask`, `DashboardHeader`.
+
+Tras el rediseño web (`redesign-dashboard-home`), un subconjunto de componentes existe en una sola plataforma hasta que la paridad mobile del rediseño se aborde como trabajo propio:
+
+- **Solo web**: `AccountsCard` ("Dónde está"), `SpendingSection`/`SpendingDonut`/`SpendingSkeleton` ("En qué se fue"), `DashboardMonthProvider`.
+- **Solo mobile**: `UpcomingFortnightSection`, `UpcomingFortnightSkeleton`, `MonthBalanceChart`, `CategoryTeaser`, `CategoryTeaserSkeleton`, `WelcomeFirstMoveCard`.
+
+Estos componentes single-platform SHALL conservar el naming PascalCase de la convención para que la futura paridad los espeje sin renombres. El carrusel de tarjetas (`CreditCardCarousel`, `CreditCardItem`) ya no es parte del dashboard: vive en el módulo cards (`apps/mobile/components/cards/`) y lo consume la pantalla `/cards`.
+
+Cada componente mobile SHALL usar las primitivas idiomáticas de RN/Expo (`View`, `Text`, `Pressable`, `FlatList`, `react-native-svg`, `useRouter` de `expo-router`, NativeWind classes) en vez de las primitivas del DOM. Los skeletons mobile SHALL componer el primitivo `SkeletonBlock` (de `apps/mobile/components/ui/`) en vez de re-implementar la animación pulse en cada caso. NO se exige que el código se comparta entre plataformas; solo el contrato semántico de naming y comportamiento.
+
+`SectionFallback` ya NO forma parte del set de componentes espejados del **dashboard** — los containers del dashboard (web y mobile) ya no lo importan, ni para loading ni para error states. El archivo en sí permanece en ambas plataformas (`apps/web/components/ui/section-fallback.tsx`, `apps/mobile/components/dashboard/SectionFallback.tsx`) porque sigue siendo utility compartida por otras rutas (`accounts`, `cards`); su migración eventual a skeletons queda fuera del scope de este change.
+
+#### Scenario: Mismo nombre de componente entre web y mobile para el set compartido
+
+- **WHEN** se inspecciona la lista de componentes del dashboard web y mobile
+- **THEN** los componentes presentes en ambas plataformas exportan el mismo nombre PascalCase
+- **AND** la única diferencia entre versiones es la implementación interna (primitivas, layout específico de pantalla)
+
+#### Scenario: Componente mobile usa primitivas RN
+
+- **WHEN** se inspecciona `apps/mobile/components/dashboard/HeroSection.tsx`
+- **THEN** el componente usa `View`/`Text`/`Pressable` y NO usa elementos del DOM como `div`, `span`, ni `<Link>` de Next
+- **AND** la navegación usa `useRouter()` de `expo-router`
+
+#### Scenario: Skeletons mobile componen el primitivo `SkeletonBlock`
+
+- **WHEN** se inspecciona cualquiera de los skeletons mobile (`HeroSkeleton`, `UpcomingFortnightSkeleton`, `MonthBalanceSkeleton`, `CategoryTeaserSkeleton`)
+- **THEN** los bloques pulsantes se renderizan vía `<SkeletonBlock className="…"/>` importado de `apps/mobile/components/ui/SkeletonBlock`
+- **AND** ningún skeleton mobile usa `Animated.View` ni `useSharedValue` directamente (la animación está encapsulada en el primitivo)
+
+#### Scenario: Los componentes del dashboard no importan `SectionFallback`
+
+- **WHEN** se busca `SectionFallback` con grep dentro de los directorios del dashboard (`apps/web/app/(app)/dashboard/` y `apps/mobile/components/dashboard/` + `apps/mobile/app/(app)/dashboard.tsx`)
+- **THEN** ningún archivo del dashboard lo importa, ni como `<Suspense>` fallback ni como error state
+- **AND** los archivos `apps/web/components/ui/section-fallback.tsx` y `apps/mobile/components/dashboard/SectionFallback.tsx` siguen existiendo porque otras rutas (`accounts`, `cards`) aún los consumen

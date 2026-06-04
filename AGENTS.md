@@ -251,7 +251,7 @@ Build order matters — each module generally depends on the ones above it. Cros
 | 8 | `transactions` | ✅ Done | Ingresos, gastos, transferencias, ajustes, cambios de moneda, reintegros/cashback; reglas de balance |
 | 9 | `cards` | ✅ Done | Tarjetas de crédito: alta de tarjeta (4 fechas), períodos (resúmenes), consumos, cuotas en pesos, pago de resumen, reversión |
 | 10 | `recurring-movements` | ✅ Done | Plantillas de recurrencias e instancias generadas; confirmar, saltar, posponer |
-| 11 | `dashboard` | ✅ Done | Landing universal post-login: Hero "Para gastar", Lo que viene, Balance del mes (3 secciones). Layout multi-columna en desktop (web), header con saludo + fecha + CTA. Tarjetas NO vive en el dashboard: el resumen vive en `/cards` |
+| 11 | `dashboard` | ✅ Done | Landing universal post-login. Web (rediseño `redesign-dashboard-home`): "Para gastar · hoy" (card navy) + "Dónde está" (cuentas), "Balance del mes" (neto + barras + strip USD), "En qué se fue" (dona ARS/USD); selector de mes compartido en el header. Mobile conserva el diseño anterior (Hero, Lo que viene, Balance con chart) — paridad pendiente como trabajo propio. Tarjetas NO vive en el dashboard: el resumen vive en `/cards` |
 | 12 | `onboarding` | ✅ Done | Wizard post-signup (web + mobile), bimoneda default, gate logic |
 | 13 | `mobile-app-shell` | ✅ Done | Expo app shell, navegación tabs, gating de auth y onboarding, presentación visual del tab bar y `AppMenu` |
 | 13b | `web-app-shell` | ✅ Done | Shell de navegación web: sidebar island único, paleta de marca, drawer mobile-first bajo `md`, estado activo derivado de la ruta |
