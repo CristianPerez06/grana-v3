@@ -1,0 +1,102 @@
+import { Pressable, Text, View } from 'react-native'
+import { useRouter } from 'expo-router'
+import { useT } from '../../lib/locale-context'
+import { useDashboardHero } from '../../lib/dashboard/queries'
+import { AccountAvatar } from '../ui/AccountAvatar'
+import { Button } from '../ui/Button'
+import { AccountsCardSkeleton } from './AccountsCardSkeleton'
+import { MaskedAmount } from './MaskedAmount'
+
+// "Dónde está" — the per-account breakdown below the hero. Shares the
+// `useDashboardHero()` queryKey with HeroSection, so TanStack dedupes into a
+// single fetch. The closing row is the total USD holding (a stock, not a
+// per-account split). Capped at 6; the full list lives in /accounts.
+const MAX_ACCOUNTS = 6
+const SWAP_MIN_HEIGHT = 160
+
+// ~44pt effective tap target for the small "Ver todas" link.
+const LINK_HIT_SLOP = { top: 12, bottom: 12, left: 12, right: 12 } as const
+
+export const AccountsCard = () => {
+  const t = useT()
+  const router = useRouter()
+  const query = useDashboardHero()
+  const data = query.data
+
+  return (
+    <View className="rounded-2xl border border-border bg-card p-6">
+      <View className="mb-1 flex-row items-center justify-between gap-2">
+        <Text className="text-base font-bold text-text">
+          {t('dashboard.accounts.title')}
+        </Text>
+        <Pressable
+          onPress={() => router.push('/accounts')}
+          accessibilityRole="link"
+          hitSlop={LINK_HIT_SLOP}
+        >
+          <Text className="text-[13px] font-bold text-emerald-deep">
+            {t('dashboard.accounts.view_all')}
+          </Text>
+        </Pressable>
+      </View>
+
+      <View style={{ minHeight: SWAP_MIN_HEIGHT }} className="justify-center">
+        {data ? (
+          <View>
+            {data.accounts.slice(0, MAX_ACCOUNTS).map((account, index) => (
+              <View
+                key={account.id}
+                className={`flex-row items-center gap-3 py-[11px] ${
+                  index > 0 ? 'border-t border-border-soft' : ''
+                }`}
+              >
+                <AccountAvatar {...account.avatar} size="sm" />
+                <Text
+                  className="min-w-0 flex-1 text-sm font-bold text-text"
+                  numberOfLines={1}
+                >
+                  {account.name}
+                </Text>
+                <MaskedAmount
+                  amount={account.ars}
+                  currency="ARS"
+                  className={`text-sm font-extrabold ${
+                    account.ars === 0 ? 'text-text-soft' : 'text-text'
+                  }`}
+                />
+              </View>
+            ))}
+
+            {/* USD holding — the bimoneda closing row, emerald like web. */}
+            <View className="mt-1 flex-row items-center gap-3 border-t border-border-soft pt-3">
+              <View className="h-2.5 w-2.5 rounded-[3px] bg-emerald" />
+              <Text
+                className="min-w-0 flex-1 text-sm font-bold text-emerald-deep"
+                numberOfLines={1}
+              >
+                {t('dashboard.accounts.usd_row')}
+              </Text>
+              <MaskedAmount
+                amount={data.usd}
+                currency="USD"
+                showCentsOverride
+                className="text-sm font-extrabold text-emerald-deep"
+              />
+            </View>
+          </View>
+        ) : query.isError ? (
+          <View className="items-center justify-center gap-3 px-4">
+            <Text className="text-center text-sm text-text-muted">
+              {t('dashboard.hero_error')}
+            </Text>
+            <Button variant="secondary" size="sm" onPress={() => query.refetch()}>
+              {t('error.retry_action')}
+            </Button>
+          </View>
+        ) : (
+          <AccountsCardSkeleton />
+        )}
+      </View>
+    </View>
+  )
+}

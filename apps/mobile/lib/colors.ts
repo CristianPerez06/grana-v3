@@ -15,11 +15,25 @@ export const colors = {
   positive: '#10B981',
   error: '#C54B3C',
   text: '#0B1A2B',
+  textMuted: '#6B7683',
   textSoft: '#8A94A3',
   card: '#FFFFFF',
   borderSoft: '#EEF1F4',
   white: '#FFFFFF',
 } as const
+
+// Category palette — mirror of the `--cat-*` tokens in theme.css/tokens.cjs.
+// Positional fallback for donut slices whose category has no DB color (same
+// order as the web SpendingDonut fallback). Keep in sync with tokens.cjs.
+export const catPalette = [
+  '#10B981', // cat-1
+  '#3A6B8A', // cat-3
+  '#D9952F', // cat-6
+  '#8A6E98', // cat-5
+  '#C05C84', // cat-7
+  '#B56A5A', // cat-4
+  '#0D9488', // cat-2
+] as const
 
 // Account avatar palette — mirror of the `--account-*` tokens in
 // @grana/ui-tokens/theme.css. RN can't read CSS vars, so these values are used

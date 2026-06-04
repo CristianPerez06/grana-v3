@@ -7,20 +7,12 @@ import {
 import {
   aggregateHero,
   buildMonthBalanceSeries,
-  buildUpcomingFortnight,
   calculateTransactionSums,
   type BalanceTransactionRow,
   type HeroAccountRow,
-  type UpcomingCardPeriodInput,
-  type UpcomingPeriodTxInput,
-  type UpcomingRecurrenceInstanceInput,
   type MonthBalanceTxInput,
 } from './aggregations'
-import type {
-  DashboardHero,
-  MonthBalanceByCurrency,
-  UpcomingFortnight,
-} from './types'
+import type { DashboardHero, MonthBalanceByCurrency } from './types'
 
 function formatDateISO(date: Date): string {
   const year = date.getFullYear()
@@ -36,16 +28,6 @@ export function resolveMonthRange(month: string): { from: string; to: string } {
     from: formatDateISO(new Date(year, m - 1, 1)),
     to: formatDateISO(new Date(year, m, 0)),
   }
-}
-
-export async function hasUserMovements(supabase: SupabaseClient): Promise<boolean> {
-  const { count, error } = await supabase
-    .from('transactions')
-    .select('id', { count: 'exact', head: true })
-    .in('type', ['income', 'expense'])
-    .eq('is_parent', false)
-  if (error) throw error
-  return (count ?? 0) > 0
 }
 
 export async function getDashboardHero(
@@ -87,64 +69,6 @@ async function getTransactionSums(
   if (error) throw error
 
   return calculateTransactionSums((data ?? []) as BalanceTransactionRow[], accountIds)
-}
-
-export async function getUpcomingFortnight(
-  supabase: SupabaseClient,
-  today: Date,
-): Promise<UpcomingFortnight> {
-  const todayISO = formatDateISO(today)
-  const horizon = new Date(today)
-  horizon.setDate(horizon.getDate() + 14)
-  const horizonISO = formatDateISO(horizon)
-
-  const { data: candidatePeriods, error: periodsErr } = await supabase
-    .from('card_periods')
-    .select(
-      'id, account_id, end_date, due_date, account:accounts!card_periods_account_id_fkey(id, name)',
-    )
-    .gte('due_date', todayISO)
-    .lte('due_date', horizonISO)
-    .lt('end_date', todayISO)
-    .order('due_date', { ascending: true })
-
-  if (periodsErr) throw periodsErr
-
-  const periods = (candidatePeriods ?? []) as unknown as UpcomingCardPeriodInput[]
-  const periodIds = periods.map((p) => p.id)
-
-  const [paymentsResult, txsResult, instancesResult] = await Promise.all([
-    periodIds.length > 0
-      ? supabase.from('period_payments').select('period_id').in('period_id', periodIds)
-      : Promise.resolve({ data: [] as Array<{ period_id: string }>, error: null }),
-    periodIds.length > 0
-      ? supabase
-          .from('transactions')
-          .select('card_period_id, currency_code, amount')
-          .in('card_period_id', periodIds)
-          .eq('is_parent', false)
-          .eq('status', 'pending')
-      : Promise.resolve({ data: [] as UpcomingPeriodTxInput[], error: null }),
-    supabase
-      .from('recurrence_instances')
-      .select(
-        'id, scheduled_date, amount, currency_code, recurrence:recurrences!inner(id, movement_type, description, account:accounts!recurrences_account_id_fkey(id, name))',
-      )
-      .eq('status', 'pending')
-      .gte('scheduled_date', todayISO)
-      .lte('scheduled_date', horizonISO)
-      .order('scheduled_date', { ascending: true }),
-  ])
-
-  if (paymentsResult.error) throw paymentsResult.error
-  if (txsResult.error) throw txsResult.error
-  if (instancesResult.error) throw instancesResult.error
-
-  const paidIds = new Set((paymentsResult.data ?? []).map((p) => p.period_id))
-  const periodTxs = (txsResult.data ?? []) as unknown as UpcomingPeriodTxInput[]
-  const instances = (instancesResult.data ?? []) as unknown as UpcomingRecurrenceInstanceInput[]
-
-  return buildUpcomingFortnight(periods, paidIds, periodTxs, instances)
 }
 
 export async function getMonthBalanceSeries(

@@ -99,16 +99,6 @@
       "eyebrow": "Para gastar · hoy",
       "caption": "Lo que tenés disponible hoy, en pesos y dólares."
     },
-    "upcoming": {
-      "title": "Lo que viene",
-      "subtitle": "Próximas 2 semanas",
-      "to_pay": "A pagar",
-      "to_collect": "A cobrar",
-      "period_balance": "Balance del período",
-      "empty": "No tenés movimientos previstos en los próximos 14 días.",
-      "loading": "Cargando los próximos eventos…",
-      "error": "No pudimos cargar los próximos eventos."
-    },
     "month": {
       "title": "Balance del mes",
       "income": "Ingresos",
@@ -129,11 +119,6 @@
       "error": "No pudimos cargar el desglose del mes.",
       "center_label": "Gastos",
       "empty": "Sin gastos este mes en esta moneda."
-    },
-    "welcome_card": {
-      "title": "Cargá tu primer movimiento",
-      "description": "Cuando registres tu primer ingreso o gasto, vas a ver acá cuánto tenés, qué viene y cómo va el mes.",
-      "cta": "Cargar movimiento"
     },
     "accounts": {
       "title": "Dónde está",

@@ -99,16 +99,6 @@
       "eyebrow": "To spend · today",
       "caption": "What you have available today, in pesos and dollars."
     },
-    "upcoming": {
-      "title": "What's coming",
-      "subtitle": "Next 2 weeks",
-      "to_pay": "To pay",
-      "to_collect": "To collect",
-      "period_balance": "Period balance",
-      "empty": "No upcoming transactions in the next 14 days.",
-      "loading": "Loading upcoming events…",
-      "error": "We couldn't load upcoming events."
-    },
     "month": {
       "title": "Month balance",
       "income": "Income",
@@ -129,11 +119,6 @@
       "error": "We couldn't load this month's breakdown.",
       "center_label": "Spent",
       "empty": "No spending this month in this currency."
-    },
-    "welcome_card": {
-      "title": "Record your first transaction",
-      "description": "Once you record your first income or expense, you'll see here how much you have, what's coming, and how the month is going.",
-      "cta": "Record transaction"
     },
     "accounts": {
       "title": "Where it is",

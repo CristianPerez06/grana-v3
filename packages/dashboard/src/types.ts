@@ -13,32 +13,9 @@ export type DashboardHero = {
   usd: number
   /**
    * Per-account breakdown (cash/bank only), ordered by ARS balance desc.
-   * Consumed by the desktop Hero; mobile renders only the totals above.
+   * Feeds the "Dónde está" card on both platforms.
    */
   accounts: HeroAccountBalance[]
-}
-
-export type UpcomingItemKind = 'card_period' | 'recurrence_instance'
-export type UpcomingDirection = 'pay' | 'collect'
-
-export type UpcomingItemTarget =
-  | { kind: 'card_period'; accountId: string; periodId: string }
-  | { kind: 'recurrence_instance'; recurrenceInstanceId: string }
-
-export type UpcomingItem = {
-  id: string
-  kind: UpcomingItemKind
-  direction: UpcomingDirection
-  date: string
-  label: string
-  amount: number
-  currency: 'ARS' | 'USD'
-  target: UpcomingItemTarget
-}
-
-export type UpcomingFortnight = {
-  toPay: UpcomingItem[]
-  toCollect: UpcomingItem[]
 }
 
 export type MonthBalanceDay = {
@@ -59,8 +36,9 @@ export type MonthBalanceSeries = {
 
 /**
  * Per-currency month balance. ARS and USD are never summed (bimoneda): the
- * dashboard renders both series on a dual-axis chart, each against its own
- * scale. USD is shown subordinate / only when it has activity.
+ * dashboard shows the ARS totals as the headline and the USD totals in a
+ * subordinate strip. The daily series stays available for future temporal
+ * views (the accumulated line chart was retired by the dashboard redesign).
  */
 export type MonthBalanceByCurrency = {
   year: number

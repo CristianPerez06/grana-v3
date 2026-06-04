@@ -1,9 +1,7 @@
 export {
   getDashboardHero,
-  getUpcomingFortnight,
   getMonthBalanceSeries,
   getMonthCategoryBreakdown,
-  hasUserMovements,
   resolveMonthRange,
   UNCATEGORIZED_ID,
   type MonthCategoryBreakdown,
@@ -11,13 +9,9 @@ export {
 
 export {
   aggregateHero,
-  buildUpcomingFortnight,
   buildMonthBalanceSeries,
   calculateTransactionSums,
   type HeroAccountRow,
-  type UpcomingCardPeriodInput,
-  type UpcomingPeriodTxInput,
-  type UpcomingRecurrenceInstanceInput,
   type MonthBalanceTxInput,
   type BalanceTransactionRow,
 } from './aggregations'
@@ -28,9 +22,4 @@ export type {
   MonthBalanceByCurrency,
   MonthBalanceDay,
   MonthBalanceSeries,
-  UpcomingDirection,
-  UpcomingFortnight,
-  UpcomingItem,
-  UpcomingItemKind,
-  UpcomingItemTarget,
 } from './types'

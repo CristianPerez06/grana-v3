@@ -1,200 +1,204 @@
-import { useState } from 'react'
 import { Text, View } from 'react-native'
+import { formatARS } from '@grana/i18n-messages'
+import type { MonthBalanceSeries } from '@grana/dashboard'
 import { useT } from '../../lib/locale-context'
+import { useShowCents } from '../../lib/preferences-context'
 import { useMonthBalanceSeries } from '../../lib/dashboard/queries'
 import { Button } from '../ui/Button'
+import { useDashboardMonth } from './DashboardMonthContext'
+import { useEyeMask } from './EyeMaskContext'
 import { MaskedAmount } from './MaskedAmount'
-import { MonthBalanceChart } from './MonthBalanceChart'
+import { MaskedAmountDisplay } from './MaskedAmountDisplay'
 import { MonthBalanceSkeleton } from './MonthBalanceSkeleton'
-import { MonthNavigator } from './MonthNavigator'
 
-type Props = {
-  currentYear: number
-  currentMonth: number
-  monthsBackLimit?: number
-}
-
-type Selected = { year: number; month: number }
-
-// Graph (200) + footer keep the card a stable size while loading/error
+// Net + flow rows + USD strip keep the card a stable size while loading/error
 // replace them; the swap region never collapses below this.
-const SWAP_MIN_HEIGHT = 280
+const SWAP_MIN_HEIGHT = 240
 
-function diffMonths(year1: number, month1: number, year2: number, month2: number): number {
-  return (year1 - year2) * 12 + (month1 - month2)
+// One Ingresos/Gastos row: dot + label + amount, proportional bar below. The
+// widths are data-derived: the larger flow fills the track, the other scales.
+const FlowRow = ({
+  label,
+  amount,
+  widthPct,
+  tone,
+}: {
+  label: string
+  amount: number
+  widthPct: number
+  tone: 'income' | 'expense'
+}) => (
+  <View>
+    <View className="flex-row items-center justify-between gap-3">
+      <View className="flex-row items-center gap-2">
+        <View
+          className={`h-[9px] w-[9px] rounded-full ${
+            tone === 'income' ? 'bg-emerald' : 'bg-terracotta'
+          }`}
+        />
+        <Text className="text-[13px] font-semibold text-text-muted">{label}</Text>
+      </View>
+      <MaskedAmount
+        amount={amount}
+        currency="ARS"
+        className="text-sm font-extrabold text-text"
+      />
+    </View>
+    <View className="mt-1.5 h-[11px] overflow-hidden rounded-md bg-border-soft">
+      <View
+        className={`h-full rounded-md ${tone === 'income' ? 'bg-emerald' : 'bg-terracotta'}`}
+        style={{ width: `${widthPct}%` }}
+      />
+    </View>
+  </View>
+)
+
+// "vas <amount>{net}</amount> este mes" — the catalog key carries rich tags
+// (web renders them via t.rich); native splits the tagged string and styles
+// the inner part with a nested Text.
+const NetThisMonth = ({ phrase, color }: { phrase: string; color: string }) => {
+  const match = phrase.match(/^(.*)<amount>(.*)<\/amount>(.*)$/)
+  if (!match) return <Text className="text-sm text-text-muted">{phrase}</Text>
+  const [, before, inner, after] = match
+  return (
+    <Text className="text-sm text-text-muted">
+      {before}
+      <Text className={`font-bold tabular-nums ${color}`}>{inner}</Text>
+      {after}
+    </Text>
+  )
 }
 
-function addMonth(year: number, month: number, delta: number): Selected {
-  const total = year * 12 + (month - 1) + delta
-  return { year: Math.floor(total / 12), month: (total % 12) + 1 }
-}
-
-export const MonthBalanceSection = ({
-  currentYear,
-  currentMonth,
-  monthsBackLimit = 12,
-}: Props) => {
+// "Balance del mes" — net + flows + USD strip for the month selected in the
+// header navigator (shared DashboardMonthProvider mirror). The card header
+// anchors "vas {neto} este mes" to the CURRENT month while past months are
+// browsed; that data comes from the TanStack cache of the first load.
+export const MonthBalanceSection = () => {
   const t = useT()
-
-  // The dashboard always opens on the current month; navigation is local state
-  // (no `?month=` param), so changing month never unmounts the card.
-  const [selected, setSelected] = useState<Selected>({
-    year: currentYear,
-    month: currentMonth,
-  })
+  const { selected, current } = useDashboardMonth()
+  const { masked } = useEyeMask()
+  const showCents = useShowCents()
 
   const query = useMonthBalanceSeries(selected.year, selected.month)
+  const currentQuery = useMonthBalanceSeries(current.year, current.month)
   const data = query.data
 
-  const monthsBack = diffMonths(currentYear, currentMonth, selected.year, selected.month)
-  const canGoBack = monthsBack < monthsBackLimit
-  const canGoForward = monthsBack > 0
+  const currentNet = currentQuery.data?.ARS.finalBalance
 
-  const onPrev = canGoBack
-    ? () => setSelected((s) => addMonth(s.year, s.month, -1))
-    : undefined
-  const onNext = canGoForward
-    ? () => setSelected((s) => addMonth(s.year, s.month, +1))
-    : undefined
+  const netLabel =
+    currentNet === undefined
+      ? null
+      : masked
+        ? '••••••'
+        : `${currentNet > 0 ? '+' : ''}${formatARS(currentNet, showCents)}`
 
-  const ars = data?.ARS
-  const usd = data?.USD
-  const hasUsd = !!usd && (usd.totalIncome !== 0 || usd.totalExpense !== 0)
+  const ars: MonthBalanceSeries | undefined = data?.ARS
+  const usd: MonthBalanceSeries | undefined = data?.USD
   const isPositive = ars ? ars.finalBalance >= 0 : true
   const usdIsPositive = usd ? usd.finalBalance >= 0 : true
-  const balanceColor = isPositive ? 'text-emerald' : 'text-negative'
-  const usdBalanceColor = usdIsPositive ? 'text-emerald' : 'text-negative'
+
+  const maxFlow = ars ? Math.max(ars.totalIncome, ars.totalExpense) : 0
+  const incomeWidth = ars && maxFlow > 0 ? (ars.totalIncome / maxFlow) * 100 : 0
+  const expenseWidth = ars && maxFlow > 0 ? (ars.totalExpense / maxFlow) * 100 : 0
 
   return (
     <View className="rounded-2xl border border-border bg-card p-6">
-      <View className="mb-4 flex-row items-center justify-between gap-4">
-        <Text
-          numberOfLines={1}
-          className="flex-shrink text-lg font-semibold text-text"
-        >
+      <View className="mb-4 flex-row items-center justify-between gap-3">
+        <Text numberOfLines={1} className="flex-shrink text-lg font-semibold text-text">
           {t('dashboard.month.title')}
         </Text>
-        <MonthNavigator
-          year={selected.year}
-          month={selected.month}
-          onPrev={onPrev}
-          onNext={onNext}
-        />
+        {netLabel !== null && (
+          <NetThisMonth
+            phrase={t('dashboard.net_this_month', { net: netLabel })}
+            color={
+              currentNet !== undefined && currentNet < 0 ? 'text-negative' : 'text-emerald'
+            }
+          />
+        )}
       </View>
 
-      {/* Swappable region — only the graph + footer change between states; the
-          card keeps its size via a stable minimum height. */}
+      {/* Swappable region — keeps a stable minimum height across the loading,
+          error and data states so the card never shifts layout. */}
       <View style={{ minHeight: SWAP_MIN_HEIGHT }} className="justify-center">
-        {ars ? (
-          <>
-            <View className="mb-3">
-              <MonthBalanceChart ars={ars.days} usd={hasUsd ? usd!.days : null} />
+        {ars && usd ? (
+          <View className="flex-1">
+            {/* Net of the month */}
+            <Text className="text-xs font-extrabold uppercase text-text-soft">
+              {t('dashboard.month.final_balance')}
+            </Text>
+            <View className="mt-1.5">
+              <MaskedAmountDisplay
+                amount={ars.finalBalance}
+                currency="ARS"
+                signPrefix={ars.finalBalance > 0 ? '+' : undefined}
+                className={`text-[30px] font-extrabold ${
+                  isPositive ? 'text-emerald' : 'text-negative'
+                }`}
+                decimalClassName="text-[15px] opacity-55"
+              />
             </View>
 
-            {/* Legend — only when both currencies are on the chart. */}
-            {hasUsd && (
-              <View className="flex-row items-center gap-4">
-                <View className="flex-row items-center gap-1.5">
-                  <View
-                    className="h-0.5 w-4 rounded bg-emerald"
-                    accessibilityElementsHidden
-                  />
-                  <Text className="text-[11px] text-text-muted">
-                    {t('dashboard.month.legend_ars')}
-                  </Text>
-                </View>
-                <View className="flex-row items-center gap-1.5">
-                  <View
-                    className="h-0 w-4 border-t-2 border-dashed"
-                    style={{ borderColor: '#0EA5E9' }}
-                    accessibilityElementsHidden
-                  />
-                  <Text className="text-[11px] text-text-muted">
-                    {t('dashboard.month.legend_usd')}
-                  </Text>
-                </View>
-              </View>
-            )}
+            {/* Ingresos / Gastos with proportional bars */}
+            <View className="mt-5 gap-3.5">
+              <FlowRow
+                label={t('dashboard.month.income')}
+                amount={ars.totalIncome}
+                widthPct={incomeWidth}
+                tone="income"
+              />
+              <FlowRow
+                label={t('dashboard.month.expense')}
+                amount={ars.totalExpense}
+                widthPct={expenseWidth}
+                tone="expense"
+              />
+            </View>
 
-            {/* ARS totals (primary) */}
-            <View className="mt-4 flex-row flex-wrap items-baseline justify-between gap-3 border-t border-border-soft pt-4">
-              <View>
-                <Text className="text-xs font-medium uppercase text-text-muted">
-                  {t('dashboard.month.final_balance')}
+            {/* USD strip — always shown (bimoneda por defecto); zeros when idle */}
+            <View className="mt-5 flex-row flex-wrap items-center gap-x-3 gap-y-1 border-t border-border-soft pt-3.5">
+              <View className="rounded-full bg-emerald-soft px-2.5 py-0.5">
+                <Text className="text-[11px] font-extrabold text-emerald-deep">USD</Text>
+              </View>
+              <View className="flex-row items-baseline">
+                <Text
+                  className={`text-[17px] font-extrabold ${
+                    usdIsPositive ? 'text-emerald' : 'text-negative'
+                  }`}
+                >
+                  {!masked && usd.finalBalance > 0 ? '+' : ''}
                 </Text>
-                <View className="mt-1 flex-row items-baseline">
-                  <Text className={`text-2xl font-bold ${balanceColor}`}>
-                    {isPositive && ars.finalBalance > 0 ? '+ ' : ''}
-                  </Text>
-                  <MaskedAmount
-                    amount={ars.finalBalance}
-                    currency="ARS"
-                    className={`text-2xl font-bold ${balanceColor}`}
-                  />
-                </View>
+                <MaskedAmount
+                  amount={usd.finalBalance}
+                  currency="USD"
+                  showCentsOverride
+                  className={`text-[17px] font-extrabold ${
+                    usdIsPositive ? 'text-emerald' : 'text-negative'
+                  }`}
+                />
               </View>
-              <View className="flex-row gap-4">
-                <View className="flex-row items-baseline">
-                  <Text className="text-xs text-text-muted">{t('dashboard.month.income')} </Text>
-                  <MaskedAmount
-                    amount={ars.totalIncome}
-                    currency="ARS"
-                    className="text-xs font-semibold text-text"
-                  />
-                </View>
-                <View className="flex-row items-baseline">
-                  <Text className="text-xs text-text-muted">{t('dashboard.month.expense')} </Text>
-                  <MaskedAmount
-                    amount={ars.totalExpense}
-                    currency="ARS"
-                    className="text-xs font-semibold text-text"
-                  />
-                </View>
+              <View className="ml-auto flex-row items-baseline">
+                <Text className="text-xs font-semibold text-text-muted">
+                  {t('dashboard.month.income')}{' '}
+                </Text>
+                <MaskedAmount
+                  amount={usd.totalIncome}
+                  currency="USD"
+                  showCentsOverride
+                  className="text-xs font-semibold text-text-muted"
+                />
+                <Text className="text-xs font-semibold text-text-muted"> · </Text>
+                <Text className="text-xs font-semibold text-text-muted">
+                  {t('dashboard.month.expense')}{' '}
+                </Text>
+                <MaskedAmount
+                  amount={usd.totalExpense}
+                  currency="USD"
+                  showCentsOverride
+                  className="text-xs font-semibold text-text-muted"
+                />
               </View>
             </View>
-
-            {/* USD totals (subordinate) — only when there's USD activity. */}
-            {hasUsd && usd && (
-              <View className="mt-3 flex-row flex-wrap items-baseline justify-between gap-3 border-t border-border-soft pt-3">
-                <View className="flex-row items-baseline gap-2">
-                  <Text className="text-[11px] font-semibold uppercase" style={{ color: '#0EA5E9' }}>
-                    USD
-                  </Text>
-                  <View className="flex-row items-baseline">
-                    <Text className={`text-base font-bold ${usdBalanceColor}`}>
-                      {usdIsPositive && usd.finalBalance > 0 ? '+ ' : ''}
-                    </Text>
-                    <MaskedAmount
-                      amount={usd.finalBalance}
-                      currency="USD"
-                      showCentsOverride
-                      className={`text-base font-bold ${usdBalanceColor}`}
-                    />
-                  </View>
-                </View>
-                <View className="flex-row gap-4">
-                  <View className="flex-row items-baseline">
-                    <Text className="text-xs text-text-muted">{t('dashboard.month.income')} </Text>
-                    <MaskedAmount
-                      amount={usd.totalIncome}
-                      currency="USD"
-                      showCentsOverride
-                      className="text-xs font-semibold text-text"
-                    />
-                  </View>
-                  <View className="flex-row items-baseline">
-                    <Text className="text-xs text-text-muted">{t('dashboard.month.expense')} </Text>
-                    <MaskedAmount
-                      amount={usd.totalExpense}
-                      currency="USD"
-                      showCentsOverride
-                      className="text-xs font-semibold text-text"
-                    />
-                  </View>
-                </View>
-              </View>
-            )}
-          </>
+          </View>
         ) : query.isError ? (
           <View className="items-center justify-center gap-3 px-4">
             <Text className="text-center text-sm text-text-muted">

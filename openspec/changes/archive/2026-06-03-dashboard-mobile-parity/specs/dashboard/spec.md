@@ -1,119 +1,41 @@
-# dashboard Specification
+# dashboard — Delta (dashboard-mobile-parity)
 
-## Purpose
+> Des-bifurcación: el dashboard nativo alcanza paridad estricta con el rediseño web. Los 4 requirements del rediseño tagged `(web)` se reabsorben como plataforma-neutrales (REMOVED + ADDED con título nuevo); los requirements del diseño viejo que solo sobrevivían en mobile se eliminan.
 
-Define la pantalla `/dashboard` como landing universal post-login y post-onboarding, con la misma composición en web y en la app nativa (rediseño `redesign-dashboard-home` + paridad `dashboard-mobile-parity`): Hero "Para gastar · hoy" (card navy bimoneda) + "Dónde está" (cuentas), "Balance del mes" (neto + barras + strip USD) y "En qué se fue" (dona por categoría con toggle ARS/USD), con las dos secciones mensuales gobernadas por un selector de mes compartido en el header. Es read-only: toda interacción navega al módulo correspondiente; el resumen de tarjetas NO vive en el dashboard sino en `/cards`. El eye toggle de privacidad enmascara los importes en ambas plataformas.
-## Requirements
-### Requirement: La pantalla dashboard es la landing universal post-login y post-onboarding
+## ADDED Requirements
 
-El sistema SHALL renderizar la pantalla principal de la app en la ruta `/dashboard` bajo el grupo `(app)`, tanto en web como en mobile. La pantalla SHALL ser la única landing tras tres flujos: login exitoso, signup confirmado con onboarding ya completado, y completar el onboarding.
+### Requirement: La card "Dónde está" desglosa las cuentas del usuario
 
-Ambas plataformas SHALL renderizar la misma composición de secciones en orden fijo: (1) Hero "Para gastar · hoy" y card "Dónde está" (fila superior en desktop web; apiladas en mobile-web y nativo), (2) "Balance del mes", (3) "En qué se fue". El dashboard NO SHALL renderizar la sección "Lo que viene" ni la card de bienvenida `WelcomeFirstMoveCard` en ninguna plataforma (eliminadas por el rediseño `redesign-dashboard-home` + `dashboard-mobile-parity`).
+Junto al Hero "Para gastar · hoy", el dashboard SHALL renderizar una card "Dónde está" que desglosa dónde vive el disponible (a la derecha del Hero en desktop web; apilada debajo en mobile-web y en la app nativa). La card SHALL listar las cuentas activas `type IN ('cash','bank')` ordenadas por saldo ARS descendente (el orden que ya devuelve `getDashboardHero`), cada fila con el `AccountAvatar` chico de la cuenta + nombre + saldo ARS alineado a la derecha. Un saldo ARS de cero SHALL pintarse atenuado. La card SHALL truncar el listado a un máximo de 6 cuentas; el resto se ve en el módulo Cuentas.
 
-La sección Tarjetas NO forma parte del dashboard en ninguna plataforma; el resumen de tarjetas vive en `/cards` (web) y se navega desde el `AppMenu` → `/cards` (nativo).
+Como fila final, separada del resto, la card SHALL mostrar la tenencia "En dólares": el total USD del usuario (el mismo `usd` del Hero) destacado en emerald. Esta fila representa el stock total en USD, NO un desglose por cuenta.
 
-#### Scenario: Usuario aterriza en dashboard tras completar el onboarding
+El header de la card SHALL incluir un link "Ver todas" → módulo Cuentas (web: `/accounts`; nativo: `router.push('/accounts')`). Los datos SHALL salir de la misma data de `getDashboardHero` que alimenta el Hero — en web vía un único container async para la fila superior; en nativo ambas cards consumen `useDashboardHero()` y TanStack dedupea por queryKey (un solo fetch). Todos los importes de la card participan del eye-mask.
 
-- **WHEN** un usuario completa el flujo de onboarding
-- **THEN** el sistema lo redirige a `/dashboard`
-- **AND** la pantalla renderiza las tres secciones (fila superior "Para gastar"+"Dónde está", "Balance del mes", "En qué se fue") en orden fijo
-- **AND** NO renderiza "Lo que viene" ni la card de bienvenida
+#### Scenario: Cuentas ordenadas con la tenencia USD al final
 
-#### Scenario: Login exitoso aterriza en dashboard
+- **WHEN** el usuario tiene Billetera $1.254.499, Galicia $1.200.000, Cooperativa $0 y un total USD de u$s 1.240
+- **THEN** la card lista Billetera, Galicia y Cooperativa en ese orden con sus saldos ARS
+- **AND** el saldo $0 de Cooperativa se pinta atenuado
+- **AND** la fila final "En dólares" muestra u$s 1.240 en emerald
 
-- **WHEN** un usuario con onboarding completado hace login
-- **THEN** el sistema redirige a `/dashboard`
+#### Scenario: Más de 6 cuentas se truncan
 
-#### Scenario: Arranque con sesión activa aterriza en /dashboard renderizado (mobile)
+- **WHEN** el usuario tiene 9 cuentas cash/bank activas
+- **THEN** la card muestra las 6 de mayor saldo ARS + la fila "En dólares"
+- **AND** el link "Ver todas" navega al módulo Cuentas donde está el listado completo
 
-- **WHEN** un usuario mobile con sesión válida persistida abre la app
-- **THEN** la app aterriza en `(app)/dashboard` con las tres secciones del rediseño renderizadas
-- **AND** NO renderiza el placeholder "Dashboard" de texto plano
+#### Scenario: Una sola llamada alimenta la fila superior (web)
 
----
+- **WHEN** se inspecciona el container de la fila superior del dashboard web
+- **THEN** un único container async llama a `getDashboardHero` y renderiza ambas cards (Hero + "Dónde está") con esa data
+- **AND** NO hay una segunda llamada a `getDashboardHero` para la card de cuentas
 
-### Requirement: El dashboard usa un layout multi-columna en desktop (web)
+#### Scenario: Un solo fetch alimenta ambas cards (mobile)
 
-En viewports `lg` (≥1024px) y mayores, la pantalla `/dashboard` web SHALL organizar sus secciones así: una **fila superior** de dos columnas (grid asimétrico ~`1.15fr 1fr`, alturas igualadas con `align-items: stretch`) con el Hero "Para gastar · hoy" a la izquierda y la card "Dónde está" a la derecha; debajo, "Balance del mes" como card full-width; debajo, "En qué se fue" como card full-width. El contenido SHALL estar centrado con un max-width acotado (~1080px efectivos).
-
-Por debajo de `lg`, el dashboard SHALL apilar todas las cards en una sola columna en el mismo orden (Para gastar → Dónde está → Balance del mes → En qué se fue). En "En qué se fue", la dona y la leyenda SHALL apilarse en una columna centrada en viewports angostos.
-
-#### Scenario: Desktop ancho muestra la fila superior en dos columnas
-
-- **WHEN** un usuario carga `/dashboard` en un viewport de 1440px
-- **THEN** "Para gastar · hoy" y "Dónde está" se muestran lado a lado con la misma altura
-- **AND** "Balance del mes" y "En qué se fue" ocupan el ancho completo debajo, en ese orden
-
-#### Scenario: Bajo lg el dashboard apila en una columna
-
-- **WHEN** un usuario carga `/dashboard` en un viewport de 820px o de 375px
-- **THEN** las cards se apilan en una sola columna: Para gastar → Dónde está → Balance del mes → En qué se fue
-
-#### Scenario: La dona se centra en mobile
-
-- **WHEN** un usuario carga `/dashboard` en un viewport de 375px
-- **THEN** "En qué se fue" muestra la dona centrada con la leyenda ocupando el ancho debajo
-
----
-
-### Requirement: El header del dashboard saluda al usuario y muestra la fecha de hoy
-
-El header del dashboard SHALL mostrar un saludo `Hola, {name}.` usando el nombre del perfil (key `dashboard.welcome`), con fallback a `dashboard.welcome_anon` ("Hola.") cuando el perfil no tiene nombre. El header SHALL mostrar la fecha del día calculada desde la zona horaria financiera del usuario vía `getTodayAR()`; NO SHALL usar `new Date()` directo del navegador/servidor. El `eye toggle` siempre vive en este header; el botón "Nuevo movimiento" vive en este header **solo en desktop-web** (viewport `≥sm`) — en mobile-web el acceso primario para registrar es el FAB definido en la spec de `transactions` y NO se renderiza en el header. En desktop el saludo es el título grande del header; en la app nativa el saludo se pinta dentro del header navy.
-
-En **web**, el header SHALL incluir además el navegador mensual compartido (ver requirement "El selector de mes del header gobierna las secciones mensuales (web)"). El subtítulo del header SHALL mostrar únicamente la fecha; el neto del mes en curso ("vas {neto} este mes") NO vive en el header sino en el header de la card "Balance del mes" (decisión de QA del rediseño: junto a la fecha competía con el saludo).
-
-En **web**, el header SHALL renderizarse desde el primer paint sin esperar al fetch del contenido del dashboard. Como el nombre del perfil se resuelve client-side (vía el cliente browser de Supabase), el header SHALL exhibir un **estado de carga** mientras esa query no resuelve: el saludo SHALL usar el fallback `dashboard.welcome_anon` ("Hola.") aunque exista un perfil con nombre, y los controles que sí vivan en el header en el viewport activo SHALL renderizarse en estado disabled (ver sus respectivos requirements). En desktop-web esto cubre el `eye toggle`, el navegador mensual y el botón "Nuevo movimiento"; en mobile-web cubre el `eye toggle` y el navegador mensual. Cuando la query del perfil resuelve, el header SHALL actualizarse al saludo personalizado y habilitar los controles del header. Si la query falla, el header SHALL permanecer indefinidamente en el saludo anon pero los controles SHALL pasar a estado habilitado para no bloquear al usuario.
-
-La fecha del header NO SHALL depender de esa query: SHALL calcularse en el server o en el primer render con `getTodayAR()` y mantenerse estable entre el estado disabled y el habilitado.
-
-#### Scenario: Saludo con nombre del perfil
-
-- **WHEN** el usuario con nombre "Cristian" carga `/dashboard`
-- **THEN** el header termina mostrando "Hola, Cristian."
-- **AND** muestra la fecha de hoy en la zona horaria financiera (AR)
-
-#### Scenario: Saludo sin nombre usa fallback
-
-- **WHEN** el usuario no tiene nombre cargado en el perfil
-- **THEN** el header muestra "Hola."
-
-#### Scenario: La fecha de hoy se calcula desde la zona financiera
-
-- **WHEN** se renderiza la fecha del header del dashboard
-- **THEN** el valor se deriva de `getTodayAR()` y NO de `new Date()` directo
-
-#### Scenario: El subtítulo del header muestra solo la fecha (web)
-
-- **WHEN** el usuario carga `/dashboard` en web
-- **THEN** el subtítulo del header muestra la fecha de hoy sin el neto del mes
-- **AND** el neto del mes en curso aparece en el header de la card "Balance del mes"
-
-#### Scenario: El header se ve antes de que resuelva la query del perfil (desktop-web)
-
-- **WHEN** un usuario web en viewport `≥sm` navega a `/dashboard` y la query del nombre del perfil todavía no resolvió
-- **THEN** el header ya está montado con el saludo "Hola." (fallback `dashboard.welcome_anon`)
-- **AND** muestra la fecha de hoy correctamente
-- **AND** sus controles (`eye toggle`, navegador mensual, "Nuevo movimiento") están visibles pero disabled
-
-#### Scenario: El header se ve antes de que resuelva la query del perfil (mobile-web)
-
-- **WHEN** un usuario web en viewport `<sm` navega a `/dashboard` y la query del nombre del perfil todavía no resolvió
-- **THEN** el header ya está montado con el saludo "Hola." (fallback `dashboard.welcome_anon`)
-- **AND** muestra la fecha de hoy correctamente
-- **AND** el `eye toggle` y el navegador mensual están visibles pero disabled
-- **AND** el botón "Nuevo movimiento" NO se renderiza en el header (su lugar lo ocupa el FAB)
-
-#### Scenario: Resolver la query actualiza el saludo y habilita los controles (web)
-
-- **WHEN** la query del perfil resuelve con `full_name = "Cristian Perez"` después de mostrar el estado disabled inicial
-- **THEN** el saludo del header pasa a "Hola, Cristian."
-- **AND** los controles que vivan en el header en el viewport activo se habilitan
-
-#### Scenario: Fallo de la query no deja el header bloqueado (web)
-
-- **WHEN** la query del perfil falla
-- **THEN** el saludo se mantiene en "Hola." (fallback anon)
-- **AND** los controles del header se habilitan igual para no bloquear al usuario
+- **WHEN** la pantalla dashboard nativa monta Hero y "Dónde está"
+- **THEN** ambos componentes consumen `useDashboardHero()` con la misma queryKey
+- **AND** TanStack ejecuta un único fetch para los dos
 
 ---
 
@@ -154,175 +76,6 @@ La navegación de mes NO SHALL modificar la URL/ruta ni provocar una navegación
 - **WHEN** el usuario abre el dashboard en la app nativa
 - **THEN** el `MonthNavigator` se renderiza dentro del header navy, debajo del saludo, ocupando el ancho
 - **AND** salir del tab y volver resetea la selección al mes actual
-
----
-
-### Requirement: El header del dashboard ofrece un acceso primario para registrar un movimiento (web)
-
-En web **desktop** (viewport `≥sm`), el header del dashboard SHALL incluir un botón primario "Nuevo movimiento" (estilo `positive`/emerald) que navega a la creación de movimiento (`/transactions/new`). El label del botón SHALL leerse del catálogo i18n (no hardcodeado). En web **mobile** (viewport `<sm`), el botón NO SHALL renderizarse en el header: el acceso primario en ese viewport es el FAB definido en la spec de `transactions` (mobile-only en web). En la app nativa este acceso NO es parte del header del dashboard; en native el acceso primario es el FAB nativo definido en la spec de `transactions`.
-
-Mientras el header esté en su estado de carga (ver requirement del saludo), el botón "Nuevo movimiento" — cuando se renderice en el viewport activo — SHALL renderizarse en estado **disabled**: SHALL aparecer con su tipografía e ícono completos pero sin envolver un `<Link>` (ni equivalente navegable), y SHALL no responder a clicks. Cuando el header sale del estado de carga, el botón SHALL pasar a su rendering normal (`<Button asChild><Link href="/transactions/new">…</Link></Button>` o equivalente).
-
-#### Scenario: El botón navega a la creación de movimiento (desktop-web)
-
-- **WHEN** un usuario web en viewport `≥sm` toca "Nuevo movimiento" en el header del dashboard una vez habilitado
-- **THEN** navega a `/transactions/new`
-
-#### Scenario: El label del botón es traducible
-
-- **WHEN** un desarrollador inspecciona el botón "Nuevo movimiento"
-- **THEN** su label se obtiene del catálogo i18n, sin string hardcodeado
-
-#### Scenario: El botón se renderiza disabled mientras el header carga (desktop-web)
-
-- **WHEN** el header del dashboard está en su estado de carga en viewport `≥sm` (query del nombre sin resolver)
-- **THEN** "Nuevo movimiento" se muestra con su label e ícono pero deshabilitado
-- **AND** no responde a clicks
-- **AND** NO envuelve a un `<Link>` (no es navegable mientras está disabled)
-
-#### Scenario: El botón no se renderiza en mobile-web
-
-- **WHEN** un usuario web en viewport `<sm` abre `/dashboard`
-- **THEN** el header NO contiene el botón "Nuevo movimiento" en ningún estado (loading o habilitado)
-- **AND** el acceso primario para registrar un movimiento en ese viewport es el FAB definido en la spec de `transactions`
-
----
-
-### Requirement: La pantalla dashboard es read-only
-
-El dashboard SHALL NOT exponer formularios, botones de creación, edición, eliminación, archivado ni confirmación de movimientos pendientes. Toda interacción que requiera modificar datos SHALL ocurrir en el módulo correspondiente (Cuentas, Tarjetas, Movimientos). Los elementos visibles en el dashboard PUEDEN ser clickeables como atajos de navegación a esos módulos, pero NO ejecutan mutaciones en sí mismos.
-
-#### Scenario: Click en el Hero navega a Cuentas (web)
-
-- **WHEN** el usuario hace click en el importe del Hero "Para gastar"
-- **THEN** el sistema navega a `/accounts`
-
-#### Scenario: Click en "Ver todas" de "Dónde está" navega a Cuentas (web)
-
-- **WHEN** el usuario hace click en el link "Ver todas" de la card "Dónde está"
-- **THEN** el sistema navega a `/accounts`
-- **AND** NO dispara ninguna mutación
-
-#### Scenario: Click en una categoría de "En qué se fue" navega a Movimientos (web)
-
-- **WHEN** el usuario hace click en una fila de la leyenda de "En qué se fue"
-- **THEN** el sistema navega a `/transactions`, que abre con el desglose completo del mes
-- **AND** NO dispara ninguna mutación
-
-#### Scenario: Toque en el Hero navega a Cuentas (mobile)
-
-- **WHEN** el usuario toca el Hero "Para gastar · hoy" en la app nativa
-- **THEN** la app navega con `useRouter().push('/accounts')` a la pantalla de cuentas
-- **AND** NO dispara ninguna mutación
-
-#### Scenario: Toque en una categoría de "En qué se fue" navega a Movimientos (mobile)
-
-- **WHEN** el usuario toca una fila de la leyenda de "En qué se fue" en la app nativa
-- **THEN** la app navega con `useRouter().push('/transactions')` a Movimientos
-- **AND** NO dispara ninguna mutación
-
----
-
-### Requirement: El Hero muestra el disponible total bimoneda
-
-El Hero SHALL mostrar dos importes: el saldo disponible total en ARS (primario, tipografía grande) y el saldo disponible total en USD (secundario, tipografía menor). Cada importe SHALL surgir de la suma de los saldos derivados de todas las cuentas activas del usuario con `type IN ('cash','bank')` para la moneda correspondiente; las cuentas `type='credit'` NO entran en el cálculo.
-
-El cálculo SHALL respetar el invariante "Off-ledger credit cards": las transacciones `expense` sobre cuentas `type='credit'` NO reducen el disponible; solo la transacción de pago de resumen (un `expense` sobre cash/bank) lo hace.
-
-Si el usuario tiene ARS habilitado pero no tiene cuentas con saldo USD inicializado, el Hero SHALL mostrar `u$s 0,00` (no oculta la línea, porque V3 provisiona ambas monedas por default).
-
-En **ambas plataformas**, el Hero SHALL renderizarse como una card oscura (navy de marca vía token — web: `surface-dark`; nativo: clase NativeWind del mirror — sin hex inline) con: eyebrow "PARA GASTAR · HOY" en uppercase, el importe ARS como titular grande con los decimales en tipografía reducida (`MaskedAmountDisplay`), la línea USD como chip "USD" + importe, y una caption al pie ("Lo que tenés disponible hoy, en pesos y dólares" vía i18n). El bloque eyebrow+importes SHALL centrarse verticalmente en el espacio sobre la caption cuando la card estira su altura. El Hero NO SHALL contener el desglose de cuentas: ese desglose vive en la card "Dónde está". Tocar el Hero navega al módulo Cuentas. Se respeta bimoneda (ARS primario, USD subordinado, sin merge entre monedas).
-
-#### Scenario: Usuario con saldos en ambas monedas
-
-- **WHEN** el usuario tiene una cuenta cash con $ 150.000 ARS + u$s 500 USD y una cuenta bank con $ 137.450 ARS + u$s 740,50 USD, sin pagos de resúmenes pendientes ya descontados
-- **THEN** el Hero muestra `$ 287.450,00` en línea primaria y `u$s 1.240,50` en línea secundaria
-
-#### Scenario: Consumo en tarjeta no reduce el disponible del Hero
-
-- **WHEN** el usuario tiene $ 100.000 ARS disponibles y registra un consumo de $ 30.000 en su tarjeta Visa
-- **THEN** el Hero sigue mostrando `$ 100.000,00`
-- **AND** el consumo aparece en `/cards`
-
-#### Scenario: Pago de resumen reduce el disponible
-
-- **WHEN** el usuario paga el resumen de Visa por $ 145.200 desde una cuenta cash que tenía $ 287.450
-- **THEN** el Hero pasa a mostrar `$ 142.250,00`
-
-#### Scenario: El Hero es la card oscura sin desglose de cuentas
-
-- **WHEN** el usuario carga el dashboard (web o nativo)
-- **THEN** el Hero se pinta como card navy con eyebrow "PARA GASTAR · HOY", el importe ARS grande y el chip USD
-- **AND** el desglose por cuenta NO está dentro del Hero (vive en la card "Dónde está")
-- **AND** el color navy proviene del token de tema, no de un hex inline
-
----
-
-### Requirement: La card "Dónde está" desglosa las cuentas del usuario
-
-Junto al Hero "Para gastar · hoy", el dashboard SHALL renderizar una card "Dónde está" que desglosa dónde vive el disponible (a la derecha del Hero en desktop web; apilada debajo en mobile-web y en la app nativa). La card SHALL listar las cuentas activas `type IN ('cash','bank')` ordenadas por saldo ARS descendente (el orden que ya devuelve `getDashboardHero`), cada fila con el `AccountAvatar` chico de la cuenta + nombre + saldo ARS alineado a la derecha. Un saldo ARS de cero SHALL pintarse atenuado. La card SHALL truncar el listado a un máximo de 6 cuentas; el resto se ve en el módulo Cuentas.
-
-Como fila final, separada del resto, la card SHALL mostrar la tenencia "En dólares": el total USD del usuario (el mismo `usd` del Hero) destacado en emerald. Esta fila representa el stock total en USD, NO un desglose por cuenta.
-
-El header de la card SHALL incluir un link "Ver todas" → módulo Cuentas (web: `/accounts`; nativo: `router.push('/accounts')`). Los datos SHALL salir de la misma data de `getDashboardHero` que alimenta el Hero — en web vía un único container async para la fila superior; en nativo ambas cards consumen `useDashboardHero()` y TanStack dedupea por queryKey (un solo fetch). Todos los importes de la card participan del eye-mask.
-
-#### Scenario: Cuentas ordenadas con la tenencia USD al final
-
-- **WHEN** el usuario tiene Billetera $1.254.499, Galicia $1.200.000, Cooperativa $0 y un total USD de u$s 1.240
-- **THEN** la card lista Billetera, Galicia y Cooperativa en ese orden con sus saldos ARS
-- **AND** el saldo $0 de Cooperativa se pinta atenuado
-- **AND** la fila final "En dólares" muestra u$s 1.240 en emerald
-
-#### Scenario: Más de 6 cuentas se truncan
-
-- **WHEN** el usuario tiene 9 cuentas cash/bank activas
-- **THEN** la card muestra las 6 de mayor saldo ARS + la fila "En dólares"
-- **AND** el link "Ver todas" navega al módulo Cuentas donde está el listado completo
-
-#### Scenario: Una sola llamada alimenta la fila superior (web)
-
-- **WHEN** se inspecciona el container de la fila superior del dashboard web
-- **THEN** un único container async llama a `getDashboardHero` y renderiza ambas cards (Hero + "Dónde está") con esa data
-- **AND** NO hay una segunda llamada a `getDashboardHero` para la card de cuentas
-
-#### Scenario: Un solo fetch alimenta ambas cards (mobile)
-
-- **WHEN** la pantalla dashboard nativa monta Hero y "Dónde está"
-- **THEN** ambos componentes consumen `useDashboardHero()` con la misma queryKey
-- **AND** TanStack ejecuta un único fetch para los dos
-
----
-
-### Requirement: El eye toggle enmascara todos los importes del dashboard
-
-El sistema SHALL exponer en el header del dashboard un botón "ojo" que, al activarse, reemplaza visualmente todos los importes numéricos del dashboard por un placeholder genérico (`••••••` o equivalente) sin alterar los datos subyacentes. El estado del eye toggle SHALL ser client-side y SHALL NOT persistir entre sesiones ni navegaciones fuera del dashboard (en nativo, salir del tab y volver lo resetea vía remount del provider).
-
-En **ambas plataformas**, el toggle SHALL aplicar al menos a: Hero "Para gastar · hoy" (importes ARS y USD), card "Dónde está" (saldos por cuenta y fila "En dólares"), "Balance del mes" (neto, ingresos, gastos, strip USD y la línea "vas {neto} este mes" del header de la card) y "En qué se fue" (montos de la leyenda y total del centro de la dona — los porcentajes NO se enmascaran).
-
-En **web**, el `eye toggle` SHALL permanecer montado y visible mientras el header esté en su estado de carga (query del nombre sin resolver), pero SHALL renderizarse **disabled** durante ese estado: no SHALL responder a clicks ni modificar el estado del `EyeMaskProvider`. Cuando el header sale del estado de carga, el toggle SHALL pasar a su comportamiento normal. El `eye toggle` SHALL implementarse en web usando el UI `Button` con `variant="ghost"` y `size="icon"` (no como `<button>` artesanal) para reusar foco accesible, cursor y estilos de disabled.
-
-#### Scenario: Activar el toggle enmascara todos los importes
-
-- **WHEN** el usuario está en `/dashboard` con todos los importes visibles y toca el botón "ojo"
-- **THEN** todos los importes numéricos visibles se reemplazan por `••••••`
-- **AND** los labels, fechas, categorías y porcentajes permanecen visibles
-
-#### Scenario: Salir del dashboard y volver resetea el toggle
-
-- **WHEN** el usuario activa el toggle, navega a `/accounts` (web) o cambia de tab y vuelve (nativo)
-- **THEN** los importes están visibles nuevamente (estado no persistido)
-
-#### Scenario: El toggle está montado pero disabled mientras el header carga (web)
-
-- **WHEN** el header del dashboard está en su estado de carga
-- **THEN** el `eye toggle` aparece en su posición habitual con el ícono visible
-- **AND** está deshabilitado: clickearlo NO cambia el estado del `EyeMaskProvider`
-
-#### Scenario: El eye toggle web está implementado sobre el UI Button
-
-- **WHEN** un desarrollador inspecciona el componente `EyeMaskToggle` en `apps/web`
-- **THEN** delega el render en el UI `Button` con `variant="ghost"` y `size="icon"`
-- **AND** NO es un `<button>` artesanal con clases tailwind ad-hoc
 
 ---
 
@@ -429,6 +182,137 @@ El dashboard SHALL renderizar como tercera sección "En qué se fue": una dona S
 - **WHEN** se inspecciona el componente `SpendingDonut` nativo
 - **THEN** dibuja los tramos con `<Circle strokeDasharray strokeDashoffset>` de `react-native-svg`
 - **AND** los colores de fallback provienen del mirror de tokens (`@grana/ui-tokens/tokens`), sin literales hex en el componente
+
+## MODIFIED Requirements
+
+### Requirement: La pantalla dashboard es la landing universal post-login y post-onboarding
+
+El sistema SHALL renderizar la pantalla principal de la app en la ruta `/dashboard` bajo el grupo `(app)`, tanto en web como en mobile. La pantalla SHALL ser la única landing tras tres flujos: login exitoso, signup confirmado con onboarding ya completado, y completar el onboarding.
+
+Ambas plataformas SHALL renderizar la misma composición de secciones en orden fijo: (1) Hero "Para gastar · hoy" y card "Dónde está" (fila superior en desktop web; apiladas en mobile-web y nativo), (2) "Balance del mes", (3) "En qué se fue". El dashboard NO SHALL renderizar la sección "Lo que viene" ni la card de bienvenida `WelcomeFirstMoveCard` en ninguna plataforma (eliminadas por el rediseño `redesign-dashboard-home` + `dashboard-mobile-parity`).
+
+La sección Tarjetas NO forma parte del dashboard en ninguna plataforma; el resumen de tarjetas vive en `/cards` (web) y se navega desde el `AppMenu` → `/cards` (nativo).
+
+#### Scenario: Usuario aterriza en dashboard tras completar el onboarding
+
+- **WHEN** un usuario completa el flujo de onboarding
+- **THEN** el sistema lo redirige a `/dashboard`
+- **AND** la pantalla renderiza las tres secciones (fila superior "Para gastar"+"Dónde está", "Balance del mes", "En qué se fue") en orden fijo
+- **AND** NO renderiza "Lo que viene" ni la card de bienvenida
+
+#### Scenario: Login exitoso aterriza en dashboard
+
+- **WHEN** un usuario con onboarding completado hace login
+- **THEN** el sistema redirige a `/dashboard`
+
+#### Scenario: Arranque con sesión activa aterriza en /dashboard renderizado (mobile)
+
+- **WHEN** un usuario mobile con sesión válida persistida abre la app
+- **THEN** la app aterriza en `(app)/dashboard` con las tres secciones del rediseño renderizadas
+- **AND** NO renderiza el placeholder "Dashboard" de texto plano
+
+---
+
+### Requirement: El Hero muestra el disponible total bimoneda
+
+El Hero SHALL mostrar dos importes: el saldo disponible total en ARS (primario, tipografía grande) y el saldo disponible total en USD (secundario, tipografía menor). Cada importe SHALL surgir de la suma de los saldos derivados de todas las cuentas activas del usuario con `type IN ('cash','bank')` para la moneda correspondiente; las cuentas `type='credit'` NO entran en el cálculo.
+
+El cálculo SHALL respetar el invariante "Off-ledger credit cards": las transacciones `expense` sobre cuentas `type='credit'` NO reducen el disponible; solo la transacción de pago de resumen (un `expense` sobre cash/bank) lo hace.
+
+Si el usuario tiene ARS habilitado pero no tiene cuentas con saldo USD inicializado, el Hero SHALL mostrar `u$s 0,00` (no oculta la línea, porque V3 provisiona ambas monedas por default).
+
+En **ambas plataformas**, el Hero SHALL renderizarse como una card oscura (navy de marca vía token — web: `surface-dark`; nativo: clase NativeWind del mirror — sin hex inline) con: eyebrow "PARA GASTAR · HOY" en uppercase, el importe ARS como titular grande con los decimales en tipografía reducida (`MaskedAmountDisplay`), la línea USD como chip "USD" + importe, y una caption al pie ("Lo que tenés disponible hoy, en pesos y dólares" vía i18n). El bloque eyebrow+importes SHALL centrarse verticalmente en el espacio sobre la caption cuando la card estira su altura. El Hero NO SHALL contener el desglose de cuentas: ese desglose vive en la card "Dónde está". Tocar el Hero navega al módulo Cuentas. Se respeta bimoneda (ARS primario, USD subordinado, sin merge entre monedas).
+
+#### Scenario: Usuario con saldos en ambas monedas
+
+- **WHEN** el usuario tiene una cuenta cash con $ 150.000 ARS + u$s 500 USD y una cuenta bank con $ 137.450 ARS + u$s 740,50 USD, sin pagos de resúmenes pendientes ya descontados
+- **THEN** el Hero muestra `$ 287.450,00` en línea primaria y `u$s 1.240,50` en línea secundaria
+
+#### Scenario: Consumo en tarjeta no reduce el disponible del Hero
+
+- **WHEN** el usuario tiene $ 100.000 ARS disponibles y registra un consumo de $ 30.000 en su tarjeta Visa
+- **THEN** el Hero sigue mostrando `$ 100.000,00`
+- **AND** el consumo aparece en `/cards`
+
+#### Scenario: Pago de resumen reduce el disponible
+
+- **WHEN** el usuario paga el resumen de Visa por $ 145.200 desde una cuenta cash que tenía $ 287.450
+- **THEN** el Hero pasa a mostrar `$ 142.250,00`
+
+#### Scenario: El Hero es la card oscura sin desglose de cuentas
+
+- **WHEN** el usuario carga el dashboard (web o nativo)
+- **THEN** el Hero se pinta como card navy con eyebrow "PARA GASTAR · HOY", el importe ARS grande y el chip USD
+- **AND** el desglose por cuenta NO está dentro del Hero (vive en la card "Dónde está")
+- **AND** el color navy proviene del token de tema, no de un hex inline
+
+---
+
+### Requirement: El eye toggle enmascara todos los importes del dashboard
+
+El sistema SHALL exponer en el header del dashboard un botón "ojo" que, al activarse, reemplaza visualmente todos los importes numéricos del dashboard por un placeholder genérico (`••••••` o equivalente) sin alterar los datos subyacentes. El estado del eye toggle SHALL ser client-side y SHALL NOT persistir entre sesiones ni navegaciones fuera del dashboard (en nativo, salir del tab y volver lo resetea vía remount del provider).
+
+En **ambas plataformas**, el toggle SHALL aplicar al menos a: Hero "Para gastar · hoy" (importes ARS y USD), card "Dónde está" (saldos por cuenta y fila "En dólares"), "Balance del mes" (neto, ingresos, gastos, strip USD y la línea "vas {neto} este mes" del header de la card) y "En qué se fue" (montos de la leyenda y total del centro de la dona — los porcentajes NO se enmascaran).
+
+En **web**, el `eye toggle` SHALL permanecer montado y visible mientras el header esté en su estado de carga (query del nombre sin resolver), pero SHALL renderizarse **disabled** durante ese estado: no SHALL responder a clicks ni modificar el estado del `EyeMaskProvider`. Cuando el header sale del estado de carga, el toggle SHALL pasar a su comportamiento normal. El `eye toggle` SHALL implementarse en web usando el UI `Button` con `variant="ghost"` y `size="icon"` (no como `<button>` artesanal) para reusar foco accesible, cursor y estilos de disabled.
+
+#### Scenario: Activar el toggle enmascara todos los importes
+
+- **WHEN** el usuario está en `/dashboard` con todos los importes visibles y toca el botón "ojo"
+- **THEN** todos los importes numéricos visibles se reemplazan por `••••••`
+- **AND** los labels, fechas, categorías y porcentajes permanecen visibles
+
+#### Scenario: Salir del dashboard y volver resetea el toggle
+
+- **WHEN** el usuario activa el toggle, navega a `/accounts` (web) o cambia de tab y vuelve (nativo)
+- **THEN** los importes están visibles nuevamente (estado no persistido)
+
+#### Scenario: El toggle está montado pero disabled mientras el header carga (web)
+
+- **WHEN** el header del dashboard está en su estado de carga
+- **THEN** el `eye toggle` aparece en su posición habitual con el ícono visible
+- **AND** está deshabilitado: clickearlo NO cambia el estado del `EyeMaskProvider`
+
+#### Scenario: El eye toggle web está implementado sobre el UI Button
+
+- **WHEN** un desarrollador inspecciona el componente `EyeMaskToggle` en `apps/web`
+- **THEN** delega el render en el UI `Button` con `variant="ghost"` y `size="icon"`
+- **AND** NO es un `<button>` artesanal con clases tailwind ad-hoc
+
+---
+
+### Requirement: La pantalla dashboard es read-only
+
+El dashboard SHALL NOT exponer formularios, botones de creación, edición, eliminación, archivado ni confirmación de movimientos pendientes. Toda interacción que requiera modificar datos SHALL ocurrir en el módulo correspondiente (Cuentas, Tarjetas, Movimientos). Los elementos visibles en el dashboard PUEDEN ser clickeables como atajos de navegación a esos módulos, pero NO ejecutan mutaciones en sí mismos.
+
+#### Scenario: Click en el Hero navega a Cuentas (web)
+
+- **WHEN** el usuario hace click en el importe del Hero "Para gastar"
+- **THEN** el sistema navega a `/accounts`
+
+#### Scenario: Click en "Ver todas" de "Dónde está" navega a Cuentas (web)
+
+- **WHEN** el usuario hace click en el link "Ver todas" de la card "Dónde está"
+- **THEN** el sistema navega a `/accounts`
+- **AND** NO dispara ninguna mutación
+
+#### Scenario: Click en una categoría de "En qué se fue" navega a Movimientos (web)
+
+- **WHEN** el usuario hace click en una fila de la leyenda de "En qué se fue"
+- **THEN** el sistema navega a `/transactions`, que abre con el desglose completo del mes
+- **AND** NO dispara ninguna mutación
+
+#### Scenario: Toque en el Hero navega a Cuentas (mobile)
+
+- **WHEN** el usuario toca el Hero "Para gastar · hoy" en la app nativa
+- **THEN** la app navega con `useRouter().push('/accounts')` a la pantalla de cuentas
+- **AND** NO dispara ninguna mutación
+
+#### Scenario: Toque en una categoría de "En qué se fue" navega a Movimientos (mobile)
+
+- **WHEN** el usuario toca una fila de la leyenda de "En qué se fue" en la app nativa
+- **THEN** la app navega con `useRouter().push('/transactions')` a Movimientos
+- **AND** NO dispara ninguna mutación
 
 ---
 
@@ -551,24 +435,6 @@ Cada componente mobile SHALL usar las primitivas idiomáticas de RN/Expo (`View`
 
 - **WHEN** se busca `UpcomingFortnightSection`, `WelcomeFirstMoveCard`, `CategoryTeaser` o `MonthBalanceChart` en `apps/web` y `apps/mobile`
 - **THEN** ningún archivo los define ni los importa
-
----
-
-### Requirement: El dashboard nativo pinta el header y la status bar con el navy de marca (mobile)
-
-En la app nativa, el header del dashboard (que contiene el saludo y el `eye toggle`) y la status bar SHALL pintarse con el navy de marca (`--navy` / `#0B1A2B`) leído desde el mirror de tokens, sin hex hardcodeado, y la status bar SHALL usar estilo `light`. El header navy SHALL respetar el safe-area top del dispositivo.
-
-#### Scenario: Header navy con status bar light
-
-- **WHEN** un usuario abre el dashboard en la app nativa
-- **THEN** el header del dashboard se pinta con el navy de marca
-- **AND** la status bar usa estilo light (íconos/hora en claro)
-- **AND** el header respeta el safe-area top
-
-#### Scenario: El color navy no está hardcodeado
-
-- **WHEN** un desarrollador inspecciona el componente del header nativo
-- **THEN** el color proviene del mirror de tokens, no de un literal hex
 
 ---
 
@@ -695,3 +561,45 @@ Los bloques internos NO SHALL declarar atributos de accesibilidad (heredan al wr
 - **WHEN** un usuario con lector de pantalla aterriza en el dashboard mientras una sección está en loading
 - **THEN** el lector anuncia el label localizado de la sección
 - **AND** los bloques individuales del skeleton no son leídos uno por uno
+
+## REMOVED Requirements
+
+### Requirement: La sección "Lo que viene" lista compromisos firmes y recurrencias de los próximos 14 días
+
+**Reason**: Paridad estricta con el rediseño web (`redesign-dashboard-home` la eliminó en web; `dashboard-mobile-parity` la elimina en nativo). La sección deja de existir en el producto.
+**Migration**: Los compromisos siguen visibles en sus módulos: resúmenes por vencer en `/cards`, recurrencias previstas en Movimientos → Recurrentes. El código de queries/agregaciones queda recuperable del archive y de git si una vista futura lo retoma.
+
+### Requirement: "Lo que viene" muestra totales por agrupación y balance del período
+
+**Reason**: Cae junto con la sección "Lo que viene" (ver arriba).
+**Migration**: N/A — el dato era derivado de los ítems de la sección eliminada.
+
+### Requirement: La sección "Balance del mes" muestra un gráfico de línea acumulada con navegador mensual
+
+**Reason**: El rediseño reemplaza el gráfico de línea por neto + barras + strip USD en ambas plataformas; el requirement quedaba mobile-only y `dashboard-mobile-parity` elimina el chart nativo. El navegador mensual ahora es compartido a nivel pantalla (requirement "El selector de mes del dashboard gobierna las secciones mensuales").
+**Migration**: La serie diaria (`MonthBalanceSeries.days`) sigue calculándose en `@grana/dashboard` y queda disponible para una futura vista de evolución temporal.
+
+### Requirement: `UpcomingItem` expone destino de navegación de forma neutral a la plataforma
+
+**Reason**: El tipo `UpcomingItem` se retira de `@grana/dashboard` junto con `getUpcomingFortnight` (sin consumidores en ninguna plataforma).
+**Migration**: Si una vista futura reintroduce "lo que viene", recuperar el patrón de destino semántico (`target.kind` + ids, sin `href` hardcodeado) desde este archive.
+
+### Requirement: La card "Dónde está" desglosa las cuentas del usuario (web)
+
+**Reason**: Reabsorbido como requirement plataforma-neutral (paridad mobile alcanzada).
+**Migration**: Ver requirement nuevo "La card \"Dónde está\" desglosa las cuentas del usuario".
+
+### Requirement: El selector de mes del header gobierna las secciones mensuales (web)
+
+**Reason**: Reabsorbido como requirement plataforma-neutral (paridad mobile alcanzada).
+**Migration**: Ver requirement nuevo "El selector de mes del dashboard gobierna las secciones mensuales".
+
+### Requirement: La sección "Balance del mes" web muestra el neto del mes con barras de ingresos y gastos (web)
+
+**Reason**: Reabsorbido como requirement plataforma-neutral (paridad mobile alcanzada).
+**Migration**: Ver requirement nuevo "La sección \"Balance del mes\" muestra el neto del mes con barras de ingresos y gastos".
+
+### Requirement: La sección "En qué se fue" muestra el desglose de gastos por categoría con dona y toggle de moneda (web)
+
+**Reason**: Reabsorbido como requirement plataforma-neutral (paridad mobile alcanzada).
+**Migration**: Ver requirement nuevo "La sección \"En qué se fue\" muestra el desglose de gastos por categoría con dona y toggle de moneda".

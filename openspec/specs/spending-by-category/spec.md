@@ -2,7 +2,7 @@
 
 ## Purpose
 
-"En qué se fue": el desglose de los gastos del mes agrupados por categoría, pesado por **neto** (gastos − reintegros recibidos) y **por moneda**. Es la carta de presentación del módulo Movimientos —un donut + ranking, con navegación por mes y drill-down al listado filtrado— y se asoma en el dashboard: en web como la sección "En qué se fue" (dona + leyenda con montos y toggle ARS/USD), en mobile como un teaser de proporciones de las 3 categorías que más pesan. Responde una de las tres preguntas centrales del usuario, complementando "cuánto tengo" y "qué viene".
+"En qué se fue": el desglose de los gastos del mes agrupados por categoría, pesado por **neto** (gastos − reintegros recibidos) y **por moneda**. Es la carta de presentación del módulo Movimientos —un donut + ranking, con navegación por mes y drill-down al listado filtrado— y se asoma en el dashboard de ambas plataformas como la sección "En qué se fue" (dona + leyenda con montos y toggle ARS/USD). Responde una de las tres preguntas centrales del usuario, complementando "cuánto tengo" y "qué viene".
 ## Requirements
 ### Requirement: El módulo Movimientos abre con un desglose de gastos por categoría del mes
 
@@ -86,17 +86,15 @@ El desglose SHALL permitir navegar entre meses, mostrando por defecto el mes act
 
 ### Requirement: El dashboard muestra un teaser de las categorías que más pesan
 
-La presencia del desglose de gastos por categoría en el dashboard difiere por plataforma. El desglose **completo** (donut + ranking + drill) SHALL seguir viviendo en Movimientos en ambas plataformas; el dashboard nunca lo reemplaza.
+El dashboard SHALL mostrar en **ambas plataformas** (web y nativo) la sección "En qué se fue": una dona con los gastos del mes por categoría (`topN: 5` + bucket "Otros"), leyenda con **montos** y porcentajes, y toggle ARS/USD. Su contrato detallado vive en la spec de `dashboard` (requirement "La sección 'En qué se fue' muestra el desglose de gastos por categoría con dona y toggle de moneda"). La sección muestra importes y por lo tanto SÍ participa del eye-mask del dashboard; sus filas y el link "Ver desglose" llevan al desglose completo en Movimientos. El desglose **completo** (donut + ranking + drill) sigue viviendo en Movimientos; el dashboard nunca lo reemplaza.
 
-En **web**, el dashboard SHALL mostrar la sección "En qué se fue": una dona con los gastos del mes por categoría (`topN: 5` + bucket "Otros"), leyenda con **montos** y porcentajes, y toggle ARS/USD. Su contrato detallado vive en la spec de `dashboard` (requirement "La sección 'En qué se fue' muestra el desglose de gastos por categoría con dona y toggle de moneda (web)"). A diferencia del teaser anterior, esta sección SÍ muestra importes y por lo tanto SÍ participa del eye-mask del dashboard; sus filas linkean al desglose completo en Movimientos. El teaser web de 3 categorías deja de existir.
+El teaser de proporciones de 3 categorías (el formato anterior del dashboard) dejó de existir en ambas plataformas (`redesign-dashboard-home` en web, `dashboard-mobile-parity` en nativo).
 
-En **mobile**, el dashboard SHALL seguir mostrando el teaser con las **3 categorías que más pesan** del mes, que enlaza al desglose completo en Movimientos. El teaser NO SHALL ser el desglose completo. Por cada categoría: su `icon + label`, una **barra de proporción** y el **porcentaje**. El teaser mobile SHALL mostrar proporciones, NO montos — por lo tanto NO participa del eye-mask. Si no hay gasto del mes (cero slices), el teaser mobile NO SHALL renderizarse.
+El peso y el orden de las categorías SHALL derivarse del mismo cálculo neto-por-moneda del desglose completo (vía `buildCategorySlices` sobre `getMonthCategoryBreakdown`), de modo que dashboard y Movimientos muestren los mismos porcentajes ante los mismos datos.
 
-En ambas plataformas, el peso y el orden de las categorías SHALL derivarse del mismo cálculo neto-por-moneda del desglose completo (vía `buildCategorySlices` sobre `getMonthCategoryBreakdown`), de modo que dashboard y Movimientos muestren los mismos porcentajes ante los mismos datos.
+#### Scenario: La sección muestra montos y linkea al desglose
 
-#### Scenario: La sección web muestra montos y linkea al desglose (web)
-
-- **WHEN** el usuario ve "En qué se fue" en el dashboard web
+- **WHEN** el usuario ve "En qué se fue" en el dashboard (web o nativo)
 - **THEN** ve la dona y la leyenda con monto y porcentaje por categoría
 - **AND** al tocar una fila o el link "Ver desglose" llega al desglose completo en Movimientos
 - **AND** el eye-mask del dashboard enmascara los montos (no los porcentajes)
@@ -106,17 +104,7 @@ En ambas plataformas, el peso y el orden de las categorías SHALL derivarse del 
 - **WHEN** el dashboard y el desglose de Movimientos se calculan sobre los mismos datos del mes
 - **THEN** ambos muestran los mismos porcentajes por categoría (mismo cálculo neto por moneda)
 
-#### Scenario: El teaser se renderiza en el dashboard mobile (mobile)
+#### Scenario: El teaser de proporciones no existe en ninguna plataforma
 
-- **WHEN** un usuario con gastos del mes abre el dashboard en la app nativa
-- **THEN** el teaser se renderiza al final del dashboard (después de "Balance del mes")
-- **AND** muestra hasta 3 categorías con barra de proporción y porcentaje
-- **AND** NO muestra importes en pesos ni dólares (el eye-mask no lo afecta)
-- **AND** el link "Ver desglose" del header navega a Movimientos mobile (`/transactions`); el cuerpo del card no es pressable
-- **AND** mientras el desglose completo no exista en Movimientos mobile, el destino es la lista de movimientos (decisión transitoria documentada en código)
-
-#### Scenario: Sin gastos del mes el teaser no aparece (mobile)
-
-- **WHEN** el usuario no tuvo gastos en el mes
-- **THEN** el teaser mobile no se renderiza (cero slices)
-- **AND** el resto del dashboard mobile renderiza normalmente
+- **WHEN** se busca `CategoryTeaser` en `apps/web` y `apps/mobile`
+- **THEN** el componente no existe en ninguna de las dos apps

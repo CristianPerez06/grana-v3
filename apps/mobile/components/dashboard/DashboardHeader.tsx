@@ -2,7 +2,9 @@ import { Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocale, useT } from '../../lib/locale-context'
 import { useProfileFirstName } from '../../lib/dashboard/queries'
+import { useDashboardMonth } from './DashboardMonthContext'
 import { EyeMaskToggle } from './EyeMaskToggle'
+import { MonthNavigator } from './MonthNavigator'
 
 type Props = {
   /** Today's accounting date as `YYYY-MM-DD`, derived from `getTodayAR()`. */
@@ -32,6 +34,8 @@ export const DashboardHeader = ({ todayISO }: Props) => {
     ? t('dashboard.welcome', { name })
     : t('dashboard.welcome_anon')
 
+  const { selected, goPrev, goNext } = useDashboardMonth()
+
   return (
     <SafeAreaView edges={['top']} className="bg-navy">
       <View className="flex-col gap-3 px-6 pb-4 pt-3">
@@ -45,6 +49,15 @@ export const DashboardHeader = ({ todayISO }: Props) => {
           </View>
           <EyeMaskToggle />
         </View>
+        {/* Shared month selector: drives "Balance del mes" + "En qué se fue";
+            never "Para gastar" (today-based). White pill over navy, full width
+            (the mobile layout of the design handoff). */}
+        <MonthNavigator
+          year={selected.year}
+          month={selected.month}
+          onPrev={goPrev}
+          onNext={goNext}
+        />
       </View>
     </SafeAreaView>
   )

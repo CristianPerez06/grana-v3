@@ -1,5 +1,6 @@
 import { Pressable } from 'react-native'
 import { Eye, EyeOff } from 'lucide-react-native'
+import { colors } from '../../lib/colors'
 import { useT } from '../../lib/locale-context'
 import { useEyeMask } from './EyeMaskContext'
 
@@ -16,7 +17,7 @@ export const EyeMaskToggle = () => {
       accessibilityRole="button"
       className="h-9 w-9 items-center justify-center rounded-full"
     >
-      <Icon size={18} color="#FFFFFF" />
+      <Icon size={18} color={colors.white} />
     </Pressable>
   )
 }
