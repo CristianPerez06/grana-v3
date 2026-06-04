@@ -24,7 +24,7 @@ El nombre visible de una categoría/subcategoría **de sistema** no sale del cam
 ## Decisions
 
 ### 1. Migración nueva incremental (no editar 0006)
-`0027_reseed_categories_argentina.sql` con el mismo patrón que `0006`: `INSERT ... ON CONFLICT DO NOTHING`, las subcategorías se insertan haciendo `join` a `categories` por `canonical_name` con `user_id IS NULL`. Idempotente: re-correrla no duplica. La categoría nueva (`cuidado-personal`) se inserta en el bloque de categorías; sus subcategorías y las de las categorías existentes, en el bloque de subcategorías.
+`0028_reseed_categories_argentina.sql` con el mismo patrón que `0006`: `INSERT ... ON CONFLICT DO NOTHING`, las subcategorías se insertan haciendo `join` a `categories` por `canonical_name` con `user_id IS NULL`. Idempotente: re-correrla no duplica. La categoría nueva (`cuidado-personal`) se inserta en el bloque de categorías; sus subcategorías y las de las categorías existentes, en el bloque de subcategorías.
 
 ### 2. Renombres de display vía i18n
 - `transporte-publico`: value es → `"SUBE/Transporte público"`; en → `"SUBE/Public transport"`.
@@ -46,7 +46,7 @@ Decisión de producto: la categoría padre alcanza; el usuario puede crear las s
 
 ## Migration Plan
 
-1. Crear y aplicar `0027` en el dashboard de Supabase (prod) y en cualquier entorno de desarrollo.
+1. Crear y aplicar `0028` en el dashboard de Supabase (prod) y en cualquier entorno de desarrollo.
 2. Desplegar i18n + `validate_schema.sql` + docs en el mismo cambio.
 3. Correr `validate_schema.sql` post-migración: debe reportar 18/13/71 sin excepciones.
 
@@ -58,7 +58,7 @@ Ninguna pendiente: catálogo, slugs, enfoque AR y manejo de `Reintegros/Cashback
 
 ## Apéndice A — Catálogo completo (fuente de verdad para la implementación)
 
-`canonical_name` entre paréntesis. `[existente]` = ya en `0006` (no se inserta de nuevo, queda por contexto). El resto es **NUEVO** y se inserta en `0027`.
+`canonical_name` entre paréntesis. `[existente]` = ya en `0006` (no se inserta de nuevo, queda por contexto). El resto es **NUEVO** y se inserta en `0028`.
 
 ### Gastos (13 categorías)
 

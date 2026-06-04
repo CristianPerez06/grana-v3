@@ -17,7 +17,7 @@ Enriquecer el seed del sistema de **17 categorías / 31 subcategorías** a **18 
 - **40 subcategorías nuevas** distribuidas en las categorías existentes (y la nueva), priorizando rubros argentinos: Monotributo, Tasas municipales, Expensas, Prepaga, SUBE/Transporte público, Peajes, Service/Mecánico, Seguro auto, VTV, Patente, Aguinaldo, Compra dólar/MEP, etc. El catálogo completo con `canonical_name` está en `design.md` (Apéndice A).
 - **2 cambios de display (solo i18n, sin tocar `canonical_name`)**: `transporte-publico` pasa a mostrarse "SUBE/Transporte público"; `intereses-cuenta-remunerada` pasa a mostrarse "Intereses".
 
-La entrega es una **migración nueva incremental** (`0027_reseed_categories_argentina.sql`) con `INSERT ... ON CONFLICT DO NOTHING`. **No se edita `0006`** (ya aplicada en prod) y **no se borra ni renombra ningún `canonical_name` existente** (se respeta la regla de inmutabilidad). Los renombres son únicamente de la etiqueta visible vía i18n.
+La entrega es una **migración nueva incremental** (`0028_reseed_categories_argentina.sql`) con `INSERT ... ON CONFLICT DO NOTHING`. **No se edita `0006`** (ya aplicada en prod) y **no se borra ni renombra ningún `canonical_name` existente** (se respeta la regla de inmutabilidad). Los renombres son únicamente de la etiqueta visible vía i18n.
 
 Como el display de las categorías de sistema se resuelve por i18n (`canonical_name` → `categories.*` / `subcategories.*`), el change incluye agregar las claves nuevas en `es.json` **y** `en.json` (si falta una clave, next-intl lanza `MISSING_MESSAGE`).
 
@@ -31,7 +31,7 @@ Como el display de las categorías de sistema se resuelve por i18n (`canonical_n
 
 **Código / datos afectados:**
 
-- `supabase/migrations/0027_reseed_categories_argentina.sql` — **NUEVO**. INSERT aditivo de 1 categoría + 40 subcategorías con `ON CONFLICT DO NOTHING`.
+- `supabase/migrations/0028_reseed_categories_argentina.sql` — **NUEVO**. INSERT aditivo de 1 categoría + 40 subcategorías con `ON CONFLICT DO NOTHING`.
 - `packages/i18n-messages/src/es.json` y `en.json` — claves nuevas en `categories.*` (1) y `subcategories.*` (40); + 2 cambios de value para los renombres de display.
 - `supabase/validate_schema.sql` — actualizar los asserts de conteo (`raise exception`): 17→18 categorías, 12→13 expense, 31→71 subcategorías; sumar los `canonical_name` nuevos a los arrays de las secciones 8.1D/8.1E. Income sigue en 5.
 - `openspec/specs/categories/spec.md` — vía el delta de este change (Purpose + requirement "Catálogo de categorías del sistema").
