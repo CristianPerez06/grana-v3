@@ -189,23 +189,23 @@ begin
     raise exception 'card_networks: falta amex';
   end if;
 
-  -- categories: exactamente 17 del sistema
+  -- categories: exactamente 18 del sistema
   select count(*) into n from categories where user_id is null;
-  if n <> 17 then raise exception 'categories sistema: esperaba 17, encontré %', n; end if;
+  if n <> 18 then raise exception 'categories sistema: esperaba 18, encontré %', n; end if;
 
-  -- categorías de gastos: 12
+  -- categorías de gastos: 13
   select count(*) into n from categories where user_id is null and type = 'expense';
-  if n <> 12 then raise exception 'categories expense: esperaba 12, encontré %', n; end if;
+  if n <> 13 then raise exception 'categories expense: esperaba 13, encontré %', n; end if;
 
   -- categorías de ingresos: 5
   select count(*) into n from categories where user_id is null and type = 'income';
   if n <> 5 then raise exception 'categories income: esperaba 5, encontré %', n; end if;
 
-  -- subcategories: exactamente 31 del sistema
+  -- subcategories: exactamente 71 del sistema
   select count(*) into n from subcategories where user_id is null;
-  if n <> 31 then raise exception 'subcategories sistema: esperaba 31, encontré %', n; end if;
+  if n <> 71 then raise exception 'subcategories sistema: esperaba 71, encontré %', n; end if;
 
-  raise notice '✓ 8.1D — seed data OK (3 currencies, >= 23 institutions, 7 card_networks, 17 categories, 31 subcategories)';
+  raise notice '✓ 8.1D — seed data OK (3 currencies, >= 23 institutions, 7 card_networks, 18 categories, 71 subcategories)';
 end $$;
 
 
@@ -219,9 +219,9 @@ declare
 begin
   for slug in select unnest(array[
     'comida','transporte','salud','educacion','entretenimiento',
-    'ropa-y-calzado','hogar','servicios','tecnologia','impuestos',
-    'financiero','otros-gastos','sueldo','freelance','inversiones',
-    'otros-ingresos','reintegros-cashback'
+    'ropa-y-calzado','hogar','servicios','cuidado-personal','tecnologia',
+    'impuestos','financiero','otros-gastos','sueldo','freelance',
+    'inversiones','otros-ingresos','reintegros-cashback'
   ])
   loop
     if not exists (
@@ -234,14 +234,25 @@ begin
 
   for slug in select unnest(array[
     'supermercado','restaurante','pedidosya','rappi','cafeteria',
+    'kiosco-almacen','verduleria','carniceria',
     'nafta','uber-cabify','transporte-publico','estacionamiento',
-    'farmacia','medico','obra-social',
+    'peajes','service-mecanico','seguro-auto','vtv','patente',
+    'farmacia','medico','obra-social','prepaga',
+    'cuota-colegio','universidad','cursos','utiles-libros',
     'netflix-streaming','cine','salidas','juegos',
-    'luz','gas','internet','celular',
+    'luz','gas','internet','celular','agua','cable-tv',
     'ropa','calzado','accesorios',
-    'alquiler','limpieza','muebles','reparaciones',
-    'impuesto-de-sellos','comision-compra-usd',
-    'constitucion-plazo-fijo','intereses-cuenta-remunerada'
+    'alquiler','limpieza','muebles','reparaciones','expensas',
+    'peluqueria','gimnasio','cosmetica-higiene','skin-care',
+    'dispositivos','apps-y-suscripciones','gadgets',
+    'impuesto-de-sellos','monotributo','tasas-municipales',
+    'comision-compra-usd','constitucion-plazo-fijo',
+    'intereses-cuenta-remunerada','comisiones-bancarias','compra-dolar-mep',
+    'regalos','donaciones',
+    'salario','aguinaldo','bono',
+    'honorarios','proyectos',
+    'plazo-fijo','dividendos','alquileres-cobrados','dolar-mep',
+    'venta','regalo-recibido'
   ])
   loop
     if not exists (
@@ -252,7 +263,7 @@ begin
     end if;
   end loop;
 
-  raise notice '✓ 8.1E — canonical_names de sistema OK (17 categories, 31 subcategories)';
+  raise notice '✓ 8.1E — canonical_names de sistema OK (18 categories, 71 subcategories)';
 end $$;
 
 
@@ -272,14 +283,14 @@ begin
     raise exception 'subcategories: % filas con category_id inválido', n;
   end if;
 
-  -- comida tiene exactamente 5 subcategorías
+  -- comida tiene exactamente 8 subcategorías
   select count(*) into n
   from subcategories s
   join categories c on c.id = s.category_id
   where c.canonical_name = 'comida' and c.user_id is null and s.user_id is null;
 
-  if n <> 5 then
-    raise exception 'comida debería tener 5 subcategorías del sistema, tiene %', n;
+  if n <> 8 then
+    raise exception 'comida debería tener 8 subcategorías del sistema, tiene %', n;
   end if;
 
   raise notice '✓ 8.1F — integridad referencial subcategories → categories OK';
