@@ -5,8 +5,6 @@ import { createClient } from '@/lib/supabase/server'
 import { getTodayAR } from '@/lib/date'
 import {
   createCreditCardSchema,
-  registerCardPurchaseSchema,
-  registerInstallmentsSchema,
   payCardPeriodSchema,
   updatePeriodDatesSchema,
   validateActionInput,
@@ -18,23 +16,20 @@ import {
   type PayCardPeriodInput,
   type UpdatePeriodDatesInput,
 } from '@grana/validation'
-import {
-  getCreditCardDebtCheck,
-  getCardPeriodsWithStatus,
-  getOrCreatePeriodForDate,
-} from '@/lib/cards/queries'
+import { getCreditCardDebtCheck } from '@/lib/cards/queries'
 import {
   derivePeriodStatus,
   splitAmountIntoInstallments,
   addDaysToISO,
-  addMonthsToISO,
   formatDateISO,
 } from '@/lib/cards/utils'
+import {
+  registerInstallments as registerInstallmentsOrchestrator,
+  registerCardPurchase as registerCardPurchaseOrchestrator,
+} from '@grana/transactions-mutations'
 import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
 import { getAuthenticatedUserId } from './_lib/auth'
-import { insertDeclaredReimbursement } from './_lib/reimbursements'
-import { applySharedSplits } from './_lib/shared-splits'
 
 function normalizeActionMoney(value: number): number {
   return normalizeMoneyAmount(value) ?? value
@@ -161,262 +156,44 @@ export async function createCreditCard(
 export async function registerCardPurchase(
   input: unknown,
 ): Promise<ActionResult<RegisterCardPurchaseInput> & { id?: string }> {
-  const validation = await validateActionInput(registerCardPurchaseSchema, input)
-  if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
-
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
-  const data = validation.data
-
-  // Verify account belongs to user and is a credit card
-  const { data: account, error: accountError } = await supabase
-    .from('accounts')
-    .select('type, is_active')
-    .eq('id', data.account_id)
-    .eq('user_id', userId)
-    .single()
-
-  if (accountError || !account) {
-    return { ok: false, formError: 'Tarjeta no encontrada.' }
+  const result = await registerCardPurchaseOrchestrator({
+    supabase,
+    userId,
+    input,
+    today: getTodayAR(),
+  })
+  if (result.ok) {
+    revalidatePath('/cards')
+    revalidatePath('/transactions')
+    revalidatePath('/shared')
   }
-  if (account.type !== 'credit') {
-    return { ok: false, formError: 'Esta acción solo aplica a tarjetas de crédito.' }
-  }
-  if (!account.is_active) {
-    return { ok: false, formError: 'Esta tarjeta está archivada.' }
-  }
-
-  // Find or create the period that covers txDate
-  let periodId: string
-  try {
-    periodId = await getOrCreatePeriodForDate(data.account_id, data.date)
-  } catch {
-    return { ok: false, formError: 'No se pudo asignar un período a esta fecha.' }
-  }
-
-  // Verify the period is not paid (backdating check)
-  const periods = await getCardPeriodsWithStatus(data.account_id)
-  const targetPeriod = periods.find((p) => p.id === periodId)
-  if (targetPeriod && targetPeriod.has_payment) {
-    return {
-      ok: false,
-      formError:
-        'No podés registrar consumos en un período ya pagado. Elegí una fecha en un período abierto.',
-    }
-  }
-
-  const dueDate = targetPeriod?.due_date ?? null
-
-  const { data: tx, error: txError } = await supabase
-    .from('transactions')
-    .insert({
-      user_id: userId,
-      account_id: data.account_id,
-      type: 'expense',
-      amount: normalizeActionMoney(data.amount),
-      currency_code: data.currency_code,
-      date: data.date,
-      category_id: data.category_id,
-      subcategory_id: data.subcategory_id ?? null,
-      description: data.description ?? null,
-      status: 'pending',
-      card_period_id: periodId,
-      due_date: dueDate,
-      fx_rate_to_ars: data.fx_rate_to_ars != null ? normalizeActionFxRate(data.fx_rate_to_ars) : null,
-      is_parent: false,
-    })
-    .select('id')
-    .single()
-
-  if (txError || !tx) {
-    return { ok: false, formError: txError?.message ?? 'Error al registrar el consumo.' }
-  }
-
-  // Declared reimbursement: created atomically-with-rollback (design.md Decisión 9).
-  if (data.reimbursement) {
-    // A statement reimbursement nets in a card period; default it to the
-    // purchase's period (required when it is received now).
-    const declaration =
-      data.reimbursement.target === 'statement'
-        ? { ...data.reimbursement, card_period_id: data.reimbursement.card_period_id ?? periodId }
-        : data.reimbursement
-    const r = await insertDeclaredReimbursement(supabase, {
-      userId,
-      expenseId: tx.id,
-      currencyCode: data.currency_code,
-      declaration,
-      shared: data.shared,
-    })
-    if (!r.ok) {
-      await supabase.from('transactions').delete().eq('id', tx.id).eq('user_id', userId)
-      return { ok: false, formError: `El consumo no se guardó (reintegro inválido): ${r.error}` }
-    }
-  }
-
-  // Shared card consumption: split the single consumo (off-ledger until the
-  // statement is paid; the debt counts it in the period of its due_date).
-  if (data.shared) {
-    const s = await applySharedSplits(
-      supabase,
-      { household_id: data.shared.household_id, splits: data.shared.splits },
-      [{ transactionId: tx.id, amount: normalizeActionMoney(data.amount) }],
-    )
-    if (!s.ok) {
-      await supabase.from('transactions').delete().eq('id', tx.id).eq('user_id', userId)
-      return { ok: false, formError: `El consumo no se guardó (compartido inválido): ${s.error}` }
-    }
-  }
-
-  revalidatePath('/cards')
-  revalidatePath('/transactions')
-  revalidatePath('/shared')
-  return { ok: true, id: tx.id }
+  return result
 }
 
 // ── 4.4: registerInstallments ─────────────────────────────────────────────────
+// Shell: auth + client + orchestrator + revalidate. The orchestration (split,
+// period assignment, parent+children fan-out, rollback dance) lives in
+// `@grana/transactions-mutations` so mobile can reuse it intact.
 
 export async function registerInstallments(
   input: unknown,
 ): Promise<ActionResult<RegisterInstallmentsInput> & { parentId?: string }> {
-  const validation = await validateActionInput(registerInstallmentsSchema, input)
-  if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
-
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
-  const data = validation.data
-  const n = data.installments_total
-
-  // Verify account
-  const { data: account, error: accountError } = await supabase
-    .from('accounts')
-    .select('type, is_active')
-    .eq('id', data.account_id)
-    .eq('user_id', userId)
-    .single()
-
-  if (accountError || !account) {
-    return { ok: false, formError: 'Tarjeta no encontrada.' }
-  }
-  if (account.type !== 'credit') {
-    return { ok: false, formError: 'Las cuotas solo aplican a tarjetas de crédito.' }
-  }
-
-  // Split amounts (residue on first installment)
-  const normalizedAmount = normalizeActionMoney(data.amount)
-  const installmentAmounts = splitAmountIntoInstallments(normalizedAmount, n)
-
-  // Pre-compute dates and periods for all N installments
-  const installmentDates: string[] = []
-  for (let i = 0; i < n; i++) {
-    installmentDates.push(addMonthsToISO(data.date, i))
-  }
-
-  // Ensure periods exist for all installment dates (rolling)
-  const periodIds: string[] = []
-  for (const txDate of installmentDates) {
-    try {
-      const periodId = await getOrCreatePeriodForDate(data.account_id, txDate)
-      periodIds.push(periodId)
-    } catch {
-      return {
-        ok: false,
-        formError: `No se pudo asignar un período para la cuota del ${txDate}.`,
-      }
-    }
-  }
-
-  // Check no period is already paid (backdating check)
-  const periods = await getCardPeriodsWithStatus(data.account_id)
-  const paidPeriodIds = new Set(periods.filter((p) => p.has_payment).map((p) => p.id))
-  for (const pid of periodIds) {
-    if (paidPeriodIds.has(pid)) {
-      return {
-        ok: false,
-        formError: 'Una o más cuotas caerían en un período ya pagado.',
-      }
-    }
-  }
-
-  // INSERT parent (off-ledger)
-  const { data: parent, error: parentError } = await supabase
-    .from('transactions')
-    .insert({
-      user_id: userId,
-      account_id: null,
-      type: 'expense',
-      amount: normalizedAmount,
-      currency_code: 'ARS',
-      date: data.date,
-      category_id: data.category_id,
-      subcategory_id: data.subcategory_id ?? null,
-      description: data.description ?? null,
-      is_parent: true,
-      installments_total: n,
-      // The parent carries the shared flag for listing; splits live on the children.
-      ...(data.shared ? { is_shared: true, household_id: data.shared.household_id } : {}),
-    })
-    .select('id')
-    .single()
-
-  if (parentError || !parent) {
-    return { ok: false, formError: parentError?.message ?? 'Error al crear la compra.' }
-  }
-
-  // INSERT N children
-  const childRows = installmentAmounts.map((installmentMoney, i) => {
-    const txDate = installmentDates[i]
-    const periodId = periodIds[i]
-    const period = periods.find((p) => p.id === periodId)
-
-    return {
-      user_id: userId,
-      account_id: data.account_id,
-      type: 'expense' as const,
-      amount: Money.toNumber(installmentMoney),
-      currency_code: 'ARS',
-      date: txDate,
-      category_id: data.category_id,
-      subcategory_id: data.subcategory_id ?? null,
-      description: data.description ?? null,
-      is_parent: false,
-      parent_id: parent.id,
-      status: 'pending' as const,
-      card_period_id: periodId,
-      due_date: period?.due_date ?? null,
-      installment_n: i + 1,
-      installments_total: n,
-    }
+  const result = await registerInstallmentsOrchestrator({
+    supabase,
+    userId,
+    input,
+    today: getTodayAR(),
   })
-
-  const { data: insertedChildren, error: childrenError } = await supabase
-    .from('transactions')
-    .insert(childRows)
-    .select('id, amount')
-
-  if (childrenError || !insertedChildren) {
-    await supabase.from('transactions').delete().eq('id', parent.id)
-    return { ok: false, formError: childrenError?.message ?? 'Error al crear las cuotas.' }
+  if (result.ok) {
+    revalidatePath('/cards')
+    revalidatePath('/transactions')
+    revalidatePath('/shared')
   }
-
-  // Shared installments: each child cuota carries its own split, so every cuota
-  // adds its share of debt in the month it falls due.
-  if (data.shared) {
-    const s = await applySharedSplits(
-      supabase,
-      { household_id: data.shared.household_id, splits: data.shared.splits },
-      insertedChildren.map((c) => ({ transactionId: c.id, amount: Number(c.amount) })),
-    )
-    if (!s.ok) {
-      await supabase.from('transactions').delete().eq('parent_id', parent.id)
-      await supabase.from('transactions').delete().eq('id', parent.id)
-      return { ok: false, formError: `Las cuotas no se guardaron (compartido inválido): ${s.error}` }
-    }
-  }
-
-  revalidatePath('/cards')
-  revalidatePath('/transactions')
-  revalidatePath('/shared')
-  return { ok: true, parentId: parent.id }
+  return result
 }
 
 // ── 4.5: payCardPeriod ────────────────────────────────────────────────────────

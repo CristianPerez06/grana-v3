@@ -15,11 +15,13 @@ apps/
   web/             # Next.js (App Router) — web app
   mobile/          # Expo — mobile app (mirrors web feature-by-feature)
 packages/
-  validation/      # @grana/validation       — Yup schemas + helpers (pure, cross-platform)
-  i18n-messages/   # @grana/i18n-messages    — locale catalogs (JSON), no runtime
-  supabase/        # @grana/supabase         — Database type slot + createClient factory
-  ui-tokens/       # @grana/ui-tokens        — design tokens (CSS variables, shared web+mobile)
-  dashboard/       # @grana/dashboard        — dashboard queries + pure aggregations
+  validation/            # @grana/validation             — Yup schemas + helpers (pure, cross-platform)
+  i18n-messages/         # @grana/i18n-messages          — locale catalogs (JSON), no runtime
+  supabase/              # @grana/supabase               — Database type slot + createClient factory
+  ui-tokens/             # @grana/ui-tokens              — design tokens (CSS variables, shared web+mobile)
+  dashboard/             # @grana/dashboard              — dashboard queries + pure aggregations
+  transactions-mutations/# @grana/transactions-mutations — orquestadores write-path con rollback (installments / card purchase / recurrence-from-movement); reciben un cliente Supabase autenticado, no hacen cache invalidation
+  movement-form/         # @grana/movement-form          — hook React `useMovementForm` (estado, cascadas, submit dispatcher) + tipo top-level `Mutators` que web y mobile bindean a sus actions
 supabase/          # SQL migrations + email templates (backend, NOT an app)
 openspec/          # spec-driven workflow
 ```

@@ -1,13 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { getTodayAR } from '@/lib/date'
 import type { Database } from '@grana/supabase'
+import {
+  getCardPeriodsWithStatus as getCardPeriodsWithStatusImpl,
+  getOrCreatePeriodForDate as getOrCreatePeriodForDateImpl,
+} from '@grana/transactions-mutations'
 
 type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
 import {
   derivePeriodStatus,
   derivePeriodVariant,
-  suggestNextPeriodDates,
-  assignTransactionToPeriod,
   formatDateISO,
   sumMoneyValues,
   subtractMoneyValues,
@@ -147,101 +149,23 @@ export async function getCreditCardDebtCheck(
 }
 
 // ─── Load card periods with payment + tx count ────────────────────────────────
+// Bodies live in `@grana/transactions-mutations` so the same write-path queries
+// can be reused cross-platform. Web wrappers stay zero-arg (create the
+// server-side supabase client themselves).
 
 export async function getCardPeriodsWithStatus(
   accountId: string,
 ): Promise<CardPeriodWithPayment[]> {
   const supabase = await createClient()
-
-  const { data: periods, error } = await supabase
-    .from('card_periods')
-    .select('*')
-    .eq('account_id', accountId)
-    .order('start_date', { ascending: true })
-
-  if (error) throw error
-  if (!periods || periods.length === 0) return []
-
-  const periodIds = periods.map((p) => p.id)
-
-  const [paymentsResult, txResult] = await Promise.all([
-    supabase
-      .from('period_payments')
-      .select('period_id')
-      .in('period_id', periodIds),
-    supabase
-      .from('transactions')
-      .select('card_period_id')
-      .in('card_period_id', periodIds)
-      .eq('is_parent', false),
-  ])
-
-  if (paymentsResult.error) throw paymentsResult.error
-  if (txResult.error) throw txResult.error
-
-  const paidIds = new Set((paymentsResult.data ?? []).map((p) => p.period_id))
-  const countByPeriod = new Map<string, number>()
-  for (const tx of txResult.data ?? []) {
-    if (tx.card_period_id) {
-      countByPeriod.set(tx.card_period_id, (countByPeriod.get(tx.card_period_id) ?? 0) + 1)
-    }
-  }
-
-  return periods.map((p) => ({
-    ...p,
-    has_payment: paidIds.has(p.id),
-    tx_count: countByPeriod.get(p.id) ?? 0,
-  }))
+  return getCardPeriodsWithStatusImpl(supabase, accountId)
 }
-
-// ─── Rolling automático: find or create period covering a given date ──────────
 
 export async function getOrCreatePeriodForDate(
   accountId: string,
   targetDate: string,
 ): Promise<string> {
   const supabase = await createClient()
-
-  const periods = await getCardPeriodsWithStatus(accountId)
-
-  // Check if an existing non-paid period covers the target date
-  const existing = assignTransactionToPeriod(periods, targetDate)
-  if (existing) return existing.id
-
-  // No period covers targetDate — generate a new estimated one using rolling algorithm
-  const today = getTodayAR()
-  const { suggestedEndDate, suggestedDueDate } = suggestNextPeriodDates(periods, today)
-
-  // The new period's start_date = last known end_date + 1 day
-  const lastPeriod = periods[periods.length - 1]
-  const newStartDate = lastPeriod
-    ? addOneDayToISO(lastPeriod.end_date)
-    : targetDate
-
-  const { data: newPeriod, error } = await supabase
-    .from('card_periods')
-    .insert({
-      account_id: accountId,
-      start_date: newStartDate,
-      end_date: suggestedEndDate,
-      due_date: suggestedDueDate,
-      is_estimated: true,
-    })
-    .select('id')
-    .single()
-
-  if (error) throw error
-  return newPeriod.id
-}
-
-function addOneDayToISO(isoDate: string): string {
-  const [y, m, d] = isoDate.split('-').map(Number)
-  const date = new Date(y, m - 1, d)
-  date.setDate(date.getDate() + 1)
-  const yr = date.getFullYear()
-  const mo = String(date.getMonth() + 1).padStart(2, '0')
-  const dy = String(date.getDate()).padStart(2, '0')
-  return `${yr}-${mo}-${dy}`
+  return getOrCreatePeriodForDateImpl(supabase, accountId, targetDate, getTodayAR())
 }
 
 // ─── Period alert level helper ─────────────────────────────────────────────────

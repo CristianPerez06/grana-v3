@@ -2518,3 +2518,151 @@ Los helpers mínimos a definir:
 - **WHEN** el usuario crea un movimiento desde `/transactions` y luego navega a `/dashboard`
 - **THEN** el dashboard muestra el balance, el hero y los breakdowns con la data nueva
 - **AND** no es necesario recargar la página manualmente
+
+### Requirement: El alta y edición de movimientos se presenta como drawer lateral en desktop
+
+El sistema SHALL presentar el formulario de carga y edición de movimientos en un drawer lateral derecho que se desliza sobre el listado de Movimientos en desktop, sin perder el contexto del listado. El drawer SHALL abrirse en modo creación desde el FAB de alta y el botón "Registrar movimiento" del header del listado. El modo edición NO SHALL abrirse desde la fila del listado: el click en una fila navega a la página de **detalle** del movimiento (donde viven reintegros/cuotas), y es el botón "Editar" de ese detalle el que abre el drawer en modo edición (la ruta `/transactions/[txId]/edit` queda como fallback). El drawer SHALL tener header fijo, body scrolleable y footer fijo. Al abrir en modo creación, el campo de monto SHALL recibir el foco automáticamente una vez completada la animación de entrada.
+
+La lógica del formulario (estado, validaciones, mutators) SHALL ser la misma que la del formulario existente — el drawer es una capa de presentación, no una reimplementación. Las rutas `/transactions/new` y `/transactions/[txId]/edit` SHALL seguir resolviendo y renderizando el mismo formulario para deep-link y clientes sin JS.
+
+#### Scenario: Abrir el drawer de alta desde el listado
+
+- **WHEN** el usuario, en `/transactions`, activa el FAB de alta o el botón "Registrar movimiento"
+- **THEN** el drawer entra desde la derecha sobre el listado
+- **AND** el listado permanece visible detrás del scrim
+- **AND** el campo de monto toma el foco al terminar la animación
+
+#### Scenario: Abrir el drawer de edición desde el detalle
+
+- **WHEN** el usuario hace click en una fila del listado de movimientos
+- **THEN** navega a la página de detalle de ese movimiento (no al drawer de edición)
+- **WHEN** en el detalle activa el botón "Editar"
+- **THEN** el drawer abre en modo edición precargado con los datos reales de ese movimiento
+
+#### Scenario: La ruta directa sigue funcionando
+
+- **WHEN** el usuario navega directamente a `/transactions/new`
+- **THEN** el formulario se renderiza (en página) con la misma lógica que el drawer
+
+### Requirement: El monto es el elemento hero del drawer con formato AR en vivo y color por tipo
+
+El sistema SHALL mostrar el monto como campo principal del formulario, usando `MoneyAmountInput` (`parseMoneyInput` para parseo/validación). El monto SHALL formatearse en vivo con separador de miles `.` y decimales tras `,` (máx 2), formato es-AR. El color del monto SHALL depender del tipo: gasto y transferencia en navy, ingreso en verde, ajuste en navy con signo `+`/`−`. Una pill de moneda SHALL alternar entre ARS y USD.
+
+#### Scenario: Formato en vivo del monto
+
+- **WHEN** el usuario tipea `8450` en el monto
+- **THEN** el campo muestra `8.450`
+- **WHEN** el usuario tipea `8450,5`
+- **THEN** el campo muestra `8.450,5`
+
+#### Scenario: Color del monto según tipo ingreso
+
+- **WHEN** el tipo activo es Ingreso
+- **THEN** el monto se muestra en color verde
+
+### Requirement: El tipo "Cambio de moneda" está disponible en el formulario unificado
+
+El sistema SHALL ofrecer cinco tipos de movimiento en el selector del formulario: Gasto, Ingreso, Transferencia, Ajuste y Cambio de moneda. El tipo Cambio de moneda SHALL reusar el flujo `createExchange`/`updateExchange`, con cuenta y moneda de origen y cuenta y moneda de destino, exigiendo que la moneda de origen y la de destino difieran.
+
+#### Scenario: Registrar un cambio de moneda desde el drawer
+
+- **WHEN** el usuario elige el tipo "Cambio de moneda", define monto/moneda de origen y monto/moneda de destino con monedas distintas, y confirma
+- **THEN** el sistema crea el movimiento usando el flujo de exchange existente
+
+#### Scenario: Origen y destino con la misma moneda es inválido
+
+- **WHEN** el usuario elige Cambio de moneda con moneda de origen y destino iguales
+- **THEN** el formulario no permite confirmar (validación de exchange)
+
+### Requirement: El selector de categoría del drawer permite drill a subcategorías
+
+El sistema SHALL presentar la selección de categoría en un popover con dos niveles: nivel 0 lista las categorías (las que tienen subcategorías muestran indicador de drill `›`), y al entrar a una categoría drillable, nivel 1 muestra "Toda la categoría" más sus subcategorías. Seleccionar una categoría no drillable o "Toda la categoría" SHALL fijar la categoría sin subcategoría; seleccionar una subcategoría SHALL fijar categoría + subcategoría. Cuando la categoría fue autosugerida (`suggestCategoryFromHistory`), SHALL mostrarse un chip "Sugerida" que SHALL desaparecer al elegir manualmente.
+
+#### Scenario: Drill y selección de subcategoría
+
+- **WHEN** el usuario abre el selector de categoría y entra a "Comida" (drillable) y elige "Almuerzo"
+- **THEN** el formulario fija categoría "Comida" y subcategoría "Almuerzo" y cierra el popover
+
+#### Scenario: Selección manual quita el chip Sugerida
+
+- **WHEN** la categoría está autosugerida (chip "Sugerida" visible) y el usuario elige una categoría manualmente
+- **THEN** el chip "Sugerida" desaparece
+
+### Requirement: Guardar y cargar otro
+
+El sistema SHALL ofrecer en modo creación un botón "+ Otro" que guarde el movimiento y, sin cerrar el drawer, limpie el monto y la descripción, mantenga cuenta/fecha/tipo, y devuelva el foco al monto. Este botón SHALL estar oculto en modo edición.
+
+#### Scenario: Cargar un movimiento atrás de otro
+
+- **WHEN** el usuario completa un gasto y activa "+ Otro"
+- **THEN** el movimiento se guarda
+- **AND** el monto y la descripción se limpian, cuenta/fecha/tipo se mantienen, y el foco vuelve al monto
+
+### Requirement: El toggle Repetir del drawer ofrece frecuencia personalizada
+
+El sistema SHALL ofrecer en el toggle "Repetir" las frecuencias Semanal, Quincenal, Mensual, Anual y Personalizado. Al elegir Personalizado, SHALL mostrarse un control de intervalo `cada N · unidad` (día/semana/mes/año) con condición de fin opcional, y al guardar SHALL crear la recurrencia vía el flujo existente con el modelo intervalo+unidad.
+
+#### Scenario: Crear una recurrencia personalizada desde el form
+
+- **WHEN** el usuario activa "Repetir", elige "Personalizado" con `cada 3 · meses` y confirma el movimiento
+- **THEN** el sistema crea el movimiento real y una recurrencia con `interval_count = 3`, `interval_unit = month`
+
+### Requirement: Atajos de teclado en el drawer
+
+El sistema SHALL soportar, con el drawer abierto, `Esc` para cerrar el popover activo si lo hay o, en su defecto, el drawer; y `⌘/Ctrl+Enter` para enviar el formulario.
+
+#### Scenario: Esc cierra popover antes que drawer
+
+- **WHEN** hay un popover abierto dentro del drawer y el usuario presiona Esc
+- **THEN** se cierra el popover y el drawer permanece abierto
+- **WHEN** no hay popover abierto y el usuario presiona Esc
+- **THEN** se cierra el drawer
+
+#### Scenario: Envío con atajo
+
+- **WHEN** el usuario presiona ⌘/Ctrl+Enter con el formulario válido
+- **THEN** el movimiento se envía
+
+### Requirement: El drawer en modo edición ajusta chrome y CTA
+
+El sistema SHALL precargar el movimiento real al abrir el drawer en modo edición y SHALL deshabilitar el cambio de tipo. El conjunto de campos editables SHALL derivarse de `getEditableFields` (regla ya especificada para el formulario único). En modo edición el CTA SHALL decir "Guardar cambios" y el botón "+ Otro" SHALL ocultarse. El borrado SHALL respetar las reglas existentes (no borrar hijas de cuotas aisladas, no borrar consumos pagados).
+
+#### Scenario: Tipo no editable en edición
+
+- **WHEN** el usuario abre un movimiento existente en el drawer de edición
+- **THEN** el selector de tipo está deshabilitado
+
+#### Scenario: CTA y "+ Otro" en edición
+
+- **WHEN** el drawer está en modo edición
+- **THEN** el CTA dice "Guardar cambios"
+- **AND** el botón "+ Otro" no se muestra
+
+#### Scenario: Borrado respeta reglas de cuotas
+
+- **WHEN** el usuario intenta eliminar una cuota hija desde la edición
+- **THEN** el sistema aplica las reglas de borrado existentes y no permite borrarla aislada
+
+### Requirement: La lógica del formulario vive en `@grana/movement-form` y los orquestadores en `@grana/transactions-mutations`
+
+El sistema SHALL alojar el estado, las cascadas (tab → cuentas elegibles / moneda / toggles válidos), los validadores y el submit dispatcher del formulario de movimientos en un hook React compartido `useMovementForm` en el package `@grana/movement-form`. El hook SHALL recibir un objeto `Mutators` (tipo top-level exportado por el package) que cada plataforma binde a sus actions de movimiento — web a las server actions de Next, mobile (cuando exista) a wrappers `@grana/supabase` para las thin mutations + a los orquestadores compartidos. La JSX SHALL quedar en cada app (web/mobile) y consumir el hook.
+
+Las mutaciones que orquestan varias filas o tablas con rollback (`registerInstallments`, `registerCardPurchase`, `createRecurrenceFromMovement`) SHALL vivir en `@grana/transactions-mutations` como funciones puras que reciben un cliente Supabase ya autenticado y un input ya validado, devolviendo `{ ok, formError?, fieldErrors?, id?/parentId? }`. Auth (`getAuthenticatedUserId`) y cache invalidation (`revalidatePath` en web / TanStack en mobile) SHALL quedar en el shell de cada plataforma — el orquestador NO conoce ninguno de los dos.
+
+#### Scenario: Web binde el hook a sus server actions
+
+- **WHEN** el componente web del formulario monta el drawer
+- **THEN** instancia `useMovementForm` pasando un objeto `Mutators` que mapea cada slot a la server action correspondiente (`createIncome`, `createExpense`, …, `registerInstallments`, `registerCardPurchase`, `createRecurrenceFromMovement`, `suggestCategoryFromHistory`)
+- **AND** wirea `onMutationSuccess` para invalidar TanStack queries + `router.refresh()`, y `onSuccess` para cerrar el drawer o navegar
+
+#### Scenario: Los orquestadores son la única fuente de verdad de la danza de rollback
+
+- **WHEN** un nuevo consumer (mobile, una server action distinta, un script) necesita registrar cuotas o un consumo simple en tarjeta
+- **THEN** importa la función desde `@grana/transactions-mutations` y le pasa su propio cliente Supabase
+- **AND** el orquestador ejecuta la misma secuencia atómica con rollback de parent/children/shared splits y devuelve `{ ok, parentId | id, formError?, fieldErrors? }`
+
+#### Scenario: El contrato `Mutators` es un drift detector
+
+- **WHEN** una nueva action entra al submit dispatcher del hook
+- **THEN** la propiedad correspondiente se agrega al tipo `Mutators` exportado
+- **AND** cualquier consumer (web hoy, mobile mañana) cuyo objeto `Mutators` no tenga esa propiedad falla en tiempo de compilación, no en runtime

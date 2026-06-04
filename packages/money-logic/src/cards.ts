@@ -208,7 +208,30 @@ export function computeStatementPaymentTotal(
   return Money.toNumber(Money.add(Money.from(pendingARS), usdInArs))
 }
 
-// ─── ISO date arithmetic helpers ──────────────────────────────────────────────
+// ─── ISO date arithmetic + AR clock helpers ──────────────────────────────────
+
+const AR_TIMEZONE = 'America/Argentina/Buenos_Aires'
+
+const arFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: AR_TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+/**
+ * Today as a `Date` in the Argentina/Buenos_Aires timezone. The returned `Date`
+ * carries the AR Y/M/D values; consumers should treat it as a calendar date,
+ * not a precise instant. Used everywhere the "today" reference is the user's
+ * AR calendar day (transactions, recurrences, card periods, etc.).
+ */
+export function getTodayAR(): Date {
+  const parts = arFormatter.formatToParts(new Date())
+  const year = Number(parts.find((p) => p.type === 'year')!.value)
+  const month = Number(parts.find((p) => p.type === 'month')!.value)
+  const day = Number(parts.find((p) => p.type === 'day')!.value)
+  return new Date(year, month - 1, day)
+}
 
 export function formatDateISO(date: Date): string {
   const y = date.getFullYear()
