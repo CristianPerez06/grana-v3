@@ -14,7 +14,6 @@ import {
   ChevronRight,
   CreditCard,
   FileText,
-  Plus,
   Repeat,
   Scale,
   Tag,
@@ -224,8 +223,6 @@ export const MovementForm = ({
   const [catDrill, setCatDrill] = useState<string | null>(null)
   const amountRef = useRef<HTMLInputElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
-  // "+ Otro": refocus the amount after a successful add-another reset.
-  const addAnotherRef = useRef(false)
 
   const returnHref = edit?.returnHref ?? createReturnHref ?? '/transactions'
 
@@ -347,7 +344,6 @@ export const MovementForm = ({
     isSubmitting: isPending,
     formError,
     onSubmit: hookSubmit,
-    onSubmitAndAddAnother: hookSubmitAndAddAnother,
     swapAccounts,
     pickCategory: hookPickCategory,
     applyReimbursementPercent,
@@ -376,15 +372,6 @@ export const MovementForm = ({
     // Run once per mount (the drawer remounts the form on each open via `key`).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  // Refocus the amount after a successful "+ Otro" save (the hook clears
-  // amount; we re-acquire focus on the next render).
-  useEffect(() => {
-    if (addAnotherRef.current && !isPending && amount === '') {
-      addAnotherRef.current = false
-      amountRef.current?.focus()
-    }
-  }, [isPending, amount])
 
   if (accounts.length === 0 && edit === undefined) {
     return (
@@ -489,11 +476,6 @@ export const MovementForm = ({
     : null
 
   const handleSwap = () => swapAccounts()
-
-  const handleAddAnother = () => {
-    addAnotherRef.current = true
-    hookSubmitAndAddAnother()
-  }
 
   const cycleCurrency = () => {
     if (currencyOptions.length < 2) return
@@ -1410,18 +1392,6 @@ export const MovementForm = ({
     </button>
   )
 
-  const otroButton = !isEdit ? (
-    <button
-      type="button"
-      onClick={handleAddAnother}
-      disabled={isPending}
-      className="flex h-[52px] shrink-0 items-center gap-1.5 rounded-[14px] border border-border bg-card px-4 text-sm font-bold text-text-muted transition-colors hover:bg-border-soft disabled:opacity-50"
-    >
-      <Plus className="size-4" aria-hidden />
-      {t('drawer.add_another')}
-    </button>
-  ) : null
-
   // ── Render: drawer shell vs inline page ─────────────────────────────────────
   if (isDrawer) {
     return (
@@ -1452,10 +1422,7 @@ export const MovementForm = ({
 
         <footer className="shrink-0 border-t border-border bg-card px-7 py-4">
           {formError && <p className="mb-3 text-sm text-destructive">{formError}</p>}
-          <div className="flex gap-3">
-            {submitButton}
-            {otroButton}
-          </div>
+          <div className="flex gap-3">{submitButton}</div>
         </footer>
       </form>
     )
@@ -1466,10 +1433,7 @@ export const MovementForm = ({
       {typeSelector}
       {body}
       {formError && <p className="text-sm text-destructive">{formError}</p>}
-      <div className="flex gap-3">
-        {submitButton}
-        {otroButton}
-      </div>
+      <div className="flex gap-3">{submitButton}</div>
     </form>
   )
 }

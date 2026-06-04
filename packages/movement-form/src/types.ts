@@ -221,7 +221,7 @@ export type UseMovementFormArgs = {
 
 /**
  * The hook's return shape. The caller renders state into JSX and wires setters
- * to controls; submit happens through `onSubmit` and `onSubmitAndAddAnother`.
+ * to controls; submit happens through `onSubmit`.
  */
 export type MovementFormState = {
   // ── Core state ──
@@ -324,8 +324,6 @@ export type MovementFormState = {
   formError: string | null
   /** Submit the form. Triggers validation; calls the right mutator. */
   onSubmit: () => void
-  /** Submit + reset amount/description/toggles for "+ Otro" UX. Create mode only. */
-  onSubmitAndAddAnother: () => void
 
   // ── Convenience handlers (do composite operations) ──
   /** Swap source ↔ destination accounts (transfer tab). */

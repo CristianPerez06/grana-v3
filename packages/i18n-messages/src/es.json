@@ -1076,7 +1076,6 @@
       "installments_breakdown": "{count} cuotas de ${amount}",
       "repeat_note": "Grana te va a pedir confirmar antes de registrarlo cada vez.",
       "repeat_question": "¿Cada cuánto?",
-      "add_another": "Otro",
       "cta": {
         "expense": "Registrar gasto",
         "income": "Registrar ingreso",

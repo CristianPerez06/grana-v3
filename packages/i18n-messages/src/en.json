@@ -1076,7 +1076,6 @@
       "installments_breakdown": "{count} installments of ${amount}",
       "repeat_note": "Grana will ask you to confirm before logging it each time.",
       "repeat_question": "How often?",
-      "add_another": "Another",
       "cta": {
         "expense": "Register expense",
         "income": "Register income",

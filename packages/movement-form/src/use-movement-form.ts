@@ -118,11 +118,6 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
     return stored?.percentage ?? 50
   })
 
-  // Track "+ Otro": when true, a successful save resets fields instead of
-  // calling onSuccess. Plain ref via state (no useRef in this hook to avoid
-  // a closure-capture pitfall with startTransition).
-  const [addAnotherFlag, setAddAnotherFlag] = useState(false)
-
   // ── Initial reimbursement default once accounts are known ──────────────────
   useEffect(() => {
     if (reimbursementAccountId === '' && accountId !== '') {
@@ -562,23 +557,6 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
       }
 
       onMutationSuccess?.()
-
-      // "+ Otro": keep the surface open, clear amount + description (keep type,
-      // account, date, currency), refresh the list. The amount-refocus is a
-      // UI concern owned by the caller.
-      if (addAnotherFlag) {
-        setAddAnotherFlag(false)
-        setAmount('')
-        setDescription('')
-        setSuggestion(null)
-        setDescriptionHasNoHistory(false)
-        setReimbursementEnabled(false)
-        setIsRecurrent(false)
-        setRecurrenceEndDate('')
-        setFormError(null)
-        return
-      }
-
       onSuccess?.()
     })
   }
@@ -586,11 +564,6 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
   const onSubmit = (): void => {
     if (isEdit) submitEdit()
     else submitCreate()
-  }
-
-  const onSubmitAndAddAnother = (): void => {
-    setAddAnotherFlag(true)
-    submitCreate()
   }
 
   return {
@@ -679,7 +652,6 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
     isSubmitting: isPending,
     formError,
     onSubmit,
-    onSubmitAndAddAnother,
 
     // Compound handlers
     swapAccounts,
