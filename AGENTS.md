@@ -245,7 +245,7 @@ Build order matters — each module generally depends on the ones above it. Cros
 | 2 | `schema-base` | ✅ Done | Monedas, instituciones, redes de tarjeta, tipo `Money`, fecha contable y zona horaria financiera |
 | 3 | `profiles` | ✅ Done | Perfil del usuario, zona horaria financiera, flag de onboarding |
 | 4 | `card-networks` | ✅ Done | Catálogo de redes de tarjeta con BIN ranges y branding |
-| 5 | `categories` | ✅ Done | 17 categorías sistema + subcategorías, categorías propias del usuario, i18n |
+| 5 | `categories` | ✅ Done | 18 categorías sistema + subcategorías, categorías propias del usuario, i18n |
 | 6 | `i18n` | ✅ Done | Estrategia de mensajes (next-intl + helper RN), catálogos JSON compartidos, fallback |
 | 7 | `accounts` | ✅ Done | Cuentas efectivo (ARS/USD), cuentas bancarias/débito (las de crédito viven en `cards`) |
 | 8 | `transactions` | ✅ Done | Ingresos, gastos, transferencias, ajustes, cambios de moneda, reintegros/cashback; reglas de balance |
