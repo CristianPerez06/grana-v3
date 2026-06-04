@@ -27,8 +27,8 @@
 
 ## 5. Verificación
 
-- [ ] 5.1 **(manual — requiere dashboard)** Aplicar `0028` en el SQL Editor de Supabase (desarrollo y prod).
-- [ ] 5.2 **(manual — post-apply)** Correr `supabase/validate_schema.sql`: debe reportar 18/13/71 y los canonical_names OK, sin `raise exception`.
-- [x] 5.3 `pnpm typecheck` ✓, `pnpm lint` ✓, `pnpm --filter web test` ✓ (339), `pnpm --filter @grana/dashboard test` ✓ (21). Los tests de breakdown usan mocks; sin regresiones.
-- [ ] 5.4 **(manual — post-apply)** Web: abrir el selector de categorías en alta de movimiento y verificar las categorías/subcategorías nuevas traducidas; cambiar idioma a `en` y confirmar que las de sistema se traducen (sin `MISSING_MESSAGE`).
-- [ ] 5.5 **(manual — post-apply)** Confirmar que categorías/subcategorías existentes y sus transacciones siguen intactas (garantizado por construcción: cambio aditivo, sin deletes/renames).
+- [x] 5.1 Aplicada `0028` en el SQL Editor de Supabase. Pre-vuelo detectó 1 colisión (un usuario de prueba con "Verdulería" propia bajo Comida); se resolvió promoviendo esa fila a sistema (`user_id = NULL`) antes de la migración.
+- [x] 5.2 `supabase/validate_schema.sql` corrido post-apply: 8.1A–8.1E OK; se corrigió el spot-check 8.1F (comida 5→8). Mini-check final verde: 18 categorías (13/5) · 71 subcategorías · comida=8.
+- [x] 5.3 `pnpm typecheck` ✓, `pnpm lint` ✓, `pnpm --filter web test` ✓ (342), `pnpm --filter @grana/dashboard test` ✓ (21). Los tests de breakdown usan mocks; sin regresiones.
+- [ ] 5.4 **(opcional — visual en app)** Abrir el selector de categorías en alta de movimiento y confirmar las nuevas traducidas; cambiar idioma a `en`. Pendiente de chequeo visual; cobertura indirecta vía paridad i18n verificada (sin claves faltantes).
+- [x] 5.5 Datos existentes intactos: confirmado por construcción (cambio aditivo, sin deletes/renames) y por que 8.1E encontró todos los canonical_name previos. La Verdulería del usuario conserva su `id`, así que sus transacciones siguen vinculadas.

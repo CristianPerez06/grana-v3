@@ -2,11 +2,15 @@
 
 ## Purpose
 
-Define el catálogo de categorías (y subcategorías) del sistema y las categorías propias del usuario que clasifican transacciones de ingreso, gasto o ambos. Cubre el seed inmutable de 17 categorías + 31 subcategorías sistema visibles a todos los usuarios, las reglas de `canonical_name` único e inmutable, las operaciones del usuario sobre sus propias categorías (crear, editar, archivar, eliminar) con las salvaguardas correspondientes, y la traducción i18n de los nombres del sistema. Sirve de base para `transactions`, `cards` y `recurring-movements`.
+Define el catálogo de categorías (y subcategorías) del sistema y las categorías propias del usuario que clasifican transacciones de ingreso, gasto o ambos. Cubre el seed de 18 categorías + 71 subcategorías sistema (enfocado en Argentina) visibles a todos los usuarios, enriquecido de forma aditiva mediante migraciones incrementales; las reglas de `canonical_name` único e inmutable, las operaciones del usuario sobre sus propias categorías (crear, editar, archivar, eliminar) con las salvaguardas correspondientes, y la traducción i18n de los nombres del sistema. Sirve de base para `transactions`, `cards` y `recurring-movements`.
 ## Requirements
 ### Requirement: Catálogo de categorías del sistema
 
-El sistema SHALL proveer 17 categorías padre pre-cargadas: 12 de tipo `expense` y 5 de tipo `income`. Cada categoría del sistema tiene subcategorías pre-cargadas (31 en total). Las categorías del sistema tienen `user_id = NULL` y son visibles para todos los usuarios autenticados.
+El sistema SHALL proveer 18 categorías padre pre-cargadas: 13 de tipo `expense` y 5 de tipo `income`. Cada categoría del sistema tiene subcategorías pre-cargadas (71 en total), con la excepción de `Reintegros/Cashback`, que se provee sin subcategorías. Las categorías del sistema tienen `user_id = NULL` y son visibles para todos los usuarios autenticados.
+
+El catálogo por defecto está enfocado en Argentina: mantiene marcas locales reconocibles (Netflix, PedidosYa, Rappi, Uber/Cabify) y rubros propios del país (Monotributo, Tasas municipales, Expensas, Prepaga, SUBE, VTV, Patente, Aguinaldo, Compra dólar/MEP, entre otros).
+
+El catálogo SHALL enriquecerse de forma aditiva: nuevas categorías/subcategorías de sistema se incorporan mediante migraciones incrementales (`INSERT ... ON CONFLICT DO NOTHING`), sin editar el seed inicial ya aplicado, sin borrar filas existentes y sin modificar ningún `canonical_name` existente. Un cambio en la etiqueta visible de una categoría/subcategoría de sistema se realiza editando su traducción i18n (`categories.*` / `subcategories.*`), nunca su `canonical_name`.
 
 Las categorías del sistema no pueden ser editadas, archivadas ni eliminadas por ningún usuario.
 
@@ -20,6 +24,13 @@ Las categorías del sistema no pueden ser editadas, archivadas ni eliminadas por
 
 - **WHEN** cualquier usuario intenta actualizar o eliminar una categoría con `user_id IS NULL`
 - **THEN** la operación es rechazada por RLS
+
+#### Scenario: Enriquecimiento aditivo del catálogo de sistema
+
+- **WHEN** una migración incremental agrega nuevas categorías/subcategorías de sistema
+- **THEN** las filas se insertan con `ON CONFLICT DO NOTHING` sin duplicar las existentes
+- **AND** los `canonical_name` y las filas previas permanecen sin cambios
+- **AND** las transacciones, recurrencias e instancias que referencian categorías previas no se ven afectadas
 
 ---
 
