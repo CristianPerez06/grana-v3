@@ -567,12 +567,23 @@ La derivación automática (`NULL`) SHALL ser:
 
 El header de `/accounts` SHALL renderizarse desde el primer paint sin esperar al fetch del contenido del módulo. El cuerpo de la ruta — sección de cuentas activas (cash + bank) y sección de cuentas archivadas — SHALL renderizarse como **secciones aisladas**, cada una con su propio fallback de carga y de error, de modo que un fallo en una sección no tire la ruta ni esconda el header.
 
-Esta receta SHALL seguir el mismo patrón "in-page loading y error para mantener el chrome visible" descripto en el spec `route-loading-and-errors` y aplicado en `/cards` y `/dashboard`.
+Esta receta SHALL seguir el patrón **Variant C** ("chrome en `<ruta>/layout.tsx` + skeletons en `<ruta>/loading.tsx`") definido en el spec `route-loading-and-errors`, alineado con cómo lo aplican `/dashboard`, `/transactions` y `/cards`.
 
-**Web (`apps/web/app/(app)/accounts/page.tsx`).** El `page.tsx` SHALL ser un shell sync que monta el header más un scaffold de `<Suspense>` envuelto por un Client Component error boundary. El header SHALL ser un Client Component (`AccountsHeader`) que ejecuta sus propias queries con el cliente browser de Supabase y SHALL exhibir un estado de carga mientras esas queries no resuelven:
+**Web — estructura de archivos:**
+
+- `apps/web/app/(app)/accounts/layout.tsx` (server component, sync) SHALL montar `<AccountsHeader />` y renderizar `{children}` debajo. El header persiste como chrome del segmento entre transiciones de `{children}` (loading, error, navegación a hijos como `/accounts/[id]`).
+- `apps/web/app/(app)/accounts/loading.tsx` SHALL renderizar los skeletons shape-matched de las dos secciones (active accounts skeleton + archived accounts skeleton) en la misma disposición que el cuerpo de la ruta. Actúa como fallback del `{children}` del layout durante la transición de segmento.
+- `apps/web/app/(app)/accounts/page.tsx` SHALL renderizar el scaffold de `<Suspense>` envuelto por el Client Component error boundary (`AccountsErrorBoundary`), SIN remontar el header (que vive en el layout). El page MAY seguir siendo async para `await getTranslations()` si las strings de los `<SectionFallback>` se resuelven server-side ahí, o MAY migrarlas a containers async dedicados para volverse sync; ambas opciones son válidas siempre que el header no se duplique.
+- El page NO SHALL hacer `await supabase.auth.getUser()` ni `redirect('/login')`: el auth check ya lo cubre `(app)/layout.tsx`.
+
+**Header — comportamiento (sin cambios respecto a la versión previa):**
+
+El `<AccountsHeader />` SHALL ser un Client Component que ejecuta sus propias queries con el cliente browser de Supabase y SHALL exhibir un estado de carga mientras esas queries no resuelven:
 
 - Título "Cuentas" (sin subtítulo derivado de queries — el header no espera ningún fetch para mostrar su texto principal).
 - El botón "+ Crear cuenta" SHALL renderizarse en estado **disabled** mientras la query del catálogo de instituciones (`institutions`) no resuelva. SHALL aparecer con su tipografía e ícono completos pero sin abrir el drawer al click. Cuando esa query resuelve, SHALL pasar a habilitado y abrir el drawer de creación al click. Si esa query falla, el botón SHALL permanecer disabled para no abrir un drawer sin data.
+
+**Cuerpo — scaffold de Suspense:**
 
 El cuerpo de la ruta web SHALL renderizarse como un scaffold de **dos** `<Suspense>` boundaries (active, archived), cada uno con un fallback `<SectionFallback>` (compartido en `components/ui/`) con un mensaje de carga y un `min-h-[Xrem]` que reserva un slot vertical próximo al alto del contenido resuelto:
 
@@ -581,7 +592,7 @@ El cuerpo de la ruta web SHALL renderizarse como un scaffold de **dos** `<Suspen
 
 Cada container web SHALL envolver su fetch en un `try/catch`. Si la query falla, el container SHALL devolver `<SectionFallback message={<mensaje de error de esa sección>} />` en vez de propagar el throw. Esto SHALL aislar errores entre secciones.
 
-La ruta web SHALL incluir un Client Component error boundary (`AccountsErrorBoundary`) que envuelva el scaffold de Suspense como red de seguridad para cualquier throw que escape al `try/catch` de los containers. Cuando ese boundary captura, SHALL renderizar `<RouteError>` en el área del contenido **sin tapar el header**, con un `onRetry` que resetea el state del boundary.
+La ruta web SHALL incluir un Client Component error boundary (`AccountsErrorBoundary`) que envuelva el scaffold de Suspense como red de seguridad para cualquier throw que escape al `try/catch` de los containers. Cuando ese boundary captura, SHALL renderizar `<RouteError>` en el área del contenido **sin tapar el header** (que vive en el layout y queda fuera del boundary), con un `onRetry` que resetea el state del boundary.
 
 **Active container — reglas de contenido.** Cuando `getCashAndBankAccounts()` resuelve:
 
@@ -602,7 +613,14 @@ Un error en una sección NO SHALL afectar el render de la otra ni del header.
 - **AND** las queries de cuentas activas y archivadas todavía no resolvieron
 - **THEN** el header ya está montado con el título "Cuentas"
 - **AND** el botón "+ Crear cuenta" está visible pero disabled
-- **AND** el cuerpo del módulo muestra los `<SectionFallback>` correspondientes a active y archived
+- **AND** el cuerpo del módulo muestra los `<SectionFallback>` (durante el render del page) o los skeletons shape-matched (durante la transición de segmento, cuando `accounts/loading.tsx` cubre el área del contenido)
+
+#### Scenario: El header persiste durante navegación entre rutas hermanas del shell (web)
+
+- **WHEN** un usuario está en `/dashboard` y navega a `/accounts`
+- **THEN** durante la transición del segmento, el `<AccountsHeader />` aparece desde el primer paint del nuevo segmento (proviene de `accounts/layout.tsx`)
+- **AND** el área del contenido muestra los skeletons shape-matched de `accounts/loading.tsx` mientras el `page.tsx` resuelve
+- **AND** el header NO se reemplaza por un spinner full-screen del layout group `(app)` en ningún momento
 
 #### Scenario: Resolver la query de instituciones habilita el botón del header (web)
 
@@ -639,11 +657,11 @@ Un error en una sección NO SHALL afectar el render de la otra ni del header.
 
 #### Scenario: Un throw fuera de los containers es capturado por el error boundary in-page (web)
 
-- **WHEN** un throw ocurre durante el render de la ruta fuera de los `try/catch` de los containers (por ejemplo, durante el render de un componente presentacional)
+- **WHEN** un throw ocurre durante el render del page (no del layout) fuera de los `try/catch` de los containers
 - **THEN** el `AccountsErrorBoundary` captura el throw
 - **AND** el área del contenido se reemplaza por `<RouteError>` con su botón "Reintentar"
-- **AND** el header de la ruta sigue visible
-- **AND** presionar "Reintentar" resetea el state del boundary y vuelve a intentar el render
+- **AND** el header de la ruta (que vive en el layout) sigue visible
+- **AND** presionar "Reintentar" resetea el state del boundary y vuelve a intentar el render del page
 
 #### Scenario: La sección de archivadas no ocupa espacio cuando el usuario no tiene archivadas (web)
 
@@ -657,16 +675,4 @@ Un error en una sección NO SHALL afectar el render de la otra ni del header.
 - **AND** la query de cuentas archivadas resuelve con una o más filas
 - **THEN** el área de la sección activa muestra `<EmptyAccountsState />` (mensaje "Todavía no tenés cuentas" + CTA secundario)
 - **AND** debajo se renderiza la sección de archivadas con sus filas
-- **AND** el botón "+ Crear cuenta" del header sigue siendo el CTA primario para crear
-
-#### Scenario: `AccountsHint` se renderiza cuando hay exactamente una cuenta activa (web)
-
-- **WHEN** la query de cuentas activas resuelve con exactamente una cuenta (cash o bank)
-- **THEN** el `ActiveAccountsContainer` renderiza primero el banner `<AccountsHint />`
-- **AND** debajo renderiza las secciones cash y bank (omitiendo el grupo vacío por el requirement de listado existente)
-
-#### Scenario: Sin hint cuando hay cero o múltiples cuentas activas (web)
-
-- **WHEN** la query de cuentas activas resuelve con cero o con dos o más cuentas
-- **THEN** el `ActiveAccountsContainer` NO renderiza el banner `<AccountsHint />`
 

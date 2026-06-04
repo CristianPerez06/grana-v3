@@ -708,11 +708,22 @@ Esta priorización garantiza que, incluso cuando existe un período nuevo y vac�
 
 El header de `/cards` SHALL renderizarse desde el primer paint sin esperar al fetch del contenido del módulo. El cuerpo de la ruta — hero del mes, wallet de tarjetas activas, sección de archivadas — SHALL renderizarse como secciones aisladas, cada una con su propio fallback de carga y de error, de modo que un fallo en una sección no tire la ruta ni esconda el header. El mecanismo cambia según la plataforma:
 
-**Web (`apps/web/app/(app)/cards/page.tsx`).** El header (título "Tarjetas", subtítulo `"{count} tarjetas de crédito · resúmenes de {mes}"`, botón "Agregar tarjeta") SHALL ser un Client Component que ejecuta sus propias queries con el cliente browser de Supabase y SHALL exhibir un estado de carga mientras esas queries no resuelven:
+**Web — estructura de archivos:**
+
+- `apps/web/app/(app)/cards/layout.tsx` (server component, sync) SHALL montar `<CardsHeader />` y renderizar `{children}` debajo. El header persiste como chrome del segmento entre transiciones de `{children}` (loading, error, navegación a hijos como `/cards/[id]`).
+- `apps/web/app/(app)/cards/loading.tsx` SHALL renderizar los skeletons shape-matched de las tres secciones (month hero skeleton + wallet skeleton + archived cards skeleton) en la misma disposición que el cuerpo de la ruta. Actúa como fallback del `{children}` del layout durante la transición de segmento.
+- `apps/web/app/(app)/cards/page.tsx` SHALL renderizar el scaffold de `<Suspense>` envuelto por el Client Component error boundary (`CardsErrorBoundary`), SIN remontar el header. El page MAY seguir siendo async para `await getTranslations()` si las strings de los `<SectionFallback>` se resuelven server-side ahí, o MAY migrarlas a containers async dedicados para volverse sync; ambas opciones son válidas siempre que el header no se duplique.
+- El page NO SHALL hacer `await supabase.auth.getUser()` ni `redirect('/login')`: el auth check ya lo cubre `(app)/layout.tsx`.
+
+**Web — header (`<CardsHeader />`), comportamiento sin cambios:**
+
+El header (título "Tarjetas", subtítulo `"{count} tarjetas de crédito · resúmenes de {mes}"`, botón "Agregar tarjeta") SHALL ser un Client Component que ejecuta sus propias queries con el cliente browser de Supabase y SHALL exhibir un estado de carga mientras esas queries no resuelven:
 
 - El **count** del subtítulo SHALL renderizarse como `"-"` (guion) mientras la query no resuelve. Cuando resuelve, SHALL pasar al número real de tarjetas activas. Si la query falla, SHALL permanecer en `"-"` indefinidamente para no bloquear la lectura del resto del header.
 - El **mes** del subtítulo SHALL derivarse de `getTodayAR()` (idéntico criterio que el header del dashboard) y NO SHALL depender de ninguna query — está disponible desde el primer render.
 - El botón "Agregar tarjeta" SHALL renderizarse en estado **disabled** mientras las queries de catálogos necesarias para abrir el drawer (`institutions`, `card_networks`) no resuelvan. SHALL aparecer con su tipografía e ícono completos pero sin abrir el drawer al click. Cuando esas queries resuelven, SHALL pasar a habilitado. Si esas queries fallan, el botón SHALL permanecer disabled para no abrir un drawer sin data.
+
+**Web — cuerpo (scaffold de Suspense):**
 
 El cuerpo de la ruta web SHALL renderizarse como un scaffold de `<Suspense>` boundaries, cada uno con un fallback visualmente coherente (estilo `SectionFallback` ya usado en dashboard: borde dashed, mensaje de carga, min-height que aproxima el tamaño del contenido final). Cada sección SHALL fetchar su propia data en un container server async aislado:
 
@@ -722,9 +733,9 @@ El cuerpo de la ruta web SHALL renderizarse como un scaffold de `<Suspense>` bou
 
 Cada container web SHALL envolver su fetch en un `try/catch`. Si la query falla, el container SHALL devolver `<SectionFallback message={<mensaje de error de esa sección>} />` en vez de propagar el throw. Esto SHALL aislar errores entre secciones.
 
-La ruta web SHALL incluir un Client Component error boundary (`CardsErrorBoundary`) que envuelva el scaffold de Suspense como red de seguridad para cualquier throw que escape al try/catch de los containers. Cuando ese boundary captura, SHALL renderizar `<RouteError>` en el área del contenido **sin tapar el header**, con un `onRetry` que resetea el state del boundary.
+La ruta web SHALL incluir un Client Component error boundary (`CardsErrorBoundary`) que envuelva el scaffold de Suspense como red de seguridad para cualquier throw que escape al try/catch de los containers. Cuando ese boundary captura, SHALL renderizar `<RouteError>` en el área del contenido **sin tapar el header** (que vive en el layout y queda fuera del boundary), con un `onRetry` que resetea el state del boundary.
 
-**Mobile (`apps/mobile/app/(app)/cards.tsx`).** El header SHALL ser un componente que envuelve el `PageHeader` custom del app mobile (nunca el header nativo del stack), con:
+**Mobile (`apps/mobile/app/(app)/cards.tsx`).** Sin cambios respecto a la versión previa. El header SHALL ser un componente que envuelve el `PageHeader` custom del app mobile (nunca el header nativo del stack), con:
 
 - Título "Tarjetas".
 - Subtítulo `"{count} tarjetas de crédito · resúmenes de {mes}"`. Mientras la query del count no resuelve (o si falla), el subtítulo SHALL mostrar `-` en el slot del número. El mes se deriva de `getTodayAR()` y NO depende de ninguna query.
@@ -738,14 +749,21 @@ El cuerpo mobile SHALL componerse de tres secciones independientes, cada una con
 
 Un error en una sección NO SHALL afectar el render de las otras ni del header. Mobile NO usa un error boundary global para esta ruta; el aislamiento se logra porque cada query react-query maneja su propio error sin throw al render parent.
 
-Esta receta SHALL seguir el mismo patrón "in-page loading y error para mantener el chrome visible" descripto en el spec `route-loading-and-errors`; `/cards` es un consumidor de esa variante en web (junto con `/dashboard`) y la versión mobile lo implementa con el toolkit del app mobile.
+Esta receta SHALL seguir el patrón "in-page loading y error para mantener el chrome visible" descripto en el spec `route-loading-and-errors`. La versión web es consumidor de **Variant C** (junto con `/dashboard`, `/transactions` y `/accounts`); la versión mobile lo implementa con el toolkit del app mobile.
 
 #### Scenario: El header se ve antes de que resuelvan las queries del módulo (web)
 
 - **WHEN** un usuario web navega a `/cards` y las queries del header (count, institutions, card_networks) todavía no resolvieron
 - **THEN** el header ya está montado con el título "Tarjetas" y el subtítulo `"- tarjetas de crédito · resúmenes de {mes}"`
 - **AND** el botón "Agregar tarjeta" está visible pero disabled
-- **AND** el cuerpo del módulo muestra los `<SectionFallback>` correspondientes a hero, wallet y archivadas
+- **AND** el cuerpo del módulo muestra los `<SectionFallback>` (durante el render del page) o los skeletons shape-matched (durante la transición de segmento, cuando `cards/loading.tsx` cubre el área del contenido)
+
+#### Scenario: El header persiste durante navegación entre rutas hermanas del shell (web)
+
+- **WHEN** un usuario está en `/dashboard` y navega a `/cards`
+- **THEN** durante la transición del segmento, el `<CardsHeader />` aparece desde el primer paint del nuevo segmento (proviene de `cards/layout.tsx`)
+- **AND** el área del contenido muestra los skeletons shape-matched de `cards/loading.tsx` mientras el `page.tsx` resuelve
+- **AND** el header NO se reemplaza por un spinner full-screen del layout group `(app)` en ningún momento
 
 #### Scenario: Resolver las queries del header actualiza el count y habilita el botón (web)
 
@@ -782,11 +800,11 @@ Esta receta SHALL seguir el mismo patrón "in-page loading y error para mantener
 
 #### Scenario: Un throw fuera de los containers es capturado por el error boundary in-page (web)
 
-- **WHEN** un throw ocurre durante el render de la ruta fuera de los `try/catch` de los containers (por ejemplo, durante el render de un componente presentacional)
+- **WHEN** un throw ocurre durante el render del page (no del layout) fuera de los `try/catch` de los containers
 - **THEN** el `CardsErrorBoundary` captura el throw
 - **AND** el área del contenido se reemplaza por `<RouteError>` con su botón "Reintentar"
-- **AND** el header de la ruta sigue visible
-- **AND** presionar "Reintentar" resetea el state del boundary y vuelve a intentar el render
+- **AND** el header de la ruta (que vive en el layout) sigue visible
+- **AND** presionar "Reintentar" resetea el state del boundary y vuelve a intentar el render del page
 
 #### Scenario: La sección de archivadas no se renderiza cuando el usuario no tiene archivadas (web)
 
@@ -836,6 +854,6 @@ Esta receta SHALL seguir el mismo patrón "in-page loading y error para mantener
 #### Scenario: Cargando archivadas en mobile no ocupa espacio visible
 
 - **WHEN** la query mobile de tarjetas archivadas todavía está `isPending`
-- **THEN** la sección "Archivadas" no renderiza un fallback ni ocupa espacio en el scroll
+- **THEN** la sección "Archivadas" mobile no renderiza un fallback ni ocupa espacio en el scroll
 - **AND** el resto de las secciones se ven sin gap reservado
 

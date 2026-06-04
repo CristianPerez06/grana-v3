@@ -1,9 +1,8 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { CheckCircle2, Settings2 } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { PageHeader } from '@/components/ui/page-header'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { getAccounts } from '@/lib/accounts/queries'
@@ -15,10 +14,10 @@ import {
 } from '@/lib/shared/queries'
 import type { BalanceCurrency, PairwiseDebt } from '@grana/money-logic'
 import { translateCategoryLabel } from '@/lib/categories/display'
-import { fmtMoney } from './_components/money'
-import { InviteCard } from './_components/invite-card'
-import { PendingSettlementCard } from './_components/pending-settlement-card'
-import { SetupForm } from './setup/_components/setup-form'
+import { fmtMoney } from '../_components/money'
+import { InviteCard } from '../_components/invite-card'
+import { PendingSettlementCard } from '../_components/pending-settlement-card'
+import { SetupForm } from '../setup/_components/setup-form'
 
 const CURRENCIES: BalanceCurrency[] = ['ARS', 'USD']
 
@@ -27,28 +26,22 @@ export default async function SharedPage() {
   const tRoot = await getTranslations()
   const household = await getHousehold()
 
-  // No household yet → create or join, both visible inline.
   if (!household) {
     return (
-      <div className="flex flex-col gap-6 max-w-lg">
-        <PageHeader title={t('title')} />
+      <>
         <p className="text-sm text-text-muted">{t('setup.description')}</p>
         <SetupForm />
-      </div>
+      </>
     )
   }
 
-  // Household exists but the partner has not joined → show the invite hint.
   if (household.members.length < 2) {
     return (
-      <div className="flex flex-col gap-6 max-w-lg">
-        <PageHeader title={household.name} actions={<SettingsLink label={t('settings.title')} />} />
-        <Card className="flex flex-col gap-3 p-5">
-          <p className="text-sm font-semibold text-text">{t('dashboard.waiting_title')}</p>
-          <p className="text-xs text-text-muted">{t('dashboard.waiting_hint')}</p>
-          <InviteCard />
-        </Card>
-      </div>
+      <Card className="flex flex-col gap-3 p-5">
+        <p className="text-sm font-semibold text-text">{t('dashboard.waiting_title')}</p>
+        <p className="text-xs text-text-muted">{t('dashboard.waiting_hint')}</p>
+        <InviteCard />
+      </Card>
     )
   }
 
@@ -97,10 +90,7 @@ export default async function SharedPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-lg">
-      <PageHeader title={household.name} actions={<SettingsLink label={t('settings.title')} />} />
-
-      {/* Balance — the emotional centerpiece of the module */}
+    <>
       <Card variant={hasAnyDebt ? 'default' : 'emerald'} className="flex flex-col gap-4 p-5">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-text-soft">
           {t('dashboard.balance_title')}
@@ -121,7 +111,6 @@ export default async function SharedPage() {
         )}
       </Card>
 
-      {/* Pending settlements to receive */}
       {pending.length > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-text-soft">
@@ -133,7 +122,6 @@ export default async function SharedPage() {
         </section>
       )}
 
-      {/* Recent shared expenses */}
       <section className="flex flex-col gap-3">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-text-soft">
           {t('dashboard.recent_title')}
@@ -179,19 +167,6 @@ export default async function SharedPage() {
           </Card>
         )}
       </section>
-    </div>
-  )
-}
-
-/** Settings shortcut in the page header — a quiet icon + label link. */
-function SettingsLink({ label }: { label: string }) {
-  return (
-    <Link
-      href="/shared/settings"
-      className="inline-flex items-center gap-1.5 text-sm text-text-muted transition-colors hover:text-text"
-    >
-      <Settings2 className="size-4" aria-hidden />
-      {label}
-    </Link>
+    </>
   )
 }

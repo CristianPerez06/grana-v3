@@ -1,65 +1,28 @@
 import { Suspense } from 'react'
-import { redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
-import { createClient } from '@/lib/supabase/server'
-import { SectionFallback } from '@/components/ui/section-fallback'
 import { ArchivedCardsContainer } from './_components/archived-cards-container'
+import { ArchivedCardsSkeleton } from './_components/archived-cards-skeleton'
 import { CardsErrorBoundary } from './_components/cards-error-boundary'
-import { CardsHeader } from './_components/cards-header'
 import { CardsMonthHeroContainer } from './_components/cards-month-hero-container'
+import { CardsMonthHeroSkeleton } from './_components/cards-month-hero-skeleton'
 import { WalletContainer } from './_components/wallet-container'
+import { WalletSkeleton } from './_components/wallet-skeleton'
 
-const CardsPage = async () => {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const t = await getTranslations('cards.route')
-
-  return (
+const CardsPage = () => (
+  <CardsErrorBoundary>
     <div className="flex flex-col gap-6">
-      <CardsHeader />
+      <Suspense fallback={<CardsMonthHeroSkeleton />}>
+        <CardsMonthHeroContainer />
+      </Suspense>
 
-      <CardsErrorBoundary>
-        <div className="flex flex-col gap-6">
-          <Suspense
-            fallback={
-              <SectionFallback
-                message={t('hero_loading')}
-                className="min-h-[14rem]"
-              />
-            }
-          >
-            <CardsMonthHeroContainer />
-          </Suspense>
+      <Suspense fallback={<WalletSkeleton />}>
+        <WalletContainer />
+      </Suspense>
 
-          <Suspense
-            fallback={
-              <SectionFallback
-                message={t('wallet_loading')}
-                className="min-h-[18rem]"
-              />
-            }
-          >
-            <WalletContainer />
-          </Suspense>
-
-          <Suspense
-            fallback={
-              <SectionFallback
-                message={t('archived_loading')}
-                className="min-h-[3rem]"
-              />
-            }
-          >
-            <ArchivedCardsContainer />
-          </Suspense>
-        </div>
-      </CardsErrorBoundary>
+      <Suspense fallback={<ArchivedCardsSkeleton />}>
+        <ArchivedCardsContainer />
+      </Suspense>
     </div>
-  )
-}
+  </CardsErrorBoundary>
+)
 
 export default CardsPage
