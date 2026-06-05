@@ -2599,16 +2599,6 @@ El sistema SHALL presentar la selección de categoría en un popover con dos niv
 - **WHEN** la categoría está autosugerida (chip "Sugerida" visible) y el usuario elige una categoría manualmente
 - **THEN** el chip "Sugerida" desaparece
 
-### Requirement: Guardar y cargar otro
-
-El sistema SHALL ofrecer en modo creación un botón "+ Otro" que guarde el movimiento y, sin cerrar el drawer, limpie el monto y la descripción, mantenga cuenta/fecha/tipo, y devuelva el foco al monto. Este botón SHALL estar oculto en modo edición.
-
-#### Scenario: Cargar un movimiento atrás de otro
-
-- **WHEN** el usuario completa un gasto y activa "+ Otro"
-- **THEN** el movimiento se guarda
-- **AND** el monto y la descripción se limpian, cuenta/fecha/tipo se mantienen, y el foco vuelve al monto
-
 ### Requirement: El toggle Repetir del drawer ofrece frecuencia personalizada
 
 El sistema SHALL ofrecer en el toggle "Repetir" las frecuencias Semanal, Quincenal, Mensual, Anual y Personalizado. Al elegir Personalizado, SHALL mostrarse un control de intervalo `cada N · unidad` (día/semana/mes/año) con condición de fin opcional, y al guardar SHALL crear la recurrencia vía el flujo existente con el modelo intervalo+unidad.
@@ -2636,18 +2626,17 @@ El sistema SHALL soportar, con el drawer abierto, `Esc` para cerrar el popover a
 
 ### Requirement: El drawer en modo edición ajusta chrome y CTA
 
-El sistema SHALL precargar el movimiento real al abrir el drawer en modo edición y SHALL deshabilitar el cambio de tipo. El conjunto de campos editables SHALL derivarse de `getEditableFields` (regla ya especificada para el formulario único). En modo edición el CTA SHALL decir "Guardar cambios" y el botón "+ Otro" SHALL ocultarse. El borrado SHALL respetar las reglas existentes (no borrar hijas de cuotas aisladas, no borrar consumos pagados).
+El sistema SHALL precargar el movimiento real al abrir el drawer en modo edición y SHALL deshabilitar el cambio de tipo. El conjunto de campos editables SHALL derivarse de `getEditableFields` (regla ya especificada para el formulario único). En modo edición el CTA SHALL decir "Guardar cambios". El borrado SHALL respetar las reglas existentes (no borrar hijas de cuotas aisladas, no borrar consumos pagados).
 
 #### Scenario: Tipo no editable en edición
 
 - **WHEN** el usuario abre un movimiento existente en el drawer de edición
 - **THEN** el selector de tipo está deshabilitado
 
-#### Scenario: CTA y "+ Otro" en edición
+#### Scenario: CTA en edición
 
 - **WHEN** el drawer está en modo edición
 - **THEN** el CTA dice "Guardar cambios"
-- **AND** el botón "+ Otro" no se muestra
 
 #### Scenario: Borrado respeta reglas de cuotas
 
@@ -2727,4 +2716,63 @@ El loader NO SHALL re-mountar al cambiar de ruta dentro de `(app)`: como vive en
 - **WHEN** alguna de las queries `accounts`, `categories` o `household` falla y no resuelve
 - **THEN** `MovementDrawerProvider` no se monta y `useMovementDrawer()` retorna `null`
 - **AND** los CTAs de alta a lo largo del producto SHALL mostrar feedback de error con acción de reintentar (no quedar disabled indefinidamente)
+
+### Requirement: El detalle de cuenta inyecta una fila sintética "Saldo inicial" en su listado
+
+El listado de movimientos del detalle de cuenta (`/accounts/[id]`) SHALL inyectar una fila sintética **"Saldo inicial"** por cada moneda activa de la cuenta cuyo `initial_balance != 0`. Esta fila NO es una transacción — no existe como row en `transactions`, no se persiste, no se replica en el módulo global `/transactions`, y NO SHALL aparecer en ninguna otra pantalla.
+
+La fila SHALL renderizarse usando el contrato funcional `Movimiento` reutilizando la variante de `adjustment` (mismo grouping, mismas reglas de filtros y orden cronológico del listado), con `description = "Saldo inicial"` (label leído del catálogo i18n), `amount = |initial_balance|`, `sign = '+'` si `initial_balance > 0` o `'-'` si `initial_balance < 0`, y `currency_code` igual a la moneda de origen.
+
+La fila SHALL ordenarse cronológicamente como cualquier otra fila del listado, usando la fecha de creación de la moneda en la cuenta (`account_currencies.initial_balance_date`). Cuando exista una transacción real con esa misma fecha, la fila "Saldo inicial" SHALL ordenarse antes — el detalle muestra primero el saldo inicial, después los movimientos del mismo día.
+
+La fila SHALL ser **no navegable** (sin `detail_href`): un click NO SHALL abrir un detalle de movimiento.
+
+La fila SHALL quedar **excluida del recurrence-link lookup** del listado: el identificador sintético de la fila NO SHALL formar parte del input al server action que resuelve qué movimientos están vinculados a una recurrencia (esa query rechazaría un id sintético al castearlo a `uuid`).
+
+El running balance del listado scoped a cuenta SHALL incluir la fila "Saldo inicial" como punto de partida: el saldo inmediatamente posterior a la fila SHALL ser el `initial_balance` de esa moneda, y los running balances de los movimientos siguientes SHALL acumularse a partir de ahí.
+
+#### Scenario: La fila "Saldo inicial" aparece en el detalle de cuenta
+
+- **WHEN** el usuario abre `/accounts/[id]` de una cuenta cuya moneda ARS tiene `initial_balance = 100000` y la cuenta tiene al menos una transacción
+- **THEN** el listado muestra una fila "Saldo inicial" con monto `$100.000` y signo `+`, fechada en `account_currencies.initial_balance_date` para ARS
+
+#### Scenario: Una cuenta con `initial_balance = 0` no genera la fila para esa moneda
+
+- **WHEN** el usuario abre `/accounts/[id]` de una cuenta cuya moneda USD tiene `initial_balance = 0`
+- **THEN** el listado NO muestra fila "Saldo inicial" para USD
+- **AND** si la moneda ARS de esa misma cuenta tiene `initial_balance != 0`, la fila ARS SÍ se muestra (la regla opera por `account_currency`, no por cuenta)
+
+#### Scenario: Una cuenta bimoneda con ambos saldos iniciales no nulos genera dos filas
+
+- **WHEN** el usuario abre `/accounts/[id]` de una cuenta cuya ARS tiene `initial_balance = 50000` y USD `initial_balance = 200`
+- **THEN** el listado muestra dos filas "Saldo inicial" — una por moneda — cada una con su monto, signo y fecha derivados de su `account_currency` correspondiente
+
+#### Scenario: La fila no aparece en el listado global de Movimientos
+
+- **WHEN** el usuario abre `/transactions`
+- **THEN** ninguna fila "Saldo inicial" aparece en el listado
+- **AND** los filtros por cuenta, categoría, moneda y rango de monto operan sin tener que excluir la fila (nunca está presente)
+
+#### Scenario: La fila no es navegable
+
+- **WHEN** el usuario hace click sobre la fila "Saldo inicial" del detalle de cuenta
+- **THEN** el sistema NO navega a un detalle de movimiento
+- **AND** ninguna pantalla de detalle existe para esa fila
+
+#### Scenario: La fila se ordena antes de las transacciones del mismo día
+
+- **WHEN** el detalle de cuenta tiene una transacción con fecha igual a `account_currencies.initial_balance_date` (ej. un gasto cargado el mismo día que se creó la moneda)
+- **THEN** la fila "Saldo inicial" aparece arriba de esa transacción en el listado
+- **AND** el running balance posterior a la fila "Saldo inicial" coincide con `initial_balance`, y a partir de ahí los running balances de las transacciones del día reflejan el saldo acumulado
+
+#### Scenario: La fila queda fuera del recurrence-link lookup
+
+- **WHEN** el listado de detalle de cuenta resuelve qué movimientos están vinculados a una recurrencia para mostrar el indicador correspondiente
+- **THEN** el identificador de la fila "Saldo inicial" NO SHALL formar parte del input enviado al server action
+- **AND** la fila nunca se marca como vinculada a una recurrencia
+
+#### Scenario: Una cuenta con saldo inicial negativo muestra signo `-`
+
+- **WHEN** el usuario abre `/accounts/[id]` de una cuenta cuya moneda ARS tiene `initial_balance = -5000` (ej. una tarjeta de crédito que arrancó con deuda — no aplica a credit cards porque son off-ledger, pero la regla soporta el caso genérico)
+- **THEN** la fila "Saldo inicial" muestra monto `$5.000` con signo `−`
 
