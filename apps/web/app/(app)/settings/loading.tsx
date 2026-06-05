@@ -1,5 +1,3 @@
-import { PageHeaderSkeleton } from '@/components/ui/page-header-skeleton'
-
 const SectionSkeleton = ({ rowCount }: { rowCount: number }) => (
   <div className="flex flex-col gap-3">
     <span className="h-3 w-28 rounded bg-muted/70 animate-pulse" />
@@ -18,8 +16,7 @@ const SectionSkeleton = ({ rowCount }: { rowCount: number }) => (
 )
 
 const SettingsLoading = () => (
-  <div className="flex flex-col gap-8 max-w-2xl" aria-busy="true">
-    <PageHeaderSkeleton />
+  <div className="flex flex-col gap-8" aria-busy="true">
     <SectionSkeleton rowCount={2} />
     <SectionSkeleton rowCount={1} />
     <SectionSkeleton rowCount={1} />

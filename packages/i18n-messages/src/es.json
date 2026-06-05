@@ -157,12 +157,12 @@
         "both": "Ambos"
       },
       "actions": {
-        "add": "+ Agregar",
+        "add": "Agregar",
         "edit": "Editar",
         "archive": "Archivar",
         "delete": "Eliminar",
         "view_subcategories": "Subcategorías",
-        "add_subcategory": "+ Agregar subcategoría"
+        "add_subcategory": "Agregar subcategoría"
       },
       "confirmations": {
         "delete_category": "¿Eliminar esta categoría? Esta acción no se puede deshacer.",

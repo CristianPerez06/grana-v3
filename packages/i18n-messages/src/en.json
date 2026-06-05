@@ -157,12 +157,12 @@
         "both": "Both"
       },
       "actions": {
-        "add": "+ Add",
+        "add": "Add",
         "edit": "Edit",
         "archive": "Archive",
         "delete": "Delete",
         "view_subcategories": "Subcategories",
-        "add_subcategory": "+ Add subcategory"
+        "add_subcategory": "Add subcategory"
       },
       "confirmations": {
         "delete_category": "Delete this category? This action cannot be undone.",

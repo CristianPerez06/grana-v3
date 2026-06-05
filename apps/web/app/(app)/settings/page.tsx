@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { getShowCents } from '@/lib/preferences'
 import { locales, type Locale } from '@/lib/i18n/config'
-import { PageHeader } from '@/components/ui/page-header'
 import { SettingsClient } from './_components/settings-client'
 import { SettingsSection } from './_components/settings-section'
 
@@ -17,9 +16,7 @@ const SettingsPage = async () => {
   }
 
   return (
-    <div className="flex flex-col gap-8 max-w-2xl">
-      <PageHeader title={t('title')} />
-
+    <div className="flex flex-col gap-8">
       <SettingsClient
         initialShowCents={showCents}
         initialLocale={locale}

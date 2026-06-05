@@ -1,9 +1,7 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getAllCategories } from '@/lib/categories/queries'
-import { PageHeader } from '@/components/ui/page-header'
 import { CategoryList } from './_components/category-list'
 
 const CategoriesPage = async () => {
@@ -14,23 +12,7 @@ const CategoriesPage = async () => {
   const t = await getTranslations()
   const categories = await getAllCategories(user.id)
 
-  return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        title={t('settings.categories.label')}
-        description={t('settings.categories.description')}
-        actions={
-          <Link
-            href="/settings/categories/new"
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            {t('settings.categories.actions.add')}
-          </Link>
-        }
-      />
-      <CategoryList categories={categories} t={t} />
-    </div>
-  )
+  return <CategoryList categories={categories} t={t} />
 }
 
 export default CategoriesPage

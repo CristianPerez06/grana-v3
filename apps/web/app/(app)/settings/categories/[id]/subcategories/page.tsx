@@ -1,10 +1,8 @@
-import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCategoryById, getSubcategoriesByCategoryId } from '@/lib/categories/queries'
-import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
-import { PageHeader } from '@/components/ui/page-header'
+import { getSubcategoryName } from '@/lib/categories/display'
 import { SubcategoryList } from './_components/subcategory-list'
 
 type Props = { params: Promise<{ id: string }> }
@@ -21,30 +19,13 @@ const SubcategoriesPage = async ({ params }: Props) => {
 
   const t = await getTranslations()
   const rawSubcategories = await getSubcategoriesByCategoryId(id)
-  const categoryDisplayName = getCategoryName(category, t)
   const subcategories = rawSubcategories.map((sub) => ({
     ...sub,
     displayName: getSubcategoryName(sub, t),
   }))
 
   return (
-    <div className="flex flex-col gap-6 max-w-md">
-      <PageHeader
-        title={t('settings.categories.subcategories.title')}
-        description={categoryDisplayName}
-        backLink={{
-          href: '/settings/categories',
-          label: t('settings.categories.label'),
-        }}
-        actions={
-          <Link
-            href={`/settings/categories/${id}/subcategories/new`}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            {t('settings.categories.actions.add')}
-          </Link>
-        }
-      />
+    <div className="max-w-md">
       <SubcategoryList subcategories={subcategories} />
     </div>
   )

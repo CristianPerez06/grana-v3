@@ -1,0 +1,36 @@
+## 1. SettingsHeader y settings/layout
+
+- [x] 1.1 Crear `apps/web/app/(app)/settings/_components/settings-header.tsx` (client component, `'use client'`). Lee `useTranslations('settings')` y `usePathname()`. Render: `<PageHeader title={t('title')} />` si `pathname === '/settings'`, retorna `null` en otro caso. JSDoc breve explicando el guard (evita doble-header cuando el segmento anidado `categories` monta su propio header).
+- [x] 1.2 Crear `apps/web/app/(app)/settings/layout.tsx` (server sync, sin awaits top-level). Monta `<SettingsHeader />` envolviendo `{children}` en un `<div className="flex flex-col gap-6 max-w-2xl">` (mismo wrapper que hoy aplica `settings/page.tsx` a su contenido). El `max-w-2xl` queda al nivel del layout porque las sub-rutas de `/settings/categories/**` usan su propio `max-w-md` que es más restrictivo (Tailwind lo gana por estar más cerca del contenido).
+- [x] 1.3 Modificar `apps/web/app/(app)/settings/page.tsx`: remover `<PageHeader title={t('title')} />` y el wrapper `<div className="flex flex-col gap-8 max-w-2xl">` si el layout ya lo provee. Page final retorna `<SettingsClient />` + `<SettingsSection>` de categorías. **Nota:** el `max-w-2xl` se movió al layout; el page mantiene `gap-8` interno para preservar el spacing entre sus secciones (`SettingsClient`, `SettingsSection`).
+- [x] 1.4 Modificar `apps/web/app/(app)/settings/loading.tsx`: eliminar el import y uso de `<PageHeaderSkeleton />`. Mantener solo los body skeletons (`SectionSkeleton` × 3). Mantener `aria-busy="true"` en el wrapper.
+- [x] 1.5 Verificar manualmente: navegar a `/settings` desde otra ruta. El header "Configuración" aparece desde el primer paint y no se reemplaza por skeleton durante la transición.
+
+## 2. CategoriesHeader y settings/categories/layout
+
+- [x] 2.1 **Decisión:** supabase directo + `useState` con guard `fetched?.id === id` para que el "loading" se derive automáticamente al cambiar de ruta. **Razón:** consistencia con `AccountsHeader`/`CardsHeader`; sin dedup real (las pages hermanas usan helpers server-side, este header es el único consumer cliente). TanStack Query no aporta acá. JSDoc en `categories-header.tsx` explica la decisión.
+- [x] 2.2 Crear `apps/web/app/(app)/settings/categories/_components/categories-header.tsx` (client component). **Nota:** lint inicial flageó `setState` sincrónico en el effect (regla `react-hooks/set-state-in-effect`); resuelto derivando `category = fetched?.id === id ? fetched : null` en lugar de hacer `setCategory(null)` cuando `id` cambia. El effect solo escribe al resolver el fetch.
+- [x] 2.3 Crear `apps/web/app/(app)/settings/categories/layout.tsx` (server sync). Monta `<CategoriesHeader />` + `{children}` en un `<div className="flex flex-col gap-6">`. El `max-w-md` de las pages individuales se respeta porque cada page lo aplica internamente sobre su body.
+- [x] 2.4 Modificar `apps/web/app/(app)/settings/categories/page.tsx`: remover el `<PageHeader>` y el `<Link "Agregar">` inline. Render final: `<CategoryList categories={categories} t={t} />` (sin wrapper extra; el layout ya provee `flex flex-col gap-6`).
+- [x] 2.5 Modificar `apps/web/app/(app)/settings/categories/new/page.tsx`: remover `<PageHeader>` inline. Page retorna `<div className="max-w-md"><CreateCategoryForm /></div>`. Page convertida a non-async ya que no necesita awaits.
+- [x] 2.6 Modificar `apps/web/app/(app)/settings/categories/[id]/edit/page.tsx`: remover `<PageHeader>` inline. Page retorna `<div className="max-w-md"><EditCategoryForm category={category} /></div>`.
+- [x] 2.7 Modificar `apps/web/app/(app)/settings/categories/[id]/subcategories/page.tsx`: remover `<PageHeader>` y `<Link "Agregar">` inline. Page retorna `<div className="max-w-md"><SubcategoryList subcategories={subcategories} /></div>`. **Nota:** `getCategoryName` ya no se usa en esta page (la descripción la calcula `CategoriesHeader`); import removido.
+- [x] 2.8 Modificar `apps/web/app/(app)/settings/categories/[id]/subcategories/new/page.tsx`: remover `<PageHeader>` inline. Page retorna `<div className="max-w-md"><CreateSubcategoryForm categoryId={id} /></div>`.
+- [x] 2.9 **No se agregaron claves nuevas**: la decisión final fue NO mostrar texto "Cargando..." durante el fetch de `category.name`. La `description` muestra un non-breaking space (`' '`) que reserva la altura de la línea sin texto visible — evita reflow del título sin mostrar feedback textual al usuario. **Side-effect:** se limpió el prefijo `+` literal de los strings `settings.categories.actions.add` y `settings.categories.actions.add_subcategory` en `es.json`/`en.json` (de `"+ Agregar"` a `"Agregar"`, etc.) porque el primitivo Button ya provee el icono `<Plus />` como única fuente del "+" visual — alineado con la convención de `accounts.actions.create` y `cards.actions.add_label`.
+- [x] 2.10 Verificar manualmente: navegar `/settings → /settings/categories → /settings/categories/<id>/subcategories → ./new → back`. En cada transición, el header del segmento correcto aparece desde el primer paint, sin skeleton del header.
+- [x] 2.11 Verificar manualmente: en `/settings/categories/<id>/subcategories`, mientras `category.name` no resuelve, la `description` está visualmente vacía pero reserva el espacio de la línea (sin reflow). Cuando resuelve, el nombre real aparece en el mismo slot sin que el título se mueva.
+- [x] 2.12 Verificar manualmente: el botón "+ Agregar" en `/settings/categories` y `/settings/categories/<id>/subcategories` es el `Button` emerald del UI library (mismo color/altura/padding que el de `/accounts` y `/cards`), y al hacer click navega a `/new` correspondiente.
+
+## 3. Loading shells por ruta
+
+- [x] 3.1 Crear `apps/web/app/(app)/settings/categories/loading.tsx` con un `CategorySectionSkeleton` shape-matched (icono circular + nombre + count placeholder + chevron) reproducido para 2 secciones (sistema y propias). NO incluye `PageHeaderSkeleton`.
+- [x] 3.2 (Opcional, dejado fuera) `subcategories/loading.tsx` no se creó: la transición a `/[id]/subcategories` usa el comportamiento default de Next (mantiene la ruta anterior visible) — alcanza para esta cardinalidad. Si la UX se siente lenta más adelante, se agrega en otro change.
+- [x] 3.3 Verificar manualmente: navegar de `/settings` a `/settings/categories` con throttling de red. El `CategoryListSkeleton` aparece debajo del header (que ya está montado por el layout) durante el fetch.
+
+## 4. Verificación de specs y cierre
+
+- [x] 4.1 `pnpm --filter web typecheck` y `pnpm --filter web lint` pasan limpio.
+- [x] 4.2 `openspec validate align-settings-headers --strict` → `valid`.
+- [x] 4.3 Verificar manualmente los scenarios nuevos de `specs/route-loading-and-errors/spec.md` (los cinco scenarios bajo el requirement nuevo de `/settings`).
+- [x] 4.4 Limpieza confirmada via grep: `PageHeader` solo se importa desde `settings/_components/settings-header.tsx` y `settings/categories/_components/categories-header.tsx`. Ninguna page bajo `apps/web/app/(app)/settings/**` lo importa.
+- [x] 4.5 El body del proposal sigue siendo verdad. Única desviación menor (anotada en 1.3): el gap entre header y body en `/settings` pasa de `gap-8` a `gap-6` (lo aplica el layout), consistente con accounts/cards. El gap interno entre secciones de `/settings` (SettingsClient ↔ SettingsSection) se preserva en `gap-8`.
