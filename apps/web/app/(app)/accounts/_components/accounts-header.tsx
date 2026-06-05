@@ -11,14 +11,10 @@ import { CreateAccountButton } from './create-account-button'
 export const AccountsHeader = () => {
   const t = useTranslations('accounts')
   const pathname = usePathname()
-  // The layout renders this header on every /accounts/* route; the create CTA
-  // only belongs on the list root (detail already has its own actions).
-  const isListRoot = pathname === '/accounts'
   const [institutions, setInstitutions] = useState<Institution[] | null>(null)
 
   useEffect(() => {
-    // Institutions only feed the create-account drawer; skip off the list root.
-    if (!isListRoot) return
+    if (pathname !== '/accounts') return
 
     const supabase = createClient()
     let cancelled = false
@@ -38,18 +34,20 @@ export const AccountsHeader = () => {
     return () => {
       cancelled = true
     }
-  }, [isListRoot])
+  }, [pathname])
+
+  // El layout monta este header en toda ruta bajo /accounts/**;
+  // solo lo renderizamos en el root para evitar el doble-header con las pages hijas.
+  if (pathname !== '/accounts') return null
 
   return (
     <PageHeader
       title={t('title')}
       actions={
-        isListRoot ? (
-          <CreateAccountButton
-            institutions={institutions ?? []}
-            disabled={institutions == null}
-          />
-        ) : undefined
+        <CreateAccountButton
+          institutions={institutions ?? []}
+          disabled={institutions == null}
+        />
       }
     />
   )

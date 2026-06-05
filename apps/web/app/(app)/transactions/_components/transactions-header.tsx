@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
+import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useQueries } from '@tanstack/react-query'
 import { PageHeader } from '@/components/ui/page-header'
@@ -25,6 +26,7 @@ import { QUERY_KEYS } from '@/lib/transactions/query-keys'
  */
 export function TransactionsHeader() {
   const t = useTranslations('transactions')
+  const pathname = usePathname()
 
   const queries = useQueries({
     queries: [
@@ -33,6 +35,10 @@ export function TransactionsHeader() {
       { queryKey: QUERY_KEYS.householdDetail, queryFn: () => getHouseholdAction() },
     ],
   })
+
+  // El layout monta este header en toda ruta bajo /transactions/**;
+  // solo lo renderizamos en el root para evitar el doble-header con las pages hijas.
+  if (pathname !== '/transactions') return null
 
   const drawerReady = queries.every((q) => q.data !== undefined)
 

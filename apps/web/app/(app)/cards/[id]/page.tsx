@@ -107,7 +107,12 @@ const CardDetailPage = async ({ params }: Props) => {
     return (
       <EditCardDrawerProvider card={editCardData(0)}>
         <div className="flex max-w-3xl flex-col gap-6">
-          <Breadcrumb label={t('back_label')} />
+          <Link
+            href="/cards"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {`← ${t('back_label')}`}
+          </Link>
           <CardDetailHeader
             name={cardDetail.name}
             bank={institutionName}
@@ -137,7 +142,12 @@ const CardDetailPage = async ({ params }: Props) => {
   if (!cardDetail.is_active && !hasPendings) {
     return (
       <div className="flex max-w-3xl flex-col gap-6">
-        <Breadcrumb label={t('back_label')} />
+        <Link
+            href="/cards"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {`← ${t('back_label')}`}
+          </Link>
         <CardDetailHeader name={cardDetail.name} bank={institutionName} accent={accent} tone="ok" />
         <CardActions cardId={id} isActive={false} hasMovements={cardHasHistory} />
         <p className="py-6 text-center text-sm text-text-muted">{t('detail.archived_no_pending')}</p>
@@ -202,7 +212,12 @@ const CardDetailPage = async ({ params }: Props) => {
   return (
     <EditCardDrawerProvider card={editCardData(committedARS)}>
       <div className="flex max-w-3xl flex-col gap-6">
-        <Breadcrumb label={t('back_label')} />
+        <Link
+            href="/cards"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {`← ${t('back_label')}`}
+          </Link>
         <CardDetailHeader
           name={cardDetail.name}
           bank={institutionName}
@@ -229,14 +244,6 @@ const CardDetailPage = async ({ params }: Props) => {
     </EditCardDrawerProvider>
   )
 }
-
-const Breadcrumb = ({ label }: { label: string }) => (
-  <div className="flex items-center gap-3">
-    <Link href="/cards" className="text-sm text-text-muted transition-colors hover:text-text">
-      ‹ {label}
-    </Link>
-  </div>
-)
 
 // Edit moved to the header (pencil icon); the footer keeps only the metadata.
 const AdminFooter = ({

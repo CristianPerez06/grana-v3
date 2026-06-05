@@ -20,9 +20,6 @@ export const CardsHeader = () => {
   const tRoute = useTranslations('cards.route')
   const locale = useLocale()
   const pathname = usePathname()
-  // The layout renders this header on every /cards/* route; the add-card CTA
-  // only belongs on the wallet root (detail already has its own actions).
-  const isWalletRoot = pathname === '/cards'
 
   const monthLabel = getTodayAR().toLocaleDateString(
     locale === 'en' ? 'en-US' : 'es-AR',
@@ -33,6 +30,8 @@ export const CardsHeader = () => {
   const [catalogs, setCatalogs] = useState<Catalogs | null>(null)
 
   useEffect(() => {
+    if (pathname !== '/cards') return
+
     const supabase = createClient()
     let cancelled = false
 
@@ -43,22 +42,17 @@ export const CardsHeader = () => {
           .select('id', { count: 'exact', head: true })
           .eq('type', 'credit')
           .eq('is_active', true),
-        // Catalogs only feed the add-card drawer; skip them off the wallet root.
-        isWalletRoot
-          ? supabase
-              .from('institutions')
-              .select('*')
-              .eq('is_active', true)
-              .order('user_id', { ascending: true, nullsFirst: true })
-              .order('name', { ascending: true })
-          : null,
-        isWalletRoot
-          ? supabase
-              .from('card_networks')
-              .select('id, slug, name, brand_color, display_order')
-              .eq('is_active', true)
-              .order('display_order', { ascending: true })
-          : null,
+        supabase
+          .from('institutions')
+          .select('*')
+          .eq('is_active', true)
+          .order('user_id', { ascending: true, nullsFirst: true })
+          .order('name', { ascending: true }),
+        supabase
+          .from('card_networks')
+          .select('id, slug, name, brand_color, display_order')
+          .eq('is_active', true)
+          .order('display_order', { ascending: true }),
       ])
 
       if (cancelled) return
@@ -68,8 +62,6 @@ export const CardsHeader = () => {
       }
 
       if (
-        institutionsResult &&
-        networksResult &&
         !institutionsResult.error &&
         !networksResult.error &&
         institutionsResult.data &&
@@ -85,7 +77,11 @@ export const CardsHeader = () => {
     return () => {
       cancelled = true
     }
-  }, [isWalletRoot])
+  }, [pathname])
+
+  // El layout monta este header en toda ruta bajo /cards/**;
+  // solo lo renderizamos en el root para evitar el doble-header con las pages hijas.
+  if (pathname !== '/cards') return null
 
   const description =
     count == null
@@ -97,13 +93,11 @@ export const CardsHeader = () => {
       title={t('title')}
       description={description}
       actions={
-        isWalletRoot ? (
-          <AddCardButton
-            institutions={catalogs?.institutions ?? []}
-            networks={catalogs?.networks ?? []}
-            disabled={catalogs == null}
-          />
-        ) : undefined
+        <AddCardButton
+          institutions={catalogs?.institutions ?? []}
+          networks={catalogs?.networks ?? []}
+          disabled={catalogs == null}
+        />
       }
     />
   )
