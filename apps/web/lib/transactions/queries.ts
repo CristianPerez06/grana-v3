@@ -189,6 +189,15 @@ export async function getGlobalMovementsPage(
   const supabase = await createClient()
   const { limit = DEFAULT_MOVEMENTS_LIMIT, offset = 0, filters = {} } = options
 
+  // Period resolution: an explicit custom range (`from`/`to`) wins; otherwise
+  // the selected `month` (`YYYY-MM`) resolves to its date range here — the
+  // query owns this translation (the `MovementFilters` contract sends the raw
+  // month), so the list and the per-month breakdowns slice the same window.
+  const monthRange =
+    !filters.from && !filters.to && filters.month ? resolveMonthRange(filters.month) : null
+  const dateFrom = filters.from ?? monthRange?.from
+  const dateTo = filters.to ?? monthRange?.to
+
   let parentIdsForAccount: string[] = []
   let cardPaymentIdsForAccount: string[] = []
   if (filters.accountId) {
@@ -233,8 +242,8 @@ export async function getGlobalMovementsPage(
       .order('id', { ascending: false })
       .range(queryOffset, queryOffset + GLOBAL_MOVEMENTS_QUERY_CHUNK_SIZE - 1)
 
-    if (filters.from) query = query.gte('date', filters.from)
-    if (filters.to) query = query.lte('date', filters.to)
+    if (dateFrom) query = query.gte('date', dateFrom)
+    if (dateTo) query = query.lte('date', dateTo)
     if (filters.categoryId) query = query.eq('category_id', filters.categoryId)
     if (filters.subcategoryId === SUBCATEGORY_NONE_MARKER) {
       query = query.is('subcategory_id', null)

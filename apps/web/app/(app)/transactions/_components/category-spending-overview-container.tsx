@@ -234,16 +234,24 @@ export function CategorySpendingOverviewContainer() {
       onSetCurrency: (currency) => dispatch({ type: 'setCurrency', currency }),
       onSetMode: (mode) => dispatch({ type: 'setOverviewMode', mode }),
       onSelectCategory: (categoryId) => {
+        // The breakdown is per-currency, so the row click pins the list to the
+        // currency being visualized — the list then shows exactly the movements
+        // behind the clicked slice (legacy URL hrefs did the same via
+        // `&currency=`, and `&type=income` in ingresos mode).
+        dispatch({ type: 'setCurrency', currency: overviewCurrency })
         // In subcategory mode the row id is the subcategoryId of the active
         // parent; everywhere else it's a top-level category.
         if (breakdownMode === 'subcategory' && filters.categoryId) {
           dispatch({ type: 'setSubcategory', subcategoryId: categoryId })
           return
         }
+        if (overviewMode === 'ingresos') {
+          dispatch({ type: 'setType', movementType: 'income' })
+        }
         dispatch({ type: 'setCategory', categoryId })
       },
     }),
-    [dispatch, breakdownMode, filters.categoryId],
+    [dispatch, breakdownMode, filters.categoryId, overviewCurrency, overviewMode],
   )
 
   // Loading state: render a skeleton card that calques the geometry of the
