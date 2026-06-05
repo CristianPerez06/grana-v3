@@ -8,7 +8,7 @@ import {
   getHouseholdAction,
 } from '@/app/_actions/queries'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
-import type { MovementFormAccount } from '../new/_components/movement-form'
+import type { MovementFormAccount } from '@/lib/transactions/components/movement-form'
 import { MovementDrawerProvider } from './movement-drawer'
 
 type Props = {
@@ -27,12 +27,13 @@ const activeCodes = (currencies: AccountCurrency[]): ('ARS' | 'USD')[] =>
  * `categories`, `household`) via TanStack Query and mounts
  * `<MovementDrawerProvider>` once it's all ready. Children render either way:
  * when the queries are pending or errored, children render outside the drawer
- * context (so `useMovementDrawer()` returns null and the
- * `<RegisterMovementButton>` falls back to its `<Link href="/transactions/new">`
- * — the canonical no-JS escape hatch).
+ * context (so `useMovementDrawer()` returns `null` and CTAs across the app
+ * render visually disabled — see `RegisterMovementButton`, `QuickAddFab`, etc.).
  *
- * The queries share their `queryKey` with `<TransactionsHeader>`, so TanStack
- * dedupes the fetches: the network roundtrip happens once.
+ * Mounted inside `AppShell` around the `{children}` slot, so the drawer is
+ * available from any authenticated route. The queries share their `queryKey`
+ * with `<TransactionsHeader>` and other consumers, so TanStack dedupes the
+ * fetches: the network roundtrip happens once.
  */
 export function MovementDrawerLoader({ children }: Props) {
   const queries = useQueries({

@@ -74,7 +74,8 @@ export type MovementFormAccount = PackageMovementFormAccount
 /**
  * Edit context built by the server page from an existing transaction. Wraps
  * the cross-platform `MovementEditContext` with web-specific `returnHref` —
- * the navigation target used after a non-drawer save.
+ * the navigation target used after a successful save from the edit *page*
+ * (the edit drawer ignores it and uses `onSuccess` to close itself).
  */
 export type MovementEditContext = PackageMovementEditContext & {
   returnHref: string
@@ -87,19 +88,20 @@ type Props = {
   edit?: MovementEditContext
   /** Create mode: pre-select this account (e.g. arriving from a card/account). */
   preselectAccountId?: string
-  /** Create mode: where to return after saving. Defaults to `/transactions`. */
-  createReturnHref?: string
   /**
    * When provided, the form is hosted in a drawer: after a successful save it
    * refreshes the route and calls `onSuccess` (to close the drawer) instead of
-   * navigating to `returnHref`. Page usage omits it and keeps navigating.
+   * navigating to `edit.returnHref`. Required in create mode (the drawer is
+   * the only host for creates); optional in edit mode (provided by the edit
+   * drawer, omitted by the standalone `/edit` route which keeps navigating).
    */
   onSuccess?: () => void
   /**
    * Presentation chrome. `'drawer'` renders the hi-fi shell (fixed header with
    * eyebrow/title/close + scroll body + fixed footer CTA). `'page'` (default)
-   * renders the same body inline for the standalone `/new` and `/edit` routes,
-   * where the page already provides its own header.
+   * renders the same body inline for the standalone `/transactions/[txId]/edit`
+   * route, where the page already provides its own header. The `'page'`
+   * variant is edit-only — the create flow always renders inside the drawer.
    */
   variant?: 'page' | 'drawer'
   /** Drawer chrome: close handler for the header ✕ and footer cancel paths. */
@@ -186,7 +188,6 @@ export const MovementForm = ({
   categories,
   edit,
   preselectAccountId,
-  createReturnHref,
   onSuccess,
   variant = 'page',
   onClose,
@@ -224,7 +225,9 @@ export const MovementForm = ({
   const amountRef = useRef<HTMLInputElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
-  const returnHref = edit?.returnHref ?? createReturnHref ?? '/transactions'
+  // Edit-only: where the form navigates after a successful page-mode save.
+  // Drawer mode never reads this (uses `onSuccess` instead).
+  const returnHref = edit?.returnHref ?? '/transactions'
 
   // Strip the web-only `returnHref` before handing the edit context to the hook
   // (the hook is cross-platform and routing belongs to the caller).

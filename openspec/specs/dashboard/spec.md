@@ -176,14 +176,15 @@ La navegación de mes NO SHALL modificar la URL/ruta ni provocar una navegación
 
 ### Requirement: El header del dashboard ofrece un acceso primario para registrar un movimiento (web)
 
-En web **desktop** (viewport `≥sm`), el header del dashboard SHALL incluir un botón primario "Nuevo movimiento" (estilo `positive`/emerald) que navega a la creación de movimiento (`/transactions/new`). El label del botón SHALL leerse del catálogo i18n (no hardcodeado). En web **mobile** (viewport `<sm`), el botón NO SHALL renderizarse en el header: el acceso primario en ese viewport es el FAB definido en la spec de `transactions` (mobile-only en web). En la app nativa este acceso NO es parte del header del dashboard; en native el acceso primario es el FAB nativo definido en la spec de `transactions`.
+En web **desktop** (viewport `≥sm`), el header del dashboard SHALL incluir un botón primario "Nuevo movimiento" (estilo `positive`/emerald) que, al activarse, **abre el drawer de creación de movimiento** sobre el dashboard (invoca `useMovementDrawer().openCreate()`), sin navegación a otra ruta. El label del botón SHALL leerse del catálogo i18n (no hardcodeado). En web **mobile** (viewport `<sm`), el botón NO SHALL renderizarse en el header: el acceso primario en ese viewport es el FAB definido en la spec de `transactions` (mobile-only en web). En la app nativa este acceso NO es parte del header del dashboard; en native el acceso primario es el FAB nativo definido en la spec de `transactions`.
 
-Mientras el header esté en su estado de carga (ver requirement del saludo), el botón "Nuevo movimiento" — cuando se renderice en el viewport activo — SHALL renderizarse en estado **disabled**: SHALL aparecer con su tipografía e ícono completos pero sin envolver un `<Link>` (ni equivalente navegable), y SHALL no responder a clicks. Cuando el header sale del estado de carga, el botón SHALL pasar a su rendering normal (`<Button asChild><Link href="/transactions/new">…</Link></Button>` o equivalente).
+Mientras el header esté en su estado de carga (ver requirement del saludo) **o el `MovementDrawerProvider` aún no esté disponible** (queries `accounts/categories/household` cargadas por `MovementDrawerLoader` aún pendientes), el botón "Nuevo movimiento" — cuando se renderice en el viewport activo — SHALL renderizarse en estado **disabled**: SHALL aparecer con su tipografía e ícono completos pero sin handler de click activo (sin envolver un `<Link>` ni equivalente navegable) y SHALL no responder a clicks. Cuando el header sale del estado de carga **y** el provider está listo, el botón SHALL pasar a su rendering normal: un `<Button>` que al click invoca `useMovementDrawer().openCreate()`.
 
-#### Scenario: El botón navega a la creación de movimiento (desktop-web)
+#### Scenario: El botón abre el drawer de creación de movimiento (desktop-web)
 
 - **WHEN** un usuario web en viewport `≥sm` toca "Nuevo movimiento" en el header del dashboard una vez habilitado
-- **THEN** navega a `/transactions/new`
+- **THEN** se abre el drawer de creación de movimiento sobre el dashboard sin navegación
+- **AND** el dashboard permanece visible detrás del scrim
 
 #### Scenario: El label del botón es traducible
 
@@ -195,15 +196,20 @@ Mientras el header esté en su estado de carga (ver requirement del saludo), el 
 - **WHEN** el header del dashboard está en su estado de carga en viewport `≥sm` (query del nombre sin resolver)
 - **THEN** "Nuevo movimiento" se muestra con su label e ícono pero deshabilitado
 - **AND** no responde a clicks
-- **AND** NO envuelve a un `<Link>` (no es navegable mientras está disabled)
+- **AND** NO envuelve a un `<Link>` ni invoca el drawer (no es accionable mientras está disabled)
+
+#### Scenario: El botón se renderiza disabled mientras el drawer no está listo (desktop-web)
+
+- **WHEN** el header del dashboard ya cargó su saludo pero el `MovementDrawerProvider` aún no está disponible en viewport `≥sm`
+- **THEN** "Nuevo movimiento" se muestra con su label e ícono pero deshabilitado (estado disabled estándar del componente `Button`)
+- **AND** no responde a clicks (no abre el drawer ni navega a ninguna URL)
+- **AND** cuando el provider resuelve, el botón pasa a habilitado
 
 #### Scenario: El botón no se renderiza en mobile-web
 
 - **WHEN** un usuario web en viewport `<sm` abre `/dashboard`
 - **THEN** el header NO contiene el botón "Nuevo movimiento" en ningún estado (loading o habilitado)
 - **AND** el acceso primario para registrar un movimiento en ese viewport es el FAB definido en la spec de `transactions`
-
----
 
 ### Requirement: La pantalla dashboard es read-only
 
@@ -712,3 +718,4 @@ Los bloques internos NO SHALL declarar atributos de accesibilidad (heredan al wr
 - **WHEN** un usuario con lector de pantalla aterriza en el dashboard mientras una sección está en loading
 - **THEN** el lector anuncia el label localizado de la sección
 - **AND** los bloques individuales del skeleton no son leídos uno por uno
+

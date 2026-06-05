@@ -46,7 +46,7 @@ import type { CategoryWithSubcategories } from '@/lib/categories/types'
 import {
   MovementForm,
   type MovementEditContext,
-} from '../../new/_components/movement-form'
+} from '@/lib/transactions/components/movement-form'
 
 const formatBalance = (amount: number, currency: 'ARS' | 'USD', showCents: boolean) =>
   currency === 'ARS' ? formatARS(Math.abs(amount), showCents) : formatUSD(Math.abs(amount), showCents)

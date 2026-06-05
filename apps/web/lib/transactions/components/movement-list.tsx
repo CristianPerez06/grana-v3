@@ -21,9 +21,7 @@ const addDaysISO = (iso: string, days: number): string => {
 /** Why the list is empty + the relevant action callbacks. Absent ⇒ 'none'. */
 export type MovementEmptyState = {
   variant: 'none' | 'search' | 'filter'
-  /** CTA target for the "register first movement" affordance (variant 'none'). */
-  addHref?: string
-  /** Alternative to `addHref`: callback handler when the host owns the click. */
+  /** Click handler for the "register first movement" CTA — typically opens the create drawer. */
   onAdd?: () => void
   /** Callback that clears the search ('search') or the filters ('filter'). */
   onClear?: () => void
@@ -115,24 +113,13 @@ export const MovementList = ({
       <div className={containerClass}>
         <p className="text-sm font-medium text-foreground">{noneTitle}</p>
         <p className="mt-1 text-sm text-muted-foreground">{noneBody}</p>
-        {emptyState?.onAdd ? (
+        {emptyState?.onAdd && (
           <div className="mt-4 flex justify-center">
             <Button size="sm" className="w-auto" onClick={emptyState.onAdd}>
               <Plus size={16} strokeWidth={2} aria-hidden />
               {noneCta}
             </Button>
           </div>
-        ) : (
-          emptyState?.addHref && (
-            <div className="mt-4 flex justify-center">
-              <Button asChild size="sm" className="w-auto">
-                <Link href={emptyState.addHref}>
-                  <Plus size={16} strokeWidth={2} aria-hidden />
-                  {noneCta}
-                </Link>
-              </Button>
-            </div>
-          )
         )}
       </div>
     )

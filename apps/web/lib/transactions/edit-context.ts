@@ -4,7 +4,7 @@ import { getAccountDetail } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
 import { getEditableFields } from '@grana/money-logic'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
-import type { MovementEditContext } from '@/app/(app)/transactions/new/_components/movement-form'
+import type { MovementEditContext } from '@/lib/transactions/components/movement-form'
 
 export type MovementEditData = {
   edit: MovementEditContext

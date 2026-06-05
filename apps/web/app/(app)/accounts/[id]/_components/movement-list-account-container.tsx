@@ -18,6 +18,7 @@ import {
   getRecurrenceLinkedTransactionIdsAction,
 } from '@/app/_actions/queries'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
+import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
 import {
   hasActiveContentFilters,
   hasActiveSearch,
@@ -106,6 +107,7 @@ function resolveRange(filters: TransactionsFilters): { from?: string; to?: strin
  */
 export function MovementListAccountContainer({ accountId }: Props) {
   const { filters, dispatch } = useTransactionsFilters()
+  const drawer = useMovementDrawer()
   const tCommon = useTranslations('common')
   const tAccounts = useTranslations('accounts')
 
@@ -234,7 +236,7 @@ export function MovementListAccountContainer({ accountId }: Props) {
         emptyState={{
           variant,
           query: filters.query,
-          addHref: `/transactions/new?account=${accountId}&from=account:${accountId}`,
+          onAdd: drawer ? () => drawer.openCreate(accountId) : undefined,
           onClear:
             variant === 'filter'
               ? () => dispatch({ type: 'clearFilters' })

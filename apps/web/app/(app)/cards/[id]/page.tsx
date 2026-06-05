@@ -12,11 +12,11 @@ import { getInstitutions } from '@/lib/accounts/queries'
 import { classifyPeriodsLifecycle, formatDateISO } from '@/lib/cards/utils'
 import { getTodayAR } from '@/lib/date'
 import { getShowCents } from '@/lib/preferences'
-import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { CardActions } from './_components/card-actions'
 import { CardHeaderActions } from './_components/card-header-actions'
 import { EditCardDrawerProvider } from './_components/edit-card-drawer'
+import { RegisterFirstPurchaseButton } from './_components/register-first-purchase-button'
 import { CardDetailHeader } from '../_components/card-detail-header'
 import { CardDetailView } from '../_components/card-detail-view'
 import { cardAccent, pillTone, resolveEditCycle } from '../_components/card-presentation'
@@ -121,11 +121,7 @@ const CardDetailPage = async ({ params }: Props) => {
               <p className="text-lg font-bold">{t('detail.ready_title')}</p>
               <p className="text-sm text-text-muted">{t('detail.ready_description')}</p>
             </div>
-            <Button asChild size="lg">
-              <Link href={`/transactions/new?account=${id}&from=card:${id}`}>
-                {t('actions.register_first_purchase')}
-              </Link>
-            </Button>
+            <RegisterFirstPurchaseButton cardId={id} />
           </Card>
           <AdminFooter createdAt={cardDetail.created_at} archivedAt={null} />
         </div>

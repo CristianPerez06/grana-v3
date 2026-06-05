@@ -3,7 +3,7 @@ import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { buildMovementEditContext } from '@/lib/transactions/edit-context'
 import { PageHeader } from '@/components/ui/page-header'
-import { MovementForm } from '../../new/_components/movement-form'
+import { MovementForm } from '@/lib/transactions/components/movement-form'
 
 type Props = {
   params: Promise<{ txId: string }>

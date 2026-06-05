@@ -21,6 +21,7 @@ const buttonVariants = cva(
         md: 'py-2.5 px-4 text-sm',
         lg: 'py-3 px-5 text-base',
         icon: 'h-9 w-9 p-0 rounded-full',
+        fab: 'h-16 w-16 p-0 rounded-2xl shadow-lg',
       },
     },
     defaultVariants: { variant: 'primary', size: 'md' },

@@ -6,7 +6,7 @@ import { Drawer } from '@/components/ui/drawer'
 import { MovementDrawerContext } from '@/lib/transactions/movement-drawer-context'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 import type { Household } from '@/lib/shared/types'
-import { MovementForm, type MovementFormAccount } from '../new/_components/movement-form'
+import { MovementForm, type MovementFormAccount } from '@/lib/transactions/components/movement-form'
 
 type Props = {
   accounts: MovementFormAccount[]
@@ -16,9 +16,10 @@ type Props = {
 }
 
 /**
- * Hosts the movement create form in a right-side drawer over the list, reusing
- * the exact same MovementForm (and its server actions/validation) as the
- * `/transactions/new` page. The page route stays as a deep-link/no-JS fallback.
+ * Hosts the movement create form in a right-side drawer over the current page.
+ * Mounted by `MovementDrawerLoader` inside `AppShell`, so the drawer is
+ * accessible from any authenticated route. The drawer is the only host for the
+ * create flow — there is no equivalent page route.
  */
 export function MovementDrawerProvider({ accounts, categories, household, children }: Props) {
   const t = useTranslations('transactions')

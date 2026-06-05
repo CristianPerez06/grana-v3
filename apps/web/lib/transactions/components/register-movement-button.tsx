@@ -1,55 +1,39 @@
 'use client'
 
-import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { Button } from '@/components/ui/button'
 import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
 
 type Props = {
   /**
-   * When true the button renders visually disabled (no interaction). The
-   * /transactions shell uses this while the drawer's data queries
-   * (`accounts` + `categories` + `household`) are still pending, so the user
-   * sees the button immediately but can't open a drawer that would crash on
-   * undefined props.
+   * When true the button renders visually disabled (no interaction). Callers
+   * use this while their own header-level data is still pending; the button
+   * is also disabled automatically when `useMovementDrawer()` is null
+   * (`MovementDrawerLoader` queries still resolving).
    */
   disabled?: boolean
 }
 
 /**
- * Desktop CTA to register a movement. Opens the drawer when the provider is
- * present; otherwise falls back to navigating to the `/transactions/new` page.
+ * Desktop CTA to register a movement. Opens the drawer via the app-shell-level
+ * `MovementDrawerProvider`. Renders disabled when the drawer provider is not
+ * yet available (cold-load window) or when the caller passes `disabled=true`.
  */
 export function RegisterMovementButton({ disabled = false }: Props = {}) {
   const t = useTranslations('transactions')
   const drawer = useMovementDrawer()
-  const label = t('actions.register_movement')
-  const className =
-    'hidden items-center gap-2 rounded-[var(--radius-lg)] bg-emerald px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-deep sm:inline-flex'
-  const disabledClassName = `${className} cursor-not-allowed opacity-60 hover:bg-emerald`
-
-  if (disabled) {
-    return (
-      <button type="button" disabled className={disabledClassName} aria-disabled>
-        <Plus className="size-4" aria-hidden />
-        {label}
-      </button>
-    )
-  }
-
-  if (!drawer) {
-    return (
-      <Link href="/transactions/new" className={className}>
-        <Plus className="size-4" aria-hidden />
-        {label}
-      </Link>
-    )
-  }
-
+  const isDisabled = disabled || !drawer
   return (
-    <button type="button" onClick={() => drawer.openCreate()} className={className}>
+    <Button
+      variant="primary"
+      size="md"
+      className="hidden w-auto sm:inline-flex"
+      disabled={isDisabled}
+      onClick={isDisabled ? undefined : () => drawer?.openCreate()}
+    >
       <Plus className="size-4" aria-hidden />
-      {label}
-    </button>
+      {t('actions.register_movement')}
+    </Button>
   )
 }

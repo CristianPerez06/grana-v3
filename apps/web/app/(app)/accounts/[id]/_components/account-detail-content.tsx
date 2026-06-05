@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { getAccountDetailAction } from '@/app/_actions/queries'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
+import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
 import { AccountDetailHeader } from './account-detail-header'
 import { PendingReimbursementsAccountContainer } from './pending-reimbursements-account-container'
 import { MovementFiltersAccountContainer } from './movement-filters-account-container'
@@ -25,6 +26,7 @@ type Props = {
  */
 export function AccountDetailContent({ accountId }: Props) {
   const t = useTranslations('accounts')
+  const drawer = useMovementDrawer()
 
   // Cached by the header; dedupes — used here only to decide whether to show
   // the "agregar moneda" link (depends on the account's currencies set).
@@ -74,11 +76,14 @@ export function AccountDetailContent({ accountId }: Props) {
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
             {t('headers.movements')}
           </h2>
-          <Button asChild size="sm" className="w-auto">
-            <Link href={`/transactions/new?account=${accountId}&from=account:${accountId}`}>
-              <Plus size={16} strokeWidth={2} aria-hidden />
-              {t('actions.add_transaction')}
-            </Link>
+          <Button
+            size="sm"
+            className="w-auto"
+            disabled={!drawer}
+            onClick={() => drawer?.openCreate(accountId)}
+          >
+            <Plus size={16} strokeWidth={2} aria-hidden />
+            {t('actions.add_transaction')}
           </Button>
         </div>
 

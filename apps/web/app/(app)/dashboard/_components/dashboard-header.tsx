@@ -1,11 +1,11 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
+import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
 import { useDashboardMonth } from './dashboard-month-context'
 import { EyeMaskToggle } from './eye-mask-toggle'
 import { MonthNavigator } from './month-navigator'
@@ -31,6 +31,7 @@ export const DashboardHeader = ({ todayISO }: Props) => {
   const localeCode = locale === 'en' ? 'en-US' : 'es-AR'
 
   const { selected, goPrev, goNext } = useDashboardMonth()
+  const drawer = useMovementDrawer()
 
   const [firstName, setFirstName] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -62,7 +63,7 @@ export const DashboardHeader = ({ todayISO }: Props) => {
     }
   }, [])
 
-  const isDisabled = isLoading
+  const isDisabled = isLoading || !drawer
   const greeting = firstName ? t('welcome', { name: firstName }) : t('welcome_anon')
 
   return (
@@ -86,17 +87,18 @@ export const DashboardHeader = ({ todayISO }: Props) => {
           />
         </div>
         <EyeMaskToggle disabled={isDisabled} />
-        {isDisabled ? (
+        {isDisabled || !drawer ? (
           <Button className="hidden w-auto sm:inline-flex" disabled>
             <Plus size={18} strokeWidth={2} />
             {t('new_movement')}
           </Button>
         ) : (
-          <Button asChild className="hidden w-auto sm:inline-flex">
-            <Link href="/transactions/new">
-              <Plus size={18} strokeWidth={2} />
-              {t('new_movement')}
-            </Link>
+          <Button
+            className="hidden w-auto sm:inline-flex"
+            onClick={() => drawer.openCreate()}
+          >
+            <Plus size={18} strokeWidth={2} />
+            {t('new_movement')}
           </Button>
         )}
       </div>

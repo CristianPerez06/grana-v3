@@ -1,9 +1,9 @@
 'use client'
 
-import Link from 'next/link'
 import { Pencil, Plus } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
+import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
 import { useEditCardDrawer } from './edit-card-drawer'
 
 type Props = {
@@ -19,22 +19,26 @@ type Props = {
  */
 export const CardHeaderActions = ({ cardId, showAdd = true }: Props) => {
   const t = useTranslations('cards')
-  const drawer = useEditCardDrawer()
+  const movementDrawer = useMovementDrawer()
+  const editDrawer = useEditCardDrawer()
 
   return (
     <>
       {showAdd && (
-        <Button asChild size="sm" className="w-auto">
-          <Link href={`/transactions/new?account=${cardId}&from=card:${cardId}`}>
-            <Plus size={16} strokeWidth={2} aria-hidden />
-            {t('actions.register_purchase')}
-          </Link>
+        <Button
+          size="sm"
+          className="w-auto"
+          disabled={!movementDrawer}
+          onClick={() => movementDrawer?.openCreate(cardId)}
+        >
+          <Plus size={16} strokeWidth={2} aria-hidden />
+          {t('actions.register_purchase')}
         </Button>
       )}
-      {drawer && (
+      {editDrawer && (
         <button
           type="button"
-          onClick={drawer.openEdit}
+          onClick={editDrawer.openEdit}
           aria-label={t('actions.edit')}
           title={t('actions.edit')}
           className="inline-flex size-9 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-border-soft hover:text-text"

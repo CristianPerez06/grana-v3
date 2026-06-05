@@ -20,6 +20,7 @@ import { useTranslations } from "next-intl";
 import { logoutAction } from "@/app/_actions/logout";
 import { setSidebarCollapsed as setSidebarCollapsedAction } from "@/app/_actions/preferences";
 import { GranaIsotype, GranaLogo } from "@/components/ui/grana-logo";
+import { MovementDrawerLoader } from "@/app/(app)/transactions/_components/movement-drawer-loader";
 
 type NavItem = {
   href: string;
@@ -80,7 +81,9 @@ export const AppShell = ({
       <TopBarMobile onOpenDrawer={() => setDrawerOpen(true)} />
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
       <main className="flex-1 md:overflow-y-auto">
-        <div className="mx-auto w-full max-w-5xl px-8 py-8">{children}</div>
+        <MovementDrawerLoader>
+          <div className="mx-auto w-full max-w-5xl px-8 py-8">{children}</div>
+        </MovementDrawerLoader>
       </main>
     </div>
   );

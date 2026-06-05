@@ -124,9 +124,9 @@ export function MovementListContainer() {
         emptyState={{
           variant,
           query: filters.query,
-          // Open the drawer when available; fall back to /transactions/new.
+          // Open the drawer when available; rendered disabled while the
+          // app-shell loader still resolves (drawer === null).
           onAdd: drawer ? () => drawer.openCreate() : undefined,
-          addHref: drawer ? undefined : '/transactions/new',
           onClear:
             variant === 'filter'
               ? () => dispatch({ type: 'clearFilters' })
