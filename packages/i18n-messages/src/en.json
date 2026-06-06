@@ -344,6 +344,9 @@
       "deactivateCurrency": "Deactivate currency",
       "add_transaction": "Add"
     },
+    "menu": {
+      "label": "Account actions"
+    },
     "headers": {
       "movements": "Transactions"
     },

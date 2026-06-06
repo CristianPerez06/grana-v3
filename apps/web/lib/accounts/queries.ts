@@ -18,6 +18,44 @@ function addMoneyAmounts(a: number | string, b: number | string): number {
   return Money.toNumber(Money.add(Money.from(a), Money.from(b)))
 }
 
+// Returns the set of account IDs that have at least one transaction referencing
+// them (either as origin or as transfer destination), excluding off-ledger
+// parent rows. Single round-trip; the row's "archive vs delete" affordance reads
+// from this set per account.
+async function getAccountIdsWithTransactions(
+  accountIds: string[],
+): Promise<Set<string>> {
+  if (accountIds.length === 0) return new Set()
+  const supabase = await createClient()
+
+  const idList = accountIds.join(',')
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('account_id, transfer_destination_account_id')
+    .or(
+      `account_id.in.(${idList}),transfer_destination_account_id.in.(${idList})`,
+    )
+    .or('is_parent.is.null,is_parent.eq.false')
+
+  if (error) throw error
+
+  const ids = new Set(accountIds)
+  const hits = new Set<string>()
+  for (const row of (data ?? []) as Array<{
+    account_id: string | null
+    transfer_destination_account_id: string | null
+  }>) {
+    if (row.account_id && ids.has(row.account_id)) hits.add(row.account_id)
+    if (
+      row.transfer_destination_account_id &&
+      ids.has(row.transfer_destination_account_id)
+    ) {
+      hits.add(row.transfer_destination_account_id)
+    }
+  }
+  return hits
+}
+
 // ── getAccounts ───────────────────────────────────────────────────────────────
 
 export async function getAccounts(
@@ -48,7 +86,10 @@ export async function getAccounts(
 
   const accounts = (data ?? []) as AccountWithDetails[]
   const accountIds = accounts.map((a) => a.id)
-  const txSumsMap = await getTransactionSums(accountIds)
+  const [txSumsMap, accountsWithTx] = await Promise.all([
+    getTransactionSums(accountIds),
+    getAccountIdsWithTransactions(accountIds),
+  ])
 
   const withBalances = accounts.map((a) => ({
     ...a,
@@ -63,6 +104,7 @@ export async function getAccounts(
       ),
     } as Record<'ARS' | 'USD', number>,
     avatar: resolveAccountAvatar(a, a.institution),
+    has_transactions: accountsWithTx.has(a.id),
   }))
 
   return {
@@ -101,7 +143,10 @@ export async function getCashAndBankAccounts(
 
   const accounts = (data ?? []) as AccountWithDetails[]
   const accountIds = accounts.map((a) => a.id)
-  const txSumsMap = await getTransactionSums(accountIds)
+  const [txSumsMap, accountsWithTx] = await Promise.all([
+    getTransactionSums(accountIds),
+    getAccountIdsWithTransactions(accountIds),
+  ])
 
   const withBalances = accounts.map((a) => ({
     ...a,
@@ -116,6 +161,7 @@ export async function getCashAndBankAccounts(
       ),
     } as Record<'ARS' | 'USD', number>,
     avatar: resolveAccountAvatar(a, a.institution),
+    has_transactions: accountsWithTx.has(a.id),
   }))
 
   return {
@@ -145,7 +191,10 @@ export async function getAccountDetail(id: string): Promise<AccountWithBalances 
   }
 
   const account = data as AccountWithDetails
-  const txSumsMap = await getTransactionSums([id])
+  const [txSumsMap, accountsWithTx] = await Promise.all([
+    getTransactionSums([id]),
+    getAccountIdsWithTransactions([id]),
+  ])
   const txSums = txSumsMap.get(id) ?? { ARS: 0, USD: 0 }
 
   const balances: Record<'ARS' | 'USD', number> = { ARS: 0, USD: 0 }
@@ -158,7 +207,12 @@ export async function getAccountDetail(id: string): Promise<AccountWithBalances 
     }
   }
 
-  return { ...account, balances, avatar: resolveAccountAvatar(account, account.institution) }
+  return {
+    ...account,
+    balances,
+    avatar: resolveAccountAvatar(account, account.institution),
+    has_transactions: accountsWithTx.has(id),
+  }
 }
 
 // ── getInstitutions ───────────────────────────────────────────────────────────

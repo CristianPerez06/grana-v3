@@ -1,15 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
-import { Pencil } from 'lucide-react'
 import type { AccountWithBalances } from '@/lib/accounts/types'
-import { reactivateAccount } from '@/app/_actions/accounts'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import { AccountAvatar } from '@/components/ui/account-avatar'
-import { useAccountsEditDrawer } from './accounts-edit-drawer'
+import { AccountRowMenu } from './account-row-menu'
 
 type Props = {
   account: AccountWithBalances
@@ -18,22 +15,11 @@ type Props = {
 export const AccountRow = ({ account }: Props) => {
   const t = useTranslations('accounts')
   const showCents = useShowCents()
-  const editDrawer = useAccountsEditDrawer()
-  const [error, setError] = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
 
   const balances = account.balances
   const activeCurrencies = account.currencies.filter((c) => c.is_active)
   const hasARS = activeCurrencies.some((c) => c.currency_code === 'ARS')
   const hasUSD = activeCurrencies.some((c) => c.currency_code === 'USD')
-
-  const handleReactivate = () => {
-    startTransition(async () => {
-      setError(null)
-      const result = await reactivateAccount(account.id)
-      if (!result.ok) setError(result.formError ?? t('errors.reactivate_failed'))
-    })
-  }
 
   return (
     <div className="flex items-center gap-4 px-5 py-4">
@@ -59,7 +45,6 @@ export const AccountRow = ({ account }: Props) => {
               {account.institution.name}
             </span>
           )}
-          {error && <p className="text-[13px] text-destructive">{error}</p>}
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-0.5 tabular-nums">
@@ -76,39 +61,8 @@ export const AccountRow = ({ account }: Props) => {
         </div>
       </Link>
 
-      <div className="flex w-20 shrink-0 items-center justify-end">
-        {account.is_active ? (
-          // Opens the shared edit drawer; the /edit route is the no-JS fallback.
-          editDrawer ? (
-            <button
-              type="button"
-              onClick={() => editDrawer.openEdit(account)}
-              aria-label={t('actions.edit')}
-              title={t('actions.edit')}
-              className="inline-flex size-9 items-center justify-center rounded-lg text-text-soft transition-colors hover:bg-border-soft hover:text-text cursor-pointer"
-            >
-              <Pencil className="size-[17px]" aria-hidden />
-            </button>
-          ) : (
-            <Link
-              href={`/accounts/${account.id}/edit`}
-              aria-label={t('actions.edit')}
-              title={t('actions.edit')}
-              className="inline-flex size-9 items-center justify-center rounded-lg text-text-soft transition-colors hover:bg-border-soft hover:text-text"
-            >
-              <Pencil className="size-[17px]" aria-hidden />
-            </Link>
-          )
-        ) : (
-          <button
-            type="button"
-            onClick={handleReactivate}
-            disabled={isPending}
-            className="text-[13px] font-semibold text-positive transition-opacity hover:opacity-80 disabled:opacity-50 cursor-pointer"
-          >
-            {t('actions.reactivate')}
-          </button>
-        )}
+      <div className="flex w-11 shrink-0 items-center justify-end sm:w-9">
+        <AccountRowMenu account={account} />
       </div>
     </div>
   )

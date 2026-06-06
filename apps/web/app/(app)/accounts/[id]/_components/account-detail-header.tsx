@@ -1,20 +1,13 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Pencil, Archive, Trash2 } from 'lucide-react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { archiveAccount, reactivateAccount, deleteAccount } from '@/app/_actions/accounts'
+import { Pencil } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import { AccountAvatar } from '@/components/ui/account-avatar'
-import {
-  getAccountDetailAction,
-  getAccountMovementsAscendingAction,
-} from '@/app/_actions/queries'
+import { getAccountDetailAction } from '@/app/_actions/queries'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
-import { invalidateAfterAccountMutation } from '@/lib/transactions/invalidation'
 import { useEditAccountDrawer } from './edit-account-drawer'
 
 type Props = {
@@ -25,8 +18,11 @@ type Props = {
  * Account detail header — client-side variant. Fetches the account detail via
  * TanStack so the route's `page.tsx` can stay a thin shell. Renders skeletons
  * for the balances while the query is pending; the back link, avatar and name
- * appear from the first paint (initial paint shows skeleton avatar/title until
- * data lands).
+ * appear from the first paint.
+ *
+ * The slot of actions on the right only exposes Edit. Archive / delete /
+ * reactivate live in the kebab menu on the row in /accounts (see the accounts
+ * spec — "El usuario puede ver la lista de sus cuentas agrupadas por tipo").
  *
  * The "Editar" button is gated on the drawer being ready: when the
  * `EditAccountDrawerProvider` has finished mounting (its loader resolved both
@@ -38,67 +34,14 @@ type Props = {
 export const AccountDetailHeader = ({ accountId }: Props) => {
   const t = useTranslations('accounts')
   const showCents = useShowCents()
-  const router = useRouter()
-  const qc = useQueryClient()
   const editDrawer = useEditAccountDrawer()
-  const [error, setError] = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
 
   const accountQ = useQuery({
     queryKey: QUERY_KEYS.accountDetail(accountId),
     queryFn: () => getAccountDetailAction(accountId),
   })
 
-  // The visible-or-not decision for archive vs delete depends on whether the
-  // account has any transactions. Read from the cached ascending-history query
-  // (the list container hydrates it). If it's not yet in the cache, the actions
-  // block shows its own skeleton — same staleness contract as the balances.
-  const movementsQ = useQuery({
-    queryKey: QUERY_KEYS.accountMovementsAscending(accountId),
-    queryFn: () => getAccountMovementsAscendingAction(accountId),
-  })
-
   const account = accountQ.data
-  const hasTransactions = (movementsQ.data?.length ?? 0) > 0
-
-  const handleArchive = () => {
-    if (!confirm(`${t('confirmations.archive_title')} ${t('confirmations.archive_body')}`)) return
-    startTransition(async () => {
-      setError(null)
-      const result = await archiveAccount(accountId)
-      if (!result.ok) {
-        setError(result.formError ?? t('errors.archive_failed'))
-        return
-      }
-      invalidateAfterAccountMutation(qc)
-    })
-  }
-
-  const handleReactivate = () => {
-    startTransition(async () => {
-      setError(null)
-      const result = await reactivateAccount(accountId)
-      if (!result.ok) {
-        setError(result.formError ?? t('errors.reactivate_failed'))
-        return
-      }
-      invalidateAfterAccountMutation(qc)
-    })
-  }
-
-  const handleDelete = () => {
-    if (!confirm(t('confirmations.delete_body_no_transactions'))) return
-    startTransition(async () => {
-      setError(null)
-      const result = await deleteAccount(accountId)
-      if (!result.ok) {
-        setError(result.formError ?? t('errors.delete_failed'))
-        return
-      }
-      invalidateAfterAccountMutation(qc)
-      router.push('/accounts')
-    })
-  }
 
   // First-paint skeleton for avatar + title. The shape mirrors the real header
   // (md avatar + 2-line block) so the layout doesn't jolt when data lands.
@@ -114,8 +57,7 @@ export const AccountDetailHeader = ({ accountId }: Props) => {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="h-3.5 w-10 rounded bg-muted/70 animate-pulse" />
-            <div className="h-3.5 w-14 rounded bg-muted/70 animate-pulse" />
+            <div className="size-9 rounded-lg bg-muted/70 animate-pulse" />
           </div>
         </div>
         <div className="flex items-end gap-6">
@@ -158,8 +100,6 @@ export const AccountDetailHeader = ({ accountId }: Props) => {
         </div>
 
         <div className="flex items-center gap-1 flex-shrink-0">
-          {/* Opens the edit drawer when ready; the /edit page is the fallback
-              path while the drawer's data is still loading or failed. */}
           {editDrawer ? (
             <button
               type="button"
@@ -179,41 +119,6 @@ export const AccountDetailHeader = ({ accountId }: Props) => {
             >
               <Pencil className="size-[17px]" aria-hidden />
             </a>
-          )}
-
-          {/* Archive/reactivate/delete needs both `account` (already resolved
-              if we got here) and the ascending history to decide which one to
-              show. Skeleton block while the history query is pending. */}
-          {movementsQ.isPending ? (
-            <div className="h-3.5 w-14 rounded bg-muted/70 animate-pulse" aria-busy />
-          ) : !account.is_active ? (
-            <button
-              onClick={handleReactivate}
-              disabled={isPending}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-            >
-              {t('actions.reactivate')}
-            </button>
-          ) : hasTransactions ? (
-            <button
-              onClick={handleArchive}
-              disabled={isPending}
-              aria-label={t('actions.archive')}
-              title={t('actions.archive')}
-              className="inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-border-soft hover:text-foreground transition-colors disabled:opacity-50"
-            >
-              <Archive className="size-[17px]" aria-hidden />
-            </button>
-          ) : (
-            <button
-              onClick={handleDelete}
-              disabled={isPending}
-              aria-label={t('actions.delete')}
-              title={t('actions.delete')}
-              className="inline-flex size-9 items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 hover:text-destructive/80 transition-colors disabled:opacity-50"
-            >
-              <Trash2 className="size-[17px]" aria-hidden />
-            </button>
           )}
         </div>
       </div>
@@ -235,8 +140,6 @@ export const AccountDetailHeader = ({ accountId }: Props) => {
           </div>
         )}
       </div>
-
-      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   )
 }

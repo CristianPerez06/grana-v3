@@ -44,6 +44,12 @@ export type AccountWithBalances = AccountWithDetails & {
   balances: Record<'ARS' | 'USD', number>
   /** Visual identity resolved server-side from color_key/icon_key + institution. */
   avatar: ResolvedAccountAvatar
+  /**
+   * True if the account has at least one transaction (either as origin or as
+   * transfer destination), excluding off-ledger parent rows. Drives the
+   * "archive vs delete" affordance in the row's kebab menu.
+   */
+  has_transactions: boolean
 }
 
 export type GroupedAccounts = {
