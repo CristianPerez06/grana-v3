@@ -6,7 +6,6 @@ import { getCreditCardDetail, getCardNetworks } from '@/lib/cards/queries'
 import { getInstitutions } from '@/lib/accounts/queries'
 import { getTodayAR } from '@/lib/date'
 import { formatDateISO } from '@/lib/cards/utils'
-import { PageHeader } from '@/components/ui/page-header'
 import { cardAccent, resolveEditCycle } from '../../_components/card-presentation'
 import { EditCardForm } from '../_components/edit-card-form'
 
@@ -55,27 +54,20 @@ const EditCardPage = async ({ params }: Props) => {
   const hasMovements = cardDetail.periods.some((p) => p.has_payment || p.tx_count > 0)
 
   return (
-    <div className="flex max-w-lg flex-col gap-6">
-      <PageHeader
-        title={t('edit.title')}
-        backLink={{ href: `/cards/${id}`, label: cardDetail.name }}
-      />
-
-      <EditCardForm
-        variant="page"
-        cardId={id}
-        initialName={cardDetail.name}
-        initialInstitutionId={cardDetail.institution_id}
-        initialCreditLimit={cardDetail.credit_limit}
-        networkLabel={networkLabel}
-        networkColor={networkColor}
-        accent={accent}
-        committedARS={0}
-        cycle={resolveEditCycle(cardDetail.periods, todayISO)}
-        hasMovements={hasMovements}
-        institutions={institutions}
-      />
-    </div>
+    <EditCardForm
+      variant="page"
+      cardId={id}
+      initialName={cardDetail.name}
+      initialInstitutionId={cardDetail.institution_id}
+      initialCreditLimit={cardDetail.credit_limit}
+      networkLabel={networkLabel}
+      networkColor={networkColor}
+      accent={accent}
+      committedARS={0}
+      cycle={resolveEditCycle(cardDetail.periods, todayISO)}
+      hasMovements={hasMovements}
+      institutions={institutions}
+    />
   )
 }
 

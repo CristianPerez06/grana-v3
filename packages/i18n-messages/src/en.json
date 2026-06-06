@@ -551,6 +551,7 @@
       "of_connector": "of"
     },
     "period": {
+      "detail_title": "Statement",
       "future": "Future",
       "current": "Current",
       "no_movements": "No transactions",

@@ -1,8 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getAccountDetail, getInstitutions } from '@/lib/accounts/queries'
-import { PageHeader } from '@/components/ui/page-header'
 import { EditAccountForm } from './_components/edit-account-form'
 
 type Props = {
@@ -16,8 +14,6 @@ const EditAccountPage = async ({ params }: Props) => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const t = await getTranslations('accounts')
-
   const [account, institutions] = await Promise.all([
     getAccountDetail(id),
     getInstitutions(),
@@ -25,15 +21,7 @@ const EditAccountPage = async ({ params }: Props) => {
 
   if (!account) notFound()
 
-  return (
-    <div className="flex flex-col gap-6 max-w-lg">
-      <PageHeader
-        title={t('edit_title')}
-        backLink={{ href: `/accounts/${id}`, label: account.name }}
-      />
-      <EditAccountForm account={account} institutions={institutions} />
-    </div>
-  )
+  return <EditAccountForm account={account} institutions={institutions} />
 }
 
 export default EditAccountPage

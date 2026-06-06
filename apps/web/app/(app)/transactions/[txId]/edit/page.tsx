@@ -1,8 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { buildMovementEditContext } from '@/lib/transactions/edit-context'
-import { PageHeader } from '@/components/ui/page-header'
 import { MovementForm } from '@/lib/transactions/components/movement-form'
 
 type Props = {
@@ -18,9 +16,6 @@ const EditMovementPage = async ({ params, searchParams }: Props) => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const t = await getTranslations('transactions')
-
-  // Canonical detail keeps the perspective via `?from=`.
   const fromQuery = from ? `?from=${encodeURIComponent(from)}` : ''
   const detailHref = `/transactions/${txId}${fromQuery}`
 
@@ -28,16 +23,7 @@ const EditMovementPage = async ({ params, searchParams }: Props) => {
   if (!data) notFound()
   const { edit, categories } = data
 
-  return (
-    <div className="flex flex-col gap-6 max-w-lg">
-      <PageHeader
-        title={t('edit_title')}
-        backLink={{ href: detailHref, label: t('detail_back_label') }}
-      />
-
-      <MovementForm accounts={[]} categories={categories} edit={edit} />
-    </div>
-  )
+  return <MovementForm accounts={[]} categories={categories} edit={edit} />
 }
 
 export default EditMovementPage

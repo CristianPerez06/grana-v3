@@ -1,11 +1,9 @@
 import { notFound, redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardPeriodDetail } from '@/lib/cards/queries'
 import { getAccounts } from '@/lib/accounts/queries'
 import { suggestNextPeriodDates } from '@/lib/cards/utils'
 import { getTodayAR } from '@/lib/date'
-import { PageHeader } from '@/components/ui/page-header'
 import { PayCardPeriodForm } from './_components/pay-card-period-form'
 import { USDSubordinatedNote } from './_components/usd-subordinated-note'
 
@@ -55,15 +53,8 @@ const PayPeriodPage = async ({ params }: Props) => {
     .filter((a) => a.is_active && a.currencies.some((c) => c.currency_code === 'ARS' && c.is_active))
     .map((a) => ({ id: a.id, name: a.name, balanceARS: a.balances.ARS }))
 
-  const t = await getTranslations('cards')
-
   return (
-    <div className="flex flex-col gap-6 max-w-lg">
-      <PageHeader
-        title={t('payment.title')}
-        backLink={{ href: `/cards/${id}/periods/${periodId}`, label: t('payment.back_label') }}
-      />
-
+    <>
       {period.pendingAmountUSD > 0 && (
         <USDSubordinatedNote usdAmount={period.pendingAmountUSD} />
       )}
@@ -78,7 +69,7 @@ const PayPeriodPage = async ({ params }: Props) => {
         lastKnownEndDate={lastKnownEndDate}
         paymentAccounts={paymentAccounts}
       />
-    </div>
+    </>
   )
 }
 

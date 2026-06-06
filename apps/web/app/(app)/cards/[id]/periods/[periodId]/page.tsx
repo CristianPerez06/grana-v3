@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardPeriodDetail } from '@/lib/cards/queries'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { getShowCents } from '@/lib/preferences'
-import { PageHeader } from '@/components/ui/page-header'
 import { translateCategoryLabel, translateSubcategoryLabel } from '@/lib/categories/display'
 import { EditDatesSheet } from './_components/edit-dates-sheet'
 
@@ -35,7 +34,6 @@ const PeriodDetailPage = async ({ params }: Props) => {
   if (!period) notFound()
 
   const hasUSD = cardDetail.currencies.some((c) => c.currency_code === 'USD' && c.is_active)
-  const canEditDates = !period.has_payment
   const totalAmount = period.has_payment ? period.paidAmountARS : period.pendingAmountARS
 
   const [t, tTx, tRoot] = await Promise.all([
@@ -44,24 +42,32 @@ const PeriodDetailPage = async ({ params }: Props) => {
     getTranslations(),
   ])
 
+  const canEditDates = !period.has_payment
+
   return (
-    <div className="flex flex-col gap-6 max-w-2xl">
-      <PageHeader
-        title={`${formatDate(period.start_date)} – ${formatDate(period.end_date)}`}
-        description={`${t('period.due_prefix')} ${formatDate(period.due_date)}`}
-        backLink={{ href: `/cards/${id}/periods`, label: t('list.periods_title') }}
-        actions={
-          canEditDates && (
-            <EditDatesSheet
-              periodId={period.id}
-              currentEndDate={period.end_date}
-              currentDueDate={period.due_date}
-              nextPeriodStart={period.nextPeriodStart}
-              nextPeriodIsPaid={period.nextPeriodIsPaid}
-            />
-          )
-        }
-      />
+    <>
+      {/* Date range + edit-dates action — dynamic chrome sub-header. The
+          layout chrome is sync (back-link + generic title); this is the
+          per-period detail that depends on data. */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-0.5">
+          <p className="text-base font-semibold">
+            {`${formatDate(period.start_date)} – ${formatDate(period.end_date)}`}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {`${t('period.due_prefix')} ${formatDate(period.due_date)}`}
+          </p>
+        </div>
+        {canEditDates && (
+          <EditDatesSheet
+            periodId={period.id}
+            currentEndDate={period.end_date}
+            currentDueDate={period.due_date}
+            nextPeriodStart={period.nextPeriodStart}
+            nextPeriodIsPaid={period.nextPeriodIsPaid}
+          />
+        )}
+      </div>
 
       {/* Amount summary — paid periods show what WAS paid, per currency. */}
       <div className="rounded-lg border border-border bg-card p-4 flex flex-col gap-1">
@@ -169,7 +175,7 @@ const PeriodDetailPage = async ({ params }: Props) => {
           </div>
         )}
       </section>
-    </div>
+    </>
   )
 }
 

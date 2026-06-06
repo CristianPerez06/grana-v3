@@ -551,6 +551,7 @@
       "of_connector": "de"
     },
     "period": {
+      "detail_title": "Resumen",
       "future": "Futuro",
       "current": "En curso",
       "no_movements": "Sin movimientos",

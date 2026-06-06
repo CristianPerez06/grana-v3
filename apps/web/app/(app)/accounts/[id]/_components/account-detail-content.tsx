@@ -48,16 +48,7 @@ export function AccountDetailContent({ accountId }: Props) {
   }, [accountQ.data])
 
   return (
-    <div className="flex flex-col gap-8 max-w-2xl">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/accounts"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          {`← ${t('title')}`}
-        </Link>
-      </div>
-
+    <>
       <AccountDetailHeader accountId={accountId} />
 
       <PendingReimbursementsAccountContainer accountId={accountId} />
@@ -91,6 +82,6 @@ export function AccountDetailContent({ accountId }: Props) {
 
         <MovementListAccountContainer accountId={accountId} />
       </section>
-    </div>
+    </>
   )
 }

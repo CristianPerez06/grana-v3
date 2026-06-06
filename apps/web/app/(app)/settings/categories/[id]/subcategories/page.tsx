@@ -24,11 +24,7 @@ const SubcategoriesPage = async ({ params }: Props) => {
     displayName: getSubcategoryName(sub, t),
   }))
 
-  return (
-    <div className="max-w-md">
-      <SubcategoryList subcategories={subcategories} />
-    </div>
-  )
+  return <SubcategoryList subcategories={subcategories} />
 }
 
 export default SubcategoriesPage

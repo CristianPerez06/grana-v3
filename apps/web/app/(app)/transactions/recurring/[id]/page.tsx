@@ -49,13 +49,12 @@ const RecurrenceDetailPage = async ({ params }: Props) => {
       })
     : null
 
+  const title = rule.description || rule.category?.name || movementLabel
+  const description = `${statusLabel} · ${accountSummary} · ${rule.currency_code}`
+
   return (
-    <div className="flex max-w-2xl flex-col gap-8">
-      <PageHeader
-        title={rule.description || rule.category?.name || movementLabel}
-        description={`${statusLabel} · ${accountSummary} · ${rule.currency_code}`}
-        backLink={{ href: '/transactions/recurring', label: tRec('title') }}
-      />
+    <>
+      <PageHeader title={title} description={description} />
 
       {createdLabel && (
         <p className="-mt-4 text-sm text-text-muted">
@@ -69,7 +68,7 @@ const RecurrenceDetailPage = async ({ params }: Props) => {
         instances={rule.instances}
         currencyCode={rule.currency_code}
       />
-    </div>
+    </>
   )
 }
 

@@ -106,30 +106,22 @@ const CardDetailPage = async ({ params }: Props) => {
   if (!cardHasHistory && cardDetail.is_active) {
     return (
       <EditCardDrawerProvider card={editCardData(0)}>
-        <div className="flex max-w-3xl flex-col gap-6">
-          <Link
-            href="/cards"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {`← ${t('back_label')}`}
-          </Link>
-          <CardDetailHeader
-            name={cardDetail.name}
-            bank={institutionName}
-            accent={accent}
-            tone="ok"
-            // The big "register first purchase" CTA below already covers add.
-            actions={<CardHeaderActions cardId={id} showAdd={false} />}
-          />
-          <Card className="flex flex-col gap-4 p-7">
-            <div className="flex flex-col gap-1">
-              <p className="text-lg font-bold">{t('detail.ready_title')}</p>
-              <p className="text-sm text-text-muted">{t('detail.ready_description')}</p>
-            </div>
-            <RegisterFirstPurchaseButton cardId={id} />
-          </Card>
-          <AdminFooter createdAt={cardDetail.created_at} archivedAt={null} />
-        </div>
+        <CardDetailHeader
+          name={cardDetail.name}
+          bank={institutionName}
+          accent={accent}
+          tone="ok"
+          // The big "register first purchase" CTA below already covers add.
+          actions={<CardHeaderActions cardId={id} showAdd={false} />}
+        />
+        <Card className="flex flex-col gap-4 p-7">
+          <div className="flex flex-col gap-1">
+            <p className="text-lg font-bold">{t('detail.ready_title')}</p>
+            <p className="text-sm text-text-muted">{t('detail.ready_description')}</p>
+          </div>
+          <RegisterFirstPurchaseButton cardId={id} />
+        </Card>
+        <AdminFooter createdAt={cardDetail.created_at} archivedAt={null} />
       </EditCardDrawerProvider>
     )
   }
@@ -141,18 +133,12 @@ const CardDetailPage = async ({ params }: Props) => {
 
   if (!cardDetail.is_active && !hasPendings) {
     return (
-      <div className="flex max-w-3xl flex-col gap-6">
-        <Link
-            href="/cards"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {`← ${t('back_label')}`}
-          </Link>
+      <>
         <CardDetailHeader name={cardDetail.name} bank={institutionName} accent={accent} tone="ok" />
         <CardActions cardId={id} isActive={false} hasMovements={cardHasHistory} />
         <p className="py-6 text-center text-sm text-text-muted">{t('detail.archived_no_pending')}</p>
         <CardDetailsSection createdAt={cardDetail.created_at} archivedAt={cardDetail.created_at} />
-      </div>
+      </>
     )
   }
 
@@ -211,36 +197,28 @@ const CardDetailPage = async ({ params }: Props) => {
 
   return (
     <EditCardDrawerProvider card={editCardData(committedARS)}>
-      <div className="flex max-w-3xl flex-col gap-6">
-        <Link
-            href="/cards"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {`← ${t('back_label')}`}
-          </Link>
-        <CardDetailHeader
-          name={cardDetail.name}
-          bank={institutionName}
-          accent={accent}
-          tone={headerTone}
-          actions={cardDetail.is_active ? <CardHeaderActions cardId={id} /> : undefined}
-        />
+      <CardDetailHeader
+        name={cardDetail.name}
+        bank={institutionName}
+        accent={accent}
+        tone={headerTone}
+        actions={cardDetail.is_active ? <CardHeaderActions cardId={id} /> : undefined}
+      />
 
-        {!cardDetail.is_active && <CardActions cardId={id} isActive={false} hasMovements={cardHasHistory} />}
+      {!cardDetail.is_active && <CardActions cardId={id} isActive={false} hasMovements={cardHasHistory} />}
 
-        <CardDetailView vm={vm} todayISO={todayISO} showCents={showCents} />
+      <CardDetailView vm={vm} todayISO={todayISO} showCents={showCents} />
 
-        <section className="flex flex-col gap-2 border-t border-border pt-4">
-          <Link href={`/cards/${id}/periods`} className="text-sm font-semibold text-text-muted transition-colors hover:text-text">
-            {t('actions.view_all_periods')}
-          </Link>
-        </section>
+      <section className="flex flex-col gap-2 border-t border-border pt-4">
+        <Link href={`/cards/${id}/periods`} className="text-sm font-semibold text-text-muted transition-colors hover:text-text">
+          {t('actions.view_all_periods')}
+        </Link>
+      </section>
 
-        <AdminFooter
-          createdAt={cardDetail.created_at}
-          archivedAt={cardDetail.is_active ? null : cardDetail.created_at}
-        />
-      </div>
+      <AdminFooter
+        createdAt={cardDetail.created_at}
+        archivedAt={cardDetail.is_active ? null : cardDetail.created_at}
+      />
     </EditCardDrawerProvider>
   )
 }

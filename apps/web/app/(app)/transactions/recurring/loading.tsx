@@ -1,5 +1,3 @@
-import { PageHeaderSkeleton } from '@/components/ui/page-header-skeleton'
-
 const ROW_COUNT = 6
 
 const RecurringRowSkeleton = () => (
@@ -14,9 +12,7 @@ const RecurringRowSkeleton = () => (
 )
 
 const RecurringLoading = () => (
-  <div className="flex max-w-3xl flex-col gap-6" aria-busy="true">
-    <PageHeaderSkeleton withSubtitle withAction />
-
+  <div className="flex flex-col gap-6" aria-busy="true">
     <div className="flex items-center gap-2">
       <span className="h-9 w-24 rounded-full bg-muted animate-pulse" />
       <span className="h-9 w-24 rounded-full bg-muted/70 animate-pulse" />

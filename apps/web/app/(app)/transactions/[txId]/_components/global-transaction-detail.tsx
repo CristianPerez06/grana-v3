@@ -34,7 +34,6 @@ import type { ExpenseReimbursementVM } from '@/lib/transactions/queries'
 import type { MovementSharedInfo } from '@/lib/shared/queries'
 import { resolveTone, toneToClass } from '@/lib/transactions/components/tone'
 import { resolveContextVariant } from '@/lib/transactions/components/resolve-context-variant'
-import { TxHeader } from './tx-header'
 import { TxHero } from './tx-hero'
 import { TxContextNote } from './tx-context-note'
 import { TxDetailGroup } from './tx-detail-group'
@@ -154,8 +153,6 @@ type Props = {
   reimbursements?: ExpenseReimbursementVM[]
   /** Perspective origin (`account:<id>` / `card:<id>` / undefined). */
   from?: string
-  /** Where the back arrow takes the user. Resolved by page.tsx. */
-  backHref: string
   /**
    * Edit context + categories for the in-context edit drawer. When present, the
    * "Editar" action opens the drawer instead of navigating to the `/edit` page.
@@ -175,7 +172,6 @@ export const GlobalTransactionDetail = ({
   installmentSiblings,
   reimbursements = [],
   from,
-  backHref,
   edit,
   editCategories,
   sharedInfo,
@@ -371,22 +367,18 @@ export const GlobalTransactionDetail = ({
           />
         </Drawer>
       )}
-      <TxHeader
-        backHref={backHref}
-        backLabel={t('back_label')}
-        actions={
-          actionAccountId && (
-            <TxActionsMenu
-              transactionId={transaction.id}
-              canEdit={canEdit}
-              canDelete={canDelete}
-              isParent={transaction.is_parent}
-              isCardPayment={!!payment}
-              onEdit={canUseEditDrawer ? () => setEditOpen(true) : undefined}
-            />
-          )
-        }
-      />
+      {actionAccountId && (
+        <div className="flex justify-end px-3.5">
+          <TxActionsMenu
+            transactionId={transaction.id}
+            canEdit={canEdit}
+            canDelete={canDelete}
+            isParent={transaction.is_parent}
+            isCardPayment={!!payment}
+            onEdit={canUseEditDrawer ? () => setEditOpen(true) : undefined}
+          />
+        </div>
+      )}
 
       <TxHero
         iconBg={heroBgFor(movement)}

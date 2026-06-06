@@ -1,6 +1,8 @@
 import { notFound, redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCategoryById } from '@/lib/categories/queries'
+import { PageHeader } from '@/components/ui/page-header'
 import { CreateSubcategoryForm } from './_components/create-subcategory-form'
 
 type Props = { params: Promise<{ id: string }> }
@@ -18,8 +20,11 @@ const NewSubcategoryPage = async ({ params }: Props) => {
   // category is off-limits.
   if (!category || (category.user_id !== null && category.user_id !== user.id)) notFound()
 
+  const tCat = await getTranslations('settings.categories')
+
   return (
-    <div className="max-w-md">
+    <div className="flex flex-col gap-6 max-w-md">
+      <PageHeader title={tCat('subcategories.new.title')} />
       <CreateSubcategoryForm categoryId={id} />
     </div>
   )

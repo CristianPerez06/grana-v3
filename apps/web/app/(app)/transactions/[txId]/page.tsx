@@ -31,16 +31,6 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
   const transaction = await getTransactionDetail(txId)
   if (!transaction) notFound()
 
-  // "Volver" respeta el origen: from=account:<id> regresa a la cuenta,
-  // from=card:<id> a la tarjeta; si no, a Movimientos.
-  const fromAccountId = from?.startsWith('account:') ? from.slice('account:'.length) : null
-  const fromCardId = from?.startsWith('card:') ? from.slice('card:'.length) : null
-  const backHref = fromAccountId
-    ? `/accounts/${fromAccountId}`
-    : fromCardId
-      ? `/cards/${fromCardId}`
-      : '/transactions'
-
   const t = await getTranslations('transactions')
   const tRec = await getTranslations('recurrences')
 
@@ -90,7 +80,7 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
   }
 
   return (
-    <div className="flex flex-col gap-4 max-w-lg mx-auto">
+    <>
       {recurrenceLink && (
         <Link
           href={`/transactions/recurring/${recurrenceLink.recurrence_id}`}
@@ -111,13 +101,12 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
         installmentSiblings={installmentFamily?.children ?? null}
         reimbursements={reimbursements}
         from={from}
-        backHref={backHref}
         edit={editData?.edit ?? null}
         editCategories={editData?.categories}
         sharedInfo={sharedInfo}
         paymentComposition={paymentComposition}
       />
-    </div>
+    </>
   )
 }
 

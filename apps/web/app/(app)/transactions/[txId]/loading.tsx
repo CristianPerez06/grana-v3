@@ -1,4 +1,3 @@
-import { PageHeaderSkeleton } from '@/components/ui/page-header-skeleton'
 import { Card, CardContent } from '@/components/ui/card'
 
 const MetaRowSkeleton = () => (
@@ -9,9 +8,7 @@ const MetaRowSkeleton = () => (
 )
 
 const TransactionDetailLoading = () => (
-  <div className="flex flex-col gap-4 max-w-lg mx-auto" aria-busy="true">
-    <PageHeaderSkeleton />
-
+  <div className="flex flex-col gap-4" aria-busy="true">
     <Card>
       <CardContent className="pt-6 flex flex-col gap-6">
         <div className="flex flex-col items-center gap-3">
