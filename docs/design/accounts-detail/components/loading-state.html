@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Loading state</title>
+    <link rel="stylesheet" href="../shared.css" />
+  </head>
+  <body>
+    <main class="stage">
+      <div class="route narrow canvas stack" aria-busy="true">
+        <span class="back">← Cuentas</span>
+        <div class="account-hero card" style="background: var(--card); color: var(--text)">
+          <div class="account-hero-main">
+            <div class="identity">
+              <span class="skeleton" style="width: 52px; height: 52px"></span>
+              <div style="display: grid; gap: 8px">
+                <span class="skeleton" style="width: 190px; height: 26px"></span>
+                <span class="skeleton" style="width: 132px; height: 14px"></span>
+              </div>
+            </div>
+            <div style="display: grid; gap: 10px">
+              <span class="skeleton" style="width: 88px; height: 12px"></span>
+              <span class="skeleton" style="width: 260px; height: 44px"></span>
+              <span class="skeleton" style="width: 150px; height: 20px"></span>
+            </div>
+          </div>
+        </div>
+        <section class="ledger">
+          <div class="ledger-head">
+            <span class="skeleton" style="width: 120px; height: 20px"></span>
+            <span class="skeleton" style="width: 150px; height: 38px"></span>
+          </div>
+          <div class="day">
+            <span class="skeleton" style="display: block; width: 80px; height: 14px; margin-bottom: 14px"></span>
+            <span class="skeleton" style="display: block; height: 58px; margin-bottom: 10px"></span>
+            <span class="skeleton" style="display: block; height: 58px"></span>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

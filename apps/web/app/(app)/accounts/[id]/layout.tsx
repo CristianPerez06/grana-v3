@@ -5,10 +5,10 @@ const AccountDetailLayout = async ({ children }: { children: React.ReactNode }) 
   const t = await getTranslations('accounts')
 
   return (
-    <div className="flex flex-col gap-8 max-w-2xl">
+    <div className="flex flex-col gap-5 max-w-3xl">
       <Link
         href="/accounts"
-        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        className="text-[13px] font-extrabold text-text-muted hover:text-foreground transition-colors"
       >
         {`← ${t('title')}`}
       </Link>

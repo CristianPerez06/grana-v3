@@ -13,6 +13,16 @@
   --emerald-soft: rgba(16, 185, 129, 0.12);
   --emerald-bg: #ECFDF5;
 
+  /* Hero gradient — navy surface with a soft emerald glow.
+     Authored as three parts (from / to / origin) so a future mobile mirror
+     codegen'd from this file can expose them as TS constants and compose
+     them via <LinearGradient> / radial wrapper, without parsing a CSS
+     gradient string. The web utility `.bg-hero-navy` (below, in @theme)
+     composes them into a `radial-gradient`. */
+  --hero-navy-from: rgba(16, 185, 129, 0.16);
+  --hero-navy-to: var(--navy);
+  --hero-navy-origin: 92% 12%;
+
   /* Brand — plum (secondary member color) */
   --plum: #8A6E98;
   --plum-deep: #6E5482;
@@ -281,4 +291,13 @@
 
   --font-sans: var(--font-jakarta, var(--font-geist-sans));
   --font-mono: var(--font-geist-mono);
+}
+
+@utility bg-hero-navy {
+  background-color: var(--hero-navy-to);
+  background-image: radial-gradient(
+    circle at var(--hero-navy-origin),
+    var(--hero-navy-from),
+    transparent 60%
+  );
 }

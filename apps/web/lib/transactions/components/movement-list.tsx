@@ -148,14 +148,17 @@ export const MovementList = ({
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      {Array.from(grouped.entries()).map(([date, dayMovements]) => (
-        <section key={date}>
-          <p className="mb-2 text-xs font-medium text-muted-foreground capitalize">
+    <div className="flex flex-col">
+      {Array.from(grouped.entries()).map(([date, dayMovements], dayIndex) => (
+        <section
+          key={date}
+          className={dayIndex === 0 ? '' : 'border-t border-border-soft pt-3 mt-3'}
+        >
+          <p className="px-4 pb-2 text-[12px] font-extrabold capitalize text-muted-foreground">
             {formatGroupDate(date)}
           </p>
-          <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
-            {dayMovements.map((movement) => {
+          <div className="flex flex-col">
+            {dayMovements.map((movement, rowIndex) => {
               const row = (
                 <MovementRow
                   movement={movement}
@@ -167,12 +170,23 @@ export const MovementList = ({
                 />
               )
 
+              const wrapperCls =
+                rowIndex === 0 ? '' : 'border-t border-border-soft'
+
               if (!movement.detail_href) {
-                return <div key={movement.id}>{row}</div>
+                return (
+                  <div key={movement.id} className={wrapperCls}>
+                    {row}
+                  </div>
+                )
               }
 
               return (
-                <Link key={movement.id} href={`${movement.detail_href}?from=${backParam}`}>
+                <Link
+                  key={movement.id}
+                  href={`${movement.detail_href}?from=${backParam}`}
+                  className={wrapperCls}
+                >
                   {row}
                 </Link>
               )

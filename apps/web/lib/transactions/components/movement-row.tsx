@@ -142,25 +142,31 @@ export const MovementRow = ({
   const FallbackIcon =
     structureIcon[movement.kind] ?? categorizedFallbackIcon[movement.kind] ?? Tag
 
+  // 3-column grid desktop: title block | amount | running balance.
+  // Mobile (< md ≈ 760px): 2 columns and running balance hidden.
+  const gridCls = runningBalance != null
+    ? 'grid grid-cols-[minmax(0,1fr)_112px] md:grid-cols-[minmax(0,1fr)_126px_126px] items-center gap-4 md:gap-[18px] min-h-[62px] px-4 py-3 hover:bg-muted/40 transition-colors'
+    : 'grid grid-cols-[minmax(0,1fr)_112px] md:grid-cols-[minmax(0,1fr)_126px] items-center gap-4 md:gap-[18px] min-h-[62px] px-4 py-3 hover:bg-muted/40 transition-colors'
+
   return (
-    <div className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-muted/50 transition-colors">
-      <div className="flex min-w-0 items-center gap-3">
+    <div className={gridCls}>
+      <div className="flex min-w-0 items-center gap-2.5">
         {CategoryEmoji ? (
           <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-base"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-base"
             style={{ backgroundColor: `${movement.category_color ?? '#888'}1A` }}
           >
             {movement.category_icon}
           </span>
         ) : (
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
             <FallbackIcon size={17} />
           </span>
         )}
 
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-bold">{primary}</span>
+            <span className="truncate text-[13px] font-extrabold leading-tight">{primary}</span>
             {chip && (
               <span className="inline-flex shrink-0 items-center rounded-full bg-border-soft px-1.5 py-0.5 text-[11px] font-semibold text-text-muted">
                 {chip}
@@ -201,24 +207,29 @@ export const MovementRow = ({
               </span>
             )}
           </div>
-          {secondary && <p className="truncate text-xs text-muted-foreground">{secondary}</p>}
+          {secondary && (
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">{secondary}</p>
+          )}
         </div>
       </div>
 
-      <div className="shrink-0 text-right">
-        <p className={`text-sm font-semibold tabular-nums ${toneToClass(resolveTone(movement.kind, view.sign, isPendingReimbursement))}`}>
+      <div className="text-right">
+        <p
+          className={`text-[14px] font-extrabold tabular-nums ${toneToClass(resolveTone(movement.kind, view.sign, isPendingReimbursement))}`}
+        >
           {view.sign}
           {formatAmount(view.amount, view.currencyCode, showCents)}
         </p>
         {view.currencyCode === 'USD' && (
-          <p className="text-xs font-normal text-muted-foreground">USD</p>
-        )}
-        {runningBalance != null && (
-          <p className="text-xs text-muted-foreground tabular-nums">
-            {formatAmount(runningBalance, view.currencyCode, showCents)}
-          </p>
+          <p className="text-[11px] font-normal text-muted-foreground">USD</p>
         )}
       </div>
+
+      {runningBalance != null && (
+        <div className="hidden text-right text-[12px] font-bold text-muted-foreground tabular-nums md:block">
+          {formatAmount(runningBalance, view.currencyCode, showCents)}
+        </div>
+      )}
     </div>
   )
 }

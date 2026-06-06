@@ -83,14 +83,12 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-md border border-border bg-muted/30 p-4">
+    <section className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold tracking-tight">{t('reimbursement.pending.title')}</h2>
-        {pending.length > 1 && (
-          <span className="text-xs text-muted-foreground">
-            {t('reimbursement.pending.count', { count: pending.length })}
-          </span>
-        )}
+        <h2 className="text-[14px] font-extrabold leading-tight">{t('reimbursement.pending.title')}</h2>
+        <span className="text-[12px] font-extrabold text-muted-foreground">
+          {t('reimbursement.pending.count', { count: pending.length })}
+        </span>
       </div>
 
       {successMessage && (
@@ -125,7 +123,7 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
           return (
             <li
               key={r.id}
-              className="flex flex-col gap-2 rounded-md border border-border bg-background p-3"
+              className="flex flex-col gap-2 rounded-2xl border border-border-soft bg-background p-3"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">

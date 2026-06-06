@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grana - Web account detail</title>
+    <link rel="stylesheet" href="../shared.css" />
+  </head>
+  <body>
+    <main class="stage">
+      <div class="route responsive-pair">
+        <section class="canvas stack">
+          <span class="back">← Cuentas</span>
+
+          <article class="account-hero card">
+            <div class="account-hero-main">
+              <div class="identity-row">
+                <div class="identity">
+                  <span class="avatar">BB</span>
+                  <div>
+                    <h1>BBVA sueldo</h1>
+                    <p>Banco BBVA Argentina · Cuenta bancaria</p>
+                  </div>
+                </div>
+                <span class="icon-button" aria-label="Editar">✎</span>
+              </div>
+
+              <div class="balance">
+                <div class="eyebrow">Disponible</div>
+                <div class="ars">$ 1.284.900</div>
+                <div class="usd">US$ 1.245,50</div>
+              </div>
+            </div>
+          </article>
+
+          <section class="pending-block">
+            <div class="pending-head">
+              <h2>Reintegros a confirmar</h2>
+              <span class="pending-count">1 pendiente</span>
+            </div>
+            <div class="pending-list">
+              <article class="pending-item">
+                <div class="pending-top">
+                  <div class="movement-main">
+                    <span class="cat">%</span>
+                    <div>
+                      <div class="mov-title">Promo supermercado</div>
+                      <div class="mov-meta">Cuenta · BBVA sueldo</div>
+                    </div>
+                  </div>
+                  <strong class="pending-amount">+$ 7.500</strong>
+                </div>
+                <div class="pending-form">
+                  <div class="field">
+                    <label>Monto real</label>
+                    <input class="input" value="7500" />
+                  </div>
+                  <div class="field">
+                    <label>Fecha real</label>
+                    <input class="input" value="2026-06-06" />
+                  </div>
+                  <button class="button small">Confirmar</button>
+                  <button class="button secondary small">Cancelar</button>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <span class="add-currency">+ Agregar moneda</span>
+
+          <section class="ledger">
+            <div class="ledger-head">
+              <div class="ledger-title">
+                <h2>Movimientos</h2>
+              </div>
+              <button class="button">+ Agregar transaccion</button>
+            </div>
+
+            <div class="toolbar">
+              <div class="month-nav">‹ Junio 2026 ›</div>
+              <div class="tools" aria-label="Herramientas">
+                <span class="tool">⌕</span>
+                <span class="tool">R</span>
+                <span class="tool">F</span>
+              </div>
+            </div>
+
+            <div class="chips">
+              <span class="pill">ARS</span>
+              <span class="pill">Gastos</span>
+              <span class="text-link">Limpiar todo</span>
+            </div>
+
+            <div class="day">
+              <p class="day-label">Hoy</p>
+              <div class="movement">
+                <div class="movement-main">
+                  <span class="cat">$</span>
+                  <div>
+                    <div class="mov-title">Supermercado</div>
+                    <div class="mov-meta">Alimentos · Mercado</div>
+                  </div>
+                </div>
+                <div class="amount negative">- $ 42.850</div>
+                <div class="running">$ 1.284.900</div>
+              </div>
+              <div class="movement">
+                <div class="movement-main">
+                  <span class="cat">+</span>
+                  <div>
+                    <div class="mov-title">Reintegro promo banco</div>
+                    <div class="mov-meta">Reintegro recibido</div>
+                  </div>
+                </div>
+                <div class="amount positive">+ $ 7.500</div>
+                <div class="running">$ 1.327.750</div>
+              </div>
+            </div>
+
+            <div class="day">
+              <p class="day-label">Ayer</p>
+              <div class="movement">
+                <div class="movement-main">
+                  <span class="cat">T</span>
+                  <div>
+                    <div class="mov-title">Transferencia a Billetera</div>
+                    <div class="mov-meta">→ Billetera</div>
+                  </div>
+                </div>
+                <div class="amount negative">- $ 25.000</div>
+                <div class="running">$ 1.320.250</div>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <aside class="phone">
+          <div class="phone-screen">
+            <header class="phone-hero">
+              <span class="back">← Cuentas</span>
+              <div class="identity-row">
+                <div class="identity">
+                  <span class="avatar">BI</span>
+                  <div>
+                    <h2>Billetera</h2>
+                    <p>Efectivo</p>
+                  </div>
+                </div>
+                <span class="icon-button" aria-label="Editar">✎</span>
+              </div>
+              <div class="phone-balance">$ 86.450</div>
+              <div class="phone-usd">US$ 120,00</div>
+              <div class="quick-actions">
+                <button>Agregar transaccion</button>
+                <button>Filtros</button>
+              </div>
+            </header>
+
+            <div class="phone-content">
+              <section class="phone-card">
+                <h3>Reintegros a confirmar</h3>
+                <div class="phone-row">
+                  <div>
+                    <div class="mov-title">Promo supermercado</div>
+                    <div class="mov-meta">Cuenta · Billetera</div>
+                  </div>
+                  <strong class="pending-amount">+$ 7.500</strong>
+                </div>
+                <div class="pending-form">
+                  <button class="button small">Confirmar</button>
+                  <button class="button secondary small">Cancelar</button>
+                </div>
+              </section>
+
+              <span class="add-currency" style="margin: 0 0 12px 2px">+ Agregar moneda</span>
+
+              <section class="phone-card">
+                <div class="phone-toolbar">
+                  <h3>Movimientos</h3>
+                  <span class="month-nav">Junio 2026</span>
+                </div>
+                <div class="chips" style="border-bottom: 0; padding: 12px 0 0">
+                  <span class="pill">Buscar</span>
+                  <span class="pill">Recurrencias</span>
+                  <span class="pill">Filtros</span>
+                </div>
+                <div class="phone-row">
+                  <div>
+                    <div class="mov-title">Verduleria</div>
+                    <div class="mov-meta">Hoy · Alimentos</div>
+                  </div>
+                  <strong class="amount negative">- $ 6.400</strong>
+                </div>
+                <div class="phone-row">
+                  <div>
+                    <div class="mov-title">Saldo inicial</div>
+                    <div class="mov-meta">1 jun</div>
+                  </div>
+                  <strong>$ 92.850</strong>
+                </div>
+              </section>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </body>
+</html>

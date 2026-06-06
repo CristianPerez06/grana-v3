@@ -14,23 +14,9 @@ type Props = {
   accountId: string
 }
 
-/**
- * Account detail header — client-side variant. Fetches the account detail via
- * TanStack so the route's `page.tsx` can stay a thin shell. Renders skeletons
- * for the balances while the query is pending; the back link, avatar and name
- * appear from the first paint.
- *
- * The slot of actions on the right only exposes Edit. Archive / delete /
- * reactivate live in the kebab menu on the row in /accounts (see the accounts
- * spec — "El usuario puede ver la lista de sus cuentas agrupadas por tipo").
- *
- * The "Editar" button is gated on the drawer being ready: when the
- * `EditAccountDrawerProvider` has finished mounting (its loader resolved both
- * `account` and `institutions`), the `useEditAccountDrawer()` hook returns a
- * non-null context and the button opens the drawer. Otherwise the button falls
- * back to a plain anchor pointing at the `/edit` route (the no-JS / degraded
- * fallback that the legacy component already supported).
- */
+const heroCardCls =
+  'bg-hero-navy text-white relative overflow-hidden rounded-3xl border border-navy-border flex min-h-[238px] flex-col justify-between p-6 shadow-[0_24px_60px_-42px_rgba(11,26,43,0.48)]'
+
 export const AccountDetailHeader = ({ accountId }: Props) => {
   const t = useTranslations('accounts')
   const showCents = useShowCents()
@@ -43,32 +29,23 @@ export const AccountDetailHeader = ({ accountId }: Props) => {
 
   const account = accountQ.data
 
-  // First-paint skeleton for avatar + title. The shape mirrors the real header
-  // (md avatar + 2-line block) so the layout doesn't jolt when data lands.
   if (!account) {
     return (
-      <div className="flex flex-col gap-4" aria-busy>
+      <div className={heroCardCls} aria-busy>
         <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="size-12 shrink-0 rounded-full bg-muted animate-pulse" />
-            <div className="flex flex-col gap-1.5 pt-1">
-              <div className="h-6 w-40 rounded bg-muted animate-pulse" />
-              <div className="h-3.5 w-28 rounded bg-muted/70 animate-pulse" />
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="size-[52px] shrink-0 rounded-2xl bg-navy-soft animate-pulse" />
+            <div className="flex min-w-0 flex-col gap-2 pt-1">
+              <div className="h-6 w-40 rounded bg-navy-soft animate-pulse" />
+              <div className="h-3.5 w-28 rounded bg-navy-soft animate-pulse" />
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="size-9 rounded-lg bg-muted/70 animate-pulse" />
-          </div>
+          <div className="size-[38px] shrink-0 rounded-xl bg-navy-soft animate-pulse" />
         </div>
-        <div className="flex items-end gap-6">
-          <div className="flex flex-col gap-1">
-            <div className="h-9 w-36 rounded bg-muted animate-pulse" />
-            <div className="h-3 w-8 rounded bg-muted/70 animate-pulse" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <div className="h-6 w-24 rounded bg-muted animate-pulse" />
-            <div className="h-3 w-8 rounded bg-muted/70 animate-pulse" />
-          </div>
+        <div className="flex flex-col gap-3">
+          <div className="h-2.5 w-16 rounded bg-navy-soft animate-pulse" />
+          <div className="h-10 w-56 rounded bg-navy-soft animate-pulse" />
+          <div className="h-5 w-32 rounded bg-navy-soft animate-pulse" />
         </div>
       </div>
     )
@@ -78,66 +55,71 @@ export const AccountDetailHeader = ({ accountId }: Props) => {
   const activeCurrencies = account.currencies.filter((c) => c.is_active)
   const hasARS = activeCurrencies.some((c) => c.currency_code === 'ARS')
   const hasUSD = activeCurrencies.some((c) => c.currency_code === 'USD')
+  // Subtitle: bank → "<institution> · <type>"; cash → just the type label.
+  // Credit accounts are redirected server-side to /cards/[id] so we never
+  // render them here, but we still pick a safe fallback.
+  const typeLabel =
+    account.type === 'bank' ? t('types.bank') : account.type === 'cash' ? t('types.cash') : ''
+  const subtitle =
+    account.type === 'bank' && account.institution
+      ? `${account.institution.name} · ${typeLabel}`
+      : typeLabel
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className={heroCardCls}>
       <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <AccountAvatar {...account.avatar} size="md" />
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold">{account.name}</h1>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="truncate text-[25px] font-extrabold leading-tight">
+                {account.name}
+              </h1>
               {!account.is_active && (
-                <span className="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-800">
+                <span className="inline-flex h-6 items-center rounded-full bg-navy-soft px-2.5 text-[11px] font-extrabold uppercase tracking-wide text-emerald">
                   {t('badges.archived')}
                 </span>
               )}
             </div>
-            {account.type === 'bank' && account.institution && (
-              <p className="mt-1 text-sm text-muted-foreground">{account.institution.name}</p>
-            )}
+            <p className="mt-1 truncate text-[13px] text-navy-muted">{subtitle}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {editDrawer ? (
-            <button
-              type="button"
-              onClick={editDrawer.openEdit}
-              aria-label={t('actions.edit')}
-              title={t('actions.edit')}
-              className="inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-border-soft hover:text-foreground transition-colors"
-            >
-              <Pencil className="size-[17px]" aria-hidden />
-            </button>
-          ) : (
-            <a
-              href={`/accounts/${accountId}/edit`}
-              aria-label={t('actions.edit')}
-              title={t('actions.edit')}
-              className="inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-border-soft hover:text-foreground transition-colors"
-            >
-              <Pencil className="size-[17px]" aria-hidden />
-            </a>
-          )}
-        </div>
+        {editDrawer ? (
+          <button
+            type="button"
+            onClick={editDrawer.openEdit}
+            aria-label={t('actions.edit')}
+            title={t('actions.edit')}
+            className="inline-flex size-[38px] shrink-0 items-center justify-center rounded-xl border border-navy-border bg-navy-soft text-white hover:bg-white/15 transition-colors"
+          >
+            <Pencil className="size-[16px]" aria-hidden />
+          </button>
+        ) : (
+          <a
+            href={`/accounts/${accountId}/edit`}
+            aria-label={t('actions.edit')}
+            title={t('actions.edit')}
+            className="inline-flex size-[38px] shrink-0 items-center justify-center rounded-xl border border-navy-border bg-navy-soft text-white hover:bg-white/15 transition-colors"
+          >
+            <Pencil className="size-[16px]" aria-hidden />
+          </a>
+        )}
       </div>
 
-      {/* Balances — ARS primary, USD secondary */}
-      <div className="flex items-end gap-6">
+      <div>
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/60">
+          {t('labels.balance')}
+        </p>
         {hasARS && (
-          <div>
-            <p className="text-3xl font-bold tabular-nums">{formatARS(balances.ARS, showCents)}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">ARS</p>
-          </div>
+          <p className="mt-2 text-[42px] font-black leading-none tabular-nums sm:text-[42px]">
+            {formatARS(balances.ARS, showCents)}
+          </p>
         )}
         {hasUSD && (
-          <div>
-            <p className="text-xl font-semibold tabular-nums text-muted-foreground">
-              {formatUSD(balances.USD, showCents)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">USD</p>
-          </div>
+          <p className="mt-2.5 text-lg font-extrabold tabular-nums text-white/75">
+            {formatUSD(balances.USD, showCents)}
+          </p>
         )}
       </div>
     </div>

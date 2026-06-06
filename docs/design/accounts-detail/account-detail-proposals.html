@@ -1,0 +1,1001 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grana - Detalle de cuenta responsive</title>
+    <style>
+      :root {
+        --navy: #0b1a2b;
+        --emerald: #10b981;
+        --emerald-deep: #059669;
+        --emerald-soft: rgba(16, 185, 129, 0.12);
+        --terracotta: #d95f3d;
+        --page: #f6f7f9;
+        --card: #ffffff;
+        --border: #e4e8ef;
+        --border-soft: #edf0f4;
+        --text: #142033;
+        --muted: #667085;
+        --soft: #98a2b3;
+        --warning: #b45309;
+        --warning-soft: #fff7ed;
+        --shadow: 0 24px 60px -42px rgba(11, 26, 43, 0.48);
+        font-family:
+          "Plus Jakarta Sans",
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--text);
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      .page {
+        min-height: 100vh;
+        padding: 32px;
+      }
+
+      .intro,
+      .proposal {
+        max-width: 1120px;
+        margin-inline: auto;
+      }
+
+      .intro {
+        margin-bottom: 24px;
+      }
+
+      .intro h1 {
+        margin: 0;
+        font-size: 30px;
+        line-height: 1.08;
+        letter-spacing: 0;
+      }
+
+      .intro p {
+        max-width: 820px;
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.55;
+      }
+
+      .proposal {
+        display: grid;
+        gap: 32px;
+      }
+
+      .section-title {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 14px;
+      }
+
+      .section-title h2 {
+        margin: 0;
+        font-size: 20px;
+        line-height: 1.2;
+      }
+
+      .section-title p {
+        max-width: 660px;
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .tag {
+        display: inline-flex;
+        min-height: 26px;
+        align-items: center;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--card);
+        padding: 0 10px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .canvas {
+        border: 1px solid var(--border-soft);
+        border-radius: 24px;
+        background: linear-gradient(180deg, #fafbfc 0%, var(--page) 100%);
+        padding: 22px;
+        box-shadow: var(--shadow);
+      }
+
+      .back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 18px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--card);
+        overflow: hidden;
+      }
+
+      .hero {
+        display: grid;
+        min-height: 238px;
+        grid-template-columns: minmax(0, 1fr);
+        background:
+          radial-gradient(circle at 92% 12%, rgba(16, 185, 129, 0.16), transparent 36%),
+          var(--navy);
+        color: white;
+      }
+
+      .hero-main {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 24px;
+      }
+
+      .identity-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        min-width: 0;
+      }
+
+      .identity {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 13px;
+      }
+
+      .avatar {
+        display: grid;
+        width: 52px;
+        height: 52px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 16px;
+        background: #3578e5;
+        color: white;
+        font-size: 22px;
+        font-weight: 900;
+      }
+
+      .identity h3 {
+        overflow: hidden;
+        margin: 0;
+        font-size: 25px;
+        line-height: 1.12;
+        letter-spacing: 0;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .identity p {
+        overflow: hidden;
+        margin: 5px 0 0;
+        color: rgba(255, 255, 255, 0.66);
+        font-size: 13px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .icon-button {
+        display: inline-grid;
+        width: 38px;
+        height: 38px;
+        flex: 0 0 auto;
+        place-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.08);
+        color: white;
+        font-size: 16px;
+      }
+
+      .balance {
+        margin-top: 30px;
+      }
+
+      .eyebrow {
+        color: rgba(255, 255, 255, 0.58);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .ars {
+        margin-top: 8px;
+        font-size: 42px;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: 0;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .usd {
+        margin-top: 10px;
+        color: rgba(255, 255, 255, 0.74);
+        font-size: 18px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .ledger-title h3,
+      .phone-card h3 {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.2;
+      }
+
+      .ledger-title p,
+      .phone-card p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .pill {
+        display: inline-flex;
+        min-height: 28px;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        background: #f1f4f8;
+        padding: 0 10px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .pill.good {
+        background: var(--emerald-soft);
+        color: var(--emerald-deep);
+      }
+
+      .pill.warn {
+        background: var(--warning-soft);
+        color: var(--warning);
+      }
+
+      .mini-movement {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .cat {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 12px;
+        background: #eef2ff;
+        color: #3730a3;
+        font-size: 14px;
+        font-weight: 900;
+      }
+
+      .mini-title {
+        overflow: hidden;
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 850;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .mini-meta {
+        overflow: hidden;
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .button {
+        display: inline-flex;
+        min-height: 38px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: 0;
+        border-radius: 12px;
+        background: var(--emerald);
+        padding: 0 14px;
+        color: white;
+        font-size: 13px;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .button.secondary {
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--muted);
+      }
+
+      .button.small {
+        min-height: 32px;
+        padding-inline: 10px;
+        font-size: 12px;
+      }
+
+      .add-currency {
+        display: inline-flex;
+        margin-top: 14px;
+        color: var(--emerald-deep);
+        font-size: 13px;
+        font-weight: 850;
+      }
+
+      .pending-block {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 18px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.72);
+        padding: 16px;
+      }
+
+      .pending-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .pending-head h3 {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.2;
+      }
+
+      .pending-count {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .pending-item {
+        display: grid;
+        gap: 12px;
+        border: 1px solid var(--border-soft);
+        border-radius: 14px;
+        background: var(--card);
+        padding: 12px;
+      }
+
+      .pending-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .pending-amount {
+        color: var(--warning);
+        font-size: 13px;
+        font-weight: 900;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      .pending-form {
+        display: grid;
+        grid-template-columns: 96px 126px auto auto;
+        gap: 8px;
+        align-items: end;
+      }
+
+      .field label {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 850;
+      }
+
+      .input {
+        width: 100%;
+        height: 32px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--card);
+        padding: 0 8px;
+        color: var(--text);
+        font-size: 12px;
+      }
+
+      .ledger-card {
+        margin-top: 18px;
+      }
+
+      .ledger-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        border-bottom: 1px solid var(--border-soft);
+        padding: 18px;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid var(--border-soft);
+        padding: 14px 18px;
+      }
+
+      .month-nav {
+        display: inline-flex;
+        min-height: 36px;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--card);
+        padding: 0 10px;
+        font-size: 13px;
+        font-weight: 850;
+      }
+
+      .tools {
+        display: flex;
+        gap: 8px;
+      }
+
+      .tool {
+        display: inline-grid;
+        width: 36px;
+        height: 36px;
+        place-items: center;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--card);
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 900;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        border-bottom: 1px solid var(--border-soft);
+        padding: 0 18px 14px;
+      }
+
+      .day {
+        padding: 18px;
+      }
+
+      .day + .day {
+        border-top: 1px solid var(--border-soft);
+      }
+
+      .day-label {
+        margin: 0 0 10px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 850;
+        text-transform: capitalize;
+      }
+
+      .movement {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 126px 126px;
+        min-height: 62px;
+        align-items: center;
+        gap: 18px;
+        border-top: 1px solid var(--border-soft);
+      }
+
+      .movement:first-of-type {
+        border-top: 0;
+      }
+
+      .amount,
+      .running {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .amount {
+        font-size: 14px;
+        font-weight: 900;
+      }
+
+      .amount.negative {
+        color: var(--terracotta);
+      }
+
+      .amount.positive {
+        color: var(--emerald-deep);
+      }
+
+      .running {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .empty-state {
+        margin: 18px;
+        border: 1px dashed var(--border);
+        border-radius: 16px;
+        padding: 32px 18px;
+        text-align: center;
+      }
+
+      .empty-state strong {
+        display: block;
+        font-size: 14px;
+      }
+
+      .empty-state p {
+        margin: 6px auto 0;
+        max-width: 360px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .mobile-preview {
+        max-width: 390px;
+      }
+
+      .phone {
+        border: 1px solid var(--border);
+        border-radius: 30px;
+        background: var(--card);
+        padding: 14px;
+        box-shadow: var(--shadow);
+      }
+
+      .phone-screen {
+        overflow: hidden;
+        border-radius: 22px;
+        background: var(--page);
+      }
+
+      .phone-hero {
+        background:
+          radial-gradient(circle at 88% 0%, rgba(16, 185, 129, 0.16), transparent 38%),
+          var(--navy);
+        color: white;
+        padding: 18px;
+      }
+
+      .phone-hero .back {
+        margin-bottom: 18px;
+        color: rgba(255, 255, 255, 0.62);
+      }
+
+      .phone-hero .identity h3 {
+        font-size: 21px;
+      }
+
+      .phone-balance {
+        margin-top: 22px;
+        font-size: 34px;
+        font-weight: 900;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .phone-usd {
+        margin-top: 8px;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 15px;
+        font-weight: 850;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .quick-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 9px;
+        margin-top: 18px;
+      }
+
+      .quick-actions button {
+        height: 46px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.08);
+        color: white;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .phone-content {
+        padding: 14px;
+      }
+
+      .phone-card {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--card);
+        padding: 14px;
+      }
+
+      .phone-card + .phone-card {
+        margin-top: 12px;
+      }
+
+      .phone-card .pending-form {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .phone-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .phone-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        min-height: 52px;
+        align-items: center;
+        gap: 10px;
+        border-top: 1px solid var(--border-soft);
+      }
+
+      .phone-row:first-of-type {
+        border-top: 0;
+      }
+
+      @media (max-width: 920px) {
+        .movement {
+          grid-template-columns: minmax(0, 1fr) 112px;
+        }
+
+        .pending-form {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .running {
+          display: none;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .page {
+          padding: 18px;
+        }
+
+        .canvas {
+          margin-inline: -18px;
+          border-radius: 0;
+          padding: 14px;
+        }
+
+        .section-title {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .ledger-head,
+        .toolbar {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .ars {
+          font-size: 34px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="intro">
+        <h1>Detalle de cuenta responsive</h1>
+        <p>
+          Propuesta unica: Option A como base desktop y Option C como base mobile.
+          No agrega datos nuevos; reordena lo que la ruta ya tiene disponible.
+        </p>
+      </header>
+
+      <div class="proposal">
+        <section>
+          <div class="section-title">
+            <div>
+              <h2>Desktop: cuenta como centro operativo</h2>
+              <p>
+                El header gana peso visual, el balance queda como foco y las acciones
+                actuales se agrupan cerca de la cuenta. Los movimientos siguen usando
+                filtros y lista compartida.
+              </p>
+            </div>
+            <span class="tag">Usa datos actuales</span>
+          </div>
+
+          <div class="canvas">
+            <span class="back">← Cuentas</span>
+
+            <article class="hero">
+              <div class="hero-main">
+                <div class="identity-row">
+                  <div class="identity">
+                    <span class="avatar">BB</span>
+                    <div>
+                      <h3>BBVA sueldo</h3>
+                      <p>Banco BBVA Argentina · Cuenta bancaria</p>
+                    </div>
+                  </div>
+                  <span class="icon-button" aria-label="Editar">✎</span>
+                </div>
+
+                <div class="balance">
+                  <div class="eyebrow">Disponible</div>
+                  <div class="ars">$ 1.284.900</div>
+                  <div class="usd">US$ 1.245,50</div>
+                </div>
+              </div>
+            </article>
+
+            <section class="pending-block">
+              <div class="pending-head">
+                <h3>Reintegros a confirmar</h3>
+                <span class="pending-count">1 pendiente</span>
+              </div>
+              <article class="pending-item">
+                <div class="pending-top">
+                  <div class="mini-movement">
+                    <span class="cat">%</span>
+                    <div>
+                      <div class="mini-title">Promo supermercado</div>
+                      <div class="mini-meta">Cuenta · BBVA sueldo</div>
+                    </div>
+                  </div>
+                  <strong class="pending-amount">+$ 7.500</strong>
+                </div>
+                <div class="pending-form">
+                  <div class="field">
+                    <label>Monto real</label>
+                    <input class="input" value="7500" />
+                  </div>
+                  <div class="field">
+                    <label>Fecha real</label>
+                    <input class="input" value="2026-06-06" />
+                  </div>
+                  <button class="button small">Confirmar</button>
+                  <button class="button secondary small">Cancelar</button>
+                </div>
+              </article>
+            </section>
+
+            <span class="add-currency">+ Agregar moneda</span>
+
+            <section class="card ledger-card">
+              <div class="ledger-head">
+                <div class="ledger-title">
+                  <h3>Movimientos</h3>
+                </div>
+                <button class="button">+ Agregar transaccion</button>
+              </div>
+
+              <div class="toolbar">
+                <div class="month-nav">‹ Junio 2026 ›</div>
+                <div class="tools" aria-label="Herramientas">
+                  <span class="tool">⌕</span>
+                  <span class="tool">R</span>
+                  <span class="tool">F</span>
+                </div>
+              </div>
+
+              <div class="chips">
+                <span class="pill">ARS</span>
+                <span class="pill">Gastos</span>
+                <span class="text-link">Limpiar todo</span>
+              </div>
+
+              <div class="day">
+                <p class="day-label">Hoy</p>
+                <div class="movement">
+                  <div class="mini-movement">
+                    <span class="cat">$</span>
+                    <div>
+                      <div class="mini-title">Supermercado</div>
+                      <div class="mini-meta">Alimentos · Mercado</div>
+                    </div>
+                  </div>
+                  <div class="amount negative">- $ 42.850</div>
+                  <div class="running">$ 1.284.900</div>
+                </div>
+                <div class="movement">
+                  <div class="mini-movement">
+                    <span class="cat">+</span>
+                    <div>
+                      <div class="mini-title">Reintegro promo banco</div>
+                      <div class="mini-meta">Reintegro recibido</div>
+                    </div>
+                  </div>
+                  <div class="amount positive">+ $ 7.500</div>
+                  <div class="running">$ 1.327.750</div>
+                </div>
+              </div>
+
+              <div class="day">
+                <p class="day-label">Ayer</p>
+                <div class="movement">
+                  <div class="mini-movement">
+                    <span class="cat">T</span>
+                    <div>
+                      <div class="mini-title">Transferencia a Billetera</div>
+                      <div class="mini-meta">→ Billetera</div>
+                    </div>
+                  </div>
+                  <div class="amount negative">- $ 25.000</div>
+                  <div class="running">$ 1.320.250</div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-title">
+            <div>
+              <h2>Mobile: hero compacto y bloques apilados</h2>
+              <p>
+                El mismo contenido se ordena en primer pantallazo: volver, identidad,
+                balance, editar/agregar y luego filtros y lista.
+              </p>
+            </div>
+            <span class="tag">Responsive bajo md</span>
+          </div>
+
+          <div class="canvas">
+            <div class="mobile-preview">
+              <div class="phone">
+                <div class="phone-screen">
+                  <header class="phone-hero">
+                    <span class="back">← Cuentas</span>
+                    <div class="identity-row">
+                      <div class="identity">
+                        <span class="avatar">BI</span>
+                        <div>
+                          <h3>Billetera</h3>
+                          <p>Efectivo</p>
+                        </div>
+                      </div>
+                      <span class="icon-button" aria-label="Editar">✎</span>
+                    </div>
+                    <div class="phone-balance">$ 86.450</div>
+                    <div class="phone-usd">US$ 120,00</div>
+                    <div class="quick-actions">
+                      <button>Agregar transaccion</button>
+                      <button>Filtros</button>
+                    </div>
+                  </header>
+
+                  <div class="phone-content">
+                    <section class="phone-card">
+                      <h3>Reintegros a confirmar</h3>
+                      <div class="phone-row">
+                        <div>
+                          <div class="mini-title">Promo supermercado</div>
+                          <div class="mini-meta">Cuenta · Billetera</div>
+                        </div>
+                        <strong class="pending-amount">+$ 7.500</strong>
+                      </div>
+                      <div class="pending-form">
+                        <button class="button small">Confirmar</button>
+                        <button class="button secondary small">Cancelar</button>
+                      </div>
+                    </section>
+
+                    <span class="add-currency" style="margin: 0 0 12px 2px">+ Agregar moneda</span>
+
+                    <section class="phone-card">
+                      <div class="phone-toolbar">
+                        <h3>Movimientos</h3>
+                        <span class="month-nav">Junio 2026</span>
+                      </div>
+                      <div class="pill-row">
+                        <span class="pill">Buscar</span>
+                        <span class="pill">Recurrencias</span>
+                        <span class="pill">Filtros</span>
+                      </div>
+                      <div class="phone-row">
+                        <div>
+                          <div class="mini-title">Verduleria</div>
+                          <div class="mini-meta">Hoy · Alimentos</div>
+                        </div>
+                        <strong class="amount negative">- $ 6.400</strong>
+                      </div>
+                      <div class="phone-row">
+                        <div>
+                          <div class="mini-title">Saldo inicial</div>
+                          <div class="mini-meta">1 jun</div>
+                        </div>
+                        <strong>$ 92.850</strong>
+                      </div>
+                    </section>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-title">
+            <div>
+              <h2>Estados que tambien debe cubrir</h2>
+            </div>
+          </div>
+
+          <div class="canvas">
+            <section class="card">
+              <div class="ledger-head">
+                <div class="ledger-title">
+                  <h3>Movimientos</h3>
+                </div>
+                <button class="button">+ Agregar transaccion</button>
+              </div>
+              <div class="empty-state">
+                <strong>No hay movimientos para mostrar</strong>
+                <p>
+                  Registrá un movimiento para empezar a ver la historia de esta cuenta.
+                </p>
+                <button class="button" style="margin-top: 16px">+ Agregar transaccion</button>
+              </div>
+            </section>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>
