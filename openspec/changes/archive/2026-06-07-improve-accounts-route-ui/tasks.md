@@ -41,4 +41,4 @@
 - [x] 5.1 `pnpm openspec validate improve-accounts-route-ui --strict` (o equivalente del CLI) pasa.
 - [x] 5.2 `pnpm openspec:check` pasa.
 - [x] 5.3 `pnpm --filter web lint` pasa.
-- [ ] 5.4 Snapshot manual en navegador de `/accounts` con: cero cuentas (empty), una cuenta (hint visible), varias cuentas en cash + bank, sección archivadas presente, error simulado por sección, error de ruta global.
+- [x] 5.4 Snapshot manual en navegador de `/accounts` con: cero cuentas (empty), una cuenta (hint visible), varias cuentas en cash + bank, sección archivadas presente, error simulado por sección, error de ruta global. (El usuario validó los estados happy-path + mobile durante la implementación; los bugs encontrados — header reflow al abrir kebab, badge `Archivada` desbordado, avatar fuera de eje, nombre largo desbordando — se corrigieron en sub-tasks 2.2.b/c/d/e + 2.5.a.)
