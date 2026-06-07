@@ -56,8 +56,8 @@ export const WalletCard = ({ card, networkName, monthLabel, showCents = false }:
           {cardMonogram(card.name)}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[17px] font-bold leading-tight">{card.name}</p>
-          <p className="truncate text-xs text-text-muted">
+          <p className="break-words text-[17px] font-bold leading-tight">{card.name}</p>
+          <p className="break-words text-xs text-text-muted">
             {networkName ? t('wallet.meta', { network: networkName }) : t('wallet.meta_no_network')}
           </p>
         </div>
@@ -65,16 +65,16 @@ export const WalletCard = ({ card, networkName, monthLabel, showCents = false }:
       </div>
 
       {/* Stats: resumen / cierra / vence */}
-      <div className="grid grid-cols-3 gap-2 border-t border-border pt-4">
+      <div className="grid grid-cols-1 gap-3 border-t border-border pt-4 sm:grid-cols-3 sm:gap-2">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
             {t('wallet.stat_statement', { month: monthLabel })}
           </p>
-          <p className="mt-0.5 truncate text-[19px] font-extrabold tabular-nums">
+          <p className="mt-0.5 break-words text-[19px] font-extrabold tabular-nums">
             {formatARS(pendingARS, showCents)}
           </p>
           {hasUSD && pendingUSD > 0 && (
-            <p className="truncate text-xs text-text-muted tabular-nums">
+            <p className="break-words text-xs text-text-muted tabular-nums">
               {formatUSD(pendingUSD, showCents)}
             </p>
           )}
@@ -110,7 +110,7 @@ export const WalletCard = ({ card, networkName, monthLabel, showCents = false }:
       )}
 
       {/* Footer: installments count + view link */}
-      <div className="flex items-center justify-between gap-2 border-t border-dashed border-border pt-3">
+      <div className="flex flex-col items-start gap-1 border-t border-dashed border-border pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
         <span className="text-xs text-text-muted">
           {t('wallet.installments', { count: card.activeInstallmentsCount })}
         </span>

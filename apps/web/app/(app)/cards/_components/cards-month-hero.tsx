@@ -74,7 +74,7 @@ export const CardsMonthHero = ({ summary, showCents = false }: Props) => {
         {hasUpcoming ? (
           <ul className="flex flex-col gap-3">
             {summary.upcoming.map((due) => (
-              <li key={due.cardId} className="flex items-center gap-3">
+              <li key={due.cardId} className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl bg-border-soft leading-none">
                   <span className="text-sm font-extrabold tabular-nums">
                     {due.dueDate.split('-')[2]}
@@ -83,21 +83,27 @@ export const CardsMonthHero = ({ summary, showCents = false }: Props) => {
                     {monthAbbrev(due.dueDate)}
                   </span>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{due.cardName}</p>
-                  <p className="text-xs text-text-muted">
-                    {due.isToPay
-                      ? t('month_hero.upcoming_due', { date: formatDayMonth(due.dueDate) })
-                      : t('month_hero.upcoming_open', { date: formatDayMonth(due.endDate) })}
-                  </p>
-                </div>
-                <div className="shrink-0 text-right tabular-nums">
-                  <p className="text-sm font-bold">{formatARS(due.amountARS, showCents)}</p>
-                  {due.amountUSD > 0 && (
-                    <p className="text-xs font-semibold text-text-muted">
-                      {formatUSD(due.amountUSD, showCents)}
+                <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words text-sm font-semibold sm:truncate">
+                      {due.cardName}
                     </p>
-                  )}
+                    <p className="text-xs text-text-muted">
+                      {due.isToPay
+                        ? t('month_hero.upcoming_due', { date: formatDayMonth(due.dueDate) })
+                        : t('month_hero.upcoming_open', { date: formatDayMonth(due.endDate) })}
+                    </p>
+                  </div>
+                  <div className="shrink-0 border-t border-border-soft pt-2 text-left tabular-nums sm:border-t-0 sm:pt-0 sm:text-right">
+                    <p className="text-sm font-bold">
+                      {formatARS(due.amountARS, showCents)}
+                    </p>
+                    {due.amountUSD > 0 && (
+                      <p className="text-xs font-semibold text-text-muted">
+                        {formatUSD(due.amountUSD, showCents)}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </li>
             ))}

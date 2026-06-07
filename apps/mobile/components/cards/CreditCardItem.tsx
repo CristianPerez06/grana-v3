@@ -45,7 +45,7 @@ export const CreditCardItem = ({ card, width }: Props) => {
 
   return (
     <Pressable
-      onPress={() => router.push('/cards')}
+      onPress={() => router.push(`/cards/${card.id}` as never)}
       accessibilityRole="button"
       style={{ width }}
       className={`mr-4 rounded-xl border border-border border-l-4 ${alertBorderClass[alert]} bg-card p-4`}
@@ -53,20 +53,18 @@ export const CreditCardItem = ({ card, width }: Props) => {
       {/* Header */}
       <View className="mb-3 flex-row items-start justify-between gap-2">
         <View className="min-w-0 flex-1">
-          <Text className="text-sm font-semibold text-text" numberOfLines={1}>
-            {card.name}
-          </Text>
+          <Text className="text-sm font-semibold text-text">{card.name}</Text>
           {!card.is_active && (
             <Text className="text-xs italic text-text-muted">Archivada</Text>
           )}
         </View>
         {alert === 'red' && (
-          <View className="rounded-full bg-negative/10 px-2 py-0.5">
+          <View className="shrink-0 rounded-full bg-negative/10 px-2 py-0.5">
             <Text className="text-xs font-medium text-negative">Vencido</Text>
           </View>
         )}
         {alert === 'amber' && (
-          <View className="rounded-full bg-amber/10 px-2 py-0.5">
+          <View className="shrink-0 rounded-full bg-amber/10 px-2 py-0.5">
             <Text className="text-xs font-medium text-amber">Por vencer</Text>
           </View>
         )}

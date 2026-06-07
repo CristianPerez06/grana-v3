@@ -78,7 +78,7 @@ export const CardsMonthHero = ({ summary }: Props) => {
         {summary.upcoming.length > 0 ? (
           <View className="flex-col gap-3">
             {summary.upcoming.map((due) => (
-              <View key={due.cardId} className="flex-row items-center gap-3">
+              <View key={due.cardId} className="flex-row items-start gap-3">
                 <View className="h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-border-soft">
                   <Text className="text-sm font-extrabold tabular-nums text-text">
                     {due.dueDate.split('-')[2]}
@@ -87,19 +87,26 @@ export const CardsMonthHero = ({ summary }: Props) => {
                     {monthAbbrev(due.dueDate)}
                   </Text>
                 </View>
-                <View className="min-w-0 flex-1">
-                  <Text numberOfLines={1} className="text-sm font-semibold text-text">
-                    {due.cardName}
-                  </Text>
-                  <Text className="text-xs text-text-muted">
-                    {due.isToPay
-                      ? t('cards.month_hero.upcoming_due', { date: formatDayMonth(due.dueDate) })
-                      : t('cards.month_hero.upcoming_open', { date: formatDayMonth(due.endDate) })}
-                  </Text>
+                <View className="min-w-0 flex-1 flex-col gap-2">
+                  <View className="min-w-0">
+                    <Text className="text-sm font-semibold text-text">{due.cardName}</Text>
+                    <Text className="text-xs text-text-muted">
+                      {due.isToPay
+                        ? t('cards.month_hero.upcoming_due', { date: formatDayMonth(due.dueDate) })
+                        : t('cards.month_hero.upcoming_open', { date: formatDayMonth(due.endDate) })}
+                    </Text>
+                  </View>
+                  <View className="border-t border-border-soft pt-2">
+                    <Text className="text-sm font-bold tabular-nums text-text">
+                      {renderARS(due.amountARS)}
+                    </Text>
+                    {due.amountUSD > 0 && (
+                      <Text className="mt-0.5 text-xs font-semibold tabular-nums text-text-muted">
+                        {renderUSD(due.amountUSD)}
+                      </Text>
+                    )}
+                  </View>
                 </View>
-                <Text className="shrink-0 text-sm font-bold tabular-nums text-text">
-                  {renderARS(due.amountARS)}
-                </Text>
               </View>
             ))}
           </View>

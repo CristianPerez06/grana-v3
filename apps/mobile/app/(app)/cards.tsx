@@ -60,8 +60,10 @@ const WalletSection = () => {
   }
   return (
     <View className="flex-col gap-3">
-      <View className="flex-row items-baseline justify-between">
-        <Text className="text-lg font-bold text-text">{t('cards.wallet.section_title')}</Text>
+      <View className="flex-col gap-1 px-0.5">
+        <Text className="text-xs font-bold uppercase tracking-widest text-text-soft">
+          {t('cards.wallet.section_title')}
+        </Text>
         <Text className="text-xs text-text-muted">{t('cards.wallet.section_hint')}</Text>
       </View>
       <Wallet cards={query.data} />
