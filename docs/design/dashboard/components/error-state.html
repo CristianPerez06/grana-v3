@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard error state</title>
+    <link rel="stylesheet" href="../shared.css" />
+  </head>
+  <body>
+    <main class="stage">
+      <div class="workbench shell">
+        <p class="workbench-title">SectionFallback / RouteError</p>
+        <section class="state">No se pudo cargar esta sección del dashboard.</section>
+        <section class="state">
+          <div>
+            <strong style="display:block;color:var(--text);font-size:18px">Algo salió mal</strong>
+            <p style="margin:8px 0 18px">Error de ruta controlado por <code>DashboardErrorBoundary</code>.</p>
+            <button class="button" type="button">Reintentar</button>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

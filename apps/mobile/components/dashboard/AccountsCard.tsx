@@ -25,8 +25,8 @@ export const AccountsCard = () => {
 
   return (
     <View className="rounded-2xl border border-border bg-card p-6">
-      <View className="mb-1 flex-row items-center justify-between gap-2">
-        <Text className="text-base font-bold text-text">
+      <View className="mb-2 flex-row items-center justify-between gap-2">
+        <Text className="text-lg font-semibold text-text">
           {t('dashboard.accounts.title')}
         </Text>
         <Pressable
@@ -46,42 +46,50 @@ export const AccountsCard = () => {
             {data.accounts.slice(0, MAX_ACCOUNTS).map((account, index) => (
               <View
                 key={account.id}
-                className={`flex-row items-center gap-3 py-[11px] ${
+                className={`flex-row items-start gap-3 py-3 ${
                   index > 0 ? 'border-t border-border-soft' : ''
                 }`}
               >
                 <AccountAvatar {...account.avatar} size="sm" />
-                <Text
-                  className="min-w-0 flex-1 text-sm font-bold text-text"
-                  numberOfLines={1}
-                >
-                  {account.name}
-                </Text>
-                <MaskedAmount
-                  amount={account.ars}
-                  currency="ARS"
-                  className={`text-sm font-extrabold ${
-                    account.ars === 0 ? 'text-text-soft' : 'text-text'
-                  }`}
-                />
+                <View className="min-w-0 flex-1">
+                  <Text
+                    className="text-sm font-bold text-text"
+                    numberOfLines={2}
+                  >
+                    {account.name}
+                  </Text>
+                  <View className="mt-2 border-t border-border-soft pt-2">
+                    <MaskedAmount
+                      amount={account.ars}
+                      currency="ARS"
+                      className={`text-[15.5px] font-extrabold ${
+                        account.ars === 0 ? 'text-text-soft' : 'text-text'
+                      }`}
+                    />
+                  </View>
+                </View>
               </View>
             ))}
 
             {/* USD holding — the bimoneda closing row, emerald like web. */}
-            <View className="mt-1 flex-row items-center gap-3 border-t border-border-soft pt-3">
-              <View className="h-2.5 w-2.5 rounded-[3px] bg-emerald" />
-              <Text
-                className="min-w-0 flex-1 text-sm font-bold text-emerald-deep"
-                numberOfLines={1}
-              >
-                {t('dashboard.accounts.usd_row')}
-              </Text>
-              <MaskedAmount
-                amount={data.usd}
-                currency="USD"
-                showCentsOverride
-                className="text-sm font-extrabold text-emerald-deep"
-              />
+            <View className="mt-1 flex-row items-start gap-3 border-t border-border-soft pt-3">
+              <View className="mt-1.5 h-2.5 w-2.5 rounded-[3px] bg-emerald" />
+              <View className="min-w-0 flex-1">
+                <Text
+                  className="text-sm font-bold text-emerald-deep"
+                  numberOfLines={1}
+                >
+                  {t('dashboard.accounts.usd_row')}
+                </Text>
+                <View className="mt-2 border-t border-border-soft pt-2">
+                  <MaskedAmount
+                    amount={data.usd}
+                    currency="USD"
+                    showCentsOverride
+                    className="text-[15.5px] font-extrabold text-emerald-deep"
+                  />
+                </View>
+              </View>
             </View>
           </View>
         ) : query.isError ? (

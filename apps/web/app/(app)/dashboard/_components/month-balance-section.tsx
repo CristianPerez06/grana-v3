@@ -166,9 +166,9 @@ export const MonthBalanceSection = ({ initialData }: Props) => {
 
   return (
     <Card className="flex flex-col">
-      <CardHeader className="flex-row items-center justify-between gap-4">
+      <CardHeader className="gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <h2 className="min-w-0 truncate text-lg font-semibold text-text">{t('title')}</h2>
-        <p className="shrink-0 text-sm text-text-muted">
+        <p className="text-sm text-text-muted sm:shrink-0">
           {tDashboard.rich('net_this_month', {
             net: currentNetLabel,
             amount: (chunks) => (

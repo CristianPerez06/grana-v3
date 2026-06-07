@@ -16,23 +16,27 @@ export const AccountsCardSkeleton = () => {
       {Array.from({ length: SKELETON_ACCOUNT_ROWS }).map((_, i) => (
         <View
           key={i}
-          className={`flex-row items-center gap-3 py-[11px] ${
+          className={`flex-row items-start gap-3 py-3 ${
             i > 0 ? 'border-t border-border-soft' : ''
           }`}
         >
           <SkeletonBlock className="h-8 w-8 rounded-lg" />
           <View className="flex-1">
             <SkeletonBlock className="h-3.5 w-28 rounded" />
+            <View className="mt-2 border-t border-border-soft pt-2">
+              <SkeletonBlock className="h-4 w-24 rounded" />
+            </View>
           </View>
-          <SkeletonBlock className="h-3.5 w-20 rounded" />
         </View>
       ))}
-      <View className="mt-1 flex-row items-center gap-3 border-t border-border-soft pt-3">
-        <SkeletonBlock className="h-2.5 w-2.5 rounded-[3px]" />
+      <View className="mt-1 flex-row items-start gap-3 border-t border-border-soft pt-3">
+        <SkeletonBlock className="mt-1.5 h-2.5 w-2.5 rounded-[3px]" />
         <View className="flex-1">
           <SkeletonBlock className="h-3.5 w-24 rounded" />
+          <View className="mt-2 border-t border-border-soft pt-2">
+            <SkeletonBlock className="h-4 w-20 rounded" />
+          </View>
         </View>
-        <SkeletonBlock className="h-3.5 w-20 rounded" />
       </View>
     </View>
   )

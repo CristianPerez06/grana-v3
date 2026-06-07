@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard loading state</title>
+    <link rel="stylesheet" href="../shared.css" />
+  </head>
+  <body>
+    <main class="stage">
+      <div class="workbench shell" aria-busy="true">
+        <p class="workbench-title">HeroSkeleton + MonthBalanceSkeleton + SpendingSkeleton</p>
+        <div class="top-grid">
+          <div class="card hero">
+            <div class="card-pad">
+              <span class="skeleton-line" style="width:110px;height:12px;background:rgba(255,255,255,.14)"></span>
+              <span class="skeleton-line" style="margin-top:26px;width:260px;height:44px;background:rgba(255,255,255,.18)"></span>
+              <span class="skeleton-line" style="margin-top:18px;width:140px;height:20px;background:rgba(255,255,255,.14)"></span>
+            </div>
+          </div>
+          <div class="card card-pad">
+            <span class="skeleton-line" style="width:120px;height:18px"></span>
+            <div style="height:24px"></div>
+            <span class="skeleton-line" style="width:100%;height:34px"></span>
+            <div style="height:14px"></div>
+            <span class="skeleton-line" style="width:100%;height:34px"></span>
+            <div style="height:14px"></div>
+            <span class="skeleton-line" style="width:80%;height:34px"></span>
+          </div>
+        </div>
+        <div class="card card-pad"><span class="skeleton-block" style="height:230px"></span></div>
+        <div class="card card-pad"><span class="skeleton-block" style="height:230px"></span></div>
+      </div>
+    </main>
+  </body>
+</html>

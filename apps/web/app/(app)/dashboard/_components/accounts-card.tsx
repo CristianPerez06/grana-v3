@@ -22,8 +22,8 @@ export const AccountsCard = async ({ data }: Props) => {
 
   return (
     <Card className="flex min-h-[13rem] flex-col">
-      <CardHeader className="flex-row items-center justify-between gap-2 pb-1">
-        <h2 className="text-base font-bold tracking-tight text-text">{t('title')}</h2>
+      <CardHeader className="gap-2 pb-1 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-lg font-semibold tracking-tight text-text">{t('title')}</h2>
         <Link
           href="/accounts"
           className="text-[13px] font-bold text-emerald-deep transition-colors hover:text-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
@@ -38,35 +38,39 @@ export const AccountsCard = async ({ data }: Props) => {
             <li
               key={account.id}
               className={cn(
-                'flex items-center gap-3 py-[11px]',
+                'flex items-start gap-3 py-[11px] sm:items-center',
                 index > 0 && 'border-t border-border-soft',
               )}
             >
               <AccountAvatar {...account.avatar} size="sm" />
-              <span className="min-w-0 flex-1 truncate text-sm font-bold text-text">
-                {account.name}
-              </span>
-              <span
-                className={cn(
-                  'shrink-0 text-[14.5px] font-extrabold tracking-tight',
-                  account.ars === 0 ? 'text-text-soft' : 'text-text',
-                )}
-              >
-                <MaskedAmount amount={account.ars} currency="ARS" />
-              </span>
+              <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                <span className="min-w-0 flex-1 text-sm font-bold text-text line-clamp-2 sm:line-clamp-none sm:truncate">
+                  {account.name}
+                </span>
+                <span
+                  className={cn(
+                    'block w-full border-t border-border-soft pt-2 text-[14.5px] font-extrabold tracking-tight tabular-nums sm:w-auto sm:border-0 sm:pt-0',
+                    account.ars === 0 ? 'text-text-soft' : 'text-text',
+                  )}
+                >
+                  <MaskedAmount amount={account.ars} currency="ARS" />
+                </span>
+              </div>
             </li>
           ))}
         </ul>
 
         {/* USD holding — the bimoneda closing row, emerald like the handoff. */}
-        <div className="mt-auto flex items-center gap-3 border-t border-border-soft pt-3">
-          <span aria-hidden className="size-2.5 shrink-0 rounded-[3px] bg-emerald" />
-          <span className="min-w-0 flex-1 truncate text-sm font-bold text-emerald-deep">
-            {t('usd_row')}
-          </span>
-          <span className="shrink-0 text-[14.5px] font-extrabold tracking-tight text-emerald-deep">
-            <MaskedAmount amount={data.usd} currency="USD" showCentsOverride />
-          </span>
+        <div className="mt-auto flex items-start gap-3 border-t border-border-soft pt-3 sm:items-center">
+          <span aria-hidden className="mt-1.5 size-2.5 shrink-0 rounded-[3px] bg-emerald sm:mt-0" />
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <span className="min-w-0 flex-1 truncate text-sm font-bold text-emerald-deep">
+              {t('usd_row')}
+            </span>
+            <span className="block w-full border-t border-border-soft pt-2 text-[14.5px] font-extrabold tracking-tight tabular-nums text-emerald-deep sm:w-auto sm:border-0 sm:pt-0">
+              <MaskedAmount amount={data.usd} currency="USD" showCentsOverride />
+            </span>
+          </div>
         </div>
       </CardContent>
     </Card>

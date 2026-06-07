@@ -83,9 +83,9 @@ export const SpendingSection = ({ initialData }: Props) => {
 
   return (
     <Card className="flex flex-col">
-      <CardHeader className="flex-row items-center justify-between gap-3">
+      <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="min-w-0 truncate text-lg font-semibold text-text">{t('title')}</h2>
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 sm:shrink-0 sm:flex-nowrap sm:justify-end">
           <Link
             href={breakdownHref}
             className="text-[13px] font-bold text-emerald-deep transition-colors hover:text-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"

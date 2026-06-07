@@ -27,17 +27,19 @@ export const AccountRow = ({ account }: Props) => {
 
       <Link
         href={`/accounts/${account.id}`}
-        className="flex flex-1 flex-col gap-2 min-w-0 sm:flex-row sm:items-center sm:gap-4"
+        className="flex flex-1 flex-col gap-2.5 min-w-0 sm:flex-row sm:items-center sm:gap-4"
       >
-        <div className="flex flex-1 flex-col items-start gap-1 min-w-0">
-          <span className="block max-w-full text-[15px] font-semibold text-text break-words sm:truncate">
-            {account.name}
-          </span>
-          {!account.is_active && (
-            <span className="inline-flex min-h-[22px] items-center rounded-full bg-warning-soft px-2 text-[10px] font-bold uppercase tracking-[0.06em] text-warning">
-              {t('badges.archived')}
+        <div className="flex flex-1 flex-col gap-1 min-w-0">
+          <div className="flex min-w-0 flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+            <span className="max-w-full text-[15px] font-semibold text-text break-words sm:truncate">
+              {account.name}
             </span>
-          )}
+            {!account.is_active && (
+              <span className="inline-flex shrink-0 min-h-[22px] items-center rounded-full bg-warning-soft px-2 text-[10px] font-bold uppercase tracking-[0.06em] text-warning">
+                {t('badges.archived')}
+              </span>
+            )}
+          </div>
           {account.type === 'bank' && account.institution && (
             <span className="block max-w-full text-[13px] text-text-soft break-words sm:truncate">
               {account.institution.name}
@@ -45,7 +47,7 @@ export const AccountRow = ({ account }: Props) => {
           )}
         </div>
 
-        <div className="flex shrink-0 flex-col items-start gap-0.5 tabular-nums sm:items-end">
+        <div className="flex w-full shrink-0 flex-col items-start gap-0.5 border-t border-border-soft pt-2.5 tabular-nums sm:w-auto sm:items-end sm:border-0 sm:pt-0">
           {hasARS && (
             <span className="text-[15px] font-semibold text-text">
               {formatARS(balances.ARS, showCents)}
