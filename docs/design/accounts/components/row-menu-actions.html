@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Row menu actions</title>
+    <link rel="stylesheet" href="../shared.css" />
+  </head>
+  <body>
+    <main class="stage">
+      <div class="workbench">
+        <p class="workbench-title">AccountRowMenu</p>
+        <div class="menu-card" role="menu" aria-label="Acciones de cuenta activa con movimientos">
+          <div class="menu-item">✎ Editar</div>
+          <div class="menu-item danger">▣ Archivar</div>
+        </div>
+
+        <div style="height: 18px"></div>
+
+        <div class="menu-card" role="menu" aria-label="Acciones de cuenta activa sin movimientos">
+          <div class="menu-item">✎ Editar</div>
+          <div class="menu-item danger">▣ Archivar</div>
+          <div class="menu-item danger">⌫ Eliminar</div>
+        </div>
+
+        <div style="height: 18px"></div>
+
+        <div class="menu-card" role="menu" aria-label="Acciones de cuenta archivada">
+          <div class="menu-item">↻ Reactivar</div>
+          <div class="menu-item danger">⌫ Eliminar</div>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

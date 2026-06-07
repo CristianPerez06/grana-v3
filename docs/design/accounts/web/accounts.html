@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cuentas - web</title>
+    <link rel="stylesheet" href="../shared.css" />
+  </head>
+  <body>
+    <main class="stage">
+      <div class="route shell">
+        <header class="header">
+          <div class="header-copy">
+            <h1 class="title">Cuentas</h1>
+          </div>
+          <button class="button" type="button">
+            <span class="icon" aria-hidden="true">+</span>
+            Crear cuenta
+          </button>
+        </header>
+
+        <div class="sections">
+          <div class="active-block">
+            <section class="hint" aria-label="Sugerencia de cuentas">
+              <div>
+                <p class="hint-title">Tenés toda tu plata en la Billetera</p>
+                <p class="hint-description">
+                  Si querés ver en qué cuentas está tu plata, creá cuentas; si no, dejá todo acá.
+                </p>
+              </div>
+              <button class="text-action" type="button">Entendido</button>
+            </section>
+
+            <section class="section">
+              <div class="section-head">
+                <h2 class="section-title">Efectivo</h2>
+                <span class="section-count">· 1</span>
+              </div>
+              <div class="account-list">
+                <article class="account-row">
+                  <div class="avatar" aria-hidden="true">$</div>
+                  <a class="row-link" href="#">
+                    <div class="row-copy">
+                      <div class="row-title-line">
+                        <span class="row-title">Billetera</span>
+                      </div>
+                      <div class="row-meta">Efectivo</div>
+                    </div>
+                    <div class="balances" aria-label="Saldo">
+                      <span class="ars">$ 128.450,00</span>
+                      <span class="usd">US$ 520,00</span>
+                    </div>
+                  </a>
+                  <button class="menu-button" type="button" aria-label="Acciones de la cuenta">⋮</button>
+                </article>
+              </div>
+            </section>
+
+            <section class="section">
+              <div class="section-head">
+                <h2 class="section-title">Cuentas bancarias</h2>
+                <span class="section-count">· 2</span>
+              </div>
+              <div class="account-list">
+                <article class="account-row">
+                  <div class="avatar bank" aria-hidden="true">G</div>
+                  <a class="row-link" href="#">
+                    <div class="row-copy">
+                      <div class="row-title-line">
+                        <span class="row-title">Caja de ahorro Galicia</span>
+                      </div>
+                      <div class="row-meta">Banco Galicia</div>
+                    </div>
+                    <div class="balances" aria-label="Saldo">
+                      <span class="ars">$ 840.300,50</span>
+                      <span class="usd">US$ 1.240,00</span>
+                    </div>
+                  </a>
+                  <button class="menu-button" type="button" aria-label="Acciones de la cuenta">⋮</button>
+                </article>
+
+                <article class="account-row">
+                  <div class="avatar bank" aria-hidden="true">M</div>
+                  <a class="row-link" href="#">
+                    <div class="row-copy">
+                      <div class="row-title-line">
+                        <span class="row-title">Mercado Pago</span>
+                      </div>
+                      <div class="row-meta">Mercado Pago</div>
+                    </div>
+                    <div class="balances" aria-label="Saldo">
+                      <span class="ars">$ 76.900,00</span>
+                    </div>
+                  </a>
+                  <button class="menu-button" type="button" aria-label="Acciones de la cuenta">⋮</button>
+                </article>
+              </div>
+            </section>
+          </div>
+
+          <section class="section">
+            <div class="section-head">
+              <h2 class="section-title">Archivadas</h2>
+              <span class="section-count">· 1</span>
+            </div>
+            <div class="account-list archived">
+              <article class="account-row">
+                <div class="avatar slate" aria-hidden="true">S</div>
+                <a class="row-link" href="#">
+                  <div class="row-copy">
+                    <div class="row-title-line">
+                      <span class="row-title">Santander vieja</span>
+                      <span class="badge">Archivada</span>
+                    </div>
+                    <div class="row-meta">Santander</div>
+                  </div>
+                  <div class="balances" aria-label="Saldo">
+                    <span class="ars">$ 0,00</span>
+                    <span class="usd">US$ 0,00</span>
+                  </div>
+                </a>
+                <button class="menu-button" type="button" aria-label="Acciones de la cuenta">⋮</button>
+              </article>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

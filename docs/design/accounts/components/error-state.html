@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Error state</title>
+    <link rel="stylesheet" href="../shared.css" />
+  </head>
+  <body>
+    <main class="stage">
+      <div class="workbench shell">
+        <p class="workbench-title">SectionFallback / RouteError</p>
+        <section class="state" role="alert">
+          <div>
+            <h2>No se pudieron cargar las cuentas activas</h2>
+            <p>Estado de error por sección, manteniendo el chrome disponible cuando la ruta lo permite.</p>
+          </div>
+        </section>
+
+        <section class="state" role="alert">
+          <div>
+            <h2>Algo salió mal</h2>
+            <p>Error de ruta controlado por <code>AccountsErrorBoundary</code>, con acción de reintento en la implementación real.</p>
+            <div style="height: 18px"></div>
+            <button class="button secondary" type="button">Reintentar</button>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

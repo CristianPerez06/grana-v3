@@ -22,32 +22,30 @@ export const AccountRow = ({ account }: Props) => {
   const hasUSD = activeCurrencies.some((c) => c.currency_code === 'USD')
 
   return (
-    <div className="flex items-center gap-4 px-5 py-4">
+    <div className="flex min-h-[78px] items-start gap-4 px-5 py-4 sm:items-center">
       <AccountAvatar {...account.avatar} size="md" />
 
       <Link
         href={`/accounts/${account.id}`}
-        className="flex flex-1 items-center gap-4 min-w-0"
+        className="flex flex-1 flex-col gap-2 min-w-0 sm:flex-row sm:items-center sm:gap-4"
       >
-        <div className="flex flex-1 flex-col gap-1 min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="truncate text-[15px] font-semibold text-text">
-              {account.name}
+        <div className="flex flex-1 flex-col items-start gap-1 min-w-0">
+          <span className="block max-w-full text-[15px] font-semibold text-text break-words sm:truncate">
+            {account.name}
+          </span>
+          {!account.is_active && (
+            <span className="inline-flex min-h-[22px] items-center rounded-full bg-warning-soft px-2 text-[10px] font-bold uppercase tracking-[0.06em] text-warning">
+              {t('badges.archived')}
             </span>
-            {!account.is_active && (
-              <span className="shrink-0 rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-warning">
-                {t('badges.archived')}
-              </span>
-            )}
-          </div>
+          )}
           {account.type === 'bank' && account.institution && (
-            <span className="truncate text-[13px] text-text-soft">
+            <span className="block max-w-full text-[13px] text-text-soft break-words sm:truncate">
               {account.institution.name}
             </span>
           )}
         </div>
 
-        <div className="flex shrink-0 flex-col items-end gap-0.5 tabular-nums">
+        <div className="flex shrink-0 flex-col items-start gap-0.5 tabular-nums sm:items-end">
           {hasARS && (
             <span className="text-[15px] font-semibold text-text">
               {formatARS(balances.ARS, showCents)}

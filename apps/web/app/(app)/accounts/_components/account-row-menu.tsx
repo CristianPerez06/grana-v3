@@ -65,7 +65,7 @@ export function AccountRowMenu({ account }: Props) {
   return (
     <>
       <div className="flex flex-col items-end gap-1">
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <button
               type="button"

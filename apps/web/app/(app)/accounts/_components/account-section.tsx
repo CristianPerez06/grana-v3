@@ -13,10 +13,10 @@ export const AccountSection = ({ title, accounts, archived = false }: Props) => 
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-baseline gap-2 px-1">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-text-soft">
+        <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-text-soft">
           {title}
         </h2>
-        <span className="text-xs font-medium text-text-soft/80">· {accounts.length}</span>
+        <span className="text-xs font-semibold text-text-soft">· {accounts.length}</span>
       </div>
       <div
         className={`flex flex-col divide-y divide-border-soft rounded-2xl bg-card ${

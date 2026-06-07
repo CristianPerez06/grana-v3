@@ -15,12 +15,18 @@ import { cn } from '@/lib/utils'
 type DropdownMenuProps = {
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  /**
+   * When false, Radix skips `react-remove-scroll` and the body padding
+   * compensation it applies on open — useful for kebab menus where the
+   * shift can cause a parent flex-wrap layout (e.g. PageHeader) to reflow.
+   */
+  modal?: boolean
   children: ReactNode
 }
 
-export function DropdownMenu({ open, onOpenChange, children }: DropdownMenuProps) {
+export function DropdownMenu({ open, onOpenChange, modal, children }: DropdownMenuProps) {
   return (
-    <RadixDropdownMenu.Root open={open} onOpenChange={onOpenChange}>
+    <RadixDropdownMenu.Root open={open} onOpenChange={onOpenChange} modal={modal}>
       {children}
     </RadixDropdownMenu.Root>
   )

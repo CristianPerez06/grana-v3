@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Loading state</title>
+    <link rel="stylesheet" href="../shared.css" />
+  </head>
+  <body>
+    <main class="stage">
+      <div class="workbench active-block" aria-busy="true">
+        <p class="workbench-title">ActiveAccountsSkeleton + ArchivedAccountsSkeleton</p>
+        <section class="section">
+          <div class="section-head">
+            <span class="skeleton-line h-12 w-24"></span>
+            <span class="skeleton-line h-12 w-16"></span>
+          </div>
+          <div class="account-list">
+            <article class="account-row">
+              <span class="skeleton-avatar"></span>
+              <div class="row-link">
+                <div class="row-copy">
+                  <span class="skeleton-line h-14 w-32"></span>
+                  <div style="height: 7px"></div>
+                  <span class="skeleton-line h-12 w-24"></span>
+                </div>
+                <div class="balances">
+                  <span class="skeleton-line h-14 w-20"></span>
+                  <span class="skeleton-line h-12 w-16"></span>
+                </div>
+              </div>
+              <span class="skeleton-button"></span>
+            </article>
+            <article class="account-row">
+              <span class="skeleton-avatar"></span>
+              <div class="row-link">
+                <div class="row-copy">
+                  <span class="skeleton-line h-14 w-32"></span>
+                  <div style="height: 7px"></div>
+                  <span class="skeleton-line h-12 w-24"></span>
+                </div>
+                <div class="balances">
+                  <span class="skeleton-line h-14 w-20"></span>
+                  <span class="skeleton-line h-12 w-16"></span>
+                </div>
+              </div>
+              <span class="skeleton-button"></span>
+            </article>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <span class="skeleton-line h-12 w-24"></span>
+            <span class="skeleton-line h-12 w-16"></span>
+          </div>
+          <div class="account-list archived">
+            <article class="account-row">
+              <span class="skeleton-avatar"></span>
+              <div class="row-link">
+                <div class="row-copy">
+                  <span class="skeleton-line h-14 w-32"></span>
+                </div>
+                <span class="skeleton-line h-14 w-20"></span>
+              </div>
+            </article>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>
