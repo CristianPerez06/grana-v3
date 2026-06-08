@@ -46,22 +46,33 @@ export const WalletCard = ({ card, networkName, monthLabel, showCents = false }:
         aria-hidden
       />
 
-      {/* Header: avatar + name + meta + status pill */}
-      <div className="flex items-start gap-3">
+      {/*
+        Header layout:
+        - `< md` (carousel): 3 tiers — row 1 chrome (avatar + pill), row 2
+          title (line-clamp 2), row 3 meta. Title and meta never share a row
+          with chrome, so they get full card width.
+        - `md+` (grid): single row — avatar + title-block + pill, matching the
+          original wallet card composition.
+        Implemented as a CSS grid that reorders the title block between row 2
+        (< md) and row 1 col 2 (md+).
+      */}
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 md:gap-y-3">
         <span
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[19px] font-extrabold text-white"
+          className="col-start-1 row-start-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[19px] font-extrabold text-white"
           style={{ backgroundColor: accent }}
           aria-hidden
         >
           {cardMonogram(card.name)}
         </span>
-        <div className="min-w-0 flex-1">
-          <p className="break-words text-[17px] font-bold leading-tight">{card.name}</p>
-          <p className="break-words text-xs text-text-muted">
+        <CardStatusPill tone={tone} className="col-start-3 row-start-1" />
+        <div className="col-span-3 col-start-1 row-start-2 min-w-0 md:col-span-1 md:col-start-2 md:row-start-1">
+          <p className="line-clamp-2 text-[17px] font-bold leading-tight [overflow-wrap:anywhere] md:line-clamp-none md:break-words">
+            {card.name}
+          </p>
+          <p className="text-xs text-text-muted [overflow-wrap:anywhere] md:break-words">
             {networkName ? t('wallet.meta', { network: networkName }) : t('wallet.meta_no_network')}
           </p>
         </div>
-        <CardStatusPill tone={tone} />
       </div>
 
       {/* Stats: resumen / cierra / vence */}

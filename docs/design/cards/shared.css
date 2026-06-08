@@ -622,10 +622,21 @@ button {
 
 .phone .wallet-card-head {
   align-items: flex-start;
+  justify-content: space-between;
 }
 
 .phone .wallet-title strong {
+  display: -webkit-box;
+  overflow: hidden;
   white-space: normal;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.phone .wallet-title span {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .phone .stats {
@@ -686,8 +697,25 @@ button {
     height: 1px;
   }
 
+  /* Under 760px the web wallet drops the grid and becomes a contained
+     horizontal scroll-snap carousel — paridad de gesto con el carrusel mobile,
+     sin compartir JSX. The carousel stays inside the stage padding (no
+     negative margin); cards are narrower so a peek of the next card is still
+     visible inside the content area. */
   .wallet-grid {
-    grid-template-columns: 1fr;
+    display: flex;
+    grid-template-columns: none;
+    gap: 14px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 6px;
+  }
+
+  .wallet-grid .wallet-card {
+    flex: 0 0 auto;
+    width: 70vw;
+    max-width: 280px;
+    scroll-snap-align: start;
   }
 
   .stats {

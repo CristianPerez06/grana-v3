@@ -45,6 +45,7 @@ No haría un rediseño grande. La ruta ya comunica bien su dominio. Haría estos
 
 - Mantener el hero "A pagar este mes", pero acercarlo al lenguaje del dashboard: superficie clara, monto principal con ARS dominante y USD subordinado, próximos vencimientos en filas escaneables.
 - En mobile, evitar filas con nombre largo + monto grande en una sola línea. Los próximos vencimientos y las tarjetas del wallet deberían apilar identidad arriba y montos debajo cuando el ancho sea estrecho.
+- En las cards del wallet mobile, separar el encabezado en tres niveles: primero una fila de chrome con avatar cuadrado de una letra a la izquierda y pill de estado a la derecha; segundo el título; tercero la descripción/meta. El título y la descripción no deben compartir línea con el avatar ni con el pill.
 - Normalizar el header de sección "Mis tarjetas": usar el patrón de sección de `/accounts` con título pequeño/semibold y hint subordinado, sin que el hint compita en una sola línea en mobile.
 - Mantener el wallet web como grilla y mobile como carrusel, porque eso ya está en OpenSpec.
 - Mantener archivadas como sección secundaria colapsable; no subirla visualmente al mismo nivel que las activas.
@@ -59,7 +60,7 @@ Durante la inspección, `apps/mobile/components/cards/CreditCardItem.tsx` navega
 
 Desktop: mantener una ruta amplia y tranquila. Hero mensual arriba, wallet en grilla de dos columnas, archivadas al final. Las tarjetas activas siguen siendo cards individuales; no convertirlas en lista.
 
-Mobile: una sola columna. Hero mensual apilado, wallet como carrusel con una card por viewport y peek de la siguiente, y filas internas con nombres/montos que puedan partirse en más de una línea.
+Mobile: una sola columna. Hero mensual apilado, wallet como carrusel con una card por viewport y peek de la siguiente, y filas internas con nombres/montos que puedan partirse en más de una línea. La card mobile usa header en capas: avatar + pill, título, descripción.
 
 ## Archivos de trabajo
 
