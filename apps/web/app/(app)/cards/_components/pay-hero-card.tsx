@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { AlertTriangle } from 'lucide-react'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
+import { Button } from '@/components/ui/button'
 import type { LifecyclePeriod } from './card-detail-types'
 import { formatDayMonth } from './card-presentation'
 
@@ -80,13 +81,17 @@ export const PayHeroCard = ({
               </>
             )}
           </div>
-          <Link
-            href={`/cards/${cardId}/periods/${period.id}/pay`}
-            onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center justify-center rounded-xl bg-terracotta px-7 py-3.5 text-sm font-bold text-white transition-opacity hover:opacity-90"
+          <Button
+            asChild
+            className="w-auto bg-terracotta px-7 hover:bg-terracotta/90 active:bg-terracotta/90"
           >
-            {t('detail.pay_cta')}
-          </Link>
+            <Link
+              href={`/cards/${cardId}/periods/${period.id}/pay`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {t('detail.pay_cta')}
+            </Link>
+          </Button>
         </div>
       </div>
     </button>

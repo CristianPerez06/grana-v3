@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { BarChart3 } from 'lucide-react'
 import { formatARS } from '@grana/i18n-messages'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { subtractMoneyValues } from '@/lib/cards/utils'
 import { CardLimitBar } from './card-limit-bar'
@@ -33,12 +34,9 @@ export const CardLimitPanel = ({ cardId, creditLimit, committedARS, accent, show
           <span className="font-semibold">{t('detail.limit_cta_title')}</span>{' '}
           <span className="text-text-muted">{t('detail.limit_cta_body')}</span>
         </p>
-        <Link
-          href={`/cards/${cardId}/edit`}
-          className="shrink-0 rounded-lg border border-border bg-card px-5 py-2.5 text-sm font-bold transition-colors hover:bg-border-soft"
-        >
-          {t('detail.limit_cta_button')}
-        </Link>
+        <Button asChild size="sm" variant="secondary" className="w-auto shrink-0">
+          <Link href={`/cards/${cardId}/edit`}>{t('detail.limit_cta_button')}</Link>
+        </Button>
       </Card>
     )
   }

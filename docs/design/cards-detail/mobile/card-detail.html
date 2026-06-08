@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Detalle de tarjeta - mobile</title>
+    <link rel="stylesheet" href="../shared.css" />
+  </head>
+  <body>
+    <main class="phone-stage">
+      <div class="phone">
+        <div class="phone-screen shell">
+          <a class="back" href="#">← Tarjetas</a>
+
+          <header class="header">
+            <span class="avatar">V</span>
+            <div class="identity">
+              <div class="title-row">
+                <h1>Visa Galicia principal de gastos familiares</h1>
+                <span class="pill danger">A pagar</span>
+              </div>
+              <p>Banco Galicia</p>
+            </div>
+          </header>
+          <div class="actions">
+            <a class="button" href="#">+ Registrar consumo</a>
+            <button class="icon-button" type="button" aria-label="Editar">✎</button>
+          </div>
+
+          <nav class="lifecycle-rail" aria-label="Ciclo de vida">
+            <p class="rail-title">Ciclo del resumen</p>
+            <div class="rail-list">
+              <div class="rail-item active">
+                <span class="rail-dot" style="background:var(--terracotta)"></span>
+                <div class="rail-copy"><strong>A pagar</strong><span>vence 12/06</span></div>
+              </div>
+              <div class="rail-item">
+                <span class="rail-dot"></span>
+                <div class="rail-copy"><strong>En curso</strong><span>cierra 28/06</span></div>
+              </div>
+              <div class="rail-item">
+                <span class="rail-dot" style="background:var(--soft)"></span>
+                <div class="rail-copy"><strong>Próximo</strong><span>cierra 28/07</span></div>
+              </div>
+            </div>
+          </nav>
+
+          <section class="card pay-hero">
+            <div class="hero-row">
+              <div>
+                <div class="eyebrow">Resumen a pagar</div>
+                <div class="amount-primary">$ 340.000<span class="dec">,00</span></div>
+                <div class="amount-secondary">+ US$ 150,00</div>
+                <p class="meta">Cerró el <strong>28/05</strong> · vence el <strong>12/06</strong></p>
+              </div>
+              <div class="countdown">
+                <div><strong>4</strong><span>días para el vencimiento</span></div>
+                <a class="button terracotta" href="#">Registrar pago</a>
+              </div>
+            </div>
+          </section>
+
+          <section class="card curso">
+            <div class="curso-grid">
+              <div>
+                <span class="eyebrow" style="color:var(--accent)">Resumen en curso</span>
+                <div class="amount-primary">$ 86.450<span class="dec">,00</span></div>
+                <p class="meta">Acumulado hasta hoy · incluye cuotas del período</p>
+              </div>
+              <div class="cycle">
+                <div class="cycle-label">Cierra</div>
+                <div class="cycle-date">28/06</div>
+                <div class="cycle-note">en 20 días</div>
+                <div class="bar"><span style="width:35%"></span></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card mini-row">
+            <span class="label">Próximo</span>
+            <span class="copy">cierra 28/07 · ya comprometido en cuotas</span>
+            <span class="value">$ 36.000</span>
+          </section>
+
+          <section class="card limit-panel">
+            <div class="limit-head"><span>Límite usado <strong>$ 462.450</strong> de $ 900.000</span><span class="limit-pct">51%</span></div>
+            <div class="bar"><span style="width:51%"></span></div>
+            <div class="limit-available">Disponible <strong>$ 437.550</strong></div>
+          </section>
+
+          <div class="segmented" aria-label="Detalle">
+            <button class="active" type="button">Movimientos</button>
+            <button type="button">Cuotas · 2</button>
+          </div>
+
+          <section class="pane">
+            <div class="pane-head"><h2>Movimientos · A pagar</h2><span>3 movimientos</span></div>
+            <div class="movement-list">
+              <div class="movement-row"><span class="movement-icon">🍽</span><div class="row-copy"><strong>Restaurante</strong><span>Comida › Salidas</span><span class="chip">Cuota 2 de 6</span></div><div class="row-amount">-$ 28.000</div></div>
+              <div class="movement-row"><span class="movement-icon">✈</span><div class="row-copy"><strong>Pasajes</strong><span>Viajes</span></div><div class="row-amount">-US$ 150</div></div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

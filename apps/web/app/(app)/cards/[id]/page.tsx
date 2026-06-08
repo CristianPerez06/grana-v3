@@ -195,6 +195,23 @@ const CardDetailPage = async ({ params }: Props) => {
     apagar?.variant ?? cursoPeriod.variant,
   )
 
+  const sideExtras = (
+    <div className="flex flex-col gap-4">
+      <div className="border-t border-border pt-4">
+        <Link
+          href={`/cards/${id}/periods`}
+          className="text-sm font-semibold text-text-muted transition-colors hover:text-text"
+        >
+          {t('actions.view_all_periods')}
+        </Link>
+      </div>
+      <AdminFooter
+        createdAt={cardDetail.created_at}
+        archivedAt={cardDetail.is_active ? null : cardDetail.created_at}
+      />
+    </div>
+  )
+
   return (
     <EditCardDrawerProvider card={editCardData(committedARS)}>
       <CardDetailHeader
@@ -207,18 +224,7 @@ const CardDetailPage = async ({ params }: Props) => {
 
       {!cardDetail.is_active && <CardActions cardId={id} isActive={false} hasMovements={cardHasHistory} />}
 
-      <CardDetailView vm={vm} todayISO={todayISO} showCents={showCents} />
-
-      <section className="flex flex-col gap-2 border-t border-border pt-4">
-        <Link href={`/cards/${id}/periods`} className="text-sm font-semibold text-text-muted transition-colors hover:text-text">
-          {t('actions.view_all_periods')}
-        </Link>
-      </section>
-
-      <AdminFooter
-        createdAt={cardDetail.created_at}
-        archivedAt={cardDetail.is_active ? null : cardDetail.created_at}
-      />
+      <CardDetailView vm={vm} todayISO={todayISO} showCents={showCents} sideExtras={sideExtras} />
     </EditCardDrawerProvider>
   )
 }

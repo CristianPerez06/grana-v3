@@ -27,7 +27,7 @@ export const CardHeaderActions = ({ cardId, showAdd = true }: Props) => {
       {showAdd && (
         <Button
           size="sm"
-          className="w-auto"
+          className="w-auto flex-1 md:flex-initial"
           disabled={!movementDrawer}
           onClick={() => movementDrawer?.openCreate(cardId)}
         >

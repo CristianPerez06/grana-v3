@@ -595,6 +595,7 @@
       "timeline_prox": "Next",
       "timeline_due": "due {date}",
       "timeline_close": "closes {date}",
+      "timeline_rail_title": "Statement lifecycle",
       "pay_eyebrow": "Statement to pay",
       "pay_sub": "Closed on <b>{close}</b> · due on <b>{due}</b>",
       "pay_countdown": "days until due",

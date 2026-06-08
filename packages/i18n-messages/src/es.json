@@ -595,6 +595,7 @@
       "timeline_prox": "Próximo",
       "timeline_due": "vence {date}",
       "timeline_close": "cierra {date}",
+      "timeline_rail_title": "Ciclo del resumen",
       "pay_eyebrow": "Resumen a pagar",
       "pay_sub": "Cerró el <b>{close}</b> · vence el <b>{due}</b>",
       "pay_countdown": "días para el vencimiento",
