@@ -28,6 +28,22 @@ export const PeriodMovementsPane = ({ cardId, period, periodKey, todayISO }: Pro
     if (chip) chips.set(tx.id, chip)
   }
 
+  const list = (
+    <MovementList
+      movements={movements}
+      perspective={{ kind: 'account', accountId: cardId }}
+      todayISO={todayISO}
+      installmentChips={chips}
+      installmentChipBelow
+      groupByDate={false}
+      emptyState={{
+        variant: 'none',
+        title: t('detail.movements_empty_title'),
+        body: t('detail.movements_empty_body'),
+      }}
+    />
+  )
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-2">
@@ -37,17 +53,11 @@ export const PeriodMovementsPane = ({ cardId, period, periodKey, todayISO }: Pro
         </span>
       </div>
 
-      <MovementList
-        movements={movements}
-        perspective={{ kind: 'account', accountId: cardId }}
-        todayISO={todayISO}
-        installmentChips={chips}
-        emptyState={{
-          variant: 'none',
-          title: t('detail.movements_empty_title'),
-          body: t('detail.movements_empty_body'),
-        }}
-      />
+      {movements.length === 0 ? (
+        list
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-border bg-card">{list}</div>
+      )}
     </div>
   )
 }

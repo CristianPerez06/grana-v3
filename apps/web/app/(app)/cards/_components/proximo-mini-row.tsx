@@ -24,7 +24,7 @@ export const ProximoMiniRow = ({ period, selected, accent, showCents = false, on
     <button
       type="button"
       onClick={onSelect}
-      className="flex w-full items-center gap-4 rounded-2xl border border-dashed border-border px-5 py-4 text-left outline-none transition-colors hover:bg-border-soft/40"
+      className="flex w-full cursor-pointer items-center gap-4 rounded-2xl border border-dashed border-border bg-card px-5 py-4 text-left outline-none transition-colors hover:bg-emerald-soft"
       style={selected ? { borderStyle: 'solid', boxShadow: `inset 0 0 0 1px ${accent}` } : undefined}
     >
       <span className="text-[11px] font-extrabold uppercase tracking-wider text-text-soft">

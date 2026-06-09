@@ -50,6 +50,10 @@ type Props = {
   runningBalances?: Map<string, Record<'ARS' | 'USD', number>> | null
   /** Per-movement installment chip labels (e.g. "Cuota 2 de 6"), keyed by id. */
   installmentChips?: Map<string, string>
+  /** Render the installment chip on a separate line below the subtitle (card statement layout). */
+  installmentChipBelow?: boolean
+  /** Group rows under date headers (Hoy / Ayer / weekday). Off for single-period views like card statements. */
+  groupByDate?: boolean
   /** Empty-state reason + actions. Absent ⇒ generic "no movements". */
   emptyState?: MovementEmptyState
 }
@@ -62,6 +66,8 @@ export const MovementList = ({
   recurrenceLinkedIds,
   runningBalances = null,
   installmentChips,
+  installmentChipBelow = false,
+  groupByDate = true,
   emptyState,
 }: Props) => {
   const t = useTranslations('transactions')
@@ -140,6 +146,41 @@ export const MovementList = ({
   const backParam =
     perspective.kind === 'account' ? `account:${perspective.accountId}` : 'transactions'
 
+  const renderRow = (movement: FinancialMovement, rowIndex: number) => {
+    const row = (
+      <MovementRow
+        movement={movement}
+        perspective={perspective}
+        showAccount={showAccount}
+        isRecurrent={recurrenceLinkedIds?.has(movement.id) ?? false}
+        runningBalanceSnapshot={runningBalances?.get(movement.id) ?? null}
+        installmentChip={installmentChips?.get(movement.id) ?? null}
+        installmentChipBelow={installmentChipBelow}
+      />
+    )
+    const wrapperCls = rowIndex === 0 ? '' : 'border-t border-border-soft'
+    if (!movement.detail_href) {
+      return (
+        <div key={movement.id} className={wrapperCls}>
+          {row}
+        </div>
+      )
+    }
+    return (
+      <Link
+        key={movement.id}
+        href={`${movement.detail_href}?from=${backParam}`}
+        className={wrapperCls}
+      >
+        {row}
+      </Link>
+    )
+  }
+
+  if (!groupByDate) {
+    return <div className="flex flex-col">{movements.map(renderRow)}</div>
+  }
+
   const grouped = new Map<string, FinancialMovement[]>()
   for (const movement of movements) {
     const existing = grouped.get(movement.date) ?? []
@@ -157,41 +198,7 @@ export const MovementList = ({
           <p className="px-4 pb-2 text-[12px] font-extrabold capitalize text-muted-foreground">
             {formatGroupDate(date)}
           </p>
-          <div className="flex flex-col">
-            {dayMovements.map((movement, rowIndex) => {
-              const row = (
-                <MovementRow
-                  movement={movement}
-                  perspective={perspective}
-                  showAccount={showAccount}
-                  isRecurrent={recurrenceLinkedIds?.has(movement.id) ?? false}
-                  runningBalanceSnapshot={runningBalances?.get(movement.id) ?? null}
-                  installmentChip={installmentChips?.get(movement.id) ?? null}
-                />
-              )
-
-              const wrapperCls =
-                rowIndex === 0 ? '' : 'border-t border-border-soft'
-
-              if (!movement.detail_href) {
-                return (
-                  <div key={movement.id} className={wrapperCls}>
-                    {row}
-                  </div>
-                )
-              }
-
-              return (
-                <Link
-                  key={movement.id}
-                  href={`${movement.detail_href}?from=${backParam}`}
-                  className={wrapperCls}
-                >
-                  {row}
-                </Link>
-              )
-            })}
-          </div>
+          <div className="flex flex-col">{dayMovements.map(renderRow)}</div>
         </section>
       ))}
     </div>

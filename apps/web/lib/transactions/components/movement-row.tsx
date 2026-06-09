@@ -64,6 +64,8 @@ type Props = {
   runningBalanceSnapshot?: Record<'ARS' | 'USD', number> | null
   /** Installment chip label (e.g. "Cuota 2 de 6"); shown on card-statement rows. */
   installmentChip?: string | null
+  /** Render the installment chip on its own line below the subtitle (card statement layout). */
+  installmentChipBelow?: boolean
 }
 
 export const MovementRow = ({
@@ -73,6 +75,7 @@ export const MovementRow = ({
   isRecurrent = false,
   runningBalanceSnapshot = null,
   installmentChip = null,
+  installmentChipBelow = false,
 }: Props) => {
   const t = useTranslations('transactions')
   const tRoot = useTranslations()
@@ -167,7 +170,7 @@ export const MovementRow = ({
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className="truncate text-[13px] font-extrabold leading-tight">{primary}</span>
-            {chip && (
+            {chip && !installmentChipBelow && (
               <span className="inline-flex shrink-0 items-center rounded-full bg-border-soft px-1.5 py-0.5 text-[11px] font-semibold text-text-muted">
                 {chip}
               </span>
@@ -209,6 +212,11 @@ export const MovementRow = ({
           </div>
           {secondary && (
             <p className="mt-0.5 truncate text-xs text-muted-foreground">{secondary}</p>
+          )}
+          {chip && installmentChipBelow && (
+            <span className="mt-1.5 inline-flex items-center rounded-full bg-border-soft px-2 py-0.5 text-[11px] font-bold text-text-muted">
+              {chip}
+            </span>
           )}
         </div>
       </div>
