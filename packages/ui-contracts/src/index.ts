@@ -341,6 +341,25 @@ export type RouteErrorProps = {
   className?: string
 }
 
+// ── RouteNotFound ───────────────────────────────────────────────────────────
+
+/**
+ * Sibling to RouteError, surfaced when a route's resource doesn't exist (Next's
+ * `notFound()`) instead of when work threw. The caller passes already-translated
+ * strings — the primitive stays agnostic of the i18n namespace so per-module
+ * not-found.tsx files can choose their own copy.
+ *
+ * No callback (e.g. `onRetry`): the semantics are navigation to a known
+ * starting point, not retry. The action is a link to `backHref`.
+ */
+export type RouteNotFoundProps = {
+  title: string
+  description: string
+  backHref: string
+  backLabel: string
+  className?: string
+}
+
 // ── AccountAvatar (account visual identity) ───────────────────────────────────
 
 /**

@@ -3,6 +3,33 @@
     "generic_title": "Algo salió mal",
     "retry_action": "Reintentar"
   },
+  "notFound": {
+    "generic": {
+      "title": "No encontramos esa página",
+      "description": "Puede haber sido eliminada o nunca haber existido.",
+      "back_label": "Volver al inicio"
+    },
+    "cards": {
+      "title": "No encontramos esa tarjeta",
+      "description": "Puede haber sido eliminada o nunca haber existido.",
+      "back_label": "Volver a tarjetas"
+    },
+    "accounts": {
+      "title": "No encontramos esa cuenta",
+      "description": "Puede haber sido eliminada o nunca haber existido.",
+      "back_label": "Volver a cuentas"
+    },
+    "transactions": {
+      "title": "No encontramos ese movimiento",
+      "description": "Puede haber sido eliminado o nunca haber existido.",
+      "back_label": "Volver a movimientos"
+    },
+    "categories": {
+      "title": "No encontramos esa categoría",
+      "description": "Puede haber sido eliminada o nunca haber existido.",
+      "back_label": "Volver a categorías"
+    }
+  },
   "auth": {
     "signup": {
       "title": "Crear cuenta",

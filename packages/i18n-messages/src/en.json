@@ -3,6 +3,33 @@
     "generic_title": "Something went wrong",
     "retry_action": "Retry"
   },
+  "notFound": {
+    "generic": {
+      "title": "We couldn't find that page",
+      "description": "It may have been deleted or never existed.",
+      "back_label": "Back to home"
+    },
+    "cards": {
+      "title": "We couldn't find that card",
+      "description": "It may have been deleted or never existed.",
+      "back_label": "Back to cards"
+    },
+    "accounts": {
+      "title": "We couldn't find that account",
+      "description": "It may have been deleted or never existed.",
+      "back_label": "Back to accounts"
+    },
+    "transactions": {
+      "title": "We couldn't find that transaction",
+      "description": "It may have been deleted or never existed.",
+      "back_label": "Back to transactions"
+    },
+    "categories": {
+      "title": "We couldn't find that category",
+      "description": "It may have been deleted or never existed.",
+      "back_label": "Back to categories"
+    }
+  },
   "auth": {
     "signup": {
       "title": "Create account",
