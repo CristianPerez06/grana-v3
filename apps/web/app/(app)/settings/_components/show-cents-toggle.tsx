@@ -15,11 +15,11 @@ export const ShowCentsToggle = ({
   }
 
   return (
-    <label className="flex items-center justify-between gap-4 cursor-pointer">
-      <div>
-        <p className="text-sm font-medium">{label}</p>
+    <label className="flex min-h-[68px] cursor-pointer items-center justify-between gap-[18px] px-[18px] py-4">
+      <div className="min-w-0">
+        <p className="text-[15px] font-extrabold text-text">{label}</p>
         {description && (
-          <p className="text-xs text-muted-foreground">{description}</p>
+          <p className="mt-0.5 text-[13px] text-text-muted">{description}</p>
         )}
       </div>
       <button
@@ -29,7 +29,7 @@ export const ShowCentsToggle = ({
         onClick={handleClick}
         disabled={disabled}
         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${
-          value ? 'bg-primary' : 'bg-input'
+          value ? 'bg-emerald' : 'bg-input'
         }`}
       >
         <span

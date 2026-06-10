@@ -165,8 +165,10 @@
     },
     "language": {
       "label": "Idioma",
-      "es": "ES",
-      "en": "EN"
+      "row_label": "Idioma de la aplicación",
+      "description": "Se aplica a textos y formatos disponibles.",
+      "es": "Español",
+      "en": "English"
     },
     "categories": {
       "label": "Categorías",
@@ -1455,6 +1457,9 @@
       "paid_by": "Pagó {name}",
       "reimbursement_label": "Reintegro",
       "empty": "Todavía no hay gastos compartidos.",
+      "integrantes": "Integrantes",
+      "vos": "Vos",
+      "miembro": "Miembro",
       "waiting_title": "Falta que se sume la otra persona",
       "waiting_hint": "Compartí este código. La otra persona se une desde Compartido → \"Unirme con un código\"."
     },

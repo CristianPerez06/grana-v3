@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ChevronRight } from 'lucide-react'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { getShowCents } from '@/lib/preferences'
 import { locales, type Locale } from '@/lib/i18n/config'
@@ -16,7 +17,7 @@ const SettingsPage = async () => {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-[18px]">
       <SettingsClient
         initialShowCents={showCents}
         initialLocale={locale}
@@ -27,15 +28,20 @@ const SettingsPage = async () => {
         showCentsDescription={t('display.show_cents.description')}
         languageSectionTitle={t('language.label')}
         languageAriaLabel={t('language.label')}
+        languageRowLabel={t('language.row_label')}
+        languageRowDescription={t('language.description')}
       />
 
       <SettingsSection title={t('categories.label')}>
         <Link
           href="/settings/categories"
-          className="-m-4 block rounded-lg p-4 text-sm font-medium hover:bg-muted/40 transition-colors flex items-center justify-between"
+          className="flex min-h-[68px] items-center justify-between gap-[18px] px-[18px] py-4 transition-colors hover:bg-muted/40"
         >
-          {t('categories.manage_cta')}
-          <span className="text-muted-foreground">→</span>
+          <div className="min-w-0">
+            <p className="text-[15px] font-extrabold text-text">{t('categories.manage_cta')}</p>
+            <p className="mt-0.5 text-[13px] text-text-muted">{t('categories.description')}</p>
+          </div>
+          <ChevronRight className="size-5 shrink-0 text-text-soft" aria-hidden />
         </Link>
       </SettingsSection>
     </div>

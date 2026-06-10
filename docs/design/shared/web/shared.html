@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+  <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Grana - Compartido</title><link rel="stylesheet" href="../shared.css" /></head>
+  <body>
+    <main class="stage">
+      <div class="route shell">
+        <header class="header">
+          <div><h1 class="title">Casa</h1><p>Control compartido entre dos personas.</p></div>
+          <a class="text-link" href="#">⚙ Configuracion</a>
+        </header>
+        <div class="grid">
+          <section class="stack">
+            <article class="card balance-card card-pad">
+              <div>
+                <p class="section-title">Balance compartido</p>
+                <div class="balance-lines">
+                  <div class="balance-line"><span>Le debes a Ana</span><strong>$ 84.500</strong></div>
+                  <div class="balance-line usd"><span>Ana te debe</span><strong>US$ 30</strong></div>
+                </div>
+              </div>
+              <div><button class="button" type="button">Saldar deuda</button></div>
+            </article>
+            <section class="card activity">
+              <div class="card-pad"><p class="section-title">Recientes</p><p class="section-subtitle">Gastos y reintegros compartidos.</p></div>
+              <ul class="activity-list">
+                <li class="activity-row"><div><strong>Supermercado</strong><p>Pagaste vos · Tu parte $ 18.400</p></div><span class="amount">$ 36.800</span></li>
+                <li class="activity-row"><div><strong>Cena</strong><p>Pago Ana · Tu parte $ 12.250</p></div><span class="amount">$ 24.500</span></li>
+                <li class="activity-row"><div><strong>Farmacia</strong><p>Reintegro · Tu parte $ 2.100</p></div><span class="amount income">+$ 4.200</span></li>
+              </ul>
+            </section>
+          </section>
+          <aside class="stack">
+            <section class="card partner-card card-pad">
+              <p class="section-title">Integrantes</p>
+              <div class="member-row"><span class="avatar">CP</span><div class="member-copy"><strong>Cristian</strong><span>Vos</span></div></div>
+              <div class="member-row"><span class="avatar">A</span><div class="member-copy"><strong>Ana</strong><span>Miembro</span></div></div>
+            </section>
+            <section class="card pending card-pad">
+              <p class="section-title">Liquidacion pendiente</p>
+              <div class="pending-row">
+                <strong>Ana registro un pago de $ 25.000</strong>
+                <div class="form-line"><span class="label">Cuenta receptora</span><select class="select"><option>Billetera</option><option>Banco Galicia</option></select></div>
+                <button class="button" type="button">Confirmar recepcion</button>
+              </div>
+            </section>
+          </aside>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

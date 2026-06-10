@@ -6,11 +6,11 @@ export const SettingsSection = ({
   className,
 }: SettingsSectionProps) => {
   return (
-    <section className={`flex flex-col gap-4 ${className ?? ''}`}>
-      <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+    <section className={`flex flex-col gap-2.5 ${className ?? ''}`}>
+      <h2 className="text-xs font-extrabold uppercase tracking-[0.08em] text-text-muted">
         {title}
       </h2>
-      <div className="rounded-lg border border-border bg-card p-4">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
         {children}
       </div>
     </section>

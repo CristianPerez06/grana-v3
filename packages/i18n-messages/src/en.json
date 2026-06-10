@@ -165,8 +165,10 @@
     },
     "language": {
       "label": "Language",
-      "es": "ES",
-      "en": "EN"
+      "row_label": "App language",
+      "description": "Applies to available texts and formats.",
+      "es": "Español",
+      "en": "English"
     },
     "categories": {
       "label": "Categories",
@@ -1455,6 +1457,9 @@
       "paid_by": "{name} paid",
       "reimbursement_label": "Reimbursement",
       "empty": "No shared expenses yet.",
+      "integrantes": "Members",
+      "vos": "You",
+      "miembro": "Member",
       "waiting_title": "Waiting for the other person to join",
       "waiting_hint": "Share this code. The other person joins from Shared → \"Join with a code\"."
     },

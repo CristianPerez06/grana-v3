@@ -18,6 +18,8 @@ type Props = {
   showCentsDescription: string
   languageSectionTitle: string
   languageAriaLabel: string
+  languageRowLabel: string
+  languageRowDescription: string
 }
 
 export const SettingsClient = ({
@@ -30,6 +32,8 @@ export const SettingsClient = ({
   showCentsDescription,
   languageSectionTitle,
   languageAriaLabel,
+  languageRowLabel,
+  languageRowDescription,
 }: Props) => {
   const [showCents, setShowCentsState] = useState(initialShowCents)
   const [centsPending, startCentsTransition] = useTransition()
@@ -69,6 +73,8 @@ export const SettingsClient = ({
           disabled={localePending}
           renderLabel={(locale) => localeLabels[locale]}
           ariaLabel={languageAriaLabel}
+          label={languageRowLabel}
+          description={languageRowDescription}
         />
       </SettingsSection>
     </>

@@ -273,7 +273,9 @@ export type LanguageSwitcherProps<TLocale extends string = string> = {
    */
   disabled?: boolean
   /**
-   * Maps a locale code to its display label (e.g. 'es' -> 'ES').
+   * Maps a locale code to its per-locale segment button label (e.g.
+   * 'es' -> 'Español'). Distinct from `label` below: `renderLabel` is the
+   * label ON each control button, `label` is the row's title.
    * Lifted so the contract does not depend on a particular i18n system.
    */
   renderLabel: (locale: TLocale) => string
@@ -281,6 +283,19 @@ export type LanguageSwitcherProps<TLocale extends string = string> = {
    * Accessibility label for the group as a whole (e.g. "Idioma").
    */
   ariaLabel: string
+  /**
+   * Optional row title shown to the left of the control (e.g. "Idioma de la
+   * aplicación"). When provided, the component renders as a settings row
+   * (copy left, control right), symmetric with `ShowCentsToggle`. Optional so
+   * a control-only consumer (e.g. mobile until its settings row is built)
+   * keeps compiling and renders just the control.
+   */
+  label?: string
+  /**
+   * Optional row description shown under `label`. Only meaningful alongside
+   * `label`.
+   */
+  description?: string
   className?: string
 }
 
