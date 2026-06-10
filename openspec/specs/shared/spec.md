@@ -3,7 +3,6 @@
 ## Purpose
 
 El módulo **Compartido** permite que dos personas convivientes repartan gastos comunes. Un gasto compartido **es** una transacción real en el ledger de quien paga (impacta su `disponible`) más un reparto por porcentaje (`shared_expense_split`); la deuda entre los miembros se **deriva** de esos splits menos las liquidaciones, **por moneda** y nunca persistida. Saldar la deuda mueve plata real entre cuentas mediante movimientos de tipo `settlement` (handshake liviano: el deudor registra el pago, el receptor asigna la cuenta donde lo recibió). Es el primer caso de **lectura cruzada entre usuarios** de v3: un miembro lee las transacciones compartidas de su hogar, mientras la escritura sigue siendo del dueño. Fase 1: hogares de dos miembros, con gastos compartidos en cualquier medio (efectivo, débito, tarjeta y cuotas) y reintegros compartidos que heredan el split. Se apoya en la capability `transactions` y en la bimoneda por defecto de v3.
-
 ## Requirements
 ### Requirement: El usuario puede crear un hogar compartido
 
@@ -205,14 +204,24 @@ La corrección de errores SHALL ser libre mientras la liquidación está **pendi
 
 El sistema SHALL permitir editar el split por defecto del hogar (ej. 50·50, 60·40), que se preselecciona al marcar un gasto como compartido. Los porcentajes SHALL sumar 100 y cada uno SHALL ser ≥ 1. El split por defecto puede sobrescribirse gasto por gasto.
 
+En `apps/web`, la sección de split por defecto de `/shared/settings` SHALL mostrar a **ambos integrantes con su nombre** (de los datos que `getHousehold()` ya provee) y una etiqueta de rol: el primer integrante con su porcentaje **editable** y el segundo con el porcentaje **complementario derivado** (`100 - primero`), sin permitir editar el segundo directamente. Esto es una presentación legible de datos ya disponibles; no cambia la regla de derivación ni la validación.
+
 #### Scenario: Cambiar el split por defecto a 60·40
 
 - **WHEN** un miembro configura el split por defecto en 60·40 y guarda
 - **THEN** los nuevos gastos compartidos preseleccionan 60·40, sin alterar los splits de gastos ya registrados
 
+#### Scenario: La pantalla muestra a ambos integrantes con su rol
+
+- **WHEN** un hogar de dos miembros abre `/shared/settings`
+- **THEN** la sección de split muestra el nombre de cada integrante con su etiqueta de rol (primer integrante / complementario)
+- **AND** sólo el porcentaje del primer integrante es editable, y el del segundo se muestra como `100 - primero`
+
 ### Requirement: El usuario puede salir del hogar solo si no hay deuda viva
 
 El sistema SHALL permitir que un miembro salga del hogar, desvinculándolo, siempre que no exista deuda neta pendiente en ninguna moneda ni dirección. Los gastos compartidos históricos se conservan. Si el hogar queda sin miembros, se marca inactivo.
+
+En `apps/web`, la ruta `/shared/settings` SHALL pedir **confirmación explícita** antes de ejecutar la salida: el botón "Salir del hogar" abre un `Dialog` (primitivo de confirmación definido en `overlay-primitives`) y la mutación de salida SHALL invocarse únicamente al confirmar desde el diálogo. Cancelar, cerrar por scrim o presionar `Esc` SHALL descartar la confirmación sin efecto. El bloqueo por deuda viva SHALL seguir siendo server-side; cuando la salida se bloquea, el motivo SHALL renderizarse como error inline dentro del cuerpo del diálogo, que permanece abierto. El CTA de confirmación SHALL usar `<Button variant="destructive">`.
 
 #### Scenario: Salida bloqueada por deuda viva
 
@@ -223,6 +232,15 @@ El sistema SHALL permitir que un miembro salga del hogar, desvinculándolo, siem
 
 - **WHEN** un miembro sin deuda viva confirma salir del hogar
 - **THEN** el sistema lo desvincula, conserva los gastos compartidos históricos, y marca el hogar inactivo si queda sin miembros
+
+#### Scenario: La salida requiere confirmación explícita (web)
+
+- **WHEN** un usuario en `/shared/settings` presiona "Salir del hogar"
+- **THEN** se abre un diálogo de confirmación y la salida todavía NO se ejecuta
+- **WHEN** el usuario cancela el diálogo (botón cancelar, scrim o Esc)
+- **THEN** el diálogo se cierra y el usuario permanece en el hogar, sin efecto alguno
+- **WHEN** el usuario confirma desde el diálogo
+- **THEN** el sistema ejecuta la salida (sujeta al bloqueo por deuda viva) y, en éxito, lo lleva de vuelta a `/shared`
 
 ### Requirement: Las monedas del hogar son ARS y USD por defecto
 

@@ -9,7 +9,7 @@ const SharedSettingsLayout = async ({ children }: { children: React.ReactNode })
 
   const t = await getTranslations('shared')
   return (
-    <div className="flex flex-col gap-6 max-w-lg">
+    <div className="flex flex-col gap-6 max-w-[760px]">
       <PageHeader title={t('settings.title')} backLink={{ href: '/shared', label: t('title') }} />
       {children}
     </div>

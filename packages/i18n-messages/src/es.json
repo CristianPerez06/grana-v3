@@ -1504,7 +1504,12 @@
       "member_badge": "Miembro",
       "default_split_title": "División por defecto",
       "default_split_hint": "Se aplica a cada gasto nuevo. Podés cambiarla gasto por gasto.",
+      "default_split_first_label": "Primer integrante",
+      "default_split_complement_label": "Complementario",
       "leave_action": "Salir del hogar",
+      "leave_description": "Esta acción te saca del hogar compartido actual.",
+      "leave_confirm_title": "¿Salir del hogar?",
+      "leave_confirm_body": "Vas a salir del hogar compartido. Se conservan los gastos compartidos históricos.",
       "leave_blocked": "Saldá la deuda antes de salir del hogar."
     }
   }

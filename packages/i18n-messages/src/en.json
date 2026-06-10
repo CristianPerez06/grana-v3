@@ -1504,7 +1504,12 @@
       "member_badge": "Member",
       "default_split_title": "Default split",
       "default_split_hint": "Applied to every new expense. You can change it per expense.",
+      "default_split_first_label": "First member",
+      "default_split_complement_label": "Remainder",
       "leave_action": "Leave household",
+      "leave_description": "This removes you from the current shared household.",
+      "leave_confirm_title": "Leave household?",
+      "leave_confirm_body": "You'll leave the shared household. Past shared expenses are kept.",
       "leave_blocked": "Settle the debt before leaving the household."
     }
   }
