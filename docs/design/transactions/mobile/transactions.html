@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grana - Movimientos mobile</title>
+    <link rel="stylesheet" href="../shared.css" />
+  </head>
+  <body>
+    <main class="phone-stage">
+      <div class="phone">
+        <div class="phone-screen shell">
+          <header class="header">
+            <div class="header-copy">
+              <h1 class="title">Movimientos</h1>
+              <p><a class="header-link" href="#">Ver recurrencias ›</a></p>
+            </div>
+            <button class="button" type="button">+ Registrar movimiento</button>
+          </header>
+
+          <div class="content-grid">
+            <section class="main-stack">
+              <section class="card overview card-pad" aria-label="En que se fue">
+                <div class="overview-head">
+                  <div>
+                    <p class="section-title">En que se fue</p>
+                    <div class="month-line">
+                      <button class="icon-button" type="button" aria-label="Mes anterior">‹</button>
+                      <strong>junio 2026</strong>
+                      <button class="icon-button" type="button" aria-label="Mes siguiente">›</button>
+                    </div>
+                  </div>
+                  <div class="currency-tabs" aria-label="Moneda">
+                    <button class="active" type="button">ARS</button>
+                    <button type="button">USD</button>
+                  </div>
+                </div>
+                <div class="mode-tabs" aria-label="Modo">
+                  <button class="active" type="button">Egresos</button>
+                  <button type="button">Ingresos</button>
+                </div>
+                <div class="overview-body">
+                  <div class="donut" aria-hidden="true">
+                    <svg viewBox="0 0 36 36">
+                      <circle cx="18" cy="18" r="15.915" stroke="#edf0f4" />
+                      <circle cx="18" cy="18" r="15.915" stroke="#d95f3d" stroke-dasharray="38 62" />
+                      <circle cx="18" cy="18" r="15.915" stroke="#3a6b8a" stroke-dasharray="24 76" stroke-dashoffset="-38" />
+                      <circle cx="18" cy="18" r="15.915" stroke="#10b981" stroke-dasharray="18 82" stroke-dashoffset="-62" />
+                    </svg>
+                    <div class="donut-center"><span>Total</span><strong>$ 420.000</strong><small>6 categorias</small></div>
+                  </div>
+                  <ol class="ranking">
+                    <li><span class="rank-label"><span class="rank-dot" style="background:#d95f3d"></span><span class="rank-name">Supermercado</span></span><span class="rank-pct">38%</span><span class="rank-amount">$ 159.600</span></li>
+                    <li><span class="rank-label"><span class="rank-dot" style="background:#3a6b8a"></span><span class="rank-name">Alquiler</span></span><span class="rank-pct">24%</span><span class="rank-amount">$ 100.800</span></li>
+                    <li><span class="rank-label"><span class="rank-dot" style="background:#10b981"></span><span class="rank-name">Transporte</span></span><span class="rank-pct">18%</span><span class="rank-amount">$ 75.600</span></li>
+                  </ol>
+                </div>
+              </section>
+
+              <section class="ledger">
+                <div class="toolbar">
+                  <div class="tool-actions">
+                    <button class="icon-button" type="button" aria-label="Buscar">⌕</button>
+                    <button class="icon-button" type="button" aria-label="Ver recurrencias">↻</button>
+                    <button class="icon-button" type="button" aria-label="Filtros">☷</button>
+                  </div>
+                </div>
+                <div class="active-chips">
+                  <button class="chip" type="button">ARS ×</button>
+                  <button class="chip" type="button">Supermercado ×</button>
+                </div>
+                <div class="movement-card">
+                  <div class="day">Hoy</div>
+                  <article class="movement-row">
+                    <div class="movement-main">
+                      <span class="movement-icon" style="background:#d95f3d1a">🛒</span>
+                      <div class="movement-copy">
+                        <div class="movement-badges"><strong class="movement-title">Compra semanal de supermercado</strong><span class="badge">Recurrente</span></div>
+                        <span class="meta">Supermercado · Billetera</span>
+                      </div>
+                    </div>
+                    <div class="movement-amount"><strong>- $ 42.800,00</strong></div>
+                  </article>
+                  <article class="movement-row">
+                    <div class="movement-main">
+                      <span class="movement-icon" style="background:#10b9811a">↙</span>
+                      <div class="movement-copy">
+                        <div class="movement-badges"><strong class="movement-title">Sueldo</strong></div>
+                        <span class="meta">Ingresos · Banco Galicia</span>
+                      </div>
+                    </div>
+                    <div class="movement-amount"><strong class="income">+ $ 1.200.000,00</strong></div>
+                  </article>
+                </div>
+              </section>
+            </section>
+
+            <aside class="side-stack">
+              <section class="card pending">
+                <div class="pending-head">
+                  <span class="tile" style="background:var(--warning-soft);color:var(--warning)">◷</span>
+                  <div>
+                    <h2>Recurrencias pendientes</h2>
+                    <p>Confirma, edita o salta.</p>
+                  </div>
+                  <span class="count-pill">2</span>
+                </div>
+                <ul class="pending-list">
+                  <li class="pending-row">
+                    <span class="tile" style="background:#d95f3d1a;width:40px;height:40px">🏠</span>
+                    <div>
+                      <strong>Alquiler</strong>
+                      <span class="meta">Mensual · Banco Galicia</span>
+                      <span class="urgency">Vence hoy</span>
+                    </div>
+                    <span class="amount">- $ 280.000,00</span>
+                    <div class="inline-actions"><button class="small-button" type="button">Confirmar</button><button class="small-button secondary" type="button">Saltar</button></div>
+                  </li>
+                </ul>
+              </section>
+            </aside>
+          </div>
+        </div>
+        <button class="fab" type="button" aria-label="Registrar movimiento">+</button>
+      </div>
+    </main>
+  </body>
+</html>

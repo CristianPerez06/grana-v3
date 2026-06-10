@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Repeat, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
-import { Input } from '@/components/ui/input'
+import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { Label } from '@/components/ui/label'
 import { getTodayAR } from '@/lib/date'
 import { translateCategoryLabel, translateSubcategoryLabel } from '@/lib/categories/display'
@@ -113,6 +113,17 @@ export const MovementFilters = ({
   const [searchMode, setSearchMode] = useState((filters.query ?? '').length > 0)
   const [search, setSearch] = useState(filters.query ?? '')
   const searchInputRef = useRef<HTMLInputElement>(null)
+  // Local drafts for the money-amount fields. MoneyAmountInput is controlled,
+  // so we mirror the parsed filter as a canonical decimal string and commit
+  // back to the reducer on blur (matches the previous defaultValue+onBlur
+  // behavior, but routed through the money-safe primitive — AGENTS.md forbids
+  // <input type="number"> for money amounts).
+  const [amountMinDraft, setAmountMinDraft] = useState(
+    filters.amountMin != null ? String(filters.amountMin) : '',
+  )
+  const [amountMaxDraft, setAmountMaxDraft] = useState(
+    filters.amountMax != null ? String(filters.amountMax) : '',
+  )
 
   // Sync local draft when external state changes (e.g. a chip is cleared,
   // which mutates the filters and so should mirror to the local search box).
@@ -122,6 +133,17 @@ export const MovementFilters = ({
     setSearchMode((filters.query ?? '').length > 0)
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [filters.query])
+
+  // Same sync for the amount drafts — chip clears / clearAll mutate the
+  // filters and the local input must reflect the new state.
+  useEffect(() => {
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    setAmountMinDraft(filters.amountMin != null ? String(filters.amountMin) : '')
+  }, [filters.amountMin])
+  useEffect(() => {
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    setAmountMaxDraft(filters.amountMax != null ? String(filters.amountMax) : '')
+  }, [filters.amountMax])
 
   // Single dispatch point for filter mutations. Every patch routes through
   // the controller's callbacks (React-state filters on the host route).
@@ -546,23 +568,23 @@ export const MovementFilters = ({
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="f-amount-min">{t('filters.amount_min')}</Label>
-                  <Input
+                  <MoneyAmountInput
                     id="f-amount-min"
-                    type="number"
-                    inputMode="decimal"
-                    defaultValue={filters.amountMin ?? ''}
-                    onBlur={(e) => setParams({ amount_min: e.target.value || null })}
+                    value={amountMinDraft}
+                    onChange={setAmountMinDraft}
+                    onBlur={() => setParams({ amount_min: amountMinDraft || null })}
+                    className="flex h-11 w-full rounded-[var(--radius-md)] border border-border bg-card px-3 py-2 text-sm text-text transition-colors duration-[var(--duration-fast)] placeholder:text-text-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="f-amount-max">{t('filters.amount_max')}</Label>
-                  <Input
+                  <MoneyAmountInput
                     id="f-amount-max"
-                    type="number"
-                    inputMode="decimal"
-                    defaultValue={filters.amountMax ?? ''}
-                    onBlur={(e) => setParams({ amount_max: e.target.value || null })}
+                    value={amountMaxDraft}
+                    onChange={setAmountMaxDraft}
+                    onBlur={() => setParams({ amount_max: amountMaxDraft || null })}
+                    className="flex h-11 w-full rounded-[var(--radius-md)] border border-border bg-card px-3 py-2 text-sm text-text transition-colors duration-[var(--duration-fast)] placeholder:text-text-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   />
                 </div>
               </div>

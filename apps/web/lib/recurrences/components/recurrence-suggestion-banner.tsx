@@ -12,6 +12,7 @@ import {
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import { getCategoryName } from '@/lib/categories/display'
+import { Button } from '@/components/ui/button'
 import { invalidateAfterSuggestionMutation } from '@/lib/transactions/invalidation'
 
 type EnrichedSuggestion = {
@@ -130,23 +131,28 @@ export const RecurrenceSuggestionBanner = ({ suggestion }: Props) => {
       {error && <p className="text-xs text-destructive">{error}</p>}
 
       <div className="flex gap-2">
-        <button
+        <Button
           type="button"
+          variant="primary"
+          size="sm"
+          className="w-auto"
           onClick={handleAccept}
           disabled={isPending}
-          className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          loading={isPending}
         >
-          {isPending ? t('suggestion.processing') : t('suggestion.create_rule')}
-        </button>
-        <button
+          {t('suggestion.create_rule')}
+        </Button>
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
+          className="w-auto"
           onClick={handleDismiss}
           disabled={isPending}
-          className="flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-foreground disabled:opacity-50"
         >
           <X size={12} />
           {t('suggestion.dismiss')}
-        </button>
+        </Button>
       </div>
     </section>
   )

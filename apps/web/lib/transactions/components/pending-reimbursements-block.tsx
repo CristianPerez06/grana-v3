@@ -10,6 +10,7 @@ import { parseMoneyInput } from '@grana/validation'
 import { confirmReimbursement, cancelReimbursement } from '@/app/_actions/reimbursements'
 import { useShowCents } from '@/lib/preferences-context'
 import { translateCategoryLabel } from '@/lib/categories/display'
+import { Button } from '@/components/ui/button'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { invalidateAfterReimbursementMutation } from '../invalidation'
 import type { PendingReimbursementVM } from '../queries'
@@ -172,22 +173,27 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
                     className="rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
-                <button
+                <Button
                   type="button"
+                  variant="primary"
+                  size="sm"
+                  className="w-auto"
                   onClick={() => handleConfirm(r)}
                   disabled={busy}
-                  className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  loading={busy}
                 >
-                  {busy ? t('reimbursement.pending.confirming') : t('reimbursement.confirm')}
-                </button>
-                <button
+                  {t('reimbursement.confirm')}
+                </Button>
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="w-auto"
                   onClick={() => handleCancel(r)}
                   disabled={busy}
-                  className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-foreground disabled:opacity-50"
                 >
                   {t('reimbursement.cancel')}
-                </button>
+                </Button>
               </div>
 
               {error && <p className="text-xs text-destructive">{error}</p>}

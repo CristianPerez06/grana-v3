@@ -145,11 +145,23 @@ export const MovementRow = ({
   const FallbackIcon =
     structureIcon[movement.kind] ?? categorizedFallbackIcon[movement.kind] ?? Tag
 
-  // 3-column grid desktop: title block | amount | running balance.
-  // Mobile (< md ≈ 760px): 2 columns and running balance hidden.
+  // Layout:
+  //   • With running balance (account / card statement): always grid — 2 cols
+  //     on mobile (running balance hidden), 3 cols ≥md.
+  //   • Without running balance (/transactions, generic list): stack on narrow
+  //     widths so a long title doesn't fight the amount for the same row, per
+  //     route-ui-system.md → "Mobile … filas sin columnas auxiliares que
+  //     compitan con el monto". Becomes a 2-col grid ≥sm.
   const gridCls = runningBalance != null
     ? 'grid grid-cols-[minmax(0,1fr)_112px] md:grid-cols-[minmax(0,1fr)_126px_126px] items-center gap-4 md:gap-[18px] min-h-[62px] px-4 py-3 hover:bg-muted/40 transition-colors'
-    : 'grid grid-cols-[minmax(0,1fr)_112px] md:grid-cols-[minmax(0,1fr)_126px] items-center gap-4 md:gap-[18px] min-h-[62px] px-4 py-3 hover:bg-muted/40 transition-colors'
+    : 'flex flex-col gap-1 sm:grid sm:grid-cols-[minmax(0,1fr)_126px] sm:items-center sm:gap-[18px] min-h-[62px] px-4 py-3 hover:bg-muted/40 transition-colors'
+
+  // When stacking, indent the amount to line up with the title (avoiding the
+  // icon column). On ≥sm it goes back to the right column of the grid.
+  const amountCls =
+    runningBalance != null
+      ? 'text-right'
+      : 'pl-[46px] text-left sm:pl-0 sm:text-right'
 
   return (
     <div className={gridCls}>
@@ -221,7 +233,7 @@ export const MovementRow = ({
         </div>
       </div>
 
-      <div className="text-right">
+      <div className={amountCls}>
         <p
           className={`text-[14px] font-extrabold tabular-nums ${toneToClass(resolveTone(movement.kind, view.sign, isPendingReimbursement))}`}
         >

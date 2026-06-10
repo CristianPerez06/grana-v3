@@ -14,6 +14,7 @@ import {
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import { parseMoneyInput } from '@grana/validation'
+import { Button } from '@/components/ui/button'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
@@ -390,24 +391,29 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
               )}
 
               <div className="flex gap-2.5 pl-[62px]">
-                <button
+                <Button
                   type="button"
+                  variant="primary"
+                  size="sm"
+                  className="w-auto"
                   onClick={() => handleConfirm(instance)}
                   disabled={busy}
-                  className="inline-flex items-center gap-1.5 rounded-[11px] bg-emerald px-4 py-2.5 text-sm font-bold text-white shadow-[0_4px_12px_rgba(16,185,129,0.28)] transition-opacity hover:opacity-90 disabled:opacity-50"
+                  loading={busy}
                 >
                   <Check className="size-4" aria-hidden />
-                  {busy ? t('pending.confirming') : t('pending.confirm')}
-                </button>
-                <button
+                  {t('pending.confirm')}
+                </Button>
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="w-auto"
                   onClick={() => handleSkip(instance)}
                   disabled={busy}
-                  className="inline-flex items-center gap-1.5 rounded-[11px] border border-border bg-card px-4 py-2.5 text-sm font-semibold text-text-muted transition-colors hover:bg-page hover:text-navy disabled:opacity-50"
                 >
                   <X className="size-3.5" aria-hidden />
                   {t('pending.skip')}
-                </button>
+                </Button>
               </div>
             </li>
           )
