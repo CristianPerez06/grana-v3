@@ -1,20 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Plus } from 'lucide-react'
-import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
 import { createClient } from '@/lib/supabase/client'
 import type { Category } from '@/lib/categories/types'
+import { CreateSubcategoryButton } from './create-subcategory-button'
 
 /**
- * Chrome de /settings/categories/[id]/subcategories: título + botón "+ Agregar".
- * Mismo patrón que `AccountsHeader` / `CardsHeader`: render sincrónico desde
- * first paint con el botón `disabled` hasta que la data resuelve, en lugar de
- * tapar el header con skeleton.
+ * Chrome de /settings/categories/[id]/subcategories: título + botón "+ Agregar"
+ * que abre el drawer de nueva subcategoría. Mismo patrón que `AccountsHeader`:
+ * el botón se rendea desde first paint y queda `disabled` hasta que la categoría
+ * padre resuelve, en lugar de tapar el header con skeleton.
  */
 export const SubcategoriesHeader = () => {
   const params = useParams<{ id: string }>()
@@ -45,21 +43,7 @@ export const SubcategoriesHeader = () => {
   return (
     <PageHeader
       title={tCat('subcategories.title')}
-      actions={
-        category != null ? (
-          <Button asChild className="w-auto">
-            <Link href={`/settings/categories/${params.id}/subcategories/new`}>
-              <Plus className="size-4" aria-hidden />
-              {tCat('actions.add')}
-            </Link>
-          </Button>
-        ) : (
-          <Button className="w-auto" disabled>
-            <Plus className="size-4" aria-hidden />
-            {tCat('actions.add')}
-          </Button>
-        )
-      }
+      actions={<CreateSubcategoryButton categoryId={params.id} disabled={category == null} />}
     />
   )
 }

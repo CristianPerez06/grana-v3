@@ -6,6 +6,8 @@ Esta propuesta aplica `docs/design/route-ui-system.md` a la ruta `/settings/cate
 
 La ruta tiene paridad web/mobile con implementaciones nativas separadas.
 
+Para corregir el patron de formularios en rutas dedicadas, ver tambien `docs/design/settings-category-drawers/`. Ese bundle propone que crear subcategoria se abra en drawer desde esta lista.
+
 ## Implementacion inspeccionada
 
 - `apps/web/app/(app)/settings/categories/[id]/subcategories/layout.tsx`

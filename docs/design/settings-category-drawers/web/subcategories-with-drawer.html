@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+  <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Grana - Subcategorias drawer</title><link rel="stylesheet" href="../shared.css" /></head>
+  <body>
+    <main class="stage">
+      <div class="route shell" style="width:min(100%,680px)">
+        <a class="back-link" href="#">← Categorias</a>
+        <header class="header"><div class="header-copy"><h1 class="title">Subcategorias</h1><p class="description">Opciones internas de Supermercado.</p></div><button class="button" type="button">+ Agregar</button></header>
+        <section class="panel">
+          <article class="subcategory-row"><div class="subcategory-copy"><strong class="subcategory-name">Carniceria</strong><span class="meta">Sistema</span></div></article>
+          <article class="subcategory-row"><div class="subcategory-copy"><strong class="subcategory-name">Verduleria del barrio</strong><span class="meta">Propia</span></div><div class="actions"><button class="text-action" type="button">Archivar</button><button class="text-action danger" type="button">Eliminar</button></div></article>
+        </section>
+      </div>
+      <div class="scrim">
+        <aside class="drawer" aria-label="Nueva subcategoria">
+          <div class="drawer-head"><div><p class="drawer-eyebrow">Supermercado</p><h2 class="drawer-title">Nueva subcategoria</h2></div><button class="close-button" type="button">×</button></div>
+          <div class="drawer-body">
+            <label class="field"><span class="label">Nombre</span><input class="input" placeholder="Ej. Verduleria" /></label>
+            <input type="hidden" value="category_id" />
+          </div>
+          <div class="drawer-foot"><button class="button secondary" type="button">Cancelar</button><button class="button" type="button">Crear subcategoria</button></div>
+        </aside>
+      </div>
+    </main>
+  </body>
+</html>

@@ -8,9 +8,13 @@ import { FormError } from '../ui/FormError'
 import { updateCategory, type Category } from '../../lib/categories'
 import { useT } from '../../lib/locale-context'
 
-type Props = { category: Category }
+type Props = {
+  category: Category
+  /** When provided, a successful update calls this instead of navigating (sheet host closes + refetches). */
+  onSuccess?: () => void
+}
 
-export function EditCategoryForm({ category }: Props) {
+export function EditCategoryForm({ category, onSuccess }: Props) {
   const t = useT()
   const router = useRouter()
   const isSystem = category.user_id === null
@@ -41,7 +45,8 @@ export function EditCategoryForm({ category }: Props) {
     })
     setSubmitting(false)
     if (result.ok) {
-      router.back()
+      if (onSuccess) onSuccess()
+      else router.back()
       return
     }
     if (result.fieldErrors) {

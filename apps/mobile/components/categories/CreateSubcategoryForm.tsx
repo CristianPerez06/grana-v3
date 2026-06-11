@@ -7,9 +7,13 @@ import { FormError } from '../ui/FormError'
 import { createSubcategory } from '../../lib/categories'
 import { useT } from '../../lib/locale-context'
 
-type Props = { categoryId: string }
+type Props = {
+  categoryId: string
+  /** When provided, a successful create calls this instead of navigating (sheet host closes + refetches). */
+  onSuccess?: () => void
+}
 
-export function CreateSubcategoryForm({ categoryId }: Props) {
+export function CreateSubcategoryForm({ categoryId, onSuccess }: Props) {
   const t = useT()
   const router = useRouter()
   const [name, setName] = useState('')
@@ -24,7 +28,8 @@ export function CreateSubcategoryForm({ categoryId }: Props) {
     const result = await createSubcategory({ category_id: categoryId, name })
     setSubmitting(false)
     if (result.ok) {
-      router.back()
+      if (onSuccess) onSuccess()
+      else router.back()
       return
     }
     if (result.fieldErrors) {

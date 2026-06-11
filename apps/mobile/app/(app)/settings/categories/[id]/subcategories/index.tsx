@@ -1,12 +1,16 @@
 import { useCallback, useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { useFocusEffect, useLocalSearchParams } from 'expo-router'
+import { X } from 'lucide-react-native'
 import { PageHeader } from '../../../../../../components/ui/PageHeader'
 import { Spinner } from '../../../../../../components/ui/Spinner'
+import { Drawer } from '../../../../../../components/ui/Drawer'
 import {
   SubcategoryList,
   type SubcategoryWithName,
 } from '../../../../../../components/categories/SubcategoryList'
+import { CreateSubcategoryForm } from '../../../../../../components/categories/CreateSubcategoryForm'
 import {
   getCategoryById,
   getSubcategoriesByCategoryId,
@@ -14,14 +18,16 @@ import {
   getSubcategoryName,
   type Category,
 } from '../../../../../../lib/categories'
+import { colors } from '../../../../../../lib/colors'
 import { useT } from '../../../../../../lib/locale-context'
 
 export default function SubcategoriesScreen() {
   const t = useT()
-  const router = useRouter()
   const { id } = useLocalSearchParams<{ id: string }>()
   const [category, setCategory] = useState<Category | null | undefined>(undefined)
   const [subcategories, setSubcategories] = useState<SubcategoryWithName[] | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createKey, setCreateKey] = useState(0)
 
   const load = async () => {
     if (!id) return
@@ -39,15 +45,19 @@ export default function SubcategoriesScreen() {
     setSubcategories(named)
   }
 
-  // Re-fetch on focus so creating / archiving / deleting from a child route
-  // reflects when we return. Stack keeps this screen mounted; useEffect would
-  // only fire on first mount.
+  // Re-fetch on focus so archiving / deleting from a child route reflects when we
+  // return. Stack keeps this screen mounted; useEffect would only fire on first mount.
   useFocusEffect(
     useCallback(() => {
       void load()
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]),
   )
+
+  const openCreate = () => {
+    setCreateKey((n) => n + 1)
+    setCreateOpen(true)
+  }
 
   const screenTitle = category
     ? `${getCategoryName(category, t)} · ${t('settings.categories.subcategories.title')}`
@@ -64,12 +74,7 @@ export default function SubcategoriesScreen() {
         actions={
           id ? (
             <Pressable
-              onPress={() =>
-                router.push({
-                  pathname: '/(app)/settings/categories/[id]/subcategories/new',
-                  params: { id },
-                })
-              }
+              onPress={openCreate}
               className="rounded-xl bg-emerald px-4 py-2"
               accessibilityRole="button"
             >
@@ -93,6 +98,40 @@ export default function SubcategoriesScreen() {
           <SubcategoryList subcategories={subcategories} onChanged={load} />
         )}
       </ScrollView>
+
+      {id ? (
+        <Drawer
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          ariaLabel={t('settings.categories.subcategories.new.title')}
+        >
+          <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-page">
+            <View className="flex-row items-center justify-between border-b border-border px-6 py-4">
+              <Text className="text-[22px] font-extrabold text-text">
+                {t('settings.categories.subcategories.new.title')}
+              </Text>
+              <Pressable
+                onPress={() => setCreateOpen(false)}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
+                className="h-9 w-9 items-center justify-center rounded-[11px] border border-border"
+              >
+                <X size={18} color={colors.text} />
+              </Pressable>
+            </View>
+            <ScrollView contentContainerClassName="px-6 py-6" keyboardShouldPersistTaps="handled">
+              <CreateSubcategoryForm
+                key={createKey}
+                categoryId={id}
+                onSuccess={() => {
+                  setCreateOpen(false)
+                  void load()
+                }}
+              />
+            </ScrollView>
+          </SafeAreaView>
+        </Drawer>
+      ) : null}
     </View>
   )
 }

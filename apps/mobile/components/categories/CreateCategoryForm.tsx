@@ -9,7 +9,12 @@ import { useT } from '../../lib/locale-context'
 
 const TYPE_OPTIONS: CategoryType[] = ['expense', 'income', 'both']
 
-export function CreateCategoryForm() {
+type Props = {
+  /** When provided, a successful create calls this instead of navigating (sheet host closes + refetches). */
+  onSuccess?: () => void
+}
+
+export function CreateCategoryForm({ onSuccess }: Props = {}) {
   const t = useT()
   const router = useRouter()
 
@@ -33,7 +38,8 @@ export function CreateCategoryForm() {
     })
     setSubmitting(false)
     if (result.ok) {
-      router.back()
+      if (onSuccess) onSuccess()
+      else router.back()
       return
     }
     if (result.fieldErrors) {

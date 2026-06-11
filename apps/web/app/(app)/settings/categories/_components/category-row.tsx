@@ -8,6 +8,8 @@ import { useTranslations } from 'next-intl'
 import type { CategoryWithSubcategories, CategoryType } from '@/lib/categories/types'
 import { archiveCategory, deleteCategory } from '@/app/_actions/categories'
 import { Button } from '@/components/ui/button'
+import { Drawer } from '@/components/ui/drawer'
+import { EditCategoryForm } from '../[id]/edit/_components/edit-category-form'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,9 +41,15 @@ export const CategoryRow = ({ category, displayName, subcategoryCount, isSystem 
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [editOpen, setEditOpen] = useState(false)
+  const [editInstance, setEditInstance] = useState(0)
 
   const subcategoriesHref = `/settings/categories/${category.id}/subcategories`
-  const editHref = `/settings/categories/${category.id}/edit`
+
+  const openEdit = () => {
+    setEditInstance((n) => n + 1)
+    setEditOpen(true)
+  }
 
   const handleArchive = () => {
     startTransition(async () => {
@@ -106,9 +114,9 @@ export const CategoryRow = ({ category, displayName, subcategoryCount, isSystem 
         </Link>
         {!isSystem && (
           <>
-            <Link href={editHref} className={textActionClass}>
+            <button type="button" onClick={openEdit} className={textActionClass}>
               {t('actions.edit')}
-            </Link>
+            </button>
             <button type="button" onClick={handleArchive} disabled={isPending} className={textActionClass}>
               {t('actions.archive')}
             </button>
@@ -143,7 +151,7 @@ export const CategoryRow = ({ category, displayName, subcategoryCount, isSystem 
             </DropdownMenuItem>
             {!isSystem && (
               <>
-                <DropdownMenuItem onSelect={() => router.push(editHref)}>
+                <DropdownMenuItem onSelect={openEdit}>
                   {t('actions.edit')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={handleArchive} disabled={isPending}>
@@ -158,6 +166,23 @@ export const CategoryRow = ({ category, displayName, subcategoryCount, isSystem 
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {!isSystem && (
+        <Drawer
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          widthPx={540}
+          ariaLabel={t('edit.title')}
+        >
+          <EditCategoryForm
+            key={editInstance}
+            category={category}
+            variant="drawer"
+            onClose={() => setEditOpen(false)}
+            onSuccess={() => setEditOpen(false)}
+          />
+        </Drawer>
+      )}
     </div>
   )
 }

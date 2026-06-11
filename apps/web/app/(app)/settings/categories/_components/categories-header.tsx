@@ -1,11 +1,9 @@
 'use client'
 
-import { Plus } from 'lucide-react'
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
+import { CreateCategoryButton } from './create-category-button'
 
 /**
  * Chrome del root de /settings/categories. El layout monta este componente en
@@ -23,14 +21,7 @@ export const CategoriesHeader = () => {
     <PageHeader
       title={tCat('label')}
       description={tCat('description')}
-      actions={
-        <Button asChild className="w-auto">
-          <Link href="/settings/categories/new">
-            <Plus className="size-4" aria-hidden />
-            {tCat('actions.add')}
-          </Link>
-        </Button>
-      }
+      actions={<CreateCategoryButton />}
     />
   )
 }

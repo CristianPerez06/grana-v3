@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+  <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Grana - Categorias drawer</title><link rel="stylesheet" href="../shared.css" /></head>
+  <body>
+    <main class="stage">
+      <div class="route shell">
+        <header class="header">
+          <div class="header-copy"><h1 class="title">Categorias</h1><p class="description">Administra categorias y subcategorias para clasificar movimientos.</p></div>
+          <button class="button" type="button">+ Agregar</button>
+        </header>
+        <div class="sections">
+          <section class="section">
+            <div class="section-head"><h2 class="section-title">Sistema</h2><span class="section-count">18</span></div>
+            <div class="panel">
+              <article class="category-row"><div class="category-main"><span class="category-icon" style="background:#d95f3d1a">🛒</span><div class="category-copy"><div class="category-top"><strong class="category-name">Supermercado</strong><span class="pill expense">Egreso</span></div><span class="meta">4 subcategorias</span></div></div><div class="actions"><button class="text-action primary" type="button">Subcategorias</button></div></article>
+              <article class="category-row"><div class="category-main"><span class="category-icon" style="background:#10b9811a">↙</span><div class="category-copy"><div class="category-top"><strong class="category-name">Ingresos laborales</strong><span class="pill income">Ingreso</span></div><span class="meta">2 subcategorias</span></div></div><div class="actions"><button class="text-action primary" type="button">Subcategorias</button></div></article>
+            </div>
+          </section>
+          <section class="section">
+            <div class="section-head"><h2 class="section-title">Propias</h2><span class="section-count">2</span></div>
+            <div class="panel">
+              <article class="category-row"><div class="category-main"><span class="category-icon" style="background:#3a6b8a1a">🎓</span><div class="category-copy"><div class="category-top"><strong class="category-name">Cursos y formacion profesional</strong><span class="pill expense">Egreso</span></div><span class="meta">3 subcategorias</span></div></div><div class="actions"><button class="text-action primary" type="button">Subcategorias</button><button class="text-action" type="button">Editar</button><button class="text-action" type="button">Archivar</button><button class="text-action danger" type="button">Eliminar</button></div></article>
+            </div>
+          </section>
+        </div>
+      </div>
+      <div class="scrim">
+        <aside class="drawer" aria-label="Nueva categoria">
+          <div class="drawer-head"><div><p class="drawer-eyebrow">Categorias</p><h2 class="drawer-title">Nueva categoria</h2></div><button class="close-button" type="button">×</button></div>
+          <div class="drawer-body">
+            <div class="preview"><span class="category-icon" style="background:#3B82F61A">🎓</span><div class="category-copy"><strong class="category-name">Cursos</strong><span class="meta">Egreso</span></div></div>
+            <label class="field"><span class="label">Nombre</span><input class="input" placeholder="Ej. Cursos" /></label>
+            <div class="field"><span class="label">Tipo</span><div class="type-grid"><button class="type-option active" type="button">Egreso</button><button class="type-option" type="button">Ingreso</button><button class="type-option" type="button">Ambos</button></div></div>
+            <div class="field"><span class="label">Icono</span><div class="emoji-grid"><button class="emoji" type="button">🍔</button><button class="emoji" type="button">🛒</button><button class="emoji" type="button">🎓</button><button class="emoji" type="button">🏠</button><button class="emoji" type="button">💊</button><button class="emoji" type="button">💰</button></div></div>
+            <div class="field"><span class="label">Color</span><div class="swatches"><span class="swatch" style="background:#EF4444"></span><span class="swatch" style="background:#F97316"></span><span class="swatch" style="background:#10B981"></span><span class="swatch" style="background:#3B82F6"></span><span class="swatch" style="background:#8B5CF6"></span></div></div>
+          </div>
+          <div class="drawer-foot"><button class="button secondary" type="button">Cancelar</button><button class="button" type="button">Crear categoria</button></div>
+        </aside>
+      </div>
+    </main>
+  </body>
+</html>

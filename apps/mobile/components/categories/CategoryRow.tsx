@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import { Alert, Pressable, Text, View } from 'react-native'
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import { MoreHorizontal } from 'lucide-react-native'
+import { MoreHorizontal, X } from 'lucide-react-native'
 import { archiveCategory, deleteCategory, type CategoryWithSubcategories } from '../../lib/categories'
 import { useT } from '../../lib/locale-context'
 import { colors } from '../../lib/colors'
+import { Drawer } from '../ui/Drawer'
 import { Popover } from '../ui/Popover'
+import { EditCategoryForm } from './EditCategoryForm'
 
 type Props = {
   category: CategoryWithSubcategories
@@ -39,8 +42,15 @@ export function CategoryRow({
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editKey, setEditKey] = useState(0)
 
   const typeLabel = t(`settings.categories.types.${category.type}`)
+
+  const openEdit = () => {
+    setEditKey((n) => n + 1)
+    setEditOpen(true)
+  }
 
   const handleArchive = async () => {
     setPending(true)
@@ -146,14 +156,7 @@ export function CategoryRow({
           <>
             <MenuItem
               label={t('settings.categories.actions.edit')}
-              onPress={() =>
-                runFromMenu(() =>
-                  router.push({
-                    pathname: '/(app)/settings/categories/[id]/edit',
-                    params: { id: category.id },
-                  }),
-                )
-              }
+              onPress={() => runFromMenu(openEdit)}
             />
             <MenuItem
               label={t('settings.categories.actions.archive')}
@@ -167,6 +170,43 @@ export function CategoryRow({
           </>
         )}
       </Popover>
+
+      {!isSystem && (
+        <Drawer
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          ariaLabel={t('settings.categories.edit.title')}
+        >
+          <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-page">
+            <View className="flex-row items-center justify-between border-b border-border px-6 py-4">
+              <Text className="text-[22px] font-extrabold text-text">
+                {t('settings.categories.edit.title')}
+              </Text>
+              <Pressable
+                onPress={() => setEditOpen(false)}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
+                className="h-9 w-9 items-center justify-center rounded-[11px] border border-border"
+              >
+                <X size={18} color={colors.text} />
+              </Pressable>
+            </View>
+            <ScrollView
+              contentContainerClassName="px-6 py-6"
+              keyboardShouldPersistTaps="handled"
+            >
+              <EditCategoryForm
+                key={editKey}
+                category={category}
+                onSuccess={() => {
+                  setEditOpen(false)
+                  onChanged?.()
+                }}
+              />
+            </ScrollView>
+          </SafeAreaView>
+        </Drawer>
+      )}
     </View>
   )
 }
