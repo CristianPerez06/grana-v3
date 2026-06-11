@@ -25,6 +25,25 @@ No intenta fijar cada pixel. Los valores numericos son guias para mantener consi
 - Reglas repo-wide: `AGENTS.md`.
 - Handoffs visuales: `docs/design/<feature>/`.
 
+## Workflow de diseño
+
+Los diseños de ruta se autoran como **archivos HTML versionados en este repo**, bajo `docs/design/<feature>/`. No se usan herramientas de diseño externas: el repo es la única fuente de handoff visual, para que una sesión fresca pueda abrir los mocks sin contexto de chat. Estructura por feature:
+
+```
+docs/design/<feature>/
+├── README.md          # contexto, observaciones, propuesta, recomendación, lista de archivos de trabajo
+├── shared.css         # tokens/estilos compartidos de los mocks
+├── web/<feature>.html # desktop + responsive mobile en el mismo archivo
+├── mobile/<feature>.html  # mock de app nativa (header navy + tab bar)
+└── components/*.html  # desglose por componente (route-shell, header, filas, estados…)
+```
+
+Reglas:
+
+1. **Las tres vistas, antes de specear:** web desktop, web-mobile (responsive en navegador, topbar + drawer) y app nativa. Se diseñan las tres y recién después se genera el spec OpenSpec.
+2. **Los mocks son no-autoritativos.** El HTML usa datos de ejemplo y puede usar valores literales para representar el visual; no es la implementación. La implementación final usa tokens (`@grana/ui-tokens`) y componentes por plataforma. Nunca copiar un hex literal del mock al código: traducir a clases de token.
+3. El `README.md` de cada feature ancla la paleta a tokens y se referencia desde el `design.md` del change correspondiente.
+
 ## Antes de diseñar una ruta
 
 1. Leer la implementacion actual de la ruta.
