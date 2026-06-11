@@ -35,7 +35,11 @@ export const sharedSplitSchema = yup
   .required()
   .min(2)
   .test('splits-sum-100', 'los porcentajes deben sumar 100', (arr) => {
-    if (!arr) return false
+    // Presence is enforced by `.required()` / `.optional()`; this test only
+    // validates the sum when a split is actually provided. Returning false on an
+    // absent value would make an optional `default_split` (e.g. a name-only
+    // `updateHouseholdConfig`) fail spuriously, since yup runs tests on undefined.
+    if (!arr) return true
     const sum = arr.reduce((acc, s) => acc + (s.percentage ?? 0), 0)
     return sum === 100
   })

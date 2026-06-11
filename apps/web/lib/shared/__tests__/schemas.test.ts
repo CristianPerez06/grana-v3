@@ -4,6 +4,7 @@ import {
   joinHouseholdSchema,
   sharedSplitSchema,
   settlementSchema,
+  updateHouseholdConfigSchema,
 } from '@grana/validation'
 
 const UUID_A = '11111111-1111-4111-8111-111111111111'
@@ -56,6 +57,39 @@ describe('sharedSplitSchema', () => {
         { user_id: UUID_A, percentage: 0 },
         { user_id: UUID_B, percentage: 100 },
       ]),
+    ).toBe(false)
+  })
+})
+
+describe('updateHouseholdConfigSchema', () => {
+  it('accepts a name-only update without a default split', async () => {
+    // Regression: an optional `default_split` must not trip the splits-sum-100
+    // test when it is absent (it runs on undefined), or a name-only update fails.
+    await expect(updateHouseholdConfigSchema.validate({ name: 'Casa' })).resolves.toEqual({
+      name: 'Casa',
+    })
+  })
+
+  it('accepts a default-split-only update that sums to 100', () => {
+    expect(
+      updateHouseholdConfigSchema.isValidSync({
+        default_split: [
+          { user_id: UUID_A, percentage: 60 },
+          { user_id: UUID_B, percentage: 40 },
+        ],
+      }),
+    ).toBe(true)
+  })
+
+  it('rejects an empty name and a default split that does not sum to 100', () => {
+    expect(updateHouseholdConfigSchema.isValidSync({ name: '' })).toBe(false)
+    expect(
+      updateHouseholdConfigSchema.isValidSync({
+        default_split: [
+          { user_id: UUID_A, percentage: 60 },
+          { user_id: UUID_B, percentage: 30 },
+        ],
+      }),
     ).toBe(false)
   })
 })

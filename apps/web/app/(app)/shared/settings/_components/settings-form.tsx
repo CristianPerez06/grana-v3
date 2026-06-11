@@ -3,14 +3,13 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { updateHouseholdConfig } from '@/app/_actions/shared'
 import type { Household } from '@/lib/shared/types'
 import { InviteCard } from '../../_components/invite-card'
+import { DefaultSplitEditDrawer } from './default-split-edit-drawer'
 import { LeaveHouseholdDialog } from './leave-household-dialog'
+import { NameEditDrawer } from './name-edit-drawer'
 
 // Up-to-two-letter initials from a member's full name (visual only — derived
 // from the existing `fullName`, no new data).
@@ -30,77 +29,71 @@ export function SettingsForm({ household }: { household: Household }) {
   const t = useTranslations('shared')
   const router = useRouter()
 
-  const [name, setName] = useState(household.name)
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
+  // Drawer open + remount keys (bump on open so each drawer re-seeds its draft
+  // from the current household values).
+  const [nameOpen, setNameOpen] = useState(false)
+  const [nameKey, setNameKey] = useState(0)
+  const [splitOpen, setSplitOpen] = useState(false)
+  const [splitKey, setSplitKey] = useState(0)
   const [leaveOpen, setLeaveOpen] = useState(false)
+
+  const openName = () => {
+    setNameKey((k) => k + 1)
+    setNameOpen(true)
+  }
+  const openSplit = () => {
+    setSplitKey((k) => k + 1)
+    setSplitOpen(true)
+  }
 
   const twoMembers = household.members.length === 2
 
   // Default split (only meaningful with two members). Seed from stored split.
-  const [firstPct, setFirstPct] = useState<number>(() => {
-    const stored = household.defaultSplit.find((s) => s.user_id === household.members[0]?.userId)
-    return stored?.percentage ?? 50
-  })
-
-  const run = async (fn: () => Promise<{ ok: boolean; formError?: string }>) => {
-    setBusy(true)
-    setError(null)
-    try {
-      const r = await fn()
-      if (!r.ok) setError(r.formError ?? 'Error')
-      else router.refresh()
-      return r.ok
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const saveName = () => run(() => updateHouseholdConfig({ name: name.trim() }))
-
-  const saveSplit = () =>
-    run(() =>
-      updateHouseholdConfig({
-        default_split: [
-          { user_id: household.members[0].userId, percentage: firstPct },
-          { user_id: household.members[1].userId, percentage: 100 - firstPct },
-        ],
-      }),
-    )
+  const firstPct =
+    household.defaultSplit.find((s) => s.user_id === household.members[0]?.userId)?.percentage ?? 50
 
   const nameOf = (userId: string) =>
     household.members.find((m) => m.userId === userId)?.fullName ?? ''
 
+  // Drawers own their submit/error state; the parent just runs the existing
+  // mutation and refreshes on success, returning the result so the drawer can
+  // render any error inline and close itself only when it succeeds.
+  const saveName = async (name: string) => {
+    const r = await updateHouseholdConfig({ name })
+    if (r.ok) router.refresh()
+    return r
+  }
+
+  const saveSplit = async (first: number) => {
+    const r = await updateHouseholdConfig({
+      default_split: [
+        { user_id: household.members[0].userId, percentage: first },
+        { user_id: household.members[1].userId, percentage: 100 - first },
+      ],
+    })
+    if (r.ok) router.refresh()
+    return r
+  }
+
   return (
     <div className="flex flex-col gap-5">
-      {error && <Alert variant="error">{error}</Alert>}
-
       {/* Name */}
       <section className="flex flex-col gap-2.5">
         <SectionTitle>{t('settings.name_label')}</SectionTitle>
         <div className="rounded-2xl border border-border bg-card p-4">
-          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end sm:gap-3">
-            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-              <Label htmlFor="household-name" className="text-xs text-text-muted">
-                {t('setup.name_label')}
-              </Label>
-              <Input
-                id="household-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={50}
-              />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-xs text-text-muted">{t('setup.name_label')}</span>
+              <span className="truncate text-sm font-semibold text-text">{household.name}</span>
             </div>
             <Button
               type="button"
               variant="secondary"
               size="sm"
-              onClick={saveName}
-              loading={busy}
-              disabled={!name.trim()}
-              className="w-full shrink-0 px-5 sm:w-auto"
+              onClick={openName}
+              className="w-auto shrink-0 px-4"
             >
-              OK
+              {t('settings.edit_action')}
             </Button>
           </div>
         </div>
@@ -126,9 +119,7 @@ export function SettingsForm({ household }: { household: Household }) {
               </div>
               <span
                 className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                  m.isCreator
-                    ? 'bg-emerald-soft text-emerald-deep'
-                    : 'bg-border-soft text-text-muted'
+                  m.isCreator ? 'bg-navy/10 text-navy' : 'bg-border-soft text-text-muted'
                 }`}
               >
                 {m.isCreator ? t('settings.creator_badge') : t('settings.member_badge')}
@@ -144,39 +135,21 @@ export function SettingsForm({ household }: { household: Household }) {
           <SectionTitle>{t('settings.default_split_title')}</SectionTitle>
           <p className="-mt-1 text-xs text-text-muted">{t('settings.default_split_hint')}</p>
           <div className="rounded-2xl border border-border bg-card p-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div className="flex flex-wrap items-end gap-4">
-                <div className="flex min-w-0 flex-col gap-1.5">
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className="truncate text-sm font-semibold text-text">
-                      {nameOf(household.members[0].userId)}
-                    </span>
-                    <span className="truncate text-xs font-medium text-text-muted">
-                      {t('settings.default_split_first_label')}
-                    </span>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                <div className="flex min-w-0 items-baseline gap-2">
+                  <span className="truncate text-sm font-semibold text-text">
+                    {nameOf(household.members[0].userId)}
                   </span>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={99}
-                    value={firstPct}
-                    onChange={(e) =>
-                      setFirstPct(Math.max(1, Math.min(99, Number(e.target.value) || 1)))
-                    }
-                    className="w-20 text-center tabular-nums"
-                    aria-label={nameOf(household.members[0].userId)}
-                  />
+                  <span className="text-sm font-semibold tabular-nums text-text-muted">
+                    {firstPct}%
+                  </span>
                 </div>
-                <div className="flex min-w-0 flex-col gap-1.5">
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className="truncate text-sm font-semibold text-text">
-                      {nameOf(household.members[1].userId)}
-                    </span>
-                    <span className="truncate text-xs font-medium text-text-muted">
-                      {t('settings.default_split_complement_label')}
-                    </span>
+                <div className="flex min-w-0 items-baseline gap-2">
+                  <span className="truncate text-sm font-semibold text-text">
+                    {nameOf(household.members[1].userId)}
                   </span>
-                  <span className="inline-flex h-11 items-center text-sm font-semibold tabular-nums text-text-muted">
+                  <span className="text-sm font-semibold tabular-nums text-text-muted">
                     {100 - firstPct}%
                   </span>
                 </div>
@@ -185,11 +158,10 @@ export function SettingsForm({ household }: { household: Household }) {
                 type="button"
                 variant="secondary"
                 size="sm"
-                onClick={saveSplit}
-                loading={busy}
-                className="w-full shrink-0 px-5 sm:w-auto"
+                onClick={openSplit}
+                className="w-auto shrink-0 px-4"
               >
-                OK
+                {t('settings.edit_action')}
               </Button>
             </div>
           </div>
@@ -219,6 +191,24 @@ export function SettingsForm({ household }: { household: Household }) {
         </Button>
       </section>
 
+      <NameEditDrawer
+        key={`name-${nameKey}`}
+        open={nameOpen}
+        onClose={() => setNameOpen(false)}
+        initialName={household.name}
+        onSave={saveName}
+      />
+      {twoMembers && (
+        <DefaultSplitEditDrawer
+          key={`split-${splitKey}`}
+          open={splitOpen}
+          onClose={() => setSplitOpen(false)}
+          firstName={nameOf(household.members[0].userId)}
+          secondName={nameOf(household.members[1].userId)}
+          initialFirstPct={firstPct}
+          onSave={saveSplit}
+        />
+      )}
       <LeaveHouseholdDialog open={leaveOpen} onClose={() => setLeaveOpen(false)} />
     </div>
   )
