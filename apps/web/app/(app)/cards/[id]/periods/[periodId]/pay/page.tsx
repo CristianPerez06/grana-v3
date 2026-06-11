@@ -33,17 +33,17 @@ const PayPeriodPage = async ({ params }: Props) => {
   }
 
   const today = getTodayAR()
-  const { suggestedEndDate, suggestedDueDate } = suggestNextPeriodDates(
-    cardDetail.periods,
-    today,
-  )
 
-  // The next period must start after the furthest known close — surfaced in the
-  // form so the user doesn't type dates that overlap the running statement.
-  const lastKnownEndDate = cardDetail.periods.reduce(
-    (max, p) => (p.end_date > max ? p.end_date : max),
-    period.end_date,
-  )
+  // The statement being paid announces the dates of the cycle now running —
+  // P(n+1), the first period after the one being paid. The form pre-fills its
+  // persisted (usually estimated) dates so the user confirms them against the
+  // statement in hand. Legacy cards without that row fall back to a projection.
+  const runningPeriod =
+    cardDetail.periods.find((p) => p.start_date > period.start_date) ?? null
+  const projection = suggestNextPeriodDates(cardDetail.periods, today)
+  const runningEndDate = runningPeriod?.end_date ?? projection.suggestedEndDate
+  const runningDueDate = runningPeriod?.due_date ?? projection.suggestedDueDate
+  const runningIsEstimated = runningPeriod?.is_estimated ?? true
 
   // Payment accounts: cash + bank with ARS active
   const paymentAccounts = [
@@ -64,9 +64,10 @@ const PayPeriodPage = async ({ params }: Props) => {
         cardId={id}
         pendingAmountARS={period.pendingAmountARS}
         pendingAmountUSD={period.pendingAmountUSD}
-        suggestedNextEndDate={suggestedEndDate}
-        suggestedNextDueDate={suggestedDueDate}
-        lastKnownEndDate={lastKnownEndDate}
+        runningEndDate={runningEndDate}
+        runningDueDate={runningDueDate}
+        runningIsEstimated={runningIsEstimated}
+        paidPeriodEndDate={period.end_date}
         paymentAccounts={paymentAccounts}
       />
     </>

@@ -9,8 +9,12 @@ type Props = {
   /** Whether at least one paid statement exists (shows the "Pagado" step). */
   hasPaid: boolean
   cursoCloseDate: string | null
+  /** Estimated periods render their close as "cierra ~DD/MM" — the real dates
+   * arrive with the statement and are confirmed at payment. */
+  cursoIsEstimated?: boolean
   apagarDueDate: string | null
   proxCloseDate: string | null
+  proxIsEstimated?: boolean
   active: PeriodKey
   accent: string
   onSelect: (period: PeriodKey) => void
@@ -22,6 +26,9 @@ type Step = {
   date: string
   color: string
   selectable: boolean
+  /** Dates are a projection not yet confirmed against a statement: the step
+   * shows an explicit "(estimado)" tag — the ~ alone is too subtle. */
+  estimated?: boolean
 }
 
 /**
@@ -35,8 +42,10 @@ export const LifecycleTimeline = ({
   hasApagar,
   hasPaid,
   cursoCloseDate,
+  cursoIsEstimated = false,
   apagarDueDate,
   proxCloseDate,
+  proxIsEstimated = false,
   active,
   accent,
   onSelect,
@@ -65,17 +74,23 @@ export const LifecycleTimeline = ({
   steps.push({
     key: 'curso',
     label: t('detail.timeline_curso'),
-    date: t('detail.timeline_close', { date: formatDayMonth(cursoCloseDate) }),
+    date: t(cursoIsEstimated ? 'detail.timeline_close_estimated' : 'detail.timeline_close', {
+      date: formatDayMonth(cursoCloseDate),
+    }),
     color: accent,
     selectable: true,
+    estimated: cursoIsEstimated,
   })
   if (proxCloseDate) {
     steps.push({
       key: 'prox',
       label: t('detail.timeline_prox'),
-      date: t('detail.timeline_close', { date: formatDayMonth(proxCloseDate) }),
+      date: t(proxIsEstimated ? 'detail.timeline_close_estimated' : 'detail.timeline_close', {
+        date: formatDayMonth(proxCloseDate),
+      }),
       color: 'var(--text-muted)',
       selectable: true,
+      estimated: proxIsEstimated,
     })
   }
 
@@ -105,6 +120,11 @@ export const LifecycleTimeline = ({
                 {step.label}
               </span>
               {step.date && <span className="text-[11px] text-text-soft">{step.date}</span>}
+              {step.estimated && (
+                <span className="text-[10px] font-semibold italic text-text-soft">
+                  ({t('detail.timeline_estimated_tag')})
+                </span>
+              )}
             </div>
           )
           return (
@@ -155,7 +175,14 @@ export const LifecycleTimeline = ({
                     {step.label}
                   </strong>
                   {step.date && (
-                    <span className="shrink-0 text-xs text-text-muted">{step.date}</span>
+                    <span className="shrink-0 text-right text-xs text-text-muted">
+                      {step.date}
+                      {step.estimated && (
+                        <span className="block text-[10px] font-semibold italic text-text-soft">
+                          ({t('detail.timeline_estimated_tag')})
+                        </span>
+                      )}
+                    </span>
                   )}
                 </div>
               </>

@@ -70,8 +70,6 @@ export const CreateCardForm = ({
   const [creditLimit, setCreditLimit] = useState('')
   const [currentEnd, setCurrentEnd] = useState('')
   const [currentDue, setCurrentDue] = useState('')
-  const [nextEnd, setNextEnd] = useState('')
-  const [nextDue, setNextDue] = useState('')
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
@@ -109,8 +107,7 @@ export const CreateCardForm = ({
   // ── Form gating + validation ────────────────────────────────────────────────
   const networkValid =
     network?.type === 'catalog' || (network?.type === 'other' && network.name.trim().length > 0)
-  const canSubmit =
-    !!institutionId && networkValid && !!currentEnd && !!currentDue && !!nextEnd && !!nextDue
+  const canSubmit = !!institutionId && networkValid && !!currentEnd && !!currentDue
   const dirty =
     !!institutionId ||
     !!institutionSearch ||
@@ -118,9 +115,7 @@ export const CreateCardForm = ({
     !!name ||
     !!creditLimit ||
     !!currentEnd ||
-    !!currentDue ||
-    !!nextEnd ||
-    !!nextDue
+    !!currentDue
 
   const validate = () => {
     const errs: Record<string, string> = {}
@@ -136,12 +131,8 @@ export const CreateCardForm = ({
 
     if (!currentEnd) errs.currentEnd = tCommon('required_short')
     if (!currentDue) errs.currentDue = tCommon('required_short')
-    if (!nextEnd) errs.nextEnd = tCommon('required_short')
-    if (!nextDue) errs.nextDue = tCommon('required_short')
 
     if (currentEnd && currentDue && currentDue <= currentEnd) errs.currentDue = t('errors.due_after_close')
-    if (currentEnd && nextEnd && nextEnd <= currentEnd) errs.nextEnd = t('errors.next_close_after_current')
-    if (nextEnd && nextDue && nextDue <= nextEnd) errs.nextDue = t('errors.next_due_after_close')
 
     setErrors(errs)
     return Object.keys(errs).length === 0
@@ -169,8 +160,6 @@ export const CreateCardForm = ({
         credit_limit: parsedLimit ?? undefined,
         current_end_date: currentEnd,
         current_due_date: currentDue,
-        next_end_date: nextEnd,
-        next_due_date: nextDue,
       })
 
       if (!result.ok) {
@@ -315,7 +304,8 @@ export const CreateCardForm = ({
       )}
       {errors.network && <p className="mt-1.5 px-0.5 text-xs text-destructive">{errors.network}</p>}
 
-      {/* Ciclo de facturación — 4 fechas */}
+      {/* Ciclo de facturación — solo el resumen actual; el próximo nace estimado
+          y se confirma al pagar (las fechas reales llegan con ese resumen). */}
       <SectionLabel className="mt-[22px]">{t('edit.section_cycle')}</SectionLabel>
       <div className="flex flex-col gap-3.5 rounded-[15px] border border-border bg-card p-4">
         <div className="flex flex-col gap-2.5">
@@ -336,25 +326,6 @@ export const CreateCardForm = ({
               onChange={setCurrentDue}
               error={errors.currentDue}
               dotColor="var(--terracotta)"
-            />
-          </div>
-        </div>
-        <div className="flex flex-col gap-2.5 border-t border-[#F1F3F6] pt-3.5">
-          <p className="text-[11px] font-bold uppercase tracking-[0.05em] text-text-soft">
-            {t('labels.next_period')}
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <DateField
-              label={t('labels.close_date')}
-              value={nextEnd}
-              onChange={setNextEnd}
-              error={errors.nextEnd}
-            />
-            <DateField
-              label={t('labels.due_date')}
-              value={nextDue}
-              onChange={setNextDue}
-              error={errors.nextDue}
             />
           </div>
         </div>

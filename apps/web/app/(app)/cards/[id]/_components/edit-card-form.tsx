@@ -40,10 +40,13 @@ export type EditCardCycle = {
   currentPeriodId: string | null
   currentEndDate: string | null
   currentDueDate: string | null
+  /** Projected dates not yet confirmed against a statement (is_estimated). */
+  currentPeriodIsEstimated?: boolean
   nextPeriodId: string | null
   nextEndDate: string | null
   nextDueDate: string | null
   nextPeriodIsPaid: boolean
+  nextPeriodIsEstimated?: boolean
 }
 
 export type EditCardFormProps = {
@@ -376,6 +379,11 @@ export const EditCardForm = ({
               <div className="flex flex-col gap-2.5 border-t border-[#F1F3F6] pt-3.5">
                 <p className="text-[11px] font-bold uppercase tracking-[0.05em] text-text-soft">
                   {t('labels.next_period')}
+                  {cycle.nextPeriodIsEstimated && (
+                    <span className="ml-2 rounded-full bg-border-soft px-2 py-0.5 font-semibold normal-case tracking-normal text-text-muted">
+                      {t('payment.estimated_badge')}
+                    </span>
+                  )}
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   <DateField
@@ -394,7 +402,13 @@ export const EditCardForm = ({
               </div>
             )}
           </div>
-          <Hint>{cycle.nextPeriodIsPaid ? t('edit.cycle_next_paid_hint') : t('edit.cycle_hint')}</Hint>
+          <Hint>
+            {cycle.nextPeriodIsPaid
+              ? t('edit.cycle_next_paid_hint')
+              : cycle.nextPeriodIsEstimated
+                ? t('edit.cycle_estimated_hint')
+                : t('edit.cycle_hint')}
+          </Hint>
         </>
       ) : (
         <div className="rounded-[15px] border border-border bg-card px-4 py-3.5">

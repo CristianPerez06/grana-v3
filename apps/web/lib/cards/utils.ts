@@ -6,6 +6,7 @@ export {
   derivePeriodStatus,
   derivePeriodVariant,
   classifyPeriodsLifecycle,
+  planRunningCycleConfirmation,
   suggestNextPeriodDates,
   assignTransactionToPeriod,
   splitAmountIntoInstallments,
@@ -17,4 +18,6 @@ export {
   addMonthsToISO,
   type PeriodStatus,
   type PeriodVariant,
+  type RunningCycleConfirmationInput,
+  type RunningCycleConfirmationPlan,
 } from '@grana/money-logic'

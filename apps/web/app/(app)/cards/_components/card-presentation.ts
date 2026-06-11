@@ -58,14 +58,16 @@ type CyclePeriodInput = {
   end_date: string
   due_date: string
   has_payment: boolean
+  is_estimated?: boolean
 }
 
 /**
  * Resolve the editable billing cycle for a card from its periods: the "resumen
  * actual" (period covering today, else the latest unpaid, else the most recent)
  * plus the "próximo resumen" (the period immediately after it). Returns the
- * shape consumed by `EditCardForm`'s `cycle` prop — these are the 4 dates the
- * create form sets, now editable post-creation via `updatePeriodDates`.
+ * shape consumed by `EditCardForm`'s `cycle` prop — editable post-creation via
+ * `updatePeriodDates`. Estimated periods (projected, not yet confirmed against
+ * a statement) are flagged so the form can mark their dates.
  */
 export const resolveEditCycle = (periods: CyclePeriodInput[], todayISO: string) => {
   const sorted = [...periods].sort((a, b) => (a.start_date < b.start_date ? -1 : 1))
@@ -80,9 +82,11 @@ export const resolveEditCycle = (periods: CyclePeriodInput[], todayISO: string) 
     currentPeriodId: current?.id ?? null,
     currentEndDate: current?.end_date ?? null,
     currentDueDate: current?.due_date ?? null,
+    currentPeriodIsEstimated: current?.is_estimated ?? false,
     nextPeriodId: next?.id ?? null,
     nextEndDate: next?.end_date ?? null,
     nextDueDate: next?.due_date ?? null,
     nextPeriodIsPaid: next?.has_payment ?? false,
+    nextPeriodIsEstimated: next?.is_estimated ?? false,
   }
 }

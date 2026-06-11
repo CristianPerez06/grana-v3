@@ -38,10 +38,13 @@ type Props = {
   pendingAmountARS: number
   /** Pending USD debt of the period; > 0 requires the payment-day fx rate. */
   pendingAmountUSD: number
-  suggestedNextEndDate: string
-  suggestedNextDueDate: string
-  /** Furthest known statement close — the next period must close after it. */
-  lastKnownEndDate: string
+  /** Persisted dates of the running cycle (P(n+1)) — the ones the statement
+   * being paid announces. Pre-filled for confirmation, not projection. */
+  runningEndDate: string
+  runningDueDate: string
+  runningIsEstimated: boolean
+  /** Close of the period being paid — the running cycle must close after it. */
+  paidPeriodEndDate: string
   paymentAccounts: PaymentAccount[]
 }
 
@@ -50,9 +53,10 @@ export const PayCardPeriodForm = ({
   cardId,
   pendingAmountARS,
   pendingAmountUSD,
-  suggestedNextEndDate,
-  suggestedNextDueDate,
-  lastKnownEndDate,
+  runningEndDate,
+  runningDueDate,
+  runningIsEstimated,
+  paidPeriodEndDate,
   paymentAccounts,
 }: Props) => {
   const router = useRouter()
@@ -68,8 +72,8 @@ export const PayCardPeriodForm = ({
   const [fxRate, setFxRate] = useState('')
   const [paymentAccountId, setPaymentAccountId] = useState(paymentAccounts[0]?.id ?? '')
   const [paymentDate, setPaymentDate] = useState(todayStr())
-  const [nextEndDate, setNextEndDate] = useState(suggestedNextEndDate)
-  const [nextDueDate, setNextDueDate] = useState(suggestedNextDueDate)
+  const [nextEndDate, setNextEndDate] = useState(runningEndDate)
+  const [nextDueDate, setNextDueDate] = useState(runningDueDate)
 
   // Payment-day conversion: total ARS = pendiente ARS + pendiente USD × fx
   // (exact Money arithmetic in computeStatementPaymentTotal). Typing the fx
@@ -110,11 +114,11 @@ export const PayCardPeriodForm = ({
     if (!paymentDate) errs.paymentDate = tCommon('required_short')
     if (!nextEndDate) errs.nextEndDate = tCommon('required_short')
     if (!nextDueDate) errs.nextDueDate = tCommon('required_short')
-    // The next close must fall AFTER every known statement — otherwise the new
-    // period would overlap the one still running.
-    if (nextEndDate && nextEndDate <= lastKnownEndDate) {
+    // The running cycle starts right after the paid statement closes, so its
+    // confirmed close must fall after that anchor.
+    if (nextEndDate && nextEndDate <= paidPeriodEndDate) {
       errs.nextEndDate = t('errors.next_end_before_known', {
-        date: formatShortDate(lastKnownEndDate),
+        date: formatShortDate(paidPeriodEndDate),
       })
     }
     if (nextEndDate && nextDueDate && nextDueDate <= nextEndDate) {
@@ -248,19 +252,23 @@ export const PayCardPeriodForm = ({
         </div>
       </div>
 
-      {/* Section 2: Next period dates */}
+      {/* Section 2: confirm the running cycle's dates — the statement being
+          paid announces them, so this is the moment the user has them in hand. */}
       <div className="flex flex-col gap-4">
         <div>
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
             {t('payment.section_next_period')}
+            {runningIsEstimated && (
+              <span className="ml-2 normal-case tracking-normal rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                {t('payment.estimated_badge')}
+              </span>
+            )}
           </h2>
           <p className="text-xs text-muted-foreground mt-1">
             {t('labels.next_period_helper')}
           </p>
-          {/* Anchor: where the running statement ends, so the user knows the
-              next close must come after it. */}
           <p className="mt-1 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-            {t('payment.next_period_context', { date: formatShortDate(lastKnownEndDate) })}
+            {t('payment.next_period_context', { date: formatShortDate(paidPeriodEndDate) })}
           </p>
         </div>
 

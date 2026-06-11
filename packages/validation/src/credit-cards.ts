@@ -6,7 +6,7 @@ import { sharedExpenseSchema } from './shared'
 
 const SUPPORTED_CURRENCIES = ['ARS', 'USD'] as const
 
-// ─── Alta de tarjeta (4 fechas) ──────────────────────────────────────────────
+// ─── Alta de tarjeta (2 fechas: el resumen actual; el siguiente nace estimado) ─
 
 export const createCreditCardSchema = yup
   .object({
@@ -54,7 +54,8 @@ export const createCreditCardSchema = yup
       .positive()
       .nullable()
       .optional(),
-    // Current period dates
+    // Current period dates — the only cycle the user knows at signup. The next
+    // period is created estimated (is_estimated=true) and confirmed at payment.
     current_end_date: yup.string().label('current_end_date').required(),
     current_due_date: yup
       .string()
@@ -67,33 +68,6 @@ export const createCreditCardSchema = yup
           const { current_end_date } = this.parent
           if (!value || !current_end_date) return true
           return value > current_end_date
-        },
-      ),
-    // Next period dates
-    next_end_date: yup
-      .string()
-      .label('next_end_date')
-      .required()
-      .test(
-        'after-current-end',
-        'next_end_must_be_after_current_end',
-        function (value) {
-          const { current_end_date } = this.parent
-          if (!value || !current_end_date) return true
-          return value > current_end_date
-        },
-      ),
-    next_due_date: yup
-      .string()
-      .label('next_due_date')
-      .required()
-      .test(
-        'after-next-end',
-        'next_due_must_be_after_next_end',
-        function (value) {
-          const { next_end_date } = this.parent
-          if (!value || !next_end_date) return true
-          return value > next_end_date
         },
       ),
   })
@@ -185,6 +159,10 @@ export const payCardPeriodSchema = yup
       .positive()
       .nullable()
       .optional(),
+    // Confirmation of the in-course period P(n+1): the statement being paid
+    // announces these dates, so the user has them in hand. The action updates
+    // the (usually estimated) next period instead of creating P(n+2), and
+    // validates next_end_date > paid period's end_date (its anchor).
     next_end_date: yup.string().label('next_end_date').required(),
     next_due_date: yup
       .string()

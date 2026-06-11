@@ -96,12 +96,11 @@ reciba aliases `+`.
 | Límite | `500.000` (ARS) |
 | Cierre período actual | `28/06/2026` |
 | Vencimiento período actual | `07/07/2026` |
-| Cierre período siguiente | `28/07/2026` |
-| Vencimiento período siguiente | `06/08/2026` |
 
-> Las fechas cumplen las validaciones del wizard (vencimiento > cierre; siguiente > actual) y
-> dejan la fecha de referencia de la suite **dentro del período actual** → un consumo de hoy
-> cae en el período actual (lo que CARD-N1-02 espera).
+> Desde `capture-card-dates-at-statement` (2026-06-11) el alta pide **solo** cierre y
+> vencimiento del resumen actual (vencimiento > cierre); el período siguiente se crea solo,
+> **estimado** (`~`), y se confirma al pagar. Las fechas dejan la referencia de la suite
+> **dentro del período actual** → un consumo de hoy cae en el período actual (CARD-N1-02).
 
 **Segunda tarjeta — para pago de resumen (CARD-N2-03 / N3-01).** La Visa Galicia no sirve
 para probar el pago hasta fin de mes (su período no cerró). Esta se crea con el período
@@ -114,9 +113,11 @@ actual **ya cerrado** (el wizard acepta cierres hasta 40 días atrás):
 | Límite | `300.000` (ARS) |
 | Cierre período actual | `01/06/2026` (**ya cerrado**) |
 | Vencimiento período actual | `10/06/2026` |
-| Cierre período siguiente | `01/07/2026` |
-| Vencimiento período siguiente | `10/07/2026` |
 | Consumo para generar deuda | gasto `10.000,50` ARS **retro-fechado al `28/05/2026`** (cae en el período cerrado) |
+
+> El período siguiente nace estimado (proyección ≈ `01/07/2026`). Al pagar, el form lo
+> muestra pre-llenado para confirmarlo — ingresá `01/07/2026` / `10/07/2026` como fechas
+> "reales" del extracto.
 
 > Con eso el período cerrado tiene deuda y el botón de pagar se habilita **hoy** (el pago
 > exige período cerrado o vencido). El monto con centavos es a propósito: CARD-N2-03
@@ -376,7 +377,7 @@ Períodos, consumos, cuotas, USD con cotización, pago de resumen.
 
 | ID | Caso | Datos | Pasos | Esperado | Estado | Notas |
 |---|---|---|---|---|---|---|
-| CARD-N1-01 | Alta de tarjeta | `Visa Galicia`, Visa, límite `500.000` | Tarjetas → crear → guardar | Aparece en Tarjetas (no en Cuentas); saldo inicial 0; período actual creado | ✅ | OK. |
+| CARD-N1-01 | Alta de tarjeta | `Visa Galicia`, Visa, límite `500.000` | Tarjetas → crear → guardar | Aparece en Tarjetas (no en Cuentas); saldo inicial 0; el form pide **solo** cierre y vencimiento del resumen actual; período actual creado + período siguiente **estimado** (timeline muestra "cierra ~DD/MM") | ⬜ | Flujo cambiado por `capture-card-dates-at-statement` (2026-06-11): re-verificar. Corrida anterior (4 fechas): ✅. |
 | CARD-N1-02 | Consumo simple | gasto ARS en la tarjeta | Nuevo gasto con tarjeta | Se asigna al período correcto; suma a la deuda del período | ✅ | OK. |
 
 ### N2 · Intermedio
@@ -385,7 +386,7 @@ Períodos, consumos, cuotas, USD con cotización, pago de resumen.
 |---|---|---|---|---|---|---|
 | CARD-N2-01 | Consumo en cuotas | gasto ARS en N cuotas | Cargar con cuotas | Genera fila padre off-ledger + cuotas; las cuotas caen en períodos sucesivos; "Cuotas en curso" muestra nombre y **fecha de compra** correctos; la lista de movimientos marca la compra con chip "N cuotas" | ✅ | Funcional OK tras fixes: header `168a679`/`57284f4`; fecha de compra `57284f4` (embed self-referencial → stitch); chip "N cuotas" en listas `1a3d0c2` (antes no había referencia a cuotas en el listado). |
 | CARD-N2-02 | Consumo en USD sin cotización | gasto USD `50` en Visa Galicia | Cargar gasto USD en tarjeta | El alta **NO pide cotización** (la conversión real es al pagar el resumen); el consumo suma a la deuda USD del período, separada de la ARS; **no** aparece marca de "revisar cotización" en la lista | ✅ | OK con el flujo nuevo (requirió la migración `0027` que relajó I-CRED-11 a nivel DB). |
-| CARD-N2-03 | Pago de resumen (centavos) | `Master QA Pagos`, deuda ARS `10.000,50` | Pagar el período desde `Galicia sueldo` | Crea el gasto de pago; el período queda pago; **el centavo no se pierde**; el form de fechas del próximo período muestra el último cierre conocido y valida contra él | ✅ | Verificado en la corrida del change FX (el detalle del pago muestra $ 10.000,50 exactos). Fix asociado: error crudo `chk_period_dates` → mensaje localizado + contexto de fechas en el form. |
+| CARD-N2-03 | Pago de resumen (centavos) | `Master QA Pagos`, deuda ARS `10.000,50` | Pagar el período desde `Galicia sueldo` | Crea el gasto de pago; el período queda pago; **el centavo no se pierde**; el form muestra las fechas del **ciclo en curso** pre-llenadas (con badge "fechas estimadas" si aplica), valida contra el cierre del resumen que se paga, y al confirmar el período estimado queda confirmado + se crea el siguiente estimado | ⬜ | Flujo cambiado por `capture-card-dates-at-statement` (2026-06-11): el form ahora **confirma** P(n+1) en vez de pedir P(n+2); re-verificar. Corrida anterior (flujo viejo): ✅ centavos exactos. |
 | CARD-N2-04 | Pago de resumen con deuda USD | `Master QA Pagos` + consumo USD `50` retro-fechado al 28/05 | Pagar el período | El form pide la **cotización del día**; desglose pendiente ARS + USD×cotización = total; monto autocompletado (editable); la cotización persiste en el gasto de pago; el detalle del pago muestra la **composición** (pesos/dólares del resumen) y los resúmenes pagados muestran el USD pagado | ✅ | Verificado en la corrida del change FX. Fixes asociados en la misma corrida: reasignación de período al editar fecha, `paidAmountUSD`, composición en el detalle del pago, USD más visible en el hero de tarjetas. |
 
 ### N3 · Avanzado / inusual

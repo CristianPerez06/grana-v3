@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import {
+  assignTransactionToPeriod,
   computeStatementPaymentTotal,
   derivePeriodStatus,
   derivePeriodVariant,
   subtractMoneyValues,
+  suggestNextPeriodDates,
   sumMoneyValues,
 } from '../utils'
 
@@ -97,6 +99,70 @@ describe('money helpers', () => {
 
   it('subtracts available credit with decimal math', () => {
     expect(subtractMoneyValues('1000.30', '0.10')).toBe(1000.2)
+  })
+})
+
+// ── assignTransactionToPeriod — estimated periods receive consumos ────────────
+
+describe('assignTransactionToPeriod', () => {
+  it('assigns a post-close purchase to the estimated period without asking dates', () => {
+    const periods = [
+      {
+        id: 'p1',
+        start_date: '2026-05-17',
+        end_date: '2026-06-16',
+        due_date: '2026-06-22',
+        is_estimated: false,
+        has_payment: false,
+        tx_count: 3,
+      },
+      {
+        id: 'p2',
+        start_date: '2026-06-17',
+        end_date: '2026-07-16',
+        due_date: '2026-07-22',
+        is_estimated: true,
+        has_payment: false,
+        tx_count: 0,
+      },
+    ]
+    expect(assignTransactionToPeriod(periods, '2026-06-18')).toBe(periods[1])
+  })
+})
+
+// ── suggestNextPeriodDates — projection anchors ───────────────────────────────
+
+describe('suggestNextPeriodDates', () => {
+  it('falls back to today+30/+45 with no history', () => {
+    const result = suggestNextPeriodDates([], new Date(2026, 5, 1))
+    expect(result).toEqual({
+      suggestedEndDate: '2026-07-01',
+      suggestedDueDate: '2026-07-16',
+    })
+  })
+
+  it('anchors on the single known period, not on today (alta case)', () => {
+    // Card created June 1 with the current statement closing June 25: the
+    // estimated P2 must be contiguous (close ≈ July 25), regardless of today.
+    const result = suggestNextPeriodDates(
+      [{ end_date: '2026-06-25', due_date: '2026-07-02' }],
+      new Date(2026, 5, 1),
+    )
+    expect(result.suggestedEndDate).toBe('2026-07-25')
+    // close→due gap preserved from the known period (7 days)
+    expect(result.suggestedDueDate).toBe('2026-08-01')
+  })
+
+  it('averages cycle and gap from prior periods', () => {
+    const result = suggestNextPeriodDates(
+      [
+        { end_date: '2026-04-15', due_date: '2026-04-30' },
+        { end_date: '2026-05-15', due_date: '2026-05-30' },
+      ],
+      new Date(2026, 4, 20),
+    )
+    expect(result.suggestedEndDate).toBe('2026-06-14')
+    expect(result.suggestedDueDate).toBe('2026-06-29')
   })
 })
 

@@ -57,8 +57,10 @@ export const CardDetailView = ({ vm, todayISO, showCents = false, sideExtras }: 
           hasApagar={vm.apagar !== null}
           hasPaid={vm.hasPaid}
           cursoCloseDate={vm.curso.end_date}
+          cursoIsEstimated={vm.curso.is_estimated}
           apagarDueDate={vm.apagar?.due_date ?? null}
           proxCloseDate={vm.prox?.end_date ?? null}
+          proxIsEstimated={vm.prox?.is_estimated ?? false}
           active={effectivePeriod}
           accent={vm.accent}
           onSelect={selectPeriod}

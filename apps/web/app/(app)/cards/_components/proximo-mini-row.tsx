@@ -31,7 +31,10 @@ export const ProximoMiniRow = ({ period, selected, accent, showCents = false, on
         {t('detail.prox_label')}
       </span>
       <span className="min-w-0 flex-1 truncate text-sm text-text-muted">
-        {t('detail.prox_info', { date: formatDayMonth(period.end_date), note })}
+        {t('detail.prox_info', {
+          date: `${period.is_estimated ? '~' : ''}${formatDayMonth(period.end_date)}`,
+          note,
+        })}
       </span>
       <span className={`shrink-0 text-sm font-bold tabular-nums ${isZero ? 'text-text-soft' : ''}`}>
         {formatARS(period.pendingAmountARS, showCents)}

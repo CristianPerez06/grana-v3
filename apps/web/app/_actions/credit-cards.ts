@@ -19,7 +19,9 @@ import {
 import { getCreditCardDebtCheck } from '@/lib/cards/queries'
 import {
   derivePeriodStatus,
+  planRunningCycleConfirmation,
   splitAmountIntoInstallments,
+  suggestNextPeriodDates,
   addDaysToISO,
   formatDateISO,
 } from '@/lib/cards/utils'
@@ -39,7 +41,7 @@ function normalizeActionFxRate(value: number): number {
   return normalizeMoneyAmount(value, { decimalPlaces: 6 }) ?? value
 }
 
-// ── 4.1: createCreditCard (4 fechas) ──────────────────────────────────────────
+// ── 4.1: createCreditCard (2 fechas: resumen actual; el siguiente nace estimado) ─
 
 export async function createCreditCard(
   input: unknown,
@@ -55,9 +57,8 @@ export async function createCreditCard(
   if (data.current_end_date < addDaysToISO(todayStr, -40)) {
     return { ok: false, formError: 'La fecha de cierre actual es demasiado antigua.' }
   }
-  // Sanity: next_due_date must be within 90 days
-  if (data.next_due_date > addDaysToISO(todayStr, 90)) {
-    return { ok: false, formError: 'La fecha de vencimiento próximo es demasiado lejana.' }
+  if (data.current_end_date > addDaysToISO(todayStr, 40)) {
+    return { ok: false, formError: 'La fecha de cierre actual es demasiado lejana.' }
   }
 
   const userId = await getAuthenticatedUserId()
@@ -120,8 +121,14 @@ export async function createCreditCard(
   }
 
   // INSERT 2 card_periods
-  // P1: start=current_end-30d, end=current_end, due=current_due
-  // P2: start=current_end+1d, end=next_end, due=next_due
+  // P1 (real): start=current_end-30d, end=current_end, due=current_due — the
+  // dates the last emitted statement announced.
+  // P2 (estimated): the bank announces its real dates only when P1 closes, so
+  // it is born projected (is_estimated=true) and confirmed when P1 is paid.
+  const projected = suggestNextPeriodDates(
+    [{ end_date: data.current_end_date, due_date: data.current_due_date }],
+    today,
+  )
   const periodRows = [
     {
       account_id: account.id,
@@ -133,9 +140,9 @@ export async function createCreditCard(
     {
       account_id: account.id,
       start_date: addDaysToISO(data.current_end_date, 1),
-      end_date: data.next_end_date,
-      due_date: data.next_due_date,
-      is_estimated: false,
+      end_date: projected.suggestedEndDate,
+      due_date: projected.suggestedDueDate,
+      is_estimated: true,
     },
   ]
 
@@ -299,26 +306,198 @@ export async function payCardPeriod(
     }
   }
 
-  // Find the last known period for this card (to determine where to append the new one)
-  const { data: lastPeriodRow, error: lastPeriodError } = await supabase
+  // ── Confirmación del ciclo en curso (P(n+1)) ────────────────────────────────
+  // The statement being paid announces the dates of the cycle now running: the
+  // user has them in hand at this exact moment. next_end_date/next_due_date
+  // confirm the period that follows the one being paid (usually estimated).
+  // The branching lives in planRunningCycleConfirmation (pure, tested); this
+  // block fetches its inputs and executes the plan. It runs BEFORE the payment
+  // inserts: confirmed dates are real-world facts, so if the payment fails
+  // afterwards they harmlessly stay confirmed.
+  const { data: laterPeriods, error: laterPeriodsError } = await supabase
     .from('card_periods')
-    .select('end_date')
+    .select('id, start_date, end_date, due_date, is_estimated')
     .eq('account_id', period.account_id)
-    .order('end_date', { ascending: false })
-    .limit(1)
-    .single()
+    .gt('start_date', period.start_date)
+    .order('start_date', { ascending: true })
+    .limit(2)
 
-  if (lastPeriodError || !lastPeriodRow) {
-    return { ok: false, formError: 'No se pudo determinar el último período de la tarjeta.' }
+  if (laterPeriodsError) {
+    return { ok: false, formError: 'No se pudo determinar el ciclo en curso de la tarjeta.' }
   }
 
-  // Sanity: new end_date must be after the last known period's end. Spell out
-  // the anchor date so the user knows which close they must come after.
-  const lastEndDisplay = lastPeriodRow.end_date.split('-').reverse().join('/')
-  if (data.next_end_date <= lastPeriodRow.end_date) {
-    return {
-      ok: false,
-      formError: `El cierre del próximo resumen debe ser posterior al ${lastEndDisplay} (fin del último resumen conocido de la tarjeta).`,
+  const nextPeriodRow = laterPeriods?.[0] ?? null
+  const nextNextRow = laterPeriods?.[1] ?? null
+
+  const laterIds = (laterPeriods ?? []).map((p) => p.id)
+  let laterPaidIds = new Set<string>()
+  if (laterIds.length > 0) {
+    const { data: laterPayments } = await supabase
+      .from('period_payments')
+      .select('period_id')
+      .in('period_id', laterIds)
+    laterPaidIds = new Set((laterPayments ?? []).map((p) => p.period_id))
+  }
+
+  let nextNextHasTx = false
+  if (nextNextRow) {
+    const { data: nextNextTx } = await supabase
+      .from('transactions')
+      .select('id')
+      .eq('card_period_id', nextNextRow.id)
+      .limit(1)
+      .maybeSingle()
+    nextNextHasTx = Boolean(nextNextTx)
+  }
+
+  const plan = planRunningCycleConfirmation({
+    paidPeriodEndDate: period.end_date,
+    nextPeriod: nextPeriodRow
+      ? {
+          start_date: nextPeriodRow.start_date,
+          end_date: nextPeriodRow.end_date,
+          due_date: nextPeriodRow.due_date,
+          has_payment: laterPaidIds.has(nextPeriodRow.id),
+        }
+      : null,
+    nextNext: nextNextRow
+      ? {
+          start_date: nextNextRow.start_date,
+          end_date: nextNextRow.end_date,
+          is_estimated: nextNextRow.is_estimated,
+          has_payment: laterPaidIds.has(nextNextRow.id),
+          has_transactions: nextNextHasTx,
+        }
+      : null,
+    confirmedEndDate: data.next_end_date,
+    confirmedDueDate: data.next_due_date,
+  })
+
+  const periodEndDisplay = period.end_date.split('-').reverse().join('/')
+  if (plan.action === 'reject') {
+    const rejectMessages: Record<typeof plan.reason, string> = {
+      end_not_after_paid_close: `El cierre del ciclo en curso debe ser posterior al ${periodEndDisplay} (cierre del resumen que estás pagando).`,
+      next_already_paid:
+        'El ciclo en curso ya tiene un pago registrado: sus fechas no se pueden modificar desde acá.',
+      boundary_next_paid:
+        'El próximo resumen ya está pagado. No se puede modificar el borde entre ambos resúmenes.',
+      would_swallow_real_period:
+        'La nueva fecha de cierre cubriría todo el próximo resumen. Editá primero las fechas del próximo resumen.',
+    }
+    return { ok: false, formError: rejectMessages[plan.reason] }
+  }
+
+  const newNextStart = addDaysToISO(data.next_end_date, 1)
+  // Suggestion history for projections: the paid cycle + the just-confirmed one.
+  const confirmedHistory = [
+    { end_date: period.end_date, due_date: period.due_date },
+    { end_date: data.next_end_date, due_date: data.next_due_date },
+  ]
+  const invalidDatesError = `No se pudo confirmar el ciclo en curso: las fechas son inválidas o se superponen con un resumen existente. El cierre debe ser posterior al ${periodEndDisplay} y el vencimiento posterior al cierre.`
+
+  if (plan.createConfirmedNext) {
+    // Legacy edge (no running period row yet): create it directly confirmed.
+    const { error: createNextError } = await supabase.from('card_periods').upsert(
+      {
+        account_id: period.account_id,
+        start_date: addDaysToISO(period.end_date, 1),
+        end_date: data.next_end_date,
+        due_date: data.next_due_date,
+        is_estimated: false,
+      },
+      { onConflict: 'account_id,start_date' },
+    )
+    if (createNextError) return { ok: false, formError: invalidDatesError }
+  }
+
+  if (nextNextRow && plan.nextNextOp !== 'none') {
+    if (plan.nextNextOp === 'reproject') {
+      // The confirmed close swallows a bare estimated P(n+2): re-project it
+      // past the new close instead of rejecting.
+      const reprojected = suggestNextPeriodDates(confirmedHistory, today)
+      const { error: reprojectError } = await supabase
+        .from('card_periods')
+        .update({
+          start_date: newNextStart,
+          end_date: reprojected.suggestedEndDate,
+          due_date: reprojected.suggestedDueDate,
+        })
+        .eq('id', nextNextRow.id)
+      if (reprojectError) return { ok: false, formError: reprojectError.message }
+    } else {
+      // Boundary cascade with P(n+2) — same semantics as updatePeriodDates.
+      if (plan.nextNextOp === 'shift_extend') {
+        // Days now covered by the running cycle: move consumos from P(n+2).
+        const { error: reassignError } = await supabase
+          .from('transactions')
+          .update({ card_period_id: nextPeriodRow!.id })
+          .eq('card_period_id', nextNextRow.id)
+          .lte('date', data.next_end_date)
+        if (reassignError) return { ok: false, formError: reassignError.message }
+      } else {
+        // Shrinking: consumos past the real close belong to P(n+2).
+        const { error: reassignError } = await supabase
+          .from('transactions')
+          .update({ card_period_id: nextNextRow.id })
+          .eq('card_period_id', nextPeriodRow!.id)
+          .gt('date', data.next_end_date)
+        if (reassignError) return { ok: false, formError: reassignError.message }
+      }
+
+      const { error: shiftError } = await supabase
+        .from('card_periods')
+        .update({ start_date: newNextStart })
+        .eq('id', nextNextRow.id)
+      if (shiftError) return { ok: false, formError: shiftError.message }
+    }
+  }
+
+  if (!plan.createConfirmedNext && nextPeriodRow) {
+    // Confirm the running cycle with the statement's dates.
+    const { error: confirmError } = await supabase
+      .from('card_periods')
+      .update({
+        end_date: data.next_end_date,
+        due_date: data.next_due_date,
+        is_estimated: false,
+      })
+      .eq('id', nextPeriodRow.id)
+    if (confirmError) return { ok: false, formError: invalidDatesError }
+  }
+
+  if (plan.createEagerEstimated) {
+    // Eager invariant: there is always an estimated period after the running
+    // one, so the timeline's "Próximo" never disappears and consumos beyond
+    // the confirmed close have a home.
+    const projected = suggestNextPeriodDates(confirmedHistory, today)
+    const { data: eagerPeriod, error: eagerError } = await supabase
+      .from('card_periods')
+      .upsert(
+        {
+          account_id: period.account_id,
+          start_date: newNextStart,
+          end_date: projected.suggestedEndDate,
+          due_date: projected.suggestedDueDate,
+          is_estimated: true,
+        },
+        { onConflict: 'account_id,start_date' },
+      )
+      .select('id')
+      .single()
+
+    if (eagerError || !eagerPeriod) {
+      return { ok: false, formError: 'No se pudo crear el próximo resumen estimado.' }
+    }
+
+    if (plan.reassignShrunkTailToEager && nextPeriodRow) {
+      // Shrunk running cycle with no P(n+2) row before this call: consumos that
+      // fell out of the confirmed range move to the fresh estimated period.
+      const { error: reassignError } = await supabase
+        .from('transactions')
+        .update({ card_period_id: eagerPeriod.id })
+        .eq('card_period_id', nextPeriodRow.id)
+        .gt('date', data.next_end_date)
+      if (reassignError) return { ok: false, formError: reassignError.message }
     }
   }
 
@@ -374,37 +553,6 @@ export async function payCardPeriod(
       .eq('status', 'paid')
     await supabase.from('transactions').delete().eq('id', expense.id)
     return { ok: false, formError: paymentError.message }
-  }
-
-  // 4. INSERT next card_period starting after the last known period
-  // lastPeriodRow.end_date is the furthest end_date for this card (e.g. P2 when paying P1)
-  const newPeriodStartDate = addDaysToISO(lastPeriodRow.end_date, 1)
-  const { error: nextPeriodError } = await supabase.from('card_periods').upsert(
-    {
-      account_id: period.account_id,
-      start_date: newPeriodStartDate,
-      end_date: data.next_end_date,
-      due_date: data.next_due_date,
-      is_estimated: false,
-    },
-    { onConflict: 'account_id,start_date' },
-  )
-
-  if (nextPeriodError) {
-    // Rollback: delete period_payment, revert transactions, delete expense
-    await supabase.from('period_payments').delete().eq('period_id', data.period_id)
-    await supabase
-      .from('transactions')
-      .update({ status: 'pending' })
-      .eq('card_period_id', data.period_id)
-      .eq('status', 'paid')
-    await supabase.from('transactions').delete().eq('id', expense.id)
-    // Never leak raw Postgres text: the realistic failure here is the period
-    // dates check/overlap (chk_period_dates) — explain it with the anchor date.
-    return {
-      ok: false,
-      formError: `No se pudo crear el próximo resumen: las fechas son inválidas o se superponen con un resumen existente. El cierre debe ser posterior al ${lastEndDisplay} y el vencimiento posterior al cierre.`,
-    }
   }
 
   revalidatePath('/cards')

@@ -128,11 +128,24 @@ export function suggestNextPeriodDates(
 ): { suggestedEndDate: string; suggestedDueDate: string } {
   const sorted = [...periods].sort((a, b) => a.end_date.localeCompare(b.end_date))
 
-  if (sorted.length < 2) {
+  if (sorted.length === 0) {
     // Fallback: no history to average from
     return {
       suggestedEndDate: addDays(today, 30),
       suggestedDueDate: addDays(today, 45),
+    }
+  }
+
+  if (sorted.length === 1) {
+    // Single period (card just created): the cycle length is unknown (default
+    // 30 days) but the close→due gap IS known from that period — anchor on its
+    // end_date, never on `today`, so the projection stays contiguous.
+    const only = sorted[0]
+    const gapDays = Math.max(1, daysBetween(only.end_date, only.due_date))
+    const nextEnd = addDaysToISO(only.end_date, 30)
+    return {
+      suggestedEndDate: nextEnd,
+      suggestedDueDate: addDaysToISO(nextEnd, gapDays),
     }
   }
 
@@ -156,6 +169,124 @@ export function suggestNextPeriodDates(
   const nextDue = addDaysToISO(nextEnd, avgGapDays)
 
   return { suggestedEndDate: nextEnd, suggestedDueDate: nextDue }
+}
+
+// ─── Running-cycle confirmation planning (statement payment) ──────────────────
+
+export type RunningCycleConfirmationInput = {
+  /** Close of the period being paid — anchors the running cycle's start. */
+  paidPeriodEndDate: string
+  /** P(n+1), the cycle now running (usually estimated); null on legacy cards. */
+  nextPeriod: {
+    start_date: string
+    end_date: string
+    due_date: string
+    has_payment: boolean
+  } | null
+  /** P(n+2) when a row already exists after the running cycle. */
+  nextNext: {
+    start_date: string
+    end_date: string
+    is_estimated: boolean
+    has_payment: boolean
+    has_transactions: boolean
+  } | null
+  /** Dates the user confirmed from the statement in hand. */
+  confirmedEndDate: string
+  confirmedDueDate: string
+}
+
+export type RunningCycleConfirmationPlan =
+  | {
+      action: 'reject'
+      reason:
+        | 'end_not_after_paid_close'
+        | 'next_already_paid'
+        | 'boundary_next_paid'
+        | 'would_swallow_real_period'
+    }
+  | {
+      action: 'apply'
+      /** Legacy cards with no running period row: insert it directly confirmed. */
+      createConfirmedNext: boolean
+      /** Existing P(n+2) row when the confirmed close moves the boundary. */
+      nextNextOp: 'none' | 'shift_extend' | 'shift_shrink' | 'reproject'
+      /** No P(n+2) row: create the estimated one eagerly... */
+      createEagerEstimated: boolean
+      /** ...and move consumos past the confirmed close into it (shrink case). */
+      reassignShrunkTailToEager: boolean
+    }
+
+/**
+ * Paying P(n) confirms the dates of P(n+1) — the cycle the statement in hand
+ * announces — instead of asking for P(n+2). This pure planner decides what the
+ * mutation layer must do; it mirrors the period-date-edit cascade semantics
+ * (contiguous boundary, transaction reassignment, paid-period guards).
+ */
+export function planRunningCycleConfirmation(
+  input: RunningCycleConfirmationInput,
+): RunningCycleConfirmationPlan {
+  const { paidPeriodEndDate, nextPeriod, nextNext, confirmedEndDate, confirmedDueDate } = input
+
+  if (confirmedEndDate <= paidPeriodEndDate) {
+    return { action: 'reject', reason: 'end_not_after_paid_close' }
+  }
+
+  if (!nextPeriod) {
+    return {
+      action: 'apply',
+      createConfirmedNext: true,
+      nextNextOp: 'none',
+      createEagerEstimated: true,
+      reassignShrunkTailToEager: false,
+    }
+  }
+
+  const datesChanged =
+    nextPeriod.end_date !== confirmedEndDate || nextPeriod.due_date !== confirmedDueDate
+
+  if (datesChanged && nextPeriod.has_payment) {
+    return { action: 'reject', reason: 'next_already_paid' }
+  }
+
+  const newNextStart = addDaysToISO(confirmedEndDate, 1)
+
+  if (nextNext && datesChanged && newNextStart !== nextNext.start_date) {
+    if (nextNext.has_payment) {
+      return { action: 'reject', reason: 'boundary_next_paid' }
+    }
+
+    if (confirmedEndDate >= nextNext.end_date) {
+      // The confirmed close would swallow P(n+2). A bare estimated projection
+      // is simply re-projected; anything with real data keeps the guard.
+      if (!nextNext.is_estimated || nextNext.has_transactions) {
+        return { action: 'reject', reason: 'would_swallow_real_period' }
+      }
+      return {
+        action: 'apply',
+        createConfirmedNext: false,
+        nextNextOp: 'reproject',
+        createEagerEstimated: false,
+        reassignShrunkTailToEager: false,
+      }
+    }
+
+    return {
+      action: 'apply',
+      createConfirmedNext: false,
+      nextNextOp: confirmedEndDate > nextPeriod.end_date ? 'shift_extend' : 'shift_shrink',
+      createEagerEstimated: false,
+      reassignShrunkTailToEager: false,
+    }
+  }
+
+  return {
+    action: 'apply',
+    createConfirmedNext: false,
+    nextNextOp: 'none',
+    createEagerEstimated: !nextNext,
+    reassignShrunkTailToEager: !nextNext && confirmedEndDate < nextPeriod.end_date,
+  }
 }
 
 // ─── Transaction → period assignment ──────────────────────────────────────────

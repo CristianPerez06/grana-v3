@@ -107,8 +107,16 @@ export const EnCursoCard = ({
         <div className="flex flex-col gap-2 rounded-2xl bg-border-soft/60 p-5">
           <p className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
             {t('detail.cycle_close')}
+            {period.is_estimated && (
+              <span className="ml-1.5 font-semibold normal-case italic tracking-normal">
+                ({t('detail.timeline_estimated_tag')})
+              </span>
+            )}
           </p>
-          <p className="text-xl font-extrabold tabular-nums">{formatDayMonth(period.end_date)}</p>
+          <p className="text-xl font-extrabold tabular-nums">
+            {period.is_estimated ? '~' : ''}
+            {formatDayMonth(period.end_date)}
+          </p>
           <p className="text-[13px] font-semibold" style={{ color: accent }}>
             {t('detail.cycle_in_days', { days: daysToClose })}
           </p>
