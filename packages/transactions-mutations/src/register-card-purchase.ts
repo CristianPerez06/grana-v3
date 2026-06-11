@@ -6,7 +6,11 @@ import {
   type RegisterCardPurchaseInput,
 } from '@grana/validation'
 import { applySharedSplits } from './internal/shared-splits'
-import { getCardPeriodsWithStatus, getOrCreatePeriodForDate } from './internal/card-periods'
+import {
+  getCardPeriodsWithStatus,
+  getOrCreatePeriodForDate,
+  CardPurchasePredatesHistoryError,
+} from './internal/card-periods'
 import { insertDeclaredReimbursement } from './internal/declared-reimbursement'
 
 export type RegisterCardPurchaseArgs = {
@@ -30,6 +34,11 @@ function normalizeMoney(value: number): number {
 
 function normalizeFxRate(value: number): number {
   return normalizeMoneyAmount(value, { decimalPlaces: 6 }) ?? value
+}
+
+/** ISO date → DD/MM/AAAA for user-facing messages. */
+function formatHistoryDate(iso: string): string {
+  return iso.split('-').reverse().join('/')
 }
 
 /**
@@ -70,7 +79,13 @@ export async function registerCardPurchase(
   let periodId: string
   try {
     periodId = await getOrCreatePeriodForDate(supabase, data.account_id, data.date, today)
-  } catch {
+  } catch (e) {
+    if (e instanceof CardPurchasePredatesHistoryError) {
+      return {
+        ok: false,
+        formError: `La fecha del consumo es anterior al primer resumen de la tarjeta (${formatHistoryDate(e.oldestStartDate)}). Grana registra consumos desde ese resumen en adelante.`,
+      }
+    }
     return { ok: false, formError: 'No se pudo asignar un período a esta fecha.' }
   }
 

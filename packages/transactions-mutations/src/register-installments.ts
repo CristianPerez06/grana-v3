@@ -11,7 +11,11 @@ import {
   splitAmountIntoInstallments,
 } from '@grana/money-logic'
 import { applySharedSplits } from './internal/shared-splits'
-import { getCardPeriodsWithStatus, getOrCreatePeriodForDate } from './internal/card-periods'
+import {
+  getCardPeriodsWithStatus,
+  getOrCreatePeriodForDate,
+  CardPurchasePredatesHistoryError,
+} from './internal/card-periods'
 
 export type RegisterInstallmentsArgs = {
   supabase: GranaSupabaseClient
@@ -33,6 +37,11 @@ export type RegisterInstallmentsResult =
 
 function normalizeMoney(value: number): number {
   return normalizeMoneyAmount(value) ?? value
+}
+
+/** ISO date → DD/MM/AAAA for user-facing messages. */
+function formatHistoryDate(iso: string): string {
+  return iso.split('-').reverse().join('/')
 }
 
 /**
@@ -91,7 +100,16 @@ export async function registerInstallments(
         today,
       )
       periodIds.push(periodId)
-    } catch {
+    } catch (e) {
+      // Only the first installment uses the purchase date; later ones are
+      // +N months (always forward). So this rejection means the purchase
+      // itself predates the card's history — nothing has been inserted yet.
+      if (e instanceof CardPurchasePredatesHistoryError) {
+        return {
+          ok: false,
+          formError: `La fecha de la compra es anterior al primer resumen de la tarjeta (${formatHistoryDate(e.oldestStartDate)}). Grana registra consumos desde ese resumen en adelante.`,
+        }
+      }
       return {
         ok: false,
         formError: `No se pudo asignar un período para la cuota del ${txDate}.`,

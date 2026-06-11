@@ -8,6 +8,20 @@ import {
 type CardPeriodRow = Database['public']['Tables']['card_periods']['Row']
 
 /**
+ * Thrown when a purchase date precedes the start of the card's oldest known
+ * period. Such a date belongs to a statement Grana never tracked (registration
+ * starts at card creation), so the system rejects it instead of inventing a
+ * future period and misassigning the consumo. `oldestStartDate` is the ISO
+ * date the orchestrators surface to the user as the history anchor.
+ */
+export class CardPurchasePredatesHistoryError extends Error {
+  constructor(public readonly oldestStartDate: string) {
+    super(`purchase date precedes card history (oldest start ${oldestStartDate})`)
+    this.name = 'CardPurchasePredatesHistoryError'
+  }
+}
+
+/**
  * Full DB row + payment/count fields. The narrower
  * `@grana/money-logic` `CardPeriodWithPayment` is a structural subset; this
  * package returns the full row because `.select('*')` does, and consumers
@@ -85,6 +99,16 @@ export async function getOrCreatePeriodForDate(
 
   const existing = assignTransactionToPeriod(periods, targetDate)
   if (existing) return existing.id
+
+  // No period covers the date. Rolling generation only ever moves forward: a
+  // date BEFORE the oldest known period belongs to a statement that predates
+  // the card's history in Grana. Reject instead of creating a future period
+  // and misassigning the consumo to it (silent corruption). `periods` is
+  // ordered by start_date ASC, so periods[0] is the oldest.
+  const oldestPeriod = periods[0]
+  if (oldestPeriod && targetDate < oldestPeriod.start_date) {
+    throw new CardPurchasePredatesHistoryError(oldestPeriod.start_date)
+  }
 
   const { suggestedEndDate, suggestedDueDate } = suggestNextPeriodDates(periods, today)
 

@@ -29,6 +29,7 @@ export {
 export {
   getCardPeriodsWithStatus,
   getOrCreatePeriodForDate,
+  CardPurchasePredatesHistoryError,
   type CardPeriodWithPayment,
 } from './internal/card-periods'
 
