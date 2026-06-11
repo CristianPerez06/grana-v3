@@ -29,8 +29,8 @@ export async function buildMovementEditContext(
   if (!user) return null
 
   const [transaction, categories] = await Promise.all([
-    getTransactionDetail(txId),
-    getAllCategories(user.id),
+    getTransactionDetail(supabase, txId),
+    getAllCategories(supabase),
   ])
   if (!transaction) return null
 
@@ -47,7 +47,7 @@ export async function buildMovementEditContext(
   let hasPaidInstallment = false
   let cardName: string | null = null
   if (isParent) {
-    const family = await getInstallmentFamily(transaction.id)
+    const family = await getInstallmentFamily(supabase, transaction.id)
     accountId = family.children[0]?.account_id ?? ''
     hasPaidInstallment = family.children.some((c) => c.status === 'paid')
     cardName = family.children.find((c) => c.source_account)?.source_account?.name ?? null
@@ -70,7 +70,7 @@ export async function buildMovementEditContext(
   // Available balance of the movement's own account, in the movement currency,
   // for the soft negative-balance warning. Parents (credit, off-ledger) skip it.
   const ownerDetail = transaction.account_id
-    ? await getAccountDetail(transaction.account_id)
+    ? await getAccountDetail(supabase, transaction.account_id)
     : null
   const availableBalance = ownerDetail?.balances[transaction.currency_code] ?? 0
 

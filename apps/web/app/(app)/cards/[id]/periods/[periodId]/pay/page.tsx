@@ -19,9 +19,9 @@ const PayPeriodPage = async ({ params }: Props) => {
   if (!user) redirect('/login')
 
   const [cardDetail, period, accountGroups] = await Promise.all([
-    getCreditCardDetail(id),
-    getCardPeriodDetail(periodId),
-    getAccounts(),
+    getCreditCardDetail(supabase, id),
+    getCardPeriodDetail(supabase, periodId),
+    getAccounts(supabase),
   ])
 
   if (!cardDetail || cardDetail.type !== 'credit') notFound()

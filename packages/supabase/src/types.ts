@@ -1003,6 +1003,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_movements_page: {
+        Args: { p_filters?: Json; p_limit?: number; p_offset?: number }
+        Returns: Json[]
+      }
       is_household_member: {
         Args: { p_household_id: string }
         Returns: boolean

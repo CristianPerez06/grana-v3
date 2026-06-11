@@ -15,8 +15,8 @@ const EditAccountPage = async ({ params }: Props) => {
   if (!user) redirect('/login')
 
   const [account, institutions] = await Promise.all([
-    getAccountDetail(id),
-    getInstitutions(),
+    getAccountDetail(supabase, id),
+    getInstitutions(supabase),
   ])
 
   if (!account) notFound()

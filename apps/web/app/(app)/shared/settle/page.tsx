@@ -15,9 +15,9 @@ export default async function SharedSettlePage() {
   if (!user) redirect('/login')
 
   const [household, debt, accounts] = await Promise.all([
-    getHousehold(),
-    getHouseholdDebt(),
-    getAccounts(),
+    getHousehold(supabase),
+    getHouseholdDebt(supabase),
+    getAccounts(supabase),
   ])
   if (!household) return null
 

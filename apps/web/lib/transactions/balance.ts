@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import type { DbClient } from '@/lib/supabase/db-client'
 import {
   calculateTransactionSums,
   type BalanceCurrency,
@@ -17,11 +17,10 @@ export {
 // Returns a map of accountId -> { ARS: net, USD: net }
 // net = income - expense - transfer_out + transfer_in + adjustment(signed)
 export async function getTransactionSums(
+  supabase: DbClient,
   accountIds: string[],
 ): Promise<Map<string, Record<BalanceCurrency, number>>> {
   if (accountIds.length === 0) return new Map()
-
-  const supabase = await createClient()
 
   // Exclude credit card child transactions (status IS NOT NULL) and
   // off-ledger parent rows (is_parent=true, account_id=NULL, auto-excluded by the or filter).

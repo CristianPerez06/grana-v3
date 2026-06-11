@@ -213,7 +213,7 @@ export async function leaveHousehold(): Promise<ActionResult<never>> {
   const householdId = await getMyHouseholdId(supabase, userId)
   if (!householdId) return { ok: false, formError: 'No tenés un hogar.' }
 
-  const debt = await getHouseholdDebt()
+  const debt = await getHouseholdDebt(supabase)
   if (debt && (debt.ARS.kind === 'owes' || debt.USD.kind === 'owes')) {
     return { ok: false, formError: 'Saldá la deuda antes de salir del hogar.' }
   }
@@ -253,7 +253,7 @@ export async function registerSettlement(
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
 
-  const household = await getHousehold()
+  const household = await getHousehold(supabase)
   if (!household || household.members.length < 2) {
     return { ok: false, formError: 'No tenés un hogar activo.' }
   }
@@ -262,7 +262,7 @@ export async function registerSettlement(
 
   // The amount cannot exceed what THIS user currently owes in that currency.
   const currency = validation.data.currency_code
-  const debt = await getHouseholdDebt()
+  const debt = await getHouseholdDebt(supabase)
   const entry = debt?.[currency]
   const youOwe = entry?.kind === 'owes' && entry.from === userId ? entry.amount : 0
   if (validation.data.amount > youOwe + 0.0001) {

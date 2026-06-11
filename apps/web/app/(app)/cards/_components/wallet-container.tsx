@@ -10,6 +10,7 @@ import { getTodayAR } from '@/lib/date'
 import { Wallet } from './wallet'
 import { WalletSection } from './wallet-section'
 import { SectionFallback } from '@/components/ui/section-fallback'
+import { createClient } from '@/lib/supabase/server'
 
 export const WalletContainer = async () => {
   let activeCards: CreditCardSummary[]
@@ -18,8 +19,8 @@ export const WalletContainer = async () => {
   let locale: string
   try {
     ;[activeCards, networks, showCents, locale] = await Promise.all([
-      getCreditCards(),
-      getCardNetworks(),
+      getCreditCards(await createClient(), {}),
+      getCardNetworks(await createClient()),
       getShowCents(),
       getLocale(),
     ])

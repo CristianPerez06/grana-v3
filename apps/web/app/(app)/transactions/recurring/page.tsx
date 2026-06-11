@@ -22,13 +22,13 @@ const RecurringPage = async () => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  await generateDueRecurrenceInstances()
+  await generateDueRecurrenceInstances(supabase)
 
   const [allRules, pendingRecurrences, { cash, bank }] =
     await Promise.all([
-      getRecurrences({ statuses: ['active', 'paused'] }),
-      getPendingRecurrenceInstances(),
-      getAccounts(),
+      getRecurrences(supabase, { statuses: ['active', 'paused'] }),
+      getPendingRecurrenceInstances(supabase),
+      getAccounts(supabase),
     ])
 
   const today = formatDateISO(getTodayAR())

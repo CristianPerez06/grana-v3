@@ -35,7 +35,8 @@ const initials = (name: string): string =>
 export default async function SharedPage() {
   const t = await getTranslations('shared')
   const tRoot = await getTranslations()
-  const household = await getHousehold()
+  const supabase = await createClient()
+  const household = await getHousehold(supabase)
 
   if (!household) {
     return (
@@ -56,7 +57,6 @@ export default async function SharedPage() {
     )
   }
 
-  const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -67,10 +67,10 @@ export default async function SharedPage() {
   const partnerName = partner?.fullName ?? ''
 
   const [debt, expenses, pending, accounts] = await Promise.all([
-    getHouseholdDebt(),
-    getSharedExpenses(),
-    getPendingSettlements(),
-    getAccounts(),
+    getHouseholdDebt(supabase),
+    getSharedExpenses(supabase),
+    getPendingSettlements(supabase),
+    getAccounts(supabase),
   ])
   const myAccounts = [...accounts.cash, ...accounts.bank].map((a) => ({ id: a.id, name: a.name }))
 

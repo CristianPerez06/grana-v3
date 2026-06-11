@@ -6,15 +6,17 @@ import { AccountSection } from './account-section'
 import { AccountsHint } from './accounts-hint'
 import { AccountsEditDrawerProvider } from './accounts-edit-drawer'
 import { EmptyAccountsState } from './empty-accounts-state'
+import { createClient } from '@/lib/supabase/server'
 
 export const ActiveAccountsContainer = async () => {
   let cash: AccountWithBalances[]
   let bank: AccountWithBalances[]
   let institutions: Institution[]
   try {
+    const supabase = await createClient()
     ;[{ cash, bank }, institutions] = await Promise.all([
-      getCashAndBankAccounts(),
-      getInstitutions(),
+      getCashAndBankAccounts(supabase),
+      getInstitutions(supabase),
     ])
   } catch {
     const t = await getTranslations('accounts.route')

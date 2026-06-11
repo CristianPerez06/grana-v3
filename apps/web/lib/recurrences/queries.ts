@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import type { DbClient } from '@/lib/supabase/db-client'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { type RecurrenceFrequency } from './date'
 import { decideRecurrenceInstance, type IntervalUnit } from './generator'
@@ -46,12 +46,12 @@ function mapRecurrenceSummary(
 }
 
 async function getPendingInstancesByRecurrenceId(
+  supabase: DbClient,
   recurrenceIds: string[],
 ): Promise<Map<string, RecurrenceInstance>> {
   const pendingByRecurrenceId = new Map<string, RecurrenceInstance>()
   if (recurrenceIds.length === 0) return pendingByRecurrenceId
 
-  const supabase = await createClient()
   const { data, error } = await supabase
     .from('recurrence_instances')
     .select('*')
@@ -68,9 +68,9 @@ async function getPendingInstancesByRecurrenceId(
 }
 
 export async function getRecurrences(
+  supabase: DbClient,
   options: { statuses?: RecurrenceStatus[] } = {},
 ): Promise<RecurrenceSummary[]> {
-  const supabase = await createClient()
   const { statuses = ['active', 'paused'] } = options
 
   let query = supabase
@@ -88,6 +88,7 @@ export async function getRecurrences(
 
   const recurrences = (data ?? []) as RecurrenceRow[]
   const pendingByRecurrenceId = await getPendingInstancesByRecurrenceId(
+    supabase,
     recurrences.map((recurrence) => recurrence.id),
   )
 
@@ -96,11 +97,9 @@ export async function getRecurrences(
   )
 }
 
-export async function getPendingRecurrenceInstances(): Promise<
-  PendingRecurrenceInstance[]
-> {
-  const supabase = await createClient()
-
+export async function getPendingRecurrenceInstances(
+  supabase: DbClient,
+): Promise<PendingRecurrenceInstance[]> {
   const { data, error } = await supabase
     .from('recurrence_instances')
     .select(INSTANCE_SELECT)
@@ -114,10 +113,9 @@ export async function getPendingRecurrenceInstances(): Promise<
 }
 
 export async function getRecurrenceDetail(
+  supabase: DbClient,
   id: string,
 ): Promise<RecurrenceDetail | null> {
-  const supabase = await createClient()
-
   const { data: recurrence, error: recurrenceError } = await supabase
     .from('recurrences')
     .select(RECURRENCE_SELECT)
@@ -158,12 +156,12 @@ export async function getRecurrenceDetail(
 // recurrente — pensado para marcar movimientos en listados con un ícono.
 
 export async function getRecurrenceLinkedTransactionIds(
+  supabase: DbClient,
   transactionIds: string[],
 ): Promise<Set<string>> {
   const ids = new Set<string>()
   if (transactionIds.length === 0) return ids
 
-  const supabase = await createClient()
   const { data, error } = await supabase
     .from('recurrence_instances')
     .select('confirmed_transaction_id')
@@ -181,14 +179,13 @@ export async function getRecurrenceLinkedTransactionIds(
 // o null si la transacción no proviene de una recurrencia.
 
 export async function getRecurrenceLinkForTransaction(
+  supabase: DbClient,
   transactionId: string,
 ): Promise<{
   recurrence_id: string
   movement_type: string
   frequency: string
 } | null> {
-  const supabase = await createClient()
-
   const { data: instance, error } = await supabase
     .from('recurrence_instances')
     .select(`
@@ -236,13 +233,11 @@ type RecurrenceRuleForGeneration = {
   description: string | null
 }
 
-export async function generateDueRecurrenceInstances(): Promise<{
+export async function generateDueRecurrenceInstances(supabase: DbClient): Promise<{
   created: number
 }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const user = claimsData?.claims.sub ? { id: claimsData.claims.sub } : null
   if (!user) return { created: 0 }
 
   const today = formatDateISO(getTodayAR())
@@ -330,7 +325,7 @@ function monthsAgoISO(months: number): string {
   return formatDateISO(target)
 }
 
-export async function getTopRecurrenceSuggestion(): Promise<
+export async function getTopRecurrenceSuggestion(supabase: DbClient): Promise<
   (RecurrenceSuggestion & {
     account: { id: string; name: string; type: 'cash' | 'bank' | 'credit' } | null
     destination_account: { id: string; name: string; type: 'cash' | 'bank' | 'credit' } | null
@@ -338,11 +333,11 @@ export async function getTopRecurrenceSuggestion(): Promise<
   })
   | null
 > {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
+  // Locally-verified claims instead of a network getUser(): the explicit
+  // user_id filters below are an index hint — RLS already scopes the rows.
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const userId = claimsData?.claims.sub
+  if (!userId) return null
 
   const sinceDate = monthsAgoISO(6)
 
@@ -352,7 +347,7 @@ export async function getTopRecurrenceSuggestion(): Promise<
     .select(
       'id, type, account_id, transfer_destination_account_id, category_id, currency_code, amount, date, description',
     )
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .gte('date', sinceDate)
     .in('type', ['income', 'expense', 'transfer'])
     .eq('is_parent', false)
@@ -381,14 +376,14 @@ export async function getTopRecurrenceSuggestion(): Promise<
     .select(
       'movement_type, account_id, transfer_destination_account_id, category_id, currency_code',
     )
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .in('status', ['active', 'paused'])
 
   // 4) Dismissed fingerprints.
   const { data: dismissals } = await supabase
     .from('recurrence_suggestion_dismissals')
     .select('fingerprint')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
 
   const dismissedFingerprints = new Set(
     (dismissals ?? []).map((row) => row.fingerprint as string),

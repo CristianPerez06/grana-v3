@@ -14,7 +14,7 @@ const NewSubcategoryPage = async ({ params }: Props) => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const category = await getCategoryById(id)
+  const category = await getCategoryById(supabase, id)
   // Allow adding a subcategory under the user's own categories AND under system
   // categories (user_id === null) — per the categories spec. Only another user's
   // category is off-limits.

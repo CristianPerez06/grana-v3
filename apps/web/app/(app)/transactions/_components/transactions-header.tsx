@@ -7,11 +7,10 @@ import { useTranslations } from 'next-intl'
 import { useQueries } from '@tanstack/react-query'
 import { PageHeader } from '@/components/ui/page-header'
 import { RegisterMovementButton } from '@/lib/transactions/components/register-movement-button'
-import {
-  getAccountsAction,
-  getAllCategoriesAction,
-  getHouseholdAction,
-} from '@/app/_actions/queries'
+import { createClient } from '@/lib/supabase/client'
+import { getAccounts } from '@/lib/accounts/queries'
+import { getAllCategories } from '@/lib/categories/queries'
+import { getHousehold } from '@/lib/shared/queries'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 
 /**
@@ -30,9 +29,9 @@ export function TransactionsHeader() {
 
   const queries = useQueries({
     queries: [
-      { queryKey: QUERY_KEYS.accountsList, queryFn: () => getAccountsAction() },
-      { queryKey: QUERY_KEYS.categoriesTree, queryFn: () => getAllCategoriesAction() },
-      { queryKey: QUERY_KEYS.householdDetail, queryFn: () => getHouseholdAction() },
+      { queryKey: QUERY_KEYS.accountsList, queryFn: () => getAccounts(createClient()) },
+      { queryKey: QUERY_KEYS.categoriesTree, queryFn: () => getAllCategories(createClient()) },
+      { queryKey: QUERY_KEYS.householdDetail, queryFn: () => getHousehold(createClient()) },
     ],
   })
 

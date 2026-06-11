@@ -12,8 +12,8 @@ const NewCardPage = async () => {
   if (!user) redirect('/login')
 
   const [institutions, networks] = await Promise.all([
-    getInstitutions(),
-    getCardNetworks(),
+    getInstitutions(supabase),
+    getCardNetworks(supabase),
   ])
 
   const t = await getTranslations('cards')

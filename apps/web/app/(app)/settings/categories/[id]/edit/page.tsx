@@ -14,7 +14,7 @@ const EditCategoryPage = async ({ params }: Props) => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const category = await getCategoryById(id)
+  const category = await getCategoryById(supabase, id)
   if (!category || category.user_id !== user.id) notFound()
 
   const tCat = await getTranslations('settings.categories')

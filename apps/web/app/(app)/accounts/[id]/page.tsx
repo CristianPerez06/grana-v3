@@ -28,7 +28,7 @@ const AccountDetailPage = async ({ params }: Props) => {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const account = await getAccountDetail(id)
+  const account = await getAccountDetail(supabase, id)
   if (!account) notFound()
   if (account.type === 'credit') redirect(`/cards/${id}`)
 

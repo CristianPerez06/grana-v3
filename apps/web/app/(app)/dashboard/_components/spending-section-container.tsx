@@ -3,6 +3,7 @@ import type { MonthCategoryBreakdown } from '@grana/dashboard'
 import { monthOf } from '@/lib/transactions/filters'
 import { getMonthCategoryBreakdown } from '@/lib/transactions/queries'
 import { SpendingSection } from './spending-section'
+import { createClient } from '@/lib/supabase/server'
 
 type Props = {
   today: Date
@@ -14,7 +15,7 @@ type Props = {
 export const SpendingSectionContainer = async ({ today }: Props) => {
   let breakdown: MonthCategoryBreakdown
   try {
-    breakdown = await getMonthCategoryBreakdown(monthOf(today))
+    breakdown = await getMonthCategoryBreakdown(await createClient(), monthOf(today))
   } catch {
     const t = await getTranslations('dashboard.spending')
     return (

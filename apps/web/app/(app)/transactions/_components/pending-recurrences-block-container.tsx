@@ -3,10 +3,9 @@
 import { useMemo } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import { PendingRecurrencesBlock } from '@/lib/recurrences/components/pending-recurrences-block'
-import {
-  getAccountsAction,
-  getPendingRecurrenceInstancesAction,
-} from '@/app/_actions/queries'
+import { createClient } from '@/lib/supabase/client'
+import { getPendingRecurrenceInstances } from '@/lib/recurrences/queries'
+import { getAccounts } from '@/lib/accounts/queries'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 
 /**
@@ -25,13 +24,13 @@ export function PendingRecurrencesBlockContainer() {
     queries: [
       {
         queryKey: QUERY_KEYS.recurrencesPendingInstances,
-        queryFn: () => getPendingRecurrenceInstancesAction(),
+        queryFn: () => getPendingRecurrenceInstances(createClient()),
       },
       // Accounts are needed only when there's a pending instance, but we leave
       // the query enabled unconditionally — `accountsList` has a 5min
       // staleTime and is already in cache from header/drawer-loader, so it
       // doesn't cost a fetch in practice.
-      { queryKey: QUERY_KEYS.accountsList, queryFn: () => getAccountsAction() },
+      { queryKey: QUERY_KEYS.accountsList, queryFn: () => getAccounts(createClient()) },
     ],
   })
 

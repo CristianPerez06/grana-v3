@@ -2,11 +2,10 @@
 
 import { useMemo, type ReactNode } from 'react'
 import { useQueries } from '@tanstack/react-query'
-import {
-  getAccountsAction,
-  getAllCategoriesAction,
-  getHouseholdAction,
-} from '@/app/_actions/queries'
+import { createClient } from '@/lib/supabase/client'
+import { getAccounts } from '@/lib/accounts/queries'
+import { getAllCategories } from '@/lib/categories/queries'
+import { getHousehold } from '@/lib/shared/queries'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import type { MovementFormAccount } from '@/lib/transactions/components/movement-form'
 import { MovementDrawerProvider } from './movement-drawer'
@@ -38,9 +37,9 @@ const activeCodes = (currencies: AccountCurrency[]): ('ARS' | 'USD')[] =>
 export function MovementDrawerLoader({ children }: Props) {
   const queries = useQueries({
     queries: [
-      { queryKey: QUERY_KEYS.accountsList, queryFn: () => getAccountsAction() },
-      { queryKey: QUERY_KEYS.categoriesTree, queryFn: () => getAllCategoriesAction() },
-      { queryKey: QUERY_KEYS.householdDetail, queryFn: () => getHouseholdAction() },
+      { queryKey: QUERY_KEYS.accountsList, queryFn: () => getAccounts(createClient()) },
+      { queryKey: QUERY_KEYS.categoriesTree, queryFn: () => getAllCategories(createClient()) },
+      { queryKey: QUERY_KEYS.householdDetail, queryFn: () => getHousehold(createClient()) },
     ],
   })
 

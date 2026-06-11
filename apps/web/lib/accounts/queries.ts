@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import type { DbClient } from '@/lib/supabase/db-client'
 import { getTransactionSums } from '@/lib/transactions/balance'
 import { getCreditCards, type CreditCardSummary } from '@/lib/cards/queries'
 import { Money } from '@grana/validation'
@@ -23,10 +23,10 @@ function addMoneyAmounts(a: number | string, b: number | string): number {
 // parent rows. Single round-trip; the row's "archive vs delete" affordance reads
 // from this set per account.
 async function getAccountIdsWithTransactions(
+  supabase: DbClient,
   accountIds: string[],
 ): Promise<Set<string>> {
   if (accountIds.length === 0) return new Set()
-  const supabase = await createClient()
 
   const idList = accountIds.join(',')
   const { data, error } = await supabase
@@ -59,10 +59,9 @@ async function getAccountIdsWithTransactions(
 // ── getAccounts ───────────────────────────────────────────────────────────────
 
 export async function getAccounts(
+  supabase: DbClient,
   options: { includeArchived?: boolean } = {},
 ): Promise<GroupedAccountsWithBalances> {
-  const supabase = await createClient()
-
   let query = supabase
     .from('accounts')
     .select(`
@@ -79,7 +78,7 @@ export async function getAccounts(
 
   const [{ data, error }, creditCards] = await Promise.all([
     query,
-    getCreditCards(options),
+    getCreditCards(supabase, options),
   ])
 
   if (error) throw error
@@ -87,8 +86,8 @@ export async function getAccounts(
   const accounts = (data ?? []) as AccountWithDetails[]
   const accountIds = accounts.map((a) => a.id)
   const [txSumsMap, accountsWithTx] = await Promise.all([
-    getTransactionSums(accountIds),
-    getAccountIdsWithTransactions(accountIds),
+    getTransactionSums(supabase, accountIds),
+    getAccountIdsWithTransactions(supabase, accountIds),
   ])
 
   const withBalances = accounts.map((a) => ({
@@ -122,9 +121,9 @@ type GroupedCashAndBank = {
 }
 
 export async function getCashAndBankAccounts(
+  supabase: DbClient,
   options: { archivedOnly?: boolean } = {},
 ): Promise<GroupedCashAndBank> {
-  const supabase = await createClient()
 
   let query = supabase
     .from('accounts')
@@ -144,8 +143,8 @@ export async function getCashAndBankAccounts(
   const accounts = (data ?? []) as AccountWithDetails[]
   const accountIds = accounts.map((a) => a.id)
   const [txSumsMap, accountsWithTx] = await Promise.all([
-    getTransactionSums(accountIds),
-    getAccountIdsWithTransactions(accountIds),
+    getTransactionSums(supabase, accountIds),
+    getAccountIdsWithTransactions(supabase, accountIds),
   ])
 
   const withBalances = accounts.map((a) => ({
@@ -172,8 +171,10 @@ export async function getCashAndBankAccounts(
 
 // ── getAccountDetail ──────────────────────────────────────────────────────────
 
-export async function getAccountDetail(id: string): Promise<AccountWithBalances | null> {
-  const supabase = await createClient()
+export async function getAccountDetail(
+  supabase: DbClient,
+  id: string,
+): Promise<AccountWithBalances | null> {
 
   const { data, error } = await supabase
     .from('accounts')
@@ -192,8 +193,8 @@ export async function getAccountDetail(id: string): Promise<AccountWithBalances 
 
   const account = data as AccountWithDetails
   const [txSumsMap, accountsWithTx] = await Promise.all([
-    getTransactionSums([id]),
-    getAccountIdsWithTransactions([id]),
+    getTransactionSums(supabase, [id]),
+    getAccountIdsWithTransactions(supabase, [id]),
   ])
   const txSums = txSumsMap.get(id) ?? { ARS: 0, USD: 0 }
 
@@ -217,8 +218,7 @@ export async function getAccountDetail(id: string): Promise<AccountWithBalances 
 
 // ── getInstitutions ───────────────────────────────────────────────────────────
 
-export async function getInstitutions() {
-  const supabase = await createClient()
+export async function getInstitutions(supabase: DbClient) {
 
   // RLS already filters: each user sees the catalog (user_id NULL) plus their
   // own custom rows. We order catalog first, custom last (each block alphabetic).

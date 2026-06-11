@@ -7,6 +7,7 @@ import {
 } from './_helpers'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
+import { generateDueRecurrenceInstances } from '@/lib/recurrences/queries'
 import {
   acceptRecurrenceSuggestionSchema,
   confirmRecurrenceInstanceSchema,
@@ -777,4 +778,14 @@ export async function dismissRecurrenceSuggestion(
   // Dismissing only updates the suggestion list; no rule or movement change.
   revalidateAfterSuggestionMutation()
   return { ok: true }
+}
+
+// ── generateDueRecurrenceInstancesAction ──────────────────────────────────────
+// Lazy materialization of due recurrence instances, fired-and-forgotten from
+// the /transactions shell on mount (web-data-access spec: writes never block
+// the read path). The caller invalidates pending-recurrences + movements when
+// `created > 0` so the new instance appears without a reload.
+
+export async function generateDueRecurrenceInstancesAction(): Promise<{ created: number }> {
+  return generateDueRecurrenceInstances(await createClient())
 }

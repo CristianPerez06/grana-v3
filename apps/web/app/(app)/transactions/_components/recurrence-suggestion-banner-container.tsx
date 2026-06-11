@@ -2,7 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { RecurrenceSuggestionBanner } from '@/lib/recurrences/components/recurrence-suggestion-banner'
-import { getTopRecurrenceSuggestionAction } from '@/app/_actions/queries'
+import { createClient } from '@/lib/supabase/client'
+import { getTopRecurrenceSuggestion } from '@/lib/recurrences/queries'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 
 /**
@@ -18,7 +19,10 @@ import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 export function RecurrenceSuggestionBannerContainer() {
   const { data: suggestion } = useQuery({
     queryKey: QUERY_KEYS.recurrencesTopSuggestion,
-    queryFn: () => getTopRecurrenceSuggestionAction(),
+    queryFn: () => getTopRecurrenceSuggestion(createClient()),
+    // The 6-month pattern detection is stable within a session — cache it so
+    // navigating away and back does not recompute it (web-data-access spec).
+    staleTime: 30 * 60 * 1000,
   })
 
   if (!suggestion) return null

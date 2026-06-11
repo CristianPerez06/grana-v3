@@ -26,9 +26,9 @@ const EditCardPage = async ({ params }: Props) => {
   if (!user) redirect('/login')
 
   const [cardDetail, institutions, networks, t] = await Promise.all([
-    getCreditCardDetail(id),
-    getInstitutions(),
-    getCardNetworks(),
+    getCreditCardDetail(supabase, id),
+    getInstitutions(supabase),
+    getCardNetworks(supabase),
     getTranslations('cards'),
   ])
 

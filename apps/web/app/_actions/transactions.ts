@@ -211,7 +211,7 @@ export async function updateTransaction(
     existing.account_id
   ) {
     const newDate = validation.data.date
-    const periods = await getCardPeriodsWithStatus(existing.account_id)
+    const periods = await getCardPeriodsWithStatus(supabase, existing.account_id)
     const current = periods.find((p) => p.id === existing.card_period_id)
     const currentStillCovers =
       current != null &&
@@ -230,7 +230,7 @@ export async function updateTransaction(
             'La nueva fecha cae en un resumen ya pagado. Elegí otra fecha o registrá un ajuste.',
         }
       }
-      const newPeriodId = await getOrCreatePeriodForDate(existing.account_id, newDate)
+      const newPeriodId = await getOrCreatePeriodForDate(supabase, existing.account_id, newDate)
       if (newPeriodId !== existing.card_period_id) {
         const { data: targetPeriod } = await supabase
           .from('card_periods')

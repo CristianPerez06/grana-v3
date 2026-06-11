@@ -14,11 +14,11 @@ const SubcategoriesPage = async ({ params }: Props) => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const category = await getCategoryById(id)
+  const category = await getCategoryById(supabase, id)
   if (!category) notFound()
 
   const t = await getTranslations()
-  const rawSubcategories = await getSubcategoriesByCategoryId(id)
+  const rawSubcategories = await getSubcategoriesByCategoryId(supabase, id)
   const subcategories = rawSubcategories.map((sub) => ({
     ...sub,
     displayName: getSubcategoryName(sub, t),

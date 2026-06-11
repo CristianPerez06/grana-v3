@@ -13,13 +13,14 @@ import {
   CategorySpendingOverview,
   type CategorySpendingOverviewController,
 } from '@/lib/transactions/components/category-spending-overview'
+import { createClient } from '@/lib/supabase/client'
 import {
-  getAllCategoriesAction,
-  getMonthCategoryBreakdownAction,
-  getMonthIncomeBreakdownAction,
-  getMonthSubcategoryBreakdownAction,
-  hasUsdActivityInMonthAction,
-} from '@/app/_actions/queries'
+  getMonthCategoryBreakdown,
+  getMonthIncomeBreakdown,
+  getMonthSubcategoryBreakdown,
+  hasUsdActivityInMonth,
+} from '@/lib/transactions/queries'
+import { getAllCategories } from '@/lib/categories/queries'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import { UNCATEGORIZED_ID } from '@grana/dashboard'
 import { SUBCATEGORY_NONE_MARKER } from '@/lib/transactions/filters'
@@ -67,22 +68,22 @@ export function CategorySpendingOverviewContainer() {
     queries: [
       {
         queryKey: QUERY_KEYS.breakdownUsdActivity(month),
-        queryFn: () => hasUsdActivityInMonthAction(month),
+        queryFn: () => hasUsdActivityInMonth(createClient(), month),
       },
       {
         queryKey: QUERY_KEYS.breakdownExpense(month),
-        queryFn: () => getMonthCategoryBreakdownAction(month),
+        queryFn: () => getMonthCategoryBreakdown(createClient(), month),
         enabled: overviewMode === 'egresos',
       },
       {
         queryKey: QUERY_KEYS.breakdownIncome(month),
-        queryFn: () => getMonthIncomeBreakdownAction(month),
+        queryFn: () => getMonthIncomeBreakdown(createClient(), month),
         enabled: overviewMode === 'ingresos',
       },
       {
         queryKey: QUERY_KEYS.breakdownExpenseSubcategory(month, filters.categoryId ?? ''),
         queryFn: () =>
-          getMonthSubcategoryBreakdownAction(month, filters.categoryId as string),
+          getMonthSubcategoryBreakdown(createClient(), month, filters.categoryId as string),
         enabled: breakdownMode === 'subcategory' && Boolean(filters.categoryId),
       },
     ],
@@ -92,7 +93,7 @@ export function CategorySpendingOverviewContainer() {
   // from it to label the active category on the in-category breadcrumb.
   const categoriesTreeQ = useQuery({
     queryKey: QUERY_KEYS.categoriesTree,
-    queryFn: () => getAllCategoriesAction(),
+    queryFn: () => getAllCategories(createClient()),
   })
 
   // ── Active breakdown (the donut's data) ────────────────────────────────────

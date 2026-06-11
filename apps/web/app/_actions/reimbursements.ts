@@ -69,7 +69,7 @@ export async function confirmReimbursement(
     }
     let periodId: string
     try {
-      periodId = await getOrCreatePeriodForDate(row.account_id, d.date)
+      periodId = await getOrCreatePeriodForDate(supabase, row.account_id, d.date)
     } catch {
       return {
         ok: false,

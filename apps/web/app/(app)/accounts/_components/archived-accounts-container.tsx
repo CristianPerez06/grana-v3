@@ -3,11 +3,12 @@ import { getCashAndBankAccounts } from '@/lib/accounts/queries'
 import type { AccountWithBalances } from '@/lib/accounts/types'
 import { SectionFallback } from '@/components/ui/section-fallback'
 import { AccountSection } from './account-section'
+import { createClient } from '@/lib/supabase/server'
 
 export const ArchivedAccountsContainer = async () => {
   let archived: AccountWithBalances[]
   try {
-    const { cash, bank } = await getCashAndBankAccounts({ archivedOnly: true })
+    const { cash, bank } = await getCashAndBankAccounts(await createClient(), { archivedOnly: true })
     archived = [...cash, ...bank]
   } catch {
     const t = await getTranslations('accounts.route')

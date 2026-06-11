@@ -3,6 +3,7 @@ import { Settings2 } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { PageHeader } from '@/components/ui/page-header'
 import { getHousehold } from '@/lib/shared/queries'
+import { createClient } from '@/lib/supabase/server'
 
 const SettingsLink = ({ label }: { label: string }) => (
   <Link
@@ -16,7 +17,7 @@ const SettingsLink = ({ label }: { label: string }) => (
 
 const SharedHomeLayout = async ({ children }: { children: React.ReactNode }) => {
   const t = await getTranslations('shared')
-  const household = await getHousehold()
+  const household = await getHousehold(await createClient())
   const title = household?.name ?? t('title')
   const actions = household ? <SettingsLink label={t('settings.title')} /> : undefined
   // Only the active household (two members) gets the wide operational layout;

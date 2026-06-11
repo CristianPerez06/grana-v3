@@ -128,7 +128,7 @@ export async function archiveAccount(
     .single()
 
   if (account?.type === 'credit') {
-    const debtCheck = await getCreditCardDebtCheck(id)
+    const debtCheck = await getCreditCardDebtCheck(supabase, id)
     if (debtCheck.hasPendingDebt) {
       return { ok: false, formError: 'pending_debt', reason: 'pending_debt' }
     }
@@ -274,7 +274,7 @@ export async function deactivateCurrencyFromAccount(
   const target = activeCurrencies.find((c) => c.currency_code === currencyCode)
   if (!target) return { ok: false, formError: 'Moneda no encontrada en la cuenta.' }
 
-  const txSums = (await getTransactionSums([accountId])).get(accountId) ?? { ARS: 0, USD: 0 }
+  const txSums = (await getTransactionSums(supabase, [accountId])).get(accountId) ?? { ARS: 0, USD: 0 }
   const totalBalance = Money.add(
     Money.from(target.initial_balance),
     Money.from(txSums[currencyCode] ?? 0),

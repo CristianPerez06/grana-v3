@@ -2,9 +2,10 @@ import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { PageHeader } from '@/components/ui/page-header'
 import { getHousehold } from '@/lib/shared/queries'
+import { createClient } from '@/lib/supabase/server'
 
 const SharedSettleLayout = async ({ children }: { children: React.ReactNode }) => {
-  const household = await getHousehold()
+  const household = await getHousehold(await createClient())
   if (!household || household.members.length < 2) redirect('/shared')
 
   const t = await getTranslations('shared')

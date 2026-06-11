@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import type { DbClient } from '@/lib/supabase/db-client'
 import { getSubcategoriesByCategoryId } from '@/lib/categories/queries'
 import {
   getMonthCategoryBreakdown as getMonthCategoryBreakdownShared,
@@ -16,9 +16,7 @@ import {
   DEFAULT_MOVEMENTS_LIMIT,
   MAX_MOVEMENTS_LIMIT,
   MOVEMENTS_LIMIT_STEP,
-  movementMatchesText,
   resolveMonthRange,
-  SUBCATEGORY_NONE_MARKER,
   type MovementFilters,
 } from './filters'
 
@@ -45,13 +43,13 @@ const TRANSACTION_SELECT = `
   )
 `
 
-const GLOBAL_MOVEMENTS_QUERY_CHUNK_SIZE = 200
-
 // Reimbursements derive their category from the linked expense. PostgREST can't
 // reliably embed a self-referential FK (transactions → transactions), so we
 // stitch it in a second query (same approach grana-v2 used for cashback).
+// Only the per-row detail reads still need this — the global movements page
+// gets the linked expense embedded by the get_movements_page RPC.
 async function attachLinkedExpenses(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: DbClient,
   rows: TransactionWithDetails[],
 ): Promise<TransactionWithDetails[]> {
   const linkedIds = [
@@ -97,10 +95,10 @@ const isHistoryRow = (r: TransactionWithDetails): boolean =>
 // ── getTransactions ───────────────────────────────────────────────────────────
 
 export async function getTransactions(
+  supabase: DbClient,
   accountId: string,
   options: { limit?: number; offset?: number; currencyCode?: 'ARS' | 'USD' } = {},
 ): Promise<TransactionWithDetails[]> {
-  const supabase = await createClient()
   const { limit = 20, offset = 0, currencyCode } = options
 
   let query = supabase
@@ -134,10 +132,9 @@ export async function getTransactions(
 // same underlying data — TanStack caches one fetch, not two).
 
 export async function getAccountMovementsAscending(
+  supabase: DbClient,
   accountId: string,
 ): Promise<TransactionWithDetails[]> {
-  const supabase = await createClient()
-
   const { data, error } = await supabase
     .from('transactions')
     .select(TRANSACTION_SELECT)
@@ -157,9 +154,10 @@ export async function getAccountMovementsAscending(
 // ── getTransactionDetail ──────────────────────────────────────────────────────
 
 export async function getGlobalMovements(
+  supabase: DbClient,
   options: { limit?: number; offset?: number; filters?: MovementFilters } = {},
 ): Promise<FinancialMovement[]> {
-  const page = await getGlobalMovementsPage(options)
+  const page = await getGlobalMovementsPage(supabase, options)
   return page.movements
 }
 
@@ -169,8 +167,7 @@ export async function getGlobalMovements(
 // (user has history elsewhere, just navigated to an empty month). LIMIT 1 so
 // the cost is constant regardless of dataset size.
 
-export async function hasAnyTransaction(): Promise<boolean> {
-  const supabase = await createClient()
+export async function hasAnyTransaction(supabase: DbClient): Promise<boolean> {
   const { data, error } = await supabase
     .from('transactions')
     .select('id')
@@ -179,14 +176,20 @@ export async function hasAnyTransaction(): Promise<boolean> {
   return (data?.length ?? 0) > 0
 }
 
+// The whole page — filters, the isHistoryRow rule, the linked-expense
+// self-join and the limit+1 lookahead — is resolved by the get_movements_page
+// RPC in ONE round-trip (migration 0029). This function only translates the
+// MovementFilters contract to the RPC's jsonb input and maps rows to
+// FinancialMovement.
+
 export async function getGlobalMovementsPage(
+  supabase: DbClient,
   options: { limit?: number; offset?: number; filters?: MovementFilters } = {},
 ): Promise<{
   movements: FinancialMovement[]
   hasMore: boolean
   nextLimit: number
 }> {
-  const supabase = await createClient()
   const { limit = DEFAULT_MOVEMENTS_LIMIT, offset = 0, filters = {} } = options
 
   // Period resolution: an explicit custom range (`from`/`to`) wins; otherwise
@@ -195,109 +198,36 @@ export async function getGlobalMovementsPage(
   // month), so the list and the per-month breakdowns slice the same window.
   const monthRange =
     !filters.from && !filters.to && filters.month ? resolveMonthRange(filters.month) : null
-  const dateFrom = filters.from ?? monthRange?.from
-  const dateTo = filters.to ?? monthRange?.to
 
-  let parentIdsForAccount: string[] = []
-  let cardPaymentIdsForAccount: string[] = []
-  if (filters.accountId) {
-    const [childRowsResult, cardPaymentsResult] = await Promise.all([
-      supabase
-        .from('transactions')
-        .select('parent_id')
-        .eq('account_id', filters.accountId)
-        .not('parent_id', 'is', null),
-      supabase
-        .from('period_payments')
-        .select('transaction_id, card_periods!inner(account_id)')
-        .eq('card_periods.account_id', filters.accountId),
-    ])
+  const { data, error } = await supabase.rpc('get_movements_page', {
+    p_filters: {
+      from: filters.from ?? monthRange?.from,
+      to: filters.to ?? monthRange?.to,
+      categoryId: filters.categoryId,
+      subcategoryId: filters.subcategoryId,
+      currency: filters.currency,
+      accountId: filters.accountId,
+      type: filters.type,
+      query: filters.query,
+      amountMin: filters.amountMin,
+      amountMax: filters.amountMax,
+    },
+    p_limit: limit,
+    p_offset: offset,
+  })
+  if (error) throw error
 
-    if (childRowsResult.error) throw childRowsResult.error
-    if (cardPaymentsResult.error) throw cardPaymentsResult.error
-
-    parentIdsForAccount = [
-      ...new Set(
-        (childRowsResult.data ?? [])
-          .map((row) => row.parent_id)
-          .filter((id): id is string => Boolean(id)),
-      ),
-    ]
-
-    cardPaymentIdsForAccount = [
-      ...new Set((cardPaymentsResult.data ?? []).map((row) => row.transaction_id)),
-    ]
-  }
-
-  const matchingMovements: FinancialMovement[] = []
-  let queryOffset = offset
-
-  while (matchingMovements.length <= limit) {
-    let query = supabase
-      .from('transactions')
-      .select(TRANSACTION_SELECT)
-      .is('parent_id', null)
-      .order('date', { ascending: false })
-      .order('created_at', { ascending: false })
-      .order('id', { ascending: false })
-      .range(queryOffset, queryOffset + GLOBAL_MOVEMENTS_QUERY_CHUNK_SIZE - 1)
-
-    if (dateFrom) query = query.gte('date', dateFrom)
-    if (dateTo) query = query.lte('date', dateTo)
-    if (filters.categoryId) query = query.eq('category_id', filters.categoryId)
-    if (filters.subcategoryId === SUBCATEGORY_NONE_MARKER) {
-      query = query.is('subcategory_id', null)
-    } else if (filters.subcategoryId) {
-      query = query.eq('subcategory_id', filters.subcategoryId)
-    }
-    if (filters.currency) query = query.eq('currency_code', filters.currency)
-
-    if (filters.accountId) {
-      const accountConditions = [
-        `account_id.eq.${filters.accountId}`,
-        `transfer_destination_account_id.eq.${filters.accountId}`,
-      ]
-
-      if (parentIdsForAccount.length > 0) {
-        accountConditions.push(`id.in.(${parentIdsForAccount.join(',')})`)
-      }
-
-      if (cardPaymentIdsForAccount.length > 0) {
-        accountConditions.push(`id.in.(${cardPaymentIdsForAccount.join(',')})`)
-      }
-
-      query = query.or(accountConditions.join(','))
-    }
-
-    const { data, error } = await query
-
-    if (error) throw error
-
-    const historyRows = ((data ?? []) as unknown as TransactionWithDetails[]).filter(isHistoryRow)
-    const enrichedRows = await attachLinkedExpenses(supabase, historyRows)
-    const pageMovements = enrichedRows
-      .map(toFinancialMovement)
-      .filter((movement) => !filters.type || movement.kind === filters.type)
-      .filter((movement) => !filters.query || movementMatchesText(movement, filters.query))
-      .filter((movement) => filters.amountMin == null || movement.amount >= filters.amountMin)
-      .filter((movement) => filters.amountMax == null || movement.amount <= filters.amountMax)
-
-    matchingMovements.push(...pageMovements)
-
-    if ((data ?? []).length < GLOBAL_MOVEMENTS_QUERY_CHUNK_SIZE) break
-    queryOffset += GLOBAL_MOVEMENTS_QUERY_CHUNK_SIZE
-  }
-
-  const hasMore = matchingMovements.length > limit && limit < MAX_MOVEMENTS_LIMIT
+  const rows = (data ?? []) as unknown as TransactionWithDetails[]
 
   return {
-    movements: matchingMovements.slice(0, limit),
-    hasMore,
+    movements: rows.slice(0, limit).map(toFinancialMovement),
+    hasMore: rows.length > limit && limit < MAX_MOVEMENTS_LIMIT,
     nextLimit: Math.min(limit + MOVEMENTS_LIMIT_STEP, MAX_MOVEMENTS_LIMIT),
   }
 }
 
 export async function getMovementFilterOptions(
+  supabase: DbClient,
   options: { categoryId?: string } = {},
 ): Promise<{
   accounts: Array<{ id: string; name: string; type: 'cash' | 'bank' | 'credit' }>
@@ -317,8 +247,6 @@ export async function getMovementFilterOptions(
     user_id: string | null
   }>
 }> {
-  const supabase = await createClient()
-
   const [accountsResult, categoriesResult, subcategories] = await Promise.all([
     supabase
       .from('accounts')
@@ -332,7 +260,9 @@ export async function getMovementFilterOptions(
       .eq('is_active', true)
       .order('type')
       .order('name'),
-    options.categoryId ? getSubcategoriesByCategoryId(options.categoryId) : Promise.resolve([]),
+    options.categoryId
+      ? getSubcategoriesByCategoryId(supabase, options.categoryId)
+      : Promise.resolve([]),
   ])
 
   if (accountsResult.error) throw accountsResult.error
@@ -362,10 +292,9 @@ export async function getMovementFilterOptions(
 }
 
 export async function getTransactionDetail(
+  supabase: DbClient,
   id: string,
 ): Promise<TransactionWithDetails | null> {
-  const supabase = await createClient()
-
   const { data, error } = await supabase
     .from('transactions')
     .select(TRANSACTION_SELECT)
@@ -386,12 +315,13 @@ export async function getTransactionDetail(
 // ── getInstallmentFamily ──────────────────────────────────────────────────────
 // Returns parent + all child rows for a given parent_id (or null if not found)
 
-export async function getInstallmentFamily(parentId: string): Promise<{
+export async function getInstallmentFamily(
+  supabase: DbClient,
+  parentId: string,
+): Promise<{
   parent: TransactionWithDetails | null
   children: TransactionWithDetails[]
 }> {
-  const supabase = await createClient()
-
   const [parentResult, childrenResult] = await Promise.all([
     supabase.from('transactions').select(TRANSACTION_SELECT).eq('id', parentId).single(),
     supabase
@@ -434,10 +364,9 @@ export type PendingReimbursementVM = {
 }
 
 export async function getPendingReimbursements(
+  supabase: DbClient,
   accountId?: string,
 ): Promise<PendingReimbursementVM[]> {
-  const supabase = await createClient()
-
   let query = supabase
     .from('transactions')
     .select(
@@ -523,10 +452,9 @@ export type ExpenseReimbursementVM = {
 }
 
 export async function getReimbursementsForExpense(
+  supabase: DbClient,
   expenseId: string,
 ): Promise<ExpenseReimbursementVM[]> {
-  const supabase = await createClient()
-
   const { data, error } = await supabase
     .from('transactions')
     .select('id, amount, currency_code, reimbursement_target, received_at, cancelled_at, date')
@@ -551,8 +479,10 @@ export async function getReimbursementsForExpense(
 // it to inject its server client; `UNCATEGORIZED_ID` and `MonthCategoryBreakdown`
 // are re-exported above so existing callers don't need to change imports.
 
-export async function getMonthCategoryBreakdown(month: string): Promise<MonthCategoryBreakdown> {
-  const supabase = await createClient()
+export async function getMonthCategoryBreakdown(
+  supabase: DbClient,
+  month: string,
+): Promise<MonthCategoryBreakdown> {
   return getMonthCategoryBreakdownShared(supabase, month)
 }
 
@@ -560,8 +490,10 @@ export async function getMonthCategoryBreakdown(month: string): Promise<MonthCat
 // ARS/USD toggle visibility in the spending overview so it stays consistent
 // across the Egresos/Ingresos modes (the toggle shouldn't appear/disappear just
 // because you switched mode). A single lightweight count query (head: true).
-export async function hasUsdActivityInMonth(month: string): Promise<boolean> {
-  const supabase = await createClient()
+export async function hasUsdActivityInMonth(
+  supabase: DbClient,
+  month: string,
+): Promise<boolean> {
   const { from, to } = resolveMonthRange(month)
   const { count, error } = await supabase
     .from('transactions')
@@ -584,8 +516,10 @@ export async function hasUsdActivityInMonth(month: string): Promise<boolean> {
 // donut. Uncategorized income is bucketed under the `uncategorized` sentinel
 // (the UI labels it via i18n).
 
-export async function getMonthIncomeBreakdown(month: string): Promise<MonthCategoryBreakdown> {
-  const supabase = await createClient()
+export async function getMonthIncomeBreakdown(
+  supabase: DbClient,
+  month: string,
+): Promise<MonthCategoryBreakdown> {
   const { from, to } = resolveMonthRange(month)
 
   const { data, error } = await supabase
@@ -682,10 +616,10 @@ export type MonthSubcategoryBreakdown = {
 }
 
 export async function getMonthSubcategoryBreakdown(
+  supabase: DbClient,
   month: string,
   categoryId: string,
 ): Promise<MonthSubcategoryBreakdown> {
-  const supabase = await createClient()
   const { from, to } = resolveMonthRange(month)
 
   const [expensesResult, reimbursementsResult, categoryResult] = await Promise.all([

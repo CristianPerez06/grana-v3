@@ -578,7 +578,7 @@ export async function deactivateCreditCardAccount(
   }
 
   // R-tarjeta: block if pending debt exists
-  const debtCheck = await getCreditCardDebtCheck(accountId)
+  const debtCheck = await getCreditCardDebtCheck(supabase, accountId)
   if (debtCheck.hasPendingDebt) {
     return { ok: false, formError: 'pending_debt', reason: 'pending_debt' }
   }

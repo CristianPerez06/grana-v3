@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import type { DbClient } from '@/lib/supabase/db-client'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import {
   computeHouseholdBalances,
@@ -18,20 +18,17 @@ import type {
 const CURRENCIES: BalanceCurrency[] = ['ARS', 'USD']
 const isBalanceCurrency = (c: string): c is BalanceCurrency => c === 'ARS' || c === 'USD'
 
-async function currentUserId(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-): Promise<string | null> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  return user?.id ?? null
+async function currentUserId(supabase: DbClient): Promise<string | null> {
+  // Locally-verified claims (no network getUser): the id is only used to
+  // filter own rows, which RLS already enforces.
+  const { data } = await supabase.auth.getClaims()
+  return data?.claims.sub ?? null
 }
 
 // ── getHousehold ──────────────────────────────────────────────────────────────
 
 /** The current user's active household (members + default split), or null. */
-export async function getHousehold(): Promise<Household | null> {
-  const supabase = await createClient()
+export async function getHousehold(supabase: DbClient): Promise<Household | null> {
   const userId = await currentUserId(supabase)
   if (!userId) return null
 
@@ -81,11 +78,10 @@ export async function getHousehold(): Promise<Household | null> {
 // ── getHouseholdDebt ──────────────────────────────────────────────────────────
 
 /** Net pairwise debt per currency, derived from splits + settlements. */
-export async function getHouseholdDebt(): Promise<DebtByCurrency | null> {
-  const household = await getHousehold()
+export async function getHouseholdDebt(supabase: DbClient): Promise<DebtByCurrency | null> {
+  const household = await getHousehold(supabase)
   if (!household || household.members.length < 2) return null
 
-  const supabase = await createClient()
   const today = formatDateISO(getTodayAR())
 
   const { data: splitRows } = await supabase
@@ -165,8 +161,7 @@ export async function getHouseholdDebt(): Promise<DebtByCurrency | null> {
 // ── getPendingSettlements ─────────────────────────────────────────────────────
 
 /** Settlements awaiting the current user (receiver) to assign an account. */
-export async function getPendingSettlements(): Promise<PendingSettlement[]> {
-  const supabase = await createClient()
+export async function getPendingSettlements(supabase: DbClient): Promise<PendingSettlement[]> {
   const userId = await currentUserId(supabase)
   if (!userId) return []
 
@@ -212,10 +207,10 @@ export type MovementSharedInfo = {
  * when the movement is not shared (or has no splits).
  */
 export async function getMovementSharedInfo(
+  supabase: DbClient,
   transactionId: string,
   isParent: boolean,
 ): Promise<MovementSharedInfo | null> {
-  const supabase = await createClient()
   const userId = await currentUserId(supabase)
   if (!userId) return null
 
@@ -240,7 +235,7 @@ export async function getMovementSharedInfo(
     byUser.set(s.user_id, (byUser.get(s.user_id) ?? 0) + Number(s.amount_assigned))
   }
 
-  const household = await getHousehold()
+  const household = await getHousehold(supabase)
   const nameById = new Map((household?.members ?? []).map((m) => [m.userId, m.fullName]))
 
   return {
@@ -260,12 +255,14 @@ export async function getMovementSharedInfo(
  * grouped under their parent (one row per purchase). Reimbursements and
  * settlements are excluded (they are not "expenses" in the list).
  */
-export async function getSharedExpenses(limit = 20): Promise<SharedExpenseItem[]> {
-  const supabase = await createClient()
+export async function getSharedExpenses(
+  supabase: DbClient,
+  limit = 20,
+): Promise<SharedExpenseItem[]> {
   const userId = await currentUserId(supabase)
   if (!userId) return []
 
-  const household = await getHousehold()
+  const household = await getHousehold(supabase)
   if (!household) return []
 
   // Shared expenses (installment parent or single) + shared reimbursements;

@@ -2730,7 +2730,7 @@ La fila SHALL ordenarse cronológicamente como cualquier otra fila del listado, 
 
 La fila SHALL ser **no navegable** (sin `detail_href`): un click NO SHALL abrir un detalle de movimiento.
 
-La fila SHALL quedar **excluida del recurrence-link lookup** del listado: el identificador sintético de la fila NO SHALL formar parte del input al server action que resuelve qué movimientos están vinculados a una recurrencia (esa query rechazaría un id sintético al castearlo a `uuid`).
+La fila SHALL quedar **excluida del recurrence-link lookup** del listado: el identificador sintético de la fila NO SHALL formar parte del input de la query que resuelve qué movimientos están vinculados a una recurrencia (esa query rechazaría un id sintético al castearlo a `uuid`). La regla es independiente del transporte de la query (server action o lectura directa browser → Supabase).
 
 El running balance del listado scoped a cuenta SHALL incluir la fila "Saldo inicial" como punto de partida: el saldo inmediatamente posterior a la fila SHALL ser el `initial_balance` de esa moneda, y los running balances de los movimientos siguientes SHALL acumularse a partir de ahí.
 
@@ -2771,7 +2771,7 @@ El running balance del listado scoped a cuenta SHALL incluir la fila "Saldo inic
 #### Scenario: La fila queda fuera del recurrence-link lookup
 
 - **WHEN** el listado de detalle de cuenta resuelve qué movimientos están vinculados a una recurrencia para mostrar el indicador correspondiente
-- **THEN** el identificador de la fila "Saldo inicial" NO SHALL formar parte del input enviado al server action
+- **THEN** el identificador de la fila "Saldo inicial" NO SHALL formar parte del input de la query que resuelve los vínculos
 - **AND** la fila nunca se marca como vinculada a una recurrencia
 
 #### Scenario: Una cuenta con saldo inicial negativo muestra signo `-`

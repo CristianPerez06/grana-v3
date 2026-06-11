@@ -11,7 +11,7 @@ const NewAccountPage = async () => {
   if (!user) redirect('/login')
 
   const t = await getTranslations('accounts')
-  const institutions = await getInstitutions()
+  const institutions = await getInstitutions(supabase)
 
   return (
     <div className="flex flex-col gap-6 max-w-lg">

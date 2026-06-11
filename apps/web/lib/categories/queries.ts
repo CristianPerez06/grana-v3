@@ -1,13 +1,16 @@
-import { createClient } from '@/lib/supabase/server'
+import type { DbClient } from '@/lib/supabase/db-client'
 import type { Category, CategoryWithSubcategories, Subcategory } from './types'
 
-export async function getAllCategories(userId: string): Promise<CategoryWithSubcategories[]> {
-  const supabase = await createClient()
+export async function getAllCategories(
+  supabase: DbClient,
+): Promise<CategoryWithSubcategories[]> {
+  // No explicit user filter: the RLS select policy on categories is exactly
+  // "system (user_id IS NULL) or own", so the visible set is already right
+  // for any caller (browser or server).
   const { data, error } = await supabase
     .from('categories')
     .select('*, subcategories(*)')
     .eq('is_active', true)
-    .or(`user_id.is.null,user_id.eq.${userId}`)
     .order('type')
     .order('name')
 
@@ -15,8 +18,10 @@ export async function getAllCategories(userId: string): Promise<CategoryWithSubc
   return (data ?? []) as CategoryWithSubcategories[]
 }
 
-export async function getCategoryById(id: string): Promise<Category | null> {
-  const supabase = await createClient()
+export async function getCategoryById(
+  supabase: DbClient,
+  id: string,
+): Promise<Category | null> {
   const { data, error } = await supabase
     .from('categories')
     .select('*')
@@ -27,8 +32,10 @@ export async function getCategoryById(id: string): Promise<Category | null> {
   return data as Category | null
 }
 
-export async function getSubcategoriesByCategoryId(categoryId: string): Promise<Subcategory[]> {
-  const supabase = await createClient()
+export async function getSubcategoriesByCategoryId(
+  supabase: DbClient,
+  categoryId: string,
+): Promise<Subcategory[]> {
   const { data, error } = await supabase
     .from('subcategories')
     .select('*')

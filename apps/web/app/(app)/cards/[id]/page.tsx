@@ -51,11 +51,11 @@ const CardDetailPage = async ({ params }: Props) => {
 
   const [cardDetail, periodsDesc, installments, institutions, networks, showCents, t] =
     await Promise.all([
-      getCreditCardDetail(id),
-      getCardPeriods(id),
-      getActiveInstallments(id),
-      getInstitutions(),
-      getCardNetworks(),
+      getCreditCardDetail(supabase, id),
+      getCardPeriods(supabase, id),
+      getActiveInstallments(supabase, id),
+      getInstitutions(supabase),
+      getCardNetworks(supabase),
       getShowCents(),
       getTranslations('cards'),
     ])

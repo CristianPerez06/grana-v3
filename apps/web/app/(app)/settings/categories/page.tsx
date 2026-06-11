@@ -10,7 +10,7 @@ const CategoriesPage = async () => {
   if (!user) redirect('/login')
 
   const t = await getTranslations()
-  const categories = await getAllCategories(user.id)
+  const categories = await getAllCategories(supabase)
 
   return <CategoryList categories={categories} t={t} />
 }

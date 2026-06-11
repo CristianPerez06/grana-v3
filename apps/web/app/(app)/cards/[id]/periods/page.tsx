@@ -16,8 +16,8 @@ const CardPeriodsPage = async ({ params }: Props) => {
   if (!user) redirect('/login')
 
   const [cardDetail, periods, showCents] = await Promise.all([
-    getCreditCardDetail(id),
-    getCardPeriods(id),
+    getCreditCardDetail(supabase, id),
+    getCardPeriods(supabase, id),
     getShowCents(),
   ])
 

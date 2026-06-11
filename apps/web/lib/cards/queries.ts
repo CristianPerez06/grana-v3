@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import type { DbClient } from '@/lib/supabase/db-client'
 import { getTodayAR } from '@/lib/date'
 import type { Database } from '@grana/supabase'
 import {
@@ -88,10 +88,9 @@ export type CreditCardDebtCheck =
   | { hasPendingDebt: true; reason: 'pending_debt' }
 
 export async function getCreditCardDebtCheck(
+  supabase: DbClient,
   accountId: string,
 ): Promise<CreditCardDebtCheck> {
-  const supabase = await createClient()
-
   // Load all periods for this card with payment status and tx counts
   const { data: periods, error: periodsError } = await supabase
     .from('card_periods')
@@ -154,17 +153,17 @@ export async function getCreditCardDebtCheck(
 // server-side supabase client themselves).
 
 export async function getCardPeriodsWithStatus(
+  supabase: DbClient,
   accountId: string,
 ): Promise<CardPeriodWithPayment[]> {
-  const supabase = await createClient()
   return getCardPeriodsWithStatusImpl(supabase, accountId)
 }
 
 export async function getOrCreatePeriodForDate(
+  supabase: DbClient,
   accountId: string,
   targetDate: string,
 ): Promise<string> {
-  const supabase = await createClient()
   return getOrCreatePeriodForDateImpl(supabase, accountId, targetDate, getTodayAR())
 }
 
@@ -187,10 +186,9 @@ function derivePeriodAlert(
 // ─── Task 5.1: getCreditCards ─────────────────────────────────────────────────
 
 export async function getCreditCards(
+  supabase: DbClient,
   options: { includeArchived?: boolean; archivedOnly?: boolean } = {},
 ): Promise<CreditCardSummary[]> {
-  const supabase = await createClient()
-
   let query = supabase
     .from('accounts')
     .select('id, name, type, is_active, credit_limit, network_id, other_network_name, institution_id, color_key, icon_key, created_at, currencies:account_currencies(currency_code, is_active)')
@@ -377,8 +375,8 @@ export type CardsMonthSummary = {
  *
  * Built on the same per-card data as `getCreditCards` to avoid an N+1.
  */
-export async function getCardsMonthSummary(): Promise<CardsMonthSummary> {
-  const cards = await getCreditCards({ includeArchived: false })
+export async function getCardsMonthSummary(supabase: DbClient): Promise<CardsMonthSummary> {
+  const cards = await getCreditCards(supabase, { includeArchived: false })
   const today = getTodayAR()
   const todayStr = formatDateISO(today)
 
@@ -471,10 +469,9 @@ export type ActiveInstallmentsResult = {
  * remaining (sum of pending children) and the next pending due date.
  */
 export async function getActiveInstallments(
+  supabase: DbClient,
   accountId: string,
 ): Promise<ActiveInstallmentsResult> {
-  const supabase = await createClient()
-
   // All installment children on this card (parent_id set). Children carry
   // account_id=card; the parent is off-ledger and fetched in a second query —
   // PostgREST can't reliably embed a self-referential FK (same caveat as the
@@ -572,9 +569,10 @@ export type CreditCardDetail = Tables<'accounts'> & {
   debtCheck: CreditCardDebtCheck
 }
 
-export async function getCreditCardDetail(accountId: string): Promise<CreditCardDetail | null> {
-  const supabase = await createClient()
-
+export async function getCreditCardDetail(
+  supabase: DbClient,
+  accountId: string,
+): Promise<CreditCardDetail | null> {
   const { data: account, error } = await supabase
     .from('accounts')
     .select('*, institution:institutions(*), currencies:account_currencies(*)')
@@ -586,9 +584,9 @@ export async function getCreditCardDetail(accountId: string): Promise<CreditCard
     throw error
   }
 
-  const periods = await getCardPeriodsWithStatus(accountId)
+  const periods = await getCardPeriodsWithStatus(supabase, accountId)
   const today = getTodayAR()
-  const debtCheck = await getCreditCardDebtCheck(accountId)
+  const debtCheck = await getCreditCardDebtCheck(supabase, accountId)
 
   return {
     ...account,
@@ -600,10 +598,11 @@ export async function getCreditCardDetail(accountId: string): Promise<CreditCard
 
 // ─── Task 5.3: getCardPeriods (historial) ─────────────────────────────────────
 
-export async function getCardPeriods(accountId: string): Promise<CardPeriodDetail[]> {
-  const supabase = await createClient()
-
-  const periods = await getCardPeriodsWithStatus(accountId)
+export async function getCardPeriods(
+  supabase: DbClient,
+  accountId: string,
+): Promise<CardPeriodDetail[]> {
+  const periods = await getCardPeriodsWithStatus(supabase, accountId)
   if (periods.length === 0) return []
 
   const today = getTodayAR()
@@ -718,9 +717,10 @@ export async function getCardPeriods(accountId: string): Promise<CardPeriodDetai
 
 // ─── Task 5.4: getCardPeriodDetail ────────────────────────────────────────────
 
-export async function getCardPeriodDetail(periodId: string): Promise<CardPeriodDetail | null> {
-  const supabase = await createClient()
-
+export async function getCardPeriodDetail(
+  supabase: DbClient,
+  periodId: string,
+): Promise<CardPeriodDetail | null> {
   const { data: period, error: periodError } = await supabase
     .from('card_periods')
     .select('*')
@@ -733,7 +733,7 @@ export async function getCardPeriodDetail(periodId: string): Promise<CardPeriodD
   }
 
   const [periodsWithStatus, txResult, paymentResult] = await Promise.all([
-    getCardPeriodsWithStatus(period.account_id),
+    getCardPeriodsWithStatus(supabase, period.account_id),
     supabase
       .from('transactions')
       .select('id, type, card_period_id, amount, currency_code, date, status, description, category_id, is_parent, installment_n, installments_total, fx_rate_to_ars, received_at, cancelled_at, category:categories(name, icon, color, canonical_name, user_id), subcategory:subcategories(name, canonical_name, user_id)')
@@ -822,9 +822,10 @@ export async function getCardPeriodDetail(periodId: string): Promise<CardPeriodD
 
 // ─── Task 5.5: getCardPeriodTransactionCount ──────────────────────────────────
 
-export async function getCardPeriodTransactionCount(periodId: string): Promise<number> {
-  const supabase = await createClient()
-
+export async function getCardPeriodTransactionCount(
+  supabase: DbClient,
+  periodId: string,
+): Promise<number> {
   const { count, error } = await supabase
     .from('transactions')
     .select('id', { count: 'exact', head: true })
@@ -839,9 +840,7 @@ export async function getCardPeriodTransactionCount(periodId: string): Promise<n
 
 export type CardNetwork = Pick<Tables<'card_networks'>, 'id' | 'slug' | 'name' | 'brand_color' | 'display_order'>
 
-export async function getCardNetworks(): Promise<CardNetwork[]> {
-  const supabase = await createClient()
-
+export async function getCardNetworks(supabase: DbClient): Promise<CardNetwork[]> {
   const { data, error } = await supabase
     .from('card_networks')
     .select('id, slug, name, brand_color, display_order')

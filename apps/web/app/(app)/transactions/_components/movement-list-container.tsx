@@ -8,11 +8,12 @@ import { MovementList } from "@/lib/transactions/components/movement-list";
 import { MovementListSkeleton } from "@/lib/transactions/components/movement-list-skeleton";
 import { Button } from "@/components/ui/button";
 import { formatDateISO, getTodayAR } from "@/lib/date";
+import { createClient } from "@/lib/supabase/client";
 import {
-  getMovementsPageAction,
-  getRecurrenceLinkedTransactionIdsAction,
-  hasAnyTransactionAction,
-} from "@/app/_actions/queries";
+  getGlobalMovementsPage,
+  hasAnyTransaction,
+} from "@/lib/transactions/queries";
+import { getRecurrenceLinkedTransactionIds } from "@/lib/recurrences/queries";
 import { QUERY_KEYS } from "@/lib/transactions/query-keys";
 import { useMovementDrawer } from "@/lib/transactions/movement-drawer-context";
 import {
@@ -53,7 +54,10 @@ export function MovementListContainer() {
       {
         queryKey: QUERY_KEYS.transactionsPage(filters.limit, adapted),
         queryFn: () =>
-          getMovementsPageAction({ limit: filters.limit, filters: adapted }),
+          getGlobalMovementsPage(createClient(), {
+            limit: filters.limit,
+            filters: adapted,
+          }),
       },
     ],
   });
@@ -65,7 +69,7 @@ export function MovementListContainer() {
 
   const linkedQ = useQuery({
     queryKey: QUERY_KEYS.transactionsLinkedRecurrenceIds(movementIds),
-    queryFn: () => getRecurrenceLinkedTransactionIdsAction(movementIds),
+    queryFn: () => getRecurrenceLinkedTransactionIds(createClient(), movementIds),
     enabled: movementIds.length > 0,
   });
 
@@ -73,7 +77,7 @@ export function MovementListContainer() {
   // copy). Cached for the session, so this is effectively free after first hit.
   const hasAnyQ = useQuery({
     queryKey: QUERY_KEYS.transactionsHasAny,
-    queryFn: () => hasAnyTransactionAction(),
+    queryFn: () => hasAnyTransaction(createClient()),
   });
 
   if (pageQ.isPending) return <MovementListSkeleton />;

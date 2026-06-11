@@ -3,13 +3,14 @@ import { getCardsMonthSummary, type CardsMonthSummary } from '@/lib/cards/querie
 import { getShowCents } from '@/lib/preferences'
 import { CardsMonthHero } from './cards-month-hero'
 import { SectionFallback } from '@/components/ui/section-fallback'
+import { createClient } from '@/lib/supabase/server'
 
 export const CardsMonthHeroContainer = async () => {
   let summary: CardsMonthSummary
   let showCents: boolean
   try {
     ;[summary, showCents] = await Promise.all([
-      getCardsMonthSummary(),
+      getCardsMonthSummary(await createClient()),
       getShowCents(),
     ])
   } catch {

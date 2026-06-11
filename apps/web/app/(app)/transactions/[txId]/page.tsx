@@ -28,7 +28,7 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const transaction = await getTransactionDetail(txId)
+  const transaction = await getTransactionDetail(supabase, txId)
   if (!transaction) notFound()
 
   const t = await getTranslations('transactions')
@@ -51,26 +51,26 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
   const [installmentFamily, recurrenceLink, reimbursements, editData] =
     await Promise.all([
       transaction.is_parent
-        ? getInstallmentFamily(transaction.id)
+        ? getInstallmentFamily(supabase, transaction.id)
         : transaction.parent_id
-          ? getInstallmentFamily(transaction.parent_id)
+          ? getInstallmentFamily(supabase, transaction.parent_id)
           : Promise.resolve(null),
-      getRecurrenceLinkForTransaction(transaction.id),
+      getRecurrenceLinkForTransaction(supabase, transaction.id),
       reimbursementExpenseId
-        ? getReimbursementsForExpense(reimbursementExpenseId)
+        ? getReimbursementsForExpense(supabase, reimbursementExpenseId)
         : Promise.resolve([]),
       buildMovementEditContext(txId, detailHref),
     ])
   const movement = toFinancialMovement(transaction)
   const sharedInfo = transaction.is_shared
-    ? await getMovementSharedInfo(transaction.id, transaction.is_parent)
+    ? await getMovementSharedInfo(supabase, transaction.id, transaction.is_parent)
     : null
 
   // Card payments show the statement composition (ARS + USD portions) instead
   // of repeating the period info the context note already carries.
   let paymentComposition: { paidARS: number; paidUSD: number } | null = null
   if (movement.kind === 'card_payment') {
-    const periodDetail = await getCardPeriodDetail(movement.period_id)
+    const periodDetail = await getCardPeriodDetail(supabase, movement.period_id)
     if (periodDetail) {
       paymentComposition = {
         paidARS: periodDetail.paidAmountARS,

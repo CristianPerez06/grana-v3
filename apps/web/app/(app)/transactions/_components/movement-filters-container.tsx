@@ -6,10 +6,11 @@ import {
   MovementFilters,
   type MovementFiltersController,
 } from '@/lib/transactions/components/movement-filters'
+import { createClient } from '@/lib/supabase/client'
 import {
-  getMovementFilterOptionsAction,
-  getMovementsPageAction,
-} from '@/app/_actions/queries'
+  getGlobalMovementsPage,
+  getMovementFilterOptions,
+} from '@/lib/transactions/queries'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import { adaptFiltersForQuery } from '@/lib/transactions/filters-state'
 import { useTransactionsFilters } from '@/lib/transactions/filters-context'
@@ -38,11 +39,12 @@ export function MovementFiltersContainer() {
       {
         queryKey: QUERY_KEYS.transactionsFilterOptions(filters.categoryId),
         queryFn: () =>
-          getMovementFilterOptionsAction({ categoryId: filters.categoryId ?? undefined }),
+          getMovementFilterOptions(createClient(), { categoryId: filters.categoryId ?? undefined }),
       },
       {
         queryKey: QUERY_KEYS.transactionsPage(filters.limit, adapted),
-        queryFn: () => getMovementsPageAction({ limit: filters.limit, filters: adapted }),
+        queryFn: () =>
+          getGlobalMovementsPage(createClient(), { limit: filters.limit, filters: adapted }),
       },
     ],
   })
