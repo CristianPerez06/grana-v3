@@ -24,7 +24,7 @@ export function CategoryList({ categories, onChanged }: Props) {
   }
 
   return (
-    <View className="flex-col gap-8">
+    <View className="flex-col gap-[26px]">
       {system.length > 0 && (
         <Group heading={t('settings.categories.list.system_heading')}>
           {system.map((category, index) => (
@@ -68,11 +68,11 @@ export function CategoryList({ categories, onChanged }: Props) {
 
 function Group({ heading, children }: { heading: string; children: React.ReactNode }) {
   return (
-    <View className="flex-col gap-3">
-      <Text className="text-xs font-medium uppercase tracking-wider text-text-soft">
+    <View className="flex-col gap-2.5">
+      <Text className="text-xs font-extrabold uppercase tracking-[0.08em] text-text-muted">
         {heading}
       </Text>
-      <View className="overflow-hidden rounded-2xl border border-border-soft bg-card">
+      <View className="overflow-hidden rounded-[18px] border border-border bg-card">
         {children}
       </View>
     </View>

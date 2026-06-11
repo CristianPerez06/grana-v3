@@ -7,18 +7,22 @@ type Props = {
   t: (key: string) => string
 }
 
+const sectionTitleClass =
+  'text-xs font-extrabold uppercase tracking-[0.08em] text-text-muted'
+const panelClass = 'overflow-hidden rounded-[18px] border border-border bg-card'
+
 export const CategoryList = ({ categories, t }: Props) => {
   const system = categories.filter((c) => c.user_id === null)
   const user = categories.filter((c) => c.user_id !== null)
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-[26px]">
       {system.length > 0 && (
-        <section>
-          <h2 className="mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wide">
+        <section className="flex flex-col gap-2.5">
+          <h2 className={sectionTitleClass}>
             {t('settings.categories.list.system_heading')}
           </h2>
-          <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
+          <div className={panelClass}>
             {system.map((category) => (
               <CategoryRow
                 key={category.id}
@@ -33,11 +37,11 @@ export const CategoryList = ({ categories, t }: Props) => {
       )}
 
       {user.length > 0 && (
-        <section>
-          <h2 className="mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wide">
+        <section className="flex flex-col gap-2.5">
+          <h2 className={sectionTitleClass}>
             {t('settings.categories.list.user_heading')}
           </h2>
-          <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
+          <div className={panelClass}>
             {user.map((category) => (
               <CategoryRow
                 key={category.id}
@@ -52,9 +56,11 @@ export const CategoryList = ({ categories, t }: Props) => {
       )}
 
       {categories.length === 0 && (
-        <p className="text-center text-sm text-muted-foreground py-12">
-          {t('settings.categories.list.empty')}
-        </p>
+        <div className="rounded-[18px] border border-dashed border-border bg-card px-[22px] py-[42px] text-center">
+          <p className="text-sm text-muted-foreground">
+            {t('settings.categories.list.empty')}
+          </p>
+        </div>
       )}
     </div>
   )

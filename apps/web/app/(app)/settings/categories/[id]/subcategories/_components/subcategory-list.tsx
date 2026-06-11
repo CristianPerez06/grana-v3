@@ -1,9 +1,19 @@
 'use client'
 
+import { MoreHorizontal } from 'lucide-react'
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import type { Subcategory } from '@/lib/categories/types'
 import { archiveSubcategory, deleteSubcategory } from '@/app/_actions/categories'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuItemDestructive,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 type SubcategoryWithName = Subcategory & { displayName: string }
 
@@ -15,20 +25,16 @@ export const SubcategoryList = ({ subcategories }: Props) => {
   const t = useTranslations('settings.categories.subcategories')
   if (subcategories.length === 0) {
     return (
-      <p className="text-center text-sm text-muted-foreground py-12">
-        {t('empty')}
-      </p>
+      <div className="rounded-[18px] border border-dashed border-border bg-card px-[22px] py-[42px] text-center">
+        <p className="text-sm text-muted-foreground">{t('empty')}</p>
+      </div>
     )
   }
 
   return (
-    <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
+    <div className="overflow-hidden rounded-[18px] border border-border bg-card">
       {subcategories.map((sub) => (
-        <SubcategoryRow
-          key={sub.id}
-          subcategory={sub}
-          displayName={sub.displayName}
-        />
+        <SubcategoryRow key={sub.id} subcategory={sub} displayName={sub.displayName} />
       ))}
     </div>
   )
@@ -38,6 +44,9 @@ type RowProps = {
   subcategory: Subcategory
   displayName: string
 }
+
+const textActionClass =
+  'text-xs font-bold text-text-muted transition-colors hover:text-text disabled:opacity-50'
 
 const SubcategoryRow = ({ subcategory, displayName }: RowProps) => {
   const t = useTranslations('settings.categories')
@@ -66,28 +75,54 @@ const SubcategoryRow = ({ subcategory, displayName }: RowProps) => {
   }
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3">
-      <div className="flex-1 min-w-0">
-        <span className="text-sm font-medium">{displayName}</span>
-        {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-t border-border-soft px-[18px] py-[15px] first:border-t-0">
+      <div className="min-w-0">
+        <span className="block truncate text-[13px] font-extrabold text-text">{displayName}</span>
+        {error && <p className="mt-1 text-xs font-semibold text-negative">{error}</p>}
       </div>
+
       {!isSystem && (
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={handleArchive}
-            disabled={isPending}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-          >
-            {t('actions.archive')}
-          </button>
-          <button
-            onClick={handleDelete}
-            disabled={isPending}
-            className="text-xs text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
-          >
-            {t('actions.delete')}
-          </button>
-        </div>
+        <>
+          {/* Desktop: inline text actions. */}
+          <div className="hidden items-center justify-end gap-3 md:flex">
+            <button type="button" onClick={handleArchive} disabled={isPending} className={textActionClass}>
+              {t('actions.archive')}
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isPending}
+              className="text-xs font-bold text-negative transition-colors hover:text-negative/80 disabled:opacity-50"
+            >
+              {t('actions.delete')}
+            </button>
+          </div>
+
+          {/* Narrow: compact kebab menu with the same actions. */}
+          <div className="flex justify-end md:hidden">
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t('actions.more')}
+                  className="size-9 rounded-[12px] border border-border bg-card text-text-muted hover:bg-border-soft"
+                >
+                  <MoreHorizontal className="size-4" aria-hidden />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onSelect={handleArchive} disabled={isPending}>
+                  {t('actions.archive')}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItemDestructive onSelect={handleDelete} disabled={isPending}>
+                  {t('actions.delete')}
+                </DropdownMenuItemDestructive>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </>
       )}
     </div>
   )

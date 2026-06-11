@@ -191,7 +191,8 @@
         "archive": "Archive",
         "delete": "Delete",
         "view_subcategories": "Subcategories",
-        "add_subcategory": "Add subcategory"
+        "add_subcategory": "Add subcategory",
+        "more": "More actions"
       },
       "confirmations": {
         "delete_category": "Delete this category? This action cannot be undone.",

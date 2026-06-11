@@ -1,0 +1,75 @@
+:root {
+  --navy: #0b1a2b;
+  --emerald: #10b981;
+  --emerald-deep: #059669;
+  --emerald-soft: #e7f8f0;
+  --page: #f6f7f9;
+  --card: #ffffff;
+  --border: #e4e8ef;
+  --border-soft: #edf0f4;
+  --text: #142033;
+  --muted: #667085;
+  --soft: #98a2b3;
+  --danger: #d92d20;
+  --danger-soft: #fef3f2;
+  --shadow: 0 24px 60px -42px rgba(11, 26, 43, 0.48);
+  font-family: "Plus Jakarta Sans", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--text); }
+button { font: inherit; }
+
+.stage { min-height: 100vh; padding: 32px; }
+.route { width: min(100%, 680px); margin-inline: auto; }
+.shell { display: flex; flex-direction: column; gap: 22px; }
+.back-link { color: var(--muted); font-size: 14px; font-weight: 750; text-decoration: none; }
+.header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.header-copy { min-width: 0; }
+.title { margin: 0; color: var(--text); font-size: 28px; font-weight: 850; line-height: 1.08; letter-spacing: 0; }
+.description { margin: 7px 0 0; color: var(--muted); font-size: 14px; font-weight: 650; line-height: 1.4; }
+
+.button { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 13px; background: var(--emerald); color: #fff; padding: 0 15px; font-size: 14px; font-weight: 850; cursor: pointer; white-space: nowrap; }
+.button[disabled] { opacity: .52; cursor: default; }
+.button.secondary { border: 1px solid var(--border); background: var(--card); color: var(--text); }
+.icon-button { display: inline-grid; width: 38px; height: 38px; place-items: center; border: 1px solid var(--border); border-radius: 12px; background: var(--card); color: var(--muted); }
+
+.panel { overflow: hidden; border: 1px solid var(--border); border-radius: 18px; background: var(--card); }
+.subcategory-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; border-top: 1px solid var(--border-soft); padding: 15px 18px; }
+.subcategory-row:first-child { border-top: 0; }
+.subcategory-main { min-width: 0; }
+.subcategory-name { display: block; overflow: hidden; color: var(--text); font-size: 15px; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
+.meta { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; font-weight: 700; }
+.actions { display: flex; justify-content: flex-end; gap: 10px; }
+.text-action { border: 0; background: transparent; color: var(--muted); font-size: 12px; font-weight: 850; cursor: pointer; }
+.text-action.danger { color: var(--danger); }
+.action-menu { display: none; }
+.error { margin-top: 5px; color: var(--danger); font-size: 12px; font-weight: 700; }
+
+.empty { border: 1px dashed var(--border); border-radius: 18px; background: var(--card); padding: 42px 22px; text-align: center; }
+.empty strong { color: var(--text); font-size: 16px; font-weight: 850; }
+.empty p { margin: 8px auto 0; max-width: 360px; color: var(--muted); font-size: 14px; line-height: 1.45; }
+.error-state { border: 1px solid color-mix(in srgb, var(--danger), white 76%); border-radius: 18px; background: var(--danger-soft); padding: 18px; color: #8a1f18; font-size: 14px; font-weight: 750; }
+.loading-line { border-radius: 999px; background: linear-gradient(90deg, var(--border-soft), #f9fafb, var(--border-soft)); background-size: 180% 100%; }
+
+.workbench { width: min(100%, 620px); margin-inline: auto; }
+.workbench-title { margin: 0 0 12px; color: var(--muted); font-size: 12px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+
+.phone-stage { min-height: 100vh; display: grid; place-items: center; padding: 28px; }
+.phone { width: 390px; max-width: 100%; overflow: hidden; border: 1px solid var(--border); border-radius: 34px; background: var(--page); box-shadow: var(--shadow); }
+.phone-screen { min-height: 780px; padding: 22px 16px 28px; }
+.phone .shell { gap: 20px; }
+.phone .header { gap: 14px; }
+.phone .title { font-size: 25px; }
+.phone .button { min-height: 40px; padding: 0 12px; font-size: 13px; }
+.phone .subcategory-row { grid-template-columns: minmax(0, 1fr) 38px; padding: 15px; }
+.phone .subcategory-name { white-space: normal; }
+.phone .actions { display: none; }
+.phone .action-menu { display: inline-grid; }
+
+@media (max-width: 720px) {
+  .stage { padding: 18px; }
+  .subcategory-row { grid-template-columns: minmax(0, 1fr) 38px; }
+  .actions { display: none; }
+  .action-menu { display: inline-grid; }
+}

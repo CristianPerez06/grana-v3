@@ -191,7 +191,8 @@
         "archive": "Archivar",
         "delete": "Eliminar",
         "view_subcategories": "Subcategorías",
-        "add_subcategory": "Agregar subcategoría"
+        "add_subcategory": "Agregar subcategoría",
+        "more": "Más acciones"
       },
       "confirmations": {
         "delete_category": "¿Eliminar esta categoría? Esta acción no se puede deshacer.",

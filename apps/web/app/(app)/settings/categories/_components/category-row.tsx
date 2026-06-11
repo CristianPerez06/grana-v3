@@ -1,10 +1,22 @@
 'use client'
 
+import { MoreHorizontal } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
-import type { CategoryWithSubcategories } from '@/lib/categories/types'
+import type { CategoryWithSubcategories, CategoryType } from '@/lib/categories/types'
 import { archiveCategory, deleteCategory } from '@/app/_actions/categories'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuItemDestructive,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { cn } from '@/lib/utils'
 
 type Props = {
   category: CategoryWithSubcategories
@@ -13,10 +25,23 @@ type Props = {
   isSystem: boolean
 }
 
+const pillClassByType: Record<CategoryType, string> = {
+  income: 'bg-emerald-soft text-emerald-deep',
+  expense: 'bg-terracotta-soft text-terracotta',
+  both: 'bg-border-soft text-text-muted',
+}
+
+const textActionClass =
+  'text-xs font-bold text-text-muted transition-colors hover:text-text disabled:opacity-50'
+
 export const CategoryRow = ({ category, displayName, subcategoryCount, isSystem }: Props) => {
   const t = useTranslations('settings.categories')
+  const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  const subcategoriesHref = `/settings/categories/${category.id}/subcategories`
+  const editHref = `/settings/categories/${category.id}/edit`
 
   const handleArchive = () => {
     startTransition(async () => {
@@ -35,56 +60,103 @@ export const CategoryRow = ({ category, displayName, subcategoryCount, isSystem 
     })
   }
 
+  // Subtle tint behind the emoji using the category's own color when present.
+  const iconStyle = category.color?.startsWith('#')
+    ? { backgroundColor: `${category.color}1a` }
+    : undefined
+
   return (
-    <div className="flex items-center gap-3 px-4 py-3">
-      {category.icon && (
-        <span className="text-xl w-8 text-center flex-shrink-0">{category.icon}</span>
-      )}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-medium text-sm truncate">{displayName}</span>
-          <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-            {t(`types.${category.type}`)}
-          </span>
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-t border-border-soft px-[18px] py-[15px] first:border-t-0">
+      <div className="flex min-w-0 items-center gap-3">
+        <span
+          className="grid size-[42px] shrink-0 place-items-center rounded-[14px] bg-border-soft text-xl"
+          style={iconStyle}
+          aria-hidden
+        >
+          {category.icon ?? ''}
+        </span>
+        <div className="min-w-0">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="truncate text-[13px] font-extrabold text-text">{displayName}</span>
+            <span
+              className={cn(
+                'inline-flex min-h-[22px] items-center rounded-full px-2 text-[11px] font-extrabold',
+                pillClassByType[category.type],
+              )}
+            >
+              {t(`types.${category.type}`)}
+            </span>
+          </div>
           {subcategoryCount > 0 && (
-            <span className="text-xs text-muted-foreground">
+            <span className="mt-1 block text-[13px] font-medium text-text-muted">
               {t('list.subcategory_count', { count: subcategoryCount })}
             </span>
           )}
+          {error && <p className="mt-1 text-xs font-semibold text-negative">{error}</p>}
         </div>
-        {error && <p className="text-xs text-destructive mt-1">{error}</p>}
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
+
+      {/* Desktop: inline text actions. */}
+      <div className="hidden items-center justify-end gap-3 md:flex">
         <Link
-          href={`/settings/categories/${category.id}/subcategories`}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          href={subcategoriesHref}
+          className="text-xs font-bold text-slate transition-colors hover:text-slate/80"
         >
           {t('actions.view_subcategories')}
         </Link>
         {!isSystem && (
           <>
-            <Link
-              href={`/settings/categories/${category.id}/edit`}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
+            <Link href={editHref} className={textActionClass}>
               {t('actions.edit')}
             </Link>
-            <button
-              onClick={handleArchive}
-              disabled={isPending}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-            >
+            <button type="button" onClick={handleArchive} disabled={isPending} className={textActionClass}>
               {t('actions.archive')}
             </button>
             <button
+              type="button"
               onClick={handleDelete}
               disabled={isPending}
-              className="text-xs text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
+              className="text-xs font-bold text-negative transition-colors hover:text-negative/80 disabled:opacity-50"
             >
               {t('actions.delete')}
             </button>
           </>
         )}
+      </div>
+
+      {/* Narrow: compact kebab menu with the same actions. */}
+      <div className="flex justify-end md:hidden">
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={t('actions.more')}
+              className="size-9 rounded-[12px] border border-border bg-card text-text-muted hover:bg-border-soft"
+            >
+              <MoreHorizontal className="size-4" aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onSelect={() => router.push(subcategoriesHref)}>
+              {t('actions.view_subcategories')}
+            </DropdownMenuItem>
+            {!isSystem && (
+              <>
+                <DropdownMenuItem onSelect={() => router.push(editHref)}>
+                  {t('actions.edit')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleArchive} disabled={isPending}>
+                  {t('actions.archive')}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItemDestructive onSelect={handleDelete} disabled={isPending}>
+                  {t('actions.delete')}
+                </DropdownMenuItemDestructive>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )

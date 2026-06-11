@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { Alert as RNAlert, Pressable, Text, View } from 'react-native'
+import { MoreHorizontal } from 'lucide-react-native'
 import { archiveSubcategory, deleteSubcategory, type Subcategory } from '../../lib/categories'
 import { useT } from '../../lib/locale-context'
+import { colors } from '../../lib/colors'
+import { Popover } from '../ui/Popover'
 
 export type SubcategoryWithName = Subcategory & { displayName: string }
 
@@ -24,12 +27,9 @@ export function SubcategoryList({ subcategories, onChanged }: Props) {
   }
 
   return (
-    <View className="overflow-hidden rounded-2xl border border-border-soft bg-card">
+    <View className="overflow-hidden rounded-[18px] border border-border bg-card">
       {subcategories.map((sub, index) => (
-        <View
-          key={sub.id}
-          className={index === 0 ? '' : 'border-t border-border-soft'}
-        >
+        <View key={sub.id} className={index === 0 ? '' : 'border-t border-border-soft'}>
           <SubcategoryRow subcategory={sub} onChanged={onChanged} />
         </View>
       ))}
@@ -47,6 +47,7 @@ function SubcategoryRow({
   const t = useT()
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const isSystem = subcategory.user_id === null
 
   const handleArchive = async () => {
@@ -86,29 +87,48 @@ function SubcategoryRow({
     )
   }
 
+  const runFromMenu = (action: () => void) => {
+    setMenuOpen(false)
+    action()
+  }
+
   return (
     <View
-      className={`flex-row items-center gap-3 px-4 py-3 ${
+      className={`flex-row items-center gap-3 px-[18px] py-[15px] ${
         pending ? 'opacity-50' : ''
       }`}
     >
       <View className="flex-1">
-        <Text className="text-sm font-medium text-text">{subcategory.displayName}</Text>
+        <Text className="text-[13px] font-extrabold text-text">{subcategory.displayName}</Text>
         {error && <Text className="mt-1 text-xs text-error">{error}</Text>}
       </View>
       {!isSystem && (
-        <View className="flex-row items-center gap-3">
-          <Pressable onPress={handleArchive} disabled={pending}>
-            <Text className="text-xs text-text-soft">
-              {t('settings.categories.actions.archive')}
-            </Text>
+        <Popover
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
+          trigger={
+            <View
+              className="h-9 w-9 items-center justify-center rounded-[12px] border border-border bg-card"
+              accessibilityRole="button"
+              accessibilityLabel={t('settings.categories.actions.more')}
+            >
+              <MoreHorizontal size={18} color={colors.textMuted} />
+            </View>
+          }
+        >
+          <Pressable
+            onPress={() => runFromMenu(handleArchive)}
+            className="rounded-[10px] px-3 py-3 active:bg-border-soft"
+          >
+            <Text className="text-sm text-text">{t('settings.categories.actions.archive')}</Text>
           </Pressable>
-          <Pressable onPress={handleDelete} disabled={pending}>
-            <Text className="text-xs text-error">
-              {t('settings.categories.actions.delete')}
-            </Text>
+          <Pressable
+            onPress={() => runFromMenu(handleDelete)}
+            className="rounded-[10px] px-3 py-3 active:bg-border-soft"
+          >
+            <Text className="text-sm text-negative">{t('settings.categories.actions.delete')}</Text>
           </Pressable>
-        </View>
+        </Popover>
       )}
     </View>
   )

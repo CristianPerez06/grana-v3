@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { Alert, Pressable, Text, View } from 'react-native'
-import { Link, useRouter } from 'expo-router'
+import { useRouter } from 'expo-router'
+import { MoreHorizontal } from 'lucide-react-native'
 import { archiveCategory, deleteCategory, type CategoryWithSubcategories } from '../../lib/categories'
 import { useT } from '../../lib/locale-context'
+import { colors } from '../../lib/colors'
+import { Popover } from '../ui/Popover'
 
 type Props = {
   category: CategoryWithSubcategories
@@ -10,6 +13,18 @@ type Props = {
   subcategoryCount: number
   isSystem: boolean
   onChanged?: () => void
+}
+
+const pillClassByType: Record<CategoryWithSubcategories['type'], string> = {
+  income: 'bg-emerald-soft',
+  expense: 'bg-terracotta-soft',
+  both: 'bg-border-soft',
+}
+
+const pillTextByType: Record<CategoryWithSubcategories['type'], string> = {
+  income: 'text-emerald-deep',
+  expense: 'text-terracotta',
+  both: 'text-text-muted',
 }
 
 export function CategoryRow({
@@ -23,6 +38,7 @@ export function CategoryRow({
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const typeLabel = t(`settings.categories.types.${category.type}`)
 
@@ -63,73 +79,110 @@ export function CategoryRow({
     )
   }
 
+  // Run a menu action after the sheet has closed.
+  const runFromMenu = (action: () => void) => {
+    setMenuOpen(false)
+    action()
+  }
+
+  const iconStyle = category.color?.startsWith('#')
+    ? { backgroundColor: `${category.color}1a` }
+    : undefined
+
   return (
     <View
-      className={`flex-row items-center gap-3 px-4 py-3 ${
+      className={`flex-row items-center gap-3 px-[18px] py-[15px] ${
         pending ? 'opacity-50' : ''
       }`}
     >
-      {category.icon ? (
-        <Text className="w-8 text-center text-xl">{category.icon}</Text>
-      ) : null}
+      <View
+        className="h-[42px] w-[42px] items-center justify-center rounded-[14px] bg-border-soft"
+        style={iconStyle}
+      >
+        {category.icon ? <Text className="text-xl">{category.icon}</Text> : null}
+      </View>
       <View className="flex-1">
         <View className="flex-row flex-wrap items-center gap-2">
-          <Text className="text-sm font-medium text-text">{displayName}</Text>
-          <View className="rounded bg-border-soft px-1.5 py-0.5">
-            <Text className="text-[10px] uppercase tracking-wide text-text-soft">
+          <Text className="text-[13px] font-extrabold text-text">{displayName}</Text>
+          <View className={`rounded-full px-2 py-0.5 ${pillClassByType[category.type]}`}>
+            <Text className={`text-[11px] font-extrabold ${pillTextByType[category.type]}`}>
               {typeLabel}
             </Text>
           </View>
-          {subcategoryCount > 0 && (
-            <Text className="text-xs text-text-soft">
-              {t('settings.categories.list.subcategory_count', { count: subcategoryCount })}
-            </Text>
-          )}
         </View>
+        {subcategoryCount > 0 && (
+          <Text className="mt-1 text-[13px] text-text-muted">
+            {t('settings.categories.list.subcategory_count', { count: subcategoryCount })}
+          </Text>
+        )}
         {error && <Text className="mt-1 text-xs text-error">{error}</Text>}
       </View>
-      <View className="flex-row items-center gap-3">
-        <Link
-          href={{
-            pathname: '/(app)/settings/categories/[id]/subcategories',
-            params: { id: category.id },
-          }}
-          asChild
-        >
-          <Pressable>
-            <Text className="text-xs text-text-soft">
-              {t('settings.categories.actions.view_subcategories')}
-            </Text>
-          </Pressable>
-        </Link>
+
+      <Popover
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
+        trigger={
+          <View
+            className="h-9 w-9 items-center justify-center rounded-[12px] border border-border bg-card"
+            accessibilityRole="button"
+            accessibilityLabel={t('settings.categories.actions.more')}
+          >
+            <MoreHorizontal size={18} color={colors.textMuted} />
+          </View>
+        }
+      >
+        <MenuItem
+          label={t('settings.categories.actions.view_subcategories')}
+          onPress={() =>
+            runFromMenu(() =>
+              router.push({
+                pathname: '/(app)/settings/categories/[id]/subcategories',
+                params: { id: category.id },
+              }),
+            )
+          }
+        />
         {!isSystem && (
           <>
-            <Pressable
+            <MenuItem
+              label={t('settings.categories.actions.edit')}
               onPress={() =>
-                router.push({
-                  pathname: '/(app)/settings/categories/[id]/edit',
-                  params: { id: category.id },
-                })
+                runFromMenu(() =>
+                  router.push({
+                    pathname: '/(app)/settings/categories/[id]/edit',
+                    params: { id: category.id },
+                  }),
+                )
               }
-              disabled={pending}
-            >
-              <Text className="text-xs text-text-soft">
-                {t('settings.categories.actions.edit')}
-              </Text>
-            </Pressable>
-            <Pressable onPress={handleArchive} disabled={pending}>
-              <Text className="text-xs text-text-soft">
-                {t('settings.categories.actions.archive')}
-              </Text>
-            </Pressable>
-            <Pressable onPress={handleDelete} disabled={pending}>
-              <Text className="text-xs text-error">
-                {t('settings.categories.actions.delete')}
-              </Text>
-            </Pressable>
+            />
+            <MenuItem
+              label={t('settings.categories.actions.archive')}
+              onPress={() => runFromMenu(handleArchive)}
+            />
+            <MenuItem
+              label={t('settings.categories.actions.delete')}
+              destructive
+              onPress={() => runFromMenu(handleDelete)}
+            />
           </>
         )}
-      </View>
+      </Popover>
     </View>
+  )
+}
+
+function MenuItem({
+  label,
+  onPress,
+  destructive = false,
+}: {
+  label: string
+  onPress: () => void
+  destructive?: boolean
+}) {
+  return (
+    <Pressable onPress={onPress} className="rounded-[10px] px-3 py-3 active:bg-border-soft">
+      <Text className={`text-sm ${destructive ? 'text-negative' : 'text-text'}`}>{label}</Text>
+    </Pressable>
   )
 }
