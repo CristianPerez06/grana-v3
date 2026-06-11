@@ -63,11 +63,19 @@ export async function getHousehold(supabase: DbClient): Promise<Household | null
     ? (hh.default_split as { user_id: string; percentage: number }[])
     : []
 
+  // Current user first. The split UI (movement form, settings) treats
+  // `members[0]` as "you" — it labels the editable share box and the "dividir
+  // con {members[1]}" hint positionally. DB order is creation order, so without
+  // this the member who joined second would see the other member's name in the
+  // "you" slot. Debt/expense consumers key by user_id, so order is irrelevant
+  // to them.
+  const orderedIds = [userId, ...ids.filter((id) => id !== userId)]
+
   return {
     id: hh.id,
     name: hh.name,
     defaultSplit,
-    members: ids.map((id) => ({
+    members: orderedIds.map((id) => ({
       userId: id,
       fullName: nameById.get(id) ?? '',
       isCreator: id === hh.created_by,
