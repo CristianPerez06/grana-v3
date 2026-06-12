@@ -25,7 +25,7 @@ export const ArchivedCardsSection = ({ cards }: Props) => {
       </summary>
       <ul className="flex flex-col border-t border-border">
         {cards.map((card) => {
-          const accent = cardAccent(card)
+          const accent = cardAccent(card, card.institution)
           return (
             <li key={card.id} className="border-b border-border last:border-b-0">
               <Link

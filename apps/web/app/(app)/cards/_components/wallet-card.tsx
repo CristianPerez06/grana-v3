@@ -18,7 +18,7 @@ type Props = {
 
 export const WalletCard = ({ card, networkName, monthLabel, showCents = false }: Props) => {
   const t = useTranslations('cards')
-  const accent = cardAccent(card)
+  const accent = cardAccent(card, card.institution)
   const period = card.activePeriod
   const pendingARS = period?.pendingAmountARS ?? 0
   const pendingUSD = period?.pendingAmountUSD ?? 0

@@ -206,6 +206,7 @@ export async function getPendingSettlements(supabase: DbClient): Promise<Pending
 
 export type MovementSharedInfo = {
   ownShare: number
+  /** The OTHER members' shares (the current user is shown separately as "Tu parte"). */
   bySplit: { userId: string; name: string; amount: number }[]
 }
 
@@ -248,11 +249,15 @@ export async function getMovementSharedInfo(
 
   return {
     ownShare: byUser.get(userId) ?? 0,
-    bySplit: [...byUser].map(([uid, amount]) => ({
-      userId: uid,
-      name: nameById.get(uid) ?? '',
-      amount,
-    })),
+    // Exclude the current user: their share is surfaced separately as "Tu parte",
+    // so listing them again by name would duplicate the figure.
+    bySplit: [...byUser]
+      .filter(([uid]) => uid !== userId)
+      .map(([uid, amount]) => ({
+        userId: uid,
+        name: nameById.get(uid) ?? '',
+        amount,
+      })),
   }
 }
 
@@ -278,7 +283,7 @@ export async function getSharedExpenses(
   const { data: txs } = await supabase
     .from('transactions')
     .select(
-      'id, type, description, date, amount, currency_code, user_id, is_parent, installments_total, linked_transaction_id, category:categories(name, canonical_name, user_id)',
+      'id, type, description, date, amount, currency_code, user_id, is_parent, installments_total, linked_transaction_id, received_at, cancelled_at, category:categories(name, canonical_name, user_id), subcategory:subcategories(name, canonical_name, user_id)',
     )
     .eq('household_id', household.id)
     .eq('is_shared', true)
@@ -290,8 +295,8 @@ export async function getSharedExpenses(
     .limit(limit)
   if (!txs?.length) return []
 
-  // Reimbursements store no description/category of their own — derive both from
-  // the linked expense so the row reads like its expense.
+  // Reimbursements store no description/category/subcategory of their own —
+  // derive all three from the linked expense so the row reads like its expense.
   const linkedIds = [
     ...new Set(
       txs
@@ -299,20 +304,23 @@ export async function getSharedExpenses(
         .map((t) => t.linked_transaction_id as string),
     ),
   ]
-  type CategoryHandle = { name: string; canonical_name: string; user_id: string | null } | null
+  type TaxonomyHandle = { name: string; canonical_name: string; user_id: string | null } | null
   const linkedById = new Map<
     string,
-    { description: string | null; category: CategoryHandle }
+    { description: string | null; category: TaxonomyHandle; subcategory: TaxonomyHandle }
   >()
   if (linkedIds.length) {
     const { data: linked } = await supabase
       .from('transactions')
-      .select('id, description, category:categories(name, canonical_name, user_id)')
+      .select(
+        'id, description, category:categories(name, canonical_name, user_id), subcategory:subcategories(name, canonical_name, user_id)',
+      )
       .in('id', linkedIds)
     for (const e of linked ?? []) {
       linkedById.set(e.id, {
         description: e.description,
-        category: (e.category as CategoryHandle) ?? null,
+        category: (e.category as TaxonomyHandle) ?? null,
+        subcategory: (e.subcategory as TaxonomyHandle) ?? null,
       })
     }
   }
@@ -363,15 +371,28 @@ export async function getSharedExpenses(
     const isReimbursement = t.type === 'reimbursement'
     const category = isReimbursement
       ? linked?.category ?? null
-      : ((t.category as unknown as CategoryHandle) ?? null)
+      : ((t.category as unknown as TaxonomyHandle) ?? null)
+    const subcategory = isReimbursement
+      ? linked?.subcategory ?? null
+      : ((t.subcategory as unknown as TaxonomyHandle) ?? null)
     return [
       {
         id: t.id,
         kind: isReimbursement ? ('reimbursement' as const) : ('expense' as const),
+        reimbursementState: isReimbursement
+          ? t.cancelled_at
+            ? ('cancelled' as const)
+            : t.received_at
+              ? ('received' as const)
+              : ('pending' as const)
+          : null,
         description: isReimbursement ? linked?.description ?? null : t.description,
         categoryName: category?.name ?? null,
         categoryCanonicalName: category?.canonical_name ?? null,
         categoryIsSystem: category != null && category.user_id === null,
+        subcategoryName: subcategory?.name ?? null,
+        subcategoryCanonicalName: subcategory?.canonical_name ?? null,
+        subcategoryIsSystem: subcategory != null && subcategory.user_id === null,
         date: t.date,
         amount: Number(t.amount),
         currencyCode: t.currency_code,

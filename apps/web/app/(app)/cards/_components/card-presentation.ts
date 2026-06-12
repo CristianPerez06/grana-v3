@@ -4,23 +4,30 @@ import type { CardPillTone } from './card-status-pill'
 
 /**
  * Per-card accent color (`--cc-accent` in the design handoff). Derived from the
- * resolved avatar, never hardcoded by brand: a user color override or, failing
- * that, a deterministic palette color from the account id. Returns a CSS color
- * string ready for inline `style` (token var or raw override).
+ * resolved avatar: a user color override, else the issuing institution's
+ * `brand_color` (live-inherited, same as bank accounts), else a deterministic
+ * palette color from the account id. Returns a CSS color string ready for
+ * inline `style` (token var or raw override).
  */
-export const cardAccent = (card: {
-  id: string
-  name: string
-  color_key: string | null
-  icon_key: string | null
-}): string => {
-  const avatar = resolveAccountAvatar({
-    id: card.id,
-    name: card.name,
-    type: 'credit',
-    color_key: card.color_key,
-    icon_key: card.icon_key,
-  })
+export const cardAccent = (
+  card: {
+    id: string
+    name: string
+    color_key: string | null
+    icon_key: string | null
+  },
+  institution?: { brand_color: string | null } | null,
+): string => {
+  const avatar = resolveAccountAvatar(
+    {
+      id: card.id,
+      name: card.name,
+      type: 'credit',
+      color_key: card.color_key,
+      icon_key: card.icon_key,
+    },
+    institution ? { brand_color: institution.brand_color, icon_type: null } : null,
+  )
   return avatar.colorKey ? `var(--account-${avatar.colorKey})` : (avatar.colorOverride ?? 'var(--account-slate)')
 }
 

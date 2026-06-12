@@ -70,12 +70,15 @@ const CardDetailPage = async ({ params }: Props) => {
     (cardDetail.institution as { name?: string } | null)?.name ??
     null
 
-  const accent = cardAccent({
-    id: cardDetail.id,
-    name: cardDetail.name,
-    color_key: cardDetail.color_key,
-    icon_key: cardDetail.icon_key,
-  })
+  const accent = cardAccent(
+    {
+      id: cardDetail.id,
+      name: cardDetail.name,
+      color_key: cardDetail.color_key,
+      icon_key: cardDetail.icon_key,
+    },
+    cardDetail.institution,
+  )
 
   const cardHasHistory = cardDetail.periods.some((p) => p.has_payment || p.tx_count > 0)
 

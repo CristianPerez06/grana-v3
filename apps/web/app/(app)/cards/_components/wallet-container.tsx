@@ -5,6 +5,8 @@ import {
   type CardNetwork,
   type CreditCardSummary,
 } from '@/lib/cards/queries'
+import { getInstitutions } from '@/lib/accounts/queries'
+import type { Institution } from '@/lib/accounts/types'
 import { getShowCents } from '@/lib/preferences'
 import { getTodayAR } from '@/lib/date'
 import { Wallet } from './wallet'
@@ -15,12 +17,14 @@ import { createClient } from '@/lib/supabase/server'
 export const WalletContainer = async () => {
   let activeCards: CreditCardSummary[]
   let networks: CardNetwork[]
+  let institutions: Institution[]
   let showCents: boolean
   let locale: string
   try {
-    ;[activeCards, networks, showCents, locale] = await Promise.all([
+    ;[activeCards, networks, institutions, showCents, locale] = await Promise.all([
       getCreditCards(await createClient(), {}),
       getCardNetworks(await createClient()),
+      getInstitutions(await createClient()),
       getShowCents(),
       getLocale(),
     ])
@@ -43,6 +47,8 @@ export const WalletContainer = async () => {
       <Wallet
         cards={activeCards}
         networkNames={networkNames}
+        institutions={institutions}
+        networks={networks}
         monthLabel={monthShort}
         showCents={showCents}
       />

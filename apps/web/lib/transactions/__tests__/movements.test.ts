@@ -166,6 +166,51 @@ describe('toFinancialMovement', () => {
     expect(movement.subcategory_id).toBeNull()
     expect(movement.subcategory_name).toBeNull()
   })
+
+  it('derives category AND subcategory from the linked expense on a reimbursement', () => {
+    const movement = toFinancialMovement(baseTx({
+      type: 'reimbursement',
+      reimbursement_target: 'account',
+      received_at: '2026-05-20T12:00:00.000Z',
+      linked_transaction_id: '77777777-7777-7777-7777-777777777777',
+      // The reimbursement stores no taxonomy of its own…
+      category: null,
+      subcategory: null,
+      // …it inherits the linked expense's category and subcategory.
+      linked_expense: {
+        id: '77777777-7777-7777-7777-777777777777',
+        description: 'Carga YPF',
+        amount: 50,
+        currency_code: 'ARS',
+        date: '2026-05-18',
+        category: {
+          id: 'cat-transporte',
+          name: 'Transporte',
+          canonical_name: 'transporte',
+          icon: '🚗',
+          color: '#5A7DB5',
+          user_id: null,
+        },
+        subcategory: {
+          id: 'subcat-nafta',
+          name: 'Combustible',
+          canonical_name: 'nafta',
+          category_id: 'cat-transporte',
+          user_id: null,
+        },
+      },
+    }))
+
+    expect(movement).toMatchObject({
+      kind: 'reimbursement',
+      category_id: 'cat-transporte',
+      category_name: 'Transporte',
+      subcategory_id: 'subcat-nafta',
+      subcategory_name: 'Combustible',
+      subcategory_canonical_name: 'nafta',
+      subcategory_is_system: true,
+    })
+  })
 })
 
 describe('toInitialBalanceMovement', () => {

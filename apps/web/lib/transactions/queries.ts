@@ -63,7 +63,7 @@ async function attachLinkedExpenses(
 
   const { data } = await supabase
     .from('transactions')
-    .select('id, description, amount, currency_code, date, category:categories(id, name, canonical_name, color, icon, user_id)')
+    .select('id, description, amount, currency_code, date, category:categories(id, name, canonical_name, color, icon, user_id), subcategory:subcategories(id, name, canonical_name, category_id, user_id)')
     .in('id', linkedIds)
 
   type LinkedExpense = NonNullable<TransactionWithDetails['linked_expense']>
@@ -76,6 +76,7 @@ async function attachLinkedExpenses(
       currency_code: e.currency_code,
       date: e.date,
       category: e.category,
+      subcategory: e.subcategory,
     })
   }
 

@@ -15,7 +15,6 @@ import {
   CardPreview,
   DateField,
   FieldIcon,
-  FieldLabel,
   Hint,
   SectionLabel,
   dayMonth,
@@ -218,32 +217,11 @@ export const CreateCardForm = ({
         />
       </div>
 
-      {/* Identidad — nombre + banco */}
+      {/* Identidad — banco emisor (el nombre va más abajo, tras la red/marca) */}
       <SectionLabel>{t('edit.section_identity')}</SectionLabel>
       {/* No overflow-hidden here: the bank dropdown is absolutely positioned and
           would be clipped. Round the edge rows instead to keep the framed look. */}
       <div className="rounded-[15px] border border-border [&>*+*]:border-t [&>*+*]:border-[#F1F3F6] [&>*:first-child]:rounded-t-[14px] [&>*:last-child]:rounded-b-[14px]">
-        <div className="flex items-center gap-[13px] bg-card px-4 py-3">
-          <FieldIcon>
-            <CreditCard className="size-[18px]" />
-          </FieldIcon>
-          <div className="min-w-0 flex-1">
-            <FieldLabel>
-              {t('labels.name')}{' '}
-              <span className="font-semibold normal-case tracking-normal text-text-soft">
-                {tCommon('optional')}
-              </span>
-            </FieldLabel>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={50}
-              placeholder={t('placeholders.name_auto')}
-              aria-label={t('labels.name')}
-              className="w-full border-none bg-transparent p-0 text-[15px] font-semibold tracking-[-0.01em] text-text outline-none placeholder:font-medium placeholder:text-text-soft"
-            />
-          </div>
-        </div>
         <BankSelectorField
           institutions={institutions}
           institutionId={institutionId}
@@ -303,6 +281,27 @@ export const CreateCardForm = ({
         />
       )}
       {errors.network && <p className="mt-1.5 px-0.5 text-xs text-destructive">{errors.network}</p>}
+
+      {/* Nombre — opcional, debajo de la red/marca (se auto-genera si se deja vacío) */}
+      <SectionLabel className="mt-[22px]">
+        {t('labels.name')}{' '}
+        <span className="font-semibold normal-case tracking-normal text-text-soft">
+          {tCommon('optional')}
+        </span>
+      </SectionLabel>
+      <div className="flex items-center gap-[13px] rounded-[15px] border border-border bg-card px-4 py-3">
+        <FieldIcon>
+          <CreditCard className="size-[18px]" />
+        </FieldIcon>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={50}
+          placeholder={t('placeholders.name_auto')}
+          aria-label={t('labels.name')}
+          className="w-full min-w-0 flex-1 border-none bg-transparent p-0 text-[15px] font-semibold tracking-[-0.01em] text-text outline-none placeholder:font-medium placeholder:text-text-soft"
+        />
+      </div>
 
       {/* Ciclo de facturación — solo el resumen actual; el próximo nace estimado
           y se confirma al pagar (las fechas reales llegan con ese resumen). */}

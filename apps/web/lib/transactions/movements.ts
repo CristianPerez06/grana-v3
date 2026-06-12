@@ -227,10 +227,10 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
   }
 
   if (tx.type === 'reimbursement') {
-    // Category is DERIVED from the linked expense (the reimbursement stores none).
-    // Subcategory is not derived — `linked_expense` query payload does not
-    // include it, and the reimbursement detail view follows the same rule.
+    // Category AND subcategory are DERIVED from the linked expense (the
+    // reimbursement stores none of its own), so the row reads like its expense.
     const linkedCat = tx.linked_expense?.category ?? null
+    const linkedSub = tx.linked_expense?.subcategory ?? null
     // Inherit the origin expense's description so the reimbursement reads the
     // same as its expense in the list (the row's primary line uses `description`).
     const inheritedDesc = tx.linked_expense?.description ?? tx.description
@@ -248,8 +248,10 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
       category_color: linkedCat?.color ?? null,
       category_canonical_name: linkedCat?.canonical_name ?? null,
       category_is_system: linkedCat != null && linkedCat.user_id === null,
-      subcategory_id: null,
-      subcategory_name: null,
+      subcategory_id: linkedSub?.id ?? null,
+      subcategory_name: linkedSub?.name ?? null,
+      subcategory_canonical_name: linkedSub?.canonical_name ?? null,
+      subcategory_is_system: linkedSub != null && linkedSub.user_id === null,
       kind: 'reimbursement',
       title: inheritedDesc ?? 'Reintegro',
       sign: '+',

@@ -29,6 +29,8 @@ export type CreditCardSummary = {
   network_id: string | null
   other_network_name: string | null
   institution_id: string | null
+  /** Institution branding for the card accent (live-inherited brand color). */
+  institution: { brand_color: string | null; icon_type: string | null } | null
   color_key: string | null
   icon_key: string | null
   created_at: string
@@ -191,7 +193,7 @@ export async function getCreditCards(
 ): Promise<CreditCardSummary[]> {
   let query = supabase
     .from('accounts')
-    .select('id, name, type, is_active, credit_limit, network_id, other_network_name, institution_id, color_key, icon_key, created_at, currencies:account_currencies(currency_code, is_active)')
+    .select('id, name, type, is_active, credit_limit, network_id, other_network_name, institution_id, color_key, icon_key, created_at, institution:institutions(brand_color, icon_type), currencies:account_currencies(currency_code, is_active)')
     .eq('type', 'credit')
     .order('created_at', { ascending: true })
 

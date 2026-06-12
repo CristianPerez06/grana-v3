@@ -27,6 +27,7 @@ import {
   getCategoryName,
   getSubcategoryName,
   translateCategoryLabel,
+  translateSubcategoryLabel,
 } from '@/lib/categories/display'
 import type { FinancialMovement, MovementReviewFlag } from '@/lib/transactions/movements'
 import type { TransactionWithDetails } from '@/lib/transactions/types'
@@ -318,6 +319,17 @@ export const GlobalTransactionDetail = ({
           tRoot,
         ),
       },
+      {
+        key: 'subcategory',
+        label: t('detail.labels.subcategory'),
+        // Also derived from the linked expense (flattened on the movement).
+        value: translateSubcategoryLabel(
+          movement.subcategory_name,
+          movement.subcategory_canonical_name,
+          movement.subcategory_is_system,
+          tRoot,
+        ),
+      },
     )
     if (
       transaction.estimated_amount != null &&
@@ -405,7 +417,7 @@ export const GlobalTransactionDetail = ({
                   ? formatARS(sharedInfo.ownShare)
                   : formatUSD(sharedInfo.ownShare),
             })}
-            {sharedInfo.bySplit.length > 1 &&
+            {sharedInfo.bySplit.length > 0 &&
               ` · ${sharedInfo.bySplit
                 .map(
                   (s) =>

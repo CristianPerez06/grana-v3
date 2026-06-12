@@ -13,7 +13,7 @@ import {
   getSharedExpenses,
 } from '@/lib/shared/queries'
 import type { BalanceCurrency, PairwiseDebt } from '@grana/money-logic'
-import { translateCategoryLabel } from '@/lib/categories/display'
+import { translateCategoryLabel, translateSubcategoryLabel } from '@/lib/categories/display'
 import { fmtMoney } from '../_components/money'
 import { InviteCard } from '../_components/invite-card'
 import { PendingSettlementCard } from '../_components/pending-settlement-card'
@@ -140,26 +140,60 @@ export default async function SharedPage() {
       ) : (
         <Card asChild>
           <ul className="flex flex-col divide-y divide-border-soft">
-            {expenses.map((e) => (
+            {expenses.map((e) => {
+              const categoryLabel = translateCategoryLabel(
+                e.categoryName,
+                e.categoryCanonicalName,
+                e.categoryIsSystem,
+                tRoot,
+              )
+              const subcategoryLabel = translateSubcategoryLabel(
+                e.subcategoryName,
+                e.subcategoryCanonicalName,
+                e.subcategoryIsSystem,
+                tRoot,
+              )
+              // Mirror the movements list: the category repeats in the taxonomy
+              // line only when the description already took the primary slot;
+              // otherwise the category is the primary and the taxonomy leads
+              // with the subcategory (when set).
+              const taxonomy = e.description
+                ? subcategoryLabel
+                  ? `${categoryLabel} › ${subcategoryLabel}`
+                  : categoryLabel
+                : subcategoryLabel
+              return (
               <li key={e.id} className="flex items-center justify-between gap-3 p-4">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-text">
-                    {e.description ||
-                      translateCategoryLabel(
-                        e.categoryName,
-                        e.categoryCanonicalName,
-                        e.categoryIsSystem,
-                        tRoot,
-                      ) ||
-                      t('split.shared_label')}
-                  </p>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <p className="truncate text-sm font-semibold text-text">
+                      {e.description || categoryLabel || t('split.shared_label')}
+                    </p>
+                    {e.reimbursementState && (
+                      <span
+                        className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
+                          e.reimbursementState === 'received'
+                            ? 'bg-green-100 text-green-800'
+                            : e.reimbursementState === 'cancelled'
+                              ? 'bg-muted text-muted-foreground line-through'
+                              : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        {tRoot(`transactions.reimbursement.state.${e.reimbursementState}`)}
+                      </span>
+                    )}
+                  </div>
+                  {taxonomy && (
+                    <p className="truncate text-xs text-text-muted">{taxonomy}</p>
+                  )}
                   <p className="text-xs text-text-muted">
-                    {e.kind === 'reimbursement'
-                      ? t('dashboard.reimbursement_label')
-                      : e.payerId === userId
-                        ? t('dashboard.paid_by_you')
-                        : t('dashboard.paid_by', { name: e.payerName })}{' '}
-                    · {t('dashboard.your_share', { amount: fmtMoney(e.ownShare, e.currencyCode) })}
+                    {e.kind === 'expense' &&
+                      `${
+                        e.payerId === userId
+                          ? t('dashboard.paid_by_you')
+                          : t('dashboard.paid_by', { name: e.payerName })
+                      } · `}
+                    {t('dashboard.your_share', { amount: fmtMoney(e.ownShare, e.currencyCode) })}
                   </p>
                 </div>
                 <span
@@ -171,7 +205,8 @@ export default async function SharedPage() {
                   {fmtMoney(e.amount, e.currencyCode)}
                 </span>
               </li>
-            ))}
+              )
+            })}
           </ul>
         </Card>
       )}

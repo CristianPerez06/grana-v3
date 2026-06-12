@@ -27,6 +27,21 @@ describe('resolveAccountAvatar', () => {
     expect(r.iconKey).toBe('landmark')
   })
 
+  it('credit card with no override also live-inherits the institution brand color', () => {
+    const r = resolveAccountAvatar(
+      { ...base, type: 'credit', name: 'Visa Galicia' },
+      { brand_color: '#FA5F0C', icon_type: 'bank' },
+    )
+    expect(r.colorOverride).toBe('#FA5F0C')
+    expect(r.colorKey).toBeNull()
+  })
+
+  it('credit card with no institution falls back to the deterministic palette', () => {
+    const r = resolveAccountAvatar({ ...base, type: 'credit', id: 'card-x' })
+    expect(r.colorOverride).toBeNull()
+    expect(ACCOUNT_COLOR_KEYS).toContain(r.colorKey)
+  })
+
   it("bank with icon_type 'wallet' derives the wallet icon", () => {
     const r = resolveAccountAvatar(
       { ...base, type: 'bank' },

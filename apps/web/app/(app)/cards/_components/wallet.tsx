@@ -1,18 +1,28 @@
-import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { Button } from '@/components/ui/button'
-import type { CreditCardSummary } from '@/lib/cards/queries'
+import type { CreditCardSummary, CardNetwork } from '@/lib/cards/queries'
+import type { Institution } from '@/lib/accounts/types'
+import { AddCardButton } from './add-card-button'
 import { WalletCard } from './wallet-card'
 
 type Props = {
   cards: CreditCardSummary[]
   /** Map of network id → display name, for each card's meta line. */
   networkNames: Record<string, string>
+  /** Catalogs for the empty-state "Agregar tarjeta" drawer (same as the header CTA). */
+  institutions: Institution[]
+  networks: CardNetwork[]
   monthLabel: string
   showCents?: boolean
 }
 
-export const Wallet = ({ cards, networkNames, monthLabel, showCents = false }: Props) => {
+export const Wallet = ({
+  cards,
+  networkNames,
+  institutions,
+  networks,
+  monthLabel,
+  showCents = false,
+}: Props) => {
   const t = useTranslations('cards')
 
   if (cards.length === 0) {
@@ -20,9 +30,9 @@ export const Wallet = ({ cards, networkNames, monthLabel, showCents = false }: P
       <div className="rounded-[20px] border border-dashed border-border p-12 text-center">
         <p className="text-sm font-semibold text-text">{t('wallet.empty_title')}</p>
         <p className="mt-1 text-sm text-text-muted">{t('wallet.empty_body')}</p>
-        <Button asChild className="mx-auto mt-4 w-auto">
-          <Link href="/cards/new">{t('wallet.empty_cta')}</Link>
-        </Button>
+        <div className="mt-4 flex justify-center">
+          <AddCardButton institutions={institutions} networks={networks} />
+        </div>
       </div>
     )
   }

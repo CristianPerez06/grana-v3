@@ -90,7 +90,7 @@ export type TransactionWithDetails = Transaction & {
     } | null
   }> | null
   // For a reimbursement: the linked origin expense, used to derive its category
-  // and to show what the reimbursement is for.
+  // and subcategory and to show what the reimbursement is for.
   linked_expense?: {
     id: string
     description: string | null
@@ -98,6 +98,7 @@ export type TransactionWithDetails = Transaction & {
     currency_code: 'ARS' | 'USD'
     date: string
     category: TransactionCategory | null
+    subcategory: TransactionSubcategory | null
   } | null
 }
 

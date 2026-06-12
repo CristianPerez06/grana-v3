@@ -505,8 +505,8 @@ function hashToIndex(id: string, modulo: number): number {
 
 /**
  * Pure resolver for an account's avatar. Resolution rules:
- *  - color: explicit `color_key` (override) > bank live-inherits institution
- *    `brand_color` > deterministic palette color from the account id.
+ *  - color: explicit `color_key` (override) > bank/credit live-inherit
+ *    institution `brand_color` > deterministic palette color from the account id.
  *  - icon: explicit `icon_key` (override) > bank derives from institution
  *    `icon_type` ('wallet' → wallet, else landmark) > cash default 'wallet'.
  *  - monogram: uppercased first letter of the name (component fallback when
@@ -523,7 +523,10 @@ export function resolveAccountAvatar(
   let colorOverride: string | null = null
   if (isAccountColorKey(account.color_key)) {
     colorKey = account.color_key
-  } else if (account.type === 'bank' && institution?.brand_color) {
+  } else if (
+    (account.type === 'bank' || account.type === 'credit') &&
+    institution?.brand_color
+  ) {
     colorOverride = institution.brand_color
   } else {
     colorKey = ACCOUNT_COLOR_KEYS[hashToIndex(account.id, ACCOUNT_COLOR_KEYS.length)]

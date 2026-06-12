@@ -28,11 +28,17 @@ export type SharedExpenseItem = {
   id: string
   /** Whether this row is the expense or a reimbursement on a shared expense. */
   kind: 'expense' | 'reimbursement'
+  /** Reimbursement lifecycle state for the row chip (null on expense rows). */
+  reimbursementState: 'pending' | 'received' | 'cancelled' | null
   description: string | null
   categoryName: string | null
   /** Translation handles: system categories render `categories.{canonical_name}`. */
   categoryCanonicalName: string | null
   categoryIsSystem: boolean
+  subcategoryName: string | null
+  /** Translation handles: system subcategories render `subcategories.{canonical_name}`. */
+  subcategoryCanonicalName: string | null
+  subcategoryIsSystem: boolean
   date: string
   amount: number
   currencyCode: BalanceCurrency
