@@ -2,11 +2,13 @@ import type { DbClient } from '@/lib/supabase/db-client'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import {
   computeHouseholdBalances,
-  countsByPeriod,
-  pairwiseDebt,
+  gateSplit,
+  householdDebtAt,
+  householdOutlook,
   type BalanceCurrency,
-  type DebtMovementSplit,
   type DebtSettlement,
+  type OutlookMonth,
+  type ProjectableSplit,
 } from '@grana/money-logic'
 import type {
   DebtByCurrency,
@@ -83,19 +85,25 @@ export async function getHousehold(supabase: DbClient): Promise<Household | null
   }
 }
 
-// ── getHouseholdDebt ──────────────────────────────────────────────────────────
+// ── Debt inputs (shared by debt + outlook) ──────────────────────────────────
 
-/** Net pairwise debt per currency, derived from splits + settlements. */
-export async function getHouseholdDebt(supabase: DbClient): Promise<DebtByCurrency | null> {
-  const household = await getHousehold(supabase)
-  if (!household || household.members.length < 2) return null
-
-  const today = formatDateISO(getTodayAR())
-
+/**
+ * Fetch the household's shared splits and settlements in **projectable** form,
+ * so the same dataset can be re-gated at any reference month (today's debt or a
+ * future month's projection). Each movement gates on its OWN due date: an
+ * expense by its statement/installment month, a reimbursement by when it is
+ * received (a received "a cuenta" reimbursement counts now — it is real money
+ * that already moved). The forward view is provided by the projection, not by
+ * deferring impacted movements.
+ */
+async function collectDebtInputs(
+  supabase: DbClient,
+  householdId: string,
+): Promise<{ projectable: ProjectableSplit[]; settlements: DebtSettlement[] }> {
   const { data: splitRows } = await supabase
     .from('shared_expense_split')
     .select('transaction_id, user_id, amount_assigned')
-    .eq('household_id', household.id)
+    .eq('household_id', householdId)
 
   // Second query for the linked movements (avoids fragile PostgREST embeds —
   // same approach as attachLinkedExpenses in transactions/queries).
@@ -109,24 +117,36 @@ export async function getHouseholdDebt(supabase: DbClient): Promise<DebtByCurren
       due_date: string | null
       received_at: string | null
       cancelled_at: string | null
+      description: string | null
+      category: { name: string } | null
     }
   >()
   if (txIds.length) {
     const { data: txs } = await supabase
       .from('transactions')
-      .select('id, user_id, type, currency_code, due_date, received_at, cancelled_at')
+      .select(
+        'id, user_id, type, currency_code, due_date, received_at, cancelled_at, description, category:categories(name)',
+      )
       .in('id', txIds)
-    for (const t of txs ?? []) txById.set(t.id, t)
+    for (const t of txs ?? [])
+      txById.set(t.id, {
+        user_id: t.user_id,
+        type: t.type,
+        currency_code: t.currency_code,
+        due_date: t.due_date,
+        received_at: t.received_at,
+        cancelled_at: t.cancelled_at,
+        description: t.description,
+        category: (t.category as unknown as { name: string } | null) ?? null,
+      })
   }
 
-  const splits: DebtMovementSplit[] = (splitRows ?? []).flatMap((row) => {
+  const projectable: ProjectableSplit[] = (splitRows ?? []).flatMap((row) => {
     const tx = txById.get(row.transaction_id)
     if (!tx || !isBalanceCurrency(tx.currency_code)) return []
     const kind = tx.type === 'reimbursement' ? 'reimbursement' : 'expense'
-    const counts =
-      kind === 'reimbursement'
-        ? tx.received_at != null && tx.cancelled_at == null && countsByPeriod(tx.due_date, today)
-        : countsByPeriod(tx.due_date, today)
+    const label =
+      tx.description ?? tx.category?.name ?? (kind === 'reimbursement' ? 'Reintegro' : 'Gasto compartido')
     return [
       {
         currencyCode: tx.currency_code,
@@ -134,7 +154,11 @@ export async function getHouseholdDebt(supabase: DbClient): Promise<DebtByCurren
         movementOwnerId: tx.user_id,
         movementKind: kind,
         amountAssigned: row.amount_assigned,
-        counts,
+        gateDueDate: tx.due_date,
+        receivedAt: tx.received_at,
+        cancelledAt: tx.cancelled_at,
+        transactionId: row.transaction_id,
+        label,
       },
     ]
   })
@@ -142,7 +166,7 @@ export async function getHouseholdDebt(supabase: DbClient): Promise<DebtByCurren
   const { data: settleRows } = await supabase
     .from('settlement')
     .select('payer_id, receiver_id, amount, currency_code')
-    .eq('household_id', household.id)
+    .eq('household_id', householdId)
 
   const settlements: DebtSettlement[] = (settleRows ?? []).flatMap((s) =>
     isBalanceCurrency(s.currency_code)
@@ -158,10 +182,80 @@ export async function getHouseholdDebt(supabase: DbClient): Promise<DebtByCurren
       : [],
   )
 
+  return { projectable, settlements }
+}
+
+/** Next `count` months after `fromYm` ('YYYY-MM'), as 'YYYY-MM' strings. */
+function nextMonths(fromYm: string, count: number): string[] {
+  let [y, m] = fromYm.split('-').map(Number)
+  const out: string[] = []
+  for (let i = 0; i < count; i++) {
+    m += 1
+    if (m > 12) {
+      m = 1
+      y += 1
+    }
+    out.push(`${y}-${String(m).padStart(2, '0')}`)
+  }
+  return out
+}
+
+// ── getHouseholdDebt ──────────────────────────────────────────────────────────
+
+/** Net pairwise debt per currency, derived from splits + settlements, at `asOf`
+ *  (defaults to today). */
+export async function getHouseholdDebt(
+  supabase: DbClient,
+  asOf?: string,
+): Promise<DebtByCurrency | null> {
+  const household = await getHousehold(supabase)
+  if (!household || household.members.length < 2) return null
+
+  const ref = asOf ?? formatDateISO(getTodayAR())
+  const { projectable, settlements } = await collectDebtInputs(supabase, household.id)
   const [a, b] = household.members.map((m) => m.userId)
+
   const result = {} as DebtByCurrency
   for (const currency of CURRENCIES) {
-    result[currency] = pairwiseDebt(computeHouseholdBalances(splits, settlements, currency), a, b)
+    result[currency] = householdDebtAt(projectable, settlements, currency, ref, a, b)
+  }
+  return result
+}
+
+// ── getHouseholdOutlook ─────────────────────────────────────────────────────
+
+/** Per-month projection of what enters the debt in the next `monthsAhead`
+ *  months, per currency. The current user is member A. */
+export async function getHouseholdOutlook(
+  supabase: DbClient,
+  monthsAhead = 3,
+): Promise<Record<BalanceCurrency, OutlookMonth[]> | null> {
+  const household = await getHousehold(supabase)
+  if (!household || household.members.length < 2) return null
+
+  const today = formatDateISO(getTodayAR())
+  const { projectable, settlements } = await collectDebtInputs(supabase, household.id)
+  const userId = await currentUserId(supabase)
+  // Member A is the current user when known, else creation order.
+  const ids = household.members.map((m) => m.userId)
+  const a = userId && ids.includes(userId) ? userId : ids[0]
+
+  // A reference date inside each upcoming month — `countsByPeriod` compares only
+  // the year-month, so the day is irrelevant (28 is safe for every month).
+  const asOfByMonth = nextMonths(today.slice(0, 7), monthsAhead).map((month) => ({
+    month,
+    asOf: `${month}-28`,
+  }))
+
+  const result = {} as Record<BalanceCurrency, OutlookMonth[]>
+  for (const currency of CURRENCIES) {
+    const baseline =
+      computeHouseholdBalances(
+        projectable.map((s) => gateSplit(s, today)),
+        settlements,
+        currency,
+      )[a] ?? 0
+    result[currency] = householdOutlook(projectable, settlements, currency, asOfByMonth, a, baseline)
   }
   return result
 }
@@ -264,26 +358,39 @@ export async function getMovementSharedInfo(
 // ── getSharedExpenses ─────────────────────────────────────────────────────────
 
 /**
- * Recent shared expenses with this user's share. Installment children are
- * grouped under their parent (one row per purchase). Reimbursements and
- * settlements are excluded (they are not "expenses" in the list).
+ * Shared expenses with this user's share. Installment children are grouped
+ * under their parent (one row per purchase); shared reimbursements are included
+ * (settlements are not). Scoping (limit lifted to feed totals/breakdown):
+ * - `month`: by registration `date` — the "recent movements" of that month.
+ * - `impactMonth`: by the month the expense IMPACTS — cash/debit by `date`, a
+ *   card purchase by its statement `due_date`. Feeds "gastaron juntos" and the
+ *   category breakdown, so a future card consumption does not count until paid.
  */
 export async function getSharedExpenses(
   supabase: DbClient,
-  limit = 20,
+  opts: { limit?: number; month?: string; impactMonth?: string } = {},
 ): Promise<SharedExpenseItem[]> {
+  const { limit = 20, month, impactMonth } = opts
   const userId = await currentUserId(supabase)
   if (!userId) return []
 
   const household = await getHousehold(supabase)
   if (!household) return []
 
+  const monthBounds = (ym: string) => {
+    const [y, m] = ym.split('-').map(Number)
+    return {
+      start: `${ym}-01`,
+      end: m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`,
+    }
+  }
+
   // Shared expenses (installment parent or single) + shared reimbursements;
   // exclude installment children (parent_id set) so a purchase shows once.
-  const { data: txs } = await supabase
+  let query = supabase
     .from('transactions')
     .select(
-      'id, type, description, date, amount, currency_code, user_id, is_parent, installments_total, linked_transaction_id, received_at, cancelled_at, category:categories(name, canonical_name, user_id), subcategory:subcategories(name, canonical_name, user_id)',
+      'id, type, description, date, due_date, amount, currency_code, user_id, is_parent, installments_total, linked_transaction_id, received_at, cancelled_at, category:categories(id, name, canonical_name, user_id, icon, color), subcategory:subcategories(name, canonical_name, user_id)',
     )
     .eq('household_id', household.id)
     .eq('is_shared', true)
@@ -292,7 +399,22 @@ export async function getSharedExpenses(
     .order('date', { ascending: false })
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
-    .limit(limit)
+  if (impactMonth) {
+    const { start, end } = monthBounds(impactMonth)
+    // Impacts this month: a card statement due this month, OR a cash/debit
+    // movement (no due date) dated this month.
+    query = query
+      .or(
+        `and(due_date.gte.${start},due_date.lt.${end}),and(due_date.is.null,date.gte.${start},date.lt.${end})`,
+      )
+      .limit(500)
+  } else if (month) {
+    const { start, end } = monthBounds(month)
+    query = query.gte('date', start).lt('date', end).limit(500)
+  } else {
+    query = query.limit(limit)
+  }
+  const { data: txs } = await query
   if (!txs?.length) return []
 
   // Reimbursements store no description/category/subcategory of their own —
@@ -305,21 +427,31 @@ export async function getSharedExpenses(
     ),
   ]
   type TaxonomyHandle = { name: string; canonical_name: string; user_id: string | null } | null
+  type CategoryHandle =
+    | {
+        id: string
+        name: string
+        canonical_name: string
+        user_id: string | null
+        icon: string | null
+        color: string | null
+      }
+    | null
   const linkedById = new Map<
     string,
-    { description: string | null; category: TaxonomyHandle; subcategory: TaxonomyHandle }
+    { description: string | null; category: CategoryHandle; subcategory: TaxonomyHandle }
   >()
   if (linkedIds.length) {
     const { data: linked } = await supabase
       .from('transactions')
       .select(
-        'id, description, category:categories(name, canonical_name, user_id), subcategory:subcategories(name, canonical_name, user_id)',
+        'id, description, category:categories(id, name, canonical_name, user_id, icon, color), subcategory:subcategories(name, canonical_name, user_id)',
       )
       .in('id', linkedIds)
     for (const e of linked ?? []) {
       linkedById.set(e.id, {
         description: e.description,
-        category: (e.category as TaxonomyHandle) ?? null,
+        category: (e.category as unknown as CategoryHandle) ?? null,
         subcategory: (e.subcategory as TaxonomyHandle) ?? null,
       })
     }
@@ -371,7 +503,7 @@ export async function getSharedExpenses(
     const isReimbursement = t.type === 'reimbursement'
     const category = isReimbursement
       ? linked?.category ?? null
-      : ((t.category as unknown as TaxonomyHandle) ?? null)
+      : ((t.category as unknown as CategoryHandle) ?? null)
     const subcategory = isReimbursement
       ? linked?.subcategory ?? null
       : ((t.subcategory as unknown as TaxonomyHandle) ?? null)
@@ -387,13 +519,17 @@ export async function getSharedExpenses(
               : ('pending' as const)
           : null,
         description: isReimbursement ? linked?.description ?? null : t.description,
+        categoryId: category?.id ?? null,
         categoryName: category?.name ?? null,
         categoryCanonicalName: category?.canonical_name ?? null,
         categoryIsSystem: category != null && category.user_id === null,
+        categoryColor: category?.color ?? null,
+        categoryIcon: category?.icon ?? null,
         subcategoryName: subcategory?.name ?? null,
         subcategoryCanonicalName: subcategory?.canonical_name ?? null,
         subcategoryIsSystem: subcategory != null && subcategory.user_id === null,
         date: t.date,
+        dueDate: t.due_date,
         amount: Number(t.amount),
         currencyCode: t.currency_code,
         payerId: t.user_id,

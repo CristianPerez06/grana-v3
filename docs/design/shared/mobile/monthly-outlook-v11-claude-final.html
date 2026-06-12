@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grana — Compartido / v11 final mobile (Claude)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --navy: #0b1a2b; --navy-muted: rgba(255,255,255,0.62); --navy-soft: rgba(255,255,255,0.08); --navy-border: rgba(255,255,255,0.14);
+        --emerald: #10b981; --emerald-deep: #059669; --emerald-soft: rgba(16,185,129,0.12); --emerald-300: #6ee7b7;
+        --terracotta-300: #e3a395; --slate: #3a6b8a; --slate-soft: #eaf1f6;
+        --page: #f6f7f9; --card: #ffffff; --border: #e6eaef; --border-soft: #eef1f4; --muted-bg: #eef1f4;
+        --text: #0b1a2b; --text-muted: #6b7683; --text-soft: #8a94a3; --income: #10b981; --expense: #b56a5a; --neutral-amount: #0b1a2b;
+        --cat-hogar: #3a6b8a; --cat-comida: #d9952f; --cat-transporte: #8a6e98; --cat-salud: #c05c84;
+        font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #e7eaf0; color: var(--text); -webkit-font-smoothing: antialiased; display: flex; justify-content: center; padding: 28px 12px; }
+      h1, h2, h3, p { margin: 0; }
+
+      .phone { position: relative; width: 390px; max-width: 100%; border-radius: 42px; background: var(--navy); padding: 12px; box-shadow: 0 40px 90px -50px rgba(11,26,43,0.7); }
+      .screen { position: relative; background: var(--page); border-radius: 32px; overflow: hidden; height: 800px; overflow-y: auto; }
+      .screen::-webkit-scrollbar { width: 0; }
+      .pad { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+      .topbar { display: flex; align-items: center; justify-content: space-between; padding: 6px 2px 0; }
+      .topbar h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
+      .icon-btn { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text-muted); cursor: pointer; }
+      .icon-btn svg { width: 18px; height: 18px; }
+
+      .month-nav { display: grid; grid-template-columns: 36px 1fr 36px; gap: 6px; }
+      .month-nav button { border: 1px solid var(--border); background: var(--card); color: var(--text); font: inherit; font-weight: 800; font-size: 13.5px; border-radius: 12px; height: 38px; cursor: pointer; }
+      .month-nav .arrow { color: var(--text-muted); }
+
+      .card { border: 1px solid var(--border); border-radius: 18px; background: var(--card); overflow: hidden; }
+      .eyebrow { font-size: 10.5px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-soft); }
+      .muted { color: var(--text-muted); font-size: 12px; font-weight: 500; line-height: 1.5; }
+      .section-title { font-size: 14px; font-weight: 800; }
+      .btn { display: flex; width: 100%; align-items: center; justify-content: center; gap: 8px; height: 44px; border: 0; border-radius: 12px; background: var(--emerald); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+      .pill { display: inline-flex; align-items: center; height: 24px; border-radius: 999px; background: var(--slate-soft); padding: 0 9px; color: var(--slate); font-size: 11px; font-weight: 700; }
+
+      .hero { border: 1px solid var(--navy-border); border-radius: 20px; color: #fff; padding: 18px 18px 20px;
+        background-color: var(--navy); background-image: radial-gradient(circle at 90% 8%, rgba(16,185,129,0.2), transparent 55%); }
+      .hero .eyebrow { color: var(--navy-muted); }
+      .hm { padding: 14px 0; } .hm:first-child { padding-top: 4px; }
+      .hm + .hm { border-top: 1px solid var(--navy-border); }
+      .metric-big { display: block; margin-top: 6px; font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 0.95; }
+      .metric-big.white { color: #fff; } .metric-big.owe { color: var(--terracotta-300); } .metric-big.owed { color: var(--emerald-300); }
+      .metric-sub { margin-top: 6px; color: var(--navy-muted); font-size: 12px; font-weight: 500; }
+      .usd-inline { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; }
+      .usd-pill { border-radius: 999px; background: rgba(16,185,129,0.18); padding: 1px 7px; font-size: 10px; font-weight: 800; color: var(--emerald-300); }
+      .usd-inline .v { font-size: 12.5px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+      .usd-inline .v.owed { color: var(--emerald-300); }
+      .usd-inline .t { color: var(--navy-muted); font-size: 11px; font-weight: 600; }
+      .hero .btn { margin-top: 12px; }
+
+      .cat-block { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--navy-border); }
+      .cat-head { display: flex; align-items: center; justify-content: space-between; }
+      .cat-head .eyebrow { color: var(--navy-muted); }
+      .ccy-toggle { display: inline-flex; border: 1px solid var(--navy-border); border-radius: 9px; overflow: hidden; }
+      .ccy-toggle button { border: 0; background: transparent; color: var(--navy-muted); font: inherit; font-size: 10.5px; font-weight: 800; padding: 3px 9px; cursor: pointer; }
+      .ccy-toggle button.active { background: var(--navy-soft); color: #fff; }
+      .stack { display: flex; height: 11px; border-radius: 6px; overflow: hidden; margin-top: 12px; background: rgba(255,255,255,0.12); }
+      .stack i { height: 100%; }
+      .cat-legend { display: flex; flex-direction: column; gap: 2px; margin-top: 12px; }
+      .cat-row { display: flex; align-items: center; gap: 8px; padding: 7px 8px; margin: 0 -8px; border-radius: 9px; }
+      .cat-row:active { background: var(--navy-soft); }
+      .cat-dot { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
+      .cat-name { font-size: 12.5px; font-weight: 700; color: #fff; flex: 1; }
+      .cat-val { font-size: 12.5px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+      .cat-pct { color: var(--navy-muted); font-size: 11px; font-weight: 600; width: 30px; text-align: right; }
+      .cat-chev { color: var(--navy-muted); font-size: 12px; }
+      .cat-hint { margin-top: 9px; color: var(--navy-muted); font-size: 11px; font-weight: 500; }
+
+      .sec-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border-soft); }
+      .commit-scroll { display: flex; gap: 10px; padding: 14px; overflow-x: auto; }
+      .commit-scroll::-webkit-scrollbar { height: 0; }
+      .commit { flex: 0 0 150px; border: 1px solid var(--border); border-radius: 14px; background: #fbfcfd; padding: 12px; display: flex; flex-direction: column; gap: 18px; }
+      .commit-month { color: var(--text-soft); font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+      .commit-title { margin-top: 3px; font-size: 12px; font-weight: 700; }
+      .commit-amount { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+      .commit-amount.owe { color: var(--expense); } .commit-amount.owed { color: var(--income); }
+
+      /* Movimientos: réplica de movement-row */
+      .mv { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px; align-items: center; min-height: 60px; padding: 11px 16px; border-top: 1px solid var(--border-soft); }
+      .mv-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+      .mv-ico { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; font-size: 16px; flex-shrink: 0; }
+      .mv-body { min-width: 0; }
+      .mv-titleline { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+      .mv-titleline h3 { font-size: 13px; font-weight: 800; }
+      .mv-chip { border-radius: 6px; padding: 1px 6px; font-size: 10.5px; font-weight: 600; background: #dcfce7; color: #166534; }
+      .mv-sub { margin-top: 2px; font-size: 11.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .mv-amt .a { font-size: 13.5px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+      .a.income { color: var(--income); } .a.expense { color: var(--expense); } .a.neutral { color: var(--neutral-amount); }
+      .foot-link { display: block; padding: 13px 16px; color: var(--emerald-deep); font-size: 12.5px; font-weight: 700; text-decoration: none; border-top: 1px solid var(--border-soft); }
+
+      /* FAB de alta (réplica de QuickAddFab: primary, size fab) */
+      .fab { position: absolute; bottom: 86px; right: 18px; width: 60px; height: 60px; border-radius: 18px; border: 0; background: var(--emerald); color: #fff; display: grid; place-items: center; cursor: pointer; box-shadow: 0 14px 30px -10px rgba(16,185,129,0.6); }
+      .fab svg { width: 28px; height: 28px; }
+
+      .tabbar { display: flex; justify-content: space-around; padding: 10px 0 14px; border-top: 1px solid var(--border); background: var(--card); }
+      .tabbar div { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; color: var(--text-soft); }
+      .tabbar div.active { color: var(--emerald-deep); }
+      .tabbar .ico { width: 22px; height: 22px; border-radius: 7px; background: var(--border-soft); }
+      .tabbar div.active .ico { background: var(--emerald-soft); }
+    </style>
+  </head>
+  <body>
+    <div class="phone">
+      <div class="screen">
+        <div class="pad">
+          <div class="topbar">
+            <h1>Nosotros &hearts;</h1>
+            <button class="icon-btn" aria-label="Configuración del hogar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+
+          <div class="month-nav">
+            <button class="arrow">‹</button>
+            <button>Junio 2026 ▾</button>
+            <button class="arrow">›</button>
+          </div>
+
+          <article class="hero">
+            <div class="hm">
+              <p class="eyebrow">Gastaron juntos en junio</p>
+              <span class="metric-big white">$145.800</span>
+              <p class="metric-sub">Tu parte del mes: $72.900</p>
+              <span class="usd-inline"><span class="usd-pill">USD</span><span class="v">US$140</span><span class="t">en el mes</span></span>
+            </div>
+            <div class="hm">
+              <p class="eyebrow">Para saldar</p>
+              <span class="metric-big owe">$18.450</span>
+              <p class="metric-sub">Le debés a Cristian.</p>
+              <span class="usd-inline"><span class="usd-pill">USD</span><span class="v owed">US$32</span><span class="t">Cristian te debe</span></span>
+              <button class="btn">Saldar ahora</button>
+            </div>
+            <div class="cat-block">
+              <div class="cat-head">
+                <p class="eyebrow">En qué gastaron</p>
+                <div class="ccy-toggle"><button class="active">ARS</button><button>USD</button></div>
+              </div>
+              <div class="stack">
+                <i style="width:42.9%;background:var(--cat-hogar)"></i>
+                <i style="width:26.7%;background:var(--cat-comida)"></i>
+                <i style="width:19.7%;background:var(--cat-transporte)"></i>
+                <i style="width:10.8%;background:var(--cat-salud)"></i>
+              </div>
+              <div class="cat-legend">
+                <div class="cat-row"><i class="cat-dot" style="background:var(--cat-hogar)"></i><span class="cat-name">Hogar</span><span class="cat-val">$62.500</span><span class="cat-pct">43%</span><span class="cat-chev">›</span></div>
+                <div class="cat-row"><i class="cat-dot" style="background:var(--cat-comida)"></i><span class="cat-name">Comida</span><span class="cat-val">$38.900</span><span class="cat-pct">27%</span><span class="cat-chev">›</span></div>
+                <div class="cat-row"><i class="cat-dot" style="background:var(--cat-transporte)"></i><span class="cat-name">Transporte</span><span class="cat-val">$28.700</span><span class="cat-pct">20%</span><span class="cat-chev">›</span></div>
+                <div class="cat-row"><i class="cat-dot" style="background:var(--cat-salud)"></i><span class="cat-name">Salud</span><span class="cat-val">$15.700</span><span class="cat-pct">11%</span><span class="cat-chev">›</span></div>
+              </div>
+              <p class="cat-hint">Tocá una categoría para ver sus gastos.</p>
+            </div>
+          </article>
+
+          <section class="card" style="padding:0">
+            <div class="sec-head"><span class="section-title">Próximos compromisos</span><span class="pill">3 meses</span></div>
+            <div class="commit-scroll">
+              <div class="commit"><div><p class="commit-month">Julio</p><p class="commit-title">Resúmenes de tarjeta</p></div><span class="commit-amount owe">$86.284</span></div>
+              <div class="commit"><div><p class="commit-month">Agosto</p><p class="commit-title">Sillón 2/6</p></div><span class="commit-amount owed">$24.500</span></div>
+              <div class="commit"><div><p class="commit-month">Septiembre</p><p class="commit-title">Sillón 3/6</p></div><span class="commit-amount owed">$24.500</span></div>
+            </div>
+          </section>
+
+          <section class="card" style="padding:0">
+            <div class="sec-head"><span class="section-title">Últimos movimientos</span></div>
+            <div class="mv">
+              <div class="mv-left">
+                <span class="mv-ico" style="background:#3a6b8a1a">🛒</span>
+                <div class="mv-body">
+                  <div class="mv-titleline"><h3>Supermercado Día</h3></div>
+                  <p class="mv-sub">Hogar › Supermercado · Tu parte $31.250</p>
+                </div>
+              </div>
+              <div class="mv-amt"><span class="a expense">−$62.500</span></div>
+            </div>
+            <div class="mv">
+              <div class="mv-left">
+                <span class="mv-ico" style="background:#8a6e981a">⛽</span>
+                <div class="mv-body">
+                  <div class="mv-titleline"><h3>YPF</h3><span class="mv-chip">Reintegro recibido</span></div>
+                  <p class="mv-sub">Transporte › Combustible · Te vuelven $7.713</p>
+                </div>
+              </div>
+              <div class="mv-amt"><span class="a income">+$15.427</span></div>
+            </div>
+            <div class="mv">
+              <div class="mv-left">
+                <span class="mv-ico" style="background:#8a6e981a">⛽</span>
+                <div class="mv-body">
+                  <div class="mv-titleline"><h3>YPF</h3></div>
+                  <p class="mv-sub">Transporte › Combustible · Pagó Cristian · Tu parte $50.997</p>
+                </div>
+              </div>
+              <div class="mv-amt"><span class="a expense">−$101.994</span></div>
+            </div>
+            <a class="foot-link" href="#">Ver todos los movimientos de junio →</a>
+          </section>
+        </div>
+
+        <!-- FAB de alta (réplica QuickAddFab) -->
+        <button class="fab" aria-label="Registrar movimiento">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M12 5v14"/></svg>
+        </button>
+
+        <div class="tabbar">
+          <div><span class="ico"></span>Inicio</div>
+          <div><span class="ico"></span>Cuentas</div>
+          <div><span class="ico"></span>Tarjetas</div>
+          <div class="active"><span class="ico"></span>Compartido</div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

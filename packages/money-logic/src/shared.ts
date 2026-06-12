@@ -45,6 +45,26 @@ export function countsByPeriod(dueDate: string | null | undefined, asOf: string)
   return dueDate.slice(0, 7) <= asOf.slice(0, 7)
 }
 
+/**
+ * Whether a shared reimbursement currently reduces the household debt. It must
+ * be received (`receivedAt` set, not cancelled) and its own period must have
+ * arrived. A received "a cuenta" reimbursement (no due date) counts now — it is
+ * real money that already moved, so it impacts the balance today even if the
+ * expense it offsets is a card purchase that only settles in a later month; the
+ * forward view of that expense is surfaced by the projection, not by deferring
+ * the reimbursement. An "en resumen" reimbursement carries the due date of the
+ * statement it lands in and counts then. Pure: 'YYYY-MM-DD' compared by year-month.
+ */
+export function reimbursementCountsTowardDebt(
+  receivedAt: string | null | undefined,
+  cancelledAt: string | null | undefined,
+  dueDate: string | null | undefined,
+  asOf: string,
+): boolean {
+  if (receivedAt == null || cancelledAt != null) return false
+  return countsByPeriod(dueDate, asOf)
+}
+
 // ─── Derived household debt ──────────────────────────────────────────────────
 
 /**
@@ -144,4 +164,136 @@ export function pairwiseDebt(
   return a > 0
     ? { kind: 'owes', from: memberB, to: memberA, amount: a }
     : { kind: 'owes', from: memberA, to: memberB, amount: -a }
+}
+
+// ─── Monthly projection (próximos compromisos) ───────────────────────────────
+
+/**
+ * A split kept in raw, projectable form: its debt contribution is re-gated per
+ * reference month so the same dataset answers "what counts today" and "what
+ * enters next month". `gateDueDate` is the date that gates it — each movement by
+ * its own due date (D1). `transactionId` + `label` let the projection itemise
+ * what lands in each upcoming month.
+ */
+export type ProjectableSplit = {
+  currencyCode: BalanceCurrency
+  memberId: string
+  movementOwnerId: string
+  movementKind: 'expense' | 'reimbursement'
+  amountAssigned: number | string
+  gateDueDate: string | null
+  receivedAt: string | null
+  cancelledAt: string | null
+  transactionId: string
+  label: string
+}
+
+/**
+ * How a split moves member A's net balance (positive = A is owed more). Own-share
+ * splits create no debt. Mirrors the signed sum of `computeHouseholdBalances`.
+ */
+export function splitContributionForA(s: ProjectableSplit, memberA: string): number {
+  if (s.memberId === s.movementOwnerId) return 0
+  const amt = typeof s.amountAssigned === 'string' ? Number(s.amountAssigned) : s.amountAssigned
+  const sign = s.movementKind === 'expense' ? 1 : -1
+  if (s.movementOwnerId === memberA) return sign * amt // A paid: A is owed (expense) / owes back (reimb)
+  if (s.memberId === memberA) return -sign * amt // A's share: A owes (expense) / is credited (reimb)
+  return 0
+}
+
+/** Re-gate a projectable split to a concrete `DebtMovementSplit` for `asOf`. */
+export function gateSplit(s: ProjectableSplit, asOf: string): DebtMovementSplit {
+  const counts =
+    s.movementKind === 'reimbursement'
+      ? reimbursementCountsTowardDebt(s.receivedAt, s.cancelledAt, s.gateDueDate, asOf)
+      : countsByPeriod(s.gateDueDate, asOf)
+  return {
+    currencyCode: s.currencyCode,
+    memberId: s.memberId,
+    movementOwnerId: s.movementOwnerId,
+    movementKind: s.movementKind,
+    amountAssigned: s.amountAssigned,
+    counts,
+  }
+}
+
+/** Net debt between two members for one currency, evaluated at `asOf`. */
+export function householdDebtAt(
+  splits: ProjectableSplit[],
+  settlements: DebtSettlement[],
+  currency: BalanceCurrency,
+  asOf: string,
+  memberA: string,
+  memberB: string,
+): PairwiseDebt {
+  const gated = splits.map((s) => gateSplit(s, asOf))
+  return pairwiseDebt(computeHouseholdBalances(gated, settlements, currency), memberA, memberB)
+}
+
+/** One movement that lands in a projected month, with its effect on A. */
+export type OutlookItem = {
+  transactionId: string
+  label: string
+  /** Effect on A's balance for that month (negative = A owes more). */
+  amountForA: number
+}
+
+export type OutlookMonth = {
+  /** 'YYYY-MM' of the projected month. */
+  month: string
+  /** The cumulative net debt at the end of that month (positive = B owes A). */
+  cumulativeForA: number
+  /** What this month adds vs. the previous one (positive = B owes A more). */
+  deltaForA: number
+  /** The movements that land in this month (sum of `amountForA` === `deltaForA`). */
+  items: OutlookItem[]
+}
+
+/**
+ * Project the cumulative debt, the per-month increment ("lo que entra") and the
+ * itemised movements landing in each month, for one currency. `asOfByMonth` maps
+ * each 'YYYY-MM' to a reference date within it. The delta of the first entry is
+ * measured against `baselineForA` (the debt the month just before the sequence).
+ * A movement lands in a month when its own gate date falls in that month (so
+ * already-counted "a cuenta" splits sit in the baseline, not in a future month).
+ * Pure: re-gates the same splits per month; no I/O.
+ */
+export function householdOutlook(
+  splits: ProjectableSplit[],
+  settlements: DebtSettlement[],
+  currency: BalanceCurrency,
+  asOfByMonth: Array<{ month: string; asOf: string }>,
+  memberA: string,
+  baselineForA: number,
+): OutlookMonth[] {
+  let prev = baselineForA
+  const out: OutlookMonth[] = []
+  for (const { month, asOf } of asOfByMonth) {
+    const gated = splits.map((s) => gateSplit(s, asOf))
+    const cumulativeForA = computeHouseholdBalances(gated, settlements, currency)[memberA] ?? 0
+
+    // Movements whose gate month is exactly this month, grouped by transaction.
+    const byTx = new Map<string, OutlookItem>()
+    for (const s of splits) {
+      if (s.currencyCode !== currency) continue
+      if (!s.gateDueDate || s.gateDueDate.slice(0, 7) !== month) continue
+      if (s.movementKind === 'reimbursement' && (s.receivedAt == null || s.cancelledAt != null)) continue
+      const c = splitContributionForA(s, memberA)
+      if (c === 0) continue
+      const cur = byTx.get(s.transactionId) ?? {
+        transactionId: s.transactionId,
+        label: s.label,
+        amountForA: 0,
+      }
+      cur.amountForA += c
+      byTx.set(s.transactionId, cur)
+    }
+    const items = [...byTx.values()]
+      .filter((i) => Math.abs(i.amountForA) > 0.01)
+      .sort((a, b) => Math.abs(b.amountForA) - Math.abs(a.amountForA))
+
+    out.push({ month, cumulativeForA, deltaForA: cumulativeForA - prev, items })
+    prev = cumulativeForA
+  }
+  return out
 }

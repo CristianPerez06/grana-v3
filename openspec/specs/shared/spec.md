@@ -152,23 +152,43 @@ El sistema SHALL tratar un `reimbursement` asociado a un gasto compartido como u
 
 ### Requirement: El usuario puede ver el dashboard del hogar
 
-El sistema SHALL ofrecer una pantalla de hogar que muestre el balance de deuda por moneda en lenguaje claro ("le debés a X", "X te debe" o "están al día"), un acceso a saldar deuda cuando hay deuda viva, la lista de gastos compartidos recientes con la porción propia de cada uno, y los **integrantes del hogar**: el nombre de cada miembro con su rol — el propio usuario marcado como "Vos" y el otro como "Miembro". El bloque de integrantes SHALL derivarse de los datos que el hogar ya provee (`getHousehold()`), sin introducir query, dato ni comportamiento nuevo; es una reorganización visual de información existente.
+El sistema SHALL ofrecer una pantalla de hogar (home de Compartido) organizada por **mes**, con un navegador de mes (`‹ mes ›`) que comparte el patrón del dashboard. Para el mes seleccionado, la pantalla SHALL mostrar:
 
-#### Scenario: Dashboard con deuda a favor
+- **Balance / decisión:** el gasto compartido total del mes ("Gastaron juntos") y la deuda neta por moneda en lenguaje claro ("le debés a X", "X te debe" o "están al día"), con un acceso a saldar deuda cuando hay deuda viva. La deuda se presenta con `text-expense` (debés) / `text-income` (te deben), nunca en rojo. La **bimoneda** (ARS + USD) se muestra **siempre** (aunque sea cero), sin fusionar monedas, integrada en las secciones de balance (USD inline, no en una fila aparte). "Gastaron juntos" cuenta los gastos por el **mes en que impactan** (se pagan): efectivo/débito por su fecha, consumo de tarjeta por el mes de su resumen (`due_date`); un consumo de tarjeta con resumen futuro NO cuenta en el mes corriente.
+- **Próximos compromisos:** una proyección de lo que entra cuando venza cada resumen/cuota futura, derivada por mes (la misma deuda derivada evaluada con `asOf` corrido a cada mes). Una sola card con los próximos meses; el headline de cada mes es el **neto acumulado** a ese mes y el detalle desplegable lista los movimientos que entran; un mes sin movimientos se muestra sin importe.
+- **En qué gastaron:** el desglose del gasto compartido del mes (impact-scoped, como "Gastaron juntos") por categoría con su color, separado por moneda. Al tocar una categoría se **despliega inline** el detalle de los movimientos que la componen (no navega fuera). Reutiliza el sistema de color de desglose existente.
+- **Últimos movimientos:** la lista de movimientos compartidos del mes, presentados con el **mismo formato del módulo Movimientos** (`MovementRow`): ícono de categoría, título, taxonomía **categoría › subcategoría**, chips de estado (incl. reintegro), y monto con tono `income`/`expense`.
 
-- **WHEN** B le debe dinero a A y A abre el dashboard del hogar
-- **THEN** A ve "X te debe $…" por la moneda correspondiente y la lista de gastos compartidos recientes
+La pantalla SHALL ofrecer el **alta de movimiento** mediante el `Button` de la librería (CTA primary en el header en web; FAB `size="fab"` en mobile), y el acceso a **Configuración del hogar** como **ícono** (no como texto). El bloque de **integrantes del hogar** NO se muestra en la home; vive en `/shared/settings`.
 
-#### Scenario: Dashboard al día
+#### Scenario: El balance de hoy refleja lo impactado y la proyección explica el futuro
 
-- **WHEN** no hay deuda neta en ninguna moneda
-- **THEN** el dashboard muestra "están al día" y no ofrece el acceso a saldar deuda
+- **WHEN** en el mes corriente hay un consumo compartido de tarjeta que vence el mes próximo y un reintegro "a cuenta" recibido sobre él
+- **THEN** el balance de hoy refleja el reintegro impactado (p. ej. "X te debe $7.713"), sin esconderlo
+- **AND** "Próximos compromisos" muestra el saldo neto acumulado al mes del resumen (p. ej. "Julio · le debés $43.284")
 
-#### Scenario: El dashboard muestra los integrantes del hogar
+#### Scenario: Navegar a un mes futuro muestra su proyección
 
-- **WHEN** un hogar activo de dos miembros y un usuario abre el dashboard
-- **THEN** ve el bloque de integrantes con el nombre de cada miembro del hogar
-- **AND** su propio registro aparece marcado como "Vos" y el otro como "Miembro"
+- **WHEN** el usuario mueve el navegador de mes a julio
+- **THEN** ve los compromisos que entran en julio (resúmenes de tarjeta y cuotas) con su monto
+
+#### Scenario: Ver en qué se gastó por categoría
+
+- **WHEN** un usuario abre la home con gastos compartidos que impactan el mes
+- **THEN** ve el desglose por categoría del gasto compartido del mes
+- **AND** al tocar una categoría se despliega inline el detalle de los movimientos que la componen
+
+#### Scenario: Un consumo de tarjeta futuro no cuenta en el gasto del mes
+
+- **WHEN** existe un consumo compartido de tarjeta registrado este mes cuyo resumen vence el mes próximo
+- **THEN** NO cuenta en "Gastaron juntos" ni en el desglose por categoría del mes corriente
+- **AND** sí figura en "Próximos compromisos" y en "Últimos movimientos" con un indicador "Impacta en {mes}"
+
+#### Scenario: Los integrantes no están en la home
+
+- **WHEN** un usuario abre la home de Compartido
+- **THEN** no ve el bloque de integrantes en la home
+- **AND** los integrantes se listan en Configuración del hogar
 
 ### Requirement: El usuario puede saldar deuda registrando una liquidación
 

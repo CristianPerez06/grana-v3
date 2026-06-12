@@ -485,6 +485,8 @@ liquidación (handshake liviano), primer caso de RLS cross-user.
 |---|---|---|---|---|---|---|
 | SHA-N2-01 | Deuda por moneda | + "Streaming anual" `100` USD split 50/50 | Ver deuda | Deuda separada: `5.000` ARS y `u$s 50`; nunca sumada/convertida | ⬜ | |
 | SHA-N2-02 | Liquidación | la deuda ARS pendiente | QA-A liquida → QA-B asigna cuenta | Dos movimientos `settlement`; handshake liviano; la deuda ARS se salda (la USD sigue) | ⬜ | |
+| SHA-N2-03 | Home rediseñada (monthly-outlook) | hogar activo con gastos del mes | Abrir `/shared` | Hero navy con "Gastaron juntos {mes}" + "Para saldar"; bimoneda USD inline; barrita de categorías; "Próximos compromisos"; "Últimos movimientos" estilo Movimientos (ícono+taxonomía); **sin** bloque de integrantes; config como ícono; botón "Registrar movimiento" | ⬜ | Change `redesign-shared-monthly-outlook` |
+| SHA-N2-04 | Navegador de mes + desglose | gastos compartidos en ≥2 meses | Mover `‹ mes ›`; tocar una categoría de la barrita | "Gastaron juntos"/desglose/últimos movimientos cambian de mes (URL `?m=`); tocar categoría lleva a `/transactions?month&category&currency` | ⬜ | |
 
 ### N3 · Avanzado / inusual
 
@@ -492,6 +494,7 @@ liquidación (handshake liviano), primer caso de RLS cross-user.
 |---|---|---|---|---|---|---|
 | SHA-N3-01 | RLS cross-user (lectura) | QA-A y QA-B | QA-B mira transacciones compartidas de QA-A | Puede **leer** las compartidas; **no** puede escribirlas | ⬜ | |
 | SHA-N3-02 | RLS aislamiento | QA-A y un tercero sin hogar | Tercero intenta ver datos del hogar | No accede a nada del hogar ajeno | ⬜ | |
+| SHA-N3-03 | Caso producción YPF (reintegro impactado + consumo de tarjeta futuro) | QA-A paga consumo compartido **con tarjeta** (resumen vence el mes próximo) 50/50 + recibe reintegro "a cuenta" sobre él | Ver balance hoy y "Próximos compromisos" | **Hoy**: el balance refleja el reintegro impactado (QA-A te debe tu parte del reintegro), NO "al día". **Próximos**: el mes del resumen muestra el neto acumulado (tu parte del gasto − reintegro). El balance no se "invierte" sin explicación | ⬜ | Cubierto por tests `debt.test.ts` (hoy "$7.713 te debe", julio "$43.284") |
 
 ---
 

@@ -53,6 +53,8 @@ La ruta mobile nativa de Compartido no existe hoy. El mock mobile de este bundle
 
 - `shared.css`
 - `web/shared.html`
+- **`web/monthly-outlook-v11-claude-final.html` — DIRECCIÓN FINAL (web).** Hero navy con dos métricas (Gastaron juntos / Para saldar) + USD inline + barrita apilada de categorías clickeable; próximos compromisos; últimos movimientos con formato `MovementRow` (categoría › subcategoría); CTA de alta (`Button` primary) e ícono de configuración. Decisiones en `openspec/changes/redesign-shared-monthly-outlook/`.
+- **`mobile/monthly-outlook-v11-claude-final.html` — DIRECCIÓN FINAL (mobile, paridad futura).** Misma estructura apilada + FAB de alta.
 - `mobile/shared.html`
 - `components/route-shell.html`
 - `components/setup-state.html`

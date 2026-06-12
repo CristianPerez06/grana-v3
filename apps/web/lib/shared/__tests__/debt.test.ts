@@ -3,13 +3,17 @@ import { Money } from '@grana/validation'
 import {
   splitAmountByPercentages,
   countsByPeriod,
+  reimbursementCountsTowardDebt,
   computeHouseholdBalances,
   pairwiseDebt,
+  gateSplit,
+  householdOutlook,
   calculateTransactionSums,
   summarizePeriod,
   type BalanceTransactionRow,
   type DebtMovementSplit,
   type DebtSettlement,
+  type ProjectableSplit,
 } from '@grana/money-logic'
 
 const A = 'user-a'
@@ -62,6 +66,178 @@ describe('countsByPeriod', () => {
 
   it('a non-installment (null due date) always counts', () => {
     expect(countsByPeriod(null, '2026-06-15')).toBe(true)
+  })
+})
+
+// ─── reimbursementCountsTowardDebt (Option B: gate by the linked expense) ────
+
+describe('reimbursementCountsTowardDebt', () => {
+  it('does not count while unreceived', () => {
+    expect(reimbursementCountsTowardDebt(null, null, null, '2026-06-15')).toBe(false)
+  })
+
+  it('does not count when cancelled', () => {
+    expect(reimbursementCountsTowardDebt('2026-06-10', '2026-06-12', null, '2026-06-15')).toBe(false)
+  })
+
+  it('a received "a cuenta" reimbursement (no due date) counts as soon as received', () => {
+    // Real money that already moved → it impacts the balance today, even if the
+    // expense it offsets is a card purchase that only settles next month.
+    expect(reimbursementCountsTowardDebt('2026-06-10', null, null, '2026-06-15')).toBe(true)
+  })
+
+  it('a received "en resumen" reimbursement waits for its statement month', () => {
+    expect(reimbursementCountsTowardDebt('2026-06-11', null, '2026-07-10', '2026-06-15')).toBe(false)
+    expect(reimbursementCountsTowardDebt('2026-06-11', null, '2026-07-10', '2026-07-01')).toBe(true)
+  })
+})
+
+// ─── Production case (YPF): impacted reimbursement today, expense projects ────
+
+describe('YPF production case', () => {
+  // A (Cristian) pays a $101.994 shared card expense, 50·50, due in July — so
+  // Julieta (B)'s $50.997 share is gated to July. A also receives a $15.427 "a
+  // cuenta" reimbursement today (June); B's share of it is $7.713. The
+  // reimbursement is real money that already moved → it counts today; the card
+  // expense lands in July.
+  const today = '2026-06-15'
+  const expenseDueDate = '2026-07-10'
+
+  const splits = (asOf: string): DebtMovementSplit[] => [
+    {
+      currencyCode: 'ARS',
+      memberId: B,
+      movementOwnerId: A,
+      movementKind: 'expense',
+      amountAssigned: 50.997,
+      counts: countsByPeriod(expenseDueDate, asOf),
+    },
+    {
+      currencyCode: 'ARS',
+      memberId: B,
+      movementOwnerId: A,
+      movementKind: 'reimbursement',
+      amountAssigned: 7.713,
+      counts: reimbursementCountsTowardDebt('2026-06-11', null, null, asOf), // a cuenta
+    },
+  ]
+
+  it('today (June): only the received reimbursement counts → A owes B $7.713', () => {
+    const debt = pairwiseDebt(computeHouseholdBalances(splits(today), [], 'ARS'), A, B)
+    expect(debt.kind).toBe('owes')
+    if (debt.kind === 'owes') {
+      expect(debt.from).toBe(A)
+      expect(debt.to).toBe(B)
+      expect(debt.amount).toBeCloseTo(7.713, 3)
+    }
+  })
+
+  it('July: the card expense lands → net B owes A $43.284', () => {
+    const debt = pairwiseDebt(computeHouseholdBalances(splits('2026-07-01'), [], 'ARS'), A, B)
+    expect(debt.kind).toBe('owes')
+    if (debt.kind === 'owes') {
+      expect(debt.from).toBe(B)
+      expect(debt.to).toBe(A)
+      expect(debt.amount).toBeCloseTo(43.284, 3)
+    }
+  })
+})
+
+// ─── Monthly projection (gateSplit + householdOutlook) ───────────────────────
+
+describe('gateSplit', () => {
+  const expenseJuly: ProjectableSplit = {
+    currencyCode: 'ARS',
+    memberId: B,
+    movementOwnerId: A,
+    movementKind: 'expense',
+    amountAssigned: 50,
+    gateDueDate: '2026-07-10',
+    receivedAt: null,
+    cancelledAt: null,
+    transactionId: 'tx-ypf',
+    label: 'YPF',
+  }
+
+  it('a future card expense does not count this month but counts in its month', () => {
+    expect(gateSplit(expenseJuly, '2026-06-15').counts).toBe(false)
+    expect(gateSplit(expenseJuly, '2026-07-01').counts).toBe(true)
+  })
+
+  it('a reimbursement gates on its linked expense date', () => {
+    const reimb: ProjectableSplit = {
+      ...expenseJuly,
+      movementKind: 'reimbursement',
+      amountAssigned: 10,
+      gateDueDate: '2026-07-10', // linked expense date
+      receivedAt: '2026-06-11',
+      cancelledAt: null,
+    }
+    expect(gateSplit(reimb, '2026-06-15').counts).toBe(false)
+    expect(gateSplit(reimb, '2026-07-01').counts).toBe(true)
+  })
+})
+
+describe('householdOutlook', () => {
+  const asOfByMonth = [
+    { month: '2026-07', asOf: '2026-07-28' },
+    { month: '2026-08', asOf: '2026-08-28' },
+  ]
+
+  it('a July card expense enters in July (itemised) and stays', () => {
+    const splits: ProjectableSplit[] = [
+      {
+        currencyCode: 'ARS',
+        memberId: B,
+        movementOwnerId: A,
+        movementKind: 'expense',
+        amountAssigned: 50,
+        gateDueDate: '2026-07-10',
+        receivedAt: null,
+        cancelledAt: null,
+        transactionId: 'tx-ypf',
+        label: 'YPF',
+      },
+    ]
+    // baseline today (June): nothing counts → A balance 0.
+    const outlook = householdOutlook(splits, [], 'ARS', asOfByMonth, A, 0)
+    expect(outlook[0]).toMatchObject({ month: '2026-07', cumulativeForA: 50, deltaForA: 50 })
+    expect(outlook[0].items).toEqual([{ transactionId: 'tx-ypf', label: 'YPF', amountForA: 50 }])
+    expect(outlook[1]).toMatchObject({ month: '2026-08', cumulativeForA: 50, deltaForA: 0 })
+    expect(outlook[1].items).toEqual([])
+  })
+
+  it('a reimbursement on the same expense nets out in the expense month', () => {
+    const splits: ProjectableSplit[] = [
+      {
+        currencyCode: 'ARS',
+        memberId: B,
+        movementOwnerId: A,
+        movementKind: 'expense',
+        amountAssigned: 50,
+        gateDueDate: '2026-07-10',
+        receivedAt: null,
+        cancelledAt: null,
+        transactionId: 'tx-ypf',
+        label: 'YPF',
+      },
+      {
+        currencyCode: 'ARS',
+        memberId: B,
+        movementOwnerId: A,
+        movementKind: 'reimbursement',
+        amountAssigned: 10,
+        gateDueDate: '2026-07-10',
+        receivedAt: '2026-06-11',
+        cancelledAt: null,
+        transactionId: 'tx-ypf-reimb',
+        label: 'YPF · Reintegro',
+      },
+    ]
+    const outlook = householdOutlook(splits, [], 'ARS', asOfByMonth, A, 0)
+    // July: expense (+50 to A) minus reimbursement's B-share (−10) → A owed 40.
+    expect(outlook[0]).toMatchObject({ month: '2026-07', cumulativeForA: 40, deltaForA: 40 })
+    expect(outlook[0].items).toHaveLength(2)
   })
 })
 
