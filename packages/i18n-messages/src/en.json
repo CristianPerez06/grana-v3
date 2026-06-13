@@ -700,6 +700,27 @@
       "empty_body": "Add your first card to keep track of your statements and installments.",
       "empty_cta": "Add card"
     },
+    "compact": {
+      "filters": {
+        "by_bank": "By bank",
+        "all": "All",
+        "in_use": "In use",
+        "due_soon": "Due soon",
+        "with_balance": "With balance"
+      },
+      "group": {
+        "summary": "{count, plural, one {# card} other {# cards}} · {inUse} in use",
+        "to_pay": "to pay",
+        "no_bank": "No bank"
+      },
+      "row": {
+        "close_label": "Closes",
+        "due_label": "Due",
+        "uso_label": "Used",
+        "no_limit": "No limit"
+      },
+      "collapsed": "{count, plural, one {# card} other {# cards}} — tap to view"
+    },
     "route": {
       "subtitle": "{count} credit cards · {month} statements",
       "subtitle_loading": "- credit cards · {month} statements",
@@ -712,6 +733,8 @@
     },
     "month_hero": {
       "eyebrow": "To pay this month",
+      "next_closes_label": "Upcoming closes",
+      "next_closes_empty": "No upcoming closes",
       "next_due_label": "Next due date",
       "next_due_value": "{card} · due {date}",
       "upcoming_title": "Upcoming due dates",

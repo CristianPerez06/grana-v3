@@ -9,7 +9,6 @@ type Props = {
   summary: CardsMonthSummary
 }
 
-const MONTHS_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 const MASK = '••••••'
 
 const formatDayMonth = (iso: string): string => {
@@ -17,11 +16,12 @@ const formatDayMonth = (iso: string): string => {
   return `${dd}/${mm}`
 }
 
-const monthAbbrev = (iso: string): string => {
-  const m = Number(iso.split('-')[1])
-  return MONTHS_ES[m - 1] ?? ''
-}
-
+/**
+ * "A pagar este mes" hero — the dark navy card of the cards module (same surface
+ * as the dashboard hero). ARS primary, USD subordinate and SEPARATE (Bimoneda).
+ * Below, "Próximos cierres": the next close DATES (not payment due dates), each
+ * grouped with all the cards that close that day.
+ */
 export const CardsMonthHero = ({ summary }: Props) => {
   const t = useT()
   const { masked } = useEyeMask()
@@ -31,87 +31,50 @@ export const CardsMonthHero = ({ summary }: Props) => {
   const renderUSD = (amount: number) => (masked ? MASK : formatUSD(amount, showCents))
 
   return (
-    <View className="overflow-hidden rounded-xl border border-border bg-card">
-      <View className="flex-col gap-4 p-5">
-        <Text className="text-[11px] font-extrabold uppercase tracking-widest text-text-soft">
-          {t('cards.month_hero.eyebrow')}
-        </Text>
+    <View className="rounded-2xl bg-navy p-6">
+      <Text className="text-[11px] font-extrabold uppercase tracking-widest text-white/55">
+        {t('cards.month_hero.eyebrow')}
+      </Text>
 
-        {summary.hasToPay ? (
-          <View className="flex-col gap-1">
-            <Text className="text-4xl font-extrabold tracking-tight text-text">
-              {renderARS(summary.toPayARS)}
-            </Text>
-            {summary.hasUSD && summary.toPayUSD > 0 && (
-              <Text className="text-base font-bold text-text-muted">
+      {summary.hasToPay ? (
+        <View className="mt-2 flex-col gap-1">
+          <Text className="text-[38px] font-extrabold tracking-tight text-white">
+            {renderARS(summary.toPayARS)}
+          </Text>
+          {summary.hasUSD && summary.toPayUSD !== 0 && (
+            <View className="mt-1 flex-row items-center gap-2">
+              <View className="rounded-full bg-emerald-soft px-2.5 py-0.5">
+                <Text className="text-[11px] font-extrabold text-positive">USD</Text>
+              </View>
+              <Text className="text-[15px] font-bold text-white/90">
                 {renderUSD(summary.toPayUSD)}
               </Text>
-            )}
-          </View>
-        ) : (
-          <Text className="text-sm text-text-muted">{t('cards.month_hero.empty')}</Text>
-        )}
-
-        {summary.nextDue?.isToPay && (
-          <View className="flex-row items-center gap-3 rounded-2xl bg-amber/10 px-4 py-3">
-            <View className="flex-col">
-              <Text className="text-[11px] font-bold uppercase tracking-wider text-amber">
-                {t('cards.month_hero.next_due_label')}
-              </Text>
-              <Text className="text-sm font-semibold text-text">
-                {t('cards.month_hero.next_due_value', {
-                  card: summary.nextDue.cardName,
-                  date: formatDayMonth(summary.nextDue.dueDate),
-                })}
-              </Text>
             </View>
-          </View>
-        )}
-      </View>
+          )}
+        </View>
+      ) : (
+        <Text className="mt-2 text-sm text-white/70">{t('cards.month_hero.empty')}</Text>
+      )}
 
-      <View className="border-t border-border" />
-
-      <View className="flex-col gap-3 p-5">
-        <Text className="text-[11px] font-extrabold uppercase tracking-widest text-text-soft">
-          {t('cards.month_hero.upcoming_title')}
+      <View className="mt-5 border-t border-white/10 pt-4">
+        <Text className="text-[11px] font-extrabold uppercase tracking-widest text-white/55">
+          {t('cards.month_hero.next_closes_label')}
         </Text>
-        {summary.upcoming.length > 0 ? (
-          <View className="flex-col gap-3">
-            {summary.upcoming.map((due) => (
-              <View key={due.cardId} className="flex-row items-start gap-3">
-                <View className="h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-border-soft">
-                  <Text className="text-sm font-extrabold tabular-nums text-text">
-                    {due.dueDate.split('-')[2]}
-                  </Text>
-                  <Text className="text-[10px] font-semibold uppercase text-text-soft">
-                    {monthAbbrev(due.dueDate)}
-                  </Text>
-                </View>
-                <View className="min-w-0 flex-1 flex-col gap-2">
-                  <View className="min-w-0">
-                    <Text className="text-sm font-semibold text-text">{due.cardName}</Text>
-                    <Text className="text-xs text-text-muted">
-                      {due.isToPay
-                        ? t('cards.month_hero.upcoming_due', { date: formatDayMonth(due.dueDate) })
-                        : t('cards.month_hero.upcoming_open', { date: formatDayMonth(due.endDate) })}
-                    </Text>
-                  </View>
-                  <View className="border-t border-border-soft pt-2">
-                    <Text className="text-sm font-bold tabular-nums text-text">
-                      {renderARS(due.amountARS)}
-                    </Text>
-                    {due.amountUSD > 0 && (
-                      <Text className="mt-0.5 text-xs font-semibold tabular-nums text-text-muted">
-                        {renderUSD(due.amountUSD)}
-                      </Text>
-                    )}
-                  </View>
-                </View>
+        {summary.nextCloses.length > 0 ? (
+          <View className="mt-3 flex-col gap-2.5">
+            {summary.nextCloses.map((close, i) => (
+              <View key={`${close.endDate}-${i}`} className="flex-row items-center gap-3">
+                <Text className="w-12 text-sm font-extrabold tabular-nums text-white">
+                  {formatDayMonth(close.endDate)}
+                </Text>
+                <Text numberOfLines={1} className="flex-1 text-sm font-semibold text-white/80">
+                  {close.cardName}
+                </Text>
               </View>
             ))}
           </View>
         ) : (
-          <Text className="text-sm text-text-muted">{t('cards.month_hero.upcoming_empty')}</Text>
+          <Text className="mt-2 text-sm text-white/50">{t('cards.month_hero.next_closes_empty')}</Text>
         )}
       </View>
     </View>

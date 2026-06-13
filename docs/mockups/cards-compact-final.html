@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root{
+    --navy:#0c1f33; --ink:#0f1e2e; --muted:#6b7a8d; --soft:#97a4b3;
+    --line:#e7ebef; --line-soft:#f0f3f6; --green:#12b886;
+    --galicia:#ff7a00; --santander:#e4002b; --icbc:#00a99d; --bbva:#1f5fd0; --slate:#64748b;
+    --red:#dc2626; --red-bg:#fde8e8; --amber:#c2710c; --amber-bg:#fdf0dd; --emer:#0f9d6e; --emer-bg:#e9f8f1;
+  }
+  body{ font-family:"Segoe UI",system-ui,-apple-system,sans-serif; background:#eef1f4; color:var(--ink); width:1480px; padding:34px 38px 22px; -webkit-font-smoothing:antialiased; }
+  h1{ font-size:29px; letter-spacing:-0.02em; }
+  .sub{ color:var(--muted); font-size:14px; margin-top:6px; }
+  .stage{ display:grid; grid-template-columns:1fr 392px; gap:26px; margin-top:24px; }
+  .panel{ background:#fff; border-radius:24px; padding:26px 28px; box-shadow:0 1px 2px rgba(12,31,51,.04); }
+  .eyebrow{ font-size:11px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:var(--soft); }
+  .tabnum{ font-variant-numeric:tabular-nums; }
+
+  .whead{ display:flex; align-items:flex-start; justify-content:space-between; }
+  .whead h2{ font-size:26px; letter-spacing:-0.02em; }
+  .whead .meta{ color:var(--muted); font-size:13px; margin-top:5px; }
+  .add{ background:var(--green); color:#fff; font-weight:700; font-size:13px; border:none; border-radius:12px; padding:11px 16px; }
+
+  /* HERO: una sola card entera */
+  .hero{ margin-top:20px; border:1px solid var(--line); border-radius:18px; overflow:hidden; display:grid; grid-template-columns:1fr 1px 320px; }
+  .hero .left{ padding:22px 24px; }
+  .hero .k{ font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--soft); }
+  .hero .big{ font-size:46px; font-weight:800; letter-spacing:-0.04em; margin-top:8px; }
+  .hero .usd{ font-size:20px; font-weight:800; color:var(--muted); letter-spacing:-0.02em; margin-top:2px; }
+  .hero .next{ display:inline-flex; align-items:center; gap:9px; margin-top:16px; background:var(--amber-bg); border-radius:12px; padding:9px 13px; }
+  .hero .next .dot{ width:9px; height:9px; border-radius:50%; background:var(--amber); }
+  .hero .next .t{ font-size:13px; font-weight:700; color:#7a4a08; }
+  .hero .divider{ background:var(--line); }
+  .hero .right{ padding:20px 20px; }
+  .duelist{ list-style:none; margin-top:10px; }
+  .due{ display:flex; align-items:center; gap:11px; padding:9px 0; }
+  .due + .due{ border-top:1px solid var(--line-soft); }
+  .dchip{ width:38px; height:38px; border-radius:11px; background:#f1f4f7; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; line-height:1; }
+  .dchip b{ font-size:14px; font-weight:800; } .dchip i{ font-size:9px; font-weight:700; color:var(--soft); font-style:normal; text-transform:uppercase; margin-top:1px; }
+  .dchip.red{ background:var(--red-bg);} .dchip.red b{color:var(--red);} .dchip.red i{color:var(--red);}
+  .dchip.amber{ background:var(--amber-bg);} .dchip.amber b{color:var(--amber);} .dchip.amber i{color:var(--amber);}
+  .dn{ flex:1; min-width:0; } .dn .nm{ font-size:13px; font-weight:700; } .dn .st{ font-size:11px; color:var(--soft); margin-top:1px; }
+  .da{ text-align:right; } .da .a1{ font-size:13.5px; font-weight:800; } .da .a2{ font-size:10.5px; color:var(--muted); font-weight:700; }
+
+  .filters{ display:flex; gap:8px; margin-top:18px; align-items:center; }
+  .chip{ font-size:12.5px; font-weight:600; color:var(--muted); background:#f3f5f8; border-radius:999px; padding:7px 13px; }
+  .chip.on{ background:#e3f6ee; color:#0a7d57; }
+  .filters .note{ margin-left:auto; font-size:11.5px; color:var(--soft); font-style:italic; }
+
+  /* GROUPS desplegables */
+  .group{ margin-top:14px; border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+  .ghead{ display:flex; align-items:center; gap:11px; padding:13px 16px; cursor:pointer; background:#fbfcfd; }
+  .chev{ width:16px; height:16px; color:var(--soft); flex-shrink:0; }
+  .gdot{ width:11px; height:11px; border-radius:50%; flex-shrink:0; }
+  .gname{ font-weight:800; font-size:15px; }
+  .gcount{ font-size:12px; color:var(--muted); }
+  .gspacer{ flex:1; }
+  .gpay{ font-size:13px; font-weight:800; margin-right:4px; text-align:right; }
+  .gpay small{ font-size:11px; color:var(--soft); font-weight:600; display:block; }
+  .gbadge{ font-size:11px; font-weight:700; padding:4px 9px; border-radius:999px; }
+
+  /* 2-ROW CARD con barra de uso en fila 2 */
+  .crow{ display:grid; grid-template-columns:auto 1fr auto; gap:13px; padding:14px 16px; border-top:1px solid var(--line-soft); align-items:center; }
+  .crow:hover{ background:#fafcfd; }
+  .mono{ width:36px; height:36px; border-radius:10px; color:#fff; font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:center; }
+  .cmid .l1{ font-weight:700; font-size:14.5px; }
+  .cmid .l2{ display:flex; align-items:flex-end; gap:16px; margin-top:7px; }
+  .cmid .l2 .meta{ font-size:12px; color:var(--soft); }
+  .dstat b{ display:block; font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--soft); }
+  .dstat i{ display:block; font-size:12px; font-weight:600; font-style:normal; color:var(--muted); margin-top:3px; }
+  .usebar{ width:56px; height:5px; border-radius:99px; background:#eef1f4; overflow:hidden; margin-bottom:2px; }
+  .usebar i{ display:block; height:100%; border-radius:99px; }
+  .usepct{ font-size:11px; font-weight:700; color:var(--muted); }
+  .usedash{ font-size:11px; color:var(--soft); margin-bottom:2px; }
+  .cright{ text-align:right; display:flex; align-items:center; gap:14px; }
+  .amt .a1{ font-weight:800; font-size:15px; }
+  .amt .a2{ font-size:12px; color:var(--muted); margin-top:2px; font-weight:700; }
+  .amt.zero .a1{ color:var(--soft); }
+  .pill{ display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; padding:5px 10px; border-radius:999px; min-width:92px; justify-content:center; }
+  .pill .pdot{ width:7px; height:7px; border-radius:50%; }
+  .p-red{ background:var(--red-bg); color:var(--red);} .p-red .pdot{background:var(--red);}
+  .p-amber{ background:var(--amber-bg); color:var(--amber);} .p-amber .pdot{background:var(--amber);}
+  .p-ok{ background:var(--emer-bg); color:var(--emer);} .p-ok .pdot{background:var(--emer);}
+  .collapsed-note{ padding:11px 16px; border-top:1px solid var(--line-soft); font-size:12px; color:var(--soft); font-style:italic; background:#fcfdfe; }
+
+  .foot{ margin-top:18px; background:#f4f8f6; border-radius:14px; padding:13px 16px; }
+  .foot b{ font-size:12.5px; } .foot p{ font-size:12px; color:var(--muted); margin-top:3px; }
+
+  /* MOBILE */
+  .mtitle{ font-size:19px; letter-spacing:-0.01em; }
+  .msub{ font-size:12.5px; color:var(--muted); margin-top:5px; }
+  .phone{ margin-top:16px; background:#0c1f33; border-radius:34px; padding:12px; }
+  .screen{ background:#fff; border-radius:24px; padding:18px 15px; }
+  .screen h3{ font-size:19px; letter-spacing:-0.01em; }
+  .screen .ssub{ font-size:11.5px; color:var(--muted); margin-top:3px; }
+  .mhero{ margin-top:13px; border:1px solid var(--line); border-radius:16px; padding:15px 15px; }
+  .mhero .k{ font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--soft); }
+  .mhero .big{ font-size:30px; font-weight:800; letter-spacing:-0.03em; margin-top:6px; }
+  .mhero .usd{ font-size:14px; font-weight:800; color:var(--muted); }
+  .mdivlab{ font-size:9.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--soft); margin-top:13px; padding-top:11px; border-top:1px solid var(--line-soft); }
+  .mdue{ display:flex; align-items:center; gap:9px; padding:7px 0; }
+  .mdue + .mdue{ border-top:1px solid var(--line-soft); }
+  .mdchip{ width:30px; height:30px; border-radius:9px; background:#f1f4f7; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1; flex-shrink:0; }
+  .mdchip b{ font-size:11px; font-weight:800; } .mdchip i{ font-size:7.5px; font-weight:700; color:var(--soft); font-style:normal; }
+  .mdchip.red{background:var(--red-bg);} .mdchip.red b,.mdchip.red i{color:var(--red);}
+  .mdchip.amber{background:var(--amber-bg);} .mdchip.amber b,.mdchip.amber i{color:var(--amber);}
+  .mdn{ flex:1; font-size:11.5px; font-weight:700; }
+  .mda{ font-size:11.5px; font-weight:800; }
+
+  .mfilters{ display:flex; gap:6px; margin-top:13px; }
+  .mchip{ font-size:11px; font-weight:600; color:var(--muted); background:#f3f5f8; border-radius:999px; padding:5px 10px; }
+  .mchip.on{ background:#e3f6ee; color:#0a7d57; }
+
+  .mgroup{ margin-top:12px; border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  .mghead{ display:flex; align-items:center; gap:8px; padding:11px 13px; background:#fbfcfd; }
+  .mchev{ width:13px; height:13px; color:var(--soft); flex-shrink:0; }
+  .mgdot{ width:9px; height:9px; border-radius:50%; }
+  .mgname{ font-weight:800; font-size:13px; }
+  .mgcount{ font-size:10.5px; color:var(--muted); }
+  .mgsp{ flex:1; }
+  .mgbadge{ font-size:10px; font-weight:700; padding:3px 7px; border-radius:999px; }
+
+  /* mobile 2-row card con barra */
+  .mcard{ display:grid; grid-template-columns:auto 1fr auto; gap:10px; padding:9px 13px; border-top:1px solid var(--line-soft); align-items:center; }
+  .mmono{ width:32px; height:32px; border-radius:9px; color:#fff; font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; }
+  .mc-l1{ font-weight:700; font-size:13px; }
+  .mc-l2{ display:flex; align-items:flex-end; gap:14px; margin-top:5px; }
+  .mc-l2 .meta{ font-size:10.5px; color:var(--soft); }
+  .mdstat b{ display:block; font-size:9px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--soft); }
+  .mdstat i{ display:block; font-size:11px; font-weight:600; font-style:normal; color:var(--muted); margin-top:2px; }
+  .musebar{ width:48px; height:4px; border-radius:99px; background:#eef1f4; overflow:hidden; margin-bottom:2px; }
+  .musebar i{ display:block; height:100%; border-radius:99px; }
+  .musedash{ font-size:10px; color:var(--soft); margin-bottom:1px; }
+  .mc-right{ text-align:right; display:flex; align-items:center; gap:8px; }
+  .mc-amt .a1{ font-weight:800; font-size:13px; }
+  .mc-amt .a2{ font-size:10px; color:var(--muted); font-weight:700; margin-top:1px; }
+  .mc-amt.zero .a1{ color:var(--soft); }
+  .sdot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .s-red{background:var(--red);} .s-amber{background:var(--amber);} .s-ok{background:#cfe6db;}
+  .mcollapsed{ padding:9px 13px; border-top:1px solid var(--line-soft); font-size:11px; color:var(--soft); font-style:italic; background:#fcfdfe; }
+
+  .mfoot{ margin-top:15px; background:#eef4f9; border-radius:13px; padding:12px 14px; }
+  .mfoot b{font-size:12px;} .mfoot p{font-size:11px;color:var(--muted);margin-top:3px;}
+
+  .decision{ margin-top:24px; background:var(--navy); color:#fff; border-radius:16px; padding:15px 22px; font-size:13.5px; }
+  .decision b{ color:#7fe3c0; }
+</style>
+</head>
+<body>
+  <h1>Tarjetas — vista compacta (final)</h1>
+  <p class="sub">Hero navy (como el dashboard) con <b>un solo próximo cierre</b> · fila 2 con <b>barra de uso</b> · grupos desplegables que <b>auto-colapsan los bancos 100% al día y en $0</b>.</p>
+
+  <div class="stage">
+    <!-- ============ WEB ============ -->
+    <div class="panel">
+      <div class="whead">
+        <div>
+          <span class="eyebrow">Web desktop</span>
+          <h2 style="margin-top:6px">Tarjetas</h2>
+          <p class="meta">7 tarjetas de crédito · resumen de junio 2026</p>
+        </div>
+        <button class="add">+ Agregar tarjeta</button>
+      </div>
+
+      <!-- HERO: card navy (igual que el hero del dashboard) — A pagar (izq) + Próximos cierres (der) -->
+      <div class="hero" style="background:var(--navy);border:none;grid-template-columns:1fr 1px 340px">
+        <div style="padding:24px 26px;display:flex;flex-direction:column;justify-content:center">
+          <div class="k" style="color:rgba(255,255,255,.55)">A pagar este mes</div>
+          <div class="big tabnum" style="color:#fff;margin-top:8px">$ 115.550</div>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+            <span style="background:rgba(18,184,134,.2);color:#3ddc97;font-size:11px;font-weight:800;border-radius:999px;padding:2px 10px">USD</span>
+            <span class="tabnum" style="color:rgba(255,255,255,.9);font-size:18px;font-weight:700">US$ 540</span>
+          </div>
+        </div>
+        <div style="background:rgba(255,255,255,.1)"></div>
+        <div style="padding:22px 24px">
+          <div class="k" style="color:rgba(255,255,255,.55)">Próximos cierres</div>
+          <ul style="list-style:none;margin-top:12px;display:flex;flex-direction:column;gap:10px">
+            <li style="display:flex;align-items:baseline;gap:12px"><span class="tabnum" style="width:46px;color:#fff;font-weight:800;font-size:14px">18/06</span><span style="color:rgba(255,255,255,.8);font-size:14px;font-weight:600">Mastercard ICBC</span></li>
+            <li style="display:flex;align-items:baseline;gap:12px"><span class="tabnum" style="width:46px;color:#fff;font-weight:800;font-size:14px">18/06</span><span style="color:rgba(255,255,255,.8);font-size:14px;font-weight:600">Visa ICBC</span></li>
+            <li style="display:flex;align-items:baseline;gap:12px"><span class="tabnum" style="width:46px;color:#fff;font-weight:800;font-size:14px">06/07</span><span style="color:rgba(255,255,255,.8);font-size:14px;font-weight:600">Amex Galicia</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="filters">
+        <span class="chip on">Por banco</span>
+        <span class="chip">Todas</span>
+        <span class="chip">En uso</span>
+        <span class="chip">Vencen pronto</span>
+        <span class="chip">Con saldo</span>
+        <span class="note">Tap en el banco despliega / colapsa</span>
+      </div>
+
+      <!-- Santander expandido (vencido) -->
+      <div class="group">
+        <div class="ghead">
+          <span class="chev"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="gdot" style="background:var(--santander)"></span>
+          <span class="gname">Santander</span>
+          <span class="gcount">· 2 tarjetas · 1 en uso</span>
+          <span class="gspacer"></span>
+          <span class="gpay tabnum">$ 92.150<small>a pagar</small></span>
+          <span class="gbadge" style="background:var(--red-bg);color:var(--red)">Vencido · 09/06</span>
+        </div>
+        <div class="crow">
+          <span class="mono" style="background:var(--santander)">V</span>
+          <div class="cmid"><div class="l1">Visa Santander</div>
+            <div class="l2"><span class="dstat"><b>Cierre</b><i>30/05</i></span><span class="dstat"><b>Vence</b><i>09/06</i></span><span class="dstat"><b>Uso</b><i>64%</i></span></div>
+          </div>
+          <div class="cright"><div class="amt"><div class="a1 tabnum">$ 92.150</div></div><span class="pill p-red"><span class="pdot"></span>Vencido</span></div>
+        </div>
+        <div class="crow">
+          <span class="mono" style="background:var(--santander)">A</span>
+          <div class="cmid"><div class="l1">Amex Santander</div>
+            <div class="l2"><span class="dstat"><b>Cierre</b><i>02/07</i></span><span class="dstat"><b>Vence</b><i>14/07</i></span><span class="dstat"><b>Uso</b><i>0%</i></span></div>
+          </div>
+          <div class="cright"><div class="amt zero"><div class="a1 tabnum">$ 0</div></div><span class="pill p-ok"><span class="pdot"></span>Al día</span></div>
+        </div>
+      </div>
+
+      <!-- ICBC expandido (por vencer + bimoneda + sin límite) -->
+      <div class="group">
+        <div class="ghead">
+          <span class="chev"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="gdot" style="background:var(--icbc)"></span>
+          <span class="gname">ICBC</span>
+          <span class="gcount">· 2 tarjetas · 2 en uso</span>
+          <span class="gspacer"></span>
+          <span class="gpay tabnum">$ 23.400<small>a pagar</small></span>
+          <span class="gbadge" style="background:var(--amber-bg);color:var(--amber)">Vence 18/06</span>
+        </div>
+        <div class="crow">
+          <span class="mono" style="background:var(--icbc)">M</span>
+          <div class="cmid"><div class="l1">Mastercard ICBC</div>
+            <div class="l2"><span class="dstat"><b>Cierre</b><i>31/05</i></span><span class="dstat"><b>Vence</b><i>18/06</i></span><span class="dstat"><b>Uso</b><i>Sin límite</i></span></div>
+          </div>
+          <div class="cright"><div class="amt"><div class="a1 tabnum">$ 23.400</div></div><span class="pill p-amber"><span class="pdot"></span>Por vencer</span></div>
+        </div>
+        <div class="crow">
+          <span class="mono" style="background:var(--icbc)">V</span>
+          <div class="cmid"><div class="l1">Visa ICBC</div>
+            <div class="l2"><span class="dstat"><b>Cierre</b><i>25/06</i></span><span class="dstat"><b>Vence</b><i>07/07</i></span><span class="dstat"><b>Uso</b><i>41%</i></span></div>
+          </div>
+          <div class="cright"><div class="amt"><div class="a1 tabnum">$ 15.200</div><div class="a2 tabnum">US$ 200</div></div><span class="pill p-ok"><span class="pdot"></span>Al día</span></div>
+        </div>
+      </div>
+
+      <!-- Galicia expandido (en uso con saldo, bimoneda) -->
+      <div class="group">
+        <div class="ghead">
+          <span class="chev"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="gdot" style="background:var(--galicia)"></span>
+          <span class="gname">Banco Galicia</span>
+          <span class="gcount">· 2 tarjetas · 2 en uso</span>
+          <span class="gspacer"></span>
+          <span class="gbadge" style="background:#eef2f6;color:var(--muted)">Vence 06/07</span>
+        </div>
+        <div class="crow">
+          <span class="mono" style="background:var(--galicia)">A</span>
+          <div class="cmid"><div class="l1">Amex Galicia</div>
+            <div class="l2"><span class="dstat"><b>Cierre</b><i>25/06</i></span><span class="dstat"><b>Vence</b><i>06/07</i></span><span class="dstat"><b>Uso</b><i>21%</i></span></div>
+          </div>
+          <div class="cright"><div class="amt"><div class="a1 tabnum">$ 84.200</div></div><span class="pill p-ok"><span class="pdot"></span>Al día</span></div>
+        </div>
+        <div class="crow">
+          <span class="mono" style="background:var(--galicia)">V</span>
+          <div class="cmid"><div class="l1">Visa Galicia</div>
+            <div class="l2"><span class="dstat"><b>Cierre</b><i>02/07</i></span><span class="dstat"><b>Vence</b><i>13/07</i></span><span class="dstat"><b>Uso</b><i>34%</i></span></div>
+          </div>
+          <div class="cright"><div class="amt"><div class="a1 tabnum">$ 128.400</div><div class="a2 tabnum">US$ 340</div></div><span class="pill p-ok"><span class="pdot"></span>Al día</span></div>
+        </div>
+      </div>
+
+      <!-- BBVA auto-colapsado (100% al día y en $0) -->
+      <div class="group">
+        <div class="ghead">
+          <span class="chev" style="transform:rotate(-90deg)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="gdot" style="background:var(--bbva)"></span>
+          <span class="gname">BBVA</span>
+          <span class="gcount">· 1 tarjeta · 0 en uso</span>
+          <span class="gspacer"></span>
+          <span class="gbadge" style="background:var(--emer-bg);color:var(--emer)">Al día</span>
+        </div>
+        <div class="collapsed-note">Auto-colapsado: sin deuda ni saldo. Tap para ver 1 tarjeta.</div>
+      </div>
+
+      <div class="foot">
+        <b>Comportamiento web</b>
+        <p>Grupos por banco desplegables; auto-colapsan los bancos 100% al día y en $0. Cada banco muestra total a pagar + badge de urgencia. 2 filas por tarjeta: fila 1 identidad + resumen + estado; fila 2 cierre · vence + barra de uso (— sin límite). Click en la fila abre el detalle.</p>
+      </div>
+    </div>
+
+    <!-- ============ MOBILE ============ -->
+    <div class="panel">
+      <span class="eyebrow">Mobile</span>
+      <h2 class="mtitle" style="margin-top:6px">Misma semántica, fila de 2 líneas</h2>
+      <p class="msub">Hero unificado · grupos desplegables · barra de uso en la fila 2.</p>
+
+      <div class="phone">
+        <div class="screen">
+          <h3>Tarjetas</h3>
+          <p class="ssub">Junio 2026 · 7 tarjetas</p>
+
+          <div class="mhero" style="background:var(--navy);border:none">
+            <div class="k" style="color:rgba(255,255,255,.55)">A pagar este mes</div>
+            <div class="big tabnum" style="color:#fff">$ 115.550</div>
+            <div style="margin-top:6px;display:flex;align-items:center;gap:7px">
+              <span style="background:rgba(18,184,134,.2);color:#3ddc97;font-size:10px;font-weight:800;border-radius:999px;padding:1px 8px">USD</span>
+              <span class="tabnum" style="color:rgba(255,255,255,.9);font-size:13px;font-weight:700">US$ 540</span>
+            </div>
+            <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1)">
+              <span style="font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55)">Próximos cierres</span>
+              <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;gap:10px"><span class="tabnum" style="width:42px;color:#fff;font-weight:800;font-size:12.5px">18/06</span><span style="color:rgba(255,255,255,.8);font-size:12.5px;font-weight:600">Mastercard ICBC</span></div>
+                <div style="display:flex;gap:10px"><span class="tabnum" style="width:42px;color:#fff;font-weight:800;font-size:12.5px">18/06</span><span style="color:rgba(255,255,255,.8);font-size:12.5px;font-weight:600">Visa ICBC</span></div>
+                <div style="display:flex;gap:10px"><span class="tabnum" style="width:42px;color:#fff;font-weight:800;font-size:12.5px">06/07</span><span style="color:rgba(255,255,255,.8);font-size:12.5px;font-weight:600">Amex Galicia</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mfilters">
+            <span class="mchip on">Por banco</span>
+            <span class="mchip">Todas</span>
+            <span class="mchip">En uso</span>
+          </div>
+
+          <div class="mgroup">
+            <div class="mghead">
+              <span class="mchev"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <span class="mgdot" style="background:var(--santander)"></span>
+              <span class="mgname">Santander</span><span class="mgcount">2 · 1 en uso</span>
+              <span class="mgsp"></span>
+              <span class="mgbadge" style="background:var(--red-bg);color:var(--red)">09/06</span>
+            </div>
+            <div class="mcard">
+              <span class="mmono" style="background:var(--santander)">V</span>
+              <div><div class="mc-l1">Visa Santander</div><div class="mc-l2"><span class="mdstat"><b>Cierre</b><i>30/05</i></span><span class="mdstat"><b>Vence</b><i>09/06</i></span><span class="mdstat"><b>Uso</b><i>64%</i></span></div></div>
+              <div class="mc-right"><div class="mc-amt"><div class="a1 tabnum">$ 92.150</div></div><span class="sdot s-red"></span></div>
+            </div>
+            <div class="mcard">
+              <span class="mmono" style="background:var(--santander)">A</span>
+              <div><div class="mc-l1">Amex Santander</div><div class="mc-l2"><span class="mdstat"><b>Cierre</b><i>02/07</i></span><span class="mdstat"><b>Vence</b><i>14/07</i></span><span class="mdstat"><b>Uso</b><i>0%</i></span></div></div>
+              <div class="mc-right"><div class="mc-amt zero"><div class="a1 tabnum">$ 0</div></div><span class="sdot s-ok"></span></div>
+            </div>
+          </div>
+
+          <div class="mgroup">
+            <div class="mghead">
+              <span class="mchev"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <span class="mgdot" style="background:var(--icbc)"></span>
+              <span class="mgname">ICBC</span><span class="mgcount">2 · 2 en uso</span>
+              <span class="mgsp"></span>
+              <span class="mgbadge" style="background:var(--amber-bg);color:var(--amber)">18/06</span>
+            </div>
+            <div class="mcard">
+              <span class="mmono" style="background:var(--icbc)">M</span>
+              <div><div class="mc-l1">Mastercard ICBC</div><div class="mc-l2"><span class="mdstat"><b>Cierre</b><i>31/05</i></span><span class="mdstat"><b>Vence</b><i>18/06</i></span><span class="mdstat"><b>Uso</b><i>Sin límite</i></span></div></div>
+              <div class="mc-right"><div class="mc-amt"><div class="a1 tabnum">$ 23.400</div></div><span class="sdot s-amber"></span></div>
+            </div>
+            <div class="mcard">
+              <span class="mmono" style="background:var(--icbc)">V</span>
+              <div><div class="mc-l1">Visa ICBC</div><div class="mc-l2"><span class="mdstat"><b>Cierre</b><i>25/06</i></span><span class="mdstat"><b>Vence</b><i>07/07</i></span><span class="mdstat"><b>Uso</b><i>41%</i></span></div></div>
+              <div class="mc-right"><div class="mc-amt"><div class="a1 tabnum">$ 15.200</div><div class="a2 tabnum">US$ 200</div></div><span class="sdot s-ok"></span></div>
+            </div>
+          </div>
+
+          <div class="mgroup">
+            <div class="mghead">
+              <span class="mchev" style="transform:rotate(-90deg)"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <span class="mgdot" style="background:var(--bbva)"></span>
+              <span class="mgname">BBVA</span><span class="mgcount">1 · 0 en uso</span>
+              <span class="mgsp"></span>
+              <span class="mgbadge" style="background:var(--emer-bg);color:var(--emer)">Al día</span>
+            </div>
+            <div class="mcollapsed">Auto-colapsado — tap para ver 1 tarjeta</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mfoot">
+        <b>Comportamiento mobile</b>
+        <p>Fila de 2 líneas: identidad + (cierre · vence + barra de uso). Dot de estado a la derecha. Bimoneda apila US$ bajo el ARS. Grupos desplegables, auto-colapso de bancos al día.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="decision">
+    <b>Final:</b> hero unificado (A pagar + próximos vencimientos) · grupos desplegables con auto-colapso de bancos 100% al día/$0 · 2 filas por tarjeta con barra de uso y bimoneda apilada · estado por fila siempre visible.
+  </div>
+</body>
+</html>

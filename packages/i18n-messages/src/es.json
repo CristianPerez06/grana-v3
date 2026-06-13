@@ -700,6 +700,27 @@
       "empty_body": "Agregá tu primera tarjeta para llevar el control de tus resúmenes y cuotas.",
       "empty_cta": "Agregar tarjeta"
     },
+    "compact": {
+      "filters": {
+        "by_bank": "Por banco",
+        "all": "Todas",
+        "in_use": "En uso",
+        "due_soon": "Vencen pronto",
+        "with_balance": "Con saldo"
+      },
+      "group": {
+        "summary": "{count, plural, one {# tarjeta} other {# tarjetas}} · {inUse} en uso",
+        "to_pay": "a pagar",
+        "no_bank": "Sin banco"
+      },
+      "row": {
+        "close_label": "Cierre",
+        "due_label": "Vence",
+        "uso_label": "Uso",
+        "no_limit": "Sin límite"
+      },
+      "collapsed": "{count, plural, one {# tarjeta} other {# tarjetas}} — tocá para ver"
+    },
     "route": {
       "subtitle": "{count} tarjetas de crédito · resúmenes de {month}",
       "subtitle_loading": "- tarjetas de crédito · resúmenes de {month}",
@@ -712,6 +733,8 @@
     },
     "month_hero": {
       "eyebrow": "A pagar este mes",
+      "next_closes_label": "Próximos cierres",
+      "next_closes_empty": "Sin cierres próximos",
       "next_due_label": "Próximo vencimiento",
       "next_due_value": "{card} · vence {date}",
       "upcoming_title": "Próximos vencimientos",

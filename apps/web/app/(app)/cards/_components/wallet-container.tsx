@@ -1,4 +1,4 @@
-import { getLocale, getTranslations } from 'next-intl/server'
+import { getTranslations } from 'next-intl/server'
 import {
   getCardNetworks,
   getCreditCards,
@@ -8,7 +8,6 @@ import {
 import { getInstitutions } from '@/lib/accounts/queries'
 import type { Institution } from '@/lib/accounts/types'
 import { getShowCents } from '@/lib/preferences'
-import { getTodayAR } from '@/lib/date'
 import { Wallet } from './wallet'
 import { WalletSection } from './wallet-section'
 import { SectionFallback } from '@/components/ui/section-fallback'
@@ -19,14 +18,12 @@ export const WalletContainer = async () => {
   let networks: CardNetwork[]
   let institutions: Institution[]
   let showCents: boolean
-  let locale: string
   try {
-    ;[activeCards, networks, institutions, showCents, locale] = await Promise.all([
+    ;[activeCards, networks, institutions, showCents] = await Promise.all([
       getCreditCards(await createClient(), {}),
       getCardNetworks(await createClient()),
       getInstitutions(await createClient()),
       getShowCents(),
-      getLocale(),
     ])
   } catch {
     const t = await getTranslations('cards.route')
@@ -37,11 +34,6 @@ export const WalletContainer = async () => {
     networks.map((n) => [n.id, n.name]),
   )
 
-  const monthShort = getTodayAR().toLocaleDateString(
-    locale === 'en' ? 'en-US' : 'es-AR',
-    { month: 'long' },
-  )
-
   return (
     <WalletSection hasCards={activeCards.length > 0}>
       <Wallet
@@ -49,7 +41,6 @@ export const WalletContainer = async () => {
         networkNames={networkNames}
         institutions={institutions}
         networks={networks}
-        monthLabel={monthShort}
         showCents={showCents}
       />
     </WalletSection>

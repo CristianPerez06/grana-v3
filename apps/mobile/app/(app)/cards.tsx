@@ -5,7 +5,7 @@ import { CardsMonthHero } from '../../components/cards/CardsMonthHero'
 import { Wallet } from '../../components/cards/Wallet'
 import { ArchivedCardsSection } from '../../components/cards/ArchivedCardsSection'
 import { SectionFallback } from '../../components/dashboard/SectionFallback'
-import { getCardsMonthSummary, getCreditCards } from '../../lib/cards/queries'
+import { getCardNetworks, getCardsMonthSummary, getCreditCards } from '../../lib/cards/queries'
 import { useT } from '../../lib/locale-context'
 
 export default function TarjetasScreen() {
@@ -41,6 +41,10 @@ const WalletSection = () => {
     queryKey: ['cards'] as const,
     queryFn: () => getCreditCards({ includeArchived: false }),
   })
+  const networksQuery = useQuery({
+    queryKey: ['cards', 'networks'] as const,
+    queryFn: getCardNetworks,
+  })
 
   if (query.isPending)
     return <SectionFallback message={t('cards.route.wallet_loading')} className="min-h-[18rem]" />
@@ -58,6 +62,11 @@ const WalletSection = () => {
       </View>
     )
   }
+
+  const networkNames: Record<string, string> = Object.fromEntries(
+    (networksQuery.data ?? []).map((n) => [n.id, n.name]),
+  )
+
   return (
     <View className="flex-col gap-3">
       <View className="flex-col gap-1 px-0.5">
@@ -66,7 +75,7 @@ const WalletSection = () => {
         </Text>
         <Text className="text-xs text-text-muted">{t('cards.wallet.section_hint')}</Text>
       </View>
-      <Wallet cards={query.data} />
+      <Wallet cards={query.data} networkNames={networkNames} />
     </View>
   )
 }

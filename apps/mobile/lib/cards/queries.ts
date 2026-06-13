@@ -25,8 +25,18 @@ export type CreditCardSummary = {
   network_id: string | null
   other_network_name: string | null
   institution_id: string | null
+  /** Institution branding + name for the card accent and bank grouping. */
+  institution: { name: string | null; brand_color: string | null; icon_type: string | null } | null
+  color_key: string | null
+  icon_key: string | null
   created_at: string
   currencies: Array<{ currency_code: string; is_active: boolean }>
+  /**
+   * Whether the card is "in use" this cycle. Mobile derives it from the active
+   * period's pending charges (its `tx_count` already includes installment
+   * children that fall in it); no separate installment-parent query yet.
+   */
+  inUse: boolean
   activePeriod: (CardPeriodWithPayment & {
     pendingAmountARS: number
     pendingAmountUSD: number
@@ -58,7 +68,7 @@ export async function getCreditCards(
 ): Promise<CreditCardSummary[]> {
   let query = supabase
     .from('accounts')
-    .select('id, name, type, is_active, credit_limit, network_id, other_network_name, institution_id, created_at, currencies:account_currencies(currency_code, is_active)')
+    .select('id, name, type, is_active, credit_limit, network_id, other_network_name, institution_id, color_key, icon_key, created_at, institution:institutions(name, brand_color, icon_type), currencies:account_currencies(currency_code, is_active)')
     .eq('type', 'credit')
     .order('created_at', { ascending: true })
 
@@ -153,6 +163,7 @@ export async function getCreditCards(
     return {
       ...card,
       type: 'credit' as const,
+      inUse: (activePeriodWithMeta?.tx_count ?? 0) > 0,
       activePeriod: activePeriodWithMeta,
     }
   })
@@ -180,6 +191,12 @@ export type CardsMonthSummary = {
   hasToPay: boolean
   nextDue: UpcomingDue | null
   upcoming: UpcomingDue[]
+  /**
+   * Upcoming statement CLOSES (cierres) among open periods (`end_date >= today`),
+   * one row per card, sorted by close date ascending, capped at the next 3.
+   * These are CLOSE dates, NOT payment due dates.
+   */
+  nextCloses: { endDate: string; cardName: string }[]
 }
 
 export async function getCardsMonthSummary(): Promise<CardsMonthSummary> {
@@ -223,6 +240,14 @@ export async function getCardsMonthSummary(): Promise<CardsMonthSummary> {
 
   upcoming.sort((a, b) => a.dueDate.localeCompare(b.dueDate))
 
+  // Próximos cierres: open statements about to close (end_date in the future),
+  // one row per card, by close date ascending, next 3.
+  const nextCloses = upcoming
+    .filter((u) => u.endDate >= todayStr)
+    .sort((a, b) => a.endDate.localeCompare(b.endDate) || a.cardName.localeCompare(b.cardName))
+    .slice(0, 3)
+    .map((u) => ({ endDate: u.endDate, cardName: u.cardName }))
+
   return {
     toPayARS,
     toPayUSD,
@@ -230,5 +255,29 @@ export async function getCardsMonthSummary(): Promise<CardsMonthSummary> {
     hasToPay,
     nextDue: upcoming[0] ?? null,
     upcoming,
+    nextCloses,
   }
+}
+
+// ─── Card networks catalog ────────────────────────────────────────────────────
+// Mirror of apps/web/lib/cards/queries.ts → getCardNetworks. Used to resolve a
+// card's network display name for the compact list's monogram + meta line.
+
+export type CardNetwork = {
+  id: string
+  slug: string
+  name: string
+  brand_color: string | null
+  display_order: number | null
+}
+
+export async function getCardNetworks(): Promise<CardNetwork[]> {
+  const { data, error } = await supabase
+    .from('card_networks')
+    .select('id, slug, name, brand_color, display_order')
+    .eq('is_active', true)
+    .order('display_order', { ascending: true })
+
+  if (error) throw error
+  return data ?? []
 }
