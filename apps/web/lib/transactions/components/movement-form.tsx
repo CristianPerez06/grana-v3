@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { invalidateAfterMovementMutation } from '@/lib/transactions/invalidation'
+import { InlineGuide } from '@/components/ui/inline-guide'
+import { GUIDANCE_IDS } from '@/lib/guidance/catalog'
 import {
   ArrowLeftRight,
   Calendar,
@@ -108,6 +110,8 @@ type Props = {
   onClose?: () => void
   /** The user's household when it has two members — enables the "Compartir" toggle. */
   household?: Household | null
+  /** Show inline guides for first-time users (no prior transactions). */
+  showFirstMovementGuidance?: boolean
 }
 
 const CURRENCY_SYMBOL: Record<'ARS' | 'USD', string> = { ARS: '$', USD: 'U$D' }
@@ -192,6 +196,7 @@ export const MovementForm = ({
   variant = 'page',
   onClose,
   household,
+  showFirstMovementGuidance = false,
 }: Props) => {
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -199,6 +204,7 @@ export const MovementForm = ({
   const tCommon = useTranslations('common')
   const tRec = useTranslations('recurrences')
   const tShared = useTranslations('shared')
+  const tGuidance = useTranslations('guidance.first_movement')
   const tRoot = useTranslations()
   const isEdit = edit !== undefined
   const editable = edit?.editableFields
@@ -645,16 +651,23 @@ export const MovementForm = ({
 
   // ── Type selector (Segmented). Disabled in edit: type is immutable. ─────────
   const typeSelector = (
-    <Segmented
-      ariaLabel={t('labels.type')}
-      value={tab}
-      onValueChange={(v) => setTab(v as Tab)}
-      options={(['expense', 'income', 'transfer', 'adjustment', 'exchange'] as Tab[]).map((k) => ({
-        value: k,
-        label: TAB_LABELS[k],
-        disabled: isEdit,
-      }))}
-    />
+    <div className="flex flex-col gap-2">
+      <Segmented
+        ariaLabel={t('labels.type')}
+        value={tab}
+        onValueChange={(v) => setTab(v as Tab)}
+        options={(['expense', 'income', 'transfer', 'adjustment', 'exchange'] as Tab[]).map((k) => ({
+          value: k,
+          label: TAB_LABELS[k],
+          disabled: isEdit,
+        }))}
+      />
+      {showFirstMovementGuidance && !isEdit && (tab === 'expense' || tab === 'income') && (
+        <InlineGuide guidanceId={GUIDANCE_IDS.FIRST_MOVEMENT_TYPE}>
+          {tGuidance('type')}
+        </InlineGuide>
+      )}
+    </div>
   )
 
   // ── Amount hero ─────────────────────────────────────────────────────────────
@@ -848,6 +861,13 @@ export const MovementForm = ({
               </button>
             )}
           </div>
+          {showFirstMovementGuidance && !isEdit && (tab === 'expense' || tab === 'income') && (
+            <div className="px-4 pb-2">
+              <InlineGuide guidanceId={GUIDANCE_IDS.FIRST_MOVEMENT_ACCOUNT}>
+                {tGuidance('account')}
+              </InlineGuide>
+            </div>
+          )}
 
           {/* Destination (transfer / exchange) */}
           {(tab === 'transfer' || tab === 'exchange') && (
@@ -875,7 +895,18 @@ export const MovementForm = ({
           )}
 
           {/* Category (income / expense) */}
-          {(tab === 'income' || tab === 'expense') && categoryRow}
+          {(tab === 'income' || tab === 'expense') && (
+            <>
+              {categoryRow}
+              {showFirstMovementGuidance && !isEdit && (
+                <div className="px-4 pb-2">
+                  <InlineGuide guidanceId={GUIDANCE_IDS.FIRST_MOVEMENT_CATEGORY}>
+                    {tGuidance('category')}
+                  </InlineGuide>
+                </div>
+              )}
+            </>
+          )}
 
           {/* Date (always) */}
           {dateRow}
