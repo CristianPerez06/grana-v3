@@ -12,6 +12,7 @@ type Props = {
   accounts: MovementFormAccount[]
   categories: CategoryWithSubcategories[]
   household?: Household | null
+  showFirstMovementGuidance?: boolean
   children: ReactNode
 }
 
@@ -21,7 +22,13 @@ type Props = {
  * accessible from any authenticated route. The drawer is the only host for the
  * create flow — there is no equivalent page route.
  */
-export function MovementDrawerProvider({ accounts, categories, household, children }: Props) {
+export function MovementDrawerProvider({
+  accounts,
+  categories,
+  household,
+  showFirstMovementGuidance = false,
+  children,
+}: Props) {
   const t = useTranslations('transactions')
   const [open, setOpen] = useState(false)
   const [preselectAccountId, setPreselectAccountId] = useState<string | undefined>(
@@ -50,6 +57,7 @@ export function MovementDrawerProvider({ accounts, categories, household, childr
           accounts={accounts}
           categories={categories}
           household={household}
+          showFirstMovementGuidance={showFirstMovementGuidance}
           preselectAccountId={preselectAccountId}
           onClose={() => setOpen(false)}
           onSuccess={() => setOpen(false)}

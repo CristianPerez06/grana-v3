@@ -1553,6 +1553,13 @@
       "leave_confirm_title": "¿Salir del hogar?",
       "leave_confirm_body": "Vas a salir del hogar compartido. Se conservan los gastos compartidos históricos.",
       "leave_blocked": "Saldá la deuda antes de salir del hogar."
+    },
+    "guidance": {
+      "first_movement": {
+        "type": "Gasto resta, ingreso suma. Simple, pero poderoso.",
+        "account": "Esto responde: ¿de dónde salió o entró la plata?",
+        "category": "Después usamos esto para mostrar en qué se te fue el mes."
+      }
     }
   }
 }

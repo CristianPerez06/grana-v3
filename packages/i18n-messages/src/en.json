@@ -1553,6 +1553,13 @@
       "leave_confirm_title": "Leave household?",
       "leave_confirm_body": "You'll leave the shared household. Past shared expenses are kept.",
       "leave_blocked": "Settle the debt before leaving the household."
+    },
+    "guidance": {
+      "first_movement": {
+        "type": "Expense subtracts, income adds. Simple, but powerful.",
+        "account": "This shows where your money came from or went to.",
+        "category": "We use this later to show you where your month's money went."
+      }
     }
   }
 }

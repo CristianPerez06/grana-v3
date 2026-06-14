@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getAccounts } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
 import { getHousehold } from '@/lib/shared/queries'
+import { hasAnyTransaction } from '@/lib/transactions/queries'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import type { MovementFormAccount } from '@/lib/transactions/components/movement-form'
 import { MovementDrawerProvider } from './movement-drawer'
@@ -40,13 +41,15 @@ export function MovementDrawerLoader({ children }: Props) {
       { queryKey: QUERY_KEYS.accountsList, queryFn: () => getAccounts(createClient()) },
       { queryKey: QUERY_KEYS.categoriesTree, queryFn: () => getAllCategories(createClient()) },
       { queryKey: QUERY_KEYS.householdDetail, queryFn: () => getHousehold(createClient()) },
+      { queryKey: ['transactionsHasAny'], queryFn: () => hasAnyTransaction(createClient()) },
     ],
   })
 
-  const [accountsQ, categoriesQ, householdQ] = queries
+  const [accountsQ, categoriesQ, householdQ, hasAnyTxQ] = queries
   const accountsData = accountsQ.data
   const categoriesData = categoriesQ.data
   const householdData = householdQ.data
+  const hasAnyTxData = hasAnyTxQ.data
 
   const drawerAccounts = useMemo<MovementFormAccount[] | null>(() => {
     if (!accountsData) return null
@@ -71,15 +74,16 @@ export function MovementDrawerLoader({ children }: Props) {
     ]
   }, [accountsData])
 
-  // Drawer only mounts when all three are ready; otherwise children render
+  // Drawer only mounts when all queries are ready; otherwise children render
   // without context (and the button stays disabled via TransactionsHeader's
   // own useQueries).
-  if (drawerAccounts && categoriesData && householdData !== undefined) {
+  if (drawerAccounts && categoriesData && householdData !== undefined && hasAnyTxData !== undefined) {
     return (
       <MovementDrawerProvider
         accounts={drawerAccounts}
         categories={categoriesData}
         household={householdData}
+        showFirstMovementGuidance={!hasAnyTxData}
       >
         {children}
       </MovementDrawerProvider>
