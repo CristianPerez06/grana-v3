@@ -13,7 +13,7 @@ Las query functions de lectura SHALL ser client-agnósticas: reciben el client S
 
 Los query keys y los `staleTime` por familia centralizados en `lib/query-client.ts` SHALL conservarse al migrar una query de transporte: cambiar el mecanismo de fetch NO SHALL cambiar la identidad de cache ni su política de frescura.
 
-Esta capability define el patrón canónico; las rutas existentes migran ruta por ruta en changes dedicados. Rutas migradas a la fecha: `/transactions`, `/accounts/[id]`.
+Esta capability define el patrón canónico; las rutas existentes migran ruta por ruta en changes dedicados. Rutas migradas a la fecha: `/transactions`, `/accounts/[id]`, `/dashboard`.
 
 #### Scenario: El mount de /transactions fetchea en paralelo
 
@@ -26,6 +26,13 @@ Esta capability define el patrón canónico; las rutas existentes migran ruta po
 - **WHEN** el usuario hace un cold-load de `/accounts/[id]`
 - **THEN** las queries de las secciones (account detail, historial ascendente de movimientos, filter options, pending reimbursements, linked recurrence ids, institutions) se disparan como requests HTTP concurrentes browser → Supabase
 - **AND** ninguna espera en una cola de server actions: el tiempo de datos del mount queda gobernado por la cadena más lenta, no por la suma de todas
+
+#### Scenario: La navegación de mes en /dashboard refetchea sin cola de actions
+
+- **WHEN** el usuario cambia el mes seleccionado en `/dashboard` y los islands "Balance del mes" y "En qué se fue" refetchean su mes
+- **THEN** ambos refetches se disparan como requests HTTP concurrentes browser → Supabase
+- **AND** ninguno espera en una cola de server actions: el cambio de mes queda gobernado por el refetch más lento, no por la suma de ambos
+- **AND** el mes actual sigue sirviéndose del `initialData` server-rendered sin refetch
 
 #### Scenario: Una query function migrada es reutilizable desde mobile
 

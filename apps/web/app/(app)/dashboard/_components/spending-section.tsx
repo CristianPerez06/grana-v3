@@ -6,7 +6,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { buildCategorySlices, type CategorySliceInput } from '@grana/money-logic'
 import { UNCATEGORIZED_ID, type MonthCategoryBreakdown } from '@grana/dashboard'
-import { getMonthCategoryBreakdownAction } from '@/app/_actions/queries'
+import { getMonthCategoryBreakdown } from '@/lib/transactions/queries'
+import { createClient } from '@/lib/supabase/client'
 import { translateCategoryLabel } from '@/lib/categories/display'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -44,7 +45,8 @@ export const SpendingSection = ({ initialData }: Props) => {
 
   const { data, isPending, isError, refetch } = useQuery({
     queryKey: ['dashboard', 'category-breakdown', selected.year, selected.month],
-    queryFn: () => getMonthCategoryBreakdownAction(monthKey(selected.year, selected.month)),
+    queryFn: () =>
+      getMonthCategoryBreakdown(createClient(), monthKey(selected.year, selected.month)),
     // The current month is server-rendered by the container; other months
     // start empty and show the in-card skeleton while they fetch.
     initialData: isCurrent ? initialData : undefined,

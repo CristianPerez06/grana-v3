@@ -9,10 +9,14 @@ import { MaskedAmountDisplay } from './masked-amount-display'
 import { MonthBalanceBodySkeleton } from './month-balance-skeleton'
 import { useDashboardMonth } from './dashboard-month-context'
 import { useEyeMask } from './eye-mask-context'
-import { fetchMonthBalanceSeries } from '@/app/_actions/dashboard'
+import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import type { MonthBalanceByCurrency, MonthBalanceSeries } from '@grana/dashboard'
+import {
+  getMonthBalanceSeries,
+  type MonthBalanceByCurrency,
+  type MonthBalanceSeries,
+} from '@grana/dashboard'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -149,7 +153,7 @@ export const MonthBalanceSection = ({ initialData }: Props) => {
 
   const { data, isPending, isError, refetch } = useQuery({
     queryKey: ['dashboard', 'balance-series', selected.year, selected.month],
-    queryFn: () => fetchMonthBalanceSeries(selected.year, selected.month),
+    queryFn: () => getMonthBalanceSeries(createClient(), selected.year, selected.month),
     // The current month is server-rendered by the container; other months
     // start empty and show the in-card skeleton while they fetch.
     initialData: isCurrent ? initialData : undefined,
