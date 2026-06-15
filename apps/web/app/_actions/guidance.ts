@@ -1,7 +1,6 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import type { GuidanceId } from '@/lib/guidance/catalog'
 import { isValidGuidanceId } from '@/lib/guidance/catalog'
 
 export type GuidanceStatus = {

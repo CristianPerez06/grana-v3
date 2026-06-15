@@ -28,5 +28,5 @@ export type GuidanceId = typeof GUIDANCE_IDS[keyof typeof GUIDANCE_IDS];
  * Validar que un guidance_id está en el catálogo conocido
  */
 export function isValidGuidanceId(id: unknown): id is GuidanceId {
-  return Object.values(GUIDANCE_IDS).includes(id as any);
+  return typeof id === 'string' && (Object.values(GUIDANCE_IDS) as string[]).includes(id);
 }
