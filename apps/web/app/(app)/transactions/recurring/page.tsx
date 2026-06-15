@@ -2,10 +2,10 @@ import { redirect } from 'next/navigation'
 import { PendingRecurrencesBlock } from '@/lib/recurrences/components/pending-recurrences-block'
 import { RecurringTabs } from './_components/recurring-tabs'
 import { UpcomingRecurrences } from './_components/upcoming-recurrences'
+import { RecurrenceGenerationTrigger } from './_components/recurrence-generation-trigger'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { createClient } from '@/lib/supabase/server'
 import {
-  generateDueRecurrenceInstances,
   getRecurrences,
   getPendingRecurrenceInstances,
 } from '@/lib/recurrences/queries'
@@ -21,8 +21,6 @@ const RecurringPage = async () => {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
-
-  await generateDueRecurrenceInstances(supabase)
 
   const [allRules, pendingRecurrences, { cash, bank }] =
     await Promise.all([
@@ -45,6 +43,8 @@ const RecurringPage = async () => {
 
   return (
     <>
+      <RecurrenceGenerationTrigger />
+
       <PendingRecurrencesBlock
         pending={pendingRecurrences}
         availableByAccount={availableByAccount}

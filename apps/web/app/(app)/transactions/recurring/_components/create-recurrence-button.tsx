@@ -5,10 +5,9 @@ import { useTranslations } from 'next-intl'
 import { useQueries } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  getAccountsAction,
-  getAllCategoriesAction,
-} from '@/app/_actions/queries'
+import { createClient } from '@/lib/supabase/client'
+import { getAccounts } from '@/lib/accounts/queries'
+import { getAllCategories } from '@/lib/categories/queries'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import {
   CreateRecurrenceModal,
@@ -23,17 +22,18 @@ const activeCodes = (
     .map((c) => c.currency_code as 'ARS' | 'USD')
 
 // Header action that opens the direct-creation modal. Self-sufficient: fetches
-// its own catalogs via TanStack Query using the canonical keys so the layout can
-// mount it without passing data props. Button stays disabled until both catalogs
-// resolve (chrome-always-visible pattern, see route-loading-and-errors spec).
+// its own catalogs directly browser→Supabase via TanStack Query using the
+// canonical keys so the layout can mount it without passing data props. Button
+// stays disabled until both catalogs resolve (chrome-always-visible pattern,
+// see route-loading-and-errors spec).
 export const CreateRecurrenceButton = () => {
   const [open, setOpen] = useState(false)
   const tRec = useTranslations('recurrences')
 
   const queries = useQueries({
     queries: [
-      { queryKey: QUERY_KEYS.accountsList, queryFn: () => getAccountsAction() },
-      { queryKey: QUERY_KEYS.categoriesTree, queryFn: () => getAllCategoriesAction() },
+      { queryKey: QUERY_KEYS.accountsList, queryFn: () => getAccounts(createClient()) },
+      { queryKey: QUERY_KEYS.categoriesTree, queryFn: () => getAllCategories(createClient()) },
     ],
   })
 
