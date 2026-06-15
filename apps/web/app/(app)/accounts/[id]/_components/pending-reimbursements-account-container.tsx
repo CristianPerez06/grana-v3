@@ -2,7 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { PendingReimbursementsBlock } from '@/lib/transactions/components/pending-reimbursements-block'
-import { getPendingReimbursementsAction } from '@/app/_actions/queries'
+import { getPendingReimbursements } from '@/lib/transactions/queries'
+import { createClient } from '@/lib/supabase/client'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 
@@ -21,7 +22,7 @@ type Props = {
 export function PendingReimbursementsAccountContainer({ accountId }: Props) {
   const { data, isPending, error } = useQuery({
     queryKey: QUERY_KEYS.accountPendingReimbursements(accountId),
-    queryFn: () => getPendingReimbursementsAction(accountId),
+    queryFn: () => getPendingReimbursements(createClient(), accountId),
   })
 
   if (isPending) return null

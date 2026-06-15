@@ -12,11 +12,10 @@ import { MovementList } from '@/lib/transactions/components/movement-list'
 import { MovementListSkeleton } from '@/lib/transactions/components/movement-list-skeleton'
 import { Button } from '@/components/ui/button'
 import { formatDateISO, getTodayAR } from '@/lib/date'
-import {
-  getAccountDetailAction,
-  getAccountMovementsAscendingAction,
-  getRecurrenceLinkedTransactionIdsAction,
-} from '@/app/_actions/queries'
+import { getAccountDetail } from '@/lib/accounts/queries'
+import { getAccountMovementsAscending } from '@/lib/transactions/queries'
+import { getRecurrenceLinkedTransactionIds } from '@/lib/recurrences/queries'
+import { createClient } from '@/lib/supabase/client'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
 import {
@@ -115,11 +114,11 @@ export function MovementListAccountContainer({ accountId }: Props) {
     queries: [
       {
         queryKey: QUERY_KEYS.accountMovementsAscending(accountId),
-        queryFn: () => getAccountMovementsAscendingAction(accountId),
+        queryFn: () => getAccountMovementsAscending(createClient(), accountId),
       },
       {
         queryKey: QUERY_KEYS.accountDetail(accountId),
-        queryFn: () => getAccountDetailAction(accountId),
+        queryFn: () => getAccountDetail(createClient(), accountId),
       },
     ],
   })
@@ -207,7 +206,7 @@ export function MovementListAccountContainer({ accountId }: Props) {
 
   const linkedQ = useQuery({
     queryKey: QUERY_KEYS.transactionsLinkedRecurrenceIds(movementIds),
-    queryFn: () => getRecurrenceLinkedTransactionIdsAction(movementIds),
+    queryFn: () => getRecurrenceLinkedTransactionIds(createClient(), movementIds),
     enabled: movementIds.length > 0,
   })
 

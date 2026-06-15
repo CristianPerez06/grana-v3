@@ -7,9 +7,10 @@ import {
   type MovementFiltersController,
 } from '@/lib/transactions/components/movement-filters'
 import {
-  getAccountMovementsAscendingAction,
-  getMovementFilterOptionsAction,
-} from '@/app/_actions/queries'
+  getAccountMovementsAscending,
+  getMovementFilterOptions,
+} from '@/lib/transactions/queries'
+import { createClient } from '@/lib/supabase/client'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import { adaptFiltersForQuery } from '@/lib/transactions/filters-state'
 import { useTransactionsFilters } from '@/lib/transactions/filters-context'
@@ -36,11 +37,13 @@ export function MovementFiltersAccountContainer({ accountId }: Props) {
       {
         queryKey: QUERY_KEYS.transactionsFilterOptions(filters.categoryId),
         queryFn: () =>
-          getMovementFilterOptionsAction({ categoryId: filters.categoryId ?? undefined }),
+          getMovementFilterOptions(createClient(), {
+            categoryId: filters.categoryId ?? undefined,
+          }),
       },
       {
         queryKey: QUERY_KEYS.accountMovementsAscending(accountId),
-        queryFn: () => getAccountMovementsAscendingAction(accountId),
+        queryFn: () => getAccountMovementsAscending(createClient(), accountId),
       },
     ],
   })

@@ -6,7 +6,8 @@ import { useQuery } from '@tanstack/react-query'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import { AccountAvatar } from '@/components/ui/account-avatar'
-import { getAccountDetailAction } from '@/app/_actions/queries'
+import { getAccountDetail } from '@/lib/accounts/queries'
+import { createClient } from '@/lib/supabase/client'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import { useEditAccountDrawer } from './edit-account-drawer'
 
@@ -24,7 +25,7 @@ export const AccountDetailHeader = ({ accountId }: Props) => {
 
   const accountQ = useQuery({
     queryKey: QUERY_KEYS.accountDetail(accountId),
-    queryFn: () => getAccountDetailAction(accountId),
+    queryFn: () => getAccountDetail(createClient(), accountId),
   })
 
   const account = accountQ.data

@@ -6,7 +6,8 @@ import { Plus } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
-import { getAccountDetailAction } from '@/app/_actions/queries'
+import { getAccountDetail } from '@/lib/accounts/queries'
+import { createClient } from '@/lib/supabase/client'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
 import { AccountDetailHeader } from './account-detail-header'
@@ -33,7 +34,7 @@ export function AccountDetailContent({ accountId }: Props) {
   // the "agregar moneda" link (depends on the account's currencies set).
   const accountQ = useQuery({
     queryKey: QUERY_KEYS.accountDetail(accountId),
-    queryFn: () => getAccountDetailAction(accountId),
+    queryFn: () => getAccountDetail(createClient(), accountId),
   })
 
   const canAddCurrency = useMemo(() => {

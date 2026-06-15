@@ -2,10 +2,8 @@
 
 import { type ReactNode } from 'react'
 import { useQueries } from '@tanstack/react-query'
-import {
-  getAccountDetailAction,
-  getInstitutionsAction,
-} from '@/app/_actions/queries'
+import { getAccountDetail, getInstitutions } from '@/lib/accounts/queries'
+import { createClient } from '@/lib/supabase/client'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import { EditAccountDrawerProvider } from './edit-account-drawer'
 
@@ -29,11 +27,11 @@ export function EditAccountDrawerLoader({ accountId, children }: Props) {
     queries: [
       {
         queryKey: QUERY_KEYS.accountDetail(accountId),
-        queryFn: () => getAccountDetailAction(accountId),
+        queryFn: () => getAccountDetail(createClient(), accountId),
       },
       {
         queryKey: QUERY_KEYS.institutions,
-        queryFn: () => getInstitutionsAction(),
+        queryFn: () => getInstitutions(createClient()),
       },
     ],
   })

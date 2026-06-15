@@ -13,12 +13,18 @@ Las query functions de lectura SHALL ser client-agnósticas: reciben el client S
 
 Los query keys y los `staleTime` por familia centralizados en `lib/query-client.ts` SHALL conservarse al migrar una query de transporte: cambiar el mecanismo de fetch NO SHALL cambiar la identidad de cache ni su política de frescura.
 
-Esta capability define el patrón canónico; las rutas existentes migran ruta por ruta en changes dedicados (en este change: `/transactions`).
+Esta capability define el patrón canónico; las rutas existentes migran ruta por ruta en changes dedicados. Rutas migradas a la fecha: `/transactions`, `/accounts/[id]`.
 
 #### Scenario: El mount de /transactions fetchea en paralelo
 
 - **WHEN** el usuario hace un cold-load de `/transactions`
 - **THEN** las queries de las secciones (listado, breakdown, filter options, pending blocks, sugerencia) se disparan como requests HTTP concurrentes browser → Supabase
+- **AND** ninguna espera en una cola de server actions: el tiempo de datos del mount queda gobernado por la cadena más lenta, no por la suma de todas
+
+#### Scenario: El mount de /accounts/[id] fetchea en paralelo
+
+- **WHEN** el usuario hace un cold-load de `/accounts/[id]`
+- **THEN** las queries de las secciones (account detail, historial ascendente de movimientos, filter options, pending reimbursements, linked recurrence ids, institutions) se disparan como requests HTTP concurrentes browser → Supabase
 - **AND** ninguna espera en una cola de server actions: el tiempo de datos del mount queda gobernado por la cadena más lenta, no por la suma de todas
 
 #### Scenario: Una query function migrada es reutilizable desde mobile
