@@ -1422,7 +1422,6 @@ export const MovementForm = ({
       }`}
     >
       {ctaLabel}
-      <kbd className="hidden font-semibold opacity-70 sm:inline">⌘↵</kbd>
     </button>
   )
 
