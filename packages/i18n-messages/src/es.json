@@ -1142,6 +1142,8 @@
       "credit_hint": "Consume saldo disponible de la tarjeta",
       "swap": "Invertir cuentas",
       "today": "Hoy",
+      "add_new_account": "Agregar nueva cuenta",
+      "add_new_category": "Agregar nueva categoría",
       "whole_category": "Toda la categoría",
       "helper_income": "+ Entra a tus cuentas",
       "helper_adjustment": "Positivo aumenta el saldo · negativo lo reduce",

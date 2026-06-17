@@ -1142,6 +1142,8 @@
       "credit_hint": "Uses the card's available balance",
       "swap": "Swap accounts",
       "today": "Today",
+      "add_new_account": "Add new account",
+      "add_new_category": "Add new category",
       "whole_category": "Whole category",
       "helper_income": "+ Goes into your accounts",
       "helper_adjustment": "Positive raises the balance · negative lowers it",

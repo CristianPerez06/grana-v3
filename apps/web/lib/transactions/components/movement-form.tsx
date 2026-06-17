@@ -18,6 +18,7 @@ import {
   CreditCard,
   FileText,
   Lightbulb,
+  Plus,
   Repeat,
   Scale,
   Tag,
@@ -570,6 +571,19 @@ export const MovementForm = ({
           {selectedId === a.id && <Check className="size-4 shrink-0 text-emerald" aria-hidden />}
         </button>
       ))}
+      <button
+        type="button"
+        onClick={() => {
+          onClose?.()
+          router.push('/accounts?nuevaCuenta=1')
+        }}
+        className="mt-0.5 flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-sm font-semibold text-emerald transition-colors hover:bg-page"
+      >
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald/10">
+          <Plus className="size-4 text-emerald" aria-hidden />
+        </span>
+        {t('drawer.add_new_account')}
+      </button>
     </div>
   )
 
@@ -635,6 +649,19 @@ export const MovementForm = ({
           </button>
         )
       })}
+      <button
+        type="button"
+        onClick={() => {
+          onClose?.()
+          router.push('/settings/categories?nuevaCategoria=1')
+        }}
+        className="mt-0.5 flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-sm font-semibold text-emerald transition-colors hover:bg-page"
+      >
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald/10">
+          <Plus className="size-4 text-emerald" aria-hidden />
+        </span>
+        {t('drawer.add_new_category')}
+      </button>
     </div>
   )
 

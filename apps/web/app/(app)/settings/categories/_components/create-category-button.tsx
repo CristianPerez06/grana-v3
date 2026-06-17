@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Drawer } from '@/components/ui/drawer'
@@ -15,8 +16,26 @@ import { CreateCategoryForm } from '../new/_components/create-category-form'
  */
 export function CreateCategoryButton() {
   const t = useTranslations('settings.categories')
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [formInstance, setFormInstance] = useState(0)
+
+  // Bridge: open the create drawer when arriving with `?nuevaCategoria=1` (e.g.
+  // the "+ Agregar nueva categoría" shortcut in the movement form), so category
+  // creation always shows in the drawer — consistent with the rest of the app.
+  // We clean the param afterwards so a refresh or back-nav doesn't reopen it.
+  const bridgedRef = useRef(false)
+  useEffect(() => {
+    if (bridgedRef.current) return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('nuevaCategoria') !== '1') return
+    bridgedRef.current = true
+    setFormInstance((n) => n + 1)
+    setOpen(true)
+    params.delete('nuevaCategoria')
+    const qs = params.toString()
+    router.replace(qs ? `${window.location.pathname}?${qs}` : window.location.pathname)
+  }, [router])
 
   return (
     <>
