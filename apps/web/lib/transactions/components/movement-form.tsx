@@ -17,6 +17,7 @@ import {
   ChevronRight,
   CreditCard,
   FileText,
+  Lightbulb,
   Repeat,
   Scale,
   Tag,
@@ -1301,6 +1302,17 @@ export const MovementForm = ({
             </div>
             {isRecurrent && (
               <div className="mt-3.5 flex flex-col gap-3 border-t pt-3.5" style={{ borderColor: ROW_DIVIDER }}>
+                <div
+                  className="flex items-start gap-2.5 rounded-[11px] p-3"
+                  style={{ backgroundColor: 'var(--emerald-soft)' }}
+                >
+                  <Lightbulb
+                    className="mt-0.5 size-4 shrink-0"
+                    style={{ color: 'var(--emerald-deep)' }}
+                    aria-hidden
+                  />
+                  <p className="text-[12.5px] leading-relaxed text-text">{t('drawer.repeat_hint')}</p>
+                </div>
                 <span className="text-xs font-semibold text-text-muted">{t('drawer.repeat_question')}</span>
                 <div className="flex flex-wrap gap-2">
                   {(['weekly', 'biweekly', 'monthly', 'annual', 'custom'] as const).map((f) => {

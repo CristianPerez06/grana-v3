@@ -1151,7 +1151,8 @@
       "adjust_reason_required": "Required — helps make sense of the adjustment later.",
       "balance_will_be": "Balance will be",
       "installments_breakdown": "{count} installments of ${amount}",
-      "repeat_note": "Grana will ask you to confirm before logging it each time.",
+      "repeat_note": "For what you pay regularly: rent, subscriptions, your salary.",
+      "repeat_hint": "When it's due, Grana gets it ready and you log it with one tap. It never goes through without your OK.",
       "repeat_question": "How often?",
       "cta": {
         "expense": "Register expense",

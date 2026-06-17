@@ -1151,7 +1151,8 @@
       "adjust_reason_required": "Requerido — ayuda a entender el ajuste después.",
       "balance_will_be": "Saldo quedará",
       "installments_breakdown": "{count} cuotas de ${amount}",
-      "repeat_note": "Grana te va a pedir confirmar antes de registrarlo cada vez.",
+      "repeat_note": "Para lo que pagás seguido: alquiler, suscripciones, el sueldo.",
+      "repeat_hint": "Cuando toca, Grana te lo deja listo y vos lo registrás con un toque. Nunca se carga solo sin tu OK.",
       "repeat_question": "¿Cada cuánto?",
       "cta": {
         "expense": "Registrar gasto",
