@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { invalidateAfterMovementMutation } from '@/lib/transactions/invalidation'
-import { InlineGuide } from '@/components/ui/inline-guide'
+import { CoachmarkTour, type CoachmarkStep } from '@/components/ui/coachmark-tour'
 import { GUIDANCE_IDS } from '@/lib/guidance/catalog'
+import { useGuidance } from '@/lib/guidance/hooks'
 import {
   ArrowLeftRight,
   Calendar,
@@ -204,7 +205,7 @@ export const MovementForm = ({
   const tCommon = useTranslations('common')
   const tRec = useTranslations('recurrences')
   const tShared = useTranslations('shared')
-  const tGuidance = useTranslations('guidance.first_movement')
+  const tTour = useTranslations('guidance.first_movement_tour')
   const tRoot = useTranslations()
   const isEdit = edit !== undefined
   const editable = edit?.editableFields
@@ -230,6 +231,10 @@ export const MovementForm = ({
   const [catDrill, setCatDrill] = useState<string | null>(null)
   const amountRef = useRef<HTMLInputElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
+
+  // First-movement guided tour (spotlight). Only the drawer create flow for a
+  // user with no prior movements; persists completion/skip so it shows once.
+  const tour = useGuidance(GUIDANCE_IDS.FIRST_MOVEMENT_TOUR)
 
   // Edit-only: where the form navigates after a successful page-mode save.
   // Drawer mode never reads this (uses `onSuccess` instead).
@@ -662,18 +667,16 @@ export const MovementForm = ({
           disabled: isEdit,
         }))}
       />
-      {showFirstMovementGuidance && !isEdit && (tab === 'expense' || tab === 'income') && (
-        <InlineGuide guidanceId={GUIDANCE_IDS.FIRST_MOVEMENT_TYPE}>
-          {tGuidance('type')}
-        </InlineGuide>
-      )}
     </div>
   )
 
   // ── Amount hero ─────────────────────────────────────────────────────────────
   const showAmountHero = isEdit ? editable?.amount : true
   const hero = showAmountHero ? (
-    <div className="rounded-[18px] border border-border bg-card px-[22px] pb-[22px] pt-5 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]">
+    <div
+      data-tour="amount"
+      className="rounded-[18px] border border-border bg-card px-[22px] pb-[22px] pt-5 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]"
+    >
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
           {t('labels.amount')}
@@ -832,7 +835,7 @@ export const MovementForm = ({
       ) : (
         <>
           {/* Source account (+ swap for transfer) */}
-          <div className="relative">
+          <div className="relative" data-tour="account">
             <Popover
               open={activePopover === 'account'}
               onOpenChange={(o) => setActivePopover(o ? 'account' : null)}
@@ -861,13 +864,6 @@ export const MovementForm = ({
               </button>
             )}
           </div>
-          {showFirstMovementGuidance && !isEdit && (tab === 'expense' || tab === 'income') && (
-            <div className="px-4 pb-2">
-              <InlineGuide guidanceId={GUIDANCE_IDS.FIRST_MOVEMENT_ACCOUNT}>
-                {tGuidance('account')}
-              </InlineGuide>
-            </div>
-          )}
 
           {/* Destination (transfer / exchange) */}
           {(tab === 'transfer' || tab === 'exchange') && (
@@ -896,16 +892,7 @@ export const MovementForm = ({
 
           {/* Category (income / expense) */}
           {(tab === 'income' || tab === 'expense') && (
-            <>
-              {categoryRow}
-              {showFirstMovementGuidance && !isEdit && (
-                <div className="px-4 pb-2">
-                  <InlineGuide guidanceId={GUIDANCE_IDS.FIRST_MOVEMENT_CATEGORY}>
-                    {tGuidance('category')}
-                  </InlineGuide>
-                </div>
-              )}
-            </>
+            <div data-tour="category">{categoryRow}</div>
           )}
 
           {/* Date (always) */}
@@ -1016,7 +1003,7 @@ export const MovementForm = ({
   // ── Description ──────────────────────────────────────────────────────────────
   const isAdjustment = isEdit ? edit?.type === 'adjustment' : tab === 'adjustment'
   const descriptionField = (
-    <div className="rounded-[15px] border border-border bg-card px-4 py-3">
+    <div className="rounded-[15px] border border-border bg-card px-4 py-3" data-tour="description">
       <div className="flex items-center gap-3">
         <span
           className="flex size-9 shrink-0 items-center justify-center rounded-[11px] text-text-muted"
@@ -1415,6 +1402,7 @@ export const MovementForm = ({
     <button
       type="submit"
       disabled={isPending}
+      data-tour="submit"
       className={`flex h-[52px] flex-1 items-center justify-center gap-2 rounded-[14px] text-[15px] font-bold text-white transition-opacity disabled:opacity-50 ${
         tab === 'income'
           ? 'bg-emerald shadow-[0_8px_20px_-4px_rgba(16,185,129,0.35)]'
@@ -1425,6 +1413,41 @@ export const MovementForm = ({
       <kbd className="hidden font-semibold opacity-70 sm:inline">⌘↵</kbd>
     </button>
   )
+
+  // ── First-movement tour ─────────────────────────────────────────────────────
+  // Auto-starts for a no-movements user opening the create drawer on an
+  // expense/income tab. The other tabs don't share these fields, so it hides.
+  const showTour =
+    showFirstMovementGuidance &&
+    isDrawer &&
+    !isEdit &&
+    !tour.loading &&
+    tour.isVisible &&
+    (tab === 'expense' || tab === 'income')
+
+  const tourSteps: CoachmarkStep[] = [
+    { target: 'amount', title: tTour('amount_title'), body: tTour('amount_body') },
+    { target: 'account', title: tTour('account_title'), body: tTour('account_body') },
+    { target: 'category', title: tTour('category_title'), body: tTour('category_body') },
+    { target: 'description', title: tTour('description_title'), body: tTour('description_body') },
+    { target: 'submit', title: tTour('save_title'), body: tTour('save_body'), finale: true },
+  ]
+
+  const tourOverlay = showTour ? (
+    <CoachmarkTour
+      steps={tourSteps}
+      containerRef={formRef}
+      labels={{
+        step: (current, total) => tTour('step_label', { current, total }),
+        next: tTour('next'),
+        back: tTour('back'),
+        skip: tTour('skip'),
+        finish: tTour('finish'),
+      }}
+      onFinish={() => tour.mark('completed')}
+      onSkip={() => tour.mark('dismissed')}
+    />
+  ) : null
 
   // ── Render: drawer shell vs inline page ─────────────────────────────────────
   if (isDrawer) {
@@ -1458,6 +1481,7 @@ export const MovementForm = ({
           {formError && <p className="mb-3 text-sm text-destructive">{formError}</p>}
           <div className="flex gap-3">{submitButton}</div>
         </footer>
+        {tourOverlay}
       </form>
     )
   }

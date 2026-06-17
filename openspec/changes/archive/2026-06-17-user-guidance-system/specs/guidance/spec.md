@@ -17,7 +17,7 @@ first_movement.saved      // Post-save validation (opcional, si se engancha fác
 
 (Changes 2-3 agregarán IDs para cuentas, tarjetas, shared, etc.)
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Sistema de persistencia de hints con granularidad clara
 
@@ -191,7 +191,7 @@ Copy de referencia (canon español):
 
 ### Requirement: Post-save "impacto" para primer movimiento (OPCIONAL en Change 1)
 
-El sistema MAY mostrar un breve mensaje post-save explicando el impacto del movimiento SOLO si se puede enganchar sin refactoring mayor al flujo de mutaciones. Si ensucia la arquitectura, DEBE quedar fuera de Change 1.
+El sistema MAY mostrar un breve mensaje post-save explicando el impacto del movimiento SOLO si se puede enganchar sin refactoring mayor al flujo de mutaciones. Si ensucia la arquitectura, MUST quedar fuera de Change 1.
 
 Mensaje de referencia (si se implementa):
 "Listo. Este movimiento cambió tu disponible y va a aparecer en tu resumen del mes."

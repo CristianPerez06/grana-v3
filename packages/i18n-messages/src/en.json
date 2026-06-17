@@ -1553,13 +1553,30 @@
       "leave_confirm_title": "Leave household?",
       "leave_confirm_body": "You'll leave the shared household. Past shared expenses are kept.",
       "leave_blocked": "Settle the debt before leaving the household."
+    }
+  },
+  "guidance": {
+    "first_movement": {
+      "type": "Expense subtracts, income adds. Simple, but powerful.",
+      "account": "This shows where your money came from or went to.",
+      "category": "We use this later to show you where your month's money went."
     },
-    "guidance": {
-      "first_movement": {
-        "type": "Expense subtracts, income adds. Simple, but powerful.",
-        "account": "This shows where your money came from or went to.",
-        "category": "We use this later to show you where your month's money went."
-      }
+    "first_movement_tour": {
+      "step_label": "Step {current} of {total}",
+      "next": "Next",
+      "back": "Back",
+      "skip": "Skip guide",
+      "finish": "Let's save it!",
+      "amount_title": "How much was it?",
+      "amount_body": "Type the amount. Use the currency button to switch between pesos and dollars.",
+      "account_title": "Where did it come from?",
+      "account_body": "Keep everything in one wallet, or pick the exact account or card. That way you always know how much you have in each.",
+      "category_title": "What was it for?",
+      "category_body": "Pick a category. That's what builds your monthly summary of where your money goes.",
+      "description_title": "Tell us what it was",
+      "description_body": "Add a short reference, like \"groceries\" or \"school\". It's optional, but it's the key: next time you repeat it, Grana suggests the category on its own. 👀",
+      "save_title": "All set!",
+      "save_body": "When you're done filling it in, tap here to save your first movement. 🎉"
     }
   }
 }

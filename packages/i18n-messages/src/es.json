@@ -1553,13 +1553,30 @@
       "leave_confirm_title": "¿Salir del hogar?",
       "leave_confirm_body": "Vas a salir del hogar compartido. Se conservan los gastos compartidos históricos.",
       "leave_blocked": "Saldá la deuda antes de salir del hogar."
+    }
+  },
+  "guidance": {
+    "first_movement": {
+      "type": "Gasto resta, ingreso suma. Simple, pero poderoso.",
+      "account": "Esto responde: ¿de dónde salió o entró la plata?",
+      "category": "Después usamos esto para mostrar en qué se te fue el mes."
     },
-    "guidance": {
-      "first_movement": {
-        "type": "Gasto resta, ingreso suma. Simple, pero poderoso.",
-        "account": "Esto responde: ¿de dónde salió o entró la plata?",
-        "category": "Después usamos esto para mostrar en qué se te fue el mes."
-      }
+    "first_movement_tour": {
+      "step_label": "Paso {current} de {total}",
+      "next": "Siguiente",
+      "back": "Atrás",
+      "skip": "Omitir guía",
+      "finish": "¡A guardar!",
+      "amount_title": "¿Cuánto fue?",
+      "amount_body": "Escribí el monto. Con el botón de la moneda cambiás entre pesos y dólares.",
+      "account_title": "¿De dónde salió?",
+      "account_body": "Podés llevar todo en una billetera, o elegir la cuenta o tarjeta exacta. Así sabés siempre cuánto tenés en cada una.",
+      "category_title": "¿En qué se fue?",
+      "category_body": "Elegí una categoría. Con esto armás tu resumen de en qué se te va la plata cada mes.",
+      "description_title": "Contale qué fue",
+      "description_body": "Escribí una referencia corta, tipo \"super\" o \"cole\". Es opcional, pero es la clave: la próxima vez que la repitas, Grana te sugiere la categoría sola. 👀",
+      "save_title": "¡Y listo!",
+      "save_body": "Cuando termines de cargar, tocá acá para guardar tu primer movimiento. 🎉"
     }
   }
 }

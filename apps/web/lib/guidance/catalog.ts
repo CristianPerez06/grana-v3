@@ -6,7 +6,10 @@
  */
 
 export const GUIDANCE_IDS = {
-  // Primer movimiento (Change 1)
+  // Primer movimiento — tour guiado (Change: first-movement-tour)
+  FIRST_MOVEMENT_TOUR: 'first_movement.tour',
+
+  // Primer movimiento — hints inline (Change 1, reemplazados por el tour)
   FIRST_MOVEMENT_TYPE: 'first_movement.type',
   FIRST_MOVEMENT_ACCOUNT: 'first_movement.account',
   FIRST_MOVEMENT_CATEGORY: 'first_movement.category',
