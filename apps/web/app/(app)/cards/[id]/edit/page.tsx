@@ -37,7 +37,7 @@ const EditCardPage = async ({ params }: Props) => {
   const todayISO = formatDateISO(getTodayAR())
 
   const network = cardDetail.network_id
-    ? networks.find((n) => n.id === cardDetail.network_id) ?? null
+    ? networks.find((n: (typeof networks)[number]) => n.id === cardDetail.network_id) ?? null
     : null
   const networkLabel = network
     ? network.name
@@ -54,7 +54,7 @@ const EditCardPage = async ({ params }: Props) => {
     cardDetail.institution,
   )
 
-  const hasMovements = cardDetail.periods.some((p) => p.has_payment || p.tx_count > 0)
+  const hasMovements = cardDetail.periods.some((p: (typeof cardDetail.periods)[number]) => p.has_payment || p.tx_count > 0)
 
   return (
     <EditCardForm
