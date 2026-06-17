@@ -1447,31 +1447,18 @@ export const MovementForm = ({
   )
 
   // ── Footer buttons ───────────────────────────────────────────────────────────
-  // Edit uses the library Button (primary emerald), matching the other edit
-  // drawers (cuenta/tarjeta). Create keeps the handoff styling: emerald for
-  // income, navy for the rest.
-  const submitButton = isEdit ? (
+  // Both create and edit use the library Button (primary emerald), so the CTA
+  // always matches the component library — same as the cuenta/tarjeta drawers.
+  const submitButton = (
     <Button
       type="submit"
       variant="primary"
       loading={isPending}
+      data-tour={isEdit ? undefined : 'submit'}
       className="h-[52px] flex-1 rounded-[14px] text-[15.5px] font-bold tracking-[-0.01em]"
     >
       {ctaLabel}
     </Button>
-  ) : (
-    <button
-      type="submit"
-      disabled={isPending}
-      data-tour="submit"
-      className={`flex h-[52px] flex-1 items-center justify-center gap-2 rounded-[14px] text-[15px] font-bold text-white transition-opacity disabled:opacity-50 ${
-        tab === 'income'
-          ? 'bg-emerald shadow-[0_8px_20px_-4px_rgba(16,185,129,0.35)]'
-          : 'bg-navy shadow-[0_8px_20px_-4px_rgba(11,26,43,0.30)]'
-      }`}
-    >
-      {ctaLabel}
-    </button>
   )
 
   // ── First-movement tour ─────────────────────────────────────────────────────
