@@ -341,6 +341,7 @@
     "sueldo": "Salary",
     "freelance": "Freelance",
     "inversiones": "Investments",
+    "financiero-ingresos": "Financial",
     "otros-ingresos": "Other Income",
     "reintegros-cashback": "Refunds / Cashback"
   },
@@ -1436,6 +1437,7 @@
     "comision-compra-usd": "USD Purchase Fee",
     "constitucion-plazo-fijo": "Fixed-Term Deposit",
     "intereses-cuenta-remunerada": "Interest",
+    "intereses-ganados": "Interest earned",
     "kiosco-almacen": "Convenience Store",
     "verduleria": "Greengrocer",
     "carniceria": "Butcher",

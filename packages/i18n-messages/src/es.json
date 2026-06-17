@@ -341,6 +341,7 @@
     "sueldo": "Sueldo",
     "freelance": "Freelance",
     "inversiones": "Inversiones",
+    "financiero-ingresos": "Financiero",
     "otros-ingresos": "Otros ingresos",
     "reintegros-cashback": "Reintegros / Cashback"
   },
@@ -1436,6 +1437,7 @@
     "comision-compra-usd": "Comisión compra USD",
     "constitucion-plazo-fijo": "Constitución plazo fijo",
     "intereses-cuenta-remunerada": "Intereses",
+    "intereses-ganados": "Intereses ganados",
     "kiosco-almacen": "Kiosco / Almacén",
     "verduleria": "Verdulería",
     "carniceria": "Carnicería",
