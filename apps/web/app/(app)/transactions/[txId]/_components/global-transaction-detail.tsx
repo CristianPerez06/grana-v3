@@ -146,6 +146,26 @@ const formatPeriodLabel = (period: { start_date: string; end_date: string } | nu
   return `${formatShortDate(period.start_date)} – ${formatShortDate(period.end_date)}`
 }
 
+// Account identity: institution is the headline, the account's own name the
+// secondary line (omitted when it would just repeat the institution, e.g.
+// auto-named accounts). Matches the accounts list + movement picker treatment.
+// Cash accounts have no institution → the name leads.
+const accountIdentityNode = (
+  account: { name: string; institution?: { name: string | null } | null } | null | undefined,
+): ReactNode => {
+  if (!account?.name) return null
+  const inst = account.institution?.name?.trim()
+  if (!inst || inst === account.name) {
+    return <span className="text-[13.5px] font-semibold text-text tracking-[-0.1px]">{account.name}</span>
+  }
+  return (
+    <span className="flex flex-col">
+      <span className="text-[13.5px] font-semibold text-text tracking-[-0.1px]">{inst}</span>
+      <span className="text-xs font-normal text-text-muted">{account.name}</span>
+    </span>
+  )
+}
+
 type Props = {
   transaction: TransactionWithDetails
   movement: FinancialMovement
@@ -230,18 +250,18 @@ export const GlobalTransactionDetail = ({
     : null
 
   // Detail rows: filtered to the keys + values that apply for this kind.
-  type Row = { key: string; label: string; value: string | null; valueNode?: ReactNode }
+  type Row = { key: string; label: string; value?: string | null; valueNode?: ReactNode }
   const rows: Row[] = []
 
   if (movement.kind === 'transfer') {
     rows.push(
-      { key: 'source_account', label: t('labels.source_account'), value: movement.account_name },
-      { key: 'destination_account', label: t('labels.destination_account'), value: movement.destination_account_name },
+      { key: 'source_account', label: t('labels.source_account'), valueNode: accountIdentityNode(transaction.source_account)},
+      { key: 'destination_account', label: t('labels.destination_account'), valueNode: accountIdentityNode(transaction.destination_account)},
     )
   } else if (movement.kind === 'exchange') {
     rows.push(
-      { key: 'source_account', label: t('labels.source_account'), value: movement.account_name },
-      { key: 'destination_account', label: t('labels.destination_account'), value: movement.destination_account_name },
+      { key: 'source_account', label: t('labels.source_account'), valueNode: accountIdentityNode(transaction.source_account)},
+      { key: 'destination_account', label: t('labels.destination_account'), valueNode: accountIdentityNode(transaction.destination_account)},
       {
         key: 'destination_amount',
         label: t('labels.exchange_received'),
@@ -267,14 +287,14 @@ export const GlobalTransactionDetail = ({
         label: t('labels.adjustment_type'),
         value: transaction.amount > 0 ? t('directions.increase_full') : t('directions.decrease_full'),
       },
-      { key: 'account', label: t('labels.account'), value: movement.account_name },
+      { key: 'account', label: t('labels.account'), valueNode: accountIdentityNode(transaction.source_account)},
     )
   } else if (movement.kind === 'card_payment') {
     // The context note already names the paid period — instead of repeating it,
     // show what the payment was made of: the statement's ARS and USD portions
     // (the fx row below carries the payment-day rate used to convert the USD).
     rows.push(
-      { key: 'account', label: t('detail.labels.account'), value: movement.account_name },
+      { key: 'account', label: t('detail.labels.account'), valueNode: accountIdentityNode(transaction.source_account)},
       { key: 'card', label: t('detail.labels.card'), value: payment?.period?.account?.name ?? null },
     )
     if (paymentComposition) {
@@ -307,7 +327,7 @@ export const GlobalTransactionDetail = ({
           ? t(`reimbursement.target.${transaction.reimbursement_target}`)
           : null,
       },
-      { key: 'account', label: t('detail.labels.account'), value: movement.account_name },
+      { key: 'account', label: t('detail.labels.account'), valueNode: accountIdentityNode(transaction.source_account)},
       {
         key: 'category',
         label: t('detail.labels.category'),
@@ -345,7 +365,7 @@ export const GlobalTransactionDetail = ({
   } else {
     // income / expense
     rows.push(
-      { key: 'account', label: t('detail.labels.account'), value: movement.account_name },
+      { key: 'account', label: t('detail.labels.account'), valueNode: accountIdentityNode(transaction.source_account)},
       { key: 'category', label: t('detail.labels.category'), value: categoryLabel },
       { key: 'subcategory', label: t('detail.labels.subcategory'), value: subcategoryLabel },
     )

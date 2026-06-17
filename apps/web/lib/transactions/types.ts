@@ -71,6 +71,7 @@ export type TransactionAccount = {
   id: string
   name: string
   type: 'cash' | 'bank' | 'credit'
+  institution?: { name: string | null } | null
 }
 
 export type TransactionWithDetails = Transaction & {

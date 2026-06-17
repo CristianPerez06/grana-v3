@@ -28,8 +28,8 @@ const TRANSACTION_SELECT = `
   *,
   category:categories(id, name, canonical_name, color, icon, user_id),
   subcategory:subcategories(id, name, canonical_name, category_id, user_id),
-  destination_account:accounts!transactions_transfer_destination_account_id_fkey(id, name, type),
-  source_account:accounts!transactions_account_id_fkey(id, name, type),
+  destination_account:accounts!transactions_transfer_destination_account_id_fkey(id, name, type, institution:institutions(name)),
+  source_account:accounts!transactions_account_id_fkey(id, name, type, institution:institutions(name)),
   period_payments(
     id,
     period_id,
