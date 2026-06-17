@@ -1,13 +1,9 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
-import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/server'
 import { completeOnboardingAction } from '@/app/_actions/onboarding'
+import { OnboardingFork } from './_components/onboarding-fork'
 
 const DonePage = async () => {
-  const t = await getTranslations('onboarding.done')
-
   // Mark onboarding as completed (idempotent — safe to revisit).
   await completeOnboardingAction()
 
@@ -33,43 +29,7 @@ const DonePage = async () => {
     totals[row.currency_code] = (totals[row.currency_code] ?? 0) + amount
   }
 
-  const hasData = totals.ARS > 0 || totals.USD > 0
-
-  return (
-    <div className="flex flex-col gap-8 text-center">
-      <header className="flex flex-col gap-3">
-        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
-      </header>
-
-      <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-6">
-        <p className="text-xs uppercase tracking-wide text-text-muted">
-          {t('balance_label')}
-        </p>
-        <p className="text-3xl font-semibold tabular-nums">
-          {formatARS(totals.ARS ?? 0)}
-        </p>
-        {totals.USD > 0 && (
-          <p className="text-sm text-text-muted tabular-nums">
-            {formatUSD(totals.USD ?? 0)}
-          </p>
-        )}
-      </div>
-
-      <p className="text-sm text-text-muted">
-        {hasData ? t('next_step_with_data') : t('next_step_skip')}
-      </p>
-
-      <Button asChild>
-        <Link href="/dashboard">{t('cta')}</Link>
-      </Button>
-    </div>
-  )
+  return <OnboardingFork totalArs={totals.ARS ?? 0} totalUsd={totals.USD ?? 0} />
 }
-
-const formatARS = (n: number) =>
-  `$${n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-
-const formatUSD = (n: number) =>
-  `US$${n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 export default DonePage

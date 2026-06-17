@@ -278,14 +278,14 @@
   },
   "onboarding": {
     "welcome": {
-      "greeting": "Hola, {name}",
-      "title": "Bienvenida a Grana",
-      "description": "Vamos a hacer un par de preguntas para que la app se ajuste a vos. Te toma menos de un minuto.",
+      "greeting": "Hey, {name}! 👋",
+      "title": "Vamos a ordenar tu plata sin convertir esto en una planilla eterna.",
+      "description": "Empezamos con lo que tenés hoy. Sin juicio, sin drama.",
       "cta": "Empezar"
     },
     "initialBalance": {
       "title": "¿Cuánta plata tenés hoy?",
-      "description": "Es solo para arrancar con un disponible real. Después lo ajustás con cualquier movimiento. Si no tenés plata, poné 0.",
+      "description": "Esto no es un ingreso ni un gasto, es tu punto de partida. Si no sabés el número exacto, poné una aproximación: la vida real rara vez cierra perfecto.",
       "group_total": "En total",
       "ars_label": "Pesos (ARS)",
       "usd_label": "Dólares (USD)",
@@ -293,11 +293,26 @@
       "continue": "Continuar"
     },
     "done": {
-      "title": "Listo, ya está configurada tu Grana",
+      "title": "Listo. Tu Grana ya tiene punto de partida. 🎉",
+      "wink": "Ahora sí: que los gastos misteriosos den la cara.",
       "balance_label": "Tu disponible",
       "next_step_with_data": "Ahora podés empezar a registrar movimientos a medida que vivís el día a día.",
       "next_step_skip": "Cuando quieras, cargá tu primer movimiento desde el dashboard.",
-      "cta": "Ir al dashboard"
+      "cta": "Ir al dashboard",
+      "fork": {
+        "title": "Tu Grana, tu decisión",
+        "subtitle": "¿Cómo querés llevar tu plata?",
+        "wallet_tag": "Lo más simple",
+        "wallet_title": "Una billetera y listo",
+        "wallet_body": "Llevá todo junto, sin complicarte. Anotás lo que entra y sale, y siempre sabés cuánto tenés. Tu billetera ya está creada.",
+        "accounts_tag": "Más control",
+        "accounts_title": "Mis cuentas, al detalle",
+        "accounts_body": "Cargá tus cuentas reales —banco, efectivo, lo que uses— y seguí el saldo de cada una. Para los que quieren tener todo cuadrado.",
+        "confirm_wallet": "¡Genial! Arranquemos por tu primer movimiento.",
+        "confirm_accounts": "¡Te gusta el detalle! Vamos a crear tu primera cuenta.",
+        "go": "Vamos 🚀",
+        "back": "Volver"
+      }
     },
     "errors": {
       "mode_required": "Elegí cuál opción se parece más a vos para continuar.",

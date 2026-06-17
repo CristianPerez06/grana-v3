@@ -91,9 +91,14 @@ export default function DoneScreen() {
         contentContainerClassName="flex-grow justify-center px-6 py-10"
       >
         <View className="mx-auto w-full max-w-md gap-8">
-        <Text className="text-center text-3xl font-bold tracking-tight text-text">
-          {t('onboarding.done.title')}
-        </Text>
+        <View className="gap-2">
+          <Text className="text-center text-3xl font-bold tracking-tight text-text">
+            {t('onboarding.done.title')}
+          </Text>
+          <Text className="text-center text-sm text-text-muted">
+            {t('onboarding.done.wink')}
+          </Text>
+        </View>
 
         <View className="gap-3 rounded-xl border border-border bg-card p-6">
           <Text className="text-xs uppercase tracking-wide text-text-muted">

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Drawer } from '@/components/ui/drawer'
@@ -21,8 +22,27 @@ type Props = {
 
 export function CreateAccountButton({ institutions, disabled = false }: Props) {
   const t = useTranslations('accounts')
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [formInstance, setFormInstance] = useState(0)
+
+  // Bridge: open the create drawer when arriving with `?nuevaCuenta=1` (e.g. the
+  // onboarding "Mis cuentas" path), so account creation always shows in the
+  // drawer — consistent with the rest of the app. We wait until institutions
+  // are loaded (`disabled` flips false) so the form has its data, then clean the
+  // param so a refresh or back-nav doesn't reopen it.
+  const bridgedRef = useRef(false)
+  useEffect(() => {
+    if (bridgedRef.current || disabled) return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('nuevaCuenta') !== '1') return
+    bridgedRef.current = true
+    setFormInstance((n) => n + 1)
+    setOpen(true)
+    params.delete('nuevaCuenta')
+    const qs = params.toString()
+    router.replace(qs ? `${window.location.pathname}?${qs}` : window.location.pathname)
+  }, [disabled, router])
 
   return (
     <>

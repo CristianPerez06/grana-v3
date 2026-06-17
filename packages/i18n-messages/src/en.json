@@ -278,14 +278,14 @@
   },
   "onboarding": {
     "welcome": {
-      "greeting": "Hi, {name}",
-      "title": "Welcome to Grana",
-      "description": "We'll ask you a couple of questions so the app fits you. It takes less than a minute.",
+      "greeting": "Hey, {name}! 👋",
+      "title": "Let's get your money in order — without turning this into a never-ending spreadsheet.",
+      "description": "We start with what you have today. No judgment, no drama.",
       "cta": "Get started"
     },
     "initialBalance": {
       "title": "How much money do you have today?",
-      "description": "Just so you start with a real available balance. You can adjust it later with any transaction. If you have no money, enter 0.",
+      "description": "This isn't income or an expense — it's your starting point. If you don't know the exact number, put an estimate: real life rarely adds up perfectly.",
       "group_total": "In total",
       "ars_label": "Pesos (ARS)",
       "usd_label": "Dollars (USD)",
@@ -293,11 +293,26 @@
       "continue": "Continue"
     },
     "done": {
-      "title": "Done, your Grana is set up",
+      "title": "Done. Your Grana has a starting point. 🎉",
+      "wink": "Now then: let's make those mystery expenses show their face.",
       "balance_label": "Your available balance",
       "next_step_with_data": "Now you can start recording transactions as you go through your day.",
       "next_step_skip": "Whenever you want, record your first transaction from the dashboard.",
-      "cta": "Go to dashboard"
+      "cta": "Go to dashboard",
+      "fork": {
+        "title": "Your Grana, your call",
+        "subtitle": "How do you want to track your money?",
+        "wallet_tag": "Simplest",
+        "wallet_title": "One wallet and done",
+        "wallet_body": "Keep everything together, no fuss. You log what comes in and goes out, and always know how much you have. Your wallet is already set up.",
+        "accounts_tag": "More control",
+        "accounts_title": "My accounts, in detail",
+        "accounts_body": "Add your real accounts —bank, cash, whatever you use— and track each balance. For those who like everything to add up.",
+        "confirm_wallet": "Awesome! Let's start with your first movement.",
+        "confirm_accounts": "You like the detail! Let's create your first account.",
+        "go": "Let's go 🚀",
+        "back": "Back"
+      }
     },
     "errors": {
       "mode_required": "Pick the option that fits you best to continue.",
