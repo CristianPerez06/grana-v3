@@ -2,6 +2,7 @@
 
 import { useMemo, type ReactNode } from 'react'
 import { useQueries } from '@tanstack/react-query'
+import { resolveAccountAvatar } from '@grana/ui-contracts'
 import { createClient } from '@/lib/supabase/client'
 import { getAccounts } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
@@ -70,6 +71,12 @@ export function MovementDrawerLoader({ children }: Props) {
         activeCurrencies: activeCodes(c.currencies),
         balances: { ARS: 0, USD: 0 },
         institutionId: c.institution_id ?? null,
+        // Resolve the avatar like cash/bank do, so each card inherits its
+        // institution's brand color instead of the default fallback.
+        avatar: resolveAccountAvatar(
+          { id: c.id, name: c.name, type: 'credit', color_key: c.color_key, icon_key: c.icon_key },
+          c.institution,
+        ),
       })),
     ]
   }, [accountsData])
