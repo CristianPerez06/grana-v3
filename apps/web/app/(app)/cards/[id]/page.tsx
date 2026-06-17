@@ -222,7 +222,7 @@ const CardDetailPage = async ({ params }: Props) => {
         bank={institutionName}
         accent={accent}
         tone={headerTone}
-        actions={cardDetail.is_active ? <CardHeaderActions cardId={id} /> : undefined}
+        actions={cardDetail.is_active ? <CardHeaderActions cardId={id} hasMovements={cardHasHistory} /> : undefined}
       />
 
       {!cardDetail.is_active && <CardActions cardId={id} isActive={false} hasMovements={cardHasHistory} />}
