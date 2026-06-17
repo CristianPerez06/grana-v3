@@ -172,8 +172,18 @@ const FieldRow = forwardRef<HTMLButtonElement, RowProps & Omit<React.ButtonHTMLA
 )
 FieldRow.displayName = 'FieldRow'
 
-// Avatar + name (+ credit badge) + balance, used as the value of an account row
-// and the rows inside the account popover.
+// Account display: the institution is the headline; the account's own name is
+// the secondary detail (omitted when it would just repeat the institution, e.g.
+// auto-named bank accounts). Cash accounts have no institution → name leads.
+const accountPrimaryName = (a: { name: string; institutionName?: string | null }): string =>
+  a.institutionName?.trim() || a.name
+const accountSecondaryName = (a: { name: string; institutionName?: string | null }): string | null => {
+  const inst = a.institutionName?.trim()
+  return inst && inst !== a.name ? a.name : null
+}
+
+// Avatar + institution headline (+ secondary name), used as the value of an
+// account row and the rows inside the account popover.
 const AccountValue = ({ account }: { account: MovementFormAccount | undefined }) => {
   if (!account) return <span className="text-text-soft">—</span>
   const avatar: ResolvedAccountAvatar = account.avatar ?? {
@@ -182,10 +192,16 @@ const AccountValue = ({ account }: { account: MovementFormAccount | undefined })
     iconKey: account.type === 'credit' ? 'credit-card' : 'wallet',
     monogram: account.name.charAt(0).toUpperCase(),
   }
+  const secondary = accountSecondaryName(account)
   return (
     <span className="flex items-center gap-2">
       <AccountAvatar {...avatar} size="sm" />
-      <span className="truncate text-text">{account.name}</span>
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate text-text">{accountPrimaryName(account)}</span>
+        {secondary && (
+          <span className="truncate text-xs font-normal text-text-muted">{secondary}</span>
+        )}
+      </span>
     </span>
   )
 }
@@ -547,30 +563,36 @@ export const MovementForm = ({
     onPick: (id: string) => void,
   ) => (
     <div className="flex flex-col gap-0.5">
-      {list.map((a) => (
-        <button
-          key={a.id}
-          type="button"
-          onClick={() => onPick(a.id)}
-          className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-page"
-        >
-          <AccountAvatar {...avatarOf(a)} size="sm" />
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="flex items-center gap-1.5 truncate text-sm font-semibold text-text">
-              {a.name}
-              {a.type === 'credit' && (
-                <span className="rounded px-1 py-0.5 text-[10px] font-bold uppercase tracking-wide text-terracotta" style={{ backgroundColor: 'var(--terracotta-soft)' }}>
-                  {t('drawer.credit_badge')}
-                </span>
+      {list.map((a) => {
+        const secondaryName = accountSecondaryName(a)
+        const detail = [secondaryName, a.type !== 'credit' ? formatBalance(a) : null]
+          .filter(Boolean)
+          .join('  ·  ')
+        return (
+          <button
+            key={a.id}
+            type="button"
+            onClick={() => onPick(a.id)}
+            className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-page"
+          >
+            <AccountAvatar {...avatarOf(a)} size="sm" />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="flex items-center gap-1.5 truncate text-sm font-semibold text-text">
+                {accountPrimaryName(a)}
+                {a.type === 'credit' && (
+                  <span className="rounded px-1 py-0.5 text-[10px] font-bold uppercase tracking-wide text-terracotta" style={{ backgroundColor: 'var(--terracotta-soft)' }}>
+                    {t('drawer.credit_badge')}
+                  </span>
+                )}
+              </span>
+              {detail && (
+                <span className="truncate text-xs tabular-nums text-text-muted">{detail}</span>
               )}
             </span>
-            {a.type !== 'credit' && (
-              <span className="text-xs tabular-nums text-text-muted">{formatBalance(a)}</span>
-            )}
-          </span>
-          {selectedId === a.id && <Check className="size-4 shrink-0 text-emerald" aria-hidden />}
-        </button>
-      ))}
+            {selectedId === a.id && <Check className="size-4 shrink-0 text-emerald" aria-hidden />}
+          </button>
+        )
+      })}
       <button
         type="button"
         onClick={() => {

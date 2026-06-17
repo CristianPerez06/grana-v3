@@ -62,6 +62,7 @@ export function MovementDrawerLoader({ children }: Props) {
         activeCurrencies: activeCodes(a.currencies),
         balances: a.balances,
         institutionId: a.institution_id ?? null,
+        institutionName: a.institution?.name ?? null,
         avatar: a.avatar,
       })),
       ...accountsData.credit.map((c) => ({
@@ -71,6 +72,7 @@ export function MovementDrawerLoader({ children }: Props) {
         activeCurrencies: activeCodes(c.currencies),
         balances: { ARS: 0, USD: 0 },
         institutionId: c.institution_id ?? null,
+        institutionName: c.institution?.name ?? null,
         // Resolve the avatar like cash/bank do, so each card inherits its
         // institution's brand color instead of the default fallback.
         avatar: resolveAccountAvatar(

@@ -31,6 +31,8 @@ export type MovementFormAccount = {
   balances: Record<'ARS' | 'USD', number>
   /** Owning institution, used to default the reimbursement credit-to account. */
   institutionId: string | null
+  /** Institution display name — the headline in account rows (name goes secondary). */
+  institutionName?: string | null
   /** Visual identity resolved server-side; drives the row avatar. */
   avatar?: ResolvedAccountAvatar
 }

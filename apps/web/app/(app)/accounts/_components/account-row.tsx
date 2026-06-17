@@ -32,7 +32,7 @@ export const AccountRow = ({ account }: Props) => {
         <div className="flex flex-1 flex-col gap-1 min-w-0">
           <div className="flex min-w-0 flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:gap-2">
             <span className="max-w-full text-[15px] font-semibold text-text break-words sm:truncate">
-              {account.name}
+              {account.institution?.name ?? account.name}
             </span>
             {!account.is_active && (
               <span className="inline-flex shrink-0 min-h-[22px] items-center rounded-full bg-warning-soft px-2 text-[10px] font-bold uppercase tracking-[0.06em] text-warning">
@@ -40,9 +40,9 @@ export const AccountRow = ({ account }: Props) => {
               </span>
             )}
           </div>
-          {account.type === 'bank' && account.institution && (
+          {account.institution && account.institution.name !== account.name && (
             <span className="block max-w-full text-[13px] text-text-soft break-words sm:truncate">
-              {account.institution.name}
+              {account.name}
             </span>
           )}
         </div>
