@@ -405,6 +405,7 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
           estimated_amount: number
           account_id: string
           received_now: boolean
+          date: string
         }
       | undefined
     if (reimbursementEnabled && tab === 'expense' && !isInstallments) {
@@ -424,6 +425,11 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
         estimated_amount: parsedReimb,
         account_id: reimbAccount,
         received_now: reimbursementReceivedNow,
+        // Date the reimbursement carries: when it's already received at creation
+        // it should read with the same date as the expense (not "today"). For a
+        // pending one this is a placeholder — confirmReimbursement overwrites it
+        // with the real accreditation date.
+        date,
       }
     }
 
