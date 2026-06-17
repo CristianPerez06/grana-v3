@@ -24,6 +24,7 @@ export const cardPeriodTransactionToMovement = (tx: CardTx): FinancialMovement =
     description: tx.description,
     account_id: null,
     account_name: null,
+    account_institution_name: null,
     category_id: tx.category_id ?? null,
     category_name: tx.category?.name ?? null,
     category_icon: tx.category?.icon ?? null,

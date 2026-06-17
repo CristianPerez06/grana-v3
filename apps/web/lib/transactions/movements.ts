@@ -12,6 +12,8 @@ type BaseMovement = {
   description: string | null
   account_id: string | null
   account_name: string | null
+  /** Owning institution name (bank/credit) — the row headline, name goes secondary. */
+  account_institution_name: string | null
   /** Category id/name/emoji/color for filtering, the row icon and subtitle (null when not categorized). */
   category_id: string | null
   category_name: string | null
@@ -56,6 +58,7 @@ export type TransferMovement = BaseMovement & {
   sign: null
   destination_account_id: string | null
   destination_account_name: string | null
+  destination_account_institution_name: string | null
 }
 
 export type AdjustmentMovement = BaseMovement & {
@@ -77,6 +80,7 @@ export type ExchangeMovement = BaseMovement & {
   destination_currency: 'ARS' | 'USD'
   destination_account_id: string | null
   destination_account_name: string | null
+  destination_account_institution_name: string | null
 }
 
 export type CardInstallmentMovement = BaseMovement & {
@@ -147,6 +151,7 @@ export const toInitialBalanceMovement = (args: {
   description: args.label,
   account_id: args.accountId,
   account_name: args.accountName,
+  account_institution_name: null,
   category_id: null,
   category_name: null,
   category_icon: null,
@@ -190,6 +195,7 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
     description: tx.description,
     account_id: tx.account_id,
     account_name: tx.source_account?.name ?? null,
+    account_institution_name: tx.source_account?.institution?.name ?? null,
     category_id: tx.category_id ?? null,
     category_name: tx.category?.name ?? null,
     category_icon: tx.category?.icon ?? null,
@@ -287,6 +293,7 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
       sign: null,
       destination_account_id: tx.transfer_destination_account_id,
       destination_account_name: tx.destination_account?.name ?? null,
+      destination_account_institution_name: tx.destination_account?.institution?.name ?? null,
     }
   }
 
@@ -300,6 +307,7 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
       destination_currency: tx.destination_currency ?? 'USD',
       destination_account_id: tx.transfer_destination_account_id,
       destination_account_name: tx.destination_account?.name ?? null,
+      destination_account_institution_name: tx.destination_account?.institution?.name ?? null,
     }
   }
 

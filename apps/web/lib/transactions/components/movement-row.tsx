@@ -114,18 +114,28 @@ export const MovementRow = ({
   const fallbackLabel = view.isCategorized ? categoryLabel ?? typeLabel : typeLabel
   const primary = movement.description ?? fallbackLabel
 
+  // Account display: institution leads, the account's own name is the fallback
+  // (cash/wallet accounts have no institution). Keeps the compact row to one
+  // line while matching the "institution principal" treatment elsewhere.
+  const accountLabel = (name: string | null, institutionName: string | null | undefined): string =>
+    institutionName?.trim() || name || '?'
+
   // Secondary line depends on the family.
   const secondary = ((): string | null => {
     if (movement.kind === 'transfer' || movement.kind === 'exchange') {
-      if (view.counterpartyDirection === 'in') return `← ${view.counterpartyName ?? '?'}`
+      const sourceLabel = accountLabel(movement.account_name, movement.account_institution_name)
+      const destLabel = accountLabel(movement.destination_account_name, movement.destination_account_institution_name)
+      if (view.counterpartyDirection === 'in') return `← ${sourceLabel}`
       if (view.counterpartyDirection === 'out' && perspective.kind === 'account') {
-        return `→ ${view.counterpartyName ?? '?'}`
+        return `→ ${destLabel}`
       }
       // global: show both ends
-      return `${movement.account_name ?? '?'} → ${view.counterpartyName ?? '?'}`
+      return `${sourceLabel} → ${destLabel}`
     }
     if (movement.kind === 'card_payment') {
-      return movement.account_name ? t('list.card_payment_from', { accountName: movement.account_name }) : null
+      return movement.account_name
+        ? t('list.card_payment_from', { accountName: accountLabel(movement.account_name, movement.account_institution_name) })
+        : null
     }
     // Categorized line. The category only repeats here when the description
     // already takes the primary slot; otherwise it's already the primary and
@@ -137,7 +147,9 @@ export const MovementRow = ({
       : subcategoryLabel
     const parts: string[] = []
     if (taxonomy) parts.push(taxonomy)
-    if (showAccount && movement.account_name) parts.push(movement.account_name)
+    if (showAccount && movement.account_name) {
+      parts.push(accountLabel(movement.account_name, movement.account_institution_name))
+    }
     return parts.length > 0 ? parts.join(' · ') : null
   })()
 
