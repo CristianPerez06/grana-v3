@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { CreditCard, Lock, X } from 'lucide-react'
@@ -10,10 +10,8 @@ import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { parseMoneyInput } from '@grana/validation'
 import {
   updateCreditCard,
-  deactivateCreditCardAccount,
   updatePeriodDates,
 } from '@/app/_actions/credit-cards'
-import { deleteAccount } from '@/app/_actions/accounts'
 import { cardMonogram } from '../../_components/card-presentation'
 import {
   BankSelectorField,
@@ -26,7 +24,6 @@ import {
   dayMonth,
   fmtMoney,
 } from '../../_components/card-form-ui'
-import { DeactivateBlockDialog } from '../../_components/deactivate-block-dialog'
 import type { Institution } from '@/lib/accounts/types'
 
 /**
@@ -64,8 +61,6 @@ export type EditCardFormProps = {
   committedARS: number
   /** Editable billing-cycle dates (current + next statement). */
   cycle: EditCardCycle
-  /** Governs delete (false) vs archive-only (true), per the README rule. */
-  hasMovements: boolean
   institutions: Institution[]
   /** `'drawer'` renders the hi-fi shell; `'page'` renders the body inline (fallback route). */
   variant?: 'drawer' | 'page'
@@ -85,7 +80,6 @@ export const EditCardForm = ({
   accent,
   committedARS,
   cycle,
-  hasMovements,
   institutions,
   variant = 'page',
   onClose,
@@ -114,9 +108,6 @@ export const EditCardForm = ({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  // Archive / delete share a transition + the pending-debt block dialog.
-  const [isActionPending, startAction] = useTransition()
-  const [blockDialogOpen, setBlockDialogOpen] = useState(false)
 
   // ── Derived live-preview values ─────────────────────────────────────────────
   const previewName = name.trim() || initialName
@@ -244,34 +235,6 @@ export const EditCardForm = ({
     if (dirty && !window.confirm(t('edit.discard_confirm'))) return
     if (onClose) onClose()
     else router.back()
-  }
-
-  const handleArchive = () => {
-    startAction(async () => {
-      setFormError(null)
-      const result = await deactivateCreditCardAccount(cardId)
-      if (!result.ok) {
-        if (result.formError === 'pending_debt') setBlockDialogOpen(true)
-        else setFormError(result.formError ?? t('errors.archive_failed'))
-        return
-      }
-      router.refresh()
-      if (onSuccess) onSuccess()
-    })
-  }
-
-  const handleDelete = () => {
-    if (hasMovements) return
-    if (!window.confirm(t('confirmations.delete_body'))) return
-    startAction(async () => {
-      setFormError(null)
-      const result = await deleteAccount(cardId)
-      if (!result.ok) {
-        setFormError(result.formError ?? t('errors.delete_failed'))
-        return
-      }
-      router.push('/cards')
-    })
   }
 
   // ── Body ─────────────────────────────────────────────────────────────────────
@@ -438,45 +401,6 @@ export const EditCardForm = ({
         <Hint>{t('edit.limit_hint')}</Hint>
       )}
 
-      {/* Acciones */}
-      <SectionLabel className="mt-[22px]">{t('edit.section_actions')}</SectionLabel>
-      <div className="overflow-hidden rounded-[15px] border border-border [&>*+*]:border-t [&>*+*]:border-border">
-        <div className="flex items-center gap-4 bg-card px-4 py-[15px]">
-          <div className="min-w-0 flex-1">
-            <p className="text-[14px] font-bold tracking-[-0.01em] text-text">{t('edit.archive_title')}</p>
-            <p className="mt-1 text-xs leading-snug text-text-muted">{t('edit.archive_sub')}</p>
-          </div>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={handleArchive}
-            disabled={isActionPending}
-            className="w-auto shrink-0 rounded-[10px] text-[13.5px] font-bold"
-          >
-            {t('actions.archive')}
-          </Button>
-        </div>
-        <div className="flex items-center gap-4 bg-card px-4 py-[15px]">
-          <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-[7px] text-[14px] font-bold tracking-[-0.01em] text-text">
-              {hasMovements && <Lock className="size-3.5 text-text-soft" aria-hidden />}
-              {t('edit.delete_title')}
-            </p>
-            <p className="mt-1 text-xs leading-snug text-text-muted">
-              {hasMovements ? t('edit.delete_sub_blocked') : t('edit.delete_sub_ok')}
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={hasMovements || isActionPending}
-            className="w-auto shrink-0 rounded-[10px] text-[13.5px] font-bold"
-          >
-            {t('actions.delete')}
-          </Button>
-        </div>
-      </div>
     </div>
   )
 
@@ -504,8 +428,7 @@ export const EditCardForm = ({
 
   if (isDrawer) {
     return (
-      <>
-        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           <header className="shrink-0 border-b border-border bg-card px-7 pb-5 pt-[22px]">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
@@ -531,20 +454,15 @@ export const EditCardForm = ({
           </div>
 
           <footer className="shrink-0 border-t border-border bg-card px-7 py-4">{footer}</footer>
-        </form>
-        <DeactivateBlockDialog open={blockDialogOpen} onClose={() => setBlockDialogOpen(false)} />
-      </>
+      </form>
     )
   }
 
   return (
-    <>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {formError && <Alert variant="error">{formError}</Alert>}
-        {body}
-        {footer}
-      </form>
-      <DeactivateBlockDialog open={blockDialogOpen} onClose={() => setBlockDialogOpen(false)} />
-    </>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {formError && <Alert variant="error">{formError}</Alert>}
+      {body}
+      {footer}
+    </form>
   )
 }

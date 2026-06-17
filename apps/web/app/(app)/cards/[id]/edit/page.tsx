@@ -54,8 +54,6 @@ const EditCardPage = async ({ params }: Props) => {
     cardDetail.institution,
   )
 
-  const hasMovements = cardDetail.periods.some((p: (typeof cardDetail.periods)[number]) => p.has_payment || p.tx_count > 0)
-
   return (
     <EditCardForm
       variant="page"
@@ -68,7 +66,6 @@ const EditCardPage = async ({ params }: Props) => {
       accent={accent}
       committedARS={0}
       cycle={resolveEditCycle(cardDetail.periods, todayISO)}
-      hasMovements={hasMovements}
       institutions={institutions}
     />
   )

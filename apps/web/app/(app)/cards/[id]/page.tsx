@@ -101,7 +101,6 @@ const CardDetailPage = async ({ params }: Props) => {
     accent,
     committedARS,
     cycle: resolveEditCycle(cardDetail.periods, todayISO),
-    hasMovements: cardHasHistory,
     institutions,
   })
 
