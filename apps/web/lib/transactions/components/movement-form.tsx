@@ -1245,11 +1245,15 @@ export const MovementForm = ({
                       className="rounded-[10px] border border-border bg-card px-3 py-2 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <option value="">{t('reimbursement.credit_to_placeholder')}</option>
-                      {cashBank.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name}
-                        </option>
-                      ))}
+                      {cashBank.map((a) => {
+                        const secondary = accountSecondaryName(a)
+                        return (
+                          <option key={a.id} value={a.id}>
+                            {accountPrimaryName(a)}
+                            {secondary ? ` · ${secondary}` : ''}
+                          </option>
+                        )
+                      })}
                     </select>
                   </div>
                 )}
