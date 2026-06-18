@@ -49,6 +49,16 @@ export function invalidateAfterAccountMutation(qc: QueryClient): void {
   qc.invalidateQueries({ queryKey: ['institutions'] })
 }
 
+/**
+ * Invalidate the category-scoped keys after creating/editing/deleting a category
+ * or subcategory, so the movement form's category picker (`categories tree`) and
+ * the filter options pick it up without a manual page refresh.
+ */
+export function invalidateAfterCategoryMutation(qc: QueryClient): void {
+  qc.invalidateQueries({ queryKey: ['categories'] })
+  qc.invalidateQueries({ queryKey: ['transactions', 'filter-options'] })
+}
+
 export function invalidateAfterRecurrenceInstanceMutation(
   qc: QueryClient,
   opts: { confirmed: boolean },

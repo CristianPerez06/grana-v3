@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { useTranslations } from 'next-intl'
@@ -10,6 +11,7 @@ import { FormField } from '@/components/ui/form-field'
 import { SubmitButton } from '@/components/ui/submit-button'
 import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/alert'
+import { invalidateAfterCategoryMutation } from '@/lib/transactions/invalidation'
 import { createCategory } from '@/app/_actions/categories'
 import { createCategorySchema } from '@grana/validation'
 import { IconPicker } from '../../_components/icon-picker'
@@ -30,6 +32,7 @@ export const CreateCategoryForm = ({ variant = 'page', onClose, onSuccess }: Pro
   const t = useTranslations('settings.categories')
   const tCommon = useTranslations('common')
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [formError, setFormError] = useState<string | null>(null)
   const isDrawer = variant === 'drawer'
 
@@ -52,6 +55,9 @@ export const CreateCategoryForm = ({ variant = 'page', onClose, onSuccess }: Pro
       color: values.color || null,
     })
     if (result.ok) {
+      // Refresh the react-query categories cache so the new category appears in
+      // the movement form's category picker without a manual page refresh.
+      invalidateAfterCategoryMutation(queryClient)
       if (onSuccess) {
         router.refresh()
         onSuccess()
