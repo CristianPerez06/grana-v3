@@ -35,7 +35,10 @@ export const PeriodMovementsPane = ({ cardId, period, periodKey, todayISO }: Pro
       todayISO={todayISO}
       installmentChips={chips}
       installmentChipBelow
-      groupByDate={false}
+      // Group by date (Hoy / Ayer / día) like the Movimientos module, so each
+      // consumo shows its date. The statement's txs come date-desc, so headers
+      // land in order.
+      groupByDate
       emptyState={{
         variant: 'none',
         title: t('detail.movements_empty_title'),

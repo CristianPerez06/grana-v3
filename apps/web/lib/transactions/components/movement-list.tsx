@@ -52,7 +52,7 @@ type Props = {
   installmentChips?: Map<string, string>
   /** Render the installment chip on a separate line below the subtitle (card statement layout). */
   installmentChipBelow?: boolean
-  /** Group rows under date headers (Hoy / Ayer / weekday). Off for single-period views like card statements. */
+  /** Group rows under date headers (Hoy / Ayer / weekday). On by default; pass false for a flat list. */
   groupByDate?: boolean
   /** Empty-state reason + actions. Absent ⇒ generic "no movements". */
   emptyState?: MovementEmptyState
