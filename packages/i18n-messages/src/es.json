@@ -1426,14 +1426,21 @@
       "amount": "Monto",
       "frequency": "Frecuencia",
       "end_date": "Fecha de fin",
-      "description": "Descripción"
+      "description": "Descripción",
+      "account": "Cuenta",
+      "destination": "Cuenta destino",
+      "category": "Categoría",
+      "next_date": "Próxima fecha",
+      "type": "Tipo"
     },
     "actions": {
       "pause": "Pausar",
       "resume": "Reanudar",
       "delete": "Eliminar",
       "save_changes": "Guardar cambios",
-      "create": "Crear recurrencia"
+      "create": "Crear recurrencia",
+      "edit": "Editar",
+      "delete_confirm": "Sí, eliminar"
     },
     "messages": {
       "changes_saved": "Cambios guardados.",
@@ -1532,7 +1539,8 @@
       "info_only": "Solo informativo",
       "empty": "Nada por aquí."
     },
-    "created_on": "Creada el {date}"
+    "created_on": "Creada el {date}",
+    "edit_title": "Editar regla recurrente"
   },
   "subcategories": {
     "supermercado": "Supermercado",

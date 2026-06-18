@@ -1426,14 +1426,21 @@
       "amount": "Amount",
       "frequency": "Frequency",
       "end_date": "End date",
-      "description": "Description"
+      "description": "Description",
+      "account": "Account",
+      "destination": "Destination account",
+      "category": "Category",
+      "next_date": "Next date",
+      "type": "Type"
     },
     "actions": {
       "pause": "Pause",
       "resume": "Resume",
       "delete": "Delete",
       "save_changes": "Save changes",
-      "create": "Create recurrence"
+      "create": "Create recurrence",
+      "edit": "Edit",
+      "delete_confirm": "Yes, delete"
     },
     "messages": {
       "changes_saved": "Changes saved.",
@@ -1532,7 +1539,8 @@
       "info_only": "Info only",
       "empty": "Nothing here."
     },
-    "created_on": "Created on {date}"
+    "created_on": "Created on {date}",
+    "edit_title": "Edit recurring rule"
   },
   "subcategories": {
     "supermercado": "Supermarket",
