@@ -83,6 +83,9 @@ export const updateTransactionSchema = yup
     description: yup.string().label('description').nullable().optional(),
     category_id: yup.string().label('category_id').uuid().nullable().optional(),
     subcategory_id: yup.string().label('subcategory_id').uuid().nullable().optional(),
+    // Share toggle from the edit form: an object sets/updates the split, an
+    // explicit null unshares, absent leaves the shared state untouched.
+    shared: sharedExpenseSchema.nullable().optional(),
   })
   .strict()
 

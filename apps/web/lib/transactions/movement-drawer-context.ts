@@ -1,10 +1,16 @@
 'use client'
 
 import { createContext, useContext } from 'react'
+import type { Household } from '@/lib/shared/types'
 
 export type MovementDrawerContextValue = {
   /** Open the drawer in create mode, optionally pre-selecting an account. */
   openCreate: (preselectAccountId?: string) => void
+  /**
+   * The user's household (browser-loaded), exposed so the in-context edit drawer
+   * can enable the "Compartir gasto" toggle without re-fetching server-side.
+   */
+  household: Household | null
 }
 
 /**

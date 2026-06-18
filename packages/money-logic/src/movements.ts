@@ -159,6 +159,8 @@ export type EditableFields = {
   adjustmentDirection: boolean
   /** Received-leg amount of a currency exchange. */
   destinationAmount: boolean
+  /** Whether the "Compartir gasto" toggle can be edited (simple expenses only). */
+  shared?: boolean
 }
 
 /**
@@ -181,6 +183,10 @@ export function getEditableFields(input: MovementEditInput): EditableFields {
       description: true,
       adjustmentDirection: false,
       destinationAmount: false,
+      // An installment purchase can be shared/unshared like a simple expense.
+      // The split lives on the child cuotas; the parent carries the marker.
+      // Editable even with paid children (only the amount locks on paid).
+      shared: true,
     }
   }
 
@@ -210,6 +216,10 @@ export function getEditableFields(input: MovementEditInput): EditableFields {
         description: true,
         adjustmentDirection: false,
         destinationAmount: false,
+        // Sharing is orthogonal to the amount lock; only statement-payment
+        // expenses (no category) can't be shared. Installment parents return
+        // earlier and are excluded (children carry the splits).
+        shared: !isCardPayment,
       }
     }
     case 'transfer':

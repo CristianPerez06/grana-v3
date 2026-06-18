@@ -70,6 +70,11 @@ export type MovementEditContext = {
   editableFields: EditableFields
   /** The movement's own account balance in the movement currency. */
   availableBalance: number
+  /**
+   * Current shared state, to prefill the "Compartir gasto" toggle when editing.
+   * `null` ⇒ not shared. `firstPct` is the first household member's percentage.
+   */
+  shared?: { householdId: string; firstPct: number } | null
 }
 
 export type HouseholdMember = {

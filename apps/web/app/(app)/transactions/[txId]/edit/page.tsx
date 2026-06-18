@@ -21,9 +21,9 @@ const EditMovementPage = async ({ params, searchParams }: Props) => {
 
   const data = await buildMovementEditContext(txId, detailHref)
   if (!data) notFound()
-  const { edit, categories } = data
+  const { edit, categories, household } = data
 
-  return <MovementForm accounts={[]} categories={categories} edit={edit} />
+  return <MovementForm accounts={[]} categories={categories} edit={edit} household={household} />
 }
 
 export default EditMovementPage

@@ -66,7 +66,7 @@ export function MovementDrawerProvider({
   }, [openCreate, router])
 
   return (
-    <MovementDrawerContext.Provider value={{ openCreate }}>
+    <MovementDrawerContext.Provider value={{ openCreate, household: household ?? null }}>
       {children}
       <Drawer
         open={open}

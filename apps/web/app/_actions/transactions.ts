@@ -260,6 +260,51 @@ export async function updateTransaction(
 
   if (error) return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
 
+  // Share toggle reconciliation (only when the form sent it — simple expenses).
+  // Clear existing splits on the expense AND any linked reimbursement (which
+  // inherits the split), then re-apply the new spec or unshare. The household
+  // debt is derived from splits, so it recomputes on its own.
+  if ('shared' in validation.data) {
+    const spec = validation.data.shared ?? null
+
+    const { data: reimbs } = await supabase
+      .from('transactions')
+      .select('id, amount')
+      .eq('linked_transaction_id', id)
+      .eq('type', 'reimbursement')
+      .eq('user_id', userId)
+    const allIds = [id, ...(reimbs ?? []).map((r) => r.id)]
+
+    await supabase.from('shared_expense_split').delete().in('transaction_id', allIds)
+
+    if (spec) {
+      const { data: exp } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('id', id)
+        .single()
+      const targets = [{ transactionId: id, amount: Math.abs(exp?.amount ?? 0) }]
+      for (const r of reimbs ?? []) {
+        targets.push({ transactionId: r.id, amount: Math.abs(r.amount) })
+      }
+      const s = await applySharedSplits(
+        supabase,
+        { household_id: spec.household_id, splits: spec.splits },
+        targets,
+      )
+      if (!s.ok) return { ok: false, formError: `No se pudo actualizar el compartido: ${s.error}` }
+    } else {
+      const { error: unshareErr } = await supabase
+        .from('transactions')
+        .update({ is_shared: false, household_id: null })
+        .in('id', allIds)
+        .eq('user_id', userId)
+      if (unshareErr) {
+        return { ok: false, formError: await translatePostgresError(unshareErr.code, 'transaction') }
+      }
+    }
+  }
+
   revalidateAfterMovementMutation()
   return { ok: true }
 }

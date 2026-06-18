@@ -1199,7 +1199,12 @@ export const MovementForm = ({
 
   // ── Toggles: reintegro + repetir (create only) ──────────────────────────────
   const showReimbursementToggle = !isEdit && tab === 'expense' && !isInstallments
-  const showSharedToggle = !isEdit && tab === 'expense' && !!sharedMembers
+  // Alta: sin cambios respecto de main (hogar de 2 + pestaña gasto). Edición:
+  // se agrega aparte, gateado a que el campo sea editable (gasto simple o madre
+  // de cuotas; el pago de resumen queda excluido).
+  const showSharedToggleEdit = isEdit && !!sharedMembers && !!edit?.editableFields?.shared
+  const showSharedToggle =
+    (!isEdit && tab === 'expense' && !!sharedMembers) || showSharedToggleEdit
   const showRepeatToggle =
     !isEdit && tab !== 'adjustment' && tab !== 'exchange' && !isInstallments
 

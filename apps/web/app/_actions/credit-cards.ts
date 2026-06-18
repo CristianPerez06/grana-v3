@@ -29,6 +29,7 @@ import {
   registerInstallments as registerInstallmentsOrchestrator,
   registerCardPurchase as registerCardPurchaseOrchestrator,
 } from '@grana/transactions-mutations'
+import { applySharedSplits } from './_lib/shared-splits'
 import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
 import { getAuthenticatedUserId } from './_lib/auth'
@@ -824,7 +825,7 @@ export async function updateInstallmentParent(
   // Check if any child is already paid
   const { data: children, error: childrenError } = await supabase
     .from('transactions')
-    .select('id, status, installment_n')
+    .select('id, status, installment_n, amount')
     .eq('parent_id', parentId)
     .eq('is_parent', false)
 
@@ -901,6 +902,51 @@ export async function updateInstallmentParent(
       .update(childUpdates as any)
       .eq('parent_id', parentId)
     if (error) return { ok: false, formError: await translatePostgresError(error.code, 'card') }
+  }
+
+  // Share toggle reconciliation (only when the form sent it). The split lives on
+  // the child cuotas (each gates the household debt by its own statement month),
+  // so we clear and re-apply across all children, then mark/unmark the parent.
+  // Runs even with paid children: only the split %s move, not the amounts.
+  if ('shared' in safeInput) {
+    const spec =
+      (safeInput.shared as {
+        household_id: string
+        splits: { user_id: string; percentage: number }[]
+      } | null) ?? null
+    const childIds = (children ?? []).map((c) => c.id)
+
+    if (childIds.length > 0) {
+      await supabase.from('shared_expense_split').delete().in('transaction_id', childIds)
+    }
+
+    if (spec) {
+      const targets = (children ?? []).map((c) => ({
+        transactionId: c.id,
+        amount: Math.abs(Number(c.amount)),
+      }))
+      const s = await applySharedSplits(
+        supabase,
+        { household_id: spec.household_id, splits: spec.splits },
+        targets,
+      )
+      if (!s.ok) return { ok: false, formError: `No se pudo actualizar el compartido: ${s.error}` }
+      // `applySharedSplits` marks the children; the parent carries the marker too.
+      const { error: markErr } = await supabase
+        .from('transactions')
+        .update({ is_shared: true, household_id: spec.household_id })
+        .eq('id', parentId)
+      if (markErr) return { ok: false, formError: await translatePostgresError(markErr.code, 'card') }
+    } else {
+      const { error: unshareErr } = await supabase
+        .from('transactions')
+        .update({ is_shared: false, household_id: null })
+        .in('id', [parentId, ...childIds])
+      if (unshareErr) {
+        return { ok: false, formError: await translatePostgresError(unshareErr.code, 'card') }
+      }
+    }
+    revalidatePath('/shared')
   }
 
   revalidatePath('/transactions')

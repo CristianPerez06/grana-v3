@@ -103,6 +103,7 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
         from={from}
         edit={editData?.edit ?? null}
         editCategories={editData?.categories}
+        editHousehold={editData?.household ?? null}
         sharedInfo={sharedInfo}
         paymentComposition={paymentComposition}
       />

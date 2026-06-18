@@ -4,11 +4,14 @@ import { getAccountDetail } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
 import { getEditableFields } from '@grana/money-logic'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
+import type { Household } from '@/lib/shared/types'
 import type { MovementEditContext } from '@/lib/transactions/components/movement-form'
 
 export type MovementEditData = {
   edit: MovementEditContext
   categories: CategoryWithSubcategories[]
+  /** The user's household (when it has two members) — enables the share toggle. */
+  household: Household | null
 }
 
 /**
@@ -74,6 +77,34 @@ export async function buildMovementEditContext(
     : null
   const availableBalance = ownerDetail?.balances[transaction.currency_code] ?? 0
 
+  // Current shared state, to prefill the "Compartir gasto" toggle. We resolve
+  // the first household member's percentage from the stored splits. For an
+  // installment purchase the splits live on the child cuotas (all share the same
+  // percentages), so we read them from the first child instead of the parent.
+  let shared: { householdId: string; firstPct: number } | null = null
+  if (transaction.is_shared && transaction.household_id) {
+    let splitTxId = transaction.id
+    if (isParent) {
+      const { data: firstChild } = await supabase
+        .from('transactions')
+        .select('id')
+        .eq('parent_id', transaction.id)
+        .eq('is_parent', false)
+        .order('installment_n', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+      splitTxId = firstChild?.id ?? transaction.id
+    }
+    const { data: splits } = await supabase
+      .from('shared_expense_split')
+      .select('user_id, percentage')
+      .eq('transaction_id', splitTxId)
+    // members[0] in the form is always the current user, so prefill its share
+    // from the current user's split row.
+    const mine = splits?.find((s) => s.user_id === user.id)
+    shared = { householdId: transaction.household_id, firstPct: mine?.percentage ?? 50 }
+  }
+
   const edit: MovementEditContext = {
     id: transaction.id,
     type: transaction.type,
@@ -95,8 +126,11 @@ export async function buildMovementEditContext(
     destinationAccountName: transaction.destination_account?.name ?? null,
     editableFields,
     availableBalance,
+    shared,
     returnHref,
   }
 
-  return { edit, categories }
+  // `household` is sourced client-side (the app-wide movement drawer) for the
+  // edit drawer; the no-JS `/edit` page falls back to no share toggle.
+  return { edit, categories, household: null }
 }

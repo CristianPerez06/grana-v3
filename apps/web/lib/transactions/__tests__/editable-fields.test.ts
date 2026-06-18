@@ -31,7 +31,7 @@ describe('getEditableFields — cash/bank income & expense', () => {
 
   it('expense (cash/bank): amount, date, category, subcategory, description', () => {
     expect(getEditableFields(input({ type: 'expense', status: null }))).toEqual(
-      fields({ amount: true, date: true, category: true, subcategory: true, description: true }),
+      fields({ amount: true, date: true, category: true, subcategory: true, description: true, shared: true }),
     )
   })
 })
@@ -59,13 +59,13 @@ describe('getEditableFields — transfer / adjustment / exchange', () => {
 describe('getEditableFields — credit-card consumption by status', () => {
   it('pending consumption: amount + date editable + category', () => {
     expect(getEditableFields(input({ type: 'expense', status: 'pending' }))).toEqual(
-      fields({ amount: true, date: true, category: true, subcategory: true, description: true }),
+      fields({ amount: true, date: true, category: true, subcategory: true, description: true, shared: true }),
     )
   })
 
   it('paid consumption: only category + description (amount/date locked)', () => {
     expect(getEditableFields(input({ type: 'expense', status: 'paid' }))).toEqual(
-      fields({ category: true, subcategory: true, description: true }),
+      fields({ category: true, subcategory: true, description: true, shared: true }),
     )
   })
 })
@@ -73,7 +73,7 @@ describe('getEditableFields — credit-card consumption by status', () => {
 describe('getEditableFields — statement-payment expense (no category)', () => {
   it('card payment: amount + date + description, category hidden', () => {
     expect(getEditableFields(input({ type: 'expense', isCardPayment: true }))).toEqual(
-      fields({ amount: true, date: true, description: true }),
+      fields({ amount: true, date: true, description: true, shared: false }),
     )
   })
 })
@@ -83,7 +83,7 @@ describe('getEditableFields — installment parent (madre)', () => {
     expect(
       getEditableFields(input({ type: 'expense', isParent: true, hasPaidInstallment: false })),
     ).toEqual(
-      fields({ amount: true, category: true, subcategory: true, description: true }),
+      fields({ amount: true, category: true, subcategory: true, description: true, shared: true }),
     )
   })
 
@@ -91,7 +91,7 @@ describe('getEditableFields — installment parent (madre)', () => {
     expect(
       getEditableFields(input({ type: 'expense', isParent: true, hasPaidInstallment: true })),
     ).toEqual(
-      fields({ category: true, subcategory: true, description: true }),
+      fields({ category: true, subcategory: true, description: true, shared: true }),
     )
   })
 

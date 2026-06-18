@@ -112,8 +112,9 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
 
   const sharedMembers =
     household && household.members.length === 2 ? household.members : null
-  const [sharedEnabled, setSharedEnabled] = useState(false)
+  const [sharedEnabled, setSharedEnabled] = useState<boolean>(edit?.shared != null)
   const [splitFirstPct, setSplitFirstPct] = useState<number>(() => {
+    if (edit?.shared) return edit.shared.firstPct
     const stored = household?.defaultSplit.find((s) => s.user_id === household.members[0]?.userId)
     return stored?.percentage ?? 50
   })
@@ -312,6 +313,22 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
       }
     }
 
+    // Share toggle: send the split spec when enabled, explicit null to unshare,
+    // or omit entirely when the field isn't editable (e.g. income/transfer) so
+    // the update leaves shared state untouched. Shared by the simple-expense and
+    // the installment-parent paths (the parent fans the splits to its cuotas).
+    const sharedUpdate = editable?.shared
+      ? sharedEnabled && sharedMembers && household
+        ? {
+            household_id: household.id,
+            splits: [
+              { user_id: sharedMembers[0].userId, percentage: splitFirstPct },
+              { user_id: sharedMembers[1].userId, percentage: 100 - splitFirstPct },
+            ],
+          }
+        : null
+      : undefined
+
     startTransition(async () => {
       let result: { ok: boolean; formError?: string }
 
@@ -321,6 +338,7 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
           subcategory_id: subcategoryId || null,
           description: description || null,
           ...(editable?.amount && parsedAmount !== null ? { amount: parsedAmount } : {}),
+          ...(sharedUpdate !== undefined ? { shared: sharedUpdate } : {}),
         })
       } else if (edit.type === 'transfer') {
         result = await mutators.updateTransfer(
@@ -354,6 +372,7 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
           category_id: categoryId || null,
           subcategory_id: subcategoryId || null,
           description: description || null,
+          ...(sharedUpdate !== undefined ? { shared: sharedUpdate } : {}),
         })
       }
 

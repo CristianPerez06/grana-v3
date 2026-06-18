@@ -33,6 +33,7 @@ import type { FinancialMovement, MovementReviewFlag } from '@/lib/transactions/m
 import type { TransactionWithDetails } from '@/lib/transactions/types'
 import type { ExpenseReimbursementVM } from '@/lib/transactions/queries'
 import type { MovementSharedInfo } from '@/lib/shared/queries'
+import type { Household } from '@/lib/shared/types'
 import { resolveTone, toneToClass } from '@/lib/transactions/components/tone'
 import { resolveContextVariant } from '@/lib/transactions/components/resolve-context-variant'
 import { TxHero } from './tx-hero'
@@ -47,6 +48,7 @@ import {
   MovementForm,
   type MovementEditContext,
 } from '@/lib/transactions/components/movement-form'
+import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
 
 const formatBalance = (amount: number, currency: 'ARS' | 'USD', showCents: boolean) =>
   currency === 'ARS' ? formatARS(Math.abs(amount), showCents) : formatUSD(Math.abs(amount), showCents)
@@ -180,6 +182,8 @@ type Props = {
    */
   edit?: MovementEditContext | null
   editCategories?: CategoryWithSubcategories[]
+  /** The user's household, to enable the share toggle inside the edit drawer. */
+  editHousehold?: Household | null
   /** Split info when the movement is shared (null otherwise). */
   sharedInfo?: MovementSharedInfo | null
   /** Card payments: the paid statement's composition per currency. */
@@ -195,10 +199,16 @@ export const GlobalTransactionDetail = ({
   from,
   edit,
   editCategories,
+  editHousehold = null,
   sharedInfo,
   paymentComposition = null,
 }: Props) => {
   const showCents = useShowCents()
+  // The household is loaded browser-side by the app-wide movement drawer; use it
+  // for the edit drawer's share toggle (server-side getHousehold isn't available
+  // in this render path). Falls back to the server-passed prop.
+  const movementDrawer = useMovementDrawer()
+  const editHouseholdResolved = movementDrawer?.household ?? editHousehold
   const t = useTranslations('transactions')
   const tRoot = useTranslations()
   const tShared = useTranslations('shared')
@@ -394,6 +404,7 @@ export const GlobalTransactionDetail = ({
             accounts={[]}
             categories={editCategories!}
             edit={edit!}
+            household={editHouseholdResolved}
             onClose={() => setEditOpen(false)}
             onSuccess={() => setEditOpen(false)}
           />
