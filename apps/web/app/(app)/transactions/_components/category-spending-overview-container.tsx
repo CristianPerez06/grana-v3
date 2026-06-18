@@ -173,6 +173,24 @@ export function CategorySpendingOverviewContainer() {
     tRoot,
   ])
 
+  // Categories in credit ("te devolvieron") for the active currency — egresos
+  // top-level only (income has none; subcategory drill doesn't surface them yet).
+  const overviewCredits = useMemo(() => {
+    if (overviewMode !== 'egresos' || breakdownMode === 'subcategory') return []
+    const raw = categoryBreakdownQ.data
+    if (!raw) return []
+    return raw.credits[overviewCurrency].map((i) => ({
+      categoryId: i.categoryId,
+      label:
+        i.categoryId === UNCATEGORIZED_ID
+          ? t('spending.uncategorized')
+          : translateCategoryLabel(i.label, i.canonicalName ?? null, i.isSystem ?? false, tRoot) ??
+            i.label,
+      color: i.color ?? null,
+      value: i.value,
+    }))
+  }, [overviewMode, breakdownMode, overviewCurrency, categoryBreakdownQ.data, t, tRoot])
+
   // Pre-fetched subcategory breakdowns for in-place drill-down (category mode
   // only). We don't pre-fetch here in PR1; the existing animated drill-in still
   // works server-side via the legacy page, and this container will get the
@@ -223,6 +241,7 @@ export function CategorySpendingOverviewContainer() {
         overviewMode === 'ingresos'
           ? t('spending.income_subtitle')
           : t('spending.subtitle_egresos'),
+      creditsLabel: tRoot('dashboard.spending.credits_label'),
     }),
     [overviewMode, activeCategory, t, tRoot],
   )
@@ -284,6 +303,7 @@ export function CategorySpendingOverviewContainer() {
       subBreakdownsByCategory={subBreakdownsByCategory}
       labels={labels}
       controller={controller}
+      credits={overviewCredits}
     />
   )
 }

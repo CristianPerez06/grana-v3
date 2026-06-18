@@ -147,7 +147,8 @@
       "loading": "Cargando el desglose…",
       "error": "No pudimos cargar el desglose del mes.",
       "center_label": "Gastos",
-      "empty": "Sin gastos este mes en esta moneda."
+      "empty": "Sin gastos este mes en esta moneda.",
+      "credits_label": "Te devolvieron"
     },
     "accounts": {
       "title": "Dónde está",
@@ -914,7 +915,7 @@
       "income_subtitle": "Ingresos del mes · acreditados",
       "income_empty": "Sin ingresos este mes.",
       "categories_caption": "en {count} categorías",
-      "off_ledger_note": "Sin contar consumos en tarjeta sin pagar",
+      "off_ledger_note": "Incluye consumos y cuotas de tarjeta",
       "see_detail": "Ver el detalle",
       "others": "Otros",
       "others_label": "+ {count} categorías más",

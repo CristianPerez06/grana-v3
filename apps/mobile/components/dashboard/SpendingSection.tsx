@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import {
@@ -38,23 +38,34 @@ export const SpendingSection = () => {
   const query = useMonthCategoryBreakdown(selected.year, selected.month)
   const data = query.data
 
-  // Relabel (uncategorized sentinel + system categories) before slicing, same
-  // as the Movimientos breakdown, so both screens speak identical labels.
-  const breakdown = useMemo(() => {
-    if (!data) return null
-    const relabel = (inputs: CategorySliceInput[]): CategorySliceInput[] =>
+  // Relabel (uncategorized sentinel + system categories) so both screens speak
+  // identical labels — shared by the spend slices and the credits rows.
+  const relabel = useCallback(
+    (inputs: CategorySliceInput[]): CategorySliceInput[] =>
       inputs.map((i) =>
         i.categoryId === UNCATEGORIZED_ID
           ? { ...i, label: t('transactions.spending.uncategorized') }
           : i.isSystem && i.canonicalName
             ? { ...i, label: t(`categories.${i.canonicalName}`) }
             : i,
-      )
+      ),
+    [t],
+  )
+
+  const breakdown = useMemo(() => {
+    if (!data) return null
     return buildCategorySlices(relabel(data[currency]), {
       topN: TOP_N,
       othersLabel: t('transactions.spending.others'),
     })
-  }, [data, currency, t])
+  }, [data, currency, relabel, t])
+
+  // Categories whose net is a credit ("te devolvieron"): shown apart, outside
+  // the donut (a donut can't draw a negative slice).
+  const credits = useMemo(
+    () => (data ? relabel(data.credits[currency]) : []),
+    [data, currency, relabel],
+  )
 
   const goToBreakdown = () => router.push('/transactions')
 
@@ -97,49 +108,98 @@ export const SpendingSection = () => {
           </View>
         ) : breakdown === null ? (
           <SpendingSkeleton />
-        ) : breakdown.slices.length === 0 ? (
+        ) : breakdown.slices.length === 0 && credits.length === 0 ? (
           <View className="items-center justify-center px-4">
             <Text className="text-center text-sm text-text-muted">
               {t('dashboard.spending.empty')}
             </Text>
           </View>
         ) : (
-          <View className="items-center gap-6">
-            <SpendingDonut
-              slices={breakdown.slices}
-              total={breakdown.total}
-              currency={currency}
-              centerLabel={t('dashboard.spending.center_label')}
-            />
-            <View className="w-full gap-3">
-              {breakdown.slices.map((slice, index) => (
-                <Pressable
-                  key={slice.categoryId ?? `otros-${index}`}
-                  onPress={goToBreakdown}
-                  accessibilityRole="link"
-                  className="flex-row items-center gap-2.5"
-                >
-                  <View
-                    className="h-2.5 w-2.5 rounded-[3px]"
-                    style={{ backgroundColor: sliceColor(slice, index) }}
-                  />
-                  <Text
-                    className="min-w-0 flex-1 text-sm font-bold text-text"
-                    numberOfLines={1}
-                  >
-                    {slice.label}
-                  </Text>
-                  <MaskedAmount
-                    amount={slice.value}
-                    currency={currency}
-                    className="text-sm font-extrabold text-text"
-                  />
-                  <Text className="w-[34px] text-right text-xs font-bold text-text-soft">
-                    {Math.round(slice.percentage)}%
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+          <View className="gap-5">
+            {breakdown.slices.length > 0 && (
+              <View className="items-center gap-6">
+                <SpendingDonut
+                  slices={breakdown.slices}
+                  total={breakdown.total}
+                  currency={currency}
+                  centerLabel={t('dashboard.spending.center_label')}
+                />
+                <View className="w-full gap-3">
+                  {breakdown.slices.map((slice, index) => (
+                    <Pressable
+                      key={slice.categoryId ?? `otros-${index}`}
+                      onPress={goToBreakdown}
+                      accessibilityRole="link"
+                      className="flex-row items-center gap-2.5"
+                    >
+                      <View
+                        className="h-2.5 w-2.5 rounded-[3px]"
+                        style={{ backgroundColor: sliceColor(slice, index) }}
+                      />
+                      <Text
+                        className="min-w-0 flex-1 text-sm font-bold text-text"
+                        numberOfLines={1}
+                      >
+                        {slice.label}
+                      </Text>
+                      <MaskedAmount
+                        amount={slice.value}
+                        currency={currency}
+                        className="text-sm font-extrabold text-text"
+                      />
+                      <Text className="w-[34px] text-right text-xs font-bold text-text-soft">
+                        {Math.round(slice.percentage)}%
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Categorías en crédito — "te devolvieron", fuera de la dona. */}
+            {credits.length > 0 && (
+              <View
+                className={
+                  breakdown.slices.length > 0 ? 'border-t border-border-soft pt-4' : ''
+                }
+              >
+                <Text className="mb-2.5 text-[11px] font-extrabold uppercase text-text-soft">
+                  {t('dashboard.spending.credits_label')}
+                </Text>
+                <View className="w-full gap-2.5">
+                  {credits.map((credit, index) => (
+                    <View
+                      key={credit.categoryId ?? `credit-${index}`}
+                      className="flex-row items-center gap-2.5"
+                    >
+                      <View
+                        className="h-2.5 w-2.5 rounded-[3px]"
+                        style={{
+                          backgroundColor: sliceColor(
+                            credit as unknown as Parameters<typeof sliceColor>[0],
+                            index,
+                          ),
+                        }}
+                      />
+                      <Text
+                        className="min-w-0 flex-1 text-sm font-bold text-text"
+                        numberOfLines={1}
+                      >
+                        {credit.label}
+                      </Text>
+                      <View className="flex-row items-baseline">
+                        <Text className="text-sm font-extrabold text-emerald">+</Text>
+                        <MaskedAmount
+                          amount={credit.value}
+                          currency={currency}
+                          className="text-sm font-extrabold text-emerald"
+                        />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
         )}
       </View>

@@ -141,6 +141,15 @@ export const UNCATEGORIZED_ID = 'uncategorized'
 export type MonthCategoryBreakdown = {
   ARS: CategorySliceInput[]
   USD: CategorySliceInput[]
+  /**
+   * Categories whose month net is a CREDIT (received reimbursements exceed the
+   * month's spend → negative net). Their `value` is the credit magnitude
+   * (positive). Shown apart from the donut ("te devolvieron"), never as a slice.
+   */
+  credits: {
+    ARS: CategorySliceInput[]
+    USD: CategorySliceInput[]
+  }
 }
 
 export async function getMonthCategoryBreakdown(
@@ -152,30 +161,23 @@ export async function getMonthCategoryBreakdown(
   const [expensesResult, reimbursementsResult] = await Promise.all([
     supabase
       .from('transactions')
-      .select('category_id, currency_code, amount, is_parent, period_payments(id)')
+      .select('id, category_id, currency_code, amount, is_parent, is_shared, period_payments(id)')
       .eq('type', 'expense')
-      // Off-ledger: credit card consumos (direct + installment children) live
-      // on a card period (`card_period_id IS NOT NULL`) and don't actually
-      // reduce `disponible` until the statement is paid. Keep them out of
-      // "Gastado por categoría" so the donut matches what the user sees in
-      // their month list (and the footer note "Sin contar consumos en tarjeta
-      // sin pagar" is honest).
-      //
-      // TODO(spec follow-up): the correct behavior is "category + amount
-      // impact when the statement is PAID, distributed by the consumos that
-      // payment covered". Today statement payments are skipped via the
-      // `period_payments?.length > 0` check below, which means card spending
-      // never appears in the breakdown — neither when it devenga nor when
-      // it's paid. The right model walks the statement payment → its
-      // `card_period` → consumos in that period (parent of installment for
-      // cuotas, or the consumo itself) → their category, attributing the
-      // paid amount proportionally. Tracked as a separate change.
-      .is('card_period_id', null)
+      // DEVENGADO (accrual): spending by category counts an expense in the
+      // month it is INCURRED, regardless of how/when it is paid — so card
+      // consumos and each installment cuota DO count here, by their own date
+      // (see spec `spending-by-category`). We intentionally do NOT filter
+      // `card_period_id IS NULL` anymore. The off-ledger invariant only governs
+      // `disponible`/CAJA (the Hero + Balance del mes), not categorization.
+      // Still excluded in the loop below: the installment PARENT (`is_parent`,
+      // off-ledger) and the statement PAYMENT (`period_payments` — it cancels
+      // debt, it is not new spending; the consumos it covers already counted in
+      // their own month).
       .gte('date', from)
       .lte('date', to),
     supabase
       .from('transactions')
-      .select('amount, currency_code, linked_transaction_id, received_at, cancelled_at')
+      .select('id, amount, currency_code, linked_transaction_id, received_at, cancelled_at, is_shared')
       .eq('type', 'reimbursement')
       .not('received_at', 'is', null)
       .is('cancelled_at', null)
@@ -186,18 +188,22 @@ export async function getMonthCategoryBreakdown(
   if (reimbursementsResult.error) throw reimbursementsResult.error
 
   const expenseRows = (expensesResult.data ?? []) as unknown as Array<{
+    id: string
     category_id: string | null
     currency_code: string
     amount: number
     is_parent: boolean
+    is_shared: boolean
     period_payments: { id: string }[] | null
   }>
   const reimbRows = (reimbursementsResult.data ?? []) as unknown as Array<{
+    id: string
     amount: number
     currency_code: string
     linked_transaction_id: string | null
     received_at: string | null
     cancelled_at: string | null
+    is_shared: boolean
   }>
 
   // Reimbursements derive their category from the linked expense. PostgREST
@@ -216,18 +222,53 @@ export async function getMonthCategoryBreakdown(
     for (const e of linked ?? []) linkedCategoryById.set(e.id, e.category_id)
   }
 
+  // Shared movements count only the USER's portion (household "cuenta
+  // corriente"): a shared expense/reimbursement contributes
+  // `shared_expense_split.amount_assigned` for her user_id, not its total. The
+  // split RLS exposes BOTH members' rows, so we filter by her uid explicitly.
+  const sharedIds = [
+    ...new Set([
+      ...expenseRows.filter((e) => e.is_shared).map((e) => e.id),
+      ...reimbRows.filter((r) => r.is_shared).map((r) => r.id),
+    ]),
+  ]
+  const mySplitByTx = new Map<string, number>()
+  if (sharedIds.length > 0) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (user) {
+      const { data: splits } = await supabase
+        .from('shared_expense_split')
+        .select('transaction_id, amount_assigned')
+        .eq('user_id', user.id)
+        .in('transaction_id', sharedIds)
+      for (const s of splits ?? [])
+        mySplitByTx.set(s.transaction_id as string, Number(s.amount_assigned))
+    }
+  }
+
+  // A shared movement contributes only the user's portion; if she has no split
+  // (0% / 100% the other member's), it contributes nothing (returns null → skip).
+  const ownPortion = (row: { id: string; is_shared: boolean; amount: number }): number | null =>
+    row.is_shared ? (mySplitByTx.get(row.id) ?? null) : row.amount
+
   const aggRows: CategoryAggRow[] = []
   for (const e of expenseRows) {
     if (e.is_parent) continue // installment parent is off-ledger; its cuotas count
     if ((e.period_payments?.length ?? 0) > 0) continue // statement payment, not category spend
+    const amount = ownPortion(e)
+    if (amount === null) continue // shared with no own split → not ours
     aggRows.push({
       categoryId: e.category_id ?? UNCATEGORIZED_ID,
       kind: 'expense',
       currency_code: e.currency_code,
-      amount: e.amount,
+      amount,
     })
   }
   for (const r of reimbRows) {
+    const amount = ownPortion(r)
+    if (amount === null) continue // shared reimbursement with no own split → not ours
     const derived = r.linked_transaction_id
       ? linkedCategoryById.get(r.linked_transaction_id)
       : null
@@ -235,7 +276,7 @@ export async function getMonthCategoryBreakdown(
       categoryId: derived ?? UNCATEGORIZED_ID,
       kind: 'reimbursement',
       currency_code: r.currency_code,
-      amount: r.amount,
+      amount,
       received_at: r.received_at,
       cancelled_at: r.cancelled_at,
     })
@@ -270,26 +311,40 @@ export async function getMonthCategoryBreakdown(
     }
   }
 
-  const build = (currency: 'ARS' | 'USD'): CategorySliceInput[] => {
-    const out: CategorySliceInput[] = []
+  // Split each currency's per-category nets into spend (positive → donut) and
+  // credits (negative → "te devolvieron", shown apart). A net of exactly zero
+  // is dropped (fully reimbursed, nothing to show).
+  const build = (
+    currency: 'ARS' | 'USD',
+  ): { spend: CategorySliceInput[]; credits: CategorySliceInput[] } => {
+    const spend: CategorySliceInput[] = []
+    const credits: CategorySliceInput[] = []
     for (const [id, perCurrency] of netByCategory.entries()) {
       const value = perCurrency[currency].neto
-      if (value <= 0) continue
+      if (value === 0) continue
       const display = id === UNCATEGORIZED_ID ? null : categoryById.get(id)
       // Uncategorized label is left empty; the UI fills it (i18n). System
       // categories carry translation handles so consumers relabel via i18n.
-      out.push({
+      const slice: CategorySliceInput = {
         categoryId: id,
         label: display?.name ?? '',
         color: display?.color ?? null,
         icon: display?.icon ?? null,
-        value,
+        value: Math.abs(value), // credits carry the magnitude, positive
         canonicalName: display?.canonical_name ?? null,
         isSystem: display != null && display.user_id === null,
-      })
+      }
+      if (value > 0) spend.push(slice)
+      else credits.push(slice)
     }
-    return out
+    return { spend, credits }
   }
 
-  return { ARS: build('ARS'), USD: build('USD') }
+  const ars = build('ARS')
+  const usd = build('USD')
+  return {
+    ARS: ars.spend,
+    USD: usd.spend,
+    credits: { ARS: ars.credits, USD: usd.credits },
+  }
 }

@@ -133,8 +133,16 @@ type Props = {
     modeIngresos: string
     /** Mode-specific subtitle shown under the selector. */
     subtitle: string
+    /** Label for the credits ("te devolvieron") group. */
+    creditsLabel: string
   }
   detailHref?: string
+  /**
+   * Categories whose net is a credit (received reimbursements exceed the
+   * month's spend) for the active currency. Egresos mode only; shown apart
+   * from the donut. `value` is the credit magnitude (positive).
+   */
+  credits?: Array<{ categoryId: string; label: string; color: string | null; value: number }>
 }
 
 // Builds a ranking row's href. Three cases:
@@ -251,6 +259,7 @@ export const CategorySpendingOverview = ({
   parentCategoryId,
   subBreakdownsByCategory,
   controller,
+  credits,
 }: Props) => {
   const showCents = useShowCents()
   const fmt = (n: number) => (currency === 'ARS' ? formatARS(n, showCents) : formatUSD(n, showCents))
@@ -670,8 +679,35 @@ export const CategorySpendingOverview = ({
         </div>
       )}
 
-      {/* Footer. The off-ledger disclaimer only applies to expenses (income is
-          never on a card statement), so it is hidden in the Ingresos mode. */}
+      {/* Categorías en crédito — "te devolvieron", fuera de la dona (egresos). */}
+      {mode === 'egresos' && credits && credits.length > 0 && (
+        <div className="border-t border-border-soft pt-4">
+          <p className="mb-2.5 text-xs font-extrabold uppercase tracking-wide text-text-soft">
+            {labels.creditsLabel}
+          </p>
+          <ul className="flex flex-col gap-2.5">
+            {credits.map((c, i) => (
+              <li
+                key={c.categoryId ?? `credit-${i}`}
+                className="flex items-center gap-3 min-w-0"
+              >
+                <span
+                  className="size-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: c.color ?? DONUT_FALLBACK }}
+                />
+                <span className="truncate text-sm font-medium text-text flex-1">{c.label}</span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-income">
+                  +{fmt(c.value)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Footer. The "includes card spending" note only applies to expenses
+          (devengado: card consumos/cuotas count by their date), so it is hidden
+          in the Ingresos mode. */}
       {(mode === 'egresos' || detailHref) && (
         <div
           className={`flex items-center gap-2 border-t border-border-soft pt-4 ${

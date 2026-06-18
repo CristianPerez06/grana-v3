@@ -596,7 +596,9 @@ export async function getMonthIncomeBreakdown(
     return out
   }
 
-  return { ARS: build('ARS'), USD: build('USD') }
+  // Income is always positive, so it never produces credits (those only arise
+  // from reimbursements netting against spend). The field is empty by construction.
+  return { ARS: build('ARS'), USD: build('USD'), credits: { ARS: [], USD: [] } }
 }
 
 // ── getMonthSubcategoryBreakdown ───────────────────────────────────────────────
@@ -626,15 +628,17 @@ export async function getMonthSubcategoryBreakdown(
   const [expensesResult, reimbursementsResult, categoryResult] = await Promise.all([
     supabase
       .from('transactions')
-      .select('subcategory_id, currency_code, amount, is_parent, period_payments(id)')
+      .select('id, subcategory_id, currency_code, amount, is_parent, is_shared, period_payments(id)')
       .eq('type', 'expense')
       .eq('category_id', categoryId)
-      .is('card_period_id', null) // off-ledger consistency with category breakdown
+      // Devengado: include card consumos/cuotas by their date (consistent with
+      // the category breakdown). The loop still skips the installment parent
+      // (is_parent) and statement payments (period_payments).
       .gte('date', from ?? '')
       .lte('date', to ?? ''),
     supabase
       .from('transactions')
-      .select('amount, currency_code, linked_transaction_id, received_at, cancelled_at')
+      .select('id, amount, currency_code, linked_transaction_id, received_at, cancelled_at, is_shared')
       .eq('type', 'reimbursement')
       .not('received_at', 'is', null)
       .is('cancelled_at', null)
@@ -650,18 +654,22 @@ export async function getMonthSubcategoryBreakdown(
   const parentCategoryColor = (categoryResult.data?.color as string | null) ?? null
 
   const expenseRows = (expensesResult.data ?? []) as unknown as Array<{
+    id: string
     subcategory_id: string | null
     currency_code: string
     amount: number
     is_parent: boolean
+    is_shared: boolean
     period_payments: { id: string }[] | null
   }>
   const reimbRows = (reimbursementsResult.data ?? []) as unknown as Array<{
+    id: string
     amount: number
     currency_code: string
     linked_transaction_id: string | null
     received_at: string | null
     cancelled_at: string | null
+    is_shared: boolean
   }>
 
   // Reimbursements net against their linked expense's subcategory. Filter to
@@ -686,25 +694,56 @@ export async function getMonthSubcategoryBreakdown(
 
   // Reuse computeCategoryNet by feeding subcategoryId as the key (with a
   // sentinel for nulls). The function is agnostic to what the key means.
+  // Shared movements count only the user's portion (household "cuenta
+  // corriente"), same rule as getMonthCategoryBreakdown. The split RLS exposes
+  // both members' rows, so filter by her uid explicitly.
+  const sharedIds = [
+    ...new Set([
+      ...expenseRows.filter((e) => e.is_shared).map((e) => e.id),
+      ...reimbRows.filter((r) => r.is_shared).map((r) => r.id),
+    ]),
+  ]
+  const mySplitByTx = new Map<string, number>()
+  if (sharedIds.length > 0) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (user) {
+      const { data: splits } = await supabase
+        .from('shared_expense_split')
+        .select('transaction_id, amount_assigned')
+        .eq('user_id', user.id)
+        .in('transaction_id', sharedIds)
+      for (const s of splits ?? [])
+        mySplitByTx.set(s.transaction_id as string, Number(s.amount_assigned))
+    }
+  }
+  const ownPortion = (row: { id: string; is_shared: boolean; amount: number }): number | null =>
+    row.is_shared ? (mySplitByTx.get(row.id) ?? null) : row.amount
+
   const aggRows: CategoryAggRow[] = []
   for (const e of expenseRows) {
     if (e.is_parent) continue
     if ((e.period_payments?.length ?? 0) > 0) continue
+    const amount = ownPortion(e)
+    if (amount === null) continue // shared with no own split → not ours
     aggRows.push({
       categoryId: e.subcategory_id ?? SUBCATEGORY_UNCATEGORIZED_ID,
       kind: 'expense',
       currency_code: e.currency_code,
-      amount: e.amount,
+      amount,
     })
   }
   for (const r of reimbRows) {
+    const amount = ownPortion(r)
+    if (amount === null) continue
     const linked = r.linked_transaction_id ? linkedSubcategoryById.get(r.linked_transaction_id) : null
     if (!linked || linked.categoryId !== categoryId) continue
     aggRows.push({
       categoryId: linked.subcategoryId ?? SUBCATEGORY_UNCATEGORIZED_ID,
       kind: 'reimbursement',
       currency_code: r.currency_code,
-      amount: r.amount,
+      amount,
       received_at: r.received_at,
       cancelled_at: r.cancelled_at,
     })

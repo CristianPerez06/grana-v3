@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { buildCategorySlices, type CategorySliceInput } from '@grana/money-logic'
@@ -53,11 +53,10 @@ export const SpendingSection = ({ initialData }: Props) => {
     staleTime: 60_000,
   })
 
-  // Relabel (uncategorized sentinel + system categories) before slicing, same
-  // as the Movimientos breakdown, so both screens speak identical labels.
-  const breakdown = useMemo(() => {
-    if (!data) return null
-    const relabel = (inputs: CategorySliceInput[]): CategorySliceInput[] =>
+  // Relabel (uncategorized sentinel + system categories) so both screens speak
+  // identical labels — shared by the spend slices and the credits rows.
+  const relabel = useCallback(
+    (inputs: CategorySliceInput[]): CategorySliceInput[] =>
       inputs.map((i) =>
         i.categoryId === UNCATEGORIZED_ID
           ? { ...i, label: tTx('spending.uncategorized') }
@@ -71,12 +70,24 @@ export const SpendingSection = ({ initialData }: Props) => {
                   tRoot,
                 ) ?? i.label,
             },
-      )
+      ),
+    [tTx, tRoot],
+  )
+
+  const breakdown = useMemo(() => {
+    if (!data) return null
     return buildCategorySlices(relabel(data[currency]), {
       topN: TOP_N,
       othersLabel: tTx('spending.others'),
     })
-  }, [data, currency, tTx, tRoot])
+  }, [data, currency, relabel, tTx])
+
+  // Categories whose net is a credit ("te devolvieron"): shown apart, outside
+  // the donut (a donut can't draw a negative slice).
+  const credits = useMemo(
+    () => (data ? relabel(data.credits[currency]) : []),
+    [data, currency, relabel],
+  )
 
   // Rows and "Ver desglose" land on /transactions, which opens with the full
   // month breakdown. No query params: the route's filters live in React state
@@ -125,47 +136,89 @@ export const SpendingSection = ({ initialData }: Props) => {
           <div aria-busy="true" aria-label={t('loading')}>
             <SpendingBodySkeleton />
           </div>
-        ) : breakdown.slices.length === 0 ? (
+        ) : breakdown.slices.length === 0 && credits.length === 0 ? (
           <div className="flex min-h-[12rem] flex-1 items-center justify-center text-center">
             <p className="text-sm text-text-muted">{t('empty')}</p>
           </div>
         ) : (
-          <div className="grid min-h-[12rem] grid-cols-1 items-center justify-items-center gap-6 sm:grid-cols-[150px_1fr] sm:gap-7 sm:justify-items-stretch">
-            <SpendingDonut
-              slices={breakdown.slices}
-              total={breakdown.total}
-              currency={currency}
-              centerLabel={t('center_label')}
-            />
-            <ul className="flex w-full flex-col gap-3">
-              {breakdown.slices.map((slice, index) => (
-                <li key={slice.categoryId ?? `otros-${index}`}>
-                  <Link
-                    href={breakdownHref}
-                    className="flex items-center gap-2.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <span
-                      aria-hidden
-                      className="size-2.5 shrink-0 rounded-[3px]"
-                      style={{ backgroundColor: sliceColor(slice, index) }}
-                    />
-                    <span className="min-w-0 flex-1 truncate text-sm font-bold text-text">
-                      {slice.label}
-                    </span>
-                    <span className="shrink-0 text-sm font-extrabold tracking-tight text-text">
-                      <MaskedAmount amount={slice.value} currency={currency} />
-                    </span>
-                    <span
-                      className={cn(
-                        'w-[34px] shrink-0 text-right text-xs font-bold text-text-soft',
-                      )}
+          <div className="flex min-h-[12rem] flex-1 flex-col gap-5">
+            {breakdown.slices.length > 0 && (
+              <div className="grid grid-cols-1 items-center justify-items-center gap-6 sm:grid-cols-[150px_1fr] sm:gap-7 sm:justify-items-stretch">
+                <SpendingDonut
+                  slices={breakdown.slices}
+                  total={breakdown.total}
+                  currency={currency}
+                  centerLabel={t('center_label')}
+                />
+                <ul className="flex w-full flex-col gap-3">
+                  {breakdown.slices.map((slice, index) => (
+                    <li key={slice.categoryId ?? `otros-${index}`}>
+                      <Link
+                        href={breakdownHref}
+                        className="flex items-center gap-2.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <span
+                          aria-hidden
+                          className="size-2.5 shrink-0 rounded-[3px]"
+                          style={{ backgroundColor: sliceColor(slice, index) }}
+                        />
+                        <span className="min-w-0 flex-1 truncate text-sm font-bold text-text">
+                          {slice.label}
+                        </span>
+                        <span className="shrink-0 text-sm font-extrabold tracking-tight text-text">
+                          <MaskedAmount amount={slice.value} currency={currency} />
+                        </span>
+                        <span
+                          className={cn(
+                            'w-[34px] shrink-0 text-right text-xs font-bold text-text-soft',
+                          )}
+                        >
+                          {Math.round(slice.percentage)}%
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Categorías en crédito — "te devolvieron", fuera de la dona. */}
+            {credits.length > 0 && (
+              <div
+                className={cn(
+                  breakdown.slices.length > 0 && 'border-t border-border-soft pt-4',
+                )}
+              >
+                <p className="mb-2.5 text-[11px] font-extrabold uppercase tracking-wide text-text-soft">
+                  {t('credits_label')}
+                </p>
+                <ul className="flex w-full flex-col gap-2.5">
+                  {credits.map((credit, index) => (
+                    <li
+                      key={credit.categoryId ?? `credit-${index}`}
+                      className="flex items-center gap-2.5"
                     >
-                      {Math.round(slice.percentage)}%
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+                      <span
+                        aria-hidden
+                        className="size-2.5 shrink-0 rounded-[3px]"
+                        style={{
+                          backgroundColor: sliceColor(
+                            credit as unknown as Parameters<typeof sliceColor>[0],
+                            index,
+                          ),
+                        }}
+                      />
+                      <span className="min-w-0 flex-1 truncate text-sm font-bold text-text">
+                        {credit.label}
+                      </span>
+                      <span className="shrink-0 text-sm font-extrabold tracking-tight text-income">
+                        +<MaskedAmount amount={credit.value} currency={currency} />
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </CardContent>

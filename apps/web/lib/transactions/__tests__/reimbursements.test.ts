@@ -102,6 +102,18 @@ describe('computeCategoryNet', () => {
     expect(net.esperado).toBe(10000)
     expect(net.neto).toBe(80000)
   })
+
+  it('neto goes NEGATIVE (a credit) when received reimbursements exceed the spend', () => {
+    // Backs "categorías en crédito": a reimbursement received this month whose
+    // origin expense is not in this month's set (or exceeds it) leaves a credit.
+    const rows: CategoryAggRow[] = [
+      { categoryId: 'comida', kind: 'reimbursement', currency_code: 'ARS', amount: '10000', received_at: RECEIVED },
+    ]
+    const net = computeCategoryNet(rows).get('comida')!.ARS
+    expect(net.bruto).toBe(0)
+    expect(net.recibido).toBe(10000)
+    expect(net.neto).toBe(-10000) // negative → shown as "te devolvieron", not capped to 0
+  })
 })
 
 describe('suggestReimbursementAmount', () => {

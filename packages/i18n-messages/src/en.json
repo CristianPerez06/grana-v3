@@ -147,7 +147,8 @@
       "loading": "Loading the breakdown…",
       "error": "We couldn't load this month's breakdown.",
       "center_label": "Spent",
-      "empty": "No spending this month in this currency."
+      "empty": "No spending this month in this currency.",
+      "credits_label": "Refunded to you"
     },
     "accounts": {
       "title": "Where it is",
@@ -914,7 +915,7 @@
       "income_subtitle": "This month's income · credited",
       "income_empty": "No income this month.",
       "categories_caption": "across {count} categories",
-      "off_ledger_note": "Credit card spending not yet paid is excluded",
+      "off_ledger_note": "Includes card spending and installments",
       "see_detail": "See the breakdown",
       "others": "Other",
       "others_label": "+ {count} more categories",
