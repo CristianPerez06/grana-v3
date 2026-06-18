@@ -57,6 +57,8 @@ export function MovementDrawerProvider({
     const params = new URLSearchParams(window.location.search)
     if (params.get('nuevo') !== '1') return
     bridgedRef.current = true
+    // Intentional: bridge the URL param to drawer state once on mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     openCreate()
     params.delete('nuevo')
     const qs = params.toString()

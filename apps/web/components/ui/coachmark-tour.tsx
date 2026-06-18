@@ -53,6 +53,8 @@ export function CoachmarkTour({ steps, containerRef, labels, onFinish, onSkip }:
   const step = steps[index]
   const numberedTotal = steps.filter((s) => !s.finale).length
 
+  // Intentional: defer the portal until after client mount to avoid SSR mismatch.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), [])
 
   const measure = useCallback(() => {

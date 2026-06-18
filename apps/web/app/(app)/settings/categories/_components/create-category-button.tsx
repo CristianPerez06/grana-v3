@@ -30,6 +30,8 @@ export function CreateCategoryButton() {
     const params = new URLSearchParams(window.location.search)
     if (params.get('nuevaCategoria') !== '1') return
     bridgedRef.current = true
+    // Intentional: bridge the URL param to drawer state once on mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFormInstance((n) => n + 1)
     setOpen(true)
     params.delete('nuevaCategoria')

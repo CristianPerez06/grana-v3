@@ -21,12 +21,11 @@ const eslintConfig = defineConfig([
   ...storybook.configs["flat/recommended"],
   {
     rules: {
-      // Mount-time setState is intentional in this codebase: query-param "open
-      // this drawer" bridges (read window.location once on mount, then open) and
-      // SSR "mounted" flags. This rule arrived via a react-hooks plugin bump and
-      // flags those idiomatic patterns, so keep it as a warning instead of
-      // failing CI.
-      "react-hooks/set-state-in-effect": "warn",
+      // Mount-time setState is intentional in a few spots: query-param "open this
+      // drawer" bridges (read window.location once on mount, then open) and SSR
+      // "mounted" flags. Those sites carry an inline eslint-disable with a
+      // justification, so the rule stays an error to catch accidental misuse.
+      "react-hooks/set-state-in-effect": "error",
     },
   },
 ]);
