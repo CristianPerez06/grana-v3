@@ -98,6 +98,10 @@ export function buildMonthBalanceSeries(
 
   const dailyIncome = Array.from({ length: lastDay + 1 }, () => Money.from(0))
   const dailyExpense = Array.from({ length: lastDay + 1 }, () => Money.from(0))
+  // Adjustments live in their own signed bucket: they are stock corrections,
+  // not flow, so they must not inflate Ingresos/Gastos — but they still move
+  // the accumulated balance (and finalBalance) because the money really moved.
+  const dailyAdjustment = Array.from({ length: lastDay + 1 }, () => Money.from(0))
   const accIdSet = new Set(ownedAccountIds)
 
   for (const tx of txs) {
@@ -112,11 +116,8 @@ export function buildMonthBalanceSeries(
     } else if (tx.type === 'expense') {
       dailyExpense[day] = Money.add(dailyExpense[day], amount)
     } else if (tx.type === 'adjustment') {
-      if (Money.compare(amount, Money.from(0)) >= 0) {
-        dailyIncome[day] = Money.add(dailyIncome[day], amount)
-      } else {
-        dailyExpense[day] = Money.subtract(dailyExpense[day], amount)
-      }
+      // Stored signed: positive raises the balance, negative lowers it.
+      dailyAdjustment[day] = Money.add(dailyAdjustment[day], amount)
     }
     // type='transfer' intentionally skipped (cash↔cash transfers don't change
     // the user's net worth).
@@ -126,16 +127,22 @@ export function buildMonthBalanceSeries(
   let acc = Money.from(0)
   let totalIncome = Money.from(0)
   let totalExpense = Money.from(0)
+  let totalAdjustment = Money.from(0)
 
   for (let d = 1; d <= lastDay; d++) {
-    acc = Money.add(acc, Money.subtract(dailyIncome[d], dailyExpense[d]))
+    acc = Money.add(
+      acc,
+      Money.add(Money.subtract(dailyIncome[d], dailyExpense[d]), dailyAdjustment[d]),
+    )
     totalIncome = Money.add(totalIncome, dailyIncome[d])
     totalExpense = Money.add(totalExpense, dailyExpense[d])
+    totalAdjustment = Money.add(totalAdjustment, dailyAdjustment[d])
     days.push({
       day: d,
       accumulatedBalance: Money.toNumber(acc),
       dailyIncome: Money.toNumber(dailyIncome[d]),
       dailyExpense: Money.toNumber(dailyExpense[d]),
+      dailyAdjustment: Money.toNumber(dailyAdjustment[d]),
     })
   }
 
@@ -145,6 +152,7 @@ export function buildMonthBalanceSeries(
     days,
     totalIncome: Money.toNumber(totalIncome),
     totalExpense: Money.toNumber(totalExpense),
+    totalAdjustment: Money.toNumber(totalAdjustment),
     finalBalance: Money.toNumber(acc),
   }
 }
@@ -162,9 +170,11 @@ function emptyMonthSeries(
       accumulatedBalance: 0,
       dailyIncome: 0,
       dailyExpense: 0,
+      dailyAdjustment: 0,
     })),
     totalIncome: 0,
     totalExpense: 0,
+    totalAdjustment: 0,
     finalBalance: 0,
   }
 }

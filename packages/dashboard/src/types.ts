@@ -23,6 +23,12 @@ export type MonthBalanceDay = {
   accumulatedBalance: number
   dailyIncome: number
   dailyExpense: number
+  /**
+   * Net balance adjustments of the day, signed (positive raises the balance,
+   * negative lowers it). Kept in its own bucket so it feeds the accumulated
+   * balance without contaminating dailyIncome/dailyExpense.
+   */
+  dailyAdjustment: number
 }
 
 export type MonthBalanceSeries = {
@@ -31,6 +37,14 @@ export type MonthBalanceSeries = {
   days: MonthBalanceDay[]
   totalIncome: number
   totalExpense: number
+  /**
+   * Net of `type='adjustment'` movements for the month, signed. Adjustments
+   * are stock corrections, not flow: they stay out of totalIncome/totalExpense
+   * (so those reflect real flow and "Gastos" reconciles with "En qué se fue")
+   * but still affect finalBalance. Invariant:
+   * finalBalance === totalIncome − totalExpense + totalAdjustment.
+   */
+  totalAdjustment: number
   finalBalance: number
 }
 

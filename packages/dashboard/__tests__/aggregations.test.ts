@@ -121,6 +121,7 @@ describe('buildMonthBalanceSeries', () => {
     expect(series.days).toHaveLength(31)
     expect(series.totalIncome).toBe(0)
     expect(series.totalExpense).toBe(0)
+    expect(series.totalAdjustment).toBe(0)
     expect(series.finalBalance).toBe(0)
     expect(series.days.every((d) => d.accumulatedBalance === 0)).toBe(true)
   })
@@ -180,16 +181,52 @@ describe('buildMonthBalanceSeries', () => {
     expect(series.finalBalance).toBe(0)
   })
 
-  it('splits signed adjustments into the right bucket', () => {
+  it('routes adjustments to their own signed bucket, out of income/expense', () => {
     const txs: MonthBalanceTxInput[] = [
       { date: '2026-05-15', type: 'adjustment', amount: 1000, account_id: 'cash-1' },
       { date: '2026-05-16', type: 'adjustment', amount: -500, account_id: 'cash-1' },
     ]
     const series = buildMonthBalanceSeries(2026, 5, txs, accIds)
 
-    expect(series.totalIncome).toBe(1000)
-    expect(series.totalExpense).toBe(500)
-    expect(series.finalBalance).toBe(500)
+    // Adjustments are stock corrections, not flow: they don't inflate the bars.
+    expect(series.totalIncome).toBe(0)
+    expect(series.totalExpense).toBe(0)
+    expect(series.totalAdjustment).toBe(500) // 1000 − 500, net signed
+    expect(series.finalBalance).toBe(500) // still moves the accumulated balance
+    expect(series.days[14].dailyAdjustment).toBe(1000)
+    expect(series.days[15].dailyAdjustment).toBe(-500)
+  })
+
+  it('keeps Gastos clean and reconciles the net (QA scenario)', () => {
+    // Real first-month data: real spend + real income + adjustments that mostly
+    // lower the balance. "Gastos" must reflect only the real expense, while the
+    // net still reconciles with the change in available balance.
+    const txs: MonthBalanceTxInput[] = [
+      { date: '2026-06-10', type: 'expense', amount: 254_461.25, account_id: 'cash-1' },
+      { date: '2026-06-05', type: 'income', amount: 7_349_361.79, account_id: 'bank-1' },
+      { date: '2026-06-12', type: 'adjustment', amount: -3_152_222.01, account_id: 'cash-1' },
+      { date: '2026-06-20', type: 'adjustment', amount: 615_610.22, account_id: 'bank-1' },
+    ]
+    const series = buildMonthBalanceSeries(2026, 6, txs, accIds)
+
+    expect(series.totalExpense).toBe(254_461.25) // only real spend, not the adjustments
+    expect(series.totalIncome).toBe(7_349_361.79) // only real income
+    expect(series.totalAdjustment).toBe(-2_536_611.79) // 615_610.22 − 3_152_222.01
+    expect(series.finalBalance).toBe(4_558_288.75)
+    // Invariant: finalBalance === income − expense + adjustment
+    expect(series.finalBalance).toBe(
+      series.totalIncome - series.totalExpense + series.totalAdjustment,
+    )
+  })
+
+  it('reports zero adjustment for a month without any', () => {
+    const txs: MonthBalanceTxInput[] = [
+      { date: '2026-05-05', type: 'expense', amount: 10_000, account_id: 'cash-1' },
+      { date: '2026-05-15', type: 'income', amount: 100_000, account_id: 'bank-1' },
+    ]
+    const series = buildMonthBalanceSeries(2026, 5, txs, accIds)
+
+    expect(series.totalAdjustment).toBe(0)
   })
 
   it('ignores transactions from accounts not owned by the user', () => {

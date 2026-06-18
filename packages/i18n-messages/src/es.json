@@ -130,6 +130,8 @@
       "title": "Balance del mes",
       "income": "Ingresos",
       "expense": "Gastos",
+      "adjustment": "Ajustes",
+      "adjustment_note": "🔍 ¿En qué se fue esta grana? Los ajustes son plata que se movió sin registrar — registrá esos movimientos y hacelos desaparecer.",
       "final_balance": "Balance",
       "legend_ars": "ARS (izq.)",
       "legend_usd": "USD (der.)",

@@ -130,6 +130,8 @@
       "title": "Month balance",
       "income": "Income",
       "expense": "Expenses",
+      "adjustment": "Adjustments",
+      "adjustment_note": "🔍 Where did this money go? Adjustments are money that moved without being recorded — log those transactions and make them disappear.",
       "final_balance": "Balance",
       "legend_ars": "ARS (left)",
       "legend_usd": "USD (right)",

@@ -17,6 +17,12 @@ const SWAP_MIN_HEIGHT = 240
 
 // One Ingresos/Gastos row: dot + label + amount, proportional bar below. The
 // widths are data-derived: the larger flow fills the track, the other scales.
+const FLOW_TONE: Record<'income' | 'expense' | 'adjustment', string> = {
+  income: 'bg-emerald',
+  expense: 'bg-terracotta',
+  adjustment: 'bg-warning',
+}
+
 const FlowRow = ({
   label,
   amount,
@@ -26,16 +32,12 @@ const FlowRow = ({
   label: string
   amount: number
   widthPct: number
-  tone: 'income' | 'expense'
+  tone: 'income' | 'expense' | 'adjustment'
 }) => (
   <View>
     <View className="flex-row items-center justify-between gap-3">
       <View className="flex-row items-center gap-2">
-        <View
-          className={`h-[9px] w-[9px] rounded-full ${
-            tone === 'income' ? 'bg-emerald' : 'bg-terracotta'
-          }`}
-        />
+        <View className={`h-[9px] w-[9px] rounded-full ${FLOW_TONE[tone]}`} />
         <Text className="text-[13px] font-semibold text-text-muted">{label}</Text>
       </View>
       <MaskedAmount
@@ -46,7 +48,7 @@ const FlowRow = ({
     </View>
     <View className="mt-1.5 h-[11px] overflow-hidden rounded-md bg-border-soft">
       <View
-        className={`h-full rounded-md ${tone === 'income' ? 'bg-emerald' : 'bg-terracotta'}`}
+        className={`h-full rounded-md ${FLOW_TONE[tone]}`}
         style={{ width: `${widthPct}%` }}
       />
     </View>
@@ -97,9 +99,16 @@ export const MonthBalanceSection = () => {
   const isPositive = ars ? ars.finalBalance >= 0 : true
   const usdIsPositive = usd ? usd.finalBalance >= 0 : true
 
-  const maxFlow = ars ? Math.max(ars.totalIncome, ars.totalExpense) : 0
+  // Adjustments are a stock correction, not flow: their own row, only when the
+  // month has any. The bar shares the scale with Ingresos/Gastos for a uniform
+  // look (width uses the absolute net, since the amount can be negative).
+  const hasAdjustment = ars ? ars.totalAdjustment !== 0 : false
+  const adjustmentAbs = ars ? Math.abs(ars.totalAdjustment) : 0
+
+  const maxFlow = ars ? Math.max(ars.totalIncome, ars.totalExpense, adjustmentAbs) : 0
   const incomeWidth = ars && maxFlow > 0 ? (ars.totalIncome / maxFlow) * 100 : 0
   const expenseWidth = ars && maxFlow > 0 ? (ars.totalExpense / maxFlow) * 100 : 0
+  const adjustmentWidth = maxFlow > 0 ? (adjustmentAbs / maxFlow) * 100 : 0
 
   return (
     <View className="rounded-2xl border border-border bg-card p-6">
@@ -152,7 +161,24 @@ export const MonthBalanceSection = () => {
                 widthPct={expenseWidth}
                 tone="expense"
               />
+              {/* Ajustes — stock correction, not flow. Same bar treatment as
+                  the flows for a uniform look, but only when the month has any. */}
+              {hasAdjustment && (
+                <FlowRow
+                  label={t('dashboard.month.adjustment')}
+                  amount={ars.totalAdjustment}
+                  widthPct={adjustmentWidth}
+                  tone="adjustment"
+                />
+              )}
             </View>
+
+            {/* Grana-voice note under the bar: adjustments are untracked money. */}
+            {hasAdjustment && (
+              <Text className="mt-2.5 text-[12px] leading-snug text-warning-deep">
+                {t('dashboard.month.adjustment_note')}
+              </Text>
+            )}
 
             {/* USD strip — always shown (bimoneda por defecto); zeros when idle */}
             <View className="mt-5 flex-row flex-wrap items-center gap-x-3 gap-y-1 border-t border-border-soft pt-3.5">

@@ -26,6 +26,12 @@ type Props = {
 
 // One Ingresos/Gastos row: dot + label + amount, proportional bar below. The
 // widths are data-derived: the larger flow fills the track, the other scales.
+const FLOW_TONE: Record<'income' | 'expense' | 'adjustment', string> = {
+  income: 'bg-emerald',
+  expense: 'bg-terracotta',
+  adjustment: 'bg-warning',
+}
+
 const FlowRow = ({
   label,
   amount,
@@ -35,18 +41,12 @@ const FlowRow = ({
   label: string
   amount: number
   widthPct: number
-  tone: 'income' | 'expense'
+  tone: 'income' | 'expense' | 'adjustment'
 }) => (
   <div>
     <div className="flex items-center justify-between gap-3">
       <span className="flex items-center gap-2 text-[13.5px] font-semibold text-text-muted">
-        <span
-          aria-hidden
-          className={cn(
-            'size-[9px] rounded-full',
-            tone === 'income' ? 'bg-emerald' : 'bg-terracotta',
-          )}
-        />
+        <span aria-hidden className={cn('size-[9px] rounded-full', FLOW_TONE[tone])} />
         {label}
       </span>
       <span className="text-[14.5px] font-extrabold tracking-tight text-text">
@@ -57,7 +57,7 @@ const FlowRow = ({
       <div
         className={cn(
           'h-full rounded-md transition-[width] duration-[var(--duration-slow)]',
-          tone === 'income' ? 'bg-emerald' : 'bg-terracotta',
+          FLOW_TONE[tone],
         )}
         style={{ width: `${widthPct}%` }}
       />
@@ -74,9 +74,17 @@ const MonthBalanceBody = ({ data }: { data: MonthBalanceByCurrency }) => {
   const isPositive = ars.finalBalance >= 0
   const usdIsPositive = usd.finalBalance >= 0
 
-  const maxFlow = Math.max(ars.totalIncome, ars.totalExpense)
+  // Adjustments are a stock correction, not flow: shown as their own row only
+  // when the month has any, so the card stays clean for users who never adjust.
+  // The bar shares the scale with Ingresos/Gastos for a uniform look (its width
+  // uses the absolute net, since the amount can be negative).
+  const hasAdjustment = ars.totalAdjustment !== 0
+  const adjustmentAbs = Math.abs(ars.totalAdjustment)
+
+  const maxFlow = Math.max(ars.totalIncome, ars.totalExpense, adjustmentAbs)
   const incomeWidth = maxFlow > 0 ? (ars.totalIncome / maxFlow) * 100 : 0
   const expenseWidth = maxFlow > 0 ? (ars.totalExpense / maxFlow) * 100 : 0
+  const adjustmentWidth = maxFlow > 0 ? (adjustmentAbs / maxFlow) * 100 : 0
 
   return (
     <div className="flex min-h-[15rem] flex-1 flex-col">
@@ -97,24 +105,45 @@ const MonthBalanceBody = ({ data }: { data: MonthBalanceByCurrency }) => {
         />
       </p>
 
-      {/* Ingresos / Gastos with proportional bars */}
-      <div className="mt-5 flex flex-col gap-3.5">
-        <FlowRow
-          label={t('income')}
-          amount={ars.totalIncome}
-          widthPct={incomeWidth}
-          tone="income"
-        />
-        <FlowRow
-          label={t('expense')}
-          amount={ars.totalExpense}
-          widthPct={expenseWidth}
-          tone="expense"
-        />
+      {/* Ingresos / Gastos / Ajustes with proportional bars. The block grows
+          (flex-1) so the USD strip stays anchored to the bottom without an
+          auto-margin that would collapse and glue its top border to the note. */}
+      <div className="mt-5 flex flex-1 flex-col">
+        <div className="flex flex-col gap-3.5">
+          <FlowRow
+            label={t('income')}
+            amount={ars.totalIncome}
+            widthPct={incomeWidth}
+            tone="income"
+          />
+          <FlowRow
+            label={t('expense')}
+            amount={ars.totalExpense}
+            widthPct={expenseWidth}
+            tone="expense"
+          />
+          {/* Ajustes — stock correction, not flow. Same bar treatment as the
+              flows for a uniform look, but only when the month has any. */}
+          {hasAdjustment && (
+            <FlowRow
+              label={t('adjustment')}
+              amount={ars.totalAdjustment}
+              widthPct={adjustmentWidth}
+              tone="adjustment"
+            />
+          )}
+        </div>
+
+        {/* Grana-voice note under the bar: adjustments are untracked money. */}
+        {hasAdjustment && (
+          <p className="mt-2.5 text-[12px] leading-snug text-warning-deep">
+            {t('adjustment_note')}
+          </p>
+        )}
       </div>
 
       {/* USD strip — always shown (bimoneda por defecto); zeros when idle */}
-      <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border-soft pt-3.5">
+      <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border-soft pt-3.5">
         <span className="rounded-full bg-emerald-soft px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-deep">
           USD
         </span>
