@@ -52,8 +52,8 @@ export const EnCursoCard = ({
       className="w-full p-7 text-left outline-none transition-shadow"
       style={selected || isHero ? { boxShadow: `inset 0 0 0 2px ${accent}` } : undefined}
     >
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-[1fr_290px] md:items-center">
-        <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_220px] md:items-center md:gap-8">
+        <div className="flex min-w-0 flex-col gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <span
               className="text-xs font-extrabold uppercase tracking-[0.12em]"
@@ -70,9 +70,9 @@ export const EnCursoCard = ({
             </span>
           </div>
 
-          <div className="flex items-baseline gap-2">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <span
-              className={`font-extrabold leading-none tracking-[-0.04em] tabular-nums ${isHero ? 'text-[52px]' : 'text-[40px]'}`}
+              className={`font-extrabold leading-none tracking-[-0.04em] tabular-nums ${isHero ? 'text-[44px] sm:text-[52px]' : 'text-[34px] sm:text-[40px]'}`}
             >
               {formatARS(period.pendingAmountARS, showCents)}
             </span>
@@ -103,32 +103,45 @@ export const EnCursoCard = ({
           </div>
         </div>
 
-        {/* Cycle panel */}
-        <div className="flex flex-col gap-2 rounded-2xl bg-border-soft/60 p-5">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
-            {t('detail.cycle_close')}
-            {period.is_estimated && (
-              <span className="ml-1.5 font-semibold normal-case italic tracking-normal">
-                ({t('detail.timeline_estimated_tag')})
-              </span>
-            )}
-          </p>
-          <p className="text-xl font-extrabold tabular-nums">
-            {period.is_estimated ? '~' : ''}
-            {formatDayMonth(period.end_date)}
-          </p>
-          <p className="text-[13px] font-semibold" style={{ color: accent }}>
-            {t('detail.cycle_in_days', { days: daysToClose })}
-          </p>
-          <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-border">
-            <div
-              className="h-full rounded-full"
-              style={{ width: `${cyclePct}%`, backgroundColor: accent }}
-            />
+        {/* Cycle panel — a thin progress ring keeps it compact so it never
+            crowds the amount (which can carry cents and a USD line). */}
+        <div className="flex items-center gap-4 rounded-2xl bg-border-soft/60 p-4">
+          <div className="relative shrink-0">
+            <svg viewBox="0 0 36 36" className="h-16 w-16 -rotate-90" aria-hidden>
+              <circle cx="18" cy="18" r="16" fill="none" className="stroke-border" strokeWidth="2.5" />
+              <circle
+                cx="18"
+                cy="18"
+                r="16"
+                fill="none"
+                stroke={accent}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                pathLength={100}
+                strokeDasharray={`${cyclePct} 100`}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
+              <span className="text-sm font-extrabold tabular-nums">{cycleDay}</span>
+              <span className="text-[9px] font-semibold text-text-muted">/ {cycleTotal}</span>
+            </div>
           </div>
-          <div className="flex items-center justify-between text-[11px] text-text-muted">
-            <span>{t('detail.cycle_day', { day: cycleDay })}</span>
-            <span>{t('detail.cycle_total', { total: cycleTotal })}</span>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
+              {t('detail.cycle_close')}
+              {period.is_estimated && (
+                <span className="ml-1 font-semibold normal-case italic tracking-normal">
+                  ({t('detail.timeline_estimated_tag')})
+                </span>
+              )}
+            </p>
+            <p className="text-lg font-extrabold tabular-nums">
+              {period.is_estimated ? '~' : ''}
+              {formatDayMonth(period.end_date)}
+            </p>
+            <p className="text-[13px] font-semibold" style={{ color: accent }}>
+              {t('detail.cycle_in_days', { days: daysToClose })}
+            </p>
           </div>
         </div>
       </div>
