@@ -59,9 +59,13 @@ const findActiveHref = (pathname: string) => {
 export const AppShell = ({
   children,
   initialCollapsed,
+  userName,
+  userEmail,
 }: {
   children: React.ReactNode;
   initialCollapsed: boolean;
+  userName: string | null;
+  userEmail: string | null;
 }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(initialCollapsed);
@@ -77,9 +81,9 @@ export const AppShell = ({
 
   return (
     <div className="flex h-full flex-1 flex-col md:flex-row md:overflow-hidden">
-      <Sidebar collapsed={collapsed} onToggle={toggleCollapsed} />
+      <Sidebar collapsed={collapsed} onToggle={toggleCollapsed} userName={userName} userEmail={userEmail} />
       <TopBarMobile onOpenDrawer={() => setDrawerOpen(true)} />
-      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} userName={userName} userEmail={userEmail} />
       <main className="flex-1 md:overflow-y-auto">
         <MovementDrawerLoader>
           <div className="mx-auto w-full max-w-5xl px-8 py-8">{children}</div>
@@ -92,9 +96,13 @@ export const AppShell = ({
 const Sidebar = ({
   collapsed,
   onToggle,
+  userName,
+  userEmail,
 }: {
   collapsed: boolean;
   onToggle: () => void;
+  userName: string | null;
+  userEmail: string | null;
 }) => {
   const pathname = usePathname();
   const activeHref = findActiveHref(pathname);
@@ -106,7 +114,7 @@ const Sidebar = ({
         collapsed ? "md:w-16" : "md:w-64"
       }`}
     >
-      <SidebarContent activeHref={activeHref} collapsed={collapsed} />
+      <SidebarContent activeHref={activeHref} collapsed={collapsed} userName={userName} userEmail={userEmail} />
       <SidebarEdgeToggle collapsed={collapsed} onToggle={onToggle} />
     </aside>
   );
@@ -142,10 +150,14 @@ const SidebarContent = ({
   activeHref,
   collapsed,
   onNavigate,
+  userName,
+  userEmail,
 }: {
   activeHref: string | null;
   collapsed: boolean;
   onNavigate?: () => void;
+  userName: string | null;
+  userEmail: string | null;
 }) => {
   const tNav = useTranslations("nav");
 
@@ -182,6 +194,8 @@ const SidebarContent = ({
 
       <div className="mx-3 my-3 shrink-0 border-t border-border-soft" />
 
+      <ProfileBlock name={userName} email={userEmail} collapsed={collapsed} />
+
       <nav className="flex shrink-0 flex-col gap-[2px] px-2 pb-1">
         <SidebarLink
           href="/settings"
@@ -194,6 +208,45 @@ const SidebarContent = ({
         <LogoutButton label={tNav("logout")} collapsed={collapsed} />
       </nav>
     </>
+  );
+};
+
+/** "Logged in as" identity above the settings/logout block. */
+const ProfileBlock = ({
+  name,
+  email,
+  collapsed,
+}: {
+  name: string | null;
+  email: string | null;
+  collapsed: boolean;
+}) => {
+  const primary = name || email;
+  if (!primary) return null;
+  const initial = primary.charAt(0).toUpperCase();
+  const secondary = name ? email : null;
+  const tooltip = secondary ? `${primary} · ${secondary}` : primary;
+
+  return (
+    <div
+      className={`flex shrink-0 items-center gap-3 pb-1 ${collapsed ? "justify-center px-0" : "px-4"}`}
+    >
+      <span
+        aria-hidden
+        title={collapsed ? tooltip : undefined}
+        className="flex size-8 shrink-0 items-center justify-center rounded-full bg-positive/10 text-[13px] font-bold text-positive"
+      >
+        {initial}
+      </span>
+      {!collapsed && (
+        <div className="min-w-0">
+          <p className="truncate text-[13px] font-bold leading-tight text-text">{primary}</p>
+          {secondary && (
+            <p className="truncate text-[11px] leading-tight text-text-soft">{secondary}</p>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -273,7 +326,17 @@ const TopBarMobile = ({ onOpenDrawer }: { onOpenDrawer: () => void }) => {
   );
 };
 
-const Drawer = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
+const Drawer = ({
+  open,
+  onClose,
+  userName,
+  userEmail,
+}: {
+  open: boolean;
+  onClose: () => void;
+  userName: string | null;
+  userEmail: string | null;
+}) => {
   const pathname = usePathname();
   const activeHref = findActiveHref(pathname);
   const tNav = useTranslations("nav");
@@ -331,6 +394,8 @@ const Drawer = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
           activeHref={activeHref}
           collapsed={false}
           onNavigate={onClose}
+          userName={userName}
+          userEmail={userEmail}
         />
       </div>
     </dialog>
