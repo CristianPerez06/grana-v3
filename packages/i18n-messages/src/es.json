@@ -1044,7 +1044,12 @@
       "count": "{n}x",
       "ars_only": "Solo disponible en pesos",
       "ars_only_hint": "Las cuotas solo están disponibles en pesos.",
-      "usd_rate_warning": "Vas a tener que cargar la cotización del día al confirmar cada mes."
+      "usd_rate_warning": "Vas a tener que cargar la cotización del día al confirmar cada mes.",
+      "custom": "Otras",
+      "custom_label": "Cantidad de cuotas",
+      "custom_range": "Mínimo 1 · máximo {max}",
+      "custom_decrease": "Una cuota menos",
+      "custom_increase": "Una cuota más"
     },
     "frequencies": {
       "weekly": "Semanal",

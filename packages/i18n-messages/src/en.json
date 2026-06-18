@@ -1044,7 +1044,12 @@
       "count": "{n}x",
       "ars_only": "Only available in pesos",
       "ars_only_hint": "Installments are only available in pesos.",
-      "usd_rate_warning": "You'll need to enter the day's FX rate when confirming each month."
+      "usd_rate_warning": "You'll need to enter the day's FX rate when confirming each month.",
+      "custom": "Other",
+      "custom_label": "Number of installments",
+      "custom_range": "Minimum 1 · maximum {max}",
+      "custom_decrease": "One fewer installment",
+      "custom_increase": "One more installment"
     },
     "frequencies": {
       "weekly": "Weekly",

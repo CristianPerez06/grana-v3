@@ -119,7 +119,9 @@ type Props = {
 
 const CURRENCY_SYMBOL: Record<'ARS' | 'USD', string> = { ARS: '$', USD: 'U$D' }
 
-const INSTALLMENT_OPTIONS = [1, 2, 3, 6, 9, 12, 18, 24]
+// The common counts as one-tap chips; anything else (incl. 5) via the stepper.
+const INSTALLMENT_OPTIONS = [1, 3, 6, 12]
+const MAX_INSTALLMENTS = 60
 
 // Field-bg literal: the canonical drawer field surface (#FAFBFC sits between
 // white card and the page bg; no token maps to it exactly — see HANDOFF tokens).
@@ -247,6 +249,9 @@ export const MovementForm = ({
   const isDrawer = variant === 'drawer'
   const [activePopover, setActivePopover] = useState<string | null>(null)
   const [catDrill, setCatDrill] = useState<string | null>(null)
+  // Reveals the free-form installments input. Also implicitly active when the
+  // current value isn't one of the presets (e.g. coming back to a 4× purchase).
+  const [customInstallments, setCustomInstallments] = useState(false)
   const amountRef = useRef<HTMLInputElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
@@ -1008,6 +1013,14 @@ export const MovementForm = ({
     ) : null
 
   // ── Cuotas card (create + Gasto + credit + ARS) ─────────────────────────────
+  // Four common counts as one-tap chips; "Otras" opens a stepper for anything
+  // else (incl. 5), 1–MAX. The stepper is also shown when the current value
+  // isn't a preset. Any integer ≥ 2 is valid per `registerInstallmentsSchema`.
+  const installmentsNum = parseInt(installments) || 1
+  const showInstallmentStepper =
+    customInstallments || !INSTALLMENT_OPTIONS.includes(installmentsNum)
+  const stepInstallments = (delta: number) =>
+    setInstallments(String(Math.max(1, Math.min(MAX_INSTALLMENTS, installmentsNum + delta))))
   const cuotasCard =
     !isEdit && tab === 'expense' && isCredit && currencyCode === 'ARS' ? (
       <div className="rounded-[15px] border border-border bg-card p-4">
@@ -1020,15 +1033,18 @@ export const MovementForm = ({
           </span>
           <span className="text-[15px] font-semibold text-text">{t('labels.installments')}</span>
         </div>
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+        <div className="mt-3 flex flex-wrap gap-2">
           {INSTALLMENT_OPTIONS.map((n) => {
-            const active = installments === String(n)
+            const active = !showInstallmentStepper && installments === String(n)
             return (
               <button
                 key={n}
                 type="button"
-                onClick={() => setInstallments(String(n))}
-                className={`shrink-0 rounded-[10px] px-3.5 py-1.5 text-sm font-bold transition-colors ${
+                onClick={() => {
+                  setCustomInstallments(false)
+                  setInstallments(String(n))
+                }}
+                className={`rounded-[10px] px-3.5 py-1.5 text-sm font-bold transition-colors ${
                   active ? 'bg-navy text-white' : 'text-text-muted'
                 }`}
                 style={active ? undefined : { backgroundColor: FIELD_BG }}
@@ -1037,16 +1053,81 @@ export const MovementForm = ({
               </button>
             )
           })}
+          <button
+            key="custom"
+            type="button"
+            onClick={() => {
+              setCustomInstallments(true)
+              // Open the stepper at a real installment count, never "1 cuota".
+              if (installmentsNum < 2) setInstallments('2')
+            }}
+            className={`inline-flex items-center gap-1 rounded-[10px] px-3.5 py-1.5 text-sm font-bold transition-colors ${
+              showInstallmentStepper ? 'bg-navy text-white' : 'text-text-muted'
+            }`}
+            style={showInstallmentStepper ? undefined : { backgroundColor: FIELD_BG }}
+          >
+            {t('installments_options.custom')}
+            <ChevronDown
+              className={`size-3.5 transition-transform ${showInstallmentStepper ? 'rotate-180' : ''}`}
+              aria-hidden
+            />
+          </button>
         </div>
+        {showInstallmentStepper && (
+          <div className="mt-3.5 flex flex-col items-center gap-1.5">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => stepInstallments(-1)}
+                disabled={installmentsNum <= 1}
+                aria-label={t('installments_options.custom_decrease')}
+                className="flex size-9 items-center justify-center rounded-[10px] border border-border text-xl font-bold leading-none text-navy transition-colors enabled:hover:bg-page disabled:opacity-40"
+                style={{ backgroundColor: FIELD_BG }}
+              >
+                −
+              </button>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={installments}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '')
+                  if (digits === '') return setInstallments('')
+                  setInstallments(String(Math.min(MAX_INSTALLMENTS, parseInt(digits))))
+                }}
+                onBlur={() => {
+                  if (installmentsNum < 1) setInstallments('1')
+                }}
+                aria-label={t('installments_options.custom_label')}
+                className="w-16 bg-transparent text-center text-2xl font-bold tabular-nums text-navy outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => stepInstallments(1)}
+                disabled={installmentsNum >= MAX_INSTALLMENTS}
+                aria-label={t('installments_options.custom_increase')}
+                className="flex size-9 items-center justify-center rounded-[10px] border border-border text-xl font-bold leading-none text-navy transition-colors enabled:hover:bg-page disabled:opacity-40"
+                style={{ backgroundColor: FIELD_BG }}
+              >
+                +
+              </button>
+            </div>
+            <p className="text-[11px] text-text-soft">
+              {t('installments_options.custom_range', { max: MAX_INSTALLMENTS })}
+            </p>
+          </div>
+        )}
         {isInstallments && perInstallment !== null && (
-          <div className="mt-3 rounded-[11px] px-3 py-2 text-[13px] text-text-muted" style={{ backgroundColor: FIELD_BG }}>
+          <div
+            className="mt-3 rounded-[11px] px-3 py-2 text-center text-[13px] text-text-muted"
+            style={{ backgroundColor: FIELD_BG }}
+          >
             {t('drawer.installments_breakdown', {
-              count: parseInt(installments),
+              count: installmentsNum,
               amount: fmtBalance(perInstallment),
             })}
           </div>
         )}
-        <p className="mt-2 text-xs text-text-soft">{t('installments_options.ars_only_hint')}</p>
       </div>
     ) : null
 
