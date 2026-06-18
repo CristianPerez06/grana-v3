@@ -28,7 +28,11 @@ export default async function SharedSettlePage() {
   }
   if (Object.keys(owed).length === 0) redirect('/shared')
 
-  const myAccounts = [...accounts.cash, ...accounts.bank].map((a) => ({ id: a.id, name: a.name }))
+  const myAccounts = [...accounts.cash, ...accounts.bank].map((a) => ({
+    id: a.id,
+    name: a.name,
+    institutionName: a.institution?.name ?? null,
+  }))
   const partnerName = household.members.find((m) => m.userId !== user.id)?.fullName ?? ''
 
   return <SettleForm owed={owed} accounts={myAccounts} partnerName={partnerName} />

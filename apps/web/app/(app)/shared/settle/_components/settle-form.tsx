@@ -16,10 +16,22 @@ import { registerSettlement } from '@/app/_actions/shared'
 const SELECT_CLASS =
   'flex h-11 w-full rounded-[var(--radius-md)] border border-border bg-card px-3 py-2 text-sm text-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
 
+type SettleAccount = { id: string; name: string; institutionName?: string | null }
+
 type Props = {
   owed: Partial<Record<BalanceCurrency, number>>
-  accounts: { id: string; name: string }[]
+  accounts: SettleAccount[]
   partnerName: string
+}
+
+// Account identity: institution is the headline, the account's own name the
+// secondary detail (omitted when it would just repeat the institution). Mirrors
+// the movement form / accounts list treatment. Cash accounts have no
+// institution → the name leads.
+const accountPrimaryName = (a: SettleAccount): string => a.institutionName?.trim() || a.name
+const accountSecondaryName = (a: SettleAccount): string | null => {
+  const inst = a.institutionName?.trim()
+  return inst && inst !== a.name ? a.name : null
 }
 
 export function SettleForm({ owed, accounts, partnerName }: Props) {
@@ -94,11 +106,15 @@ export function SettleForm({ owed, accounts, partnerName }: Props) {
           onChange={(e) => setAccountId(e.target.value)}
           className={SELECT_CLASS}
         >
-          {accounts.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
+          {accounts.map((a) => {
+            const secondary = accountSecondaryName(a)
+            return (
+              <option key={a.id} value={a.id}>
+                {accountPrimaryName(a)}
+                {secondary ? ` · ${secondary}` : ''}
+              </option>
+            )
+          })}
         </select>
       </div>
 
