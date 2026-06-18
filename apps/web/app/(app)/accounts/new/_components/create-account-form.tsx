@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { Landmark, X } from 'lucide-react'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -10,6 +11,7 @@ import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { SectionLabel, Hint } from '@/components/ui/form-primitives'
 import { useShowCents } from '@/lib/preferences-context'
+import { invalidateAfterAccountMutation } from '@/lib/transactions/invalidation'
 import { createAccount } from '@/app/_actions/accounts'
 import {
   AccountPreview,
@@ -36,6 +38,7 @@ export const CreateAccountForm = ({ institutions, variant = 'page', onClose, onS
   const t = useTranslations('accounts')
   const tCommon = useTranslations('common')
   const router = useRouter()
+  const queryClient = useQueryClient()
   const showCents = useShowCents()
   const isDrawer = variant === 'drawer'
 
@@ -128,6 +131,11 @@ export const CreateAccountForm = ({ institutions, variant = 'page', onClose, onS
         setFormError(result.formError ?? t('errors.create_failed'))
         return
       }
+
+      // Refresh the react-query caches (accounts list, institutions) so the new
+      // account shows up immediately in the movement form's account picker and
+      // elsewhere, without a manual page refresh.
+      invalidateAfterAccountMutation(queryClient)
 
       if (onSuccess) {
         router.refresh()
