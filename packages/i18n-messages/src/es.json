@@ -138,6 +138,7 @@
       "settlement": "Liquidaciones",
       "exchange": "Cambio de moneda",
       "adjustment_note": "🔍 ¿En qué se fue esta grana? Los ajustes son plata que se movió sin registrar — registrá esos movimientos y hacelos desaparecer.",
+      "financed_on_card": "💳 Gastaste {total} este mes: {cash} de tu caja + {financed} financiado en tarjeta → se paga en los próximos resúmenes.",
       "final_balance": "Balance",
       "legend_ars": "ARS (izq.)",
       "legend_usd": "USD (der.)",
@@ -148,8 +149,7 @@
     "hero_loading": "Cargando tu disponible…",
     "hero_error": "No pudimos cargar tu disponible.",
     "spending": {
-      "title": "En qué se fue",
-      "question": "¿En qué se me fue?",
+      "title": "¿En qué gasté este mes?",
       "view_all": "Ver desglose",
       "loading": "Cargando el desglose…",
       "error": "No pudimos cargar el desglose del mes.",
@@ -161,6 +161,19 @@
       "title": "Dónde está",
       "view_all": "Ver todas",
       "usd_row": "En dólares"
+    },
+    "committed": {
+      "title": "Comprometido",
+      "question": "Lo que ya sabemos del próximo mes",
+      "total_label": "Total",
+      "debt": "Resúmenes tarjeta",
+      "recurring_expense": "Gastos recurrentes",
+      "recurring_income": "Ingresos recurrentes",
+      "income_context": "Lo que entra",
+      "next_month": "(próx. mes)",
+      "empty": "No tenés deuda de tarjeta ni gastos fijos próximos.",
+      "loading": "Cargando lo que se viene…",
+      "error": "No pudimos cargar lo que se viene."
     },
     "net_this_month": "vas <amount>{net}</amount> este mes"
   },

@@ -1,4 +1,5 @@
 export {
+  getCommittedOutlook,
   getDashboardHero,
   getMonthBalanceSeries,
   getMonthCategoryBreakdown,
@@ -17,6 +18,8 @@ export {
 } from './aggregations'
 
 export type {
+  CommittedCurrency,
+  CommittedOutlook,
   DashboardHero,
   HeroAccountBalance,
   MonthBalanceByCurrency,

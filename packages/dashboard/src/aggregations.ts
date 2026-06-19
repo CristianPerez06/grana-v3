@@ -1,4 +1,5 @@
 import { Money, type MoneyType } from '@grana/validation'
+import { projectUpcomingOccurrences, type RuleForProjection } from '@grana/money-logic'
 import { resolveAccountAvatar } from '@grana/ui-contracts'
 import type {
   DashboardHero,
@@ -315,6 +316,100 @@ function emptyMonthSeries(
 
 function parseISODay(iso: string): number {
   return Number(iso.split('-')[2])
+}
+
+// ── Committed outlook (COMPROMISO lens) — pure aggregations ───────────────────
+
+type OutlookCurrency = 'ARS' | 'USD'
+
+function isOutlookCurrency(c: string): c is OutlookCurrency {
+  return c === 'ARS' || c === 'USD'
+}
+
+/** A non-parent child charge on an unpaid card statement. */
+export type CardDebtRow = {
+  type: string
+  amount: number | string
+  currency_code: string
+  status: string | null
+  received_at: string | null
+  cancelled_at: string | null
+}
+
+/**
+ * Card debt per currency = pending consumos − received statement reimbursements,
+ * across the rows of ALL unpaid statements. Mirrors the per-period pending math
+ * in `apps/web/lib/cards/queries.ts`: a received (and not cancelled) statement
+ * reimbursement reduces the debt; pending/cancelled ones do not count.
+ */
+export function aggregateCardDebt(rows: CardDebtRow[]): Record<OutlookCurrency, number> {
+  const debt: Record<OutlookCurrency, MoneyType> = { ARS: Money.from(0), USD: Money.from(0) }
+  for (const row of rows) {
+    if (!isOutlookCurrency(row.currency_code)) continue
+    const cur = row.currency_code
+    if (row.type === 'reimbursement') {
+      if (row.received_at != null && row.cancelled_at == null) {
+        debt[cur] = Money.subtract(debt[cur], Money.from(row.amount))
+      }
+    } else if (row.status === 'pending') {
+      debt[cur] = Money.add(debt[cur], Money.from(row.amount))
+    }
+  }
+  return { ARS: Money.toNumber(debt.ARS), USD: Money.toNumber(debt.USD) }
+}
+
+/** An active recurrence rule carrying its projection inputs plus amount/type. */
+export type CommittedRecurrenceRule = RuleForProjection & {
+  amount: number | string
+  currency_code: string
+  movement_type: 'income' | 'expense' | 'transfer'
+}
+
+export type RecurrenceProjectionTotals = {
+  expense: Record<OutlookCurrency, number>
+  income: Record<OutlookCurrency, number>
+}
+
+/**
+ * Project active recurrence rules into [windowStart, windowEnd] and sum each
+ * occurrence's amount by currency and movement_type. `transfer` rules are
+ * ignored (neither a commitment nor incoming context). ARS/USD never combined.
+ */
+export function aggregateRecurrenceProjection(
+  rules: CommittedRecurrenceRule[],
+  windowStart: string,
+  windowEnd: string,
+): RecurrenceProjectionTotals {
+  const ruleById = new Map(rules.map((r) => [r.id, r]))
+  const occurrences = projectUpcomingOccurrences(
+    rules.map((r) => ({
+      id: r.id,
+      start_date: r.start_date,
+      end_date: r.end_date,
+      interval_count: r.interval_count,
+      interval_unit: r.interval_unit,
+      max_occurrences: r.max_occurrences,
+    })),
+    windowStart,
+    windowEnd,
+  )
+
+  const expense: Record<OutlookCurrency, MoneyType> = { ARS: Money.from(0), USD: Money.from(0) }
+  const income: Record<OutlookCurrency, MoneyType> = { ARS: Money.from(0), USD: Money.from(0) }
+  for (const occ of occurrences) {
+    const rule = ruleById.get(occ.rule_id)
+    if (!rule || !isOutlookCurrency(rule.currency_code)) continue
+    const cur = rule.currency_code
+    if (rule.movement_type === 'expense') {
+      expense[cur] = Money.add(expense[cur], Money.from(rule.amount))
+    } else if (rule.movement_type === 'income') {
+      income[cur] = Money.add(income[cur], Money.from(rule.amount))
+    }
+  }
+  return {
+    expense: { ARS: Money.toNumber(expense.ARS), USD: Money.toNumber(expense.USD) },
+    income: { ARS: Money.toNumber(income.ARS), USD: Money.toNumber(income.USD) },
+  }
 }
 
 // `calculateTransactionSums` y su tipo viven en @grana/money-logic (fuente

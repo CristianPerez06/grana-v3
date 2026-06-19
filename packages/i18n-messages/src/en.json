@@ -138,6 +138,7 @@
       "settlement": "Settlements",
       "exchange": "Currency exchange",
       "adjustment_note": "🔍 Where did this money go? Adjustments are money that moved without being recorded — log those transactions and make them disappear.",
+      "financed_on_card": "💳 You spent {total} this month: {cash} from your cash + {financed} financed on your card → paid in upcoming statements.",
       "final_balance": "Balance",
       "legend_ars": "ARS (left)",
       "legend_usd": "USD (right)",
@@ -148,8 +149,7 @@
     "hero_loading": "Loading your available balance…",
     "hero_error": "We couldn't load your available balance.",
     "spending": {
-      "title": "Where it went",
-      "question": "Where did it go?",
+      "title": "What did I spend this month?",
       "view_all": "View breakdown",
       "loading": "Loading the breakdown…",
       "error": "We couldn't load this month's breakdown.",
@@ -161,6 +161,19 @@
       "title": "Where it is",
       "view_all": "View all",
       "usd_row": "In dollars"
+    },
+    "committed": {
+      "title": "Committed",
+      "question": "What we already know about next month",
+      "total_label": "Total",
+      "debt": "Card statements",
+      "recurring_expense": "Recurring expenses",
+      "recurring_income": "Recurring income",
+      "income_context": "What comes in",
+      "next_month": "(next month)",
+      "empty": "No card debt or upcoming fixed expenses.",
+      "loading": "Loading what's coming…",
+      "error": "We couldn't load what's coming."
     },
     "net_this_month": "you're at <amount>{net}</amount> this month"
   },

@@ -72,6 +72,26 @@ export type MonthBalanceSeries = {
 }
 
 /**
+ * COMPROMISO lens ("¿qué debo / qué se viene?"), per currency. Static "from
+ * today": `debt` is a present stock, the recurring projections are next month.
+ * The committed total = debt + recurringExpense (outflows); recurringIncome is
+ * context, never summed into the total. ARS and USD are never combined.
+ */
+export type CommittedCurrency = {
+  /** Sum of pending charges (consumos − received reimbursements) across ALL unpaid statements. */
+  debt: number
+  /** Active `expense` recurrences projected into the next calendar month. */
+  recurringExpense: number
+  /** Active `income` recurrences projected into the next calendar month (context only). */
+  recurringIncome: number
+}
+
+export type CommittedOutlook = {
+  ARS: CommittedCurrency
+  USD: CommittedCurrency
+}
+
+/**
  * Per-currency month balance. ARS and USD are never summed (bimoneda): the
  * dashboard shows the ARS totals as the headline and the USD totals in a
  * subordinate strip. The daily series stays available for future temporal

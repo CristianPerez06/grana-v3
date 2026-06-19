@@ -1,18 +1,28 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   computeCategoryNet,
+  getTodayAR,
   type CategoryAggRow,
   type CategorySliceInput,
 } from '@grana/money-logic'
 import {
+  aggregateCardDebt,
   aggregateHero,
+  aggregateRecurrenceProjection,
   buildMonthBalanceSeries,
   calculateTransactionSums,
   type BalanceTransactionRow,
+  type CardDebtRow,
+  type CommittedRecurrenceRule,
   type HeroAccountRow,
   type MonthBalanceTxInput,
 } from './aggregations'
-import type { DashboardHero, MonthBalanceByCurrency } from './types'
+import type {
+  CommittedCurrency,
+  CommittedOutlook,
+  DashboardHero,
+  MonthBalanceByCurrency,
+} from './types'
 
 function formatDateISO(date: Date): string {
   const year = date.getFullYear()
@@ -356,4 +366,91 @@ export async function getMonthCategoryBreakdown(
     USD: usd.spend,
     credits: { ARS: ars.credits, USD: usd.credits },
   }
+}
+
+// ── getCommittedOutlook (COMPROMISO lens) ──────────────────────────────────────
+// Static "from today": card debt (a present stock) + next-calendar-month
+// recurrence projection. ARS and USD are never combined. The committed total
+// (computed by the UI) is debt + recurringExpense; recurringIncome is context.
+
+function emptyCommittedCurrency(): CommittedCurrency {
+  return { debt: 0, recurringExpense: 0, recurringIncome: 0 }
+}
+
+export async function getCommittedOutlook(
+  supabase: SupabaseClient,
+): Promise<CommittedOutlook> {
+  const result: CommittedOutlook = {
+    ARS: emptyCommittedCurrency(),
+    USD: emptyCommittedCurrency(),
+  }
+
+  // ── Card debt: pending charges (consumos − received reimbursements) across
+  //    ALL unpaid statements (open + closed + overdue) of active credit cards.
+  const { data: cards, error: cardsErr } = await supabase
+    .from('accounts')
+    .select('id')
+    .eq('type', 'credit')
+    .eq('is_active', true)
+  if (cardsErr) throw cardsErr
+  const cardIds = (cards ?? []).map((c) => c.id)
+
+  if (cardIds.length > 0) {
+    const { data: periods, error: periodsErr } = await supabase
+      .from('card_periods')
+      .select('id')
+      .in('account_id', cardIds)
+    if (periodsErr) throw periodsErr
+    const periodIds = (periods ?? []).map((p) => p.id)
+
+    if (periodIds.length > 0) {
+      const { data: payments, error: payErr } = await supabase
+        .from('period_payments')
+        .select('period_id')
+        .in('period_id', periodIds)
+      if (payErr) throw payErr
+      const paidPeriodIds = new Set((payments ?? []).map((p) => p.period_id))
+      const unpaidIds = periodIds.filter((id) => !paidPeriodIds.has(id))
+
+      if (unpaidIds.length > 0) {
+        const { data: txs, error: txErr } = await supabase
+          .from('transactions')
+          .select('type, amount, currency_code, status, received_at, cancelled_at')
+          .in('card_period_id', unpaidIds)
+          .eq('is_parent', false)
+        if (txErr) throw txErr
+
+        const debt = aggregateCardDebt((txs ?? []) as CardDebtRow[])
+        result.ARS.debt = debt.ARS
+        result.USD.debt = debt.USD
+      }
+    }
+  }
+
+  // ── Recurrence projection: active rules → next calendar month window.
+  const today = getTodayAR()
+  const y = today.getFullYear()
+  const m = today.getMonth() // 0-indexed
+  const windowStart = formatDateISO(new Date(y, m + 1, 1))
+  const windowEnd = formatDateISO(new Date(y, m + 2, 0))
+
+  const { data: rules, error: rulesErr } = await supabase
+    .from('recurrences')
+    .select(
+      'id, start_date, end_date, interval_count, interval_unit, max_occurrences, amount, currency_code, movement_type',
+    )
+    .eq('status', 'active')
+  if (rulesErr) throw rulesErr
+
+  const projection = aggregateRecurrenceProjection(
+    (rules ?? []) as CommittedRecurrenceRule[],
+    windowStart,
+    windowEnd,
+  )
+  result.ARS.recurringExpense = projection.expense.ARS
+  result.USD.recurringExpense = projection.expense.USD
+  result.ARS.recurringIncome = projection.income.ARS
+  result.USD.recurringIncome = projection.income.USD
+
+  return result
 }

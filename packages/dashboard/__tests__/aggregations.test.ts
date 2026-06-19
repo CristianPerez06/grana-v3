@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  aggregateCardDebt,
   aggregateHero,
+  aggregateRecurrenceProjection,
   buildMonthBalanceSeries,
   calculateTransactionSums,
   type BalanceTransactionRow,
+  type CardDebtRow,
+  type CommittedRecurrenceRule,
   type HeroAccountRow,
   type MonthBalanceTxInput,
 } from '../src/aggregations'
@@ -382,5 +386,64 @@ describe('buildMonthBalanceSeries', () => {
       const s = buildMonthBalanceSeries(2026, 5, legacyRows, accIds, 'ARS')
       expect(s.finalBalance).toBe(s.totalIncome - s.totalExpense + s.totalAdjustment)
     })
+  })
+})
+
+describe('aggregateCardDebt', () => {
+  it('sums pending consumos minus received reimbursements, per currency', () => {
+    const rows: CardDebtRow[] = [
+      { type: 'expense', amount: 120_000, currency_code: 'ARS', status: 'pending', received_at: null, cancelled_at: null },
+      { type: 'expense', amount: 90_000, currency_code: 'ARS', status: 'pending', received_at: null, cancelled_at: null },
+      // received statement reimbursement reduces the debt
+      { type: 'reimbursement', amount: 15_000, currency_code: 'ARS', status: null, received_at: '2026-06-10T00:00:00Z', cancelled_at: null },
+      { type: 'expense', amount: 50, currency_code: 'USD', status: 'pending', received_at: null, cancelled_at: null },
+      // a paid consumo does not count (only pending)
+      { type: 'expense', amount: 999, currency_code: 'ARS', status: 'paid', received_at: null, cancelled_at: null },
+      // pending (not yet received) reimbursement: does not reduce debt
+      { type: 'reimbursement', amount: 7_000, currency_code: 'ARS', status: null, received_at: null, cancelled_at: null },
+      // cancelled reimbursement: does not reduce debt
+      { type: 'reimbursement', amount: 8_000, currency_code: 'ARS', status: null, received_at: '2026-06-11T00:00:00Z', cancelled_at: '2026-06-12T00:00:00Z' },
+    ]
+    expect(aggregateCardDebt(rows)).toEqual({ ARS: 195_000, USD: 50 })
+  })
+
+  it('returns zeros for no rows', () => {
+    expect(aggregateCardDebt([])).toEqual({ ARS: 0, USD: 0 })
+  })
+})
+
+describe('aggregateRecurrenceProjection', () => {
+  const rule = (over: Partial<CommittedRecurrenceRule> & Pick<CommittedRecurrenceRule, 'id' | 'amount' | 'movement_type'>): CommittedRecurrenceRule => ({
+    start_date: '2026-01-15',
+    end_date: null,
+    interval_count: 1,
+    interval_unit: 'month',
+    max_occurrences: null,
+    currency_code: 'ARS',
+    ...over,
+  })
+
+  it('sums occurrences in the window by currency and movement_type; ignores transfer', () => {
+    const rules: CommittedRecurrenceRule[] = [
+      rule({ id: 'rent', amount: 132_000, movement_type: 'expense', start_date: '2026-01-15' }),
+      rule({ id: 'salary', amount: 480_000, movement_type: 'income', start_date: '2026-01-05' }),
+      rule({ id: 'move', amount: 999, movement_type: 'transfer', start_date: '2026-01-10' }),
+      rule({ id: 'sub-usd', amount: 50, movement_type: 'expense', currency_code: 'USD', start_date: '2026-01-20' }),
+    ]
+    // Next calendar month window
+    const totals = aggregateRecurrenceProjection(rules, '2026-07-01', '2026-07-31')
+
+    expect(totals.expense).toEqual({ ARS: 132_000, USD: 50 })
+    expect(totals.income).toEqual({ ARS: 480_000, USD: 0 })
+  })
+
+  it('excludes rules whose occurrences fall outside the window', () => {
+    const rules: CommittedRecurrenceRule[] = [
+      // annual rule: next occurrence 2027-03-01, not in a 2026-07 window
+      rule({ id: 'annual', amount: 1_000, movement_type: 'expense', interval_unit: 'year', start_date: '2026-03-01' }),
+    ]
+    const totals = aggregateRecurrenceProjection(rules, '2026-07-01', '2026-07-31')
+    expect(totals.expense).toEqual({ ARS: 0, USD: 0 })
+    expect(totals.income).toEqual({ ARS: 0, USD: 0 })
   })
 })
