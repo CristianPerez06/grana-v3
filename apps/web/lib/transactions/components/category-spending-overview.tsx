@@ -54,17 +54,24 @@ function hexToHSL(hex: string): { h: number; s: number; l: number } {
   return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) }
 }
 
-// Generates N monochromatic tints of the parent color, varying lightness from
-// 70% (lightest, largest slice) to 34% (darkest, smallest slice), clamping
-// saturation at 62% so colours don't blow out on bright hues.
+// Generates N tints that stay in the parent colour's family but separate on
+// two axes so neighbouring slices read distinctly even when their shares are
+// nearly equal: a wide lightness ramp (76% lightest → 30% darkest) plus a
+// small analogous hue sweep centred on the parent (±span°). Saturation is
+// clamped to a readable band so bright hues don't blow out and muddy ones
+// don't wash out.
 function generateSubTints(parentColor: string, n: number): string[] {
   if (n === 0) return []
   const { h, s } = hexToHSL(parentColor)
-  const sc = Math.min(s, 62)
+  const sc = Math.min(Math.max(s, 48), 66)
   if (n === 1) return [`hsl(${h} ${sc}% 52%)`]
+  // Wider arc as the slice count grows, capped so we stay analogous (in family).
+  const span = Math.min(14 + n * 5, 54)
   return Array.from({ length: n }, (_, j) => {
-    const l = 70 - (70 - 34) * (j / (n - 1))
-    return `hsl(${h} ${sc}% ${Math.round(l)}%)`
+    const t = j / (n - 1) // 0 (largest slice) → 1 (smallest)
+    const hue = Math.round((h - span / 2 + span * t + 360) % 360)
+    const l = Math.round(76 - (76 - 30) * t)
+    return `hsl(${hue} ${sc}% ${l}%)`
   })
 }
 
@@ -267,12 +274,23 @@ export const CategorySpendingOverview = ({
   // Mode visuals: accent colours the title/centre label/active tab; income
   // segments take a positional green palette, expenses keep their DB colour.
   const accent = MODE_ACCENT[mode]
+  // Subcategory mode (egresos, drilled into a parent via `parentCategoryId`):
+  // the query stamps every slice with the same parent colour. Recolour them as
+  // monochromatic tints of the parent so each subcategory reads distinctly —
+  // brightest = largest, since slices arrive sorted by value descending.
+  const subTints = useMemo(() => {
+    if (mode !== 'egresos' || !parentCategoryId || breakdown.slices.length === 0) return null
+    const parent = breakdown.slices[0]?.color ?? DONUT_FALLBACK
+    return generateSubTints(parent, breakdown.slices.length)
+  }, [mode, parentCategoryId, breakdown.slices])
   const sliceColor = useCallback(
     (slice: CategorySlice, index: number): string =>
       mode === 'ingresos'
         ? INCOME_PALETTE[index % INCOME_PALETTE.length]
-        : slice.color ?? DONUT_FALLBACK,
-    [mode],
+        : subTints
+          ? subTints[index] ?? DONUT_FALLBACK
+          : slice.color ?? DONUT_FALLBACK,
+    [mode, subTints],
   )
   // Slices recoloured for the donut (the SVG reads `color` off each slice).
   const donutSlices = useMemo(
