@@ -1,6 +1,9 @@
 'use client'
 
 import type { CategorySlice } from '@grana/money-logic'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
+import { useShowCents } from '@/lib/preferences-context'
+import { donutAmountFontSize } from '@/lib/donut-amount'
 import { MaskedAmount } from './masked-amount'
 
 // Positional fallback when a category has no DB color (mirrors the donut in
@@ -31,6 +34,11 @@ type Props = {
 // each slice is a circle arc whose sweep/offset derive from the data — never
 // hardcoded. The centre overlay shows the label + masked total.
 export const SpendingDonut = ({ slices, total, currency, centerLabel, size = 150 }: Props) => {
+  const showCents = useShowCents()
+  // Auto-scale the centre amount so large totals don't overlap the ring.
+  const formattedTotal =
+    currency === 'ARS' ? formatARS(total, showCents) : formatUSD(total, showCents)
+  const amountFontSize = donutAmountFontSize(formattedTotal, size, 17)
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg viewBox="0 0 36 36" width={size} height={size} role="img" aria-hidden>
@@ -61,7 +69,10 @@ export const SpendingDonut = ({ slices, total, currency, centerLabel, size = 150
         <span className="text-[10px] font-extrabold uppercase tracking-wide text-text-soft">
           {centerLabel}
         </span>
-        <span className="text-[17px] font-extrabold tracking-tight text-text">
+        <span
+          className="font-extrabold tracking-tight text-text leading-none"
+          style={{ fontSize: amountFontSize }}
+        >
           <MaskedAmount amount={total} currency={currency} />
         </span>
       </div>

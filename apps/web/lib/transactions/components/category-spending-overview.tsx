@@ -14,6 +14,7 @@ const fillTemplate = (template: string, values: Record<string, string | number>)
   return out
 }
 import { useShowCents } from '@/lib/preferences-context'
+import { donutAmountFontSize } from '@/lib/donut-amount'
 
 const DONUT_FALLBACK = '#9CA3AF'
 const RANKING_TOP = 5
@@ -396,7 +397,10 @@ export const CategorySpendingOverview = ({
       <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-soft leading-none">
         {drilledSlice.label}
       </span>
-      <span className="text-2xl font-bold tabular-nums tracking-[-0.025em] text-text leading-none mt-0.5">
+      <span
+        className="font-bold tabular-nums tracking-[-0.025em] text-text leading-none mt-0.5"
+        style={{ fontSize: donutAmountFontSize(fmt(drilledSub.total), 200, 24) }}
+      >
         {fmt(drilledSub.total)}
       </span>
       <span className="mt-1 text-[10px] text-text-soft leading-none">
@@ -419,7 +423,10 @@ export const CategorySpendingOverview = ({
       >
         {labels.centerLabel}
       </span>
-      <span className="text-2xl font-bold tabular-nums tracking-[-0.025em] text-text leading-none">
+      <span
+        className="font-bold tabular-nums tracking-[-0.025em] text-text leading-none"
+        style={{ fontSize: donutAmountFontSize(fmt(breakdown.total), 200, 24) }}
+      >
         {fmt(breakdown.total)}
       </span>
       <span className="mt-1 text-[11px] text-text-soft">
