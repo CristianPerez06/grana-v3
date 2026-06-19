@@ -36,6 +36,8 @@ const Avatar = ({ initials, className }: { initials: string; className?: string 
 // household on the dashboard. Single household today, so the net is one
 // direction (te deben / debés), per currency. Read-only: the whole strip links
 // to /shared. Rendered only when the container resolves a non-settled net.
+// Mobile-first: identity + amount stack on narrow viewports (no horizontal
+// squeeze), and sit on one row from `sm` up.
 export const SharedStrip = async ({
   householdName,
   otherName,
@@ -54,55 +56,59 @@ export const SharedStrip = async ({
     <Card asChild>
       <Link
         href="/shared"
-        className="flex items-center gap-3 p-4 transition-colors hover:bg-border-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:gap-4"
+        className="flex flex-col gap-2.5 p-4 transition-colors hover:bg-border-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-row sm:items-center sm:gap-4"
       >
-        <span
-          aria-hidden
-          className="flex size-[38px] shrink-0 items-center justify-center rounded-xl bg-emerald-soft text-emerald-deep"
-        >
-          <Users size={18} strokeWidth={2.25} aria-hidden />
-        </span>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-[14px] font-bold text-text">{t('title')}</span>
-            <span className="flex -space-x-1.5">
-              <Avatar initials={selfInitials} />
-              <Avatar initials={otherInitials} />
-            </span>
-          </div>
-          <p className="truncate text-[12px] font-medium text-text-soft">
-            {t('caption', { household: householdName, other: otherName })}
-          </p>
-        </div>
-
-        <div className="shrink-0 text-right">
-          <p
-            className={cn(
-              'text-[15px] font-extrabold tracking-tight sm:text-[17px]',
-              creditTone ? 'text-emerald-deep' : 'text-expense',
-            )}
+        {/* Identity — icon + household + members. Grows to push the amount right on sm+. */}
+        <div className="flex items-center gap-3 sm:min-w-0 sm:flex-1">
+          <span
+            aria-hidden
+            className="flex size-[38px] shrink-0 items-center justify-center rounded-xl bg-emerald-soft text-emerald-deep"
           >
-            {dirLabel(primary.direction)}{' '}
-            <MaskedAmount
-              amount={primary.amount}
-              currency={primary.currency}
-              showCentsOverride={primary.currency === 'USD'}
-            />
-          </p>
-          <p className="text-[11.5px] font-medium text-text-soft">
-            {creditTone ? t('sub_credit') : t('sub_debit')}
-            {rest.map((n) => (
-              <span key={n.currency}>
-                {' · '}
-                {dirLabel(n.direction)}{' '}
-                <MaskedAmount amount={n.amount} currency={n.currency} showCentsOverride />
+            <Users size={18} strokeWidth={2.25} aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[14px] font-bold text-text">{t('title')}</span>
+              <span className="flex -space-x-1.5">
+                <Avatar initials={selfInitials} />
+                <Avatar initials={otherInitials} />
               </span>
-            ))}
-          </p>
+            </div>
+            <p className="truncate text-[12px] font-medium text-text-soft">
+              {t('caption', { household: householdName, other: otherName })}
+            </p>
+          </div>
         </div>
 
-        <ChevronRight size={18} className="shrink-0 text-text-soft" aria-hidden />
+        {/* Amount — its own row on mobile (with a divider), right-aligned on sm+. */}
+        <div className="flex items-center justify-between gap-2 border-t border-border-soft pt-2.5 sm:shrink-0 sm:justify-end sm:border-0 sm:pt-0 sm:text-right">
+          <div className="min-w-0">
+            <p
+              className={cn(
+                'text-[15px] font-extrabold tracking-tight sm:text-[17px]',
+                creditTone ? 'text-emerald-deep' : 'text-expense',
+              )}
+            >
+              {dirLabel(primary.direction)}{' '}
+              <MaskedAmount
+                amount={primary.amount}
+                currency={primary.currency}
+                showCentsOverride={primary.currency === 'USD'}
+              />
+            </p>
+            <p className="text-[11.5px] font-medium text-text-soft">
+              {creditTone ? t('sub_credit') : t('sub_debit')}
+              {rest.map((n) => (
+                <span key={n.currency}>
+                  {' · '}
+                  {dirLabel(n.direction)}{' '}
+                  <MaskedAmount amount={n.amount} currency={n.currency} showCentsOverride />
+                </span>
+              ))}
+            </p>
+          </div>
+          <ChevronRight size={18} className="shrink-0 text-text-soft" aria-hidden />
+        </div>
       </Link>
     </Card>
   )

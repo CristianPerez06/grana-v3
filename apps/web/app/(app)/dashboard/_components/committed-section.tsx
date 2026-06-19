@@ -104,8 +104,8 @@ export const CommittedSection = async ({ data }: Props) => {
           </p>
         )}
 
-        {/* Two outflow tiles. */}
-        <div className={cn('grid grid-cols-2 gap-3', hasIncome ? 'mt-2' : 'mt-5')}>
+        {/* Two outflow tiles — stack on narrow viewports so the amounts fit. */}
+        <div className={cn('grid grid-cols-1 gap-3 sm:grid-cols-2', hasIncome ? 'mt-2' : 'mt-5')}>
           <Tile
             icon={<CreditCard size={16} strokeWidth={2.25} aria-hidden />}
             iconClassName="bg-navy"

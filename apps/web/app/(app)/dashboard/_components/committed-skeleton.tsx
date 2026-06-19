@@ -15,7 +15,7 @@ export const CommittedSkeleton = async () => {
         <div className="h-3 w-24 rounded bg-muted/70 animate-pulse" />
         <div className="mt-2 h-8 w-44 rounded bg-muted animate-pulse" />
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="flex flex-col gap-2 rounded-2xl border border-border p-4">
               <span className="size-8 rounded-lg bg-muted animate-pulse" />
