@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardPeriodDetail } from '@/lib/cards/queries'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { getShowCents } from '@/lib/preferences'
+import { getTodayAR, formatDateISO } from '@/lib/date'
 import { translateCategoryLabel, translateSubcategoryLabel } from '@/lib/categories/display'
 import { EditDatesSheet } from './_components/edit-dates-sheet'
 
@@ -43,6 +44,36 @@ const PeriodDetailPage = async ({ params }: Props) => {
   ])
 
   const canEditDates = !period.has_payment
+
+  // Agrupado por fecha (Hoy / Ayer / día) igual que el listado canónico de
+  // movimientos (MovementList). period.transactions ya viene ordenado desc por date.
+  const todayISO = formatDateISO(getTodayAR())
+  const yesterdayISO = (() => {
+    const [y, m, d] = todayISO.split('-').map(Number)
+    const dt = new Date(y, m - 1, d - 1)
+    const mm = String(dt.getMonth() + 1).padStart(2, '0')
+    const dd = String(dt.getDate()).padStart(2, '0')
+    return `${dt.getFullYear()}-${mm}-${dd}`
+  })()
+  const formatGroupDate = (dateStr: string): string => {
+    if (dateStr === todayISO) return tTx('list.today')
+    if (dateStr === yesterdayISO) return tTx('list.yesterday')
+    const [y, m, d] = dateStr.split('-').map(Number)
+    return new Date(y, m - 1, d).toLocaleDateString('es-AR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    })
+  }
+  const txGroups = (() => {
+    const groups = new Map<string, typeof period.transactions>()
+    for (const tx of period.transactions) {
+      const existing = groups.get(tx.date) ?? []
+      existing.push(tx)
+      groups.set(tx.date, existing)
+    }
+    return Array.from(groups.entries())
+  })()
 
   return (
     <>
@@ -113,65 +144,82 @@ const PeriodDetailPage = async ({ params }: Props) => {
             {t('period.empty_movements_period')}
           </p>
         ) : (
-          <div className="flex flex-col divide-y divide-border rounded-lg border border-border">
-            {period.transactions.map((tx) => {
-              const isReimbursement = tx.type === 'reimbursement'
-              const categoryLabel = tx.category
-                ? translateCategoryLabel(
-                    tx.category.name,
-                    tx.category.canonical_name,
-                    tx.category.user_id === null,
-                    tRoot,
-                  )
-                : null
-              const subcategoryLabel = tx.subcategory
-                ? translateSubcategoryLabel(
-                    tx.subcategory.name,
-                    tx.subcategory.canonical_name,
-                    tx.subcategory.user_id === null,
-                    tRoot,
-                  )
-                : null
-              const label = tx.description
-                ?? (subcategoryLabel ? `${categoryLabel} · ${subcategoryLabel}` : categoryLabel)
-                ?? (isReimbursement ? tTx('reimbursement.label') : '—')
-              return (
-              <Link
-                key={tx.id}
-                href={`/transactions/${tx.id}?from=card:${id}`}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
+          <div className="flex flex-col rounded-lg border border-border">
+            {txGroups.map(([groupDate, groupTxs], groupIndex) => (
+              <section
+                key={groupDate}
+                className={groupIndex === 0 ? '' : 'border-t border-border pt-3 mt-1'}
               >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {label}
-                    {tx.installments_total && tx.installments_total > 1 && (
-                      <span className="ml-1.5 text-xs text-muted-foreground">
-                        {tx.installment_n}/{tx.installments_total}
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{formatDate(tx.date)}</p>
+                <p className="px-4 pb-2 pt-3 text-[12px] font-extrabold capitalize text-muted-foreground">
+                  {formatGroupDate(groupDate)}
+                </p>
+                <div className="flex flex-col divide-y divide-border">
+                  {groupTxs.map((tx) => {
+                    const isReimbursement = tx.type === 'reimbursement'
+                    const categoryLabel = tx.category
+                      ? translateCategoryLabel(
+                          tx.category.name,
+                          tx.category.canonical_name,
+                          tx.category.user_id === null,
+                          tRoot,
+                        )
+                      : null
+                    const subcategoryLabel = tx.subcategory
+                      ? translateSubcategoryLabel(
+                          tx.subcategory.name,
+                          tx.subcategory.canonical_name,
+                          tx.subcategory.user_id === null,
+                          tRoot,
+                        )
+                      : null
+                    const taxonomy = subcategoryLabel
+                      ? `${categoryLabel} · ${subcategoryLabel}`
+                      : categoryLabel
+                    const label =
+                      tx.description ?? taxonomy ?? (isReimbursement ? tTx('reimbursement.label') : '—')
+                    // Si el título ya es la taxonomía (sin descripción), no la repetimos abajo.
+                    const subtitle = tx.description ? taxonomy : null
+                    return (
+                      <Link
+                        key={tx.id}
+                        href={`/transactions/${tx.id}?from=card:${id}`}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {label}
+                            {tx.installments_total && tx.installments_total > 1 && (
+                              <span className="ml-1.5 text-xs text-muted-foreground">
+                                {tx.installment_n}/{tx.installments_total}
+                              </span>
+                            )}
+                          </p>
+                          {subtitle && (
+                            <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className={`text-sm font-medium ${isReimbursement ? 'text-green-600' : ''}`}>
+                            {isReimbursement ? '−' : ''}
+                            {tx.currency_code === 'ARS'
+                              ? formatARS(Number(tx.amount), showCents)
+                              : formatUSD(Number(tx.amount), showCents)}
+                          </p>
+                          {tx.currency_code !== 'ARS' && tx.fx_rate_to_ars && (
+                            <p className="text-xs text-muted-foreground">TC {tx.fx_rate_to_ars}</p>
+                          )}
+                          {!isReimbursement && (
+                            <span className={`text-xs ${tx.status === 'paid' ? 'text-green-600' : 'text-muted-foreground'}`}>
+                              {tx.status === 'paid' ? t('period.paid') : t('period.pending_short')}
+                            </span>
+                          )}
+                        </div>
+                      </Link>
+                    )
+                  })}
                 </div>
-                <div className="text-right shrink-0">
-                  <p className={`text-sm font-medium ${isReimbursement ? 'text-green-600' : ''}`}>
-                    {isReimbursement ? '−' : ''}
-                    {tx.currency_code === 'ARS'
-                      ? formatARS(Number(tx.amount), showCents)
-                      : formatUSD(Number(tx.amount), showCents)}
-                  </p>
-                  {tx.currency_code !== 'ARS' && tx.fx_rate_to_ars && (
-                    <p className="text-xs text-muted-foreground">
-                      TC {tx.fx_rate_to_ars}
-                    </p>
-                  )}
-                  {!isReimbursement && (
-                    <span className={`text-xs ${tx.status === 'paid' ? 'text-green-600' : 'text-muted-foreground'}`}>
-                      {tx.status === 'paid' ? t('period.paid') : t('period.pending_short')}
-                    </span>
-                  )}
-                </div>
-              </Link>
-            )})}
+              </section>
+            ))}
           </div>
         )}
       </section>

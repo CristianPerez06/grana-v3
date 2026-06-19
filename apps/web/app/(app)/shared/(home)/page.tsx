@@ -428,6 +428,35 @@ export default async function SharedPage({
     ) : null
 
   // ── Últimos movimientos (MovementRow-like: icon + taxonomy + toned amount) ──
+  // Agrupados por fecha (Hoy / Ayer / día), igual que el listado canónico de
+  // movimientos (MovementList). Las expenses ya vienen ordenadas desc por date.
+  const todayISO = formatDateISO(getTodayAR())
+  const yesterdayISO = (() => {
+    const [y, m, d] = todayISO.split('-').map(Number)
+    const dt = new Date(y, m - 1, d - 1)
+    const mm = String(dt.getMonth() + 1).padStart(2, '0')
+    const dd = String(dt.getDate()).padStart(2, '0')
+    return `${dt.getFullYear()}-${mm}-${dd}`
+  })()
+  const formatGroupDate = (dateStr: string): string => {
+    if (dateStr === todayISO) return tRoot('transactions.list.today')
+    if (dateStr === yesterdayISO) return tRoot('transactions.list.yesterday')
+    const [y, m, d] = dateStr.split('-').map(Number)
+    return new Date(y, m - 1, d).toLocaleDateString('es-AR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    })
+  }
+  const recentGroups = (() => {
+    const groups = new Map<string, typeof expenses>()
+    for (const e of expenses.slice(0, 8)) {
+      const existing = groups.get(e.date) ?? []
+      existing.push(e)
+      groups.set(e.date, existing)
+    }
+    return Array.from(groups.entries())
+  })()
   const recentSection = (
     <section className="flex flex-col gap-3">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-text-soft">
@@ -439,95 +468,107 @@ export default async function SharedPage({
         </Card>
       ) : (
         <Card asChild>
-          <ul className="flex flex-col divide-y divide-border-soft">
-            {expenses.slice(0, 8).map((e) => {
-              const categoryLabel = translateCategoryLabel(
-                e.categoryName,
-                e.categoryCanonicalName,
-                e.categoryIsSystem,
-                tRoot,
-              )
-              const subcategoryLabel = translateSubcategoryLabel(
-                e.subcategoryName,
-                e.subcategoryCanonicalName,
-                e.subcategoryIsSystem,
-                tRoot,
-              )
-              const primary = e.description || categoryLabel || t('split.shared_label')
-              const taxonomy =
-                categoryLabel && subcategoryLabel
-                  ? `${categoryLabel} › ${subcategoryLabel}`
-                  : categoryLabel ?? subcategoryLabel
-              const isReimb = e.kind === 'reimbursement'
-              const received = e.reimbursementState === 'received'
-              const amountTone = isReimb
-                ? received
-                  ? 'text-income'
-                  : 'text-pending'
-                : 'text-expense'
-              const sign = isReimb ? (received ? '+' : '') : '−'
-              const color = e.categoryColor ?? '#8A94A3'
-              // Card consumption whose statement falls in a later month: it is
-              // registered now but only impacts (and counts) when paid.
-              const futureImpact =
-                e.kind === 'expense' && e.dueDate != null && e.dueDate.slice(0, 7) > currentMonth()
-              return (
-                <li key={e.id}>
-                  <Link
-                    href={`/transactions/${e.id}`}
-                    className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/40"
-                  >
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <span
-                        className="grid size-9 shrink-0 place-items-center rounded-xl text-base"
-                        style={{ backgroundColor: `${color}1A` }}
-                        aria-hidden
-                      >
-                        {e.categoryIcon ?? '🧾'}
-                      </span>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="truncate text-[13px] font-extrabold leading-tight text-text">
-                            {primary}
-                          </span>
-                          {e.reimbursementState && (
+          <div className="flex flex-col">
+            {recentGroups.map(([groupDate, groupExpenses], groupIndex) => (
+              <section
+                key={groupDate}
+                className={groupIndex === 0 ? '' : 'border-t border-border-soft pt-3 mt-3'}
+              >
+                <p className="px-4 pb-2 pt-3 text-[12px] font-extrabold capitalize text-text-muted">
+                  {formatGroupDate(groupDate)}
+                </p>
+                <ul className="flex flex-col divide-y divide-border-soft">
+                  {groupExpenses.map((e) => {
+                    const categoryLabel = translateCategoryLabel(
+                      e.categoryName,
+                      e.categoryCanonicalName,
+                      e.categoryIsSystem,
+                      tRoot,
+                    )
+                    const subcategoryLabel = translateSubcategoryLabel(
+                      e.subcategoryName,
+                      e.subcategoryCanonicalName,
+                      e.subcategoryIsSystem,
+                      tRoot,
+                    )
+                    const primary = e.description || categoryLabel || t('split.shared_label')
+                    const taxonomy =
+                      categoryLabel && subcategoryLabel
+                        ? `${categoryLabel} › ${subcategoryLabel}`
+                        : categoryLabel ?? subcategoryLabel
+                    const isReimb = e.kind === 'reimbursement'
+                    const received = e.reimbursementState === 'received'
+                    const amountTone = isReimb
+                      ? received
+                        ? 'text-income'
+                        : 'text-pending'
+                      : 'text-expense'
+                    const sign = isReimb ? (received ? '+' : '') : '−'
+                    const color = e.categoryColor ?? '#8A94A3'
+                    // Card consumption whose statement falls in a later month: it is
+                    // registered now but only impacts (and counts) when paid.
+                    const futureImpact =
+                      e.kind === 'expense' && e.dueDate != null && e.dueDate.slice(0, 7) > currentMonth()
+                    return (
+                      <li key={e.id}>
+                        <Link
+                          href={`/transactions/${e.id}`}
+                          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/40"
+                        >
+                          <div className="flex min-w-0 items-center gap-2.5">
                             <span
-                              className={`inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
-                                e.reimbursementState === 'received'
-                                  ? 'bg-green-100 text-green-800'
-                                  : e.reimbursementState === 'cancelled'
-                                    ? 'bg-muted text-muted-foreground line-through'
-                                    : 'bg-amber-100 text-amber-800'
-                              }`}
+                              className="grid size-9 shrink-0 place-items-center rounded-xl text-base"
+                              style={{ backgroundColor: `${color}1A` }}
+                              aria-hidden
                             >
-                              {tRoot(`transactions.reimbursement.state.${e.reimbursementState}`)}
+                              {e.categoryIcon ?? '🧾'}
                             </span>
-                          )}
-                          {futureImpact && (
-                            <span className="inline-flex shrink-0 items-center rounded-md bg-slate-soft px-1.5 py-0.5 text-[11px] font-medium text-slate">
-                              {t('dashboard.impacts_in', { month: monthLabel(e.dueDate!.slice(0, 7)) })}
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-0.5 truncate text-xs text-text-muted">
-                          {taxonomy ? `${taxonomy} · ` : ''}
-                          {e.payerId === userId
-                            ? t('dashboard.paid_by_you')
-                            : t('dashboard.paid_by', { name: e.payerName })}
-                          {' · '}
-                          {t('dashboard.your_share', { amount: fmtMoney(e.ownShare, e.currencyCode) })}
-                        </p>
-                      </div>
-                    </div>
-                    <span className={`text-[14px] font-extrabold tabular-nums ${amountTone}`}>
-                      {sign}
-                      {fmtMoney(e.amount, e.currencyCode)}
-                    </span>
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="truncate text-[13px] font-extrabold leading-tight text-text">
+                                  {primary}
+                                </span>
+                                {e.reimbursementState && (
+                                  <span
+                                    className={`inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
+                                      e.reimbursementState === 'received'
+                                        ? 'bg-green-100 text-green-800'
+                                        : e.reimbursementState === 'cancelled'
+                                          ? 'bg-muted text-muted-foreground line-through'
+                                          : 'bg-amber-100 text-amber-800'
+                                    }`}
+                                  >
+                                    {tRoot(`transactions.reimbursement.state.${e.reimbursementState}`)}
+                                  </span>
+                                )}
+                                {futureImpact && (
+                                  <span className="inline-flex shrink-0 items-center rounded-md bg-slate-soft px-1.5 py-0.5 text-[11px] font-medium text-slate">
+                                    {t('dashboard.impacts_in', { month: monthLabel(e.dueDate!.slice(0, 7)) })}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="mt-0.5 truncate text-xs text-text-muted">
+                                {taxonomy ? `${taxonomy} · ` : ''}
+                                {e.payerId === userId
+                                  ? t('dashboard.paid_by_you')
+                                  : t('dashboard.paid_by', { name: e.payerName })}
+                                {' · '}
+                                {t('dashboard.your_share', { amount: fmtMoney(e.ownShare, e.currencyCode) })}
+                              </p>
+                            </div>
+                          </div>
+                          <span className={`text-[14px] font-extrabold tabular-nums ${amountTone}`}>
+                            {sign}
+                            {fmtMoney(e.amount, e.currencyCode)}
+                          </span>
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
         </Card>
       )}
     </section>
