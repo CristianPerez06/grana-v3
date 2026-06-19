@@ -1,13 +1,7 @@
-import { Suspense } from 'react'
-import { TxBackLink } from './_components/tx-back-link'
-
-const TransactionDetailLayout = ({ children }: { children: React.ReactNode }) => (
-  <div className="flex flex-col gap-4 max-w-lg mx-auto">
-    <Suspense fallback={<div className="px-3.5 pt-3.5 pb-1.5" aria-hidden />}>
-      <TxBackLink />
-    </Suspense>
-    {children}
-  </div>
-)
+// El detalle del movimiento maneja su propio chrome (topbar con "Volver" +
+// acciones) y su propio ancho (panel centrado ~760px). La edición, en cambio,
+// es un formulario angosto: arma su chrome (back-link + max-w-lg) en su page.
+// Por eso este layout es un passthrough — cada page define su ancho.
+const TransactionDetailLayout = ({ children }: { children: React.ReactNode }) => <>{children}</>
 
 export default TransactionDetailLayout

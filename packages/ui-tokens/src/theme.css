@@ -30,10 +30,12 @@
 
   /* Brand — terracotta (negative — NOT red) */
   --terracotta: #B56A5A;
+  --terracotta-deep: #9A5446;
   --terracotta-soft: rgba(181, 106, 90, 0.12);
 
   /* Brand — slate (informational / contextual) */
   --slate: #3A6B8A;
+  --slate-deep: #2C5269;
   --slate-soft: #EAF1F6;
 
   /* Neutrals — surfaces */
@@ -177,9 +179,11 @@
   --color-plum-soft: var(--plum-soft);
 
   --color-terracotta: var(--terracotta);
+  --color-terracotta-deep: var(--terracotta-deep);
   --color-terracotta-soft: var(--terracotta-soft);
 
   --color-slate: var(--slate);
+  --color-slate-deep: var(--slate-deep);
   --color-slate-soft: var(--slate-soft);
 
   /* Neutrals + text */

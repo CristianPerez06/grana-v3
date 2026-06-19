@@ -1,7 +1,9 @@
+import { Suspense } from 'react'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { buildMovementEditContext } from '@/lib/transactions/edit-context'
 import { MovementForm } from '@/lib/transactions/components/movement-form'
+import { TxBackLink } from '../_components/tx-back-link'
 
 type Props = {
   params: Promise<{ txId: string }>
@@ -23,7 +25,14 @@ const EditMovementPage = async ({ params, searchParams }: Props) => {
   if (!data) notFound()
   const { edit, categories, household } = data
 
-  return <MovementForm accounts={[]} categories={categories} edit={edit} household={household} />
+  return (
+    <div className="mx-auto flex max-w-lg flex-col gap-4">
+      <Suspense fallback={<div className="px-3.5 pb-1.5 pt-3.5" aria-hidden />}>
+        <TxBackLink />
+      </Suspense>
+      <MovementForm accounts={[]} categories={categories} edit={edit} household={household} />
+    </div>
+  )
 }
 
 export default EditMovementPage

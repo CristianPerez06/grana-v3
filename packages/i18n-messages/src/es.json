@@ -899,13 +899,18 @@
         "cancel": "Cancelar",
         "delete_warning_default": "Esta acción no se puede deshacer.",
         "delete_warning_parent": "Se van a eliminar la compra y todas sus cuotas. Esta acción no se puede deshacer.",
-        "delete_warning_card_payment": "Al eliminar este pago, las cuotas del período volverán a pendientes. ¿Continuar?"
+        "delete_warning_card_payment": "Al eliminar este pago, las cuotas del período volverán a pendientes. ¿Continuar?",
+        "more": "Más",
+        "edit_movement": "Editar movimiento"
       },
       "groups": {
         "details": "Detalles",
         "card": "Tarjeta",
         "installments": "Cuotas",
-        "reimbursements": "Reintegros"
+        "reimbursements": "Reintegros",
+        "paid_with": "Pagado con",
+        "month_weight": "Peso en el mes",
+        "credited_to": "Acreditado en"
       },
       "labels": {
         "date": "Fecha",
@@ -932,6 +937,74 @@
         "card_payment": "Con este pago, las cuotas del período {periodo} quedaron en estado pagado.",
         "reimbursement_pending": "Esperás que te lo devuelvan. Cuando llegue, marcalo como recibido y se va a sumar a tu disponible.",
         "reimbursement_cancelled": "Marcaste este reintegro como cancelado. Si finalmente lo recibís, podés reabrirlo."
+      },
+      "payment_sub": {
+        "cash": "Billetera",
+        "bank": "Caja de ahorro",
+        "credit": "Tarjeta de crédito"
+      },
+      "status": {
+        "reimbursed": "Reintegrado",
+        "credited": "Acreditado",
+        "completed": "Completada"
+      },
+      "flow": {
+        "expense": "Gasto",
+        "installments": "Gasto en {count} cuotas",
+        "shared": "Gasto compartido entre {count} personas",
+        "reimbursement": "Gasto con reintegro",
+        "recurrence": "Gasto recurrente",
+        "income": "Ingreso",
+        "transfer": "Movimiento entre tus cuentas"
+      },
+      "installments": {
+        "eyebrow": "En cuotas",
+        "per_month": "{amount} / mes",
+        "current": "Cuota {n}",
+        "of": "de {total}",
+        "paid": "pagado",
+        "remaining": "{amount} restan",
+        "next": "Próxima",
+        "ends": "termina",
+        "completed": "Cuotas completas"
+      },
+      "shared": {
+        "your_share": "Te toca pagar",
+        "your_share_of": "tu parte de {total}",
+        "you": "Vos",
+        "divided_among": "Dividido entre",
+        "each": "{amount} c/u"
+      },
+      "reimbursement_net": {
+        "eyebrow": "Resultado neto",
+        "caption": "lo que realmente te costó",
+        "paid": "Pagaste",
+        "reimbursed": "Reintegro",
+        "net": "Costo neto",
+        "linked": "Reintegro asociado"
+      },
+      "recurrence": {
+        "eyebrow": "Recurrencia",
+        "next_charge": "Próximo cobro",
+        "active_since": "Activa desde",
+        "since_count": "{since} · {count} cobros",
+        "history": "Historial de cobros",
+        "last_6": "últimos 6 meses"
+      },
+      "transfer": {
+        "flow": "Movimiento de dinero",
+        "from": "Sale de",
+        "to": "Entra a",
+        "internal": "Transferencia interna",
+        "callout_title": "No cuenta como gasto ni ingreso.",
+        "callout_body": "Es plata que movés entre tus cuentas, así que tu balance del mes no cambia."
+      },
+      "month_weight": {
+        "income_cap": "Ingresos",
+        "income_headline": "Peso en tus ingresos",
+        "income_note": "Es el {pct}% de todo lo que entró este mes.",
+        "expense_note": "Es el {share}% de tu gasto en {cap} este mes.",
+        "expense_rank": "{rank}.ª categoría del mes"
       }
     },
     "installments": {

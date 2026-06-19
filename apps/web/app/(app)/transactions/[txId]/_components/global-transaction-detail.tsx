@@ -4,44 +4,34 @@ import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import {
   AlertTriangle,
-  ArrowDownLeft,
   ArrowLeftRight,
   Banknote,
   Calendar,
-  CalendarClock,
+  Check,
   Coins,
   CreditCard,
-  FileText,
   Hash,
-  Info,
   Receipt,
+  Repeat,
   Scale,
   Tag,
-  Users,
   Wallet,
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import {
   getCategoryName,
   getSubcategoryName,
-  translateCategoryLabel,
-  translateSubcategoryLabel,
 } from '@/lib/categories/display'
+import type { CategorySliceInput } from '@grana/money-logic'
 import type { FinancialMovement, MovementReviewFlag } from '@/lib/transactions/movements'
 import type { TransactionWithDetails } from '@/lib/transactions/types'
 import type { ExpenseReimbursementVM } from '@/lib/transactions/queries'
 import type { MovementSharedInfo } from '@/lib/shared/queries'
 import type { Household } from '@/lib/shared/types'
-import { resolveTone, toneToClass } from '@/lib/transactions/components/tone'
+import { resolveTone } from '@/lib/transactions/components/tone'
 import { resolveContextVariant } from '@/lib/transactions/components/resolve-context-variant'
-import { TxHero } from './tx-hero'
-import { TxContextNote } from './tx-context-note'
-import { TxDetailGroup } from './tx-detail-group'
-import { TxDetailRow } from './tx-detail-row'
-import { TxInstallmentRows } from './tx-installment-rows'
-import { TxActionsMenu } from './tx-actions-menu'
+import { Alert } from '@/components/ui/alert'
 import { Drawer } from '@/components/ui/drawer'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 import {
@@ -50,122 +40,51 @@ import {
 } from '@/lib/transactions/components/movement-form'
 import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
 
-const formatBalance = (amount: number, currency: 'ARS' | 'USD', showCents: boolean) =>
-  currency === 'ARS' ? formatARS(Math.abs(amount), showCents) : formatUSD(Math.abs(amount), showCents)
+import { DetailTopbar } from './detail/detail-topbar'
+import { DetailActions } from './detail/detail-actions'
+import { DetailHero } from './detail/detail-hero'
+import { Glance, Chip, StatusDot } from './detail/glance'
+import { TilePaymentMethod } from './detail/tile-payment-method'
+import { TileDetail, type DetailRowSpec } from './detail/tile-detail'
+import { TileDescription } from './detail/tile-description'
+import { TileMonthWeight } from './detail/tile-month-weight'
+import { TileInstallments } from './detail/tile-installments'
+import { TileShareYours, TileDividedAmong } from './detail/tile-shared'
+import { TileReimbursementNet } from './detail/tile-reimbursement-net'
+import { TileRecurrence, TileRecurrenceHistory } from './detail/tile-recurrence'
+import { TileTransferFlow, TileTransferCallout } from './detail/tile-transfer-flow'
+import {
+  detailToneFromTone,
+  fmtMoney,
+  formatLongDate,
+  formatPeriodLabel,
+  formatShortDate,
+  toneVars,
+} from './detail/helpers'
+import { resolveCategoryWeight, resolveIncomeWeight } from './detail/month-weight'
+import type { RecurrenceSummaryVM } from './detail/recurrence-summary'
 
-const formatDate = (dateStr: string) => {
-  const [year, month, day] = dateStr.split('-').map(Number)
-  return new Date(year, month - 1, day).toLocaleDateString('es-AR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-}
-
-const formatShortDate = (dateStr: string) => {
-  const [year, month, day] = dateStr.split('-').map(Number)
-  return new Date(year, month - 1, day).toLocaleDateString('es-AR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-}
-
-// Match the column color to a CSS color string. The fallback gray is the same
-// the row uses elsewhere when there's no category color.
-const heroBgFor = (movement: FinancialMovement): string => {
-  if (movement.category_color) return movement.category_color
-  // Structural movements (transfer, exchange, adjustment, card_payment) and
-  // categorizable movements without a category color fall back to slate.
-  return '#3A6B8A'
-}
-
-const heroIconFor = (movement: FinancialMovement): ReactNode => {
-  // Categorized movements with an emoji use the emoji; otherwise a lucide
-  // icon picked by kind.
-  if (movement.category_icon) return <span style={{ fontSize: 28 }}>{movement.category_icon}</span>
+const heroIcon = (movement: FinancialMovement): ReactNode => {
+  if (movement.category_icon) return movement.category_icon
   switch (movement.kind) {
     case 'transfer':
-      return <ArrowLeftRight size={28} strokeWidth={1.8} />
     case 'exchange':
-      return <Coins size={28} strokeWidth={1.8} />
+      return <ArrowLeftRight size={38} strokeWidth={1.8} aria-hidden />
     case 'adjustment':
-      return <Scale size={28} strokeWidth={1.8} />
+      return <Scale size={38} strokeWidth={1.8} aria-hidden />
     case 'card_payment':
-      return <CreditCard size={28} strokeWidth={1.8} />
-    case 'income':
-      return <ArrowDownLeft size={28} strokeWidth={1.8} />
+      return <CreditCard size={38} strokeWidth={1.8} aria-hidden />
     case 'reimbursement':
-      return <Receipt size={28} strokeWidth={1.8} />
-    case 'installment_purchase':
-      return <CreditCard size={28} strokeWidth={1.8} />
+      return <Receipt size={38} strokeWidth={1.8} aria-hidden />
     default:
-      return <Tag size={28} strokeWidth={1.8} />
+      return <Tag size={38} strokeWidth={1.8} aria-hidden />
   }
 }
 
-// Lucide icon by label key. Keeps the per-row icon picking out of the JSX
-// salad below.
-const iconFor = (labelKey: string): ReactNode => {
-  switch (labelKey) {
-    case 'date':
-      return <Calendar size={16} strokeWidth={2} />
-    case 'account':
-    case 'destination_account':
-    case 'source_account':
-      return <Wallet size={16} strokeWidth={2} />
-    case 'category':
-    case 'subcategory':
-      return <Tag size={16} strokeWidth={2} />
-    case 'card':
-      return <CreditCard size={16} strokeWidth={2} />
-    case 'period':
-    case 'due_date':
-    case 'first_payment':
-      return <CalendarClock size={16} strokeWidth={2} />
-    case 'fx_rate':
-      return <Hash size={16} strokeWidth={2} />
-    case 'description':
-      return <FileText size={16} strokeWidth={2} />
-    case 'amount':
-    case 'estimated_amount':
-      return <Banknote size={16} strokeWidth={2} />
-    default:
-      return <Info size={16} strokeWidth={2} />
-  }
-}
-
-// Period label for the in-context note ("Mayo 2026"). Falls back to the raw
-// range when start/end aren't from the same month.
-const formatPeriodLabel = (period: { start_date: string; end_date: string } | null | undefined): string => {
-  if (!period) return ''
-  const start = new Date(period.start_date)
-  const end = new Date(period.end_date)
-  if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
-    return start.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
-  }
-  return `${formatShortDate(period.start_date)} – ${formatShortDate(period.end_date)}`
-}
-
-// Account identity: institution is the headline, the account's own name the
-// secondary line (omitted when it would just repeat the institution, e.g.
-// auto-named accounts). Matches the accounts list + movement picker treatment.
-// Cash accounts have no institution → the name leads.
-const accountIdentityNode = (
-  account: { name: string; institution?: { name: string | null } | null } | null | undefined,
-): ReactNode => {
-  if (!account?.name) return null
-  const inst = account.institution?.name?.trim()
-  if (!inst || inst === account.name) {
-    return <span className="text-[13.5px] font-semibold text-text tracking-[-0.1px]">{account.name}</span>
-  }
-  return (
-    <span className="flex flex-col">
-      <span className="text-[13.5px] font-semibold text-text tracking-[-0.1px]">{inst}</span>
-      <span className="text-xs font-normal text-text-muted">{account.name}</span>
-    </span>
-  )
+const backFor = (from: string | undefined): string => {
+  if (from?.startsWith('account:')) return `/accounts/${from.slice('account:'.length)}`
+  if (from?.startsWith('card:')) return `/cards/${from.slice('card:'.length)}`
+  return '/transactions'
 }
 
 type Props = {
@@ -174,20 +93,18 @@ type Props = {
   installmentParent?: TransactionWithDetails | null
   installmentSiblings?: TransactionWithDetails[] | null
   reimbursements?: ExpenseReimbursementVM[]
-  /** Perspective origin (`account:<id>` / `card:<id>` / undefined). */
   from?: string
-  /**
-   * Edit context + categories for the in-context edit drawer. When present, the
-   * "Editar" action opens the drawer instead of navigating to the `/edit` page.
-   */
   edit?: MovementEditContext | null
   editCategories?: CategoryWithSubcategories[]
-  /** The user's household, to enable the share toggle inside the edit drawer. */
   editHousehold?: Household | null
-  /** Split info when the movement is shared (null otherwise). */
   sharedInfo?: MovementSharedInfo | null
-  /** Card payments: the paid statement's composition per currency. */
   paymentComposition?: { paidARS: number; paidUSD: number } | null
+  /** Month category/income slices for the movement's currency (Peso en el mes). */
+  monthWeightSlices?: CategorySliceInput[] | null
+  /** Recurrence summary when the movement was generated by a rule. */
+  recurrence?: RecurrenceSummaryVM | null
+  /** Resolved card-period label ("Mayo 2026") for the context note. */
+  contextPeriodLabel?: string
 }
 
 export const GlobalTransactionDetail = ({
@@ -202,203 +119,386 @@ export const GlobalTransactionDetail = ({
   editHousehold = null,
   sharedInfo,
   paymentComposition = null,
+  monthWeightSlices = null,
+  recurrence = null,
+  contextPeriodLabel,
 }: Props) => {
   const showCents = useShowCents()
-  // The household is loaded browser-side by the app-wide movement drawer; use it
-  // for the edit drawer's share toggle (server-side getHousehold isn't available
-  // in this render path). Falls back to the server-passed prop.
   const movementDrawer = useMovementDrawer()
   const editHouseholdResolved = movementDrawer?.household ?? editHousehold
   const t = useTranslations('transactions')
+  const tDetail = useTranslations('transactions.detail')
   const tRoot = useTranslations()
-  const tShared = useTranslations('shared')
   const [editOpen, setEditOpen] = useState(false)
   const canUseEditDrawer = edit != null && editCategories != null
+
+  const isPendingReimbursement =
+    movement.kind === 'reimbursement' && movement.state !== 'received'
+  const tone = resolveTone(movement.kind, movement.sign, isPendingReimbursement)
+  const detailTone = detailToneFromTone(tone)
+
+  // Nota contextual (consumo de tarjeta sin impactar disponible, reintegro
+  // pendiente, etc.): info real que las tiles no cubren. Reusa el resolver
+  // existente y se muestra como Alert bajo el hero.
+  const contextVariant = resolveContextVariant(movement, transaction)
+  const periodLabel =
+    contextPeriodLabel ?? formatPeriodLabel(transaction.period_payments?.[0]?.period ?? null)
+  const contextCopy = contextVariant
+    ? tDetail(`context.${contextVariant.replace(/-/g, '_')}`, { periodo: periodLabel })
+    : null
+
+  const actionAccountId = transaction.account_id ?? installmentSiblings?.[0]?.account_id ?? null
+  const canEdit = actionAccountId != null && transaction.status !== 'paid'
+  const canDelete =
+    actionAccountId != null && !transaction.parent_id && transaction.status !== 'paid'
+
+  const categoryLabel = transaction.category ? getCategoryName(transaction.category, tRoot) : null
+  const subcategoryLabel = transaction.subcategory
+    ? getSubcategoryName(transaction.subcategory, tRoot)
+    : null
+  const money = (amount: number, currency: 'ARS' | 'USD' = movement.currency_code) =>
+    fmtMoney(amount, currency, showCents)
 
   const reviewLabel: Record<MovementReviewFlag, string> = {
     missing_category: t('review_flags.missing_category'),
   }
 
-  const isPendingReimbursement =
-    movement.kind === 'reimbursement' && movement.state !== 'received'
-  const tone = resolveTone(movement.kind, movement.sign, isPendingReimbursement)
+  // ── Variant ───────────────────────────────────────────────────────────────
+  const isTransferLike = movement.kind === 'transfer' || movement.kind === 'exchange'
+  const isInstallment =
+    movement.kind === 'installment_purchase' ||
+    (installmentSiblings != null && installmentSiblings.length > 0)
+  const hasReimbursements = movement.kind === 'expense' && reimbursements.length > 0
+  const isShared = sharedInfo != null && movement.kind === 'expense'
+  const isIncome = movement.kind === 'income'
+  const isExpense = movement.kind === 'expense' || movement.kind === 'installment_purchase'
 
-  // Account used to delete (revalidation). For a normal movement it's its own
-  // account; for an installment parent (account_id=NULL) it's a child's card
-  // account.
-  const actionAccountId = transaction.account_id ?? installmentSiblings?.[0]?.account_id ?? null
-  const canEdit = actionAccountId != null && transaction.status !== 'paid'
-  const canDelete = actionAccountId != null && !transaction.parent_id && transaction.status !== 'paid'
+  // ── Hero ────────────────────────────────────────────────────────────────────
+  const heroTitle =
+    movement.description ?? movement.title ?? categoryLabel ?? t(`types.${transaction.type}`)
 
-  // System categories/subcategories render localized; user-owned keep their name.
-  const categoryLabel = transaction.category ? getCategoryName(transaction.category, tRoot) : null
-  const subcategoryLabel = transaction.subcategory
-    ? getSubcategoryName(transaction.subcategory, tRoot)
-    : null
+  const flowLine: ReactNode = (() => {
+    if (isTransferLike) return tDetail('flow.transfer')
+    if (recurrence) return tDetail('flow.recurrence')
+    if (isInstallment) return tDetail('flow.installments', { count: movement.kind === 'installment_purchase' ? (movement.installments_total ?? installmentSiblings?.length ?? 0) : (installmentSiblings?.length ?? 0) })
+    if (isShared) return tDetail('flow.shared', { count: (sharedInfo!.bySplit.length ?? 0) + 1 })
+    if (hasReimbursements) return tDetail('flow.reimbursement')
+    if (isIncome) return tDetail('flow.income')
+    if (movement.kind === 'expense') return tDetail('flow.expense')
+    return null
+  })()
 
-  // Hero: description carries the narrative; the context line carries date +
-  // (when relevant) a second piece of identity.
-  const heroDesc =
-    movement.description ??
-    movement.title ??
-    categoryLabel ??
-    t(`types.${transaction.type}`)
-  const heroContext: ReactNode = (
-    <>
-      {formatDate(movement.date)}
-      {movement.account_name ? <> · {movement.account_name}</> : null}
-    </>
+  const dateChip = (
+    <Chip key="date">
+      <Calendar size={14} strokeWidth={2} aria-hidden />
+      {formatShortDate(movement.date)}
+    </Chip>
   )
-
-  // In-context note variant + i18n copy with the period interpolated when it
-  // applies. The note lives BELOW the hero, above the first DetailGroup.
-  const contextVariant = resolveContextVariant(movement, transaction)
-  const payment = transaction.period_payments?.[0]
-  const periodLabel = formatPeriodLabel(payment?.period ?? null)
-  const contextCopy = contextVariant
-    ? t(`detail.context.${contextVariant.replace(/-/g, '_')}`, { periodo: periodLabel })
-    : null
-
-  // Detail rows: filtered to the keys + values that apply for this kind.
-  type Row = { key: string; label: string; value?: string | null; valueNode?: ReactNode }
-  const rows: Row[] = []
-
-  if (movement.kind === 'transfer') {
-    rows.push(
-      { key: 'source_account', label: t('labels.source_account'), valueNode: accountIdentityNode(transaction.source_account)},
-      { key: 'destination_account', label: t('labels.destination_account'), valueNode: accountIdentityNode(transaction.destination_account)},
+  const chips: ReactNode[] = [dateChip]
+  if (isTransferLike) {
+    chips.push(
+      <Chip key="internal" tone>
+        <ArrowLeftRight size={14} strokeWidth={2} aria-hidden />
+        {tDetail('transfer.internal')}
+      </Chip>,
     )
-  } else if (movement.kind === 'exchange') {
-    rows.push(
-      { key: 'source_account', label: t('labels.source_account'), valueNode: accountIdentityNode(transaction.source_account)},
-      { key: 'destination_account', label: t('labels.destination_account'), valueNode: accountIdentityNode(transaction.destination_account)},
+  } else {
+    if (movement.account_name) {
+      chips.push(
+        <Chip key="method" tone>
+          <Wallet size={14} strokeWidth={2} aria-hidden />
+          {movement.account_name}
+        </Chip>,
+      )
+    }
+    if (categoryLabel) chips.push(<Chip key="cat">{categoryLabel}</Chip>)
+    if (subcategoryLabel) chips.push(<Chip key="sub">{subcategoryLabel}</Chip>)
+  }
+
+  // ── Detalle rows + Peso del mes ─────────────────────────────────────────────
+  const dateRow: DetailRowSpec = {
+    key: 'date',
+    icon: <Calendar size={16} strokeWidth={2} aria-hidden />,
+    label: tDetail('labels.date'),
+    value: formatLongDate(movement.date),
+  }
+
+  const monthWeightTile = (() => {
+    if (recurrence) return null
+    if (!monthWeightSlices?.length) return null
+    if (isIncome) {
+      const pct = resolveIncomeWeight(monthWeightSlices, movement.amount)
+      if (pct == null) return null
+      return (
+        <TileMonthWeight
+          key="weight"
+          pct={pct}
+          cap={tDetail('month_weight.income_cap')}
+          headline={tDetail('month_weight.income_headline')}
+          note={tDetail('month_weight.income_note', { pct: Math.round(pct) })}
+        />
+      )
+    }
+    if (isExpense) {
+      const w = resolveCategoryWeight(monthWeightSlices, movement.category_id, movement.amount)
+      if (!w) return null
+      return (
+        <TileMonthWeight
+          key="weight"
+          pct={w.pct}
+          cap={categoryLabel ?? tDetail('groups.month_weight')}
+          headline={categoryLabel ?? tDetail('groups.month_weight')}
+          note={
+            <>
+              {w.rank <= 5 && <b>{tDetail('month_weight.expense_rank', { rank: w.rank })}. </b>}
+              {tDetail('month_weight.expense_note', {
+                share: Math.round(w.shareOfCategoryPct),
+                cap: categoryLabel ?? '',
+              })}
+            </>
+          }
+        />
+      )
+    }
+    return null
+  })()
+
+  // ── Tiles by variant ────────────────────────────────────────────────────────
+  const tiles: ReactNode[] = []
+
+  if (isTransferLike) {
+    tiles.push(
+      <TileTransferFlow
+        key="flow"
+        source={transaction.source_account}
+        destination={transaction.destination_account}
+      />,
+      <TileTransferCallout key="callout" />,
+    )
+    const rows: DetailRowSpec[] = [
       {
-        key: 'destination_amount',
+        key: 'amount',
+        icon: <Banknote size={16} strokeWidth={2} aria-hidden />,
+        label: t('labels.amount'),
+        value: <span className="tabular-nums">{money(movement.amount)}</span>,
+      },
+    ]
+    if (movement.kind === 'exchange') {
+      rows.push({
+        key: 'received',
+        icon: <Coins size={16} strokeWidth={2} aria-hidden />,
         label: t('labels.exchange_received'),
-        value: null,
-        valueNode: (
-          <span className="text-income tabular-nums">
-            +{formatBalance(movement.destination_amount, movement.destination_currency, showCents)}
+        value: (
+          <span className="tabular-nums text-income">
+            +{money(movement.destination_amount, movement.destination_currency)}
           </span>
         ),
-      },
-    )
-    if (movement.destination_amount > 0) {
+      })
+    } else {
       rows.push({
-        key: 'fx_rate',
-        label: t('labels.fx_rate'),
-        value: `1 ${movement.destination_currency} = ${formatBalance(movement.amount / movement.destination_amount, movement.currency_code, showCents)}`,
+        key: 'status',
+        icon: <Check size={16} strokeWidth={2} aria-hidden />,
+        label: t('labels.status'),
+        value: <StatusDot label={tDetail('status.completed')} />,
       })
     }
-  } else if (movement.kind === 'adjustment') {
-    rows.push(
-      {
-        key: 'adjustment_type',
-        label: t('labels.adjustment_type'),
-        value: transaction.amount > 0 ? t('directions.increase_full') : t('directions.decrease_full'),
-      },
-      { key: 'account', label: t('labels.account'), valueNode: accountIdentityNode(transaction.source_account)},
+    tiles.push(<TileDetail key="detail" rows={rows} span2 />)
+  } else if (recurrence) {
+    tiles.push(
+      <TileRecurrence key="rec" summary={recurrence} />,
+      <TilePaymentMethod
+        key="paid"
+        account={transaction.source_account}
+        meta={
+          <>
+            <Repeat aria-hidden />
+            {t('detail.recurrence.eyebrow')}:{' '}
+            <b className="tabular-nums">{money(recurrence.accumulated, recurrence.currency)}</b>
+          </>
+        }
+      />,
+      <TileRecurrenceHistory key="hist" summary={recurrence} />,
     )
-  } else if (movement.kind === 'card_payment') {
-    // The context note already names the paid period — instead of repeating it,
-    // show what the payment was made of: the statement's ARS and USD portions
-    // (the fx row below carries the payment-day rate used to convert the USD).
-    rows.push(
-      { key: 'account', label: t('detail.labels.account'), valueNode: accountIdentityNode(transaction.source_account)},
-      { key: 'card', label: t('detail.labels.card'), value: payment?.period?.account?.name ?? null },
+  } else if (isInstallment) {
+    const parentAmount = installmentParent?.amount ?? movement.amount
+    tiles.push(
+      <TileInstallments
+        key="cuotas"
+        children_={installmentSiblings ?? []}
+        parentAmount={parentAmount}
+        currency={movement.currency_code}
+        currentN={transaction.installment_n}
+      />,
+      <TilePaymentMethod key="paid" account={transaction.source_account} />,
+      <TileDetail
+        key="detail"
+        rows={[
+          {
+            key: 'total',
+            icon: <Coins size={16} strokeWidth={2} aria-hidden />,
+            label: t('card_purchase_total'),
+            value: <span className="tabular-nums">{money(parentAmount)}</span>,
+            rightLabel: tDetail('installments.eyebrow'),
+            rightValue:
+              installmentSiblings && installmentSiblings.length > 0
+                ? `${installmentSiblings.length} × ${money(installmentSiblings[0]!.amount)}`
+                : undefined,
+          },
+        ]}
+      />,
     )
-    if (paymentComposition) {
+  } else if (hasReimbursements) {
+    const received = reimbursements.some((r) => r.state === 'received')
+    tiles.push(
+      <TileReimbursementNet
+        key="net"
+        paid={movement.amount}
+        currency={movement.currency_code}
+        reimbursements={reimbursements}
+      />,
+      <TilePaymentMethod key="paid" account={transaction.source_account} />,
+      <TileDetail
+        key="detail"
+        rows={[
+          {
+            key: 'status',
+            icon: <Check size={16} strokeWidth={2} aria-hidden />,
+            label: t('labels.status'),
+            value: received ? (
+              <StatusDot label={tDetail('status.reimbursed')} />
+            ) : (
+              <span className="text-text-muted">{t('reimbursement.state.pending')}</span>
+            ),
+          },
+        ]}
+      />,
+    )
+  } else if (isShared) {
+    tiles.push(
+      <TileShareYours key="yours" shared={sharedInfo!} total={movement.amount} currency={movement.currency_code} />,
+      <TilePaymentMethod key="paid" account={transaction.source_account} />,
+      <TileDividedAmong key="among" shared={sharedInfo!} currency={movement.currency_code} />,
+      <TileDetail
+        key="detail"
+        span2
+        rows={[
+          {
+            key: 'total',
+            icon: <Coins size={16} strokeWidth={2} aria-hidden />,
+            label: t('labels.amount') ?? 'Total',
+            value: <span className="tabular-nums">{money(movement.amount)}</span>,
+            rightLabel: tDetail('shared.your_share'),
+            rightValue: money(sharedInfo!.ownShare),
+          },
+        ]}
+      />,
+    )
+  } else if (isIncome) {
+    tiles.push(
+      <TilePaymentMethod
+        key="paid"
+        account={transaction.source_account}
+        eyebrow={tDetail('groups.credited_to')}
+      />,
+      <TileDetail
+        key="detail"
+        span2
+        rows={[
+          dateRow,
+          {
+            key: 'status',
+            icon: <Check size={16} strokeWidth={2} aria-hidden />,
+            label: t('labels.status'),
+            value: <StatusDot label={tDetail('status.credited')} />,
+          },
+        ]}
+      />,
+    )
+  } else if (movement.kind === 'reimbursement') {
+    tiles.push(
+      <TilePaymentMethod key="paid" account={transaction.source_account} />,
+      <TileDetail
+        key="detail"
+        span2
+        rows={[
+          dateRow,
+          ...(transaction.linked_expense
+            ? [
+                {
+                  key: 'linked',
+                  icon: <Receipt size={16} strokeWidth={2} aria-hidden />,
+                  label: t('reimbursement.linked_expense_title'),
+                  value: (
+                    <Link className="text-slate hover:underline" href={`/transactions/${transaction.linked_expense.id}`}>
+                      {transaction.linked_expense.description ??
+                        transaction.linked_expense.category?.name ??
+                        t('types.expense')}
+                    </Link>
+                  ),
+                } satisfies DetailRowSpec,
+              ]
+            : []),
+        ]}
+      />,
+    )
+  } else {
+    // generic: expense simple, card_payment, adjustment, settlement
+    const rows: DetailRowSpec[] = [dateRow]
+    if (movement.kind === 'card_payment' && paymentComposition) {
       rows.push({
         key: 'composition_ars',
+        icon: <Banknote size={16} strokeWidth={2} aria-hidden />,
         label: t('detail.labels.composition_ars'),
-        value: formatBalance(paymentComposition.paidARS, 'ARS', showCents),
+        value: <span className="tabular-nums">{money(paymentComposition.paidARS, 'ARS')}</span>,
       })
       if (paymentComposition.paidUSD > 0) {
         rows.push({
           key: 'composition_usd',
+          icon: <Banknote size={16} strokeWidth={2} aria-hidden />,
           label: t('detail.labels.composition_usd'),
-          value: formatBalance(paymentComposition.paidUSD, 'USD', showCents),
+          value: <span className="tabular-nums">{money(paymentComposition.paidUSD, 'USD')}</span>,
         })
       }
     }
-  } else if (movement.kind === 'installment_purchase') {
-    const cardName = installmentSiblings?.find((s) => s.source_account)?.source_account?.name ?? null
-    rows.push(
-      { key: 'card', label: t('detail.labels.card'), value: cardName },
-      { key: 'category', label: t('detail.labels.category'), value: categoryLabel },
-      { key: 'subcategory', label: t('detail.labels.subcategory'), value: subcategoryLabel },
-    )
-  } else if (movement.kind === 'reimbursement') {
-    rows.push(
-      {
-        key: 'reimbursement_target',
-        label: t('detail.labels.reimbursement_target'),
-        value: transaction.reimbursement_target
-          ? t(`reimbursement.target.${transaction.reimbursement_target}`)
-          : null,
-      },
-      { key: 'account', label: t('detail.labels.account'), valueNode: accountIdentityNode(transaction.source_account)},
-      {
-        key: 'category',
-        label: t('detail.labels.category'),
-        // Derived from the linked expense → comes flattened on the movement.
-        value: translateCategoryLabel(
-          movement.category_name,
-          movement.category_canonical_name,
-          movement.category_is_system,
-          tRoot,
-        ),
-      },
-      {
-        key: 'subcategory',
-        label: t('detail.labels.subcategory'),
-        // Also derived from the linked expense (flattened on the movement).
-        value: translateSubcategoryLabel(
-          movement.subcategory_name,
-          movement.subcategory_canonical_name,
-          movement.subcategory_is_system,
-          tRoot,
-        ),
-      },
-    )
-    if (
-      transaction.estimated_amount != null &&
-      transaction.received_at != null &&
-      Math.abs(transaction.estimated_amount - transaction.amount) > 0.005
-    ) {
+    if (transaction.fx_rate_to_ars) {
       rows.push({
-        key: 'estimated_amount',
-        label: t('reimbursement.estimated_label'),
-        value: formatBalance(transaction.estimated_amount, movement.currency_code, showCents),
+        key: 'fx',
+        icon: <Hash size={16} strokeWidth={2} aria-hidden />,
+        label: t('detail.labels.fx_rate'),
+        value: t('fx_rate_template', { rate: transaction.fx_rate_to_ars }),
       })
     }
-  } else {
-    // income / expense
-    rows.push(
-      { key: 'account', label: t('detail.labels.account'), valueNode: accountIdentityNode(transaction.source_account)},
-      { key: 'category', label: t('detail.labels.category'), value: categoryLabel },
-      { key: 'subcategory', label: t('detail.labels.subcategory'), value: subcategoryLabel },
+    tiles.push(
+      <TilePaymentMethod key="paid" account={transaction.source_account} />,
+      <TileDetail key="detail" rows={rows} />,
     )
   }
 
-  if (transaction.fx_rate_to_ars) {
-    rows.push({
-      key: 'fx_rate',
-      label: t('detail.labels.fx_rate'),
-      value: t('fx_rate_template', { rate: transaction.fx_rate_to_ars }),
-    })
-  }
-
-  const filteredRows = rows.filter((r) => r.value != null || r.valueNode != null)
+  // Descripción + Peso en el mes (siempre al final)
+  tiles.push(<TileDescription key="desc" description={transaction.description} />)
+  if (monthWeightTile) tiles.push(monthWeightTile)
 
   return (
-    <div className="flex flex-col gap-4">
+    <div style={toneVars(detailTone)} className="mx-auto w-full max-w-[760px] pb-24 sm:pb-2">
+      <DetailTopbar
+        backHref={backFor(from)}
+        backLabel={t('back_label')}
+        actions={
+          actionAccountId ? (
+            <DetailActions
+              transactionId={transaction.id}
+              canEdit={canEdit}
+              canDelete={canDelete}
+              isParent={transaction.is_parent}
+              isCardPayment={!!transaction.period_payments?.[0]}
+              onEdit={canUseEditDrawer ? () => setEditOpen(true) : undefined}
+            />
+          ) : undefined
+        }
+      />
+
       {canUseEditDrawer && (
-        <Drawer
-          open={editOpen}
-          onClose={() => setEditOpen(false)}
-          ariaLabel={t('edit_title')}
-        >
+        <Drawer open={editOpen} onClose={() => setEditOpen(false)} ariaLabel={t('edit_title')}>
           <MovementForm
             variant="drawer"
             accounts={[]}
@@ -410,150 +510,37 @@ export const GlobalTransactionDetail = ({
           />
         </Drawer>
       )}
-      {actionAccountId && (
-        <div className="flex justify-end px-3.5">
-          <TxActionsMenu
-            transactionId={transaction.id}
-            canEdit={canEdit}
-            canDelete={canDelete}
-            isParent={transaction.is_parent}
-            isCardPayment={!!payment}
-            onEdit={canUseEditDrawer ? () => setEditOpen(true) : undefined}
-          />
-        </div>
-      )}
 
-      <TxHero
-        iconBg={heroBgFor(movement)}
-        icon={heroIconFor(movement)}
-        amount={movement.amount}
-        currency={movement.currency_code}
-        tone={tone}
-        desc={heroDesc}
-        context={heroContext}
-      />
+      <div className="flex flex-col gap-3.5 sm:gap-[18px]">
+        <DetailHero
+          tone={tone}
+          icon={heroIcon(movement)}
+          amount={movement.amount}
+          currency={movement.currency_code}
+          eyebrow={isTransferLike ? tDetail('transfer.internal') : undefined}
+          title={heroTitle}
+          flow={flowLine}
+          chips={chips}
+        />
 
-      <TxContextNote copy={contextCopy} />
-
-      {sharedInfo && (
-        <div className="mx-4 flex flex-col gap-1 rounded-xl border border-emerald/20 bg-emerald-soft px-3 py-2.5 text-sm">
-          <div className="flex items-center gap-2 font-semibold text-text">
-            <Users size={16} className="text-emerald-deep" aria-hidden />
-            {tShared('split.shared_label')}
-          </div>
-          <p className="text-text-muted">
-            {tShared('dashboard.your_share', {
-              amount:
-                movement.currency_code === 'ARS'
-                  ? formatARS(sharedInfo.ownShare)
-                  : formatUSD(sharedInfo.ownShare),
-            })}
-            {sharedInfo.bySplit.length > 0 &&
-              ` · ${sharedInfo.bySplit
-                .map(
-                  (s) =>
-                    `${s.name || '—'} ${
-                      movement.currency_code === 'ARS' ? formatARS(s.amount) : formatUSD(s.amount)
-                    }`,
-                )
-                .join(' · ')}`}
-          </p>
-        </div>
-      )}
-
-      {movement.review_flags.length > 0 && (
-        <div className="mx-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          <AlertTriangle className="mt-0.5 shrink-0" size={16} />
-          <div>
-            <p className="font-medium">{t('review_alert_title')}</p>
-            <p>{movement.review_flags.map((flag) => reviewLabel[flag]).join(' · ')}</p>
-          </div>
-        </div>
-      )}
-
-      <TxDetailGroup title={t('detail.groups.details')}>
-        <TxDetailRow icon={iconFor('date')} label={t('detail.labels.date')} value={formatDate(movement.date)} />
-        {filteredRows.map((row) => (
-          <TxDetailRow
-            key={row.key}
-            icon={iconFor(row.key)}
-            label={row.label}
-            value={row.valueNode ? undefined : (row.value ?? undefined)}
-            valueNode={row.valueNode}
-          />
-        ))}
-        {transaction.description && (
-          <TxDetailRow
-            icon={iconFor('description')}
-            label={t('detail.labels.description') ?? 'Descripción'}
-            value={transaction.description}
-          />
+        {contextCopy && (
+          <Alert variant="info" icon={false}>
+            {contextCopy}
+          </Alert>
         )}
-      </TxDetailGroup>
 
-      {movement.kind === 'reimbursement' && transaction.linked_expense && (
-        <TxDetailGroup title={t('reimbursement.linked_expense_title')}>
-          <Link
-            href={`/transactions/${transaction.linked_expense.id}`}
-            className="flex items-center justify-between gap-3 px-4 py-3 text-sm transition-colors hover:bg-muted/30"
-          >
-            <span className="min-w-0 truncate text-text">
-              {transaction.linked_expense.description ??
-                transaction.linked_expense.category?.name ??
-                t('types.expense')}
-            </span>
-            <span className="shrink-0 tabular-nums text-expense">
-              −{formatBalance(transaction.linked_expense.amount, transaction.linked_expense.currency_code, showCents)}
-            </span>
-          </Link>
-        </TxDetailGroup>
-      )}
+        {movement.review_flags.length > 0 && (
+          <div className="flex items-start gap-2 rounded-[14px] border border-warning-soft bg-warning-bg px-3.5 py-3 text-sm text-warning-deep">
+            <AlertTriangle className="mt-0.5 shrink-0" size={16} aria-hidden />
+            <div>
+              <p className="font-semibold">{t('review_alert_title')}</p>
+              <p>{movement.review_flags.map((flag) => reviewLabel[flag]).join(' · ')}</p>
+            </div>
+          </div>
+        )}
 
-      {installmentParent && installmentSiblings && installmentSiblings.length > 0 && (
-        <TxDetailGroup title={t('detail.groups.installments')}>
-          <TxInstallmentRows
-            installments={installmentSiblings}
-            currentId={transaction.id}
-            from={from}
-          />
-        </TxDetailGroup>
-      )}
-
-      {reimbursements.length > 0 && (
-        <TxDetailGroup title={t('detail.groups.reimbursements')}>
-          {reimbursements.map((r) => (
-            <Link
-              key={r.id}
-              href={`/transactions/${r.id}`}
-              className="flex items-center justify-between gap-3 px-4 py-3 text-sm transition-colors hover:bg-muted/30"
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                <span
-                  className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
-                    r.state === 'received'
-                      ? 'bg-emerald-soft text-emerald-deep'
-                      : r.state === 'cancelled'
-                        ? 'bg-muted text-muted-foreground line-through'
-                        : 'bg-warning-soft text-warning-deep'
-                  }`}
-                >
-                  {t(`reimbursement.state.${r.state}`)}
-                </span>
-                <span className="truncate text-text-muted">
-                  {t(`reimbursement.target.${r.target}`)}
-                </span>
-              </span>
-              <span
-                className={`shrink-0 tabular-nums ${
-                  r.state === 'cancelled' ? 'text-muted-foreground line-through' : toneToClass('income')
-                }`}
-              >
-                +{formatBalance(r.amount, r.currencyCode, showCents)}
-              </span>
-            </Link>
-          ))}
-        </TxDetailGroup>
-      )}
+        <Glance>{tiles}</Glance>
+      </div>
     </div>
   )
 }

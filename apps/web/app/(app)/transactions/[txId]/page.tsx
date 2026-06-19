@@ -5,15 +5,20 @@ import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import {
   getInstallmentFamily,
+  getMonthCategoryBreakdown,
+  getMonthIncomeBreakdown,
   getReimbursementsForExpense,
   getTransactionDetail,
 } from '@/lib/transactions/queries'
 import { toFinancialMovement } from '@/lib/transactions/movements'
 import { getCardPeriodDetail } from '@/lib/cards/queries'
-import { getRecurrenceLinkForTransaction } from '@/lib/recurrences/queries'
+import { getRecurrenceDetail, getRecurrenceLinkForTransaction } from '@/lib/recurrences/queries'
 import { getMovementSharedInfo } from '@/lib/shared/queries'
 import { buildMovementEditContext } from '@/lib/transactions/edit-context'
 import { GlobalTransactionDetail } from './_components/global-transaction-detail'
+import { summarizeRecurrence } from './_components/detail/recurrence-summary'
+import { formatPeriodLabel } from './_components/detail/helpers'
+import type { CategorySliceInput } from '@grana/money-logic'
 
 type Props = {
   params: Promise<{ txId: string }>
@@ -66,6 +71,39 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
     ? await getMovementSharedInfo(supabase, transaction.id, transaction.is_parent)
     : null
 
+  // "Peso en el mes": slices del mes del movimiento para su moneda. Solo aplica a
+  // gastos (incl. cuotas) e ingresos categorizables — reusa el breakdown del dashboard.
+  const month = movement.date.slice(0, 7)
+  let monthWeightSlices: CategorySliceInput[] | null = null
+  if (movement.kind === 'income') {
+    const breakdown = await getMonthIncomeBreakdown(supabase, month)
+    monthWeightSlices = breakdown[movement.currency_code]
+  } else if (movement.kind === 'expense' || movement.kind === 'installment_purchase') {
+    const breakdown = await getMonthCategoryBreakdown(supabase, month)
+    monthWeightSlices = breakdown[movement.currency_code]
+  }
+
+  // Período de tarjeta para la nota contextual. En un pago de resumen viene en
+  // `period_payments`; en un consumo/cuota de tarjeta el período está en
+  // `card_period_id` (period_payments está vacío), así que lo buscamos.
+  let contextPeriodLabel = formatPeriodLabel(transaction.period_payments?.[0]?.period ?? null)
+  if (!contextPeriodLabel && transaction.card_period_id) {
+    const { data: period } = await supabase
+      .from('card_periods')
+      .select('start_date, end_date')
+      .eq('id', transaction.card_period_id)
+      .maybeSingle()
+    contextPeriodLabel = formatPeriodLabel(period)
+  }
+
+  // Detalle de la recurrencia (próximo/desde/nº cobros/acumulado/historial) cuando
+  // el movimiento fue generado por una regla.
+  const recurrenceSummary = recurrenceLink
+    ? await getRecurrenceDetail(supabase, recurrenceLink.recurrence_id).then((detail) =>
+        detail ? summarizeRecurrence(detail) : null,
+      )
+    : null
+
   // Card payments show the statement composition (ARS + USD portions) instead
   // of repeating the period info the context note already carries.
   let paymentComposition: { paidARS: number; paidUSD: number } | null = null
@@ -106,6 +144,9 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
         editHousehold={editData?.household ?? null}
         sharedInfo={sharedInfo}
         paymentComposition={paymentComposition}
+        monthWeightSlices={monthWeightSlices}
+        recurrence={recurrenceSummary}
+        contextPeriodLabel={contextPeriodLabel}
       />
     </>
   )

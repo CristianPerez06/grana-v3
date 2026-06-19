@@ -398,47 +398,81 @@ Un movimiento MAY requerir revisión por motivos como: falta de categoría, mont
 
 El sistema SHALL exponer una pantalla de detalle `/transactions/[txId]` para cada movimiento, que muestre toda la información asociada al movimiento (campos según su `kind`), las cuotas hermanas cuando es una compra en cuotas (madre o hija), los reintegros vinculados cuando corresponde, y la regla recurrente que lo generó cuando aplica. La pantalla SHALL respetar el origen de navegación (`?from=account:<id>` o `?from=card:<id>`) para resolver el destino del "Volver".
 
-La **presentación visual** SHALL seguir el patrón editorial centrado:
+La **presentación visual** SHALL seguir una **anatomía fija** que se adapta al tipo, con tres bloques:
 
-- **`TxHeader`** arriba: un ícono `←` (sin label de texto) a la izquierda como link al destino del back, y un slot a la derecha para el `TxActionsMenu` (kebab) o nada cuando el movimiento no permite acciones.
-- **`TxHero`** centrado verticalmente: ícono circular de 64px con sombra suave (`0 8px 22px rgba(11,26,43,0.10)`) y fondo derivado de la categoría (categorizables) o `bg-muted` (estructurales). Debajo, el monto display 38-48px en `text-{tone}` (income/expense/neutral-amount/pending), con el signo (+/−), el currency symbol más chico y opaco (~60% opacity) y los decimales en superscript (`fontSize: 0.55em, verticalAlign: 0.65em`). Debajo del monto, la descripción 18px font-bold navy centrada (hasta ~300px de ancho), y opcionalmente una context line 12px muted centrada con la info contextual (fecha · cuenta · subtipo · etc.).
-- **`TxDetailGroup`(s)** para los metadatos: cards blancos con border y radius grande (~18px), un eyebrow caps uppercase opcional como header del group (ej. "DETALLES", "TARJETA"), y filas adentro de tipo `TxDetailRow` (ícono cuadrado redondeado 32×32 con bg-muted + label uppercase 10.5px + value 13.5px font-semibold navy). Las filas se separan con border-bottom; la última no tiene border.
-- **`TxInstallmentRows`** cuando aplica (madre o hija de cuotas): variant del DetailGroup con cada fila llevando un número circular 28×28 con color de fondo según estado (`pending` warning soft, `paid` income soft, otras muted), descripción de la cuota, chip de estado y monto.
-- **`TxActionsMenu`** como kebab `⋯` arriba a la derecha, no como botones planos abajo: dropdown con "Editar" (link a `[txId]/edit`) y "Eliminar" (abre AlertDialog con copy contextual según parent / card payment / default).
-- **Banner de recurrencia** (cuando aplica) se mantiene arriba del `TxHero`, ubicado en el layout de la página (`page.tsx`), no dentro del componente del detalle.
+- **TOPBAR**: a la izquierda un botón "Volver" (ícono `←` + label "Movimientos") que resuelve al destino del back; a la derecha las acciones disponibles. En este alcance las acciones son **Editar** (botón sólido navy) y **Eliminar** (icon button, hover en tono peligro), reusando los handlers existentes (`TxActionsMenu`: Editar abre el drawer de edición en contexto cuando está disponible, o navega a `[txId]/edit`; Eliminar abre el `AlertDialog` con copy contextual). En **mobile** la topbar es sticky, las acciones secundarias colapsan en un menú "···" y **Editar** pasa a una **barra fija inferior** full-width (thumb-reach).
+- **HERO**: una tarjeta con banda superior tintada por el tono del tipo (`radial-gradient` con `--tone-soft`). Contiene el **ícono de categoría** en un cuadro redondeado tintado (88px desktop / 72px mobile), un **título** (descripción o categoría del movimiento), el **monto grande** tonal (60px desktop / 46px mobile) con el currency symbol más chico y opaco y los decimales según `showCents`, una **línea de contexto** (ej. "Gasto · pago único en efectivo"), y una fila de **chips**: `fecha` · `medio de pago` · `categoría` · `subcategoría`. Para transferencias el hero lleva además un eyebrow "Transferencia interna" sobre el título.
+- **GRILLA "de un vistazo"**: tiles en cards blancos (radius ~20px) en **2 columnas desktop / 1 columna mobile** que **cambian por tipo**. El tile **"Peso en el mes"** SHALL ir **siempre al final** (primero el detalle del movimiento, después el contexto del mes).
 
-La lógica de qué campos mostrar por kind, el manejo de cuotas hermanas, los reembolsos vinculados y el back navigation NO cambia — preserva todo el comportamiento del componente actual.
+El color del monto/hero (tone) lo define el **tipo**, seteado con una clase en el contenedor raíz:
+
+- gasto → terracotta (`--terracota`), signo `−` (U+2212).
+- ingreso → emerald-deep (`--emerald-deep`), signo `+`.
+- transferencia → slate (`--slate`), **sin signo**.
+
+Los **tiles por tipo** SHALL ser:
+
+- **gasto simple**: Pagado con · Detalle (fecha) · Descripción · Peso en el mes.
+- **cuotas**: En cuotas (barra de pagadas/restantes + próxima + fin) · Pagado con · Detalle (total + valor cuota) · Descripción · Peso en el mes.
+- **compartido**: Te toca pagar (tu parte) · Pagado con · Dividido entre (personas con su parte, **sin** badge de estado de liquidación) · Detalle · Descripción.
+- **reintegro**: Resultado neto (pagaste + reintegro = costo neto, con el movimiento vinculado clickeable) · Pagado con · Detalle · Descripción.
+- **recurrencia**: Recurrencia (próximo cobro · activa desde · nº de cobros) · Pagado con (acumulado) · Historial de cobros (barras de los últimos 6 meses) · Descripción.
+- **ingreso**: Acreditado en · Detalle (origen) · Descripción · Peso del mes (% de ingresos).
+- **transferencia**: Movimiento (origen → destino) · callout "no cuenta como gasto ni ingreso" · Detalle · Descripción.
+
+**Reglas de negocio** que la presentación SHALL respetar:
+
+- App de gestión, **NO** opera pagos: NUNCA mostrar número de tarjeta; solo **nombre + tipo** del medio de pago.
+- Los movimientos guardan **solo fecha** (sin hora).
+- No existe estado "confirmado": el detalle SHALL mostrar un estado **solo cuando informa algo real** — *Reintegrado* (reintegro recibido), *Completada* (transferencia), *Acreditado* (ingreso).
+- Las **transferencias no afectan el balance del mes** (no son gasto ni ingreso); el callout lo explicita.
+- El campo de texto libre se rotula **"Descripción"** (no "Nota").
+
+La lógica de qué campos mostrar por kind, el manejo de cuotas hermanas, los reembolsos vinculados y el back navigation NO cambia — preserva el comportamiento de datos del componente actual. El **banner de recurrencia** (link a la regla) se mantiene en el layout de la página (`page.tsx`), arriba del hero.
 
 #### Scenario: El detalle se abre y muestra los campos correctos según el kind
 
 - **WHEN** el usuario abre `/transactions/[txId]` de un gasto categorizado en una cuenta cash
-- **THEN** el detalle muestra el hero centrado con monto en `text-expense`, ícono de la categoría con bg tintado, descripción debajo del monto, y un `TxDetailGroup` con filas para fecha, cuenta, categoría y subcategoría (si la tiene)
-- **AND** el back en `TxHeader` resuelve al destino que indica `?from=` o, por defecto, a `/transactions`
+- **THEN** el detalle muestra el hero con tone gasto (terracotta), monto con signo `−`, ícono de la categoría con bg tintado, título y línea de contexto, y los chips fecha · medio de pago · categoría · subcategoría
+- **AND** la grilla muestra los tiles "Pagado con", "Detalle", "Descripción" (si la tiene) y "Peso en el mes" al final
+- **AND** el botón "Volver" resuelve al destino que indica `?from=` o, por defecto, a `/transactions`
 
-#### Scenario: Compra en cuotas muestra el detalle con tabla de cuotas
+#### Scenario: Compra en cuotas muestra el tile de progreso de cuotas
 
 - **WHEN** el usuario abre el detalle de una compra en cuotas (madre o hija)
-- **THEN** el `TxHero` muestra la descripción de la compra y el monto total (en la madre) o la cuota (en la hija)
-- **AND** un `TxInstallmentRows` lista todas las cuotas con su número circular, estado y monto
-- **AND** un click sobre una cuota hija navega a su propio detalle
+- **THEN** el hero muestra la descripción de la compra y el monto total
+- **AND** un tile "En cuotas" muestra la barra de cuotas pagadas/restantes, el valor por cuota, la próxima fecha y la fecha de fin
+- **AND** un tile "Detalle" muestra el total de la compra y el desglose `n × valor cuota`
 
-#### Scenario: Un reintegro pendiente muestra tone pending
+#### Scenario: Gasto con reintegro muestra el resultado neto
 
-- **WHEN** el usuario abre el detalle de un reintegro con `received_at IS NULL` y `cancelled_at IS NULL`
-- **THEN** el `TxHero` muestra el monto con `text-pending` (gris)
-- **AND** un `TxDetailGroup` lista el gasto vinculado, el monto esperado y el estado
+- **WHEN** el usuario abre el detalle de un gasto con uno o más reintegros recibidos
+- **THEN** un tile "Resultado neto" muestra `pagaste` + `reintegro` = `costo neto`
+- **AND** lista el/los movimiento(s) de reintegro vinculado(s), clickeable(s) hacia su propio detalle
+
+#### Scenario: Gasto compartido muestra las partes sin estado por persona
+
+- **WHEN** el usuario abre el detalle de un gasto compartido de un hogar de varias personas
+- **THEN** un tile "Te toca pagar" muestra la parte propia del usuario
+- **AND** un tile "Dividido entre" lista a cada persona con su parte, **sin** badge "Te debe"/"Saldado" (el modelo no guarda el estado de liquidación por transacción)
+
+#### Scenario: La transferencia explicita que no afecta el balance
+
+- **WHEN** el usuario abre el detalle de una transferencia entre cuentas propias
+- **THEN** el hero usa tone transferencia (slate) y el monto se muestra **sin signo**
+- **AND** un tile "Movimiento" muestra origen → destino y un callout aclara que no cuenta como gasto ni ingreso
 
 #### Scenario: El back navigation respeta el origen
 
-- **WHEN** el usuario abre `/transactions/[txId]?from=account:abc-123` y hace click en el `←`
+- **WHEN** el usuario abre `/transactions/[txId]?from=account:abc-123` y hace click en "Volver"
 - **THEN** el sistema navega a `/accounts/abc-123`
 
 #### Scenario: El AlertDialog de eliminar tiene copy contextual
 
-- **WHEN** el usuario abre el kebab del detalle de una compra en cuotas madre y elige "Eliminar"
-- **THEN** el AlertDialog muestra el warning "Se van a eliminar la compra y todas sus cuotas. Esta acción no se puede deshacer."
-- **AND** cuando el movimiento es un pago de resumen, el warning dice "Al eliminar este pago, las cuotas del período volverán a pendientes. ¿Continuar?"
-- **AND** en todos los otros casos, el warning genérico "Esta acción no se puede deshacer."
+- **WHEN** el usuario elige "Eliminar" en el detalle de una compra en cuotas madre
+- **THEN** el AlertDialog muestra el warning de eliminar la compra y todas sus cuotas
+- **AND** cuando el movimiento es un pago de resumen, el warning explica que las cuotas del período volverán a pendientes
+- **AND** en todos los otros casos, el warning genérico
 
 #### Scenario: Transacción de otro usuario no es accesible
 
@@ -447,61 +481,61 @@ La lógica de qué campos mostrar por kind, el manejo de cuotas hermanas, los re
 
 ### Requirement: El detalle del movimiento usa un hero editorial centrado con el monto como protagonista
 
-El sistema SHALL renderizar el hero del detalle de un movimiento como un bloque **centrado verticalmente**, con la siguiente anatomía:
+El sistema SHALL renderizar el hero del detalle de un movimiento como una **tarjeta con banda tintada por tono**, centrada, con la siguiente anatomía:
 
-- Un **ícono circular** de 64×64 px con sombra suave (`box-shadow: 0 8px 22px rgba(11,26,43,0.10)`) y fondo derivado del kind: tintado del color de la categoría para movimientos categorizables (income, expense, installment_purchase), bg-muted con un ícono lucide en text-soft para movimientos de estructura (transfer, exchange, adjustment, card_payment), bg con tono del estado para reintegros.
-- El **monto display** debajo del ícono, tipografía editorial 38-48px font-bold, en `text-{tone}` según el tone resuelto:
-  - `text-income` para income, reimbursement recibido, ajuste positivo.
-  - `text-expense` para gasto en cash/bank, consumo o cuota de tarjeta, pago de resumen, ajuste negativo.
-  - `text-neutral-amount` para transferencia y cambio de moneda.
-  - `text-pending` para reintegro esperado (no recibido).
-- El monto SHALL llevar un **signo** (+/−) cuando el tone es income o expense, y omitirlo cuando es neutral o pending. El **currency symbol** SHALL renderearse en línea, a la izquierda del entero, en font-size ~63% del display, opacidad 0.6. Los **decimales** SHALL renderearse en **superscript** (`fontSize: 0.55em, verticalAlign: 0.65em`) cuando el usuario tiene `showCents=true` y el monto no es entero exacto.
-- Debajo del monto, una **descripción** 18px font-bold navy centrada, máximo ~300px de ancho.
-- Opcionalmente, una **context line** 12px muted centrada con info contextual (fecha relativa, cuenta, subtipo, fx_rate, período, etc., según el kind).
+- Una **banda superior** con `radial-gradient` derivado del tono del tipo (gasto/ingreso/transferencia) sobre fondo blanco.
+- Un **ícono de categoría** en un cuadro redondeado tintado (`--tone-soft`) de 88×88 px (desktop) / 72×72 px (mobile), con sombra suave. Para movimientos categorizables usa el emoji de la categoría; para movimientos de estructura (transfer, exchange, adjustment, card_payment) usa un ícono lucide acorde al kind.
+- El **monto display** debajo del ícono, tipografía editorial 60px (desktop) / 46px (mobile) font-bold, en el color del tono (`--tone`):
+  - terracotta (gasto) con signo `−`.
+  - emerald-deep (ingreso) con signo `+`.
+  - slate (transferencia) **sin signo**.
+- El **currency symbol** SHALL renderearse a la izquierda del entero, más chico (~50% del display) y opaco (~0.6). Los **decimales** SHALL respetar la preferencia `showCents` del usuario.
+- Para transferencias, un **eyebrow** uppercase ("Transferencia interna") SHALL ir sobre el título.
+- Debajo del monto, una **línea de contexto** (`hero-flow`) que describe el tipo en lenguaje funcional (ej. "Gasto · pago único en efectivo", "Ingreso de ACME S.A.", "Movimiento entre tus cuentas").
+- Una fila de **chips** (`hero-chips`) separada por un borde superior: `fecha`, `medio de pago` (chip tonal), `categoría`, `subcategoría`. Estados reales (Reintegro acreditado, etc.) pueden aparecer como un chip de color cuando informan algo.
 
-El hero NO SHALL llevar type chips ("Compra en cuotas", "3 cuotas · pesos", etc.) — la información del tipo se infiere del ícono y se especifica en los DetailGroups y la tabla de cuotas debajo.
+A diferencia del hero anterior, el nuevo hero **SÍ** lleva chips de contexto (fecha · medio · categoría · subcategoría) debajo del monto; el tipo se comunica con el tono, el ícono y la línea de contexto, no con pills de "tipo" sobre el monto.
 
-#### Scenario: El hero usa el tone semántico correcto
+#### Scenario: El hero usa el tono y signo correctos por tipo
 
-- **WHEN** el sistema renderiza el detalle de un gasto cash de $1.234,56 en ARS
-- **THEN** el hero muestra el monto como `−$1.234,56` con `,56` en superscript, en color `text-expense`
-- **AND** la descripción 18px bold debajo
+- **WHEN** el sistema renderiza el detalle de un gasto cash de $4.200,50 en ARS
+- **THEN** el hero muestra el monto como `−$ 4.200,50` en color terracotta, con el símbolo de moneda más chico y opaco
+- **AND** debajo aparecen la línea de contexto y los chips de fecha · medio de pago · categoría · subcategoría
 
-#### Scenario: El hero de un reintegro pendiente usa tone pending
+#### Scenario: El hero de una transferencia no muestra signo
 
-- **WHEN** el sistema renderiza el detalle de un reintegro con `received_at IS NULL`
-- **THEN** el monto se muestra con `text-pending` (gris) y sin signo
-- **AND** la context line incluye la etiqueta "esperado"
+- **WHEN** el sistema renderiza el detalle de una transferencia interna
+- **THEN** el monto se muestra en slate **sin** signo `+` ni `−`
+- **AND** un eyebrow "Transferencia interna" aparece sobre el título
 
-#### Scenario: El hero no muestra type chips
+#### Scenario: El hero muestra los chips de contexto
 
-- **WHEN** el sistema renderiza el detalle de una compra en cuotas madre
-- **THEN** el hero muestra ícono + monto + descripción + context line
-- **AND** NO renderea pills con etiquetas tipo "Compra en cuotas" o "3 cuotas · pesos" arriba del monto
+- **WHEN** el sistema renderiza el detalle de un gasto categorizado con subcategoría
+- **THEN** la fila de chips incluye la fecha, el medio de pago, la categoría y la subcategoría
+- **AND** el chip del medio de pago NO muestra ningún número de tarjeta, solo el nombre del medio
 
 ### Requirement: Las acciones del detalle viven en un kebab menu
 
-El sistema SHALL exponer las acciones del detalle (Editar, Eliminar) como un **kebab menu `⋯`** ubicado arriba a la derecha del `TxHeader`, no como botones planos al pie del detalle. El kebab es un botón de 36×36 con ícono `MoreHorizontal`. Al click abre un dropdown con los items disponibles según los permisos del usuario y el editable-state del movimiento.
+El sistema SHALL exponer las acciones del detalle en la **topbar** de la pantalla, no en un kebab ni como botones planos al pie. En **desktop**, **Editar** SHALL ser un botón sólido navy a la derecha de la topbar y **Eliminar** un icon button (con hover en tono peligro). En **mobile**, la topbar es sticky: las acciones secundarias (incluida Eliminar) colapsan en un menú **"···"**, y **Editar** SHALL renderearse como un **botón fijo full-width en una barra inferior** (thumb-reach, respetando `safe-area-inset-bottom`).
 
-Items del dropdown:
+Las acciones disponibles dependen de los permisos del usuario y del editable-state del movimiento (igual que hoy): **Editar** abre el drawer de edición en contexto cuando está disponible, o navega a `[txId]/edit`; **Eliminar** abre el `AlertDialog` con copy contextual (parent / card payment / default). Cuando el movimiento no permite ninguna acción, la topbar deja el slot de acciones vacío.
 
-- **Editar**: link a `/transactions/[txId]/edit`. SHALL aparecer solo cuando `canEdit` (movimiento editable según `getEditableFields`).
-- **Eliminar**: abre un AlertDialog con copy contextual según el kind del movimiento. SHALL aparecer solo cuando `canDelete`.
+#### Scenario: En desktop, Editar y Eliminar están en la topbar
 
-Cuando ambos `canEdit` y `canDelete` son false, el kebab NO SHALL renderearse — el slot de actions del header queda vacío.
+- **WHEN** el sistema renderiza en viewport ancho el detalle de un gasto editable y eliminable
+- **THEN** la topbar muestra a la derecha el botón sólido "Editar" y un icon button de "Eliminar"
+- **AND** no se renderea ningún menú kebab `⋯`
 
-#### Scenario: El kebab abre el dropdown con los items aplicables
+#### Scenario: En mobile, Editar pasa a una barra inferior fija
 
-- **WHEN** el usuario abre el detalle de un gasto editable y eliminable y hace click en el kebab `⋯`
-- **THEN** se abre un dropdown con "Editar" y "Eliminar"
-- **AND** click en "Editar" navega a `/transactions/[txId]/edit`
-- **AND** click en "Eliminar" abre un AlertDialog de confirmación
+- **WHEN** el sistema renderiza en viewport angosto (≤600px) el detalle de un gasto editable
+- **THEN** la topbar es sticky y las acciones secundarias viven en un menú "···"
+- **AND** "Editar" se muestra como un botón fijo full-width en una barra inferior
 
-#### Scenario: El kebab se oculta cuando no hay acciones disponibles
+#### Scenario: Editar abre el drawer de edición en contexto
 
-- **WHEN** el usuario abre el detalle de un movimiento donde `canEdit && canDelete` son false (ej. una cuota hija con período pagado)
-- **THEN** el slot de actions del `TxHeader` queda vacío
-- **AND** el kebab `⋯` no aparece
+- **WHEN** el usuario toca "Editar" en un movimiento con drawer de edición disponible
+- **THEN** se abre el drawer de edición en contexto (sin navegar a `[txId]/edit`)
 
 ### Requirement: Los metadatos del detalle se agrupan en DetailGroups con eyebrow caps y filas
 

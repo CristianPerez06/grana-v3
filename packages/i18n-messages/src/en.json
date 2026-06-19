@@ -899,13 +899,18 @@
         "cancel": "Cancel",
         "delete_warning_default": "This action can't be undone.",
         "delete_warning_parent": "This will delete the purchase and all its installments. This action can't be undone.",
-        "delete_warning_card_payment": "If you delete this payment, the installments for the period will go back to pending. Continue?"
+        "delete_warning_card_payment": "If you delete this payment, the installments for the period will go back to pending. Continue?",
+        "more": "More",
+        "edit_movement": "Edit movement"
       },
       "groups": {
         "details": "Details",
         "card": "Card",
         "installments": "Installments",
-        "reimbursements": "Reimbursements"
+        "reimbursements": "Reimbursements",
+        "paid_with": "Paid with",
+        "month_weight": "Share of the month",
+        "credited_to": "Credited to"
       },
       "labels": {
         "date": "Date",
@@ -932,6 +937,74 @@
         "card_payment": "With this payment, the installments for the {periodo} period moved to paid.",
         "reimbursement_pending": "You're expecting this refund. When it lands, mark it as received and it'll add to your available balance.",
         "reimbursement_cancelled": "You marked this reimbursement as cancelled. If it does come in, you can reopen it."
+      },
+      "payment_sub": {
+        "cash": "Wallet",
+        "bank": "Savings account",
+        "credit": "Credit card"
+      },
+      "status": {
+        "reimbursed": "Reimbursed",
+        "credited": "Credited",
+        "completed": "Completed"
+      },
+      "flow": {
+        "expense": "Expense",
+        "installments": "Expense in {count} installments",
+        "shared": "Shared expense between {count} people",
+        "reimbursement": "Expense with reimbursement",
+        "recurrence": "Recurring expense",
+        "income": "Income",
+        "transfer": "Movement between your accounts"
+      },
+      "installments": {
+        "eyebrow": "Installments",
+        "per_month": "{amount} / mo",
+        "current": "Installment {n}",
+        "of": "of {total}",
+        "paid": "paid",
+        "remaining": "{amount} left",
+        "next": "Next",
+        "ends": "ends",
+        "completed": "Installments complete"
+      },
+      "shared": {
+        "your_share": "Your share",
+        "your_share_of": "your part of {total}",
+        "you": "You",
+        "divided_among": "Split between",
+        "each": "{amount} each"
+      },
+      "reimbursement_net": {
+        "eyebrow": "Net result",
+        "caption": "what it actually cost you",
+        "paid": "You paid",
+        "reimbursed": "Reimbursed",
+        "net": "Net cost",
+        "linked": "Linked reimbursement"
+      },
+      "recurrence": {
+        "eyebrow": "Recurrence",
+        "next_charge": "Next charge",
+        "active_since": "Active since",
+        "since_count": "{since} · {count} charges",
+        "history": "Charge history",
+        "last_6": "last 6 months"
+      },
+      "transfer": {
+        "flow": "Money movement",
+        "from": "From",
+        "to": "To",
+        "internal": "Internal transfer",
+        "callout_title": "It is not income or an expense.",
+        "callout_body": "It is money you move between your own accounts, so your monthly balance does not change."
+      },
+      "month_weight": {
+        "income_cap": "Income",
+        "income_headline": "Share of your income",
+        "income_note": "It is {pct}% of everything that came in this month.",
+        "expense_note": "It is {share}% of your {cap} spending this month.",
+        "expense_rank": "#{rank} category of the month"
       }
     },
     "installments": {
