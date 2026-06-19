@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   aggregateHero,
   buildMonthBalanceSeries,
+  calculateTransactionSums,
+  type BalanceTransactionRow,
   type HeroAccountRow,
   type MonthBalanceTxInput,
 } from '../src/aggregations'
@@ -115,35 +117,43 @@ describe('aggregateHero', () => {
 describe('buildMonthBalanceSeries', () => {
   const accIds = ['cash-1', 'bank-1']
 
+  // Row factory with sensible defaults so each test only states what matters.
+  const tx = (over: Partial<MonthBalanceTxInput> & Pick<MonthBalanceTxInput, 'date' | 'type' | 'amount' | 'account_id'>): MonthBalanceTxInput => ({
+    currency_code: 'ARS',
+    ...over,
+  })
+
   it('returns a flat zero series for a month with no movements', () => {
-    const series = buildMonthBalanceSeries(2026, 5, [], accIds)
+    const series = buildMonthBalanceSeries(2026, 5, [], accIds, 'ARS')
 
     expect(series.days).toHaveLength(31)
     expect(series.totalIncome).toBe(0)
     expect(series.totalExpense).toBe(0)
     expect(series.totalAdjustment).toBe(0)
+    expect(series.totalCardPayment).toBe(0)
+    expect(series.totalReimbursement).toBe(0)
+    expect(series.totalSettlement).toBe(0)
+    expect(series.totalExchange).toBe(0)
     expect(series.finalBalance).toBe(0)
     expect(series.days.every((d) => d.accumulatedBalance === 0)).toBe(true)
   })
 
   it('returns empty series when the user has no cash/bank accounts', () => {
-    const txs: MonthBalanceTxInput[] = [
-      { date: '2026-05-15', type: 'income', amount: 100, account_id: 'cash-1' },
-    ]
-    const series = buildMonthBalanceSeries(2026, 5, txs, [])
+    const txs = [tx({ date: '2026-05-15', type: 'income', amount: 100, account_id: 'cash-1' })]
+    const series = buildMonthBalanceSeries(2026, 5, txs, [], 'ARS')
 
     expect(series.totalIncome).toBe(0)
     expect(series.finalBalance).toBe(0)
   })
 
   it('reflects sueldo day as a jump and steady expense days as decline', () => {
-    const txs: MonthBalanceTxInput[] = [
-      { date: '2026-05-05', type: 'expense', amount: 10_000, account_id: 'cash-1' },
-      { date: '2026-05-10', type: 'expense', amount: 5_000, account_id: 'cash-1' },
-      { date: '2026-05-15', type: 'income', amount: 850_000, account_id: 'bank-1' },
-      { date: '2026-05-20', type: 'expense', amount: 30_000, account_id: 'bank-1' },
+    const txs = [
+      tx({ date: '2026-05-05', type: 'expense', amount: 10_000, account_id: 'cash-1' }),
+      tx({ date: '2026-05-10', type: 'expense', amount: 5_000, account_id: 'cash-1' }),
+      tx({ date: '2026-05-15', type: 'income', amount: 850_000, account_id: 'bank-1' }),
+      tx({ date: '2026-05-20', type: 'expense', amount: 30_000, account_id: 'bank-1' }),
     ]
-    const series = buildMonthBalanceSeries(2026, 5, txs, accIds)
+    const series = buildMonthBalanceSeries(2026, 5, txs, accIds, 'ARS')
 
     expect(series.totalIncome).toBe(850_000)
     expect(series.totalExpense).toBe(45_000)
@@ -156,25 +166,38 @@ describe('buildMonthBalanceSeries', () => {
     expect(series.days[30].accumulatedBalance).toBe(805_000)
   })
 
-  it('treats a card statement payment (expense on cash/bank) as a balance drop on its date', () => {
-    const txs: MonthBalanceTxInput[] = [
-      { date: '2026-05-01', type: 'income', amount: 500_000, account_id: 'bank-1' },
-      // Pago de resumen Visa el día 27 (expense en bank, status NULL → entra)
-      { date: '2026-05-27', type: 'expense', amount: 145_200, account_id: 'bank-1' },
+  it('routes a card statement payment to its own bucket, out of Gastos, still lowering the net', () => {
+    const txs = [
+      tx({ date: '2026-05-01', type: 'income', amount: 500_000, account_id: 'bank-1' }),
+      // Pago de resumen Visa el día 27 (expense en bank, vinculado a period_payments)
+      tx({
+        date: '2026-05-27',
+        type: 'expense',
+        amount: 145_200,
+        account_id: 'bank-1',
+        is_card_payment: true,
+      }),
     ]
-    const series = buildMonthBalanceSeries(2026, 5, txs, accIds)
+    const series = buildMonthBalanceSeries(2026, 5, txs, accIds, 'ARS')
 
+    expect(series.totalExpense).toBe(0) // card payment is NOT real spend
+    expect(series.totalCardPayment).toBe(145_200)
     expect(series.days[0].accumulatedBalance).toBe(500_000)
-    expect(series.days[26].accumulatedBalance).toBe(354_800)
+    expect(series.days[26].accumulatedBalance).toBe(354_800) // it still left cash
     expect(series.finalBalance).toBe(354_800)
   })
 
-  it('skips transfer rows (cash↔cash do not change net worth)', () => {
-    const txs: MonthBalanceTxInput[] = [
-      { date: '2026-05-10', type: 'transfer', amount: 200_000, account_id: 'cash-1' },
-      { date: '2026-05-10', type: 'transfer', amount: 200_000, account_id: 'bank-1' },
+  it('skips a transfer between owned accounts (nets to zero)', () => {
+    const txs = [
+      tx({
+        date: '2026-05-10',
+        type: 'transfer',
+        amount: 200_000,
+        account_id: 'cash-1',
+        transfer_destination_account_id: 'bank-1',
+      }),
     ]
-    const series = buildMonthBalanceSeries(2026, 5, txs, accIds)
+    const series = buildMonthBalanceSeries(2026, 5, txs, accIds, 'ARS')
 
     expect(series.totalIncome).toBe(0)
     expect(series.totalExpense).toBe(0)
@@ -182,11 +205,11 @@ describe('buildMonthBalanceSeries', () => {
   })
 
   it('routes adjustments to their own signed bucket, out of income/expense', () => {
-    const txs: MonthBalanceTxInput[] = [
-      { date: '2026-05-15', type: 'adjustment', amount: 1000, account_id: 'cash-1' },
-      { date: '2026-05-16', type: 'adjustment', amount: -500, account_id: 'cash-1' },
+    const txs = [
+      tx({ date: '2026-05-15', type: 'adjustment', amount: 1000, account_id: 'cash-1' }),
+      tx({ date: '2026-05-16', type: 'adjustment', amount: -500, account_id: 'cash-1' }),
     ]
-    const series = buildMonthBalanceSeries(2026, 5, txs, accIds)
+    const series = buildMonthBalanceSeries(2026, 5, txs, accIds, 'ARS')
 
     // Adjustments are stock corrections, not flow: they don't inflate the bars.
     expect(series.totalIncome).toBe(0)
@@ -197,51 +220,167 @@ describe('buildMonthBalanceSeries', () => {
     expect(series.days[15].dailyAdjustment).toBe(-500)
   })
 
-  it('keeps Gastos clean and reconciles the net (QA scenario)', () => {
-    // Real first-month data: real spend + real income + adjustments that mostly
-    // lower the balance. "Gastos" must reflect only the real expense, while the
-    // net still reconciles with the change in available balance.
-    const txs: MonthBalanceTxInput[] = [
-      { date: '2026-06-10', type: 'expense', amount: 254_461.25, account_id: 'cash-1' },
-      { date: '2026-06-05', type: 'income', amount: 7_349_361.79, account_id: 'bank-1' },
-      { date: '2026-06-12', type: 'adjustment', amount: -3_152_222.01, account_id: 'cash-1' },
-      { date: '2026-06-20', type: 'adjustment', amount: 615_610.22, account_id: 'bank-1' },
+  it('counts only a received "a cuenta" reimbursement, not pending or cancelled ones', () => {
+    const txs = [
+      tx({
+        date: '2026-05-10',
+        type: 'reimbursement',
+        amount: 50_000,
+        account_id: 'cash-1',
+        reimbursement_target: 'account',
+        received_at: '2026-05-10T00:00:00Z',
+      }),
+      // Pendiente (received_at null) → no cuenta
+      tx({
+        date: '2026-05-11',
+        type: 'reimbursement',
+        amount: 99_999,
+        account_id: 'cash-1',
+        reimbursement_target: 'account',
+        received_at: null,
+      }),
+      // Cancelado → no cuenta
+      tx({
+        date: '2026-05-12',
+        type: 'reimbursement',
+        amount: 88_888,
+        account_id: 'cash-1',
+        reimbursement_target: 'account',
+        received_at: '2026-05-12T00:00:00Z',
+        cancelled_at: '2026-05-13T00:00:00Z',
+      }),
     ]
-    const series = buildMonthBalanceSeries(2026, 6, txs, accIds)
+    const series = buildMonthBalanceSeries(2026, 5, txs, accIds, 'ARS')
 
-    expect(series.totalExpense).toBe(254_461.25) // only real spend, not the adjustments
-    expect(series.totalIncome).toBe(7_349_361.79) // only real income
-    expect(series.totalAdjustment).toBe(-2_536_611.79) // 615_610.22 − 3_152_222.01
+    expect(series.totalReimbursement).toBe(50_000)
+    expect(series.finalBalance).toBe(50_000)
+  })
+
+  it('keeps Gastos clean and reconciles the net (QA scenario)', () => {
+    const txs = [
+      tx({ date: '2026-06-10', type: 'expense', amount: 254_461.25, account_id: 'cash-1' }),
+      tx({ date: '2026-06-05', type: 'income', amount: 7_349_361.79, account_id: 'bank-1' }),
+      tx({ date: '2026-06-12', type: 'adjustment', amount: -3_152_222.01, account_id: 'cash-1' }),
+      tx({ date: '2026-06-20', type: 'adjustment', amount: 615_610.22, account_id: 'bank-1' }),
+    ]
+    const series = buildMonthBalanceSeries(2026, 6, txs, accIds, 'ARS')
+
+    expect(series.totalExpense).toBe(254_461.25)
+    expect(series.totalIncome).toBe(7_349_361.79)
+    expect(series.totalAdjustment).toBe(-2_536_611.79)
     expect(series.finalBalance).toBe(4_558_288.75)
-    // Invariant: finalBalance === income − expense + adjustment
     expect(series.finalBalance).toBe(
       series.totalIncome - series.totalExpense + series.totalAdjustment,
     )
   })
 
-  it('reports zero adjustment for a month without any', () => {
-    const txs: MonthBalanceTxInput[] = [
-      { date: '2026-05-05', type: 'expense', amount: 10_000, account_id: 'cash-1' },
-      { date: '2026-05-15', type: 'income', amount: 100_000, account_id: 'bank-1' },
-    ]
-    const series = buildMonthBalanceSeries(2026, 5, txs, accIds)
-
-    expect(series.totalAdjustment).toBe(0)
-  })
-
   it('ignores transactions from accounts not owned by the user', () => {
-    const txs: MonthBalanceTxInput[] = [
-      { date: '2026-05-10', type: 'expense', amount: 999, account_id: 'someone-elses-account' },
+    const txs = [
+      tx({ date: '2026-05-10', type: 'expense', amount: 999, account_id: 'someone-elses-account' }),
     ]
-    const series = buildMonthBalanceSeries(2026, 5, txs, accIds)
+    const series = buildMonthBalanceSeries(2026, 5, txs, accIds, 'ARS')
 
     expect(series.totalExpense).toBe(0)
     expect(series.finalBalance).toBe(0)
   })
 
   it('produces the right number of days for short months', () => {
-    expect(buildMonthBalanceSeries(2026, 2, [], accIds).days).toHaveLength(28)
-    expect(buildMonthBalanceSeries(2028, 2, [], accIds).days).toHaveLength(29)
-    expect(buildMonthBalanceSeries(2026, 4, [], accIds).days).toHaveLength(30)
+    expect(buildMonthBalanceSeries(2026, 2, [], accIds, 'ARS').days).toHaveLength(28)
+    expect(buildMonthBalanceSeries(2028, 2, [], accIds, 'ARS').days).toHaveLength(29)
+    expect(buildMonthBalanceSeries(2026, 4, [], accIds, 'ARS').days).toHaveLength(30)
+  })
+
+  // ── Reconciliation guardrail: the month net must equal the change in
+  //    `disponible` (calculateTransactionSums) over the same rows, by currency.
+  describe('reconciles with calculateTransactionSums (Disponible)', () => {
+    // One representative month touching every cash-movement type + the
+    // exclusions (pending/cancelled reimbursement, transfer netting to zero).
+    const rows: MonthBalanceTxInput[] = [
+      tx({ date: '2026-05-02', type: 'income', amount: 850_000, account_id: 'bank-1' }),
+      tx({ date: '2026-05-04', type: 'expense', amount: 254_461.25, account_id: 'cash-1' }),
+      tx({
+        date: '2026-05-06',
+        type: 'expense',
+        amount: 145_200,
+        account_id: 'bank-1',
+        is_card_payment: true,
+      }),
+      tx({ date: '2026-05-08', type: 'adjustment', amount: -3_000, account_id: 'cash-1' }),
+      tx({ date: '2026-05-09', type: 'adjustment', amount: 1_000, account_id: 'bank-1' }),
+      tx({
+        date: '2026-05-10',
+        type: 'reimbursement',
+        amount: 50_000,
+        account_id: 'cash-1',
+        reimbursement_target: 'account',
+        received_at: '2026-05-10T00:00:00Z',
+      }),
+      tx({
+        date: '2026-05-11',
+        type: 'reimbursement',
+        amount: 99_999,
+        account_id: 'cash-1',
+        reimbursement_target: 'account',
+        received_at: null,
+      }),
+      tx({ date: '2026-05-12', type: 'settlement', amount: 40_000, account_id: 'bank-1', settlement_direction: 'in' }),
+      tx({ date: '2026-05-13', type: 'settlement', amount: 10_000, account_id: 'cash-1', settlement_direction: 'out' }),
+      tx({
+        date: '2026-05-14',
+        type: 'exchange',
+        amount: 120_000,
+        account_id: 'cash-1',
+        currency_code: 'ARS',
+        transfer_destination_account_id: 'bank-1',
+        destination_amount: 100,
+        destination_currency: 'USD',
+      }),
+      tx({
+        date: '2026-05-15',
+        type: 'transfer',
+        amount: 200_000,
+        account_id: 'cash-1',
+        transfer_destination_account_id: 'bank-1',
+      }),
+      tx({ date: '2026-05-16', type: 'income', amount: 500, account_id: 'bank-1', currency_code: 'USD' }),
+    ]
+
+    // calculateTransactionSums ignores `date`/`is_card_payment`; the extra fields
+    // are harmless. Sum its per-account result across owned accounts, per currency.
+    const sums = calculateTransactionSums(rows as unknown as BalanceTransactionRow[], accIds)
+    const disponible = (currency: 'ARS' | 'USD') =>
+      accIds.reduce((acc, id) => acc + (sums.get(id)?.[currency] ?? 0), 0)
+
+    it('ARS net equals the ARS change in disponible', () => {
+      const series = buildMonthBalanceSeries(2026, 5, rows, accIds, 'ARS')
+      expect(series.finalBalance).toBeCloseTo(disponible('ARS'), 6)
+      expect(series.finalBalance).toBe(408_338.75)
+    })
+
+    it('USD net equals the USD change in disponible (exchange destination + income)', () => {
+      const series = buildMonthBalanceSeries(2026, 5, rows, accIds, 'USD')
+      expect(series.finalBalance).toBeCloseTo(disponible('USD'), 6)
+      expect(series.finalBalance).toBe(600) // 500 income + 100 exchange-in
+      expect(series.totalExchange).toBe(100)
+    })
+
+    it('buckets each type correctly (ARS)', () => {
+      const s = buildMonthBalanceSeries(2026, 5, rows, accIds, 'ARS')
+      expect(s.totalIncome).toBe(850_000)
+      expect(s.totalExpense).toBe(254_461.25) // excludes the card payment
+      expect(s.totalCardPayment).toBe(145_200)
+      expect(s.totalAdjustment).toBe(-2_000)
+      expect(s.totalReimbursement).toBe(50_000) // pending one excluded
+      expect(s.totalSettlement).toBe(30_000) // 40_000 in − 10_000 out
+      expect(s.totalExchange).toBe(-120_000) // source leg leaves ARS
+    })
+
+    it('matches the legacy formula when only income/expense/adjustment exist (no regression)', () => {
+      const legacyRows = rows.filter(
+        (r) => (r.type === 'income' || r.type === 'expense' || r.type === 'adjustment') && r.currency_code === 'ARS' && !r.is_card_payment,
+      )
+      const s = buildMonthBalanceSeries(2026, 5, legacyRows, accIds, 'ARS')
+      expect(s.finalBalance).toBe(s.totalIncome - s.totalExpense + s.totalAdjustment)
+    })
   })
 })

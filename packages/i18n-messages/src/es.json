@@ -124,13 +124,19 @@
       "label": "Para gastar",
       "view_all_accounts": "Ver todas las cuentas",
       "eyebrow": "Para gastar · hoy",
+      "question": "¿Cuánto tengo?",
       "caption": "Lo que tenés disponible hoy, en pesos y dólares."
     },
     "month": {
       "title": "Balance del mes",
+      "question": "¿Cómo se movió mi plata este mes?",
       "income": "Ingresos",
       "expense": "Gastos",
       "adjustment": "Ajustes",
+      "card_payment": "Pago de tarjeta",
+      "reimbursement": "Reintegros recibidos",
+      "settlement": "Liquidaciones",
+      "exchange": "Cambio de moneda",
       "adjustment_note": "🔍 ¿En qué se fue esta grana? Los ajustes son plata que se movió sin registrar — registrá esos movimientos y hacelos desaparecer.",
       "final_balance": "Balance",
       "legend_ars": "ARS (izq.)",
@@ -143,6 +149,7 @@
     "hero_error": "No pudimos cargar tu disponible.",
     "spending": {
       "title": "En qué se fue",
+      "question": "¿En qué se me fue?",
       "view_all": "Ver desglose",
       "loading": "Cargando el desglose…",
       "error": "No pudimos cargar el desglose del mes.",

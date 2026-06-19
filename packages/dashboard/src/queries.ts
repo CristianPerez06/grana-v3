@@ -57,10 +57,14 @@ async function getTransactionSums(
 
   // Exclude credit card child transactions (status IS NOT NULL) and
   // off-ledger parent rows (is_parent=true, account_id=NULL, auto-excluded by the or filter).
-  // destination_amount/currency feed the exchange leg in calculateTransactionSums.
+  // destination_amount/currency feed the exchange leg; reimbursement_target +
+  // received_at + cancelled_at gate which reimbursements credit the account; and
+  // settlement_direction gates the settlement leg — all consumed by
+  // calculateTransactionSums. Omitting any of them silently drops that type from
+  // the disponible (the bug this reconciliation change fixes).
   const { data, error } = await supabase
     .from('transactions')
-    .select('account_id, transfer_destination_account_id, currency_code, amount, type, destination_amount, destination_currency')
+    .select('account_id, transfer_destination_account_id, currency_code, amount, type, destination_amount, destination_currency, reimbursement_target, received_at, cancelled_at, settlement_direction')
     .or(
       `account_id.in.(${accountIds.join(',')}),transfer_destination_account_id.in.(${accountIds.join(',')})`,
     )
@@ -92,19 +96,22 @@ export async function getMonthBalanceSeries(
     return {
       year,
       month,
-      ARS: buildMonthBalanceSeries(year, month, [], []),
-      USD: buildMonthBalanceSeries(year, month, [], []),
+      ARS: buildMonthBalanceSeries(year, month, [], [], 'ARS'),
+      USD: buildMonthBalanceSeries(year, month, [], [], 'USD'),
     }
   }
 
-  // Fetch both currencies and partition by currency_code — bimoneda is never
-  // summed, so each currency builds its own accumulated series.
+  // Fetch every cash movement of the month on owned accounts. We do NOT
+  // pre-partition by currency_code: an `exchange` row's destination leg lives in
+  // `destination_currency` (the other currency), so each currency series must
+  // see all rows and pick the leg(s) relevant to it (see buildMonthBalanceSeries).
+  // The extra fields + `period_payments(id)` feed the per-type sign rules and the
+  // card-payment detection (same embed `getMonthCategoryBreakdown` uses).
   const { data: txs, error: txsErr } = await supabase
     .from('transactions')
     .select(
-      'id, date, type, amount, currency_code, account_id, transfer_destination_account_id, created_at',
+      'id, date, type, amount, currency_code, account_id, transfer_destination_account_id, destination_amount, destination_currency, reimbursement_target, received_at, cancelled_at, settlement_direction, created_at, period_payments(id)',
     )
-    .in('currency_code', ['ARS', 'USD'])
     .gte('date', fromISO)
     .lte('date', toISO)
     .is('status', null)
@@ -117,15 +124,17 @@ export async function getMonthBalanceSeries(
 
   if (txsErr) throw txsErr
 
-  const rows = (txs ?? []) as unknown as Array<MonthBalanceTxInput & { currency_code: string }>
-  const arsTxs = rows.filter((t) => t.currency_code === 'ARS')
-  const usdTxs = rows.filter((t) => t.currency_code === 'USD')
+  const rows: MonthBalanceTxInput[] = (
+    (txs ?? []) as unknown as Array<
+      Omit<MonthBalanceTxInput, 'is_card_payment'> & { period_payments: { id: string }[] | null }
+    >
+  ).map((t) => ({ ...t, is_card_payment: (t.period_payments?.length ?? 0) > 0 }))
 
   return {
     year,
     month,
-    ARS: buildMonthBalanceSeries(year, month, arsTxs, accIds),
-    USD: buildMonthBalanceSeries(year, month, usdTxs, accIds),
+    ARS: buildMonthBalanceSeries(year, month, rows, accIds, 'ARS'),
+    USD: buildMonthBalanceSeries(year, month, rows, accIds, 'USD'),
   }
 }
 

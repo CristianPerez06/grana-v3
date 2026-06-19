@@ -24,12 +24,25 @@ type Props = {
   initialData: MonthBalanceByCurrency
 }
 
-// One Ingresos/Gastos row: dot + label + amount, proportional bar below. The
-// widths are data-derived: the larger flow fills the track, the other scales.
-const FLOW_TONE: Record<'income' | 'expense' | 'adjustment', string> = {
+// One flow row: dot + label + amount, proportional bar below. The widths are
+// data-derived: the larger flow fills the track, the others scale.
+type FlowTone =
+  | 'income'
+  | 'expense'
+  | 'adjustment'
+  | 'cardPayment'
+  | 'reimbursement'
+  | 'settlement'
+  | 'exchange'
+
+const FLOW_TONE: Record<FlowTone, string> = {
   income: 'bg-emerald',
   expense: 'bg-terracotta',
   adjustment: 'bg-warning',
+  cardPayment: 'bg-navy',
+  reimbursement: 'bg-emerald-deep',
+  settlement: 'bg-slate',
+  exchange: 'bg-info',
 }
 
 const FlowRow = ({
@@ -41,7 +54,7 @@ const FlowRow = ({
   label: string
   amount: number
   widthPct: number
-  tone: 'income' | 'expense' | 'adjustment'
+  tone: FlowTone
 }) => (
   <div>
     <div className="flex items-center justify-between gap-3">
@@ -81,10 +94,34 @@ const MonthBalanceBody = ({ data }: { data: MonthBalanceByCurrency }) => {
   const hasAdjustment = ars.totalAdjustment !== 0
   const adjustmentAbs = Math.abs(ars.totalAdjustment)
 
-  const maxFlow = Math.max(ars.totalIncome, ars.totalExpense, adjustmentAbs)
-  const incomeWidth = maxFlow > 0 ? (ars.totalIncome / maxFlow) * 100 : 0
-  const expenseWidth = maxFlow > 0 ? (ars.totalExpense / maxFlow) * 100 : 0
-  const adjustmentWidth = maxFlow > 0 ? (adjustmentAbs / maxFlow) * 100 : 0
+  // A received reimbursement is cash coming back into the account: for CAJA it
+  // behaves like income, so it folds into "Ingresos" (no row of its own) while
+  // still counting in the net (reconciles with the Disponible).
+  const incomeWithRefunds = ars.totalIncome + ars.totalReimbursement
+  const usdIncomeWithRefunds = usd.totalIncome + usd.totalReimbursement
+
+  // Extra cash-movement buckets (CAJA reconciliation): each is a row only when
+  // the month has it, with the same bar treatment. Signed buckets (settlement,
+  // exchange) show their sign and scale by absolute value. Order: after Gastos,
+  // with Ajustes kept last so its educational note stays attached below it.
+  const conditionalRows = (
+    [
+      { tone: 'cardPayment', label: t('card_payment'), amount: ars.totalCardPayment },
+      { tone: 'settlement', label: t('settlement'), amount: ars.totalSettlement },
+      { tone: 'exchange', label: t('exchange'), amount: ars.totalExchange },
+    ] as const
+  ).filter((row) => row.amount !== 0)
+
+  const maxFlow = Math.max(
+    incomeWithRefunds,
+    ars.totalExpense,
+    adjustmentAbs,
+    ...conditionalRows.map((row) => Math.abs(row.amount)),
+  )
+  const widthOf = (value: number) => (maxFlow > 0 ? (Math.abs(value) / maxFlow) * 100 : 0)
+  const incomeWidth = widthOf(incomeWithRefunds)
+  const expenseWidth = widthOf(ars.totalExpense)
+  const adjustmentWidth = widthOf(adjustmentAbs)
 
   return (
     <div className="flex min-h-[15rem] flex-1 flex-col">
@@ -112,7 +149,7 @@ const MonthBalanceBody = ({ data }: { data: MonthBalanceByCurrency }) => {
         <div className="flex flex-col gap-3.5">
           <FlowRow
             label={t('income')}
-            amount={ars.totalIncome}
+            amount={incomeWithRefunds}
             widthPct={incomeWidth}
             tone="income"
           />
@@ -122,6 +159,19 @@ const MonthBalanceBody = ({ data }: { data: MonthBalanceByCurrency }) => {
             widthPct={expenseWidth}
             tone="expense"
           />
+          {/* Extra cash movements (pago de tarjeta, liquidaciones, cambio de
+              moneda) — only the buckets the month actually has, so the net
+              reconcilia con el Disponible sin ensuciar la card. Reintegros van
+              dentro de Ingresos (plata que volvió), sin barra propia. */}
+          {conditionalRows.map((row) => (
+            <FlowRow
+              key={row.tone}
+              label={row.label}
+              amount={row.amount}
+              widthPct={widthOf(row.amount)}
+              tone={row.tone}
+            />
+          ))}
           {/* Ajustes — stock correction, not flow. Same bar treatment as the
               flows for a uniform look, but only when the month has any. */}
           {hasAdjustment && (
@@ -158,7 +208,7 @@ const MonthBalanceBody = ({ data }: { data: MonthBalanceByCurrency }) => {
         </span>
         <span className="ml-auto text-[12.5px] font-semibold text-text-muted">
           {t('income')}{' '}
-          <MaskedAmount amount={usd.totalIncome} currency="USD" showCentsOverride />
+          <MaskedAmount amount={usdIncomeWithRefunds} currency="USD" showCentsOverride />
           {' · '}
           {t('expense')}{' '}
           <MaskedAmount amount={usd.totalExpense} currency="USD" showCentsOverride />
@@ -200,7 +250,10 @@ export const MonthBalanceSection = ({ initialData }: Props) => {
   return (
     <Card className="flex flex-col">
       <CardHeader className="gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <h2 className="min-w-0 truncate text-lg font-semibold text-text">{t('title')}</h2>
+        <div className="min-w-0">
+          <h2 className="min-w-0 truncate text-lg font-semibold text-text">{t('title')}</h2>
+          <p className="truncate text-[12.5px] text-text-soft">{t('question')}</p>
+        </div>
         <p className="text-sm text-text-muted sm:shrink-0">
           {tDashboard.rich('net_this_month', {
             net: currentNetLabel,

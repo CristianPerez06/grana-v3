@@ -1,4 +1,4 @@
-import { Money } from '@grana/validation'
+import { Money, type MoneyType } from '@grana/validation'
 import { resolveAccountAvatar } from '@grana/ui-contracts'
 import type {
   DashboardHero,
@@ -78,65 +78,191 @@ export function aggregateHero(
   }
 }
 
+type BalanceCurrency = 'ARS' | 'USD'
+
+/** Absolute value of a Money (the API is functional: no `.abs()`/`.minus()`). */
+function moneyAbs(m: MoneyType): MoneyType {
+  return Money.isNegative(m) ? Money.subtract(Money.from(0), m) : m
+}
+
+/** Negate a Money. */
+function moneyNegate(m: MoneyType): MoneyType {
+  return Money.subtract(Money.from(0), m)
+}
+
+/**
+ * A month-balance input row. Carries every field the CAJA reconciliation needs
+ * so the month series applies the SAME per-type sign rules as
+ * `calculateTransactionSums` (the source of the Hero/Disponible) and therefore
+ * `finalBalance` equals the month's change in `disponible` by construction.
+ */
 export type MonthBalanceTxInput = {
   date: string
-  type: 'income' | 'expense' | 'transfer' | 'adjustment'
+  type:
+    | 'income'
+    | 'expense'
+    | 'transfer'
+    | 'adjustment'
+    | 'exchange'
+    | 'reimbursement'
+    | 'settlement'
   amount: number | string
   account_id: string | null
+  currency_code: string
+  transfer_destination_account_id?: string | null
+  /** Destination leg of an exchange (in `destination_currency`). */
+  destination_amount?: number | string | null
+  destination_currency?: string | null
+  /** Reimbursement subtype. */
+  reimbursement_target?: 'account' | 'statement' | null
+  /** Reimbursement confirmation/cancellation instants (NULL received = pending). */
+  received_at?: string | null
+  cancelled_at?: string | null
+  /** Settlement leg direction: 'out' debits, 'in' credits. */
+  settlement_direction?: 'out' | 'in' | null
+  /** True when this `expense` is a card statement payment (linked to a period_payments). */
+  is_card_payment?: boolean
+}
+
+/** Which display bucket a signed contribution belongs to (for the per-bucket totals). */
+type CashBucket =
+  | 'income'
+  | 'expense'
+  | 'cardPayment'
+  | 'adjustment'
+  | 'reimbursement'
+  | 'settlement'
+  | 'exchange'
+
+/**
+ * Classify a row's contribution to ONE currency's running balance, mirroring
+ * `calculateTransactionSums`. Returns the signed balance delta (what moves the
+ * accumulated balance) and the bucket it should be tallied under, or `null` when
+ * the row does not affect this currency on an owned account. `transfer` always
+ * returns null: between owned cash/bank accounts both legs net to zero.
+ *
+ * The bucket total is derived from `signed` (its magnitude or the signed value
+ * for the signed buckets), so the per-type sign rules live in exactly one place.
+ */
+function classifyCashContribution(
+  row: MonthBalanceTxInput,
+  currency: BalanceCurrency,
+  ownedAccountIds: Set<string>,
+): { bucket: CashBucket; signed: MoneyType } | null {
+  const owns = (id: string | null | undefined) => id != null && ownedAccountIds.has(id)
+  const amount = Money.from(row.amount)
+
+  switch (row.type) {
+    case 'income':
+      if (!owns(row.account_id) || row.currency_code !== currency) return null
+      return { bucket: 'income', signed: amount }
+    case 'expense':
+      if (!owns(row.account_id) || row.currency_code !== currency) return null
+      return {
+        bucket: row.is_card_payment ? 'cardPayment' : 'expense',
+        signed: moneyNegate(amount),
+      }
+    case 'adjustment':
+      // Stored signed: positive raises the balance, negative lowers it.
+      if (!owns(row.account_id) || row.currency_code !== currency) return null
+      return { bucket: 'adjustment', signed: amount }
+    case 'reimbursement':
+      // Only a received "a cuenta" reimbursement credits the account, like income.
+      if (
+        !owns(row.account_id) ||
+        row.currency_code !== currency ||
+        row.reimbursement_target !== 'account' ||
+        row.received_at == null ||
+        row.cancelled_at != null
+      ) {
+        return null
+      }
+      return { bucket: 'reimbursement', signed: amount }
+    case 'settlement':
+      if (!owns(row.account_id) || row.currency_code !== currency) return null
+      if (row.settlement_direction === 'in') return { bucket: 'settlement', signed: amount }
+      if (row.settlement_direction === 'out') {
+        return { bucket: 'settlement', signed: moneyNegate(amount) }
+      }
+      return null
+    case 'exchange': {
+      // Two legs in (potentially) different currencies: the source leg leaves
+      // `currency_code`, the destination leg arrives in `destination_currency`.
+      // For the target currency, apply whichever leg matches.
+      if (owns(row.account_id) && row.currency_code === currency) {
+        return { bucket: 'exchange', signed: moneyNegate(amount) }
+      }
+      if (
+        owns(row.transfer_destination_account_id) &&
+        row.destination_currency === currency &&
+        row.destination_amount != null
+      ) {
+        return { bucket: 'exchange', signed: Money.from(row.destination_amount) }
+      }
+      return null
+    }
+    case 'transfer':
+      // Between owned cash/bank accounts both legs net to zero → no effect.
+      return null
+  }
 }
 
 export function buildMonthBalanceSeries(
   year: number,
   month: number,
-  txs: MonthBalanceTxInput[],
+  rows: MonthBalanceTxInput[],
   ownedAccountIds: string[],
+  currency: BalanceCurrency,
 ): MonthBalanceSeries {
   const lastDay = new Date(year, month, 0).getDate()
   if (ownedAccountIds.length === 0) {
     return emptyMonthSeries(year, month, lastDay)
   }
 
+  const accIdSet = new Set(ownedAccountIds)
+  // Per-day signed delta (drives the accumulated balance) + the three legacy
+  // per-day flow buckets still exposed on MonthBalanceDay.
+  const dailyDelta = Array.from({ length: lastDay + 1 }, () => Money.from(0))
   const dailyIncome = Array.from({ length: lastDay + 1 }, () => Money.from(0))
   const dailyExpense = Array.from({ length: lastDay + 1 }, () => Money.from(0))
-  // Adjustments live in their own signed bucket: they are stock corrections,
-  // not flow, so they must not inflate Ingresos/Gastos — but they still move
-  // the accumulated balance (and finalBalance) because the money really moved.
   const dailyAdjustment = Array.from({ length: lastDay + 1 }, () => Money.from(0))
-  const accIdSet = new Set(ownedAccountIds)
 
-  for (const tx of txs) {
-    const day = parseISODay(tx.date)
+  const totals: Record<CashBucket, MoneyType> = {
+    income: Money.from(0),
+    expense: Money.from(0),
+    cardPayment: Money.from(0),
+    adjustment: Money.from(0),
+    reimbursement: Money.from(0),
+    settlement: Money.from(0),
+    exchange: Money.from(0),
+  }
+
+  for (const row of rows) {
+    const day = parseISODay(row.date)
     if (day < 1 || day > lastDay) continue
-    const amount = Money.from(tx.amount)
-    const ownsAccount = tx.account_id != null && accIdSet.has(tx.account_id)
-    if (!ownsAccount) continue
 
-    if (tx.type === 'income') {
-      dailyIncome[day] = Money.add(dailyIncome[day], amount)
-    } else if (tx.type === 'expense') {
-      dailyExpense[day] = Money.add(dailyExpense[day], amount)
-    } else if (tx.type === 'adjustment') {
-      // Stored signed: positive raises the balance, negative lowers it.
-      dailyAdjustment[day] = Money.add(dailyAdjustment[day], amount)
+    const contribution = classifyCashContribution(row, currency, accIdSet)
+    if (!contribution) continue
+    const { bucket, signed } = contribution
+
+    // Accumulated balance always tracks the signed delta of every cash movement.
+    dailyDelta[day] = Money.add(dailyDelta[day], signed)
+    // Per-bucket totals: signed buckets keep the sign; flow buckets the magnitude.
+    if (bucket === 'adjustment' || bucket === 'settlement' || bucket === 'exchange') {
+      totals[bucket] = Money.add(totals[bucket], signed)
+    } else {
+      totals[bucket] = Money.add(totals[bucket], moneyAbs(signed))
     }
-    // type='transfer' intentionally skipped (cash↔cash transfers don't change
-    // the user's net worth).
+
+    if (bucket === 'income') dailyIncome[day] = Money.add(dailyIncome[day], moneyAbs(signed))
+    else if (bucket === 'expense') dailyExpense[day] = Money.add(dailyExpense[day], moneyAbs(signed))
+    else if (bucket === 'adjustment') dailyAdjustment[day] = Money.add(dailyAdjustment[day], signed)
   }
 
   const days: MonthBalanceDay[] = []
   let acc = Money.from(0)
-  let totalIncome = Money.from(0)
-  let totalExpense = Money.from(0)
-  let totalAdjustment = Money.from(0)
-
   for (let d = 1; d <= lastDay; d++) {
-    acc = Money.add(
-      acc,
-      Money.add(Money.subtract(dailyIncome[d], dailyExpense[d]), dailyAdjustment[d]),
-    )
-    totalIncome = Money.add(totalIncome, dailyIncome[d])
-    totalExpense = Money.add(totalExpense, dailyExpense[d])
-    totalAdjustment = Money.add(totalAdjustment, dailyAdjustment[d])
+    acc = Money.add(acc, dailyDelta[d])
     days.push({
       day: d,
       accumulatedBalance: Money.toNumber(acc),
@@ -150,9 +276,13 @@ export function buildMonthBalanceSeries(
     year,
     month,
     days,
-    totalIncome: Money.toNumber(totalIncome),
-    totalExpense: Money.toNumber(totalExpense),
-    totalAdjustment: Money.toNumber(totalAdjustment),
+    totalIncome: Money.toNumber(totals.income),
+    totalExpense: Money.toNumber(totals.expense),
+    totalAdjustment: Money.toNumber(totals.adjustment),
+    totalCardPayment: Money.toNumber(totals.cardPayment),
+    totalReimbursement: Money.toNumber(totals.reimbursement),
+    totalSettlement: Money.toNumber(totals.settlement),
+    totalExchange: Money.toNumber(totals.exchange),
     finalBalance: Money.toNumber(acc),
   }
 }
@@ -175,6 +305,10 @@ function emptyMonthSeries(
     totalIncome: 0,
     totalExpense: 0,
     totalAdjustment: 0,
+    totalCardPayment: 0,
+    totalReimbursement: 0,
+    totalSettlement: 0,
+    totalExchange: 0,
     finalBalance: 0,
   }
 }

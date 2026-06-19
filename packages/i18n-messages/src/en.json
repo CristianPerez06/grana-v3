@@ -124,13 +124,19 @@
       "label": "To spend",
       "view_all_accounts": "View all accounts",
       "eyebrow": "To spend · today",
+      "question": "How much do I have?",
       "caption": "What you have available today, in pesos and dollars."
     },
     "month": {
       "title": "Month balance",
+      "question": "How did my money move this month?",
       "income": "Income",
       "expense": "Expenses",
       "adjustment": "Adjustments",
+      "card_payment": "Card payment",
+      "reimbursement": "Reimbursements received",
+      "settlement": "Settlements",
+      "exchange": "Currency exchange",
       "adjustment_note": "🔍 Where did this money go? Adjustments are money that moved without being recorded — log those transactions and make them disappear.",
       "final_balance": "Balance",
       "legend_ars": "ARS (left)",
@@ -143,6 +149,7 @@
     "hero_error": "We couldn't load your available balance.",
     "spending": {
       "title": "Where it went",
+      "question": "Where did it go?",
       "view_all": "View breakdown",
       "loading": "Loading the breakdown…",
       "error": "We couldn't load this month's breakdown.",

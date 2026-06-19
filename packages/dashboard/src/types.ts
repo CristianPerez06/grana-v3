@@ -36,15 +36,38 @@ export type MonthBalanceSeries = {
   month: number
   days: MonthBalanceDay[]
   totalIncome: number
+  /** Real expense only (`type='expense'` that is NOT a card statement payment). */
   totalExpense: number
   /**
    * Net of `type='adjustment'` movements for the month, signed. Adjustments
    * are stock corrections, not flow: they stay out of totalIncome/totalExpense
    * (so those reflect real flow and "Gastos" reconciles with "En qué se fue")
-   * but still affect finalBalance. Invariant:
-   * finalBalance === totalIncome − totalExpense + totalAdjustment.
+   * but still affect finalBalance.
    */
   totalAdjustment: number
+  /**
+   * Card statement payments of the month (the `expense` on cash/bank linked to
+   * a `period_payments`). Kept out of `totalExpense` (it cancels already-accrued
+   * debt, it is not new spending) but it IS a real cash outflow, so it lowers
+   * `finalBalance`.
+   */
+  totalCardPayment: number
+  /** Received "a cuenta" reimbursements (credit the account, like income). */
+  totalReimbursement: number
+  /** Net of debt settlements, signed: `in` adds, `out` subtracts. */
+  totalSettlement: number
+  /**
+   * Net of currency-exchange legs for THIS currency, signed: the source leg
+   * (money leaving this currency) subtracts, the destination leg (money arriving
+   * in this currency) adds. Reconciles per-currency, never summed across ARS/USD.
+   */
+  totalExchange: number
+  /**
+   * Net of the month, reconciling with the change in `disponible` by
+   * construction (same per-type sign rules as `calculateTransactionSums`):
+   * finalBalance = totalIncome − totalExpense − totalCardPayment
+   *   + totalAdjustment + totalReimbursement + totalSettlement + totalExchange.
+   */
   finalBalance: number
 }
 

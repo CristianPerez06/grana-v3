@@ -97,7 +97,10 @@ export const SpendingSection = ({ initialData }: Props) => {
   return (
     <Card className="flex flex-col">
       <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="min-w-0 truncate text-lg font-semibold text-text">{t('title')}</h2>
+        <div className="min-w-0">
+          <h2 className="min-w-0 truncate text-lg font-semibold text-text">{t('title')}</h2>
+          <p className="truncate text-[12.5px] text-text-soft">{t('question')}</p>
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-3 sm:shrink-0 sm:flex-nowrap sm:justify-end">
           <Link
             href={breakdownHref}

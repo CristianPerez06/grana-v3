@@ -354,30 +354,76 @@ En **web**, el `eye toggle` SHALL permanecer montado y visible mientras el heade
 
 ### Requirement: La sección "Balance del mes" muestra el neto del mes con barras de ingresos y gastos
 
-La sección "Balance del mes" SHALL mostrar, para el mes seleccionado en el navegador compartido: un eyebrow "BALANCE" y debajo el neto ARS del mes en tipografía grande con signo y color (positivo → emerald, negativo → terracota/expense); debajo, dos filas Ingresos y Gastos, cada una con dot de color + label + monto y una barra horizontal proporcional.
+La sección "Balance del mes" SHALL mostrar, para el mes seleccionado en el navegador compartido: un eyebrow "BALANCE" y debajo el neto ARS del mes en tipografía grande con signo y color (positivo → emerald, negativo → terracota/expense); debajo, las filas de flujo, cada una con dot de color + label + monto y una barra horizontal proporcional.
 
-Los movimientos `type='adjustment'` (ajustes de saldo) SHALL contabilizarse en un **balde propio** separado de Ingresos y Gastos. Un ajuste de saldo es una corrección del stock, no un flujo: NO SHALL sumarse a "Ingresos" (cuando es positivo) ni a "Gastos" (cuando es negativo). En consecuencia, la fila "Gastos" SHALL reflejar únicamente gasto real (`type='expense'`) y SHALL coincidir con el total de "En qué se fue" para el mismo mes y moneda (salvo el neteo de reintegros propio de esa card). El neto del mes (`finalBalance`) y el saldo acumulado SHALL seguir incluyendo el efecto de los ajustes, de modo que el neto reconcilie con el cambio del Disponible: `finalBalance = totalIncome − totalExpense + totalAdjustment`.
+**Reconciliación con el Disponible (lente CAJA).** El neto del mes (`finalBalance`) SHALL reconciliar exactamente con el cambio del Disponible en ese mes: la sección SHALL contabilizar **todo** movimiento de caja del mes sobre cuentas propias (`type IN ('cash','bank')`) aplicando los **mismos signos** que `calculateTransactionSums` (la fuente del Hero/Disponible), por moneda, sin combinar ARS con USD. En consecuencia `finalBalance = totalIncome − totalExpense − totalCardPayment + totalAdjustment + totalReimbursement + totalSettlement + totalExchange`. Ningún tipo de movimiento de caja SHALL descartarse: los reintegros recibidos a cuenta, las liquidaciones de deuda compartida y los cambios de moneda — hoy ignorados — SHALL contabilizarse. Las transferencias entre cuentas propias netean cero y SHALL seguir sin contabilizarse. Solo cuentan transacciones confirmadas (los consumos `pending` de tarjeta no entran, igual que siempre).
 
-Cuando el mes seleccionado tenga al menos un ajuste de saldo (neto distinto de cero), la sección SHALL mostrar una fila adicional "Ajustes" con el mismo tratamiento visual que Ingresos/Gastos (dot + label + monto + barra horizontal proporcional), en un color propio (`warning`/ámbar) para distinguirla. El monto SHALL mostrarse con su signo (el neto puede ser negativo). Cuando el mes NO tenga ajustes (neto cero), la fila "Ajustes" NO SHALL renderizarse, para no ensuciar la card del usuario que nunca ajusta.
+Cada tipo de movimiento de caja vive en su **balde propio**, con estas reglas de signo (idénticas a `calculateTransactionSums`):
 
-La barra de "Ajustes" SHALL compartir la escala con las barras de Ingresos/Gastos: el ancho de las tres se calcula contra el mismo `maxFlow = max(totalIncome, totalExpense, |totalAdjustment|)`, usando el valor absoluto del neto de ajustes para el ancho. Los anchos NO SHALL hardcodearse.
+- **Ingresos** (`income`): suma. Fila siempre visible.
+- **Gastos** (`expense` que NO es pago de resumen): suma. Fila siempre visible.
+- **Ajustes** (`adjustment`): signado (positivo sube el saldo, negativo lo baja). Corrección de stock, no flujo.
+- **Pago de tarjeta** (`expense` vinculado a un `period_payments`): suma. Cancela deuda ya devengada, no es consumo nuevo.
+- **Reintegros recibidos** (`reimbursement` con `reimbursement_target='account'`, `received_at` no nulo y `cancelled_at` nulo): es plata que vuelve a la cuenta, así que para la caja se cuenta como **ingreso** y se **pliega dentro de la fila "Ingresos"** (NO tiene barra propia). Suma al neto igual. Los reintegros pendientes, cancelados o "en resumen" NO entran (no tocan el Disponible).
+- **Liquidaciones** (`settlement`): signado — `settlement_direction='in'` suma, `'out'` resta.
+- **Cambio de moneda** (`exchange`): signado **por moneda** — en la serie ARS, la pata origen (la plata que sale de ARS) resta; en la serie USD, la pata destino (la que entra) suma. Reconcilia per-moneda porque es exactamente lo que hace `calculateTransactionSums`.
+
+Un ajuste de saldo es una corrección del stock, no un flujo: NO SHALL sumarse a "Ingresos" ni a "Gastos". El pago de resumen NO SHALL sumarse a "Gastos". La fila "Gastos" SHALL reflejar únicamente gasto **de caja** real (`type='expense'` sobre cuenta propia que NO es pago de resumen).
+
+**"Gastos" (CAJA) NO coincide con "En qué se fue" (CONSUMO).** Son lentes distintas a propósito: "En qué se fue" es **devengado** e incluye el consumo de tarjeta (consumos + cuotas, por fecha de compra), mientras "Gastos" de Balance del mes es **caja** y solo cuenta lo que salió de una cuenta propia (efectivo/débito). La diferencia entre ambos es, justamente, el consumo de tarjeta del mes que aún no se pagó. La reconciliación que SHALL cumplirse es otra: `finalBalance` ↔ el cambio del **Disponible** (ver más arriba). El rótulo de la pregunta de cada card comunica que miran cosas distintas.
+
+**Filas condicionales.** Las filas "Ingresos" y "Gastos" SHALL mostrarse siempre. Los reintegros recibidos se pliegan dentro de "Ingresos" (sin barra propia). Las filas "Ajustes", "Pago de tarjeta", "Liquidaciones" y "Cambio de moneda" SHALL mostrarse **solo cuando el mes tiene ese movimiento** (balde con monto ≠ 0), para no ensuciar la card de quien no los usa. Cada una con el mismo tratamiento visual (dot + label + monto + barra proporcional) y un tono propio que la distinga; los montos signados (Ajustes, Liquidaciones, Cambio de moneda) SHALL mostrarse con su signo.
 
 Debajo de la fila "Ajustes", y solo cuando esa fila se muestra, la sección SHALL renderizar un **aviso educativo** (voz Grana, texto atenuado) que comunique que los ajustes son grana que se movió sin registrar y que la meta es hacerlos desaparecer registrando esos movimientos. El texto SHALL salir del catálogo i18n (`dashboard.month.adjustment_note`), sin string hardcodeado.
 
 El header de la card SHALL mostrar a la derecha del título la línea "vas {neto} este mes" referida **siempre al mes en curso** (no sigue al selector: ancla el contexto de hoy mientras se navegan meses pasados), con el monto coloreado por signo y enmascarable por el eye-mask. El dato SHALL salir del mes actual ya disponible (web: server-rendered; nativo: el cache de TanStack del primer load) sin fetch adicional.
 
-Los anchos de las barras SHALL calcularse de los datos: la magnitud mayor entre Ingresos, Gastos y `|Ajustes|` ocupa el 100% del track y las otras escalan proporcionalmente (`magnitud / maxFlow`); con todas en cero, las barras quedan vacías. Los anchos NO SHALL hardcodearse. Ingresos usa el color emerald; Gastos el terracota; Ajustes el `warning`/ámbar.
+Los anchos de las barras SHALL calcularse de los datos: la magnitud mayor entre todas las filas presentes ocupa el 100% del track y las otras escalan proporcionalmente (`magnitud / maxFlow`), usando el valor absoluto de los baldes signados; con todas en cero, las barras quedan vacías. Los anchos NO SHALL hardcodearse. Ingresos usa el color emerald; Gastos el terracota; Ajustes el `warning`/ámbar; las demás filas un tono propio que las distinga.
 
 Al pie, un strip USD SHALL mostrar el chip "USD", el neto USD del mes con signo y color, y el detalle "Ingresos US$X · Gastos US$Y". El strip SHALL mostrarse siempre (bimoneda por defecto: sin actividad USD muestra ceros). ARS y USD nunca se combinan ni convierten.
 
-Los datos SHALL salir de `getMonthBalanceSeries` (totales por moneda, incluyendo `totalAdjustment`). La sección NO SHALL renderizar el gráfico de línea acumulada en ninguna plataforma: `MonthBalanceChart` no existe ni en `apps/web` ni en `apps/mobile` (la serie diaria sigue disponible en el package para vistas futuras). Todos los importes participan del eye-mask. El cálculo considera solo transacciones confirmadas (los consumos `pending` de tarjeta no entran), igual que siempre.
+Los datos SHALL salir de `getMonthBalanceSeries` (totales por moneda, incluyendo `totalAdjustment`, `totalCardPayment`, `totalReimbursement`, `totalSettlement` y `totalExchange`). La sección NO SHALL renderizar el gráfico de línea acumulada en ninguna plataforma: `MonthBalanceChart` no existe ni en `apps/web` ni en `apps/mobile` (la serie diaria sigue disponible en el package para vistas futuras). Todos los importes participan del eye-mask.
+
+#### Scenario: El neto del mes reconcilia con el cambio del Disponible
+
+- **WHEN** el mes (ARS) tiene ingresos $500.000, gastos reales $300.000 y un reintegro recibido a cuenta de $50.000
+- **THEN** el neto del mes es `+$250.000` (= 500.000 − 300.000 + 50.000)
+- **AND** ese neto es idéntico al cambio del Disponible del mes (que también cuenta el reintegro)
+- **AND** el reintegro se cuenta dentro de la fila "Ingresos" (que muestra `$550.000`), sin barra propia
+
+#### Scenario: El Disponible cuenta los reintegros recibidos y las liquidaciones
+
+- **WHEN** el usuario tiene un reintegro recibido a cuenta y una liquidación de deuda que acreditan cuentas propias
+- **THEN** el cálculo del Disponible (Hero) los incluye (de lo contrario `finalBalance` del mes no reconciliaría con el cambio del Disponible)
+- **AND** la query del Disponible SHALL traer los campos que gobiernan esos tipos (`reimbursement_target`, `received_at`, `cancelled_at`, `settlement_direction`); omitir cualquiera los descarta silenciosamente
+
+#### Scenario: Liquidaciones y cambios de moneda se contabilizan
+
+- **WHEN** en ARS el usuario recibe una liquidación (`settlement in`) de $40.000 y hace un cambio de moneda comprando dólares por $120.000 (pata origen ARS)
+- **THEN** la sección muestra una fila "Liquidaciones" en `+$40.000` y una fila "Cambio de moneda" en `−$120.000`
+- **AND** el neto del mes incluye ambos efectos y reconcilia con el Disponible ARS
+- **AND** en la serie USD, la pata destino del cambio aparece como "Cambio de moneda" en positivo
+
+#### Scenario: El pago de resumen se rotula aparte y no infla Gastos
+
+- **WHEN** el mes seleccionado tiene gasto real ARS $200.000 y un pago de resumen de tarjeta de ARS $150.000 (un `expense` sobre cash/bank vinculado a un `period_payments`)
+- **THEN** la fila "Gastos" muestra `$200.000` (sin el pago de resumen)
+- **AND** la sección muestra una fila aparte "Pago de tarjeta" en `$150.000`
+- **AND** el neto del mes sigue restando los $150.000 (la plata salió de caja): `finalBalance` es idéntico al que daba contando el pago dentro de Gastos
+
+#### Scenario: "Gastos" (CAJA) difiere de "En qué se fue" (CONSUMO) cuando hay tarjeta
+
+- **WHEN** el mes tiene gasto de caja (efectivo/débito) por $254.461,25 y además consumos de tarjeta del mes por $460.892,38 (devengados)
+- **THEN** "Gastos" de "Balance del mes" muestra `$254.461,25` (solo caja)
+- **AND** "En qué se fue" muestra `$715.353,63` (devengado: incluye la tarjeta)
+- **AND** los dos números difieren a propósito (lentes distintas) — NO es un error; la reconciliación que cuenta es `finalBalance` ↔ Disponible
 
 #### Scenario: Neto positivo con barras proporcionales
 
-- **WHEN** el mes seleccionado tiene ingresos ARS $800.000 y gastos ARS $295.500,25 y sin ajustes de saldo
+- **WHEN** el mes seleccionado tiene ingresos ARS $800.000 y gastos ARS $295.500,25 y ningún otro movimiento de caja
 - **THEN** el neto muestra `+$504.499,75` en emerald
 - **AND** la barra de Ingresos ocupa el 100% del track y la de Gastos ~36,9%
-- **AND** la fila "Ajustes" NO se renderiza
+- **AND** solo se renderizan las filas "Ingresos" y "Gastos"
 - **AND** el strip USD muestra el neto USD del mes con su detalle de ingresos y gastos
 
 #### Scenario: Gastos mayores que ingresos invierten la proporción
@@ -391,21 +437,15 @@ Los datos SHALL salir de `getMonthBalanceSeries` (totales por moneda, incluyendo
 - **WHEN** el mes seleccionado tiene gasto real ARS $254.461,25, ingreso real ARS $7.349.361,79, ajustes que restan saldo por ARS $3.152.222,01 y ajustes que suman saldo por ARS $615.610,22
 - **THEN** la fila "Gastos" muestra `$254.461,25` (solo gasto real, sin los ajustes)
 - **AND** la fila "Ingresos" muestra `$7.349.361,79` (solo ingreso real)
-- **AND** la fila "Ajustes" se muestra con el neto `−$2.536.611,79` y una barra ámbar proporcional (su ancho contra `maxFlow = $7.349.361,79`)
+- **AND** la fila "Ajustes" se muestra con el neto `−$2.536.611,79` y una barra ámbar proporcional (su ancho contra `maxFlow`)
 - **AND** debajo de las barras aparece el aviso educativo (voz Grana) desde `dashboard.month.adjustment_note`
 - **AND** el neto del mes es `$4.558.288,75` (= ingresos − gastos + ajustes), idéntico al cambio del Disponible
-
-#### Scenario: El total de Gastos coincide con "En qué se fue"
-
-- **WHEN** el mes tiene gasto real categorizado y además ajustes de saldo
-- **THEN** el "Gastos" de "Balance del mes" refleja solo el gasto real
-- **AND** coincide con el total de "En qué se fue" del mismo mes y moneda (modulo el neteo de reintegros de esa card)
 
 #### Scenario: Mes sin movimientos muestra ceros
 
 - **WHEN** el mes seleccionado no tiene movimientos confirmados
-- **THEN** el neto muestra `$0` y ambas barras quedan vacías
-- **AND** la fila "Ajustes" NO se renderiza
+- **THEN** el neto muestra `$0` y las barras quedan vacías
+- **AND** solo se renderizan las filas "Ingresos" y "Gastos" (en cero); ninguna fila condicional aparece
 - **AND** el strip USD muestra `US$0` con ingresos y gastos en cero
 
 #### Scenario: El header de la card ancla el neto del mes en curso
@@ -418,7 +458,7 @@ Los datos SHALL salir de `getMonthBalanceSeries` (totales por moneda, incluyendo
 
 - **WHEN** el usuario registra un consumo de $30.000 en su tarjeta en el mes
 - **THEN** los totales del mes NO reflejan ese consumo
-- **AND** cuando el usuario pague el resumen correspondiente, ese pago (sobre cash/bank) sí entra como gasto en la fecha del pago
+- **AND** cuando el usuario pague el resumen correspondiente, ese pago (sobre cash/bank) entra en la fila "Pago de tarjeta" en la fecha del pago, no en "Gastos"
 
 #### Scenario: El chart de línea no existe en ninguna app
 
@@ -769,4 +809,27 @@ Cuando ninguna categoría quede en crédito, la sección NO SHALL renderizar la 
 - **WHEN** hay categorías con gasto positivo y además una en crédito
 - **THEN** la dona y su total central se calculan solo con las categorías de neto positivo
 - **AND** los créditos quedan fuera del cálculo de la dona
+
+### Requirement: Cada sección del dashboard rotula la pregunta que ayuda a responder
+
+Para que quede claro que el dashboard mezcla **lentes distintas a propósito** (CAJA vs CONSUMO vs COMPROMISO) — y que dos números que miran cosas distintas no tienen por qué coincidir — cada sección del dashboard SHALL exhibir un rótulo breve (voz Grana, atenuado) con la pregunta que ayuda a responder. Los textos SHALL salir del catálogo i18n (sin hardcodear) y participar del idioma activo. El rótulo NO SHALL alterar la jerarquía visual existente (queda como subtítulo/caption, no compite con el titular).
+
+Las preguntas por sección:
+
+- **Disponible / "Para gastar · hoy"** → "¿Cuánto tengo?" (lente CAJA, stock de hoy). Puede convivir con la caption existente o reemplazarla.
+- **Balance del mes** → "¿Cómo se movió mi plata este mes?" (lente CAJA, flujo del mes; reconcilia con el Disponible).
+- **En qué se fue** → "¿En qué se me fue?" (lente CONSUMO, devengado; puede diferir de "Gastos" de Balance del mes y está bien).
+
+#### Scenario: Cada card muestra su pregunta
+
+- **WHEN** el usuario abre el dashboard
+- **THEN** el Hero rotula "¿Cuánto tengo?"
+- **AND** "Balance del mes" rotula "¿Cómo se movió mi plata este mes?"
+- **AND** "En qué se fue" rotula "¿En qué se me fue?"
+- **AND** todos los textos salen del catálogo i18n en el idioma activo
+
+#### Scenario: El rótulo no compite con el titular
+
+- **WHEN** se renderiza el rótulo de una sección
+- **THEN** se muestra como subtítulo/caption atenuado, sin alterar la jerarquía del importe principal de la card
 

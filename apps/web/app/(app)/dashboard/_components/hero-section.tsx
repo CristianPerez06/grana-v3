@@ -28,6 +28,7 @@ export const HeroSection = async ({ data }: Props) => {
             <p className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-white/55">
               {t('eyebrow')}
             </p>
+            <p className="mt-0.5 text-[12.5px] font-semibold text-white/50">{t('question')}</p>
             <p className="mt-2 text-[clamp(2.125rem,4.6vw,2.875rem)] font-extrabold leading-none tracking-tight">
               <MaskedAmountDisplay amount={data.ars} currency="ARS" />
             </p>
