@@ -138,6 +138,7 @@
       "settlement": "Settlements",
       "exchange": "Currency exchange",
       "adjustment_note": "🔍 Where did this money go? Adjustments are money that moved without being recorded — log those transactions and make them disappear.",
+      "adjustment_unregistered": "Unrecorded",
       "financed_on_card": "💳 You spent {total} this month: {cash} from your cash + {financed} financed on your card → paid in upcoming statements.",
       "final_balance": "Balance",
       "legend_ars": "ARS (left)",
@@ -160,7 +161,8 @@
     "accounts": {
       "title": "Where it is",
       "view_all": "View all",
-      "usd_row": "In dollars"
+      "usd_row": "In dollars",
+      "concentration_lead": "of your money is in"
     },
     "committed": {
       "title": "Committed",
@@ -171,9 +173,28 @@
       "recurring_income": "Recurring income",
       "income_context": "What comes in",
       "next_month": "(next month)",
+      "outflow_label": "Going out",
+      "income_tile_title": "Coming in",
+      "income_tile_sub": "Recurring income (next month)",
+      "net_surplus": "With your income, next month you start <amount></amount> ahead.",
+      "net_deficit": "With your income, next month you're <amount></amount> short.",
       "empty": "No card debt or upcoming fixed expenses.",
       "loading": "Loading what's coming…",
       "error": "We couldn't load what's coming."
+    },
+    "spent": {
+      "title": "You spent this month",
+      "from_cash": "From your cash",
+      "financed": "Financed on card",
+      "caption": "<b>{financed}</b> was financed on your card → paid in upcoming statements."
+    },
+    "shared_strip": {
+      "title": "Shared",
+      "caption": "{household} · you and {other}",
+      "they_owe_you": "They owe you",
+      "you_owe": "You owe",
+      "sub_credit": "Balance in your favor in the household",
+      "sub_debit": "Balance against you in the household"
     },
     "net_this_month": "you're at <amount>{net}</amount> this month"
   },

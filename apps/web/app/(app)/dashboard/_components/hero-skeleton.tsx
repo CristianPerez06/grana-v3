@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 
-const SKELETON_ACCOUNT_ROWS = 4
+const SKELETON_GRID_CELLS = 4
 
 // Shape-matched skeleton for the dashboard top row: the dark "Para gastar"
 // card on the left and the "Dónde está" accounts card on the right (stacked
@@ -35,23 +35,23 @@ export const HeroSkeleton = async () => {
           <span className="h-4 w-24 rounded bg-muted animate-pulse" />
           <span className="h-3.5 w-16 rounded bg-muted/70 animate-pulse" />
         </CardHeader>
-        <CardContent className="flex flex-1 flex-col">
-          <ul className="flex flex-col">
-            {Array.from({ length: SKELETON_ACCOUNT_ROWS }).map((_, i) => (
-              <li
-                key={i}
-                className={`flex items-center gap-3 py-[11px] ${i > 0 ? 'border-t border-border-soft' : ''}`}
-              >
-                <span className="size-6 shrink-0 rounded-md bg-muted animate-pulse" />
-                <span className="h-3.5 w-28 rounded bg-muted animate-pulse" />
-                <span className="ml-auto h-3.5 w-20 shrink-0 rounded bg-muted animate-pulse" />
-              </li>
+        <CardContent className="flex flex-1 flex-col gap-4">
+          {/* Concentration callout */}
+          <div className="flex items-center gap-3">
+            <span className="h-11 w-20 rounded bg-muted animate-pulse" />
+            <span className="h-3.5 w-32 rounded bg-muted/70 animate-pulse" />
+          </div>
+          {/* Concentration bar */}
+          <span className="h-4 w-full rounded-[7px] bg-muted animate-pulse" />
+          {/* Compact grid */}
+          <div className="mt-auto grid grid-cols-1 gap-x-5 gap-y-2.5 sm:grid-cols-2">
+            {Array.from({ length: SKELETON_GRID_CELLS }).map((_, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <span className="size-2 shrink-0 rounded-[3px] bg-muted animate-pulse" />
+                <span className="h-3 w-20 rounded bg-muted animate-pulse" />
+                <span className="ml-auto h-3 w-16 shrink-0 rounded bg-muted/70 animate-pulse" />
+              </div>
             ))}
-          </ul>
-          <div className="mt-auto flex items-center gap-3 border-t border-border-soft pt-3">
-            <span className="size-2.5 shrink-0 rounded-[3px] bg-muted animate-pulse" />
-            <span className="h-3.5 w-24 rounded bg-muted animate-pulse" />
-            <span className="ml-auto h-3.5 w-20 shrink-0 rounded bg-muted/70 animate-pulse" />
           </div>
         </CardContent>
       </Card>

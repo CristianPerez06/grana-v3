@@ -50,17 +50,25 @@ const FlowRow = ({
   amount,
   widthPct,
   tone,
+  chip,
 }: {
   label: string
   amount: number
   widthPct: number
   tone: FlowTone
+  /** Optional pill next to the label (e.g. "Sin registrar" for adjustments). */
+  chip?: string
 }) => (
   <div>
     <div className="flex items-center justify-between gap-3">
       <span className="flex items-center gap-2 text-[13.5px] font-semibold text-text-muted">
         <span aria-hidden className={cn('size-[9px] rounded-full', FLOW_TONE[tone])} />
         {label}
+        {chip && (
+          <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-warning-deep">
+            {chip}
+          </span>
+        )}
       </span>
       <span className="text-[14.5px] font-extrabold tracking-tight text-text">
         <MaskedAmount amount={amount} currency="ARS" />
@@ -180,6 +188,7 @@ const MonthBalanceBody = ({ data }: { data: MonthBalanceByCurrency }) => {
               amount={ars.totalAdjustment}
               widthPct={adjustmentWidth}
               tone="adjustment"
+              chip={t('adjustment_unregistered')}
             />
           )}
         </div>

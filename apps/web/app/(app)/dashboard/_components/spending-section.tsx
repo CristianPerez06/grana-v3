@@ -151,33 +151,49 @@ export const SpendingSection = ({ initialData }: Props) => {
                   centerLabel={t('center_label')}
                 />
                 <ul className="flex w-full flex-col gap-3">
-                  {breakdown.slices.map((slice, index) => (
-                    <li key={slice.categoryId ?? `otros-${index}`}>
-                      <Link
-                        href={breakdownHref}
-                        className="flex items-center gap-2.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <span
-                          aria-hidden
-                          className="size-2.5 shrink-0 rounded-[3px]"
-                          style={{ backgroundColor: sliceColor(slice, index) }}
-                        />
-                        <span className="min-w-0 flex-1 truncate text-sm font-bold text-text">
-                          {slice.label}
-                        </span>
-                        <span className="shrink-0 text-sm font-extrabold tracking-tight text-text">
-                          <MaskedAmount amount={slice.value} currency={currency} />
-                        </span>
-                        <span
-                          className={cn(
-                            'w-[34px] shrink-0 text-right text-xs font-bold text-text-soft',
-                          )}
+                  {breakdown.slices.map((slice, index) => {
+                    // Bar width is data-driven: the largest category fills the
+                    // track and the rest scale by their amount.
+                    const maxValue = Math.max(...breakdown.slices.map((s) => s.value), 0)
+                    const barPct = maxValue > 0 ? (slice.value / maxValue) * 100 : 0
+                    const color = sliceColor(slice, index)
+                    return (
+                      <li key={slice.categoryId ?? `otros-${index}`}>
+                        <Link
+                          href={breakdownHref}
+                          className="flex items-center gap-2.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
-                          {Math.round(slice.percentage)}%
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
+                          <span
+                            aria-hidden
+                            className="size-2.5 shrink-0 rounded-[3px]"
+                            style={{ backgroundColor: color }}
+                          />
+                          <span className="min-w-0 flex-1 truncate text-sm font-bold text-text">
+                            {slice.label}
+                          </span>
+                          <span className="shrink-0 text-sm font-extrabold tracking-tight text-text">
+                            <MaskedAmount amount={slice.value} currency={currency} />
+                          </span>
+                          <span
+                            className={cn(
+                              'w-[34px] shrink-0 text-right text-xs font-bold text-text-soft',
+                            )}
+                          >
+                            {Math.round(slice.percentage)}%
+                          </span>
+                        </Link>
+                        <div
+                          aria-hidden
+                          className="ml-5 mt-1.5 h-[7px] overflow-hidden rounded-md bg-border-soft"
+                        >
+                          <div
+                            className="h-full rounded-md"
+                            style={{ width: `${barPct}%`, backgroundColor: color }}
+                          />
+                        </div>
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
             )}

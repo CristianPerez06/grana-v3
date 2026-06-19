@@ -138,6 +138,7 @@
       "settlement": "Liquidaciones",
       "exchange": "Cambio de moneda",
       "adjustment_note": "🔍 ¿En qué se fue esta grana? Los ajustes son plata que se movió sin registrar — registrá esos movimientos y hacelos desaparecer.",
+      "adjustment_unregistered": "Sin registrar",
       "financed_on_card": "💳 Gastaste {total} este mes: {cash} de tu caja + {financed} financiado en tarjeta → se paga en los próximos resúmenes.",
       "final_balance": "Balance",
       "legend_ars": "ARS (izq.)",
@@ -160,7 +161,8 @@
     "accounts": {
       "title": "Dónde está",
       "view_all": "Ver todas",
-      "usd_row": "En dólares"
+      "usd_row": "En dólares",
+      "concentration_lead": "de tu plata está en"
     },
     "committed": {
       "title": "Comprometido",
@@ -171,9 +173,28 @@
       "recurring_income": "Ingresos recurrentes",
       "income_context": "Lo que entra",
       "next_month": "(próx. mes)",
+      "outflow_label": "Ya sale",
+      "income_tile_title": "Ya entra",
+      "income_tile_sub": "Ingreso recurrente (próx. mes)",
+      "net_surplus": "Con tu ingreso, el próximo mes arrancás con <amount></amount> a favor.",
+      "net_deficit": "Con tu ingreso, el próximo mes te queda <amount></amount> en contra.",
       "empty": "No tenés deuda de tarjeta ni gastos fijos próximos.",
       "loading": "Cargando lo que se viene…",
       "error": "No pudimos cargar lo que se viene."
+    },
+    "spent": {
+      "title": "Gastaste este mes",
+      "from_cash": "De tu caja",
+      "financed": "Financiado en tarjeta",
+      "caption": "<b>{financed}</b> se financió en tarjeta → se paga en los próximos resúmenes."
+    },
+    "shared_strip": {
+      "title": "Compartido",
+      "caption": "{household} · vos y {other}",
+      "they_owe_you": "Te deben",
+      "you_owe": "Debés",
+      "sub_credit": "Saldo a tu favor en el Hogar",
+      "sub_debit": "Saldo en contra en el Hogar"
     },
     "net_this_month": "vas <amount>{net}</amount> este mes"
   },

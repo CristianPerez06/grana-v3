@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 
-// Shape-matched placeholder for "Lo que se viene": title + total + two rows.
+// Shape-matched placeholder for "Comprometido": title + total + two outflow tiles + USD strip.
 export const CommittedSkeleton = async () => {
   const t = await getTranslations('dashboard.committed')
   return (
@@ -15,11 +15,12 @@ export const CommittedSkeleton = async () => {
         <div className="h-3 w-24 rounded bg-muted/70 animate-pulse" />
         <div className="mt-2 h-8 w-44 rounded bg-muted animate-pulse" />
 
-        <div className="mt-5 flex flex-col gap-3.5">
+        <div className="mt-5 grid grid-cols-2 gap-3">
           {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="flex items-center justify-between gap-3">
-              <div className="h-3.5 w-28 rounded bg-muted/70 animate-pulse" />
-              <div className="h-3.5 w-24 rounded bg-muted animate-pulse" />
+            <div key={i} className="flex flex-col gap-2 rounded-2xl border border-border p-4">
+              <span className="size-8 rounded-lg bg-muted animate-pulse" />
+              <span className="h-3 w-20 rounded bg-muted/70 animate-pulse" />
+              <span className="h-5 w-24 rounded bg-muted animate-pulse" />
             </div>
           ))}
         </div>

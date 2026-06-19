@@ -1,3 +1,4 @@
+import { ArrowUpRight, CreditCard, Repeat } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -9,37 +10,6 @@ type Props = {
   data: CommittedOutlook
 }
 
-const ROW_TONE = {
-  debt: 'bg-navy',
-  recurringExpense: 'bg-terracotta',
-  recurringIncome: 'bg-emerald',
-} as const
-
-const Row = ({
-  label,
-  hint,
-  amount,
-  tone,
-  currency,
-}: {
-  label: string
-  hint?: string
-  amount: number
-  tone: keyof typeof ROW_TONE
-  currency: 'ARS' | 'USD'
-}) => (
-  <div className="flex items-center justify-between gap-3">
-    <span className="flex items-center gap-2 text-[13.5px] font-semibold text-text-muted">
-      <span aria-hidden className={cn('size-[9px] rounded-full', ROW_TONE[tone])} />
-      {label}
-      {hint && <span className="text-[12px] font-medium text-text-soft">{hint}</span>}
-    </span>
-    <span className="text-[14.5px] font-extrabold tracking-tight text-text">
-      <MaskedAmount amount={amount} currency={currency} showCentsOverride={currency === 'USD'} />
-    </span>
-  </div>
-)
-
 const committedTotal = (c: CommittedCurrency) => c.debt + c.recurringExpense
 
 const isEmpty = (data: CommittedOutlook) =>
@@ -48,15 +18,54 @@ const isEmpty = (data: CommittedOutlook) =>
   data.ARS.recurringIncome === 0 &&
   data.USD.recurringIncome === 0
 
-// "Lo que se viene" — COMPROMISO lens: card debt (a present stock) + next-month
-// recurring outflows, with recurring income shown as context. Static "from
-// today": it does NOT follow the month navigator. Server-rendered; amounts mask
-// via the client MaskedAmount leaf.
+// One outflow mini-tile: icon + label (+ hint) + amount. No bar/chart — the
+// committed card communicates with tiles, not FlowRows.
+const Tile = ({
+  icon,
+  iconClassName,
+  label,
+  hint,
+  amount,
+}: {
+  icon: React.ReactNode
+  iconClassName: string
+  label: string
+  hint?: string
+  amount: number
+}) => (
+  <div className="flex flex-col gap-2 rounded-2xl border border-border p-4">
+    <span
+      className={cn(
+        'flex size-8 items-center justify-center rounded-lg text-white',
+        iconClassName,
+      )}
+      aria-hidden
+    >
+      {icon}
+    </span>
+    <span className="text-[12px] font-bold leading-tight text-text-muted">
+      {label}
+      {hint && <span className="font-medium text-text-soft"> {hint}</span>}
+    </span>
+    <span className="text-[19px] font-extrabold tracking-tight text-text">
+      <MaskedAmount amount={amount} currency="ARS" />
+    </span>
+  </div>
+)
+
+// "Comprometido" — COMPROMISO lens: card debt (a present stock) + next-month
+// recurring outflows shown as two tiles. When there is recurring income, a green
+// "Ya entra" tile and a net closing band ("arrancás con +X a favor") appear; the
+// income never sums into the committed total. Static "from today": it does NOT
+// follow the month navigator. Server-rendered; amounts mask via client leaves.
 export const CommittedSection = async ({ data }: Props) => {
   const t = await getTranslations('dashboard.committed')
   const ars = data.ARS
   const usd = data.USD
   const totalArs = committedTotal(ars)
+  const hasIncome = ars.recurringIncome > 0
+  const net = ars.recurringIncome - totalArs
+  const surplus = net >= 0
 
   if (isEmpty(data)) {
     return (
@@ -80,7 +89,7 @@ export const CommittedSection = async ({ data }: Props) => {
       </CardHeader>
 
       <CardContent className="flex flex-1 flex-col">
-        {/* Total comprometido = lo que sale (deuda + gastos recurrentes) */}
+        {/* Total comprometido = lo que sale (deuda + gastos recurrentes). */}
         <p className="text-xs font-extrabold uppercase tracking-wide text-text-soft">
           {t('total_label')}
         </p>
@@ -88,31 +97,70 @@ export const CommittedSection = async ({ data }: Props) => {
           <MaskedAmountDisplay amount={totalArs} currency="ARS" />
         </p>
 
-        <div className="mt-5 flex flex-col gap-3.5">
-          <Row label={t('debt')} amount={ars.debt} tone="debt" currency="ARS" />
-          <Row
+        {/* "YA SALE" sub-label only when there is income to contrast it with. */}
+        {hasIncome && (
+          <p className="mt-4 text-[11px] font-extrabold uppercase tracking-wide text-terracotta">
+            {t('outflow_label')}
+          </p>
+        )}
+
+        {/* Two outflow tiles. */}
+        <div className={cn('grid grid-cols-2 gap-3', hasIncome ? 'mt-2' : 'mt-5')}>
+          <Tile
+            icon={<CreditCard size={16} strokeWidth={2.25} aria-hidden />}
+            iconClassName="bg-navy"
+            label={t('debt')}
+            amount={ars.debt}
+          />
+          <Tile
+            icon={<Repeat size={16} strokeWidth={2.25} aria-hidden />}
+            iconClassName="bg-terracotta"
             label={t('recurring_expense')}
             hint={t('next_month')}
             amount={ars.recurringExpense}
-            tone="recurringExpense"
-            currency="ARS"
           />
         </div>
 
-        {/* Ingresos recurrentes — contexto ("lo que entra"), NO suma al total. */}
-        {ars.recurringIncome > 0 && (
-          <div className="mt-4 border-t border-border-soft pt-3.5">
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-text-soft">
-              {t('income_context')}
+        {/* "Ya entra" — recurring income tile + net closing band (context only). */}
+        {hasIncome && (
+          <>
+            <div className="mt-3 flex items-center gap-3 rounded-2xl border border-emerald/40 bg-emerald-soft p-4">
+              <span
+                className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald text-white"
+                aria-hidden
+              >
+                <ArrowUpRight size={16} strokeWidth={2.5} aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] font-bold text-emerald-deep">{t('income_tile_title')}</p>
+                <p className="truncate text-[11px] font-medium text-emerald-deep/80">
+                  {t('income_tile_sub')}
+                </p>
+              </div>
+              <span className="shrink-0 text-[17px] font-extrabold tracking-tight text-emerald-deep">
+                <MaskedAmountDisplay amount={ars.recurringIncome} currency="ARS" signPrefix="+" />
+              </span>
+            </div>
+
+            <p
+              className={cn(
+                'mt-3 rounded-2xl px-4 py-3 text-[12.5px] font-semibold leading-snug',
+                surplus ? 'bg-emerald-soft text-emerald-deep' : 'bg-page text-expense',
+              )}
+            >
+              {t.rich(surplus ? 'net_surplus' : 'net_deficit', {
+                amount: () => (
+                  <strong className="font-extrabold">
+                    <MaskedAmountDisplay
+                      amount={Math.abs(net)}
+                      currency="ARS"
+                      signPrefix={surplus ? '+' : undefined}
+                    />
+                  </strong>
+                ),
+              })}
             </p>
-            <Row
-              label={t('recurring_income')}
-              hint={t('next_month')}
-              amount={ars.recurringIncome}
-              tone="recurringIncome"
-              currency="ARS"
-            />
-          </div>
+          </>
         )}
 
         {/* USD strip — bimoneda por defecto; ceros cuando no hay actividad USD. */}
