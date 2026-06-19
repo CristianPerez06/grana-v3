@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import {
+  getCommittedOutlook,
   getDashboardHero,
   getMonthBalanceSeries,
   getMonthCategoryBreakdown,
@@ -20,6 +21,14 @@ export function useMonthBalanceSeries(year: number, month: number) {
   return useQuery({
     queryKey: ['dashboard', 'balance-series', { year, month }] as const,
     queryFn: () => getMonthBalanceSeries(supabase, year, month),
+  })
+}
+
+// "Comprometido" — static "from today" (does NOT follow the month navigator).
+export function useCommittedOutlook() {
+  return useQuery({
+    queryKey: ['dashboard', 'committed'] as const,
+    queryFn: () => getCommittedOutlook(supabase),
   })
 }
 

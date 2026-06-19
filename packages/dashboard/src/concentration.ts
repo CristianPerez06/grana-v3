@@ -1,8 +1,9 @@
-// Pure, presentational concentration math for the "Dónde está" card (web).
-// Given the per-account ARS balances, it derives the dominant-account share and
-// the proportional widths of the concentration bar. Widths/percentages are
-// derived from the data — never hardcoded. Negative balances (overdrafts) do not
-// contribute to the bar (a width can't be negative); they still show in the grid.
+// Pure, presentational concentration math for the "Dónde está" card (web +
+// mobile). Given the per-account ARS balances, it derives the dominant-account
+// share and the proportional widths of the concentration bar. Widths/percentages
+// are derived from the data — never hardcoded. Negative balances (overdrafts) do
+// not contribute to the bar (a width can't be negative); they still show in the
+// grid. RN-safe: no DOM/Node deps.
 
 export type ConcentrationAccount = {
   id: string

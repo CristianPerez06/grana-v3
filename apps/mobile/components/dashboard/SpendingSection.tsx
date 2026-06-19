@@ -125,33 +125,47 @@ export const SpendingSection = () => {
                   centerLabel={t('dashboard.spending.center_label')}
                 />
                 <View className="w-full gap-3">
-                  {breakdown.slices.map((slice, index) => (
-                    <Pressable
-                      key={slice.categoryId ?? `otros-${index}`}
-                      onPress={goToBreakdown}
-                      accessibilityRole="link"
-                      className="flex-row items-center gap-2.5"
-                    >
-                      <View
-                        className="h-2.5 w-2.5 rounded-[3px]"
-                        style={{ backgroundColor: sliceColor(slice, index) }}
-                      />
-                      <Text
-                        className="min-w-0 flex-1 text-sm font-bold text-text"
-                        numberOfLines={1}
-                      >
-                        {slice.label}
-                      </Text>
-                      <MaskedAmount
-                        amount={slice.value}
-                        currency={currency}
-                        className="text-sm font-extrabold text-text"
-                      />
-                      <Text className="w-[34px] text-right text-xs font-bold text-text-soft">
-                        {Math.round(slice.percentage)}%
-                      </Text>
-                    </Pressable>
-                  ))}
+                  {breakdown.slices.map((slice, index) => {
+                    // Bar width is data-driven: the largest category fills the
+                    // track and the rest scale by their amount.
+                    const maxValue = Math.max(...breakdown.slices.map((s) => s.value), 0)
+                    const barPct = maxValue > 0 ? (slice.value / maxValue) * 100 : 0
+                    const color = sliceColor(slice, index)
+                    return (
+                      <View key={slice.categoryId ?? `otros-${index}`}>
+                        <Pressable
+                          onPress={goToBreakdown}
+                          accessibilityRole="link"
+                          className="flex-row items-center gap-2.5"
+                        >
+                          <View
+                            className="h-2.5 w-2.5 rounded-[3px]"
+                            style={{ backgroundColor: color }}
+                          />
+                          <Text
+                            className="min-w-0 flex-1 text-sm font-bold text-text"
+                            numberOfLines={1}
+                          >
+                            {slice.label}
+                          </Text>
+                          <MaskedAmount
+                            amount={slice.value}
+                            currency={currency}
+                            className="text-sm font-extrabold text-text"
+                          />
+                          <Text className="w-[34px] text-right text-xs font-bold text-text-soft">
+                            {Math.round(slice.percentage)}%
+                          </Text>
+                        </Pressable>
+                        <View className="ml-5 mt-1.5 h-[7px] overflow-hidden rounded-md bg-border-soft">
+                          <View
+                            className="h-full rounded-md"
+                            style={{ width: `${barPct}%`, backgroundColor: color }}
+                          />
+                        </View>
+                      </View>
+                    )
+                  })}
                 </View>
               </View>
             )}

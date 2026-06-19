@@ -17,6 +17,13 @@ export {
   type BalanceTransactionRow,
 } from './aggregations'
 
+export {
+  computeConcentration,
+  type Concentration,
+  type ConcentrationAccount,
+  type ConcentrationSegment,
+} from './concentration'
+
 export type {
   CommittedCurrency,
   CommittedOutlook,

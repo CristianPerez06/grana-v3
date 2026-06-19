@@ -28,17 +28,25 @@ const FlowRow = ({
   amount,
   widthPct,
   tone,
+  chip,
 }: {
   label: string
   amount: number
   widthPct: number
   tone: 'income' | 'expense' | 'adjustment'
+  /** Optional pill next to the label (e.g. "Sin registrar" for adjustments). */
+  chip?: string
 }) => (
   <View>
     <View className="flex-row items-center justify-between gap-3">
       <View className="flex-row items-center gap-2">
         <View className={`h-[9px] w-[9px] rounded-full ${FLOW_TONE[tone]}`} />
         <Text className="text-[13px] font-semibold text-text-muted">{label}</Text>
+        {chip ? (
+          <View className="rounded-full bg-warning/15 px-2 py-0.5">
+            <Text className="text-[10px] font-extrabold uppercase text-warning-deep">{chip}</Text>
+          </View>
+        ) : null}
       </View>
       <MaskedAmount
         amount={amount}
@@ -169,6 +177,7 @@ export const MonthBalanceSection = () => {
                   amount={ars.totalAdjustment}
                   widthPct={adjustmentWidth}
                   tone="adjustment"
+                  chip={t('dashboard.month.adjustment_unregistered')}
                 />
               )}
             </View>

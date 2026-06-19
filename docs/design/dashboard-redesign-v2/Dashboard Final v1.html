@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>grana · Dashboard Final · v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#EEF1F4; --card:#FFFFFF; --ink:#142231; --navy:#0B1A2B;
+  --muted:#6B7683; --soft:#8A94A3; --faint:#AEB6C0; --border:#E8ECF1; --line:#EEF1F5; --hair:#E4E8EE;
+  --emerald:#11B981; --emerald-deep:#0E9E6E; --emerald-soft:#E7F8F0;
+  --terracota:#C2705C; --terracota-soft:#F7ECE7; --slate:#3A6B8A; --amber:#E79A2B; --amber-deep:#B9791B; --amber-soft:#FBF0DD;
+  --violet:#7C5CD6; --rose:#C95C86; --blue:#2F7FD1; --cyan:#15A8C4;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{background:var(--bg);font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;}
+.tnum{font-variant-numeric:tabular-nums;}
+button{font-family:inherit;cursor:pointer;}
+a{text-decoration:none;color:inherit;}
+
+.app{display:grid;grid-template-columns:248px 1fr;min-height:100vh;}
+.sidebar{background:var(--card);border-radius:0 26px 26px 0;box-shadow:1px 0 0 var(--border);padding:26px 18px 22px;display:flex;flex-direction:column;}
+.brand{display:flex;align-items:center;gap:2px;padding:6px 10px 0;margin-bottom:36px;}
+.brand .word{font-size:26px;font-weight:800;letter-spacing:-0.04em;color:var(--navy);}
+.brand .dot{width:15px;height:15px;border-radius:50%;background:var(--emerald);display:grid;place-items:center;margin-left:1px;margin-top:9px;}
+.brand .dot::after{content:"$";color:#fff;font-size:8.5px;font-weight:800;}
+.nav{display:flex;flex-direction:column;gap:3px;}
+.nav a{display:flex;align-items:center;gap:13px;padding:12px 14px;border-radius:12px;color:var(--muted);font-size:15px;font-weight:600;letter-spacing:-0.01em;}
+.nav a svg{width:20px;height:20px;flex:none;stroke-width:2;}
+.nav a.active{background:var(--emerald-soft);color:var(--emerald-deep);font-weight:700;}
+.spacer{flex:1;}
+.foot-link{display:flex;align-items:center;gap:13px;padding:12px 14px;border-radius:12px;color:var(--muted);font-size:14px;font-weight:600;}
+.foot-link svg{width:19px;height:19px;}
+
+.main{padding:30px clamp(20px,3.2vw,42px) 64px;}
+.content{max-width:1080px;margin:0 auto;}
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:22px;}
+.hello h1{font-size:clamp(24px,3.2vw,30px);font-weight:800;letter-spacing:-0.035em;line-height:1;}
+.hello .date{margin-top:9px;color:var(--muted);font-size:14px;font-weight:500;}
+.hello .date .g{color:var(--emerald-deep);font-weight:700;}
+.top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
+.monthsel{display:inline-flex;align-items:center;gap:2px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:4px;}
+.monthsel .mnav{width:32px;height:32px;border:none;background:transparent;border-radius:8px;display:grid;place-items:center;color:var(--muted);}
+.monthsel .mnav svg{width:16px;height:16px;stroke-width:2.4;}
+.monthsel .lbl{font-size:14px;font-weight:800;padding:0 6px;min-width:96px;text-align:center;}
+.eye-btn{width:42px;height:42px;border-radius:12px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;color:var(--muted);}
+.eye-btn svg{width:19px;height:19px;}
+.btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--emerald);color:#fff;border:none;font-size:14.5px;font-weight:700;padding:12px 18px;border-radius:13px;box-shadow:0 8px 18px -6px rgba(17,185,129,.5);white-space:nowrap;}
+.btn-primary svg{width:18px;height:18px;stroke-width:2.6;}
+
+.grid-main{display:flex;flex-direction:column;gap:16px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:20px;}
+.card-pad{padding:22px 24px;}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:4px;}
+.card-h h2{font-size:16.5px;font-weight:800;letter-spacing:-0.02em;}
+.card-h .sub{font-size:12.5px;font-weight:600;color:var(--soft);margin-top:3px;}
+.link{color:var(--emerald-deep);font-size:13px;font-weight:700;}
+.seg{display:inline-flex;gap:3px;background:#EEF1F5;border-radius:10px;padding:4px;}
+.seg button{border:none;font-size:12.5px;font-weight:700;color:var(--muted);padding:6px 12px;border-radius:7px;background:transparent;}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(11,26,43,.1);}
+
+.r-top{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;align-items:stretch;}
+.r-two{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:stretch;}
+
+/* ===== HERO ===== */
+.hero{background:var(--ink);border:1px solid var(--ink);border-radius:20px;color:#fff;padding:28px 28px 24px;display:flex;flex-direction:column;}
+.hero .pl{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.55);}
+.hero .pv{font-size:clamp(40px,4.8vw,56px);font-weight:800;letter-spacing:-0.05em;line-height:.95;margin-top:14px;}
+.hero .pv .cur{color:rgba(255,255,255,.4);font-weight:700;}
+.hero .pv .dec{font-size:.4em;color:rgba(255,255,255,.45);vertical-align:.9em;}
+.hero .usd{margin-top:15px;display:inline-flex;align-items:center;gap:9px;}
+.hero .usd .chip{font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;background:rgba(17,185,129,.18);color:#4FD6A4;}
+.hero .usd .uv{font-size:16px;font-weight:700;color:rgba(255,255,255,.92);}
+.hero .pcap{margin-top:auto;padding-top:20px;font-size:12.5px;font-weight:600;color:rgba(255,255,255,.5);line-height:1.4;}
+
+/* ===== DÓNDE ESTÁ ===== */
+.donde{display:flex;flex-direction:column;}
+.conc-call{display:flex;align-items:flex-end;gap:14px;margin:8px 0 16px;}
+.conc-call .pct{font-size:clamp(38px,4.6vw,52px);font-weight:800;letter-spacing:-0.05em;line-height:.85;color:var(--blue);}
+.conc-call .lead{padding-bottom:4px;}
+.conc-call .lead .l1{font-size:13px;font-weight:600;color:var(--muted);}
+.conc-call .lead .l1 b{color:var(--ink);font-weight:800;}
+.conc-call .lead .l2{font-size:14px;font-weight:800;letter-spacing:-0.02em;margin-top:2px;}
+.conc-bar{height:16px;border-radius:7px;overflow:hidden;display:flex;gap:2px;background:var(--line);}
+.conc-bar span{height:100%;}
+.conc-bar span:first-child{border-radius:7px 3px 3px 7px;}
+.conc-bar span:last-child{border-radius:3px 7px 7px 3px;}
+.acc-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px 18px;margin-top:18px;}
+.acc-grid .c{display:flex;align-items:center;gap:9px;}
+.acc-grid .c .d{width:8px;height:8px;border-radius:2px;flex:none;}
+.acc-grid .c .nm{font-size:13px;font-weight:700;}
+.acc-grid .c .am{margin-left:auto;font-size:13px;font-weight:800;letter-spacing:-0.02em;}
+.acc-grid .c.usd .d{background:var(--emerald);}
+.acc-grid .c.usd .nm,.acc-grid .c.usd .am{color:var(--emerald-deep);}
+
+/* ===== BALANCE ===== */
+.bal .lbl{font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--soft);}
+.bal .big{font-size:clamp(34px,4.4vw,46px);font-weight:800;letter-spacing:-0.05em;color:var(--emerald-deep);line-height:.95;margin-top:9px;}
+.bal .big .dec{font-size:.4em;opacity:.55;}
+.flow{margin-top:24px;display:flex;flex-direction:column;gap:17px;}
+.fl .ft{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;}
+.fl .ft .k{font-size:13px;font-weight:700;color:var(--muted);display:inline-flex;align-items:center;gap:8px;}
+.fl .ft .k .dt{width:9px;height:9px;border-radius:3px;}
+.fl .ft .k .flag{font-size:10px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--amber-deep);background:var(--amber-soft);padding:2px 7px;border-radius:999px;white-space:nowrap;}
+.fl .ft .v{font-size:16px;font-weight:800;letter-spacing:-0.025em;}
+.fl .ft .v.neg{color:var(--amber-deep);}
+.fl .bar{height:8px;background:#F1F4F7;border-radius:5px;overflow:hidden;}
+.fl .bar .f{height:100%;border-radius:5px;}
+.ajnote{margin-top:7px;font-size:12px;font-weight:600;color:var(--muted);line-height:1.5;}
+.ajnote b{color:var(--amber-deep);font-weight:800;}
+.bal-usd{margin-top:20px;padding-top:15px;border-top:1px solid var(--hair);font-size:12.5px;font-weight:600;color:var(--muted);}
+.bal-usd b{color:var(--ink);font-weight:800;}
+
+/* ===== COMPROMETIDO — v1 tiles (sin gráfico) ===== */
+.comp-card .ptot{margin:14px 0 16px;}
+.comp-card .ptot .lbl{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);}
+.comp-card .ptot .num{font-size:clamp(34px,4.2vw,42px);font-weight:800;letter-spacing:-0.05em;line-height:.95;margin-top:6px;color:var(--ink);}
+.comp-card .ptot .num .dec{font-size:.42em;color:var(--faint);}
+.ctiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.ctiles .t{border:1px solid var(--border);border-radius:14px;padding:15px 16px;}
+.ctiles .t .ic{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;color:#fff;margin-bottom:11px;}
+.ctiles .t .ic svg{width:17px;height:17px;}
+.ctiles .t .k{font-size:12px;font-weight:700;color:var(--muted);}
+.ctiles .t .k small{display:block;color:var(--faint);font-weight:600;font-size:10.5px;margin-top:1px;}
+.ctiles .t .v{font-size:19px;font-weight:800;letter-spacing:-0.03em;margin-top:8px;}
+.comp-usd{margin-top:16px;padding-top:13px;border-top:1px solid var(--hair);font-size:12px;font-weight:600;color:var(--muted);}
+.comp-usd b{color:var(--ink);font-weight:800;}
+
+/* ===== COMPARTIDO (tira finita, condicional) ===== */
+.shared{display:flex;align-items:center;gap:16px;padding:15px 22px;}
+.shared .si{width:38px;height:38px;border-radius:11px;background:var(--emerald-soft);color:var(--emerald-deep);display:grid;place-items:center;flex:none;}
+.shared .si svg{width:20px;height:20px;}
+.shared .meta .t{font-size:14.5px;font-weight:800;letter-spacing:-0.01em;display:flex;align-items:center;gap:9px;}
+.shared .meta .ava{display:inline-flex;}
+.shared .meta .ava span{width:22px;height:22px;border-radius:50%;border:2px solid #fff;display:grid;place-items:center;font-size:9px;font-weight:800;color:#fff;margin-left:-7px;}
+.shared .meta .ava span:first-child{margin-left:0;}
+.shared .meta .c{font-size:12px;font-weight:600;color:var(--muted);margin-top:3px;}
+.shared .net{margin-left:auto;text-align:right;}
+.shared .net .n{font-size:17px;font-weight:800;letter-spacing:-0.025em;color:var(--emerald-deep);}
+.shared .net .b{font-size:11.5px;font-weight:600;color:var(--muted);margin-top:2px;}
+.shared .net .b .deb{color:var(--terracota);font-weight:700;}
+.shared .go{flex:none;color:var(--faint);}
+.shared .go svg{width:20px;height:20px;}
+
+/* ===== GASTASTE ESTE MES ===== */
+.ss{padding:22px 24px;}
+.ss-h{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:16px;}
+.ss-h h2{font-size:16.5px;font-weight:800;letter-spacing:-0.02em;}
+.ss-h .tot{font-size:22px;font-weight:800;letter-spacing:-0.03em;}
+.ss-bar{display:flex;gap:4px;height:62px;}
+.ss-bar .seg2{display:flex;flex-direction:column;justify-content:center;padding:0 18px;color:#fff;border-radius:9px;overflow:hidden;}
+.ss-bar .seg2 .sl{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.85;}
+.ss-bar .seg2 .sv{font-size:17px;font-weight:800;letter-spacing:-0.025em;margin-top:3px;white-space:nowrap;}
+.ss-bar .caja{background:var(--slate);}
+.ss-bar .tar{background:var(--terracota);}
+.ss-cap{margin-top:14px;font-size:13px;font-weight:600;color:var(--muted);line-height:1.5;}
+.ss-cap b{color:var(--terracota);font-weight:800;}
+
+/* ===== EN QUÉ GASTÉ — dona con total al centro + leyenda limpia ===== */
+.spend{display:grid;grid-template-columns:190px 1fr;gap:36px;align-items:center;margin-top:18px;}
+.donut{width:190px;height:190px;border-radius:50%;position:relative;}
+.donut::after{content:"";position:absolute;inset:31px;background:var(--card);border-radius:50%;box-shadow:inset 0 0 0 1px var(--line);}
+.donut .ctr{position:absolute;inset:0;display:grid;place-items:center;text-align:center;z-index:2;}
+.donut .ctr .tt{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);}
+.donut .ctr .vv{font-size:23px;font-weight:800;letter-spacing:-0.03em;margin-top:4px;color:var(--ink);}
+.donut .ctr .vv .dec{font-size:.5em;color:var(--faint);}
+.legc{display:flex;flex-direction:column;gap:15px;}
+.legc .r{display:grid;grid-template-columns:1fr auto;gap:5px 14px;align-items:center;}
+.legc .r .nm{font-size:14.5px;font-weight:700;display:inline-flex;align-items:center;gap:11px;}
+.legc .r .nm .d{width:11px;height:11px;border-radius:3px;flex:none;}
+.legc .r .am{font-size:14px;font-weight:800;letter-spacing:-0.02em;text-align:right;}
+.legc .r .am .pc{color:var(--faint);font-weight:700;margin-left:8px;}
+.legc .r .bar{grid-column:1/3;height:7px;background:#F1F4F7;border-radius:5px;overflow:hidden;}
+.legc .r .bar .f{height:100%;border-radius:5px;}
+
+.mbar,.bnav{display:none;}
+
+@media (max-width:980px){.r-top,.r-two{grid-template-columns:1fr;}}
+@media (max-width:680px){
+  .app{display:block;}
+  .sidebar{display:none;}
+  .mbar{display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:20;background:rgba(238,241,244,.92);backdrop-filter:blur(10px);padding:14px 18px;}
+  .mbar .word{font-size:23px;font-weight:800;letter-spacing:-0.04em;color:var(--navy);}
+  .mbar .word .dt{color:var(--emerald);}
+  .mbar .mb-actions{display:flex;align-items:center;gap:10px;}
+  .mbar .av{width:36px;height:36px;border-radius:50%;background:var(--slate);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:800;}
+  .main{padding:6px 16px 100px;}
+  .topbar{flex-direction:column;gap:14px;margin-bottom:16px;}
+  .topbar .top-actions{width:100%;}
+  .topbar .monthsel{flex:1;justify-content:space-between;}
+  .topbar .btn-primary{display:none;}
+  .hero .pv{font-size:42px;}
+  .ss-bar{height:auto;flex-direction:column;}
+  .ss-bar .seg2{flex-direction:row;align-items:baseline;justify-content:space-between;padding:13px 16px;}
+  .ss-bar .seg2 .sv{margin-top:0;}
+  .shared{flex-wrap:wrap;}
+  .shared .net{margin-left:0;text-align:left;width:100%;order:3;padding-top:10px;border-top:1px solid var(--line);}
+  .spend{grid-template-columns:1fr;justify-items:center;gap:22px;}
+  .legc{width:100%;}
+  .bnav{display:flex;align-items:center;justify-content:space-around;position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--card);border-top:1px solid var(--border);padding:8px 10px calc(8px + env(safe-area-inset-bottom));}
+  .bnav a{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--faint);font-size:10.5px;font-weight:700;flex:1;}
+  .bnav a svg{width:22px;height:22px;stroke-width:2;}
+  .bnav a.active{color:var(--emerald-deep);}
+  .bnav .fab{flex:none;width:50px;height:50px;border-radius:16px;background:var(--emerald);color:#fff;display:grid;place-items:center;box-shadow:0 8px 18px -5px rgba(17,185,129,.55);margin-top:-14px;}
+  .bnav .fab svg{width:24px;height:24px;stroke-width:2.6;}
+}
+</style>
+</head>
+<body>
+<div class="app" data-screen-label="Dashboard Final · v1 (tiles)">
+  <aside class="sidebar">
+    <div class="brand"><span class="word">grana</span><span class="dot"></span></div>
+    <nav class="nav">
+      <a href="#" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.6"/></svg>Inicio</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h13a2 2 0 012 2v2H5a2 2 0 00-2 2V7z"/><path d="M3 11h17a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-7z"/></svg>Cuentas</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2.5"/><line x1="3" y1="11" x2="21" y2="11"/><line x1="7" y1="15" x2="11" y2="15"/></svg>Tarjetas</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="17" x2="18" y2="17"/></svg>Movimientos</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0111 0"/><path d="M16 6.2a3.2 3.2 0 010 6"/><path d="M18 19a5.5 5.5 0 00-3-4.9"/></svg>Compartido</a>
+    </nav>
+    <div class="spacer"></div>
+    <div class="foot-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7.7 1.6 1.6 0 01-3.2 0 1.6 1.6 0 00-2.7-.7l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00-.7-2.7 1.6 1.6 0 010-3.2 1.6 1.6 0 00.7-2.7l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 002.7-.7 1.6 1.6 0 013.2 0 1.6 1.6 0 002.7.7l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8z"/></svg>Configuración</div>
+  </aside>
+
+  <header class="mbar">
+    <span class="word">grana<span class="dt">.</span></span>
+    <div class="mb-actions"><button class="eye-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button><div class="av">JL</div></div>
+  </header>
+
+  <main class="main">
+    <div class="content">
+      <div class="topbar">
+        <div class="hello"><h1>Hola, Julieta.</h1><div class="date">Jueves, 18 de junio · vas <span class="g">+$7.022.760</span> este mes.</div></div>
+        <div class="top-actions">
+          <div class="monthsel"><button class="mnav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button><span class="lbl tnum">Junio 2026</span><button class="mnav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button></div>
+          <button class="eye-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <button class="btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo movimiento</button>
+        </div>
+      </div>
+
+      <div class="grid-main">
+        <!-- HERO + DÓNDE ESTÁ -->
+        <div class="r-top">
+          <section class="hero">
+            <div class="pl">Para gastar · hoy</div>
+            <div class="pv tnum"><span class="cur">$</span>9.892.017<span class="dec">,06</span></div>
+            <div class="usd"><span class="chip">USD</span><span class="uv tnum">US$ 600,00</span></div>
+            <div class="pcap">Lo que tenés disponible hoy, en pesos y dólares.</div>
+          </section>
+
+          <section class="card card-pad donde">
+            <div class="card-h"><h2>Dónde está</h2><a href="#" class="link">Ver todas</a></div>
+            <div class="conc-call">
+              <div class="pct">97%</div>
+              <div class="lead"><div class="l1">de tu plata está en</div><div class="l2">Cta remunerada · $9.575.790,25</div></div>
+            </div>
+            <div class="conc-bar">
+              <span style="width:96.8%;background:var(--blue)"></span>
+              <span style="width:1.49%;background:var(--amber)"></span>
+              <span style="width:1.09%;background:var(--slate)"></span>
+              <span style="width:0.54%;background:var(--cyan)"></span>
+              <span style="width:0.06%;background:var(--emerald)"></span>
+              <span style="width:0.02%;background:var(--rose)"></span>
+            </div>
+            <div class="acc-grid">
+              <div class="c"><span class="d" style="background:var(--amber)"></span><span class="nm">CA</span><span class="am tnum">$146.939,17</span></div>
+              <div class="c"><span class="d" style="background:var(--slate)"></span><span class="nm">Billetera</span><span class="am tnum">$108.200,00</span></div>
+              <div class="c"><span class="d" style="background:var(--cyan)"></span><span class="nm">Personal Pay</span><span class="am tnum">$53.082,99</span></div>
+              <div class="c"><span class="d" style="background:var(--emerald)"></span><span class="nm">Cta DNI</span><span class="am tnum">$6.004,44</span></div>
+              <div class="c"><span class="d" style="background:var(--rose)"></span><span class="nm">CU</span><span class="am tnum">$2.000,21</span></div>
+              <div class="c usd"><span class="d"></span><span class="nm">En dólares</span><span class="am tnum">US$ 600,00</span></div>
+            </div>
+          </section>
+        </div>
+
+        <!-- BALANCE + COMPROMETIDO -->
+        <div class="r-two">
+          <section class="card card-pad bal">
+            <div class="card-h"><div><h2>Balance del mes</h2><div class="sub">¿Cómo se movió mi plata este mes?</div></div></div>
+            <div style="margin-top:14px;"><div class="lbl">Balance de junio</div><div class="big tnum">+$7.022.760<span class="dec">,84</span></div></div>
+            <div class="flow">
+              <div class="fl"><div class="ft"><span class="k"><span class="dt" style="background:var(--emerald)"></span>Ingresos</span><span class="v tnum">$8.388.800,94</span></div><div class="bar"><div class="f" style="width:100%;background:var(--emerald)"></div></div></div>
+              <div class="fl"><div class="ft"><span class="k"><span class="dt" style="background:var(--terracota)"></span>Gastos</span><span class="v tnum">$498.379,65</span></div><div class="bar"><div class="f" style="width:5.9%;background:var(--terracota)"></div></div></div>
+              <div class="fl"><div class="ft"><span class="k"><span class="dt" style="background:var(--amber)"></span>Ajustes <span class="flag">Sin registrar</span></span><span class="v neg tnum">−$867.660,45</span></div><div class="bar"><div class="f" style="width:10.3%;background:var(--amber)"></div></div><div class="ajnote"><b>Plata que se movió sin registrar.</b> Registrá esos movimientos y hacelos desaparecer.</div></div>
+            </div>
+            <div class="bal-usd">En dólares: <b>US$ 0,00</b> · Ingresos US$0,00 · Gastos US$0,00</div>
+          </section>
+
+          <section class="card card-pad comp-card">
+            <div class="card-h"><div><h2>Comprometido</h2><div class="sub">Lo que ya sabemos del próximo mes</div></div></div>
+            <div class="ptot"><div class="lbl">Ya comprometido · sale</div><div class="num tnum">$819.148<span class="dec">,63</span></div></div>
+            <div class="ctiles">
+              <div class="t"><div class="ic" style="background:var(--navy)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2.5"/><line x1="3" y1="11" x2="21" y2="11"/></svg></div><div class="k">Resúmenes tarjeta</div><div class="v tnum">$712.182</div></div>
+              <div class="t"><div class="ic" style="background:var(--terracota)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-3-6.7"/><polyline points="21 4 21 9 16 9"/></svg></div><div class="k">Gastos recurrentes <small>próx. mes</small></div><div class="v tnum">$106.966</div></div>
+            </div>
+            <div class="comp-usd">En dólares: <b>US$ 0,00</b> · Resúmenes US$0 · Recurrentes US$0</div>
+          </section>
+        </div>
+
+        <!-- COMPARTIDO (aparece solo si hay movimientos compartidos) -->
+        <section class="card shared">
+          <div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0111 0"/><path d="M16 6.2a3.2 3.2 0 010 6"/><path d="M18 19a5.5 5.5 0 00-3-4.9"/></svg></div>
+          <div class="meta">
+            <div class="t">Compartido <span class="ava"><span style="background:var(--slate)">JU</span><span style="background:var(--violet)">MA</span></span></div>
+            <div class="c">Hogar · vos y Martín</div>
+          </div>
+          <div class="net">
+            <div class="n tnum">Te deben $34.500</div>
+            <div class="b">Saldo a tu favor en el Hogar</div>
+          </div>
+          <a href="#" class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></a>
+        </section>
+
+        <!-- GASTASTE ESTE MES -->
+        <section class="card ss">
+          <div class="ss-h"><h2>Gastaste este mes</h2><span class="tot tnum">$879.684,24</span></div>
+          <div class="ss-bar">
+            <div class="seg2 caja" style="flex:56.65;"><span class="sl">De tu caja</span><span class="sv tnum">$498.379,65</span></div>
+            <div class="seg2 tar" style="flex:43.35;"><span class="sl">Financiado en tarjeta</span><span class="sv tnum">$381.304,59</span></div>
+          </div>
+          <p class="ss-cap"><b>$381.304,59</b> se financió en tarjeta → se paga en los próximos resúmenes.</p>
+        </section>
+
+        <!-- EN QUÉ GASTÉ -->
+        <section class="card card-pad">
+          <div class="card-h"><div><h2>¿En qué gasté este mes?</h2></div><div style="display:flex;align-items:center;gap:12px;"><a href="#" class="link">Ver desglose</a><div class="seg"><button class="on">ARS</button><button>USD</button></div></div></div>
+          <div class="spend">
+            <div class="donut" style="background:conic-gradient(var(--amber) 0 23.49%,var(--blue) 23.49% 42.25%,var(--violet) 42.25% 55.32%,var(--emerald) 55.32% 67.78%,var(--slate) 67.78% 78.56%,var(--faint) 78.56% 100%)">
+              <div class="ctr"><div><div class="tt">Total gastado</div><div class="vv tnum">$879.684<span class="dec">,24</span></div></div></div>
+            </div>
+            <div class="legc">
+              <div class="r"><span class="nm"><span class="d" style="background:var(--amber)"></span>Comida</span><span class="am tnum">$206.625,35<span class="pc">23%</span></span><div class="bar"><div class="f" style="width:100%;background:var(--amber)"></div></div></div>
+              <div class="r"><span class="nm"><span class="d" style="background:var(--blue)"></span>Transporte</span><span class="am tnum">$165.000,51<span class="pc">19%</span></span><div class="bar"><div class="f" style="width:79.9%;background:var(--blue)"></div></div></div>
+              <div class="r"><span class="nm"><span class="d" style="background:var(--violet)"></span>Entretenimiento</span><span class="am tnum">$114.940,00<span class="pc">13%</span></span><div class="bar"><div class="f" style="width:55.6%;background:var(--violet)"></div></div></div>
+              <div class="r"><span class="nm"><span class="d" style="background:var(--emerald)"></span>Hogar</span><span class="am tnum">$109.589,12<span class="pc">12%</span></span><div class="bar"><div class="f" style="width:53%;background:var(--emerald)"></div></div></div>
+              <div class="r"><span class="nm"><span class="d" style="background:var(--slate)"></span>Otros gastos</span><span class="am tnum">$94.866,66<span class="pc">11%</span></span><div class="bar"><div class="f" style="width:45.9%;background:var(--slate)"></div></div></div>
+              <div class="r"><span class="nm"><span class="d" style="background:var(--faint)"></span>Otros</span><span class="am tnum">$188.662,60<span class="pc">21%</span></span><div class="bar"><div class="f" style="width:91.3%;background:var(--faint)"></div></div></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <nav class="bnav">
+    <a href="#" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.6"/></svg>Inicio</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h13a2 2 0 012 2v2H5a2 2 0 00-2 2V7z"/><path d="M3 11h17a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-7z"/></svg>Cuentas</a>
+    <a href="#" class="fab-wrap"><span class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span></a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="17" x2="18" y2="17"/></svg>Movim.</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0111 0"/><path d="M16 6.2a3.2 3.2 0 010 6"/><path d="M18 19a5.5 5.5 0 00-3-4.9"/></svg>Compart.</a>
+  </nav>
+</div>
+</body>
+</html>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeConcentration } from '../concentration'
+import { computeConcentration } from '@grana/dashboard'
 
 describe('computeConcentration', () => {
   it('derives the dominant share and proportional segments', () => {

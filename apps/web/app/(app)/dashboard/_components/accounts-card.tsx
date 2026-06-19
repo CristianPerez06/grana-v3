@@ -1,10 +1,9 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { computeConcentration } from '@/lib/dashboard/concentration'
 import { cn } from '@/lib/utils'
 import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
-import type { DashboardHero } from '@grana/dashboard'
+import { computeConcentration, type DashboardHero } from '@grana/dashboard'
 import { MaskedAmount } from './masked-amount'
 
 type Props = {
