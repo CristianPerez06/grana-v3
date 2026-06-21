@@ -493,6 +493,7 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
               <div className="overflow-hidden rounded-[15px] border border-border bg-card [&>*+*]:border-t [&>*+*]:border-[#F1F3F6]">
                 {/* Source account */}
                 <Popover
+                  modal
                   open={activePopover === 'account'}
                   onOpenChange={(o) => setActivePopover(o ? 'account' : null)}
                   trigger={
@@ -512,6 +513,7 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
                 {/* Destination (transfer) */}
                 {type === 'transfer' && (
                   <Popover
+                    modal
                     open={activePopover === 'destination'}
                     onOpenChange={(o) => setActivePopover(o ? 'destination' : null)}
                     trigger={
@@ -532,6 +534,7 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
                 {/* Category (income / expense) */}
                 {(type === 'income' || type === 'expense') && (
                   <Popover
+                    modal
                     open={activePopover === 'category'}
                     onOpenChange={(o) => {
                       setActivePopover(o ? 'category' : null)
@@ -630,6 +633,7 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
 
                 {/* Start date row */}
                 <Popover
+                  modal
                   open={activePopover === 'date'}
                   onOpenChange={(o) => setActivePopover(o ? 'date' : null)}
                   trigger={
