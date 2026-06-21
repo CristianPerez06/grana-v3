@@ -588,6 +588,14 @@ export type PopoverProps = {
   minWidthPx?: number
   /** Max content width in px. Defaults to 340. */
   maxWidthPx?: number
+  /**
+   * Modal popover: traps focus and owns its own scroll lock. Set this when the
+   * popover is opened from inside another scroll-locked overlay (e.g. a Drawer),
+   * so its scrollable content can be scrolled on wheel/touch instead of being
+   * swallowed by the host overlay's lock. Defaults to false (web). Ignored on
+   * mobile, where the popover is always a native bottom-sheet modal.
+   */
+  modal?: boolean
   children?: ReactNode
   className?: string
 }

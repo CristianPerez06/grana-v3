@@ -1,4 +1,4 @@
-import { Modal, Pressable, View } from 'react-native'
+import { Modal, Pressable, ScrollView, View } from 'react-native'
 import type { PopoverProps } from '@grana/ui-contracts'
 
 /**
@@ -36,7 +36,10 @@ export function Popover({
             className="rounded-t-2xl bg-card p-2"
             style={{ maxHeight: '60%' }}
           >
-            {children}
+            {/* Scroll the list when it exceeds the sheet's max height — without
+                this the maxHeight just clips the extra rows (e.g. the long
+                category list) with no way to reach them. */}
+            <ScrollView showsVerticalScrollIndicator={false}>{children}</ScrollView>
           </Pressable>
         </Pressable>
       </Modal>

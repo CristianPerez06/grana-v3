@@ -16,11 +16,12 @@ export function Popover({
   align = 'start',
   minWidthPx = 280,
   maxWidthPx = 340,
+  modal = false,
   children,
   className,
 }: PopoverProps) {
   return (
-    <RadixPopover.Root open={open} onOpenChange={onOpenChange}>
+    <RadixPopover.Root open={open} onOpenChange={onOpenChange} modal={modal}>
       <RadixPopover.Trigger asChild>{trigger}</RadixPopover.Trigger>
       <RadixPopover.Portal>
         <RadixPopover.Content

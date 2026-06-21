@@ -850,6 +850,7 @@ export const MovementForm = ({
 
   const categoryRow = (
     <Popover
+      modal={isDrawer}
       open={activePopover === 'category'}
       onOpenChange={(o) => {
         setActivePopover(o ? 'category' : null)
@@ -865,6 +866,7 @@ export const MovementForm = ({
 
   const dateRow = (
     <Popover
+      modal={isDrawer}
       open={activePopover === 'date'}
       onOpenChange={(o) => setActivePopover(o ? 'date' : null)}
       trigger={
@@ -896,6 +898,7 @@ export const MovementForm = ({
           {/* Source account (+ swap for transfer) */}
           <div className="relative" data-tour="account">
             <Popover
+              modal={isDrawer}
               open={activePopover === 'account'}
               onOpenChange={(o) => setActivePopover(o ? 'account' : null)}
               trigger={
@@ -927,6 +930,7 @@ export const MovementForm = ({
           {/* Destination (transfer / exchange) */}
           {(tab === 'transfer' || tab === 'exchange') && (
             <Popover
+              modal={isDrawer}
               open={activePopover === 'destination'}
               onOpenChange={(o) => setActivePopover(o ? 'destination' : null)}
               trigger={
