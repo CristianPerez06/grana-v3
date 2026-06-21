@@ -30,7 +30,12 @@ export function Popover({
           collisionPadding={12}
           style={{ minWidth: minWidthPx, maxWidth: maxWidthPx }}
           className={cn(
-            'grana-popover z-50 max-h-[60vh] overflow-y-auto rounded-[var(--radius-xl)] border border-border bg-card p-1.5 shadow-[0_20px_50px_-12px_rgba(11,26,43,0.30)] outline-none',
+            // Cap the height to the space Radix measured between the (post-flip)
+            // anchored edge and the viewport — minus collisionPadding — so the
+            // panel never runs off-screen when it opens up or down. `min()` keeps
+            // 60vh as an aesthetic ceiling on tall viewports. Internal scroll then
+            // operates entirely within the visible band, so every option is reachable.
+            'grana-popover z-50 max-h-[min(60vh,var(--radix-popover-content-available-height))] overflow-y-auto rounded-[var(--radius-xl)] border border-border bg-card p-1.5 shadow-[0_20px_50px_-12px_rgba(11,26,43,0.30)] outline-none',
             className,
           )}
         >

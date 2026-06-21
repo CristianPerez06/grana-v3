@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import * as RadixPopover from '@radix-ui/react-popover'
 import { Building2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import {
@@ -73,38 +74,56 @@ export const BankSelector = ({
   }
 
   return (
-    <div className="relative flex items-center gap-[13px] bg-card px-4 py-3">
-      {selected ? (
-        <span
-          className="flex size-9 shrink-0 items-center justify-center rounded-[11px] text-sm font-extrabold text-white"
-          style={{ backgroundColor: selected.brand_color ?? 'var(--account-slate)' }}
-          aria-hidden
+    // Radix Popover (Anchor + portal'd Content) gives the dropdown collision-aware
+    // flip, an adaptive max-height, and escape from the drawer's `overflow-hidden`
+    // — without it the absolute list was clipped and never flipped up. We keep the
+    // inline search input as the anchor and our own focus/blur logic as the single
+    // source of open/close (Radix only positions), so typeahead focus is preserved.
+    <RadixPopover.Root open={showDropdown} onOpenChange={(o) => { if (!o) setFocused(false) }}>
+      <RadixPopover.Anchor asChild>
+        <div className="relative flex items-center gap-[13px] bg-card px-4 py-3">
+          {selected ? (
+            <span
+              className="flex size-9 shrink-0 items-center justify-center rounded-[11px] text-sm font-extrabold text-white"
+              style={{ backgroundColor: selected.brand_color ?? 'var(--account-slate)' }}
+              aria-hidden
+            >
+              {(selected.name[0] ?? '?').toUpperCase()}
+            </span>
+          ) : (
+            <FieldIcon>
+              <Building2 className="size-[18px]" />
+            </FieldIcon>
+          )}
+          <div className="min-w-0 flex-1">
+            <FieldLabel>{label}</FieldLabel>
+            <input
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              onFocus={(e) => {
+                setFocused(true)
+                // Pre-select the prefilled name so typing replaces it when switching.
+                if (isPristineSelection) e.target.select()
+              }}
+              onBlur={() => setTimeout(() => setFocused(false), 150)}
+              placeholder={placeholder}
+              aria-label={label}
+              className="w-full border-none bg-transparent p-0 text-[15px] font-semibold tracking-[-0.01em] text-text outline-none placeholder:font-medium placeholder:text-text-soft"
+            />
+          </div>
+        </div>
+      </RadixPopover.Anchor>
+      <RadixPopover.Portal>
+        <RadixPopover.Content
+          align="start"
+          sideOffset={6}
+          collisionPadding={12}
+          // Keep focus on the search input and let our blur logic own close-on-outside.
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+          style={{ width: 'var(--radix-popover-trigger-width)' }}
+          className="z-50 max-h-[min(18rem,var(--radix-popover-content-available-height))] overflow-y-auto rounded-md border border-border bg-card shadow-md"
         >
-          {(selected.name[0] ?? '?').toUpperCase()}
-        </span>
-      ) : (
-        <FieldIcon>
-          <Building2 className="size-[18px]" />
-        </FieldIcon>
-      )}
-      <div className="min-w-0 flex-1">
-        <FieldLabel>{label}</FieldLabel>
-        <input
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          onFocus={(e) => {
-            setFocused(true)
-            // Pre-select the prefilled name so typing replaces it when switching.
-            if (isPristineSelection) e.target.select()
-          }}
-          onBlur={() => setTimeout(() => setFocused(false), 150)}
-          placeholder={placeholder}
-          aria-label={label}
-          className="w-full border-none bg-transparent p-0 text-[15px] font-semibold tracking-[-0.01em] text-text outline-none placeholder:font-medium placeholder:text-text-soft"
-        />
-      </div>
-      {showDropdown && (
-        <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-72 overflow-y-auto rounded-md border border-border bg-card shadow-md">
           {filtered.map((inst) => (
             <button
               key={inst.id}
@@ -144,9 +163,9 @@ export const BankSelector = ({
               ? t('customInstitution.add_with_query', { query: search.trim() })
               : t('customInstitution.add')}
           </button>
-        </div>
-      )}
-    </div>
+        </RadixPopover.Content>
+      </RadixPopover.Portal>
+    </RadixPopover.Root>
   )
 }
 

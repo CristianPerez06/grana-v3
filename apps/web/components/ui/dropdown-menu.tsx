@@ -62,7 +62,10 @@ export function DropdownMenuContent({
         collisionPadding={12}
         style={{ minWidth: minWidthPx }}
         className={cn(
-          'grana-dropdown-menu z-50 overflow-hidden rounded-[var(--radius-xl)] border border-border bg-card p-1.5 shadow-[0_20px_50px_-12px_rgba(11,26,43,0.30)] outline-none',
+          // Bound the menu to the available space (post-flip, minus collisionPadding)
+          // and scroll internally — `overflow-hidden` alone clipped long menus with
+          // no way to reach the rest.
+          'grana-dropdown-menu z-50 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto rounded-[var(--radius-xl)] border border-border bg-card p-1.5 shadow-[0_20px_50px_-12px_rgba(11,26,43,0.30)] outline-none',
           className,
         )}
       >
