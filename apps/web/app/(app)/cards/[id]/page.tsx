@@ -65,6 +65,18 @@ const CardDetailPage = async ({ params }: Props) => {
   const today = getTodayAR()
   const todayISO = formatDateISO(today)
 
+  // Back-link to the cards list. Rendered by the page (not the layout) so it
+  // doesn't leak into the nested routes (periods, statement detail, edit, pay),
+  // each of which renders its own header + back-link.
+  const backLink = (
+    <Link
+      href="/cards"
+      className="text-[13px] font-extrabold text-text-muted transition-colors hover:text-foreground"
+    >
+      {`← ${t('back_label')}`}
+    </Link>
+  )
+
   const institutionName =
     cardDetail.other_network_name ??
     (cardDetail.institution as { name?: string } | null)?.name ??
@@ -108,6 +120,7 @@ const CardDetailPage = async ({ params }: Props) => {
   if (!cardHasHistory && cardDetail.is_active) {
     return (
       <EditCardDrawerProvider card={editCardData(0)}>
+        {backLink}
         <CardDetailHeader
           name={cardDetail.name}
           bank={institutionName}
@@ -136,6 +149,7 @@ const CardDetailPage = async ({ params }: Props) => {
   if (!cardDetail.is_active && !hasPendings) {
     return (
       <>
+        {backLink}
         <CardDetailHeader name={cardDetail.name} bank={institutionName} accent={accent} tone="ok" />
         <CardActions cardId={id} isActive={false} hasMovements={cardHasHistory} />
         <p className="py-6 text-center text-sm text-text-muted">{t('detail.archived_no_pending')}</p>
@@ -216,6 +230,7 @@ const CardDetailPage = async ({ params }: Props) => {
 
   return (
     <EditCardDrawerProvider card={editCardData(committedARS)}>
+      {backLink}
       <CardDetailHeader
         name={cardDetail.name}
         bank={institutionName}
