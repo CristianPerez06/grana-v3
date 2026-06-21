@@ -28,6 +28,11 @@ export function invalidateAfterMovementMutation(qc: QueryClient): void {
   qc.invalidateQueries({ queryKey: ['transactions', 'linked-recurrence-ids'] })
   qc.invalidateQueries({ queryKey: ['recurrences', 'top-suggestion'] })
   qc.invalidateQueries({ queryKey: ['accounts', 'list'] })
+  // Dashboard client widgets (balance series, category breakdown, and any
+  // future `['dashboard', ...]` query) read from TanStack, not RSC, so
+  // router.refresh() alone leaves them stale until a hard reload. Invalidate
+  // the whole prefix so every dashboard card refetches after a movement.
+  qc.invalidateQueries({ queryKey: ['dashboard'] })
   // /accounts/[id] shell: detail balances + ascending history + scoped
   // pending reimbursements. We invalidate by the `account` / `reimbursements`
   // prefixes so each account's slice refreshes without callers needing to
@@ -79,6 +84,9 @@ export function invalidateAfterReimbursementMutation(qc: QueryClient): void {
   qc.invalidateQueries({ queryKey: ['transactions', 'page'] })
   qc.invalidateQueries({ queryKey: ['transactions', 'breakdown'] })
   qc.invalidateQueries({ queryKey: ['accounts', 'list'] })
+  // Marking an expense received changes the month's spending, so the dashboard
+  // balance/breakdown widgets must refetch too.
+  qc.invalidateQueries({ queryKey: ['dashboard'] })
   // Account detail view: balances + ascending history + scoped pending list.
   qc.invalidateQueries({ queryKey: ['account', 'detail'] })
   qc.invalidateQueries({ queryKey: ['account', 'movements-ascending'] })
