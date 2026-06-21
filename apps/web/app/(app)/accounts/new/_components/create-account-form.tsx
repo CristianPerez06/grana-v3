@@ -78,15 +78,17 @@ export const CreateAccountForm = ({ institutions, variant = 'page', onClose, onS
 
   const meta = t('preview.meta_bank', { bank: bankShort || t('preview.meta_bank_empty') })
 
-  const arsNum = parseMoneyInput(arsValue) ?? 0
-  const usdNum = parseMoneyInput(usdValue) ?? 0
+  const arsNum = parseMoneyInput(arsValue, { allowNegative: true }) ?? 0
+  const usdNum = parseMoneyInput(usdValue, { allowNegative: true }) ?? 0
   const arsLabel = formatARS(arsNum, showCents).replace(/^\$\s?/, '')
-  const usdLabel = usdNum > 0 ? formatUSD(usdNum, showCents) : null
+  const usdLabel = usdNum !== 0 ? formatUSD(usdNum, showCents) : null
 
   // ── Form gating + validation ────────────────────────────────────────────────
+  // A negative opening balance is allowed (account "en rojo"); only an
+  // unparseable / empty field is invalid.
   const balancesValid = CURRENCY_CODES.every((code) => {
-    const v = parseMoneyInput(code === 'ARS' ? arsValue : usdValue)
-    return v !== null && v >= 0
+    const v = parseMoneyInput(code === 'ARS' ? arsValue : usdValue, { allowNegative: true })
+    return v !== null
   })
   const canSubmit = !!institutionId && balancesValid
   const dirty = !!name.trim() || !!institutionId || arsValue !== '0' || usdValue !== '0'
@@ -96,10 +98,10 @@ export const CreateAccountForm = ({ institutions, variant = 'page', onClose, onS
     // Name is optional — it falls back to the (short) institution name.
     if (name.trim().length > 50) errs.name = t('errors.name_too_long')
     if (!institutionId) errs.institution = t('errors.institution_required_short')
-    if (parseMoneyInput(arsValue) === null || (parseMoneyInput(arsValue) ?? 0) < 0)
-      errs.balance_ARS = t('errors.balance_negative')
-    if (parseMoneyInput(usdValue) === null || (parseMoneyInput(usdValue) ?? 0) < 0)
-      errs.balance_USD = t('errors.balance_negative')
+    if (parseMoneyInput(arsValue, { allowNegative: true }) === null)
+      errs.balance_ARS = t('errors.balance_invalid')
+    if (parseMoneyInput(usdValue, { allowNegative: true }) === null)
+      errs.balance_USD = t('errors.balance_invalid')
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -112,8 +114,8 @@ export const CreateAccountForm = ({ institutions, variant = 'page', onClose, onS
     setIsSubmitting(true)
     try {
       const currencies = [
-        { currency_code: 'ARS', initial_balance: parseMoneyInput(arsValue) ?? 0 },
-        { currency_code: 'USD', initial_balance: parseMoneyInput(usdValue) ?? 0 },
+        { currency_code: 'ARS', initial_balance: parseMoneyInput(arsValue, { allowNegative: true }) ?? 0 },
+        { currency_code: 'USD', initial_balance: parseMoneyInput(usdValue, { allowNegative: true }) ?? 0 },
       ]
       // No explicit name falls back to the (short) institution name.
       const finalName = name.trim() || bankShort || (selectedInstitution?.name ?? '')
@@ -238,6 +240,7 @@ export const CreateAccountForm = ({ institutions, variant = 'page', onClose, onS
         usdValue={usdValue}
         onArsChange={setArsValue}
         onUsdChange={setUsdValue}
+        allowNegative
       />
       {errors.balance_ARS || errors.balance_USD ? (
         <p className="mt-1.5 px-0.5 text-xs text-destructive">

@@ -31,20 +31,26 @@ type Props = MoneyAmountInputProps &
     // Group the integer part with thousands separators while typing. Default true.
     // Set false for non-2dp money fields (FX rates) — see note above.
     groupThousands?: boolean
+    // Allow a leading minus sign (e.g. an account opening "en rojo"). Default
+    // false — most money fields (expense amounts, etc.) must stay non-negative.
+    allowNegative?: boolean
   }
 
-// Non-grouped path: keep digits + at most one decimal separator.
-const sanitize = (raw: string): string => {
+// Non-grouped path: keep digits + at most one decimal separator. A leading `-`
+// is preserved only when `allowNegative` is set.
+const sanitize = (raw: string, allowNegative: boolean): string => {
+  const negative = allowNegative && raw.trimStart().startsWith('-')
   const onlyNumericChars = raw.replace(/[^\d.,]/g, '')
   const firstSepIdx = onlyNumericChars.search(/[.,]/)
-  if (firstSepIdx === -1) return onlyNumericChars
+  const sign = negative ? '-' : ''
+  if (firstSepIdx === -1) return sign + onlyNumericChars
   const head = onlyNumericChars.slice(0, firstSepIdx + 1)
   const tail = onlyNumericChars.slice(firstSepIdx + 1).replace(/[.,]/g, '')
-  return head + tail
+  return sign + head + tail
 }
 
 export const MoneyAmountInput = forwardRef<HTMLInputElement, Props>(
-  ({ value, onChange, groupThousands = true, ...rest }, ref) => {
+  ({ value, onChange, groupThousands = true, allowNegative = false, ...rest }, ref) => {
     if (!groupThousands) {
       return (
         <input
@@ -53,7 +59,7 @@ export const MoneyAmountInput = forwardRef<HTMLInputElement, Props>(
           inputMode="decimal"
           autoComplete="off"
           value={value}
-          onChange={(e) => onChange(sanitize(e.target.value))}
+          onChange={(e) => onChange(sanitize(e.target.value, allowNegative))}
           {...rest}
         />
       )
@@ -72,7 +78,7 @@ export const MoneyAmountInput = forwardRef<HTMLInputElement, Props>(
       const start = input.selectionStart ?? input.value.length
       const end = input.selectionEnd ?? input.value.length
       const next = `${input.value.slice(0, start)},${input.value.slice(end)}`
-      onChange(toCanonical(next))
+      onChange(toCanonical(next, allowNegative))
     }
 
     return (
@@ -82,7 +88,7 @@ export const MoneyAmountInput = forwardRef<HTMLInputElement, Props>(
         inputMode="decimal"
         autoComplete="off"
         value={formatForDisplay(value)}
-        onChange={(e) => onChange(toCanonical(e.target.value))}
+        onChange={(e) => onChange(toCanonical(e.target.value, allowNegative))}
         {...rest}
         onKeyDown={handleKeyDown}
       />

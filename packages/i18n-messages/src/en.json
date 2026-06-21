@@ -458,7 +458,7 @@
       "institution_forbidden": "Cash accounts do not have an institution.",
       "currency_required": "Select at least one currency.",
       "currency_unsupported": "Unsupported currency.",
-      "balance_negative": "Opening balance cannot be negative.",
+      "balance_invalid": "Enter a valid amount.",
       "delete_has_transactions": "This account has transactions. Archive it to preserve the history.",
       "deactivate_non_zero_balance": "Cannot deactivate a currency with a non-zero balance.",
       "deactivate_last_currency": "At least one currency must remain active.",

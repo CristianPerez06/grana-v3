@@ -26,11 +26,11 @@ const currencySchema = yup
       .label('currency_code')
       .required()
       .oneOf(SUPPORTED_CURRENCIES),
+    // No lower bound: an account can open "en rojo" (negative opening balance).
     initial_balance: yup
       .number()
       .label('initial_balance')
-      .required()
-      .min(0),
+      .required(),
   })
   .strict()
 
@@ -96,11 +96,11 @@ export const addCurrencySchema = yup
       .label('currency_code')
       .required()
       .oneOf(SUPPORTED_CURRENCIES),
+    // No lower bound: a currency can be added with a negative opening balance.
     initial_balance: yup
       .number()
       .label('initial_balance')
-      .required()
-      .min(0),
+      .required(),
   })
   .strict()
 

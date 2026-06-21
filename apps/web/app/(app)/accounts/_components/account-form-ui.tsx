@@ -129,6 +129,7 @@ const MoneyRow = ({
   prefix,
   value,
   onChange,
+  allowNegative,
 }: {
   currency: 'ARS' | 'USD'
   label: string
@@ -138,6 +139,7 @@ const MoneyRow = ({
   prefix: string
   value: string
   onChange: (value: string) => void
+  allowNegative?: boolean
 }) => (
   <div className="flex items-center gap-[13px] bg-card px-4 py-[13px]">
     <span
@@ -156,6 +158,7 @@ const MoneyRow = ({
       <MoneyAmountInput
         value={value}
         onChange={onChange}
+        allowNegative={allowNegative}
         placeholder="0"
         aria-label={label}
         className="w-[132px] rounded-[10px] border border-border bg-[#FAFBFC] px-3 py-[9px] text-right text-base font-bold tabular-nums tracking-[-0.01em] text-text outline-none focus-visible:border-[#C9CFD7] focus-visible:ring-[3px] focus-visible:ring-[rgba(58,107,138,0.12)] placeholder:font-semibold placeholder:text-text-soft"
@@ -177,6 +180,7 @@ export const EditableMoneyGroup = ({
   usdValue,
   onArsChange,
   onUsdChange,
+  allowNegative,
 }: {
   arsLabel: string
   usdLabel: string
@@ -186,6 +190,8 @@ export const EditableMoneyGroup = ({
   usdValue: string
   onArsChange: (value: string) => void
   onUsdChange: (value: string) => void
+  // Permite saldo inicial negativo (cuenta en rojo) en ambas monedas.
+  allowNegative?: boolean
 }) => (
   <div className="overflow-hidden rounded-[15px] border border-border [&>*+*]:border-t [&>*+*]:border-border">
     <MoneyRow
@@ -197,6 +203,7 @@ export const EditableMoneyGroup = ({
       prefix="$"
       value={arsValue}
       onChange={onArsChange}
+      allowNegative={allowNegative}
     />
     <MoneyRow
       currency="USD"
@@ -207,6 +214,7 @@ export const EditableMoneyGroup = ({
       prefix="US$"
       value={usdValue}
       onChange={onUsdChange}
+      allowNegative={allowNegative}
     />
   </div>
 )

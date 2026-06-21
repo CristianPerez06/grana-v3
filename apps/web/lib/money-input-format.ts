@@ -20,10 +20,16 @@ const MAX_DECIMALS = 2
 // Displayed text → canonical. Grouping dots are dropped; the first comma (if any)
 // becomes the decimal point. Leading zeros are trimmed so typing onto a default
 // "0" builds the number naturally. The fractional part is capped to 2 digits.
-export const toCanonical = (raw: string): string => {
+//
+// When `allowNegative` is set, a leading `-` (e.g. an account that opens "en
+// rojo") is preserved as a canonical `-` prefix. A lone `-` is kept so the user
+// can type the sign before the digits; `parseMoneyInput` treats it as invalid
+// until a number follows.
+export const toCanonical = (raw: string, allowNegative = false): string => {
+  const negative = allowNegative && raw.trimStart().startsWith('-')
   // Keep only digits and commas — this drops grouping dots and anything else.
   const cleaned = raw.replace(/[^\d,]/g, '')
-  if (cleaned === '') return ''
+  if (cleaned === '') return negative ? '-' : ''
 
   const firstComma = cleaned.indexOf(',')
   let intPart: string
@@ -39,7 +45,8 @@ export const toCanonical = (raw: string): string => {
   intPart = intPart.replace(/^0+(?=\d)/, '') // trim leading zeros, keep the last digit
   if (intPart === '') intPart = '0'
 
-  return decPart === null ? intPart : `${intPart}.${decPart}`
+  const body = decPart === null ? intPart : `${intPart}.${decPart}`
+  return negative ? `-${body}` : body
 }
 
 // Canonical → grouped display. Groups the integer part with `.` and shows the
@@ -47,11 +54,14 @@ export const toCanonical = (raw: string): string => {
 // a trailing `,` so the user can keep typing the cents.
 export const formatGrouped = (canonical: string): string => {
   if (canonical === '') return ''
-  const dotIdx = canonical.indexOf('.')
-  const intPart = dotIdx === -1 ? canonical : canonical.slice(0, dotIdx)
+  const negative = canonical.startsWith('-')
+  const body = negative ? canonical.slice(1) : canonical
+  if (body === '') return negative ? '-' : ''
+  const dotIdx = body.indexOf('.')
+  const intPart = dotIdx === -1 ? body : body.slice(0, dotIdx)
   const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-  if (dotIdx === -1) return grouped
-  return `${grouped},${canonical.slice(dotIdx + 1)}`
+  const out = dotIdx === -1 ? grouped : `${grouped},${body.slice(dotIdx + 1)}`
+  return negative ? `-${out}` : out
 }
 
 // The input's displayed value: canonical (as stored upstream) → grouped text.
