@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { CreditCard, X } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
@@ -9,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { parseMoneyInput } from '@grana/validation'
 import { createCreditCard } from '@/app/_actions/credit-cards'
+import { invalidateAfterAccountMutation } from '@/lib/transactions/invalidation'
 import { cardMonogram } from './card-presentation'
 import {
   BankSelectorField,
@@ -58,6 +60,7 @@ export const CreateCardForm = ({
   onSuccess,
 }: CreateCardFormProps) => {
   const router = useRouter()
+  const qc = useQueryClient()
   const t = useTranslations('cards')
   const tCommon = useTranslations('common')
   const isDrawer = variant === 'drawer'
@@ -165,6 +168,12 @@ export const CreateCardForm = ({
         setFormError(result.formError ?? t('errors.create_failed'))
         return
       }
+
+      // The new card lives in the TanStack `['accounts','list']` cache that the
+      // movement drawer reads from; `router.refresh()` only revalidates RSC, so
+      // without this the card won't appear (or preselect) in the form until a
+      // hard page reload. Mirrors the account-create flow (account-confirm-dialog).
+      invalidateAfterAccountMutation(qc)
 
       if (onSuccess) {
         router.refresh()

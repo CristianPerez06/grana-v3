@@ -252,6 +252,10 @@ export const MovementForm = ({
   // Reveals the free-form installments input. Also implicitly active when the
   // current value isn't one of the presets (e.g. coming back to a 4× purchase).
   const [customInstallments, setCustomInstallments] = useState(false)
+  // Editing buffer for the split % field so it can be momentarily empty while
+  // retyping (e.g. clearing "50" to enter "60"). `null` = show the committed
+  // value; a string = the in-progress text. Clamped/committed on blur.
+  const [splitDraft, setSplitDraft] = useState<string | null>(null)
   const amountRef = useRef<HTMLInputElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
@@ -1396,11 +1400,17 @@ export const MovementForm = ({
                     <input
                       type="text"
                       inputMode="numeric"
-                      value={String(splitFirstPct)}
+                      value={splitDraft ?? String(splitFirstPct)}
                       onChange={(e) => {
-                        const n = parseInt(e.target.value.replace(/\D/g, ''), 10)
-                        setSplitFirstPct(Number.isNaN(n) ? 1 : Math.max(1, Math.min(99, n)))
+                        // Allow an empty field while editing; only commit a
+                        // clamped value once there are digits to parse.
+                        const raw = e.target.value.replace(/\D/g, '').slice(0, 2)
+                        setSplitDraft(raw)
+                        if (raw !== '') {
+                          setSplitFirstPct(Math.max(1, Math.min(99, parseInt(raw, 10))))
+                        }
                       }}
+                      onBlur={() => setSplitDraft(null)}
                       aria-label={sharedMembers[0].fullName}
                       className="w-16 rounded-[10px] border border-border py-1.5 pl-2.5 pr-6 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       style={{ backgroundColor: FIELD_BG }}
