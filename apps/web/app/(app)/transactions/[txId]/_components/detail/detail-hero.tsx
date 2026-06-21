@@ -56,7 +56,7 @@ export const DetailHero = ({ tone, icon, amount, currency, eyebrow, title, flow,
         </div>
 
         <div
-          className="mt-3 flex items-baseline justify-center text-[46px] font-extrabold leading-none tracking-[-0.045em] tabular-nums sm:mt-[15px] sm:text-[60px]"
+          className="mt-3 flex min-w-0 items-baseline justify-center text-[clamp(2rem,11vw,46px)] font-extrabold leading-none tracking-[-0.045em] tabular-nums sm:mt-[15px] sm:text-[60px]"
           style={{ color: 'var(--tone)' }}
         >
           {parts.sign && <span className="mr-0.5">{parts.sign}</span>}

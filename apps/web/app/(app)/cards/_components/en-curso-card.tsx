@@ -49,7 +49,7 @@ export const EnCursoCard = ({
     <button
       type="button"
       onClick={onSelect}
-      className="w-full p-7 text-left outline-none transition-shadow"
+      className="w-full p-5 text-left outline-none transition-shadow sm:p-7"
       style={selected || isHero ? { boxShadow: `inset 0 0 0 2px ${accent}` } : undefined}
     >
       <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_220px] md:items-center md:gap-8">
@@ -72,7 +72,7 @@ export const EnCursoCard = ({
 
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <span
-              className={`font-extrabold leading-none tracking-[-0.04em] tabular-nums ${isHero ? 'text-[44px] sm:text-[52px]' : 'text-[34px] sm:text-[40px]'}`}
+              className={`font-extrabold leading-none tracking-[-0.04em] tabular-nums ${isHero ? 'text-[clamp(2rem,11vw,44px)] sm:text-[52px]' : 'text-[clamp(1.75rem,9vw,34px)] sm:text-[40px]'}`}
             >
               {formatARS(period.pendingAmountARS, showCents)}
             </span>

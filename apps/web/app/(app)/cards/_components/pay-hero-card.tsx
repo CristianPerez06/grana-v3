@@ -38,17 +38,17 @@ export const PayHeroCard = ({
     <button
       type="button"
       onClick={onSelect}
-      className="w-full rounded-[20px] border border-[#EEDAD2] bg-gradient-to-b from-[#FBF1ED] to-card p-7 text-left outline-none transition-shadow"
+      className="w-full rounded-[20px] border border-[#EEDAD2] bg-gradient-to-b from-[#FBF1ED] to-card p-5 text-left outline-none transition-shadow sm:p-7"
       style={selected ? { boxShadow: 'inset 0 0 0 2px var(--terracotta)' } : undefined}
     >
       <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-        <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <span className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-terracotta">
             <AlertTriangle size={14} />
             {t('detail.pay_eyebrow')}
           </span>
-          <div className="flex items-baseline gap-2">
-            <span className="text-[56px] font-extrabold leading-none tracking-[-0.045em] tabular-nums">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-2">
+            <span className="text-[clamp(2.25rem,12vw,56px)] font-extrabold leading-none tracking-[-0.045em] tabular-nums">
               {formatARS(period.pendingAmountARS, showCents)}
             </span>
             {period.pendingAmountUSD > 0 && (
