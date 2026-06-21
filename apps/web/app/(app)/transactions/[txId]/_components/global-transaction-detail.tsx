@@ -148,7 +148,13 @@ export const GlobalTransactionDetail = ({
     : null
 
   const actionAccountId = transaction.account_id ?? installmentSiblings?.[0]?.account_id ?? null
-  const canEdit = actionAccountId != null && transaction.status !== 'paid'
+  // A single cuota (parent_id set) is never edited on its own — amount/date/
+  // category belong to the parent (madre). It has NO edit/delete action; the
+  // only affordance is a note linking to the original purchase (the madre).
+  const installmentParentHref =
+    transaction.parent_id != null ? `/transactions/${transaction.parent_id}` : null
+  const canEdit =
+    actionAccountId != null && transaction.status !== 'paid' && installmentParentHref == null
   const canDelete =
     actionAccountId != null && !transaction.parent_id && transaction.status !== 'paid'
 
@@ -526,6 +532,15 @@ export const GlobalTransactionDetail = ({
         {contextCopy && (
           <Alert variant="info" icon={false}>
             {contextCopy}
+          </Alert>
+        )}
+
+        {installmentParentHref && (
+          <Alert variant="info" icon={false}>
+            {tDetail('installment_child_note')}{' '}
+            <Link href={installmentParentHref} className="font-semibold underline">
+              {tDetail('installment_child_link')}
+            </Link>
           </Alert>
         )}
 

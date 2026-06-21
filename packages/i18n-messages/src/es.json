@@ -903,6 +903,8 @@
         "more": "Más",
         "edit_movement": "Editar movimiento"
       },
+      "installment_child_note": "Esta es una cuota. El monto se edita desde la compra original, no desde cada cuota.",
+      "installment_child_link": "Ir a la compra original",
       "groups": {
         "details": "Detalles",
         "card": "Tarjeta",

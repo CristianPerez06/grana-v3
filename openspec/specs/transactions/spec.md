@@ -537,6 +537,37 @@ Las acciones disponibles dependen de los permisos del usuario y del editable-sta
 - **WHEN** el usuario toca "Editar" en un movimiento con drawer de edición disponible
 - **THEN** se abre el drawer de edición en contexto (sin navegar a `[txId]/edit`)
 
+### Requirement: Una cuota individual es inmutable; el monto de una compra en cuotas se edita solo desde la madre
+
+Una compra en cuotas se modela como una transacción **madre** (`is_parent=true`, off-ledger, `account_id=NULL`) y N **cuotas hijas** (`parent_id` apuntando a la madre). El monto, la fecha y la categoría de la compra son propiedad de la madre: editar una cuota hija en forma aislada descuadraría la familia (las N cuotas + la madre dejarían de sumar el total). Por eso el sistema SHALL tratar a cada cuota hija como **inmutable** y canalizar toda edición a través de la madre.
+
+- El detalle de una **cuota hija** SHALL NOT ofrecer las acciones "Editar" ni "Eliminar". En su lugar SHALL mostrar una nota que indique que es una cuota y que el monto se edita desde la compra original, con un link al detalle de la madre (`/transactions/[parentId]`).
+- El form de edición SHALL marcar todos los campos de una cuota hija como no editables (`getEditableFields` con `isInstallmentChild`).
+- El server action de actualización de un movimiento (`updateTransaction`) SHALL rechazar cualquier cambio de monto o fecha sobre una fila con `parent_id` no nulo (defensa en profundidad, en paralelo al guard que ya impide eliminar una cuota suelta).
+- La edición del **total** se hace desde la madre (`updateInstallmentParent`): cambiar el monto SHALL re-repartir el nuevo total entre las cuotas (residuo en la primera). Si **alguna** cuota ya está pagada (`status='paid'`), el sistema SHALL rechazar el cambio de monto (categoría y descripción siguen editables y se propagan a las cuotas).
+
+#### Scenario: El detalle de una cuota no ofrece editar ni eliminar
+
+- **WHEN** el usuario abre el detalle de una cuota hija (`parent_id` no nulo) desde un resumen o el listado
+- **THEN** la topbar no muestra "Editar" ni "Eliminar"
+- **AND** aparece una nota "Esta es una cuota. El monto se edita desde la compra original" con un link "Ir a la compra original" hacia el detalle de la madre
+
+#### Scenario: Intentar editar el monto de una cuota vía API es rechazado
+
+- **WHEN** una llamada a `updateTransaction` envía un nuevo `amount` o `date` para una fila con `parent_id` no nulo
+- **THEN** la action retorna un error indicando que el monto de una compra en cuotas se edita desde la compra original, no desde cada cuota
+- **AND** no se persiste ningún cambio
+
+#### Scenario: Editar el total desde la madre re-reparte las cuotas
+
+- **WHEN** el usuario edita el monto total en el detalle de la madre y ninguna cuota está pagada
+- **THEN** el nuevo total se re-reparte entre las N cuotas (con el residuo en la primera)
+
+#### Scenario: La madre con una cuota pagada bloquea el cambio de monto
+
+- **WHEN** el usuario intenta cambiar el monto total de una compra en cuotas que tiene al menos una cuota en estado `paid`
+- **THEN** el sistema rechaza el cambio de monto (la categoría y la descripción sí se pueden editar y se propagan a las cuotas)
+
 ### Requirement: Los metadatos del detalle se agrupan en DetailGroups con eyebrow caps y filas
 
 El sistema SHALL agrupar los metadatos del detalle en componentes `TxDetailGroup`: cards blancos con border de 1px y border-radius ~18px, opcionalmente precedidos por un **eyebrow caps uppercase** de 10.5px font-bold tracked (~0.6px) y color text-soft, que actúa como header del group (ej. "DETALLES", "TARJETA", "CUOTAS", "REINTEGROS").

@@ -183,12 +183,26 @@ export async function updateTransaction(
 
   const { data: existing } = await supabase
     .from('transactions')
-    .select('id, status, account_id, card_period_id')
+    .select('id, status, account_id, card_period_id, parent_id')
     .eq('id', id)
     .eq('user_id', userId)
     .single()
 
   if (!existing) return { ok: false, formError: 'Transacción no encontrada.' }
+
+  // A single installment (cuota) is immutable on its own: amount, date and
+  // category are owned by the parent (madre). Editing one cuota would desync the
+  // family, so amount/date changes must go through `updateInstallmentParent`.
+  // Mirrors the parent-only guard on `deleteTransaction`.
+  if (
+    existing.parent_id != null &&
+    (validation.data.amount !== undefined || validation.data.date !== undefined)
+  ) {
+    return {
+      ok: false,
+      formError: 'El monto de una compra en cuotas se edita desde la compra original, no desde cada cuota.',
+    }
+  }
 
   // A paid credit-card consumption is immutable except for category/description.
   if (

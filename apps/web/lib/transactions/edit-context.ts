@@ -38,6 +38,7 @@ export async function buildMovementEditContext(
   if (!transaction) return null
 
   const isParent = transaction.is_parent === true
+  const isInstallmentChild = !isParent && transaction.parent_id != null
   if (!isParent && !transaction.account_id) return null
   // Reimbursements are not edited through this form — they use confirm/cancel.
   // Reimbursements and debt settlements are not edited via the movement form;
@@ -68,6 +69,7 @@ export async function buildMovementEditContext(
     isParent,
     isCardPayment,
     hasPaidInstallment,
+    isInstallmentChild,
   })
 
   // Available balance of the movement's own account, in the movement currency,
@@ -122,6 +124,7 @@ export async function buildMovementEditContext(
     subcategoryId: transaction.subcategory_id,
     description: transaction.description,
     installmentsTotal: transaction.installments_total,
+    parentId: transaction.parent_id ?? null,
     sourceAccountName: isParent ? cardName : transaction.source_account?.name ?? null,
     destinationAccountName: transaction.destination_account?.name ?? null,
     editableFields,

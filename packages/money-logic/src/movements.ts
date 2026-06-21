@@ -133,6 +133,9 @@ export type MovementType = 'income' | 'expense' | 'transfer' | 'adjustment' | 'e
  * - `isCardPayment`: an expense that pays a statement (no category — `payCardPeriod`
  *   inserts it with `category_id=null` on purpose).
  * - `hasPaidInstallment`: only meaningful for a parent — true when any child is `paid`.
+ * - `isInstallmentChild`: a single cuota (`parent_id` set). Fully immutable — its
+ *   amount, date and category are owned by the parent (madre); editing one cuota
+ *   in isolation desyncs the family. All edits route through the parent.
  */
 export type MovementEditInput = {
   type: MovementType
@@ -140,6 +143,7 @@ export type MovementEditInput = {
   isParent: boolean
   isCardPayment: boolean
   hasPaidInstallment: boolean
+  isInstallmentChild?: boolean
 }
 
 /**
@@ -170,6 +174,22 @@ export type EditableFields = {
  */
 export function getEditableFields(input: MovementEditInput): EditableFields {
   const { type, status, isParent, isCardPayment, hasPaidInstallment } = input
+
+  // Installment child (single cuota): fully immutable. Amount/date/category are
+  // owned by the parent (madre) — editing one cuota in isolation would desync the
+  // family. The UI routes any edit to the parent instead.
+  if (input.isInstallmentChild) {
+    return {
+      amount: false,
+      date: false,
+      category: false,
+      subcategory: false,
+      description: false,
+      adjustmentDirection: false,
+      destinationAmount: false,
+      shared: false,
+    }
+  }
 
   // Installment parent (madre): category/description always editable; amount only
   // when no child is paid (changing it re-splits the children); date never (the

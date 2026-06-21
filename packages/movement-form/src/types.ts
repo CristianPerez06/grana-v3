@@ -55,6 +55,8 @@ export type MovementEditContext = {
   accountId: string
   destinationAccountId: string | null
   isParent: boolean
+  /** Parent (madre) id when this movement is a single installment (cuota). */
+  parentId: string | null
   amount: number
   signedAmount: number
   date: string

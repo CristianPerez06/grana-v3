@@ -903,6 +903,8 @@
         "more": "More",
         "edit_movement": "Edit movement"
       },
+      "installment_child_note": "This is one installment. The amount is edited from the original purchase, not from each installment.",
+      "installment_child_link": "Go to the original purchase",
       "groups": {
         "details": "Details",
         "card": "Card",

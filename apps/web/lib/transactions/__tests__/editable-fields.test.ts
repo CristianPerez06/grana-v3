@@ -101,6 +101,21 @@ describe('getEditableFields — installment parent (madre)', () => {
   })
 })
 
+describe('getEditableFields — installment child (single cuota)', () => {
+  it('fully locked: no field editable, edits route to the parent', () => {
+    expect(
+      getEditableFields(input({ type: 'expense', status: 'pending', isInstallmentChild: true })),
+    ).toEqual(fields({ shared: false }))
+  })
+
+  it('stays locked even if not yet paid', () => {
+    const f = getEditableFields(input({ type: 'expense', status: 'pending', isInstallmentChild: true }))
+    expect(f.amount).toBe(false)
+    expect(f.date).toBe(false)
+    expect(f.category).toBe(false)
+  })
+})
+
 describe('getEditableFields — invariants', () => {
   const types = ['income', 'expense', 'transfer', 'adjustment', 'exchange'] as const
 
