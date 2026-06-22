@@ -26,6 +26,7 @@ export {
 
 export type {
   CommittedCurrency,
+  CommittedItem,
   CommittedOutlook,
   DashboardHero,
   HeroAccountBalance,

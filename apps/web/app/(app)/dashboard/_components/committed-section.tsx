@@ -1,8 +1,9 @@
-import { ArrowUpRight, CreditCard, Repeat } from 'lucide-react'
+import Link from 'next/link'
+import { AlertTriangle, ArrowUpRight, CreditCard, Repeat } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import type { CommittedCurrency, CommittedOutlook } from '@grana/dashboard'
+import type { CommittedCurrency, CommittedItem, CommittedOutlook } from '@grana/dashboard'
 import { MaskedAmount } from './masked-amount'
 import { MaskedAmountDisplay } from './masked-amount-display'
 
@@ -18,63 +19,104 @@ const isEmpty = (data: CommittedOutlook) =>
   data.ARS.recurringIncome === 0 &&
   data.USD.recurringIncome === 0
 
-// One outflow mini-tile: icon + label (+ hint) + ARS amount, with the USD amount
-// folded in right below when there's USD activity (bimoneda lives inside each
-// tile, no separate strip). No bar/chart — the card communicates with tiles.
-const Tile = ({
+/** ISO `YYYY-MM-DD` → `dd/mm` for the compact movement rows. */
+const ddmm = (iso: string) => (iso.length >= 10 ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : '')
+
+// One obligation section: icon + label (+ hint) + per-currency subtotal, then its
+// top movements by amount, and a link to the full module. USD shows whenever the
+// card has any USD activity (bimoneda por defecto), with ceros when the section
+// itself has none — consistent with the total.
+const Section = ({
   icon,
   iconClassName,
   label,
   hint,
-  amount,
-  usdAmount,
+  ars,
+  usd,
+  showUsd,
+  items,
+  href,
+  linkLabel,
 }: {
   icon: React.ReactNode
   iconClassName: string
   label: string
-  hint?: string
-  amount: number
-  usdAmount: number
+  hint: string
+  ars: number
+  usd: number
+  showUsd: boolean
+  items: CommittedItem[]
+  href: string
+  linkLabel: string
 }) => (
-  <div className="flex flex-col gap-2 rounded-2xl border border-border p-4">
-    <span
-      className={cn(
-        'flex size-8 items-center justify-center rounded-lg text-white',
-        iconClassName,
-      )}
-      aria-hidden
-    >
-      {icon}
-    </span>
-    <span className="text-[12px] font-bold leading-tight text-text-muted">
-      {label}
-      {hint && <span className="font-medium text-text-soft"> {hint}</span>}
-    </span>
-    <span className="text-[19px] font-extrabold tracking-tight text-text">
-      <MaskedAmount amount={amount} currency="ARS" />
-    </span>
-    {usdAmount > 0 && (
-      <span className="text-[12px] font-bold tracking-tight text-text-soft">
-        <span className="text-emerald-deep">USD</span>{' '}
-        <MaskedAmount amount={usdAmount} currency="USD" showCentsOverride />
+  <div className="mt-4">
+    <div className="flex items-start gap-2.5 border-b border-border-soft pb-2.5">
+      <span
+        className={cn('flex size-7 shrink-0 items-center justify-center rounded-lg text-white', iconClassName)}
+        aria-hidden
+      >
+        {icon}
       </span>
+      <span className="min-w-0 flex-1 pt-0.5 text-[13px] font-bold leading-tight text-text">
+        {label}
+        <span className="font-medium text-text-soft"> · {hint}</span>
+      </span>
+      <span className="shrink-0 text-right">
+        <span className="block text-[15px] font-extrabold tracking-tight tabular-nums text-text">
+          <MaskedAmount amount={ars} currency="ARS" />
+        </span>
+        {showUsd && (
+          <span className="block text-[11px] font-bold tabular-nums text-text-soft">
+            <span className="text-emerald-deep">USD</span>{' '}
+            <MaskedAmount amount={usd} currency="USD" showCentsOverride />
+          </span>
+        )}
+      </span>
+    </div>
+
+    {items.length > 0 && (
+      <ul className="mt-1">
+        {items.map((it, i) => (
+          <li key={`${it.description}-${it.date}-${i}`} className="flex items-center gap-2.5 py-1.5">
+            <span className="w-9 shrink-0 text-[11px] font-bold tabular-nums text-text-soft">
+              {ddmm(it.date)}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-text">
+              {it.description || '—'}
+            </span>
+            <span className="shrink-0 text-[13px] font-bold tabular-nums text-text">
+              <MaskedAmount amount={it.amount} currency="ARS" />
+            </span>
+          </li>
+        ))}
+      </ul>
     )}
+
+    <Link
+      href={href}
+      className="mt-1 inline-block rounded text-[12px] font-bold text-emerald-deep transition-colors hover:text-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      {linkLabel} →
+    </Link>
   </div>
 )
 
-// "Comprometido" — COMPROMISO lens: card debt (overdue or due next month) +
-// next-month recurring outflows shown as two tiles. When there is recurring
-// income, a green "Ya entra" tile and a net closing band ("arrancás con +X a
-// favor") appear; the income never sums into the committed total. Scoped to next
-// month, NOT the month navigator. Server-rendered; amounts mask via client leaves.
+// "Comprometido" — COMPROMISO lens ("obligaciones pendientes"): card debt
+// ("A pagar" + "En curso") + recurrences pending confirmation, each as a section
+// with its top movements. A "Ya entra" band closes the card when there is
+// recurring income (context, never summed). Static "from today": it does NOT
+// follow the month navigator. Server-rendered; amounts mask via client leaves.
 export const CommittedSection = async ({ data }: Props) => {
   const t = await getTranslations('dashboard.committed')
   const ars = data.ARS
   const usd = data.USD
   const totalArs = committedTotal(ars)
+  const totalUsd = committedTotal(usd)
+  const showUsd = totalUsd > 0
   const hasIncome = ars.recurringIncome > 0
   const net = ars.recurringIncome - totalArs
   const surplus = net >= 0
+  const hasOverdue = ars.overdue > 0
 
   if (isEmpty(data)) {
     return (
@@ -98,47 +140,68 @@ export const CommittedSection = async ({ data }: Props) => {
       </CardHeader>
 
       <CardContent className="flex flex-1 flex-col">
-        {/* Total comprometido = lo que sale (deuda + gastos recurrentes). Label a
-            la izquierda y monto a la derecha, alineados sobre la misma baseline. */}
+        {/* Total a pagar — label izquierda, monto derecha (ARS + USD) en baseline. */}
         <div className="flex items-baseline justify-between gap-3">
           <p className="text-xs font-extrabold uppercase tracking-wide text-text-soft">
             {t('total_label')}
           </p>
-          <p className="text-[clamp(1.625rem,3.4vw,2.125rem)] font-extrabold leading-none tracking-tight text-text">
-            <MaskedAmountDisplay amount={totalArs} currency="ARS" />
+          <p className="text-right">
+            <span className="block text-[clamp(1.5rem,3.2vw,2rem)] font-extrabold leading-none tracking-tight text-text">
+              <MaskedAmountDisplay amount={totalArs} currency="ARS" />
+            </span>
+            {showUsd && (
+              <span className="mt-1 block text-[13px] font-bold tabular-nums text-text-muted">
+                <span className="text-emerald-deep">USD</span>{' '}
+                <MaskedAmount amount={totalUsd} currency="USD" showCentsOverride />
+              </span>
+            )}
           </p>
         </div>
 
-        {/* "YA SALE" sub-label only when there is income to contrast it with. */}
-        {hasIncome && (
-          <p className="mt-4 text-[11px] font-extrabold uppercase tracking-wide text-terracotta">
-            {t('outflow_label')}
+        {/* Aviso de vencido — sólo cuando hay deuda con vencimiento pasado. */}
+        {hasOverdue && (
+          <p className="mt-3 flex items-center gap-2 rounded-xl bg-amber-soft px-3 py-2 text-[12px] font-semibold text-amber-deep">
+            <AlertTriangle size={15} strokeWidth={2.25} className="shrink-0" aria-hidden />
+            {t.rich('overdue', {
+              amount: () => (
+                <strong className="font-extrabold">
+                  <MaskedAmount amount={ars.overdue} currency="ARS" />
+                </strong>
+              ),
+            })}
           </p>
         )}
 
-        {/* Two outflow tiles — stack on narrow viewports so the amounts fit. */}
-        <div className={cn('grid grid-cols-1 gap-3 sm:grid-cols-2', hasIncome ? 'mt-2' : 'mt-5')}>
-          <Tile
-            icon={<CreditCard size={16} strokeWidth={2.25} aria-hidden />}
-            iconClassName="bg-navy"
-            label={t('debt')}
-            amount={ars.debt}
-            usdAmount={usd.debt}
-          />
-          <Tile
-            icon={<Repeat size={16} strokeWidth={2.25} aria-hidden />}
-            iconClassName="bg-terracotta"
-            label={t('recurring_expense')}
-            hint={t('next_month')}
-            amount={ars.recurringExpense}
-            usdAmount={usd.recurringExpense}
-          />
-        </div>
+        <Section
+          icon={<CreditCard size={15} strokeWidth={2.25} aria-hidden />}
+          iconClassName="bg-navy"
+          label={t('card_label')}
+          hint={t('card_hint')}
+          ars={ars.debt}
+          usd={usd.debt}
+          showUsd={showUsd}
+          items={ars.topCard}
+          href="/cards"
+          linkLabel={t('view_cards')}
+        />
 
-        {/* "Ya entra" — recurring income tile + net closing band (context only). */}
+        <Section
+          icon={<Repeat size={15} strokeWidth={2.25} aria-hidden />}
+          iconClassName="bg-terracotta"
+          label={t('recurring_label')}
+          hint={t('recurring_hint')}
+          ars={ars.recurringExpense}
+          usd={usd.recurringExpense}
+          showUsd={showUsd}
+          items={ars.topRecurring}
+          href="/transactions/recurring"
+          linkLabel={t('view_recurring')}
+        />
+
+        {/* "Ya entra" — ingreso recurrente del mes próximo + cierre neto (contexto). */}
         {hasIncome && (
           <>
-            <div className="mt-3 flex items-center gap-3 rounded-2xl border border-emerald/40 bg-emerald-soft p-4">
+            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-emerald/40 bg-emerald-soft p-3.5">
               <span
                 className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald text-white"
                 aria-hidden
@@ -151,7 +214,7 @@ export const CommittedSection = async ({ data }: Props) => {
                   {t('income_tile_sub')}
                 </p>
               </div>
-              <span className="shrink-0 text-[17px] font-extrabold tracking-tight text-emerald-deep">
+              <span className="shrink-0 text-[16px] font-extrabold tracking-tight text-emerald-deep">
                 <MaskedAmountDisplay amount={ars.recurringIncome} currency="ARS" signPrefix="+" />
               </span>
             </div>

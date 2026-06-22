@@ -19,15 +19,15 @@
 
 ## 4. UI web
 
-- [ ] 4.1 Reescribir `committed-section.tsx`: total a pagar (ARS + USD), secciones "Tarjeta · a pagar" y "Recurrencias · pendientes de confirmar", top-movimientos por sección, aviso de vencido, contexto "Ya entra" + neto, USD consistente
-- [ ] 4.2 Reemplazar los tiles cuadrados por el layout de filas/secciones del mockup aprobado
-- [ ] 4.3 Actualizar `committed-skeleton.tsx` al nuevo shape
-- [ ] 4.4 Eye-mask en todos los importes nuevos (total, subtotales, montos de movimientos)
-- [ ] 4.5 Estado vacío y estado de error compactos
+- [x] 4.1 `committed-section.tsx` reescrito: total a pagar (ARS + USD), secciones "Resúmenes de tarjeta" y "Recurrencias · pendientes de confirmar", top-movimientos por sección, aviso de vencido, contexto "Ya entra" + neto, USD consistente.
+- [x] 4.2 Tiles cuadrados reemplazados por el layout de secciones/filas del mockup aprobado.
+- [x] 4.3 `committed-skeleton.tsx` actualizado al nuevo shape (total + 2 secciones con filas).
+- [x] 4.4 Eye-mask en todos los importes (vía `MaskedAmount`/`MaskedAmountDisplay`).
+- [x] 4.5 Estado vacío ("No tenés nada por pagar por ahora") + error compacto (sin cambios).
 
 ## 5. i18n
 
-- [ ] 5.1 Agregar/renombrar claves en `packages/i18n-messages` (es.json y en.json) según 1.3
+- [x] 5.1 Claves nuevas en es/en (`card_label`, `card_hint`, `recurring_label`, `recurring_hint`, `view_cards`, `view_recurring`, `overdue`) + `question`/`total_label`/`empty` actualizadas. Claves legacy (`debt`, `recurring_expense`, `next_month`, `outflow_label`) conservadas porque la `CommittedSection` mobile aún las usa (se limpian en el Chunk 6).
 
 ## 6. Paridad mobile
 
