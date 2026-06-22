@@ -30,8 +30,9 @@ export const QUERY_KEYS = {
     ['transactions', 'breakdown', 'expense', month, 'subcategory', categoryId] as const,
   breakdownIncome: (month: string) =>
     ['transactions', 'breakdown', 'income', month] as const,
-  breakdownUsdActivity: (month: string) =>
-    ['transactions', 'breakdown', 'usd-activity', month] as const,
+  // Whether the user operates in USD at all (bimoneda) — drives the ARS/USD
+  // toggle in the spending overview. User-level, month-independent.
+  hasUsdAccount: ['transactions', 'breakdown', 'has-usd-account'] as const,
 
   // Recurrences side-car queries.
   recurrencesPendingInstances: ['recurrences', 'pending-instances'] as const,

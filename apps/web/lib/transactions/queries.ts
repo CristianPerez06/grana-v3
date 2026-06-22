@@ -488,22 +488,16 @@ export async function getMonthCategoryBreakdown(
   return getMonthCategoryBreakdownShared(supabase, month)
 }
 
-// Whether the user has any USD income/expense activity in the month. Drives the
-// ARS/USD toggle visibility in the spending overview so it stays consistent
-// across the Egresos/Ingresos modes (the toggle shouldn't appear/disappear just
-// because you switched mode). A single lightweight count query (head: true).
-export async function hasUsdActivityInMonth(
-  supabase: DbClient,
-  month: string,
-): Promise<boolean> {
-  const { from, to } = resolveMonthRange(month)
+// Whether the user operates in USD at all — i.e. has at least one account with a
+// USD currency row (bimoneda). Drives the ARS/USD toggle in the spending
+// overview so it shows on every month for bimoneda users, not only on months
+// that happen to have USD movements. User-level, month-independent; a single
+// lightweight count query (head: true), RLS-scoped to the user's accounts.
+export async function hasUsdAccount(supabase: DbClient): Promise<boolean> {
   const { count, error } = await supabase
-    .from('transactions')
-    .select('id', { count: 'exact', head: true })
+    .from('account_currencies')
+    .select('account_id', { count: 'exact', head: true })
     .eq('currency_code', 'USD')
-    .in('type', ['income', 'expense'])
-    .gte('date', from ?? '')
-    .lte('date', to ?? '')
   if (error) throw error
   return (count ?? 0) > 0
 }

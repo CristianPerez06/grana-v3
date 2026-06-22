@@ -477,7 +477,7 @@ export const CategorySpendingOverview = ({
   // to "all categories" together.
   const inCategory = !drilledId && Boolean(parentCategoryId) && Boolean(controller?.onClearCategory)
   const breadcrumb = drilledId && drilledSlice ? (
-    <span className="text-[11px] font-semibold uppercase tracking-[0.08em]">
+    <span className="text-xl font-extrabold tracking-tight">
       <button
         type="button"
         onClick={drillOut}
@@ -489,7 +489,7 @@ export const CategorySpendingOverview = ({
       <span className="text-text">{drilledSlice.label}</span>
     </span>
   ) : inCategory ? (
-    <span className="text-[11px] font-semibold uppercase tracking-[0.08em]">
+    <span className="text-xl font-extrabold tracking-tight">
       <button
         type="button"
         onClick={controller!.onClearCategory}
@@ -507,7 +507,7 @@ export const CategorySpendingOverview = ({
   ) : (
     <span
       id="spending-overview-title"
-      className="text-[11px] font-bold uppercase tracking-[0.08em]"
+      className="text-xl font-extrabold tracking-tight"
       style={{ color: accent }}
     >
       {labels.eyebrow}
@@ -573,86 +573,58 @@ export const CategorySpendingOverview = ({
       aria-labelledby="spending-overview-title"
       className="flex flex-col gap-5 rounded-2xl border border-border bg-card px-7 py-6"
     >
-      {/* Header */}
+      {/* Header row 1: title + subtitle (left) · month navigator (right). */}
       <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-1.5 min-w-0">
+        <div className="flex flex-col gap-0.5 min-w-0">
           {breadcrumb}
-          <div className="flex items-center gap-2">
-            {controller ? (
-              <button
-                type="button"
-                onClick={controller.onPrevMonth}
-                aria-label="Mes anterior"
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-text-muted hover:text-text transition-colors"
-              >
-                <ChevronLeft size={14} />
-              </button>
-            ) : (
-              <Link
-                href={prevHref}
-                aria-label="Mes anterior"
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-text-muted hover:text-text transition-colors"
-              >
-                <ChevronLeft size={14} />
-              </Link>
-            )}
-            <span className="text-lg font-bold tracking-tight text-text capitalize">
-              {monthLabel}
-            </span>
-            {controller ? (
-              <button
-                type="button"
-                onClick={controller.onNextMonth}
-                aria-label="Mes siguiente"
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-text-muted hover:text-text transition-colors"
-              >
-                <ChevronRight size={14} />
-              </button>
-            ) : (
-              <Link
-                href={nextHref}
-                aria-label="Mes siguiente"
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-text-muted hover:text-text transition-colors"
-              >
-                <ChevronRight size={14} />
-              </Link>
-            )}
-          </div>
+          <p className="text-sm font-medium text-text-soft">{labels.subtitle}</p>
         </div>
-        {hasUsd && (
-          <div className="flex items-center gap-1">
-            {(['ARS', 'USD'] as const).map((code) => {
-              const active = currency === code
-              const className = `rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
-                active
-                  ? 'bg-primary text-primary-foreground'
-                  : 'border border-border bg-card text-text-muted hover:text-text'
-              }`
-              if (controller) {
-                return (
-                  <button
-                    key={code}
-                    type="button"
-                    onClick={() => controller.onSetCurrency(code)}
-                    className={className}
-                  >
-                    {code}
-                  </button>
-                )
-              }
-              return (
-                <Link key={code} href={code === 'ARS' ? arsHref : usdHref} className={className}>
-                  {code}
-                </Link>
-              )
-            })}
-          </div>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          {controller ? (
+            <button
+              type="button"
+              onClick={controller.onPrevMonth}
+              aria-label="Mes anterior"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-text-muted hover:text-text transition-colors"
+            >
+              <ChevronLeft size={14} />
+            </button>
+          ) : (
+            <Link
+              href={prevHref}
+              aria-label="Mes anterior"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-text-muted hover:text-text transition-colors"
+            >
+              <ChevronLeft size={14} />
+            </Link>
+          )}
+          <span className="text-base font-bold tracking-tight text-text capitalize">
+            {monthLabel}
+          </span>
+          {controller ? (
+            <button
+              type="button"
+              onClick={controller.onNextMonth}
+              aria-label="Mes siguiente"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-text-muted hover:text-text transition-colors"
+            >
+              <ChevronRight size={14} />
+            </button>
+          ) : (
+            <Link
+              href={nextHref}
+              aria-label="Mes siguiente"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-text-muted hover:text-text transition-colors"
+            >
+              <ChevronRight size={14} />
+            </Link>
+          )}
+        </div>
       </div>
 
-      {/* Mode selector (Egresos / Ingresos) — same "pill" family as the currency
-          toggle; the active tab adopts the mode's accent (navy / emerald). */}
-      <div className="flex flex-col gap-2">
+      {/* Header row 2: mode selector (Egresos / Ingresos) on the left, currency
+          toggle (ARS / USD) on the right — both pill families share this row. */}
+      <div className="flex items-center justify-between gap-3">
         <div
           className="inline-flex w-fit gap-1 rounded-xl p-1"
           style={{ backgroundColor: '#EEF1F5' }}
@@ -697,7 +669,35 @@ export const CategorySpendingOverview = ({
             )
           })}
         </div>
-        <p className="text-sm font-medium text-text-soft">{labels.subtitle}</p>
+        {hasUsd && (
+          <div className="flex shrink-0 items-center gap-1">
+            {(['ARS', 'USD'] as const).map((code) => {
+              const active = currency === code
+              const className = `rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                active
+                  ? 'bg-primary text-primary-foreground'
+                  : 'border border-border bg-card text-text-muted hover:text-text'
+              }`
+              if (controller) {
+                return (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => controller.onSetCurrency(code)}
+                    className={className}
+                  >
+                    {code}
+                  </button>
+                )
+              }
+              return (
+                <Link key={code} href={code === 'ARS' ? arsHref : usdHref} className={className}>
+                  {code}
+                </Link>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {breakdown.slices.length === 0 ? (

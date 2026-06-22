@@ -18,7 +18,7 @@ import {
   getMonthCategoryBreakdown,
   getMonthIncomeBreakdown,
   getMonthSubcategoryBreakdown,
-  hasUsdActivityInMonth,
+  hasUsdAccount,
 } from '@/lib/transactions/queries'
 import { getAllCategories } from '@/lib/categories/queries'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
@@ -109,8 +109,12 @@ export function CategorySpendingOverviewContainer() {
   const [usdQ, categoryBreakdownQ, incomeBreakdownQ, subcategoryDrillQ] = useQueries({
     queries: [
       {
-        queryKey: QUERY_KEYS.breakdownUsdActivity(month),
-        queryFn: () => hasUsdActivityInMonth(createClient(), month),
+        // Toggle visibility = "does the user use USD at all" (bimoneda), not
+        // "did this month have USD movements" — so it shows on every month for
+        // bimoneda users. Month-independent, so it caches across navigation.
+        queryKey: QUERY_KEYS.hasUsdAccount,
+        queryFn: () => hasUsdAccount(createClient()),
+        staleTime: 30 * 60 * 1000,
       },
       {
         queryKey: QUERY_KEYS.breakdownExpense(month),
