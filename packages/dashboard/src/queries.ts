@@ -385,8 +385,21 @@ export async function getCommittedOutlook(
     USD: emptyCommittedCurrency(),
   }
 
-  // ── Card debt: pending charges (consumos − received reimbursements) across
-  //    ALL unpaid statements (open + closed + overdue) of active credit cards.
+  // Next calendar month window [first day, last day]. The recurrence projection
+  // is scoped to it; the card debt is scoped to "overdue OR due next month".
+  const today = getTodayAR()
+  const y = today.getFullYear()
+  const m = today.getMonth() // 0-indexed
+  const todayISO = formatDateISO(today)
+  const windowStart = formatDateISO(new Date(y, m + 1, 1))
+  const windowEnd = formatDateISO(new Date(y, m + 2, 0))
+
+  // ── Card debt: pending charges (consumos − received reimbursements) across the
+  //    unpaid statements that are either overdue (due_date < today, money already
+  //    owed) or due next month (due_date in [windowStart, windowEnd], what's
+  //    coming). The rest of the current month is excluded (already being paid
+  //    now, not part of "what's next"), as are statements due later (installments
+  //    2..N, future projected periods).
   const { data: cards, error: cardsErr } = await supabase
     .from('accounts')
     .select('id')
@@ -400,6 +413,7 @@ export async function getCommittedOutlook(
       .from('card_periods')
       .select('id')
       .in('account_id', cardIds)
+      .or(`due_date.lt.${todayISO},and(due_date.gte.${windowStart},due_date.lte.${windowEnd})`)
     if (periodsErr) throw periodsErr
     const periodIds = (periods ?? []).map((p) => p.id)
 
@@ -427,13 +441,7 @@ export async function getCommittedOutlook(
     }
   }
 
-  // ── Recurrence projection: active rules → next calendar month window.
-  const today = getTodayAR()
-  const y = today.getFullYear()
-  const m = today.getMonth() // 0-indexed
-  const windowStart = formatDateISO(new Date(y, m + 1, 1))
-  const windowEnd = formatDateISO(new Date(y, m + 2, 0))
-
+  // ── Recurrence projection: active rules → same next-month window.
   const { data: rules, error: rulesErr } = await supabase
     .from('recurrences')
     .select(

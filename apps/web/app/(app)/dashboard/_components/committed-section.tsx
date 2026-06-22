@@ -62,11 +62,11 @@ const Tile = ({
   </div>
 )
 
-// "Comprometido" — COMPROMISO lens: card debt (a present stock) + next-month
-// recurring outflows shown as two tiles. When there is recurring income, a green
-// "Ya entra" tile and a net closing band ("arrancás con +X a favor") appear; the
-// income never sums into the committed total. Static "from today": it does NOT
-// follow the month navigator. Server-rendered; amounts mask via client leaves.
+// "Comprometido" — COMPROMISO lens: card debt (overdue or due next month) +
+// next-month recurring outflows shown as two tiles. When there is recurring
+// income, a green "Ya entra" tile and a net closing band ("arrancás con +X a
+// favor") appear; the income never sums into the committed total. Scoped to next
+// month, NOT the month navigator. Server-rendered; amounts mask via client leaves.
 export const CommittedSection = async ({ data }: Props) => {
   const t = await getTranslations('dashboard.committed')
   const ars = data.ARS

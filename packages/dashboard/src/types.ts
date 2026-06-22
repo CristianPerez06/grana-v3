@@ -75,13 +75,19 @@ export type MonthBalanceSeries = {
 }
 
 /**
- * COMPROMISO lens ("¿qué debo / qué se viene?"), per currency. Static "from
- * today": `debt` is a present stock, the recurring projections are next month.
- * The committed total = debt + recurringExpense (outflows); recurringIncome is
- * context, never summed into the total. ARS and USD are never combined.
+ * COMPROMISO lens ("¿qué debo / qué se viene?"), per currency, scoped to next
+ * month: `debt` is card debt that is overdue or due next month, the recurring
+ * projections are next month. The committed total = debt + recurringExpense
+ * (outflows); recurringIncome is context, never summed into the total. ARS and
+ * USD are never combined.
  */
 export type CommittedCurrency = {
-  /** Sum of pending charges (consumos − received reimbursements) across ALL unpaid statements. */
+  /**
+   * Sum of pending charges (consumos − received reimbursements) across unpaid
+   * statements that are overdue (due_date < today) or due next month. The rest
+   * of the current month, and statements due later (installments 2..N, future
+   * projected periods), are excluded.
+   */
   debt: number
   /** Active `expense` recurrences projected into the next calendar month. */
   recurringExpense: number

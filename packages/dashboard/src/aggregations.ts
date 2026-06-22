@@ -339,7 +339,8 @@ export type CardDebtRow = {
 
 /**
  * Card debt per currency = pending consumos − received statement reimbursements,
- * across the rows of ALL unpaid statements. Mirrors the per-period pending math
+ * across the rows it is given (the caller scopes which statements feed it — the
+ * committed outlook passes only overdue or next-month statements). Mirrors the per-period pending math
  * in `apps/web/lib/cards/queries.ts`: a received (and not cancelled) statement
  * reimbursement reduces the debt; pending/cancelled ones do not count.
  */
