@@ -1333,6 +1333,8 @@
       "all_masc": "Todos",
       "all_fem": "Todas",
       "filters_button": "Filtros",
+      "show_shared": "Mostrar compartidos",
+      "hide_shared": "Ocultar compartidos",
       "clear_all": "Limpiar todo",
       "currency": "Moneda",
       "amount_min": "Monto mínimo",

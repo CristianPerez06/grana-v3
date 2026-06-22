@@ -32,6 +32,13 @@ export type TransactionsFilters = {
   query: string
   amountMin: number | null
   amountMax: number | null
+  /**
+   * Whether shared (Compartido) movements are shown in the global list. Unlike
+   * the chip-removable filters above, this is a **persisted view preference**
+   * (see the global container): it survives reloads, is not a removable chip,
+   * and does not count toward "active filters". Defaults to `true`.
+   */
+  showShared: boolean
   limit: number
 }
 
@@ -47,6 +54,7 @@ export type TransactionsFiltersAction =
   | { type: 'setCategory'; categoryId: string | null }
   | { type: 'setSubcategory'; subcategoryId: string | null }
   | { type: 'setQuery'; query: string }
+  | { type: 'setShowShared'; value: boolean }
   | { type: 'setAmountRange'; min: number | null; max: number | null }
   | { type: 'setLimit'; limit: number }
   | { type: 'incrementLimit' }
@@ -62,7 +70,7 @@ export type TransactionsFiltersAction =
  * determinism.
  */
 export function createInitialFilters(
-  options: { today?: Date } = {},
+  options: { today?: Date; showShared?: boolean } = {},
 ): TransactionsFilters {
   const today = options.today ?? getTodayAR()
   return {
@@ -77,6 +85,7 @@ export function createInitialFilters(
     query: '',
     amountMin: null,
     amountMax: null,
+    showShared: options.showShared ?? true,
     limit: DEFAULT_MOVEMENTS_LIMIT,
   }
 }
@@ -135,6 +144,10 @@ export function transactionsFiltersReducer(
       return { ...state, subcategoryId: action.subcategoryId, limit: DEFAULT_MOVEMENTS_LIMIT }
     case 'setQuery':
       return { ...state, query: action.query, limit: DEFAULT_MOVEMENTS_LIMIT }
+    case 'setShowShared':
+      // Persisted view preference (not a chip filter). Reset the page limit so
+      // pagination restarts cleanly when the visible set changes.
+      return { ...state, showShared: action.value, limit: DEFAULT_MOVEMENTS_LIMIT }
     case 'setAmountRange':
       return {
         ...state,
@@ -234,5 +247,8 @@ export function adaptFiltersForQuery(
   if (filters.currency) out.currency = filters.currency
   if (filters.amountMin != null) out.amountMin = filters.amountMin
   if (filters.amountMax != null) out.amountMax = filters.amountMax
+  // Only project the constraint when shared movements are hidden; when shown
+  // (default) the field stays absent so the queryKey matches the legacy shape.
+  if (!filters.showShared) out.excludeShared = true
   return out
 }

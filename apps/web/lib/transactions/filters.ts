@@ -37,6 +37,12 @@ export type MovementFilters = {
   currency?: MovementCurrencyFilter
   amountMin?: number
   amountMax?: number
+  /**
+   * When `true`, the query excludes shared (Compartido) movements
+   * (`is_shared = true`). Absent/false ⇒ shared movements are included. Driven
+   * by the global module's "show shared" toggle (a persisted view preference).
+   */
+  excludeShared?: boolean
 }
 
 export const DEFAULT_MOVEMENTS_LIMIT = 50

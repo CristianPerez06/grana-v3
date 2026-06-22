@@ -212,6 +212,7 @@ export async function getGlobalMovementsPage(
       query: filters.query,
       amountMin: filters.amountMin,
       amountMax: filters.amountMax,
+      excludeShared: filters.excludeShared ? true : undefined,
     },
     p_limit: limit,
     p_offset: offset,

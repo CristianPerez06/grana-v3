@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  adaptFiltersForQuery,
   createInitialFilters,
   hasActiveContentFilters,
   hasActiveSearch,
@@ -29,7 +30,39 @@ describe('createInitialFilters', () => {
     expect(state.query).toBe('')
     expect(state.amountMin).toBeNull()
     expect(state.amountMax).toBeNull()
+    expect(state.showShared).toBe(true)
     expect(state.limit).toBe(DEFAULT_MOVEMENTS_LIMIT)
+  })
+})
+
+describe('transactionsFiltersReducer — showShared', () => {
+  it('turns the shared visibility off and resets the page limit', () => {
+    const state = baseState({ limit: 200 })
+    const next = transactionsFiltersReducer(state, { type: 'setShowShared', value: false })
+    expect(next.showShared).toBe(false)
+    expect(next.limit).toBe(DEFAULT_MOVEMENTS_LIMIT)
+  })
+
+  it('is preserved by clearAll (it is a persisted preference, not a chip)', () => {
+    const state = baseState({ showShared: false, type: 'expense', query: 'foo' })
+    const next = transactionsFiltersReducer(state, { type: 'clearAll' })
+    expect(next.showShared).toBe(false)
+    expect(next.type).toBeNull()
+    expect(next.query).toBe('')
+  })
+
+  it('does not count toward active content filters', () => {
+    expect(hasActiveContentFilters(baseState({ showShared: false }))).toBe(false)
+  })
+})
+
+describe('adaptFiltersForQuery — excludeShared', () => {
+  it('omits excludeShared when shared movements are shown (default)', () => {
+    expect(adaptFiltersForQuery(baseState()).excludeShared).toBeUndefined()
+  })
+
+  it('projects excludeShared=true when shared movements are hidden', () => {
+    expect(adaptFiltersForQuery(baseState({ showShared: false })).excludeShared).toBe(true)
   })
 })
 

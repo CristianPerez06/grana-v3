@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import {
   MovementFilters,
@@ -25,8 +25,34 @@ import { useTransactionsFilters } from '@/lib/transactions/filters-context'
  * vs controller); we always pass the controller here so URL navigation never
  * fires from this route.
  */
+/**
+ * localStorage key for the persisted "show shared movements" preference. Scoped
+ * to the global Movimientos module; the account detail view does not read it.
+ */
+const SHOW_SHARED_KEY = 'grana:tx:showShared'
+
 export function MovementFiltersContainer() {
   const { filters, dispatch } = useTransactionsFilters()
+
+  // Hydrate the persisted "show shared" preference once on mount. Default is ON
+  // (shared shown); only restore when the user previously turned it OFF, so a
+  // brand-new user incurs no extra fetch. Reading localStorage in an effect
+  // (browser-only) avoids any SSR hydration mismatch.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.localStorage.getItem(SHOW_SHARED_KEY) === 'false') {
+      dispatch({ type: 'setShowShared', value: false })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const toggleShared = () => {
+    const next = !filters.showShared
+    dispatch({ type: 'setShowShared', value: next })
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(SHOW_SHARED_KEY, String(next))
+    }
+  }
 
   // Filter-options change when the active categoryId changes (subcategory list
   // depends on it); the queryKey includes it so each category fetches its own
@@ -83,6 +109,7 @@ export function MovementFiltersContainer() {
       showAccount={(filterOptions?.accounts.length ?? 0) >= 2}
       showMonthNav={false}
       controller={controller}
+      sharedToggle={{ active: filters.showShared, onToggle: toggleShared }}
       disabled={listLoading}
     />
   )

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Repeat, Search, SlidersHorizontal, X } from 'lucide-react'
+import { Repeat, Search, SlidersHorizontal, Users, X } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { Label } from '@/components/ui/label'
@@ -63,6 +63,14 @@ type MovementFiltersProps = {
   /** Required controller — every filter mutation dispatches through it. */
   controller: MovementFiltersController
   /**
+   * Optional "show shared movements" toggle, rendered as a toolbar button. Only
+   * the global module passes it (the account detail view omits it). `active`
+   * means shared movements are currently shown; `onToggle` flips the persisted
+   * preference. It is intentionally NOT a chip filter and does not affect the
+   * "Filtros (N)" count.
+   */
+  sharedToggle?: { active: boolean; onToggle: () => void }
+  /**
    * When true the toolbar (search / filter sheet / chip clears / clear-all)
    * renders visually disabled and stops accepting clicks. The shell uses this
    * while the movement list query is pending so the user gets clear feedback
@@ -97,6 +105,7 @@ export const MovementFilters = ({
   showAccountFilter = true,
   showMonthNav = true,
   controller,
+  sharedToggle,
   disabled = false,
 }: MovementFiltersProps) => {
   const t = useTranslations('transactions')
@@ -387,6 +396,27 @@ export const MovementFilters = ({
               >
                 <Repeat size={16} />
               </Link>
+            )}
+            {sharedToggle && (
+              <button
+                type="button"
+                onClick={sharedToggle.onToggle}
+                disabled={disabled}
+                aria-pressed={!sharedToggle.active}
+                className={
+                  disabled
+                    ? iconButtonDisabledCls
+                    : sharedToggle.active
+                      ? iconButtonCls
+                      : 'inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-primary bg-primary text-primary-foreground transition-colors'
+                }
+                aria-label={
+                  sharedToggle.active ? t('filters.hide_shared') : t('filters.show_shared')
+                }
+                title={sharedToggle.active ? t('filters.hide_shared') : t('filters.show_shared')}
+              >
+                <Users size={16} />
+              </button>
             )}
             <button
               type="button"

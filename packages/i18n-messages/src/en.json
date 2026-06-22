@@ -1333,6 +1333,8 @@
       "all_masc": "All",
       "all_fem": "All",
       "filters_button": "Filters",
+      "show_shared": "Show shared",
+      "hide_shared": "Hide shared",
       "clear_all": "Clear all",
       "currency": "Currency",
       "amount_min": "Min amount",
