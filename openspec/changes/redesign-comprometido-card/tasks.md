@@ -29,15 +29,14 @@
 
 - [x] 5.1 Claves nuevas en es/en (`card_label`, `card_hint`, `recurring_label`, `recurring_hint`, `view_cards`, `view_recurring`, `overdue`) + `question`/`total_label`/`empty` actualizadas. Claves legacy (`debt`, `recurring_expense`, `next_month`, `outflow_label`) conservadas porque la `CommittedSection` mobile aún las usa (se limpian en el Chunk 6).
 
-## 6. Paridad mobile
+## 6. Mobile — FUERA DE ALCANCE (lo hace el tech lead)
 
-- [ ] 6.1 Reescribir `apps/mobile/components/dashboard/CommittedSection.tsx` con el mismo modelo (consume la query compartida) según el mockup mobile
-- [ ] 6.2 Actualizar `CommittedSkeleton` nativa
-- [ ] 6.3 Verificar eye-mask y bimoneda en nativo
+- [x] 6.1 La app mobile la maneja el tech lead. Nosotros NO tocamos `apps/mobile`. La query compartida (`getCommittedOutlook`) ya quedó lista para cuando el tech lead rehaga la `CommittedSection` nativa. Las claves i18n legacy (`debt`, `recurring_expense`, `next_month`, `outflow_label`) se CONSERVAN porque la card nativa actual aún las usa.
+- [x] 6.2 Nuestra responsabilidad en su lugar: que la card web sea **responsive** (apilada en mobile, sin overflow). Verificado: vive en la grilla que colapsa a 1 columna < `lg`; total con `justify-between` + monto `clamp`, filas con `truncate`, sin anchos fijos que rompan.
 
 ## 7. Verificación
 
-- [ ] 7.1 `pnpm typecheck` + `pnpm typecheck:mobile` + `pnpm lint`
-- [ ] 7.2 Tests de `@grana/dashboard` y de la lógica "A pagar" en verde
-- [ ] 7.3 QA manual: comparar el número "tarjeta a pagar" del Comprometido contra el header del módulo Tarjetas (deben coincidir) con datos reales (usuario QA)
+- [x] 7.1 `pnpm typecheck` + `pnpm typecheck:mobile` + `pnpm lint` (en verde tras cada chunk)
+- [x] 7.2 Tests de `@grana/dashboard` (30) en verde
+- [ ] 7.3 QA manual: comparar el número de tarjeta del Comprometido contra "A pagar" + "En curso" del módulo Tarjetas (deben coincidir) con datos reales — EN CURSO con el usuario
 - [ ] 7.4 Actualizar el handoff/README y archivar el change (OpenSpec) en la branch antes de mergear

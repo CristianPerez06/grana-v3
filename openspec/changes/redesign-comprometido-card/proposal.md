@@ -10,7 +10,7 @@ La card "Comprometido" del dashboard (1) inflaba su número en producción —su
 - **Total a pagar** = tarjeta a pagar + recurrencias pendientes de confirmar.
 - **Contexto "Ya entra":** se conserva el ingreso recurrente del mes próximo + la banda de cierre neto; es contexto y NO suma al total.
 - **UI:** se reemplazan los tiles cuadrados por secciones con filas; cada sección lista sus **3-4 movimientos de mayor monto** (rellena el espacio en blanco). **USD consistente** en el total y en cada sección (bimoneda por defecto). Chip de aviso "incluye $X vencido" sólo cuando hay deuda vencida.
-- **Paridad mobile:** `CommittedSection` nativa adopta el mismo modelo (consume la misma query compartida de `@grana/dashboard`).
+- **Mobile (fuera de alcance):** la app nativa la maneja el tech lead; este cambio NO toca `apps/mobile`. La query compartida queda lista para cuando el tech lead rehaga la card nativa. Nuestra responsabilidad es que la card **web sea responsive**.
 
 ## Capabilities
 
@@ -18,14 +18,14 @@ La card "Comprometido" del dashboard (1) inflaba su número en producción —su
 <!-- ninguna -->
 
 ### Modified Capabilities
-- `dashboard`: cambian los requerimientos de la card "Comprometido" — qué suma (a pagar de tarjeta + recurrencias pendientes de confirmar, no el stock total ni futuros), cómo presenta el desglose (secciones con top-movimientos), la consistencia de USD, el aviso de vencido, y la paridad de contenido entre web y mobile.
+- `dashboard`: cambian los requerimientos de la card "Comprometido" — qué suma (a pagar + en curso de tarjeta + recurrencias pendientes de confirmar, no el stock total ni futuros), cómo presenta el desglose (secciones con top-movimientos), la consistencia de USD, y el aviso de vencido. Implementación web; la nativa la hace el tech lead.
 
 ## Impact
 
 - **Specs:** `openspec/specs/dashboard/spec.md` (requerimientos de la card Comprometido: cálculo, contenido, layout web+mobile).
-- **Datos (`packages/dashboard`):** `getCommittedOutlook` / `CommittedOutlook` types — reusar la lógica de "A pagar" de `apps/web/lib/cards/month-summary.ts` (mover/compartir a `@grana/dashboard` o `@grana/money-logic` para que mobile la consuma), traer recurrencias `status='pending'`, y los top-N movimientos por sección.
+- **Datos (`packages/dashboard`):** `getCommittedOutlook` / `CommittedOutlook` types — tarjeta = resúmenes ya empezados impagos (a pagar + en curso) reusando la matemática de `aggregateCardDebt` (sin tocar el módulo Tarjetas), recurrencias `status='pending'`, y los top-N movimientos por sección. Compartida con mobile cuando el tech lead la consuma.
 - **Web:** `apps/web/app/(app)/dashboard/_components/committed-section.tsx` + `committed-skeleton.tsx`.
-- **Mobile:** `apps/mobile/components/dashboard/CommittedSection.tsx` + `CommittedSkeleton.tsx`.
+- **Mobile:** FUERA DE ALCANCE — lo hace el tech lead. No se toca `apps/mobile` (la card web debe ser responsive).
 - **i18n:** claves nuevas/renombradas en `packages/i18n-messages` (es/en): "a pagar", "pendientes de confirmar", "fijos del próximo mes", aviso de vencido.
 - **Handoff:** `docs/design/dashboard-comprometido/` (mockup web aprobado; falta mockup mobile).
 - **Relación:** depende conceptualmente del fix interino en `fix/dashboard-cards-polish`; encaja en el roadmap de lentes COMPROMISO.
