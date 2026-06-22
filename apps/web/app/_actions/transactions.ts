@@ -332,7 +332,7 @@ export async function deleteTransaction(id: string): Promise<ActionResult<never>
   // Block deletion of individual installment children — must delete from parent
   const { data: tx } = await supabase
     .from('transactions')
-    .select('parent_id, status')
+    .select('parent_id, status, is_shared, household_id')
     .eq('id', id)
     .eq('user_id', userId)
     .single()
@@ -349,6 +349,25 @@ export async function deleteTransaction(id: string): Promise<ActionResult<never>
     return {
       ok: false,
       formError: 'No podés eliminar un consumo que ya fue pagado en el resumen.',
+    }
+  }
+
+  // Block deleting a shared expense while a settlement is live in the household:
+  // the debt is settled by NET, with no per-expense imputation, so deleting would
+  // silently change a debt a settlement already accounted for. The DB trigger is the
+  // real invariant (see 0043); this is the friendly message. Reversal by contraasiento
+  // is Paso 3.
+  if (tx?.is_shared && tx.household_id) {
+    const { count } = await supabase
+      .from('settlement')
+      .select('id', { count: 'exact', head: true })
+      .eq('household_id', tx.household_id)
+    if ((count ?? 0) > 0) {
+      return {
+        ok: false,
+        formError:
+          'Este gasto es parte de una cuenta con liquidaciones. Revertí la liquidación antes de borrarlo.',
+      }
     }
   }
 

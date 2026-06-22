@@ -128,49 +128,28 @@ export async function joinHousehold(
   const validation = await validateActionInput(joinHouseholdSchema, input)
   if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
 
-  const userId = await getAuthenticatedUserId()
+  await getAuthenticatedUserId() // require an authenticated session
   const supabase = await createClient()
 
-  if (await getMyHouseholdId(supabase, userId)) {
-    return { ok: false, formError: 'Ya pertenecés a un hogar.' }
+  // Joining is a single privileged, atomic operation: it resolves the code,
+  // validates capacity/expiry/use, inserts the membership, claims the invite and
+  // sets the 50·50 split. Invites are no longer client-readable (members only),
+  // so the resolution must happen inside the RPC. See migration 0043.
+  const { error } = await supabase.rpc('join_household_by_code', {
+    p_code: validation.data.code,
+  })
+  if (error) {
+    const msg = error.message
+    if (msg.includes('already_in_household')) {
+      return { ok: false, formError: 'Ya pertenecés a un hogar.' }
+    }
+    if (msg.includes('invite_not_found')) return { ok: false, fieldErrors: { code: 'Código inválido.' } }
+    if (msg.includes('invite_used')) return { ok: false, fieldErrors: { code: 'El código ya fue usado.' } }
+    if (msg.includes('invite_expired')) return { ok: false, fieldErrors: { code: 'El código venció.' } }
+    if (msg.includes('household_full')) return { ok: false, fieldErrors: { code: 'El hogar ya está completo.' } }
+    if (msg.includes('household_inactive')) return { ok: false, fieldErrors: { code: 'El hogar no está activo.' } }
+    return { ok: false, formError: error.message }
   }
-
-  const { data: invite } = await supabase
-    .from('household_invite')
-    .select('id, household_id, expires_at, used_by')
-    .eq('code', validation.data.code)
-    .maybeSingle()
-
-  if (!invite) return { ok: false, fieldErrors: { code: 'Código inválido.' } }
-  if (invite.used_by) return { ok: false, fieldErrors: { code: 'El código ya fue usado.' } }
-  if (new Date(invite.expires_at).getTime() < Date.now()) {
-    return { ok: false, fieldErrors: { code: 'El código venció.' } }
-  }
-  if ((await countMembers(supabase, invite.household_id)) >= 2) {
-    return { ok: false, fieldErrors: { code: 'El hogar ya está completo.' } }
-  }
-
-  const { data: members } = await supabase
-    .from('household_member')
-    .select('user_id')
-    .eq('household_id', invite.household_id)
-  const memberIds = [...(members ?? []).map((m) => m.user_id), userId].slice(0, 2)
-
-  const { error: memberError } = await supabase
-    .from('household_member')
-    .insert({ household_id: invite.household_id, user_id: userId })
-  if (memberError) return { ok: false, formError: memberError.message }
-
-  // Best-effort: claim the invite and set the 50·50 default split now that both
-  // members exist. Failures here do not undo the join.
-  await supabase
-    .from('household_invite')
-    .update({ used_by: userId, used_at: new Date().toISOString() })
-    .eq('id', invite.id)
-  await supabase
-    .from('household')
-    .update({ default_split: memberIds.map((id) => ({ user_id: id, percentage: 50 })) })
-    .eq('id', invite.household_id)
 
   revalidatePath('/shared')
   return { ok: true }
@@ -257,10 +236,10 @@ export async function registerSettlement(
   if (!household || household.members.length < 2) {
     return { ok: false, formError: 'No tenés un hogar activo.' }
   }
-  const partner = household.members.find((m) => m.userId !== userId)
-  if (!partner) return { ok: false, formError: 'Falta el otro miembro del hogar.' }
 
   // The amount cannot exceed what THIS user currently owes in that currency.
+  // The debt derivation lives in TS (money-logic), so this ceiling stays here;
+  // the RPC only guarantees atomicity and server-side authorship. See 0043.
   const currency = validation.data.currency_code
   const debt = await getHouseholdDebt(supabase)
   const entry = debt?.[currency]
@@ -271,45 +250,19 @@ export async function registerSettlement(
 
   const today = formatDateISO(getTodayAR())
 
-  // Payer leg: a settlement-type movement that debits the payer's account.
-  const { data: mov, error: movError } = await supabase
-    .from('transactions')
-    .insert({
-      user_id: userId,
-      account_id: validation.data.account_id,
-      type: 'settlement',
-      settlement_direction: 'out',
-      amount: validation.data.amount,
-      currency_code: currency,
-      date: today,
-      category_id: null,
-    })
-    .select('id')
-    .single()
-  if (movError || !mov) {
-    return { ok: false, formError: movError?.message ?? 'No se pudo registrar el pago.' }
-  }
-
-  const { data: settlement, error: sError } = await supabase
-    .from('settlement')
-    .insert({
-      household_id: household.id,
-      payer_id: userId,
-      payer_movement_id: mov.id,
-      receiver_id: partner.userId,
-      amount: validation.data.amount,
-      currency_code: currency,
-      status: 'pending_receipt',
-    })
-    .select('id')
-    .single()
-  if (sError || !settlement) {
-    await supabase.from('transactions').delete().eq('id', mov.id) // rollback
-    return { ok: false, formError: sError?.message ?? 'No se pudo registrar la liquidación.' }
+  // Atomic: payer leg (settlement movement that debits the account) + settlement row.
+  const { data: settlementId, error } = await supabase.rpc('register_settlement', {
+    p_account_id: validation.data.account_id,
+    p_amount: validation.data.amount,
+    p_currency: currency,
+    p_date: today,
+  })
+  if (error || !settlementId) {
+    return { ok: false, formError: error?.message ?? 'No se pudo registrar la liquidación.' }
   }
 
   revalidatePath('/shared')
-  return { ok: true, id: settlement.id }
+  return { ok: true, id: settlementId }
 }
 
 // ── assignSettlementAccount (receiver) ─────────────────────────────────────────
@@ -323,9 +276,10 @@ export async function assignSettlementAccount(
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
 
+  // Friendly pre-check; the RPC is the real authorization guard.
   const { data: s } = await supabase
     .from('settlement')
-    .select('id, receiver_id, amount, currency_code, status')
+    .select('receiver_id, status')
     .eq('id', validation.data.settlement_id)
     .maybeSingle()
   if (!s) return { ok: false, formError: 'Liquidación no encontrada.' }
@@ -336,37 +290,13 @@ export async function assignSettlementAccount(
 
   const today = formatDateISO(getTodayAR())
 
-  // Receiver leg: a settlement-type movement that credits the receiver's account.
-  const { data: mov, error: movError } = await supabase
-    .from('transactions')
-    .insert({
-      user_id: userId,
-      account_id: validation.data.account_id,
-      type: 'settlement',
-      settlement_direction: 'in',
-      amount: s.amount,
-      currency_code: s.currency_code,
-      date: today,
-      category_id: null,
-    })
-    .select('id')
-    .single()
-  if (movError || !mov) {
-    return { ok: false, formError: movError?.message ?? 'No se pudo registrar la recepción.' }
-  }
-
-  const { error: uError } = await supabase
-    .from('settlement')
-    .update({
-      receiver_movement_id: mov.id,
-      status: 'completed',
-      resolved_at: new Date().toISOString(),
-    })
-    .eq('id', s.id)
-  if (uError) {
-    await supabase.from('transactions').delete().eq('id', mov.id) // rollback
-    return { ok: false, formError: uError.message }
-  }
+  // Atomic: receiver leg (settlement movement that credits the account) + completed.
+  const { error } = await supabase.rpc('confirm_settlement', {
+    p_settlement_id: validation.data.settlement_id,
+    p_account_id: validation.data.account_id,
+    p_date: today,
+  })
+  if (error) return { ok: false, formError: error.message }
 
   revalidatePath('/shared')
   return { ok: true }

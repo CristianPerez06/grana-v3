@@ -1047,6 +1047,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      confirm_settlement: {
+        Args: { p_account_id: string; p_date: string; p_settlement_id: string }
+        Returns: undefined
+      }
       get_movements_page: {
         Args: { p_filters?: Json; p_limit?: number; p_offset?: number }
         Returns: Json[]
@@ -1054,6 +1058,19 @@ export type Database = {
       is_household_member: {
         Args: { p_household_id: string }
         Returns: boolean
+      }
+      join_household_by_code: {
+        Args: { p_code: string }
+        Returns: string
+      }
+      register_settlement: {
+        Args: {
+          p_account_id: string
+          p_amount: number
+          p_currency: string
+          p_date: string
+        }
+        Returns: string
       }
       reverse_settlement: {
         Args: { p_settlement_id: string }

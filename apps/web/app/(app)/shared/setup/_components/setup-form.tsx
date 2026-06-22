@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { useQueryClient } from '@tanstack/react-query'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { FormField } from '@/components/ui/form-field'
 import { Segmented } from '@/components/ui/segmented'
+import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import { createHousehold, joinHousehold } from '@/app/_actions/shared'
 
 type Mode = 'create' | 'join'
@@ -14,6 +16,7 @@ type Mode = 'create' | 'join'
 export function SetupForm() {
   const t = useTranslations('shared')
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [mode, setMode] = useState<Mode>('create')
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
@@ -37,6 +40,10 @@ export function SetupForm() {
         setError(result.formError ?? fieldError ?? 'Error')
         return
       }
+      // The movement drawer (mounted in AppShell) gates the "Compartir" toggle on
+      // a TanStack query of the household; router.refresh() only revalidates RSC,
+      // so invalidate the query too or the toggle stays hidden until a hard reload.
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.householdDetail })
       router.push('/shared')
       router.refresh()
     } finally {
