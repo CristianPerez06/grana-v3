@@ -66,8 +66,7 @@ const Section = ({
           <MaskedAmount amount={ars} currency="ARS" />
         </span>
         {showUsd && (
-          <span className="block text-[11px] font-bold tabular-nums text-text-soft">
-            <span className="text-emerald-deep">USD</span>{' '}
+          <span className="block text-[11px] font-extrabold tabular-nums text-emerald-deep">
             <MaskedAmount amount={usd} currency="USD" showCentsOverride />
           </span>
         )}
@@ -143,19 +142,19 @@ export const CommittedSection = async ({ data }: Props) => {
       </CardHeader>
 
       <CardContent className="flex flex-1 flex-col">
-        {/* Total a pagar — bloque hero alineado a la izquierda: label arriba, monto
-            ARS grande y el USD en línea al lado (emerald), sobre la misma baseline. */}
-        <div>
-          <p className="text-[11px] font-extrabold uppercase tracking-wide text-text-soft">
+        {/* Total a pagar — label a la izquierda, monto a la derecha (ARS grande y el
+            USD debajo, ambos alineados a la derecha) como en el mockup. */}
+        <div className="flex items-start justify-between gap-3">
+          <p className="pt-1.5 text-xs font-extrabold uppercase tracking-wide text-text-soft">
             {t('total_label')}
           </p>
-          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-            <span className="text-[clamp(1.75rem,3.6vw,2.25rem)] font-extrabold leading-none tracking-tight text-text">
+          <div className="text-right">
+            <span className="block text-[clamp(1.75rem,3.6vw,2.25rem)] font-extrabold leading-none tracking-tight text-text">
               <MaskedAmountDisplay amount={totalArs} currency="ARS" />
             </span>
             {showUsd && (
-              <span className="text-[14px] font-extrabold tabular-nums text-emerald-deep">
-                US$ <MaskedAmount amount={totalUsd} currency="USD" showCentsOverride />
+              <span className="mt-1.5 block text-[13px] font-extrabold tabular-nums text-emerald-deep">
+                <MaskedAmount amount={totalUsd} currency="USD" showCentsOverride />
               </span>
             )}
           </div>
