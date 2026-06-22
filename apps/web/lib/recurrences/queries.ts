@@ -330,6 +330,12 @@ export async function getTopRecurrenceSuggestion(supabase: DbClient): Promise<
     account: { id: string; name: string; type: 'cash' | 'bank' | 'credit' } | null
     destination_account: { id: string; name: string; type: 'cash' | 'bank' | 'credit' } | null
     category: { id: string; name: string; canonical_name: string; user_id: string | null } | null
+    /**
+     * How many suggestions are pending in total (this one included). The banner
+     * shows one suggestion at a time — confirming/dismissing reveals the next —
+     * and uses this count to decide whether to start collapsed (2+) or open (1).
+     */
+    total_pending: number
   })
   | null
 > {
@@ -458,6 +464,7 @@ export async function getTopRecurrenceSuggestion(supabase: DbClient): Promise<
 
   return {
     ...top,
+    total_pending: suggestions.length,
     account: byId.get(top.account_id) ?? null,
     destination_account: top.destination_account_id
       ? (byId.get(top.destination_account_id) ?? null)
