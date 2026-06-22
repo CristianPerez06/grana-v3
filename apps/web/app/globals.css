@@ -34,3 +34,41 @@ body {
   .grana-drawer-left,
   .grana-popover { animation-duration: 0.01ms !important }
 }
+
+/* ── DatePicker (react-day-picker) brand skin ─────────────────────────────────
+   Scoped to `.grana-datepicker` so it never leaks onto other calendars. Maps
+   react-day-picker's CSS variables/classes onto Grana tokens: navy = selected,
+   emerald = today. */
+.grana-datepicker .rdp-root {
+  --rdp-accent-color: var(--primary);
+  --rdp-accent-background-color: var(--emerald-soft);
+  --rdp-today-color: var(--emerald-deep);
+  --rdp-day-width: 38px;
+  --rdp-day-height: 38px;
+  --rdp-day_button-width: 38px;
+  --rdp-day_button-height: 38px;
+  --rdp-day_button-border-radius: 10px;
+  --rdp-selected-border: none;
+  margin: 0;
+  font-size: 0.875rem;
+}
+.grana-datepicker .rdp-month_caption { font-weight: 700; padding-inline: 4px; }
+.grana-datepicker .rdp-weekday {
+  color: var(--text-soft);
+  font-weight: 600;
+  text-transform: lowercase;
+}
+.grana-datepicker .rdp-day_button:hover { background-color: var(--page); }
+.grana-datepicker .rdp-selected .rdp-day_button {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 700;
+  border: none;
+}
+.grana-datepicker .rdp-today:not(.rdp-selected) .rdp-day_button {
+  color: var(--emerald-deep);
+  font-weight: 700;
+}
+.grana-datepicker .rdp-disabled { opacity: 0.4; }
+.grana-datepicker .rdp-chevron { fill: var(--text-muted); }
+.grana-datepicker .rdp-dropdowns { gap: 6px; font-weight: 600; }

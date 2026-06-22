@@ -20,6 +20,7 @@ import {
 import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
 import { Drawer } from '@/components/ui/drawer'
 import { Popover } from '@/components/ui/popover'
+import { DatePicker } from '@/components/ui/date-picker'
 import { AccountAvatar } from '@/components/ui/account-avatar'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { parseMoneyInput } from '@grana/validation'
@@ -632,10 +633,10 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
                 <div className="-mx-4 mt-4 border-t" style={{ borderColor: ROW_DIVIDER }} />
 
                 {/* Start date row */}
-                <Popover
+                <DatePicker
+                  value={startDate}
+                  onChange={setStartDate}
                   modal
-                  open={activePopover === 'date'}
-                  onOpenChange={(o) => setActivePopover(o ? 'date' : null)}
                   trigger={
                     <button
                       type="button"
@@ -656,27 +657,7 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
                       <ChevronRight className="size-4 shrink-0 text-text-soft/60" aria-hidden />
                     </button>
                   }
-                >
-                  <div className="flex w-[252px] flex-col gap-2 p-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStartDate(todayISO())
-                        setActivePopover(null)
-                      }}
-                      className="flex items-center justify-between rounded-[10px] px-2.5 py-2 text-sm font-semibold text-text transition-colors hover:bg-page"
-                    >
-                      {tRec('create.today')}
-                      {startDate === todayISO() && <Check className="size-4 text-emerald" aria-hidden />}
-                    </button>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full rounded-[10px] border border-border bg-card px-3 py-2 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
-                  </div>
-                </Popover>
+                />
 
                 {/* End-date toggle row */}
                 <div className="-mx-4 flex items-center gap-3 border-t px-4 py-3" style={{ borderColor: ROW_DIVIDER }}>
@@ -702,14 +683,15 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
                   <div className="-mx-4 flex flex-wrap items-end gap-4 px-4 pb-1 pt-3">
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="rec-end" className="text-xs text-text-muted">{tRec('create.repeat_until')}</label>
-                      <input
-                        id="rec-end"
-                        type="date"
-                        value={endDate}
-                        min={startDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="w-44 rounded-[10px] border border-border bg-card px-3 py-2 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      />
+                      <div className="w-44">
+                        <DatePicker
+                          id="rec-end"
+                          value={endDate}
+                          onChange={setEndDate}
+                          min={startDate}
+                          label={tRec('create.repeat_until')}
+                        />
+                      </div>
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="rec-max" className="text-xs text-text-muted">{tRec('create.max_occurrences')}</label>

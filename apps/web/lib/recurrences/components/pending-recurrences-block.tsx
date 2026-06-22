@@ -16,6 +16,7 @@ import { useShowCents } from '@/lib/preferences-context'
 import { parseMoneyInput } from '@grana/validation'
 import { Button } from '@/components/ui/button'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { DatePicker } from '@/components/ui/date-picker'
 import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
 import { invalidateAfterRecurrenceInstanceMutation } from '@/lib/transactions/invalidation'
@@ -351,12 +352,11 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
                     >
                       {t('labels_extra.date')}
                     </label>
-                    <input
+                    <DatePicker
                       id={`date-${instance.id}`}
-                      type="date"
                       value={editDate}
-                      onChange={(e) => setEditDate(e.target.value)}
-                      className="rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      onChange={setEditDate}
+                      label={t('labels_extra.date')}
                     />
                   </div>
 

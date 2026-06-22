@@ -33,6 +33,7 @@ import { Button } from '@/components/ui/button'
 import { Segmented } from '@/components/ui/segmented'
 import { Switch } from '@/components/ui/switch'
 import { Popover } from '@/components/ui/popover'
+import { DatePicker } from '@/components/ui/date-picker'
 import {
   createIncome,
   createExpense,
@@ -826,28 +827,6 @@ export const MovementForm = ({
   ) : null
 
   // ── Field group (clickable rows → popovers) ─────────────────────────────────
-  const dateContent = (
-    <div className="flex w-[252px] flex-col gap-2 p-1">
-      <button
-        type="button"
-        onClick={() => {
-          setDate(todayStr())
-          setActivePopover(null)
-        }}
-        className="flex items-center justify-between rounded-[10px] px-2.5 py-2 text-sm font-semibold text-text transition-colors hover:bg-page"
-      >
-        {t('drawer.today')}
-        {date === todayStr() && <Check className="size-4 text-emerald" aria-hidden />}
-      </button>
-      <input
-        type="date"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-        className="w-full rounded-[10px] border border-border bg-card px-3 py-2 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      />
-    </div>
-  )
-
   const categoryRow = (
     <Popover
       modal={isDrawer}
@@ -865,16 +844,14 @@ export const MovementForm = ({
   )
 
   const dateRow = (
-    <Popover
+    <DatePicker
+      value={date}
+      onChange={setDate}
       modal={isDrawer}
-      open={activePopover === 'date'}
-      onOpenChange={(o) => setActivePopover(o ? 'date' : null)}
       trigger={
         <FieldRow icon={<Calendar className="size-[18px]" />} label={t('labels.date')} value={formatDateValue(date)} />
       }
-    >
-      {dateContent}
-    </Popover>
+    />
   )
 
   const fieldGroup = (
@@ -1517,14 +1494,16 @@ export const MovementForm = ({
                   <label htmlFor="recurrence-until" className="text-xs text-text-muted">
                     {t('drawer.repeat_until')}
                   </label>
-                  <input
-                    id="recurrence-until"
-                    type="date"
-                    value={recurrenceEndDate}
-                    min={date}
-                    onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                    className="w-44 rounded-[10px] border border-border bg-card px-3 py-2 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
+                  <div className="w-44">
+                    <DatePicker
+                      id="recurrence-until"
+                      value={recurrenceEndDate}
+                      onChange={setRecurrenceEndDate}
+                      min={date}
+                      modal={isDrawer}
+                      label={t('drawer.repeat_until')}
+                    />
+                  </div>
                 </div>
               </div>
             )}

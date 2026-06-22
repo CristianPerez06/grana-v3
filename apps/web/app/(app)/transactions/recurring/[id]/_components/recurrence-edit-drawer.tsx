@@ -7,6 +7,7 @@ import { updateRecurrence } from '@/app/_actions/recurrences'
 import { parseMoneyInput } from '@grana/validation'
 import { Drawer } from '@/components/ui/drawer'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { DatePicker } from '@/components/ui/date-picker'
 import type { RecurrenceDetail } from '@/lib/recurrences/types'
 
 type FrequencyValue = 'weekly' | 'biweekly' | 'monthly' | 'annual'
@@ -118,14 +119,7 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
               {tCommon('optional')}
             </span>
           </label>
-          <input
-            id="end_date"
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className={fieldClass}
-            style={{ backgroundColor: FIELD_BG }}
-          />
+          <DatePicker id="end_date" value={endDate} onChange={setEndDate} label={t('labels.end_date')} />
         </div>
 
         <div className="flex flex-col gap-1.5">

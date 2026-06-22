@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { updatePeriodDates } from '@/app/_actions/credit-cards'
+import { DatePicker } from '@/components/ui/date-picker'
 
 type Props = {
   periodId: string
@@ -81,14 +82,7 @@ export const EditDatesSheet = ({
                 <label className="text-sm font-medium" htmlFor="end_date">
                   {t('edit_dates.close_label')}
                 </label>
-                <input
-                  id="end_date"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  required
-                  className="rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                />
+                <DatePicker id="end_date" value={endDate} onChange={setEndDate} label={t('edit_dates.close_label')} />
                 {isExtending && newNextStart && !blockedByPaidNext && (
                   <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 mt-1">
                     {t('edit_dates.info_extending', {
@@ -118,14 +112,7 @@ export const EditDatesSheet = ({
                 <label className="text-sm font-medium" htmlFor="due_date">
                   {t('edit_dates.due_label')}
                 </label>
-                <input
-                  id="due_date"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  required
-                  className="rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                />
+                <DatePicker id="due_date" value={dueDate} onChange={setDueDate} label={t('edit_dates.due_label')} />
               </div>
 
               {error && <p className="text-sm text-destructive">{error}</p>}

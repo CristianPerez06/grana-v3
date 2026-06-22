@@ -306,7 +306,9 @@
     "optional": "(optional)",
     "not_editable": "— not editable",
     "no_results": "No results.",
-    "required_short": "Required."
+    "required_short": "Required.",
+    "today": "Today",
+    "pick_date": "Pick a date"
   },
   "nav": {
     "dashboard": "Home",

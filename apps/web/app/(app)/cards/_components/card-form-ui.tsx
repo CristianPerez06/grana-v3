@@ -4,6 +4,7 @@ import { useState } from 'react'
 import * as RadixPopover from '@radix-ui/react-popover'
 import { Building2 } from 'lucide-react'
 import { FieldIcon, FieldLabel } from '@/components/ui/form-primitives'
+import { DatePicker } from '@/components/ui/date-picker'
 import type { Institution } from '@/lib/accounts/types'
 
 /**
@@ -50,13 +51,7 @@ export const DateField = ({
       {dotColor && <span className="size-[7px] rounded-full" style={{ backgroundColor: dotColor }} aria-hidden />}
       {label}
     </label>
-    <input
-      type="date"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      aria-label={label}
-      className="w-full rounded-[10px] border border-border bg-card px-3 py-2 text-sm tabular-nums text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    />
+    <DatePicker value={value} onChange={onChange} label={label} />
     {error && <p className="text-xs text-destructive">{error}</p>}
   </div>
 )

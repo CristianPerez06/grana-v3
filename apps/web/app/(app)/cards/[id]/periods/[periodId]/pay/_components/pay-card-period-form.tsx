@@ -8,6 +8,7 @@ import { payCardPeriod } from '@/app/_actions/credit-cards'
 import { computeStatementPaymentTotal } from '@/lib/cards/utils'
 import { parseMoneyInput } from '@grana/validation'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { DatePicker } from '@/components/ui/date-picker'
 import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
 
@@ -241,13 +242,7 @@ export const PayCardPeriodForm = ({
 
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">{t('labels.payment_date')}</label>
-          <input
-            type="date"
-            required
-            value={paymentDate}
-            onChange={(e) => setPaymentDate(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
+          <DatePicker value={paymentDate} onChange={setPaymentDate} label={t('labels.payment_date')} />
           {errors.paymentDate && <p className="text-xs text-destructive">{errors.paymentDate}</p>}
         </div>
       </div>
@@ -275,24 +270,12 @@ export const PayCardPeriodForm = ({
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium">{t('labels.close_date')}</label>
-            <input
-              type="date"
-              required
-              value={nextEndDate}
-              onChange={(e) => setNextEndDate(e.target.value)}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
+            <DatePicker value={nextEndDate} onChange={setNextEndDate} label={t('labels.close_date')} />
             {errors.nextEndDate && <p className="text-xs text-destructive">{errors.nextEndDate}</p>}
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium">{t('labels.due_date')}</label>
-            <input
-              type="date"
-              required
-              value={nextDueDate}
-              onChange={(e) => setNextDueDate(e.target.value)}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
+            <DatePicker value={nextDueDate} onChange={setNextDueDate} label={t('labels.due_date')} />
             {errors.nextDueDate && <p className="text-xs text-destructive">{errors.nextDueDate}</p>}
           </div>
         </div>

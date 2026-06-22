@@ -12,6 +12,7 @@ import { useShowCents } from '@/lib/preferences-context'
 import { translateCategoryLabel } from '@/lib/categories/display'
 import { Button } from '@/components/ui/button'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { DatePicker } from '@/components/ui/date-picker'
 import { invalidateAfterReimbursementMutation } from '../invalidation'
 import type { PendingReimbursementVM } from '../queries'
 
@@ -165,12 +166,11 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
                   <label htmlFor={`reimb-date-${r.id}`} className="text-[11px] text-muted-foreground">
                     {t('reimbursement.pending.real_date')}
                   </label>
-                  <input
+                  <DatePicker
                     id={`reimb-date-${r.id}`}
-                    type="date"
                     value={dateById[r.id] ?? r.expenseDate ?? todayISO}
-                    onChange={(e) => setDateById((prev) => ({ ...prev, [r.id]: e.target.value }))}
-                    className="rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onChange={(v) => setDateById((prev) => ({ ...prev, [r.id]: v }))}
+                    label={t('reimbursement.pending.real_date')}
                   />
                 </div>
                 <Button
