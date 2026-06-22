@@ -1,7 +1,8 @@
 # guidance Specification
 
 ## Purpose
-TBD - created by archiving change user-guidance-system. Update Purpose after archive.
+El módulo `guidance` es la capa de orientación contextual del usuario: muestra hints/guías inline (de un catálogo conocido por `guidance_id`, ej. `first_movement.type`) y persiste su ciclo de vida por usuario —visto (`seen_at`), descartado (`dismissed_at`) y completado (`completed_at`)— en `user_guidance_events` con RLS. Garantiza que una guía se muestre solo mientras no fue descartada ni completada, respeta el dismiss del usuario y permite disparar acciones objetivo (ej. "cargá tu primer movimiento"). El hook `useGuidance` es la interfaz de lectura/escritura para cualquier feature que consuma guías, desacoplando el onboarding y las ayudas no intrusivas de cada pantalla.
+
 ## Requirements
 ### Requirement: Sistema de persistencia de hints con granularidad clara
 
