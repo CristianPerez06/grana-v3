@@ -97,9 +97,10 @@ export type CommittedItem = {
  */
 export type CommittedCurrency = {
   /**
-   * Card "A pagar": pending consumos − received reimbursements across unpaid
-   * CLOSED/OVERDUE statements (end_date < today). Mirrors the Tarjetas module's
-   * "A pagar". Excludes the open statement and statements due later.
+   * Card debt: pending consumos − received reimbursements across unpaid statements
+   * already STARTED (start_date <= today) = "A pagar" (closed/overdue) + "En curso"
+   * (open statement) from the Tarjetas module. Excludes FUTURE statements
+   * (installments 2..N, projected periods) — that was the inflation bug.
    */
   debt: number
   /**

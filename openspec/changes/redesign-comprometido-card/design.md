@@ -17,7 +17,7 @@ La card "Comprometido" vive en `packages/dashboard` (query `getCommittedOutlook`
 
 ## Decisions
 
-- **Reusar "A pagar" del módulo Tarjetas, no duplicar la matemática.** Extraer la lógica pura de `month-summary.ts` (suma de `pending` − reintegros sobre resúmenes cerrados/vencidos) a un lugar compartido (`@grana/money-logic` o `@grana/dashboard`) para que `getCommittedOutlook` y el módulo Tarjetas (web) la consuman, y mobile también. Alternativa descartada: recalcular en `getCommittedOutlook` con otro filtro → riesgo de divergencia con el header de Tarjetas.
+- **Mismo número que "A pagar" + "En curso" del módulo Tarjetas.** El monto de tarjeta = todo lo que ya debés = resúmenes ya EMPEZADOS impagos (`start_date <= hoy`): los cerrados/vencidos ("A pagar") + el abierto que acumula ("En curso"). Excluye los resúmenes futuros (`start_date > hoy`). Se reusa la misma matemática pendiente−reintegros (`aggregateCardDebt`) sin tocar el fetch del módulo Tarjetas (producción); la paridad se garantiza por usar la misma matemática + tests.
 - **Recurrencias pendientes = `status='pending'`.** Es estado concreto y barato (un read), no matcheo de reglas vs transacciones generadas. La proyección "fijos del mes próximo" reusa `projectUpcomingOccurrences` (ya en uso). 
 - **`getCommittedOutlook` devuelve el desglose + top-N.** El tipo `CommittedOutlook` crece para incluir, por moneda: `cardToPay`, `recurringPending`, `recurringNextMonth`, `overdue` (para el aviso), y `topItems` por sección (3-4, ordenados por monto desc). El cálculo de "top-N" se hace en la query/aggregations (puro y testeable).
 - **El total NO incluye fijos del mes próximo ni ingresos.** Decisión de producto ya tomada.
@@ -34,7 +34,8 @@ La card "Comprometido" vive en `packages/dashboard` (query `getCommittedOutlook`
 
 - **NO se proyectan "fijos del próximo mes"** (confirmado). Una recurrencia, al llegar su momento, se vuelve "pendiente de confirmar"; al confirmarla deja de ser obligación (o, si va con tarjeta, su deuda ya está en la sección Tarjeta). Una proyección futura no es obligación presente. La sección Recurrencias = sólo "pendientes de confirmar".
 - **Ingreso recurrente ("Ya entra" + banda de cierre neto): SE CONSERVA** (confirmado). Contexto cuando hay ingreso recurrente el mes próximo; NO suma al total a pagar. (Asimetría aceptada: es la única proyección que queda, justificada como cierre tranquilizador.)
-- **Wording final (es):** subtítulo "Plata que ya está comprometida"; titular "Total a pagar"; "Tarjeta · a pagar"; "Recurrencias · pendientes de confirmar"; aviso "Incluye $X vencido sin pagar".
+- **Wording final (es):** subtítulo "Plata que ya está comprometida"; titular "Total a pagar"; "Resúmenes de tarjeta" (= a pagar + en curso); "Recurrencias · pendientes de confirmar"; aviso "Incluye $X vencido sin pagar".
+- **El monto de tarjeta = "A pagar" + "En curso"** (no solo "A pagar"). Confirmado al testear: con solo "A pagar" la card quedaba vacía mientras el resumen está abierto. Incluir "en curso" la mantiene útil; se siguen excluyendo los resúmenes futuros (la inflación).
 - **Mockup mobile: aprobado** (`docs/design/dashboard-comprometido/mobile/comprometido.html`). Misma estructura en una columna; top-3 consumos de tarjeta y top-2 recurrencias.
 
 ## Open Questions

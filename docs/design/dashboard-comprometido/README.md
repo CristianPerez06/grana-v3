@@ -20,9 +20,10 @@ La card deja de ser "lo del próximo mes" y pasa a responder **"¿qué tengo que
 y todavía no pagué?"**, con dos secciones, cada una con sus 3-4 movimientos de mayor
 monto para aprovechar el espacio:
 
-- **Tarjeta · a pagar** — mismo número/definición que el header del módulo Tarjetas
-  (`apps/web/lib/cards/month-summary.ts`: resúmenes cerrados/vencidos impagos). NO
-  incluye "en curso" (eso ya vive en el módulo Tarjetas).
+- **Resúmenes de tarjeta** — "A pagar" (resúmenes cerrados/vencidos impagos) **+
+  "En curso"** (el resumen abierto que acumula) del módulo Tarjetas — todo lo que
+  ya debés. Suma pendiente−reintegros sobre resúmenes ya empezados (`start_date <=
+  hoy`); EXCLUYE los futuros (`start_date > hoy`: cuotas 2..N), que eran la inflación.
 - **Recurrencias · pendientes de confirmar** — instancias `recurrence_instances.status='pending'`
   (`getPendingRecurrenceInstances`). Plata generada que espera tu OK. **NO** se proyectan
   "fijos del próximo mes": una recurrencia, al llegar su momento, se vuelve pendiente de

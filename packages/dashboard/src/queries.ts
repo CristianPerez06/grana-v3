@@ -404,12 +404,13 @@ export async function getCommittedOutlook(
   const windowStart = formatDateISO(new Date(y, m + 1, 1))
   const windowEnd = formatDateISO(new Date(y, m + 2, 0))
 
-  // ── Card "A pagar": pending consumos − received reimbursements across the
-  //    unpaid CLOSED/OVERDUE statements (end_date < today) of active credit cards.
-  //    Same definition as the Tarjetas module header. The open statement ("en
-  //    curso") and statements due later are NOT a present obligation, so they
-  //    stay out. `overdue` is the subset whose due_date already passed (drives the
-  //    "incluye $X vencido" flag).
+  // ── Card debt: pending consumos − received reimbursements across the unpaid
+  //    statements that have ALREADY STARTED (start_date <= today) of active credit
+  //    cards. That is "A pagar" (closed/overdue) + "En curso" (the open statement
+  //    still accruing) from the Tarjetas module — everything you actually owe on
+  //    the card. FUTURE statements (start_date > today: installments 2..N,
+  //    projected periods) are excluded — that was the inflation bug. `overdue` is
+  //    the subset whose due_date already passed (drives the "incluye $X vencido" flag).
   const { data: cards, error: cardsErr } = await supabase
     .from('accounts')
     .select('id')
@@ -423,10 +424,10 @@ export async function getCommittedOutlook(
       .from('card_periods')
       .select('id, due_date')
       .in('account_id', cardIds)
-      .lt('end_date', todayISO)
+      .lte('start_date', todayISO)
     if (periodsErr) throw periodsErr
-    const closedPeriods = periods ?? []
-    const periodIds = closedPeriods.map((p) => p.id)
+    const startedPeriods = periods ?? []
+    const periodIds = startedPeriods.map((p) => p.id)
 
     if (periodIds.length > 0) {
       const { data: payments, error: payErr } = await supabase
@@ -435,9 +436,9 @@ export async function getCommittedOutlook(
         .in('period_id', periodIds)
       if (payErr) throw payErr
       const paidPeriodIds = new Set((payments ?? []).map((p) => p.period_id))
-      const unpaidIds = closedPeriods.filter((p) => !paidPeriodIds.has(p.id)).map((p) => p.id)
+      const unpaidIds = startedPeriods.filter((p) => !paidPeriodIds.has(p.id)).map((p) => p.id)
       const overdueIds = new Set(
-        closedPeriods
+        startedPeriods
           .filter((p) => !paidPeriodIds.has(p.id) && p.due_date < todayISO)
           .map((p) => p.id),
       )

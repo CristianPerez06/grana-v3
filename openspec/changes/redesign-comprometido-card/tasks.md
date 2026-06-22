@@ -2,7 +2,7 @@
 
 - [x] 1.1 Confirmar con el usuario si se conserva la sección de ingreso recurrente "Ya entra" + banda de cierre neto (CONFIRMADO: se conserva)
 - [x] 1.2 Definir y aprobar el mockup mobile en `docs/design/dashboard-comprometido/mobile/` (aprobado)
-- [x] 1.3 Fijar wording final (CONFIRMADO): subtítulo "Plata que ya está comprometida"; titular "Total a pagar"; "Tarjeta · a pagar"; "Recurrencias · pendientes de confirmar"; aviso "Incluye $X vencido sin pagar". (Sin línea de "fijos del próximo mes".) Falta sólo el paralelo en inglés.
+- [x] 1.3 Fijar wording final (CONFIRMADO): subtítulo "Plata que ya está comprometida"; titular "Total a pagar"; "Resúmenes de tarjeta" (= a pagar + en curso); "Recurrencias · pendientes de confirmar"; aviso "Incluye $X vencido sin pagar". (Sin línea de "fijos del próximo mes".) Falta sólo el paralelo en inglés.
 
 ## 2. Lógica compartida ("A pagar" como fuente única)
 
@@ -13,7 +13,7 @@
 ## 3. Capa de datos (`packages/dashboard`)
 
 - [x] 3.1 Tipo extendido (`CommittedCurrency`): `debt` (= A pagar cerrados/vencidos), `overdue` (subset vencido), `recurringExpense` (= pendientes de confirmar), `recurringIncome`, `topCard`/`topRecurring` (`CommittedItem[]`). Nombres legacy conservados para no romper la UI actual; el redesign de UI los relabela.
-- [x] 3.2 `getCommittedOutlook` reescrito: A pagar (resúmenes `end_date<hoy` impagos) + `overdue` subset + recurrencias `status='pending'` tipo expense (vía `recurrence_instances`). NO proyecta fijos del mes próximo. Mantiene proyección de INGRESO mes próximo para "Ya entra".
+- [x] 3.2 `getCommittedOutlook` reescrito: tarjeta = resúmenes ya empezados impagos (`start_date<=hoy` = a pagar + en curso; excluye futuros) + `overdue` subset + recurrencias `status='pending'` tipo expense (vía `recurrence_instances`). NO proyecta fijos del mes próximo. Mantiene proyección de INGRESO mes próximo para "Ya entra".
 - [x] 3.3 Top-N por sección con `topCommittedItems` (pura, testeable) + `sumByCurrency`.
 - [x] 3.4 Tests de los helpers puros nuevos + split overdue (30 tests en verde). (El fetch en sí no es unit-test; queda el QA de paridad en 7.3.)
 
