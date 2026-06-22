@@ -335,14 +335,20 @@ export type CardDebtRow = {
   status: string | null
   received_at: string | null
   cancelled_at: string | null
+  /** Owning statement — lets the caller split overdue from the rest. */
+  card_period_id?: string | null
+  /** Movement metadata, for the top-by-amount section detail. */
+  description?: string | null
+  date?: string | null
 }
 
 /**
  * Card debt per currency = pending consumos − received statement reimbursements,
  * across the rows it is given (the caller scopes which statements feed it — the
- * committed outlook passes only overdue or next-month statements). Mirrors the per-period pending math
- * in `apps/web/lib/cards/queries.ts`: a received (and not cancelled) statement
- * reimbursement reduces the debt; pending/cancelled ones do not count.
+ * committed outlook passes only the "A pagar" set: unpaid CLOSED/OVERDUE
+ * statements). Mirrors the per-period pending math in `apps/web/lib/cards/queries.ts`:
+ * a received (and not cancelled) statement reimbursement reduces the debt;
+ * pending/cancelled ones do not count.
  */
 export function aggregateCardDebt(rows: CardDebtRow[]): Record<OutlookCurrency, number> {
   const debt: Record<OutlookCurrency, MoneyType> = { ARS: Money.from(0), USD: Money.from(0) }
@@ -358,6 +364,52 @@ export function aggregateCardDebt(rows: CardDebtRow[]): Record<OutlookCurrency, 
     }
   }
   return { ARS: Money.toNumber(debt.ARS), USD: Money.toNumber(debt.USD) }
+}
+
+/** A pending item that can be listed in a committed section (card or recurrence). */
+export type CommittedItemRow = {
+  amount: number | string
+  currency_code: string
+  description?: string | null
+  date?: string | null
+}
+
+/** Default count of movements a committed section lists. */
+export const COMMITTED_TOP_N = 4
+
+/**
+ * Top-by-amount pending items for ONE currency, descending, capped at `n`.
+ * Pure presentation helper — the caller decides which rows are eligible (e.g.
+ * for cards: pending consumos only, excluding reimbursements). Amounts are
+ * normalized to positive numbers; missing description/date fall back to ''.
+ */
+export function topCommittedItems(
+  rows: CommittedItemRow[],
+  currency: OutlookCurrency,
+  n: number = COMMITTED_TOP_N,
+): Array<{ description: string; date: string; amount: number }> {
+  return rows
+    .filter((r) => r.currency_code === currency)
+    .map((r) => ({
+      description: r.description ?? '',
+      date: r.date ?? '',
+      amount: Money.toNumber(Money.from(r.amount)),
+    }))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, n)
+}
+
+/**
+ * Sum item amounts per currency (ARS/USD never combined). Used for the
+ * "recurrencias pendientes de confirmar" subtotal from pending instance rows.
+ */
+export function sumByCurrency(rows: CommittedItemRow[]): Record<OutlookCurrency, number> {
+  const acc: Record<OutlookCurrency, MoneyType> = { ARS: Money.from(0), USD: Money.from(0) }
+  for (const r of rows) {
+    if (!isOutlookCurrency(r.currency_code)) continue
+    acc[r.currency_code] = Money.add(acc[r.currency_code], Money.from(r.amount))
+  }
+  return { ARS: Money.toNumber(acc.ARS), USD: Money.toNumber(acc.USD) }
 }
 
 /** An active recurrence rule carrying its projection inputs plus amount/type. */

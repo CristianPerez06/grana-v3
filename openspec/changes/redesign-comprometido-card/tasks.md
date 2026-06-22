@@ -6,16 +6,16 @@
 
 ## 2. Lógica compartida ("A pagar" como fuente única)
 
-- [ ] 2.1 Extraer la lógica pura de "A pagar" de `apps/web/lib/cards/month-summary.ts` (suma de `pending` − reintegros sobre resúmenes cerrados/vencidos) a un módulo compartible (`@grana/money-logic` o `@grana/dashboard`), sin acoplarla a Supabase
-- [ ] 2.2 Reapuntar el módulo Tarjetas (web) a la lógica extraída para que no haya duplicación (verificar que el header de Tarjetas no cambia de número)
-- [ ] 2.3 Tests unitarios de la lógica "A pagar" extraída (incluye separación de la parte vencida para el aviso)
+- [x] 2.1 Definición compartida de "A pagar": en vez de extraer/reconectar el fetch del módulo Tarjetas (producción, alto riesgo), `getCommittedOutlook` reusa `aggregateCardDebt` (misma matemática pendiente−reintegros que el módulo Tarjetas) sobre los resúmenes `end_date < hoy` impagos (cerrados/vencidos). Módulo Tarjetas NO tocado.
+- [x] 2.2 (Reemplazada por 2.1) Cards module sin tocar; paridad garantizada por usar la misma matemática + el test de paridad (2.3). El header de Tarjetas no cambia.
+- [x] 2.3 Tests del split overdue/total con la misma matemática (`aggregateCardDebt overdue split`) + helpers `topCommittedItems`/`sumByCurrency`.
 
 ## 3. Capa de datos (`packages/dashboard`)
 
-- [ ] 3.1 Extender el tipo `CommittedOutlook`/`CommittedCurrency`: `cardToPay`, `overdue`, `recurringPending`, `recurringNextMonth`, y `topItems` por sección (3-4, monto desc)
-- [ ] 3.2 Reescribir `getCommittedOutlook`: tarjeta a pagar (lógica del paso 2) + recurrencias `status='pending'` (vía la consulta de `recurrence_instances`); total = tarjeta a pagar + pendientes de confirmar. NO proyectar fijos del mes próximo. Mantener la proyección de INGRESO recurrente del mes próximo sólo para el contexto "Ya entra" (reusa `projectUpcomingOccurrences`)
-- [ ] 3.3 Calcular los top-N movimientos por sección en aggregations (función pura, testeable)
-- [ ] 3.4 Tests de `aggregations`/`getCommittedOutlook` para el nuevo shape (total, exclusión de en curso/futuros y de la proyección de fijos, aviso de vencido, top-N, USD por moneda, contexto "Ya entra"/neto)
+- [x] 3.1 Tipo extendido (`CommittedCurrency`): `debt` (= A pagar cerrados/vencidos), `overdue` (subset vencido), `recurringExpense` (= pendientes de confirmar), `recurringIncome`, `topCard`/`topRecurring` (`CommittedItem[]`). Nombres legacy conservados para no romper la UI actual; el redesign de UI los relabela.
+- [x] 3.2 `getCommittedOutlook` reescrito: A pagar (resúmenes `end_date<hoy` impagos) + `overdue` subset + recurrencias `status='pending'` tipo expense (vía `recurrence_instances`). NO proyecta fijos del mes próximo. Mantiene proyección de INGRESO mes próximo para "Ya entra".
+- [x] 3.3 Top-N por sección con `topCommittedItems` (pura, testeable) + `sumByCurrency`.
+- [x] 3.4 Tests de los helpers puros nuevos + split overdue (30 tests en verde). (El fetch en sí no es unit-test; queda el QA de paridad en 7.3.)
 
 ## 4. UI web
 

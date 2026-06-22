@@ -5,8 +5,11 @@ import {
   aggregateRecurrenceProjection,
   buildMonthBalanceSeries,
   calculateTransactionSums,
+  sumByCurrency,
+  topCommittedItems,
   type BalanceTransactionRow,
   type CardDebtRow,
+  type CommittedItemRow,
   type CommittedRecurrenceRule,
   type HeroAccountRow,
   type MonthBalanceTxInput,
@@ -445,5 +448,78 @@ describe('aggregateRecurrenceProjection', () => {
     const totals = aggregateRecurrenceProjection(rules, '2026-07-01', '2026-07-31')
     expect(totals.expense).toEqual({ ARS: 0, USD: 0 })
     expect(totals.income).toEqual({ ARS: 0, USD: 0 })
+  })
+})
+
+describe('topCommittedItems', () => {
+  const rows: CommittedItemRow[] = [
+    { amount: 100, currency_code: 'ARS', description: 'A', date: '2026-07-01' },
+    { amount: 900, currency_code: 'ARS', description: 'B', date: '2026-07-02' },
+    { amount: 300, currency_code: 'ARS', description: 'C', date: '2026-07-03' },
+    { amount: 50, currency_code: 'USD', description: 'D', date: '2026-07-04' },
+  ]
+
+  it('returns the top-N of ONE currency, by amount desc', () => {
+    expect(topCommittedItems(rows, 'ARS', 2)).toEqual([
+      { description: 'B', date: '2026-07-02', amount: 900 },
+      { description: 'C', date: '2026-07-03', amount: 300 },
+    ])
+  })
+
+  it('filters by currency (never mixes ARS and USD)', () => {
+    expect(topCommittedItems(rows, 'USD')).toEqual([
+      { description: 'D', date: '2026-07-04', amount: 50 },
+    ])
+  })
+
+  it('falls back to empty description/date when missing', () => {
+    const [item] = topCommittedItems([{ amount: 10, currency_code: 'ARS' }], 'ARS')
+    expect(item).toEqual({ description: '', date: '', amount: 10 })
+  })
+})
+
+describe('sumByCurrency', () => {
+  it('sums amounts per currency, never combining ARS and USD', () => {
+    const rows: CommittedItemRow[] = [
+      { amount: 120_000, currency_code: 'ARS' },
+      { amount: '22500.50', currency_code: 'ARS' },
+      { amount: 30, currency_code: 'USD' },
+    ]
+    expect(sumByCurrency(rows)).toEqual({ ARS: 142_500.5, USD: 30 })
+  })
+
+  it('ignores unknown currencies and returns zeros for empty input', () => {
+    expect(sumByCurrency([{ amount: 5, currency_code: 'EUR' }])).toEqual({ ARS: 0, USD: 0 })
+    expect(sumByCurrency([])).toEqual({ ARS: 0, USD: 0 })
+  })
+})
+
+describe('aggregateCardDebt overdue split (parity with cards "A pagar")', () => {
+  // The committed outlook computes `debt` (all closed/overdue unpaid) and
+  // `overdue` (the due_date<today subset) by running aggregateCardDebt over the
+  // full set and over the overdue-only subset — the same pending−reimbursement
+  // math the Tarjetas module uses. This guards that the subset sums correctly.
+  const tx = (over: Partial<CardDebtRow>): CardDebtRow => ({
+    type: 'expense',
+    amount: 0,
+    currency_code: 'ARS',
+    status: 'pending',
+    received_at: null,
+    cancelled_at: null,
+    card_period_id: 'p1',
+    ...over,
+  })
+
+  it('overdue subset is a strict subset of the full to-pay sum', () => {
+    const txs: CardDebtRow[] = [
+      tx({ amount: 419_840, card_period_id: 'closed' }),
+      tx({ amount: 12_000, card_period_id: 'overdue' }),
+      tx({ type: 'reimbursement', amount: 2_000, status: null, received_at: '2026-06-01', card_period_id: 'closed' }),
+    ]
+    const overdueIds = new Set(['overdue'])
+    const toPay = aggregateCardDebt(txs)
+    const overdue = aggregateCardDebt(txs.filter((t) => overdueIds.has(t.card_period_id!)))
+    expect(toPay.ARS).toBe(429_840) // 419_840 + 12_000 − 2_000
+    expect(overdue.ARS).toBe(12_000)
   })
 })

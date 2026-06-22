@@ -74,25 +74,47 @@ export type MonthBalanceSeries = {
   finalBalance: number
 }
 
+/** One listed movement in a committed section (top-by-amount detail). */
+export type CommittedItem = {
+  /** Movement description (consumo merchant / recurrence label). */
+  description: string
+  /** ISO date: card tx `date` or recurrence instance `scheduled_date`. */
+  date: string
+  /** Positive amount in the section's currency. */
+  amount: number
+}
+
 /**
- * COMPROMISO lens ("¿qué debo / qué se viene?"), per currency, scoped to next
- * month: `debt` is card debt that is overdue or due next month, the recurring
- * projections are next month. The committed total = debt + recurringExpense
- * (outflows); recurringIncome is context, never summed into the total. ARS and
- * USD are never combined.
+ * COMPROMISO lens ("obligaciones pendientes": ¿qué tengo que pagar y no pagué?),
+ * per currency. `debt` is the card "A pagar" (same definition as the Tarjetas
+ * module header); `recurringExpense` is recurrences pending confirmation. The
+ * committed total = debt + recurringExpense; recurringIncome is context for the
+ * "Ya entra" band, never summed. ARS and USD are never combined.
+ *
+ * NOTE: field names `debt`/`recurringExpense` are kept for back-compat with the
+ * current card UI, but their MEANING changed with the redesign (see below). The
+ * UI redesign relabels them to "Tarjeta · a pagar" / "Recurrencias · pendientes".
  */
 export type CommittedCurrency = {
   /**
-   * Sum of pending charges (consumos − received reimbursements) across unpaid
-   * statements that are overdue (due_date < today) or due next month. The rest
-   * of the current month, and statements due later (installments 2..N, future
-   * projected periods), are excluded.
+   * Card "A pagar": pending consumos − received reimbursements across unpaid
+   * CLOSED/OVERDUE statements (end_date < today). Mirrors the Tarjetas module's
+   * "A pagar". Excludes the open statement and statements due later.
    */
   debt: number
-  /** Active `expense` recurrences projected into the next calendar month. */
+  /**
+   * Of `debt`, the portion that comes from OVERDUE statements (due_date < today).
+   * Drives the "incluye $X vencido" flag. 0 when nothing is overdue.
+   */
+  overdue: number
+  /** Recurrences pending confirmation: sum of pending `expense` recurrence instances. */
   recurringExpense: number
-  /** Active `income` recurrences projected into the next calendar month (context only). */
+  /** Active `income` recurrences projected into the next calendar month (context for "Ya entra", never summed). */
   recurringIncome: number
+  /** Top card consumos of the "A pagar" set, by amount desc (section detail). */
+  topCard: CommittedItem[]
+  /** Top pending recurrences, by amount desc (section detail). */
+  topRecurring: CommittedItem[]
 }
 
 export type CommittedOutlook = {
