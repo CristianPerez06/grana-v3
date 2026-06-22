@@ -34,6 +34,13 @@ function formatDateISO(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
+/** A Supabase to-one embed typed (incorrectly) as an array — read `.name` safely. */
+type NameEmbed = { name: string | null } | { name: string | null }[] | null
+const embedName = (e: NameEmbed): string => {
+  const obj = Array.isArray(e) ? e[0] : e
+  return obj?.name ?? ''
+}
+
 /** First/last accounting date of a `YYYY-MM` month, as ISO `YYYY-MM-DD`. */
 export function resolveMonthRange(month: string): { from: string; to: string } {
   const [year, m] = month.split('-').map(Number)
@@ -447,22 +454,33 @@ export async function getCommittedOutlook(
         const { data: txData, error: txErr } = await supabase
           .from('transactions')
           .select(
-            'type, amount, currency_code, status, received_at, cancelled_at, card_period_id, description, date',
+            'type, amount, currency_code, status, received_at, cancelled_at, card_period_id, description, date, category:categories(name), subcategory:subcategories(name)',
           )
           .in('card_period_id', unpaidIds)
           .eq('is_parent', false)
         if (txErr) throw txErr
-        const txs = (txData ?? []) as CardDebtRow[]
+        type CardTxRow = CardDebtRow & {
+          description: string | null
+          category: NameEmbed
+          subcategory: NameEmbed
+        }
+        const txs = (txData ?? []) as unknown as CardTxRow[]
 
         const toPay = aggregateCardDebt(txs)
         const overdue = aggregateCardDebt(
           txs.filter((t) => t.card_period_id != null && overdueIds.has(t.card_period_id)),
         )
         // Top consumos for the section detail: pending charges only (a received
-        // reimbursement reduces the total but is not a "consumo to pay").
-        const consumos = txs.filter(
-          (t) => t.status === 'pending' && t.type !== 'reimbursement',
-        ) as CommittedItemRow[]
+        // reimbursement reduces the total but is not a "consumo to pay"). The label
+        // falls back to subcategory/category when the consumo has no description.
+        const consumos: CommittedItemRow[] = txs
+          .filter((t) => t.status === 'pending' && t.type !== 'reimbursement')
+          .map((t) => ({
+            amount: t.amount,
+            currency_code: t.currency_code,
+            date: t.date,
+            description: t.description || embedName(t.subcategory) || embedName(t.category),
+          }))
 
         result.ARS.debt = toPay.ARS
         result.USD.debt = toPay.USD
@@ -481,7 +499,9 @@ export async function getCommittedOutlook(
   //    section), so a future projection is not a present obligation.
   const { data: instData, error: instErr } = await supabase
     .from('recurrence_instances')
-    .select('amount, currency_code, description, scheduled_date, recurrence:recurrences(movement_type)')
+    .select(
+      'amount, currency_code, description, scheduled_date, recurrence:recurrences(movement_type), category:categories(name), subcategory:subcategories(name)',
+    )
     .eq('status', 'pending')
   if (instErr) throw instErr
   type MovementTypeEmbed = { movement_type: string }
@@ -490,9 +510,11 @@ export async function getCommittedOutlook(
     currency_code: string
     description: string | null
     scheduled_date: string | null
-    // PostgREST returns the to-one embed as an object, but the generated types
-    // widen it to an array — tolerate both.
+    // PostgREST returns the to-one embeds as objects, but the generated types
+    // widen them to arrays — tolerate both.
     recurrence: MovementTypeEmbed | MovementTypeEmbed[] | null
+    category: NameEmbed
+    subcategory: NameEmbed
   }
   const movementTypeOf = (r: PendingInstanceRow['recurrence']): string | undefined =>
     Array.isArray(r) ? r[0]?.movement_type : (r?.movement_type ?? undefined)
@@ -502,7 +524,7 @@ export async function getCommittedOutlook(
     .map((i) => ({
       amount: i.amount,
       currency_code: i.currency_code,
-      description: i.description,
+      description: i.description || embedName(i.subcategory) || embedName(i.category),
       date: i.scheduled_date,
     }))
 

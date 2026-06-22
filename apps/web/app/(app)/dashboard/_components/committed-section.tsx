@@ -117,6 +117,9 @@ export const CommittedSection = async ({ data }: Props) => {
   const net = ars.recurringIncome - totalArs
   const surplus = net >= 0
   const hasOverdue = ars.overdue > 0
+  // Prioritize the recurrences detail: if there are pending recurrences, list
+  // those; only when there are none do we fall back to listing the card consumos.
+  const recurringHasItems = ars.topRecurring.length > 0
 
   if (isEmpty(data)) {
     return (
@@ -140,27 +143,27 @@ export const CommittedSection = async ({ data }: Props) => {
       </CardHeader>
 
       <CardContent className="flex flex-1 flex-col">
-        {/* Total a pagar — label izquierda, monto derecha (ARS + USD) en baseline. */}
-        <div className="flex items-baseline justify-between gap-3">
-          <p className="text-xs font-extrabold uppercase tracking-wide text-text-soft">
+        {/* Total a pagar — bloque hero alineado a la izquierda: label arriba, monto
+            ARS grande y el USD en línea al lado (emerald), sobre la misma baseline. */}
+        <div>
+          <p className="text-[11px] font-extrabold uppercase tracking-wide text-text-soft">
             {t('total_label')}
           </p>
-          <p className="text-right">
-            <span className="block text-[clamp(1.5rem,3.2vw,2rem)] font-extrabold leading-none tracking-tight text-text">
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+            <span className="text-[clamp(1.75rem,3.6vw,2.25rem)] font-extrabold leading-none tracking-tight text-text">
               <MaskedAmountDisplay amount={totalArs} currency="ARS" />
             </span>
             {showUsd && (
-              <span className="mt-1 block text-[13px] font-bold tabular-nums text-text-muted">
-                <span className="text-emerald-deep">USD</span>{' '}
-                <MaskedAmount amount={totalUsd} currency="USD" showCentsOverride />
+              <span className="text-[14px] font-extrabold tabular-nums text-emerald-deep">
+                US$ <MaskedAmount amount={totalUsd} currency="USD" showCentsOverride />
               </span>
             )}
-          </p>
+          </div>
         </div>
 
         {/* Aviso de vencido — sólo cuando hay deuda con vencimiento pasado. */}
         {hasOverdue && (
-          <p className="mt-3 flex items-center gap-2 rounded-xl bg-amber-soft px-3 py-2 text-[12px] font-semibold text-amber-deep">
+          <p className="mt-3 flex items-center gap-2 rounded-xl bg-terracotta-soft px-3 py-2 text-[12px] font-semibold text-terracotta-deep">
             <AlertTriangle size={15} strokeWidth={2.25} className="shrink-0" aria-hidden />
             {t.rich('overdue', {
               amount: () => (
@@ -180,7 +183,7 @@ export const CommittedSection = async ({ data }: Props) => {
           ars={ars.debt}
           usd={usd.debt}
           showUsd={showUsd}
-          items={ars.topCard}
+          items={recurringHasItems ? [] : ars.topCard}
           href="/cards"
           linkLabel={t('view_cards')}
         />
