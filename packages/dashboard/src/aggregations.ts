@@ -14,7 +14,7 @@ export type HeroAccountRow = {
   type: 'cash' | 'bank' | 'credit'
   color_key: string | null
   icon_key: string | null
-  institution: { brand_color: string | null; icon_type: string | null } | null
+  institution: { name: string | null; brand_color: string | null; icon_type: string | null } | null
   currencies: Array<{
     currency_code: string
     initial_balance: number | string | null
@@ -51,6 +51,7 @@ export function aggregateHero(
     breakdown.push({
       id: acc.id,
       name: acc.name,
+      institutionName: acc.institution?.name ?? null,
       ars: Money.toNumber(accArs),
       usd: Money.toNumber(accUsd),
       avatar: resolveAccountAvatar(

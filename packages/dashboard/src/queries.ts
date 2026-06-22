@@ -46,7 +46,7 @@ export async function getDashboardHero(
   const { data: accounts, error } = await supabase
     .from('accounts')
     .select(
-      'id, name, type, color_key, icon_key, institution:institutions(brand_color, icon_type), currencies:account_currencies(currency_code, initial_balance)',
+      'id, name, type, color_key, icon_key, institution:institutions(name, brand_color, icon_type), currencies:account_currencies(currency_code, initial_balance)',
     )
     .in('type', ['cash', 'bank'])
     .eq('is_active', true)

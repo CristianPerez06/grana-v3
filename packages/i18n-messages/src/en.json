@@ -167,7 +167,7 @@
     "committed": {
       "title": "Committed",
       "question": "What we already know about next month",
-      "total_label": "Total",
+      "total_label": "Total committed",
       "debt": "Card statements",
       "recurring_expense": "Recurring expenses",
       "recurring_income": "Recurring income",
@@ -183,8 +183,8 @@
       "error": "We couldn't load what's coming."
     },
     "spent": {
-      "title": "You spent this month",
-      "from_cash": "From your cash",
+      "title": "I spent this month",
+      "from_cash": "From cash",
       "financed": "Financed on card",
       "caption": "<b>{financed}</b> was financed on your card → paid in upcoming statements."
     },

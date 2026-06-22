@@ -50,8 +50,8 @@ describe('aggregateHero', () => {
       ars: 160_000,
       usd: 550,
       accounts: [
-        { id: 'cash-1', name: 'Billetera', ars: 130_000, usd: 250, avatar: anyAvatar },
-        { id: 'bank-1', name: 'Banco Galicia', ars: 30_000, usd: 300, avatar: anyAvatar },
+        { id: 'cash-1', name: 'Billetera', institutionName: null, ars: 130_000, usd: 250, avatar: anyAvatar },
+        { id: 'bank-1', name: 'Banco Galicia', institutionName: null, ars: 30_000, usd: 300, avatar: anyAvatar },
       ],
     })
   })
@@ -80,7 +80,7 @@ describe('aggregateHero', () => {
     expect(aggregateHero(accounts, txSums)).toEqual({
       ars: 100_000,
       usd: 0,
-      accounts: [{ id: 'cash-1', name: 'Billetera', ars: 100_000, usd: 0, avatar: anyAvatar }],
+      accounts: [{ id: 'cash-1', name: 'Billetera', institutionName: null, ars: 100_000, usd: 0, avatar: anyAvatar }],
     })
   })
 
@@ -96,7 +96,7 @@ describe('aggregateHero', () => {
     expect(aggregateHero(accounts, txSums)).toEqual({
       ars: 0,
       usd: 0,
-      accounts: [{ id: 'cash-1', name: 'Billetera', ars: 0, usd: 0, avatar: anyAvatar }],
+      accounts: [{ id: 'cash-1', name: 'Billetera', institutionName: null, ars: 0, usd: 0, avatar: anyAvatar }],
     })
   })
 
@@ -113,7 +113,7 @@ describe('aggregateHero', () => {
     expect(aggregateHero(accounts, txSums)).toEqual({
       ars: 0.3,
       usd: 0,
-      accounts: [{ id: 'cash-1', name: 'Billetera', ars: 0.3, usd: 0, avatar: anyAvatar }],
+      accounts: [{ id: 'cash-1', name: 'Billetera', institutionName: null, ars: 0.3, usd: 0, avatar: anyAvatar }],
     })
   })
 })

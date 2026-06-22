@@ -2,7 +2,10 @@ import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
 
 export type HeroAccountBalance = {
   id: string
+  /** User-given account name (e.g. "Caja de ahorro sueldo"). */
   name: string
+  /** Bank/institution display name when the account has one; null for cash. */
+  institutionName: string | null
   ars: number
   usd: number
   avatar: ResolvedAccountAvatar

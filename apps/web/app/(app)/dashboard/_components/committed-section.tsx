@@ -18,20 +18,23 @@ const isEmpty = (data: CommittedOutlook) =>
   data.ARS.recurringIncome === 0 &&
   data.USD.recurringIncome === 0
 
-// One outflow mini-tile: icon + label (+ hint) + amount. No bar/chart — the
-// committed card communicates with tiles, not FlowRows.
+// One outflow mini-tile: icon + label (+ hint) + ARS amount, with the USD amount
+// folded in right below when there's USD activity (bimoneda lives inside each
+// tile, no separate strip). No bar/chart — the card communicates with tiles.
 const Tile = ({
   icon,
   iconClassName,
   label,
   hint,
   amount,
+  usdAmount,
 }: {
   icon: React.ReactNode
   iconClassName: string
   label: string
   hint?: string
   amount: number
+  usdAmount: number
 }) => (
   <div className="flex flex-col gap-2 rounded-2xl border border-border p-4">
     <span
@@ -50,6 +53,12 @@ const Tile = ({
     <span className="text-[19px] font-extrabold tracking-tight text-text">
       <MaskedAmount amount={amount} currency="ARS" />
     </span>
+    {usdAmount > 0 && (
+      <span className="text-[12px] font-bold tracking-tight text-text-soft">
+        <span className="text-emerald-deep">USD</span>{' '}
+        <MaskedAmount amount={usdAmount} currency="USD" showCentsOverride />
+      </span>
+    )}
   </div>
 )
 
@@ -89,13 +98,16 @@ export const CommittedSection = async ({ data }: Props) => {
       </CardHeader>
 
       <CardContent className="flex flex-1 flex-col">
-        {/* Total comprometido = lo que sale (deuda + gastos recurrentes). */}
-        <p className="text-xs font-extrabold uppercase tracking-wide text-text-soft">
-          {t('total_label')}
-        </p>
-        <p className="mt-1.5 text-[clamp(1.625rem,3.4vw,2.125rem)] font-extrabold leading-none tracking-tight text-text">
-          <MaskedAmountDisplay amount={totalArs} currency="ARS" />
-        </p>
+        {/* Total comprometido = lo que sale (deuda + gastos recurrentes). Label a
+            la izquierda y monto a la derecha, alineados sobre la misma baseline. */}
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="text-xs font-extrabold uppercase tracking-wide text-text-soft">
+            {t('total_label')}
+          </p>
+          <p className="text-[clamp(1.625rem,3.4vw,2.125rem)] font-extrabold leading-none tracking-tight text-text">
+            <MaskedAmountDisplay amount={totalArs} currency="ARS" />
+          </p>
+        </div>
 
         {/* "YA SALE" sub-label only when there is income to contrast it with. */}
         {hasIncome && (
@@ -111,6 +123,7 @@ export const CommittedSection = async ({ data }: Props) => {
             iconClassName="bg-navy"
             label={t('debt')}
             amount={ars.debt}
+            usdAmount={usd.debt}
           />
           <Tile
             icon={<Repeat size={16} strokeWidth={2.25} aria-hidden />}
@@ -118,6 +131,7 @@ export const CommittedSection = async ({ data }: Props) => {
             label={t('recurring_expense')}
             hint={t('next_month')}
             amount={ars.recurringExpense}
+            usdAmount={usd.recurringExpense}
           />
         </div>
 
@@ -162,22 +176,6 @@ export const CommittedSection = async ({ data }: Props) => {
             </p>
           </>
         )}
-
-        {/* USD strip — bimoneda por defecto; ceros cuando no hay actividad USD. */}
-        <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border-soft pt-3.5">
-          <span className="rounded-full bg-emerald-soft px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-deep">
-            USD
-          </span>
-          <span className="text-[17px] font-extrabold tracking-tight text-text">
-            <MaskedAmount amount={committedTotal(usd)} currency="USD" showCentsOverride />
-          </span>
-          <span className="ml-auto text-[12.5px] font-semibold text-text-muted">
-            {t('debt')} <MaskedAmount amount={usd.debt} currency="USD" showCentsOverride />
-            {' · '}
-            {t('recurring_expense')}{' '}
-            <MaskedAmount amount={usd.recurringExpense} currency="USD" showCentsOverride />
-          </span>
-        </div>
       </CardContent>
     </Card>
   )

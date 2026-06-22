@@ -60,7 +60,7 @@ export const AccountsCard = async ({ data }: Props) => {
             <p className="min-w-0 text-[13px] font-semibold leading-snug text-text-muted">
               {t('concentration_lead')}
               <br />
-              <span className="font-bold text-text">{dominant.name}</span>{' '}
+              <span className="font-bold text-text">{dominant.institutionName ?? dominant.name}</span>{' '}
               <span className="font-extrabold tabular-nums text-text">
                 <MaskedAmount amount={dominant.ars} currency="ARS" />
               </span>
@@ -97,7 +97,7 @@ export const AccountsCard = async ({ data }: Props) => {
                 style={{ backgroundColor: avatarColor(account.avatar) }}
               />
               <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-text">
-                {account.name}
+                {account.institutionName ?? account.name}
               </span>
               <span
                 className={cn(

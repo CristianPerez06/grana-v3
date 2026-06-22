@@ -167,7 +167,7 @@
     "committed": {
       "title": "Comprometido",
       "question": "Lo que ya sabemos del próximo mes",
-      "total_label": "Total",
+      "total_label": "Total comprometido",
       "debt": "Resúmenes tarjeta",
       "recurring_expense": "Gastos recurrentes",
       "recurring_income": "Ingresos recurrentes",
@@ -183,8 +183,8 @@
       "error": "No pudimos cargar lo que se viene."
     },
     "spent": {
-      "title": "Gastaste este mes",
-      "from_cash": "De tu caja",
+      "title": "Gasté este mes",
+      "from_cash": "De la caja",
       "financed": "Financiado en tarjeta",
       "caption": "<b>{financed}</b> se financió en tarjeta → se paga en los próximos resúmenes."
     },
