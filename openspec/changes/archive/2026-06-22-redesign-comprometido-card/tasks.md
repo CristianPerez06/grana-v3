@@ -38,5 +38,5 @@
 
 - [x] 7.1 `pnpm typecheck` + `pnpm typecheck:mobile` + `pnpm lint` (en verde tras cada chunk)
 - [x] 7.2 Tests de `@grana/dashboard` (30) en verde
-- [ ] 7.3 QA manual: comparar el número de tarjeta del Comprometido contra "A pagar" + "En curso" del módulo Tarjetas (deben coincidir) con datos reales — EN CURSO con el usuario
-- [ ] 7.4 Actualizar el handoff/README y archivar el change (OpenSpec) en la branch antes de mergear
+- [x] 7.3 QA manual: el número de tarjeta del Comprometido coincide con "A pagar" + "En curso" del módulo Tarjetas (confirmado por el usuario con datos reales).
+- [x] 7.4 Handoff/README actualizado y change archivado (OpenSpec sincronizado al spec maestro) en la branch antes de mergear.

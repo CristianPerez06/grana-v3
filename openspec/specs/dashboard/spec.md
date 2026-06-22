@@ -863,40 +863,65 @@ Las preguntas por sección:
 
 ### Requirement: La card "Comprometido" muestra los resúmenes de tarjeta y los gastos fijos del mes próximo (lente COMPROMISO)
 
-El dashboard (web y mobile) SHALL renderizar una card **"Comprometido"** (lente COMPROMISO) que responde "¿qué debo / qué se viene?", con el subtítulo "Lo que ya sabemos del próximo mes". En web se ubica **a la derecha de "Balance del mes"** en una fila de dos columnas; en mobile las cards se apilan (Comprometido debajo de "Balance del mes"). A diferencia de "Balance del mes" y "¿En qué gasté este mes?", esta card SHALL ser **estática "desde hoy"**: NO SHALL responder al navegador de mes (la deuda es un stock del presente y las recurrencias se proyectan al mes próximo). En mobile los datos llegan vía el hook `useCommittedOutlook` (TanStack) sobre `getCommittedOutlook`, con su propio loading/error in-card.
+El dashboard (web y mobile) SHALL renderizar una card **"Comprometido"** (lente COMPROMISO) que responde **"¿qué tengo que pagar y todavía no pagué?"**, con el subtítulo "Plata que ya está comprometida". En web se ubica **a la derecha de "Balance del mes"** en una fila de dos columnas; en mobile las cards se apilan (Comprometido debajo de "Balance del mes"). Esta card SHALL ser **estática "desde hoy"**: NO SHALL responder al navegador de mes. En mobile los datos llegan vía el hook `useCommittedOutlook` (TanStack) sobre `getCommittedOutlook`, con su propio loading/error in-card.
 
-La card SHALL presentar, **por moneda y sin combinar ARS con USD** (bimoneda por defecto):
+La card SHALL presentar, **por moneda y sin combinar ARS con USD** (bimoneda por defecto; el USD SHALL mostrarse de forma **consistente** en el total y en cada sección, con ceros cuando no hay actividad USD):
 
-- Un **total comprometido** como titular = lo que SALE = `resúmenesTarjeta + gastosRecurrentes`. El total NO SHALL incluir los ingresos recurrentes (un ingreso no es un compromiso).
-- **Dos mini-tiles de egreso** (sin gráfico): una "Resúmenes tarjeta" y otra "Gastos recurrentes" (rotulada como del mes próximo), cada una con ícono + label + monto. NO SHALL usar el patrón `FlowRow` de barras para estos egresos.
-  - **"Resúmenes tarjeta"** = la suma de los cargos pendientes de TODOS los resúmenes impagos de las tarjetas del usuario: consumos `pending` menos los reintegros recibidos imputados a esos resúmenes, abarcando el resumen **en curso** (open) y los **cerrados/vencidos** sin pagar. NO SHALL proyectarse una línea aparte de "cuotas futuras".
-  - **"Gastos recurrentes"** = la proyección de las reglas de recurrencia activas tipo `expense` cuyas ocurrencias caen en el **mes calendario siguiente** a hoy, sumando el monto de cada ocurrencia por moneda.
-- **Estado con ingreso recurrente** (cuando la proyección de reglas tipo `income` del mes próximo es > 0 en la moneda): la card SHALL agregar un sub-label "YA SALE" sobre las tiles de egreso, una **tile "Ya entra"** a ancho completo, destacada en emerald, con el label del ingreso recurrente y su monto en positivo; y una **banda de cierre neto** con `neto = ingresosRecurrentes − totalComprometido`. Si `neto ≥ 0`, la banda comunica en tono positivo que el próximo mes "arrancás con **+neto** a favor"; si `neto < 0`, la banda comunica el déficit en tono expense sin ocultarlo. El ingreso recurrente SHALL seguir mostrándose como contexto y NO SHALL sumarse al total comprometido; el cierre neto es un cálculo presentacional aparte. Las recurrencias tipo `transfer` NO SHALL contabilizarse.
-- Si NO hay ingreso recurrente en la moneda (proyección `income` = 0), la card NO SHALL mostrar el sub-label "YA SALE", ni la tile "Ya entra", ni la banda de cierre neto.
+- Un **total a pagar** como titular = `tarjetaAPagar + recurrenciasPendientesDeConfirmar`. El total NO SHALL incluir proyecciones del mes próximo ni los ingresos recurrentes.
+- Una **sección "Resúmenes de tarjeta"**: su monto = "A pagar" (resúmenes cerrados/vencidos impagos) **+ "En curso"** (el resumen abierto que está acumulando) del módulo Tarjetas — todo lo que ya debés de la tarjeta. Es la suma de consumos `pending` menos los reintegros recibidos imputados, sobre los resúmenes **ya empezados** (`start_date <= hoy`). EXCLUYE los resúmenes **futuros** (`start_date > hoy`: cuotas 2..N, períodos proyectados) — esa era la inflación. La sección SHALL listar los **3-4 consumos de mayor monto** (fecha, descripción, monto) y un enlace "ver más" cuando hay más.
+- Una **sección "Recurrencias · pendientes de confirmar"** = suma de las instancias de recurrencia tipo `expense` con `status='pending'` (ya generadas, esperando confirmación del usuario). SHALL listar las **3-4 de mayor monto**. La card NO SHALL proyectar una línea de "fijos del próximo mes": una recurrencia, al llegar su momento, se vuelve "pendiente de confirmar" (y si se confirma con tarjeta de crédito, su deuda ya queda contemplada en la sección Tarjeta), por lo que una proyección futura no es una obligación presente.
+- **Aviso de vencido**: cuando parte del monto "tarjeta a pagar" corresponde a resúmenes **vencidos** (`due_date < hoy`), la card SHALL mostrar un aviso compacto "incluye $X vencido"; si no hay deuda vencida, NO SHALL mostrarlo.
+- **Estado con ingreso recurrente** (cuando la proyección de reglas tipo `income` del mes próximo es > 0 en la moneda): la card SHALL mostrar, **como contexto**, el ingreso recurrente "Ya entra" y una **banda de cierre neto** con `neto = ingresosRecurrentes − totalAPagar`, sin sumar el ingreso al total a pagar. Las recurrencias tipo `transfer` NO SHALL contabilizarse.
+- **Etiqueta de cada movimiento listado**: descripción del movimiento; si está vacía, SHALL caer a la **subcategoría** y luego a la **categoría** (nunca un guión/blanco si hay categoría).
+- **Prioridad del detalle de movimientos**: para no recargar la card, el listado de movimientos SHALL mostrarse para UNA sección priorizando **Recurrencias**: si hay recurrencias pendientes, se listan ésas; si no hay, se listan los consumos de tarjeta de mayor monto. Los subtotales de ambas secciones se muestran siempre.
 
-Todos los importes SHALL participar del eye-mask. La proyección de recurrencias SHALL reusar `projectUpcomingOccurrences` de `@grana/money-logic`; la deuda de tarjeta SHALL reusar la lógica de pendientes por resumen ya existente, sin duplicar la matemática del neto. El cierre neto SHALL derivarse de los datos, sin hardcodear.
+Todos los importes SHALL participar del eye-mask. La proyección del ingreso recurrente del mes próximo ("Ya entra") SHALL reusar `projectUpcomingOccurrences` de `@grana/money-logic`; las pendientes de confirmar SHALL reusar `getPendingRecurrenceInstances`; el monto "a pagar" de tarjeta SHALL reusar la lógica de pendientes por resumen del módulo Tarjetas (`apps/web/lib/cards/month-summary.ts`) sin duplicar la matemática. La card SHALL tolerar datos parciales: si la query falla, SHALL mostrar un error compacto sin romper el resto del dashboard. Su estado de carga SHALL renderizarse como skeleton shape-matched (chrome/título visibles).
 
-La card SHALL tolerar datos parciales: si la query falla, SHALL mostrar un error compacto sin romper el resto del dashboard. Su estado de carga SHALL renderizarse como skeleton shape-matched (chrome/título visibles).
+#### Scenario: El total a pagar suma tarjeta a pagar + recurrencias pendientes de confirmar
 
-#### Scenario: La card muestra el total y los egresos como dos tiles, sin ingreso recurrente
+- **WHEN** el usuario tiene "tarjeta a pagar" por ARS $419.840 y recurrencias pendientes de confirmar por ARS $142.500
+- **THEN** la card muestra el total a pagar `$562.340`
+- **AND** muestra la sección "Tarjeta · a pagar" con subtotal `$419.840` y la sección "Recurrencias" con "Pendientes de confirmar" `$142.500`
 
-- **WHEN** el usuario tiene resúmenes de tarjeta impagos por ARS $712.182 y gastos recurrentes proyectados al mes próximo por ARS $106.966, sin ingresos recurrentes
-- **THEN** la card muestra el total comprometido `$819.148` (= resúmenes + gastos recurrentes)
-- **AND** muestra dos mini-tiles: "Resúmenes tarjeta" en `$712.182` y "Gastos recurrentes" en `$106.966`
-- **AND** NO muestra el sub-label "YA SALE", ni la tile "Ya entra", ni la banda de cierre neto
+#### Scenario: El monto de tarjeta = "A pagar" + "En curso" y excluye los resúmenes futuros
 
-#### Scenario: Con ingreso recurrente aparece la tile "Ya entra" y el cierre neto
+- **WHEN** el usuario tiene resúmenes cerrados/vencidos impagos por ARS $300.000, un resumen en curso acumulando ARS $119.840 y cuotas en resúmenes que aún no empezaron (`start_date > hoy`)
+- **THEN** la sección "Resúmenes de tarjeta" muestra `$419.840` (= "A pagar" + "En curso" del módulo Tarjetas)
+- **AND** NO incluye los resúmenes futuros (cuotas 2..N / períodos proyectados)
 
-- **WHEN** además de un total comprometido de ARS $819.149, el usuario tiene un ingreso recurrente (sueldo) proyectado al mes próximo por ARS $1.450.000
-- **THEN** la card muestra el sub-label "YA SALE" sobre las dos tiles de egreso
-- **AND** muestra una tile "Ya entra" a ancho completo en emerald con `+$1.450.000`
-- **AND** muestra la banda de cierre neto en tono positivo indicando que el próximo mes arranca con `+$630.851` a favor (= 1.450.000 − 819.149)
-- **AND** el total comprometido sigue siendo `$819.149` (el ingreso NO se sumó al total)
+#### Scenario: La card no proyecta los fijos del próximo mes
 
-#### Scenario: La card "Comprometido" se renderiza en mobile
+- **WHEN** el usuario tiene reglas de recurrencia activas que recién ocurrirán el mes próximo (aún sin instancia generada)
+- **THEN** la card NO muestra una línea de "fijos del próximo mes"
+- **AND** sólo cuenta las recurrencias con instancia `pending` (pendientes de confirmar)
 
-- **WHEN** un usuario abre el dashboard nativo con deuda de tarjeta y/o recurrencias activas
-- **THEN** la pantalla nativa muestra la card "Comprometido" debajo de "Balance del mes" con el total + las dos tiles de egreso
+#### Scenario: Con ingreso recurrente aparece "Ya entra" y el cierre neto como contexto
+
+- **WHEN** además del total a pagar de ARS $562.340, el usuario tiene un ingreso recurrente (sueldo) proyectado al mes próximo por ARS $1.450.000
+- **THEN** la card muestra el contexto "Ya entra" con `+$1.450.000` y una banda de cierre neto indicando que arranca con `+$887.660` a favor (= 1.450.000 − 562.340)
+- **AND** el total a pagar sigue siendo `$562.340` (el ingreso NO se sumó)
+
+#### Scenario: El aviso de vencido aparece sólo cuando hay deuda vencida
+
+- **WHEN** del monto "tarjeta a pagar" hay ARS $12.000 en resúmenes con `due_date` anterior a hoy
+- **THEN** la card muestra el aviso "incluye $12.000 vencido"
+- **WHEN** no hay resúmenes vencidos
+- **THEN** la card NO muestra el aviso de vencido
+
+#### Scenario: Cada sección lista sus movimientos de mayor monto
+
+- **WHEN** la sección "Tarjeta · a pagar" cubre 11 consumos
+- **THEN** la card lista los 3-4 de mayor monto (fecha, descripción, monto) y un enlace "ver más"
+
+#### Scenario: USD consistente en total y secciones
+
+- **WHEN** el usuario tiene actividad en ARS y consumos pendientes en USD
+- **THEN** el total a pagar y cada sección muestran su línea USD (con ceros donde no hay actividad USD), sin convertir ni sumar entre monedas
+
+#### Scenario: La card "Comprometido" se renderiza en mobile con el mismo modelo
+
+- **WHEN** un usuario abre el dashboard nativo con deuda de tarjeta y/o recurrencias
+- **THEN** la pantalla nativa muestra la card "Comprometido" debajo de "Balance del mes" con el total a pagar + las secciones Tarjeta y Recurrencias
 - **AND** los datos provienen del hook `useCommittedOutlook` sobre `getCommittedOutlook`
 - **AND** la card NO responde al navegador de mes
 
@@ -904,24 +929,17 @@ La card SHALL tolerar datos parciales: si la query falla, SHALL mostrar un error
 
 - **WHEN** el usuario navega el selector de mes a un mes anterior
 - **THEN** "Balance del mes" y "¿En qué gasté este mes?" cambian al mes navegado
-- **AND** la card "Comprometido" NO cambia: sigue mostrando los resúmenes de hoy, los recurrentes del mes próximo y el cierre neto si aplica
+- **AND** la card "Comprometido" NO cambia
 
-#### Scenario: Bimoneda separada
+#### Scenario: Sin deuda ni recurrencias muestra un estado vacío neutral
 
-- **WHEN** el usuario tiene resúmenes y recurrencias en ARS y también consumos pendientes en USD
-- **THEN** la card muestra los totales y tiles de ARS y USD por separado, sin convertir ni sumar entre monedas
-
-#### Scenario: Sin resúmenes ni recurrencias muestra un estado vacío neutral
-
-- **WHEN** el usuario no tiene deuda de tarjeta ni reglas de recurrencia activas
+- **WHEN** el usuario no tiene tarjeta a pagar, ni recurrencias pendientes, ni fijos del mes próximo
 - **THEN** la card muestra un estado vacío neutral y NO desaparece del layout
 
 #### Scenario: Los importes participan del eye-mask
 
 - **WHEN** el usuario activa el eye toggle
-- **THEN** el total comprometido, los montos de las tiles, el ingreso "Ya entra" y el neto del cierre quedan enmascarados
-
----
+- **THEN** el total a pagar, los subtotales de cada sección, los montos de los movimientos listados y el contexto de ingreso/neto quedan enmascarados
 
 ### Requirement: El dashboard muestra cuánto del gasto del mes se financió en tarjeta
 
