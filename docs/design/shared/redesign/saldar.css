@@ -1,0 +1,126 @@
+/* ════════════════════════════════════════════════════════════════
+   saldar.css — drawer "Saldar" + superficies del flujo (enviado, tarea
+   de Caro, recibo). Overlay igual que alta de movimiento del repo.
+   Una sola moneda por flujo (hoy ARS, Juli es el deudor). Se carga junto
+   a shared.css.
+   ════════════════════════════════════════════════════════════════ */
+
+/* fondo / scrim del overlay (en el artboard) */
+.scrim { min-height: 100%; background: rgba(11,26,43,.5); display: flex; justify-content: center; align-items: flex-start; padding: 30px 34px 40px; }
+.scrim.col { flex-direction: column; align-items: center; gap: 18px; }
+
+/* panel del drawer */
+.drawer { width: 480px; max-width: 100%; background: var(--card); border-radius: 24px; box-shadow: 0 30px 70px -20px rgba(11,26,43,.5); overflow: hidden; display: flex; flex-direction: column; }
+.dh { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 22px 24px 14px; }
+.dh .eyebrow { display: block; margin-bottom: 4px; }
+.dh h2 { font-size: 21px; font-weight: 800; letter-spacing: -0.025em; color: var(--ink); }
+.dh .x { width: 34px; height: 34px; border-radius: 999px; border: none; background: var(--line); color: var(--muted); display: grid; place-items: center; flex: none; }
+.dh .x svg { width: 16px; height: 16px; stroke-width: 2.4; }
+.dbody { padding: 4px 24px 8px; display: flex; flex-direction: column; gap: 18px; }
+.dfoot { padding: 16px 24px 22px; margin-top: 6px; }
+.dfoot .btn-pri { width: 100%; justify-content: center; font-size: 15.5px; padding: 14px; border-radius: 14px; }
+.dfoot .cancel { display: block; text-align: center; margin-top: 10px; color: var(--muted); font-size: 13.5px; font-weight: 700; background: none; border: none; width: 100%; }
+
+/* bloque de deuda (avatares J → C) */
+.deuda { display: flex; align-items: center; gap: 14px; background: var(--terracota-soft); border-radius: 16px; padding: 15px 16px; }
+.deuda .avs { display: inline-flex; align-items: center; gap: 8px; flex: none; }
+.deuda .av { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 14px; font-weight: 800; }
+.deuda .av.j { background: var(--juli); } .deuda .av.c { background: var(--caro); }
+.deuda .arr { color: var(--terracota); display: grid; place-items: center; }
+.deuda .arr svg { width: 18px; height: 18px; stroke-width: 2.2; }
+.deuda .txt { font-size: 14px; font-weight: 700; color: var(--ink); }
+.deuda .txt b { color: var(--terracota); }
+.deuda .txt .s { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+
+/* sección genérica */
+.fld { display: flex; flex-direction: column; gap: 9px; }
+.fld > .lbl { font-size: 12.5px; font-weight: 800; color: var(--ink); letter-spacing: -0.01em; }
+.fld > .lbl .hint { font-weight: 600; color: var(--muted); }
+
+/* monto */
+.amount { display: flex; align-items: center; gap: 8px; border: 2px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+.amount.focus { border-color: var(--emerald); }
+.amount .cur { font-size: 24px; font-weight: 700; color: var(--faint); }
+.amount input, .amount .val { border: none; outline: none; font-family: inherit; font-size: 30px; font-weight: 800; letter-spacing: -0.03em; color: var(--ink); width: 100%; font-variant-numeric: tabular-nums; background: none; }
+.quick { display: flex; gap: 8px; }
+.qbtn { flex: 1; border: 1px solid var(--border); background: var(--card); border-radius: 11px; padding: 9px 6px; font-size: 13px; font-weight: 700; color: var(--ink); }
+.qbtn.on { border-color: var(--emerald); background: var(--emerald-soft); color: var(--emerald-deep); }
+.qbtn .sub { display: block; font-size: 10.5px; font-weight: 600; color: var(--muted); margin-top: 1px; }
+.qbtn.on .sub { color: var(--emerald-deep); }
+
+/* cuentas de origen */
+.accs { display: flex; flex-direction: column; gap: 8px; }
+.acc { display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--border); border-radius: 13px; padding: 12px 14px; cursor: pointer; transition: border-color .12s, background .12s; }
+.acc.on { border-color: var(--emerald); background: var(--emerald-soft); }
+.acc .mk { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: #fff; flex: none; }
+.acc .mk svg { width: 17px; height: 17px; stroke-width: 2; }
+.acc .nm { font-size: 14px; font-weight: 700; color: var(--ink); }
+.acc .nm .s { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); margin-top: 1px; }
+.acc .bal { margin-left: auto; text-align: right; }
+.acc .bal .b { display: block; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); letter-spacing: -0.02em; }
+.acc .bal .bl { display: block; font-size: 10.5px; font-weight: 700; color: var(--faint); text-transform: uppercase; letter-spacing: .04em; margin-top: 1px; }
+.acc .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); flex: none; display: grid; place-items: center; }
+.acc.on .radio { border-color: var(--emerald); }
+.acc.on .radio::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--emerald); }
+
+/* restante después del pago */
+.restante { display: flex; align-items: center; gap: 10px; padding: 13px 16px; background: var(--emerald-soft); border-radius: 13px; }
+.restante svg { width: 18px; height: 18px; stroke-width: 2.4; color: var(--emerald-deep); flex: none; }
+.restante .t { font-size: 13px; font-weight: 700; color: var(--emerald-deep); }
+.restante .t b { font-weight: 800; }
+.restante.partial { background: var(--slate-soft); }
+.restante.partial svg, .restante.partial .t { color: var(--slate); }
+
+/* aviso no bloqueante de saldo negativo */
+.aviso { display: flex; gap: 11px; padding: 13px 15px; background: var(--amber-soft); border-radius: 13px; }
+.aviso svg { width: 18px; height: 18px; stroke-width: 2.4; color: #B97A1C; flex: none; margin-top: 1px; }
+.aviso .t { font-size: 12.5px; font-weight: 600; color: #6B5326; line-height: 1.45; }
+.aviso .t b { color: #5A4012; font-weight: 800; }
+
+/* microcopy explicativo */
+.micro { font-size: 12.5px; font-weight: 600; color: var(--muted); line-height: 1.5; padding: 0 2px; }
+.micro b { color: var(--ink); font-weight: 700; }
+
+/* ── vista de impacto (V3): antes → después ── */
+.impact { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
+.impact .ic { border: 1.5px solid var(--border); border-radius: 14px; padding: 14px; text-align: center; }
+.impact .ic .k { font-size: 11px; font-weight: 700; color: var(--muted); }
+.impact .ic .v { font-size: 20px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; margin-top: 5px; color: var(--ink); }
+.impact .ic .v.was { color: var(--faint); text-decoration: line-through; font-size: 15px; }
+.impact .ic .v.zero { color: var(--emerald-deep); }
+.impact .ic .v.neg { color: var(--terracota); }
+.impact .ar { color: var(--faint); }
+.impact .ar svg { width: 20px; height: 20px; stroke-width: 2.4; }
+
+/* ════ superficies del flujo (estado) ════ */
+.surf { width: 460px; max-width: 100%; background: var(--card); border-radius: 22px; box-shadow: 0 20px 50px -22px rgba(11,26,43,.4); overflow: hidden; }
+.surf-pad { padding: 24px 26px; }
+.state-top { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.state-ic { width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center; flex: none; }
+.state-ic svg { width: 22px; height: 22px; stroke-width: 2.2; }
+.state-ic.sent { background: var(--amber-soft); color: #B97A1C; }
+.state-ic.task { background: var(--slate-soft); color: var(--slate); }
+.state-ic.done { background: var(--emerald-soft); color: var(--emerald-deep); }
+.state-h { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); }
+.state-h .s { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+.surf-label { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); margin-bottom: 9px; }
+.flow-arrow { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--faint); }
+.flow-arrow svg { width: 22px; height: 22px; }
+.flow-cap { font-size: 11.5px; font-weight: 700; }
+.recibo-line { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; color: var(--ink); padding: 13px 0; border-top: 1px solid var(--line); margin-top: 4px; }
+.recibo-line .rl { font-weight: 600; color: var(--muted); }
+.persona-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; padding: 4px 9px 4px 5px; border-radius: 999px; background: var(--line); color: var(--muted); }
+.persona-tag .pdot { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 9px; font-weight: 800; }
+.persona-tag .pdot.j { background: var(--juli); } .persona-tag .pdot.c { background: var(--caro); }
+
+/* ── mobile: drawer como bottom sheet a ancho completo ── */
+@media (max-width: 560px) {
+  .scrim { align-items: flex-end; padding: 0; }
+  .scrim.col { align-items: stretch; padding: 16px 14px 28px; }
+  .drawer { width: 100%; max-width: 100%; border-radius: 22px 22px 0 0; }
+  .surf { width: 100%; }
+  .dh h2 { font-size: 19px; }
+  .amount-hero .big { font-size: 44px; }
+  .impact { grid-template-columns: 1fr; gap: 8px; }
+  .impact .ar { transform: rotate(90deg); justify-self: center; }
+}

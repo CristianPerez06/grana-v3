@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Saldar · resto del flujo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="shared.css" />
+<link rel="stylesheet" href="saldar.css" />
+<style>
+  .scrim.col { background: var(--bg); }
+  .step-tag { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); align-self: flex-start; margin: 4px 0 -8px 4px; }
+  .step-tag b { color: var(--ink); }
+</style>
+</head>
+<body data-screen-label="Saldar · resto del flujo">
+  <div class="scrim col" data-screen-label="Saldar flujo">
+
+    <!-- 1 · ENVIADO (lo ve Juli en la cuenta corriente) -->
+    <div class="step-tag">1 · lo ve <b>Juli</b> en la cuenta corriente</div>
+    <div class="surf">
+      <div class="surf-pad">
+        <div class="state-top">
+          <span class="state-ic sent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></span>
+          <span class="state-h">Enviado · $1.250<span class="s">Esperando que Caro confirme en qué cuenta lo recibió</span></span>
+        </div>
+        <p class="micro" style="margin-top:8px">Tu deuda ya figura en <b>$0</b>. Cuando Caro confirme, la liquidación pasa a <b>completada</b>. No hace falta que hagas nada más.</p>
+      </div>
+    </div>
+
+    <div class="flow-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></div>
+
+    <!-- 2 · TAREA DE CARO (otra superficie: a Caro le llega para confirmar) -->
+    <div class="step-tag">2 · le llega a <b>Caro</b> como tarea pendiente (otra superficie)</div>
+    <div class="surf">
+      <div class="surf-pad">
+        <div class="state-top">
+          <span class="state-ic task"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>
+          <span class="state-h">Juli te pagó $1.250<span class="s">Confirmá en qué cuenta lo recibiste para cerrar la deuda</span></span>
+        </div>
+        <div class="fld" style="margin-top:16px">
+          <span class="lbl">¿En qué cuenta lo recibiste?</span>
+          <div class="accs">
+            <div class="acc on">
+              <span class="mk" style="background:var(--amber)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M2 10h20"/></svg></span>
+              <span class="nm">Galicia<span class="s">Caro</span></span>
+              <span class="bal"><span class="b tnum">$31.900</span><span class="bl">saldo</span></span>
+              <span class="radio"></span>
+            </div>
+            <div class="acc">
+              <span class="mk" style="background:var(--emerald)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M2 10h20"/></svg></span>
+              <span class="nm">Mercado Pago<span class="s">Caro</span></span>
+              <span class="bal"><span class="b tnum">$8.420</span><span class="bl">saldo</span></span>
+              <span class="radio"></span>
+            </div>
+          </div>
+        </div>
+        <p class="micro" style="margin-top:14px">Al confirmar, tu saldo de <b>Galicia</b> sube $1.250 y la deuda de Juli con vos queda en <b>$0</b>.</p>
+        <button class="btn-pri" style="width:100%;justify-content:center;margin-top:14px;padding:13px;border-radius:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Confirmar recepción</button>
+      </div>
+    </div>
+
+    <div class="flow-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></div>
+
+    <!-- 3 · RECIBO COMPLETADA (ambos lo ven en la cuenta corriente) -->
+    <div class="step-tag">3 · recibo · lo ven <b>los dos</b> en la cuenta corriente</div>
+    <div class="surf">
+      <div class="surf-pad">
+        <div class="state-top">
+          <span class="state-ic done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+          <span class="state-h">Liquidación completada<span class="s">La deuda en pesos quedó en $0</span></span>
+        </div>
+        <div class="recibo-line"><span class="rl">Monto</span><b class="tnum" style="margin-left:auto">$1.250</b></div>
+        <div class="recibo-line"><span class="rl">Fecha</span><b style="margin-left:auto">18 jun 2026</b></div>
+        <div class="recibo-line"><span class="rl">Movimiento</span><span style="margin-left:auto;display:flex;align-items:center;gap:8px"><span class="persona-tag"><span class="pdot j">J</span>Mercado Pago</span><svg viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span class="persona-tag"><span class="pdot c">C</span>Galicia</span></span></div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

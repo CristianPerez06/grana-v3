@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Saldar · finalista</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="shared.css" />
+<link rel="stylesheet" href="saldar.css" />
+<style>
+  .amount-hero { text-align: center; padding: 6px 0 2px; }
+  .amount-hero .k { font-size: 12.5px; font-weight: 700; color: var(--muted); }
+  .amount-hero .k b { color: var(--ink); }
+  .amount-hero .big { font-size: 50px; font-weight: 800; letter-spacing: -0.05em; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.05; margin-top: 4px; }
+  .amount-hero .big .cur { color: var(--faint); font-weight: 700; }
+  /* dropdown de cuenta */
+  .picker { position: relative; }
+  .picker-trigger { display: flex; align-items: center; gap: 12px; width: 100%; border: 1.5px solid var(--border); border-radius: 13px; padding: 12px 14px; background: var(--card); cursor: pointer; text-align: left; }
+  .picker-trigger.open { border-color: var(--emerald); }
+  .picker-trigger .chev { margin-left: auto; color: var(--muted); transition: transform .2s; }
+  .picker-trigger .chev svg { width: 16px; height: 16px; stroke-width: 2.4; }
+  .picker.open .picker-trigger .chev { transform: rotate(180deg); }
+  .picker-menu { position: absolute; left: 0; right: 0; top: calc(100% + 6px); background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 18px 44px -16px rgba(11,26,43,.45); padding: 6px; z-index: 5; display: none; }
+  .picker.open .picker-menu { display: block; }
+  .picker-opt { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px; cursor: pointer; }
+  .picker-opt:hover { background: var(--line); }
+  .picker-opt.sel { background: var(--emerald-soft); }
+  .picker .nm .s, .picker-opt .nm .s { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); margin-top: 1px; }
+  .picker .nm, .picker-opt .nm { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .picker-opt .bal { margin-left: auto; font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .picker-opt .ck { width: 18px; height: 18px; color: var(--emerald-deep); flex: none; opacity: 0; }
+  .picker-opt.sel .ck { opacity: 1; }
+</style>
+</head>
+<body data-screen-label="Saldar finalista (monto + impacto + selector)">
+  <div class="scrim" data-screen-label="Saldar finalista">
+    <div class="drawer">
+      <div class="dh">
+        <div><span class="eyebrow">Compartido · Caro</span><h2>Saldar</h2></div>
+        <button class="x" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="dbody">
+        <div class="amount-hero">
+          <div class="k">Le pagás a Caro · de <b>$1.250</b> que le debés en pesos</div>
+          <div class="big tnum"><span class="cur">$</span><span id="amt">1.250</span></div>
+        </div>
+        <div class="quick" id="quick">
+          <button class="qbtn on" data-amt="1250">Total<span class="sub">$1.250</span></button>
+          <button class="qbtn" data-amt="500">$500</button>
+          <button class="qbtn" data-amt="1000">$1.000</button>
+        </div>
+
+        <div class="fld">
+          <span class="lbl">Pagar desde</span>
+          <div class="picker" id="picker">
+            <button class="picker-trigger" id="trigger">
+              <span class="mk" id="trMk" style="background:var(--emerald);width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;flex:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px"><rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M2 10h20"/></svg></span>
+              <span class="nm" id="trNm">Mercado Pago<span class="s" id="trSub">disponible $48.300</span></span>
+              <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+            </button>
+            <div class="picker-menu" id="menu"></div>
+          </div>
+        </div>
+
+        <div class="fld">
+          <span class="lbl">Qué pasa al pagar</span>
+          <div class="impact">
+            <div class="ic"><div class="k" id="icAccName">Mercado Pago</div><div class="v was tnum" id="icWas">$48.300</div><div class="v tnum" id="icNow">$47.050</div></div>
+            <div class="ar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+            <div class="ic"><div class="k">Deuda con Caro</div><div class="v was tnum">$1.250</div><div class="v zero tnum" id="icDebt">$0</div></div>
+          </div>
+        </div>
+
+        <div class="aviso" id="aviso" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/></svg><span class="t" id="avisoTxt"></span></div>
+
+        <div class="restante" id="restante"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><span class="t" id="restTxt">Tu deuda con Caro queda en <b>$0</b>.</span></div>
+
+        <p class="micro">Caro va a <b>confirmar en qué cuenta</b> lo recibió; recién ahí la liquidación queda completada. Los dólares siguen su propia cuenta.</p>
+      </div>
+      <div class="dfoot">
+        <button class="btn-pri" id="payBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> <span id="payLbl">Pagar $1.250 a Caro</span></button>
+        <button class="cancel">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var DEBT = 1250;
+      var accs = [
+        { id:'mp', nm:'Mercado Pago', sub:'Juli', bal:48300, color:'var(--emerald)' },
+        { id:'gal', nm:'Galicia', sub:'Caja de ahorro', bal:12500, color:'var(--amber)' },
+        { id:'bru', nm:'Brubank', sub:'Cuenta', bal:900, color:'var(--violet)' },
+      ];
+      var amount = 1250, accId = 'mp';
+      var fmt = function (v) { return '$' + Math.round(v).toLocaleString('es-AR'); };
+      var fmtSigned = function (v) { return (v < 0 ? '−$' : '$') + Math.abs(Math.round(v)).toLocaleString('es-AR'); };
+      var cardSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px"><rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M2 10h20"/></svg>';
+      var checkSvg = '<svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+
+      var $ = function (id) { return document.getElementById(id); };
+
+      function buildMenu() {
+        $('menu').innerHTML = accs.map(function (a) {
+          return '<div class="picker-opt' + (a.id === accId ? ' sel' : '') + '" data-id="' + a.id + '">'
+            + '<span class="mk" style="background:' + a.color + ';width:32px;height:32px;border-radius:9px;display:grid;place-items:center;color:#fff;flex:none">' + cardSvg + '</span>'
+            + '<span class="nm">' + a.nm + '<span class="s">' + a.sub + '</span></span>'
+            + '<span class="bal">' + fmt(a.bal) + '</span>' + checkSvg + '</div>';
+        }).join('');
+        $('menu').querySelectorAll('.picker-opt').forEach(function (o) {
+          o.addEventListener('click', function () { accId = o.dataset.id; $('picker').classList.remove('open'); render(); });
+        });
+      }
+
+      function render() {
+        var a = accs.filter(function (x) { return x.id === accId; })[0];
+        $('amt').textContent = Math.round(amount).toLocaleString('es-AR');
+        // trigger
+        $('trMk').style.background = a.color;
+        $('trNm').firstChild.textContent = a.nm;
+        $('trSub').textContent = 'disponible ' + fmt(a.bal);
+        // impact
+        var after = a.bal - amount;
+        $('icAccName').textContent = a.nm;
+        $('icWas').textContent = fmt(a.bal);
+        $('icNow').textContent = fmtSigned(after);
+        $('icNow').className = 'v tnum' + (after < 0 ? ' neg' : '');
+        // resto deuda
+        var resto = DEBT - amount;
+        if (resto <= 0) {
+          $('restante').className = 'restante';
+          $('restTxt').innerHTML = 'Tu deuda con Caro queda en <b>$0</b>.';
+          $('icDebt').textContent = '$0'; $('icDebt').className = 'v zero tnum';
+        } else {
+          $('restante').className = 'restante partial';
+          $('restTxt').innerHTML = 'Pago parcial · quedan <b>' + fmt(resto) + '</b> registrados en la cuenta corriente.';
+          $('icDebt').textContent = fmt(resto); $('icDebt').className = 'v tnum';
+        }
+        // aviso negativo
+        if (after < 0) {
+          $('aviso').style.display = 'flex';
+          $('avisoTxt').innerHTML = '<b>Ojo:</b> ' + a.nm + ' queda en <b>' + fmtSigned(after) + '</b> después de este pago. Podés pagar igual, es solo un aviso.';
+        } else { $('aviso').style.display = 'none'; }
+        // button
+        $('payLbl').textContent = 'Pagar ' + fmt(amount) + ' a Caro';
+        // quick chips on-state
+        $('quick').querySelectorAll('.qbtn').forEach(function (b) { b.classList.toggle('on', parseInt(b.dataset.amt, 10) === amount); });
+      }
+
+      $('trigger').addEventListener('click', function () { $('picker').classList.toggle('open'); });
+      document.addEventListener('click', function (e) { if (!$('picker').contains(e.target)) $('picker').classList.remove('open'); });
+      $('quick').querySelectorAll('.qbtn').forEach(function (b) {
+        b.addEventListener('click', function () { amount = parseInt(b.dataset.amt, 10); render(); });
+      });
+
+      buildMenu();
+      render();
+    })();
+  </script>
+</body>
+</html>

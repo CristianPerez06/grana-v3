@@ -1,0 +1,64 @@
+/* ════════════════════════════════════════════════════════════════
+   mobile.css — adaptación responsive de la HOME (home4) y la CUENTA
+   CORRIENTE a ancho de teléfono (~390px). Mismo HTML; se carga ÚLTIMO
+   (después de los <style> inline) para ganar el cascade en mobile.
+   ════════════════════════════════════════════════════════════════ */
+@media (max-width: 560px) {
+  .wrap { padding: 16px 14px 36px; }
+  .stack.airy { gap: 14px; }
+
+  /* ── header ── */
+  .topbar { gap: 10px; margin-bottom: 16px; }
+  .topbar h1 { font-size: 22px; }
+  .btn-reg { font-size: 0; padding: 11px; gap: 0; }
+  .btn-reg svg { width: 20px; height: 20px; }
+  .icon-btn { width: 42px; height: 42px; }
+
+  /* ── navegador de mes ── */
+  .monthsel { width: 100%; justify-content: space-between; }
+  .monthsel .lbl { min-width: 0; }
+
+  /* ── hero ── */
+  .hero { padding: 20px 18px; }
+  .hero-top { margin-bottom: 14px; }
+  .hero-cols { grid-template-columns: 1fr; gap: 16px; }
+  .hero-cols .div { display: none; }
+  .hc + .div + .hc { padding-top: 16px; border-top: 1px solid rgba(255,255,255,.12); }
+  .hc .big { font-size: 32px; }
+  .hero-main { flex-direction: column; align-items: stretch; gap: 14px; }
+  .hero-top { flex-wrap: wrap; gap: 8px; }
+  .brk { min-width: 0; padding-bottom: 0; }
+  .neto-block .big { font-size: 38px; }
+  .eq-row { grid-template-columns: 12px 1fr auto 16px; gap: 10px; }
+  .eq-pct { display: none; }
+  .eq-movs-in { padding-left: 26px; }
+
+  /* ── tiles (se deben / se viene) ── */
+  .tiles2 { grid-template-columns: 1fr; gap: 14px; }
+  .spark-svg { height: 84px; }
+
+  /* ── últimos movimientos ── */
+  .lm-row { grid-template-columns: 30px 1fr auto; gap: 11px; }
+
+  /* ════ CUENTA CORRIENTE ════ */
+  .cc-top h1 { font-size: 24px; }
+  .top2 { grid-template-columns: 1fr; }
+  .scard .big { font-size: 36px; }
+  .eq-boxes { grid-template-columns: 1fr 1fr; }
+  .toolbar { flex-wrap: wrap; }
+  .filters { width: 100%; }
+  .filters .fbtn { flex: 1; justify-content: center; }
+
+  /* tabla → lista apilada */
+  .cct-h { display: none; }
+  .cct-r { grid-template-columns: 46px 1fr auto; grid-template-areas: "f mv imp" "f qc sal"; align-items: start; gap: 4px 10px; padding: 13px 16px; }
+  .cct-r .f { grid-area: f; align-self: center; }
+  .cct-r .mv { grid-area: mv; }
+  .cct-r .qc { grid-area: qc; font-size: 12px; }
+  .cct-r .imp { grid-area: imp; align-self: center; }
+  .cct-r .sal { grid-area: sal; font-size: 12px; color: var(--soft); }
+
+  /* lo que se viene (proyección) */
+  .prox-row { flex-wrap: wrap; gap: 8px 10px; }
+  .prox-row .pi { width: 100%; margin-left: 0; text-align: left; }
+}

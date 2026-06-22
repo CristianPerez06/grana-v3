@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HOME visual · v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="shared.css" />
+<link rel="stylesheet" href="home2.css" />
+<link rel="stylesheet" href="home3.css" />
+<style>
+  /* se deben · tile más lindo */
+  .tile.deben-t { padding: 22px 24px 20px; }
+  .tile.deben-t .people-c { gap: 18px; margin-top: 4px; }
+  .tile.deben-t .people-c .av { width: 52px; height: 52px; font-size: 20px; box-shadow: 0 6px 16px -6px rgba(11,26,43,.35); }
+  .tile.deben-t .people-c .mid .amt { font-size: 30px; }
+  .tile.deben-t .people-c .mid .ar { width: 78px; height: 3px; }
+  .tile.deben-t .cap { margin-top: 14px; font-size: 12.5px; }
+  .tile .divide { height: 1px; background: var(--line); margin: 16px 0 14px; }
+
+  /* se viene · vuelta de tuerca: proyección como línea ascendente */
+  .tile.viene-t .proj-mini { margin-top: 8px; }
+  .spark-svg { width: 100%; height: 92px; display: block; overflow: visible; }
+  .spark-labels { display: flex; justify-content: space-between; margin-top: 6px; padding: 0 4px; }
+  .spark-labels span { font-size: 11px; font-weight: 700; color: var(--muted); }
+  .spark-labels span.now { color: var(--terracota); }
+  .spark-labels span.end { color: var(--emerald-deep); }
+  .viene-end { display: flex; align-items: baseline; justify-content: center; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .viene-end .v { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; color: var(--emerald-deep); font-variant-numeric: tabular-nums; }
+  .viene-end .l { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .next-chip { display: inline-flex; align-items: center; gap: 8px; margin-top: 2px; padding: 8px 13px; border-radius: 12px; background: var(--amber-soft); color: #B97A1C; font-size: 12.5px; font-weight: 700; width: fit-content; }
+  .next-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); }
+</style>
+<link rel="stylesheet" href="mobile.css" />
+</head>
+<body data-screen-label="HOME visual v2">
+  <div class="wrap stack airy" data-screen-label="HOME visual v2">
+
+    <div class="topbar">
+      <h1>Nosotros&nbsp;♡</h1>
+      <div class="acts">
+        <button class="btn-reg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Registrar movimiento</button>
+        <button class="icon-btn" aria-label="Ajustes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="9" cy="8" r="2.4" fill="var(--card)"/><circle cx="15" cy="16" r="2.4" fill="var(--card)"/></svg></button>
+      </div>
+    </div>
+
+    <div class="month-pill">
+      <div class="monthsel">
+        <button class="nv" aria-label="Mes anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <span class="lbl">Junio de 2026</span>
+        <button class="nv" aria-label="Mes siguiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+      </div>
+    </div>
+
+    <!-- HERO (conservado · liviano) -->
+    <section class="hero">
+      <div class="hero-top"><span class="ttl">Gasto del hogar · neto · junio</span><span class="usd-chip-d">USD · US$ 84,00 neto</span></div>
+      <div class="hero-main">
+        <div class="neto-block"><span class="pl">Costo neto del hogar</span><div class="big tnum"><span class="cur">$</span>130.373</div></div>
+        <div class="brk">
+          <div class="brk-row"><span>Gastaron</span><b>$145.800</b></div>
+          <div class="brk-row win"><span>Reintegros</span><b>−$15.427</b></div>
+        </div>
+      </div>
+      <div class="tuparte">Te toca <b>$65.187</b> · la mitad (split 50·50) · <span class="usd-i">US$ 42 en dólares</span></div>
+      <div class="hero-rule"></div>
+      <div class="eq-head"><span class="ttl2">En qué gastaron</span><div class="seg dark" data-eq-seg="#eq4"><button class="on" data-cur="ARS">ARS</button><button data-cur="USD">USD</button></div></div>
+      <div class="eq-dark" id="eq4" data-eq data-cur="ARS"></div>
+    </section>
+
+    <!-- DOS TILES: se deben (chico+lindo) · lo que se viene (vuelta de tuerca) -->
+    <div class="tiles2">
+      <div class="tile deben-t">
+        <div style="display:flex;align-items:center;justify-content:space-between"><span class="th">Qué se deben hoy</span></div>
+        <div class="people-c">
+          <span class="av j">J</span>
+          <div class="mid"><span class="amt tnum">$1.250</span><span class="ar"><span class="head"></span></span></div>
+          <span class="av c">C</span>
+        </div>
+        <div class="cap">Juli le debe a Caro · en pesos</div>
+        <div class="usd-mini"><span class="ch">USD</span> Caro te debe US$ 12</div>
+        <div class="divide"></div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn-pri" style="flex:1;justify-content:center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Saldar</button>
+          <a class="btn-ghost" href="cuenta-corriente.html" style="flex:none">Cuenta corriente</a>
+        </div>
+      </div>
+
+      <div class="tile viene-t">
+        <div style="display:flex;align-items:center;justify-content:space-between"><span class="th">Lo que se viene</span><span class="tag ghost">Proyección</span></div>
+        <div class="next-chip"><span class="dot"></span>Próximo impacto: <b style="font-weight:800">Cuota Heladera +$16.998</b> · jul</div>
+        <div class="proj-mini">
+          <svg class="spark-svg" viewBox="0 0 300 92" preserveAspectRatio="none" aria-hidden="true">
+            <polyline points="14,74 150,48 286,16" fill="none" stroke="var(--emerald)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="14" cy="74" r="5" fill="var(--terracota)"/>
+            <circle cx="150" cy="48" r="5" fill="var(--emerald)"/>
+            <circle cx="286" cy="16" r="6" fill="var(--emerald)"/>
+          </svg>
+          <div class="spark-labels"><span class="now">hoy −$1.250</span><span>jul</span><span class="end">ago +$37.246</span></div>
+        </div>
+        <div class="viene-end"><span class="v tnum">+$37.246</span><span class="l">saldo proyectado a tu favor · si nadie salda antes</span></div>
+      </div>
+    </div>
+
+    <!-- ÚLTIMOS MOVIMIENTOS (reemplaza la card grande de 'se viene') -->
+    <section class="card card-pad">
+      <div class="card-h"><h2>Últimos movimientos</h2><a class="link" href="#">Ver todos</a></div>
+      <div class="lm">
+        <div class="lm-row"><span class="lm-ic" style="background:var(--violet)"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v10"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg></span><div class="lm-mid"><div class="t">Spotify + Apple</div><div class="s"><span class="pd pd-c" style="width:7px;height:7px;border-radius:50%;display:inline-block"></span> Pagó Caro · 21 jun</div></div><div class="lm-amt"><div class="a">$1.250</div><div class="s">tu parte · total $2.500</div></div></div>
+        <div class="lm-row"><span class="lm-ic" style="background:var(--rose)"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span><div class="lm-mid"><div class="t">Farmacia</div><div class="s"><span class="pd pd-c" style="width:7px;height:7px;border-radius:50%;display:inline-block"></span> Pagó Caro · 15 jun</div></div><div class="lm-amt"><div class="a">$3.500</div><div class="s">tu parte · total $7.000</div></div></div>
+        <div class="lm-row"><span class="lm-ic" style="background:var(--emerald-deep)"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18"/><path d="M4 11a8 8 0 0016 0"/><path d="M9 7c0-1 1-1.5 0-3"/><path d="M13 7c0-1 1-1.5 0-3"/></svg></span><div class="lm-mid"><div class="t">Cena Don Julio</div><div class="s"><span class="pd pd-j" style="width:7px;height:7px;border-radius:50%;display:inline-block"></span> Pagó Juli · 09 jun</div></div><div class="lm-amt"><div class="a">$8.000</div><div class="s">parte de Caro · total $16.000</div></div></div>
+        <div class="lm-row"><span class="lm-ic" style="background:var(--amber)"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13l2-5.5A2 2 0 017 6h10a2 2 0 012 1.5L21 13v4H3z"/><circle cx="8" cy="18.5" r="1.3"/><circle cx="16" cy="18.5" r="1.3"/></svg></span><div class="lm-mid"><div class="t">Súper Coto</div><div class="s"><span class="pd pd-j" style="width:7px;height:7px;border-radius:50%;display:inline-block"></span> Pagó Juli · 05 jun</div></div><div class="lm-amt"><div class="a">$9.225</div><div class="s">parte de Caro · total $18.450</div></div></div>
+      </div>
+    </section>
+
+    <div class="mobile-note"><b>Adaptación mobile:</b> los dos tiles (“qué se deben” / “lo que se viene”) se apilan; el hero queda arriba con el navegador de mes y “últimos movimientos” al final. La línea de proyección y los avatares se mantienen (livianos). El drill abre con tap.</div>
+  </div>
+  <script src="eq-drill.js"></script>
+</body>
+</html>

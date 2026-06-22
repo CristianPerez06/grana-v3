@@ -1,0 +1,153 @@
+/* ════════════════════════════════════════════════════════════════
+   home2.css — HOME ronda 2: hero de V1 (Consumo) + tabs de V4, con el
+   SALDO mucho más presente y "Compromiso" como cuenta corriente
+   proyectada. Se carga junto a shared.css. Tres opciones (A/B/C) varían
+   en cómo se presenta el saldo + saldar (la card que no gustó).
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── header común ── */
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.topbar h1 { font-size: 27px; font-weight: 800; letter-spacing: -0.03em; color: var(--ink); }
+.topbar .acts { display: flex; align-items: center; gap: 10px; }
+.icon-btn { width: 44px; height: 44px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); display: grid; place-items: center; color: var(--muted); }
+.icon-btn svg { width: 19px; height: 19px; stroke-width: 2; }
+.btn-reg { display: inline-flex; align-items: center; gap: 8px; background: var(--emerald); color: #fff; border: none; font-size: 14.5px; font-weight: 700; padding: 12px 20px; border-radius: 999px; letter-spacing: -0.01em; box-shadow: 0 8px 18px -7px rgba(17,185,129,.5); }
+.btn-reg svg { width: 18px; height: 18px; stroke-width: 2.6; }
+
+/* ── tabs (de V4, refinadas) ── */
+.tabs2 { display: flex; gap: 4px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 5px; }
+.tabs2 button { flex: 1; border: none; background: transparent; padding: 11px 14px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; }
+.tabs2 button .tn { font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.tabs2 button .tq { font-size: 13.5px; font-weight: 700; color: var(--muted); letter-spacing: -0.01em; }
+.tabs2 button.on { background: var(--ink); }
+.tabs2 button.on .tn { color: rgba(255,255,255,.6); }
+.tabs2 button.on .tq { color: #fff; }
+.panel2 { display: none; } .panel2.on { display: block; }
+
+/* ── HERO de Consumo (card navy de V1) ── */
+.hero { border-radius: 22px; padding: 26px 30px 28px; background: var(--ink); color: #fff; }
+.hero-top { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+.hero-top .ttl { font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: rgba(255,255,255,.5); }
+.hero .monthsel { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.14); }
+.hero .monthsel .nv { color: rgba(255,255,255,.75); } .hero .monthsel .nv:hover { background: rgba(255,255,255,.12); color: #fff; }
+.hero .monthsel .lbl { color: #fff; }
+.hero-cols { display: grid; grid-template-columns: 1fr 1px 1fr; gap: 30px; align-items: stretch; }
+.hero-cols .div { background: rgba(255,255,255,.12); }
+.hc .pl { font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: rgba(255,255,255,.5); }
+.hc .big { font-size: clamp(34px, 4.2vw, 44px); font-weight: 800; letter-spacing: -0.045em; line-height: 1; margin-top: 12px; color: #fff; font-variant-numeric: tabular-nums; }
+.hc .big .cur { color: rgba(255,255,255,.4); font-weight: 700; }
+.hc .sub { margin-top: 11px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.62); }
+.hc .sub b { color: #fff; font-weight: 700; } .hc .sub .win { color: #4FD6A4; font-weight: 700; }
+.hc .usd { margin-top: 13px; display: inline-flex; align-items: center; gap: 9px; }
+.hc .usd .uchip { font-size: 10.5px; font-weight: 800; letter-spacing: .04em; padding: 3px 9px; border-radius: 999px; background: rgba(17,185,129,.18); color: #4FD6A4; }
+.hc .usd .uv { font-size: 14.5px; font-weight: 700; color: rgba(255,255,255,.9); font-variant-numeric: tabular-nums; }
+.hc .usd .ug { font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,.45); }
+.hero-rule { height: 1px; background: rgba(255,255,255,.12); margin: 24px 0 6px; }
+.hero .eq-head { padding-top: 6px; }
+.hero .eq-head .ttl2 { font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: rgba(255,255,255,.5); }
+.seg.dark { background: rgba(255,255,255,.08); }
+.seg.dark button { color: rgba(255,255,255,.6); }
+.seg.dark button.on { background: rgba(255,255,255,.95); color: var(--ink); box-shadow: none; }
+
+/* hero · versión liviana: neto grande + desglose chico al costado */
+.hero-top .usd-chip-d { font-size: 11px; font-weight: 800; letter-spacing: .03em; padding: 5px 12px; border-radius: 999px; background: rgba(17,185,129,.18); color: #4FD6A4; font-variant-numeric: tabular-nums; }
+.hero-main { display: flex; align-items: flex-end; justify-content: space-between; gap: 26px; flex-wrap: wrap; }
+.neto-block .pl { font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: rgba(255,255,255,.5); }
+.neto-block .big { font-size: clamp(38px, 5vw, 50px); font-weight: 800; letter-spacing: -0.045em; line-height: 1; margin-top: 10px; color: #fff; font-variant-numeric: tabular-nums; }
+.neto-block .big .cur { color: rgba(255,255,255,.4); font-weight: 700; }
+.brk { display: flex; flex-direction: column; gap: 9px; min-width: 196px; padding-bottom: 7px; }
+.brk-row { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.55); }
+.brk-row b { font-weight: 800; font-variant-numeric: tabular-nums; color: rgba(255,255,255,.92); letter-spacing: -0.02em; }
+.brk-row.win b { color: #4FD6A4; }
+.tuparte { margin-top: 16px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.55); }
+.tuparte b { color: #fff; font-weight: 800; font-variant-numeric: tabular-nums; }
+.tuparte .usd-i { color: rgba(255,255,255,.72); }
+
+/* ════════ SALDO · OPCIÓN A — banner protagonista, siempre arriba ════════ */
+.saldo-A { background: var(--ink); border-radius: 22px; padding: 24px 30px; color: #fff; display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; }
+.saldo-A .left .rel { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.3; max-width: 460px; }
+.saldo-A .left .rel b { color: #F0A88F; } .saldo-A .left .rel .ok { color: #4FD6A4; }
+.saldo-A .nums { display: flex; gap: 32px; margin-top: 16px; }
+.saldo-A .n .k { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; color: rgba(255,255,255,.55); }
+.saldo-A .n .v { font-size: 30px; font-weight: 800; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; line-height: 1; margin-top: 5px; }
+.saldo-A .n .v.neg { color: #F0A88F; } .saldo-A .n .v.pos { color: #4FD6A4; }
+.saldo-A .uchip { font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
+.saldo-A .uchip.ars { background: rgba(58,107,138,.5); color: #cfe2ef; } .saldo-A .uchip.usd { background: rgba(17,185,129,.2); color: #4FD6A4; }
+.saldo-A .right { display: flex; flex-direction: column; gap: 10px; align-items: stretch; min-width: 190px; }
+.saldo-A .btn-pri { justify-content: center; font-size: 15px; padding: 13px 22px; }
+.saldo-A .link-w { color: rgba(255,255,255,.7); font-size: 13px; font-weight: 700; text-decoration: none; text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.saldo-A .link-w svg { width: 14px; height: 14px; stroke-width: 2.2; }
+
+/* ════════ SALDO · OPCIÓN B — tab Caja con saldo gigante ════════ */
+.caja-hero { text-align: left; }
+.caja-hero .rel { font-size: 16px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+.caja-hero .rel b { color: var(--ink); }
+.caja-big { display: flex; gap: 48px; flex-wrap: wrap; align-items: flex-end; }
+.caja-big .cb .k { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.caja-big .cb .v { font-size: clamp(40px, 5.5vw, 58px); font-weight: 800; letter-spacing: -0.05em; line-height: .95; font-variant-numeric: tabular-nums; margin-top: 6px; }
+.caja-big .cb .v.neg { color: var(--terracota); } .caja-big .cb .v.pos { color: var(--emerald-deep); }
+.caja-big .cb .who { font-size: 12.5px; font-weight: 600; color: var(--soft); margin-top: 6px; }
+.caja-acts { display: flex; gap: 10px; margin: 22px 0 4px; }
+.caja-acts .btn-pri { font-size: 15px; padding: 13px 24px; }
+.mini-cc { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
+.mini-cc .hh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.mini-cc .hh .t { font-size: 12.5px; font-weight: 800; color: var(--ink); }
+.mcc { display: grid; grid-template-columns: 52px 1fr auto auto; align-items: center; gap: 14px; padding: 11px 0; }
+.mcc + .mcc { border-top: 1px solid var(--line); }
+.mcc .f { font-size: 11px; font-weight: 700; color: var(--faint); font-variant-numeric: tabular-nums; }
+.mcc .t { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+.mcc .t .s { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-top: 1px; }
+.mcc .d { font-size: 13.5px; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; letter-spacing: -0.02em; }
+.mcc .d.pos { color: var(--emerald-deep); } .mcc .d.neg { color: var(--terracota); }
+.mcc .sl { font-size: 11px; font-weight: 700; color: var(--soft); width: 92px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ════════ SALDO · OPCIÓN C — relacional con avatares (quién le paga a quién) ════════ */
+.saldo-C { background: var(--card); border: 1px solid var(--border); border-radius: 22px; padding: 24px 28px; }
+.saldo-C .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.flowviz { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 18px; }
+.flowviz .who-card { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.flowviz .av-big { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 21px; font-weight: 800; }
+.flowviz .av-big.j { background: var(--juli); } .flowviz .av-big.c { background: var(--caro); }
+.flowviz .who-card .nm { font-size: 13px; font-weight: 700; color: var(--ink); }
+.flowviz .who-card .role { font-size: 11px; font-weight: 600; color: var(--soft); }
+.flowviz .arrow { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.flowviz .arrow .lab { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.flowviz .arrow .line { position: relative; width: 100%; min-width: 120px; height: 2px; background: var(--terracota); }
+.flowviz .arrow .line::after { content: ""; position: absolute; right: -1px; top: 50%; transform: translateY(-50%); border-left: 7px solid var(--terracota); border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+.flowviz .arrow .amt { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; color: var(--terracota); font-variant-numeric: tabular-nums; }
+.saldo-C .cur-rows { display: flex; gap: 12px; margin-top: 20px; }
+.saldo-C .cr { flex: 1; border: 1px solid var(--border); border-radius: 14px; padding: 13px 16px; display: flex; align-items: center; justify-content: space-between; }
+.saldo-C .cr .k { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.saldo-C .cr .v { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.saldo-C .cr .v.neg { color: var(--terracota); } .saldo-C .cr .v.pos { color: var(--emerald-deep); }
+.saldo-C .acts { display: flex; gap: 10px; margin-top: 18px; }
+.saldo-C .acts .btn-pri { flex: 1; justify-content: center; }
+
+/* ════════ COMPROMISO · cuenta corriente PROYECTADA ════════ */
+.proj-intro { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 14px; line-height: 1.5; }
+.proj-intro b { color: var(--ink); font-weight: 700; }
+.proj { display: flex; flex-direction: column; }
+.proj-row { display: grid; grid-template-columns: 58px 28px 1fr auto 120px; align-items: center; gap: 14px; padding: 13px 4px; }
+.proj-row + .proj-row { border-top: 1px solid var(--line); }
+.proj-row .f { font-size: 11.5px; font-weight: 700; color: var(--faint); font-variant-numeric: tabular-nums; }
+.proj-row .dot { width: 11px; height: 11px; border-radius: 50%; justify-self: center; }
+.proj-row .t { font-size: 14px; font-weight: 700; color: var(--ink); }
+.proj-row .t .s { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+.proj-row .d { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; letter-spacing: -0.02em; }
+.proj-row .sl { text-align: right; font-variant-numeric: tabular-nums; }
+.proj-row .sl .lbl { font-size: 9.5px; font-weight: 700; color: var(--faint); text-transform: uppercase; letter-spacing: .05em; display: block; }
+.proj-row .sl .n { font-size: 14px; font-weight: 800; letter-spacing: -0.02em; }
+.proj-row .sl .n.neg { color: var(--terracota); } .proj-row .sl .n.pos { color: var(--emerald-deep); }
+/* fila ancla "hoy" */
+.proj-row.now { background: var(--emerald-soft); border-radius: 12px; }
+.proj-row.now .dot { background: var(--emerald); width: 14px; height: 14px; }
+.proj-row.now .t { font-weight: 800; }
+/* filas futuras */
+.proj-row.fut .dot { background: var(--card); box-shadow: 0 0 0 2px var(--amber); }
+.proj-row.fut .t { color: var(--muted); }
+.proj-row.fut .d { color: var(--amber); }
+.proj-end { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 14px; padding: 18px 20px; background: var(--ink); color: #fff; border-radius: 16px; }
+.proj-end .l { font-size: 13px; font-weight: 700; color: rgba(255,255,255,.7); max-width: 360px; line-height: 1.4; }
+.proj-end .l b { color: #fff; }
+.proj-end .v { font-size: 28px; font-weight: 800; letter-spacing: -0.035em; font-variant-numeric: tabular-nums; }
+.proj-end .v.pos { color: #4FD6A4; } .proj-end .v.neg { color: #F0A88F; }

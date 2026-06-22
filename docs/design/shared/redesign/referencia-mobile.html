@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Compartido · Referencia MOBILE</title>
+<style>
+  :root { --bg:#EEF1F4; --ink:#142231; --muted:#6B7683; --border:#E8ECF1; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: #E4E8EE; color: var(--ink); }
+  header { padding: 28px 32px 8px; }
+  header h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin: 0; }
+  header p { margin: 6px 0 0; font-size: 13.5px; color: var(--muted); font-weight: 600; max-width: 720px; line-height: 1.5; }
+  .row { display: flex; flex-wrap: wrap; gap: 30px; padding: 22px 32px 48px; }
+  .col { display: flex; flex-direction: column; gap: 12px; }
+  .col .lab { display: flex; align-items: baseline; gap: 8px; }
+  .col .lab .n { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #8A94A3; }
+  .col .lab .t { font-size: 15px; font-weight: 800; letter-spacing: -0.015em; }
+  /* phone bezel */
+  .phone { width: 402px; height: 844px; background: #0B1A2B; border-radius: 44px; padding: 11px; box-shadow: 0 24px 60px -22px rgba(11,26,43,.5); }
+  .phone .scr { width: 100%; height: 100%; border-radius: 34px; overflow: hidden; background: var(--bg); position: relative; }
+  .phone .notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 150px; height: 30px; background: #0B1A2B; border-radius: 0 0 18px 18px; z-index: 3; }
+  .phone iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
+  .col .note { font-size: 12px; font-weight: 600; color: var(--muted); max-width: 402px; }
+  .col .note code { background: #fff; padding: 1px 6px; border-radius: 5px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Compartido · Referencia MOBILE</h1>
+    <p>Las mismas pantallas a ~402px (responsive, mismo HTML que web). El hero apila columnas, los tiles se apilan, el extracto pasa a lista y el drawer de Saldar se vuelve bottom sheet. Marco de teléfono solo ilustrativo.</p>
+  </header>
+  <div class="row">
+    <div class="col">
+      <div class="lab"><span class="n">01</span><span class="t">Home</span></div>
+      <div class="phone"><div class="scr"><span class="notch"></span><iframe src="home.html" title="home mobile"></iframe></div></div>
+      <div class="note">Archivo: <code>home.html</code> · @media ≤560px</div>
+    </div>
+    <div class="col">
+      <div class="lab"><span class="n">02</span><span class="t">Cuenta corriente</span></div>
+      <div class="phone"><div class="scr"><span class="notch"></span><iframe src="cuenta-corriente.html" title="cc mobile"></iframe></div></div>
+      <div class="note">Archivo: <code>cuenta-corriente.html</code> · tabla → lista</div>
+    </div>
+    <div class="col">
+      <div class="lab"><span class="n">03</span><span class="t">Saldar</span></div>
+      <div class="phone"><div class="scr"><span class="notch"></span><iframe src="saldar.html" title="saldar mobile"></iframe></div></div>
+      <div class="note">Archivo: <code>saldar.html</code> · drawer → bottom sheet</div>
+    </div>
+  </div>
+</body>
+</html>

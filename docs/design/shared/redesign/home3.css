@@ -1,0 +1,83 @@
+/* ════════════════════════════════════════════════════════════════
+   home3.css — HOME liviana y visual. Conserva el hero navy de V1
+   (vive en home2.css) y resuelve "qué se deben" y "lo que se viene"
+   con piezas VISUALES: menos texto, menos números sueltos, más aire.
+   Se carga junto a shared.css + home2.css (por el hero).
+   ════════════════════════════════════════════════════════════════ */
+
+/* más aire entre cards */
+.stack.airy { gap: 18px; }
+
+/* ════════ SE DEBEN · visual con personas (poco texto) ════════ */
+.deben { background: var(--card); border: 1px solid var(--border); border-radius: 22px; padding: 24px 28px 22px; }
+.deben .hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.deben .hd .ttl { font-size: 15px; font-weight: 800; color: var(--ink); letter-spacing: -0.01em; }
+
+.people { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 16px; padding: 14px 6px 6px; }
+.person { display: flex; flex-direction: column; align-items: center; gap: 9px; }
+.person .av { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 23px; font-weight: 800; }
+.person .av.j { background: var(--juli); } .person .av.c { background: var(--caro); }
+.person .nm { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+.person.dim .av { opacity: .85; }
+
+.flow { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+.flow .amt { font-size: 32px; font-weight: 800; letter-spacing: -0.04em; color: var(--terracota); font-variant-numeric: tabular-nums; line-height: 1; }
+.flow .track { position: relative; width: 100%; min-width: 130px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, var(--juli), var(--caro)); }
+.flow .track .head { position: absolute; right: -2px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 8px solid var(--caro); border-top: 6px solid transparent; border-bottom: 6px solid transparent; }
+.flow .cap { font-size: 12px; font-weight: 700; color: var(--muted); }
+
+/* moneda secundaria, chiquita (USD) */
+.usd-mini { display: inline-flex; align-items: center; gap: 7px; margin: 14px auto 0; padding: 7px 13px; border-radius: 999px; background: var(--emerald-soft); color: var(--emerald-deep); font-size: 12.5px; font-weight: 700; width: fit-content; }
+.usd-mini .ch { font-size: 9.5px; font-weight: 800; letter-spacing: .04em; background: rgba(14,158,110,.16); padding: 2px 7px; border-radius: 999px; }
+
+.deben-foot { display: flex; gap: 10px; margin-top: 18px; }
+.deben-foot .btn-pri { flex: 1; justify-content: center; font-size: 15px; padding: 13px; }
+.deben-foot .btn-ghost { flex: none; }
+
+/* layout centrado del bloque personas + usd */
+.deben .center { display: flex; flex-direction: column; align-items: center; }
+
+/* ════════ SE VIENE · visual liviano (chips de mes + total) ════════ */
+.viene { background: var(--card); border: 1px solid var(--border); border-radius: 22px; padding: 24px 28px; }
+.viene .hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.viene .hd .ttl { font-size: 15px; font-weight: 800; color: var(--ink); letter-spacing: -0.01em; }
+.viene .lead { font-size: 13.5px; font-weight: 600; color: var(--muted); margin: -8px 0 16px; }
+.viene .lead b { color: var(--ink); font-weight: 700; }
+
+.spark { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; align-items: end; }
+.bar-col { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.bar-col .col { width: 100%; max-width: 84px; border-radius: 10px 10px 4px 4px; background: var(--amber-soft); display: flex; align-items: flex-start; justify-content: center; padding-top: 9px; }
+.bar-col .col .v { font-size: 13px; font-weight: 800; color: #B97A1C; font-variant-numeric: tabular-nums; }
+.bar-col .mo { font-size: 11.5px; font-weight: 700; color: var(--muted); text-transform: capitalize; }
+.bar-col.now .col { background: var(--emerald-soft); }
+.bar-col.now .col .v { color: var(--emerald-deep); }
+.bar-col.now .mo { color: var(--emerald-deep); }
+
+.viene-total { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.viene-total .l { font-size: 12.5px; font-weight: 600; color: var(--muted); max-width: 320px; line-height: 1.4; }
+.viene-total .l b { color: var(--ink); font-weight: 700; }
+.viene-total .v { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; color: var(--emerald-deep); font-variant-numeric: tabular-nums; }
+
+/* ════════ OPCIÓN 2 · dos tiles en fila ════════ */
+.tiles2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: stretch; }
+@media (max-width: 860px) { .tiles2 { grid-template-columns: 1fr; } }
+.tile { background: var(--card); border: 1px solid var(--border); border-radius: 22px; padding: 22px 24px; display: flex; flex-direction: column; }
+.tile .th { font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--soft); margin-bottom: 14px; }
+/* tile se deben compacto */
+.tile .people-c { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.tile .people-c .av { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 18px; font-weight: 800; }
+.tile .people-c .av.j { background: var(--juli); } .tile .people-c .av.c { background: var(--caro); }
+.tile .people-c .mid { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.tile .people-c .mid .amt { font-size: 26px; font-weight: 800; letter-spacing: -0.035em; color: var(--terracota); font-variant-numeric: tabular-nums; line-height: 1; }
+.tile .people-c .mid .ar { width: 64px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, var(--juli), var(--caro)); position: relative; }
+.tile .people-c .mid .ar .head { position: absolute; right: -1px; top: 50%; transform: translateY(-50%); border-left: 7px solid var(--caro); border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+.tile .cap { text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); margin-top: 12px; }
+.tile .usd-mini { margin: 12px auto 0; }
+.tile .foot { margin-top: auto; padding-top: 18px; }
+.tile .foot .btn-pri { width: 100%; justify-content: center; }
+.tile .seemore { display: inline-flex; justify-content: center; width: 100%; margin-top: 10px; color: var(--emerald-deep); font-size: 13px; font-weight: 700; text-decoration: none; }
+/* tile se viene compacto */
+.tile .spark { margin-top: 4px; }
+.tile .vtot { text-align: center; margin-top: 16px; }
+.tile .vtot .v { font-size: 26px; font-weight: 800; letter-spacing: -0.035em; color: var(--emerald-deep); font-variant-numeric: tabular-nums; }
+.tile .vtot .l { font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 4px; }

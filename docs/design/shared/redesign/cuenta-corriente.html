@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Compartido · Cuenta corriente</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="shared.css" />
+<link rel="stylesheet" href="cc.css" />
+<style>
+  /* ── encabezado ── */
+  .crumb { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 14px; }
+  .crumb .cur { color: var(--ink); }
+  .cc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 22px; }
+  .cc-top h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.035em; color: var(--ink); }
+  .cc-top .ssub { margin-top: 7px; font-size: 14px; font-weight: 600; color: var(--muted); }
+  .cc-top .av-pair { display: inline-flex; }
+  .cc-top .av-pair .av { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: #fff; font-size: 14px; font-weight: 800; border: 2px solid var(--card); }
+  .cc-top .av-pair .av + .av { margin-left: -10px; }
+  .cc-top .av-pair .j { background: var(--ink); } .cc-top .av-pair .c { background: var(--violet); }
+
+  /* ── dos cards de saldo ── */
+  .top2 { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; margin-bottom: 16px; align-items: stretch; }
+  @media (max-width: 860px) { .top2 { grid-template-columns: 1fr; } }
+  .scard { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 22px 26px; display: flex; flex-direction: column; }
+  .scard .lab { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--soft); }
+  .scard .big { font-size: 44px; font-weight: 800; letter-spacing: -0.045em; line-height: 1; margin-top: 12px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .scard .big .cur { color: var(--faint); font-weight: 700; }
+  .scard .meta { margin-top: 9px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .scard .meta b { color: var(--terracota); font-weight: 700; }
+  /* arrow J→C */
+  .arrowrow { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+  .arrowrow .av { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; color: #fff; font-size: 15px; font-weight: 800; flex: none; }
+  .arrowrow .av.j { background: var(--ink); } .arrowrow .av.c { background: var(--violet); }
+  .arrowrow .ln { flex: 1; position: relative; height: 2px; background: var(--terracota); }
+  .arrowrow .ln .txt { position: absolute; left: 50%; top: -20px; transform: translateX(-50%); white-space: nowrap; font-size: 12px; font-weight: 800; color: var(--terracota); }
+  .arrowrow .ln::after { content: ""; position: absolute; right: -1px; top: 50%; transform: translateY(-50%); border-left: 8px solid var(--terracota); border-top: 6px solid transparent; border-bottom: 6px solid transparent; }
+  .scard.usd .big { color: var(--emerald-deep); }
+  .scard.usd .note { margin-top: 9px; font-size: 12.5px; font-weight: 600; color: var(--muted); line-height: 1.5; }
+  .scard .saldar { margin-top: auto; padding-top: 18px; }
+  .scard .btn-pri { width: 100%; justify-content: center; font-size: 15px; padding: 13px; }
+
+  /* ── ecuación (cómo llegamos a este saldo) ── */
+  .eq-panel { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 22px 26px; margin-bottom: 16px; }
+  .eq-panel .eh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .eq-panel .eh .t { font-size: 16px; font-weight: 800; letter-spacing: -0.015em; color: var(--ink); }
+  .eq-panel .eh .toggle { background: none; border: none; color: var(--muted); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+  .eq-panel .eh .toggle svg { width: 13px; height: 13px; stroke-width: 2.6; transition: transform .2s; }
+  .eq-panel.collapsed .eh .toggle svg { transform: rotate(180deg); }
+  .eq-boxes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 820px) { .eq-boxes { grid-template-columns: repeat(2, 1fr); } }
+  .eq-box { border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+  .eq-box .k { font-size: 12px; font-weight: 600; color: var(--muted); line-height: 1.35; min-height: 32px; }
+  .eq-box .v { font-size: 19px; font-weight: 800; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; margin-top: 8px; }
+  .eq-box .v.pos { color: var(--emerald-deep); } .eq-box .v.neg { color: var(--terracota); }
+  .eq-box.total { background: var(--emerald-soft); border-color: #CDEEDF; }
+  .eq-box.total .v { color: var(--ink); font-size: 17px; }
+  .eq-foot { margin-top: 14px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .eq-panel.collapsed .eq-boxes, .eq-panel.collapsed .eq-foot { display: none; }
+
+  /* ── filtros + tabla ── */
+  .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 6px 2px 8px; }
+  .filters { display: flex; gap: 8px; }
+  .fbtn { border: 1px solid var(--border); background: var(--card); border-radius: 999px; padding: 8px 15px; font-size: 13px; font-weight: 700; color: var(--muted); display: inline-flex; align-items: center; gap: 7px; }
+  .fbtn svg { width: 14px; height: 14px; stroke-width: 2.2; }
+
+  .cct { background: var(--card); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
+  .cct-h, .cct-r { display: grid; grid-template-columns: 70px 1fr 190px 116px 104px; align-items: center; gap: 16px; padding: 13px 24px; }
+  .cct-h { font-size: 10.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--soft); border-bottom: 1px solid var(--line); }
+  .cct-h .r, .cct-r .imp, .cct-r .sal { text-align: right; }
+  .cct-r { border-top: 1px solid var(--line); cursor: pointer; transition: background .12s; }
+  .cct-r:first-of-type { border-top: none; }
+  .cct-r:hover { background: #FAFBFC; }
+  .cct-r .f { font-size: 12px; font-weight: 700; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .cct-r .mv .t { font-size: 14px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .cct-r .mv .s { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+  .cct-r .qc { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .cct-r .imp { font-size: 14.5px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .cct-r .imp.pos { color: var(--emerald-deep); } .cct-r .imp.neg { color: var(--terracota); } .cct-r .imp.mut { color: var(--faint); }
+  .cct-r .sal { font-size: 13.5px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--ink); }
+  .cct-r .sal.zero { color: var(--emerald-deep); }
+  .cct-r.revert { opacity: .58; }
+  .cct-r.revert .mv .t .nm { text-decoration: line-through; text-decoration-color: var(--faint); }
+  .cct-r.contra { background: #FBF3F0; }
+  .cct-r.pend { background: #FDF8EE; }
+
+  .hoy-bar { display: flex; align-items: center; gap: 12px; padding: 13px 24px; background: var(--emerald-soft); }
+  .hoy-bar .ln { flex: 1; height: 1px; background: #BFE6D5; }
+  .hoy-bar .t { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--emerald-deep); }
+  .prox { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 24px; border-top: 1px solid var(--line); }
+  .prox .l { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .prox .r { font-size: 13px; font-weight: 700; color: var(--amber); font-variant-numeric: tabular-nums; }
+  /* lo que se viene · proyección por mes */
+  .prox-block { padding: 15px 24px 16px; background: #FCFBF8; border-bottom: 1px solid var(--line); }
+  .prox-head { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: #B97A1C; margin-bottom: 11px; }
+  .prox-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; }
+  .prox-row + .prox-row { border-top: 1px dashed var(--line); }
+  .prox-row .pm { font-size: 13.5px; font-weight: 800; color: var(--ink); width: 66px; text-transform: capitalize; }
+  .prox-row .ps { font-size: 16px; font-weight: 800; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; }
+  .prox-row .ps.pos { color: var(--emerald-deep); } .prox-row .ps.neg { color: var(--terracota); }
+  .prox-row .pdir { font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 999px; }
+  .prox-row .pdir.favj { background: var(--emerald-soft); color: var(--emerald-deep); }
+  .prox-row .pdir.favc { background: var(--terracota-soft); color: var(--terracota); }
+  .prox-row .pi { margin-left: auto; font-size: 11.5px; font-weight: 600; color: var(--faint); font-variant-numeric: tabular-nums; text-align: right; }
+  .prox-note { font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 12px; line-height: 1.5; }
+  .prox-note b { color: var(--ink); font-weight: 700; }
+  .prox-note .flip { color: #B97A1C; font-weight: 800; }
+
+  .cc-pane { display: none; } .cc-pane.on { display: block; }
+</style>
+<link rel="stylesheet" href="mobile.css" />
+</head>
+<body data-screen-label="Cuenta corriente (estilo ecuación)">
+  <div class="wrap" data-screen-label="Cuenta corriente">
+
+    <div class="crumb"><a href="home.html" style="color:inherit;text-decoration:none">Compartido</a> <span style="color:var(--faint)">/</span> <span class="cur">Cuenta corriente</span></div>
+
+    <div class="cc-top">
+      <div>
+        <h1>Cuenta corriente</h1>
+        <div class="ssub">De dónde sale el saldo entre ustedes.</div>
+      </div>
+      <div class="av-pair"><span class="av j">J</span><span class="av c">C</span></div>
+    </div>
+
+    <!-- dos cards de saldo (bimoneda siempre visible) -->
+    <div class="top2">
+      <div class="scard">
+        <span class="lab">Saldo actual</span>
+        <div class="big tnum"><span class="cur">$</span>1.250</div>
+        <div class="meta"><b>A favor de Caro</b> · en pesos (ARS)</div>
+        <div class="arrowrow">
+          <span class="av j">J</span>
+          <span class="ln"><span class="txt">Juli le debe $1.250</span></span>
+          <span class="av c">C</span>
+        </div>
+      </div>
+      <div class="scard usd">
+        <span class="lab">También en USD</span>
+        <div class="big tnum">+US$ 12,00</div>
+        <div class="note">Caro te debe. La moneda sigue visible aunque el saldo sea chico — pesos y dólares nunca se mezclan.</div>
+        <div class="saldar"><button class="btn-pri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Saldar</button></div>
+      </div>
+    </div>
+
+    <!-- ecuación: cómo llegamos a este saldo -->
+    <div class="eq-panel" id="eqPanel">
+      <div class="eh">
+        <span class="t">Cómo llegamos a este saldo</span>
+        <button class="toggle" id="eqToggle">ocultar ecuación <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg></button>
+      </div>
+      <div class="eq-boxes">
+        <div class="eq-box"><div class="k">Partes de Caro en lo que pagó Juli</div><div class="v pos">+$24.325</div></div>
+        <div class="eq-box"><div class="k">Tus partes en lo que pagó Caro</div><div class="v neg">−$18.850</div></div>
+        <div class="eq-box"><div class="k">Reintegros y liquidaciones cobradas</div><div class="v neg">−$6.725</div></div>
+        <div class="eq-box total"><div class="k">Saldo actual</div><div class="v">$1.250 → Caro</div></div>
+      </div>
+      <div class="eq-foot">Cada movimiento de abajo alimenta una de estas partes. Tocá una línea para ver el movimiento original.</div>
+    </div>
+
+    <!-- filtros -->
+    <div class="toolbar">
+      <div class="seg" id="ccSeg"><button class="on" data-cc="ARS">ARS</button><button data-cc="USD">USD</button></div>
+      <div class="filters">
+        <button class="fbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.5a4.5 4.5 0 0 1 5 0"/></svg> Persona</button>
+        <button class="fbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Liquidaciones</button>
+      </div>
+    </div>
+
+    <!-- ░░ PANE ARS ░░ -->
+    <div class="cc-pane on" data-cc="ARS">
+      <div class="cct">
+        <div class="cct-h"><span>Fecha</span><span>Movimiento</span><span>Qué cambia</span><span class="r">Importe</span><span class="r">Saldo</span></div>
+        <div class="prox-block">
+          <div class="prox-head">Lo que se viene · cómo queda el saldo proyectado</div>
+          <div class="prox-row"><span class="pm">Julio</span><span class="ps pos tnum">+$20.248</span><span class="pdir favj">Caro te debe</span><span class="pi">impacta +$21.498 (cuota + resumen Visa)</span></div>
+          <div class="prox-row"><span class="pm">Agosto</span><span class="ps pos tnum">+$37.246</span><span class="pdir favj">Caro te debe</span><span class="pi">impacta +$16.998 (cuota 2/3)</span></div>
+          <div class="prox-note">Hoy <b>le debés $1.250 a Caro</b>. <span class="flip">En julio se da vuelta:</span> al impactar las cuotas, el saldo pasa a estar <b>a tu favor</b>.</div>
+        </div>
+        <div class="hoy-bar"><span class="ln"></span><span class="t">Hoy · $1.250 a favor de Caro</span><span class="ln"></span></div>
+        <div class="cct-r pend"><span class="f">22 jun</span><div class="mv"><div class="t"><span class="nm">Liquidación parcial</span> <span class="st pend">Pendiente</span></div><div class="s">Le pagaste $1.250 a Caro · falta que la acepte</div></div><span class="qc">Reduce el saldo al aceptarse</span><span class="imp mut">−$1.250</span><span class="sal">−$1.250</span></div>
+        <div class="cct-r"><span class="f">22 jun</span><div class="mv"><div class="t"><span class="nm">SUBE + Delivery</span></div><div class="s">Pagó Caro · split 50·50</div></div><span class="qc">Suma tu parte</span><span class="imp neg">−$8.350</span><span class="sal">−$1.250</span></div>
+        <div class="cct-r"><span class="f">19 jun</span><div class="mv"><div class="t"><span class="nm">Carnicería</span></div><div class="s">Pagó Juli · split 50·50</div></div><span class="qc">Suma la parte de Caro</span><span class="imp pos">+$7.100</span><span class="sal">+$7.100</span></div>
+        <div class="cct-r"><span class="f">18 jun</span><div class="mv"><div class="t"><span class="nm">Liquidación</span> <span class="st done">Completada</span></div><div class="s">Caro te pagó · transferencia confirmada</div></div><span class="qc">Reduce el saldo</span><span class="imp neg">−$5.525</span><span class="sal zero">$0</span></div>
+        <div class="cct-r"><span class="f">15 jun</span><div class="mv"><div class="t"><span class="nm">Farmacia</span></div><div class="s">Pagó Caro · split 50·50</div></div><span class="qc">Suma tu parte</span><span class="imp neg">−$3.500</span><span class="sal">+$5.525</span></div>
+        <div class="cct-r"><span class="f">12 jun</span><div class="mv"><div class="t"><span class="nm">Reintegro Súper</span></div><div class="s">Cashback de la compra del 05 jun</div></div><span class="qc">Baja la deuda de Caro</span><span class="imp neg">−$1.200</span><span class="sal">+$9.025</span></div>
+        <div class="cct-r"><span class="f">09 jun</span><div class="mv"><div class="t"><span class="nm">Cena Don Julio</span></div><div class="s">Pagó Juli · split 50·50</div></div><span class="qc">Suma la parte de Caro</span><span class="imp pos">+$8.000</span><span class="sal">+$10.225</span></div>
+        <div class="cct-r contra"><span class="f">07 jun</span><div class="mv"><div class="t"><span class="nm">Reversión de liquidación</span> <span class="st contra">Contraasiento</span></div><div class="s">Anula la liquidación anterior · no se borra</div></div><span class="qc">Restaura el importe</span><span class="imp pos">+$2.225</span><span class="sal">+$2.225</span></div>
+        <div class="cct-r revert"><span class="f">07 jun</span><div class="mv"><div class="t"><span class="nm">Liquidación</span> <span class="st rev">Revertida</span></div><div class="s">Caro te pagó · anulada el mismo día</div></div><span class="qc">Anulada por contraasiento</span><span class="imp neg">−$2.225</span><span class="sal zero">$0</span></div>
+        <div class="cct-r"><span class="f">05 jun</span><div class="mv"><div class="t"><span class="nm">Súper Coto</span></div><div class="s">Pagó Juli · split 50·50</div></div><span class="qc">Suma la parte de Caro</span><span class="imp pos">+$9.225</span><span class="sal">+$2.225</span></div>
+        <div class="cct-r"><span class="f">02 jun</span><div class="mv"><div class="t"><span class="nm">Expensas</span></div><div class="s">Pagó Caro · split 50·50</div></div><span class="qc">Suma tu parte</span><span class="imp neg">−$7.000</span><span class="sal">−$7.000</span></div>
+      </div>
+    </div>
+
+    <!-- ░░ PANE USD ░░ -->
+    <div class="cc-pane" data-cc="USD">
+      <div class="cct">
+        <div class="cct-h"><span>Fecha</span><span>Movimiento</span><span>Qué cambia</span><span class="r">Importe</span><span class="r">Saldo</span></div>
+        <div class="prox-block">
+          <div class="prox-head">Lo que se viene · cómo queda el saldo proyectado</div>
+          <div class="prox-row"><span class="pm">Julio</span><span class="ps pos tnum">+US$ 42,00</span><span class="pdir favj">Caro te debe</span><span class="pi">impacta +US$ 30 (cuota 2/3 Hotel)</span></div>
+          <div class="prox-note">En dólares ya está <b>a tu favor</b>; la cuota de julio lo agranda. No se da vuelta.</div>
+        </div>
+        <div class="hoy-bar"><span class="ln"></span><span class="t">Hoy · US$ 12,00 a tu favor</span><span class="ln"></span></div>
+        <div class="cct-r"><span class="f">16 jun</span><div class="mv"><div class="t"><span class="nm">Liquidación</span> <span class="st done">Completada</span></div><div class="s">Caro te pagó · transferencia confirmada</div></div><span class="qc">Reduce el saldo</span><span class="imp neg">−US$ 15,00</span><span class="sal">+US$ 12,00</span></div>
+        <div class="cct-r"><span class="f">09 jun</span><div class="mv"><div class="t"><span class="nm">Hotel Bariloche · seña</span></div><div class="s">Pagó Juli · split 50·50</div></div><span class="qc">Suma la parte de Caro</span><span class="imp pos">+US$ 15,00</span><span class="sal">+US$ 27,00</span></div>
+        <div class="cct-r"><span class="f">04 jun</span><div class="mv"><div class="t"><span class="nm">Spotify + Apple</span></div><div class="s">Pagó Juli · split 50·50</div></div><span class="qc">Suma la parte de Caro</span><span class="imp pos">+US$ 12,00</span><span class="sal">+US$ 12,00</span></div>
+      </div>
+    </div>
+
+    <div class="mobile-note" style="margin-top:16px"><b>Adaptación mobile:</b> las dos cards de saldo se apilan; la ecuación pasa a 2×2 y queda colapsable; la tabla se vuelve lista (Movimiento + “qué cambia” arriba, Importe y Saldo abajo a la derecha). El divisor “hoy” y “próximos impactos” quedan fijos al pie. Selector ARS/USD en chips.</div>
+  </div>
+
+  <script>
+    (function () {
+      // toggle ecuación
+      var panel = document.getElementById('eqPanel');
+      document.getElementById('eqToggle').addEventListener('click', function () {
+        var c = panel.classList.toggle('collapsed');
+        this.firstChild.textContent = (c ? 'mostrar ecuación ' : 'ocultar ecuación ');
+      });
+      // toggle ARS/USD
+      var seg = document.getElementById('ccSeg');
+      seg.querySelectorAll('button').forEach(function (b) {
+        b.addEventListener('click', function () {
+          seg.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+          var cur = b.dataset.cc;
+          document.querySelectorAll('.cc-pane').forEach(function (p) { p.classList.toggle('on', p.dataset.cc === cur); });
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

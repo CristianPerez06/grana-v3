@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Compartido · Exploración de Home</title>
+  <style>
+    :root {
+      --navy: #0b1a2b;
+      --navy-2: #0a3035;
+      --navy-muted: #9aa8b7;
+      --emerald: #10b981;
+      --emerald-deep: #087c62;
+      --emerald-soft: #e7f8f0;
+      --page: #f5f7f9;
+      --card: #fff;
+      --border: #e2e7ed;
+      --border-soft: #edf0f4;
+      --text: #122033;
+      --muted: #667085;
+      --soft: #98a2b3;
+      --amber: #f7a208;
+      --violet: #8b5cf6;
+      --slate: #718096;
+      --rose: #d8786c;
+      --warning-soft: #fff6e7;
+      --shadow: 0 24px 60px -42px rgba(11, 26, 43, .45);
+      font-family: "Plus Jakarta Sans", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--text); background: #e9edf1; }
+    button, summary { font: inherit; }
+    button { cursor: pointer; }
+    .workbench { min-height: 100vh; padding: 28px; }
+    .intro { max-width: 1080px; margin: 0 auto 24px; }
+    .kicker { margin: 0 0 8px; color: var(--emerald-deep); font-size: 12px; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(28px, 4vw, 44px); letter-spacing: -.04em; }
+    .intro > p:last-child { max-width: 760px; margin: 10px 0 0; color: var(--muted); line-height: 1.55; }
+    .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    .legend span { border: 1px solid var(--border); border-radius: 999px; background: rgba(255,255,255,.7); padding: 7px 11px; color: var(--muted); font-size: 12px; font-weight: 750; }
+    .gallery { display: grid; grid-template-columns: repeat(2, minmax(520px, 1fr)); gap: 24px; max-width: 1440px; margin: 0 auto; }
+    .variant { min-width: 0; }
+    .variant-note { display: flex; align-items: baseline; gap: 10px; margin: 0 0 10px 4px; }
+    .variant-tag { border-radius: 8px; background: var(--navy); color: white; padding: 5px 8px; font-size: 11px; font-weight: 900; letter-spacing: .08em; }
+    .variant-note strong { font-size: 14px; }
+    .variant-note span:last-child { color: var(--muted); font-size: 12px; }
+    .screen { min-height: 920px; overflow: hidden; border: 1px solid #d9e0e7; border-radius: 24px; background: var(--page); box-shadow: var(--shadow); }
+    .app-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 24px 12px; }
+    .brand { font-size: 23px; font-weight: 850; letter-spacing: -.04em; }
+    .top-actions { display: flex; align-items: center; gap: 8px; }
+    .primary, .secondary, .icon-button { border: 0; border-radius: 12px; font-weight: 800; }
+    .primary { min-height: 40px; padding: 0 14px; background: var(--emerald); color: white; }
+    .secondary { min-height: 38px; padding: 0 13px; border: 1px solid var(--border); background: white; color: var(--text); }
+    .icon-button { width: 40px; height: 40px; border: 1px solid var(--border); background: white; color: var(--muted); }
+    .content { display: flex; flex-direction: column; gap: 14px; padding: 10px 24px 26px; }
+    .card { overflow: hidden; border: 1px solid var(--border); border-radius: 18px; background: var(--card); }
+    .navy { border-color: rgba(255,255,255,.08); background: linear-gradient(120deg, var(--navy), var(--navy-2)); color: white; }
+    .eyebrow { color: var(--soft); font-size: 10.5px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+    .navy .eyebrow { color: var(--navy-muted); }
+    .money { font-variant-numeric: tabular-nums; letter-spacing: -.035em; }
+    .month-nav { display: inline-grid; grid-template-columns: 30px minmax(130px, auto) 30px; align-items: center; align-self: flex-start; border: 1px solid var(--border); border-radius: 13px; background: white; padding: 4px; }
+    .month-nav button { display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 9px; background: transparent; color: var(--muted); }
+    .month-nav strong { padding: 0 9px; text-align: center; font-size: 12.5px; }
+    .scope { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11.5px; font-weight: 650; }
+    .scope::before { width: 7px; height: 7px; border-radius: 50%; background: var(--emerald); content: ""; }
+    .today-card { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; padding: 18px 20px; }
+    .people { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+    .avatar { display: grid; width: 29px; height: 29px; place-items: center; border-radius: 10px; background: var(--navy); color: white; font-size: 11px; font-weight: 900; }
+    .avatar.c { background: #8b5cf6; }
+    .relation { margin: 0; font-size: 15px; font-weight: 850; }
+    .relation strong { color: var(--rose); font-size: 20px; }
+    .usd-line { display: flex; align-items: center; gap: 7px; margin-top: 8px; color: var(--muted); font-size: 11.5px; }
+    .pill { display: inline-flex; align-items: center; border-radius: 999px; background: var(--emerald-soft); color: var(--emerald-deep); padding: 3px 7px; font-size: 9.5px; font-weight: 900; }
+    .today-actions { display: flex; flex-direction: column; gap: 7px; align-items: stretch; }
+    .text-link { border: 0; background: transparent; color: var(--emerald-deep); padding: 3px; font-size: 11.5px; font-weight: 850; }
+    .hero { padding: 20px; }
+    .hero-head { display: flex; justify-content: space-between; gap: 16px; }
+    .hero-amount { display: block; margin-top: 8px; font-size: 34px; font-weight: 900; line-height: 1; }
+    .equation { margin: 7px 0 0; color: var(--navy-muted); font-size: 11.5px; line-height: 1.45; }
+    .currency-totals { min-width: 120px; text-align: right; }
+    .currency-totals strong { display: block; font-size: 15px; }
+    .currency-totals span { color: var(--navy-muted); font-size: 10.5px; }
+    .breakdown { margin-top: 17px; border-top: 1px solid rgba(255,255,255,.13); padding-top: 14px; }
+    .breakdown-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .segmented { display: inline-flex; gap: 2px; border-radius: 10px; background: rgba(255,255,255,.1); padding: 3px; }
+    .segmented.light { background: var(--border-soft); }
+    .segmented button { min-width: 42px; border: 0; border-radius: 8px; background: transparent; color: var(--navy-muted); padding: 5px 8px; font-size: 10px; font-weight: 900; }
+    .segmented.light button { color: var(--muted); }
+    .segmented button.active { background: white; color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,.11); }
+    .bar { display: flex; height: 9px; overflow: hidden; border-radius: 5px; background: rgba(255,255,255,.09); margin: 11px 0 8px; }
+    .bar span:nth-child(1) { background: var(--amber); }
+    .bar span:nth-child(2) { background: var(--violet); }
+    .bar span:nth-child(3) { background: var(--slate); }
+    details { border-radius: 9px; }
+    details[open] { background: rgba(255,255,255,.045); }
+    summary { display: grid; grid-template-columns: 10px minmax(0,1fr) auto 32px 12px; gap: 8px; align-items: center; padding: 7px 5px; cursor: pointer; list-style: none; }
+    summary::-webkit-details-marker { display: none; }
+    .dot { width: 9px; height: 9px; border-radius: 3px; }
+    .cat-name { overflow: hidden; font-size: 11.5px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+    .cat-value { font-size: 11.5px; font-weight: 900; font-variant-numeric: tabular-nums; }
+    .cat-pct { color: var(--navy-muted); font-size: 10px; text-align: right; }
+    .chev { color: var(--navy-muted); transition: transform .2s; }
+    details[open] .chev { transform: rotate(90deg); }
+    .movement-drill { margin: 0 5px 5px 18px; border-left: 1px solid rgba(255,255,255,.14); padding: 2px 0 4px 10px; }
+    .movement-drill div { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; color: var(--navy-muted); font-size: 10.5px; }
+    .movement-drill strong { color: white; }
+    .section-title { display: flex; align-items: center; justify-content: space-between; margin: 2px 2px 0; }
+    .section-title strong { font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
+    .section-title span { color: var(--muted); font-size: 11px; }
+    .movement-list { padding: 4px 14px; }
+    .movement { display: grid; grid-template-columns: 34px minmax(0,1fr) auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-soft); }
+    .movement:last-child { border-bottom: 0; }
+    .movement-icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 11px; background: var(--warning-soft); }
+    .movement strong { display: block; font-size: 11.5px; }
+    .movement small { display: block; margin-top: 3px; color: var(--muted); font-size: 9.5px; }
+    .movement .amount { color: var(--text); font-size: 11.5px; font-weight: 900; }
+    .upcoming-strip { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; border-top: 1px solid var(--border-soft); padding: 10px 14px; color: var(--muted); font-size: 10.5px; }
+    .date-chip { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; background: var(--border-soft); color: var(--text); font-weight: 900; }
+    .upcoming-strip strong { color: var(--text); }
+    .lens-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+    .lens { min-height: 148px; padding: 15px; }
+    .lens.active { background: var(--navy); color: white; }
+    .lens .big { display: block; margin-top: 12px; font-size: 21px; font-weight: 900; }
+    .lens p { margin: 6px 0 0; color: var(--muted); font-size: 10.5px; line-height: 1.4; }
+    .lens.active p { color: var(--navy-muted); }
+    .split-panel { display: grid; grid-template-columns: 1fr 1.2fr; gap: 12px; }
+    .monthly-summary { padding: 18px; }
+    .monthly-summary .money { display: block; margin-top: 8px; font-size: 31px; font-weight: 900; }
+    .monthly-summary p { margin: 6px 0 0; color: var(--muted); font-size: 10.5px; }
+    .light-breakdown { padding: 16px; }
+    .light-breakdown summary { color: var(--text); }
+    .light-breakdown .cat-pct, .light-breakdown .chev { color: var(--soft); }
+    .light-breakdown details[open] { background: var(--page); }
+    .light-breakdown .movement-drill { border-color: var(--border); }
+    .light-breakdown .movement-drill div { color: var(--muted); }
+    .light-breakdown .movement-drill strong { color: var(--text); }
+    .relational-hero { position: relative; padding: 22px; }
+    .relational-hero::after { position: absolute; right: -40px; top: -62px; width: 180px; height: 180px; border: 1px solid rgba(255,255,255,.09); border-radius: 50%; content: ""; }
+    .relational-hero h2 { max-width: 380px; margin: 13px 0 0; font-size: 22px; line-height: 1.15; }
+    .balance-pair { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 16px; }
+    .balance-pair div { min-width: 120px; }
+    .balance-pair span { color: var(--navy-muted); font-size: 9.5px; font-weight: 850; text-transform: uppercase; }
+    .balance-pair strong { display: block; margin-top: 3px; font-size: 16px; }
+    .mini-ledger { margin-top: 17px; overflow: hidden; border: 1px solid rgba(255,255,255,.11); border-radius: 13px; }
+    .ledger-row { display: grid; grid-template-columns: 44px minmax(0,1fr) auto; gap: 8px; padding: 9px 11px; border-bottom: 1px solid rgba(255,255,255,.08); font-size: 10.5px; }
+    .ledger-row:last-child { border: 0; }
+    .ledger-row span { color: var(--navy-muted); }
+    .ledger-row strong { font-variant-numeric: tabular-nums; }
+    .now-line { display: flex; align-items: center; gap: 8px; color: var(--emerald); font-size: 9px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+    .now-line::before, .now-line::after { height: 1px; flex: 1; background: rgba(16,185,129,.38); content: ""; }
+    .activity-tab { display: flex; align-items: center; justify-content: space-between; padding: 13px 15px; }
+    .activity-tab strong { font-size: 12px; }
+    .currency-scope [data-currency]:not(.show) { display: none !important; }
+    [data-currency] { display: none; }
+    [data-currency].show { display: block; }
+    span[data-currency].show { display: inline; }
+    .mobile-note { max-width: 1440px; margin: 22px auto 0; border: 1px solid var(--border); border-radius: 16px; background: rgba(255,255,255,.72); padding: 15px 18px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .mobile-note strong { color: var(--text); }
+    @media (max-width: 1120px) { .gallery { grid-template-columns: 1fr; max-width: 680px; } }
+    @media (max-width: 620px) {
+      .workbench { padding: 15px; }
+      .gallery { min-width: 0; }
+      .screen { min-height: 0; border-radius: 18px; }
+      .app-top { padding: 18px 16px 10px; }
+      .primary span { display: none; }
+      .content { padding: 8px 16px 20px; }
+      .today-card, .split-panel { grid-template-columns: 1fr; }
+      .today-actions { flex-direction: row; }
+      .lens-grid { grid-template-columns: 1fr; }
+      .lens { min-height: 0; }
+      .hero-head { flex-direction: column; }
+      .currency-totals { text-align: left; }
+      .variant-note { align-items: flex-start; flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <main class="workbench">
+    <header class="intro">
+      <p class="kicker">Grana · Compartido</p>
+      <h1>Exploración de Home</h1>
+      <p>Cuatro estructuras para separar con claridad el saldo de hoy de la actividad mensual. Probá los selectores ARS/USD y abrí las categorías: las interacciones funcionan.</p>
+      <div class="legend"><span>Hoy = saldo + proyección</span><span>Mes = consumo devengado</span><span>ARS y USD siempre presentes</span><span>Neto protagonista</span></div>
+    </header>
+
+    <section class="gallery">
+      <article class="variant">
+        <div class="variant-note"><span class="variant-tag">V1</span><strong>Cirugía mínima</strong><span>Conserva el hero; la deuda sale a una franja fija.</span></div>
+        <div class="screen currency-scope" data-active-currency="ARS">
+          <header class="app-top"><div class="brand">Nosotros ♡</div><div class="top-actions"><button class="primary">＋ <span>Registrar movimiento</span></button><button class="icon-button">⚙</button></div></header>
+          <div class="content">
+            <section class="card today-card">
+              <div><div class="people"><span class="avatar">J</span><span>↔</span><span class="avatar c">C</span><span class="eyebrow">Hoy entre ustedes</span></div><p class="relation">Están casi al día — quedan <strong class="money">$1.250</strong> a favor de Caro</p><div class="usd-line"><span class="pill">USD</span><b>US$0,00</b><span>Están al día</span></div></div>
+              <div class="today-actions"><button class="primary">Saldar</button><button class="text-link">Ver cuenta corriente →</button></div>
+            </section>
+            <div class="month-nav"><button>‹</button><strong>Junio de 2026</strong><button>›</button></div>
+            <div class="scope">Gasto, categorías y movimientos responden a este mes</div>
+            <section class="card navy hero">
+              <div class="hero-head"><div><span class="eyebrow">Costo neto del mes</span><strong class="hero-amount money" data-currency="ARS">$130.373</strong><strong class="hero-amount money" data-currency="USD">US$84,50</strong><p class="equation" data-currency="ARS">Gastaron $145.800 · lograron $15.427 en reintegros</p><p class="equation" data-currency="USD">Gastaron US$100,00 · lograron US$15,50 en reintegros</p></div><div class="currency-totals"><span>La otra moneda</span><strong class="money" data-currency="ARS">US$84,50</strong><strong class="money" data-currency="USD">$130.373</strong><span>costo neto</span></div></div>
+              <div class="breakdown">
+                <div class="breakdown-head"><span class="eyebrow">En qué gastaron</span><div class="segmented"><button class="currency-button active" data-target="ARS">ARS</button><button class="currency-button" data-target="USD">USD</button></div></div>
+                <div data-currency="ARS">
+                  <div class="bar"><span style="width:47%"></span><span style="width:32%"></span><span style="width:21%"></span></div>
+                  <details><summary><span class="dot" style="background:var(--amber)"></span><span class="cat-name">Comida</span><span class="cat-value">$61.500</span><span class="cat-pct">47%</span><span class="chev">›</span></summary><div class="movement-drill"><div><span>Supermercado · pagó Juli</span><strong>$42.300</strong></div><div><span>Cena · pagó Caro</span><strong>$19.200</strong></div></div></details>
+                  <details><summary><span class="dot" style="background:var(--violet)"></span><span class="cat-name">Entretenimiento</span><span class="cat-value">$42.300</span><span class="cat-pct">32%</span><span class="chev">›</span></summary><div class="movement-drill"><div><span>Entradas · pagó Caro</span><strong>$28.000</strong></div><div><span>Streaming · pagó Juli</span><strong>$14.300</strong></div></div></details>
+                  <details><summary><span class="dot" style="background:var(--slate)"></span><span class="cat-name">Otros gastos</span><span class="cat-value">$26.573</span><span class="cat-pct">21%</span><span class="chev">›</span></summary><div class="movement-drill"><div><span>Regalo · pagó Juli</span><strong>$26.573</strong></div></div></details>
+                </div>
+                <div data-currency="USD"><div class="bar"><span style="width:57%"></span><span style="width:27%"></span><span style="width:16%"></span></div><details><summary><span class="dot" style="background:var(--amber)"></span><span class="cat-name">Comida</span><span class="cat-value">US$48,00</span><span class="cat-pct">57%</span><span class="chev">›</span></summary><div class="movement-drill"><div><span>Cena de viaje · pagó Juli</span><strong>US$48</strong></div></div></details><details><summary><span class="dot" style="background:var(--violet)"></span><span class="cat-name">Entretenimiento</span><span class="cat-value">US$22,50</span><span class="cat-pct">27%</span><span class="chev">›</span></summary><div class="movement-drill"><div><span>Suscripción · pagó Caro</span><strong>US$22,50</strong></div></div></details><details><summary><span class="dot" style="background:var(--slate)"></span><span class="cat-name">Otros gastos</span><span class="cat-value">US$14,00</span><span class="cat-pct">16%</span><span class="chev">›</span></summary></details></div>
+              </div>
+            </section>
+            <div class="section-title"><strong>Últimos movimientos</strong><span>Junio</span></div>
+            <section class="card movement-list"><div class="movement"><span class="movement-icon">🛒</span><div><strong>Supermercado</strong><small>Pagó Juli · tu parte $21.150</small></div><span class="amount">−$42.300</span></div><div class="movement"><span class="movement-icon">🎟️</span><div><strong>Entradas</strong><small>Pagó Caro · tu parte $14.000</small></div><span class="amount">−$28.000</span></div></section>
+          </div>
+        </div>
+      </article>
+
+      <article class="variant">
+        <div class="variant-note"><span class="variant-tag">V2</span><strong>Dos relojes</strong><span>Recomendada: “hoy” y “el mes” tienen marcos propios.</span></div>
+        <div class="screen currency-scope" data-active-currency="ARS">
+          <header class="app-top"><div class="brand">Nosotros ♡</div><div class="top-actions"><button class="primary">＋ <span>Registrar movimiento</span></button><button class="icon-button">⚙</button></div></header>
+          <div class="content">
+            <section class="card today-card"><div><div class="people"><span class="avatar">J</span><span class="avatar c">C</span><span class="eyebrow">Cuenta corriente · hoy</span></div><p class="relation">Quedan <strong>$1.250</strong> a favor de Caro</p><div class="usd-line"><span class="pill">USD</span><b>US$0,00</b><span>Están al día</span></div></div><div class="today-actions"><button class="primary">Saldar</button><button class="text-link">Abrir el libro →</button></div></section>
+            <section class="card"><div class="upcoming-strip"><span class="date-chip">JUL</span><span><b>Próximo impacto</b><br>Cuota 1 de 3 · parte de Caro</span><strong class="money">+$16.998</strong></div></section>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><div class="month-nav"><button>‹</button><strong>Junio de 2026</strong><button>›</button></div><div class="scope" style="margin-top:7px">Actividad del mes</div></div><div class="segmented light"><button class="currency-button active" data-target="ARS">ARS</button><button class="currency-button" data-target="USD">USD</button></div></div>
+            <section class="split-panel">
+              <div class="card monthly-summary"><span class="eyebrow">Costo neto</span><strong class="money" data-currency="ARS">$130.373</strong><strong class="money" data-currency="USD">US$84,50</strong><p data-currency="ARS">$145.800 brutos<br>− $15.427 reintegros</p><p data-currency="USD">US$100 brutos<br>− US$15,50 reintegros</p><div class="usd-line"><span class="pill">USD</span><b data-currency="ARS">US$84,50</b><b data-currency="USD">ARS $130.373</b><span>neto</span></div></div>
+              <div class="card navy light-breakdown"><div class="breakdown-head"><span class="eyebrow">En qué gastaron</span><span style="font-size:10px;color:var(--navy-muted)">tocá para abrir</span></div><div data-currency="ARS"><div class="bar"><span style="width:47%"></span><span style="width:32%"></span><span style="width:21%"></span></div><details><summary><span class="dot" style="background:var(--amber)"></span><span class="cat-name">Comida</span><span class="cat-value">$61.500</span><span class="cat-pct">47%</span><span class="chev">›</span></summary><div class="movement-drill"><div><span>Súper · Juli</span><strong>$42.300</strong></div><div><span>Cena · Caro</span><strong>$19.200</strong></div></div></details><details><summary><span class="dot" style="background:var(--violet)"></span><span class="cat-name">Entretenimiento</span><span class="cat-value">$42.300</span><span class="cat-pct">32%</span><span class="chev">›</span></summary></details><details><summary><span class="dot" style="background:var(--slate)"></span><span class="cat-name">Otros</span><span class="cat-value">$26.573</span><span class="cat-pct">21%</span><span class="chev">›</span></summary></details></div><div data-currency="USD"><div class="bar"><span style="width:57%"></span><span style="width:27%"></span><span style="width:16%"></span></div><details><summary><span class="dot" style="background:var(--amber)"></span><span class="cat-name">Comida</span><span class="cat-value">US$48</span><span class="cat-pct">57%</span><span class="chev">›</span></summary><div class="movement-drill"><div><span>Cena de viaje · Juli</span><strong>US$48</strong></div></div></details><details><summary><span class="dot" style="background:var(--violet)"></span><span class="cat-name">Entretenimiento</span><span class="cat-value">US$22,50</span><span class="cat-pct">27%</span><span class="chev">›</span></summary></details><details><summary><span class="dot" style="background:var(--slate)"></span><span class="cat-name">Otros</span><span class="cat-value">US$14</span><span class="cat-pct">16%</span><span class="chev">›</span></summary></details></div></div>
+            </section>
+            <div class="section-title"><strong>Últimos movimientos de junio</strong><span>Ver todos →</span></div><section class="card movement-list"><div class="movement"><span class="movement-icon">🛒</span><div><strong>Supermercado</strong><small>Pagó Juli · 50·50</small></div><span class="amount">−$42.300</span></div><div class="movement"><span class="movement-icon">🍝</span><div><strong>Cena</strong><small>Pagó Caro · tu parte $9.600</small></div><span class="amount">−$19.200</span></div></section>
+          </div>
+        </div>
+      </article>
+
+      <article class="variant">
+        <div class="variant-note"><span class="variant-tag">V3</span><strong>Tres lentes</strong><span>El modelo se hace explícito sin usar tabs.</span></div>
+        <div class="screen currency-scope" data-active-currency="ARS">
+          <header class="app-top"><div class="brand">Nosotros ♡</div><div class="top-actions"><button class="primary">＋ <span>Registrar movimiento</span></button><button class="icon-button">⚙</button></div></header>
+          <div class="content">
+            <div class="lens-grid"><section class="card lens active"><span class="eyebrow">01 · Consumo</span><strong class="big money">$130.373</strong><p>Costo neto de junio. Cambia con el navegador de mes.</p></section><section class="card lens"><span class="eyebrow">02 · Caja · hoy</span><strong class="big money" style="color:var(--rose)">$1.250</strong><p>A favor de Caro. Surge cuando la plata se mueve.</p></section><section class="card lens"><span class="eyebrow">03 · Compromiso</span><strong class="big money">$16.998</strong><p>Próximo impacto estimado en julio.</p></section></div>
+            <section class="card today-card"><div><div class="people"><span class="avatar">J</span><span>↔</span><span class="avatar c">C</span><span class="eyebrow">La relación, hoy</span></div><p class="relation">Están casi al día — quedan <strong>$1.250</strong> a favor de Caro</p><div class="usd-line"><span class="pill">USD</span><b>US$0,00</b><span>Están al día</span></div></div><div class="today-actions"><button class="primary">Saldar</button><button class="text-link">Cuenta corriente →</button></div></section>
+            <div style="display:flex;justify-content:space-between;align-items:center"><div class="month-nav"><button>‹</button><strong>Junio de 2026</strong><button>›</button></div><div class="segmented light"><button class="currency-button active" data-target="ARS">ARS</button><button class="currency-button" data-target="USD">USD</button></div></div>
+            <section class="card navy hero"><div class="hero-head"><div><span class="eyebrow">Consumo · costo neto</span><strong class="hero-amount" data-currency="ARS">$130.373</strong><strong class="hero-amount" data-currency="USD">US$84,50</strong><p class="equation" data-currency="ARS">Bruto $145.800 − reintegros $15.427</p><p class="equation" data-currency="USD">Bruto US$100 − reintegros US$15,50</p></div><div class="currency-totals"><span>También</span><strong data-currency="ARS">US$84,50</strong><strong data-currency="USD">$130.373</strong></div></div><div class="breakdown"><div class="breakdown-head"><span class="eyebrow">En qué gastaron</span><span style="font-size:10px;color:var(--navy-muted)">devengado</span></div><div data-currency="ARS"><div class="bar"><span style="width:47%"></span><span style="width:32%"></span><span style="width:21%"></span></div><details><summary><span class="dot" style="background:var(--amber)"></span><span class="cat-name">Comida</span><span class="cat-value">$61.500</span><span class="cat-pct">47%</span><span class="chev">›</span></summary><div class="movement-drill"><div><span>Súper · pagó Juli</span><strong>$42.300</strong></div><div><span>Cena · pagó Caro</span><strong>$19.200</strong></div></div></details><details><summary><span class="dot" style="background:var(--violet)"></span><span class="cat-name">Entretenimiento</span><span class="cat-value">$42.300</span><span class="cat-pct">32%</span><span class="chev">›</span></summary></details></div><div data-currency="USD"><div class="bar"><span style="width:70%"></span><span style="width:30%"></span></div><details><summary><span class="dot" style="background:var(--amber)"></span><span class="cat-name">Comida</span><span class="cat-value">US$48</span><span class="cat-pct">57%</span><span class="chev">›</span></summary><div class="movement-drill"><div><span>Cena de viaje</span><strong>US$48</strong></div></div></details><details><summary><span class="dot" style="background:var(--violet)"></span><span class="cat-name">Otros</span><span class="cat-value">US$36,50</span><span class="cat-pct">43%</span><span class="chev">›</span></summary></details></div></div></section>
+            <section class="card"><div class="upcoming-strip"><span class="date-chip">JUL</span><span><b>Lo que se viene</b><br>No cambia al navegar junio</span><strong>+$16.998</strong></div></section>
+          </div>
+        </div>
+      </article>
+
+      <article class="variant">
+        <div class="variant-note"><span class="variant-tag">V4</span><strong>El libro como centro</strong><span>Audaz: la cuenta corriente abre la experiencia.</span></div>
+        <div class="screen currency-scope" data-active-currency="ARS">
+          <header class="app-top"><div class="brand">Nosotros ♡</div><div class="top-actions"><button class="primary">＋ <span>Registrar movimiento</span></button><button class="icon-button">⚙</button></div></header>
+          <div class="content">
+            <section class="card navy relational-hero"><div class="people"><span class="avatar" style="background:white;color:var(--navy)">J</span><span>↔</span><span class="avatar c">C</span><span class="eyebrow">Cuenta corriente</span></div><h2>Están casi al día. Quedan exactamente <span style="color:#e3a395">$1.250 a favor de Caro</span>.</h2><div class="balance-pair"><div><span>ARS · saldo hoy</span><strong>$1.250 → Caro</strong></div><div><span>USD · saldo hoy</span><strong>US$0,00 · al día</strong></div></div><div class="mini-ledger"><div class="ledger-row"><span>15 jun</span><span>Súper · parte de Caro</span><strong>+$9.225</strong></div><div class="ledger-row"><span>18 jun</span><span>Caro te pagó</span><strong>−$9.225</strong></div><div class="now-line">hoy</div><div class="ledger-row"><span>jul</span><span>Cuota 1/3 · estimado</span><strong>+$16.998</strong></div></div><div style="display:flex;gap:8px;margin-top:14px"><button class="primary">Saldar</button><button class="secondary">Abrir cuenta corriente</button></div></section>
+            <section class="card"><div class="activity-tab"><div><span class="eyebrow">Actividad compartida</span><strong style="display:block;margin-top:3px">Junio de 2026</strong></div><div class="month-nav"><button>‹</button><strong>Junio</strong><button>›</button></div></div></section>
+            <div style="display:flex;align-items:center;justify-content:space-between"><div class="scope">Solo esta zona responde al mes</div><div class="segmented light"><button class="currency-button active" data-target="ARS">ARS</button><button class="currency-button" data-target="USD">USD</button></div></div>
+            <section class="card light-breakdown"><div class="hero-head"><div><span class="eyebrow">Costo neto</span><strong class="hero-amount" style="color:var(--text)" data-currency="ARS">$130.373</strong><strong class="hero-amount" style="color:var(--text)" data-currency="USD">US$84,50</strong><p class="equation" style="color:var(--muted)" data-currency="ARS">Gastaron $145.800 · recuperaron $15.427</p><p class="equation" style="color:var(--muted)" data-currency="USD">Gastaron US$100 · recuperaron US$15,50</p></div><div class="currency-totals"><span>La otra moneda</span><strong data-currency="ARS">US$84,50</strong><strong data-currency="USD">$130.373</strong></div></div><div class="breakdown" style="border-color:var(--border)"><div class="breakdown-head"><span class="eyebrow">En qué gastaron</span><span style="color:var(--muted);font-size:10px">abrir categorías</span></div><div data-currency="ARS"><div class="bar" style="background:var(--border-soft)"><span style="width:47%"></span><span style="width:32%"></span><span style="width:21%"></span></div><details><summary><span class="dot" style="background:var(--amber)"></span><span class="cat-name">Comida</span><span class="cat-value">$61.500</span><span class="cat-pct">47%</span><span class="chev">›</span></summary><div class="movement-drill"><div><span>Supermercado · Juli</span><strong>$42.300</strong></div><div><span>Cena · Caro</span><strong>$19.200</strong></div></div></details><details><summary><span class="dot" style="background:var(--violet)"></span><span class="cat-name">Entretenimiento</span><span class="cat-value">$42.300</span><span class="cat-pct">32%</span><span class="chev">›</span></summary></details><details><summary><span class="dot" style="background:var(--slate)"></span><span class="cat-name">Otros</span><span class="cat-value">$26.573</span><span class="cat-pct">21%</span><span class="chev">›</span></summary></details></div><div data-currency="USD"><div class="bar" style="background:var(--border-soft)"><span style="width:57%"></span><span style="width:27%"></span><span style="width:16%"></span></div><details><summary><span class="dot" style="background:var(--amber)"></span><span class="cat-name">Comida</span><span class="cat-value">US$48</span><span class="cat-pct">57%</span><span class="chev">›</span></summary><div class="movement-drill"><div><span>Cena de viaje</span><strong>US$48</strong></div></div></details><details><summary><span class="dot" style="background:var(--violet)"></span><span class="cat-name">Otros</span><span class="cat-value">US$36,50</span><span class="cat-pct">43%</span><span class="chev">›</span></summary></details></div></div></section>
+          </div>
+        </div>
+      </article>
+    </section>
+    <aside class="mobile-note"><strong>Adaptación mobile:</strong> las variantes mantienen un solo flujo vertical. En V2, el bloque “Hoy” queda primero y el selector de moneda viaja con la actividad mensual; en V3 las tres lentes se apilan; en V4 el mini libro se reduce a concepto + importe y conserva la línea “hoy”.</aside>
+  </main>
+  <script>
+    document.querySelectorAll('.currency-scope').forEach((scope) => {
+      const setCurrency = (currency) => {
+        scope.dataset.activeCurrency = currency;
+        scope.querySelectorAll('[data-currency]').forEach((node) => node.classList.toggle('show', node.dataset.currency === currency));
+        scope.querySelectorAll('.currency-button').forEach((button) => button.classList.toggle('active', button.dataset.target === currency));
+      };
+      scope.querySelectorAll('.currency-button').forEach((button) => button.addEventListener('click', () => setCurrency(button.dataset.target)));
+      setCurrency(scope.dataset.activeCurrency || 'ARS');
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Compartido · Referencia WEB</title>
+<style>
+  :root { --bg:#EEF1F4; --ink:#142231; --muted:#6B7683; --border:#E8ECF1; --card:#fff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: #E4E8EE; color: var(--ink); }
+  header { padding: 28px 32px 18px; }
+  header h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin: 0; }
+  header p { margin: 6px 0 0; font-size: 13.5px; color: var(--muted); font-weight: 600; max-width: 720px; line-height: 1.5; }
+  .screen { padding: 0 32px 40px; }
+  .screen .lab { display: flex; align-items: baseline; gap: 10px; padding: 22px 2px 12px; }
+  .screen .lab .n { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #8A94A3; }
+  .screen .lab .t { font-size: 16px; font-weight: 800; letter-spacing: -0.015em; }
+  .screen .lab .d { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .frame { background: var(--bg); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; box-shadow: 0 10px 30px -16px rgba(11,26,43,.25); }
+  .frame iframe { width: 100%; border: 0; display: block; background: var(--bg); }
+  .note { font-size: 12px; font-weight: 600; color: var(--muted); margin: 10px 2px 0; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Compartido · Referencia WEB (desktop)</h1>
+    <p>Prototipos HTML de referencia para implementar. Las interacciones clave funcionan: el drill inline de “En qué gastaron”, los toggles ARS/USD, el dropdown de cuenta y los montos rápidos de Saldar. Anchos de diseño ~1080px (contenido) en viewport de escritorio.</p>
+  </header>
+
+  <section class="screen">
+    <div class="lab"><span class="n">01</span><span class="t">Home</span><span class="d">· gasto neto + qué se deben + lo que se viene + últimos movimientos</span></div>
+    <div class="frame"><iframe src="home.html" style="height:1545px" title="Home web"></iframe></div>
+    <div class="note">Archivo: <code>home.html</code> · El botón “Cuenta corriente” navega a la pantalla 02.</div>
+  </section>
+
+  <section class="screen">
+    <div class="lab"><span class="n">02</span><span class="t">Cuenta corriente</span><span class="d">· ecuación del saldo + extracto con “qué cambia” y estados</span></div>
+    <div class="frame"><iframe src="cuenta-corriente.html" style="height:1715px" title="Cuenta corriente web"></iframe></div>
+    <div class="note">Archivo: <code>cuenta-corriente.html</code> · Orden descendente (lo más reciente arriba). Toggle ARS/USD funcional.</div>
+  </section>
+
+  <section class="screen">
+    <div class="lab"><span class="n">03</span><span class="t">Saldar</span><span class="d">· drawer overlay (lado de Juli, el que paga)</span></div>
+    <div class="frame"><iframe src="saldar.html" style="height:900px" title="Saldar web"></iframe></div>
+    <div class="note">Archivo: <code>saldar.html</code> · Monto protagonista + “qué pasa al pagar” + selector de cuenta (dropdown). Probá Brubank → aviso de saldo negativo no bloqueante.</div>
+  </section>
+
+  <section class="screen">
+    <div class="lab"><span class="n">03b</span><span class="t">Saldar · resto del flujo</span><span class="d">· superficies de estado (no son el mismo drawer)</span></div>
+    <div class="frame"><iframe src="saldar-flujo.html" style="height:1120px" title="Saldar flujo"></iframe></div>
+    <div class="note">Archivo: <code>saldar-flujo.html</code> · Enviado (Juli) → tarea de Caro (asigna cuenta, sin rechazar) → recibo completada.</div>
+  </section>
+</body>
+</html>
