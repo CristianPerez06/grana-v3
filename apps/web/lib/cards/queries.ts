@@ -15,6 +15,7 @@ import {
   subtractMoneyValues,
 } from './utils'
 import type { CardPeriodWithPayment, PeriodVariant } from './types'
+import { summarizeCardsMonth, type CardsMonthSummary, type UpcomingDue } from './month-summary'
 
 // ─── Types for card list and detail ───────────────────────────────────────────
 
@@ -49,6 +50,14 @@ export type CreditCardSummary = {
     variant: PeriodVariant
     alert: CardPeriodAlert
   }) | null
+  /**
+   * The current OPEN statement (`start_date <= today <= end_date`, unpaid) with
+   * its pending amounts and close date — the "en curso" statement, distinct from
+   * `activePeriod` (which, for a card that has a closed-unpaid statement, is the
+   * one "a pagar", not the open one). `null` when the card has no open period.
+   * Feeds the hero's "En curso" figure and "Próximos cierres".
+   */
+  inProgress: { endDate: string; amountARS: number; amountUSD: number } | null
 }
 
 export type CardPeriodDetail = CardPeriodWithPayment & {
@@ -332,126 +341,43 @@ export async function getCreditCards(
 
     const activeInstallmentsCount = installmentParentsByCard.get(card.id)?.size ?? 0
 
+    // The OPEN statement (today within range, unpaid) — independent of which
+    // period is "active". A card with a closed-unpaid statement has BOTH: the
+    // one "a pagar" (its activePeriod) and this open one still accruing.
+    const inProgressPeriod = unpaidPeriods.find(
+      (p) => p.start_date <= todayStr && todayStr <= p.end_date,
+    )
+    const inProgress = inProgressPeriod
+      ? {
+          endDate: inProgressPeriod.end_date,
+          amountARS: amountByPeriod.get(inProgressPeriod.id)?.ARS ?? 0,
+          amountUSD: amountByPeriod.get(inProgressPeriod.id)?.USD ?? 0,
+        }
+      : null
+
     return {
       ...card,
       type: 'credit' as const,
       activeInstallmentsCount,
       inUse: (activePeriodWithMeta?.tx_count ?? 0) > 0 || activeInstallmentsCount > 0,
       activePeriod: activePeriodWithMeta,
+      inProgress,
     }
   })
 }
 
-// ─── Listing-level aggregate: "A pagar este mes" + próximos vencimientos ──────
+// ─── Listing-level aggregate: "A pagar" + "En curso" + próximos cierres ───────
 
-export type UpcomingDue = {
-  cardId: string
-  cardName: string
-  /** Statement close date (ISO). */
-  endDate: string
-  /** Statement due date (ISO). */
-  dueDate: string
-  amountARS: number
-  amountUSD: number
-  /** Derived alert from days until due (red ≤3, amber ≤7, none otherwise). */
-  alert: CardPeriodAlert
-  /** Whether this statement already closed and is unpaid (counts toward "a pagar"). */
-  isToPay: boolean
-}
-
-export type CardsMonthSummary = {
-  /** Sum of all cards' "a pagar" (closed/overdue, unpaid) statements, per currency. */
-  toPayARS: number
-  toPayUSD: number
-  /** Whether any active card has a USD ledger (drives showing the USD line). */
-  hasUSD: boolean
-  /** Whether at least one card has a statement to pay this month. */
-  hasToPay: boolean
-  /** Closest upcoming due date among all active cards, or null. */
-  nextDue: UpcomingDue | null
-  /** Next due date of EVERY active card with an active period, by due date asc. */
-  upcoming: UpcomingDue[]
-  /**
-   * Upcoming statement CLOSES (cierres) among open periods (`end_date >= today`),
-   * one row per card, sorted by close date ascending, capped at the next 3.
-   * These are CLOSE dates, NOT payment due dates.
-   */
-  nextCloses: { endDate: string; cardName: string }[]
-}
+export type { UpcomingDue, CardsMonthSummary }
 
 /**
- * Listing-level summary for the cards hero. Two distinct concepts:
- *
- * - "A pagar este mes" (`toPayARS`/`toPayUSD`): the sum of statements that
- *   already CLOSED and are unpaid (`closed`/`overdue` with charges). ARS and
- *   USD are summed SEPARATELY, never converted (Bimoneda).
- * - "Próximos vencimientos" (`upcoming`): the next due date of EVERY active
- *   card that has an active period — including cards that are up to date (only
- *   accruing in the open statement). Each row is flagged `isToPay` so the UI
- *   can distinguish a statement already due from one still open.
- *
- * Built on the same per-card data as `getCreditCards` to avoid an N+1.
+ * Listing-level summary for the cards hero. Thin DB wrapper: loads the per-card
+ * data once via `getCreditCards()` (no N+1) and delegates the derivation to the
+ * pure `summarizeCardsMonth()`. See that function for the figure definitions.
  */
 export async function getCardsMonthSummary(supabase: DbClient): Promise<CardsMonthSummary> {
   const cards = await getCreditCards(supabase, { includeArchived: false })
-  const today = getTodayAR()
-  const todayStr = formatDateISO(today)
-
-  const upcoming: UpcomingDue[] = []
-  let toPayARS = 0
-  let toPayUSD = 0
-  let hasUSD = false
-  let hasToPay = false
-
-  for (const card of cards) {
-    if (card.currencies.some((c) => c.currency_code === 'USD' && c.is_active)) {
-      hasUSD = true
-    }
-    const period = card.activePeriod
-    if (!period || period.has_payment) continue
-
-    // A statement counts as "a pagar" once it has closed and remains unpaid.
-    const isToPay =
-      (period.end_date < todayStr || period.due_date < todayStr) && period.tx_count > 0
-
-    if (isToPay) {
-      hasToPay = true
-      toPayARS = sumMoneyValues([toPayARS, period.pendingAmountARS])
-      toPayUSD = sumMoneyValues([toPayUSD, period.pendingAmountUSD])
-    }
-
-    // Every active card with an active period contributes its next due date.
-    upcoming.push({
-      cardId: card.id,
-      cardName: card.name,
-      endDate: period.end_date,
-      dueDate: period.due_date,
-      amountARS: period.pendingAmountARS,
-      amountUSD: period.pendingAmountUSD,
-      alert: period.alert,
-      isToPay,
-    })
-  }
-
-  upcoming.sort((a, b) => a.dueDate.localeCompare(b.dueDate))
-
-  // Próximos cierres: open statements about to close (end_date in the future),
-  // one row per card, by close date ascending, next 3.
-  const nextCloses = upcoming
-    .filter((u) => u.endDate >= todayStr)
-    .sort((a, b) => a.endDate.localeCompare(b.endDate) || a.cardName.localeCompare(b.cardName))
-    .slice(0, 3)
-    .map((u) => ({ endDate: u.endDate, cardName: u.cardName }))
-
-  return {
-    toPayARS,
-    toPayUSD,
-    hasUSD,
-    hasToPay,
-    nextDue: upcoming[0] ?? null,
-    upcoming,
-    nextCloses,
-  }
+  return summarizeCardsMonth(cards, formatDateISO(getTodayAR()))
 }
 
 // ─── Active installments (cuotas en curso) per card ───────────────────────────

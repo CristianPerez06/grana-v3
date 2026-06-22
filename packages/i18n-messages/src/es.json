@@ -793,6 +793,9 @@
     },
     "month_hero": {
       "eyebrow": "A pagar este mes",
+      "to_pay_label": "A pagar",
+      "in_progress_label": "En curso",
+      "in_progress_caption": "se sigue sumando hasta el cierre",
       "next_closes_label": "Próximos cierres",
       "next_closes_empty": "Sin cierres próximos",
       "next_due_label": "Próximo vencimiento",

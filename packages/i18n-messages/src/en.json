@@ -793,6 +793,9 @@
     },
     "month_hero": {
       "eyebrow": "To pay this month",
+      "to_pay_label": "To pay",
+      "in_progress_label": "In progress",
+      "in_progress_caption": "keeps adding up until it closes",
       "next_closes_label": "Upcoming closes",
       "next_closes_empty": "No upcoming closes",
       "next_due_label": "Next due date",

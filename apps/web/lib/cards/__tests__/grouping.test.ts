@@ -72,6 +72,7 @@ const mkCard = (over: CardOver = {}): CreditCardSummary => {
     activeInstallmentsCount: 0,
     inUse,
     activePeriod,
+    inProgress: null,
   }
 }
 

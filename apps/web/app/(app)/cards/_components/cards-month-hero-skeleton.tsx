@@ -10,10 +10,18 @@ export const CardsMonthHeroSkeleton = async () => {
       aria-label={t('hero_loading')}
     >
       <CardContent className="grid grid-cols-1 gap-0 p-0 md:grid-cols-[1fr_1px_minmax(0,340px)]">
-        <div className="flex flex-col gap-3 p-7">
-          <span className="h-3 w-32 rounded bg-white/15 animate-pulse" />
-          <span className="h-12 w-56 rounded bg-white/15 animate-pulse" />
-          <span className="h-5 w-28 rounded bg-white/10 animate-pulse" />
+        <div className="flex flex-col gap-5 p-7">
+          {/* A pagar */}
+          <div className="flex flex-col gap-2">
+            <span className="h-3 w-20 rounded bg-white/15 animate-pulse" />
+            <span className="h-11 w-52 rounded bg-white/15 animate-pulse" />
+          </div>
+          {/* En curso */}
+          <div className="flex flex-col gap-2 border-t border-white/10 pt-4">
+            <span className="h-3 w-20 rounded bg-white/15 animate-pulse" />
+            <span className="h-7 w-40 rounded bg-white/10 animate-pulse" />
+            <span className="h-3 w-44 rounded bg-white/10 animate-pulse" />
+          </div>
         </div>
         <div className="hidden bg-white/10 md:block" aria-hidden />
         <div className="flex flex-col gap-3 border-t border-white/10 p-7 md:border-t-0">
