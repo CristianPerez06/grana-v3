@@ -31,6 +31,48 @@ import {
   translateSubcategoryLabel,
 } from '@/lib/categories/display'
 
+// We build the breakdown WITHOUT the "Otros" tail so every category survives as
+// its own slice — the ranking list can then reveal them all (see the
+// expandable "+ N categorías más" row in CategorySpendingOverview). The donut
+// is regrouped to a clean top-N + "Otros" separately, in `groupForDonut` below.
+const NO_OTHERS_CAP = Number.MAX_SAFE_INTEGER
+// How many named arcs the donut shows before folding the rest into one "Otros"
+// slice. Mirrors the previous buildCategorySlices default (topN: 6) so the donut
+// stays visually identical.
+const DONUT_TOP = 6
+
+// Regroup an uncapped, sorted breakdown into the donut's top-N + "Otros" view,
+// recomputing the cumulative offsets so the arcs stay contiguous. Pure mirror of
+// buildCategorySlices' tail logic, applied after the fact so the ranking can
+// keep the full per-category list.
+function groupForDonut(
+  breakdown: CategoryBreakdown,
+  topN: number,
+  othersLabel: string,
+): CategoryBreakdown {
+  if (breakdown.slices.length <= topN) return breakdown
+  const named = breakdown.slices.slice(0, topN)
+  const rest = breakdown.slices.slice(topN)
+  const last = named[named.length - 1]
+  const othersValue = rest.reduce((acc, s) => acc + s.value, 0)
+  const othersPercentage = rest.reduce((acc, s) => acc + s.percentage, 0)
+  return {
+    total: breakdown.total,
+    slices: [
+      ...named,
+      {
+        categoryId: null,
+        label: othersLabel,
+        color: '#9CA3AF',
+        icon: null,
+        value: othersValue,
+        percentage: othersPercentage,
+        offset: last.offset + last.percentage,
+      },
+    ],
+  }
+}
+
 /**
  * Client container for `<CategorySpendingOverview>`. Reads filters from the
  * route's React state (month, currency, overview mode, optional category /
@@ -116,16 +158,28 @@ export function CategorySpendingOverviewContainer() {
       const raw = incomeBreakdownQ.data
       if (!raw) return null
       const fill = (rows: typeof raw.ARS) => rows.map(relabel)
-      const ars = buildCategorySlices(fill(raw.ARS), { othersLabel: t('spending.others') })
-      const usd = buildCategorySlices(fill(raw.USD), { othersLabel: t('spending.others') })
+      const ars = buildCategorySlices(fill(raw.ARS), {
+        topN: NO_OTHERS_CAP,
+        othersLabel: t('spending.others'),
+      })
+      const usd = buildCategorySlices(fill(raw.USD), {
+        topN: NO_OTHERS_CAP,
+        othersLabel: t('spending.others'),
+      })
       return overviewCurrency === 'USD' ? usd : ars
     }
     // egresos
     const raw = categoryBreakdownQ.data
     if (!raw) return null
     const fill = (rows: typeof raw.ARS) => rows.map(relabel)
-    const arsCategory = buildCategorySlices(fill(raw.ARS), { othersLabel: t('spending.others') })
-    const usdCategory = buildCategorySlices(fill(raw.USD), { othersLabel: t('spending.others') })
+    const arsCategory = buildCategorySlices(fill(raw.ARS), {
+      topN: NO_OTHERS_CAP,
+      othersLabel: t('spending.others'),
+    })
+    const usdCategory = buildCategorySlices(fill(raw.USD), {
+      topN: NO_OTHERS_CAP,
+      othersLabel: t('spending.others'),
+    })
 
     if (breakdownMode === 'subcategory' && filters.categoryId && subcategoryDrillQ.data) {
       const subRaw = subcategoryDrillQ.data
@@ -172,6 +226,16 @@ export function CategorySpendingOverviewContainer() {
     t,
     tRoot,
   ])
+
+  // The donut gets a clean top-N + "Otros" view; the ranking gets the full,
+  // uncapped `overviewBreakdown.slices` so it can list every category. In the
+  // in-category subcategory view we keep showing all sub-arcs (no "Otros"),
+  // matching the previous behaviour.
+  const donutBreakdown = useMemo<CategoryBreakdown | null>(() => {
+    if (!overviewBreakdown) return null
+    if (breakdownMode === 'subcategory') return overviewBreakdown
+    return groupForDonut(overviewBreakdown, DONUT_TOP, t('spending.others'))
+  }, [overviewBreakdown, breakdownMode, t])
 
   // Categories in credit ("te devolvieron") for the active currency — egresos
   // top-level only (income has none; subcategory drill doesn't surface them yet).
@@ -224,6 +288,12 @@ export function CategorySpendingOverviewContainer() {
                 category: getCategoryName(activeCategory, tRoot),
               })
             : t('spending.eyebrow'),
+      // Base eyebrow without the "dentro de X" suffix — used as the clickable
+      // "back to all categories" crumb when a category filter is active.
+      baseEyebrow:
+        overviewMode === 'ingresos' ? t('spending.income_eyebrow') : t('spending.eyebrow'),
+      activeCategoryName:
+        activeCategory != null ? getCategoryName(activeCategory, tRoot) : undefined,
       centerLabel:
         overviewMode === 'ingresos'
           ? t('spending.income_center_label')
@@ -233,6 +303,7 @@ export function CategorySpendingOverviewContainer() {
       seeDetail: t('spending.see_detail'),
       othersLabelTemplate: t.raw('spending.others_label') as string,
       seeAllCategories: t('spending.see_all_categories'),
+      showLess: t('spending.show_less'),
       emptyMessage:
         overviewMode === 'ingresos' ? t('spending.income_empty') : t('spending.empty'),
       modeEgresos: t('spending.mode_egresos'),
@@ -268,8 +339,15 @@ export function CategorySpendingOverviewContainer() {
         if (overviewMode === 'ingresos') {
           dispatch({ type: 'setType', movementType: 'income' })
         }
-        dispatch({ type: 'setCategory', categoryId })
+        // Toggle: clicking the already-active category clears the filter so the
+        // chart and the movement list return to "all categories" in sync. (In
+        // egresos this mostly fires from the breadcrumb/donut back affordance,
+        // since selecting a category swaps the ranking to its subcategories.)
+        dispatch({ type: 'setCategory', categoryId: filters.categoryId === categoryId ? null : categoryId })
       },
+      // Clear the active category (and its subcategory) — returns the overview to
+      // all categories and unfilters the list. Wired to the breadcrumb + donut.
+      onClearCategory: () => dispatch({ type: 'setCategory', categoryId: null }),
     }),
     [dispatch, breakdownMode, filters.categoryId, overviewCurrency, overviewMode],
   )
@@ -279,7 +357,7 @@ export function CategorySpendingOverviewContainer() {
   // doesn't jolt when data lands. The original "Sin gastos este mes" text is
   // the genuine empty state — only shown after the queries resolve with no
   // slices.
-  if (!overviewBreakdown || usdQ.data === undefined) {
+  if (!overviewBreakdown || !donutBreakdown || usdQ.data === undefined) {
     return <CategorySpendingOverviewSkeleton />
   }
 
@@ -294,7 +372,8 @@ export function CategorySpendingOverviewContainer() {
       mode={overviewMode}
       egresosHref="#"
       ingresosHref="#"
-      breakdown={overviewBreakdown}
+      breakdown={donutBreakdown}
+      rankingSlices={overviewBreakdown.slices}
       hasUsd={Boolean(usdQ.data)}
       arsHref="#"
       usdHref="#"

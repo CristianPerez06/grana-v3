@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import type { CategoryBreakdown, CategorySlice, SubcategoryBreakdown } from '@grana/money-logic'
 
@@ -17,7 +17,10 @@ import { useShowCents } from '@/lib/preferences-context'
 import { donutAmountFontSize } from '@/lib/donut-amount'
 
 const DONUT_FALLBACK = '#9CA3AF'
-const RANKING_TOP = 5
+// How many category rows the ranking shows before folding the rest into the
+// expandable "+ N más" control. Independent of the donut's top-6 + "Otros"
+// grouping — most users sit under this and never see the toggle.
+const RANKING_VISIBLE = 10
 
 // ── Mode palette / accent (design handoff: selector Egresos / Ingresos) ────────
 // Egresos keeps each category's own DB colour (multicolour by design); Ingresos
@@ -94,6 +97,8 @@ export type CategorySpendingOverviewController = {
    * (`parentCategoryId` is set), `categoryId` is the subcategoryId.
    */
   onSelectCategory: (categoryId: string) => void
+  /** Clear the active category filter — back to the all-categories overview. */
+  onClearCategory?: () => void
   onSeeDetail?: () => void
 }
 
@@ -127,14 +132,28 @@ type Props = {
    * drill-down instead of navigating to a new URL.
    */
   subBreakdownsByCategory?: Record<string, { ARS: SubcategoryBreakdown; USD: SubcategoryBreakdown }>
+  /**
+   * Full, uncapped per-category ranking (sorted desc, with percentages). The
+   * donut's `breakdown` is grouped into top-N + "Otros", but the ranking lists
+   * every category — the rows beyond RANKING_VISIBLE collapse into an expandable
+   * "+ N categorías más" control. Falls back to `breakdown.slices` for legacy
+   * callers that don't pass it.
+   */
+  rankingSlices?: CategorySlice[]
   labels: {
     eyebrow: string
+    /** Base eyebrow without the "dentro de X" suffix (clickable back crumb). */
+    baseEyebrow: string
+    /** Active category name, when a category filter is on (for the breadcrumb). */
+    activeCategoryName?: string
     centerLabel: string
     categoriesCaptionTemplate: string
     offLedgerNote: string
     seeDetail: string
     othersLabelTemplate: string
     seeAllCategories: string
+    /** "Ver menos" — collapses the expanded category tail. */
+    showLess: string
     emptyMessage: string
     /** Mode selector tab labels. */
     modeEgresos: string
@@ -266,6 +285,7 @@ export const CategorySpendingOverview = ({
   detailHref,
   parentCategoryId,
   subBreakdownsByCategory,
+  rankingSlices,
   controller,
   credits,
 }: Props) => {
@@ -363,12 +383,99 @@ export const CategorySpendingOverview = ({
   }, [currency])
 
   // ── Ranking rows ───────────────────────────────────────────────────────────
-  const named = breakdown.slices.slice(0, RANKING_TOP)
-  const tail = breakdown.slices.slice(RANKING_TOP)
+  // The ranking lists EVERY category (full, uncapped `rankingSlices`), not the
+  // donut's grouped slices — otherwise the tail beyond RANKING_VISIBLE would be
+  // the opaque "Otros" bucket the user can't drill into. Rows past
+  // RANKING_VISIBLE fold into an expandable control so the list stays compact.
+  const rankingSource = rankingSlices ?? breakdown.slices
+  const named = rankingSource.slice(0, RANKING_VISIBLE)
+  const tail = rankingSource.slice(RANKING_VISIBLE)
   const tailValue = tail.reduce((acc, s) => acc + s.value, 0)
   const tailPct = tail.reduce((acc, s) => acc + s.percentage, 0)
+  const [tailExpanded, setTailExpanded] = useState(false)
+  // Bars are scaled against the largest share (slices arrive sorted desc) so the
+  // top category fills the track and the rest read as a proportion of it.
+  const maxPercentage = rankingSource[0]?.percentage ?? 100
+
+  // A single category ranking row — a header line (icon · label · % · amount)
+  // plus a thin bar of the category's share. Shared by the visible rows and the
+  // expanded tail so both behave identically (drill, filter, or link).
+  const renderCategoryRow = (s: CategorySlice, i: number) => {
+    const href = buildRowHref(s.categoryId, { month, currency, mode, parentCategoryId })
+    const share = Math.round(s.percentage)
+    const barWidth = maxPercentage > 0 ? (s.percentage / maxPercentage) * 100 : 0
+    // Match the donut's coloring: income uses the positional green palette,
+    // expenses keep each category's own colour.
+    const barColor =
+      mode === 'ingresos'
+        ? INCOME_PALETTE[i % INCOME_PALETTE.length]
+        : s.color ?? DONUT_FALLBACK
+    const isDrillable =
+      subBreakdownsByCategory && s.categoryId
+        ? (subBreakdownsByCategory[s.categoryId]?.[currency]?.slices.length ?? 0) > 0
+        : false
+
+    const row = (
+      <div className="flex flex-col gap-1.5 min-w-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="truncate text-sm font-medium text-text flex-1">
+            {s.icon ? `${s.icon} ` : ''}
+            {s.label}
+            {isDrillable && <span className="ml-1 text-text-soft text-xs">›</span>}
+          </span>
+          <span className="shrink-0 w-10 text-right text-xs text-text-soft tabular-nums">
+            {share}%
+          </span>
+          <span className="shrink-0 text-sm font-semibold tabular-nums tracking-[-0.01em] text-text">
+            {fmt(s.value)}
+          </span>
+        </div>
+        <div className="h-1.5 rounded-full bg-border-soft overflow-hidden">
+          <div
+            className="h-full rounded-full"
+            style={{ width: `${barWidth}%`, backgroundColor: barColor }}
+          />
+        </div>
+      </div>
+    )
+
+    return (
+      <li key={s.categoryId ?? `otros-${i}`}>
+        {isDrillable && s.categoryId ? (
+          <button
+            type="button"
+            onClick={() => drillIn(s.categoryId!)}
+            className="block w-full rounded-md px-1.5 py-1 hover:bg-muted/40 transition-colors text-left"
+            aria-label={`Ver subcategorías de ${s.label}`}
+            aria-expanded={drilledId === s.categoryId}
+          >
+            {row}
+          </button>
+        ) : controller && s.categoryId ? (
+          <button
+            type="button"
+            onClick={() => controller.onSelectCategory(s.categoryId!)}
+            className="block w-full rounded-md px-1.5 py-1 hover:bg-muted/40 transition-colors text-left"
+          >
+            {row}
+          </button>
+        ) : href ? (
+          <Link href={href} className="block rounded-md px-1.5 py-1 hover:bg-muted/40 transition-colors">
+            {row}
+          </Link>
+        ) : (
+          <div className="px-1.5 py-1">{row}</div>
+        )}
+      </li>
+    )
+  }
 
   // ── Breadcrumb ─────────────────────────────────────────────────────────────
+  // In-category filter view (a category is selected and the ranking shows its
+  // subcategories): expose a clickable "‹ base eyebrow › Category" crumb whose
+  // first segment clears the filter, so the chart and the movement list return
+  // to "all categories" together.
+  const inCategory = !drilledId && Boolean(parentCategoryId) && Boolean(controller?.onClearCategory)
   const breadcrumb = drilledId && drilledSlice ? (
     <span className="text-[11px] font-semibold uppercase tracking-[0.08em]">
       <button
@@ -380,6 +487,22 @@ export const CategorySpendingOverview = ({
       </button>
       <span className="mx-1 text-text-soft">›</span>
       <span className="text-text">{drilledSlice.label}</span>
+    </span>
+  ) : inCategory ? (
+    <span className="text-[11px] font-semibold uppercase tracking-[0.08em]">
+      <button
+        type="button"
+        onClick={controller!.onClearCategory}
+        className="text-slate hover:underline cursor-pointer"
+      >
+        {labels.baseEyebrow}
+      </button>
+      {labels.activeCategoryName && (
+        <>
+          <span className="mx-1 text-text-soft">›</span>
+          <span className="text-text">{labels.activeCategoryName}</span>
+        </>
+      )}
     </span>
   ) : (
     <span
@@ -430,8 +553,18 @@ export const CategorySpendingOverview = ({
         {fmt(breakdown.total)}
       </span>
       <span className="mt-1 text-[11px] text-text-soft">
-        {fillTemplate(labels.categoriesCaptionTemplate, { count: breakdown.slices.length })}
+        {fillTemplate(labels.categoriesCaptionTemplate, { count: rankingSource.length })}
       </span>
+      {inCategory && (
+        <button
+          type="button"
+          onClick={controller!.onClearCategory}
+          className="mt-1 text-[10px] font-semibold text-slate hover:underline leading-none"
+          aria-label="Volver a todas las categorías"
+        >
+          ‹ Volver
+        </button>
+      )}
     </>
   )
 
@@ -575,10 +708,14 @@ export const CategorySpendingOverview = ({
         <div className="flex flex-col items-center gap-7 sm:flex-row sm:items-center">
           {/* Donut + center label */}
           <div
-            className="relative flex shrink-0 items-center justify-center cursor-pointer"
-            onClick={drilledId ? drillOut : undefined}
-            role={drilledId ? 'button' : undefined}
-            aria-label={drilledId ? 'Volver a categorías' : undefined}
+            className={
+              drilledId || inCategory
+                ? 'relative flex shrink-0 items-center justify-center cursor-pointer'
+                : 'relative flex shrink-0 items-center justify-center'
+            }
+            onClick={drilledId ? drillOut : inCategory ? controller!.onClearCategory : undefined}
+            role={drilledId || inCategory ? 'button' : undefined}
+            aria-label={drilledId || inCategory ? 'Volver a todas las categorías' : undefined}
           >
             <AnimatedDonut
               parentSlices={donutSlices}
@@ -621,81 +758,48 @@ export const CategorySpendingOverview = ({
                 </li>
               ))
             ) : (
-              // Category ranking
+              // Category ranking — top-N named rows, then the rest behind an
+              // expandable "+ N categorías más" control so every category is
+              // reachable (the old aggregate row was a dead end).
               <>
-                {named.map((s, i) => {
-                  const href = buildRowHref(s.categoryId, { month, currency, mode, parentCategoryId })
-                  const share = Math.round(s.percentage)
-                  const isDrillable =
-                    subBreakdownsByCategory && s.categoryId
-                      ? (subBreakdownsByCategory[s.categoryId]?.[currency]?.slices.length ?? 0) > 0
-                      : false
+                {named.map((s, i) => renderCategoryRow(s, i))}
 
-                  const row = (
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="truncate text-sm font-medium text-text flex-1">
-                        {s.icon ? `${s.icon} ` : ''}
-                        {s.label}
-                        {isDrillable && (
-                          <span className="ml-1 text-text-soft text-xs">›</span>
-                        )}
-                      </span>
-                      <span className="shrink-0 w-10 text-right text-xs text-text-soft tabular-nums">
-                        {share}%
-                      </span>
-                      <span className="shrink-0 text-sm font-semibold tabular-nums tracking-[-0.01em] text-text">
-                        {fmt(s.value)}
-                      </span>
-                    </div>
-                  )
-
-                  return (
-                    <li key={s.categoryId ?? `otros-${i}`}>
-                      {isDrillable && s.categoryId ? (
-                        <button
-                          type="button"
-                          onClick={() => drillIn(s.categoryId!)}
-                          className="block w-full rounded-md hover:bg-muted/40 transition-colors text-left"
-                          aria-label={`Ver subcategorías de ${s.label}`}
-                          aria-expanded={drilledId === s.categoryId}
-                        >
-                          {row}
-                        </button>
-                      ) : controller && s.categoryId ? (
-                        <button
-                          type="button"
-                          onClick={() => controller.onSelectCategory(s.categoryId!)}
-                          className="block w-full rounded-md hover:bg-muted/40 transition-colors text-left"
-                        >
-                          {row}
-                        </button>
-                      ) : href ? (
-                        <Link
-                          href={href}
-                          className="block rounded-md hover:bg-muted/40 transition-colors"
-                        >
-                          {row}
-                        </Link>
-                      ) : (
-                        row
-                      )}
-                    </li>
-                  )
-                })}
+                {tail.length > 0 && tailExpanded &&
+                  tail.map((s, i) => renderCategoryRow(s, RANKING_VISIBLE + i))}
 
                 {tail.length > 0 && (
                   <li>
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="truncate text-sm font-medium text-text-muted flex-1">
-                        {fillTemplate(labels.othersLabelTemplate, { count: tail.length })}
-                      </span>
-                      <span className="shrink-0 w-10 text-right text-xs text-text-soft tabular-nums">
-                        {Math.round(tailPct)}%
-                      </span>
-                      <span className="shrink-0 text-sm font-semibold tabular-nums text-text-muted">
-                        {fmt(tailValue)}
-                      </span>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setTailExpanded((v) => !v)}
+                      className="block w-full rounded-md hover:bg-muted/40 transition-colors text-left"
+                      aria-expanded={tailExpanded}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="flex items-center gap-1 truncate text-sm font-medium text-slate flex-1">
+                          {tailExpanded
+                            ? labels.showLess
+                            : fillTemplate(labels.othersLabelTemplate, { count: tail.length })}
+                          <ChevronDown
+                            size={14}
+                            className={`shrink-0 transition-transform ${
+                              tailExpanded ? 'rotate-180' : ''
+                            }`}
+                            aria-hidden
+                          />
+                        </span>
+                        {!tailExpanded && (
+                          <>
+                            <span className="shrink-0 w-10 text-right text-xs text-text-soft tabular-nums">
+                              {Math.round(tailPct)}%
+                            </span>
+                            <span className="shrink-0 text-sm font-semibold tabular-nums text-text-muted">
+                              {fmt(tailValue)}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </button>
                   </li>
                 )}
               </>

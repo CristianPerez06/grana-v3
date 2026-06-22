@@ -1047,6 +1047,7 @@
       "others_label": "+ {count} categorías más",
       "others_meta": "{share}% del total",
       "see_all_categories": "Ver todas las categorías",
+      "show_less": "Ver menos",
       "meta": {
         "installments": "{share}% · cuotas {description}",
         "recurring": "{share}% · {count} recurrentes",
