@@ -3,6 +3,10 @@ import {
   decideRecurrenceInstance,
   type RuleForDecision,
 } from '@grana/money-logic'
+import {
+  buildPendingInstanceInsert,
+  type RecurrenceRuleForGeneration,
+} from '../queries'
 
 // Direct rule: created from scratch, no seed transaction. last_generated_date is
 // null, so the FIRST instance falls ON start_date (not start_date + interval).
@@ -80,5 +84,47 @@ describe('decideRecurrenceInstance — seeded rules (last_generated_date set)', 
       false,
     )
     expect(decision).toEqual({ generate: false, reason: 'past_end_date' })
+  })
+})
+
+describe('buildPendingInstanceInsert — shared propagation', () => {
+  const baseRule: RecurrenceRuleForGeneration = {
+    id: 'rule-1',
+    frequency: 'monthly',
+    interval_count: 1,
+    interval_unit: 'month',
+    max_occurrences: null,
+    start_date: '2026-01-15',
+    end_date: null,
+    last_generated_date: null,
+    amount: 100000,
+    account_id: 'acc-1',
+    transfer_destination_account_id: null,
+    currency_code: 'ARS',
+    category_id: 'cat-1',
+    subcategory_id: null,
+    description: 'Alquiler',
+    household_id: null,
+    default_split: null,
+  }
+
+  it('propagates household_id and snapshots default_split into split for a shared rule', () => {
+    const split = [
+      { user_id: 'u1', percentage: 50 },
+      { user_id: 'u2', percentage: 50 },
+    ]
+    const row = buildPendingInstanceInsert(
+      { ...baseRule, household_id: 'hh-1', default_split: split },
+      'u1',
+      '2026-01-15',
+    )
+    expect(row.household_id).toBe('hh-1')
+    expect(row.split).toEqual(split)
+  })
+
+  it('leaves household_id and split null for an individual rule', () => {
+    const row = buildPendingInstanceInsert(baseRule, 'u1', '2026-01-15')
+    expect(row.household_id).toBeNull()
+    expect(row.split).toBeNull()
   })
 })

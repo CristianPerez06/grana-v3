@@ -206,6 +206,22 @@ export async function leaveHousehold(): Promise<ActionResult<never>> {
     return { ok: false, formError: 'Hay liquidaciones pendientes. Resolvelas antes de salir.' }
   }
 
+  // A live shared recurrence keeps generating shared movements for this
+  // household; leaving would orphan it. Same honest-blocking criterion as debt
+  // and pending settlements: ask the user to pause or delete it first.
+  const { count: sharedRules } = await supabase
+    .from('recurrences')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('household_id', householdId)
+    .eq('status', 'active')
+  if ((sharedRules ?? 0) > 0) {
+    return {
+      ok: false,
+      formError: 'Tenés una recurrencia compartida activa. Pausala o eliminala antes de salir.',
+    }
+  }
+
   const { error } = await supabase
     .from('household_member')
     .delete()

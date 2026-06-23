@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronDown, Clock, Pencil, Repeat, X } from 'lucide-react'
+import { Check, ChevronDown, Clock, Pencil, Repeat, Users, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { getCategoryName } from '@/lib/categories/display'
@@ -289,11 +289,21 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
                       (instance.category ? getCategoryName(instance.category, tRoot) : null) ||
                       movementLabel}
                   </span>
-                  <span className="truncate text-[14px] font-medium text-text-muted">
-                    {freqLabel} ·{' '}
-                    {instance.recurrence.movement_type === 'transfer'
-                      ? `${accountName} → ${destinationName ?? '—'}`
-                      : accountName}
+                  <span className="flex items-center gap-1.5 text-[14px] font-medium text-text-muted">
+                    <span className="truncate">
+                      {freqLabel} ·{' '}
+                      {instance.recurrence.movement_type === 'transfer'
+                        ? `${accountName} → ${destinationName ?? '—'}`
+                        : accountName}
+                    </span>
+                    {/* Shared recurrence: confirming will split this expense with
+                        the household. Same badge as the movement list. */}
+                    {instance.household_id && (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-border-soft px-1.5 py-0.5 text-[11px] font-semibold text-text-muted">
+                        <Users size={10} />
+                        {tTx('list.shared_short')}
+                      </span>
+                    )}
                   </span>
                   <span
                     className="mt-0.5 inline-flex items-center gap-1.5 text-[12px] font-extrabold uppercase tracking-[0.06em]"

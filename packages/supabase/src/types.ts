@@ -443,10 +443,12 @@ export type Database = {
           created_at: string
           currency_code: string
           description: string | null
+          household_id: string | null
           id: string
           recurrence_id: string
           resolved_at: string | null
           scheduled_date: string
+          split: Json | null
           status: string
           subcategory_id: string | null
           transfer_destination_account_id: string | null
@@ -460,10 +462,12 @@ export type Database = {
           created_at?: string
           currency_code: string
           description?: string | null
+          household_id?: string | null
           id?: string
           recurrence_id: string
           resolved_at?: string | null
           scheduled_date: string
+          split?: Json | null
           status?: string
           subcategory_id?: string | null
           transfer_destination_account_id?: string | null
@@ -477,10 +481,12 @@ export type Database = {
           created_at?: string
           currency_code?: string
           description?: string | null
+          household_id?: string | null
           id?: string
           recurrence_id?: string
           resolved_at?: string | null
           scheduled_date?: string
+          split?: Json | null
           status?: string
           subcategory_id?: string | null
           transfer_destination_account_id?: string | null
@@ -514,6 +520,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "currencies"
             referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "recurrence_instances_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "household"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "recurrence_instances_recurrence_id_fkey"
@@ -570,9 +583,11 @@ export type Database = {
           created_at: string
           created_from_transaction_id: string | null
           currency_code: string
+          default_split: Json | null
           description: string | null
           end_date: string | null
           frequency: string
+          household_id: string | null
           id: string
           interval_count: number
           interval_unit: string
@@ -592,9 +607,11 @@ export type Database = {
           created_at?: string
           created_from_transaction_id?: string | null
           currency_code: string
+          default_split?: Json | null
           description?: string | null
           end_date?: string | null
           frequency: string
+          household_id?: string | null
           id?: string
           interval_count?: number
           interval_unit?: string
@@ -614,9 +631,11 @@ export type Database = {
           created_at?: string
           created_from_transaction_id?: string | null
           currency_code?: string
+          default_split?: Json | null
           description?: string | null
           end_date?: string | null
           frequency?: string
+          household_id?: string | null
           id?: string
           interval_count?: number
           interval_unit?: string
@@ -657,6 +676,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "currencies"
             referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "recurrences_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "household"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "recurrences_subcategory_id_fkey"

@@ -8,6 +8,7 @@ import {
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateDueRecurrenceInstances } from '@/lib/recurrences/queries'
+import { getHousehold } from '@/lib/shared/queries'
 import {
   acceptRecurrenceSuggestionSchema,
   confirmRecurrenceInstanceSchema,
@@ -82,7 +83,13 @@ export async function createRecurrenceFromMovement(
     userId,
     input,
   })
-  if (result.ok) revalidateAfterRecurrenceMutation()
+  if (result.ok) {
+    // Eagerly materialize the first due instance so the "por confirmar" aviso
+    // appears without a manual refresh (the lazy on-mount trigger only runs when
+    // the page remounts). Idempotent via the one-pending-per-rule unique index.
+    await generateDueRecurrenceInstances(supabase)
+    revalidateAfterRecurrenceMutation()
+  }
   return result
 }
 
@@ -168,6 +175,32 @@ export async function createRecurrence(
   const subcategoryId =
     data.movement_type === 'transfer' ? null : data.subcategory_id ?? null
 
+  // Recurrencia compartida (solo gasto): validamos pertenencia al hogar y que el
+  // reparto cubra exactamente a sus miembros. Es defensa en profundidad y mejor
+  // UX; la inserción del split al confirmar también está protegida por RLS. El
+  // template (default_split) se siembra en cada instancia al generarse.
+  let sharedHouseholdId: string | null = null
+  let defaultSplit: { user_id: string; percentage: number }[] | null = null
+  if (data.movement_type === 'expense' && data.shared) {
+    const household = await getHousehold(supabase)
+    if (!household || household.members.length < 2) {
+      return { ok: false, formError: 'No tenés un hogar de dos miembros para compartir.' }
+    }
+    if (household.id !== data.shared.household_id) {
+      return { ok: false, formError: 'El hogar indicado no coincide con el tuyo.' }
+    }
+    const memberIds = new Set(household.members.map((m) => m.userId))
+    const splitIds = data.shared.splits.map((s) => s.user_id)
+    if (splitIds.length !== memberIds.size || !splitIds.every((id) => memberIds.has(id))) {
+      return {
+        ok: false,
+        formError: 'El reparto debe incluir exactamente a los miembros del hogar.',
+      }
+    }
+    sharedHouseholdId = data.shared.household_id
+    defaultSplit = data.shared.splits
+  }
+
   const { data: recurrence, error: insertError } = await supabase
     .from('recurrences')
     .insert({
@@ -190,6 +223,8 @@ export async function createRecurrence(
       last_generated_date: null,
       status: 'active',
       created_from_transaction_id: null,
+      household_id: sharedHouseholdId,
+      default_split: defaultSplit,
     })
     .select('id')
     .single()
@@ -200,6 +235,11 @@ export async function createRecurrence(
       formError: insertError?.message ?? 'No se pudo crear la regla recurrente.',
     }
   }
+
+  // Eagerly materialize the first due instance (start_date is today/past) so the
+  // "por confirmar" aviso shows without a manual refresh. Idempotent via the
+  // one-pending-per-rule unique index.
+  await generateDueRecurrenceInstances(supabase)
 
   revalidateAfterRecurrenceMutation()
   return { ok: true, id: recurrence.id }
@@ -229,7 +269,7 @@ export async function confirmRecurrenceInstance(
   const { data: instance, error: instanceError } = await supabase
     .from('recurrence_instances')
     .select(
-      'id, recurrence_id, status, scheduled_date, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description',
+      'id, recurrence_id, status, scheduled_date, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description, household_id, split',
     )
     .eq('id', instanceId)
     .eq('user_id', userId)
@@ -289,6 +329,10 @@ export async function confirmRecurrenceInstance(
         : instance.subcategory_id,
     description:
       payload.description !== undefined ? payload.description : instance.description,
+    // Shared recurrence: the mapper turns these into `shared` on the expense /
+    // card-purchase plan, so the confirmed movement is created shared.
+    household_id: instance.household_id,
+    split: instance.split,
   }
 
   let plan

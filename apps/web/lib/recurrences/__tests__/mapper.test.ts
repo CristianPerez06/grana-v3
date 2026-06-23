@@ -25,9 +25,17 @@ function buildInstance(
     confirmed_transaction_id: null,
     created_at: '2026-05-20T00:00:00.000Z',
     resolved_at: null,
+    household_id: null,
+    split: null,
     ...overrides,
   } as RecurrenceInstance
 }
+
+const HOUSEHOLD_ID = 'dddddddd-dddd-dddd-dddd-dddddddddddd'
+const SPLIT_5050 = [
+  { user_id: '33333333-3333-3333-3333-333333333333', percentage: 50 },
+  { user_id: '44444444-4444-4444-4444-444444444444', percentage: 50 },
+]
 
 const cashContext: ConfirmInstanceContext = {
   movementType: 'income',
@@ -196,6 +204,39 @@ describe('mapInstanceToConfirmPlan', () => {
     )
     if (plan.kind !== 'income') throw new Error('expected income')
     expect(plan.input.amount).toBe(999.99)
+  })
+
+  it('emits shared on the expense plan when the instance has a household + split', () => {
+    const plan = mapInstanceToConfirmPlan(
+      buildInstance({ household_id: HOUSEHOLD_ID, split: SPLIT_5050 as never }),
+      { movementType: 'expense', accountType: 'bank' },
+    )
+    if (plan.kind !== 'expense') throw new Error('expected expense')
+    expect(plan.input.shared).toEqual({
+      household_id: HOUSEHOLD_ID,
+      splits: SPLIT_5050,
+    })
+  })
+
+  it('emits shared on the card_purchase plan for a shared expense on a credit account', () => {
+    const plan = mapInstanceToConfirmPlan(
+      buildInstance({ household_id: HOUSEHOLD_ID, split: SPLIT_5050 as never }),
+      { movementType: 'expense', accountType: 'credit' },
+    )
+    if (plan.kind !== 'card_purchase') throw new Error('expected card_purchase')
+    expect(plan.input.shared).toEqual({
+      household_id: HOUSEHOLD_ID,
+      splits: SPLIT_5050,
+    })
+  })
+
+  it('does not emit shared for an individual expense instance', () => {
+    const plan = mapInstanceToConfirmPlan(buildInstance(), {
+      movementType: 'expense',
+      accountType: 'bank',
+    })
+    if (plan.kind !== 'expense') throw new Error('expected expense')
+    expect(plan.input).not.toHaveProperty('shared')
   })
 
   it('omits subcategory_id and description when null', () => {

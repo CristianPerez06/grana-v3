@@ -14,11 +14,14 @@ import {
   FileText,
   Repeat,
   Tag,
+  Users,
   Wallet,
   X,
 } from 'lucide-react'
 import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
+import type { Household } from '@/lib/shared/types'
 import { Drawer } from '@/components/ui/drawer'
+import { Switch } from '@/components/ui/switch'
 import { Popover } from '@/components/ui/popover'
 import { DatePicker } from '@/components/ui/date-picker'
 import { AccountAvatar } from '@/components/ui/account-avatar'
@@ -46,6 +49,8 @@ type Props = {
   onClose: () => void
   accounts: RecurrenceAccount[]
   categories: CategoryWithSubcategories[]
+  /** The user's household when it has two members — enables the "Compartir" toggle. */
+  household?: Household | null
 }
 
 const CURRENCY_SYMBOL: Record<'ARS' | 'USD', string> = { ARS: '$', USD: 'U$D' }
@@ -109,11 +114,12 @@ const AccountValue = ({ account }: { account: RecurrenceAccount | undefined }) =
     <span className="text-text-soft">—</span>
   )
 
-export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: Props) => {
+export const CreateRecurrenceModal = ({ open, onClose, accounts, categories, household }: Props) => {
   const router = useRouter()
   const tRec = useTranslations('recurrences')
   const tTx = useTranslations('transactions')
   const tCommon = useTranslations('common')
+  const tShared = useTranslations('shared')
   const tRoot = useTranslations()
   const [isPending, startTransition] = useTransition()
   const [formError, setFormError] = useState<string | null>(null)
@@ -139,6 +145,21 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
   const [hasEndDate, setHasEndDate] = useState(false)
   const [endDate, setEndDate] = useState('')
   const [maxOccurrences, setMaxOccurrences] = useState('')
+
+  // Shared recurrence (expense only): the split here is the TEMPLATE seeded into
+  // each generated instance. Defaults to the household's default split. Same UX
+  // as the movement form's "Compartir" toggle.
+  const sharedMembers =
+    household && household.members.length === 2 ? household.members : null
+  const [sharedEnabled, setSharedEnabled] = useState(false)
+  const [splitFirstPct, setSplitFirstPct] = useState<number>(() => {
+    const stored = household?.defaultSplit.find(
+      (s) => s.user_id === household.members[0]?.userId,
+    )?.percentage
+    return stored ?? 50
+  })
+  const [splitDraft, setSplitDraft] = useState<string | null>(null)
+  const showSharedToggle = type === 'expense' && !!sharedMembers
 
   // Single open popover at a time: 'account' | 'destination' | 'category' | 'date'.
   const [activePopover, setActivePopover] = useState<string | null>(null)
@@ -173,6 +194,8 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
     setSubcategoryId('')
     setCatDrill(null)
     setFormError(null)
+    // Sharing only applies to expenses; drop it when leaving the expense tab.
+    if (next !== 'expense') setSharedEnabled(false)
     const eligible = eligibleFor(accounts, next)
     if (!eligible.some((a) => a.id === accountId)) {
       const first = eligible[0]
@@ -223,6 +246,8 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
     setActivePopover(null)
     setCatDrill(null)
     setFormError(null)
+    setSharedEnabled(false)
+    setSplitDraft(null)
   }
 
   const close = () => {
@@ -269,6 +294,19 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
     const trimmedEnd = hasEndDate ? endDate.trim() : ''
     const trimmedMax = maxOccurrences.trim()
 
+    // Shared template (expense + two-member household only). members[0] is the
+    // current user (getHousehold orders self first).
+    const sharedDecl =
+      type === 'expense' && sharedEnabled && sharedMembers && household
+        ? {
+            household_id: household.id,
+            splits: [
+              { user_id: sharedMembers[0].userId, percentage: splitFirstPct },
+              { user_id: sharedMembers[1].userId, percentage: 100 - splitFirstPct },
+            ],
+          }
+        : undefined
+
     const payload = {
       movement_type: type,
       account_id: accountId,
@@ -283,6 +321,7 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
       ...(type === 'transfer'
         ? { transfer_destination_account_id: destinationAccountId }
         : { category_id: categoryId, subcategory_id: subcategoryId || undefined }),
+      ...(sharedDecl ? { shared: sharedDecl } : {}),
     }
 
     startTransition(async () => {
@@ -573,6 +612,68 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories }: P
                 </div>
               </div>
             </div>
+
+            {/* Compartir (solo gasto + hogar de dos) */}
+            {showSharedToggle && sharedMembers && (
+              <div className="overflow-hidden rounded-[15px] border border-border bg-card px-4 py-3.5">
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`flex size-9 shrink-0 items-center justify-center rounded-[11px] transition-colors ${
+                      sharedEnabled ? 'text-emerald-deep' : 'text-text-muted'
+                    }`}
+                    style={{ backgroundColor: sharedEnabled ? 'var(--emerald-soft)' : FIELD_BG }}
+                  >
+                    <Users className="size-[18px]" aria-hidden />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[15px] font-semibold text-text">{tShared('split.toggle_label')}</p>
+                    <p className="text-xs text-text-muted">
+                      {tShared('split.toggle_hint', { name: sharedMembers[1].fullName })}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={sharedEnabled}
+                    ariaLabel={tShared('split.toggle_label')}
+                    onValueChange={setSharedEnabled}
+                  />
+                </div>
+                {sharedEnabled && (
+                  <div
+                    className="mt-3.5 flex flex-col gap-2 border-t pt-3.5"
+                    style={{ borderColor: ROW_DIVIDER }}
+                  >
+                    <span className="text-xs text-text-muted">{tShared('split.title')}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-text">{sharedMembers[0].fullName}</span>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={splitDraft ?? String(splitFirstPct)}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/\D/g, '').slice(0, 2)
+                            setSplitDraft(raw)
+                            if (raw !== '') {
+                              setSplitFirstPct(Math.max(1, Math.min(99, parseInt(raw, 10))))
+                            }
+                          }}
+                          onBlur={() => setSplitDraft(null)}
+                          aria-label={sharedMembers[0].fullName}
+                          className="w-16 rounded-[10px] border border-border py-1.5 pl-2.5 pr-6 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          style={{ backgroundColor: FIELD_BG }}
+                        />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-text-muted">
+                          %
+                        </span>
+                      </div>
+                      <span className="text-sm text-text-muted">
+                        · {sharedMembers[1].fullName} {100 - splitFirstPct}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Cuándo se repite */}
             <div className="flex flex-col gap-2">

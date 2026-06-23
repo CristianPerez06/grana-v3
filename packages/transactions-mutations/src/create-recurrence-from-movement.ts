@@ -58,7 +58,7 @@ export async function createRecurrenceFromMovement(
   const { data: tx, error: txError } = await supabase
     .from('transactions')
     .select(
-      'id, account_id, transfer_destination_account_id, type, amount, currency_code, date, category_id, subcategory_id, description, is_parent, parent_id',
+      'id, account_id, transfer_destination_account_id, type, amount, currency_code, date, category_id, subcategory_id, description, is_parent, parent_id, is_shared, household_id',
     )
     .eq('id', transaction_id)
     .eq('user_id', userId)
@@ -115,6 +115,26 @@ export async function createRecurrenceFromMovement(
     }
   }
 
+  // Shared seed → the rule inherits the household + split as its template, so
+  // every generated instance is shared like the origin movement (shared is
+  // expense-only, enforced by chk_recurrences_shared_expense_only). The split
+  // comes from the seed's shared_expense_split rows.
+  let sharedHouseholdId: string | null = null
+  let defaultSplit: { user_id: string; percentage: number }[] | null = null
+  if (movementType === 'expense' && tx.is_shared && tx.household_id) {
+    const { data: splits } = await supabase
+      .from('shared_expense_split')
+      .select('user_id, percentage')
+      .eq('transaction_id', tx.id)
+    if (splits && splits.length > 0) {
+      sharedHouseholdId = tx.household_id
+      defaultSplit = splits.map((s) => ({
+        user_id: s.user_id as string,
+        percentage: s.percentage as number,
+      }))
+    }
+  }
+
   const { data: recurrence, error: insertError } = await supabase
     .from('recurrences')
     .insert({
@@ -137,6 +157,8 @@ export async function createRecurrenceFromMovement(
       last_generated_date: tx.date,
       status: 'active',
       created_from_transaction_id: tx.id,
+      household_id: sharedHouseholdId,
+      default_split: defaultSplit,
     })
     .select('id')
     .single()

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { getAccounts } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
+import { getHousehold } from '@/lib/shared/queries'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import {
   CreateRecurrenceModal,
@@ -34,10 +35,13 @@ export const CreateRecurrenceButton = () => {
     queries: [
       { queryKey: QUERY_KEYS.accountsList, queryFn: () => getAccounts(createClient()) },
       { queryKey: QUERY_KEYS.categoriesTree, queryFn: () => getAllCategories(createClient()) },
+      // Enables the "Compartir" toggle on expense recurrences when the user is in
+      // a two-member household. Fetched client-side like the other catalogs.
+      { queryKey: QUERY_KEYS.householdDetail, queryFn: () => getHousehold(createClient()) },
     ],
   })
 
-  const [accountsQ, categoriesQ] = queries
+  const [accountsQ, categoriesQ, householdQ] = queries
   const ready = accountsQ.data !== undefined && categoriesQ.data !== undefined
 
   const accounts: RecurrenceAccount[] = useMemo(() => {
@@ -78,6 +82,7 @@ export const CreateRecurrenceButton = () => {
         onClose={() => setOpen(false)}
         accounts={accounts}
         categories={categories}
+        household={householdQ.data ?? null}
       />
     </>
   )

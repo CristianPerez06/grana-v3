@@ -50,10 +50,33 @@ export type InstanceSnapshot = Pick<
   | 'subcategory_id'
   | 'description'
   | 'scheduled_date'
+  | 'household_id'
+  | 'split'
 >
+
+type SplitEntry = { user_id: string; percentage: number }
 
 function toAmountNumber(amount: InstanceSnapshot['amount']): number {
   return typeof amount === 'string' ? Number(amount) : amount
+}
+
+/**
+ * Build the shared spec for a confirmed movement from a recurrence instance.
+ * Returns undefined for individual instances. The instance carries `household_id`
+ * + `split` (jsonb, seeded from the rule's default_split at generation); at
+ * confirmation that split becomes the movement's shared split via the existing
+ * createExpense/registerCardPurchase shared path. Reused by both the cash/bank
+ * (expense) and credit (card_purchase) branches so a shared expense rule works
+ * regardless of account type.
+ */
+function toSharedSpec(
+  instance: InstanceSnapshot,
+): { household_id: string; splits: SplitEntry[] } | undefined {
+  if (!instance.household_id || !instance.split) return undefined
+  return {
+    household_id: instance.household_id,
+    splits: instance.split as unknown as SplitEntry[],
+  }
 }
 
 export function mapInstanceToConfirmPlan(
@@ -133,6 +156,7 @@ export function mapInstanceToConfirmPlan(
         'No se debe enviar cotización para recurrencias en ARS.',
       )
     }
+    const shared = toSharedSpec(instance)
     const input: RegisterCardPurchaseInput = {
       account_id: instance.account_id,
       amount,
@@ -144,6 +168,7 @@ export function mapInstanceToConfirmPlan(
       }),
       ...(instance.description != null && { description: instance.description }),
       ...(instance.currency_code === 'USD' && fx != null && fx > 0 && { fx_rate_to_ars: fx }),
+      ...(shared && { shared }),
     }
     return { kind: 'card_purchase', input }
   }
@@ -155,6 +180,7 @@ export function mapInstanceToConfirmPlan(
     )
   }
 
+  const shared = toSharedSpec(instance)
   const input: CreateExpenseInput = {
     account_id: instance.account_id,
     currency_code: instance.currency_code,
@@ -165,6 +191,7 @@ export function mapInstanceToConfirmPlan(
       subcategory_id: instance.subcategory_id,
     }),
     ...(instance.description != null && { description: instance.description }),
+    ...(shared && { shared }),
   }
   return { kind: 'expense', input }
 }

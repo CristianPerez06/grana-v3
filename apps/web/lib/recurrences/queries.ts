@@ -215,7 +215,7 @@ export async function getRecurrenceLinkForTransaction(
 // Generates AT MOST one pending instance per rule per call — matches the design
 // rule "one pending per rule at a time".
 
-type RecurrenceRuleForGeneration = {
+export type RecurrenceRuleForGeneration = {
   id: string
   frequency: RecurrenceFrequency
   interval_count: number
@@ -231,6 +231,35 @@ type RecurrenceRuleForGeneration = {
   category_id: string | null
   subcategory_id: string | null
   description: string | null
+  household_id: string | null
+  default_split: unknown
+}
+
+// Pure builder for the pending-instance row, so the snapshot rule (which fields
+// carry over from the rule) is unit-testable without a live client. Mirrors how
+// `amount` is copied; for shared rules it also propagates the household and
+// snapshots `default_split` into the instance's `split`. The DB constraint pairs
+// household_id with split, so both are set together or left null.
+export function buildPendingInstanceInsert(
+  rule: RecurrenceRuleForGeneration,
+  userId: string,
+  scheduledDate: string,
+) {
+  return {
+    recurrence_id: rule.id,
+    user_id: userId,
+    scheduled_date: scheduledDate,
+    status: 'pending' as const,
+    amount: rule.amount,
+    account_id: rule.account_id,
+    transfer_destination_account_id: rule.transfer_destination_account_id,
+    currency_code: rule.currency_code,
+    category_id: rule.category_id,
+    subcategory_id: rule.subcategory_id,
+    description: rule.description,
+    household_id: rule.household_id,
+    split: rule.household_id ? rule.default_split : null,
+  }
 }
 
 export async function generateDueRecurrenceInstances(supabase: DbClient): Promise<{
@@ -245,7 +274,7 @@ export async function generateDueRecurrenceInstances(supabase: DbClient): Promis
   const { data: rules, error: rulesError } = await supabase
     .from('recurrences')
     .select(
-      'id, frequency, interval_count, interval_unit, max_occurrences, start_date, end_date, last_generated_date, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description',
+      'id, frequency, interval_count, interval_unit, max_occurrences, start_date, end_date, last_generated_date, amount, account_id, transfer_destination_account_id, currency_code, category_id, subcategory_id, description, household_id, default_split',
     )
     .eq('user_id', user.id)
     .eq('status', 'active')
@@ -292,19 +321,9 @@ export async function generateDueRecurrenceInstances(supabase: DbClient): Promis
 
     const { error: insertError } = await supabase
       .from('recurrence_instances')
-      .insert({
-        recurrence_id: rule.id,
-        user_id: user.id,
-        scheduled_date: decision.scheduled_date,
-        status: 'pending',
-        amount: rule.amount,
-        account_id: rule.account_id,
-        transfer_destination_account_id: rule.transfer_destination_account_id,
-        currency_code: rule.currency_code,
-        category_id: rule.category_id,
-        subcategory_id: rule.subcategory_id,
-        description: rule.description,
-      })
+      .insert(
+        buildPendingInstanceInsert(rule, user.id, decision.scheduled_date) as never,
+      )
 
     if (!insertError) created += 1
     // Unique-index violation under concurrent calls is expected; ignore silently.

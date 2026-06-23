@@ -1,4 +1,5 @@
 import * as yup from 'yup'
+import { sharedExpenseSchema } from './shared'
 
 const SUPPORTED_CURRENCIES = ['ARS', 'USD'] as const
 // The four named presets are accepted everywhere; `custom` is only accepted by
@@ -99,6 +100,11 @@ export const createExpenseRecurrenceSchema = yup
     movement_type: yup.string().label('movement_type').required().oneOf(['expense'] as const),
     ...recurrenceBaseSchema,
     ...categorizedRecurrenceFields,
+    // Optional: make this recurrence shared with a household. The split here is
+    // the TEMPLATE (default_split): it seeds each generated instance's split and,
+    // at confirmation, becomes the movement's shared split. Only expense rules
+    // can be shared — income/transfer schemas intentionally omit this field.
+    shared: sharedExpenseSchema.optional().default(undefined),
   })
   .strict()
 
