@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { Check, Clock, Pencil, Repeat, X } from 'lucide-react'
+import { Check, ChevronDown, Clock, Pencil, Repeat, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { getCategoryName } from '@/lib/categories/display'
@@ -57,6 +57,9 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
   const [activeId, setActiveId] = useState<string | null>(null)
   const [errorByInstance, setErrorByInstance] = useState<Record<string, string>>({})
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  // Collapsible, like the recurrence-suggestion banner: open with one pending
+  // instance, collapsed with several so it stays a thin header above the card.
+  const [isOpen, setIsOpen] = useState(pending.length <= 1)
 
   // Edit mode: at most one instance edited at a time, to keep UI focused.
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -173,8 +176,13 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
       className="overflow-hidden rounded-[22px] border bg-card"
       style={{ borderColor: '#EAD9A8', boxShadow: '0 0 0 4px rgba(181,138,30,0.06)' }}
     >
-      {/* Hub header */}
-      <div className="flex items-center gap-3.5 px-6 pb-4 pt-5">
+      {/* Hub header — collapsible toggle */}
+      <button
+        type="button"
+        onClick={() => setIsOpen((open) => !open)}
+        aria-expanded={isOpen}
+        className="flex w-full items-center gap-3.5 px-6 pb-4 pt-5 text-left transition-colors hover:bg-page/40"
+      >
         <span
           className="flex size-11 shrink-0 items-center justify-center rounded-[13px]"
           style={{ backgroundColor: 'var(--warning-bg)', color: 'var(--warning)' }}
@@ -193,9 +201,13 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
             {t('pending.count', { count: pending.length })}
           </span>
         )}
-      </div>
+        <ChevronDown
+          className={`size-5 shrink-0 text-text-muted transition-transform ${isOpen ? '' : '-rotate-90'}`}
+          aria-hidden
+        />
+      </button>
 
-      {successMessage && (
+      {isOpen && successMessage && (
         <div className="mx-6 mb-3 flex items-center justify-between gap-2 rounded-[12px] border border-emerald/30 bg-[var(--emerald-soft)] px-3 py-2 text-sm font-medium text-emerald-deep">
           <span className="flex items-center gap-2">
             <Check className="size-4" aria-hidden />
@@ -212,7 +224,7 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
         </div>
       )}
 
-      {pending.length === 0 ? (
+      {isOpen && (pending.length === 0 ? (
         <div
           className="flex items-center gap-3.5 border-t px-6 py-6 text-[15px] font-semibold text-emerald-deep"
           style={{ borderColor: 'var(--border-soft)' }}
@@ -419,7 +431,7 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
           )
         })}
       </ul>
-      )}
+      ))}
     </section>
   )
 }

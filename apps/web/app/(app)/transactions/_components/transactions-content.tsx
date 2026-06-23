@@ -14,26 +14,28 @@ import { RecurrenceSuggestionBannerContainer } from './recurrence-suggestion-ban
  * out the existing sections in a two-column grid:
  *
  *   ┌──────────────────────────────┬────────────────────────┐
- *   │  recurrence suggestion       │  pending recurrences   │
- *   │  overview                    │  pending reimbursements│
+ *   │  recurrence suggestion       │  pending reimbursements│
+ *   │  pending recurrences         │                        │
+ *   │  overview                    │                        │
  *   │  ledger (toolbar + list)     │                        │
  *   └──────────────────────────────┴────────────────────────┘
  *
- * The recurrence suggestion is a collapsible hint that sits above the spending
- * overview in the main column (it used to live in the side column); narrow
- * widths collapse to a single column and the side blocks pull to the top
- * because they represent pending user tasks (see route-ui-system.md → "Mobile").
- * No queries, totals, or data are introduced here — only layout.
+ * The recurrence suggestion AND the pending-recurrences hub are collapsible
+ * blocks above the spending overview in the main column (both used to live in
+ * the side column); narrow widths collapse to a single column and the side
+ * block pulls to the top because it represents pending user tasks (see
+ * route-ui-system.md → "Mobile"). No queries/totals here — only layout.
  */
 export function TransactionsContent() {
   return (
     <>
-      {/* `has-[aside:empty]:lg:grid-cols-1` collapses the side column when both
-          conditional containers render null, so the main column fills the full
+      {/* `has-[aside:empty]:lg:grid-cols-1` collapses the side column when the
+          conditional container renders null, so the main column fills the full
           width instead of leaving a blank 340px gutter. */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:has-[aside:empty]:grid-cols-1">
         <section className="flex min-w-0 flex-col gap-4">
           <RecurrenceSuggestionBannerContainer />
+          <PendingRecurrencesBlockContainer />
           <CategorySpendingOverviewContainer />
           <section className="flex flex-col gap-3">
             <MovementFiltersContainer />
@@ -41,7 +43,6 @@ export function TransactionsContent() {
           </section>
         </section>
         <aside className="order-first flex flex-col gap-4 empty:hidden lg:order-none">
-          <PendingRecurrencesBlockContainer />
           <PendingReimbursementsBlockContainer />
         </aside>
       </div>
