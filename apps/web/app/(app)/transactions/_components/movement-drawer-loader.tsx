@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getAccounts } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
 import { getHousehold } from '@/lib/shared/queries'
+import { getAppStartDate } from '@/lib/profile/queries'
 import { hasAnyTransaction } from '@/lib/transactions/queries'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 import type { MovementFormAccount } from '@/lib/transactions/components/movement-form'
@@ -43,14 +44,16 @@ export function MovementDrawerLoader({ children }: Props) {
       { queryKey: QUERY_KEYS.categoriesTree, queryFn: () => getAllCategories(createClient()) },
       { queryKey: QUERY_KEYS.householdDetail, queryFn: () => getHousehold(createClient()) },
       { queryKey: ['transactionsHasAny'], queryFn: () => hasAnyTransaction(createClient()) },
+      { queryKey: QUERY_KEYS.appStartDate, queryFn: () => getAppStartDate(createClient()) },
     ],
   })
 
-  const [accountsQ, categoriesQ, householdQ, hasAnyTxQ] = queries
+  const [accountsQ, categoriesQ, householdQ, hasAnyTxQ, appStartDateQ] = queries
   const accountsData = accountsQ.data
   const categoriesData = categoriesQ.data
   const householdData = householdQ.data
   const hasAnyTxData = hasAnyTxQ.data
+  const appStartDate = (appStartDateQ.data as string | null | undefined) ?? null
 
   const drawerAccounts = useMemo<MovementFormAccount[] | null>(() => {
     if (!accountsData) return null
@@ -86,12 +89,19 @@ export function MovementDrawerLoader({ children }: Props) {
   // Drawer only mounts when all queries are ready; otherwise children render
   // without context (and the button stays disabled via TransactionsHeader's
   // own useQueries).
-  if (drawerAccounts && categoriesData && householdData !== undefined && hasAnyTxData !== undefined) {
+  if (
+    drawerAccounts &&
+    categoriesData &&
+    householdData !== undefined &&
+    hasAnyTxData !== undefined &&
+    appStartDateQ.data !== undefined
+  ) {
     return (
       <MovementDrawerProvider
         accounts={drawerAccounts}
         categories={categoriesData}
         household={householdData}
+        appStartDate={appStartDate}
         showFirstMovementGuidance={!hasAnyTxData}
       >
         {children}

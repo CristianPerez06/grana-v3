@@ -13,6 +13,8 @@ type Props = {
   accounts: MovementFormAccount[]
   categories: CategoryWithSubcategories[]
   household?: Household | null
+  /** Lower bound for the date picker (user signup date); null ⇒ no floor. */
+  appStartDate?: string | null
   showFirstMovementGuidance?: boolean
   children: ReactNode
 }
@@ -27,6 +29,7 @@ export function MovementDrawerProvider({
   accounts,
   categories,
   household,
+  appStartDate = null,
   showFirstMovementGuidance = false,
   children,
 }: Props) {
@@ -79,6 +82,7 @@ export function MovementDrawerProvider({
           accounts={accounts}
           categories={categories}
           household={household}
+          appStartDate={appStartDate}
           showFirstMovementGuidance={showFirstMovementGuidance}
           preselectAccountId={preselectAccountId}
           onClose={() => setOpen(false)}

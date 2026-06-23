@@ -114,6 +114,11 @@ type Props = {
   onClose?: () => void
   /** The user's household when it has two members — enables the "Compartir" toggle. */
   household?: Household | null
+  /**
+   * Lower bound for the movement date (the user's signup date). You can't
+   * register a movement dated before you started using the app. Null ⇒ no floor.
+   */
+  appStartDate?: string | null
   /** Show inline guides for first-time users (no prior transactions). */
   showFirstMovementGuidance?: boolean
 }
@@ -218,6 +223,7 @@ export const MovementForm = ({
   variant = 'page',
   onClose,
   household,
+  appStartDate = null,
   showFirstMovementGuidance = false,
 }: Props) => {
   const router = useRouter()
@@ -847,6 +853,7 @@ export const MovementForm = ({
     <DatePicker
       value={date}
       onChange={setDate}
+      min={appStartDate ?? undefined}
       modal={isDrawer}
       trigger={
         <FieldRow icon={<Calendar className="size-[18px]" />} label={t('labels.date')} value={formatDateValue(date)} />

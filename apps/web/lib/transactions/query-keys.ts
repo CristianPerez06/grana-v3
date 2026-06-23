@@ -11,6 +11,8 @@ export const QUERY_KEYS = {
   accountsList: ['accounts', 'list'] as const,
   categoriesTree: ['categories', 'tree'] as const,
   householdDetail: ['household', 'detail'] as const,
+  // App start date (user signup) — the floor for the movement date picker.
+  appStartDate: ['profile', 'app-start-date'] as const,
 
   // /transactions sections. Keyed on the projected query shape + limit so
   // unrelated React state (overview mode, etc.) does not invalidate the cache.
