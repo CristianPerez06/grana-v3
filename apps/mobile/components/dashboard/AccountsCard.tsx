@@ -71,7 +71,9 @@ export const AccountsCard = () => {
                 <Text className="flex-1 text-[13px] font-semibold text-text-muted">
                   {t('dashboard.accounts.concentration_lead')}
                   {'\n'}
-                  <Text className="font-bold text-text">{dominant.name} </Text>
+                  <Text className="font-bold text-text">
+                    {dominant.institutionName ?? dominant.name}{' '}
+                  </Text>
                 </Text>
               </View>
             )}
@@ -107,7 +109,7 @@ export const AccountsCard = () => {
                     style={{ backgroundColor: avatarColor(account.avatar) }}
                   />
                   <Text className="flex-1 text-[13px] font-bold text-text" numberOfLines={1}>
-                    {account.name}
+                    {account.institutionName ?? account.name}
                   </Text>
                   <MaskedAmount
                     amount={account.ars}

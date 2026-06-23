@@ -1,13 +1,16 @@
 // Auto-scales the amount shown in the centre of a donut chart so long totals
 // (e.g. "$1.028.737,77") stay inside the ring instead of overlapping it.
 //
-// MIRROR: `apps/mobile/lib/donut-amount.ts` keeps a verbatim copy — update both.
+// MIRROR of `apps/web/lib/donut-amount.ts` — keep both copies in sync. Pure
+// presentational math tuned for the same bold tabular-nums glyph set; replicated
+// rather than shared because the workspace convention is cross-platform naming
+// parity, not forced code sharing (a ~15-line helper doesn't justify a new
+// package surface yet). If a third consumer appears, promote it to a package.
 //
 // The donut hole is ~77% of the SVG size (r=15.915, strokeWidth=4 over a
 // 36-unit viewBox). We estimate the formatted string's width at font-size 1px
-// using per-glyph factors tuned for the bold tabular-nums numerals used in the
-// centre, then pick the largest font-size that fits — capped so short amounts
-// keep their original prominence.
+// using per-glyph factors, then pick the largest font-size that fits — capped so
+// short amounts keep their original prominence.
 
 const approxWidthAt1px = (s: string): number => {
   let w = 0

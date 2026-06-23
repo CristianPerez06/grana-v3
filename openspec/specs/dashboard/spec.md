@@ -284,11 +284,13 @@ En **ambas plataformas**, el Hero SHALL renderizarse como una card oscura (navy 
 
 Junto al Hero "Para gastar · hoy", el dashboard SHALL renderizar una card "Dónde está" que desglosa dónde vive el disponible (a la derecha del Hero en desktop web; apilada debajo en mobile-web y en la app nativa). Los datos SHALL salir de la misma data de `getDashboardHero` que alimenta el Hero — en web vía un único container async para la fila superior; en nativo ambas cards consumen `useDashboardHero()` y TanStack dedupea por queryKey (un solo fetch). La card SHALL considerar las cuentas activas `type IN ('cash','bank')` ordenadas por saldo ARS descendente (el orden que ya devuelve `getDashboardHero`), truncadas a un máximo de 6; el resto se ve en el módulo Cuentas. El header de la card SHALL incluir un link "Ver todas" → módulo Cuentas (web: `/accounts`; nativo: `router.push('/accounts')`). Todos los importes de la card participan del eye-mask.
 
+Al rotular cada cuenta (tanto en el callout de concentración como en la grilla compacta), la card SHALL mostrar el **nombre de la institución/banco** de la cuenta cuando exista (`HeroAccountBalance.institutionName`), cayendo al **nombre dado por el usuario** (`name`) cuando la cuenta no tiene institución (p. ej. efectivo). Esta regla SHALL aplicar idéntica en web y en nativo; el dato sale de `getDashboardHero`, no se deriva en la card.
+
 **Presentación (web y mobile):** la card SHALL comunicar la **concentración** del saldo de un vistazo, sin lista larga, idéntica en ambas plataformas:
 
-- Un **callout de concentración**: el porcentaje de la cuenta de mayor saldo ARS sobre el total ARS (`pct = cuenta_dominante.ars / Σ cuentas.ars`, redondeado a entero) en tipografía grande, junto al nombre y saldo de esa cuenta. El porcentaje SHALL derivarse de los datos, NO hardcodearse. Con `Σ = 0` (sin saldo ARS), el callout NO SHALL mostrarse.
+- Un **callout de concentración**: el porcentaje de la cuenta de mayor saldo ARS sobre el total ARS (`pct = cuenta_dominante.ars / Σ cuentas.ars`, redondeado a entero) en tipografía grande, junto al nombre (institución con fallback al nombre del usuario) y saldo de esa cuenta. El porcentaje SHALL derivarse de los datos, NO hardcodearse. Con `Σ = 0` (sin saldo ARS), el callout NO SHALL mostrarse.
 - Una **barra de concentración** horizontal compuesta por un segmento por cuenta, cuyo ancho SHALL ser proporcional al saldo ARS de la cuenta sobre el total (`cuenta.ars / Σ`), nunca hardcodeado. Cada segmento usa el color de identidad de su cuenta (sin hex inline en web; mirror de tokens en nativo). Los segmentos sub-pixel PUEDEN recibir un ancho mínimo visible sin alterar el cálculo del dato.
-- Una **grilla compacta** (2 columnas) con las cuentas restantes (cada celda: cuadradito de color + nombre + saldo ARS) y, como celda final destacada en emerald, la tenencia "En dólares" con el total USD del usuario (el mismo `usd` del Hero), que representa el stock total en USD y NO un desglose por cuenta. Un saldo ARS de cero SHALL pintarse atenuado.
+- Una **grilla compacta** (2 columnas) con las cuentas restantes (cada celda: cuadradito de color + nombre de institución/banco con fallback al nombre del usuario + saldo ARS) y, como celda final destacada en emerald, la tenencia "En dólares" con el total USD del usuario (el mismo `usd` del Hero), que representa el stock total en USD y NO un desglose por cuenta. Un saldo ARS de cero SHALL pintarse atenuado.
 
 El cálculo de concentración (porcentaje dominante + anchos de los segmentos) SHALL reusar la función pura `computeConcentration` de `@grana/dashboard` en ambas plataformas; no se duplica.
 
@@ -305,6 +307,13 @@ El cálculo de concentración (porcentaje dominante + anchos de los segmentos) S
 - **THEN** el callout muestra el `%` de la cuenta dominante con su nombre y saldo
 - **AND** la barra de concentración muestra un segmento por cuenta con ancho proporcional a su saldo ARS sobre el total
 - **AND** la grilla compacta lista las cuentas restantes y la fila "En dólares" en emerald
+
+#### Scenario: El nombre del banco se muestra cuando la cuenta tiene institución (web y mobile)
+
+- **WHEN** la cuenta dominante tiene `institutionName` "Banco Galicia" y `name` "Caja de ahorro sueldo"
+- **THEN** el callout y la grilla rotulan esa cuenta como "Banco Galicia"
+- **WHEN** una cuenta de efectivo tiene `institutionName` nulo y `name` "Billetera"
+- **THEN** esa celda se rotula con "Billetera" (fallback al nombre del usuario)
 
 #### Scenario: Una sola cuenta concentra el 100%
 
