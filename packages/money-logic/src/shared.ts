@@ -186,6 +186,9 @@ export type ProjectableSplit = {
   cancelledAt: string | null
   transactionId: string
   label: string
+  /** The movement's own accounting date (used to order the ledger when there is
+   *  no gating due date — cash/debit). 'YYYY-MM-DD'. */
+  date: string
 }
 
 /**
@@ -296,4 +299,182 @@ export function householdOutlook(
     prev = cumulativeForA
   }
   return out
+}
+
+// ─── Cuenta corriente (derived ledger) ───────────────────────────────────────
+
+/** A settlement enriched for the ledger: identity, date and display status. */
+export type LedgerSettlement = {
+  currencyCode: BalanceCurrency
+  id: string
+  date: string
+  payerId: string
+  receiverId: string
+  amount: number | string
+  /** `reversed` = original anulada por contraasiento; `contra` = el contraasiento. */
+  status: 'completed' | 'pending' | 'reversed' | 'contra'
+}
+
+/** Semantic of "qué cambia" — the UI maps it to natural-language copy. */
+export type LedgerChange =
+  | 'adds_other_share' // gasto que pagó A: suma la parte del otro (+)
+  | 'adds_your_share' // gasto que pagó el otro: suma tu parte (−)
+  | 'reduces_debt' // reintegro: baja la deuda
+  | 'reduces_balance' // liquidación: reduce el saldo
+  | 'restores_amount' // contraasiento: restaura el importe
+
+export type LedgerEntry = {
+  id: string
+  /** Impact date 'YYYY-MM-DD' (gating date when present, else the movement date). */
+  date: string
+  label: string
+  kind: 'expense' | 'reimbursement' | 'settlement'
+  /** Settlement display state; `null` for expense/reimbursement. */
+  state: 'completed' | 'pending' | 'reversed' | 'contra' | null
+  /** Who paid the expense / registered the settlement (for "Pagó X · split"). */
+  payerId: string | null
+  /** Signed effect on member A's balance (positive = in A's favour). */
+  amountForA: number
+  /** Running balance for A after this entry (positive = B owes A). */
+  runningForA: number
+  change: LedgerChange
+}
+
+export type CurrentAccountEquation = {
+  /** Partes del otro en lo que pagó A (+). */
+  otherSharesYouPaid: number
+  /** Tus partes en lo que pagó el otro (−). */
+  yourSharesTheyPaid: number
+  /** Reintegros y liquidaciones (cobradas). */
+  reimbursementsAndSettlements: number
+  /** = los tres anteriores. Positive = B owes A. */
+  balanceForA: number
+}
+
+export type CurrentAccount = {
+  currency: BalanceCurrency
+  /** Entries in DISPLAY order (most recent first). */
+  entries: LedgerEntry[]
+  equation: CurrentAccountEquation
+  debt: PairwiseDebt
+}
+
+/**
+ * Derive the cuenta corriente (running ledger) for one currency at `asOf`, from
+ * the same splits + settlements as the debt. Each shared expense/reimbursement is
+ * one entry (grouped by transaction) signed by its effect on member A; each
+ * settlement is one entry. The running balance is the cumulative effect on A and
+ * its final value EQUALS `householdDebtAt` for A (same inputs, same gating). The
+ * equation aggregates the entries into the four boxes shown in the UI. Pure;
+ * `Money` accumulation so there is no centavo drift. See spec `shared`
+ * "El usuario puede ver la cuenta corriente del hogar".
+ */
+export function deriveCurrentAccount(
+  splits: ProjectableSplit[],
+  settlements: LedgerSettlement[],
+  currency: BalanceCurrency,
+  asOf: string,
+  memberA: string,
+  _memberB: string,
+): CurrentAccount {
+  type Draft = Omit<LedgerEntry, 'runningForA'> & { amt: MoneyType }
+  const byTx = new Map<string, Draft>()
+
+  for (const s of splits) {
+    if (s.currencyCode !== currency) continue
+    const counts =
+      s.movementKind === 'reimbursement'
+        ? reimbursementCountsTowardDebt(s.receivedAt, s.cancelledAt, s.gateDueDate, asOf)
+        : countsByPeriod(s.gateDueDate, asOf)
+    if (!counts) continue
+    const c = splitContributionForA(s, memberA)
+    const impactDate =
+      s.movementKind === 'reimbursement'
+        ? s.gateDueDate ?? s.receivedAt?.slice(0, 10) ?? s.date // receivedAt is a timestamp
+        : s.gateDueDate ?? s.date
+    const existing = byTx.get(s.transactionId)
+    if (existing) {
+      existing.amt = Money.add(existing.amt, Money.from(c))
+      existing.amountForA = Money.toNumber(existing.amt)
+    } else {
+      const paidByA = s.movementOwnerId === memberA
+      byTx.set(s.transactionId, {
+        id: s.transactionId,
+        date: impactDate,
+        label: s.label,
+        kind: s.movementKind,
+        state: null,
+        payerId: s.movementOwnerId,
+        amt: Money.from(c),
+        amountForA: c,
+        change:
+          s.movementKind === 'reimbursement'
+            ? 'reduces_debt'
+            : paidByA
+              ? 'adds_other_share'
+              : 'adds_your_share',
+      })
+    }
+  }
+
+  const drafts: Draft[] = [...byTx.values()]
+
+  for (const t of settlements) {
+    if (t.currencyCode !== currency) continue
+    const amt = Money.from(t.amount)
+    // A settlement reduces what the payer owed: +amount to the payer's balance.
+    const forA = t.payerId === memberA ? amt : t.receiverId === memberA ? Money.subtract(Money.from(0), amt) : Money.from(0)
+    drafts.push({
+      id: t.id,
+      date: t.date,
+      label: t.status === 'contra' ? 'Reversión de liquidación' : 'Liquidación',
+      kind: 'settlement',
+      state: t.status,
+      payerId: t.payerId,
+      amt: forA,
+      amountForA: Money.toNumber(forA),
+      change: t.status === 'contra' ? 'restores_amount' : 'reduces_balance',
+    })
+  }
+
+  // Chronological ASC to compute the running balance (id as a stable tiebreaker).
+  drafts.sort((a, b) =>
+    a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0,
+  )
+
+  let running = Money.from(0)
+  let other = Money.from(0)
+  let yours = Money.from(0)
+  let reimbSettle = Money.from(0)
+  const asc: LedgerEntry[] = drafts.map((d) => {
+    running = Money.add(running, d.amt)
+    if (d.kind === 'expense') {
+      if (d.payerId === memberA) other = Money.add(other, d.amt)
+      else yours = Money.add(yours, d.amt)
+    } else {
+      reimbSettle = Money.add(reimbSettle, d.amt)
+    }
+    const { amt: _omit, ...rest } = d
+    return { ...rest, runningForA: Money.toNumber(running) }
+  })
+
+  const balanceForA = Money.toNumber(running)
+  const debt: PairwiseDebt =
+    Math.abs(balanceForA) < DEBT_TOLERANCE
+      ? { kind: 'settled' }
+      : balanceForA > 0
+        ? { kind: 'owes', from: _memberB, to: memberA, amount: balanceForA }
+        : { kind: 'owes', from: memberA, to: _memberB, amount: -balanceForA }
+
+  return {
+    currency,
+    entries: asc.reverse(), // display: most recent first
+    equation: {
+      otherSharesYouPaid: Money.toNumber(other),
+      yourSharesTheyPaid: Money.toNumber(yours),
+      reimbursementsAndSettlements: Money.toNumber(reimbSettle),
+      balanceForA,
+    },
+    debt,
+  }
 }

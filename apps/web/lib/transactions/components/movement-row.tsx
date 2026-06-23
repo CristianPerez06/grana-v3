@@ -111,8 +111,11 @@ export const MovementRow = ({
     movement.kind === 'reimbursement' && movement.state !== 'received'
 
   // Primary line: what the user wrote; falls back to the category or type name.
+  // Adjustments carry a meaningful title (real "Ajuste", or a settlement label
+  // like "Pago de deuda compartida"), so prefer it over the generic type label.
   const fallbackLabel = view.isCategorized ? categoryLabel ?? typeLabel : typeLabel
-  const primary = movement.description ?? fallbackLabel
+  const primary =
+    movement.description ?? (movement.kind === 'adjustment' ? movement.title : fallbackLabel)
 
   // Account display: institution leads, the account's own name is the fallback
   // (cash/wallet accounts have no institution). Keeps the compact row to one

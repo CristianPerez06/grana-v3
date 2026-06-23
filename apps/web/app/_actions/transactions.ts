@@ -332,7 +332,7 @@ export async function deleteTransaction(id: string): Promise<ActionResult<never>
   // Block deletion of individual installment children — must delete from parent
   const { data: tx } = await supabase
     .from('transactions')
-    .select('parent_id, status, is_shared, household_id')
+    .select('parent_id, status, is_shared, household_id, type')
     .eq('id', id)
     .eq('user_id', userId)
     .single()
@@ -349,6 +349,16 @@ export async function deleteTransaction(id: string): Promise<ActionResult<never>
     return {
       ok: false,
       formError: 'No podés eliminar un consumo que ya fue pagado en el resumen.',
+    }
+  }
+
+  // A settlement leg belongs to a household settlement (cuenta corriente).
+  // Deleting it here would orphan the other member's leg and bypass the
+  // reversal-by-contraasiento — it must be reverted from the cuenta corriente.
+  if (tx?.type === 'settlement') {
+    return {
+      ok: false,
+      formError: 'Es parte de una liquidación del hogar. Revertila desde la cuenta corriente.',
     }
   }
 

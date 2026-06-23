@@ -157,6 +157,7 @@ describe('gateSplit', () => {
     cancelledAt: null,
     transactionId: 'tx-ypf',
     label: 'YPF',
+    date: '2026-06-15',
   }
 
   it('a future card expense does not count this month but counts in its month', () => {
@@ -197,6 +198,7 @@ describe('householdOutlook', () => {
         cancelledAt: null,
         transactionId: 'tx-ypf',
         label: 'YPF',
+        date: '2026-06-15',
       },
     ]
     // baseline today (June): nothing counts → A balance 0.
@@ -220,6 +222,7 @@ describe('householdOutlook', () => {
         cancelledAt: null,
         transactionId: 'tx-ypf',
         label: 'YPF',
+        date: '2026-06-15',
       },
       {
         currencyCode: 'ARS',
@@ -232,6 +235,7 @@ describe('householdOutlook', () => {
         cancelledAt: null,
         transactionId: 'tx-ypf-reimb',
         label: 'YPF · Reintegro',
+        date: '2026-06-15',
       },
     ]
     const outlook = householdOutlook(splits, [], 'ARS', asOfByMonth, A, 0)

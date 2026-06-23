@@ -686,6 +686,8 @@ export type Database = {
           receiver_id: string
           receiver_movement_id: string | null
           resolved_at: string | null
+          reversed_at: string | null
+          reverses_settlement_id: string | null
           status: string
         }
         Insert: {
@@ -699,6 +701,8 @@ export type Database = {
           receiver_id: string
           receiver_movement_id?: string | null
           resolved_at?: string | null
+          reversed_at?: string | null
+          reverses_settlement_id?: string | null
           status?: string
         }
         Update: {
@@ -712,6 +716,8 @@ export type Database = {
           receiver_id?: string
           receiver_movement_id?: string | null
           resolved_at?: string | null
+          reversed_at?: string | null
+          reverses_settlement_id?: string | null
           status?: string
         }
         Relationships: [
@@ -741,6 +747,13 @@ export type Database = {
             columns: ["receiver_movement_id"]
             isOneToOne: false
             referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlement_reverses_settlement_id_fkey"
+            columns: ["reverses_settlement_id"]
+            isOneToOne: false
+            referencedRelation: "settlement"
             referencedColumns: ["id"]
           },
         ]

@@ -2,11 +2,14 @@ import type { DbClient } from '@/lib/supabase/db-client'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import {
   computeHouseholdBalances,
+  deriveCurrentAccount,
   gateSplit,
   householdDebtAt,
   householdOutlook,
   type BalanceCurrency,
+  type CurrentAccount,
   type DebtSettlement,
+  type LedgerSettlement,
   type OutlookMonth,
   type ProjectableSplit,
 } from '@grana/money-logic'
@@ -114,18 +117,20 @@ async function collectDebtInputs(
       user_id: string
       type: string
       currency_code: string
+      date: string
       due_date: string | null
       received_at: string | null
       cancelled_at: string | null
       description: string | null
       category: { name: string } | null
+      linked_transaction_id: string | null
     }
   >()
   if (txIds.length) {
     const { data: txs } = await supabase
       .from('transactions')
       .select(
-        'id, user_id, type, currency_code, due_date, received_at, cancelled_at, description, category:categories(name)',
+        'id, user_id, type, currency_code, date, due_date, received_at, cancelled_at, description, linked_transaction_id, category:categories(name)',
       )
       .in('id', txIds)
     for (const t of txs ?? [])
@@ -133,20 +138,51 @@ async function collectDebtInputs(
         user_id: t.user_id,
         type: t.type,
         currency_code: t.currency_code,
+        date: t.date,
         due_date: t.due_date,
         received_at: t.received_at,
         cancelled_at: t.cancelled_at,
         description: t.description,
         category: (t.category as unknown as { name: string } | null) ?? null,
+        linked_transaction_id: t.linked_transaction_id,
       })
+  }
+
+  // Reimbursements carry no description/category of their own — resolve a label
+  // from the expense they offset (linked_transaction_id), like getSharedExpenses.
+  const linkedIds = [
+    ...new Set(
+      [...txById.values()]
+        .filter((t) => t.type === 'reimbursement' && t.linked_transaction_id)
+        .map((t) => t.linked_transaction_id as string),
+    ),
+  ]
+  const linkedLabelById = new Map<string, string>()
+  if (linkedIds.length) {
+    const { data: linked } = await supabase
+      .from('transactions')
+      .select('id, description, category:categories(name)')
+      .in('id', linkedIds)
+    for (const e of linked ?? []) {
+      const cat = (e.category as unknown as { name: string } | null) ?? null
+      const label = e.description ?? cat?.name ?? null
+      if (label) linkedLabelById.set(e.id, label)
+    }
   }
 
   const projectable: ProjectableSplit[] = (splitRows ?? []).flatMap((row) => {
     const tx = txById.get(row.transaction_id)
     if (!tx || !isBalanceCurrency(tx.currency_code)) return []
     const kind = tx.type === 'reimbursement' ? 'reimbursement' : 'expense'
+    const linkedLabel = tx.linked_transaction_id
+      ? linkedLabelById.get(tx.linked_transaction_id)
+      : undefined
     const label =
-      tx.description ?? tx.category?.name ?? (kind === 'reimbursement' ? 'Reintegro' : 'Gasto compartido')
+      kind === 'reimbursement'
+        ? linkedLabel
+          ? `Reintegro · ${linkedLabel}`
+          : 'Reintegro'
+        : (tx.description ?? tx.category?.name ?? 'Gasto compartido')
     return [
       {
         currencyCode: tx.currency_code,
@@ -159,6 +195,7 @@ async function collectDebtInputs(
         cancelledAt: tx.cancelled_at,
         transactionId: row.transaction_id,
         label,
+        date: tx.date,
       },
     ]
   })
@@ -260,6 +297,75 @@ export async function getHouseholdOutlook(
   return result
 }
 
+// ── getCurrentAccount (cuenta corriente) ──────────────────────────────────────
+
+export type CurrentAccountData = {
+  byCurrency: Record<BalanceCurrency, CurrentAccount>
+  /** "Lo que se viene" — same projection as the home, per currency. */
+  outlook: Record<BalanceCurrency, OutlookMonth[]> | null
+  /** Current user (member A — the perspective of the ledger). */
+  memberAId: string
+  partnerName: string
+  nameById: Record<string, string>
+}
+
+/**
+ * The household current account (cuenta corriente) at today, per currency: the
+ * derived ledger (extracto + ecuación + saldo) plus the forward projection. The
+ * ledger derivation is pure (`deriveCurrentAccount`); here we only gather inputs.
+ */
+export async function getCurrentAccount(supabase: DbClient): Promise<CurrentAccountData | null> {
+  const household = await getHousehold(supabase)
+  if (!household || household.members.length < 2) return null
+
+  const userId = await currentUserId(supabase)
+  const ids = household.members.map((m) => m.userId)
+  const a = userId && ids.includes(userId) ? userId : ids[0]
+  const b = ids.find((id) => id !== a) ?? ids[0]
+  const nameById = Object.fromEntries(household.members.map((m) => [m.userId, m.fullName]))
+  const partnerName = nameById[b] ?? ''
+
+  const today = formatDateISO(getTodayAR())
+  const { projectable } = await collectDebtInputs(supabase, household.id)
+
+  // Ledger settlements carry id/date/status (richer than the debt's DebtSettlement).
+  const { data: settleRows } = await supabase
+    .from('settlement')
+    .select('id, payer_id, receiver_id, amount, currency_code, status, created_at, resolved_at')
+    .eq('household_id', household.id)
+  const ledgerSettlements: LedgerSettlement[] = (settleRows ?? []).flatMap((s) => {
+    if (!isBalanceCurrency(s.currency_code)) return []
+    const status: LedgerSettlement['status'] =
+      s.status === 'pending_receipt'
+        ? 'pending'
+        : s.status === 'completed'
+          ? 'completed'
+          : (s.status as LedgerSettlement['status']) // 'reversed' | 'contra' (Fase B)
+    return [
+      {
+        currencyCode: s.currency_code,
+        id: s.id,
+        // Full timestamp (not sliced) so a settlement sorts AFTER same-day
+        // expenses (which carry date-only) → the latest one shows on top.
+        date: s.resolved_at ?? s.created_at,
+        payerId: s.payer_id,
+        receiverId: s.receiver_id,
+        amount: s.amount,
+        status,
+      },
+    ]
+  })
+
+  const byCurrency = {} as Record<BalanceCurrency, CurrentAccount>
+  for (const currency of CURRENCIES) {
+    byCurrency[currency] = deriveCurrentAccount(projectable, ledgerSettlements, currency, today, a, b)
+  }
+
+  const outlook = await getHouseholdOutlook(supabase)
+
+  return { byCurrency, outlook, memberAId: a, partnerName, nameById }
+}
+
 // ── getPendingSettlements ─────────────────────────────────────────────────────
 
 /** Settlements awaiting the current user (receiver) to assign an account. */
@@ -294,6 +400,154 @@ export async function getPendingSettlements(supabase: DbClient): Promise<Pending
         ]
       : [],
   )
+}
+
+// ── getSharedAccruedExpenses (DEVENGADO) ──────────────────────────────────────
+
+type CategoryHandle =
+  | {
+      id: string
+      name: string
+      canonical_name: string
+      user_id: string | null
+      icon: string | null
+      color: string | null
+    }
+  | null
+type TaxonomyHandle = { name: string; canonical_name: string; user_id: string | null } | null
+
+/**
+ * Shared movements of the household scoped by **DEVENGADO** (accrual): EXPENSES
+ * counted by purchase `date` (each installment CHILD in its month; the PARENT
+ * excluded — off-ledger), plus **received REIMBURSEMENTS** by their date. Mirrors
+ * the dashboard's accrual scoping so Compartido cuenta igual que el resto de la
+ * app, summing the **household total** (`amount`, both parts). Feeds "Gastaron
+ * juntos" (gross, expenses), the category breakdown (expenses only) and the NET
+ * (gross − reintegros). Both currencies.
+ *
+ * NOTE: the DEBT (cuenta corriente) keeps its own IMPACT clock — see
+ * `getHouseholdDebt`/`getHouseholdOutlook`. This is the spending clock only.
+ */
+export async function getSharedAccruedMovements(
+  supabase: DbClient,
+  month: string,
+): Promise<SharedExpenseItem[]> {
+  const userId = await currentUserId(supabase)
+  if (!userId) return []
+
+  const household = await getHousehold(supabase)
+  if (!household) return []
+
+  const [y, m] = month.split('-').map(Number)
+  const start = `${month}-01`
+  const end = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
+
+  const [expRes, reimbRes] = await Promise.all([
+    // Expenses: `is_parent = false` → singles, card consumos and each cuota by its date.
+    supabase
+      .from('transactions')
+      .select(
+        'id, type, description, date, due_date, amount, currency_code, user_id, installments_total, category:categories(id, name, canonical_name, user_id, icon, color), subcategory:subcategories(name, canonical_name, user_id)',
+      )
+      .eq('household_id', household.id)
+      .eq('is_shared', true)
+      .eq('type', 'expense')
+      .eq('is_parent', false)
+      .gte('date', start)
+      .lt('date', end)
+      .limit(500),
+    // Received, non-cancelled shared reimbursements by their date (for the NET).
+    supabase
+      .from('transactions')
+      .select('id, description, date, due_date, amount, currency_code, user_id')
+      .eq('household_id', household.id)
+      .eq('is_shared', true)
+      .eq('type', 'reimbursement')
+      .not('received_at', 'is', null)
+      .is('cancelled_at', null)
+      .gte('date', start)
+      .lt('date', end)
+      .limit(500),
+  ])
+  const expTxs = expRes.data ?? []
+  const reimbTxs = reimbRes.data ?? []
+  if (!expTxs.length && !reimbTxs.length) return []
+
+  // The current user's share (for "tu parte"); each row carries its own split.
+  const ids = [...expTxs, ...reimbTxs].map((t) => t.id)
+  const shareByTx = new Map<string, number>()
+  if (ids.length) {
+    const { data: rows } = await supabase
+      .from('shared_expense_split')
+      .select('transaction_id, amount_assigned')
+      .in('transaction_id', ids)
+      .eq('user_id', userId)
+    for (const r of rows ?? []) shareByTx.set(r.transaction_id, Number(r.amount_assigned))
+  }
+
+  const nameById = new Map(household.members.map((mm) => [mm.userId, mm.fullName]))
+
+  const expenseItems: SharedExpenseItem[] = expTxs.flatMap((t) => {
+    if (!isBalanceCurrency(t.currency_code)) return []
+    const category = (t.category as unknown as CategoryHandle) ?? null
+    const subcategory = (t.subcategory as unknown as TaxonomyHandle) ?? null
+    return [
+      {
+        id: t.id,
+        kind: 'expense' as const,
+        reimbursementState: null,
+        description: t.description,
+        categoryId: category?.id ?? null,
+        categoryName: category?.name ?? null,
+        categoryCanonicalName: category?.canonical_name ?? null,
+        categoryIsSystem: category != null && category.user_id === null,
+        categoryColor: category?.color ?? null,
+        categoryIcon: category?.icon ?? null,
+        subcategoryName: subcategory?.name ?? null,
+        subcategoryCanonicalName: subcategory?.canonical_name ?? null,
+        subcategoryIsSystem: subcategory != null && subcategory.user_id === null,
+        date: t.date,
+        dueDate: t.due_date,
+        amount: Number(t.amount),
+        currencyCode: t.currency_code,
+        payerId: t.user_id,
+        payerName: nameById.get(t.user_id) ?? '',
+        ownShare: shareByTx.get(t.id) ?? 0,
+        isInstallment: (t.installments_total ?? 1) > 1,
+      },
+    ]
+  })
+
+  const reimbItems: SharedExpenseItem[] = reimbTxs.flatMap((t) => {
+    if (!isBalanceCurrency(t.currency_code)) return []
+    return [
+      {
+        id: t.id,
+        kind: 'reimbursement' as const,
+        reimbursementState: 'received' as const,
+        description: t.description,
+        categoryId: null,
+        categoryName: null,
+        categoryCanonicalName: null,
+        categoryIsSystem: false,
+        categoryColor: null,
+        categoryIcon: null,
+        subcategoryName: null,
+        subcategoryCanonicalName: null,
+        subcategoryIsSystem: false,
+        date: t.date,
+        dueDate: t.due_date,
+        amount: Number(t.amount),
+        currencyCode: t.currency_code,
+        payerId: t.user_id,
+        payerName: nameById.get(t.user_id) ?? '',
+        ownShare: shareByTx.get(t.id) ?? 0,
+        isInstallment: false,
+      },
+    ]
+  })
+
+  return [...expenseItems, ...reimbItems]
 }
 
 // ── getMovementSharedInfo ─────────────────────────────────────────────────────
@@ -360,17 +614,18 @@ export async function getMovementSharedInfo(
 /**
  * Shared expenses with this user's share. Installment children are grouped
  * under their parent (one row per purchase); shared reimbursements are included
- * (settlements are not). Scoping (limit lifted to feed totals/breakdown):
+ * (settlements are not). Scoping:
  * - `month`: by registration `date` — the "recent movements" of that month.
- * - `impactMonth`: by the month the expense IMPACTS — cash/debit by `date`, a
- *   card purchase by its statement `due_date`. Feeds "gastaron juntos" and the
- *   category breakdown, so a future card consumption does not count until paid.
+ * - none: the latest `limit` movements.
+ *
+ * The DEVENGADO spending of the month ("Gastaron juntos" + breakdown) is NOT
+ * served here — it has its own clock and grouping in `getSharedAccruedExpenses`.
  */
 export async function getSharedExpenses(
   supabase: DbClient,
-  opts: { limit?: number; month?: string; impactMonth?: string } = {},
+  opts: { limit?: number; month?: string } = {},
 ): Promise<SharedExpenseItem[]> {
-  const { limit = 20, month, impactMonth } = opts
+  const { limit = 20, month } = opts
   const userId = await currentUserId(supabase)
   if (!userId) return []
 
@@ -399,16 +654,7 @@ export async function getSharedExpenses(
     .order('date', { ascending: false })
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
-  if (impactMonth) {
-    const { start, end } = monthBounds(impactMonth)
-    // Impacts this month: a card statement due this month, OR a cash/debit
-    // movement (no due date) dated this month.
-    query = query
-      .or(
-        `and(due_date.gte.${start},due_date.lt.${end}),and(due_date.is.null,date.gte.${start},date.lt.${end})`,
-      )
-      .limit(500)
-  } else if (month) {
+  if (month) {
     const { start, end } = monthBounds(month)
     query = query.gte('date', start).lt('date', end).limit(500)
   } else {

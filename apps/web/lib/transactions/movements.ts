@@ -318,7 +318,7 @@ export const toFinancialMovement = (tx: TransactionWithDetails): FinancialMoveme
     return {
       ...base,
       kind: 'adjustment',
-      title: isIn ? 'Pago recibido' : 'Saldar deuda',
+      title: isIn ? 'Cobro de deuda compartida' : 'Pago de deuda compartida',
       sign: isIn ? '+' : '-',
     }
   }

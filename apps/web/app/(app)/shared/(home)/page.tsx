@@ -13,12 +13,21 @@ import {
   getHouseholdOutlook,
   getPendingSettlements,
   getSharedExpenses,
+  getSharedAccruedMovements,
 } from '@/lib/shared/queries'
+import {
+  groupSharedSpendingByCategory,
+  sharedSpendingTotal,
+  sharedReimbursementsTotal,
+  sharedOwnNetShare,
+} from '@/lib/shared/spending-breakdown'
 import type { BalanceCurrency } from '@grana/money-logic'
 import { translateCategoryLabel, translateSubcategoryLabel } from '@/lib/categories/display'
 import { fmtMoney } from '../_components/money'
 import { InviteCard } from '../_components/invite-card'
 import { PendingSettlementCard } from '../_components/pending-settlement-card'
+import { SpendingBreakdown } from '../_components/spending-breakdown'
+import { SettleDrawer } from '../settle/_components/settle-drawer'
 import { SetupForm } from '../setup/_components/setup-form'
 
 const CURRENCIES: BalanceCurrency[] = ['ARS', 'USD']
@@ -49,6 +58,11 @@ const monthLabel = (ym: string): string => {
   const [y, m] = ym.split('-').map(Number)
   const s = new Date(y, m - 1, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
   return s.charAt(0).toUpperCase() + s.slice(1)
+}
+// Abbreviated month for the projection axis ("jul", "ago").
+const monthShort = (ym: string): string => {
+  const [y, m] = ym.split('-').map(Number)
+  return new Date(y, m - 1, 1).toLocaleDateString('es-AR', { month: 'short' }).replace('.', '')
 }
 
 export default async function SharedPage({
@@ -86,8 +100,9 @@ export default async function SharedPage({
   if (!user) redirect('/login')
   const userId = user.id
 
+  const firstName = (n: string) => (n || '').trim().split(/\s+/)[0] ?? ''
   const partner = household.members.find((m) => m.userId !== userId)
-  const partnerName = partner?.fullName ?? ''
+  const partnerName = firstName(partner?.fullName ?? '')
 
   const sp = await searchParams
   const month = isValidMonth(sp.m) ? sp.m : currentMonth()
@@ -96,61 +111,73 @@ export default async function SharedPage({
     getHouseholdDebt(supabase),
     // Registered this month (by date) → "Últimos movimientos".
     getSharedExpenses(supabase, { month }),
-    // Impacting this month (cash by date, card by statement) → "Gastaron juntos"
-    // + breakdown, so a future card consumption doesn't count until it's paid.
-    getSharedExpenses(supabase, { impactMonth: month }),
+    // DEVENGADO: counted by purchase date (cash/card by their date, each cuota in
+    // its month) → "Gastaron juntos" + breakdown. The DEBT keeps its own impact
+    // clock (getHouseholdDebt/Outlook), so a future card consumo counts as spending
+    // this month but only enters the debt when its statement is paid.
+    getSharedAccruedMovements(supabase, month),
     getPendingSettlements(supabase),
     getAccounts(supabase),
     getHouseholdOutlook(supabase),
   ])
-  const myAccounts = [...accounts.cash, ...accounts.bank].map((a) => ({ id: a.id, name: a.name }))
-
   const youOweSomething = CURRENCIES.some((c) => {
     const d = debt?.[c]
     return d?.kind === 'owes' && d.from === userId
   })
 
-  // ── Month spending (gastaron juntos / tu parte / breakdown) — impact-scoped ─
+  // What you owe per currency + your accounts (with balances) → settle drawer.
+  const owed: Partial<Record<BalanceCurrency, number>> = {}
+  for (const c of CURRENCIES) {
+    const d = debt?.[c]
+    if (d?.kind === 'owes' && d.from === userId) owed[c] = d.amount
+  }
+  const settleAccounts = [...accounts.cash, ...accounts.bank].map((a) => ({
+    id: a.id,
+    name: a.name,
+    institutionName: a.institution?.name ?? null,
+    balances: a.balances,
+  }))
+
+  // ── Month spending (gastaron juntos / tu parte / breakdown) — DEVENGADO ──────
+  // `spending` is the accrual-scoped list: household TOTAL per category, both
+  // currencies. "Tu parte" derives from each item's own share.
   const monthExpenses = spending.filter((e) => e.kind === 'expense')
-  const spendOf = (c: BalanceCurrency) =>
-    monthExpenses.filter((e) => e.currencyCode === c).reduce((a, e) => a + e.amount, 0)
-  const shareOf = (c: BalanceCurrency) =>
-    monthExpenses.filter((e) => e.currencyCode === c).reduce((a, e) => a + e.ownShare, 0)
+  const spendOf = (c: BalanceCurrency) => sharedSpendingTotal(spending, c) // gross
+  const reimbOf = (c: BalanceCurrency) => sharedReimbursementsTotal(spending, c)
+  const netOf = (c: BalanceCurrency) => spendOf(c) - reimbOf(c)
+  const netShareOf = (c: BalanceCurrency) => sharedOwnNetShare(spending, c)
 
   type Slice = { key: string; label: string; color: string; value: number; pct: number }
   const breakdownOf = (c: BalanceCurrency): Slice[] => {
     const total = spendOf(c)
     if (total <= 0) return []
-    const byCat = new Map<
-      string,
-      { name: string | null; canonical: string | null; isSystem: boolean; color: string | null; value: number }
-    >()
-    for (const e of monthExpenses.filter((e) => e.currencyCode === c)) {
-      const key = e.categoryId ?? 'none'
-      const cur =
-        byCat.get(key) ??
-        {
-          name: e.categoryName,
-          canonical: e.categoryCanonicalName,
-          isSystem: e.categoryIsSystem,
-          color: e.categoryColor,
-          value: 0,
-        }
-      cur.value += e.amount
-      byCat.set(key, cur)
-    }
-    return [...byCat.entries()]
-      .map(([key, v]) => ({ key, ...v }))
-      .sort((a, b) => b.value - a.value)
-      .map((v, i) => ({
-        key: v.key,
-        label: translateCategoryLabel(v.name, v.canonical, v.isSystem, tRoot) ?? t('split.shared_label'),
-        color: v.color ?? CAT_FALLBACK[i % CAT_FALLBACK.length],
-        value: v.value,
-        pct: (v.value / total) * 100,
-      }))
+    return groupSharedSpendingByCategory(spending, c).map((g, i) => ({
+      key: g.categoryId ?? 'none',
+      label:
+        translateCategoryLabel(g.name, g.canonicalName, g.isSystem, tRoot) ?? t('split.shared_label'),
+      color: g.color ?? CAT_FALLBACK[i % CAT_FALLBACK.length],
+      value: g.value,
+      pct: (g.value / total) * 100,
+    }))
   }
-  const arsBreakdown = breakdownOf('ARS')
+  const breakdownSlices: Record<BalanceCurrency, Slice[]> = {
+    ARS: breakdownOf('ARS'),
+    USD: breakdownOf('USD'),
+  }
+  const breakdownMovements = monthExpenses.map((e) => ({
+    id: e.id,
+    key: e.categoryId ?? 'none',
+    currency: e.currencyCode,
+    description: e.description,
+    amount: e.amount,
+  }))
+
+  // Net balance for member A (you) per currency: positive = in your favour.
+  const balanceForYou = (cur: BalanceCurrency): number => {
+    const d = debt?.[cur]
+    if (!d || d.kind === 'settled') return 0
+    return d.to === userId ? d.amount : -d.amount
+  }
 
   // ── Month navigator ────────────────────────────────────────────────────────
   const monthNav = (
@@ -173,259 +200,260 @@ export default async function SharedPage({
     </div>
   )
 
-  // ── Navy hero ──────────────────────────────────────────────────────────────
-  // USD line — always visible (bimoneda por defecto), even at zero.
-  const usdInline = (value: number, owedToYou: boolean | null, note: string) => (
-    <span className="mt-2 inline-flex items-center gap-1.5">
-      <span className="rounded-full bg-emerald-500/20 px-1.5 py-px text-[10px] font-extrabold text-emerald-300">
-        USD
-      </span>
-      <span
-        className={`text-[13px] font-extrabold tabular-nums ${
-          owedToYou === null ? 'text-white' : owedToYou ? 'text-emerald-300' : 'text-[#e3a395]'
-        }`}
-      >
-        {fmtMoney(Math.abs(value), 'USD')}
-      </span>
-      <span className="text-[11.5px] font-semibold text-navy-muted">{note}</span>
-    </span>
-  )
-
-  const debtMetric = (() => {
-    const d = debt?.ARS
-    if (!d || d.kind === 'settled') {
-      return (
-        <>
-          <span className="mt-2 block text-[28px] font-black leading-none text-emerald-300">
-            {t('dashboard.settled')}
-          </span>
-        </>
-      )
-    }
-    const youOwe = d.from === userId
-    return (
-      <>
-        <span
-          className={`mt-2 block text-[32px] font-black leading-none tabular-nums ${
-            youOwe ? 'text-[#e3a395]' : 'text-emerald-300'
-          }`}
-        >
-          {fmtMoney(d.amount, 'ARS')}
-        </span>
-        <p className="mt-1.5 text-xs font-medium text-navy-muted">
-          {youOwe
-            ? t('dashboard.you_owe', { name: partnerName })
-            : t('dashboard.you_are_owed', { name: partnerName })}
-        </p>
-      </>
-    )
-  })()
-
-  const usdDebt = debt?.USD
+  // ── Hero: Gasto del hogar · NETO (A3). El navegador gobierna SOLO esto (A2). ──
   const heroSection = (
     <article className="bg-hero-navy text-white relative overflow-hidden rounded-3xl border border-navy-border p-6 shadow-[0_24px_60px_-42px_rgba(11,26,43,0.48)]">
-      <div className="grid gap-6 sm:grid-cols-2">
-        {/* Gastaron juntos */}
-        <div className="sm:border-r sm:border-navy-border sm:pr-6">
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.07em] text-navy-muted">
-            {t('dashboard.spent_together', { month: monthLabel(month) })}
-          </p>
-          <span className="mt-2 block text-[32px] font-black leading-none tabular-nums text-white">
-            {fmtMoney(spendOf('ARS'), 'ARS')}
-          </span>
-          <p className="mt-1.5 text-xs font-medium text-navy-muted">
-            {t('dashboard.your_month_share', { amount: fmtMoney(shareOf('ARS'), 'ARS') })}
-          </p>
-          {usdInline(spendOf('USD'), null, t('dashboard.in_the_month'))}
-        </div>
-        {/* Para saldar / balance */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.07em] text-navy-muted">
+          {t('dashboard.household_spend_net', { month: monthLabel(month) })}
+        </p>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-extrabold">
+          <span className="text-emerald-300">USD</span>
+          <span className="tabular-nums text-white">{fmtMoney(netOf('USD'), 'USD')}</span>
+          <span className="text-navy-muted">{t('dashboard.net_in_usd')}</span>
+        </span>
+      </div>
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
         <div>
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.07em] text-navy-muted">
-            {t('dashboard.to_settle')}
-          </p>
-          {debtMetric}
-          {!usdDebt || usdDebt.kind === 'settled'
-            ? usdInline(0, null, t('dashboard.settled'))
-            : usdInline(
-                usdDebt.amount,
-                usdDebt.to === userId,
-                usdDebt.from === userId
-                  ? t('dashboard.you_owe', { name: partnerName })
-                  : t('dashboard.you_are_owed', { name: partnerName }),
-              )}
-          {youOweSomething && (
-            <Button asChild className="mt-4 w-auto px-4">
-              <Link href="/shared/settle">{t('dashboard.settle_action')}</Link>
-            </Button>
-          )}
+          <span className="text-[11px] font-semibold text-navy-muted">{t('dashboard.net_cost')}</span>
+          <span className="mt-1 block text-[38px] font-black leading-none tabular-nums text-white">
+            {fmtMoney(netOf('ARS'), 'ARS')}
+          </span>
+        </div>
+        <div className="text-[12px] font-semibold leading-relaxed text-navy-muted">
+          <div className="flex items-center justify-end gap-4">
+            <span>{t('dashboard.gross_label')}</span>
+            <b className="w-[104px] text-right tabular-nums text-white">{fmtMoney(spendOf('ARS'), 'ARS')}</b>
+          </div>
+          <div className="flex items-center justify-end gap-4">
+            <span>{t('dashboard.reimb_label')}</span>
+            <b className="w-[104px] text-right tabular-nums text-emerald-300">
+              −{fmtMoney(reimbOf('ARS'), 'ARS')}
+            </b>
+          </div>
         </div>
       </div>
-
-      {/* En qué gastaron — barrita apilada clickeable */}
-      {arsBreakdown.length > 0 && (
-        <div className="mt-5 border-t border-navy-border pt-4">
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.07em] text-navy-muted">
-            {t('dashboard.spent_on')}
-          </p>
-          <div className="mt-3 flex h-[11px] overflow-hidden rounded-md bg-white/10">
-            {arsBreakdown.map((s) => (
-              <span key={s.key} style={{ width: `${s.pct}%`, backgroundColor: s.color }} />
-            ))}
-          </div>
-          <div className="mt-3 flex flex-col gap-0.5">
-            {arsBreakdown.map((s) => {
-              const movs = monthExpenses.filter(
-                (e) => (e.categoryId ?? 'none') === s.key && e.currencyCode === 'ARS',
-              )
-              return (
-                <details key={s.key} className="group">
-                  <summary className="-mx-2 flex cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-white/5">
-                    <span
-                      className="size-2.5 shrink-0 rounded-[3px]"
-                      style={{ backgroundColor: s.color }}
-                      aria-hidden
-                    />
-                    <span className="truncate text-[12.5px] font-bold text-white">{s.label}</span>
-                    <span className="ml-auto text-[12.5px] font-extrabold tabular-nums text-white">
-                      {fmtMoney(s.value, 'ARS')}
-                    </span>
-                    <span className="w-8 text-right text-[11px] font-semibold text-navy-muted">
-                      {Math.round(s.pct)}%
-                    </span>
-                    <ChevronRight
-                      size={13}
-                      className="text-navy-muted transition-transform group-open:rotate-90"
-                    />
-                  </summary>
-                  {movs.length > 0 && (
-                    <div className="mb-1 ml-[18px] border-l border-navy-border pl-3">
-                      {movs.map((m) => (
-                        <div
-                          key={m.id}
-                          className="flex items-center justify-between gap-3 py-1 text-[11.5px]"
-                        >
-                          <span className="truncate text-navy-muted">{m.description || s.label}</span>
-                          <span className="shrink-0 font-bold tabular-nums text-white">
-                            {fmtMoney(m.amount, 'ARS')}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </details>
-              )
-            })}
-          </div>
-        </div>
+      <p className="mt-2 text-xs font-medium text-navy-muted">
+        {t('dashboard.your_net_share', { amount: fmtMoney(netShareOf('ARS'), 'ARS') })}
+      </p>
+      {netShareOf('USD') > 0.01 && (
+        <p className="mt-0.5 text-xs font-semibold text-emerald-300">
+          {t('dashboard.your_net_share_usd', { amount: fmtMoney(netShareOf('USD'), 'USD') })}
+        </p>
       )}
+      <SpendingBreakdown
+        slices={breakdownSlices}
+        movements={breakdownMovements}
+        fallbackLabel={t('split.shared_label')}
+      />
     </article>
   )
 
-  // ── Próximos compromisos — one card; the next 3 months inside. Each month's
-  // headline is the cumulative net the balance will stand at by then; the months
-  // with movements detail what lands in them. ────────────────────────────────
-  const outlookCards = outlook
-    ? outlook.ARS.map((row, i) => ({
-        month: row.month,
-        arsCum: row.cumulativeForA,
-        items: row.items,
-        usdCum: outlook.USD[i]?.cumulativeForA ?? 0,
-      }))
-    : []
-  const firstWithItems = outlookCards.findIndex((c) => c.items.length > 0)
+  // ── Dos tiles: "qué se deben hoy" (avatares J→C) + "lo que se viene" (sparkline)
+  const initial = (name: string) => (name.trim()[0] || '?').toUpperCase()
+  const youName = household.members.find((m) => m.userId === userId)?.fullName ?? ''
+  const arsForYou = balanceForYou('ARS')
+  const usdForYou = balanceForYou('USD')
+  const arsSettled = Math.abs(arsForYou) < 0.01
+  const usdSettled = Math.abs(usdForYou) < 0.01
 
-  const projectionSection =
-    outlookCards.length > 0 ? (
-      <section>
-        <Card className="overflow-hidden">
-          <div className="flex items-center justify-between border-b border-border-soft px-4 py-3.5">
-            <span className="text-sm font-bold text-text">{t('dashboard.upcoming_title')}</span>
-            <span className="rounded-full bg-slate-soft px-2.5 py-0.5 text-[11px] font-bold text-slate">
-              {t('dashboard.upcoming_count', { count: outlookCards.length })}
+  const debtTile = (
+    <Card className="flex flex-col p-5">
+      <span className="text-[11px] font-extrabold uppercase tracking-wide text-text-soft">
+        {t('dashboard.debt_today_title')}
+      </span>
+      <div className="mt-3.5 flex items-center justify-center gap-3.5">
+        <span
+          className="grid size-[46px] shrink-0 place-items-center rounded-full text-lg font-black text-white"
+          style={{ background: '#3A6B8A' }}
+        >
+          {initial(youName)}
+        </span>
+        <div className="flex flex-col items-center gap-1.5">
+          <span
+            className={`text-[26px] font-black leading-none tabular-nums ${
+              arsSettled || arsForYou > 0 ? 'text-income' : 'text-expense'
+            }`}
+          >
+            {arsSettled ? t('dashboard.settled') : fmtMoney(Math.abs(arsForYou), 'ARS')}
+          </span>
+          {!arsSettled && (
+            // Gradient line you→partner with an arrowhead toward the creditor.
+            <span
+              className="relative h-[3px] w-16 rounded-full"
+              style={{
+                background:
+                  arsForYou < 0
+                    ? 'linear-gradient(90deg,#3A6B8A,#C2705C)'
+                    : 'linear-gradient(90deg,#C2705C,#3A6B8A)',
+              }}
+            >
+              <span
+                className="absolute top-1/2 size-0 -translate-y-1/2"
+                style={
+                  arsForYou < 0
+                    ? { right: -1, borderLeft: '7px solid #C2705C', borderTop: '5px solid transparent', borderBottom: '5px solid transparent' }
+                    : { left: -1, borderRight: '7px solid #3A6B8A', borderTop: '5px solid transparent', borderBottom: '5px solid transparent' }
+                }
+              />
             </span>
-          </div>
-          <div className="grid gap-3 p-3 sm:grid-cols-3">
-            {outlookCards.map((c, idx) => {
-              // A month only carries a "commitment" when something lands in it.
-              // Months with no movement show no amount (the running net is the
-              // selected month's balance, not a new obligation here).
-              const hasMovement = c.items.length > 0
-              const owe = c.arsCum < 0
-              const head = (
-                <div className="flex flex-col gap-1 p-3">
-                  <span className="text-[10.5px] font-bold uppercase tracking-wide text-text-soft">
-                    {monthLabel(c.month)}
+          )}
+        </div>
+        <span
+          className="grid size-[46px] shrink-0 place-items-center rounded-full text-lg font-black text-white"
+          style={{ background: '#C2705C' }}
+        >
+          {initial(partnerName)}
+        </span>
+      </div>
+      <p className="mt-3 text-center text-[12px] font-bold text-text-muted">
+        {arsSettled
+          ? t('dashboard.settled')
+          : arsForYou > 0
+            ? t('dashboard.owes_to', { from: partnerName, to: youName })
+            : t('dashboard.owes_to', { from: youName, to: partnerName })}{' '}
+        · {t('dashboard.in_pesos')}
+      </p>
+      <span className="mx-auto mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-[12.5px] font-bold text-emerald-700">
+        <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9.5px] font-extrabold tracking-wide">
+          USD
+        </span>
+        {usdSettled
+          ? t('dashboard.settled')
+          : `${
+              usdForYou > 0
+                ? t('dashboard.you_are_owed', { name: partnerName })
+                : t('dashboard.you_owe', { name: partnerName })
+            } ${fmtMoney(Math.abs(usdForYou), 'USD')}`}
+      </span>
+      <div className="mt-auto flex items-center gap-2 border-t border-border-soft pt-4">
+        {youOweSomething && (
+          <SettleDrawer
+            owed={owed}
+            accounts={settleAccounts}
+            partnerName={partnerName}
+            triggerClassName="flex-1 justify-center px-4"
+          />
+        )}
+        {youOweSomething ? (
+          // Secondary next to "Saldar" — ghost + outline, like the mockup btn-ghost.
+          <Button
+            asChild
+            variant="ghost"
+            className="w-auto border border-border px-4 font-bold text-text underline underline-offset-2"
+          >
+            <Link href="/shared/cuenta-corriente">{t('dashboard.current_account_action')}</Link>
+          </Button>
+        ) : (
+          // Settled: it's the only action (no green "Saldar" beside it), so
+          // promote it to a warm terracotta CTA so it doesn't read as a sad lone
+          // secondary button. Only ever shown when there's no debt → no clash.
+          <Button asChild className="flex-1 justify-center px-4 !bg-[#C2705C] text-white hover:opacity-90">
+            <Link href="/shared/cuenta-corriente">🧾 {t('dashboard.current_account_action')}</Link>
+          </Button>
+        )}
+      </div>
+    </Card>
+  )
+
+  // Sparkline of the projected balance (today → upcoming months).
+  const sparkline = (values: number[]) => {
+    if (values.length < 2) return null
+    const min = Math.min(...values)
+    const max = Math.max(...values)
+    const range = max - min || 1
+    const W = 300
+    const H = 72
+    const P = 8
+    const pts = values.map((v, i) => {
+      const x = P + (i / (values.length - 1)) * (W - 2 * P)
+      const y = H - P - ((v - min) / range) * (H - 2 * P)
+      return [x, y] as const
+    })
+    const [fx, fy] = pts[0]
+    const [lx, ly] = pts[pts.length - 1]
+    return (
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="mt-3 h-[72px] w-full" aria-hidden>
+        <polyline
+          points={pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')}
+          fill="none"
+          stroke="#11B981"
+          strokeWidth={3}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle cx={fx} cy={fy} r={4.5} fill={values[0] < 0 ? '#C2705C' : '#11B981'} />
+        <circle cx={lx} cy={ly} r={5} fill="#11B981" />
+      </svg>
+    )
+  }
+
+  const projMonths = outlook ? outlook.ARS.filter((m) => m.items.length > 0) : []
+  const projValues = [arsForYou, ...(outlook?.ARS.map((m) => m.cumulativeForA) ?? [])]
+  const projectedEnd =
+    outlook && outlook.ARS.length ? outlook.ARS[outlook.ARS.length - 1].cumulativeForA : arsForYou
+  const nextImpact = projMonths[0]?.items[0]
+  const nextImpactMonth = projMonths[0] ? monthShort(projMonths[0].month) : ''
+
+  const projectionTile = (
+    <Card className="flex flex-col p-5">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-extrabold uppercase tracking-wide text-text-soft">
+          {t('dashboard.upcoming_home')}
+        </span>
+        <span className="rounded-full bg-slate-soft px-2.5 py-0.5 text-[10px] font-bold text-slate">
+          {t('dashboard.projection')}
+        </span>
+      </div>
+      {projMonths.length === 0 ? (
+        // Empty state — nada por venir.
+        <div className="flex flex-1 flex-col items-center justify-center gap-1.5 py-6 text-center">
+          <span className="text-3xl" aria-hidden>
+            🌴
+          </span>
+          <p className="text-sm font-extrabold text-text">{t('dashboard.upcoming_none_title')}</p>
+          <p className="text-xs text-text-muted">{t('dashboard.upcoming_none_hint')}</p>
+        </div>
+      ) : (
+        <>
+          {nextImpact && (
+            <div className="mt-3 inline-flex w-fit items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-[12.5px] font-bold text-amber-800">
+              <span className="size-2 rounded-full bg-amber-500" />
+              {t('dashboard.next_impact')}: {nextImpact.label}
+              {nextImpactMonth ? ` · ${nextImpactMonth}` : ''}
+            </div>
+          )}
+          {projValues.some((v, i) => i > 0 && v !== projValues[0]) && (
+            <>
+              {sparkline(projValues)}
+              <div className="mt-1 flex justify-between px-1 text-[11px] font-bold">
+                <span className="text-[#C2705C]">{t('dashboard.today_short')}</span>
+                {(outlook?.ARS ?? []).map((mo, i, arr) => (
+                  <span key={mo.month} className={i === arr.length - 1 ? 'text-income' : 'text-text-muted'}>
+                    {monthShort(mo.month)}
                   </span>
-                  {hasMovement ? (
-                    <>
-                      <span
-                        className={`text-lg font-extrabold tabular-nums ${
-                          owe ? 'text-expense' : 'text-income'
-                        }`}
-                      >
-                        {fmtMoney(Math.abs(c.arsCum), 'ARS')}
-                      </span>
-                      <span className="text-xs text-text-muted">
-                        {owe
-                          ? t('dashboard.you_owe', { name: partnerName })
-                          : t('dashboard.you_are_owed', { name: partnerName })}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-sm font-semibold text-text-soft">
-                      {t('dashboard.upcoming_empty')}
-                    </span>
-                  )}
-                </div>
-              )
-              if (!hasMovement) {
-                return (
-                  <div
-                    key={c.month}
-                    className="overflow-hidden rounded-xl border border-border bg-[#fbfcfd]"
-                  >
-                    {head}
-                  </div>
-                )
-              }
-              return (
-                <details
-                  key={c.month}
-                  open={idx === firstWithItems}
-                  className="overflow-hidden rounded-xl border border-border bg-[#fbfcfd]"
-                >
-                  <summary className="cursor-pointer list-none">{head}</summary>
-                  <div className="border-t border-border-soft bg-card px-3 pb-2.5 pt-1.5">
-                    <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-text-soft">
-                      {t('dashboard.enters_this_month')}
-                    </p>
-                    {c.items.map((it) => {
-                      const credit = it.amountForA > 0 // reduces what you owe
-                      return (
-                        <div
-                          key={it.transactionId}
-                          className="flex items-center justify-between gap-3 py-1 text-xs"
-                        >
-                          <span className="truncate text-text-muted">{it.label}</span>
-                          <span
-                            className={`shrink-0 font-bold tabular-nums ${
-                              credit ? 'text-income' : 'text-text'
-                            }`}
-                          >
-                            {credit ? '−' : ''}
-                            {fmtMoney(Math.abs(it.amountForA), 'ARS')}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </details>
-              )
-            })}
+                ))}
+              </div>
+            </>
+          )}
+          <div className="mt-3 flex items-baseline justify-center gap-2 border-t border-border-soft pt-3">
+            <span className={`text-2xl font-black tabular-nums ${projectedEnd >= 0 ? 'text-income' : 'text-expense'}`}>
+              {projectedEnd >= 0 ? '+' : '−'}
+              {fmtMoney(Math.abs(projectedEnd), 'ARS')}
+            </span>
+            <span className="text-xs text-text-muted">{t('dashboard.projected_balance')}</span>
           </div>
-        </Card>
-      </section>
-    ) : null
+        </>
+      )}
+    </Card>
+  )
+
+  const tilesRow = (
+    <div className="grid gap-4 sm:grid-cols-2">
+      {debtTile}
+      {projectionTile}
+    </div>
+  )
 
   // ── Últimos movimientos (MovementRow-like: icon + taxonomy + toned amount) ──
   // Agrupados por fecha (Hoy / Ayer / día), igual que el listado canónico de
@@ -505,6 +533,18 @@ export default async function SharedPage({
                       : 'text-expense'
                     const sign = isReimb ? (received ? '+' : '') : '−'
                     const color = e.categoryColor ?? '#8A94A3'
+                    // Headline = the share that matters to you; total below.
+                    const youPaid = e.payerId === userId
+                    const perspectiveAmount = isReimb
+                      ? e.amount
+                      : youPaid
+                        ? e.amount - e.ownShare
+                        : e.ownShare
+                    const perspectiveLabel = isReimb
+                      ? t('dashboard.reimbursement_label')
+                      : youPaid
+                        ? t('dashboard.partner_part', { name: partnerName })
+                        : t('dashboard.your_part')
                     // Card consumption whose statement falls in a later month: it is
                     // registered now but only impacts (and counts) when paid.
                     const futureImpact =
@@ -552,15 +592,19 @@ export default async function SharedPage({
                                 {e.payerId === userId
                                   ? t('dashboard.paid_by_you')
                                   : t('dashboard.paid_by', { name: e.payerName })}
-                                {' · '}
-                                {t('dashboard.your_share', { amount: fmtMoney(e.ownShare, e.currencyCode) })}
                               </p>
                             </div>
                           </div>
-                          <span className={`text-[14px] font-extrabold tabular-nums ${amountTone}`}>
-                            {sign}
-                            {fmtMoney(e.amount, e.currencyCode)}
-                          </span>
+                          <div className="text-right">
+                            <span className={`block text-[14px] font-extrabold tabular-nums ${amountTone}`}>
+                              {sign}
+                              {fmtMoney(perspectiveAmount, e.currencyCode)}
+                            </span>
+                            <span className="text-[11px] text-text-muted">
+                              {perspectiveLabel} ·{' '}
+                              {t('dashboard.total_label', { amount: fmtMoney(e.amount, e.currencyCode) })}
+                            </span>
+                          </div>
                         </Link>
                       </li>
                     )
@@ -581,18 +625,18 @@ export default async function SharedPage({
           {t('settle.pending_title')}
         </h2>
         {pending.map((p) => (
-          <PendingSettlementCard key={p.id} settlement={p} accounts={myAccounts} />
+          <PendingSettlementCard key={p.id} settlement={p} accounts={settleAccounts} />
         ))}
       </section>
     ) : null
 
-  // Single focused column (members live in household settings now).
+  // The household name + register CTA + settings icon live in (home)/layout.tsx.
   return (
-    <div className="mx-auto flex w-full max-w-[720px] flex-col gap-4">
+    <div className="flex flex-col gap-4">
       {monthNav}
       {heroSection}
+      {tilesRow}
       {pendingSection}
-      {projectionSection}
       {recentSection}
     </div>
   )
