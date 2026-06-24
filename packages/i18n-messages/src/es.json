@@ -1094,6 +1094,8 @@
       "cancel": "Cancelar",
       "pending": {
         "title": "Reintegros a confirmar",
+        "subtitle": "Confirmalos cuando el dinero realmente llegue",
+        "all_clear": "Todo al día — no hay reintegros esperando tu confirmación.",
         "count": "{count} pendientes",
         "real_amount": "Monto real",
         "real_date": "Fecha",

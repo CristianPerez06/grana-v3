@@ -10,42 +10,37 @@ import { RecurrenceSuggestionBannerContainer } from './recurrence-suggestion-ban
 
 /**
  * Visual content of /transactions. The route shell (header + drawer loader +
- * outer flex wrapper) lives in `transactions/layout.tsx`. This component lays
- * out the existing sections in a two-column grid:
+ * outer flex wrapper) lives in `transactions/layout.tsx`. This component stacks
+ * the sections in a single column:
  *
- *   ┌──────────────────────────────┬────────────────────────┐
- *   │  recurrence suggestion       │  pending reimbursements│
- *   │  pending recurrences         │                        │
- *   │  overview                    │                        │
- *   │  ledger (toolbar + list)     │                        │
- *   └──────────────────────────────┴────────────────────────┘
+ *   ┌──────────────────────────────┐
+ *   │  recurrence suggestion       │
+ *   │  pending recurrences         │
+ *   │  pending reimbursements      │
+ *   │  overview                    │
+ *   │  ledger (toolbar + list)     │
+ *   └──────────────────────────────┘
  *
- * The recurrence suggestion AND the pending-recurrences hub are collapsible
- * blocks above the spending overview in the main column (both used to live in
- * the side column); narrow widths collapse to a single column and the side
- * block pulls to the top because it represents pending user tasks (see
- * route-ui-system.md → "Mobile"). No queries/totals here — only layout.
+ * The recurrence suggestion, the pending-recurrences hub AND the pending
+ * reimbursements are collapsible "por confirmar" notices stacked full-width
+ * above the spending overview. The reimbursements block used to sit in a 340px
+ * side column, which shrank the overview chart; it now lives inline with the
+ * other notices so every aviso reads top-to-bottom. No queries/totals here —
+ * only layout.
  */
 export function TransactionsContent() {
   return (
     <>
-      {/* `has-[aside:empty]:lg:grid-cols-1` collapses the side column when the
-          conditional container renders null, so the main column fills the full
-          width instead of leaving a blank 340px gutter. */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:has-[aside:empty]:grid-cols-1">
-        <section className="flex min-w-0 flex-col gap-4">
-          <RecurrenceSuggestionBannerContainer />
-          <PendingRecurrencesBlockContainer />
-          <CategorySpendingOverviewContainer />
-          <section className="flex flex-col gap-3">
-            <MovementFiltersContainer />
-            <MovementListContainer />
-          </section>
+      <section className="flex min-w-0 flex-col gap-4">
+        <RecurrenceSuggestionBannerContainer />
+        <PendingRecurrencesBlockContainer />
+        <PendingReimbursementsBlockContainer />
+        <CategorySpendingOverviewContainer />
+        <section className="flex flex-col gap-3">
+          <MovementFiltersContainer />
+          <MovementListContainer />
         </section>
-        <aside className="order-first flex flex-col gap-4 empty:hidden lg:order-none">
-          <PendingReimbursementsBlockContainer />
-        </aside>
-      </div>
+      </section>
       <QuickAddFab />
     </>
   )

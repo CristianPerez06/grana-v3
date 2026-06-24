@@ -1094,6 +1094,8 @@
       "cancel": "Cancel",
       "pending": {
         "title": "Reimbursements to confirm",
+        "subtitle": "Confirm them once the money actually arrives",
+        "all_clear": "All caught up — no reimbursements awaiting your confirmation.",
         "count": "{count} pending",
         "real_amount": "Actual amount",
         "real_date": "Date",

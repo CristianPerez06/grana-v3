@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { X } from 'lucide-react'
+import { Check, ChevronDown, Undo2, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { parseMoneyInput } from '@grana/validation'
@@ -35,6 +35,9 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
   const [dateById, setDateById] = useState<Record<string, string>>({})
   const [errorById, setErrorById] = useState<Record<string, string>>({})
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  // Collapsible, like the pending-recurrences hub: open with one pending
+  // reintegro, collapsed with several so it stays a thin header above the chart.
+  const [isOpen, setIsOpen] = useState(pending.length <= 1)
 
   if (pending.length === 0 && !successMessage) return null
 
@@ -85,21 +88,56 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
   }
 
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-[14px] font-extrabold leading-tight">{t('reimbursement.pending.title')}</h2>
-        <span className="text-[12px] font-extrabold text-muted-foreground">
-          {t('reimbursement.pending.count', { count: pending.length })}
+    <section
+      className="overflow-hidden rounded-[22px] border bg-card"
+      style={{ borderColor: '#C7D8E2', boxShadow: '0 0 0 4px rgba(58,107,138,0.06)' }}
+    >
+      {/* Notice header — collapsible toggle. Slate accent (informational), to
+          read as distinct from the golden pending-recurrences hub above. */}
+      <button
+        type="button"
+        onClick={() => setIsOpen((open) => !open)}
+        aria-expanded={isOpen}
+        className="flex w-full items-center gap-3.5 px-6 pb-4 pt-5 text-left transition-colors hover:bg-page/40"
+      >
+        <span
+          className="flex size-11 shrink-0 items-center justify-center rounded-[13px]"
+          style={{ backgroundColor: 'var(--slate-soft)', color: 'var(--slate)' }}
+        >
+          <Undo2 className="size-[22px]" aria-hidden />
         </span>
-      </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-[18px] font-extrabold tracking-[-0.02em] text-text">
+            {t('reimbursement.pending.title')}
+          </h2>
+          <p className="mt-0.5 text-sm font-medium text-text-muted">
+            {t('reimbursement.pending.subtitle')}
+          </p>
+        </div>
+        {pending.length > 0 && (
+          <span
+            className="shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-bold"
+            style={{ backgroundColor: 'var(--slate-soft)', color: 'var(--slate)' }}
+          >
+            {t('reimbursement.pending.count', { count: pending.length })}
+          </span>
+        )}
+        <ChevronDown
+          className={`size-5 shrink-0 text-text-muted transition-transform ${isOpen ? '' : '-rotate-90'}`}
+          aria-hidden
+        />
+      </button>
 
-      {successMessage && (
-        <div className="flex items-center justify-between gap-2 rounded-md border border-green-600/40 bg-green-600/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
-          <span>{successMessage}</span>
+      {isOpen && successMessage && (
+        <div className="mx-6 mb-3 flex items-center justify-between gap-2 rounded-[12px] border border-emerald/30 bg-[var(--emerald-soft)] px-3 py-2 text-sm font-medium text-emerald-deep">
+          <span className="flex items-center gap-2">
+            <Check className="size-4" aria-hidden />
+            {successMessage}
+          </span>
           <button
             type="button"
             onClick={() => setSuccessMessage(null)}
-            className="text-green-700/70 hover:text-green-700 dark:text-green-400/70 dark:hover:text-green-400"
+            className="text-emerald-deep/70 hover:text-emerald-deep"
             aria-label={t('reimbursement.pending.close_notice')}
           >
             <X size={14} />
@@ -107,7 +145,16 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
         </div>
       )}
 
-      <ul className="flex flex-col gap-2">
+      {isOpen && (pending.length === 0 ? (
+        <div
+          className="flex items-center gap-3.5 border-t px-6 py-6 text-[15px] font-semibold text-emerald-deep"
+          style={{ borderColor: 'var(--border-soft)' }}
+        >
+          <Check className="size-5 shrink-0" aria-hidden />
+          {t('reimbursement.pending.all_clear')}
+        </div>
+      ) : (
+      <ul className="flex flex-col">
         {pending.map((r) => {
           const busy = isPending && activeId === r.id
           const error = errorById[r.id]
@@ -125,7 +172,8 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
           return (
             <li
               key={r.id}
-              className="flex flex-col gap-2 rounded-2xl border border-border-soft bg-background p-3"
+              className="flex flex-col gap-2 border-t px-6 py-4"
+              style={{ borderColor: 'var(--border-soft)' }}
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
@@ -201,6 +249,7 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
           )
         })}
       </ul>
+      ))}
     </section>
   )
 }
