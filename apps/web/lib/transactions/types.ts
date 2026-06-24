@@ -1,107 +1,17 @@
-export type TransactionType =
-  | 'income'
-  | 'expense'
-  | 'transfer'
-  | 'adjustment'
-  | 'exchange'
-  | 'reimbursement'
-  | 'settlement'
-
-export type ReimbursementTarget = 'account' | 'statement'
-
-export type Transaction = {
-  id: string
-  user_id: string
-  account_id: string | null
-  category_id: string | null
-  subcategory_id: string | null
-  transfer_destination_account_id: string | null
-  type: TransactionType
-  amount: number
-  currency_code: 'ARS' | 'USD'
-  // Exchange (currency conversion) destination leg. Only set for type='exchange'.
-  destination_amount: number | null
-  destination_currency: 'ARS' | 'USD' | null
-  date: string
-  description: string | null
-  created_at: string
-  // Credit card fields
-  status: 'pending' | 'paid' | null
-  due_date: string | null
-  is_parent: boolean
-  parent_id: string | null
-  installment_n: number | null
-  installments_total: number | null
-  card_period_id: string | null
-  fx_rate_to_ars: number | null
-  // Reimbursement (reintegro / cashback) fields. Only set for type='reimbursement'.
-  linked_transaction_id: string | null
-  reimbursement_target: ReimbursementTarget | null
-  estimated_amount: number | null
-  received_at: string | null
-  cancelled_at: string | null
-  // Debt-settlement leg direction. Only set for type='settlement'.
-  settlement_direction: 'out' | 'in' | null
-  // Shared module (Compartido): a shared expense impacts the owner's balance and
-  // carries per-member splits; the household it belongs to.
-  is_shared: boolean
-  household_id: string | null
-}
-
-export type TransactionCategory = {
-  id: string
-  name: string
-  canonical_name: string
-  color: string | null
-  icon: string | null
-  /** NULL = system category (translatable via `categories.{canonical_name}`). */
-  user_id: string | null
-}
-
-export type TransactionSubcategory = {
-  id: string
-  name: string
-  canonical_name: string
-  category_id: string
-  /** NULL = system subcategory (translatable via `subcategories.{canonical_name}`). */
-  user_id: string | null
-}
-
-export type TransactionAccount = {
-  id: string
-  name: string
-  type: 'cash' | 'bank' | 'credit'
-  institution?: { name: string | null } | null
-}
-
-export type TransactionWithDetails = Transaction & {
-  category: TransactionCategory | null
-  subcategory: TransactionSubcategory | null
-  destination_account: TransactionAccount | null
-  source_account: TransactionAccount | null
-  period_payments: Array<{
-    id: string
-    period_id: string
-    period?: {
-      id: string
-      start_date: string
-      end_date: string
-      due_date: string
-      account: TransactionAccount | null
-    } | null
-  }> | null
-  // For a reimbursement: the linked origin expense, used to derive its category
-  // and subcategory and to show what the reimbursement is for.
-  linked_expense?: {
-    id: string
-    description: string | null
-    amount: number
-    currency_code: 'ARS' | 'USD'
-    date: string
-    category: TransactionCategory | null
-    subcategory: TransactionSubcategory | null
-  } | null
-}
+// The account-scoped read slice and its types now live in `@grana/transactions`
+// so mobile can reuse them. Re-exported here so the rest of the app keeps
+// importing these types from `@/lib/transactions/types` unchanged. The mutation
+// input types below stay in web (the feed/writes still live here).
+export type {
+  Transaction,
+  TransactionType,
+  ReimbursementTarget,
+  TransactionCategory,
+  TransactionSubcategory,
+  TransactionAccount,
+  TransactionWithDetails,
+  PendingReimbursementVM,
+} from '@grana/transactions'
 
 export type CreateIncomeInput = {
   account_id: string

@@ -144,6 +144,9 @@ importers:
       '@grana/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
+      '@grana/transactions':
+        specifier: workspace:*
+        version: link:../../packages/transactions
       '@grana/transactions-mutations':
         specifier: workspace:*
         version: link:../../packages/transactions-mutations
@@ -382,6 +385,16 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.105.4
         version: 2.105.4
+
+  packages/transactions:
+    dependencies:
+      '@grana/supabase':
+        specifier: workspace:*
+        version: link:../supabase
+    devDependencies:
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@20.19.41)(happy-dom@15.11.7)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.9.0)
 
   packages/transactions-mutations:
     dependencies:
