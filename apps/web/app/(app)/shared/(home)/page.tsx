@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Repeat } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { countPendingSharedRecurrenceInstances } from '@/lib/recurrences/queries'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { getAccounts } from '@/lib/accounts/queries'
@@ -107,19 +108,23 @@ export default async function SharedPage({
   const sp = await searchParams
   const month = isValidMonth(sp.m) ? sp.m : currentMonth()
 
-  const [debt, expenses, spending, pending, accounts, outlook] = await Promise.all([
-    getHouseholdDebt(supabase),
-    // Registered this month (by date) → "Últimos movimientos".
-    getSharedExpenses(supabase, { month }),
-    // DEVENGADO: counted by purchase date (cash/card by their date, each cuota in
-    // its month) → "Gastaron juntos" + breakdown. The DEBT keeps its own impact
-    // clock (getHouseholdDebt/Outlook), so a future card consumo counts as spending
-    // this month but only enters the debt when its statement is paid.
-    getSharedAccruedMovements(supabase, month),
-    getPendingSettlements(supabase),
-    getAccounts(supabase),
-    getHouseholdOutlook(supabase),
-  ])
+  const [debt, expenses, spending, pending, accounts, outlook, pendingSharedRecurrences] =
+    await Promise.all([
+      getHouseholdDebt(supabase),
+      // Registered this month (by date) → "Últimos movimientos".
+      getSharedExpenses(supabase, { month }),
+      // DEVENGADO: counted by purchase date (cash/card by their date, each cuota in
+      // its month) → "Gastaron juntos" + breakdown. The DEBT keeps its own impact
+      // clock (getHouseholdDebt/Outlook), so a future card consumo counts as spending
+      // this month but only enters the debt when its statement is paid.
+      getSharedAccruedMovements(supabase, month),
+      getPendingSettlements(supabase),
+      getAccounts(supabase),
+      getHouseholdOutlook(supabase),
+      // Teaser: shared recurrences waiting in the hub (the confirm action lives
+      // there, not here — this only points to it).
+      countPendingSharedRecurrenceInstances(supabase),
+    ])
   const youOweSomething = CURRENCIES.some((c) => {
     const d = debt?.[c]
     return d?.kind === 'owes' && d.from === userId
@@ -618,6 +623,32 @@ export default async function SharedPage({
     </section>
   )
 
+  // Teaser no accionable: avisa de recurrencias compartidas por confirmar y
+  // linkea al hub (la acción de confirmar vive solo ahí, no en Compartido).
+  const recurrenceTeaser =
+    pendingSharedRecurrences > 0 ? (
+      <Link
+        href="/transactions/recurring"
+        className="flex items-center gap-3.5 rounded-2xl border border-border bg-card px-5 py-4 transition-colors hover:bg-muted/40"
+      >
+        <span
+          className="grid size-10 shrink-0 place-items-center rounded-xl"
+          style={{ backgroundColor: 'var(--warning-bg)', color: 'var(--warning)' }}
+        >
+          <Repeat className="size-5" aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] font-extrabold leading-tight text-text">
+            {t('dashboard.recurrence_teaser_title', { count: pendingSharedRecurrences })}
+          </p>
+          <p className="mt-0.5 text-[12px] font-medium text-text-muted">
+            {t('dashboard.recurrence_teaser_hint')}
+          </p>
+        </div>
+        <ChevronRight className="size-5 shrink-0 text-text-soft" aria-hidden />
+      </Link>
+    ) : null
+
   const pendingSection =
     pending.length > 0 ? (
       <section className="flex flex-col gap-3">
@@ -636,6 +667,7 @@ export default async function SharedPage({
       {monthNav}
       {heroSection}
       {tilesRow}
+      {recurrenceTeaser}
       {pendingSection}
       {recentSection}
     </div>

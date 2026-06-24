@@ -152,6 +152,20 @@ export async function getRecurrenceDetail(
   }
 }
 
+// Cuántas instancias recurrentes COMPARTIDAS están pendientes de confirmar.
+// Liviano (head + count), RLS-scoped al usuario. Alimenta el teaser del módulo
+// Compartido que avisa y linkea al hub (la acción de confirmar vive solo ahí).
+export async function countPendingSharedRecurrenceInstances(
+  supabase: DbClient,
+): Promise<number> {
+  const { count } = await supabase
+    .from('recurrence_instances')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending')
+    .not('household_id', 'is', null)
+  return count ?? 0
+}
+
 // Devuelve el set de IDs de transacciones que fueron generadas por una regla
 // recurrente — pensado para marcar movimientos en listados con un ícono.
 

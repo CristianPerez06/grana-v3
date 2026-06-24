@@ -1682,6 +1682,8 @@
       "enters_this_month": "Enters this month",
       "impacts_in": "Impacts in {month}",
       "recent_title": "Recent movements",
+      "recurrence_teaser_title": "{count, plural, one {You have # shared recurring expense to confirm} other {You have # shared recurring expenses to confirm}}",
+      "recurrence_teaser_hint": "Confirm them from the recurrences hub",
       "your_share": "Your share: {amount}",
       "paid_by_you": "You paid",
       "paid_by": "{name} paid",

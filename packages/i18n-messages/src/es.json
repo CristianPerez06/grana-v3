@@ -1682,6 +1682,8 @@
       "enters_this_month": "Entra este mes",
       "impacts_in": "Impacta en {month}",
       "recent_title": "Últimos movimientos",
+      "recurrence_teaser_title": "{count, plural, one {Tenés # gasto compartido recurrente por confirmar} other {Tenés # gastos compartidos recurrentes por confirmar}}",
+      "recurrence_teaser_hint": "Confirmalos desde el hub de recurrencias",
       "your_share": "Tu parte: {amount}",
       "paid_by_you": "Pagaste",
       "paid_by": "Pagó {name}",
