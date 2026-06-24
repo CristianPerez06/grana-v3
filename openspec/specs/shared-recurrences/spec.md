@@ -1,7 +1,9 @@
 # shared-recurrences Specification
 
 ## Purpose
-TBD - created by archiving change add-shared-recurrences. Update Purpose after archive.
+
+Cubre las recurrencias de gasto compartidas con un hogar. Una regla de recurrencia de tipo `expense` puede pertenecer a un hogar de dos miembros y llevar un `default_split` por porcentaje (el "template" del reparto, cuyos porcentajes suman 100), definido **estructuralmente al alta** —como cuenta, categoría y tipo— y no editable desde el edit drawer. El estado compartido se hereda cuando la regla nace de un movimiento compartido (copia su `household_id` y arma el split desde las filas `shared_expense_split` del seed) y se propaga a cada instancia generada como snapshot (`split` propio, distinto del template, para habilitar override por instancia a futuro). Las instancias compartidas pendientes son **base caja**: no generan deuda en el hogar ni impactan el gasto hasta confirmarse; al confirmar, la instancia con `household_id` crea un gasto compartido reutilizando el alta de gasto compartido existente (`shared = { household_id, splits }`), de modo que la deuda del hogar se deriva como con cualquier gasto compartido manual. La confirmación vive únicamente en el hub de recurrencias —que sella las instancias compartidas pendientes con "Compartido"—; el módulo Compartido refleja el gasto recién al confirmar. Income y compras de tarjeta recurrentes quedan fuera de alcance.
+
 ## Requirements
 ### Requirement: Una regla de recurrencia de gasto puede ser compartida con un hogar
 
