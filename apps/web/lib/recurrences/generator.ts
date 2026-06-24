@@ -4,6 +4,7 @@
 
 export {
   decideRecurrenceInstance,
+  getNextExpectedOccurrence,
   presetToInterval,
   type RuleForDecision,
   type GenerationDecision,

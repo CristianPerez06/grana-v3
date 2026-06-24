@@ -211,6 +211,41 @@ export function projectRuleOccurrences(
   return out
 }
 
+// The next occurrence a rule is still expected to produce — the calendar
+// "próximo" for display. Walks the schedule forward from start_date and returns
+// the earliest occurrence that is BOTH:
+//   (a) on or after `today` — never surface a past date as "próximo"; and
+//   (b) strictly after `lastGeneratedDate` — the cursor of the last occurrence
+//       already confirmed/omitted (advanced by confirm & skip). Without (b), a
+//       rule whose occurrence for *today* was already confirmed would still show
+//       today as "próximo" instead of rolling to the next interval.
+// `lastGeneratedDate` is null for direct rules with nothing confirmed yet, in
+// which case only (a) applies. A pending-but-unconfirmed instance does NOT
+// advance the cursor, so its (past) date is intentionally skipped here — it
+// lives in the "por confirmar" surfaces, not in "próximo".
+// Honors end_date and max_occurrences; returns null when the rule has no further
+// occurrence (finished or capped out).
+export function getNextExpectedOccurrence(
+  rule: RuleForProjection,
+  today: string,
+  lastGeneratedDate: string | null,
+): string | null {
+  let current = rule.start_date
+  // `produced` counts occurrences stepped past — doubles as the max_occurrences
+  // gate and a hard safety cap (~750 steps ≈ >2 years of daily) against loops.
+  for (let produced = 0; produced < 750; produced++) {
+    if (rule.max_occurrences != null && produced >= rule.max_occurrences) return null
+    if (rule.end_date != null && current > rule.end_date) return null
+    const afterToday = current >= today
+    const afterCursor = lastGeneratedDate == null || current > lastGeneratedDate
+    if (afterToday && afterCursor) return current
+    current = addInterval(current, rule.interval_unit, rule.interval_count, {
+      anchorDate: rule.start_date,
+    })
+  }
+  return null
+}
+
 // Flatten every rule's in-window occurrences into a single date-sorted list.
 export function projectUpcomingOccurrences(
   rules: RuleForProjection[],

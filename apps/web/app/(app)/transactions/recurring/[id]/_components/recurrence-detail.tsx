@@ -1,11 +1,14 @@
 'use client'
 
 import { useState, type ReactNode } from 'react'
+import Link from 'next/link'
 import {
   ArrowLeftRight,
   Banknote,
   Calendar,
   CalendarClock,
+  ChevronRight,
+  Receipt,
   Repeat,
   Tag,
   Wallet,
@@ -33,6 +36,16 @@ const formatCalendarDate = (iso: string) => {
   })
 }
 
+// `created_at` is an instant (ISO timestamp), not a bare calendar date: render
+// the AR calendar day it fell on so the date doesn't drift across midnight UTC.
+const formatTimestamp = (iso: string) =>
+  new Date(iso).toLocaleDateString('es-AR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'America/Argentina/Buenos_Aires',
+  })
+
 const iconFor = (key: string): ReactNode => {
   switch (key) {
     case 'frequency':
@@ -45,6 +58,8 @@ const iconFor = (key: string): ReactNode => {
     case 'next_date':
     case 'end_date':
       return <CalendarClock size={16} strokeWidth={2} />
+    case 'origin_movement':
+      return <Receipt size={16} strokeWidth={2} />
     case 'amount':
       return <Banknote size={16} strokeWidth={2} />
     default:
@@ -90,7 +105,7 @@ export const RecurrenceDetail = ({ rule }: Props) => {
 
   const heroDesc = rule.description || rule.category?.name || typeLabel
 
-  type Row = { key: string; label: string; value: string }
+  type Row = { key: string; label: string; value: string; href?: string }
   const rows: Row[] = [{ key: 'frequency', label: t('labels.frequency'), value: frequencyLabel }]
 
   if (type === 'transfer') {
@@ -113,11 +128,11 @@ export const RecurrenceDetail = ({ rule }: Props) => {
     }
   }
 
-  if (rule.pending_instance?.scheduled_date) {
+  if (rule.next_occurrence) {
     rows.push({
       key: 'next_date',
       label: t('labels.next_date'),
-      value: formatCalendarDate(rule.pending_instance.scheduled_date),
+      value: formatCalendarDate(rule.next_occurrence),
     })
   }
   if (rule.end_date) {
@@ -125,6 +140,23 @@ export const RecurrenceDetail = ({ rule }: Props) => {
       key: 'end_date',
       label: t('labels.end_date'),
       value: formatCalendarDate(rule.end_date),
+    })
+  }
+
+  // Provenance: when the rule was created, and — if it was born from a movement —
+  // a link back to that movement. `created_from_transaction_id` is null for rules
+  // created directly, so the origin row only appears when there's a movement.
+  rows.push({
+    key: 'created_at',
+    label: t('labels.created_at'),
+    value: formatTimestamp(rule.created_at),
+  })
+  if (rule.created_from_transaction_id) {
+    rows.push({
+      key: 'origin_movement',
+      label: t('labels.origin_movement'),
+      value: '',
+      href: `/transactions/${rule.created_from_transaction_id}`,
     })
   }
 
@@ -158,18 +190,32 @@ export const RecurrenceDetail = ({ rule }: Props) => {
 
       {/* Detail rows */}
       <div className="flex flex-col overflow-hidden rounded-[15px] border border-border bg-card">
-        {rows.map((row) => (
-          <div
-            key={row.key}
-            className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 last:border-b-0"
-          >
+        {rows.map((row) => {
+          const label = (
             <span className="flex items-center gap-2 text-sm text-text-muted">
               {iconFor(row.key)}
               {row.label}
             </span>
-            <span className="text-sm font-semibold text-text">{row.value}</span>
-          </div>
-        ))}
+          )
+          const rowClass =
+            'flex items-center justify-between gap-3 border-b border-border px-4 py-3 last:border-b-0'
+
+          if (row.href) {
+            return (
+              <Link key={row.key} href={row.href} className={`${rowClass} transition-colors hover:bg-page`}>
+                {label}
+                <ChevronRight className="size-4 shrink-0 text-text-soft/50" aria-hidden />
+              </Link>
+            )
+          }
+
+          return (
+            <div key={row.key} className={rowClass}>
+              {label}
+              <span className="text-sm font-semibold text-text">{row.value}</span>
+            </div>
+          )
+        })}
       </div>
 
       <RecurrenceEditDrawer rule={rule} open={editOpen} onClose={() => setEditOpen(false)} />

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  getNextExpectedOccurrence,
   projectRuleOccurrences,
   projectUpcomingOccurrences,
   type RuleForProjection,
@@ -72,6 +73,69 @@ describe('projectRuleOccurrences', () => {
       '2026-06-30',
     )
     expect(out).toEqual(['2026-06-01', '2026-06-15', '2026-06-29'])
+  })
+})
+
+describe('getNextExpectedOccurrence', () => {
+  it('returns the same day when today IS an occurrence and nothing is confirmed yet', () => {
+    // Monthly on the 1st, today Jun 1, no cursor ⇒ próximo = Jun 1 (fires today).
+    expect(getNextExpectedOccurrence(monthly(), '2026-06-01', null)).toBe('2026-06-01')
+  })
+
+  it('rolls forward past occurrences — a past start_date does NOT surface as próximo', () => {
+    // Monthly on day 19, today Jun 23, no cursor ⇒ Jun 19 passed ⇒ próximo = Jul 19.
+    expect(
+      getNextExpectedOccurrence(monthly({ start_date: '2026-05-19' }), '2026-06-23', null),
+    ).toBe('2026-07-19')
+  })
+
+  it('rolls past today when today\'s occurrence is already the cursor (seeded/confirmed)', () => {
+    // The real Epe case: movement loaded TODAY (Jun 23) marked monthly. The seed
+    // covers Jun 23 (last_generated_date = Jun 23), so próximo = Jul 23, not today.
+    expect(
+      getNextExpectedOccurrence(monthly({ start_date: '2026-06-23' }), '2026-06-23', '2026-06-23'),
+    ).toBe('2026-07-23')
+  })
+
+  it('returns today when the cursor is an older occurrence and today is due', () => {
+    // Confirmed last month (cursor May 23); today Jun 23 is the next, still due.
+    expect(
+      getNextExpectedOccurrence(monthly({ start_date: '2026-05-23' }), '2026-06-23', '2026-05-23'),
+    ).toBe('2026-06-23')
+  })
+
+  it('returns start_date when the rule starts in the future', () => {
+    expect(
+      getNextExpectedOccurrence(monthly({ start_date: '2026-09-10' }), '2026-06-23', null),
+    ).toBe('2026-09-10')
+  })
+
+  it('returns null when end_date is before the next occurrence', () => {
+    expect(
+      getNextExpectedOccurrence(
+        monthly({ start_date: '2026-01-19', end_date: '2026-06-01' }),
+        '2026-06-23',
+        null,
+      ),
+    ).toBeNull()
+  })
+
+  it('returns null when max_occurrences is exhausted before today', () => {
+    // 2 occurrences (Jan 19, Feb 19), both past today ⇒ no further occurrence.
+    expect(
+      getNextExpectedOccurrence(
+        monthly({ start_date: '2026-01-19', max_occurrences: 2 }),
+        '2026-06-23',
+        null,
+      ),
+    ).toBeNull()
+  })
+
+  it('honors end-of-month clamping when rolling forward', () => {
+    // Monthly on the 31st, today Mar 1 ⇒ próximo = Mar 31 (Feb clamps to 28).
+    expect(
+      getNextExpectedOccurrence(monthly({ start_date: '2026-01-31' }), '2026-03-01', null),
+    ).toBe('2026-03-31')
   })
 })
 

@@ -1,7 +1,11 @@
 import type { DbClient } from '@/lib/supabase/db-client'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { type RecurrenceFrequency } from './date'
-import { decideRecurrenceInstance, type IntervalUnit } from './generator'
+import {
+  decideRecurrenceInstance,
+  getNextExpectedOccurrence,
+  type IntervalUnit,
+} from './generator'
 import {
   detectRecurrenceSuggestions,
   type RecurrenceSuggestion,
@@ -38,10 +42,27 @@ type RecurrenceRow = Omit<RecurrenceSummary, 'pending_instance'>
 function mapRecurrenceSummary(
   recurrence: RecurrenceRow,
   pendingByRecurrenceId: Map<string, RecurrenceInstance>,
+  today: string,
 ): RecurrenceSummary {
   return {
     ...recurrence,
     pending_instance: pendingByRecurrenceId.get(recurrence.id) ?? null,
+    // Calendar "próximo": next occurrence >= today AND after the rule's cursor
+    // (last_generated_date — the last occurrence already confirmed/omitted or
+    // seeded from a movement). Independent of the pending (due) instance, whose
+    // date sits at <= today. See RecurrenceSummary.next_occurrence.
+    next_occurrence: getNextExpectedOccurrence(
+      {
+        id: recurrence.id,
+        start_date: recurrence.start_date,
+        end_date: recurrence.end_date,
+        interval_count: recurrence.interval_count,
+        interval_unit: recurrence.interval_unit as IntervalUnit,
+        max_occurrences: recurrence.max_occurrences,
+      },
+      today,
+      recurrence.last_generated_date,
+    ),
   }
 }
 
@@ -92,8 +113,9 @@ export async function getRecurrences(
     recurrences.map((recurrence) => recurrence.id),
   )
 
+  const today = formatDateISO(getTodayAR())
   return recurrences.map((recurrence) =>
-    mapRecurrenceSummary(recurrence, pendingByRecurrenceId),
+    mapRecurrenceSummary(recurrence, pendingByRecurrenceId, today),
   )
 }
 
@@ -141,6 +163,7 @@ export async function getRecurrenceDetail(
         .filter((instance) => instance.status === 'pending')
         .map((instance) => [instance.recurrence_id, instance]),
     ),
+    formatDateISO(getTodayAR()),
   )
 
   return {

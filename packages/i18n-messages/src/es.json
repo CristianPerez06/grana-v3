@@ -1441,7 +1441,9 @@
       "destination": "Cuenta destino",
       "category": "Categoría",
       "next_date": "Próxima fecha",
-      "type": "Tipo"
+      "type": "Tipo",
+      "created_at": "Creada el",
+      "origin_movement": "Creada a partir de un movimiento"
     },
     "actions": {
       "pause": "Pausar",

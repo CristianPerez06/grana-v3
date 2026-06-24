@@ -22,7 +22,7 @@ export const summarizeRecurrence = (detail: RecurrenceDetail): RecurrenceSummary
   const lastDate = asc[asc.length - 1]?.scheduled_date ?? null
 
   return {
-    nextDate: detail.pending_instance?.scheduled_date ?? null,
+    nextDate: detail.next_occurrence,
     startDate: detail.start_date,
     confirmedCount: confirmed.length,
     accumulated: confirmed.reduce((sum, i) => sum + i.amount, 0),

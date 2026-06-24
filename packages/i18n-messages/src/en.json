@@ -1441,7 +1441,9 @@
       "destination": "Destination account",
       "category": "Category",
       "next_date": "Next date",
-      "type": "Type"
+      "type": "Type",
+      "created_at": "Created on",
+      "origin_movement": "Created from a movement"
     },
     "actions": {
       "pause": "Pause",

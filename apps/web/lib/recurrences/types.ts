@@ -66,6 +66,13 @@ export type RecurrenceSummary = Recurrence & {
   category: RecurrenceCategory | null
   subcategory: RecurrenceSubcategory | null
   pending_instance: RecurrenceInstance | null
+  /**
+   * Next scheduled occurrence on or after today (the calendar "próximo"), or null
+   * if the rule has no further occurrence. Computed from start_date — NOT from
+   * `pending_instance`, whose date is the DUE occurrence awaiting confirmation and
+   * is always <= today.
+   */
+  next_occurrence: string | null
 }
 
 export type RecurrenceDetail = RecurrenceSummary & {
