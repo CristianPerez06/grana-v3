@@ -123,6 +123,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@grana/cards':
+        specifier: workspace:*
+        version: link:../../packages/cards
       '@grana/dashboard':
         specifier: workspace:*
         version: link:../../packages/dashboard
@@ -262,6 +265,22 @@ importers:
       vite:
         specifier: ^8.0.13
         version: 8.0.13(@types/node@20.19.41)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.47.1)(yaml@2.9.0)
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@20.19.41)(happy-dom@15.11.7)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.9.0)
+
+  packages/cards:
+    dependencies:
+      '@grana/money-logic':
+        specifier: workspace:*
+        version: link:../money-logic
+      '@grana/supabase':
+        specifier: workspace:*
+        version: link:../supabase
+      '@grana/transactions-mutations':
+        specifier: workspace:*
+        version: link:../transactions-mutations
+    devDependencies:
       vitest:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@20.19.41)(happy-dom@15.11.7)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.9.0)
