@@ -17,6 +17,7 @@ import {
   deactivateCurrencyFromAccount as deactivateCurrencyFromAccountImpl,
   type AccountMutationResult,
 } from '@grana/accounts'
+import { getTranslations } from 'next-intl/server'
 import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
 import { getAuthenticatedUserId } from './_lib/auth'
@@ -25,8 +26,9 @@ import { revalidateAfterAccountMutation } from './_helpers'
 // The mutation logic lives in `@grana/accounts` so mobile can reuse it. These
 // wrappers are the web platform shell: resolve the authenticated user, build the
 // server client, inject `today`, then map the package's neutral result to
-// `ActionResult` — translating raw Postgres error codes to user-facing messages
-// (web i18n) — and revalidate on success.
+// `ActionResult` — resolving the error text (web i18n) — and revalidate on
+// success. The package never pre-translates: domain errors arrive as a
+// `messageKey` (a full catalog path) and DB errors as a raw `errorCode`.
 async function finish<T>(
   result: AccountMutationResult<T>,
 ): Promise<ActionResult<T> & { id?: string; reason?: string }> {
@@ -34,9 +36,13 @@ async function finish<T>(
     revalidateAfterAccountMutation()
     return { ok: true, id: result.id }
   }
-  const formError =
-    result.formError ??
-    (result.errorCode != null ? await translatePostgresError(result.errorCode, 'account') : undefined)
+  let formError: string | undefined
+  if (result.messageKey != null) {
+    const t = await getTranslations()
+    formError = t(result.messageKey)
+  } else if (result.errorCode != null) {
+    formError = await translatePostgresError(result.errorCode, 'account')
+  }
   return {
     ok: false,
     fieldErrors: result.fieldErrors,

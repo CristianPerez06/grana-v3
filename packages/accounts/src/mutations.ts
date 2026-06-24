@@ -15,17 +15,24 @@ import { getCreditCardDebtCheck } from '@grana/cards'
 import { getTransactionSums } from './queries'
 
 /**
- * Neutral mutation result. The web action wrapper maps this to `ActionResult`:
- * `errorCode` (a raw Postgres code) is translated to a user-facing message via
- * `translatePostgresError` (web i18n, can't live in the package); `formError`
- * (already a domain message) and `fieldErrors`/`reason`/`id` pass through.
+ * Neutral, platform-agnostic mutation result. Each consumer (web via next-intl,
+ * mobile via its `useT` helper) resolves the error text itself; the package never
+ * translates. The error channels:
+ * - `messageKey`: a full catalog path into `@grana/i18n-messages`
+ *   (e.g. `accounts.errors.deactivate_last_currency`) for domain errors. Never a
+ *   pre-translated literal nor a raw Postgres `error.message`.
+ * - `errorCode`: a raw Postgres code (e.g. `23505`) for DB-constraint errors the
+ *   consumer maps to a message (`23505 → duplicate`, else `generic`).
+ * - `reason`: a structured slug that drives UX behavior (e.g. `pending_debt`),
+ *   independent of the displayed text.
+ * - `fieldErrors`: per-field validation messages keyed by the input schema.
  */
 export type AccountMutationResult<T = never> =
   | { ok: true; id?: string }
   | {
       ok: false
       fieldErrors?: Partial<Record<keyof T, string>>
-      formError?: string
+      messageKey?: string
       errorCode?: string
       reason?: string
     }
@@ -62,7 +69,7 @@ export async function createAccount(args: {
     .single()
 
   if (accountError || !account) {
-    return { ok: false, formError: accountError?.message ?? 'Failed to create account' }
+    return { ok: false, messageKey: 'accounts.errors.create_failed' }
   }
 
   const currencyRows = validation.data.currencies.map((c) => ({
@@ -78,7 +85,7 @@ export async function createAccount(args: {
 
   if (currencyError) {
     await supabase.from('accounts').delete().eq('id', account.id)
-    return { ok: false, formError: currencyError.message }
+    return { ok: false, messageKey: 'accounts.errors.create_failed' }
   }
 
   return { ok: true, id: account.id }
@@ -142,7 +149,7 @@ export async function archiveAccount(args: {
   if (account?.type === 'credit') {
     const debtCheck = await getCreditCardDebtCheck(supabase, id, today)
     if (debtCheck.hasPendingDebt) {
-      return { ok: false, formError: 'pending_debt', reason: 'pending_debt' }
+      return { ok: false, messageKey: 'accounts.errors.pending_debt', reason: 'pending_debt' }
     }
   }
 
@@ -195,13 +202,10 @@ export async function deleteAccount(args: {
     .or(`account_id.eq.${id},transfer_destination_account_id.eq.${id}`)
     .limit(1)
 
-  if (txError) return { ok: false, formError: txError.message }
+  if (txError) return { ok: false, messageKey: 'accounts.errors.delete_failed' }
 
   if (existingTx && existingTx.length > 0) {
-    return {
-      ok: false,
-      formError: 'Esta cuenta tiene movimientos. Archivala para preservar el historial.',
-    }
+    return { ok: false, messageKey: 'accounts.errors.delete_has_transactions' }
   }
 
   const { error } = await supabase
@@ -237,7 +241,7 @@ export async function addCurrencyToAccount(args: {
     .eq('user_id', userId)
     .single()
 
-  if (ownerError || !account) return { ok: false, formError: 'Cuenta no encontrada.' }
+  if (ownerError || !account) return { ok: false, messageKey: 'accounts.errors.account_not_found' }
 
   const { error } = await supabase.from('account_currencies').upsert(
     {
@@ -272,7 +276,7 @@ export async function deactivateCurrencyFromAccount(args: {
     .eq('user_id', userId)
     .single()
 
-  if (ownerError || !account) return { ok: false, formError: 'Cuenta no encontrada.' }
+  if (ownerError || !account) return { ok: false, messageKey: 'accounts.errors.account_not_found' }
 
   const { data: currencies, error: fetchError } = await supabase
     .from('account_currencies')
@@ -280,16 +284,16 @@ export async function deactivateCurrencyFromAccount(args: {
     .eq('account_id', accountId)
     .eq('is_active', true)
 
-  if (fetchError) return { ok: false, formError: fetchError.message }
+  if (fetchError) return { ok: false, messageKey: 'accounts.errors.save_failed' }
 
   const activeCurrencies = currencies ?? []
 
   if (activeCurrencies.length <= 1) {
-    return { ok: false, formError: 'Debe quedar al menos una moneda activa.' }
+    return { ok: false, messageKey: 'accounts.errors.deactivate_last_currency' }
   }
 
   const target = activeCurrencies.find((c) => c.currency_code === currencyCode)
-  if (!target) return { ok: false, formError: 'Moneda no encontrada en la cuenta.' }
+  if (!target) return { ok: false, messageKey: 'accounts.errors.currency_not_found' }
 
   const txSums = (await getTransactionSums(supabase, [accountId])).get(accountId) ?? { ARS: 0, USD: 0 }
   const totalBalance = Money.add(
@@ -298,10 +302,7 @@ export async function deactivateCurrencyFromAccount(args: {
   )
 
   if (!Money.isZero(totalBalance)) {
-    return {
-      ok: false,
-      formError: 'No podés desactivar una moneda con saldo distinto de cero.',
-    }
+    return { ok: false, messageKey: 'accounts.errors.deactivate_non_zero_balance' }
   }
 
   const { error } = await supabase
