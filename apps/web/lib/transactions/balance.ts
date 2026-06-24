@@ -1,4 +1,3 @@
-import type { DbClient } from '@/lib/supabase/db-client'
 import {
   calculateTransactionSums,
   type BalanceCurrency,
@@ -6,33 +5,13 @@ import {
 } from '@grana/money-logic'
 
 // Pure aggregation lives in @grana/money-logic so it can be reused from
-// apps/mobile. This module keeps the Supabase-bound wrapper because each app
-// builds its own Supabase client.
+// apps/mobile. The Supabase-bound `getTransactionSums` read now lives in
+// @grana/accounts (accounts is its only consumer); re-exported here so existing
+// importers keep working.
 export {
   calculateTransactionSums,
   type BalanceCurrency,
   type BalanceTransactionRow,
 }
 
-// Returns a map of accountId -> { ARS: net, USD: net }
-// net = income - expense - transfer_out + transfer_in + adjustment(signed)
-export async function getTransactionSums(
-  supabase: DbClient,
-  accountIds: string[],
-): Promise<Map<string, Record<BalanceCurrency, number>>> {
-  if (accountIds.length === 0) return new Map()
-
-  // Exclude credit card child transactions (status IS NOT NULL) and
-  // off-ledger parent rows (is_parent=true, account_id=NULL, auto-excluded by the or filter).
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('account_id, transfer_destination_account_id, currency_code, amount, type, destination_amount, destination_currency, reimbursement_target, received_at, cancelled_at, settlement_direction')
-    .or(
-      `account_id.in.(${accountIds.join(',')}),transfer_destination_account_id.in.(${accountIds.join(',')})`,
-    )
-    .is('status', null)
-
-  if (error) throw error
-
-  return calculateTransactionSums((data ?? []) as BalanceTransactionRow[], accountIds)
-}
+export { getTransactionSums } from '@grana/accounts'

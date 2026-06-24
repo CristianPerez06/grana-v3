@@ -14,6 +14,7 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@grana/accounts": "workspace:*",
     "@grana/cards": "workspace:*",
     "@grana/dashboard": "workspace:*",
     "@grana/i18n-messages": "workspace:*",

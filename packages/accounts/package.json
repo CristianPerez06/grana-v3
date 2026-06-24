@@ -1,0 +1,24 @@
+{
+  "name": "@grana/accounts",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@grana/cards": "workspace:*",
+    "@grana/money-logic": "workspace:*",
+    "@grana/supabase": "workspace:*",
+    "@grana/ui-contracts": "workspace:*",
+    "@grana/validation": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  }
+}
