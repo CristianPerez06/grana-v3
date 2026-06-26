@@ -340,23 +340,11 @@ export default async function SharedPage({
             triggerClassName="flex-1 justify-center px-4"
           />
         )}
-        {youOweSomething ? (
-          // Secondary next to "Saldar" — ghost + outline, like the mockup btn-ghost.
-          <Button
-            asChild
-            variant="ghost"
-            className="w-auto border border-border px-4 font-bold text-text underline underline-offset-2"
-          >
-            <Link href="/shared/cuenta-corriente">{t('dashboard.current_account_action')}</Link>
-          </Button>
-        ) : (
-          // Settled: it's the only action (no green "Saldar" beside it), so
-          // promote it to a warm terracotta CTA so it doesn't read as a sad lone
-          // secondary button. Only ever shown when there's no debt → no clash.
-          <Button asChild className="flex-1 justify-center px-4 !bg-[#C2705C] text-white hover:opacity-90">
-            <Link href="/shared/cuenta-corriente">🧾 {t('dashboard.current_account_action')}</Link>
-          </Button>
-        )}
+        {/* "Ver el detalle" — siempre el mismo CTA terracota con ícono para todos,
+            tenga o no el botón "Saldar" (emerald) al lado. Verde + terracota no chocan. */}
+        <Button asChild className="flex-1 justify-center px-4 !bg-[#C2705C] text-white hover:opacity-90">
+          <Link href="/shared/cuenta-corriente">🧾 {t('dashboard.current_account_action')}</Link>
+        </Button>
       </div>
     </Card>
   )

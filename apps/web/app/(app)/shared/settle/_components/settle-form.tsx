@@ -142,7 +142,7 @@ export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
       {/* monto protagonista — el número grande ES el input (editable) */}
       <div className="text-center">
         <p className="text-[12.5px] font-semibold text-text-muted">
-          {t('settle.you_pay_to', { name: partner })} · {t('settle.owe_detail', { amount: fmt(owedNow) })}
+          {t('settle.you_owe_total', { amount: fmt(owedNow), name: partner })}
         </p>
         <div className="mt-1 flex items-center justify-center gap-1">
           <span className="text-[28px] font-black text-text-soft">$</span>

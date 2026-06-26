@@ -170,7 +170,7 @@ export function CurrentAccountView({ data }: { data: CurrentAccountData }) {
           </span>
         ) : (
           <span className="mt-2 text-[13px] font-semibold text-text-muted">
-            {settled ? t('settled') : youOwe ? t('in_favor_of', { name: partner }) : t('owed_to_you')} ·{' '}
+            {settled ? t('settled') : youOwe ? t('in_favor_of', { name: partner }) : t('owed_to_you', { name: partner })} ·{' '}
             {t('in_pesos')}
           </span>
         )}
@@ -227,7 +227,7 @@ export function CurrentAccountView({ data }: { data: CurrentAccountData }) {
         <p className={`mt-2 text-[12.5px] font-medium leading-relaxed ${settled && pending ? 'text-amber-700' : 'text-text-muted'}`}>
           {settled && pending
             ? t('settled_pending', { name: partner })
-            : `${settled ? t('settled') : bal > 0 ? t('owed_to_you') : t('in_favor_of', { name: partner })} — ${t('usd_note')}`}
+            : `${settled ? t('settled') : bal > 0 ? t('owed_to_you', { name: partner }) : t('in_favor_of', { name: partner })} — ${t('usd_note')}`}
         </p>
         {youOweUsd && (
           <Button asChild className="mt-auto w-full justify-center">
@@ -412,7 +412,7 @@ export function CurrentAccountView({ data }: { data: CurrentAccountData }) {
                         owe ? 'bg-[#F7ECE7] text-[#C2705C]' : 'bg-green-100 text-green-700'
                       }`}
                     >
-                      {owe ? t('in_favor_of', { name: partner }) : t('owed_to_you')}
+                      {owe ? t('in_favor_of', { name: partner }) : t('owed_to_you', { name: partner })}
                     </span>
                     <span className="ml-auto truncate pl-2 text-right text-[11.5px] font-semibold tabular-nums text-text-soft">
                       {t('impacts_detail', {
@@ -454,7 +454,7 @@ export function CurrentAccountView({ data }: { data: CurrentAccountData }) {
                   acc.debt.kind === 'settled'
                     ? t('settled')
                     : `${fmtMoney(acc.debt.amount, currency)} ${
-                        acc.debt.from === youId ? t('in_favor_of', { name: partner }) : t('owed_to_you')
+                        acc.debt.from === youId ? t('in_favor_of', { name: partner }) : t('owed_to_you', { name: partner })
                       }`,
               })}
             </span>
