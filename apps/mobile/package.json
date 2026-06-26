@@ -18,9 +18,11 @@
   },
   "dependencies": {
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
+    "@grana/accounts": "workspace:*",
     "@grana/dashboard": "workspace:*",
     "@grana/money-logic": "workspace:*",
     "@grana/supabase": "workspace:*",
+    "@grana/transactions": "workspace:*",
     "@grana/ui-contracts": "workspace:*",
     "@grana/validation": "workspace:*",
     "@tanstack/react-query": "5.100.13",

@@ -17,6 +17,9 @@ importers:
       '@expo-google-fonts/plus-jakarta-sans':
         specifier: ^0.4.2
         version: 0.4.2
+      '@grana/accounts':
+        specifier: workspace:*
+        version: link:../../packages/accounts
       '@grana/dashboard':
         specifier: workspace:*
         version: link:../../packages/dashboard
@@ -26,6 +29,9 @@ importers:
       '@grana/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
+      '@grana/transactions':
+        specifier: workspace:*
+        version: link:../../packages/transactions
       '@grana/ui-contracts':
         specifier: workspace:*
         version: link:../../packages/ui-contracts

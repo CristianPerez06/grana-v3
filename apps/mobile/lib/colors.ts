@@ -13,6 +13,7 @@ import type { AccountColorKey } from '@grana/ui-contracts'
 export const colors = {
   navy: '#0B1A2B',
   positive: '#10B981',
+  emeraldDeep: '#059669',
   error: '#C54B3C',
   text: '#0B1A2B',
   textMuted: '#6B7683',

@@ -3,17 +3,36 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Link } from 'expo-router'
 import type { PageHeaderProps } from '@grana/ui-contracts'
 
-export function PageHeader({ title, description, backLink, actions }: PageHeaderProps) {
+// `onBackPress` overrides the back-link's navigation with a custom handler
+// (e.g. `router.back()` to pop the stack instead of navigating to a fixed
+// href). The `backLink.label` is still used for the affordance text.
+type MobilePageHeaderProps = PageHeaderProps & {
+  onBackPress?: () => void
+}
+
+export function PageHeader({
+  title,
+  description,
+  backLink,
+  actions,
+  onBackPress,
+}: MobilePageHeaderProps) {
   return (
     <SafeAreaView edges={['top']} className="bg-navy">
       <View className="flex-col gap-3 px-6 pb-4 pt-3">
         {backLink ? (
           <View className="flex-row items-center">
-            <Link href={backLink.href} asChild>
-              <Pressable hitSlop={8}>
+            {onBackPress ? (
+              <Pressable hitSlop={8} onPress={onBackPress} accessibilityRole="button">
                 <Text className="text-sm text-navy-muted">← {backLink.label}</Text>
               </Pressable>
-            </Link>
+            ) : (
+              <Link href={backLink.href} asChild>
+                <Pressable hitSlop={8}>
+                  <Text className="text-sm text-navy-muted">← {backLink.label}</Text>
+                </Pressable>
+              </Link>
+            )}
           </View>
         ) : (
           <View className="h-5" />
