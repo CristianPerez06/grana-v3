@@ -1,4 +1,5 @@
 import { Pressable, Text } from 'react-native'
+import { useRouter } from 'expo-router'
 import { Plus } from 'lucide-react-native'
 import { useQuery } from '@tanstack/react-query'
 import { PageHeader } from '../ui/PageHeader'
@@ -37,22 +38,25 @@ export const CardsHeader = () => {
     <PageHeader
       title={t('cards.title')}
       description={description}
-      actions={<AddCardPlaceholder label={t('cards.actions.add_label')} />}
+      actions={<AddCardButton label={t('cards.actions.add_label')} />}
     />
   )
 }
 
-// CTA placeholder: visually present, permanently disabled until /cards/new
-// mobile exists. Matches the disabled-button pattern used in web while
-// catalog queries load — same look, different reason.
-const AddCardPlaceholder = ({ label }: { label: string }) => (
-  <Pressable
-    disabled
-    accessibilityState={{ disabled: true }}
-    className="flex-row items-center gap-1.5 rounded-xl bg-emerald px-3 py-2 opacity-50"
-  >
-    <Plus size={16} color="white" strokeWidth={3} />
-    <Text className="text-sm font-semibold text-white">{label}</Text>
-  </Pressable>
-)
+// Header CTA: pushes the native /cards/new alta route. The route screen loads
+// its own catalog (institutions + networks) and shows a spinner meanwhile, so
+// the button itself stays enabled.
+const AddCardButton = ({ label }: { label: string }) => {
+  const router = useRouter()
+  return (
+    <Pressable
+      onPress={() => router.push('/(app)/cards/new')}
+      accessibilityRole="button"
+      className="flex-row items-center gap-1.5 rounded-xl bg-emerald px-3 py-2"
+    >
+      <Plus size={16} color="white" strokeWidth={3} />
+      <Text className="text-sm font-semibold text-white">{label}</Text>
+    </Pressable>
+  )
+}
 

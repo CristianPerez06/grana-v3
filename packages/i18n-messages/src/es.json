@@ -866,6 +866,8 @@
       "next_close_after_current": "El próximo cierre debe ser posterior al cierre actual.",
       "next_due_after_close": "El próximo vencimiento debe ser posterior al cierre.",
       "create_failed": "Error al crear la tarjeta.",
+      "current_end_too_old": "La fecha de cierre actual es demasiado antigua.",
+      "current_end_too_far": "La fecha de cierre actual es demasiado lejana.",
       "save_failed": "Error al guardar.",
       "archive_failed": "Error al archivar.",
       "reactivate_failed": "Error al reactivar.",

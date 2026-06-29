@@ -1,10 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getTodayAR } from '@/lib/date'
 import {
-  createCreditCardSchema,
   payCardPeriodSchema,
   updatePeriodDatesSchema,
   validateActionInput,
@@ -17,13 +17,13 @@ import {
   type UpdatePeriodDatesInput,
 } from '@grana/validation'
 import { getCreditCardDebtCheck } from '@/lib/cards/queries'
+import { createCreditCard as createCreditCardMutation } from '@grana/cards'
 import {
   derivePeriodStatus,
   planRunningCycleConfirmation,
   splitAmountIntoInstallments,
   suggestNextPeriodDates,
   addDaysToISO,
-  formatDateISO,
 } from '@/lib/cards/utils'
 import {
   registerInstallments as registerInstallmentsOrchestrator,
@@ -47,116 +47,39 @@ function normalizeActionFxRate(value: number): number {
 export async function createCreditCard(
   input: unknown,
 ): Promise<ActionResult<CreateCreditCardInput> & { id?: string }> {
-  const validation = await validateActionInput(createCreditCardSchema, input)
-  if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
-
-  const today = getTodayAR()
-  const todayStr = formatDateISO(today)
-  const data = validation.data
-
-  // Sanity: current_end_date must be within ±40 days of today
-  if (data.current_end_date < addDaysToISO(todayStr, -40)) {
-    return { ok: false, formError: 'La fecha de cierre actual es demasiado antigua.' }
-  }
-  if (data.current_end_date > addDaysToISO(todayStr, 40)) {
-    return { ok: false, formError: 'La fecha de cierre actual es demasiado lejana.' }
-  }
-
+  // Thin shell over the shared `@grana/cards` mutation: this layer only resolves
+  // auth + supabase, translates the neutral result for the web user, and
+  // revalidates the affected route trees. The orchestration (account + currencies
+  // + 2 periods, name derivation, rollback) lives in the package so mobile reuses it.
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
 
-  // Build auto name if not provided: "Network Banco"
-  let cardName = data.name?.trim() ?? ''
-  if (!cardName) {
-    let networkLabel = data.other_network_name ?? ''
-    if (data.network_id) {
-      const { data: network } = await supabase
-        .from('card_networks')
-        .select('name')
-        .eq('id', data.network_id)
-        .single()
-      networkLabel = network?.name ?? ''
+  const result = await createCreditCardMutation({
+    supabase,
+    userId,
+    input,
+    today: getTodayAR(),
+  })
+
+  if (!result.ok) {
+    if (result.fieldErrors) return { ok: false, fieldErrors: result.fieldErrors }
+    if (result.errorCode) {
+      return {
+        ok: false,
+        errorCode: result.errorCode,
+        formError: await translatePostgresError(result.errorCode, 'card'),
+      }
     }
-    const { data: institution } = await supabase
-      .from('institutions')
-      .select('name')
-      .eq('id', data.institution_id)
-      .single()
-    cardName = [networkLabel, institution?.name].filter(Boolean).join(' ') || 'Tarjeta'
-  }
-
-  // INSERT account
-  const { data: account, error: accountError } = await supabase
-    .from('accounts')
-    .insert({
-      user_id: userId,
-      name: cardName,
-      type: 'credit',
-      institution_id: data.institution_id,
-      network_id: data.network_id ?? null,
-      other_network_name: data.other_network_name ?? null,
-      credit_limit: data.credit_limit != null ? normalizeActionMoney(data.credit_limit) : null,
-    })
-    .select('id')
-    .single()
-
-  if (accountError || !account) {
-    return { ok: false, formError: accountError?.message ?? 'Error al crear la tarjeta.' }
-  }
-
-  // INSERT account_currencies (ARS forced, initial_balance=0)
-  const currencyRows = data.currencies.map((c) => ({
-    account_id: account.id,
-    currency_code: c.currency_code,
-    initial_balance: 0,
-    initial_balance_date: todayStr,
-  }))
-
-  const { error: currencyError } = await supabase
-    .from('account_currencies')
-    .insert(currencyRows)
-
-  if (currencyError) {
-    await supabase.from('accounts').delete().eq('id', account.id)
-    return { ok: false, formError: currencyError.message }
-  }
-
-  // INSERT 2 card_periods
-  // P1 (real): start=current_end-30d, end=current_end, due=current_due — the
-  // dates the last emitted statement announced.
-  // P2 (estimated): the bank announces its real dates only when P1 closes, so
-  // it is born projected (is_estimated=true) and confirmed when P1 is paid.
-  const projected = suggestNextPeriodDates(
-    [{ end_date: data.current_end_date, due_date: data.current_due_date }],
-    today,
-  )
-  const periodRows = [
-    {
-      account_id: account.id,
-      start_date: addDaysToISO(data.current_end_date, -30),
-      end_date: data.current_end_date,
-      due_date: data.current_due_date,
-      is_estimated: false,
-    },
-    {
-      account_id: account.id,
-      start_date: addDaysToISO(data.current_end_date, 1),
-      end_date: projected.suggestedEndDate,
-      due_date: projected.suggestedDueDate,
-      is_estimated: true,
-    },
-  ]
-
-  const { error: periodsError } = await supabase.from('card_periods').insert(periodRows)
-
-  if (periodsError) {
-    await supabase.from('accounts').delete().eq('id', account.id)
-    return { ok: false, formError: periodsError.message }
+    const t = await getTranslations()
+    return {
+      ok: false,
+      formError: result.messageKey ? t(result.messageKey) : await translatePostgresError(undefined, 'card'),
+    }
   }
 
   revalidatePath('/cards')
   revalidatePath('/accounts')
-  return { ok: true, id: account.id }
+  return { ok: true, id: result.id }
 }
 
 // ── 4.3: registerCardPurchase ─────────────────────────────────────────────────

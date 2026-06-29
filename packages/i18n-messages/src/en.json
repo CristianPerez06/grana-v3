@@ -866,6 +866,8 @@
       "next_close_after_current": "Next closing date must be after the current closing date.",
       "next_due_after_close": "Next due date must be after the closing date.",
       "create_failed": "Failed to create the card.",
+      "current_end_too_old": "The current closing date is too far in the past.",
+      "current_end_too_far": "The current closing date is too far in the future.",
       "save_failed": "Failed to save.",
       "archive_failed": "Failed to archive.",
       "reactivate_failed": "Failed to reactivate.",

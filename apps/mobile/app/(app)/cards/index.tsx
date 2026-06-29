@@ -1,12 +1,12 @@
 import { ScrollView, Text, View } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
-import { CardsHeader } from '../../components/cards/CardsHeader'
-import { CardsMonthHero } from '../../components/cards/CardsMonthHero'
-import { Wallet } from '../../components/cards/Wallet'
-import { ArchivedCardsSection } from '../../components/cards/ArchivedCardsSection'
-import { SectionFallback } from '../../components/dashboard/SectionFallback'
-import { getCardNetworks, getCardsMonthSummary, getCreditCards } from '../../lib/cards/queries'
-import { useT } from '../../lib/locale-context'
+import { CardsHeader } from '../../../components/cards/CardsHeader'
+import { CardsMonthHero } from '../../../components/cards/CardsMonthHero'
+import { Wallet } from '../../../components/cards/Wallet'
+import { ArchivedCardsSection } from '../../../components/cards/ArchivedCardsSection'
+import { SectionFallback } from '../../../components/dashboard/SectionFallback'
+import { getCardNetworks, getCardsMonthSummary, getCreditCards } from '../../../lib/cards/queries'
+import { useT } from '../../../lib/locale-context'
 
 export default function TarjetasScreen() {
   return (

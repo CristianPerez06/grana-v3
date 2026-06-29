@@ -205,7 +205,7 @@ El sistema SHALL permitir editar `end_date` y `due_date` de un `card_periods` cu
 
 El sistema SHALL renderizar el listado de tarjetas de crédito (`/cards`) como una **vista compacta agrupada por banco** (NO como wallet de cards grandes), conservando el hero unificado, con esta estructura de arriba hacia abajo:
 
-1. **Header**: título "Tarjetas" + subtítulo ("N tarjetas de crédito · resumen de <mes>"). Acción primaria "Agregar tarjeta" (primitivo `Button`). En web el CTA navega a `/cards/new`; en mobile el CTA SHALL renderizarse en estado **disabled placeholder** mientras la ruta `/cards/new` mobile no exista.
+1. **Header**: título "Tarjetas" + subtítulo ("N tarjetas de crédito · resumen de <mes>"). Acción primaria "Agregar tarjeta" (primitivo `Button`). En ambas plataformas el CTA SHALL abrir el flujo de alta de tarjeta: en web navega a `/cards/new` (o abre el drawer de alta); en mobile navega a la ruta `/cards/new` nativa. El CTA NO SHALL renderizarse como placeholder permanentemente disabled. La carga de catálogos (instituciones / redes) puede gatear el submit/CTA mientras resuelve (web deshabilita el CTA; mobile defiere la carga a la ruta `/cards/new`, que muestra un loading state propio).
 2. **Hero del mes (card navy, dos columnas)**: el hero SHALL renderizarse como una card oscura navy (mismo patrón de superficie que el hero del dashboard). A la **izquierda**, **dos cifras** mostradas juntas, cada una en **Bimoneda** (ARS primario y USD subordinado, **NUNCA sumados ni convertidos**):
    - **A pagar (ahora)** (`summary.toPayARS` / `toPayUSD`): la suma del total a pagar de **todas** las tarjetas activas que ya tienen un resumen **cerrado e impago** (deuda firme, vence ~este mes). Cuando la cifra es cero, el hero SHALL mostrar **`$ 0`** — NO un texto de empty-state.
    - **En curso** (`summary.inProgressARS` / `inProgressUSD`): la suma de los resúmenes **abiertos (aún no cerraron) con saldo > 0** de **todas** las tarjetas activas. Es el **acumulado real** de los consumos del ciclo abierto (no una proyección): un piso que sigue creciendo hasta el cierre. SHALL llevar el caption **"se sigue sumando hasta el cierre"**. Cuando es cero, SHALL mostrar `$ 0`.
@@ -262,6 +262,12 @@ La navegación de una fila (click web / tap mobile) SHALL ir a `/cards/[id]`. La
 - **THEN** "Próximos cierres" muestra una fila por tarjeta (`fecha de cierre · nombre`, sin monto), ordenadas por fecha de cierre ascendente
 - **AND** la lista incluye la tarjeta cuyo resumen "a pagar" está cerrado pero cuyo resumen siguiente sigue abierto (no se pierde su próximo cierre)
 - **AND** la lista se capa en `NEXT_CLOSES_CAP` (6)
+
+#### Scenario: El CTA "Agregar tarjeta" abre el flujo de alta nativo en mobile
+
+- **WHEN** el usuario está en `/cards` mobile con las queries de catálogo ya cargadas y toca "Agregar tarjeta"
+- **THEN** la app navega a la ruta de alta de tarjeta nativa (`/cards/new`)
+- **AND** el CTA NO se renderiza como placeholder permanentemente disabled
 
 ### Requirement: El detalle de tarjeta muestra el resumen actual, próximo, y acciones primarias
 
@@ -584,6 +590,8 @@ El sistema SHALL aplicar Row Level Security sobre `card_periods` y `period_payme
 
 El formulario de alta de tarjeta SHALL pedir únicamente el cierre y el vencimiento del resumen actual (`current_end_date`, `current_due_date`) — las dos fechas que el último extracto emitido anunció. El alta NO SHALL pedir fechas del próximo resumen.
 
+El alta de tarjeta SHALL estar disponible en **web y mobile** (paridad). Ambas plataformas SHALL ejecutar la **misma** lógica de creación, expuesta como una única mutación compartida `createCreditCard` en `@grana/cards` que recibe `{ supabase, userId, input, today }`, valida con `createCreditCardSchema` y devuelve un resultado neutral (`CardMutationResult`: `{ ok: true, id }` o `{ ok: false, fieldErrors? | messageKey? | errorCode? }`). El paquete NO SHALL traducir texto: cada consumer resuelve el mensaje con su helper de i18n (`next-intl` en web, `useT` en mobile). El server action de web y el wrapper `lib/cards/mutations.ts` de mobile SHALL ser shells finos sobre esa mutación, divergiendo solo en resolución de `userId`, mapeo de error e invalidación/revalidación de caché. La presentación del formulario SHALL ser idiomática por plataforma (drawer/página en web; ruta nativa en mobile) conservando los mismos nombres y props públicas del componente (`CreateCardForm`).
+
 Al crear la tarjeta, el sistema SHALL insertar dos períodos:
 
 - **P1 (real)**: `start_date = current_end_date − 30 días`, `end_date = current_end_date`, `due_date = current_due_date`, `is_estimated = false`.
@@ -606,6 +614,13 @@ Al crear la tarjeta, el sistema SHALL insertar dos períodos:
 - **WHEN** la tarjeta tiene P1 (`end_date='2026-06-16'`) y P2 estimado, y el usuario registra un consumo con `date='2026-06-18'`
 - **THEN** la transacción se inserta con `card_period_id` apuntando a P2
 - **AND** no se pide ninguna fecha al usuario
+
+#### Scenario: El alta nativa en mobile crea la tarjeta con la misma lógica que web
+
+- **WHEN** el usuario completa el `CreateCardForm` nativo (institución, red o nombre custom, monedas con ARS, cierre y vencimiento del resumen actual) y confirma
+- **THEN** mobile invoca la mutación compartida `createCreditCard` de `@grana/cards` con el `userId` autenticado y `today`
+- **AND** se crean el account `type=credit`, sus `account_currencies` y los dos `card_periods` (P1 real + P2 estimado) idénticos a los que crearía web con el mismo input
+- **AND** ante éxito se invalidan las query keys de cards y la app vuelve a `/cards`; ante error se muestra el mensaje resuelto desde `messageKey`/`fieldErrors` con `useT`, sin texto pre-traducido por el paquete
 
 ---
 

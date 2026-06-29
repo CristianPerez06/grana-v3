@@ -1,0 +1,81 @@
+import { useState } from 'react'
+import { Platform, Pressable, Text, View } from 'react-native'
+import DateTimePicker, {
+  type DateTimePickerEvent,
+} from '@react-native-community/datetimepicker'
+import { useLocale, useT } from '../../lib/locale-context'
+
+type Props = {
+  /** Date-only ISO string (`YYYY-MM-DD`), or `''` when empty. */
+  value: string
+  onChange: (iso: string) => void
+  placeholder?: string
+  invalid?: boolean
+}
+
+// `YYYY-MM-DD` ⇄ Date using LOCAL components so a date-only value never shifts a
+// day across timezones (parsing the ISO string directly would treat it as UTC).
+function isoToDate(iso: string): Date {
+  if (!iso) return new Date()
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d, 12, 0, 0)
+}
+
+function dateToISO(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+// Native date field: a tappable trigger that opens the platform DateTimePicker
+// and emits `YYYY-MM-DD`. iOS renders an inline spinner with a Done button;
+// Android shows the native dialog and commits on "set". Reusable across forms
+// (cards alta today, movement form next).
+export function DateField({ value, onChange, placeholder, invalid }: Props) {
+  const t = useT()
+  const locale = useLocale()
+  const [show, setShow] = useState(false)
+
+  const display = value
+    ? isoToDate(value).toLocaleDateString(locale === 'en' ? 'en-US' : 'es-AR', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+    : (placeholder ?? t('common.pick_date'))
+
+  const handleChange = (event: DateTimePickerEvent, selected?: Date) => {
+    if (Platform.OS === 'android') setShow(false)
+    if (event.type === 'set' && selected) onChange(dateToISO(selected))
+  }
+
+  const borderClass = invalid ? 'border-error' : 'border-border'
+
+  return (
+    <View className="flex-col gap-2">
+      <Pressable
+        onPress={() => setShow((s) => !s)}
+        className={`h-11 w-full justify-center rounded-lg border bg-card px-3 ${borderClass}`}
+      >
+        <Text className={`text-sm ${value ? 'text-text' : 'text-text-soft'}`}>{display}</Text>
+      </Pressable>
+
+      {show && (
+        <View>
+          <DateTimePicker
+            value={isoToDate(value)}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleChange}
+          />
+          {Platform.OS === 'ios' && (
+            <Pressable onPress={() => setShow(false)} className="self-end px-3 py-1.5">
+              <Text className="text-sm font-semibold text-emerald">{t('common.close')}</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
+    </View>
+  )
+}
