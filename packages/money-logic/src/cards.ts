@@ -339,6 +339,39 @@ export function computeStatementPaymentTotal(
   return Money.toNumber(Money.add(Money.from(pendingARS), usdInArs))
 }
 
+// ─── Impuesto de sellos (stamp tax) ──────────────────────────────────────────
+
+/**
+ * Alícuotas provinciales más comunes del impuesto de sellos sobre resúmenes de
+ * tarjeta, ordenadas por prevalencia. Se usan SOLO para sugerir montos en pesos
+ * la primera vez (cuando la tarjeta todavía no tiene tasa). El usuario nunca ve
+ * el porcentaje: la UI le muestra el monto resultante. 0,012 = 1,2% (Bs As y
+ * varias), 0,01 = 1% (Tucumán), 0,001 = 0,1% (Jujuy / Santa Fe).
+ */
+export const COMMON_STAMP_TAX_RATES: readonly number[] = [0.012, 0.01, 0.001]
+
+/**
+ * Deriva la alícuota de sellos a partir del monto que el banco cobró y la base
+ * (total del resumen). Es un ratio, NO dinero: se mantiene a precisión completa
+ * (Money redondea a centavos y colapsaría una tasa como 0,001 a 0). Devuelve
+ * null si la base o el monto no son positivos.
+ */
+export function deriveStampTaxRate(base: number, amount: number): number | null {
+  if (base <= 0 || amount <= 0) return null
+  return amount / base
+}
+
+/**
+ * Sugiere el monto del impuesto de sellos para un resumen, dada la alícuota
+ * recordada de la tarjeta y la base (total del resumen). El monto SÍ es dinero:
+ * se redondea a centavos vía Money.multiply. Devuelve 0 si base o tasa no son
+ * positivas.
+ */
+export function suggestStampTaxAmount(base: number, rate: number): number {
+  if (base <= 0 || rate <= 0) return 0
+  return Money.toNumber(Money.multiply(Money.from(base), rate))
+}
+
 // ─── ISO date arithmetic + AR clock helpers ──────────────────────────────────
 
 const AR_TIMEZONE = 'America/Argentina/Buenos_Aires'

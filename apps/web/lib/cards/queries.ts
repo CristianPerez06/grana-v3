@@ -41,6 +41,8 @@ export type CardPeriodDetail = CardPeriodWithPayment & {
   pendingAmountUSD: number
   paidAmountARS: number
   paidAmountUSD: number
+  /** Alícuota de sellos recordada de la tarjeta; null si todavía no se conoce. */
+  stampTaxRate: number | null
   paymentDate: string | null
   paymentRecordId: string | null
   paymentExpenseId: string | null
@@ -306,6 +308,15 @@ export async function getCardPeriods(
   const today = getTodayAR()
   const periodIds = periods.map((p) => p.id)
 
+  // Alícuota de sellos de la tarjeta (la misma para todos sus períodos).
+  const { data: accountRow, error: accountRowError } = await supabase
+    .from('accounts')
+    .select('stamp_tax_rate')
+    .eq('id', accountId)
+    .maybeSingle()
+  if (accountRowError) throw accountRowError
+  const stampTaxRate = accountRow?.stamp_tax_rate ?? null
+
   // Load transactions grouped by period
   const { data: txRows, error: txError } = await supabase
     .from('transactions')
@@ -403,6 +414,7 @@ export async function getCardPeriods(
       pendingAmountUSD: pendingUSD,
       paidAmountARS: paidARS,
       paidAmountUSD: paidUSD,
+      stampTaxRate,
       paymentDate: paymentInfo?.date ?? null,
       paymentRecordId: paymentInfo?.recordId ?? null,
       paymentExpenseId: paymentInfo?.expenseId ?? null,
@@ -430,7 +442,7 @@ export async function getCardPeriodDetail(
     throw periodError
   }
 
-  const [periodsWithStatus, txResult, paymentResult] = await Promise.all([
+  const [periodsWithStatus, txResult, paymentResult, accountResult] = await Promise.all([
     getCardPeriodsWithStatus(supabase, period.account_id),
     supabase
       .from('transactions')
@@ -445,10 +457,16 @@ export async function getCardPeriodDetail(
       .select('id, period_id, transaction_id, transactions!transaction_id(date)')
       .eq('period_id', periodId)
       .maybeSingle(),
+    supabase
+      .from('accounts')
+      .select('stamp_tax_rate')
+      .eq('id', period.account_id)
+      .maybeSingle(),
   ])
 
   if (txResult.error) throw txResult.error
   if (paymentResult.error) throw paymentResult.error
+  if (accountResult.error) throw accountResult.error
 
   const periodWithPayment = periodsWithStatus.find((p) => p.id === periodId)
   if (!periodWithPayment) return null
@@ -509,6 +527,7 @@ export async function getCardPeriodDetail(
     pendingAmountUSD: pendingUSD,
     paidAmountARS: paidARS,
     paidAmountUSD: paidUSD,
+    stampTaxRate: accountResult.data?.stamp_tax_rate ?? null,
     paymentDate: paymentTxDate,
     paymentRecordId: payment?.id ?? null,
     paymentExpenseId: payment?.transaction_id ?? null,

@@ -20,6 +20,7 @@ import { getCreditCardDebtCheck } from '@/lib/cards/queries'
 import { createCreditCard as createCreditCardMutation } from '@grana/cards'
 import {
   derivePeriodStatus,
+  deriveStampTaxRate,
   planRunningCycleConfirmation,
   splitAmountIntoInstallments,
   suggestNextPeriodDates,
@@ -152,7 +153,7 @@ export async function payCardPeriod(
 
   const { data: account, error: accountError } = await supabase
     .from('accounts')
-    .select('user_id, name')
+    .select('user_id, name, stamp_tax_rate')
     .eq('id', period.account_id)
     .eq('user_id', userId)
     .single()
@@ -222,6 +223,23 @@ export async function payCardPeriod(
     )
     .reduce((sum, r) => Money.toNumber(Money.add(Money.from(sum), Money.from(Math.abs(Number(r.amount))))), 0)
   const pendingUSD = Money.toNumber(Money.subtract(Money.from(usdPending), Money.from(usdReimbursed)))
+
+  // Base ARS del resumen (consumos pending ARS menos reintegros ARS recibidos),
+  // computada ANTES de insertar el sello para que no se incluya en su propia
+  // base. Mirrors the pendingAmountARS math of getCardPeriodDetail.
+  const arsPending = (periodTxRows ?? [])
+    .filter((r) => r.type !== 'reimbursement' && r.status === 'pending' && r.currency_code === 'ARS')
+    .reduce((sum, r) => Money.toNumber(Money.add(Money.from(sum), Money.from(Math.abs(Number(r.amount))))), 0)
+  const arsReimbursed = (periodTxRows ?? [])
+    .filter(
+      (r) =>
+        r.type === 'reimbursement' &&
+        r.currency_code === 'ARS' &&
+        r.received_at != null &&
+        r.cancelled_at == null,
+    )
+    .reduce((sum, r) => Money.toNumber(Money.add(Money.from(sum), Money.from(Math.abs(Number(r.amount))))), 0)
+  const stampTaxBaseARS = Money.toNumber(Money.subtract(Money.from(arsPending), Money.from(arsReimbursed)))
 
   if (pendingUSD > 0 && (data.fx_rate_to_ars == null || data.fx_rate_to_ars <= 0)) {
     return {
@@ -450,7 +468,73 @@ export async function payCardPeriod(
     return { ok: false, formError: expenseError?.message ?? 'Error al registrar el pago.' }
   }
 
-  // 2. UPDATE child transactions to 'paid'
+  // 1.5 INSERT impuesto de sellos del resumen (si el usuario confirmó monto > 0).
+  // Movimiento de la tarjeta asignado al período, con fecha = cierre del resumen;
+  // queda 'pending' y se barre a 'paid' en el paso 2 junto con el resto. La base
+  // (stampTaxBaseARS) se congeló antes de este insert para no auto-incluirse.
+  const stampTaxAmount = data.stamp_tax_amount ?? 0
+  let stampTaxId: string | null = null
+  if (stampTaxAmount > 0) {
+    const [{ data: impuestosCat }, { data: selloSub }] = await Promise.all([
+      supabase
+        .from('categories')
+        .select('id')
+        .eq('canonical_name', 'impuestos')
+        .is('user_id', null)
+        .maybeSingle(),
+      supabase
+        .from('subcategories')
+        .select('id')
+        .eq('canonical_name', 'impuesto-de-sellos')
+        .is('user_id', null)
+        .maybeSingle(),
+    ])
+
+    const { data: stampTx, error: stampError } = await supabase
+      .from('transactions')
+      .insert({
+        user_id: userId,
+        account_id: period.account_id,
+        type: 'expense',
+        amount: normalizeActionMoney(stampTaxAmount),
+        currency_code: 'ARS',
+        date: period.end_date,
+        category_id: impuestosCat?.id ?? null,
+        subcategory_id: selloSub?.id ?? null,
+        description: 'Impuesto de sellos',
+        is_parent: false,
+        status: 'pending',
+        card_period_id: data.period_id,
+        due_date: period.due_date,
+        fx_rate_to_ars: null,
+      })
+      .select('id')
+      .single()
+
+    if (stampError || !stampTx) {
+      await supabase.from('transactions').delete().eq('id', expense.id)
+      return {
+        ok: false,
+        formError: stampError?.message ?? 'No se pudo registrar el impuesto de sellos.',
+      }
+    }
+    stampTaxId = stampTx.id
+
+    // Primera vez para esta tarjeta: derivar y recordar la alícuota para que en
+    // los próximos resúmenes Grana la sugiera sola. Una corrección puntual del
+    // monto en pagos posteriores NO reescribe la tasa (solo se setea si era null).
+    if (account.stamp_tax_rate == null) {
+      const derived = deriveStampTaxRate(stampTaxBaseARS, stampTaxAmount)
+      if (derived != null) {
+        await supabase
+          .from('accounts')
+          .update({ stamp_tax_rate: derived })
+          .eq('id', period.account_id)
+      }
+    }
+  }
+
+  // 2. UPDATE child transactions to 'paid' (incluye el sello recién insertado)
   const { error: updateError } = await supabase
     .from('transactions')
     .update({ status: 'paid' })
@@ -458,6 +542,7 @@ export async function payCardPeriod(
     .eq('status', 'pending')
 
   if (updateError) {
+    if (stampTaxId) await supabase.from('transactions').delete().eq('id', stampTaxId)
     await supabase.from('transactions').delete().eq('id', expense.id)
     return { ok: false, formError: updateError.message }
   }
@@ -469,12 +554,13 @@ export async function payCardPeriod(
   })
 
   if (paymentError) {
-    // Rollback: revert transactions to pending and delete expense
+    // Rollback: revert transactions to pending, delete the sello, delete expense
     await supabase
       .from('transactions')
       .update({ status: 'pending' })
       .eq('card_period_id', data.period_id)
       .eq('status', 'paid')
+    if (stampTaxId) await supabase.from('transactions').delete().eq('id', stampTaxId)
     await supabase.from('transactions').delete().eq('id', expense.id)
     return { ok: false, formError: paymentError.message }
   }

@@ -2,10 +2,13 @@ import { describe, it, expect } from 'vitest'
 import {
   assignTransactionToPeriod,
   computeStatementPaymentTotal,
+  COMMON_STAMP_TAX_RATES,
+  deriveStampTaxRate,
   derivePeriodStatus,
   derivePeriodVariant,
   subtractMoneyValues,
   suggestNextPeriodDates,
+  suggestStampTaxAmount,
   sumMoneyValues,
 } from '../utils'
 
@@ -185,5 +188,49 @@ describe('computeStatementPaymentTotal', () => {
     expect(computeStatementPaymentTotal(0, 33.33, 1234.567)).toBe(41148.12)
     // Float-hostile pair: 0.1 + (0.2 × 1) = 0.3 exactly (Money, not IEEE754)
     expect(computeStatementPaymentTotal(0.1, 0.2, 1)).toBe(0.3)
+  })
+})
+
+describe('deriveStampTaxRate', () => {
+  it('returns null when base or amount are not positive', () => {
+    expect(deriveStampTaxRate(0, 10)).toBeNull()
+    expect(deriveStampTaxRate(-1, 10)).toBeNull()
+    expect(deriveStampTaxRate(1000, 0)).toBeNull()
+    expect(deriveStampTaxRate(1000, -5)).toBeNull()
+  })
+
+  it('derives the rate from real statements (the user cases)', () => {
+    // Visa: 24.42 / 24421.97 ≈ 0,1%
+    expect(deriveStampTaxRate(24421.97, 24.42)).toBeCloseTo(0.001, 5)
+    // Amex: 1527.76 / 127313.30 ≈ 1,2%
+    expect(deriveStampTaxRate(127313.3, 1527.76)).toBeCloseTo(0.012, 5)
+  })
+})
+
+describe('suggestStampTaxAmount', () => {
+  it('returns 0 when base or rate are not positive', () => {
+    expect(suggestStampTaxAmount(0, 0.012)).toBe(0)
+    expect(suggestStampTaxAmount(-1, 0.012)).toBe(0)
+    expect(suggestStampTaxAmount(1000, 0)).toBe(0)
+  })
+
+  it('suggests the amount rounded to centavos for the user cases', () => {
+    // 24421.97 × 0.001 = 24.42197 → 24.42
+    expect(suggestStampTaxAmount(24421.97, 0.001)).toBe(24.42)
+    // 127313.30 × 0.012 = 1527.7596 → 1527.76
+    expect(suggestStampTaxAmount(127313.3, 0.012)).toBe(1527.76)
+  })
+
+  it('round-trips: a derived rate re-suggests the original amount', () => {
+    const base = 127313.3
+    const amount = 1527.76
+    const rate = deriveStampTaxRate(base, amount)!
+    expect(suggestStampTaxAmount(base, rate)).toBe(amount)
+  })
+})
+
+describe('COMMON_STAMP_TAX_RATES', () => {
+  it('exposes the prevalent provincial rates ordered by prevalence', () => {
+    expect(COMMON_STAMP_TAX_RATES).toEqual([0.012, 0.01, 0.001])
   })
 })

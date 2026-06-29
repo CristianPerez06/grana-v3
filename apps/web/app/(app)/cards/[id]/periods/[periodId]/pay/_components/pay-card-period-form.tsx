@@ -5,8 +5,12 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { getTodayAR } from '@/lib/date'
 import { payCardPeriod } from '@/app/_actions/credit-cards'
-import { computeStatementPaymentTotal } from '@/lib/cards/utils'
-import { parseMoneyInput } from '@grana/validation'
+import {
+  computeStatementPaymentTotal,
+  suggestStampTaxAmount,
+  COMMON_STAMP_TAX_RATES,
+} from '@/lib/cards/utils'
+import { Money, parseMoneyInput } from '@grana/validation'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { DatePicker } from '@/components/ui/date-picker'
 import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
@@ -46,6 +50,8 @@ type Props = {
   runningIsEstimated: boolean
   /** Close of the period being paid — the running cycle must close after it. */
   paidPeriodEndDate: string
+  /** Alícuota de sellos recordada de la tarjeta; null = primera vez (se pregunta). */
+  stampTaxRate: number | null
   paymentAccounts: PaymentAccount[]
 }
 
@@ -58,6 +64,7 @@ export const PayCardPeriodForm = ({
   runningDueDate,
   runningIsEstimated,
   paidPeriodEndDate,
+  stampTaxRate,
   paymentAccounts,
 }: Props) => {
   const router = useRouter()
@@ -69,7 +76,25 @@ export const PayCardPeriodForm = ({
 
   const hasUsdDebt = pendingAmountUSD > 0
 
-  const [amount, setAmount] = useState(String(pendingAmountARS))
+  // Base del impuesto de sellos = total ARS del resumen (consumos pendientes en
+  // pesos). El usuario nunca ve la alícuota: si la tarjeta ya la tiene, se
+  // sugiere el monto; si no, se le pide elegir un monto (primera vez).
+  const stampBase = pendingAmountARS
+  const stampKnown = stampTaxRate != null
+  const initialStamp = stampTaxRate != null ? suggestStampTaxAmount(stampBase, stampTaxRate) : 0
+
+  const sumARS = (a: number, b: number) =>
+    Money.toNumber(Money.add(Money.from(a), Money.from(b)))
+
+  // Total a pagar = consumos (ARS + USD×fx) + sello. El consumo USD requiere la
+  // cotización; hasta tenerla se usa la base ARS y el sello se suma igual.
+  const consumosBase = (fx: number | null): number | null =>
+    hasUsdDebt
+      ? computeStatementPaymentTotal(pendingAmountARS, pendingAmountUSD, fx)
+      : pendingAmountARS
+
+  const [stampTax, setStampTax] = useState(initialStamp > 0 ? String(initialStamp) : '')
+  const [amount, setAmount] = useState(String(sumARS(pendingAmountARS, initialStamp)))
   const [fxRate, setFxRate] = useState('')
   const [paymentAccountId, setPaymentAccountId] = useState(paymentAccounts[0]?.id ?? '')
   const [paymentDate, setPaymentDate] = useState(todayStr())
@@ -77,9 +102,10 @@ export const PayCardPeriodForm = ({
   const [nextDueDate, setNextDueDate] = useState(runningDueDate)
 
   // Payment-day conversion: total ARS = pendiente ARS + pendiente USD × fx
-  // (exact Money arithmetic in computeStatementPaymentTotal). Typing the fx
-  // auto-fills the amount with the computed total (still editable).
+  // (exact Money arithmetic in computeStatementPaymentTotal). Typing the fx or
+  // the sello auto-fills the amount with the computed total (still editable).
   const parsedFx = fxRate ? parseMoneyInput(fxRate, { decimalPlaces: 6 }) : null
+  const parsedStamp = parseMoneyInput(stampTax) ?? 0
   const computedTotal = hasUsdDebt
     ? computeStatementPaymentTotal(pendingAmountARS, pendingAmountUSD, parsedFx)
     : null
@@ -88,12 +114,38 @@ export const PayCardPeriodForm = ({
       ? Math.round((computedTotal - pendingAmountARS) * 100) / 100
       : null
 
+  // Sugerencia de total (consumos + sello) que se muestra como ayuda.
+  const suggestedConsumos = consumosBase(parsedFx)
+  const suggestedTotal =
+    suggestedConsumos !== null ? sumARS(suggestedConsumos, parsedStamp) : null
+
+  const recomputeAmount = (fx: number | null, stamp: number) => {
+    const base = consumosBase(fx)
+    if (base !== null) setAmount(String(sumARS(base, stamp)))
+  }
+
   const handleFxChange = (value: string) => {
     setFxRate(value)
     const fx = value ? parseMoneyInput(value, { decimalPlaces: 6 }) : null
-    const total = computeStatementPaymentTotal(pendingAmountARS, pendingAmountUSD, fx)
-    if (hasUsdDebt && total !== null) setAmount(String(total))
+    recomputeAmount(fx, parsedStamp)
   }
+
+  const handleStampChange = (value: string) => {
+    setStampTax(value)
+    recomputeAmount(parsedFx, parseMoneyInput(value) ?? 0)
+  }
+
+  // Sugerencias de monto para la primera vez (sin mostrar el %): cada alícuota
+  // común aplicada a la base, deduplicadas, solo si hay base positiva.
+  const stampSuggestions = stampKnown
+    ? []
+    : Array.from(
+        new Set(
+          COMMON_STAMP_TAX_RATES.map((rate) => suggestStampTaxAmount(stampBase, rate)).filter(
+            (amt) => amt > 0,
+          ),
+        ),
+      ).sort((a, b) => b - a)
 
   // Soft, non-blocking warning: paying from this account would leave its ARS
   // available balance negative. Statement payments are always in ARS.
@@ -142,6 +194,7 @@ export const PayCardPeriodForm = ({
         payment_date: paymentDate,
         next_end_date: nextEndDate,
         next_due_date: nextDueDate,
+        stamp_tax_amount: parseMoneyInput(stampTax) ?? 0,
         ...(hasUsdDebt && parsedFx !== null && parsedFx > 0
           ? { fx_rate_to_ars: parsedFx }
           : {}),
@@ -202,11 +255,62 @@ export const PayCardPeriodForm = ({
           </div>
         )}
 
+        {/* Impuesto de sellos del resumen. Primera vez: selector de montos sin
+            mencionar el %. Próximas: monto sugerido y editable. */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">{t('payment.stamp_tax_label')}</label>
+          <p className="text-xs text-muted-foreground mb-1">
+            {stampKnown
+              ? t('payment.stamp_tax_known_helper')
+              : t('payment.stamp_tax_first_time_hint')}
+          </p>
+
+          {!stampKnown && stampSuggestions.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-1">
+              {stampSuggestions.map((amt) => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => handleStampChange(String(amt))}
+                  className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                    parsedStamp === amt
+                      ? 'border-primary bg-primary/10 text-foreground'
+                      : 'border-input bg-background text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  {formatARS(amt)}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => handleStampChange('0')}
+                className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                  parsedStamp === 0 && stampTax !== ''
+                    ? 'border-primary bg-primary/10 text-foreground'
+                    : 'border-input bg-background text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {t('payment.stamp_tax_none')}
+              </button>
+            </div>
+          )}
+
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+            <MoneyAmountInput
+              value={stampTax}
+              onChange={handleStampChange}
+              placeholder={!stampKnown ? t('payment.stamp_tax_other_placeholder') : undefined}
+              className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+        </div>
+
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">{t('labels.amount_to_pay')}</label>
           <p className="text-xs text-muted-foreground mb-1">
             {t('labels.amount_to_pay_helper')} (
-            {computedTotal !== null ? formatARS(computedTotal) : formatARS(pendingAmountARS)})
+            {suggestedTotal !== null ? formatARS(suggestedTotal) : formatARS(pendingAmountARS)})
           </p>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>

@@ -68,6 +68,7 @@ const PayPeriodPage = async ({ params }: Props) => {
         runningDueDate={runningDueDate}
         runningIsEstimated={runningIsEstimated}
         paidPeriodEndDate={period.end_date}
+        stampTaxRate={period.stampTaxRate}
         paymentAccounts={paymentAccounts}
       />
     </>

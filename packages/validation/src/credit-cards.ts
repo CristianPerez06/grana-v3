@@ -159,6 +159,16 @@ export const payCardPeriodSchema = yup
       .positive()
       .nullable()
       .optional(),
+    // Impuesto de sellos confirmado por el usuario para este resumen (ARS).
+    // 0 / ausente = sin sello (no se inserta movimiento ni se toca la alícuota).
+    // > 0 = se registra como movimiento del período y, si la tarjeta no tenía
+    // alícuota, se deriva y persiste (monto ÷ base).
+    stamp_tax_amount: yup
+      .number()
+      .label('stamp_tax_amount')
+      .min(0)
+      .nullable()
+      .optional(),
     // Confirmation of the in-course period P(n+1): the statement being paid
     // announces these dates, so the user has them in hand. The action updates
     // the (usually estimated) next period instead of creating P(n+2), and

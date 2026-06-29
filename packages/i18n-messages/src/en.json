@@ -842,6 +842,11 @@
       "section_payment_data": "Payment details",
       "section_next_period": "Running cycle",
       "estimated_badge": "estimated dates",
+      "stamp_tax_label": "Stamp tax",
+      "stamp_tax_first_time_hint": "Your bank usually charges a stamp tax on the statement. Pick how much it charged by checking your statement. We only ask this once: from now on we'll suggest it for you.",
+      "stamp_tax_known_helper": "Suggested from your previous statements. Adjust it if it doesn't match the real statement.",
+      "stamp_tax_other_placeholder": "Other amount",
+      "stamp_tax_none": "No stamp tax charged",
       "warning": "Once confirmed, the payment cannot be reverted. If you recorded a wrong amount or account, fix it with a balance adjustment."
     },
     "edit_dates": {

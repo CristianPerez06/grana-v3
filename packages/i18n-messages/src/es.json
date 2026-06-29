@@ -842,6 +842,11 @@
       "section_payment_data": "Datos del pago",
       "section_next_period": "Ciclo en curso",
       "estimated_badge": "fechas estimadas",
+      "stamp_tax_label": "Impuesto de sellos",
+      "stamp_tax_first_time_hint": "Tu banco suele cobrar un impuesto de sellos en el resumen. Elegí cuánto te cobró mirando el resumen. Te lo preguntamos solo esta vez: en los próximos lo vamos a sugerir solo.",
+      "stamp_tax_known_helper": "Sugerido a partir de tus resúmenes anteriores. Ajustalo si no coincide con el resumen real.",
+      "stamp_tax_other_placeholder": "Otro monto",
+      "stamp_tax_none": "No me cobraron sellos",
       "warning": "Una vez confirmado, el pago no se puede revertir. Si registraste un monto o cuenta incorrectos, podés corregirlo con un ajuste de saldo."
     },
     "edit_dates": {

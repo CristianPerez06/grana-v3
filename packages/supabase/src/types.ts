@@ -71,6 +71,7 @@ export type Database = {
           name: string
           network_id: string | null
           other_network_name: string | null
+          stamp_tax_rate: number | null
           type: Database["public"]["Enums"]["account_type"]
           user_id: string
         }
@@ -85,6 +86,7 @@ export type Database = {
           name: string
           network_id?: string | null
           other_network_name?: string | null
+          stamp_tax_rate?: number | null
           type: Database["public"]["Enums"]["account_type"]
           user_id: string
         }
@@ -99,6 +101,7 @@ export type Database = {
           name?: string
           network_id?: string | null
           other_network_name?: string | null
+          stamp_tax_rate?: number | null
           type?: Database["public"]["Enums"]["account_type"]
           user_id?: string
         }
