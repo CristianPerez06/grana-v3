@@ -13,6 +13,9 @@ ALTER TABLE public.accounts
 
 -- La alícuota, cuando existe, es un ratio en (0, 1).
 ALTER TABLE public.accounts
+  DROP CONSTRAINT IF EXISTS chk_stamp_tax_rate_range;
+
+ALTER TABLE public.accounts
   ADD CONSTRAINT chk_stamp_tax_rate_range
     CHECK (stamp_tax_rate IS NULL OR (stamp_tax_rate > 0 AND stamp_tax_rate < 1));
 
