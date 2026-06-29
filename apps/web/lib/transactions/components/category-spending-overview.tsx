@@ -571,7 +571,7 @@ export const CategorySpendingOverview = ({
   return (
     <section
       aria-labelledby="spending-overview-title"
-      className="flex flex-col gap-5 rounded-2xl border border-border bg-card px-7 py-6"
+      className="flex flex-col gap-5 rounded-2xl border border-border bg-card px-5 py-6 sm:px-7"
     >
       {/* Header row 1: title + subtitle (left) · month navigator (right). */}
       <div className="flex items-start justify-between gap-3">

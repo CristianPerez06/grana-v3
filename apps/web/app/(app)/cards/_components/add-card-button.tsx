@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Drawer } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
+import { Fab } from '@/components/ui/fab'
 import { CreateCardForm, type CardNetwork } from './create-card-form'
 import type { Institution } from '@/lib/accounts/types'
 
@@ -27,20 +28,23 @@ export function AddCardButton({
   const [open, setOpen] = useState(false)
   const [formInstance, setFormInstance] = useState(0)
 
+  const openCreate = () => {
+    if (disabled) return
+    setFormInstance((n) => n + 1)
+    setOpen(true)
+  }
+
   return (
     <>
       <Button
-        className="w-auto"
+        className="hidden w-auto sm:inline-flex"
         disabled={disabled}
-        onClick={() => {
-          if (disabled) return
-          setFormInstance((n) => n + 1)
-          setOpen(true)
-        }}
+        onClick={openCreate}
       >
         <Plus className="size-4" aria-hidden />
         {t('actions.add_label')}
       </Button>
+      <Fab label={t('actions.add_label')} disabled={disabled} onClick={openCreate} />
       <Drawer open={open} onClose={() => setOpen(false)} widthPx={540} ariaLabel={t('new.drawer_title')}>
         <CreateCardForm
           key={formInstance}

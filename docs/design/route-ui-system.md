@@ -91,7 +91,8 @@ Mobile:
 - Hero compacto arriba.
 - Acciones primarias dentro o inmediatamente debajo del hero.
 - Bloques condicionales apilados.
-- Listas sin columnas auxiliares que compitan con el monto.
+- Filas de lista: el monto queda inline con el titulo (misma altura que en desktop), alineado a la derecha en su columna; el titulo trunca si es largo. No apilar el monto debajo del titulo.
+- Lo que se oculta en mobile son las columnas auxiliares (running balance, comparaciones), no el monto principal.
 
 ### Ruta de lista / ledger
 

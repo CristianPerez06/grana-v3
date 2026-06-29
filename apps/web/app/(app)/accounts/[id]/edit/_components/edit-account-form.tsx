@@ -252,14 +252,14 @@ export const EditAccountForm = ({
   if (isDrawer) {
     return (
       <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-        <header className="shrink-0 border-b border-border bg-card px-7 pb-5 pt-[22px]">
+        <header className="shrink-0 border-b border-border bg-card px-5 pb-5 pt-[22px] sm:px-7">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.15em] text-text-muted">
                 <ArrowLeft className="size-[13px]" aria-hidden />
                 <span className="truncate">{account.name}</span>
               </p>
-              <h2 className="truncate text-[25px] font-extrabold leading-tight tracking-[-0.03em] text-text">
+              <h2 className="truncate text-[20px] font-extrabold leading-tight tracking-[-0.03em] text-text sm:text-[25px]">
                 {t('edit_title')}
               </h2>
             </div>
@@ -274,7 +274,7 @@ export const EditAccountForm = ({
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-7 pb-7 pt-[22px]">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-7 pt-[22px] sm:px-7">
           {formError && (
             <Alert variant="error" className="mb-4">
               {formError}
@@ -283,7 +283,7 @@ export const EditAccountForm = ({
           {body}
         </div>
 
-        <footer className="shrink-0 border-t border-border bg-card px-7 py-4">{footer}</footer>
+        <footer className="shrink-0 border-t border-border bg-card px-5 py-4 sm:px-7">{footer}</footer>
       </form>
     )
   }

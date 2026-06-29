@@ -95,7 +95,7 @@ export const PageHeader = ({
   // ── Classic variant (existing behavior) ──────────────────────────────────
   const titleAndDescription = (
     <div className="flex flex-col gap-1">
-      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight break-words">{title}</h1>
       {(description || descriptionExtras) && (
         <p className="text-sm text-muted-foreground">
           {description}
@@ -106,9 +106,24 @@ export const PageHeader = ({
   )
 
   const titleBlock = actions ? (
-    <div className="flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-2">
-      {titleAndDescription}
-      {actions}
+    // Only the title + actions sit in the row that decides wrapping, so the
+    // (potentially long) description never inflates the measurement and pushes
+    // the actions down on its own. On mobile the actions stay pinned top-right
+    // next to the title when they fit; when the title + actions are too wide to
+    // share a line, the actions wrap to their own line (the previous stacked
+    // look) instead of squeezing the title. The description renders full-width
+    // below the row.
+    <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <h1 className="text-2xl font-semibold tracking-tight break-words">{title}</h1>
+        <div className="shrink-0">{actions}</div>
+      </div>
+      {(description || descriptionExtras) && (
+        <p className="text-sm text-muted-foreground">
+          {description}
+          {descriptionExtras}
+        </p>
+      )}
     </div>
   ) : (
     titleAndDescription

@@ -6,6 +6,7 @@ import { Plus } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Drawer } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
+import { Fab } from '@/components/ui/fab'
 import { CreateCategoryForm } from '../new/_components/create-category-form'
 
 /**
@@ -39,18 +40,18 @@ export function CreateCategoryButton() {
     router.replace(qs ? `${window.location.pathname}?${qs}` : window.location.pathname)
   }, [router])
 
+  const openCreate = () => {
+    setFormInstance((n) => n + 1)
+    setOpen(true)
+  }
+
   return (
     <>
-      <Button
-        className="w-auto"
-        onClick={() => {
-          setFormInstance((n) => n + 1)
-          setOpen(true)
-        }}
-      >
+      <Button className="hidden w-auto sm:inline-flex" onClick={openCreate}>
         <Plus className="size-4" aria-hidden />
         {t('actions.add')}
       </Button>
+      <Fab label={t('actions.add')} onClick={openCreate} />
       <Drawer open={open} onClose={() => setOpen(false)} widthPx={540} ariaLabel={t('new.title')}>
         <CreateCategoryForm
           key={formInstance}

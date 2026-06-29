@@ -105,7 +105,7 @@ export const UpcomingRecurrences = async ({ rules }: Props) => {
             {rule.account?.name ?? '—'}
           </span>
         </div>
-        <div className="flex flex-col items-end">
+        <div className="flex shrink-0 flex-col items-end">
           <span className={`text-[15px] font-bold tracking-[-0.02em] tabular-nums ${amtClass}`}>
             {sign}{formatted}
           </span>

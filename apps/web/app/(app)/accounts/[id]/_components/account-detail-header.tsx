@@ -16,7 +16,7 @@ type Props = {
 }
 
 const heroCardCls =
-  'bg-hero-navy text-white relative overflow-hidden rounded-3xl border border-navy-border flex min-h-[238px] flex-col justify-between p-6 shadow-[0_24px_60px_-42px_rgba(11,26,43,0.48)]'
+  'bg-hero-navy text-white relative overflow-hidden rounded-3xl border border-navy-border flex min-h-[200px] flex-col justify-between p-5 shadow-[0_24px_60px_-42px_rgba(11,26,43,0.48)] sm:min-h-[238px] sm:p-6'
 
 export const AccountDetailHeader = ({ accountId }: Props) => {
   const t = useTranslations('accounts')
@@ -45,7 +45,7 @@ export const AccountDetailHeader = ({ accountId }: Props) => {
         </div>
         <div className="flex flex-col gap-3">
           <div className="h-2.5 w-16 rounded bg-navy-soft animate-pulse" />
-          <div className="h-10 w-56 rounded bg-navy-soft animate-pulse" />
+          <div className="h-10 w-40 rounded bg-navy-soft animate-pulse sm:w-56" />
           <div className="h-5 w-32 rounded bg-navy-soft animate-pulse" />
         </div>
       </div>
@@ -73,7 +73,7 @@ export const AccountDetailHeader = ({ accountId }: Props) => {
           <AccountAvatar {...account.avatar} size="md" />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="truncate text-[25px] font-extrabold leading-tight">
+              <h1 className="truncate text-[20px] font-extrabold leading-tight sm:text-[25px]">
                 {account.name}
               </h1>
               {!account.is_active && (
@@ -113,7 +113,7 @@ export const AccountDetailHeader = ({ accountId }: Props) => {
           {t('labels.balance')}
         </p>
         {hasARS && (
-          <p className="mt-2 text-[42px] font-black leading-none tabular-nums sm:text-[42px]">
+          <p className="mt-2 text-[28px] font-black leading-none tabular-nums sm:text-[42px]">
             {formatARS(balances.ARS, showCents)}
           </p>
         )}

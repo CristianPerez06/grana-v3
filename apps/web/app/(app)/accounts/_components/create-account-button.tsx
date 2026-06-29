@@ -6,6 +6,7 @@ import { Plus } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Drawer } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
+import { Fab } from '@/components/ui/fab'
 import { CreateAccountForm } from '../new/_components/create-account-form'
 import type { Institution } from '@/lib/accounts/types'
 
@@ -46,19 +47,22 @@ export function CreateAccountButton({ institutions, disabled = false }: Props) {
     router.replace(qs ? `${window.location.pathname}?${qs}` : window.location.pathname)
   }, [disabled, router])
 
+  const openCreate = () => {
+    setFormInstance((n) => n + 1)
+    setOpen(true)
+  }
+
   return (
     <>
       <Button
-        className="w-auto"
+        className="hidden w-auto sm:inline-flex"
         disabled={disabled}
-        onClick={() => {
-          setFormInstance((n) => n + 1)
-          setOpen(true)
-        }}
+        onClick={openCreate}
       >
         <Plus className="size-4" aria-hidden />
         {t('actions.create')}
       </Button>
+      <Fab label={t('actions.create')} disabled={disabled} onClick={openCreate} />
       <Drawer open={open} onClose={() => setOpen(false)} widthPx={540} ariaLabel={t('actions.create')}>
         <CreateAccountForm
           key={formInstance}

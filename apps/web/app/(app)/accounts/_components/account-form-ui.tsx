@@ -81,7 +81,7 @@ export const AccountPreview = ({
       {caption}
     </p>
     <div
-      className={`rounded-[20px] border bg-card px-[22px] pb-[18px] pt-5 ${
+      className={`rounded-[20px] border bg-card px-4 pb-[18px] pt-5 sm:px-[22px] ${
         ghost ? 'border-dashed border-border' : 'border-border'
       }`}
     >
@@ -112,7 +112,7 @@ export const AccountPreview = ({
       </div>
       <div className="mt-4 flex items-baseline gap-[9px]">
         <span className="text-[13px] font-semibold opacity-55">$</span>
-        <span className="text-[26px] font-bold tracking-[-0.02em] tabular-nums">{arsLabel}</span>
+        <span className="text-[20px] font-bold tracking-[-0.02em] tabular-nums sm:text-[26px]">{arsLabel}</span>
       </div>
       {usdLabel && <p className="mt-1 text-[13px] font-semibold text-text-muted tabular-nums">{usdLabel}</p>}
     </div>
@@ -149,9 +149,9 @@ const MoneyRow = ({
     >
       {currency === 'ARS' ? '$' : 'U$'}
     </span>
-    <div>
-      <p className="text-sm font-bold tracking-[-0.01em] text-text">{label}</p>
-      <p className="mt-px text-[11.5px] font-semibold text-text-soft">{sub}</p>
+    <div className="min-w-0">
+      <p className="truncate text-sm font-bold tracking-[-0.01em] text-text">{label}</p>
+      <p className="mt-px truncate text-[11.5px] font-semibold text-text-soft">{sub}</p>
     </div>
     <div className="ml-auto flex shrink-0 items-center gap-1.5">
       <span className="text-sm font-bold text-text-soft">{prefix}</span>
@@ -161,7 +161,7 @@ const MoneyRow = ({
         allowNegative={allowNegative}
         placeholder="0"
         aria-label={label}
-        className="w-[132px] rounded-[10px] border border-border bg-[#FAFBFC] px-3 py-[9px] text-right text-base font-bold tabular-nums tracking-[-0.01em] text-text outline-none focus-visible:border-[#C9CFD7] focus-visible:ring-[3px] focus-visible:ring-[rgba(58,107,138,0.12)] placeholder:font-semibold placeholder:text-text-soft"
+        className="w-[100px] rounded-[10px] border border-border bg-[#FAFBFC] px-3 py-[9px] text-right text-base font-bold tabular-nums tracking-[-0.01em] text-text outline-none focus-visible:border-[#C9CFD7] focus-visible:ring-[3px] focus-visible:ring-[rgba(58,107,138,0.12)] placeholder:font-semibold placeholder:text-text-soft sm:w-[132px]"
       />
     </div>
   </div>

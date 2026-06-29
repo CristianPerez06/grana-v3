@@ -31,7 +31,7 @@ export const HeroSkeleton = async () => {
 
       {/* Dónde está */}
       <Card className="flex min-h-[13rem] flex-col">
-        <CardHeader className="flex-row items-center justify-between gap-2 pb-1">
+        <CardHeader className="flex-col items-start gap-1 pb-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
           <span className="h-4 w-24 rounded bg-muted animate-pulse" />
           <span className="h-3.5 w-16 rounded bg-muted/70 animate-pulse" />
         </CardHeader>

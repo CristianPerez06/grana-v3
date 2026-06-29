@@ -80,13 +80,16 @@ export const AppShell = ({
   };
 
   return (
-    <div className="flex h-full flex-1 flex-col md:flex-row md:overflow-hidden">
+    <div className="flex h-full flex-1 flex-col overflow-hidden md:flex-row">
       <Sidebar collapsed={collapsed} onToggle={toggleCollapsed} userName={userName} userEmail={userEmail} />
       <TopBarMobile onOpenDrawer={() => setDrawerOpen(true)} />
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} userName={userName} userEmail={userEmail} />
-      <main className="flex-1 md:overflow-y-auto">
+      {/* `min-h-0 overflow-y-auto` (not gated to `md`) makes <main> the scroll
+          container on mobile too — otherwise the 100vh-locked shell leaves tall
+          content (e.g. an expanded card group) unreachable with no scrollbar. */}
+      <main className="min-h-0 flex-1 overflow-y-auto">
         <MovementDrawerLoader>
-          <div className="mx-auto w-full max-w-5xl px-8 py-8">{children}</div>
+          <div className="mx-auto w-full max-w-5xl px-4 py-5 md:px-8 md:py-8">{children}</div>
         </MovementDrawerLoader>
       </main>
     </div>

@@ -181,21 +181,21 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
         type="button"
         onClick={() => setIsOpen((open) => !open)}
         aria-expanded={isOpen}
-        className="flex w-full items-center gap-3.5 px-6 pb-4 pt-5 text-left transition-colors hover:bg-page/40"
+        className="flex w-full items-center gap-3 px-4 pb-3.5 pt-4 text-left transition-colors hover:bg-page/40 sm:gap-3.5 sm:px-6 sm:pb-4 sm:pt-5"
       >
         <span
-          className="flex size-11 shrink-0 items-center justify-center rounded-[13px]"
+          className="flex size-10 shrink-0 items-center justify-center rounded-[13px] sm:size-11"
           style={{ backgroundColor: 'var(--warning-bg)', color: 'var(--warning)' }}
         >
-          <Clock className="size-[22px]" aria-hidden />
+          <Clock className="size-5 sm:size-[22px]" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-[18px] font-extrabold tracking-[-0.02em] text-text">{t('pending.title')}</h2>
-          <p className="mt-0.5 text-sm font-medium text-text-muted">{t('pending.subtitle')}</p>
+          <h2 className="text-[15px] font-extrabold leading-tight tracking-[-0.02em] text-text sm:text-[18px]">{t('pending.title')}</h2>
+          <p className="mt-0.5 hidden text-sm font-medium text-text-muted sm:block">{t('pending.subtitle')}</p>
         </div>
         {pending.length > 0 && (
           <span
-            className="shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-bold"
+            className="shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold sm:px-3.5 sm:py-1.5 sm:text-[13px]"
             style={{ backgroundColor: 'var(--warning-bg)', color: 'var(--warning)' }}
           >
             {t('pending.count', { count: pending.length })}
@@ -208,7 +208,7 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
       </button>
 
       {isOpen && successMessage && (
-        <div className="mx-6 mb-3 flex items-center justify-between gap-2 rounded-[12px] border border-emerald/30 bg-[var(--emerald-soft)] px-3 py-2 text-sm font-medium text-emerald-deep">
+        <div className="mx-4 mb-3 flex items-center justify-between gap-2 rounded-[12px] border border-emerald/30 bg-[var(--emerald-soft)] px-3 py-2 text-sm font-medium text-emerald-deep sm:mx-6">
           <span className="flex items-center gap-2">
             <Check className="size-4" aria-hidden />
             {successMessage}
@@ -226,7 +226,7 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
 
       {isOpen && (pending.length === 0 ? (
         <div
-          className="flex items-center gap-3.5 border-t px-6 py-6 text-[15px] font-semibold text-emerald-deep"
+          className="flex items-center gap-3.5 border-t px-4 py-5 text-[15px] font-semibold text-emerald-deep sm:px-6 sm:py-6"
           style={{ borderColor: 'var(--border-soft)' }}
         >
           <Check className="size-5 shrink-0" aria-hidden />
@@ -266,10 +266,10 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
           return (
             <li
               key={instance.id}
-              className="flex flex-col gap-3 border-t px-6 py-4"
+              className="flex flex-col gap-3 border-t px-4 py-4 sm:px-6"
               style={{ borderColor: 'var(--border-soft)' }}
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
                 {/* Category tile with repeat badge */}
                 <span
                   className="relative flex size-[46px] shrink-0 items-center justify-center rounded-[13px] text-[21px]"
@@ -317,7 +317,7 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className={`text-[18px] font-bold tracking-[-0.025em] tabular-nums ${amtClass}`}>
+                  <span className={`text-[16px] font-bold tracking-[-0.025em] tabular-nums sm:text-[18px] ${amtClass}`}>
                     {amtSign}{formatted}
                   </span>
                   {!isEditing && (
@@ -412,7 +412,7 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
                 />
               )}
 
-              <div className="flex gap-2.5 pl-[62px]">
+              <div className="flex gap-2.5 pl-[58px] sm:pl-[62px]">
                 <Button
                   type="button"
                   variant="primary"

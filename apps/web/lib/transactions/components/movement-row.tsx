@@ -160,23 +160,18 @@ export const MovementRow = ({
   const FallbackIcon =
     structureIcon[movement.kind] ?? categorizedFallbackIcon[movement.kind] ?? Tag
 
-  // Layout:
-  //   • With running balance (account / card statement): always grid — 2 cols
-  //     on mobile (running balance hidden), 3 cols ≥md.
-  //   • Without running balance (/transactions, generic list): stack on narrow
-  //     widths so a long title doesn't fight the amount for the same row, per
-  //     route-ui-system.md → "Mobile … filas sin columnas auxiliares que
-  //     compitan con el monto". Becomes a 2-col grid ≥sm.
+  // Layout — the amount always stays inline with the title (web parity on every
+  // width), right-aligned in its own column; the title truncates (`min-w-0`)
+  // instead of fighting it.
+  //   • With running balance (account / card statement): 2 cols on mobile
+  //     (running balance hidden), 3 cols ≥md.
+  //   • Without running balance (/transactions, generic list): 2 cols, the
+  //     amount column sized to its content.
   const gridCls = runningBalance != null
     ? 'grid grid-cols-[minmax(0,1fr)_112px] md:grid-cols-[minmax(0,1fr)_126px_126px] items-center gap-4 md:gap-[18px] min-h-[62px] px-4 py-3 hover:bg-muted/40 transition-colors'
-    : 'flex flex-col gap-1 sm:grid sm:grid-cols-[minmax(0,1fr)_126px] sm:items-center sm:gap-[18px] min-h-[62px] px-4 py-3 hover:bg-muted/40 transition-colors'
+    : 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:gap-[18px] min-h-[62px] px-4 py-3 hover:bg-muted/40 transition-colors'
 
-  // When stacking, indent the amount to line up with the title (avoiding the
-  // icon column). On ≥sm it goes back to the right column of the grid.
-  const amountCls =
-    runningBalance != null
-      ? 'text-right'
-      : 'pl-[46px] text-left sm:pl-0 sm:text-right'
+  const amountCls = 'text-right'
 
   return (
     <div className={gridCls}>
@@ -195,8 +190,8 @@ export const MovementRow = ({
         )}
 
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="truncate text-[13px] font-extrabold leading-tight">{primary}</span>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="min-w-0 truncate text-[13px] font-extrabold leading-tight">{primary}</span>
             {chip && !installmentChipBelow && (
               <span className="inline-flex shrink-0 items-center rounded-full bg-border-soft px-1.5 py-0.5 text-[11px] font-semibold text-text-muted">
                 {chip}

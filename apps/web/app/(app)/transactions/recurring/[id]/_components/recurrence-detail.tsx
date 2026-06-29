@@ -181,7 +181,7 @@ export const RecurrenceDetail = ({ rule }: Props) => {
             </span>
           )}
         </div>
-        <span className={`text-[32px] font-bold tabular-nums tracking-tight ${amountClass}`}>
+        <span className={`text-[24px] font-bold tabular-nums tracking-tight sm:text-[32px] ${amountClass}`}>
           {sign}
           {fmt(rule.amount)}
         </span>

@@ -45,12 +45,20 @@ export type DatePickerProps = {
   id?: string
   /** Extra classes for the built-in field trigger button. */
   className?: string
+  /** Render the value as `dd/mm/aa` instead of `29 jun 2026` — for tight inline boxes. */
+  compact?: boolean
 }
 
 const dateFmt = new Intl.DateTimeFormat('es-AR', {
   day: '2-digit',
   month: 'short',
   year: 'numeric',
+})
+
+const compactFmt = new Intl.DateTimeFormat('es-AR', {
+  day: '2-digit',
+  month: '2-digit',
+  year: '2-digit',
 })
 
 export function DatePicker({
@@ -66,6 +74,7 @@ export function DatePicker({
   placeholder,
   id,
   className,
+  compact = false,
 }: DatePickerProps) {
   const t = useTranslations('common')
   const [open, setOpen] = useState(false)
@@ -99,8 +108,8 @@ export function DatePicker({
         className,
       )}
     >
-      <span className={cn(!selected && 'text-text-muted')}>
-        {selected ? dateFmt.format(selected) : (placeholder ?? t('pick_date'))}
+      <span className={cn('truncate whitespace-nowrap', !selected && 'text-text-muted')}>
+        {selected ? (compact ? compactFmt : dateFmt).format(selected) : (placeholder ?? t('pick_date'))}
       </span>
       <Calendar className="size-4 shrink-0 text-text-soft" aria-hidden />
     </button>

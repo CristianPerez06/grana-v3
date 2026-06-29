@@ -60,12 +60,14 @@ export function DropdownMenuContent({
         align={align}
         sideOffset={6}
         collisionPadding={12}
-        style={{ minWidth: minWidthPx }}
+        // Clamp minWidth to the viewport (minus a margin) so a large minWidthPx
+        // never forces horizontal overflow on a narrow phone.
+        style={{ minWidth: `min(${minWidthPx}px, calc(100vw - 24px))` }}
         className={cn(
           // Bound the menu to the available space (post-flip, minus collisionPadding)
           // and scroll internally — `overflow-hidden` alone clipped long menus with
-          // no way to reach the rest.
-          'grana-dropdown-menu z-50 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto rounded-[var(--radius-xl)] border border-border bg-card p-1.5 shadow-[0_20px_50px_-12px_rgba(11,26,43,0.30)] outline-none',
+          // no way to reach the rest. `max-w` caps long items to the viewport too.
+          'grana-dropdown-menu z-50 max-h-[var(--radix-dropdown-menu-content-available-height)] max-w-[calc(100vw-24px)] overflow-y-auto rounded-[var(--radius-xl)] border border-border bg-card p-1.5 shadow-[0_20px_50px_-12px_rgba(11,26,43,0.30)] outline-none',
           className,
         )}
       >

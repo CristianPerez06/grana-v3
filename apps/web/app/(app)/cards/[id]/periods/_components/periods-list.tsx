@@ -5,9 +5,20 @@ import type { PeriodVariant } from '@/lib/cards/types'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { EstimatedDateBadge } from '../../../_components/estimated-date-badge'
 
+const periodDateFmt = new Intl.DateTimeFormat('es-AR', {
+  day: '2-digit',
+  month: 'short',
+  year: '2-digit',
+})
+
+// "04 jun 26" — short and readable. Built from parts to avoid the es-AR
+// "04 de jun de 26" connectors that `format()` inserts.
 const formatDate = (iso: string) => {
-  const [y, m, d] = iso.split('-')
-  return `${d}/${m}/${y}`
+  const [y, m, d] = iso.split('-').map(Number)
+  const parts = periodDateFmt.formatToParts(new Date(y, m - 1, d))
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? ''
+  return `${get('day')} ${get('month')} ${get('year')}`
 }
 
 const variantLabelKey: Record<PeriodVariant, string> = {
@@ -56,7 +67,7 @@ export const PeriodsList = ({ periods, cardId, hasUSD = false, showCents = false
           <Link
             key={period.id}
             href={`/cards/${cardId}/periods/${period.id}`}
-            className="flex items-center gap-4 px-4 py-3 hover:bg-muted/50 transition-colors"
+            className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors"
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
@@ -68,18 +79,20 @@ export const PeriodsList = ({ periods, cardId, hasUSD = false, showCents = false
                 </span>
                 {period.is_estimated && <EstimatedDateBadge />}
               </div>
-              <div className="mt-0.5">
-                <span className="font-medium text-sm">{formatARS(totalAmount, showCents)}</span>
-                {hasUSD && totalUSD > 0 && (
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    {formatUSD(totalUSD, showCents)}
-                  </span>
-                )}
-              </div>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                {t('period.due_prefix')} {formatDate(period.due_date)}
+              </span>
             </div>
-            <span className="text-xs text-muted-foreground shrink-0">
-              {t('period.due_prefix')} {formatDate(period.due_date)}
-            </span>
+            <div className="shrink-0 text-right">
+              <span className="block text-sm font-semibold tabular-nums">
+                {formatARS(totalAmount, showCents)}
+              </span>
+              {hasUSD && totalUSD > 0 && (
+                <span className="block text-xs text-muted-foreground tabular-nums">
+                  {formatUSD(totalUSD, showCents)}
+                </span>
+              )}
+            </div>
           </Link>
         )
       })}

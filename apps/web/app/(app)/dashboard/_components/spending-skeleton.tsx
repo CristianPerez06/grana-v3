@@ -29,7 +29,7 @@ export const SpendingSkeleton = async () => {
       aria-busy="true"
       aria-label={t('spending.loading')}
     >
-      <CardHeader className="flex-row items-center justify-between gap-4">
+      <CardHeader className="flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <span className="h-5 w-36 rounded bg-muted animate-pulse" />
         <span className="h-8 w-28 rounded-lg bg-muted/70 animate-pulse" />
       </CardHeader>

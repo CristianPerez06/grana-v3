@@ -83,7 +83,7 @@ export const CuotasEnCursoPane = ({ items, totalRemaining, accent, showCents = f
 
             <CuotaProgressDots paid={q.paidCount} total={q.total} accent={accent} />
 
-            <div className="grid grid-cols-3 gap-2 border-t border-border pt-3">
+            <div className="grid grid-cols-2 gap-2 border-t border-border pt-3 sm:grid-cols-3">
               <FooterStat label={t('detail.cuotas_per_installment')} value={formatARS(q.perInstallment, showCents)} />
               <FooterStat
                 label={t('detail.cuotas_remaining')}

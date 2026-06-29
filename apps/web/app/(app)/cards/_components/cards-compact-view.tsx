@@ -124,8 +124,8 @@ const BankGroupCard = ({ group, networkLabel, showCents }: GroupProps) => {
           style={{ backgroundColor: group.brandColor ?? 'var(--account-slate)' }}
           aria-hidden
         />
-        <span className="font-bold">{group.name ?? t('compact.group.no_bank')}</span>
-        <span className="text-xs text-text-muted">
+        <span className="min-w-0 truncate font-bold">{group.name ?? t('compact.group.no_bank')}</span>
+        <span className="hidden shrink-0 text-xs text-text-muted sm:inline">
           {t('compact.group.summary', { count: group.count, inUse: group.inUseCount })}
         </span>
         <span className="flex-1" />
@@ -203,7 +203,7 @@ const CompactCardRow = ({ card, networkLabel, showCents }: RowProps) => {
   return (
     <Link
       href={`/cards/${card.id}`}
-      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3.5 transition-colors hover:bg-border-soft/40"
+      className="flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-border-soft/40"
     >
       <span
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-sm font-extrabold text-white"
@@ -213,8 +213,23 @@ const CompactCardRow = ({ card, networkLabel, showCents }: RowProps) => {
         {monogram}
       </span>
 
-      <div className="min-w-0">
-        <p className="truncate font-bold leading-tight">{card.name}</p>
+      {/* Single responsive layout: name + amount/pill on the top line, the date
+          stats on their own line below so they never get crushed on mobile. */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-3">
+          <p className="min-w-0 truncate font-bold leading-tight">{card.name}</p>
+          <div className="flex shrink-0 items-center gap-3">
+            <div className="text-right tabular-nums">
+              <p className={cn('font-extrabold', pendingARS === 0 && 'text-text-soft')}>
+                {formatARS(pendingARS, showCents)}
+              </p>
+              {hasUSD && pendingUSD !== 0 && (
+                <p className="text-xs font-bold text-text-muted">{formatUSD(pendingUSD, showCents)}</p>
+              )}
+            </div>
+            <CardStatusPill tone={tone} />
+          </div>
+        </div>
         <div className="mt-2 flex items-end gap-4">
           <DateStat label={t('compact.row.close_label')} value={formatDayMonth(period?.end_date ?? null)} />
           <DateStat label={t('compact.row.due_label')} value={formatDayMonth(period?.due_date ?? null)} />
@@ -223,18 +238,6 @@ const CompactCardRow = ({ card, networkLabel, showCents }: RowProps) => {
             value={pct !== null ? `${pct}%` : t('compact.row.no_limit')}
           />
         </div>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <div className="text-right tabular-nums">
-          <p className={cn('font-extrabold', pendingARS === 0 && 'text-text-soft')}>
-            {formatARS(pendingARS, showCents)}
-          </p>
-          {hasUSD && pendingUSD !== 0 && (
-            <p className="text-xs font-bold text-text-muted">{formatUSD(pendingUSD, showCents)}</p>
-          )}
-        </div>
-        <CardStatusPill tone={tone} />
       </div>
     </Link>
   )

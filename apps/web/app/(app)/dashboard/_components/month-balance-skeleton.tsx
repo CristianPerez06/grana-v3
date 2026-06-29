@@ -39,7 +39,7 @@ export const MonthBalanceSkeleton = async () => {
       aria-busy="true"
       aria-label={t('month.loading')}
     >
-      <CardHeader className="flex-row items-center justify-between gap-4">
+      <CardHeader className="flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <span className="h-5 w-40 rounded bg-muted animate-pulse" />
       </CardHeader>
 

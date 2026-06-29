@@ -443,13 +443,13 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories, hou
     <Drawer open={open} onClose={close} ariaLabel={tRec('create.title')}>
       <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
         {/* Header */}
-        <header className="shrink-0 border-b border-border bg-card px-7 pb-4 pt-[22px]">
+        <header className="shrink-0 border-b border-border bg-card px-5 pb-4 pt-[22px] sm:px-7">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-text-soft">
                 {tRec('create.eyebrow')}
               </p>
-              <h2 className="truncate text-[25px] font-extrabold leading-tight tracking-[-0.03em] text-text">
+              <h2 className="truncate text-[20px] font-extrabold leading-tight tracking-[-0.03em] text-text sm:text-[25px]">
                 {tRec('create.title')}
               </h2>
             </div>
@@ -464,7 +464,7 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories, hou
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-7 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-7">
           <div className="flex flex-col gap-5">
             {/* Type pills */}
             <div className="flex gap-2">
@@ -841,7 +841,7 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories, hou
         </div>
 
         {/* Footer */}
-        <footer className="shrink-0 border-t border-border bg-card px-7 py-4">
+        <footer className="shrink-0 border-t border-border bg-card px-5 py-4 sm:px-7">
           {formError && <p className="mb-3 text-sm text-destructive">{formError}</p>}
           <button
             type="submit"

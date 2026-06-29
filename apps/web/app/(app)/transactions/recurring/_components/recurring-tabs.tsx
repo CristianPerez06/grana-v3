@@ -67,7 +67,9 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Segmented tabs */}
+      {/* Segmented tabs — horizontally scrollable on narrow screens so the three
+          pills never push the page wider than the viewport. */}
+      <div className="overflow-x-auto">
       <div className="inline-flex w-fit gap-1 rounded-[11px] border border-border bg-[#F1F3F6] p-1">
         {tabs.map((t) => {
           const on = tab === t.id
@@ -76,7 +78,7 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
-              className={`inline-flex items-center gap-2 rounded-[8px] px-4 py-2 text-sm font-bold transition-colors ${
+              className={`inline-flex shrink-0 items-center gap-2 rounded-[8px] px-4 py-2 text-sm font-bold transition-colors ${
                 on ? 'bg-card text-navy shadow-[0_1px_3px_rgba(11,26,43,0.1)]' : 'text-text-muted hover:text-text'
               }`}
             >
@@ -85,6 +87,7 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
             </button>
           )
         })}
+      </div>
       </div>
 
       {/* List */}

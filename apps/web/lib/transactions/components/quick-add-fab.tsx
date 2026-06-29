@@ -1,8 +1,7 @@
 'use client'
 
-import { Plus } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { Button } from '@/components/ui/button'
+import { Fab } from '@/components/ui/fab'
 import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
 
 /**
@@ -14,17 +13,11 @@ import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
 export const QuickAddFab = () => {
   const t = useTranslations('transactions')
   const drawer = useMovementDrawer()
-  const label = t('actions.register_movement')
   return (
-    <Button
-      variant="primary"
-      size="fab"
-      aria-label={label}
-      className="fixed bottom-10 right-10 z-40 sm:hidden"
+    <Fab
+      label={t('actions.register_movement')}
       disabled={!drawer}
       onClick={drawer ? () => drawer.openCreate() : undefined}
-    >
-      <Plus className="size-7" aria-hidden />
-    </Button>
+    />
   )
 }

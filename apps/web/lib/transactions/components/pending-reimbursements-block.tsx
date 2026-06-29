@@ -98,25 +98,25 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
         type="button"
         onClick={() => setIsOpen((open) => !open)}
         aria-expanded={isOpen}
-        className="flex w-full items-center gap-3.5 px-6 pb-4 pt-5 text-left transition-colors hover:bg-page/40"
+        className="flex w-full items-center gap-3 px-4 pb-3.5 pt-4 text-left transition-colors hover:bg-page/40 sm:gap-3.5 sm:px-6 sm:pb-4 sm:pt-5"
       >
         <span
-          className="flex size-11 shrink-0 items-center justify-center rounded-[13px]"
+          className="flex size-10 shrink-0 items-center justify-center rounded-[13px] sm:size-11"
           style={{ backgroundColor: 'var(--slate-soft)', color: 'var(--slate)' }}
         >
-          <Undo2 className="size-[22px]" aria-hidden />
+          <Undo2 className="size-5 sm:size-[22px]" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-[18px] font-extrabold tracking-[-0.02em] text-text">
+          <h2 className="text-[15px] font-extrabold leading-tight tracking-[-0.02em] text-text sm:text-[18px]">
             {t('reimbursement.pending.title')}
           </h2>
-          <p className="mt-0.5 text-sm font-medium text-text-muted">
+          <p className="mt-0.5 hidden text-sm font-medium text-text-muted sm:block">
             {t('reimbursement.pending.subtitle')}
           </p>
         </div>
         {pending.length > 0 && (
           <span
-            className="shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-bold"
+            className="shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold sm:px-3.5 sm:py-1.5 sm:text-[13px]"
             style={{ backgroundColor: 'var(--slate-soft)', color: 'var(--slate)' }}
           >
             {t('reimbursement.pending.count', { count: pending.length })}
@@ -129,7 +129,7 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
       </button>
 
       {isOpen && successMessage && (
-        <div className="mx-6 mb-3 flex items-center justify-between gap-2 rounded-[12px] border border-emerald/30 bg-[var(--emerald-soft)] px-3 py-2 text-sm font-medium text-emerald-deep">
+        <div className="mx-4 mb-3 flex items-center justify-between gap-2 rounded-[12px] border border-emerald/30 bg-[var(--emerald-soft)] px-3 py-2 text-sm font-medium text-emerald-deep sm:mx-6">
           <span className="flex items-center gap-2">
             <Check className="size-4" aria-hidden />
             {successMessage}
@@ -147,7 +147,7 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
 
       {isOpen && (pending.length === 0 ? (
         <div
-          className="flex items-center gap-3.5 border-t px-6 py-6 text-[15px] font-semibold text-emerald-deep"
+          className="flex items-center gap-3.5 border-t px-4 py-5 text-[15px] font-semibold text-emerald-deep sm:px-6 sm:py-6"
           style={{ borderColor: 'var(--border-soft)' }}
         >
           <Check className="size-5 shrink-0" aria-hidden />
@@ -172,11 +172,11 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
           return (
             <li
               key={r.id}
-              className="flex flex-col gap-2 border-t px-6 py-4"
+              className="flex flex-col gap-2 border-t px-4 py-4 sm:px-6"
               style={{ borderColor: 'var(--border-soft)' }}
             >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
                   {r.categoryIcon && (
                     <span
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm"
@@ -193,13 +193,13 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
                     </span>
                   </div>
                 </div>
-                <span className="text-sm font-semibold text-pending tabular-nums">
+                <span className="shrink-0 text-sm font-semibold text-pending tabular-nums">
                   +{format(r.estimatedAmount, r.currencyCode)}
                 </span>
               </div>
 
               <div className="flex flex-wrap items-end gap-2">
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-1 basis-[calc(50%-0.25rem)] flex-col gap-1 sm:flex-none sm:basis-auto">
                   <label htmlFor={`reimb-amount-${r.id}`} className="text-[11px] text-muted-foreground">
                     {t('reimbursement.pending.real_amount')}
                   </label>
@@ -207,10 +207,10 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
                     id={`reimb-amount-${r.id}`}
                     value={amountById[r.id] ?? String(r.estimatedAmount)}
                     onChange={(v) => setAmountById((prev) => ({ ...prev, [r.id]: v }))}
-                    className="w-28 rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-28"
                   />
                 </div>
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-1 basis-[calc(50%-0.25rem)] flex-col gap-1 sm:flex-none sm:basis-auto">
                   <label htmlFor={`reimb-date-${r.id}`} className="text-[11px] text-muted-foreground">
                     {t('reimbursement.pending.real_date')}
                   </label>
@@ -219,6 +219,8 @@ export const PendingReimbursementsBlock = ({ pending, todayISO }: Props) => {
                     value={dateById[r.id] ?? r.expenseDate ?? todayISO}
                     onChange={(v) => setDateById((prev) => ({ ...prev, [r.id]: v }))}
                     label={t('reimbursement.pending.real_date')}
+                    className="rounded-md px-2 py-1"
+                    compact
                   />
                 </div>
                 <Button

@@ -20,7 +20,7 @@ const HeroCardSkeleton = () => (
     </div>
     <div className="flex flex-col gap-3">
       <div className="h-2.5 w-16 rounded bg-navy-soft animate-pulse" />
-      <div className="h-10 w-56 rounded bg-navy-soft animate-pulse" />
+      <div className="h-10 w-40 rounded bg-navy-soft animate-pulse sm:w-56" />
       <div className="h-5 w-32 rounded bg-navy-soft animate-pulse" />
     </div>
   </div>

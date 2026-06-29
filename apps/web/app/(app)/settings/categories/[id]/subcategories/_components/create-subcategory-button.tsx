@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Drawer } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
+import { Fab } from '@/components/ui/fab'
 import { CreateSubcategoryForm } from '../new/_components/create-subcategory-form'
 
 /**
@@ -23,19 +24,18 @@ export function CreateSubcategoryButton({ categoryId, disabled = false }: Props)
   const [open, setOpen] = useState(false)
   const [formInstance, setFormInstance] = useState(0)
 
+  const openCreate = () => {
+    setFormInstance((n) => n + 1)
+    setOpen(true)
+  }
+
   return (
     <>
-      <Button
-        className="w-auto"
-        disabled={disabled}
-        onClick={() => {
-          setFormInstance((n) => n + 1)
-          setOpen(true)
-        }}
-      >
+      <Button className="hidden w-auto sm:inline-flex" disabled={disabled} onClick={openCreate}>
         <Plus className="size-4" aria-hidden />
         {t('actions.add')}
       </Button>
+      <Fab label={t('actions.add')} disabled={disabled} onClick={openCreate} />
       <Drawer
         open={open}
         onClose={() => setOpen(false)}

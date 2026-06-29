@@ -51,7 +51,7 @@ export const DetailHero = ({ tone, icon, amount, currency, eyebrow, title, flow,
           </div>
         )}
 
-        <div className="text-[24px] font-extrabold leading-[1.05] tracking-[-0.03em] text-text sm:text-[29px]">
+        <div className="break-words text-[24px] font-extrabold leading-[1.05] tracking-[-0.03em] text-text sm:text-[29px]">
           {title}
         </div>
 

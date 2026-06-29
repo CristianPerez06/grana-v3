@@ -25,9 +25,9 @@ export const CardsMonthHero = ({ summary, showCents = false }: Props) => {
 
   return (
     <Card className="border-transparent bg-surface-dark text-white">
-      <CardContent className="grid grid-cols-1 gap-0 p-0 md:grid-cols-[1fr_1px_minmax(0,340px)]">
+      <CardContent className="grid grid-cols-1 gap-0 p-0 lg:grid-cols-[1fr_1px_minmax(0,340px)]">
         {/* Left: A pagar (ahora) + En curso */}
-        <div className="flex flex-col gap-5 p-7">
+        <div className="flex flex-col gap-5 p-5 sm:p-7">
           {/* A pagar (ahora) — deuda firme */}
           <div className="flex flex-col">
             <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/55">
@@ -71,10 +71,10 @@ export const CardsMonthHero = ({ summary, showCents = false }: Props) => {
         </div>
 
         {/* Divider */}
-        <div className="hidden bg-white/10 md:block" aria-hidden />
+        <div className="hidden bg-white/10 lg:block" aria-hidden />
 
         {/* Right: próximos cierres con monto */}
-        <div className="flex flex-col gap-3 border-t border-white/10 p-7 md:border-t-0">
+        <div className="flex flex-col gap-3 border-t border-white/10 p-5 sm:p-7 lg:border-t-0">
           <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/55">
             {t('month_hero.next_closes_label')}
           </p>

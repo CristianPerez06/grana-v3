@@ -28,7 +28,12 @@ export function Popover({
           align={align}
           sideOffset={6}
           collisionPadding={12}
-          style={{ minWidth: minWidthPx, maxWidth: maxWidthPx }}
+          // Clamp both bounds to the viewport (minus a margin) so the panel never
+          // runs off-screen on a narrow phone, even when minWidthPx > viewport.
+          style={{
+            minWidth: `min(${minWidthPx}px, calc(100vw - 24px))`,
+            maxWidth: `min(${maxWidthPx}px, calc(100vw - 24px))`,
+          }}
           className={cn(
             // Cap the height to the space Radix measured between the (post-flip)
             // anchored edge and the viewport — minus collisionPadding — so the

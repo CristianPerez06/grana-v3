@@ -14,13 +14,14 @@ type Props = {
 
 /**
  * Compound detail header (avatar + name + status pill + bank). A permitted
- * exception to `PageHeader`, like CardHero / AccountDetailHeader. On narrow
- * widths the title/pill stack and the actions row moves below the identity so
- * a long card name never squeezes the pill or the buttons.
+ * exception to `PageHeader`, like CardHero / AccountDetailHeader. The actions
+ * (edit/archive icons) sit pinned to the top-right on every width; the identity
+ * column shrinks (`min-w-0`) so a long card name truncates instead of pushing
+ * them out of place.
  */
 export const CardDetailHeader = ({ name, bank, accent, tone, actions }: Props) => (
-  <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
-    <div className="flex items-start gap-4 md:flex-1 md:items-center">
+  <div className="flex items-start gap-3 md:gap-4">
+    <div className="flex min-w-0 flex-1 items-start gap-4 md:items-center">
       <span
         className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-[15px] text-2xl font-extrabold text-white"
         style={{ backgroundColor: accent }}
@@ -33,13 +34,11 @@ export const CardDetailHeader = ({ name, bank, accent, tone, actions }: Props) =
           <h1 className="break-words text-2xl font-extrabold tracking-tight md:truncate">{name}</h1>
           <CardStatusPill tone={tone} />
         </div>
-        {bank && <p className="mt-1 break-words text-sm text-text-muted md:mt-1 md:truncate">{bank}</p>}
+        {bank && <p className="mt-1 break-words text-sm text-text-muted md:truncate">{bank}</p>}
       </div>
     </div>
     {actions && (
-      <div className="flex items-center gap-2 pl-[70px] md:shrink-0 md:pl-0">
-        {actions}
-      </div>
+      <div className="flex shrink-0 items-center gap-2">{actions}</div>
     )}
   </div>
 )

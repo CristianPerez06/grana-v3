@@ -157,11 +157,11 @@ export function CurrentAccountView({ data }: { data: CurrentAccountData }) {
     const youOwe = bal < 0
     const arrowColor = settled ? '#11B981' : youOwe ? '#C2705C' : '#11B981'
     return (
-      <Card className="flex flex-col p-6">
+      <Card className="flex flex-col p-5 sm:p-6">
         <span className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-text-soft">
           {currency === 'ARS' ? t('current_balance') : t('also_in', { currency: 'ARS' })}
         </span>
-        <span className="mt-3 text-[40px] font-black leading-none tracking-tight tabular-nums text-text">
+        <span className="mt-3 text-[30px] font-black leading-none tracking-tight tabular-nums text-text sm:text-[40px]">
           {settled ? t('settled') : fmtMoney(Math.abs(bal), 'ARS')}
         </span>
         {settled && pending ? (
@@ -175,12 +175,12 @@ export function CurrentAccountView({ data }: { data: CurrentAccountData }) {
           </span>
         )}
         {!settled && (
-          <div className="mt-5 flex items-center gap-3">
+          <div className="mt-7 flex items-center gap-3 sm:mt-5">
             <span className="grid size-9 shrink-0 place-items-center rounded-lg text-sm font-black text-white" style={{ background: '#3A6B8A' }}>
               {initial(youName)}
             </span>
             <span className="relative h-[3px] flex-1 rounded-full" style={{ background: arrowColor }}>
-              <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[12px] font-extrabold" style={{ color: arrowColor }}>
+              <span className="absolute -top-5 left-1/2 max-w-[80vw] -translate-x-1/2 text-center text-[12px] font-extrabold sm:max-w-none sm:whitespace-nowrap" style={{ color: arrowColor }}>
                 {youOwe
                   ? t('owes_label', { from: youName, to: partner, amount: fmtMoney(Math.abs(bal), 'ARS') })
                   : t('owes_label', { from: partner, to: youName, amount: fmtMoney(Math.abs(bal), 'ARS') })}
@@ -384,7 +384,7 @@ export function CurrentAccountView({ data }: { data: CurrentAccountData }) {
 
           {/* lo que se viene · cómo queda el saldo proyectado (mockup: 1 fila/mes) */}
           {projection.length > 0 && (
-            <div className="border-b border-border-soft bg-[#FCFBF8] px-6 py-4">
+            <div className="border-b border-border-soft bg-[#FCFBF8] px-4 py-4 sm:px-6">
               <p className="mb-2.5 text-[11px] font-extrabold uppercase tracking-[0.07em] text-[#B97A1C]">
                 {t('upcoming')}
               </p>
@@ -398,7 +398,7 @@ export function CurrentAccountView({ data }: { data: CurrentAccountData }) {
                 return (
                   <div
                     key={m.month}
-                    className={`flex items-center gap-3 py-2 ${i > 0 ? 'border-t border-dashed border-border' : ''}`}
+                    className={`flex flex-wrap items-center gap-x-3 gap-y-1 py-2 ${i > 0 ? 'border-t border-dashed border-border' : ''}`}
                   >
                     <span className="w-[88px] shrink-0 text-[13.5px] font-extrabold capitalize text-text">
                       {monthLabel(m.month)}
@@ -414,7 +414,7 @@ export function CurrentAccountView({ data }: { data: CurrentAccountData }) {
                     >
                       {owe ? t('in_favor_of', { name: partner }) : t('owed_to_you', { name: partner })}
                     </span>
-                    <span className="ml-auto truncate pl-2 text-right text-[11.5px] font-semibold tabular-nums text-text-soft">
+                    <span className="ml-auto min-w-0 truncate pl-2 text-right text-[11.5px] font-semibold tabular-nums text-text-soft">
                       {t('impacts_detail', {
                         amount: `${m.deltaForA >= 0 ? '+' : '−'}${fmtMoney(Math.abs(m.deltaForA), currency)}`,
                         detail,

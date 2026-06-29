@@ -52,7 +52,7 @@ export const EnCursoCard = ({
       className="w-full p-5 text-left outline-none transition-shadow sm:p-7"
       style={selected || isHero ? { boxShadow: `inset 0 0 0 2px ${accent}` } : undefined}
     >
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_220px] md:items-center md:gap-8">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-center lg:gap-8">
         <div className="flex min-w-0 flex-col gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <span

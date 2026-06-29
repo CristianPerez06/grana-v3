@@ -80,13 +80,13 @@ export const CreateSubcategoryForm = ({
   if (isDrawer) {
     return (
       <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" noValidate>
-        <header className="shrink-0 border-b border-border bg-card px-7 pb-5 pt-[22px]">
+        <header className="shrink-0 border-b border-border bg-card px-5 pb-5 pt-[22px] sm:px-7">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-emerald-deep">
                 {t('subcategories.title')}
               </p>
-              <h2 className="truncate text-[25px] font-extrabold leading-tight tracking-[-0.03em] text-text">
+              <h2 className="truncate text-[20px] font-extrabold leading-tight tracking-[-0.03em] text-text sm:text-[25px]">
                 {t('subcategories.new.title')}
               </h2>
             </div>
@@ -101,14 +101,14 @@ export const CreateSubcategoryForm = ({
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-7 pb-7 pt-[22px]">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-7 pt-[22px] sm:px-7">
           <div className="flex flex-col gap-4">
             {formError && <Alert variant="error">{formError}</Alert>}
             {fields}
           </div>
         </div>
 
-        <footer className="shrink-0 border-t border-border bg-card px-7 py-4">
+        <footer className="shrink-0 border-t border-border bg-card px-5 py-4 sm:px-7">
           <div className="flex items-center gap-3">
             <Button
               type="button"

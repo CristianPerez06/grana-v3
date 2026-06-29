@@ -3,6 +3,7 @@ import { Settings2 } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { PageHeader } from '@/components/ui/page-header'
 import { RegisterMovementButton } from '@/lib/transactions/components/register-movement-button'
+import { QuickAddFab } from '@/lib/transactions/components/quick-add-fab'
 import { getHousehold } from '@/lib/shared/queries'
 import { createClient } from '@/lib/supabase/server'
 
@@ -38,6 +39,7 @@ const SharedHomeLayout = async ({ children }: { children: React.ReactNode }) => 
     <div className={`flex flex-col gap-6 ${isActive ? 'max-w-[960px]' : 'max-w-lg'}`}>
       <PageHeader title={title} actions={actions} />
       {children}
+      {isActive && <QuickAddFab />}
     </div>
   )
 }

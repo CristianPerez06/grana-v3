@@ -401,7 +401,7 @@ function CategorySpendingOverviewSkeleton() {
     <section
       aria-busy
       aria-label="Cargando desglose por categoría"
-      className="flex flex-col gap-5 rounded-2xl border border-border bg-card px-7 py-6"
+      className="flex flex-col gap-5 rounded-2xl border border-border bg-card px-5 py-6 sm:px-7"
     >
       {/* Header row: month nav + currency pills */}
       <div className="flex items-start justify-between gap-3">

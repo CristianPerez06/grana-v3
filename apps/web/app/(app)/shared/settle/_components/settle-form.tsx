@@ -145,12 +145,12 @@ export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
           {t('settle.you_owe_total', { amount: fmt(owedNow), name: partner })}
         </p>
         <div className="mt-1 flex items-center justify-center gap-1">
-          <span className="text-[28px] font-black text-text-soft">$</span>
+          <span className="text-[22px] font-black text-text-soft sm:text-[28px]">$</span>
           <MoneyAmountInput
             value={amount}
             onChange={setAmount}
             aria-label={t('settle.amount_label')}
-            className="w-full max-w-[240px] bg-transparent text-center text-[42px] font-black leading-none tracking-tight tabular-nums text-text outline-none"
+            className="w-full max-w-[240px] bg-transparent text-center text-[32px] font-black leading-none tracking-tight tabular-nums text-text outline-none sm:text-[42px]"
           />
         </div>
       </div>

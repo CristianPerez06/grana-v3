@@ -49,7 +49,7 @@ export const SpentThisMonthSection = () => {
 
   return (
     <Card className="flex flex-col">
-      <CardHeader className="flex-row items-center justify-between gap-3">
+      <CardHeader className="flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <h2 className="text-lg font-semibold tracking-tight text-text">{t('title')}</h2>
         <span className="text-[18px] font-extrabold tracking-tight tabular-nums text-text">
           <MaskedAmount amount={accrued} currency="ARS" />

@@ -207,7 +207,7 @@ export default async function SharedPage({
 
   // ── Hero: Gasto del hogar · NETO (A3). El navegador gobierna SOLO esto (A2). ──
   const heroSection = (
-    <article className="bg-hero-navy text-white relative overflow-hidden rounded-3xl border border-navy-border p-6 shadow-[0_24px_60px_-42px_rgba(11,26,43,0.48)]">
+    <article className="bg-hero-navy text-white relative overflow-hidden rounded-3xl border border-navy-border p-5 shadow-[0_24px_60px_-42px_rgba(11,26,43,0.48)] sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <p className="text-[11px] font-extrabold uppercase tracking-[0.07em] text-navy-muted">
           {t('dashboard.household_spend_net', { month: monthLabel(month) })}
@@ -218,10 +218,10 @@ export default async function SharedPage({
           <span className="text-navy-muted">{t('dashboard.net_in_usd')}</span>
         </span>
       </div>
-      <div className="mt-3 flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-3 sm:gap-x-8">
         <div>
           <span className="text-[11px] font-semibold text-navy-muted">{t('dashboard.net_cost')}</span>
-          <span className="mt-1 block text-[38px] font-black leading-none tabular-nums text-white">
+          <span className="mt-1 block text-[28px] font-black leading-none tabular-nums text-white sm:text-[38px]">
             {fmtMoney(netOf('ARS'), 'ARS')}
           </span>
         </div>
@@ -276,7 +276,7 @@ export default async function SharedPage({
         </span>
         <div className="flex flex-col items-center gap-1.5">
           <span
-            className={`text-[26px] font-black leading-none tabular-nums ${
+            className={`text-[22px] font-black leading-none tabular-nums sm:text-[26px] ${
               arsSettled || arsForYou > 0 ? 'text-income' : 'text-expense'
             }`}
           >
