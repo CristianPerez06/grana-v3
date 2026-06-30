@@ -5,6 +5,7 @@ import * as RadixPopover from '@radix-ui/react-popover'
 import { Building2 } from 'lucide-react'
 import { FieldIcon, FieldLabel } from '@/components/ui/form-primitives'
 import { DatePicker } from '@/components/ui/date-picker'
+import { useDrawerContainer } from '@/components/ui/drawer'
 import type { Institution } from '@/lib/accounts/types'
 
 /**
@@ -82,6 +83,9 @@ export const BankSelectorField = ({
   noResultsLabel: string
 }) => {
   const [focused, setFocused] = useState(false)
+  // Inside the card drawer, portal the list into the drawer panel (not body) so
+  // the Dialog's scroll-lock lets the wheel scroll it — see `useDrawerContainer`.
+  const drawerContainer = useDrawerContainer()
   const filtered = institutions.filter((i) =>
     i.name.toLowerCase().includes(search.toLowerCase()),
   )
@@ -112,7 +116,7 @@ export const BankSelectorField = ({
           </div>
         </div>
       </RadixPopover.Anchor>
-      <RadixPopover.Portal>
+      <RadixPopover.Portal container={drawerContainer ?? undefined}>
         <RadixPopover.Content
           align="start"
           sideOffset={6}
