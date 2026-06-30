@@ -1,0 +1,207 @@
+/* ════════════════════════════════════════════════════════════════
+   Pagar resumen · shared.css
+   Tokens y primitivos visuales para el rediseño de la pantalla de
+   PAGO DE RESUMEN de tarjeta de crédito (/cards/[id]/periods/[id]/pay).
+   Hereda el lenguaje del módulo Tarjetas (docs/design/cards): Plus
+   Jakarta Sans, fondo #F6F7F9, navy #0B1A2B, terracota = "a pagar",
+   emerald = positivo, bimoneda ARS/USD (ARS protagonista). Los nombres
+   de clase mapean a los PRIMITIVOS de la librería (ver README):
+   Card, Alert, Select, Button, DatePicker, MoneyAmountInput,
+   MoneyChipPicker (propuesto), PageHeader.
+   Lo cargan web/pay.html y mobile/pay.html.
+   ════════════════════════════════════════════════════════════════ */
+:root {
+  /* tokens canónicos de la librería (def3.css / compartido shared.css) */
+  --bg: #EEF1F4; --card: #FFFFFF; --field: #FAFBFC;
+  --navy: #0B1A2B; --ink: #142231;
+  --muted: #6B7683; --soft: #8A94A3; --faint: #AEB6C0;
+  --border: #E8ECF1; --line: #EEF1F5;
+  --emerald: #11B981; --emerald-deep: #0E9E6E; --emerald-soft: #E7F8F0;
+  --terracota: #C2705C; --terracota-deep: #9A4B38; --terracota-soft: #F7ECE7;
+  --slate: #3A6B8A; --slate-soft: #EAF1F6;
+  --amber: #E79A2B; --amber-soft: #FBF0DD; --amber-ink: #6B5326;
+  --violet: #7C5CD6; --violet-soft: #EEEAFA;
+  --brand: #11B981;
+  /* esta tarjeta (acento por marca, inyectable) */
+  --cc-accent: #3A6B8A; /* Amex slate en el ejemplo */
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: var(--navy); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+.tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+button { font-family: inherit; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+
+/* ───────── PageHeader (patrón title / description / backLink) ───────── */
+.ph { margin-bottom: 24px; }
+.ph .back { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13.5px; font-weight: 700; padding: 6px 10px 6px 6px; border-radius: 9px; margin: 0 0 14px -6px; transition: background .14s, color .14s; }
+.ph .back:hover { background: var(--line); color: var(--navy); }
+.ph .back svg { width: 15px; height: 15px; stroke-width: 2.4; }
+.ph .ph-row { display: flex; align-items: center; gap: 14px; }
+.ph .ph-mark { width: 46px; height: 46px; border-radius: 13px; flex: none; background: var(--cc-accent); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 19px; letter-spacing: -0.02em; }
+.ph h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+.ph .ph-sub { margin-top: 8px; color: var(--muted); font-size: 14px; font-weight: 600; }
+.ph .ph-sub b { color: var(--ink); font-weight: 700; }
+
+/* ───────── Card (superficie) ───────── */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; }
+.card-pad { padding: 22px 24px 24px; }
+.card + .card { margin-top: 16px; }
+
+/* ───────── eyebrow de sección + badge ───────── */
+.sec-head { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; }
+.eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: 11.5px; font-weight: 800; color: var(--soft); }
+.badge { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 800; letter-spacing: .04em; padding: 4px 10px; border-radius: 999px; text-transform: uppercase; }
+.badge.est { background: var(--slate-soft); color: var(--slate); }
+.badge.usd { background: var(--emerald-soft); color: var(--emerald-deep); letter-spacing: .02em; }
+.badge.ars { background: var(--slate-soft); color: var(--slate); letter-spacing: .02em; }
+
+/* ───────── Field genérico (label + helper) ───────── */
+.field { display: flex; flex-direction: column; }
+.field + .field { margin-top: 18px; }
+.field > .lbl { font-size: 13.5px; font-weight: 800; color: var(--ink); letter-spacing: -0.01em; margin-bottom: 7px; }
+.field .helper { font-size: 12.5px; font-weight: 600; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+.field .helper b { color: var(--ink); font-weight: 700; }
+.field .helper.after { margin: 8px 0 0; }
+
+/* ───────── MoneyAmountInput (NUNCA <input type=number> para plata) ───────── */
+.money { display: flex; align-items: center; gap: 10px; border: 1.5px solid var(--border); border-radius: 13px; padding: 13px 16px; background: var(--card); transition: border-color .14s, box-shadow .14s; }
+.money:focus-within, .money.focus { border-color: var(--emerald); box-shadow: 0 0 0 3px rgba(17,185,129,.13); }
+.money .cur { font-size: 18px; font-weight: 700; color: var(--faint); flex: none; }
+.money input, .money .val { border: none; outline: none; background: none; font-family: inherit; width: 100%; font-size: 26px; font-weight: 800; letter-spacing: -0.03em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.money input::placeholder { color: var(--faint); }
+.money.usd { border-style: dashed; }
+.money.usd .val, .money.usd input { font-size: 20px; }
+.money.err { border-color: var(--terracota); box-shadow: 0 0 0 3px rgba(181,106,90,.10); }
+/* variante compacta (sellos "ya aprendido") */
+.money.sm { padding: 10px 14px; }
+.money.sm .val, .money.sm input { font-size: 20px; }
+.money.sm .cur { font-size: 15px; }
+
+/* ───────── MoneyChipPicker (PRIMITIVO NUEVO propuesto) ─────────
+   Fila de chips de montos sugeridos que pre-rellenan el MoneyAmountInput
+   acoplado abajo. Parecido a Segmented pero con input editable. */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 11px; }
+.chip { border: 1.5px solid var(--border); background: var(--card); border-radius: 11px; padding: 9px 15px; font-size: 14px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; transition: border-color .14s, background .14s, color .14s; font-variant-numeric: tabular-nums; }
+.chip:hover { border-color: var(--soft); }
+.chip.on { border-color: var(--emerald); background: var(--emerald-soft); color: var(--emerald-deep); }
+.chip.zero { color: var(--muted); }
+.chip.zero.on { border-color: var(--emerald); background: var(--emerald-soft); color: var(--emerald-deep); }
+.chip .sx { font-size: 11px; font-weight: 700; opacity: .55; margin-right: 1px; }
+
+/* ───────── Select (primitivo de librería, NO <select> nativo) ───────── */
+.sel { position: relative; }
+.sel-trigger { display: flex; align-items: center; gap: 12px; width: 100%; border: 1.5px solid var(--border); border-radius: 13px; padding: 12px 15px; background: var(--card); text-align: left; transition: border-color .14s; }
+.sel-trigger:hover { border-color: var(--soft); }
+.sel.open .sel-trigger { border-color: var(--emerald); }
+.sel-trigger .mk { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: #fff; flex: none; }
+.sel-trigger .mk svg { width: 17px; height: 17px; stroke-width: 2; }
+.sel-trigger .nm { font-size: 14.5px; font-weight: 700; color: var(--ink); }
+.sel-trigger .nm .s { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); margin-top: 1px; }
+.sel-trigger .bal { margin-left: auto; text-align: right; flex: none; }
+.sel-trigger .bal .b { font-size: 14.5px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); letter-spacing: -0.02em; }
+.sel-trigger .bal .bl { display: block; font-size: 10px; font-weight: 700; color: var(--faint); text-transform: uppercase; letter-spacing: .05em; }
+.sel-trigger .chev { color: var(--muted); flex: none; transition: transform .2s; }
+.sel-trigger .chev svg { width: 16px; height: 16px; stroke-width: 2.4; }
+.sel.open .sel-trigger .chev { transform: rotate(180deg); }
+.sel-menu { position: absolute; left: 0; right: 0; top: calc(100% + 6px); background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 20px 48px -16px rgba(11,26,43,.42); padding: 6px; z-index: 20; display: none; }
+.sel.open .sel-menu { display: block; }
+.sel-opt { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; }
+.sel-opt:hover { background: var(--line); }
+.sel-opt.sel-on { background: var(--emerald-soft); }
+.sel-opt .mk { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; color: #fff; flex: none; }
+.sel-opt .mk svg { width: 16px; height: 16px; stroke-width: 2; }
+.sel-opt .nm { font-size: 14px; font-weight: 700; color: var(--ink); }
+.sel-opt .nm .s { display: block; font-size: 11px; font-weight: 600; color: var(--muted); }
+.sel-opt .bal { margin-left: auto; font-size: 13.5px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
+.sel-opt .ck { width: 18px; height: 18px; color: var(--emerald-deep); flex: none; opacity: 0; stroke-width: 2.6; }
+.sel-opt.sel-on .ck { opacity: 1; }
+
+/* ───────── DatePicker ───────── */
+.dgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.datefield { display: flex; align-items: center; gap: 10px; border: 1.5px solid var(--border); border-radius: 13px; padding: 13px 15px; background: var(--card); transition: border-color .14s; }
+.datefield:hover { border-color: var(--soft); }
+.datefield .dval { font-size: 15px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.datefield .cal { margin-left: auto; color: var(--muted); flex: none; }
+.datefield .cal svg { width: 17px; height: 17px; stroke-width: 2; }
+.datefield.err { border-color: var(--terracota); box-shadow: 0 0 0 3px rgba(181,106,90,.10); }
+
+/* ───────── Alert (warning / informativo-muted / info) ───────── */
+.alert { display: flex; gap: 12px; padding: 14px 16px; border-radius: 14px; }
+.alert .a-ic { flex: none; margin-top: 1px; }
+.alert .a-ic svg { width: 19px; height: 19px; stroke-width: 2.3; }
+.alert .a-body { font-size: 13px; font-weight: 600; line-height: 1.5; }
+.alert .a-body b { font-weight: 800; }
+.alert.warn { background: var(--amber-soft); }
+.alert.warn .a-ic { color: #B97A1C; }
+.alert.warn .a-body { color: var(--amber-ink); }
+.alert.warn .a-body b { color: #5A4012; }
+.alert.muted { background: var(--line); }
+.alert.muted .a-ic { color: var(--soft); }
+.alert.muted .a-body { color: var(--muted); }
+.alert.muted .a-body b { color: var(--ink); }
+.alert.info { background: var(--slate-soft); }
+.alert.info .a-ic { color: var(--slate); }
+.alert.info .a-body { color: #3C5A6E; }
+.alert.info .a-body b { color: var(--slate); }
+
+/* ───────── desglose USD (pendiente ARS + USD×fx = total) ───────── */
+.usdbox { border: 1px solid var(--border); background: var(--field); border-radius: 14px; padding: 4px 16px; margin-top: 12px; }
+.usd-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; }
+.usd-line + .usd-line { border-top: 1px solid var(--line); }
+.usd-line .k { font-size: 13px; font-weight: 600; color: var(--muted); display: inline-flex; align-items: center; gap: 8px; }
+.usd-line .k .op { color: var(--faint); font-weight: 800; }
+.usd-line .v { font-size: 14.5px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--ink); }
+.usd-line .v .su { font-size: 11px; font-weight: 700; color: var(--emerald-deep); margin-right: 4px; }
+.usd-line.tot { border-top: 1.5px solid var(--border); }
+.usd-line.tot .k { color: var(--ink); font-weight: 800; }
+.usd-line.tot .v { font-size: 17px; }
+
+/* ───────── Recibo / desglose del total a debitar ───────── */
+.recibo { border-radius: 16px; border: 1px solid var(--border); background: var(--field); overflow: hidden; }
+.recibo-row { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 13px 18px; }
+.recibo-row + .recibo-row { border-top: 1px dashed var(--border); }
+.recibo-row .rk { font-size: 14px; font-weight: 600; color: var(--muted); }
+.recibo-row .rk b { color: var(--ink); font-weight: 700; }
+.recibo-row .rk .sub { display: block; font-size: 12px; font-weight: 600; color: var(--faint); margin-top: 2px; }
+.recibo-row .rv { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--ink); }
+.recibo-row.total { background: var(--navy); border-top: none; padding: 18px; }
+.recibo-row.total .rk { color: rgba(255,255,255,.7); font-weight: 700; }
+.recibo-row.total .rk b { color: #fff; }
+.recibo-row.total .rv { color: #fff; font-size: 26px; letter-spacing: -0.035em; }
+.recibo-row.total .rv .cur { color: rgba(255,255,255,.45); font-weight: 700; }
+
+/* ───────── Hero "Monto a pagar" (V2) ───────── */
+.hero-amt { border-radius: 18px; padding: 22px 24px 24px; background: linear-gradient(180deg,#FBF1ED 0%,#FFFFFF 70%); border: 1px solid #EEDAD2; }
+.hero-amt .he-eyebrow { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; color: var(--terracota-deep); margin-bottom: 10px; }
+.hero-amt .he-money { display: flex; align-items: center; gap: 10px; }
+.hero-amt .he-money .cur { font-size: 26px; font-weight: 700; color: #C49384; }
+.hero-amt .he-money input, .hero-amt .he-money .val { border: none; outline: none; background: none; font-family: inherit; font-size: 44px; font-weight: 800; letter-spacing: -0.045em; color: #5E2B1F; font-variant-numeric: tabular-nums; width: 100%; }
+.hero-amt .he-help { font-size: 13px; font-weight: 600; color: #9A6457; margin-top: 10px; }
+.hero-amt .he-help b { color: #6E3325; font-weight: 800; }
+
+/* ───────── Button (primitivo) ───────── */
+.btn-pri { display: inline-flex; align-items: center; justify-content: center; gap: 9px; width: 100%; background: var(--emerald); color: #fff; border: none; font-size: 15.5px; font-weight: 700; padding: 15px; border-radius: 14px; letter-spacing: -0.01em; box-shadow: 0 10px 22px -7px rgba(17,185,129,.5); transition: opacity .15s, transform .12s; }
+.btn-pri:hover { opacity: .94; }
+.btn-pri:active { transform: translateY(1px); }
+.btn-pri svg { width: 18px; height: 18px; stroke-width: 2.3; }
+.btn-pri.loading { background: var(--emerald-deep); opacity: .85; cursor: default; }
+.btn-pri .spin { width: 17px; height: 17px; border: 2.4px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.btn-text { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13.5px; font-weight: 700; padding: 12px; }
+.btn-text:hover { color: var(--navy); }
+
+/* mensaje de error a nivel form */
+.form-err { display: flex; align-items: center; gap: 10px; background: var(--terracota-soft); border: 1px solid #EBD2CB; border-radius: 13px; padding: 12px 15px; font-size: 13px; font-weight: 700; color: var(--terracota-deep); }
+.form-err svg { width: 17px; height: 17px; stroke-width: 2.4; flex: none; }
+/* error inline por campo */
+.field-err { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--terracota-deep); margin-top: 7px; }
+.field-err svg { width: 14px; height: 14px; stroke-width: 2.6; flex: none; }
+
+/* ───────── skeleton (loading) ───────── */
+.sk { background: linear-gradient(90deg,#ECEFF2 25%,#F4F6F8 37%,#ECEFF2 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; border-radius: 8px; }
+@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+
+/* relación sellos↔monto: resumen pedagógico inline */
+.note-rel { display: flex; gap: 9px; align-items: flex-start; font-size: 12.5px; font-weight: 600; color: var(--muted); line-height: 1.5; padding: 2px; }
+.note-rel svg { width: 15px; height: 15px; stroke-width: 2.2; color: var(--slate); flex: none; margin-top: 2px; }
+.note-rel b { color: var(--ink); font-weight: 700; }

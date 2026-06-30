@@ -7,7 +7,7 @@ import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { getShowCents } from '@/lib/preferences'
 import { getTodayAR, formatDateISO } from '@/lib/date'
 import { translateCategoryLabel, translateSubcategoryLabel } from '@/lib/categories/display'
-import { EditDatesSheet } from './_components/edit-dates-sheet'
+import { EditDatesSheet } from '../_components/edit-dates-sheet'
 
 const formatDate = (iso: string) => {
   const [y, m, d] = iso.split('-')

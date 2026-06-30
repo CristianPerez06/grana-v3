@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Grana · Pagar resumen — Bloques reutilizables</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../shared.css" />
+<style>
+  body { background: #E4E8EE; }
+  .doc-head { padding: 32px 40px 4px; max-width: 1240px; margin: 0 auto; }
+  .doc-head h1 { font-size: 23px; font-weight: 800; letter-spacing: -0.025em; }
+  .doc-head p { margin-top: 8px; font-size: 13.5px; font-weight: 600; color: var(--muted); line-height: 1.55; max-width: 860px; }
+  .gallery { max-width: 1240px; margin: 0 auto; padding: 22px 40px 64px; display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+  .block { background: var(--bg); border: 1px solid var(--border); border-radius: 18px; padding: 22px 22px 24px; }
+  .block.wide { grid-column: 1 / -1; }
+  .bhead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .bhead .bn { font-size: 14.5px; font-weight: 800; letter-spacing: -0.015em; }
+  .bhead .bp { font-size: 11px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; color: var(--slate); background: var(--slate-soft); padding: 4px 9px; border-radius: 999px; }
+  .bhead .bd { font-size: 12.5px; font-weight: 600; color: var(--muted); width: 100%; }
+  .stage { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+</style>
+</head>
+<body class="doc">
+  <div class="doc-head">
+    <h1>Pagar resumen · bloques reutilizables</h1>
+    <p>Cada bloque mapea a un primitivo de la librería (etiqueta morada). Todos comparten <code>shared.css</code>. Son los ladrillos con los que se arman <code>web/pay.html</code> y <code>mobile/pay.html</code>. El único primitivo nuevo es <b>MoneyChipPicker</b> (chips de montos sugeridos + input acoplado).</p>
+  </div>
+
+  <div class="gallery">
+
+    <!-- 1 · PageHeader -->
+    <div class="block">
+      <div class="bhead"><span class="bn">Header de pantalla</span><span class="bp">PageHeader</span><span class="bd">title · description · backLink. Marca de la tarjeta (--cc-accent) a la izquierda.</span></div>
+      <div class="stage">
+        <div class="ph" style="margin:0">
+          <a class="back" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg> Resumen</a>
+          <div class="ph-row"><span class="ph-mark">A</span><div><h1>Pagar resumen</h1></div></div>
+          <div class="ph-sub">American Express · resumen de <b>junio</b> · cerró el <b>20/06</b></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 · Sellos chip-picker -->
+    <div class="block">
+      <div class="bhead"><span class="bn">Impuesto de sellos · chips</span><span class="bp">MoneyChipPicker (nuevo)</span><span class="bd">Montos sugeridos (calculados del resumen) + "No me cobraron sellos" ($0) que pre-rellenan el MoneyAmountInput editable de abajo.</span></div>
+      <div class="stage">
+        <div class="chips"><button class="chip"><span class="sx">$</span>604</button><button class="chip on"><span class="sx">$</span>503,33</button><button class="chip"><span class="sx">$</span>50,33</button><button class="chip zero">No me cobraron sellos</button></div>
+        <div class="money sm"><span class="cur">$</span><span class="val tnum">503,33</span></div>
+      </div>
+    </div>
+
+    <!-- 3 · MoneyAmountInput -->
+    <div class="block">
+      <div class="bhead"><span class="bn">Monto a pagar</span><span class="bp">MoneyAmountInput</span><span class="bd">NUNCA &lt;input type=number&gt;. Formato es-AR (miles ".", decimales ","). Estado focus + error.</span></div>
+      <div class="stage" style="display:flex;flex-direction:column;gap:12px">
+        <div class="money focus"><span class="cur">$</span><span class="val tnum">50.836,67</span></div>
+        <div class="money err"><span class="cur">$</span><span class="val tnum">0</span></div>
+        <div class="field-err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16v.4"/></svg> Ingresá un monto mayor a $0.</div>
+      </div>
+    </div>
+
+    <!-- 4 · Select cuenta -->
+    <div class="block">
+      <div class="bhead"><span class="bn">Cuenta de débito</span><span class="bp">Select</span><span class="bd">Primitivo de librería, NO &lt;select&gt; nativo. Nombre + saldo ARS por opción.</span></div>
+      <div class="stage">
+        <div class="sel" data-sel>
+          <button class="sel-trigger" data-sel-trigger>
+            <span class="mk" style="background:var(--amber)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M2 10h20"/></svg></span>
+            <span class="nm">CA Galicia<span class="s">Caja de ahorro en pesos</span></span>
+            <span class="bal"><span class="b tnum">$1.510</span><span class="bl">disponible</span></span>
+            <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+          </button>
+          <div class="sel-menu">
+            <div class="sel-opt sel-on"><span class="mk" style="background:var(--amber)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M2 10h20"/></svg></span><span class="nm">CA Galicia<span class="s">Caja de ahorro</span></span><span class="bal tnum">$1.510</span><svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+            <div class="sel-opt"><span class="mk" style="background:var(--emerald)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M2 10h20"/></svg></span><span class="nm">Mercado Pago<span class="s">Billetera</span></span><span class="bal tnum">$148.300</span><svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5 · Desglose USD -->
+    <div class="block">
+      <div class="bhead"><span class="bn">Desglose USD</span><span class="bp">MoneyAmountInput + box</span><span class="bd">Cotización del día (fx) → "pendiente ARS + (USD × fx) = total". ARS dominante, USD subordinado y etiquetado.</span></div>
+      <div class="stage">
+        <div class="money usd focus" style="margin-bottom:12px"><span class="cur">$</span><span class="val tnum">1.180,00</span></div>
+        <div class="usdbox" style="margin-top:0">
+          <div class="usd-line"><span class="k">Pendiente en pesos</span><span class="v tnum">$30.000,00</span></div>
+          <div class="usd-line"><span class="k"><span class="op">+</span>u$s 120,00 × $1.180</span><span class="v tnum"><span class="su">USD</span>$141.600,00</span></div>
+          <div class="usd-line tot"><span class="k">Total del resumen (ARS)</span><span class="v tnum">$171.600,00</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6 · Aviso saldo negativo -->
+    <div class="block">
+      <div class="bhead"><span class="bn">Aviso de saldo negativo</span><span class="bp">Alert · warning</span><span class="bd">No bloqueante. Muestra el disponible proyectado y "Podés registrarlo igual".</span></div>
+      <div class="stage">
+        <div class="alert warn"><span class="a-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.4"/></svg></span><div class="a-body"><b>El saldo de CA Galicia quedaría en negativo.</b> El disponible en ARS pasaría a <b class="tnum">−$49.830,00</b>. Podés registrarlo igual — es solo un aviso.</div></div>
+      </div>
+    </div>
+
+    <!-- 7 · Ciclo en curso -->
+    <div class="block wide">
+      <div class="bhead"><span class="bn">Sección ciclo en curso</span><span class="bp">Card · DatePicker · badge</span><span class="bd">Badge "fechas estimadas" + microcopy de contexto + dos DatePicker (Cierre / Vencimiento). Validan: cierre posterior al cierre del resumen pagado; vencimiento posterior al cierre.</span></div>
+      <div class="stage">
+        <div class="sec-head"><span class="eyebrow">Ciclo en curso</span><span class="badge est">fechas estimadas</span></div>
+        <div class="helper" style="margin-bottom:14px">Pre-llenamos las fechas registradas; corregilas con las que figuran en el resumen (cerró el <b>20/06/2026</b>).</div>
+        <div class="dgrid">
+          <div><span class="lbl" style="display:block;font-size:13.5px;font-weight:800;margin-bottom:7px">Cierre</span><div class="datefield"><span class="dval">21 de jul de 2026</span><span class="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg></span></div></div>
+          <div><span class="lbl" style="display:block;font-size:13.5px;font-weight:800;margin-bottom:7px">Vencimiento</span><div class="datefield err"><span class="dval">18 de jul de 2026</span><span class="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg></span></div><div class="field-err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16v.4"/></svg> Tiene que ser posterior al cierre (21 jul).</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8 · Recibo -->
+    <div class="block">
+      <div class="bhead"><span class="bn">Recibo · total desglosado</span><span class="bp">Card</span><span class="bd">Resumen + sellos = total a debitar. Fila total en navy. El corazón de "¿de dónde sale?".</span></div>
+      <div class="stage">
+        <div class="recibo">
+          <div class="recibo-row"><span class="rk">Resumen <b>junio</b><span class="sub">total pendiente</span></span><span class="rv tnum">$50.836,67</span></div>
+          <div class="recibo-row"><span class="rk">Impuesto de sellos<span class="sub">lo que cobró el banco</span></span><span class="rv tnum">$503,33</span></div>
+          <div class="recibo-row total"><span class="rk">Total a debitar de <b>CA Galicia</b></span><span class="rv tnum"><span class="cur">$</span>51.340,00</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9 · Irreversibilidad + 10 estados -->
+    <div class="block">
+      <div class="bhead"><span class="bn">Aviso de irreversibilidad + CTA</span><span class="bp">Alert · muted · Button</span><span class="bd">Informativo/muted (no warning). Button full-width primario. Estado "Procesando…".</span></div>
+      <div class="stage" style="display:flex;flex-direction:column;gap:12px">
+        <div class="alert muted"><span class="a-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><div class="a-body">Una vez confirmado, el pago <b>no se puede revertir</b>. Se corrige con un ajuste de saldo.</div></div>
+        <button class="btn-pri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Confirmar pago</button>
+        <button class="btn-pri loading"><span class="spin"></span> Procesando…</button>
+      </div>
+    </div>
+
+    <!-- 11 · Estados loading + form error -->
+    <div class="block wide">
+      <div class="bhead"><span class="bn">Estados · loading + error de form</span><span class="bp">skeleton · form-err</span><span class="bd">loading.tsx (skeleton) y banner de error a nivel formulario.</span></div>
+      <div class="stage" style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+        <div>
+          <div class="sk" style="height:18px;width:120px;margin-bottom:16px"></div>
+          <div class="sk" style="height:44px;width:100%;border-radius:11px;margin-bottom:14px"></div>
+          <div class="sk" style="height:52px;width:100%;border-radius:13px;margin-bottom:14px"></div>
+          <div class="sk" style="height:50px;width:100%;border-radius:14px"></div>
+        </div>
+        <div>
+          <div class="form-err" style="margin-bottom:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16v.4"/></svg> No pudimos registrar el pago. Revisá los datos e intentá de nuevo.</div>
+          <div class="alert info"><span class="a-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5M12 8v.4"/></svg></span><div class="a-body">Banner de contexto USD: <b>Consumos en dólares: US$ 120,00.</b> El total en ARS se calcula con la cotización del día.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    document.addEventListener('click', function (e) {
+      var trig = e.target.closest('[data-sel-trigger]');
+      document.querySelectorAll('.sel.open').forEach(function (s) { if (!trig || s !== trig.closest('.sel')) s.classList.remove('open'); });
+      if (trig) { trig.closest('.sel').classList.toggle('open'); return; }
+      var opt = e.target.closest('.sel-opt');
+      if (opt) { var sel = opt.closest('.sel'); sel.querySelectorAll('.sel-opt').forEach(function (o){o.classList.remove('sel-on');}); opt.classList.add('sel-on'); sel.classList.remove('open'); return; }
+      var chip = e.target.closest('.chip');
+      if (chip) { var g = chip.closest('.chips'); g.querySelectorAll('.chip').forEach(function (c){c.classList.remove('on');}); chip.classList.add('on'); }
+    });
+  </script>
+</body>
+</html>

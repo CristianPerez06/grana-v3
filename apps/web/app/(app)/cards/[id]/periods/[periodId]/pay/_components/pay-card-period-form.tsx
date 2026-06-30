@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { Lock } from 'lucide-react'
 import { getTodayAR } from '@/lib/date'
 import { payCardPeriod } from '@/app/_actions/credit-cards'
 import {
@@ -11,25 +12,28 @@ import {
   COMMON_STAMP_TAX_RATES,
 } from '@/lib/cards/utils'
 import { Money, parseMoneyInput } from '@grana/validation'
+import { formatARS } from '@grana/i18n-messages'
+import { useShowCents } from '@/lib/preferences-context'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { DatePicker } from '@/components/ui/date-picker'
+import { Card } from '@/components/ui/card'
+import { Alert } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { SectionLabel } from '@/components/ui/form-primitives'
 import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
+import { DebitAccountSelect } from './debit-account-select'
 
 const todayStr = () => {
   const d = getTodayAR()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-const formatARS = (amount: number) =>
-  new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount)
-
 const formatShortDate = (iso: string) => iso.split('-').reverse().join('/')
+
+// Shared field-control look: input box matching the system's 10px radius / border.
+const INPUT_CLS =
+  'w-full rounded-[10px] border border-border bg-card px-3 py-2.5 text-sm text-text outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring placeholder:text-text-soft'
 
 type PaymentAccount = {
   id: string
@@ -55,6 +59,18 @@ type Props = {
   paymentAccounts: PaymentAccount[]
 }
 
+const FieldLabel = ({ children }: { children: React.ReactNode }) => (
+  <label className="text-sm font-semibold text-text">{children}</label>
+)
+
+const Hint = ({ children }: { children: React.ReactNode }) => (
+  <p className="text-xs text-text-muted">{children}</p>
+)
+
+const FieldError = ({ children }: { children: React.ReactNode }) => (
+  <p className="text-xs text-error">{children}</p>
+)
+
 export const PayCardPeriodForm = ({
   periodId,
   cardId,
@@ -70,6 +86,8 @@ export const PayCardPeriodForm = ({
   const router = useRouter()
   const t = useTranslations('cards')
   const tCommon = useTranslations('common')
+  const showCents = useShowCents()
+  const fmtARS = (n: number) => formatARS(n, showCents)
   const [isPending, startTransition] = useTransition()
   const [formError, setFormError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -156,6 +174,12 @@ export const PayCardPeriodForm = ({
       ? checkNegativeBalance(selectedAccount.balanceARS, parsedPaymentAmount)
       : null
 
+  // Composición del monto: de la cuenta sale el total del resumen (consumos en
+  // ARS + USD×fx) más el impuesto de sellos. Se muestra cuando hay algo que
+  // explicar (deuda USD o sello cargado) para que cada cifra responda "¿de
+  // dónde sale?". El "Total a pagar" coincide con el monto pre-llenado.
+  const showBreakdown = hasUsdDebt || parsedStamp > 0
+
   const validate = () => {
     const errs: Record<string, string> = {}
     const parsedAmount = parseMoneyInput(amount)
@@ -210,194 +234,221 @@ export const PayCardPeriodForm = ({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
       {/* Section 1: Payment data */}
-      <div className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-          {t('payment.section_payment_data')}
-        </h2>
+      <Card>
+        <div className="flex flex-col gap-5 p-5">
+          <SectionLabel className="mb-0">{t('payment.section_payment_data')}</SectionLabel>
 
-        {hasUsdDebt && (
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="pay-fx" className="text-sm font-medium">
-              {t('payment.fx_label')}
-            </label>
-            <p className="text-xs text-muted-foreground mb-1">{t('payment.fx_helper')}</p>
-            <MoneyAmountInput
-              id="pay-fx"
-              required
-              groupThousands={false}
-              value={fxRate}
-              onChange={handleFxChange}
-              placeholder={t('payment.fx_placeholder')}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-            {errors.fxRate && <p className="text-xs text-destructive">{errors.fxRate}</p>}
-
-            {/* Breakdown: ARS pendiente + USD × fx = total */}
-            <div className="mt-1 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground tabular-nums">
-              <div className="flex justify-between">
-                <span>{t('payment.breakdown_ars')}</span>
-                <span>{formatARS(pendingAmountARS)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>
+          {/* Caso USD: cotización primero, luego la conversión visible, para que
+              el monto a pagar se entienda antes de fijarlo. */}
+          {hasUsdDebt && (
+            <div className="flex flex-col gap-1.5">
+              <FieldLabel>{t('payment.fx_label')}</FieldLabel>
+              <Hint>{t('payment.fx_helper')}</Hint>
+              <MoneyAmountInput
+                id="pay-fx"
+                required
+                groupThousands={false}
+                value={fxRate}
+                onChange={handleFxChange}
+                placeholder={t('payment.fx_placeholder')}
+                className={INPUT_CLS}
+              />
+              {errors.fxRate && <FieldError>{errors.fxRate}</FieldError>}
+              {usdConvertedARS !== null && (
+                <p className="text-xs text-text-muted tabular-nums">
                   {t('payment.breakdown_usd', { usd: pendingAmountUSD })}
-                  {parsedFx !== null && parsedFx > 0 ? ` × ${fxRate}` : ''}
-                </span>
-                <span>{usdConvertedARS !== null ? formatARS(usdConvertedARS) : '—'}</span>
-              </div>
-              <div className="mt-1 flex justify-between border-t border-border pt-1 font-semibold text-foreground">
-                <span>{t('payment.breakdown_total')}</span>
-                <span>{computedTotal !== null ? formatARS(computedTotal) : '—'}</span>
-              </div>
+                  {parsedFx !== null && parsedFx > 0 ? ` × ${fxRate}` : ''} ={' '}
+                  <span className="font-semibold text-text">{fmtARS(usdConvertedARS)}</span>
+                </p>
+              )}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Impuesto de sellos del resumen. Primera vez: selector de montos sin
-            mencionar el %. Próximas: monto sugerido y editable. */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">{t('payment.stamp_tax_label')}</label>
-          <p className="text-xs text-muted-foreground mb-1">
-            {stampKnown
-              ? t('payment.stamp_tax_known_helper')
-              : t('payment.stamp_tax_first_time_hint')}
-          </p>
+          {/* Impuesto de sellos del resumen. Primera vez: chips de montos sin
+              mencionar el %. Próximas: monto sugerido y editable. */}
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel>{t('payment.stamp_tax_label')}</FieldLabel>
+            <Hint>
+              {stampKnown
+                ? t('payment.stamp_tax_known_helper')
+                : t('payment.stamp_tax_first_time_hint')}
+            </Hint>
 
-          {!stampKnown && stampSuggestions.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-1">
-              {stampSuggestions.map((amt) => (
+            {!stampKnown && stampSuggestions.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {stampSuggestions.map((amt) => {
+                  const active = parsedStamp === amt
+                  return (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => handleStampChange(String(amt))}
+                      aria-pressed={active}
+                      className={`rounded-full border px-3 py-1 text-sm font-semibold tabular-nums transition-colors ${
+                        active
+                          ? 'border-emerald bg-emerald-soft text-emerald-deep'
+                          : 'border-border bg-card text-text-muted hover:bg-page'
+                      }`}
+                    >
+                      {fmtARS(amt)}
+                    </button>
+                  )
+                })}
                 <button
-                  key={amt}
                   type="button"
-                  onClick={() => handleStampChange(String(amt))}
-                  className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-                    parsedStamp === amt
-                      ? 'border-primary bg-primary/10 text-foreground'
-                      : 'border-input bg-background text-muted-foreground hover:bg-muted'
+                  onClick={() => handleStampChange('0')}
+                  aria-pressed={parsedStamp === 0 && stampTax !== ''}
+                  className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
+                    parsedStamp === 0 && stampTax !== ''
+                      ? 'border-emerald bg-emerald-soft text-emerald-deep'
+                      : 'border-border bg-card text-text-soft hover:bg-page'
                   }`}
                 >
-                  {formatARS(amt)}
+                  {t('payment.stamp_tax_none')}
                 </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => handleStampChange('0')}
-                className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-                  parsedStamp === 0 && stampTax !== ''
-                    ? 'border-primary bg-primary/10 text-foreground'
-                    : 'border-input bg-background text-muted-foreground hover:bg-muted'
-                }`}
-              >
-                {t('payment.stamp_tax_none')}
-              </button>
+              </div>
+            )}
+
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-soft">
+                $
+              </span>
+              <MoneyAmountInput
+                value={stampTax}
+                onChange={handleStampChange}
+                placeholder={!stampKnown ? t('payment.stamp_tax_other_placeholder') : undefined}
+                className={`${INPUT_CLS} pl-8`}
+              />
             </div>
-          )}
+          </div>
 
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-            <MoneyAmountInput
-              value={stampTax}
-              onChange={handleStampChange}
-              placeholder={!stampKnown ? t('payment.stamp_tax_other_placeholder') : undefined}
-              className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          {/* Monto a pagar (incluye consumos + sello). Editable para pago parcial. */}
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel>{t('labels.amount_to_pay')}</FieldLabel>
+            <Hint>{t('labels.amount_to_pay_helper')}</Hint>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-soft">
+                $
+              </span>
+              <MoneyAmountInput
+                required
+                value={amount}
+                onChange={setAmount}
+                className={`${INPUT_CLS} pl-8 text-base font-semibold`}
+              />
+            </div>
+            {errors.amount && <FieldError>{errors.amount}</FieldError>}
+
+            {/* "¿De dónde sale?": composición del total que deja la cuenta. */}
+            {showBreakdown && (
+              <div className="mt-1 rounded-[10px] bg-page px-3 py-2.5 text-xs tabular-nums">
+                <div className="flex justify-between text-text-muted">
+                  <span>{t('payment.breakdown_ars')}</span>
+                  <span>{fmtARS(pendingAmountARS)}</span>
+                </div>
+                {hasUsdDebt && (
+                  <div className="mt-1 flex justify-between text-text-muted">
+                    <span>
+                      {t('payment.breakdown_usd', { usd: pendingAmountUSD })}
+                      {parsedFx !== null && parsedFx > 0 ? ` × ${fxRate}` : ''}
+                    </span>
+                    <span>{usdConvertedARS !== null ? fmtARS(usdConvertedARS) : '—'}</span>
+                  </div>
+                )}
+                {parsedStamp > 0 && (
+                  <div className="mt-1 flex justify-between text-text-muted">
+                    <span>{t('payment.stamp_tax_label')}</span>
+                    <span>{fmtARS(parsedStamp)}</span>
+                  </div>
+                )}
+                <div className="mt-1.5 flex justify-between border-t border-border pt-1.5 font-semibold text-text">
+                  <span>{t('payment.breakdown_total')}</span>
+                  <span>{suggestedTotal !== null ? fmtARS(suggestedTotal) : '—'}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Cuenta de débito */}
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel>{t('labels.debit_account')}</FieldLabel>
+            <DebitAccountSelect
+              accounts={paymentAccounts}
+              value={paymentAccountId}
+              onChange={setPaymentAccountId}
+              label={t('labels.debit_account')}
+              placeholder={t('errors.account_required')}
+              invalid={Boolean(errors.paymentAccountId)}
             />
+            {errors.paymentAccountId && <FieldError>{errors.paymentAccountId}</FieldError>}
+            {negativeWarning?.negative && (
+              <NegativeBalanceNotice projected={negativeWarning.projected} currency="ARS" />
+            )}
+          </div>
+
+          {/* Fecha del pago */}
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel>{t('labels.payment_date')}</FieldLabel>
+            <DatePicker value={paymentDate} onChange={setPaymentDate} label={t('labels.payment_date')} />
+            {errors.paymentDate && <FieldError>{errors.paymentDate}</FieldError>}
           </div>
         </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">{t('labels.amount_to_pay')}</label>
-          <p className="text-xs text-muted-foreground mb-1">
-            {t('labels.amount_to_pay_helper')} (
-            {suggestedTotal !== null ? formatARS(suggestedTotal) : formatARS(pendingAmountARS)})
-          </p>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-            <MoneyAmountInput
-              required
-              value={amount}
-              onChange={setAmount}
-              className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
-          {errors.amount && <p className="text-xs text-destructive">{errors.amount}</p>}
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">{t('labels.debit_account')}</label>
-          <select
-            required
-            value={paymentAccountId}
-            onChange={(e) => setPaymentAccountId(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {paymentAccounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name} — {formatARS(a.balanceARS)}
-              </option>
-            ))}
-          </select>
-          {errors.paymentAccountId && <p className="text-xs text-destructive">{errors.paymentAccountId}</p>}
-          {negativeWarning?.negative && (
-            <NegativeBalanceNotice projected={negativeWarning.projected} currency="ARS" />
-          )}
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">{t('labels.payment_date')}</label>
-          <DatePicker value={paymentDate} onChange={setPaymentDate} label={t('labels.payment_date')} />
-          {errors.paymentDate && <p className="text-xs text-destructive">{errors.paymentDate}</p>}
-        </div>
-      </div>
+      </Card>
 
       {/* Section 2: confirm the running cycle's dates — the statement being
           paid announces them, so this is the moment the user has them in hand. */}
-      <div className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            {t('payment.section_next_period')}
+      <Card>
+        <div className="flex flex-col gap-4 p-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <SectionLabel className="mb-0">{t('payment.section_next_period')}</SectionLabel>
             {runningIsEstimated && (
-              <span className="ml-2 normal-case tracking-normal rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+              <span className="rounded-full bg-slate-soft px-2 py-0.5 text-[11px] font-semibold text-slate">
                 {t('payment.estimated_badge')}
               </span>
             )}
-          </h2>
-          <p className="text-xs text-muted-foreground mt-1">
-            {t('labels.next_period_helper')}
-          </p>
-          <p className="mt-1 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+          </div>
+          <Hint>{t('labels.next_period_helper')}</Hint>
+          <p className="rounded-[10px] bg-page px-3 py-2.5 text-xs text-text-muted">
             {t('payment.next_period_context', { date: formatShortDate(paidPeriodEndDate) })}
           </p>
-        </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium">{t('labels.close_date')}</label>
-            <DatePicker value={nextEndDate} onChange={setNextEndDate} label={t('labels.close_date')} />
-            {errors.nextEndDate && <p className="text-xs text-destructive">{errors.nextEndDate}</p>}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <FieldLabel>{t('labels.close_date')}</FieldLabel>
+              <DatePicker
+                value={nextEndDate}
+                onChange={setNextEndDate}
+                min={paidPeriodEndDate}
+                label={t('labels.close_date')}
+              />
+              {errors.nextEndDate && <FieldError>{errors.nextEndDate}</FieldError>}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <FieldLabel>{t('labels.due_date')}</FieldLabel>
+              <DatePicker
+                value={nextDueDate}
+                onChange={setNextDueDate}
+                min={nextEndDate || paidPeriodEndDate}
+                label={t('labels.due_date')}
+              />
+              {errors.nextDueDate && <FieldError>{errors.nextDueDate}</FieldError>}
+            </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium">{t('labels.due_date')}</label>
-            <DatePicker value={nextDueDate} onChange={setNextDueDate} label={t('labels.due_date')} />
-            {errors.nextDueDate && <p className="text-xs text-destructive">{errors.nextDueDate}</p>}
-          </div>
         </div>
-      </div>
+      </Card>
 
-      {formError && <p className="text-sm text-destructive">{formError}</p>}
+      {/* Cierre: irreversibilidad (informativo) + CTA */}
+      <Alert variant="info" icon={<Lock className="h-4 w-4" aria-hidden />}>
+        <p className="text-xs">{t('payment.warning')}</p>
+      </Alert>
 
-      <p className="text-xs text-muted-foreground rounded-md bg-muted px-3 py-2">
-        {t('payment.warning')}
-      </p>
+      {formError && <FieldError>{formError}</FieldError>}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="w-full rounded-md bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
-      >
+      <Button type="submit" loading={isPending} size="lg">
         {isPending ? tCommon('processing') : t('actions.confirm_payment')}
-      </button>
+      </Button>
     </form>
   )
 }

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Grana · Pagar resumen — Web (3 variantes)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../shared.css" />
+<style>
+  body { background: #E4E8EE; }
+  .doc-head { padding: 32px 40px 8px; max-width: 1180px; margin: 0 auto; }
+  .doc-head h1 { font-size: 23px; font-weight: 800; letter-spacing: -0.025em; }
+  .doc-head p { margin-top: 8px; font-size: 13.5px; font-weight: 600; color: var(--muted); line-height: 1.55; max-width: 820px; }
+  .doc-head .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .doc-head .lg { font-size: 11.5px; font-weight: 700; color: var(--muted); background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; }
+
+  .vset { max-width: 1180px; margin: 0 auto; padding: 26px 40px 10px; }
+  .vlabel { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; padding: 0 2px 14px; }
+  .vlabel .v { font-size: 13px; font-weight: 800; letter-spacing: .03em; color: #fff; background: var(--navy); border-radius: 7px; padding: 4px 9px; }
+  .vlabel .t { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+  .vlabel .r { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .vlabel .states { display: flex; gap: 6px; margin-left: auto; }
+  .vlabel .st { font-size: 10.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; }
+  .st.ars { background: var(--slate-soft); color: var(--slate); }
+  .st.usd { background: var(--emerald-soft); color: var(--emerald-deep); }
+  .st.learn { background: #EEE9F4; color: #6E5B8C; }
+  .st.first { background: var(--amber-soft); color: #8A6A1C; }
+
+  /* artboard = el área "main" del shell v3 (el sidebar 300px existe, no se rediseña) */
+  .artboard { background: var(--bg); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 14px 40px -22px rgba(11,26,43,.4); padding: 38px 40px 44px; position: relative; }
+  .artboard::before { content: "MAIN · el shell v3 (sidebar 300px + nav) envuelve esta área"; position: absolute; top: 12px; right: 18px; font-size: 10px; font-weight: 700; letter-spacing: .04em; color: var(--faint); text-transform: uppercase; }
+  .form-col { max-width: 660px; margin: 0 auto; }
+
+  .estados { max-width: 1180px; margin: 0 auto; padding: 26px 40px 56px; }
+  .est-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+  .est-card { background: var(--bg); border: 1px solid var(--border); border-radius: 16px; padding: 22px 22px 24px; }
+  .est-card .cap { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--soft); margin-bottom: 14px; }
+
+  .foldrow { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border: 1px solid var(--border); border-radius: 16px; background: var(--card); cursor: pointer; }
+  .foldrow .fic { width: 38px; height: 38px; border-radius: 11px; background: var(--slate-soft); color: var(--slate); display: grid; place-items: center; flex: none; }
+  .foldrow .fic svg { width: 18px; height: 18px; stroke-width: 2.2; }
+  .foldrow .ft { font-size: 14.5px; font-weight: 800; color: var(--ink); }
+  .foldrow .fs { font-size: 12.5px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+  .foldrow .fchev { margin-left: auto; color: var(--muted); flex: none; }
+  .foldrow .fchev svg { width: 18px; height: 18px; stroke-width: 2.4; }
+
+  .divider { height: 1px; background: var(--line); margin: 20px 0; }
+</style>
+</head>
+<body class="doc">
+  <div class="doc-head">
+    <h1>Pagar resumen · rediseño web (desktop)</h1>
+    <p>Pantalla <code>/cards/[id]/periods/[periodId]/pay</code> llevada al sistema visual del módulo Tarjetas, construida con los primitivos de la librería (Card · Alert · Select · DatePicker · MoneyAmountInput · MoneyChipPicker · Button · PageHeader). Tres variantes recorriendo un espectro, cada una mostrando una combinación distinta de estados (ARS / USD, sellos primera vez / ya aprendido). El sello se trata como <b>cargo aparte que se debita de la misma cuenta</b> → el total a debitar = monto del resumen + sellos.</p>
+    <div class="legend">
+      <span class="lg">ARS protagonista · USD subordinado y etiquetado</span>
+      <span class="lg">Aviso, no bloqueo</span>
+      <span class="lg">Cada cifra responde "¿de dónde sale?"</span>
+      <span class="lg">Tarjetas off-ledger: recién este pago mueve el disponible</span>
+    </div>
+  </div>
+
+  <!-- ════════════════ V1 · MÍNIMA ════════════════ -->
+  <section class="vset">
+    <div class="vlabel">
+      <span class="v">V1</span><span class="t">Mínima — al sistema</span>
+      <span class="r">misma estructura de dos secciones, llevada a Card / Alert / Select / chips con jerarquía clara.</span>
+      <span class="states"><span class="st ars">solo ARS</span><span class="st learn">sellos ya aprendido</span></span>
+    </div>
+    <div class="artboard">
+      <div class="form-col">
+        <!-- PageHeader -->
+        <div class="ph">
+          <a class="back" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg> Resumen</a>
+          <div class="ph-row">
+            <span class="ph-mark">A</span>
+            <div><h1>Pagar resumen</h1></div>
+          </div>
+          <div class="ph-sub">American Express · resumen de <b>junio</b> · cerró el <b>20/06</b>, vence el <b>10/07</b></div>
+        </div>
+
+        <!-- Datos del pago -->
+        <div class="card card-pad">
+          <div class="sec-head"><span class="eyebrow">Datos del pago</span></div>
+
+          <!-- Sellos · ya aprendido (compacto) -->
+          <div class="field">
+            <span class="lbl">Impuesto de sellos</span>
+            <div class="alert info" style="margin-bottom:11px">
+              <span class="a-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4-6.3-4.6L5.7 21.4 8 14 2 9.4h7.6z"/></svg></span>
+              <div class="a-body">Lo aprendimos de tus pagos: tu banco suele cobrar <b>$503,33</b>. Confirmá mirando tu resumen o tocá otro monto.</div>
+            </div>
+            <div class="chips">
+              <button class="chip"><span class="sx">$</span>604</button>
+              <button class="chip on"><span class="sx">$</span>503,33</button>
+              <button class="chip"><span class="sx">$</span>50,33</button>
+              <button class="chip zero">No me cobraron sellos</button>
+            </div>
+            <div class="money sm"><span class="cur">$</span><span class="val tnum">503,33</span></div>
+          </div>
+
+          <!-- Monto a pagar -->
+          <div class="field">
+            <span class="lbl">Monto a pagar</span>
+            <div class="helper">Pre-llenado con el total pendiente del resumen. Podés editarlo para registrar un pago parcial. <b>Total pendiente $50.836,67</b>.</div>
+            <div class="money focus"><span class="cur">$</span><span class="val tnum">50.836,67</span></div>
+          </div>
+
+          <!-- relación sellos ↔ monto -->
+          <div class="note-rel" style="margin-top:14px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/></svg>
+            <span>El sello es un <b>cargo aparte</b>: se debita de la misma cuenta junto al pago. <b>Se debita $51.340,00</b> = $50.836,67 (resumen) + $503,33 (sellos).</span>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Cuenta de débito (Select) -->
+          <div class="field">
+            <span class="lbl">Cuenta de débito</span>
+            <div class="sel" data-sel>
+              <button class="sel-trigger" data-sel-trigger>
+                <span class="mk" style="background:var(--amber)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M2 10h20"/></svg></span>
+                <span class="nm">CA Galicia<span class="s">Caja de ahorro en pesos</span></span>
+                <span class="bal"><span class="b tnum">$1.510</span><span class="bl">disponible</span></span>
+                <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+              </button>
+              <div class="sel-menu">
+                <div class="sel-opt sel-on"><span class="mk" style="background:var(--amber)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M2 10h20"/></svg></span><span class="nm">CA Galicia<span class="s">Caja de ahorro en pesos</span></span><span class="bal tnum">$1.510</span><svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <div class="sel-opt"><span class="mk" style="background:var(--emerald)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M2 10h20"/></svg></span><span class="nm">Mercado Pago<span class="s">Billetera</span></span><span class="bal tnum">$148.300</span><svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <div class="sel-opt"><span class="mk" style="background:var(--slate)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M2 10h20"/></svg></span><span class="nm">Cuenta corriente Galicia<span class="s">En pesos</span></span><span class="bal tnum">$62.500</span><svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Aviso saldo negativo (warning, no bloquea) -->
+          <div class="alert warn" style="margin-top:14px">
+            <span class="a-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.4"/></svg></span>
+            <div class="a-body"><b>El saldo de CA Galicia quedaría en negativo.</b> El disponible en ARS pasaría a <b class="tnum">−$49.830,00</b> tras debitar $51.340,00. Podés registrarlo igual — es solo un aviso.</div>
+          </div>
+
+          <!-- Fecha del pago -->
+          <div class="field">
+            <span class="lbl">Fecha del pago</span>
+            <div class="datefield"><span class="dval">29 de jun de 2026</span><span class="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg></span></div>
+          </div>
+        </div>
+
+        <!-- Ciclo en curso -->
+        <div class="card card-pad">
+          <div class="sec-head"><span class="eyebrow">Ciclo en curso</span><span class="badge est">fechas estimadas</span></div>
+          <div class="helper" style="margin-bottom:14px">Tu resumen anuncia el cierre y vencimiento del ciclo que sigue. Pre-llenamos las fechas registradas; corregilas con las que figuran en el resumen que estás pagando (cerró el <b>20/06/2026</b>).</div>
+          <div class="dgrid">
+            <div class="field" style="margin:0"><span class="lbl">Cierre</span><div class="datefield"><span class="dval">21 de jul de 2026</span><span class="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg></span></div></div>
+            <div class="field" style="margin:0"><span class="lbl">Vencimiento</span><div class="datefield"><span class="dval">28 de jul de 2026</span><span class="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg></span></div></div>
+          </div>
+        </div>
+
+        <!-- Irreversibilidad + CTA -->
+        <div class="alert muted" style="margin-top:16px">
+          <span class="a-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+          <div class="a-body">Una vez confirmado, el pago <b>no se puede revertir</b>. Si registrás un monto o cuenta incorrectos, lo corregís después con un ajuste de saldo.</div>
+        </div>
+        <div style="margin-top:16px"><button class="btn-pri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Confirmar pago</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════ V2 · HERO + USD ════════════════ -->
+  <section class="vset">
+    <div class="vlabel">
+      <span class="v">V2</span><span class="t">Foco en el monto — héroe</span>
+      <span class="r">monto a pagar como héroe; sellos y resto subordinados; ciclo en curso plegado hasta que se necesita.</span>
+      <span class="states"><span class="st usd">deuda USD</span><span class="st first">sellos primera vez</span></span>
+    </div>
+    <div class="artboard">
+      <div class="form-col">
+        <div class="ph">
+          <a class="back" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg> Resumen</a>
+          <div class="ph-row">
+            <span class="ph-mark">A</span>
+            <div><h1>Pagar resumen</h1></div>
+          </div>
+          <div class="ph-sub">American Express · resumen con consumos en <b>pesos y dólares</b> · se liquida todo en ARS</div>
+        </div>
+
+        <!-- Banner: aviso de deuda en USD (se calcula con la cotización) -->
+        <div class="alert info" style="margin-bottom:16px">
+          <span class="a-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5M12 8v.4"/></svg></span>
+          <div class="a-body"><b>Consumos en dólares: US$ 120,00.</b> Este resumen tiene deuda en USD. Cargá la cotización del día abajo: el total a pagar en ARS se calcula con ella. ARS y USD nunca se mezclan — el pago se liquida en pesos.</div>
+        </div>
+
+        <!-- HERO monto a pagar -->
+        <div class="hero-amt">
+          <div class="he-eyebrow">Monto a pagar</div>
+          <div class="he-money"><span class="cur">$</span><span class="val tnum">173.316,00</span></div>
+          <div class="he-help">Total a debitar de tu cuenta = <b>$171.600,00</b> del resumen + <b>$1.716,00</b> de sellos. Editá para un pago parcial.</div>
+        </div>
+
+        <!-- Desglose USD (de dónde sale el total del resumen) -->
+        <div class="card card-pad" style="margin-top:16px">
+          <div class="sec-head"><span class="eyebrow">De dónde sale el total</span><span class="badge usd">bimoneda</span></div>
+          <div class="field" style="margin:0">
+            <span class="lbl">Cotización del día (USD → ARS)</span>
+            <div class="helper">El resumen tiene deuda en dólares. Cargá la cotización a la que pagás y armamos el total en pesos.</div>
+            <div class="money usd focus"><span class="cur">$</span><span class="val tnum">1.180,00</span></div>
+          </div>
+          <div class="usdbox">
+            <div class="usd-line"><span class="k">Pendiente en pesos</span><span class="v tnum">$30.000,00</span></div>
+            <div class="usd-line"><span class="k"><span class="op">+</span>Pendiente en dólares <span class="badge usd" style="padding:2px 7px">US$ 120,00</span> × $1.180</span><span class="v tnum"><span class="su">USD</span>$141.600,00</span></div>
+            <div class="usd-line tot"><span class="k">Total del resumen (ARS)</span><span class="v tnum">$171.600,00</span></div>
+          </div>
+        </div>
+
+        <!-- Sellos · primera vez (subordinado, explicación larga) -->
+        <div class="card card-pad" style="margin-top:16px">
+          <div class="field" style="margin:0">
+            <span class="lbl">Impuesto de sellos</span>
+            <div class="helper">Tu banco suele cobrar un <b>impuesto de sellos</b> en el resumen. Elegí cuánto te cobró mirando tu resumen. Te lo preguntamos <b>solo esta vez</b>: en los próximos lo vamos a sugerir solo.</div>
+            <div class="chips">
+              <button class="chip"><span class="sx">$</span>1.230</button>
+              <button class="chip on"><span class="sx">$</span>1.716</button>
+              <button class="chip"><span class="sx">$</span>171,60</button>
+              <button class="chip zero">No me cobraron sellos</button>
+            </div>
+            <div class="money sm"><span class="cur">$</span><span class="val tnum">1.716,00</span></div>
+          </div>
+        </div>
+
+        <!-- Cuenta + fecha (subordinados) -->
+        <div class="card card-pad" style="margin-top:16px">
+          <div class="field" style="margin:0">
+            <span class="lbl">Cuenta de débito</span>
+            <div class="sel" data-sel>
+              <button class="sel-trigger" data-sel-trigger>
+                <span class="mk" style="background:var(--slate)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M2 10h20"/></svg></span>
+                <span class="nm">Cuenta corriente Galicia<span class="s">En pesos</span></span>
+                <span class="bal"><span class="b tnum">$210.500</span><span class="bl">disponible</span></span>
+                <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+              </button>
+              <div class="sel-menu">
+                <div class="sel-opt sel-on"><span class="mk" style="background:var(--slate)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M2 10h20"/></svg></span><span class="nm">Cuenta corriente Galicia<span class="s">En pesos</span></span><span class="bal tnum">$210.500</span><svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+                <div class="sel-opt"><span class="mk" style="background:var(--emerald)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M2 10h20"/></svg></span><span class="nm">Mercado Pago<span class="s">Billetera</span></span><span class="bal tnum">$148.300</span><svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+              </div>
+            </div>
+            <div class="helper after">Disponible tras el pago: <b class="tnum">$37.184,00</b>. Recién este débito mueve el disponible — el consumo de la tarjeta no lo movía (las tarjetas van off-ledger).</div>
+          </div>
+          <div class="field"><span class="lbl">Fecha del pago</span><div class="datefield"><span class="dval">29 de jun de 2026</span><span class="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg></span></div></div>
+        </div>
+
+        <!-- Ciclo en curso · PLEGADO -->
+        <div style="margin-top:16px">
+          <div class="foldrow">
+            <span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg></span>
+            <div><div class="ft">Confirmar fechas del ciclo en curso</div><div class="fs">Estimadas: cierra 21 jul · vence 28 jul. Tocá para revisar.</div></div>
+            <span class="badge est" style="margin-left:8px">fechas estimadas</span>
+            <span class="fchev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+          </div>
+        </div>
+
+        <div class="alert muted" style="margin-top:16px">
+          <span class="a-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+          <div class="a-body">Una vez confirmado, el pago <b>no se puede revertir</b>. Lo corregís después con un ajuste de saldo.</div>
+        </div>
+        <div style="margin-top:16px"><button class="btn-pri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Confirmar pago · $173.316,00</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════ V3 · RECIBO ════════════════ -->
+  <section class="vset">
+    <div class="vlabel">
+      <span class="v">V3</span><span class="t">Recibo — revisá antes de confirmar</span>
+      <span class="r">paso de confirmación tipo recibo con el total desglosado (monto + sellos) bien explícito.</span>
+      <span class="states"><span class="st ars">solo ARS</span><span class="st learn">paso 2 de 2</span></span>
+    </div>
+    <div class="artboard">
+      <div class="form-col">
+        <div class="ph">
+          <a class="back" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg> Editar datos</a>
+          <div class="ph-row">
+            <span class="ph-mark">A</span>
+            <div><h1>Revisá el pago</h1></div>
+          </div>
+          <div class="ph-sub">American Express · paso <b>2 de 2</b> · confirmá los números antes de registrar</div>
+        </div>
+
+        <!-- Recibo: desglose del total a debitar -->
+        <div class="card card-pad">
+          <div class="sec-head"><span class="eyebrow">Lo que se debita</span></div>
+          <div class="recibo">
+            <div class="recibo-row"><span class="rk">Resumen <b>junio</b><span class="sub">total pendiente que estás pagando</span></span><span class="rv tnum">$50.836,67</span></div>
+            <div class="recibo-row"><span class="rk">Impuesto de sellos<span class="sub">lo que te cobró el banco</span></span><span class="rv tnum">$503,33</span></div>
+            <div class="recibo-row total"><span class="rk">Total a debitar de <b>CA Galicia</b></span><span class="rv tnum"><span class="cur">$</span>51.340,00</span></div>
+          </div>
+          <div class="note-rel" style="margin-top:14px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/></svg>
+            <span>El sello es un cargo aparte que el banco suma al débito. Por eso salen <b>$51.340,00</b> y no $50.836,67.</span>
+          </div>
+        </div>
+
+        <!-- detalle de la operación -->
+        <div class="card card-pad" style="margin-top:16px">
+          <div class="recibo" style="background:var(--card);border:none">
+            <div class="recibo-row" style="padding-left:0;padding-right:0"><span class="rk">Cuenta de débito</span><span class="rv" style="font-size:14.5px">CA Galicia · <span class="tnum" style="color:var(--muted);font-weight:700">$1.510</span></span></div>
+            <div class="recibo-row" style="padding-left:0;padding-right:0"><span class="rk">Fecha del pago</span><span class="rv" style="font-size:14.5px">29 de jun de 2026</span></div>
+            <div class="recibo-row" style="padding-left:0;padding-right:0"><span class="rk">Ciclo en curso <span class="badge est" style="margin-left:4px">estimadas</span></span><span class="rv" style="font-size:14.5px">cierra 21 jul · vence 28 jul</span></div>
+          </div>
+        </div>
+
+        <!-- aviso negativo + irreversibilidad en el recibo -->
+        <div class="alert warn" style="margin-top:16px">
+          <span class="a-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.4"/></svg></span>
+          <div class="a-body"><b>CA Galicia queda en negativo.</b> Disponible proyectado <b class="tnum">−$49.830,00</b>. Podés registrarlo igual.</div>
+        </div>
+        <div class="alert muted" style="margin-top:12px">
+          <span class="a-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+          <div class="a-body">Una vez confirmado <b>no se puede revertir</b>. Se corrige con un ajuste de saldo.</div>
+        </div>
+
+        <div style="margin-top:18px"><button class="btn-pri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Confirmar y registrar pago</button></div>
+        <div style="text-align:center;margin-top:4px"><a class="btn-text" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg> Volver a editar</a></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════ ESTADOS ════════════════ -->
+  <section class="estados">
+    <div class="vlabel"><span class="v" style="background:var(--slate)">ST</span><span class="t">Estados</span><span class="r">loading (skeleton) · error de validación por campo · error de form · CTA procesando.</span></div>
+    <div class="est-grid">
+      <!-- Loading skeleton -->
+      <div class="est-card">
+        <div class="cap">Loading · skeleton</div>
+        <div class="sk" style="height:18px;width:120px;margin-bottom:18px"></div>
+        <div class="sk" style="height:13px;width:160px;margin-bottom:10px"></div>
+        <div class="sk" style="height:38px;width:100%;border-radius:11px;margin-bottom:18px"></div>
+        <div class="sk" style="height:13px;width:200px;margin-bottom:10px"></div>
+        <div class="sk" style="height:52px;width:100%;border-radius:13px;margin-bottom:18px"></div>
+        <div class="sk" style="height:52px;width:100%;border-radius:13px;margin-bottom:18px"></div>
+        <div class="sk" style="height:50px;width:100%;border-radius:14px"></div>
+      </div>
+
+      <!-- Errores -->
+      <div class="est-card">
+        <div class="cap">Error de validación · por campo</div>
+        <div class="field" style="margin:0">
+          <span class="lbl">Vencimiento</span>
+          <div class="datefield err"><span class="dval">18 de jul de 2026</span><span class="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg></span></div>
+          <div class="field-err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16v.4"/></svg> El vencimiento tiene que ser posterior al cierre (21 jul).</div>
+        </div>
+        <div class="field">
+          <span class="lbl">Monto a pagar</span>
+          <div class="money err"><span class="cur">$</span><span class="val tnum">0</span></div>
+          <div class="field-err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16v.4"/></svg> Ingresá un monto mayor a $0.</div>
+        </div>
+        <div class="divider"></div>
+        <div class="cap">Error de form</div>
+        <div class="form-err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16v.4"/></svg> No pudimos registrar el pago. Revisá los datos e intentá de nuevo.</div>
+        <div class="divider"></div>
+        <div class="cap">CTA · procesando</div>
+        <button class="btn-pri loading"><span class="spin"></span> Procesando…</button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // Interacciones livianas: Select (abrir/cerrar/elegir) + chips de sellos.
+    document.addEventListener('click', function (e) {
+      var trig = e.target.closest('[data-sel-trigger]');
+      document.querySelectorAll('.sel.open').forEach(function (s) {
+        if (!trig || s !== trig.closest('.sel')) s.classList.remove('open');
+      });
+      if (trig) { trig.closest('.sel').classList.toggle('open'); return; }
+
+      var opt = e.target.closest('.sel-opt');
+      if (opt) {
+        var sel = opt.closest('.sel');
+        sel.querySelectorAll('.sel-opt').forEach(function (o) { o.classList.remove('sel-on'); });
+        opt.classList.add('sel-on');
+        var t = sel.querySelector('.sel-trigger');
+        t.querySelector('.mk').style.background = opt.querySelector('.mk').style.background;
+        t.querySelector('.nm').innerHTML = opt.querySelector('.nm').innerHTML;
+        t.querySelector('.bal .b').textContent = opt.querySelector('.bal').textContent;
+        sel.classList.remove('open');
+        return;
+      }
+
+      var chip = e.target.closest('.chip');
+      if (chip) {
+        var group = chip.closest('.chips');
+        group.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('on'); });
+        chip.classList.add('on');
+        var input = group.parentElement.querySelector('.money .val');
+        if (input) {
+          var txt = chip.textContent.replace('$', '').trim();
+          input.textContent = chip.classList.contains('zero') ? '0,00' : txt + (txt.indexOf(',') < 0 ? ',00' : '');
+        }
+      }
+    });
+  </script>
+</body>
+</html>
