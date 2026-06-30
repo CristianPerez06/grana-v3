@@ -1,8 +1,9 @@
-import { sumMoneyValues } from './utils'
+import { sumMoneyValues } from '@grana/money-logic'
 
 // Pure aggregation for the cards month hero. No I/O: takes the per-card data
 // `getCreditCards()` already produced and derives the hero figures. Lives in its
-// own module (like `grouping.ts`) so it can be unit-tested without a DB.
+// own module (like `grouping.ts`) so it can be unit-tested without a DB, and is
+// shared by web and mobile from `@grana/cards`.
 
 type CardAlert = 'red' | 'amber' | 'none'
 

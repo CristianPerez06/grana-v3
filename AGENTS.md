@@ -40,9 +40,9 @@ Two native implementations, one shared API.
 
 - Each primitive UI component (`Button`, `Card`, `Input`, etc.) has a separate implementation in `apps/web/components/ui/` (HTML primitives) and `apps/mobile/components/ui/` (React Native primitives). **JSX is not shared between web and React Native** — `<div>` does not exist in RN, `<View>` does not exist in web.
 - Parity is guaranteed by **shared prop types** in `packages/ui-contracts/`. Both apps import the same `ButtonProps`, `CardProps`, etc. Divergence in prop names, types or semantics breaks TypeScript on the other side.
-- Pure business logic (balance calculation, period derivation, recurrence date generation) lives in `packages/money-logic/` and is consumed by both apps. No duplicate calculation code in `apps/<name>/lib/`.
+- Pure business logic (balance calculation, period derivation, recurrence date generation) lives in `packages/money-logic/` and is consumed by both apps. Pure **view-model** logic of a domain (grouping, urgency/tone, presentation, row mappers) lives in that domain's package (`@grana/cards`, `@grana/accounts`, …). No duplicate, hand-synced logic in `apps/<name>/lib/` — the "Mirror of … keep in sync" pattern is prohibited.
 - Naming convention: interaction callbacks are named `onPress` (RN-friendly) on both sides — not `onClick`. Other naming conventions are documented in `packages/ui-contracts/README.md`.
-- Supabase queries stay in each app's `lib/` because they depend on each app's Supabase client wrapper. Only the pure functions move to `packages/`.
+- The `apps/` ↔ `packages/` boundary is decided by **platform coupling, not by whether code touches Supabase**. Isomorphic logic moves to `@grana/<domain>`: pure functions **and** reads parameterized by an injected client (`supabase: GranaSupabaseClient`, `today` injected — no `next/*`, no `server-only`, no client construction). Only platform-coupled glue stays per app: `next/cache` revalidation, `server-only`/client construction, `'use server'` shells that translate errors, and RSC data assembly. See spec `web-data-access` for the read-slice pattern.
 
 ### Component layering (UI)
 

@@ -6,7 +6,7 @@ import { AlertTriangle } from 'lucide-react'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { Button } from '@/components/ui/button'
 import type { LifecyclePeriod } from './card-detail-types'
-import { formatDayMonth } from './card-presentation'
+import { formatDayMonth } from '@grana/cards'
 
 type Props = {
   cardId: string

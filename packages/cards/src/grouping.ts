@@ -1,12 +1,11 @@
 // Pure view-model logic for the compact cards list: bank grouping, ordering,
 // urgency, the auto-collapse rule, the statement-usage percentage, and the view
-// filters. No React, no Supabase — testable in isolation. Mirrored in
-// apps/mobile/lib/cards/grouping.ts; keep the two in sync (same policy as the
-// queries files).
+// filters. No React, no Supabase — testable in isolation, shared by web and
+// mobile from `@grana/cards`.
 
-import type { CreditCardSummary } from './queries'
+import type { CreditCardSummary } from './types'
 
-/** Group urgency / row tone, matching `card-presentation.ts` → `pillTone`. */
+/** Group urgency / row tone, matching `presentation.ts` → `pillTone`. */
 export type CardTone = 'due' | 'soon' | 'ok'
 
 /** Sentinel key for cards without an issuing institution → "Sin banco" group. */

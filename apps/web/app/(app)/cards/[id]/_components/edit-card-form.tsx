@@ -12,7 +12,7 @@ import {
   updateCreditCard,
   updatePeriodDates,
 } from '@/app/_actions/credit-cards'
-import { cardMonogram } from '../../_components/card-presentation'
+import { cardMonogram } from '@grana/cards'
 import {
   BankSelectorField,
   CardPreview,

@@ -1,4 +1,5 @@
 import { useTranslations } from 'next-intl'
+import type { CardTone } from '@grana/cards'
 
 /**
  * Statement status as shown on the wallet card and the detail header.
@@ -6,8 +7,11 @@ import { useTranslations } from 'next-intl'
  *  - `due`  → terracota (a pagar / urgente): closed or overdue, unpaid, with debt.
  *  - `soon` → amber (cierra pronto): due within ~7 days.
  *  - `ok`   → emerald (al día): everything else.
+ *
+ * Single source of truth for the tone union is `CardTone` in `@grana/cards`
+ * (shared with `grouping.ts`/`pillTone`); kept aliased here for the UI.
  */
-export type CardPillTone = 'due' | 'soon' | 'ok'
+export type CardPillTone = CardTone
 
 const TONE_CLASS: Record<CardPillTone, string> = {
   due: 'bg-terracotta-soft text-terracotta',

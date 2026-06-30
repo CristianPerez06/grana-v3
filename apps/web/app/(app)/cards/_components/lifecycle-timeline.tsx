@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import type { PeriodKey } from './card-detail-types'
-import { formatDayMonth } from './card-presentation'
+import { formatDayMonth } from '@grana/cards'
 
 type Props = {
   hasApagar: boolean

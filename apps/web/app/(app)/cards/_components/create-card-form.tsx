@@ -11,7 +11,7 @@ import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { parseMoneyInput } from '@grana/validation'
 import { createCreditCard } from '@/app/_actions/credit-cards'
 import { invalidateAfterAccountMutation } from '@/lib/transactions/invalidation'
-import { cardMonogram } from './card-presentation'
+import { cardMonogram } from '@grana/cards'
 import {
   BankSelectorField,
   CardPreview,

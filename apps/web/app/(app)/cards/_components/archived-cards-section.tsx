@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { Card } from '@/components/ui/card'
 import type { CreditCardSummary } from '@/lib/cards/queries'
-import { cardAccent, cardMonogram } from './card-presentation'
+import { cardAccent, cardMonogram } from '@grana/cards'
 
 type Props = {
   cards: CreditCardSummary[]

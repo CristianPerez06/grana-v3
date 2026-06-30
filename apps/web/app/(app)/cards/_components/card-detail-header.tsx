@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { cardMonogram } from './card-presentation'
+import { cardMonogram } from '@grana/cards'
 import { CardStatusPill } from './card-status-pill'
 import type { CardPillTone } from './card-status-pill'
 

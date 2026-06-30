@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl'
 import { ChevronRight } from 'lucide-react'
 import { formatARS } from '@grana/i18n-messages'
 import type { LifecyclePeriod } from './card-detail-types'
-import { formatDayMonth } from './card-presentation'
+import { formatDayMonth } from '@grana/cards'
 
 type Props = {
   period: LifecyclePeriod

@@ -24,7 +24,7 @@ import {
   subtractMoneyValues,
 } from './utils'
 import type { CardPeriodWithPayment, PeriodVariant } from './types'
-import { summarizeCardsMonth, type CardsMonthSummary, type UpcomingDue } from './month-summary'
+import { summarizeCardsMonth, type CardsMonthSummary, type UpcomingDue } from '@grana/cards'
 
 // The cards read slice (`getCreditCards`, `getCreditCardDebtCheck`) and its
 // types now live in `@grana/cards` so mobile can reuse them. The web wrappers

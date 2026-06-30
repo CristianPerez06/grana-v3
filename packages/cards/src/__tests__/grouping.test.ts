@@ -8,7 +8,7 @@ import {
   cardHasBalance,
   NO_BANK_KEY,
 } from '../grouping'
-import type { CreditCardSummary } from '../queries'
+import type { CreditCardSummary } from '../types'
 
 // ── Test factories ────────────────────────────────────────────────────────────
 

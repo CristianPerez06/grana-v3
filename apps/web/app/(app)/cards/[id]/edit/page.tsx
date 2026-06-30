@@ -6,7 +6,7 @@ import { getCreditCardDetail, getCardNetworks } from '@/lib/cards/queries'
 import { getInstitutions } from '@/lib/accounts/queries'
 import { getTodayAR } from '@/lib/date'
 import { formatDateISO } from '@/lib/cards/utils'
-import { cardAccent, resolveEditCycle } from '../../_components/card-presentation'
+import { cardAccent, resolveEditCycle } from '@grana/cards'
 import { EditCardForm } from '../_components/edit-card-form'
 
 type Props = {

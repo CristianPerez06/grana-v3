@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card'
 import { translateCategoryLabel } from '@/lib/categories/display'
 import type { ActiveInstallment } from '@/lib/cards/queries'
 import { CuotaProgressDots } from './cuota-progress-dots'
-import { formatDayMonth } from './card-presentation'
+import { formatDayMonth } from '@grana/cards'
 
 type Props = {
   items: ActiveInstallment[]

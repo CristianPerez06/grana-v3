@@ -2,7 +2,7 @@ import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { Card, CardContent } from '@/components/ui/card'
 import type { CardsMonthSummary } from '@/lib/cards/queries'
-import { formatDayMonth } from './card-presentation'
+import { formatDayMonth } from '@grana/cards'
 
 type Props = {
   summary: CardsMonthSummary

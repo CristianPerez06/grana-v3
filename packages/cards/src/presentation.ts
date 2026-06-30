@@ -1,6 +1,6 @@
 import { resolveAccountAvatar } from '@grana/ui-contracts'
-import type { CardPeriodAlert } from '@/lib/cards/queries'
-import type { CardPillTone } from './card-status-pill'
+import type { CardPeriodAlert } from './types'
+import type { CardTone } from './grouping'
 
 /**
  * Per-card accent color (`--cc-accent` in the design handoff). Derived from the
@@ -38,7 +38,8 @@ export const cardMonogram = (name: string): string => {
 }
 
 /**
- * Map a card's active-period alert + variant to the wallet/detail pill tone:
+ * Map a card's active-period alert + variant to the wallet/detail pill tone
+ * (`CardTone`, the single tone union shared with `grouping.ts`):
  *  - `due`  (terracota): the statement closed/overdue and is unpaid with debt.
  *  - `soon` (amber): the due date is near (alert='amber') or it closes soon.
  *  - `ok`   (emerald): up to date.
@@ -46,7 +47,7 @@ export const cardMonogram = (name: string): string => {
 export const pillTone = (
   alert: CardPeriodAlert,
   variant: string | null,
-): CardPillTone => {
+): CardTone => {
   if (variant === 'vencido' || variant === 'cerrado_esperando_pago' || alert === 'red') return 'due'
   if (alert === 'amber') return 'soon'
   return 'ok'
