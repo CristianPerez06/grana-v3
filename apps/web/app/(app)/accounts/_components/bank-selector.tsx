@@ -10,6 +10,7 @@ import {
   type AccountColorKey,
 } from '@grana/ui-contracts'
 import { FieldIcon, FieldLabel } from '@/components/ui/form-primitives'
+import { useDrawerContainer } from '@/components/ui/drawer'
 import { createCustomInstitution } from '@/app/_actions/institutions'
 import type { Institution } from '@/lib/accounts/types'
 
@@ -40,6 +41,9 @@ export const BankSelector = ({
 }) => {
   const t = useTranslations('accounts')
   const [focused, setFocused] = useState(false)
+  // Inside the account drawer, portal the list into the drawer panel (not body)
+  // so the Dialog's scroll-lock lets the wheel scroll it — see `useDrawerContainer`.
+  const drawerContainer = useDrawerContainer()
   const [mode, setMode] = useState<'list' | 'create'>('list')
   const [createPrefill, setCreatePrefill] = useState('')
 
@@ -113,7 +117,7 @@ export const BankSelector = ({
           </div>
         </div>
       </RadixPopover.Anchor>
-      <RadixPopover.Portal>
+      <RadixPopover.Portal container={drawerContainer ?? undefined}>
         <RadixPopover.Content
           align="start"
           sideOffset={6}
