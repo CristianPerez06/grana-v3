@@ -45,3 +45,26 @@ export {
   type UpcomingDue,
   type MonthSummaryCard,
 } from './month-summary'
+
+export {
+  getCreditCardDetail,
+  getCardPeriods,
+  getCardPeriodDetail,
+  getActiveInstallments,
+  getCardNetworks,
+  getCardPeriodTransactionCount,
+  type CardPeriodDetail,
+  type CreditCardDetail,
+  type ActiveInstallment,
+  type ActiveInstallmentsResult,
+  type CardNetwork,
+} from './detail-queries'
+
+export {
+  resolveCardDetailState,
+  type CardDetailViewModel,
+  type CardDetailState,
+  type CardDetailShared,
+  type PeriodKey,
+  type LifecyclePeriod,
+} from './detail-vm'

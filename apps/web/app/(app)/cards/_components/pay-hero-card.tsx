@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { AlertTriangle } from 'lucide-react'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { Button } from '@/components/ui/button'
-import type { LifecyclePeriod } from './card-detail-types'
+import type { LifecyclePeriod } from '@grana/cards'
 import { formatDayMonth } from '@grana/cards'
 
 type Props = {

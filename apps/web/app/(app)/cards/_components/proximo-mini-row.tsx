@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { ChevronRight } from 'lucide-react'
 import { formatARS } from '@grana/i18n-messages'
-import type { LifecyclePeriod } from './card-detail-types'
+import type { LifecyclePeriod } from '@grana/cards'
 import { formatDayMonth } from '@grana/cards'
 
 type Props = {

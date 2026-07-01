@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import type { PeriodKey } from './card-detail-types'
+import type { PeriodKey } from '@grana/cards'
 import { formatDayMonth } from '@grana/cards'
 
 type Props = {

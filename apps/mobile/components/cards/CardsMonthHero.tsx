@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
-import type { CardsMonthSummary } from '../../lib/cards/queries'
+import type { CardsMonthSummary } from '@grana/cards'
 import { useT } from '../../lib/locale-context'
 import { useEyeMask } from '../dashboard/EyeMaskContext'
 import { useShowCents } from '../../lib/preferences-context'
@@ -55,6 +55,29 @@ export const CardsMonthHero = ({ summary }: Props) => {
       ) : (
         <Text className="mt-2 text-sm text-white/70">{t('cards.month_hero.empty')}</Text>
       )}
+
+      {/* En curso — resúmenes abiertos, sigue sumando hasta el cierre (paridad con web) */}
+      <View className="mt-5 border-t border-white/10 pt-4">
+        <Text className="text-[11px] font-extrabold uppercase tracking-widest text-white/55">
+          {t('cards.month_hero.in_progress_label')}
+        </Text>
+        <Text className="mt-1 text-2xl font-bold tracking-tight text-white/90">
+          {renderARS(summary.inProgressARS)}
+        </Text>
+        {summary.hasUSD && summary.inProgressUSD !== 0 && (
+          <View className="mt-1 flex-row items-center gap-2">
+            <View className="rounded-full bg-emerald-soft px-2 py-0.5">
+              <Text className="text-[10px] font-extrabold text-positive">USD</Text>
+            </View>
+            <Text className="text-[15px] font-bold text-white/80">
+              {renderUSD(summary.inProgressUSD)}
+            </Text>
+          </View>
+        )}
+        <Text className="mt-1.5 text-[12px] text-white/45">
+          {t('cards.month_hero.in_progress_caption')}
+        </Text>
+      </View>
 
       <View className="mt-5 border-t border-white/10 pt-4">
         <Text className="text-[11px] font-extrabold uppercase tracking-widest text-white/55">

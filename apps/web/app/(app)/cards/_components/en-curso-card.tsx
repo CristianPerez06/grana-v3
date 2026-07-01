@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { Card } from '@/components/ui/card'
-import type { LifecyclePeriod } from './card-detail-types'
+import type { LifecyclePeriod } from '@grana/cards'
 import { formatDayMonth } from '@grana/cards'
 
 type Props = {

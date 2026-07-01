@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
 import { Segmented } from '@/components/ui/segmented'
-import type { CardDetailViewModel, PeriodKey } from './card-detail-types'
+import type { CardDetailViewModel, PeriodKey } from '@grana/cards'
 import { LifecycleTimeline } from './lifecycle-timeline'
 import { PayHeroCard } from './pay-hero-card'
 import { EnCursoCard } from './en-curso-card'

@@ -14,7 +14,7 @@ import {
   type ViewFilter,
   type BankGroup,
   type CardTone,
-} from '../../lib/cards/grouping'
+} from '@grana/cards'
 import { accountColors } from '../../lib/colors'
 import { useT } from '../../lib/locale-context'
 import { useShowCents } from '../../lib/preferences-context'

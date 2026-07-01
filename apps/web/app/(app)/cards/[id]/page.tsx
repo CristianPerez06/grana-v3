@@ -9,7 +9,7 @@ import {
   getCardNetworks,
 } from '@/lib/cards/queries'
 import { getInstitutions } from '@/lib/accounts/queries'
-import { classifyPeriodsLifecycle, formatDateISO } from '@/lib/cards/utils'
+import { formatDateISO } from '@/lib/cards/utils'
 import { getTodayAR } from '@/lib/date'
 import { getShowCents } from '@/lib/preferences'
 import { Card } from '@/components/ui/card'
@@ -19,24 +19,8 @@ import { EditCardDrawerProvider } from './_components/edit-card-drawer'
 import { RegisterFirstPurchaseButton } from './_components/register-first-purchase-button'
 import { CardDetailHeader } from '../_components/card-detail-header'
 import { CardDetailView } from '../_components/card-detail-view'
-import { cardAccent, pillTone, resolveEditCycle } from '@grana/cards'
+import { resolveCardDetailState } from '@grana/cards'
 import { CardDetailsSection } from '../_components/card-details-section'
-import type { CardDetailViewModel } from '../_components/card-detail-types'
-import type { CardPeriodDetail } from '@/lib/cards/queries'
-
-const daysBetweenISO = (fromISO: string, toISO: string): number => {
-  const [ay, am, ad] = fromISO.split('-').map(Number)
-  const [by, bm, bd] = toISO.split('-').map(Number)
-  const a = new Date(ay, am - 1, ad).getTime()
-  const b = new Date(by, bm - 1, bd).getTime()
-  return Math.round((b - a) / (1000 * 60 * 60 * 24))
-}
-
-/** Installments (ARS) imputed to a period = pending children with installment_n. */
-const installmentsARSOf = (period: CardPeriodDetail): number =>
-  period.transactions
-    .filter((tx) => tx.installments_total && tx.installments_total > 1 && tx.currency_code === 'ARS')
-    .reduce((sum, tx) => sum + Math.abs(Number(tx.amount)), 0)
 
 type Props = {
   params: Promise<{ id: string }>
@@ -62,8 +46,20 @@ const CardDetailPage = async ({ params }: Props) => {
 
   if (!cardDetail || cardDetail.type !== 'credit') notFound()
 
-  const today = getTodayAR()
-  const todayISO = formatDateISO(today)
+  const todayISO = formatDateISO(getTodayAR())
+
+  // Pure view-model + screen-state derivation (lifecycle, cycle counters,
+  // committed total, empty-state branching) lives in `@grana/cards` so mobile
+  // can reuse it. The page only fetches, maps the state to JSX, and assembles
+  // the platform-coupled glue (edit drawer + i18n network label).
+  const state = resolveCardDetailState({
+    cardDetail,
+    periods: periodsDesc,
+    installments,
+    todayISO,
+  })
+
+  if (state.kind === 'not-found') notFound()
 
   // Back-link to the cards list. Rendered by the page (not the layout) so it
   // doesn't leak into the nested routes (periods, statement detail, edit, pay),
@@ -76,23 +72,6 @@ const CardDetailPage = async ({ params }: Props) => {
       {`← ${t('back_label')}`}
     </Link>
   )
-
-  const institutionName =
-    cardDetail.other_network_name ??
-    (cardDetail.institution as { name?: string } | null)?.name ??
-    null
-
-  const accent = cardAccent(
-    {
-      id: cardDetail.id,
-      name: cardDetail.name,
-      color_key: cardDetail.color_key,
-      icon_key: cardDetail.icon_key,
-    },
-    cardDetail.institution,
-  )
-
-  const cardHasHistory = cardDetail.periods.some((p) => p.has_payment || p.tx_count > 0)
 
   // ── Edit-drawer data (network is immutable; cycle shown read-only) ──────────
   const network = cardDetail.network_id
@@ -110,21 +89,21 @@ const CardDetailPage = async ({ params }: Props) => {
     initialCreditLimit: cardDetail.credit_limit,
     networkLabel,
     networkColor,
-    accent,
+    accent: state.shared.accent,
     committedARS,
-    cycle: resolveEditCycle(cardDetail.periods, todayISO),
+    cycle: state.shared.editCycle,
     institutions,
   })
 
   // ── Empty state: tarjeta nueva (no history) ─────────────────────────────────
-  if (!cardHasHistory && cardDetail.is_active) {
+  if (state.kind === 'new-card') {
     return (
       <EditCardDrawerProvider card={editCardData(0)}>
         {backLink}
         <CardDetailHeader
           name={cardDetail.name}
-          bank={institutionName}
-          accent={accent}
+          bank={state.shared.institutionName}
+          accent={state.shared.accent}
           tone="ok"
           // The big "register first purchase" CTA below already covers add.
           actions={<CardHeaderActions cardId={id} showAdd={false} />}
@@ -142,75 +121,24 @@ const CardDetailPage = async ({ params }: Props) => {
   }
 
   // ── Empty state: archived without pendings ──────────────────────────────────
-  const hasPendings =
-    cardDetail.debtCheck.hasPendingDebt ||
-    cardDetail.periods.some((p) => !p.has_payment && p.tx_count > 0)
-
-  if (!cardDetail.is_active && !hasPendings) {
+  if (state.kind === 'archived-empty') {
     return (
       <>
         {backLink}
-        <CardDetailHeader name={cardDetail.name} bank={institutionName} accent={accent} tone="ok" />
-        <CardActions cardId={id} isActive={false} hasMovements={cardHasHistory} />
+        <CardDetailHeader
+          name={cardDetail.name}
+          bank={state.shared.institutionName}
+          accent={state.shared.accent}
+          tone="ok"
+        />
+        <CardActions cardId={id} isActive={false} hasMovements={state.shared.cardHasHistory} />
         <p className="py-6 text-center text-sm text-text-muted">{t('detail.archived_no_pending')}</p>
         <CardDetailsSection createdAt={cardDetail.created_at} archivedAt={cardDetail.created_at} />
       </>
     )
   }
 
-  // ── Classify the lifecycle (apagar / curso / prox) ──────────────────────────
-  const lifecycle = classifyPeriodsLifecycle(cardDetail.periods, today)
-  const byId = new Map(periodsDesc.map((p) => [p.id, p]))
-
-  // Resolve each lifecycle period to its full detail (with transactions).
-  const apagar = lifecycle.apagar ? byId.get(lifecycle.apagar.id) ?? null : null
-  const curso = lifecycle.curso ? byId.get(lifecycle.curso.id) ?? null : null
-  const prox = lifecycle.prox ? byId.get(lifecycle.prox.id) ?? null : null
-
-  // Curso is the anchor; if classification couldn't find one (degenerate data),
-  // fall back to the latest unpaid period detail.
-  const cursoPeriod = curso ?? periodsDesc.find((p) => !p.has_payment) ?? periodsDesc[0]
-  if (!cursoPeriod) notFound()
-
-  const cursoCycleTotal = Math.max(1, daysBetweenISO(cursoPeriod.start_date, cursoPeriod.end_date))
-  const cursoCycleDayRaw = daysBetweenISO(cursoPeriod.start_date, todayISO)
-  const cursoCycleDay = Math.max(0, Math.min(cursoCycleTotal, cursoCycleDayRaw))
-  const cursoDaysToClose = Math.max(0, daysBetweenISO(todayISO, cursoPeriod.end_date))
-
-  const apagarDaysToDue = apagar ? daysBetweenISO(todayISO, apagar.due_date) : null
-
-  const committedARS = [apagar, cursoPeriod, prox]
-    .filter((p): p is CardPeriodDetail => p !== null)
-    .reduce((sum, p) => sum + p.pendingAmountARS, 0)
-
-  const hasUSD = cardDetail.currencies.some(
-    (c) => c.currency_code === 'USD' && c.is_active,
-  )
-
-  const vm: CardDetailViewModel = {
-    cardId: id,
-    accent,
-    creditLimit: cardDetail.credit_limit,
-    committedARS,
-    hasUSD,
-    hasPaid: cardDetail.periods.some((p) => p.has_payment),
-    apagar,
-    curso: cursoPeriod,
-    prox,
-    cursoCycleDay,
-    cursoCycleTotal,
-    cursoInstallmentsARS: installmentsARSOf(cursoPeriod),
-    cursoDaysToClose,
-    apagarDaysToDue,
-    installments: installments.items,
-    installmentsTotalRemaining: installments.totalRemaining,
-  }
-
-  const headerTone = pillTone(
-    apagar?.alert ?? cursoPeriod.alert,
-    apagar?.variant ?? cursoPeriod.variant,
-  )
-
+  // ── Active: full detail view ────────────────────────────────────────────────
   const sideExtras = (
     <div className="flex flex-col gap-4">
       <div className="border-t border-border pt-4">
@@ -229,19 +157,19 @@ const CardDetailPage = async ({ params }: Props) => {
   )
 
   return (
-    <EditCardDrawerProvider card={editCardData(committedARS)}>
+    <EditCardDrawerProvider card={editCardData(state.shared.committedARS)}>
       {backLink}
       <CardDetailHeader
         name={cardDetail.name}
-        bank={institutionName}
-        accent={accent}
-        tone={headerTone}
-        actions={cardDetail.is_active ? <CardHeaderActions cardId={id} hasMovements={cardHasHistory} /> : undefined}
+        bank={state.shared.institutionName}
+        accent={state.shared.accent}
+        tone={state.shared.headerTone}
+        actions={cardDetail.is_active ? <CardHeaderActions cardId={id} hasMovements={state.shared.cardHasHistory} /> : undefined}
       />
 
-      {!cardDetail.is_active && <CardActions cardId={id} isActive={false} hasMovements={cardHasHistory} />}
+      {!cardDetail.is_active && <CardActions cardId={id} isActive={false} hasMovements={state.shared.cardHasHistory} />}
 
-      <CardDetailView vm={vm} todayISO={todayISO} showCents={showCents} sideExtras={sideExtras} />
+      <CardDetailView vm={state.vm} todayISO={todayISO} showCents={showCents} sideExtras={sideExtras} />
     </EditCardDrawerProvider>
   )
 }
