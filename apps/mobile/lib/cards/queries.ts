@@ -9,6 +9,9 @@ import { formatDateISO } from './utils'
 import {
   getCreditCards as getCreditCardsImpl,
   getCardNetworks as getCardNetworksImpl,
+  getCreditCardDetail as getCreditCardDetailImpl,
+  getCardPeriods as getCardPeriodsImpl,
+  getActiveInstallments as getActiveInstallmentsImpl,
   summarizeCardsMonth,
 } from '@grana/cards'
 import type {
@@ -17,6 +20,10 @@ import type {
   UpcomingDue,
   CardNetwork,
   CardPeriodAlert,
+  CreditCardDetail,
+  CardPeriodDetail,
+  ActiveInstallment,
+  ActiveInstallmentsResult,
 } from '@grana/cards'
 
 export type {
@@ -25,6 +32,10 @@ export type {
   UpcomingDue,
   CardNetwork,
   CardPeriodAlert,
+  CreditCardDetail,
+  CardPeriodDetail,
+  ActiveInstallment,
+  ActiveInstallmentsResult,
 }
 
 // ─── getCreditCards ────────────────────────────────────────────────────────────
@@ -48,4 +59,23 @@ export async function getCardsMonthSummary(): Promise<CardsMonthSummary> {
 
 export async function getCardNetworks(): Promise<CardNetwork[]> {
   return getCardNetworksImpl(supabase)
+}
+
+// ─── Detail read layer ─────────────────────────────────────────────────────────
+// Thin wrappers over the shared `@grana/cards` detail reads: inject the native
+// client + `getTodayAR()`, keep zero-arg signatures (bar `id`). The `/cards/[id]`
+// screen fetches these three and feeds them to `resolveCardDetailState`. The
+// nested-route reads (`getCardPeriodDetail`/`getCardPeriodTransactionCount`) are
+// deferred with the routes that consume them.
+
+export async function getCreditCardDetail(id: string): Promise<CreditCardDetail | null> {
+  return getCreditCardDetailImpl(supabase, id, getTodayAR())
+}
+
+export async function getCardPeriods(id: string): Promise<CardPeriodDetail[]> {
+  return getCardPeriodsImpl(supabase, id, getTodayAR())
+}
+
+export async function getActiveInstallments(id: string): Promise<ActiveInstallmentsResult> {
+  return getActiveInstallmentsImpl(supabase, id)
 }
