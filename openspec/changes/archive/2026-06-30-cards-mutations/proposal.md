@@ -9,7 +9,7 @@ Dos hallazgos acotan el alcance real:
 ## What Changes
 
 - **Extraer 5 mutaciones a `@grana/cards`** con contrato neutral `CardMutationResult` (espejo de `createCreditCard`), recibiendo `{ supabase, userId, input, today }` y devolviendo `{ ok, id? } | { ok:false, fieldErrors? | messageKey? | errorCode? }`:
-  - `payCardPeriod` (pago de resumen, incluida la reversa de pago y el **impuesto de sellos** por resumen incorporado en main: valida `stamp_tax_amount`, inserta el movimiento de sello y persiste `stamp_tax_rate` con rollback, componiendo los helpers puros ya compartidos de `@grana/money-logic` — `deriveStampTaxRate`, `suggestStampTaxAmount`, `COMMON_STAMP_TAX_RATES` — sin duplicarlos)
+  - `payCardPeriod` (pago de resumen, con la confirmación del ciclo en curso y el **impuesto de sellos** por resumen incorporado en main: valida `stamp_tax_amount`, inserta el movimiento de sello y persiste `stamp_tax_rate` con rollback, componiendo los helpers puros ya compartidos de `@grana/money-logic` — `deriveStampTaxRate`, `suggestStampTaxAmount`, `COMMON_STAMP_TAX_RATES` — sin duplicarlos). **Nota:** no existe una reversa de pago en la app (resúmenes pagados no reversibles hoy); no hay código de reversa que extraer — ver `design.md` D5.
   - `updatePeriodDates` (edición de fechas de ciclo)
   - `updateCreditCard` (edición de nombre/institución/límite)
   - `updateInstallmentParent` (edición de la madre de cuotas)

@@ -6,8 +6,14 @@ export {
 
 export {
   createCreditCard,
+  updateCreditCard,
+  updatePeriodDates,
+  updateInstallmentParent,
+  deleteInstallmentParent,
   type CardMutationResult,
 } from './mutations'
+
+export { payCardPeriod } from './pay-card-period'
 
 export type {
   CreditCardSummary,
