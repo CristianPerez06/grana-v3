@@ -12,6 +12,7 @@ import {
   type SubcategorySliceInput,
 } from '@grana/money-logic'
 import { Money } from '@grana/validation'
+import { resolveAccountAvatar, type ResolvedAccountAvatar } from '@grana/ui-contracts'
 import {
   getAccountMovementsAscending,
   getPendingReimbursements,
@@ -153,13 +154,20 @@ export async function getMovementFilterOptions(
   supabase: DbClient,
   options: { categoryId?: string } = {},
 ): Promise<{
-  accounts: Array<{ id: string; name: string; type: 'cash' | 'bank' | 'credit' }>
+  accounts: Array<{
+    id: string
+    name: string
+    type: 'cash' | 'bank' | 'credit'
+    avatar: ResolvedAccountAvatar
+  }>
   categories: Array<{
     id: string
     name: string
     type: 'income' | 'expense' | 'both'
     canonical_name: string
     user_id: string | null
+    icon: string | null
+    color: string | null
   }>
   /** Subcategories of the active category, or [] when no category is filtered. */
   subcategories: Array<{
@@ -173,13 +181,13 @@ export async function getMovementFilterOptions(
   const [accountsResult, categoriesResult, subcategories] = await Promise.all([
     supabase
       .from('accounts')
-      .select('id, name, type')
+      .select('id, name, type, color_key, icon_key, institution:institutions(brand_color, icon_type)')
       .eq('is_active', true)
       .order('type')
       .order('name'),
     supabase
       .from('categories')
-      .select('id, name, type, canonical_name, user_id')
+      .select('id, name, type, canonical_name, user_id, icon, color')
       .eq('is_active', true)
       .order('type')
       .order('name'),
@@ -191,18 +199,30 @@ export async function getMovementFilterOptions(
   if (accountsResult.error) throw accountsResult.error
   if (categoriesResult.error) throw categoriesResult.error
 
+  const accountRows = (accountsResult.data ?? []) as unknown as Array<{
+    id: string
+    name: string
+    type: 'cash' | 'bank' | 'credit'
+    color_key: string | null
+    icon_key: string | null
+    institution: { brand_color: string | null; icon_type: string | null } | null
+  }>
+
   return {
-    accounts: (accountsResult.data ?? []) as Array<{
-      id: string
-      name: string
-      type: 'cash' | 'bank' | 'credit'
-    }>,
+    accounts: accountRows.map((a) => ({
+      id: a.id,
+      name: a.name,
+      type: a.type,
+      avatar: resolveAccountAvatar(a, a.institution),
+    })),
     categories: (categoriesResult.data ?? []) as Array<{
       id: string
       name: string
       type: 'income' | 'expense' | 'both'
       canonical_name: string
       user_id: string | null
+      icon: string | null
+      color: string | null
     }>,
     subcategories: subcategories.map((s) => ({
       id: s.id,

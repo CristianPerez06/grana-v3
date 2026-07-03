@@ -4,8 +4,11 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Repeat, Search, SlidersHorizontal, Users, X } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
+import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { AccountAvatar } from '@/components/ui/account-avatar'
 import { Label } from '@/components/ui/label'
+import { FilterSelect } from './filter-select'
 import { getTodayAR } from '@/lib/date'
 import { translateCategoryLabel, translateSubcategoryLabel } from '@/lib/categories/display'
 import {
@@ -38,13 +41,22 @@ export type MovementFiltersController = {
 
 type MovementFiltersProps = {
   filters: MovementFiltersState
-  accounts: Array<{ id: string; name: string; type: 'cash' | 'bank' | 'credit' }>
+  accounts: Array<{
+    id: string
+    name: string
+    type: 'cash' | 'bank' | 'credit'
+    /** Resolved visual identity; optional so callers that don't fetch it still compile. */
+    avatar?: ResolvedAccountAvatar
+  }>
   categories: Array<{
     id: string
     name: string
     type: 'income' | 'expense' | 'both'
     canonical_name: string
     user_id: string | null
+    /** Emoji glyph + tint; optional for the same reason as `accounts.avatar`. */
+    icon?: string | null
+    color?: string | null
   }>
   /** Subcategories of the active category (empty when no category is filtered, or when the host view chooses not to support this filter). */
   subcategories?: Array<{
@@ -117,6 +129,19 @@ export const MovementFilters = ({
     translateCategoryLabel(c.name, c.canonical_name, c.user_id === null, tRoot) ?? c.name
   const subcategoryLabel = (s: { name: string; canonical_name: string; user_id: string | null }) =>
     translateSubcategoryLabel(s.name, s.canonical_name, s.user_id === null, tRoot) ?? s.name
+
+  // Category emoji in a tinted square — same visual vocabulary as the movement
+  // row's leading glyph. Falls back to a neutral square when a category has no
+  // emoji so every option keeps the same left gutter.
+  const categoryGlyph = (icon?: string | null, color?: string | null) => (
+    <span
+      className="grid size-7 shrink-0 place-items-center rounded-lg text-sm"
+      style={{ backgroundColor: `${color ?? '#888'}1A` }}
+      aria-hidden
+    >
+      {icon ?? ''}
+    </span>
+  )
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [searchMode, setSearchMode] = useState((filters.query ?? '').length > 0)
@@ -504,95 +529,100 @@ export const MovementFilters = ({
 
             <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 py-6">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="f-type">{t('filters.type')}</Label>
-                <select
-                  id="f-type"
-                  value={filters.type ?? ''}
-                  onChange={(e) => setParams({ type: e.target.value || null })}
-                  className="h-11 w-full rounded-[12px] border border-input bg-background px-3 text-sm"
-                >
-                  <option value="">{t('filters.all_masc')}</option>
-                  {MOVEMENT_TYPE_KEYS.map((value) => (
-                    <option key={value} value={value}>
-                      {t(`movement_kinds.${value}`)}
-                    </option>
-                  ))}
-                </select>
+                <Label>{t('filters.type')}</Label>
+                <FilterSelect
+                  ariaLabel={t('filters.type')}
+                  allLabel={t('filters.all_masc')}
+                  value={filters.type ?? null}
+                  onChange={(v) => setParams({ type: v })}
+                  options={MOVEMENT_TYPE_KEYS.map((value) => ({
+                    value,
+                    label: t(`movement_kinds.${value}`),
+                  }))}
+                />
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="f-category">{t('filters.category')}</Label>
-                <select
-                  id="f-category"
-                  value={filters.categoryId ?? ''}
-                  onChange={(e) =>
-                    // Changing the parent category invalidates the active
-                    // subcategory: subcategories belong to a single category,
-                    // so the previously selected one is no longer reachable.
-                    setParams({ category: e.target.value || null, subcategory: null })
-                  }
-                  className="h-11 w-full rounded-[12px] border border-input bg-background px-3 text-sm"
-                >
-                  <option value="">{t('filters.all_fem')}</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {categoryLabel(category)}
-                    </option>
-                  ))}
-                </select>
+                <Label>{t('filters.category')}</Label>
+                <FilterSelect
+                  ariaLabel={t('filters.category')}
+                  allLabel={t('filters.all_fem')}
+                  value={filters.categoryId ?? null}
+                  // Changing the parent category invalidates the active
+                  // subcategory: subcategories belong to a single category, so
+                  // the previously selected one is no longer reachable.
+                  onChange={(v) => setParams({ category: v, subcategory: null })}
+                  options={categories.map((category) => ({
+                    value: category.id,
+                    label: categoryLabel(category),
+                    leading: categoryGlyph(category.icon, category.color),
+                  }))}
+                />
               </div>
 
               {filters.categoryId && (
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="f-subcategory">{t('filters.subcategory')}</Label>
-                  <select
-                    id="f-subcategory"
-                    value={filters.subcategoryId ?? ''}
-                    onChange={(e) => setParams({ subcategory: e.target.value || null })}
-                    className="h-11 w-full rounded-[12px] border border-input bg-background px-3 text-sm"
-                  >
-                    <option value="">{t('filters.all_fem')}</option>
-                    {subcategories.map((subcategory) => (
-                      <option key={subcategory.id} value={subcategory.id}>
-                        {subcategoryLabel(subcategory)}
-                      </option>
-                    ))}
-                    <option value={SUBCATEGORY_NONE_MARKER}>{t('filters.no_subcategory')}</option>
-                  </select>
+                  <Label>{t('filters.subcategory')}</Label>
+                  <FilterSelect
+                    ariaLabel={t('filters.subcategory')}
+                    allLabel={t('filters.all_fem')}
+                    value={filters.subcategoryId ?? null}
+                    onChange={(v) => setParams({ subcategory: v })}
+                    options={[
+                      ...subcategories.map((subcategory) => ({
+                        value: subcategory.id,
+                        label: subcategoryLabel(subcategory),
+                      })),
+                      { value: SUBCATEGORY_NONE_MARKER, label: t('filters.no_subcategory') },
+                    ]}
+                  />
                 </div>
               )}
 
               {showAccount && showAccountFilter && (
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="f-account">{t('filters.account')}</Label>
-                  <select
-                    id="f-account"
-                    value={filters.accountId ?? ''}
-                    onChange={(e) => setParams({ account: e.target.value || null })}
-                    className="h-11 w-full rounded-[12px] border border-input bg-background px-3 text-sm"
-                  >
-                    <option value="">{t('filters.all_fem')}</option>
-                    {accounts.map((account) => (
-                      <option key={account.id} value={account.id}>
-                        {account.name} · {t(`account_types.${account.type}`)}
-                      </option>
-                    ))}
-                  </select>
+                  <Label>{t('filters.account')}</Label>
+                  <FilterSelect
+                    ariaLabel={t('filters.account')}
+                    allLabel={t('filters.all_fem')}
+                    value={filters.accountId ?? null}
+                    onChange={(v) => setParams({ account: v })}
+                    options={accounts.map((account) => ({
+                      value: account.id,
+                      label: account.name,
+                      leading: account.avatar ? (
+                        <AccountAvatar {...account.avatar} size="sm" />
+                      ) : undefined,
+                    }))}
+                  />
                 </div>
               )}
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="f-currency">{t('filters.currency')}</Label>
-                <select
-                  id="f-currency"
-                  value={filters.currency ?? ''}
-                  onChange={(e) => setParams({ currency: e.target.value || null })}
-                  className="h-11 w-full rounded-[12px] border border-input bg-background px-3 text-sm"
-                >
-                  <option value="">{t('filters.all_fem')}</option>
-                  <option value="ARS">ARS</option>
-                  <option value="USD">USD</option>
-                </select>
+                <Label>{t('filters.currency')}</Label>
+                {/* Two chips instead of a dropdown: tapping the active one again
+                    clears the filter (back to "both currencies"), which the old
+                    <select>'s empty option represented. */}
+                <div className="flex items-center gap-2">
+                  {(['ARS', 'USD'] as const).map((code) => {
+                    const active = filters.currency === code
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => setParams({ currency: active ? null : code })}
+                        className={`h-11 flex-1 rounded-[12px] border text-sm font-semibold transition-colors ${
+                          active
+                            ? 'border-emerald bg-emerald text-white'
+                            : 'border-border bg-card text-text-muted hover:bg-muted/40'
+                        }`}
+                      >
+                        {code}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
