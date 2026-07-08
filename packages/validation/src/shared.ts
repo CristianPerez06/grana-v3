@@ -24,11 +24,13 @@ export const joinHouseholdSchema = yup
 const splitEntrySchema = yup
   .object({
     user_id: yup.string().label('user_id').uuid().required(),
-    percentage: yup.number().label('percentage').required().integer().min(1).max(100),
+    percentage: yup.number().label('percentage').required().integer().min(0).max(100),
   })
   .strict()
 
-// A split must list every member, each ≥ 1%, and the percentages must sum to 100.
+// A split must list every member and the percentages must sum to 100. A member
+// may be 0% (the expense is fully the other member's — the payer fronted it);
+// `.min(2)` + the sum test still reject degenerate splits.
 export const sharedSplitSchema = yup
   .array(splitEntrySchema)
   .label('splits')

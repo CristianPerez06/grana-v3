@@ -409,6 +409,21 @@ export const MovementForm = ({
   const isCredit = selectedAccount?.type === 'credit'
   const sharedMembers =
     household && household.members.length === 2 ? household.members : null
+  // "Es 100% del otro": the payer (members[0]) keeps 0%, the partner owes the
+  // whole amount. It's just the split's edge (0/100), surfaced as an explicit
+  // toggle so a bare "0%" doesn't have to be discovered. `prevSplitPct` remembers
+  // the last real split so unchecking restores it instead of snapping to a default.
+  const fullyOther = splitFirstPct === 0
+  const [prevSplitPct, setPrevSplitPct] = useState<number>(() => splitFirstPct || 50)
+  const setFullyOther = (on: boolean) => {
+    if (on) {
+      if (splitFirstPct > 0) setPrevSplitPct(splitFirstPct)
+      setSplitDraft(null)
+      setSplitFirstPct(0)
+    } else {
+      setSplitFirstPct(prevSplitPct || 50)
+    }
+  }
 
   // Autofocus the amount after the drawer slide-in settles (≈360ms), matching
   // the prototype. On the page variant focus lands immediately.
@@ -1378,38 +1393,60 @@ export const MovementForm = ({
             </div>
             {sharedEnabled && (
               <div
-                className="mt-3.5 flex flex-col gap-2 border-t pt-3.5"
+                className="mt-3.5 flex flex-col gap-3 border-t pt-3.5"
                 style={{ borderColor: ROW_DIVIDER }}
               >
-                <span className="text-xs text-text-muted">{tShared('split.title')}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-text">{sharedMembers[0].fullName}</span>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={splitDraft ?? String(splitFirstPct)}
-                      onChange={(e) => {
-                        // Allow an empty field while editing; only commit a
-                        // clamped value once there are digits to parse.
-                        const raw = e.target.value.replace(/\D/g, '').slice(0, 2)
-                        setSplitDraft(raw)
-                        if (raw !== '') {
-                          setSplitFirstPct(Math.max(1, Math.min(99, parseInt(raw, 10))))
-                        }
-                      }}
-                      onBlur={() => setSplitDraft(null)}
-                      aria-label={sharedMembers[0].fullName}
-                      className="w-16 rounded-[10px] border border-border py-1.5 pl-2.5 pr-6 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      style={{ backgroundColor: FIELD_BG }}
-                    />
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-text-muted">
-                      %
-                    </span>
+                {!fullyOther && (
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs text-text-muted">{tShared('split.title')}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-text">{sharedMembers[0].fullName}</span>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={splitDraft ?? String(splitFirstPct)}
+                          onChange={(e) => {
+                            // Allow an empty field while editing; only commit a
+                            // clamped value once there are digits to parse.
+                            const raw = e.target.value.replace(/\D/g, '').slice(0, 2)
+                            setSplitDraft(raw)
+                            if (raw !== '') {
+                              setSplitFirstPct(Math.max(1, Math.min(99, parseInt(raw, 10))))
+                            }
+                          }}
+                          onBlur={() => setSplitDraft(null)}
+                          aria-label={sharedMembers[0].fullName}
+                          className="w-16 rounded-[10px] border border-border py-1.5 pl-2.5 pr-6 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          style={{ backgroundColor: FIELD_BG }}
+                        />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-text-muted">
+                          %
+                        </span>
+                      </div>
+                      <span className="text-sm text-text-muted">
+                        · {sharedMembers[1].fullName} {100 - splitFirstPct}%
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-sm text-text-muted">
-                    · {sharedMembers[1].fullName} {100 - splitFirstPct}%
-                  </span>
+                )}
+                {/* Edge affordance: the payer covers a cost that is entirely the
+                    other member's (0/100). Reachable only here — the % field stays
+                    1..99. */}
+                <div className="flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-text">
+                      {tShared('split.fully_other_label', { name: sharedMembers[1].fullName })}
+                    </p>
+                    <p className="text-xs text-text-muted">
+                      {tShared('split.fully_other_hint', { name: sharedMembers[1].fullName })}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={fullyOther}
+                    ariaLabel={tShared('split.fully_other_label', { name: sharedMembers[1].fullName })}
+                    onValueChange={setFullyOther}
+                  />
                 </div>
               </div>
             )}

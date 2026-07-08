@@ -1801,7 +1801,9 @@
       "default_prefix": "Default",
       "edit_action": "Cambiar división para este gasto",
       "sum_error": "Los porcentajes deben sumar 100.",
-      "shared_label": "Gasto compartido"
+      "shared_label": "Gasto compartido",
+      "fully_other_label": "Es 100% de {name}",
+      "fully_other_hint": "Lo pagás vos y {name} te lo debe entero"
     },
     "invite": {
       "title": "Invitar miembro",

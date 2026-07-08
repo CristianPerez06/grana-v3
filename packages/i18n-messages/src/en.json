@@ -1801,7 +1801,9 @@
       "default_prefix": "Default",
       "edit_action": "Change the split for this expense",
       "sum_error": "Percentages must add up to 100.",
-      "shared_label": "Shared expense"
+      "shared_label": "Shared expense",
+      "fully_other_label": "It's 100% {name}'s",
+      "fully_other_hint": "You pay it and {name} owes you the whole amount"
     },
     "invite": {
       "title": "Invite a member",
