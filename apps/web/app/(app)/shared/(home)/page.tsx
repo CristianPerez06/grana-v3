@@ -519,25 +519,18 @@ export default async function SharedPage({
                         : categoryLabel ?? subcategoryLabel
                     const isReimb = e.kind === 'reimbursement'
                     const received = e.reimbursementState === 'received'
+                    const color = e.categoryColor ?? '#8A94A3'
+                    // Spending log: the movement TOTAL is the protagonist; the user's own
+                    // share ("tu parte") is the secondary detail below. Both are invariant to
+                    // who paid — the who-owes-whom lives in the debt strip above, once.
                     const amountTone = isReimb
                       ? received
                         ? 'text-income'
                         : 'text-pending'
                       : 'text-expense'
                     const sign = isReimb ? (received ? '+' : '') : '−'
-                    const color = e.categoryColor ?? '#8A94A3'
-                    // Headline = the share that matters to you; total below.
-                    const youPaid = e.payerId === userId
-                    const perspectiveAmount = isReimb
-                      ? e.amount
-                      : youPaid
-                        ? e.amount - e.ownShare
-                        : e.ownShare
-                    const perspectiveLabel = isReimb
-                      ? t('dashboard.reimbursement_label')
-                      : youPaid
-                        ? t('dashboard.partner_part', { name: partnerName })
-                        : t('dashboard.your_part')
+                    // Hide the share line when the whole movement is the user's (no real split).
+                    const showShare = Math.abs(e.ownShare - e.amount) > 0.005
                     // Card consumption whose statement falls in a later month: it is
                     // registered now but only impacts (and counts) when paid.
                     const futureImpact =
@@ -591,12 +584,13 @@ export default async function SharedPage({
                           <div className="text-right">
                             <span className={`block text-[14px] font-extrabold tabular-nums ${amountTone}`}>
                               {sign}
-                              {fmtMoney(perspectiveAmount, e.currencyCode)}
+                              {fmtMoney(e.amount, e.currencyCode)}
                             </span>
-                            <span className="text-[11px] text-text-muted">
-                              {perspectiveLabel} ·{' '}
-                              {t('dashboard.total_label', { amount: fmtMoney(e.amount, e.currencyCode) })}
-                            </span>
+                            {showShare && (
+                              <span className="text-[11px] text-text-muted">
+                                {t('dashboard.your_share', { amount: fmtMoney(e.ownShare, e.currencyCode) })}
+                              </span>
+                            )}
                           </div>
                         </Link>
                       </li>
