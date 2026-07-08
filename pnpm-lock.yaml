@@ -317,6 +317,9 @@ importers:
       '@grana/supabase':
         specifier: workspace:*
         version: link:../supabase
+      '@grana/transactions':
+        specifier: workspace:*
+        version: link:../transactions
       '@grana/transactions-mutations':
         specifier: workspace:*
         version: link:../transactions-mutations
@@ -406,6 +409,9 @@ importers:
 
   packages/transactions:
     dependencies:
+      '@grana/money-logic':
+        specifier: workspace:*
+        version: link:../money-logic
       '@grana/supabase':
         specifier: workspace:*
         version: link:../supabase

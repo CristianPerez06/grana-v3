@@ -1,5 +1,5 @@
-import type { CardPeriodDetail } from '@/lib/cards/queries'
-import type { FinancialMovement } from '@/lib/transactions/movements'
+import type { FinancialMovement } from '@grana/transactions'
+import type { CardPeriodDetail } from './detail-queries'
 
 type CardTx = CardPeriodDetail['transactions'][number]
 

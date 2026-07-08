@@ -2,30 +2,49 @@ import { useState } from 'react'
 import { View } from 'react-native'
 import type { CardDetailViewModel, PeriodKey } from '@grana/cards'
 import { useShowCents } from '../../../lib/preferences-context'
+import { useT } from '../../../lib/locale-context'
+import { Segmented } from '../../ui/Segmented'
 import { LifecycleTimeline } from './LifecycleTimeline'
 import { PayHeroCard } from './PayHeroCard'
 import { EnCursoCard } from './EnCursoCard'
 import { ProximoMiniRow } from './ProximoMiniRow'
 import { CardLimitPanel } from './CardLimitPanel'
 import { CuotasEnCursoPane } from './CuotasEnCursoPane'
+import { PeriodMovementsPane } from './PeriodMovementsPane'
+
+type Tab = 'movs' | 'cuotas'
 
 type Props = {
   vm: CardDetailViewModel
+  /** Financial "today" (from getTodayAR) — feeds the pane's date group labels. */
+  todayISO: string
 }
 
 /**
  * Native read-only orchestrator for the active card detail (mirror of the web
- * `CardDetailView`, minus writes and the movs/cuotas segmented). Holds the
- * selected statement so the timeline and heroes stay in sync; the "a pagar" hero
- * is display-only and the cuotas pane renders inline (the per-period movements
- * pane is deferred). Default focus: "a pagar" if it exists, else "en curso".
+ * `CardDetailView`, minus writes). Holds the selected statement so the timeline
+ * and heroes stay in sync, plus a `[Movimientos | Cuotas]` segmented (default
+ * Movimientos) that shows the selected period's movements pane or the active
+ * installments. The "a pagar" hero is display-only. Default focus: "a pagar" if
+ * it exists, else "en curso".
  */
-export const CardDetailView = ({ vm }: Props) => {
+export const CardDetailView = ({ vm, todayISO }: Props) => {
+  const t = useT()
   const showCents = useShowCents()
   const [periodo, setPeriodo] = useState<PeriodKey>(vm.apagar ? 'apagar' : 'curso')
+  const [tab, setTab] = useState<Tab>('movs')
 
   // Guard: if there is no "a pagar" but it's selected, fall back to "en curso".
   const active: PeriodKey = periodo === 'apagar' && !vm.apagar ? 'curso' : periodo
+
+  // Selecting a period in the timeline focuses its movements.
+  const selectPeriod = (p: PeriodKey) => {
+    setPeriodo(p)
+    setTab('movs')
+  }
+
+  const selectedPeriod =
+    active === 'apagar' ? vm.apagar : active === 'prox' ? vm.prox : vm.curso
 
   return (
     <View className="flex-col gap-5">
@@ -39,7 +58,7 @@ export const CardDetailView = ({ vm }: Props) => {
         proxIsEstimated={vm.prox?.is_estimated ?? false}
         active={active}
         accent={vm.accent}
-        onSelect={setPeriodo}
+        onSelect={selectPeriod}
       />
 
       <View className="flex-col gap-4">
@@ -50,7 +69,7 @@ export const CardDetailView = ({ vm }: Props) => {
               daysToDue={vm.apagarDaysToDue ?? 0}
               selected={active === 'apagar'}
               showCents={showCents}
-              onSelect={() => setPeriodo('apagar')}
+              onSelect={() => selectPeriod('apagar')}
             />
             <EnCursoCard
               period={vm.curso}
@@ -63,7 +82,7 @@ export const CardDetailView = ({ vm }: Props) => {
               movementsCount={vm.curso.transactions.length}
               installmentsARS={vm.cursoInstallmentsARS}
               showCents={showCents}
-              onSelect={() => setPeriodo('curso')}
+              onSelect={() => selectPeriod('curso')}
             />
           </>
         ) : (
@@ -78,7 +97,7 @@ export const CardDetailView = ({ vm }: Props) => {
             movementsCount={vm.curso.transactions.length}
             installmentsARS={vm.cursoInstallmentsARS}
             showCents={showCents}
-            onSelect={() => setPeriodo('curso')}
+            onSelect={() => selectPeriod('curso')}
           />
         )}
 
@@ -88,7 +107,7 @@ export const CardDetailView = ({ vm }: Props) => {
             selected={active === 'prox'}
             accent={vm.accent}
             showCents={showCents}
-            onSelect={() => setPeriodo('prox')}
+            onSelect={() => selectPeriod('prox')}
           />
         )}
       </View>
@@ -100,12 +119,37 @@ export const CardDetailView = ({ vm }: Props) => {
         showCents={showCents}
       />
 
-      <CuotasEnCursoPane
-        items={vm.installments}
-        totalRemaining={vm.installmentsTotalRemaining}
-        accent={vm.accent}
-        showCents={showCents}
+      <Segmented
+        value={tab}
+        onValueChange={(v) => setTab(v as Tab)}
+        ariaLabel={t('cards.detail.tab_movements')}
+        options={[
+          { value: 'movs', label: t('cards.detail.tab_movements') },
+          {
+            value: 'cuotas',
+            label:
+              vm.installments.length > 0
+                ? `${t('cards.detail.tab_installments')} · ${vm.installments.length}`
+                : t('cards.detail.tab_installments'),
+          },
+        ]}
       />
+
+      {tab === 'movs' && selectedPeriod ? (
+        <PeriodMovementsPane
+          cardId={vm.cardId}
+          period={selectedPeriod}
+          periodKey={active}
+          todayISO={todayISO}
+        />
+      ) : (
+        <CuotasEnCursoPane
+          items={vm.installments}
+          totalRemaining={vm.installmentsTotalRemaining}
+          accent={vm.accent}
+          showCents={showCents}
+        />
+      )}
     </View>
   )
 }

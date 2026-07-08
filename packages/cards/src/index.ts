@@ -74,3 +74,5 @@ export {
   type PeriodKey,
   type LifecyclePeriod,
 } from './detail-vm'
+
+export { cardPeriodTransactionToMovement, installmentChip } from './movement-mapper'

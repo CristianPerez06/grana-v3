@@ -1,34 +1,11 @@
-import type { MovementKind } from '@grana/money-logic'
+import { type Tone } from '@grana/transactions'
 
-// Editorial amount tone resolution. Lives next to the components that consume
-// it (movement-row, tx-hero) so the same matrix drives row and detail in sync.
-// Pure: same input → same output. Tested in __tests__/tone.test.ts.
-
-export type Tone = 'income' | 'expense' | 'neutral' | 'pending'
-
-/**
- * Resolve the editorial tone of a movement amount:
- * - `income`: the money is in (income, reimbursement received, ajuste positivo).
- * - `expense`: the money is out (gasto, consumo/cuota tarjeta, pago resumen,
- *   ajuste negativo).
- * - `neutral`: no in/out from the user's net position (transferencia entre
- *   cuentas propias, cambio de moneda).
- * - `pending`: an expected money-in that hasn't landed yet (reintegro con
- *   `received_at IS NULL` y `cancelled_at IS NULL`). Distinct from `income`
- *   so the UI doesn't transmit confidence.
- */
-export const resolveTone = (
-  kind: MovementKind,
-  sign: '+' | '-' | null,
-  isPendingReimbursement: boolean,
-): Tone => {
-  if (isPendingReimbursement) return 'pending'
-  if (kind === 'income' || kind === 'reimbursement') return 'income'
-  if (kind === 'adjustment') return sign === '-' ? 'expense' : 'income'
-  if (kind === 'transfer' || kind === 'exchange') return 'neutral'
-  // expense, card_payment, installment_purchase
-  return 'expense'
-}
+// `resolveTone` + the `Tone` type are pure and shared via `@grana/transactions`
+// (mobile reuses them). Re-exported here so the web components that consume the
+// tone matrix keep importing from `./tone` unchanged. `toneToClass` (Tailwind)
+// and `fmtAmountParts` (web amount treatment) stay web-only.
+export { resolveTone } from '@grana/transactions'
+export type { Tone } from '@grana/transactions'
 
 const TONE_CLASS: Record<Tone, string> = {
   income: 'text-income',

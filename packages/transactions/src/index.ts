@@ -19,3 +19,24 @@ export type {
   TransactionWithDetails,
   PendingReimbursementVM,
 } from './types'
+
+// Display-VM layer: the `FinancialMovement` union a movement row renders + the
+// pure bridge to `resolveMovementView`. The global-feed DB mappers stay in web.
+export { toMovementViewInput } from './movements'
+export type {
+  FinancialMovement,
+  MovementReviewFlag,
+  ReimbursementState,
+  IncomeMovement,
+  ExpenseMovement,
+  CardPaymentMovement,
+  TransferMovement,
+  AdjustmentMovement,
+  CardInstallmentMovement,
+  ExchangeMovement,
+  ReimbursementMovement,
+} from './movements'
+
+// Amount tone (pure). `toneToClass` (Tailwind) stays in web.
+export { resolveTone } from './tone'
+export type { Tone } from './tone'

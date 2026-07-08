@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@grana/money-logic": "workspace:*",
     "@grana/supabase": "workspace:*"
   },
   "devDependencies": {

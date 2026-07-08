@@ -38,6 +38,7 @@ export default function CardDetailScreen() {
 
   const cardDetail = query.data?.cardDetail ?? null
   const isCredit = cardDetail?.type === 'credit'
+  const todayISO = formatDateISO(getTodayAR())
 
   const state =
     query.data && cardDetail && isCredit
@@ -45,7 +46,7 @@ export default function CardDetailScreen() {
           cardDetail,
           periods: query.data.periods,
           installments: query.data.installments,
-          todayISO: formatDateISO(getTodayAR()),
+          todayISO,
         })
       : null
 
@@ -72,7 +73,7 @@ export default function CardDetailScreen() {
         ) : state.kind === 'archived-empty' ? (
           <EmptyInfo title={t('cards.detail.archived_no_pending')} />
         ) : (
-          <CardDetailView vm={state.vm} />
+          <CardDetailView vm={state.vm} todayISO={todayISO} />
         )}
       </ScrollView>
     </View>

@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { MovementList } from '@/lib/transactions/components/movement-list'
 import type { LifecyclePeriod, PeriodKey } from '@grana/cards'
-import { cardPeriodTransactionToMovement, installmentChip } from './card-movement-mapper'
+import { cardPeriodTransactionToMovement, installmentChip } from '@grana/cards'
 
 type Props = {
   cardId: string

@@ -20,8 +20,8 @@ import {
 } from '@grana/money-logic'
 import { useShowCents } from '@/lib/preferences-context'
 import { translateCategoryLabel, translateSubcategoryLabel } from '@/lib/categories/display'
-import { toMovementViewInput, type FinancialMovement } from '../movements'
-import { resolveTone, toneToClass } from './tone'
+import { resolveTone, toMovementViewInput, type FinancialMovement } from '@grana/transactions'
+import { toneToClass } from './tone'
 
 /** Lucide icon for the "structure" family (movements with no category). */
 const structureIcon: Partial<Record<MovementKind, typeof Tag>> = {
