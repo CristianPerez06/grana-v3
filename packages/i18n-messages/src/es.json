@@ -910,6 +910,7 @@
       "amount_positive": "El monto debe ser mayor a cero.",
       "installment_no_cuotas": "La compra no tiene cuotas para recalcular.",
       "shared_update_failed": "No se pudo actualizar el compartido: {error}",
+      "shared_unshare_settlement": "No se puede descompartir: hay una liquidación registrada después de esta compra. Revertí esa liquidación primero.",
       "installment_delete_paid": "No podés eliminar una compra con cuotas ya pagadas."
     }
   },

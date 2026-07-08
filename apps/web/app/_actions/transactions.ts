@@ -281,20 +281,18 @@ export async function updateTransaction(
   if ('shared' in validation.data) {
     const spec = validation.data.shared ?? null
 
-    const { data: reimbs } = await supabase
-      .from('transactions')
-      .select('id, amount')
-      .eq('linked_transaction_id', id)
-      .eq('type', 'reimbursement')
-      .eq('user_id', userId)
-    const allIds = [id, ...(reimbs ?? []).map((r) => r.id)]
-
     if (spec) {
       // Re-apply in place via upsert — do NOT delete-then-insert. Clearing all of
       // a transaction's splits transiently zeroes their sum, which trips the
       // deferred `trg_splits_sum_total` invariant and rolls the delete back,
       // leaving the old rows to collide with the re-insert. `applySharedSplits`
       // upserts the stable 2-member rows, so the sum stays exact throughout.
+      const { data: reimbs } = await supabase
+        .from('transactions')
+        .select('id, amount')
+        .eq('linked_transaction_id', id)
+        .eq('type', 'reimbursement')
+        .eq('user_id', userId)
       const { data: exp } = await supabase
         .from('transactions')
         .select('amount')
@@ -311,17 +309,24 @@ export async function updateTransaction(
       )
       if (!s.ok) return { ok: false, formError: `No se pudo actualizar el compartido: ${s.error}` }
     } else {
-      // Unshare: drop the splits and mark the movements non-shared. NOTE: the
-      // delete still transiently zeroes the sum and trips the same invariant, so
-      // this path has a latent orphan-splits bug — tracked separately.
-      await supabase.from('shared_expense_split').delete().in('transaction_id', allIds)
-      const { error: unshareErr } = await supabase
-        .from('transactions')
-        .update({ is_shared: false, household_id: null })
-        .in('id', allIds)
-        .eq('user_id', userId)
+      // Unshare atomically: flip is_shared and drop the splits in a single DB
+      // transaction, deriving the affected movements (this expense + its linked
+      // reimbursements) server-side from the root. A client-side delete-then-update
+      // would transiently zero the split sum, trip the deferred invariant, roll the
+      // delete back and leave orphan splits. The temporal settlement guard raises
+      // SQLSTATE GRN01, which we map to a friendly, on-brand message.
+      const { error: unshareErr } = await supabase.rpc('unshare_movement', {
+        p_root_id: id,
+      })
       if (unshareErr) {
-        return { ok: false, formError: await translatePostgresError(unshareErr.code, 'transaction') }
+        if (unshareErr.code === 'GRN01') {
+          return {
+            ok: false,
+            formError:
+              'No se puede descompartir: hay una liquidación registrada después de este gasto en el hogar. Revertí esa liquidación primero.',
+          }
+        }
+        return { ok: false, formError: unshareErr.message }
       }
     }
   }
@@ -369,32 +374,26 @@ export async function deleteTransaction(id: string): Promise<ActionResult<never>
     }
   }
 
-  // Block deleting a shared expense while a settlement is live in the household:
-  // the debt is settled by NET, with no per-expense imputation, so deleting would
-  // silently change a debt a settlement already accounted for. The DB trigger is the
-  // real invariant (see 0043); this is the friendly message. Reversal by contraasiento
-  // is Paso 3.
-  if (tx?.is_shared && tx.household_id) {
-    const { count } = await supabase
-      .from('settlement')
-      .select('id', { count: 'exact', head: true })
-      .eq('household_id', tx.household_id)
-    if ((count ?? 0) > 0) {
-      return {
-        ok: false,
-        formError:
-          'Este gasto es parte de una cuenta con liquidaciones. Revertí la liquidación antes de borrarlo.',
-      }
-    }
-  }
-
+  // Deleting a shared expense that a settlement already covered would rewrite a
+  // settled balance. The temporal guard (see 0043 + 0049) blocks the delete only
+  // when a same-currency settlement is dated at/after the expense, raising SQLSTATE
+  // GRN01 which we map to a friendly message. Reversal by contraasiento is Paso 3.
   const { error } = await supabase
     .from('transactions')
     .delete()
     .eq('id', id)
     .eq('user_id', userId)
 
-  if (error) return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
+  if (error) {
+    if (error.code === 'GRN01') {
+      return {
+        ok: false,
+        formError:
+          'No se puede borrar: hay una liquidación registrada después de este gasto en el hogar. Revertí esa liquidación primero.',
+      }
+    }
+    return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
+  }
 
   revalidateAfterMovementMutation()
   return { ok: true }

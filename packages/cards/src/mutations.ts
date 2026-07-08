@@ -450,8 +450,11 @@ export async function updateInstallmentParent(args: {
   }
 
   // Share toggle reconciliation (only when the form sent it). The split lives on
-  // the child cuotas, so we clear and re-apply across all children, then
-  // mark/unmark the parent. Runs even with paid children: only the split %s move.
+  // the child cuotas. Re-share upserts in place (no pre-delete: clearing all splits
+  // would transiently zero their sum and trip the deferred invariant). Unshare goes
+  // through the atomic `unshare_movement` RPC, which flips the flag and drops the
+  // splits (parent + children + linked reimbursements) in a single DB transaction.
+  // Runs even with paid children: only the split %s move.
   let sharedTouched = false
   if ('shared' in safeInput) {
     sharedTouched = true
@@ -460,11 +463,6 @@ export async function updateInstallmentParent(args: {
         household_id: string
         splits: { user_id: string; percentage: number }[]
       } | null) ?? null
-    const childIds = (children ?? []).map((c) => c.id)
-
-    if (childIds.length > 0) {
-      await supabase.from('shared_expense_split').delete().in('transaction_id', childIds)
-    }
 
     if (spec) {
       const targets = (children ?? []).map((c) => ({
@@ -490,11 +488,23 @@ export async function updateInstallmentParent(args: {
         .eq('id', parentId)
       if (markErr) return { ok: false, errorCode: markErr.code, sharedTouched }
     } else {
-      const { error: unshareErr } = await supabase
-        .from('transactions')
-        .update({ is_shared: false, household_id: null })
-        .in('id', [parentId, ...childIds])
-      if (unshareErr) return { ok: false, errorCode: unshareErr.code, sharedTouched }
+      // Atomic unshare via RPC. The temporal settlement guard (0043 + 0049) raises
+      // SQLSTATE GRN01 when a same-currency settlement is dated at/after a covered
+      // cuota — mapped to a friendly message; any other error is surfaced generically.
+      const { error: unshareErr } = await supabase.rpc('unshare_movement', {
+        p_root_id: parentId,
+      })
+      if (unshareErr) {
+        if (unshareErr.code === 'GRN01') {
+          return { ok: false, messageKey: 'cards.errors.shared_unshare_settlement', sharedTouched }
+        }
+        return {
+          ok: false,
+          messageKey: 'cards.errors.shared_update_failed',
+          messageParams: { error: unshareErr.message },
+          sharedTouched,
+        }
+      }
     }
   }
 

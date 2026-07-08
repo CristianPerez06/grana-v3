@@ -1118,6 +1118,10 @@ export type Database = {
         Args: { p_settlement_id: string }
         Returns: undefined
       }
+      unshare_movement: {
+        Args: { p_root_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       account_type: "cash" | "bank" | "credit"

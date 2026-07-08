@@ -24,12 +24,14 @@ type Ctx = {
 }
 
 type Handler = (ctx: Ctx) => { data: unknown; error: unknown }
+type RpcHandler = (fn: string, args: unknown) => { data: unknown; error: unknown }
 
-function makeSupabase(handler: Handler) {
+function makeSupabase(handler: Handler, rpcHandler?: RpcHandler) {
   const calls = {
     inserts: [] as Array<{ table: string; payload: unknown }>,
     updates: [] as Array<{ table: string; payload: unknown; filters: Record<string, unknown> }>,
     deletes: [] as Array<{ table: string; filters: Record<string, unknown> }>,
+    rpcs: [] as Array<{ fn: string; args: unknown }>,
   }
 
   function builder(table: string) {
@@ -88,7 +90,13 @@ function makeSupabase(handler: Handler) {
     return b
   }
 
-  const supabase = { from: (t: string) => builder(t) } as unknown as GranaSupabaseClient
+  const supabase = {
+    from: (t: string) => builder(t),
+    rpc: (fn: string, args: unknown) => {
+      calls.rpcs.push({ fn, args })
+      return Promise.resolve(rpcHandler ? rpcHandler(fn, args) : OK)
+    },
+  } as unknown as GranaSupabaseClient
   return { supabase, calls }
 }
 
@@ -265,6 +273,75 @@ describe('updateInstallmentParent', () => {
     expect(result).toEqual({ ok: true, sharedTouched: false })
     // parent + children both updated with the new category
     expect(calls.updates.filter((u) => u.table === 'transactions')).toHaveLength(2)
+  })
+})
+
+// ── updateInstallmentParent › unshare (atomic RPC) ──────────────────────────────
+
+describe('updateInstallmentParent › unshare', () => {
+  const parentAndChildren = (c: Ctx) => {
+    if (c.table === 'transactions' && c.op === 'select' && c.cols.includes('installments_total'))
+      return { data: { id: 'par', installments_total: 3 }, error: null }
+    if (c.table === 'transactions' && c.op === 'select')
+      return { data: [{ id: 'ch1', status: 'pending', installment_n: 1, amount: 100 }], error: null }
+    return OK
+  }
+
+  it('unshares via the unshare_movement RPC — no client split delete, no direct flag flip', async () => {
+    const { supabase, calls } = makeSupabase(parentAndChildren)
+    const result = await updateInstallmentParent({
+      supabase,
+      userId: USER,
+      parentId: 'par',
+      input: { shared: null },
+    })
+    expect(result).toEqual({ ok: true, sharedTouched: true })
+    // The atomic RPC is called with the parent as root.
+    expect(calls.rpcs).toEqual([{ fn: 'unshare_movement', args: { p_root_id: 'par' } }])
+    // The buggy client-side delete-then-flip is gone.
+    expect(calls.deletes.filter((d) => d.table === 'shared_expense_split')).toHaveLength(0)
+    expect(
+      calls.updates.filter(
+        (u) => u.table === 'transactions' && (u.payload as Record<string, unknown>).is_shared === false,
+      ),
+    ).toHaveLength(0)
+  })
+
+  it('maps the temporal settlement guard (GRN01) to a friendly messageKey', async () => {
+    const { supabase } = makeSupabase(parentAndChildren, () => ({
+      data: null,
+      error: { code: 'GRN01', message: 'cannot unshare movement covered by a later settlement' },
+    }))
+    const result = await updateInstallmentParent({
+      supabase,
+      userId: USER,
+      parentId: 'par',
+      input: { shared: null },
+    })
+    expect(result).toEqual({
+      ok: false,
+      messageKey: 'cards.errors.shared_unshare_settlement',
+      sharedTouched: true,
+    })
+  })
+
+  it('maps any other unshare RPC error to shared_update_failed', async () => {
+    const { supabase } = makeSupabase(parentAndChildren, () => ({
+      data: null,
+      error: { code: '23503', message: 'some other db error' },
+    }))
+    const result = await updateInstallmentParent({
+      supabase,
+      userId: USER,
+      parentId: 'par',
+      input: { shared: null },
+    })
+    expect(result).toEqual({
+      ok: false,
+      messageKey: 'cards.errors.shared_update_failed',
+      messageParams: { error: 'some other db error' },
+      sharedTouched: true,
+    })
   })
 })
 

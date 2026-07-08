@@ -910,6 +910,7 @@
       "amount_positive": "The amount must be greater than zero.",
       "installment_no_cuotas": "The purchase has no installments to recalculate.",
       "shared_update_failed": "Couldn’t update the shared split: {error}",
+      "shared_unshare_settlement": "Can’t un-share: a settlement is dated after this purchase. Reverse that settlement first.",
       "installment_delete_paid": "You can’t delete a purchase with already-paid installments."
     }
   },

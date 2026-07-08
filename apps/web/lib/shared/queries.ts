@@ -116,6 +116,7 @@ async function collectDebtInputs(
     {
       user_id: string
       type: string
+      is_shared: boolean
       currency_code: string
       date: string
       due_date: string | null
@@ -130,13 +131,14 @@ async function collectDebtInputs(
     const { data: txs } = await supabase
       .from('transactions')
       .select(
-        'id, user_id, type, currency_code, date, due_date, received_at, cancelled_at, description, linked_transaction_id, category:categories(name)',
+        'id, user_id, type, is_shared, currency_code, date, due_date, received_at, cancelled_at, description, linked_transaction_id, category:categories(name)',
       )
       .in('id', txIds)
     for (const t of txs ?? [])
       txById.set(t.id, {
         user_id: t.user_id,
         type: t.type,
+        is_shared: t.is_shared,
         currency_code: t.currency_code,
         date: t.date,
         due_date: t.due_date,
@@ -172,7 +174,11 @@ async function collectDebtInputs(
 
   const projectable: ProjectableSplit[] = (splitRows ?? []).flatMap((row) => {
     const tx = txById.get(row.transaction_id)
-    if (!tx || !isBalanceCurrency(tx.currency_code)) return []
+    // Defensive: only splits of a still-shared transaction feed the derived debt.
+    // A stray/legacy split on an unshared movement (its own household_id survives)
+    // must never contribute — the symmetric invariant should prevent it, this is the
+    // belt-and-suspenders on the read side.
+    if (!tx || !tx.is_shared || !isBalanceCurrency(tx.currency_code)) return []
     const kind = tx.type === 'reimbursement' ? 'reimbursement' : 'expense'
     const linkedLabel = tx.linked_transaction_id
       ? linkedLabelById.get(tx.linked_transaction_id)
