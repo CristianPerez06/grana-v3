@@ -11,6 +11,14 @@ type Props = {
   onChange: (iso: string) => void
   placeholder?: string
   invalid?: boolean
+  /**
+   * Controlled open state. Pass together with `onOpenChange` to let a parent
+   * own whether the picker is shown — used to keep sibling pickers (e.g. Cierre
+   * / Vencimiento) mutually exclusive so opening one closes the other. Omit both
+   * for the standalone, self-managed behavior.
+   */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 // `YYYY-MM-DD` ⇄ Date using LOCAL components so a date-only value never shifts a
@@ -32,10 +40,19 @@ function dateToISO(date: Date): string {
 // and emits `YYYY-MM-DD`. iOS renders an inline spinner with a Done button;
 // Android shows the native dialog and commits on "set". Reusable across forms
 // (cards alta today, movement form next).
-export function DateField({ value, onChange, placeholder, invalid }: Props) {
+export function DateField({ value, onChange, placeholder, invalid, open, onOpenChange }: Props) {
   const t = useT()
   const locale = useLocale()
-  const [show, setShow] = useState(false)
+  const [internalShow, setInternalShow] = useState(false)
+
+  // Controlled when the parent supplies both `open` and `onOpenChange`; else the
+  // field manages its own visibility.
+  const controlled = open !== undefined && onOpenChange !== undefined
+  const show = controlled ? open : internalShow
+  const setShow = (next: boolean) => {
+    if (controlled) onOpenChange(next)
+    else setInternalShow(next)
+  }
 
   const display = value
     ? isoToDate(value).toLocaleDateString(locale === 'en' ? 'en-US' : 'es-AR', {
@@ -55,7 +72,7 @@ export function DateField({ value, onChange, placeholder, invalid }: Props) {
   return (
     <View className="flex-col gap-2">
       <Pressable
-        onPress={() => setShow((s) => !s)}
+        onPress={() => setShow(!show)}
         className={`h-11 w-full justify-center rounded-lg border bg-card px-3 ${borderClass}`}
       >
         <Text className={`text-sm ${value ? 'text-text' : 'text-text-soft'}`}>{display}</Text>

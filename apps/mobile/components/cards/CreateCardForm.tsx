@@ -40,6 +40,9 @@ export function CreateCardForm({ institutions, networks }: Props) {
   const [creditLimit, setCreditLimit] = useState('')
   const [currentEnd, setCurrentEnd] = useState('')
   const [currentDue, setCurrentDue] = useState('')
+  // Only one of the two date pickers (Cierre / Vencimiento) is open at a time —
+  // opening one closes the other.
+  const [openPicker, setOpenPicker] = useState<'close' | 'due' | null>(null)
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
@@ -165,14 +168,26 @@ export function CreateCardForm({ institutions, networks }: Props) {
         <View className="flex-row gap-3">
           <View className="flex-1 flex-col gap-1.5">
             <Text className="text-xs font-medium text-text-muted">{t('cards.labels.close_date')}</Text>
-            <DateField value={currentEnd} onChange={setCurrentEnd} invalid={Boolean(fieldErrors.currentEnd)} />
+            <DateField
+              value={currentEnd}
+              onChange={setCurrentEnd}
+              invalid={Boolean(fieldErrors.currentEnd)}
+              open={openPicker === 'close'}
+              onOpenChange={(o) => setOpenPicker(o ? 'close' : null)}
+            />
             {fieldErrors.currentEnd && (
               <Text className="text-xs text-error">{fieldErrors.currentEnd}</Text>
             )}
           </View>
           <View className="flex-1 flex-col gap-1.5">
             <Text className="text-xs font-medium text-text-muted">{t('cards.labels.due_date')}</Text>
-            <DateField value={currentDue} onChange={setCurrentDue} invalid={Boolean(fieldErrors.currentDue)} />
+            <DateField
+              value={currentDue}
+              onChange={setCurrentDue}
+              invalid={Boolean(fieldErrors.currentDue)}
+              open={openPicker === 'due'}
+              onOpenChange={(o) => setOpenPicker(o ? 'due' : null)}
+            />
             {fieldErrors.currentDue && (
               <Text className="text-xs text-error">{fieldErrors.currentDue}</Text>
             )}
