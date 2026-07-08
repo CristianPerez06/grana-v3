@@ -289,9 +289,12 @@ export async function updateTransaction(
       .eq('user_id', userId)
     const allIds = [id, ...(reimbs ?? []).map((r) => r.id)]
 
-    await supabase.from('shared_expense_split').delete().in('transaction_id', allIds)
-
     if (spec) {
+      // Re-apply in place via upsert — do NOT delete-then-insert. Clearing all of
+      // a transaction's splits transiently zeroes their sum, which trips the
+      // deferred `trg_splits_sum_total` invariant and rolls the delete back,
+      // leaving the old rows to collide with the re-insert. `applySharedSplits`
+      // upserts the stable 2-member rows, so the sum stays exact throughout.
       const { data: exp } = await supabase
         .from('transactions')
         .select('amount')
@@ -308,6 +311,10 @@ export async function updateTransaction(
       )
       if (!s.ok) return { ok: false, formError: `No se pudo actualizar el compartido: ${s.error}` }
     } else {
+      // Unshare: drop the splits and mark the movements non-shared. NOTE: the
+      // delete still transiently zeroes the sum and trips the same invariant, so
+      // this path has a latent orphan-splits bug — tracked separately.
+      await supabase.from('shared_expense_split').delete().in('transaction_id', allIds)
       const { error: unshareErr } = await supabase
         .from('transactions')
         .update({ is_shared: false, household_id: null })

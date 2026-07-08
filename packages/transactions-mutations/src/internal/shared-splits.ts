@@ -46,7 +46,14 @@ export async function applySharedSplits(
     }))
   })
 
-  const { error: splitError } = await supabase.from('shared_expense_split').insert(rows)
+  // Upsert (not insert) so re-applying a split on an existing shared movement
+  // updates its rows in place. A delete-then-insert would transiently zero the
+  // per-transaction sum, tripping the deferred `trg_splits_sum_total` invariant;
+  // the member set is stable (2 rows per transaction), so the `(transaction_id,
+  // user_id)` keys already exist on an edit and the sum stays exact throughout.
+  const { error: splitError } = await supabase
+    .from('shared_expense_split')
+    .upsert(rows, { onConflict: 'transaction_id,user_id' })
   if (splitError) return { ok: false, error: splitError.message }
 
   return { ok: true }
