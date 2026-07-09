@@ -21,6 +21,8 @@ export const joinHouseholdSchema = yup
 
 // ─── Splits (shared expense / default split) ─────────────────────────────────
 
+// Per-expense split entry: a member may be 0% (the expense is fully the other
+// member's — the payer fronted it), so the range is relaxed to 0..100.
 const splitEntrySchema = yup
   .object({
     user_id: yup.string().label('user_id').uuid().required(),
@@ -28,23 +30,41 @@ const splitEntrySchema = yup
   })
   .strict()
 
-// A split must list every member and the percentages must sum to 100. A member
-// may be 0% (the expense is fully the other member's — the payer fronted it);
-// `.min(2)` + the sum test still reject degenerate splits.
+// Default (household) split entry: NOT part of the 0/100 relaxation. The default
+// split is the household's norm, not a per-expense decision, so each member stays
+// 1..99 (see the shared spec: the default-split editor is bounded to 1..99).
+const defaultSplitEntrySchema = yup
+  .object({
+    user_id: yup.string().label('user_id').uuid().required(),
+    percentage: yup.number().label('percentage').required().integer().min(1).max(99),
+  })
+  .strict()
+
+// Presence is enforced by `.required()` / `.optional()`; the sum test only runs
+// when a split is actually provided. Returning false on an absent value would make
+// an optional `default_split` (e.g. a name-only `updateHouseholdConfig`) fail
+// spuriously, since yup runs tests on undefined.
+const sumsTo100 = (arr: { percentage?: number }[] | undefined): boolean => {
+  if (!arr) return true
+  return arr.reduce((acc, s) => acc + (s.percentage ?? 0), 0) === 100
+}
+
+// A split must list every member and the percentages must sum to 100. `.min(2)` +
+// the sum test still reject degenerate splits.
 export const sharedSplitSchema = yup
   .array(splitEntrySchema)
   .label('splits')
   .required()
   .min(2)
-  .test('splits-sum-100', 'los porcentajes deben sumar 100', (arr) => {
-    // Presence is enforced by `.required()` / `.optional()`; this test only
-    // validates the sum when a split is actually provided. Returning false on an
-    // absent value would make an optional `default_split` (e.g. a name-only
-    // `updateHouseholdConfig`) fail spuriously, since yup runs tests on undefined.
-    if (!arr) return true
-    const sum = arr.reduce((acc, s) => acc + (s.percentage ?? 0), 0)
-    return sum === 100
-  })
+  .test('splits-sum-100', 'los porcentajes deben sumar 100', sumsTo100)
+
+// The household default split: same shape, but each member bounded to 1..99.
+export const defaultSplitSchema = yup
+  .array(defaultSplitEntrySchema)
+  .label('splits')
+  .required()
+  .min(2)
+  .test('splits-sum-100', 'los porcentajes deben sumar 100', sumsTo100)
 
 export const sharedExpenseSchema = yup
   .object({
@@ -56,7 +76,7 @@ export const sharedExpenseSchema = yup
 export const updateHouseholdConfigSchema = yup
   .object({
     name: yup.string().label('name').transform(trim).min(1).max(50).optional(),
-    default_split: sharedSplitSchema.optional().default(undefined),
+    default_split: defaultSplitSchema.optional().default(undefined),
   })
   .strict()
 

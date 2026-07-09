@@ -51,11 +51,20 @@ describe('sharedSplitSchema', () => {
     ).toBe(false)
   })
 
-  it('rejects a percentage below 1', () => {
+  it('accepts a 0/100 split (the expense is fully the other member’s)', () => {
     expect(
       sharedSplitSchema.isValidSync([
         { user_id: UUID_A, percentage: 0 },
         { user_id: UUID_B, percentage: 100 },
+      ]),
+    ).toBe(true)
+  })
+
+  it('rejects a percentage outside 0..100', () => {
+    expect(
+      sharedSplitSchema.isValidSync([
+        { user_id: UUID_A, percentage: -10 },
+        { user_id: UUID_B, percentage: 110 },
       ]),
     ).toBe(false)
   })
@@ -88,6 +97,18 @@ describe('updateHouseholdConfigSchema', () => {
         default_split: [
           { user_id: UUID_A, percentage: 60 },
           { user_id: UUID_B, percentage: 30 },
+        ],
+      }),
+    ).toBe(false)
+  })
+
+  it('rejects a default split with a 0% member (the default stays 1..99)', () => {
+    // The 0/100 relaxation is a per-expense decision, not the household norm.
+    expect(
+      updateHouseholdConfigSchema.isValidSync({
+        default_split: [
+          { user_id: UUID_A, percentage: 0 },
+          { user_id: UUID_B, percentage: 100 },
         ],
       }),
     ).toBe(false)
