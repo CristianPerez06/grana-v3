@@ -134,6 +134,7 @@ const GlobalTransactionDetailPage = async ({ params, searchParams }: Props) => {
 
       <GlobalTransactionDetail
         transaction={transaction}
+        canManage={transaction.user_id === user.id}
         movement={movement}
         installmentParent={installmentFamily?.parent ?? null}
         installmentSiblings={installmentFamily?.children ?? null}

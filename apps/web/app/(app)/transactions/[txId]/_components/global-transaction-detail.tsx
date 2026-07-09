@@ -94,6 +94,9 @@ type Props = {
   installmentSiblings?: TransactionWithDetails[] | null
   reimbursements?: ExpenseReimbursementVM[]
   from?: string
+  /** Whether the current user owns this movement (its payer). A shared movement is
+   * readable cross-user but only its owner may edit/delete it. Defaults to true. */
+  canManage?: boolean
   edit?: MovementEditContext | null
   editCategories?: CategoryWithSubcategories[]
   editHousehold?: Household | null
@@ -114,6 +117,7 @@ export const GlobalTransactionDetail = ({
   installmentSiblings,
   reimbursements = [],
   from,
+  canManage = true,
   edit,
   editCategories,
   editHousehold = null,
@@ -153,10 +157,15 @@ export const GlobalTransactionDetail = ({
   // only affordance is a note linking to the original purchase (the madre).
   const installmentParentHref =
     transaction.parent_id != null ? `/transactions/${transaction.parent_id}` : null
+  // Only the owner (payer) can edit/delete. A shared movement paid by the other
+  // member is read-only here even though it's visible via the household RLS.
   const canEdit =
-    actionAccountId != null && transaction.status !== 'paid' && installmentParentHref == null
+    canManage &&
+    actionAccountId != null &&
+    transaction.status !== 'paid' &&
+    installmentParentHref == null
   const canDelete =
-    actionAccountId != null && !transaction.parent_id && transaction.status !== 'paid'
+    canManage && actionAccountId != null && !transaction.parent_id && transaction.status !== 'paid'
 
   const categoryLabel = transaction.category ? getCategoryName(transaction.category, tRoot) : null
   const subcategoryLabel = transaction.subcategory

@@ -37,6 +37,12 @@ export async function buildMovementEditContext(
   ])
   if (!transaction) return null
 
+  // A shared movement is READABLE cross-user (a member sees the household's shared
+  // expenses via RLS), but only its owner (the payer) can edit it. Without this
+  // gate the other member would get the edit form and a confusing "Transacción no
+  // encontrada" on save (the mutation filters by user_id). Hide the affordance.
+  if (transaction.user_id !== user.id) return null
+
   const isParent = transaction.is_parent === true
   const isInstallmentChild = !isParent && transaction.parent_id != null
   if (!isParent && !transaction.account_id) return null
