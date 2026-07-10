@@ -915,6 +915,10 @@
     }
   },
   "transactions": {
+    "route": {
+      "feed_loading": "Loading your transactions…",
+      "feed_error": "We couldn't load your transactions."
+    },
     "title": "Transactions",
     "description": "Chronological history of income, expenses, transfers, adjustments, and card purchases.",
     "back_label": "Transactions",

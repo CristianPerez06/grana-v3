@@ -24,9 +24,10 @@ type Props = {
   onNext?: () => void
 }
 
-// Header month selector — mirror of the web "monthsel" pill: a white bordered
-// container with the two arrows and a bold capitalized label. Sits inside the
-// navy dashboard header, stretching to the available width.
+// Shared month selector — mirror of the web "monthsel" pill: a white bordered
+// container with the two arrows and a bold capitalized label. Presentational and
+// prop-driven; used by the dashboard header and the Movimientos feed. Stretches
+// to the available width.
 export const MonthNavigator = ({ year, month, onPrev, onNext }: Props) => {
   const label = `${MONTH_NAMES_ES[month - 1]} ${year}`
 

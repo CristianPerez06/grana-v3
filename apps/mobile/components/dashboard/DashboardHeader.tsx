@@ -4,7 +4,7 @@ import { useLocale, useT } from '../../lib/locale-context'
 import { useProfileFirstName } from '../../lib/dashboard/queries'
 import { useDashboardMonth } from './DashboardMonthContext'
 import { EyeMaskToggle } from './EyeMaskToggle'
-import { MonthNavigator } from './MonthNavigator'
+import { MonthNavigator } from '../ui/MonthNavigator'
 
 type Props = {
   /** Today's accounting date as `YYYY-MM-DD`, derived from `getTodayAR()`. */

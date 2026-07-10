@@ -409,6 +409,9 @@ importers:
 
   packages/transactions:
     dependencies:
+      '@grana/dashboard':
+        specifier: workspace:*
+        version: link:../dashboard
       '@grana/money-logic':
         specifier: workspace:*
         version: link:../money-logic

@@ -915,6 +915,10 @@
     }
   },
   "transactions": {
+    "route": {
+      "feed_loading": "Cargando tus movimientos…",
+      "feed_error": "No pudimos cargar tus movimientos."
+    },
     "title": "Movimientos",
     "description": "Historial cronológico de ingresos, gastos, transferencias, ajustes y consumos.",
     "back_label": "Movimientos",

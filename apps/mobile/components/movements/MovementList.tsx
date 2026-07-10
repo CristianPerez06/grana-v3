@@ -50,6 +50,10 @@ type Props = {
   groupByDate?: boolean
   /** Empty-state copy. Absent ⇒ nothing rendered when there are no movements. */
   emptyState?: MovementEmptyState
+  /** Show the owning account in each row's subtitle — the global feed spans accounts. */
+  showAccount?: boolean
+  /** Show the feed-only row badges ("Revisar" / "Compartido"). */
+  showFeedBadges?: boolean
 }
 
 /**
@@ -65,6 +69,8 @@ export function MovementList({
   installmentChips,
   groupByDate = true,
   emptyState,
+  showAccount = false,
+  showFeedBadges = false,
 }: Props) {
   const t = useT()
   const locale = useLocale()
@@ -96,6 +102,8 @@ export function MovementList({
         movement={movement}
         perspective={perspective}
         installmentChip={installmentChips?.get(movement.id) ?? null}
+        showAccount={showAccount}
+        showFeedBadges={showFeedBadges}
       />
     </View>
   )

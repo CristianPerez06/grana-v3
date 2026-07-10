@@ -20,16 +20,9 @@ import {
   attachLinkedExpenses,
   isHistoryRow,
 } from '@grana/transactions'
-import {
-  DEFAULT_MOVEMENTS_LIMIT,
-  MAX_MOVEMENTS_LIMIT,
-  MOVEMENTS_LIMIT_STEP,
-  resolveMonthRange,
-  type MovementFilters,
-} from './filters'
+import { resolveMonthRange } from './filters'
 
 export { UNCATEGORIZED_ID, type MonthCategoryBreakdown }
-import { toFinancialMovement, type FinancialMovement } from './movements'
 import type { TransactionWithDetails } from './types'
 
 // The account-scoped read slice (movements list + pending reimbursements) and
@@ -74,81 +67,12 @@ export async function getTransactions(
   )
 }
 
-// ── getTransactionDetail ──────────────────────────────────────────────────────
-
-export async function getGlobalMovements(
-  supabase: DbClient,
-  options: { limit?: number; offset?: number; filters?: MovementFilters } = {},
-): Promise<FinancialMovement[]> {
-  const page = await getGlobalMovementsPage(supabase, options)
-  return page.movements
-}
-
-// ── hasAnyTransaction ─────────────────────────────────────────────────────────
-// Lightweight check used by the empty-state copy in `/transactions`. Decides
-// between the welcome variant (first-time user) and the month-vacío variant
-// (user has history elsewhere, just navigated to an empty month). LIMIT 1 so
-// the cost is constant regardless of dataset size.
-
-export async function hasAnyTransaction(supabase: DbClient): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('id')
-    .limit(1)
-  if (error) throw error
-  return (data?.length ?? 0) > 0
-}
-
-// The whole page — filters, the isHistoryRow rule, the linked-expense
-// self-join and the limit+1 lookahead — is resolved by the get_movements_page
-// RPC in ONE round-trip (migration 0029). This function only translates the
-// MovementFilters contract to the RPC's jsonb input and maps rows to
-// FinancialMovement.
-
-export async function getGlobalMovementsPage(
-  supabase: DbClient,
-  options: { limit?: number; offset?: number; filters?: MovementFilters } = {},
-): Promise<{
-  movements: FinancialMovement[]
-  hasMore: boolean
-  nextLimit: number
-}> {
-  const { limit = DEFAULT_MOVEMENTS_LIMIT, offset = 0, filters = {} } = options
-
-  // Period resolution: an explicit custom range (`from`/`to`) wins; otherwise
-  // the selected `month` (`YYYY-MM`) resolves to its date range here — the
-  // query owns this translation (the `MovementFilters` contract sends the raw
-  // month), so the list and the per-month breakdowns slice the same window.
-  const monthRange =
-    !filters.from && !filters.to && filters.month ? resolveMonthRange(filters.month) : null
-
-  const { data, error } = await supabase.rpc('get_movements_page', {
-    p_filters: {
-      from: filters.from ?? monthRange?.from,
-      to: filters.to ?? monthRange?.to,
-      categoryId: filters.categoryId,
-      subcategoryId: filters.subcategoryId,
-      currency: filters.currency,
-      accountId: filters.accountId,
-      type: filters.type,
-      query: filters.query,
-      amountMin: filters.amountMin,
-      amountMax: filters.amountMax,
-      excludeShared: filters.excludeShared ? true : undefined,
-    },
-    p_limit: limit,
-    p_offset: offset,
-  })
-  if (error) throw error
-
-  const rows = (data ?? []) as unknown as TransactionWithDetails[]
-
-  return {
-    movements: rows.slice(0, limit).map(toFinancialMovement),
-    hasMore: rows.length > limit && limit < MAX_MOVEMENTS_LIMIT,
-    nextLimit: Math.min(limit + MOVEMENTS_LIMIT_STEP, MAX_MOVEMENTS_LIMIT),
-  }
-}
+// ── Global movements feed ─────────────────────────────────────────────────────
+// `getGlobalMovements`, `getGlobalMovementsPage` and `hasAnyTransaction` now live
+// in `@grana/transactions` (the mobile Movimientos tab is the second consumer).
+// Re-exported here so web keeps importing them from `@/lib/transactions/queries`
+// unchanged — same RPC (`get_movements_page`), same pagination, same query keys.
+export { getGlobalMovements, getGlobalMovementsPage, hasAnyTransaction } from '@grana/transactions'
 
 export async function getMovementFilterOptions(
   supabase: DbClient,

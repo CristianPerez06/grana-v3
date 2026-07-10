@@ -15,6 +15,7 @@ export const colors = {
   positive: '#10B981',
   emeraldDeep: '#059669',
   error: '#C54B3C',
+  warningDeep: '#B45309',
   text: '#0B1A2B',
   textMuted: '#6B7683',
   textSoft: '#8A94A3',
