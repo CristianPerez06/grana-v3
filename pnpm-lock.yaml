@@ -29,12 +29,18 @@ importers:
       '@grana/money-logic':
         specifier: workspace:*
         version: link:../../packages/money-logic
+      '@grana/movement-form':
+        specifier: workspace:*
+        version: link:../../packages/movement-form
       '@grana/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
       '@grana/transactions':
         specifier: workspace:*
         version: link:../../packages/transactions
+      '@grana/transactions-mutations':
+        specifier: workspace:*
+        version: link:../../packages/transactions-mutations
       '@grana/ui-contracts':
         specifier: workspace:*
         version: link:../../packages/ui-contracts

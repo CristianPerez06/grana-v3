@@ -34,3 +34,20 @@ export {
 } from './internal/card-periods'
 
 export { insertDeclaredReimbursement } from './internal/declared-reimbursement'
+
+// Thin movement mutations (isomorphic): the create/update bodies for simple
+// movements, shared by web server actions and the mobile mutators. Auth +
+// cache-invalidation stay in each platform's shell.
+export {
+  verifyActiveCurrency,
+  createIncome,
+  createExpense,
+  createTransfer,
+  createAdjustment,
+  createExchange,
+  updateTransaction,
+  updateTransfer,
+  updateAdjustment,
+  updateExchange,
+  type ThinMutationResult,
+} from './thin-mutations'

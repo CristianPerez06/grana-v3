@@ -1,8 +1,20 @@
 import { Pressable, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useSegments } from 'expo-router'
 import { Home, List, MoreHorizontal, Users } from 'lucide-react-native'
 import { colors } from '../../lib/colors'
 import { useT } from '../../lib/locale-context'
+
+// Non-tab stacks reached from Menú (never a highlighted tab): the whole section
+// renders chromeless — the tab bar would only show detached/unhighlighted.
+const CHROMELESS_SECTIONS: readonly string[] = ['accounts', 'cards']
+
+// Pushed screens that render chromeless even though they live inside a primary
+// tab's stack. The movement alta form pushes over the Movimientos tab but should
+// read as a dedicated full-screen flow, not "still in the tab".
+const CHROMELESS_SCREENS: readonly (readonly [parent: string, screen: string])[] = [
+  ['transactions', 'new'],
+]
 
 type TabRoute = { key: string; name: string }
 type TabBarNavigation = {
@@ -40,6 +52,21 @@ type Props = {
 export function TabBar({ state, navigation, onMenuPress, menuActive }: Props) {
   const t = useT()
   const insets = useSafeAreaInsets()
+  const segments = useSegments()
+
+  // Hide the tab bar on chromeless routes: whole non-tab sections (accounts,
+  // cards) and specific pushed screens inside a tab (e.g. `/transactions/new`),
+  // so each reads as a full-screen flow instead of a highlighted-tab sub-view.
+  // Group segments like `(app)` are dropped so the section/screen check is
+  // stable regardless of the route group.
+  const parts = segments.filter((s) => !s.startsWith('('))
+  const section = parts[0]
+  const screen = parts[parts.length - 1]
+  const parent = parts[parts.length - 2]
+  const chromeless =
+    (section !== undefined && CHROMELESS_SECTIONS.includes(section)) ||
+    CHROMELESS_SCREENS.some(([p, s]) => parent === p && screen === s)
+  if (chromeless) return null
 
   return (
     <View

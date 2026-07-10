@@ -1424,6 +1424,30 @@
       "transfer_subtitle_unknown_destination": "Cuenta destino",
       "installment_subtitle": "{count} cuotas",
       "card_payment_from": "Desde {accountName}"
+    },
+    "form": {
+      "type_label": "Tipo de movimiento",
+      "amount_label": "Monto",
+      "currency_label": "Moneda",
+      "account_label": "Cuenta",
+      "destination_label": "Cuenta destino",
+      "date_label": "Fecha",
+      "description_label": "Descripción",
+      "description_placeholder": "Opcional",
+      "suggestion_apply": "Usar sugerencia: {category}",
+      "category_label": "Categoría",
+      "negative_warning": "Esta operación deja el disponible en negativo ({amount}).",
+      "shared_toggle": "Compartir gasto",
+      "split_label": "Cómo se divide",
+      "split_you": "Pago yo todo",
+      "split_even": "50 / 50",
+      "split_other": "Paga {name}",
+      "your_share": "Tu parte: {pct}%",
+      "submit": "Guardar movimiento"
+    },
+    "new": {
+      "title": "Nuevo movimiento",
+      "load_error": "No pudimos cargar el formulario. Intentá de nuevo."
     }
   },
   "recurrences": {

@@ -1424,6 +1424,30 @@
       "transfer_subtitle_unknown_destination": "Destination account",
       "installment_subtitle": "{count} installments",
       "card_payment_from": "From {accountName}"
+    },
+    "form": {
+      "type_label": "Movement type",
+      "amount_label": "Amount",
+      "currency_label": "Currency",
+      "account_label": "Account",
+      "destination_label": "Destination account",
+      "date_label": "Date",
+      "description_label": "Description",
+      "description_placeholder": "Optional",
+      "suggestion_apply": "Use suggestion: {category}",
+      "category_label": "Category",
+      "negative_warning": "This leaves the available balance negative ({amount}).",
+      "shared_toggle": "Share expense",
+      "split_label": "How to split",
+      "split_you": "I pay all",
+      "split_even": "50 / 50",
+      "split_other": "{name} pays",
+      "your_share": "Your share: {pct}%",
+      "submit": "Save movement"
+    },
+    "new": {
+      "title": "New movement",
+      "load_error": "We couldn't load the form. Please try again."
     }
   },
   "recurrences": {
