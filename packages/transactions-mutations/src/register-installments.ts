@@ -16,6 +16,7 @@ import {
   getOrCreatePeriodForDate,
   CardPurchasePredatesHistoryError,
 } from './internal/card-periods'
+import { insertDeclaredReimbursement } from './internal/declared-reimbursement'
 
 export type RegisterInstallmentsArgs = {
   supabase: GranaSupabaseClient
@@ -184,6 +185,35 @@ export async function registerInstallments(
   if (childrenError || !insertedChildren) {
     await supabase.from('transactions').delete().eq('id', parent.id)
     return { ok: false, formError: childrenError?.message ?? 'Error al crear las cuotas.' }
+  }
+
+  if (data.reimbursement) {
+    // The reimbursement links to the PARENT (the whole purchase), not a child
+    // installment. A 'statement' reimbursement nets in a card period; default it
+    // to the FIRST installment's period (the purchase's period, the same one a
+    // 1× purchase would use) — required when it is received now, reconcilable at
+    // confirmation. The parent is off-ledger (account_id null, is_parent true);
+    // the trigger's is_parent branch validates that its children are on a card.
+    const declaration =
+      data.reimbursement.target === 'statement'
+        ? { ...data.reimbursement, card_period_id: data.reimbursement.card_period_id ?? periodIds[0] }
+        : data.reimbursement
+    const r = await insertDeclaredReimbursement(supabase, {
+      userId,
+      expenseId: parent.id,
+      currencyCode: 'ARS',
+      declaration,
+      // Shared purchase → the reimbursement inherits the same split (one row).
+      shared: data.shared,
+      today,
+    })
+    if (!r.ok) {
+      // Deleting the parent cascades the reimbursement (ON DELETE CASCADE on
+      // linked_transaction_id); delete the children explicitly.
+      await supabase.from('transactions').delete().eq('parent_id', parent.id)
+      await supabase.from('transactions').delete().eq('id', parent.id)
+      return { ok: false, formError: `Las cuotas no se guardaron (reintegro inválido): ${r.error}` }
+    }
   }
 
   if (data.shared) {

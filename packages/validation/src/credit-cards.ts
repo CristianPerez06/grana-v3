@@ -138,6 +138,7 @@ export const registerInstallmentsSchema = yup
     category_id: yup.string().label('category_id').uuid().required(),
     subcategory_id: yup.string().label('subcategory_id').uuid().optional(),
     description: yup.string().label('description').optional(),
+    reimbursement: reimbursementDeclarationSchema.optional().default(undefined),
     shared: sharedExpenseSchema.optional().default(undefined),
   })
   .strict()

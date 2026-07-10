@@ -1205,7 +1205,7 @@ export const MovementForm = ({
     ) : null
 
   // ── Toggles: reintegro + repetir (create only) ──────────────────────────────
-  const showReimbursementToggle = !isEdit && tab === 'expense' && !isInstallments
+  const showReimbursementToggle = !isEdit && tab === 'expense'
   // Alta: sin cambios respecto de main (hogar de 2 + pestaña gasto). Edición:
   // se agrega aparte, gateado a que el campo sea editable (gasto simple o madre
   // de cuotas; el pago de resumen queda excluido).

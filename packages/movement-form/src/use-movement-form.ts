@@ -427,7 +427,7 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
           date: string
         }
       | undefined
-    if (reimbursementEnabled && tab === 'expense' && !isInstallments) {
+    if (reimbursementEnabled && tab === 'expense') {
       const parsedReimb = parseMoneyInput(reimbursementAmount)
       if (parsedReimb === null || parsedReimb <= 0) {
         setFormError(t('reimbursement.errors.amount_positive'))
@@ -519,6 +519,7 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
             subcategory_id: subcategoryId || undefined,
             description: description || undefined,
             installments_total: parseInt(installments),
+            reimbursement: reimbursementDecl,
             shared: sharedDecl,
           })
         } else {
