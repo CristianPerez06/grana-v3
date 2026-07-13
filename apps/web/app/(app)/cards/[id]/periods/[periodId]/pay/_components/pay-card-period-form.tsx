@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button'
 import { SectionLabel } from '@/components/ui/form-primitives'
 import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
-import { DebitAccountSelect } from './debit-account-select'
+import { DebitAccountSelect, type DebitAccount } from './debit-account-select'
 
 const todayStr = () => {
   const d = getTodayAR()
@@ -35,11 +35,7 @@ const formatShortDate = (iso: string) => iso.split('-').reverse().join('/')
 const INPUT_CLS =
   'w-full rounded-[10px] border border-border bg-card px-3 py-2.5 text-sm text-text outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring placeholder:text-text-soft'
 
-type PaymentAccount = {
-  id: string
-  name: string
-  balanceARS: number
-}
+type PaymentAccount = DebitAccount
 
 type Props = {
   periodId: string

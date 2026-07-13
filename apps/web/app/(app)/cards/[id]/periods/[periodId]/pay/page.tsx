@@ -51,7 +51,7 @@ const PayPeriodPage = async ({ params }: Props) => {
     ...accountGroups.bank,
   ]
     .filter((a) => a.is_active && a.currencies.some((c) => c.currency_code === 'ARS' && c.is_active))
-    .map((a) => ({ id: a.id, name: a.name, balanceARS: a.balances.ARS }))
+    .map((a) => ({ id: a.id, name: a.name, balanceARS: a.balances.ARS, avatar: a.avatar }))
 
   return (
     <>

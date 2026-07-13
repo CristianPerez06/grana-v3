@@ -3,13 +3,17 @@
 import { useState } from 'react'
 import * as RadixPopover from '@radix-ui/react-popover'
 import { Check, ChevronDown, Wallet } from 'lucide-react'
+import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
 import { formatARS } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
+import { AccountAvatar } from '@/components/ui/account-avatar'
 
 export type DebitAccount = {
   id: string
   name: string
   balanceARS: number
+  /** Visual identity (color + icon/monogram), same as the accounts listing. */
+  avatar: ResolvedAccountAvatar
 }
 
 /**
@@ -49,12 +53,16 @@ export const DebitAccountSelect = ({
             invalid ? 'border-error' : 'border-border'
           }`}
         >
-          <span
-            className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-page text-text-muted"
-            aria-hidden
-          >
-            <Wallet className="size-4" />
-          </span>
+          {selected ? (
+            <AccountAvatar {...selected.avatar} size="sm" />
+          ) : (
+            <span
+              className="flex size-8 shrink-0 items-center justify-center rounded-md bg-page text-text-muted"
+              aria-hidden
+            >
+              <Wallet className="size-4" />
+            </span>
+          )}
           <span className="min-w-0 flex-1">
             {selected ? (
               <>
@@ -92,6 +100,7 @@ export const DebitAccountSelect = ({
                   isSelected ? 'bg-page' : ''
                 }`}
               >
+                <AccountAvatar {...account.avatar} size="sm" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold text-text">{account.name}</span>
                   <span className="block truncate text-xs text-text-muted tabular-nums">

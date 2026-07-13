@@ -11,7 +11,7 @@ const PayPeriodLayout = async ({ children, params }: Props) => {
   const t = await getTranslations('cards')
 
   return (
-    <div className="flex flex-col gap-6 max-w-xl">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
       <PageHeader
         title={t('payment.title')}
         backLink={{ href: `/cards/${id}/periods/${periodId}`, label: t('payment.back_label') }}
