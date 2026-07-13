@@ -12,6 +12,8 @@ export type DebitAccount = {
   id: string
   name: string
   balanceARS: number
+  /** Secondary line under the name (account type / institution), like the mockup. */
+  subtitle: string | null
   /** Visual identity (color + icon/monogram), same as the accounts listing. */
   avatar: ResolvedAccountAvatar
 }
@@ -19,10 +21,10 @@ export type DebitAccount = {
 /**
  * Account picker for the statement payment. The library has no generic `Select`
  * primitive, so — like the cards/accounts drawers (`BankSelector`) — this is a
- * Radix Popover dropdown styled to the system: a field-looking trigger that
- * shows the selected account + its ARS available balance, opening a list where
- * each option carries the same two facts. The parent owns the selected `value`;
- * this component owns only its open state.
+ * Radix Popover dropdown styled to the system. Matches the handoff mockup: the
+ * account's color avatar + name + type on the left, the available ARS balance
+ * (with an "available" caption) on the right. The parent owns the selected
+ * `value`; this component owns only its open state.
  */
 export const DebitAccountSelect = ({
   accounts,
@@ -30,6 +32,7 @@ export const DebitAccountSelect = ({
   onChange,
   label,
   placeholder,
+  availableLabel,
   invalid = false,
 }: {
   accounts: DebitAccount[]
@@ -37,6 +40,7 @@ export const DebitAccountSelect = ({
   onChange: (id: string) => void
   label: string
   placeholder: string
+  availableLabel: string
   invalid?: boolean
 }) => {
   const showCents = useShowCents()
@@ -63,18 +67,24 @@ export const DebitAccountSelect = ({
               <Wallet className="size-4" />
             </span>
           )}
-          <span className="min-w-0 flex-1">
-            {selected ? (
-              <>
+          {selected ? (
+            <>
+              <span className="min-w-0 flex-1">
                 <span className="block truncate font-semibold text-text">{selected.name}</span>
-                <span className="block truncate text-xs text-text-muted tabular-nums">
+                {selected.subtitle && (
+                  <span className="block truncate text-xs text-text-muted">{selected.subtitle}</span>
+                )}
+              </span>
+              <span className="shrink-0 text-right">
+                <span className="block font-semibold tabular-nums text-text">
                   {formatARS(selected.balanceARS, showCents)}
                 </span>
-              </>
-            ) : (
-              <span className="block truncate text-text-soft">{placeholder}</span>
-            )}
-          </span>
+                <span className="block text-[11px] text-text-soft">{availableLabel}</span>
+              </span>
+            </>
+          ) : (
+            <span className="min-w-0 flex-1 truncate text-text-soft">{placeholder}</span>
+          )}
           <ChevronDown className="size-4 shrink-0 text-text-soft" aria-hidden />
         </button>
       </RadixPopover.Trigger>
@@ -103,9 +113,12 @@ export const DebitAccountSelect = ({
                 <AccountAvatar {...account.avatar} size="sm" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold text-text">{account.name}</span>
-                  <span className="block truncate text-xs text-text-muted tabular-nums">
-                    {formatARS(account.balanceARS, showCents)}
-                  </span>
+                  {account.subtitle && (
+                    <span className="block truncate text-xs text-text-muted">{account.subtitle}</span>
+                  )}
+                </span>
+                <span className="shrink-0 font-semibold tabular-nums text-text-muted">
+                  {formatARS(account.balanceARS, showCents)}
                 </span>
                 {isSelected && <Check className="size-4 shrink-0 text-emerald" aria-hidden />}
               </button>

@@ -830,6 +830,8 @@
     "payment": {
       "title": "Pay statement",
       "back_label": "Statement",
+      "header_context": "{card} · closed on {close} · due {due}",
+      "available_label": "available",
       "usd_note_prefix": "Dollar purchases:",
       "usd_note_description": "This statement has USD debt. Enter the payment-day rate below: the ARS total to pay is computed with it.",
       "fx_label": "Payment-day rate (ARS per 1 USD)",
@@ -845,6 +847,8 @@
       "stamp_tax_label": "Stamp tax",
       "stamp_tax_first_time_hint": "Your bank usually charges a stamp tax on the statement. Pick how much it charged by checking your statement. We only ask this once: from now on we'll suggest it for you.",
       "stamp_tax_known_helper": "Suggested from your previous statements. Adjust it if it doesn't match the real statement.",
+      "stamp_tax_learned_alert": "We learned it from your payments: your bank usually charges {amount}. Confirm by checking your statement or tap another amount.",
+      "stamp_tax_relation_note": "The stamp tax is a separate charge: it's debited from the same account along with the payment. {total} is debited = {consumos} (statement) + {stamp} (stamp tax).",
       "stamp_tax_other_placeholder": "Other amount",
       "stamp_tax_none": "No stamp tax charged",
       "warning": "Once confirmed, the payment cannot be reverted. If you recorded a wrong amount or account, fix it with a balance adjustment."

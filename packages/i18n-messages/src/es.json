@@ -830,6 +830,8 @@
     "payment": {
       "title": "Pagar resumen",
       "back_label": "Resumen",
+      "header_context": "{card} · cerró el {close} · vence el {due}",
+      "available_label": "disponible",
       "usd_note_prefix": "Consumos en dólares:",
       "usd_note_description": "Este resumen tiene deuda en USD. Cargá la cotización del día de pago abajo: el total a pagar en ARS se calcula con ella.",
       "fx_label": "Cotización del día (ARS por 1 USD)",
@@ -845,6 +847,8 @@
       "stamp_tax_label": "Impuesto de sellos",
       "stamp_tax_first_time_hint": "Tu banco suele cobrar un impuesto de sellos en el resumen. Elegí cuánto te cobró mirando el resumen. Te lo preguntamos solo esta vez: en los próximos lo vamos a sugerir solo.",
       "stamp_tax_known_helper": "Sugerido a partir de tus resúmenes anteriores. Ajustalo si no coincide con el resumen real.",
+      "stamp_tax_learned_alert": "Lo aprendimos de tus pagos: tu banco suele cobrar {amount}. Confirmá mirando tu resumen o tocá otro monto.",
+      "stamp_tax_relation_note": "El sello es un cargo aparte: se debita de la misma cuenta junto al pago. Se debita {total} = {consumos} (resumen) + {stamp} (sellos).",
       "stamp_tax_other_placeholder": "Otro monto",
       "stamp_tax_none": "No me cobraron sellos",
       "warning": "Una vez confirmado, el pago no se puede revertir. Si registraste un monto o cuenta incorrectos, podés corregirlo con un ajuste de saldo."

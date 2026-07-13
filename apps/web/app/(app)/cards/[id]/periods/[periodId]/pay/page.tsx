@@ -1,9 +1,13 @@
+import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
+import { ChevronLeft } from 'lucide-react'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCreditCardDetail, getCardPeriodDetail } from '@/lib/cards/queries'
 import { getAccounts } from '@/lib/accounts/queries'
 import { suggestNextPeriodDates } from '@/lib/cards/utils'
 import { getTodayAR } from '@/lib/date'
+import { cardAccent, cardMonogram, formatDayMonth } from '@grana/cards'
 import { PayCardPeriodForm } from './_components/pay-card-period-form'
 import { USDSubordinatedNote } from './_components/usd-subordinated-note'
 
@@ -51,10 +55,50 @@ const PayPeriodPage = async ({ params }: Props) => {
     ...accountGroups.bank,
   ]
     .filter((a) => a.is_active && a.currencies.some((c) => c.currency_code === 'ARS' && c.is_active))
-    .map((a) => ({ id: a.id, name: a.name, balanceARS: a.balances.ARS, avatar: a.avatar }))
+    .map((a) => ({
+      id: a.id,
+      name: a.name,
+      // Secondary line: the issuing institution when it differs from the name
+      // (matches the accounts listing's name / institution split).
+      subtitle: a.institution && a.institution.name !== a.name ? a.institution.name : null,
+      balanceARS: a.balances.ARS,
+      avatar: a.avatar,
+    }))
+
+  const t = await getTranslations('cards')
+  const accent = cardAccent(cardDetail, cardDetail.institution)
+  const monogram = cardMonogram(cardDetail.name)
 
   return (
     <>
+      {/* Rich header: card identity (mark) + statement context, per the handoff. */}
+      <header className="flex flex-col gap-3">
+        <Link
+          href={`/cards/${id}/periods/${periodId}`}
+          className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ChevronLeft className="size-4" aria-hidden />
+          {t('payment.back_label')}
+        </Link>
+        <div className="flex items-center gap-3">
+          <span
+            className="flex size-10 shrink-0 items-center justify-center rounded-[12px] text-base font-extrabold text-white"
+            style={{ backgroundColor: accent }}
+            aria-hidden
+          >
+            {monogram}
+          </span>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('payment.title')}</h1>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {t('payment.header_context', {
+            card: cardDetail.name,
+            close: formatDayMonth(period.end_date),
+            due: formatDayMonth(period.due_date),
+          })}
+        </p>
+      </header>
+
       {period.pendingAmountUSD > 0 && (
         <USDSubordinatedNote usdAmount={period.pendingAmountUSD} />
       )}

@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Lock } from 'lucide-react'
+import { Check, Info, Lock, Sparkles } from 'lucide-react'
 import { getTodayAR } from '@/lib/date'
 import { payCardPeriod } from '@/app/_actions/credit-cards'
 import {
@@ -31,9 +31,38 @@ const todayStr = () => {
 
 const formatShortDate = (iso: string) => iso.split('-').reverse().join('/')
 
-// Shared field-control look: input box matching the system's 10px radius / border.
-const INPUT_CLS =
-  'w-full rounded-[10px] border border-border bg-card px-3 py-2.5 text-sm text-text outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring placeholder:text-text-soft'
+// Prominent money display matching the handoff `.money` primitive: a bordered
+// box (1.5px, 13px radius) with a faint `$` and a large, bold, tabular value,
+// glowing emerald on focus. `lg` is the hero amount; `sm` the fx / stamp fields.
+const MoneyField = ({
+  size = 'lg',
+  invalid = false,
+  children,
+}: {
+  size?: 'lg' | 'sm'
+  invalid?: boolean
+  children: React.ReactNode
+}) => (
+  <div
+    className={`flex items-center gap-2.5 rounded-[13px] border-[1.5px] bg-card px-4 transition-colors focus-within:ring-[3px] ${
+      size === 'lg' ? 'py-3' : 'py-2.5'
+    } ${
+      invalid
+        ? 'border-error focus-within:border-error focus-within:ring-error/10'
+        : 'border-border focus-within:border-emerald focus-within:ring-emerald/15'
+    }`}
+  >
+    <span className={`shrink-0 font-bold text-text-soft ${size === 'lg' ? 'text-lg' : 'text-base'}`}>
+      $
+    </span>
+    {children}
+  </div>
+)
+
+const moneyInputCls = (size: 'lg' | 'sm') =>
+  `w-full border-none bg-transparent p-0 font-extrabold tracking-tight tabular-nums text-text outline-none placeholder:font-normal placeholder:text-text-soft ${
+    size === 'lg' ? 'text-[26px] leading-none' : 'text-xl leading-none'
+  }`
 
 type PaymentAccount = DebitAccount
 
@@ -56,7 +85,7 @@ type Props = {
 }
 
 const FieldLabel = ({ children }: { children: React.ReactNode }) => (
-  <label className="text-sm font-semibold text-text">{children}</label>
+  <label className="text-[13.5px] font-extrabold tracking-tight text-text">{children}</label>
 )
 
 const Hint = ({ children }: { children: React.ReactNode }) => (
@@ -149,17 +178,17 @@ export const PayCardPeriodForm = ({
     recomputeAmount(parsedFx, parseMoneyInput(value) ?? 0)
   }
 
-  // Sugerencias de monto para la primera vez (sin mostrar el %): cada alícuota
-  // común aplicada a la base, deduplicadas, solo si hay base positiva.
-  const stampSuggestions = stampKnown
-    ? []
-    : Array.from(
-        new Set(
-          COMMON_STAMP_TAX_RATES.map((rate) => suggestStampTaxAmount(stampBase, rate)).filter(
-            (amt) => amt > 0,
-          ),
-        ),
-      ).sort((a, b) => b - a)
+  // Chips de monto (sin mostrar el %): cada alícuota común aplicada a la base +
+  // el monto aprendido/sugerido, deduplicados. Se muestran también en modo
+  // "ya aprendido" (con el sugerido pre-seleccionado), como en el mockup.
+  const stampSuggestions = Array.from(
+    new Set(
+      [
+        ...(initialStamp > 0 ? [initialStamp] : []),
+        ...COMMON_STAMP_TAX_RATES.map((rate) => suggestStampTaxAmount(stampBase, rate)),
+      ].filter((amt) => amt > 0),
+    ),
+  ).sort((a, b) => b - a)
 
   // Soft, non-blocking warning: paying from this account would leave its ARS
   // available balance negative. Statement payments are always in ARS.
@@ -169,12 +198,6 @@ export const PayCardPeriodForm = ({
     selectedAccount && parsedPaymentAmount !== null && parsedPaymentAmount > 0
       ? checkNegativeBalance(selectedAccount.balanceARS, parsedPaymentAmount)
       : null
-
-  // Composición del monto: de la cuenta sale el total del resumen (consumos en
-  // ARS + USD×fx) más el impuesto de sellos. Se muestra cuando hay algo que
-  // explicar (deuda USD o sello cargado) para que cada cifra responda "¿de
-  // dónde sale?". El "Total a pagar" coincide con el monto pre-llenado.
-  const showBreakdown = hasUsdDebt || parsedStamp > 0
 
   const validate = () => {
     const errs: Record<string, string> = {}
@@ -242,15 +265,17 @@ export const PayCardPeriodForm = ({
             <div className="flex flex-col gap-1.5">
               <FieldLabel>{t('payment.fx_label')}</FieldLabel>
               <Hint>{t('payment.fx_helper')}</Hint>
-              <MoneyAmountInput
-                id="pay-fx"
-                required
-                groupThousands={false}
-                value={fxRate}
-                onChange={handleFxChange}
-                placeholder={t('payment.fx_placeholder')}
-                className={INPUT_CLS}
-              />
+              <MoneyField size="sm" invalid={Boolean(errors.fxRate)}>
+                <MoneyAmountInput
+                  id="pay-fx"
+                  required
+                  groupThousands={false}
+                  value={fxRate}
+                  onChange={handleFxChange}
+                  placeholder={t('payment.fx_placeholder')}
+                  className={moneyInputCls('sm')}
+                />
+              </MoneyField>
               {errors.fxRate && <FieldError>{errors.fxRate}</FieldError>}
               {usdConvertedARS !== null && (
                 <p className="text-xs text-text-muted tabular-nums">
@@ -266,13 +291,17 @@ export const PayCardPeriodForm = ({
               mencionar el %. Próximas: monto sugerido y editable. */}
           <div className="flex flex-col gap-1.5">
             <FieldLabel>{t('payment.stamp_tax_label')}</FieldLabel>
-            <Hint>
-              {stampKnown
-                ? t('payment.stamp_tax_known_helper')
-                : t('payment.stamp_tax_first_time_hint')}
-            </Hint>
+            {stampKnown ? (
+              <Alert variant="info" icon={<Sparkles className="h-4 w-4" aria-hidden />}>
+                <p className="text-xs">
+                  {t('payment.stamp_tax_learned_alert', { amount: fmtARS(initialStamp) })}
+                </p>
+              </Alert>
+            ) : (
+              <Hint>{t('payment.stamp_tax_first_time_hint')}</Hint>
+            )}
 
-            {!stampKnown && stampSuggestions.length > 0 && (
+            {stampSuggestions.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {stampSuggestions.map((amt) => {
                   const active = parsedStamp === amt
@@ -307,65 +336,76 @@ export const PayCardPeriodForm = ({
               </div>
             )}
 
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-soft">
-                $
-              </span>
+            <MoneyField size="sm">
               <MoneyAmountInput
                 value={stampTax}
                 onChange={handleStampChange}
                 placeholder={!stampKnown ? t('payment.stamp_tax_other_placeholder') : undefined}
-                className={`${INPUT_CLS} pl-8`}
+                className={moneyInputCls('sm')}
               />
-            </div>
+            </MoneyField>
           </div>
 
           {/* Monto a pagar (incluye consumos + sello). Editable para pago parcial. */}
           <div className="flex flex-col gap-1.5">
             <FieldLabel>{t('labels.amount_to_pay')}</FieldLabel>
             <Hint>{t('labels.amount_to_pay_helper')}</Hint>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-soft">
-                $
-              </span>
+            <MoneyField size="lg" invalid={Boolean(errors.amount)}>
               <MoneyAmountInput
                 required
                 value={amount}
                 onChange={setAmount}
-                className={`${INPUT_CLS} pl-8 text-base font-semibold`}
+                className={moneyInputCls('lg')}
               />
-            </div>
+            </MoneyField>
             {errors.amount && <FieldError>{errors.amount}</FieldError>}
 
-            {/* "¿De dónde sale?": composición del total que deja la cuenta. */}
-            {showBreakdown && (
-              <div className="mt-1 rounded-[10px] bg-page px-3 py-2.5 text-xs tabular-nums">
-                <div className="flex justify-between text-text-muted">
+            {/* Caso USD: desglose línea a línea de cómo se arma el total en ARS. */}
+            {hasUsdDebt && (
+              <div className="mt-2 rounded-[12px] border border-border bg-page px-4 text-xs tabular-nums">
+                <div className="flex items-center justify-between py-2.5 text-text-muted">
                   <span>{t('payment.breakdown_ars')}</span>
-                  <span>{fmtARS(pendingAmountARS)}</span>
+                  <span className="font-semibold text-text">{fmtARS(pendingAmountARS)}</span>
                 </div>
-                {hasUsdDebt && (
-                  <div className="mt-1 flex justify-between text-text-muted">
-                    <span>
-                      {t('payment.breakdown_usd', { usd: pendingAmountUSD })}
-                      {parsedFx !== null && parsedFx > 0 ? ` × ${fxRate}` : ''}
-                    </span>
-                    <span>{usdConvertedARS !== null ? fmtARS(usdConvertedARS) : '—'}</span>
-                  </div>
-                )}
+                <div className="flex items-center justify-between border-t border-border py-2.5 text-text-muted">
+                  <span>
+                    {t('payment.breakdown_usd', { usd: pendingAmountUSD })}
+                    {parsedFx !== null && parsedFx > 0 ? ` × ${fxRate}` : ''}
+                  </span>
+                  <span className="font-semibold text-text">
+                    {usdConvertedARS !== null ? fmtARS(usdConvertedARS) : '—'}
+                  </span>
+                </div>
                 {parsedStamp > 0 && (
-                  <div className="mt-1 flex justify-between text-text-muted">
+                  <div className="flex items-center justify-between border-t border-border py-2.5 text-text-muted">
                     <span>{t('payment.stamp_tax_label')}</span>
-                    <span>{fmtARS(parsedStamp)}</span>
+                    <span className="font-semibold text-text">{fmtARS(parsedStamp)}</span>
                   </div>
                 )}
-                <div className="mt-1.5 flex justify-between border-t border-border pt-1.5 font-semibold text-text">
+                <div className="flex items-center justify-between border-t border-border py-2.5 font-semibold text-text">
                   <span>{t('payment.breakdown_total')}</span>
-                  <span>{suggestedTotal !== null ? fmtARS(suggestedTotal) : '—'}</span>
+                  <span className="text-sm">{suggestedTotal !== null ? fmtARS(suggestedTotal) : '—'}</span>
                 </div>
               </div>
             )}
           </div>
+
+          {/* Relación sello ↔ débito (note-rel): explica por qué del débito sale
+              consumos + sello. En USD el desglose de arriba ya lo muestra. */}
+          {parsedStamp > 0 && !hasUsdDebt && (
+            <div className="flex items-start gap-2.5 px-0.5 text-xs leading-relaxed text-text-muted">
+              <Info className="mt-0.5 size-4 shrink-0 text-slate" aria-hidden />
+              <span>
+                {t('payment.stamp_tax_relation_note', {
+                  total: suggestedTotal !== null ? fmtARS(suggestedTotal) : '—',
+                  consumos: fmtARS(pendingAmountARS),
+                  stamp: fmtARS(parsedStamp),
+                })}
+              </span>
+            </div>
+          )}
+
+          <div className="h-px bg-border" />
 
           {/* Cuenta de débito */}
           <div className="flex flex-col gap-1.5">
@@ -376,6 +416,7 @@ export const PayCardPeriodForm = ({
               onChange={setPaymentAccountId}
               label={t('labels.debit_account')}
               placeholder={t('errors.account_required')}
+              availableLabel={t('payment.available_label')}
               invalid={Boolean(errors.paymentAccountId)}
             />
             {errors.paymentAccountId && <FieldError>{errors.paymentAccountId}</FieldError>}
@@ -435,15 +476,23 @@ export const PayCardPeriodForm = ({
         </div>
       </Card>
 
-      {/* Cierre: irreversibilidad (informativo) + CTA */}
-      <Alert variant="info" icon={<Lock className="h-4 w-4" aria-hidden />}>
-        <p className="text-xs">{t('payment.warning')}</p>
-      </Alert>
+      {/* Cierre: irreversibilidad (neutral, informativo) + CTA */}
+      <div className="flex gap-3 rounded-[14px] bg-page px-4 py-3.5">
+        <Lock className="mt-0.5 size-4 shrink-0 text-text-soft" aria-hidden />
+        <p className="text-xs leading-relaxed text-text-muted">{t('payment.warning')}</p>
+      </div>
 
       {formError && <FieldError>{formError}</FieldError>}
 
       <Button type="submit" loading={isPending} size="lg">
-        {isPending ? tCommon('processing') : t('actions.confirm_payment')}
+        {isPending ? (
+          tCommon('processing')
+        ) : (
+          <>
+            <Check className="size-4" aria-hidden />
+            {t('actions.confirm_payment')}
+          </>
+        )}
       </Button>
     </form>
   )
