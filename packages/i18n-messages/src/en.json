@@ -1139,6 +1139,8 @@
       "received_now": "Already credited to me",
       "received_now_hint": "Recorded as a received reimbursement.",
       "pending_hint": "It stays as an expected reimbursement. Confirm it when it actually arrives.",
+      "readonly_hint_received": "It was already credited. Managed from the reimbursement.",
+      "readonly_hint_cancelled": "This reimbursement was cancelled.",
       "state": {
         "pending": "Expected reimbursement",
         "received": "Reimbursement received",

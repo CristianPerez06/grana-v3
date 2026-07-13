@@ -9,6 +9,7 @@ import type {
   CreateTransferInput,
   RegisterCardPurchaseInput,
   RegisterInstallmentsInput,
+  SaveExpenseReimbursementInput,
   UpdateAdjustmentInput,
   UpdateExchangeInput,
   UpdateTransactionInput,
@@ -77,6 +78,25 @@ export type MovementEditContext = {
    * `null` ⇒ not shared. `firstPct` is the first household member's percentage.
    */
   shared?: { householdId: string; firstPct: number } | null
+  /**
+   * The reintegro currently linked to this expense (or madre), to prefill the
+   * "Tiene reintegro" section when editing. `null` ⇒ none. `status` gates the
+   * UI: `pending` is editable/removable; `received`/`cancelled` show read-only
+   * (they already touched saldo/resumen and are managed from their own flows).
+   */
+  reimbursement?: EditReimbursement | null
+}
+
+/** Linked reimbursement projected for the edit form's prefill. */
+export type EditReimbursement = {
+  id: string
+  status: 'pending' | 'received' | 'cancelled'
+  target: 'account' | 'statement'
+  amount: number
+  /** Cash/bank account credited (`account` target). Null for `statement`. */
+  accountId: string | null
+  /** Card period reduced (`statement` target). Null for `account`. */
+  cardPeriodId: string | null
 }
 
 export type HouseholdMember = {
@@ -171,6 +191,17 @@ export type Mutators = {
     id: string,
     patch: unknown,
   ) => Promise<MutationResult<unknown>>
+  /**
+   * Add / edit / remove the reintegro linked to an existing expense (or madre).
+   * A `reimbursement` declaration in the patch adds or replaces it; its absence
+   * removes any pending one. A received/cancelled reintegro is never touched.
+   * The `shared` spec (the expense's resulting shared state) lets the reintegro
+   * inherit the household split.
+   */
+  saveExpenseReimbursement: (
+    id: string,
+    patch: unknown,
+  ) => Promise<MutationResult<SaveExpenseReimbursementInput>>
 
   // ── Orchestrators (live in @grana/transactions-mutations) ──
   registerCardPurchase: (
@@ -268,6 +299,8 @@ export type MovementFormState = {
   reimbursementPercent: string
   reimbursementCap: string
   reimbursementAccountId: string
+  /** The linked reimbursement is received/cancelled ⇒ show read-only, no edits. */
+  reimbursementReadOnly: boolean
 
   // Shared
   sharedEnabled: boolean

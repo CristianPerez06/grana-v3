@@ -1139,6 +1139,8 @@
       "received_now": "Ya me lo acreditaron",
       "received_now_hint": "Se registra como reintegro recibido.",
       "pending_hint": "Queda como reintegro pendiente. Lo confirmás cuando realmente llegue.",
+      "readonly_hint_received": "Ya te lo acreditaron. Se gestiona desde el reintegro.",
+      "readonly_hint_cancelled": "Este reintegro fue cancelado.",
       "state": {
         "pending": "Reintegro esperado",
         "received": "Reintegro recibido",

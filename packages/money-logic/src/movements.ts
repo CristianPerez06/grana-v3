@@ -165,6 +165,14 @@ export type EditableFields = {
   destinationAmount: boolean
   /** Whether the "Compartir gasto" toggle can be edited (simple expenses only). */
   shared?: boolean
+  /**
+   * Whether the reimbursement section is editable (a reintegro can be added,
+   * edited or removed). True for a categorizable expense (cash/bank/card) and an
+   * installment parent (linked to the madre); false for a statement-payment
+   * expense, an installment child, and non-expense types. Orthogonal to the
+   * paid-amount lock — same rule as `shared`.
+   */
+  reimbursement?: boolean
 }
 
 /**
@@ -188,6 +196,7 @@ export function getEditableFields(input: MovementEditInput): EditableFields {
       adjustmentDirection: false,
       destinationAmount: false,
       shared: false,
+      reimbursement: false,
     }
   }
 
@@ -207,6 +216,9 @@ export function getEditableFields(input: MovementEditInput): EditableFields {
       // The split lives on the child cuotas; the parent carries the marker.
       // Editable even with paid children (only the amount locks on paid).
       shared: true,
+      // The reimbursement links to the madre (not a cuota) — editable like a
+      // simple expense, independent of the paid-amount lock.
+      reimbursement: true,
     }
   }
 
@@ -240,6 +252,10 @@ export function getEditableFields(input: MovementEditInput): EditableFields {
         // expenses (no category) can't be shared. Installment parents return
         // earlier and are excluded (children carry the splits).
         shared: !isCardPayment,
+        // A reintegro can be attached to any categorizable expense (cash/bank or
+        // card), independent of the paid lock. A statement-payment expense (no
+        // category) can't carry one.
+        reimbursement: !isCardPayment,
       }
     }
     case 'transfer':

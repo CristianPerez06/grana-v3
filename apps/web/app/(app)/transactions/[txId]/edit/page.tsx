@@ -23,14 +23,14 @@ const EditMovementPage = async ({ params, searchParams }: Props) => {
 
   const data = await buildMovementEditContext(txId, detailHref)
   if (!data) notFound()
-  const { edit, categories, household } = data
+  const { edit, categories, household, accounts } = data
 
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-4">
       <Suspense fallback={<div className="px-3.5 pb-1.5 pt-3.5" aria-hidden />}>
         <TxBackLink />
       </Suspense>
-      <MovementForm accounts={[]} categories={categories} edit={edit} household={household} />
+      <MovementForm accounts={accounts} categories={categories} edit={edit} household={household} />
     </div>
   )
 }

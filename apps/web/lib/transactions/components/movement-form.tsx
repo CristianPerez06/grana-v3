@@ -51,6 +51,7 @@ import {
   updateInstallmentParent,
 } from '@/app/_actions/credit-cards'
 import { createRecurrenceFromMovement } from '@/app/_actions/recurrences'
+import { saveExpenseReimbursement } from '@/app/_actions/reimbursements'
 import { suggestCategoryFromHistory } from '@/app/_actions/category-suggestion'
 import { Money, parseMoneyInput } from '@grana/validation'
 import {
@@ -298,6 +299,7 @@ export const MovementForm = ({
     updateAdjustment,
     updateExchange,
     updateInstallmentParent,
+    saveExpenseReimbursement,
     registerCardPurchase,
     registerInstallments,
     createRecurrenceFromMovement,
@@ -349,6 +351,7 @@ export const MovementForm = ({
     reimbursementPercent,
     reimbursementCap,
     reimbursementAccountId,
+    reimbursementReadOnly,
     sharedEnabled,
     splitFirstPct,
     suggestion,
@@ -1207,8 +1210,14 @@ export const MovementForm = ({
       <CategorySuggestionChip suggestion={suggestion} onApply={applySuggestion} />
     ) : null
 
-  // ── Toggles: reintegro + repetir (create only) ──────────────────────────────
-  const showReimbursementToggle = !isEdit && tab === 'expense'
+  // ── Toggles: reintegro + repetir ────────────────────────────────────────────
+  // Alta: pestaña gasto. Edición: gateado a que el reintegro sea editable (gasto
+  // simple/tarjeta o madre de cuotas; el pago de resumen queda excluido). El
+  // estado read-only (reintegro ya recibido/cancelado) se resuelve dentro del
+  // bloque: se muestra, pero sin controles de edición.
+  const showReimbursementToggleCreate = !isEdit && tab === 'expense'
+  const showReimbursementToggleEdit = isEdit && !!edit?.editableFields?.reimbursement
+  const showReimbursementToggle = showReimbursementToggleCreate || showReimbursementToggleEdit
   // Alta: sin cambios respecto de main (hogar de 2 + pestaña gasto). Edición:
   // se agrega aparte, gateado a que el campo sea editable (gasto simple o madre
   // de cuotas; el pago de resumen queda excluido).
@@ -1234,10 +1243,19 @@ export const MovementForm = ({
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-[15px] font-semibold text-text">{t('reimbursement.toggle')}</p>
-                <p className="text-xs text-text-muted">{t('reimbursement.pending_hint')}</p>
+                <p className="text-xs text-text-muted">
+                  {reimbursementReadOnly
+                    ? t(
+                        edit?.reimbursement?.status === 'cancelled'
+                          ? 'reimbursement.readonly_hint_cancelled'
+                          : 'reimbursement.readonly_hint_received',
+                      )
+                    : t('reimbursement.pending_hint')}
+                </p>
               </div>
               <Switch
                 checked={reimbursementEnabled}
+                disabled={reimbursementReadOnly}
                 ariaLabel={t('reimbursement.toggle')}
                 onValueChange={(on) => {
                   setReimbursementEnabled(on)
@@ -1245,7 +1263,21 @@ export const MovementForm = ({
                 }}
               />
             </div>
-            {reimbursementEnabled && (
+            {reimbursementReadOnly && edit?.reimbursement && (
+              <div
+                className="mt-3.5 flex items-center justify-between gap-3 border-t pt-3.5"
+                style={{ borderColor: ROW_DIVIDER }}
+              >
+                <span className="text-xs text-text-muted">
+                  {t(`reimbursement.target.${edit.reimbursement.target}`)}
+                </span>
+                <span className="text-sm font-semibold text-text">
+                  {CURRENCY_SYMBOL[currencyCode]}
+                  {reimbursementAmount}
+                </span>
+              </div>
+            )}
+            {reimbursementEnabled && !reimbursementReadOnly && (
               <div className="mt-3.5 flex flex-col gap-3 border-t pt-3.5" style={{ borderColor: ROW_DIVIDER }}>
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="reimb-amount" className="text-xs font-semibold text-text-muted">

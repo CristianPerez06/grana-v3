@@ -40,6 +40,18 @@ export const reimbursementDeclarationSchema = yup
   })
   .strict()
 
+// Add / edit / remove a reimbursement on an EXISTING expense (or madre), from
+// the edit form. `reimbursement` present ⇒ add or replace the pending one;
+// absent ⇒ remove any pending one. `shared` is the expense's resulting shared
+// state so the reimbursement inherits (or drops) the household split.
+export const saveExpenseReimbursementSchema = yup
+  .object({
+    expense_id: yup.string().label('expense_id').uuid().required(),
+    reimbursement: reimbursementDeclarationSchema.optional().default(undefined),
+    shared: sharedExpenseSchema.optional().default(undefined),
+  })
+  .strict()
+
 export const confirmReimbursementSchema = yup
   .object({
     id: yup.string().label('id').uuid().required(),
@@ -199,5 +211,6 @@ export type UpdateAdjustmentInput = yup.InferType<typeof updateAdjustmentSchema>
 export type CreateExchangeInput = yup.InferType<typeof createExchangeSchema>
 export type UpdateExchangeInput = yup.InferType<typeof updateExchangeSchema>
 export type ReimbursementDeclarationInput = yup.InferType<typeof reimbursementDeclarationSchema>
+export type SaveExpenseReimbursementInput = yup.InferType<typeof saveExpenseReimbursementSchema>
 export type ConfirmReimbursementInput = yup.InferType<typeof confirmReimbursementSchema>
 export type CancelReimbursementInput = yup.InferType<typeof cancelReimbursementSchema>

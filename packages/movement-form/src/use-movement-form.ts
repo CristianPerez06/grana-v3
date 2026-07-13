@@ -111,13 +111,24 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
   const [intervalUnit, setIntervalUnit] = useState<IntervalUnit>('month')
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
 
-  const [reimbursementEnabled, setReimbursementEnabled] = useState(false)
-  const [reimbursementTarget, setReimbursementTarget] = useState<'account' | 'statement'>('account')
-  const [reimbursementAmount, setReimbursementAmount] = useState('')
+  // Prefill from the linked reimbursement when editing. A received/cancelled one
+  // is read-only (managed from its own confirm/cancel flow), so its fields load
+  // for display but the section won't submit changes.
+  const editReimb = edit?.reimbursement ?? null
+  const [reimbursementEnabled, setReimbursementEnabled] = useState(editReimb != null)
+  const [reimbursementTarget, setReimbursementTarget] = useState<'account' | 'statement'>(
+    editReimb?.target ?? 'account',
+  )
+  const [reimbursementAmount, setReimbursementAmount] = useState(
+    editReimb ? String(editReimb.amount) : '',
+  )
   const [reimbursementReceivedNow, setReimbursementReceivedNow] = useState(false)
   const [reimbursementPercent, setReimbursementPercent] = useState('')
   const [reimbursementCap, setReimbursementCap] = useState('')
-  const [reimbursementAccountId, setReimbursementAccountId] = useState('')
+  const [reimbursementAccountId, setReimbursementAccountId] = useState(editReimb?.accountId ?? '')
+
+  // The linked reimbursement can't be edited/removed here once received/cancelled.
+  const reimbursementReadOnly = editReimb != null && editReimb.status !== 'pending'
 
   const sharedMembers =
     household && household.members.length === 2 ? household.members : null
@@ -338,6 +349,51 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
         : null
       : undefined
 
+    // Reimbursement (reintegro): only when the field is editable and not read-only
+    // (a received/cancelled one is managed from its own flow). An enabled toggle
+    // adds or replaces it; a disabled toggle removes any pending one. The patch
+    // carries the expense's resulting shared spec so the reintegro inherits (or
+    // drops) the split. `null` ⇒ leave the reimbursement untouched entirely.
+    let reimbursementCall:
+      | {
+          reimbursement?: {
+            target: 'account' | 'statement'
+            estimated_amount: number
+            account_id: string
+            received_now: boolean
+            date: string
+          }
+          shared?: { household_id: string; splits: { user_id: string; percentage: number }[] }
+        }
+      | null = null
+    if (editable?.reimbursement && !reimbursementReadOnly) {
+      if (reimbursementEnabled) {
+        const parsedReimb = parseMoneyInput(reimbursementAmount)
+        if (parsedReimb === null || parsedReimb <= 0) {
+          setFormError(t('reimbursement.errors.amount_positive'))
+          return
+        }
+        const reimbTarget = isCredit ? reimbursementTarget : 'account'
+        const reimbAccount = reimbTarget === 'statement' ? accountId : reimbursementAccountId
+        if (!reimbAccount) {
+          setFormError(t('reimbursement.errors.account_required'))
+          return
+        }
+        reimbursementCall = {
+          reimbursement: {
+            target: reimbTarget,
+            estimated_amount: parsedReimb,
+            account_id: reimbAccount,
+            received_now: reimbursementReceivedNow,
+            date,
+          },
+          shared: sharedUpdate ?? undefined,
+        }
+      } else {
+        reimbursementCall = { shared: sharedUpdate ?? undefined }
+      }
+    }
+
     runSubmit(async () => {
       let result: { ok: boolean; formError?: string }
 
@@ -389,6 +445,18 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
         setFormError(result.formError ?? t('errors.save_failed_short'))
         return
       }
+
+      // Apply the reintegro after the expense edit so it inherits the resulting
+      // shared state. If it fails, surface the error and don't report success;
+      // the expense edit stands (a pending reintegro is recoverable on retry).
+      if (reimbursementCall) {
+        const rr = await mutators.saveExpenseReimbursement(edit.id, reimbursementCall)
+        if (!rr.ok) {
+          setFormError(rr.formError ?? t('errors.save_failed_short'))
+          return
+        }
+      }
+
       onMutationSuccess?.()
       onSuccess?.()
     })
@@ -627,6 +695,7 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
     reimbursementPercent,
     reimbursementCap,
     reimbursementAccountId,
+    reimbursementReadOnly,
     sharedEnabled,
     splitFirstPct,
     suggestion,

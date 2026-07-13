@@ -51,6 +51,7 @@ export {
   createExchangeSchema,
   updateExchangeSchema,
   reimbursementDeclarationSchema,
+  saveExpenseReimbursementSchema,
   confirmReimbursementSchema,
   cancelReimbursementSchema,
   type CreateIncomeInput,
@@ -63,6 +64,7 @@ export {
   type CreateExchangeInput,
   type UpdateExchangeInput,
   type ReimbursementDeclarationInput,
+  type SaveExpenseReimbursementInput,
   type ConfirmReimbursementInput,
   type CancelReimbursementInput,
 } from "./transactions";

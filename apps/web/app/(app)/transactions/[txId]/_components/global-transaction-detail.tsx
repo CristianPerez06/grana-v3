@@ -37,6 +37,7 @@ import type { CategoryWithSubcategories } from '@/lib/categories/types'
 import {
   MovementForm,
   type MovementEditContext,
+  type MovementFormAccount,
 } from '@/lib/transactions/components/movement-form'
 import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
 
@@ -100,6 +101,8 @@ type Props = {
   edit?: MovementEditContext | null
   editCategories?: CategoryWithSubcategories[]
   editHousehold?: Household | null
+  /** Account list for the edit form (reimbursement credit-to + card detection). */
+  editAccounts?: MovementFormAccount[] | null
   sharedInfo?: MovementSharedInfo | null
   paymentComposition?: { paidARS: number; paidUSD: number } | null
   /** Month category/income slices for the movement's currency (Peso en el mes). */
@@ -121,6 +124,7 @@ export const GlobalTransactionDetail = ({
   edit,
   editCategories,
   editHousehold = null,
+  editAccounts = null,
   sharedInfo,
   paymentComposition = null,
   monthWeightSlices = null,
@@ -516,7 +520,7 @@ export const GlobalTransactionDetail = ({
         <Drawer open={editOpen} onClose={() => setEditOpen(false)} ariaLabel={t('edit_title')}>
           <MovementForm
             variant="drawer"
-            accounts={[]}
+            accounts={editAccounts ?? []}
             categories={editCategories!}
             edit={edit!}
             household={editHouseholdResolved}

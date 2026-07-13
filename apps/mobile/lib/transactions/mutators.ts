@@ -12,6 +12,7 @@ import {
   updateExchange as updateExchangeImpl,
   registerCardPurchase,
   registerInstallments,
+  saveExpenseReimbursement as saveExpenseReimbursementImpl,
   createRecurrenceFromMovement,
   type ThinMutationResult,
 } from '@grana/transactions-mutations'
@@ -116,6 +117,15 @@ export function createMovementMutators(t: Translate): Mutators {
         input: patch,
       })
       return result.ok ? { ok: true } : result
+    },
+    // Add / edit / remove the reintegro of an existing expense (edit form). The
+    // native edit UI doesn't surface it yet; the binding keeps the shared
+    // contract complete and is ready for the native edit section to consume.
+    saveExpenseReimbursement: async (id, patch) => {
+      const userId = await currentUserId()
+      if (!userId) return authError()
+      const input = { expense_id: id, ...(patch as Record<string, unknown>) }
+      return saveExpenseReimbursementImpl({ supabase, userId, input, today: getTodayAR() })
     },
 
     // ── Orchestrators (shared) ──

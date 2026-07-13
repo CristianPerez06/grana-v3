@@ -11,6 +11,12 @@ export {
 } from './register-card-purchase'
 
 export {
+  saveExpenseReimbursement,
+  type SaveExpenseReimbursementArgs,
+  type SaveExpenseReimbursementResult,
+} from './save-expense-reimbursement'
+
+export {
   createRecurrenceFromMovement,
   type CreateRecurrenceFromMovementArgs,
   type CreateRecurrenceFromMovementResult,

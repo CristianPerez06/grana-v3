@@ -1,17 +1,66 @@
 import { createClient } from '@/lib/supabase/server'
 import { getTransactionDetail, getInstallmentFamily } from '@/lib/transactions/queries'
-import { getAccountDetail } from '@/lib/accounts/queries'
+import { getAccountDetail, getAccounts } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
 import { getEditableFields } from '@grana/money-logic'
+import { resolveAccountAvatar } from '@grana/ui-contracts'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 import type { Household } from '@/lib/shared/types'
-import type { MovementEditContext } from '@/lib/transactions/components/movement-form'
+import type {
+  MovementEditContext,
+  MovementFormAccount,
+} from '@/lib/transactions/components/movement-form'
 
 export type MovementEditData = {
   edit: MovementEditContext
   categories: CategoryWithSubcategories[]
   /** The user's household (when it has two members) — enables the share toggle. */
   household: Household | null
+  /**
+   * The account list the form needs — in edit mode the account is immutable
+   * context, but the reimbursement "credit-to" select and the card `isCredit`
+   * derivation still need the full list. Same projection the create drawer uses.
+   */
+  accounts: MovementFormAccount[]
+}
+
+type AccountCurrency = { currency_code: string; is_active: boolean }
+
+const activeCodes = (currencies: AccountCurrency[]): ('ARS' | 'USD')[] =>
+  currencies
+    .filter((c) => c.is_active && (c.currency_code === 'ARS' || c.currency_code === 'USD'))
+    .map((c) => c.currency_code as 'ARS' | 'USD')
+
+/** Project `getAccounts()` onto the form's account shape (mirrors the create loader). */
+async function buildFormAccounts(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<MovementFormAccount[]> {
+  const data = await getAccounts(supabase)
+  return [
+    ...[...data.cash, ...data.bank].map((a) => ({
+      id: a.id,
+      name: a.name,
+      type: a.type as 'cash' | 'bank',
+      activeCurrencies: activeCodes(a.currencies),
+      balances: a.balances,
+      institutionId: a.institution_id ?? null,
+      institutionName: a.institution?.name ?? null,
+      avatar: a.avatar,
+    })),
+    ...data.credit.map((c) => ({
+      id: c.id,
+      name: c.name,
+      type: 'credit' as const,
+      activeCurrencies: activeCodes(c.currencies),
+      balances: { ARS: 0, USD: 0 },
+      institutionId: c.institution_id ?? null,
+      institutionName: c.institution?.name ?? null,
+      avatar: resolveAccountAvatar(
+        { id: c.id, name: c.name, type: 'credit', color_key: c.color_key, icon_key: c.icon_key },
+        c.institution,
+      ),
+    })),
+  ]
 }
 
 /**
@@ -31,9 +80,10 @@ export async function buildMovementEditContext(
   } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [transaction, categories] = await Promise.all([
+  const [transaction, categories, accounts] = await Promise.all([
     getTransactionDetail(supabase, txId),
     getAllCategories(supabase),
+    buildFormAccounts(supabase),
   ])
   if (!transaction) return null
 
@@ -113,6 +163,34 @@ export async function buildMovementEditContext(
     shared = { householdId: transaction.household_id, firstPct: mine?.percentage ?? 50 }
   }
 
+  // Linked reimbursement, to prefill the "Tiene reintegro" section. Prefer the
+  // pending one (editable); fall back to a received/cancelled one for read-only
+  // display. For a madre the reimbursement links to the madre id (this txId), so
+  // the same id resolves it. Only for reimbursement-editable movements.
+  let reimbursement: MovementEditContext['reimbursement'] = null
+  if (editableFields.reimbursement) {
+    const { data: reimbs } = await supabase
+      .from('transactions')
+      .select('id, amount, reimbursement_target, received_at, cancelled_at, account_id, card_period_id')
+      .eq('type', 'reimbursement')
+      .eq('linked_transaction_id', transaction.id)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true })
+    const rows = reimbs ?? []
+    const chosen =
+      rows.find((r) => r.received_at == null && r.cancelled_at == null) ?? rows[0] ?? null
+    if (chosen) {
+      reimbursement = {
+        id: chosen.id,
+        status: chosen.cancelled_at ? 'cancelled' : chosen.received_at ? 'received' : 'pending',
+        target: (chosen.reimbursement_target ?? 'account') as 'account' | 'statement',
+        amount: Math.abs(chosen.amount),
+        accountId: chosen.account_id ?? null,
+        cardPeriodId: chosen.card_period_id ?? null,
+      }
+    }
+  }
+
   const edit: MovementEditContext = {
     id: transaction.id,
     type: transaction.type,
@@ -136,10 +214,11 @@ export async function buildMovementEditContext(
     editableFields,
     availableBalance,
     shared,
+    reimbursement,
     returnHref,
   }
 
   // `household` is sourced client-side (the app-wide movement drawer) for the
   // edit drawer; the no-JS `/edit` page falls back to no share toggle.
-  return { edit, categories, household: null }
+  return { edit, categories, household: null, accounts }
 }

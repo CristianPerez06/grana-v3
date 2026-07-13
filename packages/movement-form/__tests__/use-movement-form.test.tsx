@@ -44,6 +44,7 @@ const stubMutators = (): Mutators => ({
   updateAdjustment: vi.fn(async () => ({ ok: true as const })),
   updateExchange: vi.fn(async () => ({ ok: true as const })),
   updateInstallmentParent: vi.fn(async () => ({ ok: true as const })),
+  saveExpenseReimbursement: vi.fn(async () => ({ ok: true as const })),
   registerCardPurchase: vi.fn(async () => ({ ok: true as const, id: 'tx-6' })),
   registerInstallments: vi.fn(async () => ({ ok: true as const, parentId: 'tx-7' })),
   createRecurrenceFromMovement: vi.fn(async () => ({ ok: true as const, id: 'rec-1' })),

@@ -31,7 +31,7 @@ describe('getEditableFields — cash/bank income & expense', () => {
 
   it('expense (cash/bank): amount, date, category, subcategory, description', () => {
     expect(getEditableFields(input({ type: 'expense', status: null }))).toEqual(
-      fields({ amount: true, date: true, category: true, subcategory: true, description: true, shared: true }),
+      fields({ amount: true, date: true, category: true, subcategory: true, description: true, shared: true, reimbursement: true }),
     )
   })
 })
@@ -59,13 +59,13 @@ describe('getEditableFields — transfer / adjustment / exchange', () => {
 describe('getEditableFields — credit-card consumption by status', () => {
   it('pending consumption: amount + date editable + category', () => {
     expect(getEditableFields(input({ type: 'expense', status: 'pending' }))).toEqual(
-      fields({ amount: true, date: true, category: true, subcategory: true, description: true, shared: true }),
+      fields({ amount: true, date: true, category: true, subcategory: true, description: true, shared: true, reimbursement: true }),
     )
   })
 
   it('paid consumption: only category + description (amount/date locked)', () => {
     expect(getEditableFields(input({ type: 'expense', status: 'paid' }))).toEqual(
-      fields({ category: true, subcategory: true, description: true, shared: true }),
+      fields({ category: true, subcategory: true, description: true, shared: true, reimbursement: true }),
     )
   })
 })
@@ -73,7 +73,7 @@ describe('getEditableFields — credit-card consumption by status', () => {
 describe('getEditableFields — statement-payment expense (no category)', () => {
   it('card payment: amount + date + description, category hidden', () => {
     expect(getEditableFields(input({ type: 'expense', isCardPayment: true }))).toEqual(
-      fields({ amount: true, date: true, description: true, shared: false }),
+      fields({ amount: true, date: true, description: true, shared: false, reimbursement: false }),
     )
   })
 })
@@ -83,7 +83,7 @@ describe('getEditableFields — installment parent (madre)', () => {
     expect(
       getEditableFields(input({ type: 'expense', isParent: true, hasPaidInstallment: false })),
     ).toEqual(
-      fields({ amount: true, category: true, subcategory: true, description: true, shared: true }),
+      fields({ amount: true, category: true, subcategory: true, description: true, shared: true, reimbursement: true }),
     )
   })
 
@@ -91,7 +91,7 @@ describe('getEditableFields — installment parent (madre)', () => {
     expect(
       getEditableFields(input({ type: 'expense', isParent: true, hasPaidInstallment: true })),
     ).toEqual(
-      fields({ category: true, subcategory: true, description: true, shared: true }),
+      fields({ category: true, subcategory: true, description: true, shared: true, reimbursement: true }),
     )
   })
 
@@ -105,7 +105,7 @@ describe('getEditableFields — installment child (single cuota)', () => {
   it('fully locked: no field editable, edits route to the parent', () => {
     expect(
       getEditableFields(input({ type: 'expense', status: 'pending', isInstallmentChild: true })),
-    ).toEqual(fields({ shared: false }))
+    ).toEqual(fields({ shared: false, reimbursement: false }))
   })
 
   it('stays locked even if not yet paid', () => {
@@ -134,6 +134,21 @@ describe('getEditableFields — invariants', () => {
   it('only exchange exposes the destination amount', () => {
     for (const type of types) {
       expect(getEditableFields(input({ type })).destinationAmount).toBe(type === 'exchange')
+    }
+  })
+
+  it('reimbursement is editable only on a categorizable expense (and the madre)', () => {
+    // Simple / card expense and the installment parent can carry a reintegro.
+    expect(getEditableFields(input({ type: 'expense', status: null })).reimbursement).toBe(true)
+    expect(getEditableFields(input({ type: 'expense', status: 'paid' })).reimbursement).toBe(true)
+    expect(getEditableFields(input({ isParent: true })).reimbursement).toBe(true)
+    // Statement-payment expense, installment child, and non-expense types cannot.
+    expect(getEditableFields(input({ type: 'expense', isCardPayment: true })).reimbursement).toBe(false)
+    expect(
+      getEditableFields(input({ type: 'expense', isInstallmentChild: true })).reimbursement,
+    ).toBe(false)
+    for (const type of ['income', 'transfer', 'adjustment', 'exchange'] as const) {
+      expect(getEditableFields(input({ type })).reimbursement).toBeFalsy()
     }
   })
 })

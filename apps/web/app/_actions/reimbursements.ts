@@ -9,12 +9,43 @@ import {
   normalizeMoneyAmount,
   type ConfirmReimbursementInput,
   type CancelReimbursementInput,
+  type SaveExpenseReimbursementInput,
 } from '@grana/validation'
+import { saveExpenseReimbursement as saveExpenseReimbursementOrchestrator } from '@grana/transactions-mutations'
 import type { ActionResult } from './types'
 import { getAuthenticatedUserId } from './_lib/auth'
 import { getOrCreatePeriodForDate } from '@/lib/cards/queries'
+import { getTodayAR } from '@/lib/date'
 
 // Use shared `revalidateAfterReimbursementMutation` directly at the callsite.
+
+// ── saveExpenseReimbursement (add / edit / remove from the edit form) ────────────
+
+/**
+ * Shell for the edit-form reintegro CRUD: auth + client + orchestrator +
+ * revalidate. `patch` carries the optional `reimbursement` declaration (absent ⇒
+ * remove the pending one) and the expense's resulting `shared` spec (so the
+ * reintegro inherits the split). The orchestrator lives in
+ * `@grana/transactions-mutations` and does the state reconciliation.
+ */
+export async function saveExpenseReimbursement(
+  id: string,
+  patch: unknown,
+): Promise<ActionResult<SaveExpenseReimbursementInput>> {
+  const userId = await getAuthenticatedUserId()
+  const supabase = await createClient()
+
+  const input = { expense_id: id, ...(patch as Record<string, unknown>) }
+  const result = await saveExpenseReimbursementOrchestrator({
+    supabase,
+    userId,
+    input,
+    today: getTodayAR(),
+  })
+
+  if (result.ok) revalidateAfterReimbursementMutation()
+  return result
+}
 
 // ── confirmReimbursement (reconcile) ────────────────────────────────────────────
 
