@@ -66,6 +66,7 @@ import {
   type Tab,
 } from '@grana/movement-form'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
 import { CategorySuggestionChip } from '@/lib/transactions/components/category-suggestion-chip'
 import { CategorySuggestionHint } from '@/lib/transactions/components/category-suggestion-hint'
@@ -789,6 +790,7 @@ export const MovementForm = ({
           placeholder="0"
           className={`w-full min-w-0 bg-transparent text-[46px] font-bold leading-none tracking-[-0.045em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
         />
+        <MoneyCalculatorPopover seed={amount} onResult={setAmount} className="shrink-0 self-center" />
       </div>
       {tab === 'income' && (
         <p className="mt-2.5 text-[12.5px] font-medium text-emerald-deep">{t('drawer.helper_income')}</p>
@@ -1002,6 +1004,7 @@ export const MovementForm = ({
             placeholder="0"
             className="w-full min-w-0 bg-transparent text-[46px] font-bold leading-none tracking-[-0.045em] tabular-nums text-text outline-none placeholder:text-text-soft/40"
           />
+          <MoneyCalculatorPopover seed={destinationAmount} onResult={setDestinationAmount} className="shrink-0 self-center" />
         </div>
         {exchangeRate !== null && (
           <p className="mt-2.5 text-[12.5px] text-text-muted tabular-nums">

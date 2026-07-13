@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import { Lock } from 'lucide-react'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 
 /**
  * Account-specific drawer form pieces (Alta + Editar). The neutral primitives
@@ -163,6 +164,7 @@ const MoneyRow = ({
         aria-label={label}
         className="w-[100px] rounded-[10px] border border-border bg-[#FAFBFC] px-3 py-[9px] text-right text-base font-bold tabular-nums tracking-[-0.01em] text-text outline-none focus-visible:border-[#C9CFD7] focus-visible:ring-[3px] focus-visible:ring-[rgba(58,107,138,0.12)] placeholder:font-semibold placeholder:text-text-soft sm:w-[132px]"
       />
+      <MoneyCalculatorPopover seed={value} onResult={onChange} allowNegative={allowNegative} className="shrink-0" />
     </div>
   </div>
 )

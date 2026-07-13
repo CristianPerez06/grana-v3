@@ -308,7 +308,15 @@
     "no_results": "No results.",
     "required_short": "Required.",
     "today": "Today",
-    "pick_date": "Pick a date"
+    "pick_date": "Pick a date",
+    "calculator": {
+      "open": "Open calculator",
+      "title": "Calculator",
+      "clear": "Clear all",
+      "backspace": "Backspace",
+      "equals": "Equals",
+      "apply": "Use result"
+    }
   },
   "nav": {
     "dashboard": "Home",

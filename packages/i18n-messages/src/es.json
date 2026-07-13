@@ -308,7 +308,15 @@
     "no_results": "Sin resultados.",
     "required_short": "Requerido.",
     "today": "Hoy",
-    "pick_date": "Elegí una fecha"
+    "pick_date": "Elegí una fecha",
+    "calculator": {
+      "open": "Abrir calculadora",
+      "title": "Calculadora",
+      "clear": "Borrar todo",
+      "backspace": "Borrar",
+      "equals": "Igual",
+      "apply": "Usar resultado"
+    }
   },
   "nav": {
     "dashboard": "Inicio",

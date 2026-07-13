@@ -16,6 +16,7 @@ import { useShowCents } from '@/lib/preferences-context'
 import { parseMoneyInput } from '@grana/validation'
 import { Button } from '@/components/ui/button'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { DatePicker } from '@/components/ui/date-picker'
 import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
@@ -356,12 +357,19 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
                     >
                       {t('labels.amount')}
                     </label>
-                    <MoneyAmountInput
-                      id={`amount-${instance.id}`}
-                      value={editAmount}
-                      onChange={setEditAmount}
-                      className="rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
+                    <div className="relative flex items-center">
+                      <MoneyAmountInput
+                        id={`amount-${instance.id}`}
+                        value={editAmount}
+                        onChange={setEditAmount}
+                        className="w-full rounded-md border border-input bg-background px-2 py-1 pr-10 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      />
+                      <MoneyCalculatorPopover
+                        seed={editAmount}
+                        onResult={setEditAmount}
+                        className="absolute right-1 top-1/2 size-7 -translate-y-1/2"
+                      />
+                    </div>
                     <p className="text-[11px] text-muted-foreground">
                       {t('pending.amount_changes_rule')}
                     </p>

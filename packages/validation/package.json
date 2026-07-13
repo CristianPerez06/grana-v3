@@ -7,9 +7,16 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
   "dependencies": {
     "@grana/ui-contracts": "workspace:*",
     "decimal.js": "^10.4.3",
     "yup": "^1.7.1"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
   }
 }

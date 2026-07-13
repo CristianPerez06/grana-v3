@@ -7,6 +7,7 @@ import { CreditCard, Lock, X } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { parseMoneyInput } from '@grana/validation'
 import {
   updateCreditCard,
@@ -394,6 +395,7 @@ export const EditCardForm = ({
           className="min-w-0 flex-1 border-none bg-transparent p-0 text-[17px] font-bold tracking-[-0.01em] tabular-nums text-text outline-none placeholder:font-semibold placeholder:text-text-soft"
         />
         <span className="shrink-0 text-xs font-semibold text-text-soft">{t('labels.limit_suffix')}</span>
+        <MoneyCalculatorPopover seed={creditLimit} onResult={setCreditLimit} className="shrink-0" />
       </div>
       {errors.creditLimit ? (
         <p className="mt-1.5 px-0.5 text-xs text-destructive">{errors.creditLimit}</p>

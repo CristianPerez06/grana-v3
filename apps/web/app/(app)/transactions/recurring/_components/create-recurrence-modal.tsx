@@ -26,6 +26,7 @@ import { Popover } from '@/components/ui/popover'
 import { DatePicker } from '@/components/ui/date-picker'
 import { AccountAvatar } from '@/components/ui/account-avatar'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { parseMoneyInput } from '@grana/validation'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { createRecurrence } from '@/app/_actions/recurrences'
@@ -522,6 +523,7 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories, hou
                   placeholder="0"
                   className={`w-full min-w-0 bg-transparent text-[30px] font-extrabold leading-none tracking-[-0.02em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
                 />
+                <MoneyCalculatorPopover seed={amount} onResult={setAmount} className="shrink-0 self-center" />
               </div>
             </div>
 

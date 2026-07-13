@@ -7,6 +7,7 @@ import { updateRecurrence } from '@/app/_actions/recurrences'
 import { parseMoneyInput } from '@grana/validation'
 import { Drawer } from '@/components/ui/drawer'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { DatePicker } from '@/components/ui/date-picker'
 import type { RecurrenceDetail } from '@/lib/recurrences/types'
 
@@ -83,14 +84,21 @@ export const RecurrenceEditDrawer = ({ rule, open, onClose }: Props) => {
           <label htmlFor="amount" className={labelClass}>
             {t('labels.amount')}
           </label>
-          <MoneyAmountInput
-            id="amount"
-            required
-            value={amount}
-            onChange={setAmount}
-            className={fieldClass}
-            style={{ backgroundColor: FIELD_BG }}
-          />
+          <div className="relative flex items-center">
+            <MoneyAmountInput
+              id="amount"
+              required
+              value={amount}
+              onChange={setAmount}
+              className={`${fieldClass} pr-11`}
+              style={{ backgroundColor: FIELD_BG }}
+            />
+            <MoneyCalculatorPopover
+              seed={amount}
+              onResult={setAmount}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2"
+            />
+          </div>
         </div>
 
         <div className="flex flex-col gap-1.5">

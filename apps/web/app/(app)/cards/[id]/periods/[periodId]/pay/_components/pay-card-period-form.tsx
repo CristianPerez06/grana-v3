@@ -15,6 +15,7 @@ import { Money, parseMoneyInput } from '@grana/validation'
 import { formatARS } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Card } from '@/components/ui/card'
 import { Alert } from '@/components/ui/alert'
@@ -357,6 +358,7 @@ export const PayCardPeriodForm = ({
                 onChange={setAmount}
                 className={moneyInputCls('lg')}
               />
+              <MoneyCalculatorPopover seed={amount} onResult={setAmount} className="shrink-0" />
             </MoneyField>
             {errors.amount && <FieldError>{errors.amount}</FieldError>}
 

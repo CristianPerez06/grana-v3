@@ -1,6 +1,7 @@
 export { ValidationError, setLocale as setYupLocale } from "yup";
 export {
   Money,
+  evaluateMoneyExpression,
   normalizeMoneyAmount,
   parseMoneyInput,
   type Money as MoneyType,

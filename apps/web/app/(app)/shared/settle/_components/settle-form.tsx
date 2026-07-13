@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Segmented } from '@/components/ui/segmented'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { parseMoneyInput } from '@grana/validation'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { checkNegativeBalance, type BalanceCurrency } from '@grana/money-logic'
@@ -152,6 +153,7 @@ export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
             aria-label={t('settle.amount_label')}
             className="w-full max-w-[240px] bg-transparent text-center text-[32px] font-black leading-none tracking-tight tabular-nums text-text outline-none sm:text-[42px]"
           />
+          <MoneyCalculatorPopover seed={amount} onResult={setAmount} className="shrink-0" />
         </div>
       </div>
 
