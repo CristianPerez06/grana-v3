@@ -1247,6 +1247,7 @@
     "placeholders": {
       "amount": "0,00",
       "description": "Descripción opcional",
+      "account": "Seleccioná una cuenta",
       "category": "Seleccioná una categoría",
       "subcategory": "Seleccioná una subcategoría (opcional)",
       "destination_account": "Seleccioná la cuenta destino",

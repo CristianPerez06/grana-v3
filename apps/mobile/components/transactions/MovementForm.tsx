@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
+import { ChevronLeft, ChevronRight } from 'lucide-react-native'
 import { getTodayAR } from '@grana/money-logic'
 import { Money, parseMoneyInput } from '@grana/validation'
 import {
@@ -17,11 +18,16 @@ import { Segmented } from '../ui/Segmented'
 import { Switch } from '../ui/Switch'
 import { FormError } from '../ui/FormError'
 import { Spinner } from '../ui/Spinner'
+import { AccountAvatar } from '../ui/AccountAvatar'
+import { SelectField, SheetRow } from '../ui/SelectField'
+import { SelectSheet } from '../ui/SelectSheet'
 import { colors } from '../../lib/colors'
 import { useT } from '../../lib/locale-context'
 import { createMovementMutators } from '../../lib/transactions/mutators'
 import { invalidateAfterMovementMutation } from '../../lib/transactions/invalidate'
 import { useQueryClient } from '@tanstack/react-query'
+
+type Subcategory = CategoryWithSubcategories['subcategories'][number]
 
 // Tabs offered: Gasto / Ingreso / Transferencia. Exchange and adjustment are
 // deferred (B.2b), so their tabs are not offered here — the shared hook still
@@ -142,25 +148,12 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
       </View>
 
       {/* Source account */}
-      <View className="flex-col gap-1.5">
-        <Label>{t('transactions.form.account_label')}</Label>
-        <View className="flex-col gap-2">
-          {form.eligibleAccounts.map((account) => (
-            <PickRow
-              key={account.id}
-              label={account.institutionName ?? account.name}
-              secondary={account.institutionName ? account.name : undefined}
-              hint={
-                account.type === 'credit'
-                  ? t('transactions.drawer.credit_hint')
-                  : undefined
-              }
-              selected={form.accountId === account.id}
-              onPress={() => form.setAccountId(account.id)}
-            />
-          ))}
-        </View>
-      </View>
+      <AccountSelectField
+        label={t('transactions.form.account_label')}
+        accounts={form.eligibleAccounts}
+        selectedId={form.accountId}
+        onSelect={form.setAccountId}
+      />
 
       {/* Installments (credit expense) — ARS gets chips + stepper + preview;
           USD gets the cuotas-sólo-ARS hint (simple USD purchase stays allowed) */}
@@ -286,20 +279,12 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
 
       {/* Destination account (transfer) */}
       {form.tab === 'transfer' && (
-        <View className="flex-col gap-1.5">
-          <Label>{t('transactions.form.destination_label')}</Label>
-          <View className="flex-col gap-2">
-            {form.otherAccounts.map((account) => (
-              <PickRow
-                key={account.id}
-                label={account.institutionName ?? account.name}
-                secondary={account.institutionName ? account.name : undefined}
-                selected={form.destinationAccountId === account.id}
-                onPress={() => form.setDestinationAccountId(account.id)}
-              />
-            ))}
-          </View>
-        </View>
+        <AccountSelectField
+          label={t('transactions.form.destination_label')}
+          accounts={form.otherAccounts}
+          selectedId={form.destinationAccountId}
+          onSelect={form.setDestinationAccountId}
+        />
       )}
 
       {/* Date */}
@@ -330,38 +315,14 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
         )}
       </View>
 
-      {/* Category (+ subcategory drill) for expense/income */}
+      {/* Category (+ one-level subcategory drill) for expense/income */}
       {showCategory && (
-        <View className="flex-col gap-1.5">
-          <Label>{t('transactions.form.category_label')}</Label>
-          <View className="flex-col gap-2">
-            {form.transactionCategories.map((category) => {
-              const active = form.categoryId === category.id
-              return (
-                <View key={category.id} className="flex-col gap-2">
-                  <PickRow
-                    label={category.name}
-                    selected={active}
-                    onPress={() => form.pickCategory(category.id, '')}
-                  />
-                  {active && category.subcategories.length > 0 && (
-                    <View className="flex-col gap-1.5 pl-4">
-                      {category.subcategories.map((sub) => (
-                        <PickRow
-                          key={sub.id}
-                          label={sub.name}
-                          selected={form.subcategoryId === sub.id}
-                          onPress={() => form.pickCategory(category.id, sub.id)}
-                          compact
-                        />
-                      ))}
-                    </View>
-                  )}
-                </View>
-              )
-            })}
-          </View>
-        </View>
+        <CategorySelectField
+          categories={form.transactionCategories}
+          categoryId={form.categoryId}
+          subcategoryId={form.subcategoryId}
+          onPick={form.pickCategory}
+        />
       )}
 
       {/* Negative-balance warning (non-blocking) */}
@@ -443,7 +404,9 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
                 </View>
               </View>
 
-              {/* Target radio — credit only (cash/bank implies 'account') */}
+              {/* Target radio — credit only (cash/bank implies 'account'). A
+                  vertical radio, not Segmented: the labels are long explanatory
+                  strings that would wrap badly in a two-option segmented. */}
               {isCredit && (
                 <View className="flex-col gap-1.5">
                   <Text className="text-xs text-text-muted">
@@ -451,12 +414,11 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
                   </Text>
                   <View className="flex-col gap-2">
                     {(['account', 'statement'] as const).map((tg) => (
-                      <PickRow
+                      <RadioRow
                         key={tg}
                         label={t(`transactions.reimbursement.target.${tg}`)}
                         selected={form.reimbursementTarget === tg}
                         onPress={() => form.setReimbursementTarget(tg)}
-                        compact
                       />
                     ))}
                   </View>
@@ -465,21 +427,12 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
 
               {/* Credit-to account (cash/bank) */}
               {(!isCredit || form.reimbursementTarget === 'account') && (
-                <View className="flex-col gap-1.5">
-                  <Label>{t('transactions.reimbursement.credit_to')}</Label>
-                  <View className="flex-col gap-2">
-                    {form.cashBankAccounts.map((account) => (
-                      <PickRow
-                        key={account.id}
-                        label={account.institutionName ?? account.name}
-                        secondary={account.institutionName ? account.name : undefined}
-                        selected={form.reimbursementAccountId === account.id}
-                        onPress={() => form.setReimbursementAccountId(account.id)}
-                        compact
-                      />
-                    ))}
-                  </View>
-                </View>
+                <AccountSelectField
+                  label={t('transactions.reimbursement.credit_to')}
+                  accounts={form.cashBankAccounts}
+                  selectedId={form.reimbursementAccountId}
+                  onSelect={form.setReimbursementAccountId}
+                />
               )}
 
               {/* Received now */}
@@ -570,40 +523,202 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
   )
 }
 
-// A single selectable row — the picker unit for accounts, categories and
-// subcategories. Emerald border when selected (mirror of SelectableCard).
-function PickRow({
+// A bordered radio card — emerald border + ✓ when selected. Used only for the
+// reimbursement target (two options with long explanatory labels).
+function RadioRow({
   label,
-  secondary,
-  hint,
   selected,
   onPress,
-  compact = false,
 }: {
   label: string
-  secondary?: string
-  hint?: string
   selected: boolean
   onPress: () => void
-  compact?: boolean
 }) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      className={`flex-row items-center justify-between rounded-xl border-2 bg-card ${
-        compact ? 'px-3 py-2' : 'px-4 py-3'
-      } ${selected ? 'border-emerald' : 'border-border'}`}
+      className={`flex-row items-center justify-between rounded-xl border-2 bg-card px-3 py-2 ${
+        selected ? 'border-emerald' : 'border-border'
+      }`}
     >
-      <View className="flex-1 flex-col">
-        <Text className={`font-semibold text-text ${compact ? 'text-sm' : 'text-base'}`}>
-          {label}
-        </Text>
-        {secondary && <Text className="text-xs text-text-muted">{secondary}</Text>}
-        {hint && <Text className="text-xs text-text-soft">{hint}</Text>}
-      </View>
+      <Text className="flex-1 pr-2 text-sm font-semibold text-text">{label}</Text>
       {selected && <Text className="text-emerald">✓</Text>}
     </Pressable>
+  )
+}
+
+// Account picker: compact trigger (avatar + name) that opens a sheet with the
+// account list. Replaces the inline account lists; reused for source, transfer
+// destination, and the reimbursement credit-to account.
+function AccountSelectField({
+  label,
+  accounts,
+  selectedId,
+  onSelect,
+}: {
+  label: string
+  accounts: MovementFormAccount[]
+  selectedId: string
+  onSelect: (id: string) => void
+}) {
+  const t = useT()
+  const [open, setOpen] = useState(false)
+  const selected = accounts.find((a) => a.id === selectedId)
+
+  return (
+    <View className="flex-col gap-1.5">
+      <Label>{label}</Label>
+      <SelectField
+        placeholder={t('transactions.placeholders.account')}
+        onPress={() => setOpen(true)}
+        value={
+          selected ? (
+            <View className="flex-row items-center gap-2">
+              {selected.avatar && <AccountAvatar {...selected.avatar} size="sm" />}
+              <Text className="flex-1 text-sm text-text" numberOfLines={1}>
+                {selected.institutionName ?? selected.name}
+              </Text>
+            </View>
+          ) : undefined
+        }
+      />
+      <SelectSheet
+        visible={open}
+        onClose={() => setOpen(false)}
+        title={label}
+        items={accounts}
+        keyExtractor={(a) => a.id}
+        renderRow={(a) => (
+          <SheetRow
+            leading={a.avatar ? <AccountAvatar {...a.avatar} size="sm" /> : undefined}
+            primary={a.institutionName ?? a.name}
+            secondary={a.institutionName ? a.name : undefined}
+            hint={a.type === 'credit' ? t('transactions.drawer.credit_hint') : undefined}
+            selected={a.id === selectedId}
+            onPress={() => {
+              onSelect(a.id)
+              setOpen(false)
+            }}
+          />
+        )}
+      />
+    </View>
+  )
+}
+
+// Category picker: trigger shows `Categoría › Subcategoría`; the sheet drills one
+// level (categories → back + "whole category" + subcategories), mirror of web.
+function CategorySelectField({
+  categories,
+  categoryId,
+  subcategoryId,
+  onPick,
+}: {
+  categories: CategoryWithSubcategories[]
+  categoryId: string
+  subcategoryId: string
+  onPick: (categoryId: string, subcategoryId: string) => void
+}) {
+  const t = useT()
+  const [open, setOpen] = useState(false)
+  const [drillId, setDrillId] = useState<string | null>(null)
+
+  const selectedCat = categories.find((c) => c.id === categoryId)
+  const selectedSub = selectedCat?.subcategories.find((s) => s.id === subcategoryId)
+  const drillCat = drillId ? categories.find((c) => c.id === drillId) ?? null : null
+
+  const close = () => {
+    setOpen(false)
+    setDrillId(null)
+  }
+
+  return (
+    <View className="flex-col gap-1.5">
+      <Label>{t('transactions.form.category_label')}</Label>
+      <SelectField
+        placeholder={t('transactions.placeholders.category')}
+        onPress={() => setOpen(true)}
+        value={
+          selectedCat ? (
+            <View className="flex-row items-center gap-1">
+              <Text className="text-sm text-text" numberOfLines={1}>
+                {selectedCat.name}
+              </Text>
+              {selectedSub && (
+                <>
+                  <Text className="text-text-soft">›</Text>
+                  <Text className="text-sm text-text-muted" numberOfLines={1}>
+                    {selectedSub.name}
+                  </Text>
+                </>
+              )}
+            </View>
+          ) : undefined
+        }
+      />
+      <SelectSheet<CategoryWithSubcategories | Subcategory>
+        visible={open}
+        onClose={close}
+        title={t('transactions.form.category_label')}
+        items={drillCat ? drillCat.subcategories : categories}
+        keyExtractor={(item) => item.id}
+        header={
+          drillCat ? (
+            <View className="pb-1">
+              <Pressable
+                onPress={() => setDrillId(null)}
+                accessibilityRole="button"
+                className="flex-row items-center gap-1.5 py-3"
+              >
+                <ChevronLeft size={18} color={colors.textMuted} />
+                <Text className="text-sm font-semibold text-text-muted">{drillCat.name}</Text>
+              </Pressable>
+              <SheetRow
+                primary={t('transactions.drawer.whole_category')}
+                selected={categoryId === drillCat.id && !subcategoryId}
+                onPress={() => {
+                  onPick(drillCat.id, '')
+                  close()
+                }}
+              />
+            </View>
+          ) : undefined
+        }
+        renderRow={(item) => {
+          if ('subcategories' in item) {
+            const drillable = item.subcategories.length > 0
+            return (
+              <SheetRow
+                primary={item.name}
+                selected={!drillable && categoryId === item.id}
+                trailing={
+                  drillable ? <ChevronRight size={18} color={colors.textSoft} /> : undefined
+                }
+                onPress={() => {
+                  if (drillable) {
+                    setDrillId(item.id)
+                  } else {
+                    onPick(item.id, '')
+                    close()
+                  }
+                }}
+              />
+            )
+          }
+          return (
+            <SheetRow
+              primary={item.name}
+              selected={subcategoryId === item.id}
+              onPress={() => {
+                if (drillCat) onPick(drillCat.id, item.id)
+                close()
+              }}
+            />
+          )
+        }}
+      />
+    </View>
   )
 }

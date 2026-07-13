@@ -1247,6 +1247,7 @@
     "placeholders": {
       "amount": "0.00",
       "description": "Optional description",
+      "account": "Select an account",
       "category": "Select a category",
       "subcategory": "Select a subcategory (optional)",
       "destination_account": "Select destination account",

@@ -3120,13 +3120,15 @@ El read SHALL usar el mismo RPC `get_movements_page` y el mismo anon-key/RLS pat
 
 ### Requirement: La app nativa expone la pantalla de alta de movimiento `/transactions/new`
 
-La app nativa SHALL exponer una pantalla full-screen `/transactions/new` para **registrar** un movimiento, como thin consumer del hook `useMovementForm` de `@grana/movement-form`. La pantalla SHALL montar el hook pasándole: las cuentas del usuario proyectadas a `MovementFormAccount`, el árbol de categorías (`getAllCategories`), el hogar (`getHousehold`, cuando exista), `today: getTodayAR()`, una `translate` wire al i18n mobile, y un objeto `Mutators` nativo. La JSX SHALL ser RN idiomática sobre los primitivos existentes (`PageHeader`, `Segmented`, `MoneyAmountInput`, `DateField`, `SelectableCard`, `Switch`, `FormError`), con la chrome (`PageHeader` + CTA) visible desde el primer paint.
+La app nativa SHALL exponer una pantalla full-screen `/transactions/new` para **registrar** un movimiento, como thin consumer del hook `useMovementForm` de `@grana/movement-form`. La pantalla SHALL montar el hook pasándole: las cuentas del usuario proyectadas a `MovementFormAccount`, el árbol de categorías (`getAllCategories`), el hogar (`getHousehold`, cuando exista), `today: getTodayAR()`, una `translate` wire al i18n mobile, y un objeto `Mutators` nativo. La JSX SHALL ser RN idiomática sobre los primitivos existentes (`PageHeader`, `Segmented`, `MoneyAmountInput`, `DateField`, `SelectField`/`SelectSheet`, `Switch`, `FormError`), con la chrome (`PageHeader` + CTA) visible desde el primer paint.
+
+La selección de **cuenta** y **categoría** SHALL renderizarse con el picker `SelectField` + `SelectSheet` (un trigger-row compacto que muestra la selección actual —avatar + nombre, o placeholder— y abre un `formSheet` modal con la lista), NO como listas de filas inline. El picker NO SHALL incluir buscador (paridad con web). La selección de categoría SHALL drillear **un nivel** dentro del mismo sheet, espejo del web: nivel de categorías (las que tienen subcategorías abren el drill; las que no, se seleccionan directo) → nivel drilleado con "volver", "Toda la categoría" y las subcategorías. El trigger de categoría SHALL mostrar `Categoría › Subcategoría` cuando hay subcategoría elegida.
 
 El alcance de esta pantalla es **create-only**: SHALL ofrecer las tabs **Gasto**, **Ingreso** y **Transferencia**. El picker de cuentas SHALL incluir **todas** las cuentas del usuario (cash, bank y credit), proyectando las credit como off-ledger (`balances: { ARS: 0, USD: 0 }`, avatar resuelto vía `resolveAccountAvatar`); el gate `eligibleFor` del hook restringe credit a la tab Gasto, y la fila credit SHALL mostrar el hint de consumo de tarjeta (`transactions.drawer.credit_hint`). La pantalla NO SHALL ofrecer (todavía) el cambio de moneda, el ajuste ni la recurrencia — slices aditivos posteriores (B.2b) — ni la edición de movimientos (change C).
 
 Con una cuenta credit seleccionada en Gasto, la pantalla SHALL ofrecer **cuotas** cuando la moneda es ARS: chips preset `1·3·6·12` más un stepper custom acotado a 2–60, con preview del monto por cuota y CTA dinámico (`actions.register_installments`); con moneda USD SHALL mostrar el hint de cuotas-sólo-ARS en lugar de los chips, sin bloquear el consumo simple en USD. El submit SHALL rutear vía el hook a `registerCardPurchase` (consumo simple) o `registerInstallments` (cuotas), sin lógica de ruteo propia en la pantalla.
 
-En la tab Gasto la pantalla SHALL ofrecer la **declaración de reintegro** con paridad web: toggle, monto estimado, auto-cálculo por porcentaje/tope (`applyReimbursementPercent`), destino *a cuenta / a resumen* (el radio sólo con credit; cash/bank implica 'account'), picker de cuenta de acreditación cuando aplica, y el checkbox *ya lo recibí* con su hint condicional. El bloque SHALL estar disponible también sobre una compra **en cuotas**: el hook vincula el reintegro a la madre de la compra (el subtipo *a resumen* cae en el período de la primera cuota), igual que web.
+En la tab Gasto la pantalla SHALL ofrecer la **declaración de reintegro** con paridad web: toggle, monto estimado, auto-cálculo por porcentaje/tope (`applyReimbursementPercent`), destino *a cuenta / a resumen* (radio vertical, sólo con credit; cash/bank implica 'account'), picker de cuenta de acreditación cuando aplica, y el checkbox *ya lo recibí* con su hint condicional. El bloque SHALL estar disponible también sobre una compra **en cuotas**: el hook vincula el reintegro a la madre de la compra (el subtipo *a resumen* cae en el período de la primera cuota), igual que web.
 
 La pantalla SHALL soportar el **gasto compartido**: cuando el hogar tiene exactamente dos miembros, SHALL exponer el toggle "Compartir gasto" y el control de split, permitiendo cualquier reparto incluido el **100%-al-otro-miembro**. Si no hay hogar de dos miembros (o el read falla), el toggle NO SHALL renderizarse y el alta simple SHALL seguir funcionando.
 
@@ -3137,6 +3139,12 @@ Al guardar con éxito, `onSuccess` SHALL navegar de vuelta al feed y `onMutation
 - **WHEN** el usuario tapea el FAB, elige la tab "Gasto", una cuenta cash/bank, un monto, una categoría y guarda
 - **THEN** la pantalla invoca `form.onSubmit`, que dispara el mutator `createExpense` nativo (validate + auth + la thin mutation compartida)
 - **AND** al éxito navega de vuelta al feed y el gasto aparece en el mes correspondiente sin recarga manual
+
+#### Scenario: Elegir cuenta y categoría vía el picker de sheet
+
+- **WHEN** el usuario tapea el trigger de "Cuenta" (o "Categoría")
+- **THEN** se abre un `formSheet` modal con la lista (sin buscador) y al elegir una opción el sheet se cierra y el trigger muestra la selección (avatar + nombre; para categoría, `Categoría › Subcategoría`)
+- **AND** en categoría, elegir una categoría con subcategorías drillea un nivel dentro del sheet (con "volver" y "Toda la categoría") en vez de seleccionar directo
 
 #### Scenario: Registrar un ingreso o una transferencia desde mobile
 
@@ -3162,7 +3170,7 @@ Al guardar con éxito, `onSuccess` SHALL navegar de vuelta al feed y `onMutation
 
 - **WHEN** el usuario registra un gasto (cash/bank, o credit con o sin cuotas), activa el toggle Reintegro y completa el monto estimado (directo o por %/tope)
 - **THEN** el submit envía la declaración al mutator (`createExpense`, `registerCardPurchase` o `registerInstallments`), que la inserta atómicamente con rollback
-- **AND** con credit el usuario puede elegir destino *a resumen* (reduce el período) o *a cuenta*; con cash/bank el destino es *a cuenta* sin radio
+- **AND** con credit el usuario puede elegir destino *a resumen* (reduce el período) o *a cuenta*; con cash/bank el destino es *a cuenta* sin selector
 - **AND** sobre una compra en cuotas el reintegro se vincula a la madre (el subtipo *a resumen* cae en el período de la primera cuota)
 
 #### Scenario: Gasto compartido 100%-al-otro desde mobile
