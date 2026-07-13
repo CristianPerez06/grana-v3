@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { GranaSupabaseClient } from '@grana/supabase'
-import { createIncome, createExpense, createTransfer } from '../src/thin-mutations'
+import {
+  createIncome,
+  createExpense,
+  createTransfer,
+  updateTransaction,
+} from '../src/thin-mutations'
 
 /**
  * Smoke tests for the thin movement mutations' fail-fast + happy paths. The
@@ -133,5 +138,132 @@ describe('thin-mutations — createTransfer', () => {
     })
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.formError).toContain('no está activa')
+  })
+})
+
+// Mock for updateTransaction's debit-account-change path: transactions select
+// (existing) + update, accounts select (new account type), account_currencies
+// (currency active). No date change, so period logic is skipped.
+function updateClient(opts: {
+  existing: Record<string, unknown> | null
+  newAccountType?: string | null
+  currencyActive?: boolean
+  capture?: { updated?: Record<string, unknown> }
+}): GranaSupabaseClient {
+  return {
+    from(table: string) {
+      if (table === 'transactions') {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: opts.existing,
+                  error: opts.existing ? null : { message: 'not found' },
+                }),
+              }),
+            }),
+          }),
+          update: (payload: Record<string, unknown>) => {
+            if (opts.capture) opts.capture.updated = payload
+            return { eq: () => ({ eq: async () => ({ error: null }) }) }
+          },
+        }
+      }
+      if (table === 'accounts') {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: opts.newAccountType === null ? null : { type: opts.newAccountType ?? 'bank' },
+                  error: null,
+                }),
+              }),
+            }),
+          }),
+        }
+      }
+      if (table === 'account_currencies') {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                eq: () => ({
+                  single: async () => ({ data: (opts.currencyActive ?? true) ? { id: 'c' } : null }),
+                }),
+              }),
+            }),
+          }),
+        }
+      }
+      throw new Error(`unexpected table ${table}`)
+    },
+  } as unknown as GranaSupabaseClient
+}
+
+const NEW_ACCOUNT = '44444444-4444-4444-8444-444444444444'
+const TX = '55555555-5555-4555-8555-555555555555'
+const today = new Date('2026-07-13T00:00:00Z')
+
+// A statement payment is off-period: card_period_id null, its period link lives
+// in period_payments.
+const paymentRow = {
+  id: TX,
+  status: null,
+  account_id: ACCOUNT,
+  card_period_id: null,
+  parent_id: null,
+  currency_code: 'ARS',
+}
+
+describe('thin-mutations — updateTransaction debit account change', () => {
+  it('moves the debit account of a statement payment (off-period)', async () => {
+    const capture: { updated?: Record<string, unknown> } = {}
+    const result = await updateTransaction(
+      updateClient({ existing: paymentRow, newAccountType: 'bank', capture }),
+      USER,
+      TX,
+      { account_id: NEW_ACCOUNT },
+      today,
+    )
+    expect(result.ok).toBe(true)
+    expect(capture.updated?.account_id).toBe(NEW_ACCOUNT)
+  })
+
+  it('rejects moving the account of a card consumption (card_period_id set)', async () => {
+    const result = await updateTransaction(
+      updateClient({ existing: { ...paymentRow, card_period_id: 'period-1' } }),
+      USER,
+      TX,
+      { account_id: NEW_ACCOUNT },
+      today,
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.formError).toContain('consumo de tarjeta')
+  })
+
+  it('rejects a credit account as the new debit source', async () => {
+    const result = await updateTransaction(
+      updateClient({ existing: paymentRow, newAccountType: 'credit' }),
+      USER,
+      TX,
+      { account_id: NEW_ACCOUNT },
+      today,
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.formError).toContain('tarjeta de crédito')
+  })
+
+  it('rejects a new account without the payment currency active', async () => {
+    const result = await updateTransaction(
+      updateClient({ existing: paymentRow, newAccountType: 'bank', currencyActive: false }),
+      USER,
+      TX,
+      { account_id: NEW_ACCOUNT },
+      today,
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.formError).toContain('moneda activa')
   })
 })

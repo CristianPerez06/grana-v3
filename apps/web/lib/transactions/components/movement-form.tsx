@@ -485,7 +485,7 @@ export const MovementForm = ({
               { label: t('labels.source_account'), value: edit.sourceAccountName ?? edit.accountId },
               { label: t('labels.destination_account'), value: edit.destinationAccountName ?? '—' },
             ]
-          : edit.sourceAccountName
+          : edit.sourceAccountName && !edit.editableFields?.account
             ? [{ label: t('labels.account'), value: edit.sourceAccountName }]
             : []),
       ]
@@ -894,6 +894,34 @@ export const MovementForm = ({
               </span>
             </div>
           ))}
+          {/* Editable debit account — statement payment only (getEditableFields
+              gates it). The account is a pure debit pointer here, so it can move
+              to any cash/bank account with the payment currency active. */}
+          {editable?.account && (
+            <div className="relative">
+              <Popover
+                modal={isDrawer}
+                open={activePopover === 'account'}
+                onOpenChange={(o) => setActivePopover(o ? 'account' : null)}
+                trigger={
+                  <FieldRow
+                    icon={<Wallet className="size-[18px]" />}
+                    label={t('labels.account')}
+                    value={<AccountValue account={selectedAccount} />}
+                  />
+                }
+              >
+                {renderAccountPicker(
+                  cashBank.filter((a) => a.activeCurrencies.includes(currencyCode)),
+                  accountId,
+                  (id) => {
+                    setAccountId(id)
+                    setActivePopover(null)
+                  },
+                )}
+              </Popover>
+            </div>
+          )}
           {editable?.category && categoryRow}
           {editable?.date && dateRow}
         </>

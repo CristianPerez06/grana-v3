@@ -31,7 +31,7 @@ describe('getEditableFields — cash/bank income & expense', () => {
 
   it('expense (cash/bank): amount, date, category, subcategory, description', () => {
     expect(getEditableFields(input({ type: 'expense', status: null }))).toEqual(
-      fields({ amount: true, date: true, category: true, subcategory: true, description: true, shared: true, reimbursement: true }),
+      fields({ amount: true, date: true, category: true, subcategory: true, description: true, shared: true, reimbursement: true, account: false }),
     )
   })
 })
@@ -59,21 +59,21 @@ describe('getEditableFields — transfer / adjustment / exchange', () => {
 describe('getEditableFields — credit-card consumption by status', () => {
   it('pending consumption: amount + date editable + category', () => {
     expect(getEditableFields(input({ type: 'expense', status: 'pending' }))).toEqual(
-      fields({ amount: true, date: true, category: true, subcategory: true, description: true, shared: true, reimbursement: true }),
+      fields({ amount: true, date: true, category: true, subcategory: true, description: true, shared: true, reimbursement: true, account: false }),
     )
   })
 
   it('paid consumption: only category + description (amount/date locked)', () => {
     expect(getEditableFields(input({ type: 'expense', status: 'paid' }))).toEqual(
-      fields({ category: true, subcategory: true, description: true, shared: true, reimbursement: true }),
+      fields({ category: true, subcategory: true, description: true, shared: true, reimbursement: true, account: false }),
     )
   })
 })
 
 describe('getEditableFields — statement-payment expense (no category)', () => {
-  it('card payment: amount + date + description, category hidden', () => {
+  it('card payment: amount + date + description, category hidden, account editable', () => {
     expect(getEditableFields(input({ type: 'expense', isCardPayment: true }))).toEqual(
-      fields({ amount: true, date: true, description: true, shared: false, reimbursement: false }),
+      fields({ amount: true, date: true, description: true, shared: false, reimbursement: false, account: true }),
     )
   })
 })
@@ -134,6 +134,17 @@ describe('getEditableFields — invariants', () => {
   it('only exchange exposes the destination amount', () => {
     for (const type of types) {
       expect(getEditableFields(input({ type })).destinationAmount).toBe(type === 'exchange')
+    }
+  })
+
+  it('account is editable only for a statement-payment expense', () => {
+    expect(getEditableFields(input({ type: 'expense', isCardPayment: true })).account).toBe(true)
+    // Non-payment expenses and every other type keep the account immutable.
+    expect(getEditableFields(input({ type: 'expense', status: null })).account).toBe(false)
+    expect(getEditableFields(input({ type: 'expense', status: 'paid' })).account).toBe(false)
+    expect(getEditableFields(input({ isParent: true })).account).toBeFalsy()
+    for (const type of ['income', 'transfer', 'adjustment', 'exchange'] as const) {
+      expect(getEditableFields(input({ type })).account).toBeFalsy()
     }
   })
 

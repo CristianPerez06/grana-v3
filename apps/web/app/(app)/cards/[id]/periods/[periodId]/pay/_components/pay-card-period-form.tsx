@@ -83,6 +83,8 @@ type Props = {
   /** Alícuota de sellos recordada de la tarjeta; null = primera vez (se pregunta). */
   stampTaxRate: number | null
   paymentAccounts: PaymentAccount[]
+  /** Preselected debit account — the card's own bank when available. */
+  defaultPaymentAccountId: string
 }
 
 const FieldLabel = ({ children }: { children: React.ReactNode }) => (
@@ -108,6 +110,7 @@ export const PayCardPeriodForm = ({
   paidPeriodEndDate,
   stampTaxRate,
   paymentAccounts,
+  defaultPaymentAccountId,
 }: Props) => {
   const router = useRouter()
   const t = useTranslations('cards')
@@ -140,7 +143,9 @@ export const PayCardPeriodForm = ({
   const [stampTax, setStampTax] = useState(initialStamp > 0 ? String(initialStamp) : '')
   const [amount, setAmount] = useState(String(sumARS(pendingAmountARS, initialStamp)))
   const [fxRate, setFxRate] = useState('')
-  const [paymentAccountId, setPaymentAccountId] = useState(paymentAccounts[0]?.id ?? '')
+  const [paymentAccountId, setPaymentAccountId] = useState(
+    defaultPaymentAccountId || paymentAccounts[0]?.id || '',
+  )
   const [paymentDate, setPaymentDate] = useState(todayStr())
   const [nextEndDate, setNextEndDate] = useState(runningEndDate)
   const [nextDueDate, setNextDueDate] = useState(runningDueDate)

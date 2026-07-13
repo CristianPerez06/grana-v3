@@ -438,6 +438,11 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
           subcategory_id: subcategoryId || null,
           description: description || null,
           ...(sharedUpdate !== undefined ? { shared: sharedUpdate } : {}),
+          // Debit-account change (statement payment): send it only when the
+          // field is editable and the account actually changed.
+          ...(editable?.account && accountId !== edit.accountId
+            ? { account_id: accountId }
+            : {}),
         })
       }
 

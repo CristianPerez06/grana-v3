@@ -173,6 +173,13 @@ export type EditableFields = {
    * paid-amount lock — same rule as `shared`.
    */
   reimbursement?: boolean
+  /**
+   * Whether the debit account can be changed. True ONLY for a statement-payment
+   * expense (its account is a pure debit pointer with no cascades). The account
+   * of every other movement — including a card consumption, whose account drives
+   * the period — stays immutable context.
+   */
+  account?: boolean
 }
 
 /**
@@ -256,6 +263,10 @@ export function getEditableFields(input: MovementEditInput): EditableFields {
         // card), independent of the paid lock. A statement-payment expense (no
         // category) can't carry one.
         reimbursement: !isCardPayment,
+        // Only a statement payment lets you change the debit account (its account
+        // is a pure debit pointer). A cash/bank expense or a card consumption keeps
+        // its account immutable.
+        account: isCardPayment,
       }
     }
     case 'transfer':

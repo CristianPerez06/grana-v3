@@ -50,20 +50,29 @@ const PayPeriodPage = async ({ params }: Props) => {
   const runningIsEstimated = runningPeriod?.is_estimated ?? true
 
   // Payment accounts: cash + bank with ARS active
-  const paymentAccounts = [
-    ...accountGroups.cash,
-    ...accountGroups.bank,
-  ]
-    .filter((a) => a.is_active && a.currencies.some((c) => c.currency_code === 'ARS' && c.is_active))
-    .map((a) => ({
-      id: a.id,
-      name: a.name,
-      // Secondary line: the issuing institution when it differs from the name
-      // (matches the accounts listing's name / institution split).
-      subtitle: a.institution && a.institution.name !== a.name ? a.institution.name : null,
-      balanceARS: a.balances.ARS,
-      avatar: a.avatar,
-    }))
+  const debitEligible = [...accountGroups.cash, ...accountGroups.bank].filter(
+    (a) => a.is_active && a.currencies.some((c) => c.currency_code === 'ARS' && c.is_active),
+  )
+  const paymentAccounts = debitEligible.map((a) => ({
+    id: a.id,
+    name: a.name,
+    // Secondary line: the issuing institution when it differs from the name
+    // (matches the accounts listing's name / institution split).
+    subtitle: a.institution && a.institution.name !== a.name ? a.institution.name : null,
+    balanceARS: a.balances.ARS,
+    avatar: a.avatar,
+  }))
+
+  // Default the debit account to one of the CARD's own bank (same institution),
+  // so paying a Galicia card defaults to the Galicia account instead of the
+  // first account in the list. Falls back to the first eligible account.
+  const cardInstitutionId = cardDetail.institution?.id ?? null
+  const defaultPaymentAccountId =
+    (cardInstitutionId
+      ? debitEligible.find((a) => a.institution?.id === cardInstitutionId)?.id
+      : undefined) ??
+    paymentAccounts[0]?.id ??
+    ''
 
   const t = await getTranslations('cards')
   const accent = cardAccent(cardDetail, cardDetail.institution)
@@ -114,6 +123,7 @@ const PayPeriodPage = async ({ params }: Props) => {
         paidPeriodEndDate={period.end_date}
         stampTaxRate={period.stampTaxRate}
         paymentAccounts={paymentAccounts}
+        defaultPaymentAccountId={defaultPaymentAccountId}
       />
     </>
   )

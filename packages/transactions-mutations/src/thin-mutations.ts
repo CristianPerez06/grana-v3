@@ -341,12 +341,45 @@ export async function updateTransaction(
 
   const { data: existing } = await supabase
     .from('transactions')
-    .select('id, status, account_id, card_period_id, parent_id')
+    .select('id, status, account_id, card_period_id, parent_id, currency_code')
     .eq('id', id)
     .eq('user_id', userId)
     .single()
 
   if (!existing) return { ok: false, formError: 'Transacción no encontrada.' }
+
+  // Debit-account change (statement payment only). Guard: never move the account
+  // of a card consumption — its account drives the period. Allowed only for an
+  // off-period movement (`card_period_id IS NULL`), which is the case for a
+  // statement payment (its period link lives in `period_payments`). The new
+  // account must be a non-credit account with the movement's currency active.
+  // Balances are derived, so they recompute on their own after the UPDATE.
+  if (
+    validation.data.account_id !== undefined &&
+    validation.data.account_id !== existing.account_id
+  ) {
+    if (existing.card_period_id != null) {
+      return { ok: false, formError: 'No podés cambiar la cuenta de un consumo de tarjeta.' }
+    }
+    const { data: newAccount } = await supabase
+      .from('accounts')
+      .select('type')
+      .eq('id', validation.data.account_id)
+      .eq('user_id', userId)
+      .single()
+    if (!newAccount) return { ok: false, formError: 'La cuenta seleccionada no existe.' }
+    if (newAccount.type === 'credit') {
+      return { ok: false, formError: 'El pago no puede salir de una tarjeta de crédito.' }
+    }
+    const currencyActive = await verifyActiveCurrency(
+      supabase,
+      validation.data.account_id,
+      existing.currency_code,
+    )
+    if (!currencyActive) {
+      return { ok: false, formError: 'La cuenta seleccionada no tiene esa moneda activa.' }
+    }
+  }
 
   // A single installment (cuota) is immutable on its own: amount, date and
   // category are owned by the parent (madre). Editing one cuota would desync the
@@ -429,6 +462,9 @@ export async function updateTransaction(
       ...('category_id' in validation.data && { category_id: validation.data.category_id ?? null }),
       ...('subcategory_id' in validation.data && {
         subcategory_id: validation.data.subcategory_id ?? null,
+      }),
+      ...(validation.data.account_id !== undefined && {
+        account_id: validation.data.account_id,
       }),
       ...(periodReassignment ?? {}),
     })
