@@ -22,6 +22,7 @@ export function invalidateAfterMovementMutation(qc: QueryClient): void {
   // explicitly because they don't share a prefix with the global list.
   qc.invalidateQueries({ queryKey: ['transactions', 'page'] })
   qc.invalidateQueries({ queryKey: ['transactions', 'breakdown'] })
+  qc.invalidateQueries({ queryKey: ['transactions', 'category-lines'] })
   qc.invalidateQueries({ queryKey: ['transactions', 'filter-options'] })
   qc.invalidateQueries({ queryKey: ['transactions', 'has-any'] })
   qc.invalidateQueries({ queryKey: ['transactions', 'pending-reimbursements'] })
@@ -83,6 +84,7 @@ export function invalidateAfterReimbursementMutation(qc: QueryClient): void {
   qc.invalidateQueries({ queryKey: ['transactions', 'pending-reimbursements'] })
   qc.invalidateQueries({ queryKey: ['transactions', 'page'] })
   qc.invalidateQueries({ queryKey: ['transactions', 'breakdown'] })
+  qc.invalidateQueries({ queryKey: ['transactions', 'category-lines'] })
   qc.invalidateQueries({ queryKey: ['accounts', 'list'] })
   // Marking an expense received changes the month's spending, so the dashboard
   // balance/breakdown widgets must refetch too.

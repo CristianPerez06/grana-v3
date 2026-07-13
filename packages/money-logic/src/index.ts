@@ -1,6 +1,7 @@
 export * from './balance'
 export * from './cards'
 export * from './category-breakdown'
+export * from './category-lens'
 export * from './category-suggestion'
 export * from './movements'
 export * from './recurrences'

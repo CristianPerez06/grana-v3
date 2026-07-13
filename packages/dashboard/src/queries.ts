@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
+  categoryOwnPortion,
   computeCategoryNet,
+  countsAsCategorySpend,
   getTodayAR,
   type CategoryAggRow,
   type CategorySliceInput,
@@ -277,16 +279,16 @@ export async function getMonthCategoryBreakdown(
     }
   }
 
-  // A shared movement contributes only the user's portion; if she has no split
-  // (0% / 100% the other member's), it contributes nothing (returns null → skip).
-  const ownPortion = (row: { id: string; is_shared: boolean; amount: number }): number | null =>
-    row.is_shared ? (mySplitByTx.get(row.id) ?? null) : row.amount
-
+  // Shared/own attribution and the category-spend inclusion rule are the
+  // devengado lens — shared with `getMonthCategoryLines` via `@grana/money-logic`
+  // so the donut's weights and the drilled list's rows stay reconciled.
   const aggRows: CategoryAggRow[] = []
   for (const e of expenseRows) {
-    if (e.is_parent) continue // installment parent is off-ledger; its cuotas count
-    if ((e.period_payments?.length ?? 0) > 0) continue // statement payment, not category spend
-    const amount = ownPortion(e)
+    if (!countsAsCategorySpend({
+      is_parent: e.is_parent,
+      hasStatementPayment: (e.period_payments?.length ?? 0) > 0,
+    })) continue // installment parent (off-ledger) or statement payment → not spend
+    const amount = categoryOwnPortion(e, mySplitByTx)
     if (amount === null) continue // shared with no own split → not ours
     aggRows.push({
       categoryId: e.category_id ?? UNCATEGORIZED_ID,
@@ -296,7 +298,7 @@ export async function getMonthCategoryBreakdown(
     })
   }
   for (const r of reimbRows) {
-    const amount = ownPortion(r)
+    const amount = categoryOwnPortion(r, mySplitByTx)
     if (amount === null) continue // shared reimbursement with no own split → not ours
     const derived = r.linked_transaction_id
       ? linkedCategoryById.get(r.linked_transaction_id)

@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useQuery, useQueries } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { MovementList } from "@/lib/transactions/components/movement-list";
 import { MovementListSkeleton } from "@/lib/transactions/components/movement-list-skeleton";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { formatDateISO, getTodayAR } from "@/lib/date";
 import { createClient } from "@/lib/supabase/client";
 import {
   getGlobalMovementsPage,
+  getMonthCategoryLines,
   hasAnyTransaction,
 } from "@/lib/transactions/queries";
 import { getRecurrenceLinkedTransactionIds } from "@/lib/recurrences/queries";
@@ -46,32 +47,82 @@ export function MovementListContainer() {
 
   const adapted = useMemo(() => adaptFiltersForQuery(filters), [filters]);
 
-  // movement page + linked-recurrence-ids in parallel; the latter depends on
-  // the movement ids, so it's keyed on the resolved list and chained via
-  // `enabled`.
-  const [pageQ] = useQueries({
-    queries: [
-      {
-        queryKey: QUERY_KEYS.transactionsPage(filters.limit, adapted),
-        queryFn: () =>
-          getGlobalMovementsPage(createClient(), {
-            limit: filters.limit,
-            filters: adapted,
-          }),
-      },
-    ],
+  // Drilled reconciliation view: in the PURE drill state (a category selected —
+  // via the donut or the filter bar — with no other content filter or search
+  // active), the list shows the movements that COMPOSE that category's donut
+  // weight (devengado lens — cuota children by due month, the user's part of
+  // shared, received reimbursements netting), NOT the general CAJA feed.
+  // Per-currency, like the donut it drills into. As soon as the user layers on
+  // another filter (account, type, amount, search) they've left the drill, so we
+  // fall back to the general feed that honours ALL filters. Currency and
+  // subcategory are part of the drill, so they don't break it.
+  const pureCategoryDrill =
+    filters.categoryId != null &&
+    !filters.type &&
+    !filters.accountId &&
+    filters.amountMin == null &&
+    filters.amountMax == null &&
+    filters.query.trim().length === 0;
+  const overviewCurrency: "ARS" | "USD" =
+    filters.currency === "USD" ? "USD" : "ARS";
+
+  const pageQ = useQuery({
+    queryKey: QUERY_KEYS.transactionsPage(filters.limit, adapted),
+    queryFn: () =>
+      getGlobalMovementsPage(createClient(), {
+        limit: filters.limit,
+        filters: adapted,
+      }),
+    enabled: !pureCategoryDrill,
   });
 
-  const movementIds = useMemo(
-    () => pageQ.data?.movements.map((m) => m.id) ?? [],
-    [pageQ.data],
+  const linesQ = useQuery({
+    queryKey: QUERY_KEYS.categoryLines(
+      filters.month,
+      filters.categoryId ?? "",
+      overviewCurrency,
+      filters.subcategoryId,
+    ),
+    queryFn: () =>
+      getMonthCategoryLines(
+        createClient(),
+        filters.month,
+        filters.categoryId as string,
+        overviewCurrency,
+        filters.subcategoryId ?? undefined,
+      ),
+    enabled: pureCategoryDrill,
+  });
+
+  const activeQ = pureCategoryDrill ? linesQ : pageQ;
+  const movements = useMemo(
+    () =>
+      pureCategoryDrill
+        ? (linesQ.data?.movements ?? [])
+        : (pageQ.data?.movements ?? []),
+    [pureCategoryDrill, linesQ.data, pageQ.data],
   );
+  // The reconciliation list returns every composing row (a category-month is
+  // small), so it never paginates.
+  const hasMore = pureCategoryDrill ? false : (pageQ.data?.hasMore ?? false);
+
+  const movementIds = useMemo(() => movements.map((m) => m.id), [movements]);
 
   const linkedQ = useQuery({
     queryKey: QUERY_KEYS.transactionsLinkedRecurrenceIds(movementIds),
     queryFn: () => getRecurrenceLinkedTransactionIds(createClient(), movementIds),
     enabled: movementIds.length > 0,
   });
+
+  // "Cuota n de N" chips for the drilled installment children, keyed by row id.
+  const installmentChips = useMemo(() => {
+    if (!pureCategoryDrill || !linesQ.data) return undefined;
+    const chips = new Map<string, string>();
+    for (const [id, { n, total }] of linesQ.data.installments) {
+      chips.set(id, t("installment_pair", { n, total }));
+    }
+    return chips;
+  }, [pureCategoryDrill, linesQ.data, t]);
 
   // hasAny is only needed for the "none" empty variant (welcome vs. month-empty
   // copy). Cached for the session, so this is effectively free after first hit.
@@ -80,8 +131,8 @@ export function MovementListContainer() {
     queryFn: () => hasAnyTransaction(createClient()),
   });
 
-  if (pageQ.isPending) return <MovementListSkeleton />;
-  if (pageQ.error || !pageQ.data) {
+  if (activeQ.isPending) return <MovementListSkeleton />;
+  if (activeQ.error || !activeQ.data) {
     // Generic inline fallback; group 8 upgrades to <RouteError> with retry.
     return (
       <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-text-muted">
@@ -89,8 +140,6 @@ export function MovementListContainer() {
       </div>
     );
   }
-
-  const { movements, hasMore } = pageQ.data;
   const variant = resolveEmptyVariant(filters);
   const showAccount = false; // sin filter-options aquí; el container de filtros decide
 
@@ -126,6 +175,7 @@ export function MovementListContainer() {
       todayISO={formatDateISO(getTodayAR())}
       showAccount={showAccount}
       recurrenceLinkedIds={recurrenceLinkedIds}
+      installmentChips={installmentChips}
       emptyState={{
         variant,
         query: filters.query,

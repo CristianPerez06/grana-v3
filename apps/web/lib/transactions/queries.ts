@@ -6,7 +6,9 @@ import {
   type MonthCategoryBreakdown,
 } from '@grana/dashboard'
 import {
+  categoryOwnPortion,
   computeCategoryNet,
+  countsAsCategorySpend,
   type CategoryAggRow,
   type CategorySliceInput,
   type SubcategorySliceInput,
@@ -19,6 +21,9 @@ import {
   TRANSACTION_SELECT,
   attachLinkedExpenses,
   isHistoryRow,
+  toFinancialMovement,
+  SUBCATEGORY_NONE_MARKER,
+  type FinancialMovement,
 } from '@grana/transactions'
 import { resolveMonthRange } from './filters'
 
@@ -256,6 +261,160 @@ export async function getMonthCategoryBreakdown(
   return getMonthCategoryBreakdownShared(supabase, month)
 }
 
+// ── getMonthCategoryLines (drilled reconciliation list) ────────────────────────
+// The rows that COMPOSE a category's weight in the "En qué se fue" donut for a
+// month + currency. Uses the SAME devengado lens as `getMonthCategoryBreakdown`
+// (shared helpers `countsAsCategorySpend` / `categoryOwnPortion`), so the sum of
+// the rows' displayed amounts equals the donut weight BY CONSTRUCTION — the
+// `category-lens` reconcile test guards the helpers against drift.
+//
+//   - installment CHILDREN by their due month (not the off-ledger parent);
+//   - shared movements at the USER's part (`amount` overridden to her split);
+//   - shared with no own part (100% the other member) omitted;
+//   - received reimbursements of the category as their own inflow rows — they
+//     net the spend down (expense sign '-' + reimbursement sign '+' → the
+//     signed sum is the weight);
+//   - statement payment excluded.
+//
+// Optionally narrows to a subcategory (the in-category drill). This is a
+// DRILL-ONLY view: unlike the general feed (`get_movements_page`, CAJA lens) it
+// shows children and the user's part, and never replaces the general list.
+
+export type MonthCategoryLines = {
+  movements: FinancialMovement[]
+  /** Cuota position per child-installment movement id, for the "Cuota n de N" chip. */
+  installments: Map<string, { n: number; total: number }>
+}
+
+export async function getMonthCategoryLines(
+  supabase: DbClient,
+  month: string,
+  categoryId: string,
+  currency: 'ARS' | 'USD',
+  subcategoryId?: string,
+): Promise<MonthCategoryLines> {
+  const { from, to } = resolveMonthRange(month)
+  const isUncategorized = categoryId === UNCATEGORIZED_ID
+
+  // Expenses of the category in the month (devengado): normal + card consumos +
+  // cuota CHILDREN (their date lands in the month). No status filter — children
+  // carry status='pending'/'paid'. The parent is fetched only if its purchase
+  // date is in the month, and skipped by the lens below.
+  let expenseQuery = supabase
+    .from('transactions')
+    .select(TRANSACTION_SELECT)
+    .eq('type', 'expense')
+    .eq('currency_code', currency)
+    .gte('date', from ?? '')
+    .lte('date', to ?? '')
+  expenseQuery = isUncategorized
+    ? expenseQuery.is('category_id', null)
+    : expenseQuery.eq('category_id', categoryId)
+  if (subcategoryId) {
+    expenseQuery =
+      subcategoryId === SUBCATEGORY_NONE_MARKER
+        ? expenseQuery.is('subcategory_id', null)
+        : expenseQuery.eq('subcategory_id', subcategoryId)
+  }
+
+  // Received (not cancelled) reimbursements in the month; their category is
+  // DERIVED from the linked expense, so fetch broadly then filter below.
+  const reimbQuery = supabase
+    .from('transactions')
+    .select(TRANSACTION_SELECT)
+    .eq('type', 'reimbursement')
+    .eq('currency_code', currency)
+    .not('received_at', 'is', null)
+    .is('cancelled_at', null)
+    .gte('date', from ?? '')
+    .lte('date', to ?? '')
+
+  const [expenseResult, reimbResult] = await Promise.all([expenseQuery, reimbQuery])
+  if (expenseResult.error) throw expenseResult.error
+  if (reimbResult.error) throw reimbResult.error
+
+  const expenseRows = (expenseResult.data ?? []) as unknown as TransactionWithDetails[]
+  const reimbRowsAll = await attachLinkedExpenses(
+    supabase,
+    (reimbResult.data ?? []) as unknown as TransactionWithDetails[],
+  )
+  // Keep only reimbursements whose linked expense sits in this category (and
+  // subcategory, when drilling) — mirrors the donut's derived-category netting.
+  const targetCategory = isUncategorized ? null : categoryId
+  const reimbRows = reimbRowsAll.filter((r) => {
+    const linkedCat = r.linked_expense?.category?.id ?? null
+    if (linkedCat !== targetCategory) return false
+    if (!subcategoryId) return true
+    const linkedSub = r.linked_expense?.subcategory?.id ?? null
+    return subcategoryId === SUBCATEGORY_NONE_MARKER ? linkedSub === null : linkedSub === subcategoryId
+  })
+
+  // The user's part for shared rows (household "cuenta corriente"). The split
+  // RLS exposes both members, so filter by her uid explicitly.
+  const sharedIds = [
+    ...new Set([
+      ...expenseRows.filter((e) => e.is_shared).map((e) => e.id),
+      ...reimbRows.filter((r) => r.is_shared).map((r) => r.id),
+    ]),
+  ]
+  const mySplitByTx = new Map<string, number>()
+  if (sharedIds.length > 0) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (user) {
+      const { data: splits } = await supabase
+        .from('shared_expense_split')
+        .select('transaction_id, amount_assigned')
+        .eq('user_id', user.id)
+        .in('transaction_id', sharedIds)
+      for (const s of splits ?? [])
+        mySplitByTx.set(s.transaction_id as string, Number(s.amount_assigned))
+    }
+  }
+
+  const movements: FinancialMovement[] = []
+  const installments = new Map<string, { n: number; total: number }>()
+
+  const pushLine = (tx: TransactionWithDetails, share: number) => {
+    const mv = toFinancialMovement(tx)
+    // Show the user's part: override the amount the row displays (and thus the
+    // reconciliation sum) to her share. Non-shared → share === full amount.
+    movements.push({ ...mv, amount: Math.abs(share) })
+    if (tx.installment_n != null && tx.installments_total != null) {
+      installments.set(tx.id, { n: tx.installment_n, total: tx.installments_total })
+    }
+  }
+
+  for (const e of expenseRows) {
+    if (
+      !countsAsCategorySpend({
+        is_parent: e.is_parent,
+        hasStatementPayment: (e.period_payments?.length ?? 0) > 0,
+      })
+    )
+      continue
+    const share = categoryOwnPortion(e, mySplitByTx)
+    if (share === null) continue // shared with no own part → not ours
+    pushLine(e, share)
+  }
+  for (const r of reimbRows) {
+    const share = categoryOwnPortion(r, mySplitByTx)
+    if (share === null) continue
+    pushLine(r, share)
+  }
+
+  // Feed order: date desc, then created_at/id desc — same as the global feed.
+  movements.sort(
+    (a, b) =>
+      b.date.localeCompare(a.date) ||
+      b.created_at.localeCompare(a.created_at) ||
+      b.id.localeCompare(a.id),
+  )
+
+  return { movements, installments }
+}
+
 // Whether the user operates in USD at all — i.e. has at least one account with a
 // USD currency row (bimoneda). Drives the ARS/USD toggle in the spending
 // overview so it shows on every month for bimoneda users, not only on months
@@ -481,14 +640,13 @@ export async function getMonthSubcategoryBreakdown(
         mySplitByTx.set(s.transaction_id as string, Number(s.amount_assigned))
     }
   }
-  const ownPortion = (row: { id: string; is_shared: boolean; amount: number }): number | null =>
-    row.is_shared ? (mySplitByTx.get(row.id) ?? null) : row.amount
-
   const aggRows: CategoryAggRow[] = []
   for (const e of expenseRows) {
-    if (e.is_parent) continue
-    if ((e.period_payments?.length ?? 0) > 0) continue
-    const amount = ownPortion(e)
+    if (!countsAsCategorySpend({
+      is_parent: e.is_parent,
+      hasStatementPayment: (e.period_payments?.length ?? 0) > 0,
+    })) continue
+    const amount = categoryOwnPortion(e, mySplitByTx)
     if (amount === null) continue // shared with no own split → not ours
     aggRows.push({
       categoryId: e.subcategory_id ?? SUBCATEGORY_UNCATEGORIZED_ID,
@@ -498,7 +656,7 @@ export async function getMonthSubcategoryBreakdown(
     })
   }
   for (const r of reimbRows) {
-    const amount = ownPortion(r)
+    const amount = categoryOwnPortion(r, mySplitByTx)
     if (amount === null) continue
     const linked = r.linked_transaction_id ? linkedSubcategoryById.get(r.linked_transaction_id) : null
     if (!linked || linked.categoryId !== categoryId) continue

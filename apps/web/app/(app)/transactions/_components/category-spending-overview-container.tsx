@@ -99,12 +99,15 @@ export function CategorySpendingOverviewContainer() {
   const overviewCurrency: 'ARS' | 'USD' = filters.currency === 'USD' ? 'USD' : 'ARS'
   const overviewMode = filters.overviewMode
 
-  // Subcategory drill-in mode: only in egresos with a single category filter
-  // and no further subcategory narrowing.
+  // Subcategory drill-in mode: whenever egresos has a category filter active —
+  // including after the user narrows to one of its subcategories. The donut
+  // SHALL stay showing the category's subcategory breakdown while a subcategory
+  // filters the list; it must NOT snap back to the all-categories view (that
+  // left the donut contradicting the still-filtered list). Selecting a
+  // subcategory only filters the list, keeping the "inside this category"
+  // context.
   const breakdownMode: 'category' | 'subcategory' =
-    overviewMode === 'egresos' && filters.categoryId && !filters.subcategoryId
-      ? 'subcategory'
-      : 'category'
+    overviewMode === 'egresos' && filters.categoryId ? 'subcategory' : 'category'
 
   const [usdQ, categoryBreakdownQ, incomeBreakdownQ, subcategoryDrillQ] = useQueries({
     queries: [
@@ -329,20 +332,29 @@ export function CategorySpendingOverviewContainer() {
       onSetCurrency: (currency) => dispatch({ type: 'setCurrency', currency }),
       onSetMode: (mode) => dispatch({ type: 'setOverviewMode', mode }),
       onSelectCategory: (categoryId) => {
-        // The breakdown is per-currency, so the row click pins the list to the
-        // currency being visualized — the list then shows exactly the movements
-        // behind the clicked slice (legacy URL hrefs did the same via
-        // `&currency=`, and `&type=income` in ingresos mode).
-        dispatch({ type: 'setCurrency', currency: overviewCurrency })
         // In subcategory mode the row id is the subcategoryId of the active
-        // parent; everywhere else it's a top-level category.
+        // parent; everywhere else it's a top-level category. Clicking the
+        // already-selected subcategory toggles it off (back to the whole
+        // category) without leaving the drill.
         if (breakdownMode === 'subcategory' && filters.categoryId) {
-          dispatch({ type: 'setSubcategory', subcategoryId: categoryId })
+          dispatch({
+            type: 'setSubcategory',
+            subcategoryId: filters.subcategoryId === categoryId ? null : categoryId,
+          })
           return
         }
         if (overviewMode === 'ingresos') {
+          // Ingresos drills into the general CAJA list (get_movements_page),
+          // which needs an explicit currency + type filter to match the income
+          // donut (per-currency, income only).
+          dispatch({ type: 'setCurrency', currency: overviewCurrency })
           dispatch({ type: 'setType', movementType: 'income' })
         }
+        // Egresos: the drilled reconciliation list derives its currency from the
+        // same `filters.currency` as the donut (both map null→ARS), so pinning
+        // the currency is redundant AND would leave a stray currency filter
+        // active after drilling back out — so we do NOT pin it here.
+        //
         // Toggle: clicking the already-active category clears the filter so the
         // chart and the movement list return to "all categories" in sync. (In
         // egresos this mostly fires from the breadcrumb/donut back affordance,
@@ -353,7 +365,14 @@ export function CategorySpendingOverviewContainer() {
       // all categories and unfilters the list. Wired to the breadcrumb + donut.
       onClearCategory: () => dispatch({ type: 'setCategory', categoryId: null }),
     }),
-    [dispatch, breakdownMode, filters.categoryId, overviewCurrency, overviewMode],
+    [
+      dispatch,
+      breakdownMode,
+      filters.categoryId,
+      filters.subcategoryId,
+      overviewCurrency,
+      overviewMode,
+    ],
   )
 
   // Loading state: render a skeleton card that calques the geometry of the

@@ -32,6 +32,14 @@ export const QUERY_KEYS = {
     ['transactions', 'breakdown', 'expense', month, 'subcategory', categoryId] as const,
   breakdownIncome: (month: string) =>
     ['transactions', 'breakdown', 'income', month] as const,
+  // Drilled reconciliation list: the movements that compose a category's donut
+  // weight (devengado lens), for the active month + currency (+ subcategory).
+  categoryLines: (
+    month: string,
+    categoryId: string,
+    currency: 'ARS' | 'USD',
+    subcategoryId: string | null,
+  ) => ['transactions', 'category-lines', month, categoryId, currency, subcategoryId] as const,
   // Whether the user operates in USD at all (bimoneda) — drives the ARS/USD
   // toggle in the spending overview. User-level, month-independent.
   hasUsdAccount: ['transactions', 'breakdown', 'has-usd-account'] as const,
