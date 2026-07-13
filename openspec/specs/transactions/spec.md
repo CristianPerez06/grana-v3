@@ -3122,7 +3122,11 @@ El read SHALL usar el mismo RPC `get_movements_page` y el mismo anon-key/RLS pat
 
 La app nativa SHALL exponer una pantalla full-screen `/transactions/new` para **registrar** un movimiento, como thin consumer del hook `useMovementForm` de `@grana/movement-form`. La pantalla SHALL montar el hook pasándole: las cuentas del usuario proyectadas a `MovementFormAccount`, el árbol de categorías (`getAllCategories`), el hogar (`getHousehold`, cuando exista), `today: getTodayAR()`, una `translate` wire al i18n mobile, y un objeto `Mutators` nativo. La JSX SHALL ser RN idiomática sobre los primitivos existentes (`PageHeader`, `Segmented`, `MoneyAmountInput`, `DateField`, `SelectableCard`, `Switch`, `FormError`), con la chrome (`PageHeader` + CTA) visible desde el primer paint.
 
-El alcance de esta pantalla es **create-only y B-minimal**: SHALL ofrecer las tabs **Gasto**, **Ingreso** y **Transferencia**, sobre cuentas **cash/bank** únicamente. La pantalla NO SHALL ofrecer (en este slice) el consumo de tarjeta de crédito, las cuotas, el reintegro, el cambio de moneda, el ajuste, ni la recurrencia — cada uno es un slice aditivo posterior. Al restringir el picker a cash/bank, las ramas `isCredit`/`isInstallments` del hook quedan inalcanzables desde mobile sin modificar el hook.
+El alcance de esta pantalla es **create-only**: SHALL ofrecer las tabs **Gasto**, **Ingreso** y **Transferencia**. El picker de cuentas SHALL incluir **todas** las cuentas del usuario (cash, bank y credit), proyectando las credit como off-ledger (`balances: { ARS: 0, USD: 0 }`, avatar resuelto vía `resolveAccountAvatar`); el gate `eligibleFor` del hook restringe credit a la tab Gasto, y la fila credit SHALL mostrar el hint de consumo de tarjeta (`transactions.drawer.credit_hint`). La pantalla NO SHALL ofrecer (todavía) el cambio de moneda, el ajuste ni la recurrencia — slices aditivos posteriores (B.2b) — ni la edición de movimientos (change C).
+
+Con una cuenta credit seleccionada en Gasto, la pantalla SHALL ofrecer **cuotas** cuando la moneda es ARS: chips preset `1·3·6·12` más un stepper custom acotado a 2–60, con preview del monto por cuota y CTA dinámico (`actions.register_installments`); con moneda USD SHALL mostrar el hint de cuotas-sólo-ARS en lugar de los chips, sin bloquear el consumo simple en USD. El submit SHALL rutear vía el hook a `registerCardPurchase` (consumo simple) o `registerInstallments` (cuotas), sin lógica de ruteo propia en la pantalla.
+
+En la tab Gasto la pantalla SHALL ofrecer la **declaración de reintegro** con paridad web: toggle, monto estimado, auto-cálculo por porcentaje/tope (`applyReimbursementPercent`), destino *a cuenta / a resumen* (el radio sólo con credit; cash/bank implica 'account'), picker de cuenta de acreditación cuando aplica, y el checkbox *ya lo recibí* con su hint condicional. El bloque SHALL estar disponible también sobre una compra **en cuotas**: el hook vincula el reintegro a la madre de la compra (el subtipo *a resumen* cae en el período de la primera cuota), igual que web.
 
 La pantalla SHALL soportar el **gasto compartido**: cuando el hogar tiene exactamente dos miembros, SHALL exponer el toggle "Compartir gasto" y el control de split, permitiendo cualquier reparto incluido el **100%-al-otro-miembro**. Si no hay hogar de dos miembros (o el read falla), el toggle NO SHALL renderizarse y el alta simple SHALL seguir funcionando.
 
@@ -3140,17 +3144,32 @@ Al guardar con éxito, `onSuccess` SHALL navegar de vuelta al feed y `onMutation
 - **THEN** el submit dispara `createIncome` (o `createTransfer`) vía el mutator nativo
 - **AND** las cascadas del hook (cuentas elegibles, moneda, destino) se comportan igual que en web
 
+#### Scenario: Registrar un consumo simple en tarjeta desde mobile
+
+- **WHEN** el usuario elige la tab "Gasto", selecciona una cuenta credit, completa monto/categoría y guarda con cuotas en 1
+- **THEN** el submit rutea a `registerCardPurchase` vía el hook (el consumo queda off-ledger, asignado a su período)
+- **AND** la fila credit del picker muestra el hint de consumo de tarjeta
+- **AND** las tabs Ingreso y Transferencia no ofrecen la cuenta credit
+
+#### Scenario: Registrar un consumo en cuotas desde mobile
+
+- **WHEN** el usuario, con una credit en ARS, elige 3 cuotas (o un valor custom vía stepper, p. ej. 24) y guarda
+- **THEN** el preview muestra el monto por cuota antes del submit y el CTA refleja la cantidad de cuotas
+- **AND** el submit rutea a `registerInstallments`, creando la madre y sus cuotas
+- **AND** con moneda USD los chips de cuotas no se ofrecen (hint cuotas-sólo-ARS) pero el consumo simple USD sigue permitido
+
+#### Scenario: Declarar un reintegro desde mobile
+
+- **WHEN** el usuario registra un gasto (cash/bank, o credit con o sin cuotas), activa el toggle Reintegro y completa el monto estimado (directo o por %/tope)
+- **THEN** el submit envía la declaración al mutator (`createExpense`, `registerCardPurchase` o `registerInstallments`), que la inserta atómicamente con rollback
+- **AND** con credit el usuario puede elegir destino *a resumen* (reduce el período) o *a cuenta*; con cash/bank el destino es *a cuenta* sin radio
+- **AND** sobre una compra en cuotas el reintegro se vincula a la madre (el subtipo *a resumen* cae en el período de la primera cuota)
+
 #### Scenario: Gasto compartido 100%-al-otro desde mobile
 
 - **WHEN** el hogar tiene dos miembros y el usuario activa "Compartir gasto" y lleva el split a 100% para el otro miembro
 - **THEN** el submit envía el spec de split al mutator, que aplica `applySharedSplits` con el reparto declarado
 - **AND** el gasto queda marcado como compartido con la porción correspondiente al otro miembro
-
-#### Scenario: El picker de cuentas ofrece sólo cash/bank en el slice B-minimal
-
-- **WHEN** el usuario abre el selector de cuentas en cualquiera de las tres tabs
-- **THEN** sólo ve cuentas de tipo cash/bank (ninguna cuenta de crédito)
-- **AND** las ramas de consumo de tarjeta / cuotas del hook no son alcanzables desde la pantalla
 
 #### Scenario: La chrome de la pantalla de alta está visible desde el primer paint
 

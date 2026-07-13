@@ -1,4 +1,4 @@
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useState } from 'react'
 import {
   checkNegativeBalance,
   formatDateISO,
@@ -67,7 +67,16 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
   const initialTab: Tab = edit?.type ?? 'expense'
 
   // ── State ──────────────────────────────────────────────────────────────────
-  const [isPending, startTransition] = useTransition()
+  // Deliberately NOT `useTransition`: React 19 keeps the tree suspended while
+  // an async transition is pending, and expo-router wraps every route in a
+  // Suspense boundary with an empty fallback — the whole native screen goes
+  // blank for the duration of the submit (expo/expo#37155). A plain pending
+  // flag renders identically on web and keeps the form visible on mobile.
+  const [isPending, setIsPending] = useState(false)
+  const runSubmit = (fn: () => Promise<void>): void => {
+    setIsPending(true)
+    void fn().finally(() => setIsPending(false))
+  }
   const [tab, setTabRaw] = useState<Tab>(initialTab)
   const [formError, setFormError] = useState<string | null>(null)
   const [accountId, setAccountIdRaw] = useState(
@@ -329,7 +338,7 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
         : null
       : undefined
 
-    startTransition(async () => {
+    runSubmit(async () => {
       let result: { ok: boolean; formError?: string }
 
       if (edit.isParent) {
@@ -465,7 +474,7 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
       }
     }
 
-    startTransition(async () => {
+    runSubmit(async () => {
       let result: { ok: boolean; formError?: string; id?: string; parentId?: string }
 
       if (tab === 'income') {
