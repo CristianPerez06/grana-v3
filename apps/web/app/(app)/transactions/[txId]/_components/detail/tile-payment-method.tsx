@@ -34,7 +34,7 @@ export const TilePaymentMethod = ({ account, eyebrow, subOverride, meta, span2 }
         <div className="min-w-0">
           <div className="text-[16.5px] font-extrabold tracking-[-0.02em] text-text">{d.name}</div>
           <div className="mt-0.5 text-[13px] font-semibold text-text-muted">
-            {subOverride ?? t(`payment_sub.${d.subKey}`)}
+            {subOverride ?? d.secondary ?? t(`payment_sub.${d.subKey}`)}
           </div>
         </div>
       </div>

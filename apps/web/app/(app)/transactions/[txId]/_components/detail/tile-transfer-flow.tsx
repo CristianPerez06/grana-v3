@@ -29,7 +29,7 @@ const Node = ({
       <div className="min-w-0">
         <div className="text-[11px] font-bold uppercase tracking-[0.07em] text-text-muted">{kindLabel}</div>
         <div className="mt-0.5 truncate text-[14px] font-extrabold tracking-[-0.02em] text-text sm:text-[15px]">
-          {account?.name ?? '—'}
+          {d?.name ?? account?.name ?? '—'}
         </div>
         <div className="mt-px text-[12px] font-semibold text-text-muted">{subLabel}</div>
       </div>
@@ -46,7 +46,9 @@ export const TileTransferFlow = ({ source, destination }: Props) => {
   const t = useTranslations('transactions.detail')
   const subFor = (a: TransactionAccount | null | undefined) => {
     const d = paymentMethodDescriptor(a)
-    return d ? t(`payment_sub.${d.subKey}`) : ''
+    // Account name as the secondary line when the institution is the headline;
+    // otherwise the type label. Keeps the bank visible to identify the account.
+    return d ? (d.secondary ?? t(`payment_sub.${d.subKey}`)) : ''
   }
 
   return (

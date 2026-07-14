@@ -48,8 +48,10 @@ export const toneVars = (tone: DetailTone): CSSProperties =>
 // nombre de la cuenta + una etiqueta de tipo y un badge de color por tipo.
 
 export type PaymentMethodDescriptor = {
-  /** Account name — the badge headline (never a card number). */
+  /** Headline: the institution (bank) when known, else the account name. */
   name: string
+  /** Secondary line: the account name when it differs from the institution. */
+  secondary: string | null
   /** Type sublabel i18n key under `transactions.detail.payment_sub.*`. */
   subKey: 'cash' | 'bank' | 'credit'
   icon: LucideIcon
@@ -58,17 +60,25 @@ export type PaymentMethodDescriptor = {
 }
 
 export const paymentMethodDescriptor = (
-  account: Pick<TransactionAccount, 'name' | 'type'> | null | undefined,
+  account: Pick<TransactionAccount, 'name' | 'type' | 'institution'> | null | undefined,
 ): PaymentMethodDescriptor | null => {
   if (!account?.name) return null
+  // Institution (bank) as the headline, account name as the secondary line —
+  // the same name/institution split the account rows and pickers use. A generic
+  // account name like "Caja de ahorro" is useless without the bank, so the bank
+  // must always be visible to identify the account.
+  const inst = account.institution?.name?.trim() || null
+  const name = inst || account.name
+  const secondary = inst && inst !== account.name ? account.name : null
+  const base = { name, secondary }
   switch (account.type) {
     case 'credit':
-      return { name: account.name, subKey: 'credit', icon: CreditCard, badgeClass: 'bg-warning' }
+      return { ...base, subKey: 'credit', icon: CreditCard, badgeClass: 'bg-warning' }
     case 'bank':
-      return { name: account.name, subKey: 'bank', icon: Landmark, badgeClass: 'bg-slate' }
+      return { ...base, subKey: 'bank', icon: Landmark, badgeClass: 'bg-slate' }
     case 'cash':
     default:
-      return { name: account.name, subKey: 'cash', icon: Wallet, badgeClass: 'bg-warning' }
+      return { ...base, subKey: 'cash', icon: Wallet, badgeClass: 'bg-warning' }
   }
 }
 
