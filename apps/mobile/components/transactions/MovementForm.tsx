@@ -6,7 +6,9 @@ import { Money, parseMoneyInput } from '@grana/validation'
 import {
   useMovementForm,
   type CategoryWithSubcategories,
+  type Frequency,
   type Household,
+  type IntervalUnit,
   type MovementFormAccount,
   type Tab,
 } from '@grana/movement-form'
@@ -29,15 +31,22 @@ import { useQueryClient } from '@tanstack/react-query'
 
 type Subcategory = CategoryWithSubcategories['subcategories'][number]
 
-// Tabs offered: Gasto / Ingreso / Transferencia. Exchange and adjustment are
-// deferred (B.2b), so their tabs are not offered here — the shared hook still
-// supports them for a later slice.
-const TABS: Tab[] = ['expense', 'income', 'transfer']
+// The five tabs of the unified form. Rendered as a two-row wrapping pill group
+// (not the shared `Segmented`): five `flex-1` segments would squeeze
+// "Transferencia" into two/three lines on a narrow phone. The hook still gates
+// what each tab shows (credit only in Gasto, etc.).
+const TABS: Tab[] = ['expense', 'income', 'transfer', 'adjustment', 'exchange']
+
+// Recurrence frequency chips + custom-interval units, mirror of the web form.
+const FREQUENCIES: Frequency[] = ['weekly', 'biweekly', 'monthly', 'annual', 'custom']
+const INTERVAL_UNITS: IntervalUnit[] = ['day', 'week', 'month', 'year']
 
 // The common counts as one-tap chips; anything else via the stepper. Local
 // presentation mirror of the web form's constants (component-local there too).
 const INSTALLMENT_OPTIONS = [1, 3, 6, 12]
 const MAX_INSTALLMENTS = 60
+
+const CURRENCY_SYMBOL: Record<'ARS' | 'USD', string> = { ARS: '$', USD: 'U$D' }
 
 const fmtAmount = (n: number) =>
   n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
@@ -81,6 +90,38 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
   const members = household && household.members.length === 2 ? household.members : null
   const showShared = form.tab === 'expense' && members !== null
   const showCategory = form.tab === 'expense' || form.tab === 'income'
+  const showAdjustment = form.tab === 'adjustment'
+  const showExchange = form.tab === 'exchange'
+
+  // "Repetir": on gasto (non-installment) / ingreso / transferencia, mirror of
+  // the hook's recurrence gate in submitCreate.
+  const showRepeat =
+    form.tab !== 'adjustment' && form.tab !== 'exchange' && !form.isInstallments
+
+  // Adjustment balance preview (create-only): current → resulting balance for
+  // the selected currency, signed by the direction. Mirror of web's preview.
+  const adjustmentPreview = (() => {
+    if (!showAdjustment || !form.selectedAccount) return null
+    const current = form.selectedAccount.balances[form.currencyCode] ?? 0
+    const parsed = parseMoneyInput(form.amount)
+    if (parsed === null) return { current, next: current }
+    const next =
+      form.adjustmentDirection === 'decrease'
+        ? Money.toNumber(Money.subtract(Money.from(current), Money.from(parsed)))
+        : Money.toNumber(Money.add(Money.from(current), Money.from(parsed)))
+    return { current, next }
+  })()
+
+  // Exchange: the received currency is the destination's other currency; the
+  // implicit rate "1 {dst} = {src}" is derived read-only from both amounts.
+  const receivedCurrency: 'ARS' | 'USD' = form.exchangeDestCurrency ?? 'USD'
+  const exchangeRate = (() => {
+    if (!showExchange) return null
+    const src = parseMoneyInput(form.amount)
+    const dst = parseMoneyInput(form.destinationAmount)
+    if (src === null || dst === null || src <= 0 || dst <= 0) return null
+    return Money.toNumber(Money.divide(Money.from(src), dst))
+  })()
 
   const isCredit = form.selectedAccount?.type === 'credit'
   const showInstallmentsCard = form.tab === 'expense' && isCredit
@@ -115,16 +156,31 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
 
   return (
     <View className="flex-col gap-5">
-      {/* Tab selector */}
-      <Segmented
-        ariaLabel={t('transactions.form.type_label')}
-        value={form.tab}
-        onValueChange={(v) => form.setTab(v as Tab)}
-        options={TABS.map((tab) => ({
-          value: tab,
-          label: t(`transactions.types.${tab}`),
-        }))}
-      />
+      {/* Tab selector — two-row wrapping pill group (see design 1b) */}
+      <View
+        accessibilityRole="radiogroup"
+        accessibilityLabel={t('transactions.form.type_label')}
+        className="flex-row flex-wrap gap-1.5 rounded-xl bg-border-soft p-1"
+      >
+        {TABS.map((tab) => {
+          const active = form.tab === tab
+          return (
+            <Pressable
+              key={tab}
+              onPress={() => form.setTab(tab)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: active }}
+              className={`rounded-lg px-3.5 py-1.5 ${active ? 'bg-card' : ''}`}
+            >
+              <Text
+                className={`text-sm font-bold ${active ? 'text-text' : 'text-text-muted'}`}
+              >
+                {t(`transactions.types.${tab}`)}
+              </Text>
+            </Pressable>
+          )
+        })}
+      </View>
 
       {/* Amount (+ currency when the account has both) */}
       <View className="flex-col gap-1.5">
@@ -147,9 +203,36 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
         )}
       </View>
 
+      {/* Adjustment direction (Suma / Resta) + informative banner */}
+      {showAdjustment && (
+        <>
+          <Segmented
+            ariaLabel={t('transactions.types.adjustment')}
+            value={form.adjustmentDirection}
+            onValueChange={(v) => form.setAdjustmentDirection(v as 'increase' | 'decrease')}
+            options={[
+              { value: 'increase', label: `${t('transactions.directions.increase')} (+)` },
+              { value: 'decrease', label: `${t('transactions.directions.decrease')} (−)` },
+            ]}
+          />
+          <View className="rounded-xl border border-warning-deep/30 bg-warning-deep/5 p-3">
+            <Text className="text-xs text-warning-deep">
+              <Text className="font-bold">
+                {t('transactions.drawer.adjust_banner_title')}{' '}
+              </Text>
+              {t('transactions.drawer.adjust_banner_body')}
+            </Text>
+          </View>
+        </>
+      )}
+
       {/* Source account */}
       <AccountSelectField
-        label={t('transactions.form.account_label')}
+        label={
+          showAdjustment
+            ? t('transactions.drawer.account_to_adjust')
+            : t('transactions.form.account_label')
+        }
         accounts={form.eligibleAccounts}
         selectedId={form.accountId}
         onSelect={form.setAccountId}
@@ -277,7 +360,7 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
         </View>
       )}
 
-      {/* Destination account (transfer) */}
+      {/* Destination account (transfer / exchange) */}
       {form.tab === 'transfer' && (
         <AccountSelectField
           label={t('transactions.form.destination_label')}
@@ -286,6 +369,48 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
           onSelect={form.setDestinationAccountId}
         />
       )}
+      {showExchange && (
+        <AccountSelectField
+          label={t('transactions.drawer.account_toward')}
+          accounts={form.cashBankAccounts}
+          selectedId={form.destinationAccountId}
+          onSelect={form.setDestinationAccountId}
+        />
+      )}
+
+      {/* Exchange: received amount (destination currency) + implicit rate, or a
+          hint when the destination account has no other currency (submit blocked
+          by the hook). */}
+      {showExchange &&
+        (form.exchangeDestCurrency ? (
+          <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-sm font-semibold text-text">
+                {t('transactions.labels.exchange_received')}
+              </Text>
+              <View className="rounded-lg border border-border px-2.5 py-1">
+                <Text className="text-xs font-bold text-text">{receivedCurrency}</Text>
+              </View>
+            </View>
+            <MoneyAmountInput
+              value={form.destinationAmount}
+              onChangeText={form.setDestinationAmount}
+              placeholder="0"
+            />
+            {exchangeRate !== null && (
+              <Text className="text-xs text-text-muted">
+                1 {receivedCurrency} = {CURRENCY_SYMBOL[form.currencyCode]}
+                {fmtAmount(exchangeRate)} {form.currencyCode}
+              </Text>
+            )}
+          </View>
+        ) : (
+          <Text className="text-sm text-text-muted">
+            {t('transactions.exchange.no_other_currency_hint', {
+              currency: form.currencyCode === 'ARS' ? 'USD' : 'ARS',
+            })}
+          </Text>
+        ))}
 
       {/* Date */}
       <View className="flex-col gap-1.5">
@@ -293,16 +418,24 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
         <DateField value={form.date} onChange={form.setDate} />
       </View>
 
-      {/* Description */}
+      {/* Description (relabelled "Motivo del ajuste" for adjustments) */}
       <View className="flex-col gap-1.5">
-        <Label>{t('transactions.form.description_label')}</Label>
+        <Label>
+          {showAdjustment
+            ? t('transactions.drawer.adjust_reason')
+            : t('transactions.form.description_label')}
+        </Label>
         <Input
           value={form.description}
           onChangeText={form.setDescription}
           onBlur={() => {
             void form.fetchSuggestionForDescription()
           }}
-          placeholder={t('transactions.form.description_placeholder')}
+          placeholder={
+            showAdjustment
+              ? t('transactions.drawer.adjust_reason_placeholder')
+              : t('transactions.form.description_placeholder')
+          }
         />
         {form.suggestion && (
           <Pressable onPress={form.applySuggestion} className="pt-1">
@@ -314,6 +447,24 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
           </Pressable>
         )}
       </View>
+
+      {/* Adjustment balance preview: current → resulting balance */}
+      {adjustmentPreview && (
+        <View className="flex-row items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
+          <Text className="text-sm text-text-muted">
+            {t('transactions.drawer.balance_will_be')}
+          </Text>
+          <Text className="text-sm font-semibold text-text">
+            <Text className="text-text-soft">
+              {CURRENCY_SYMBOL[form.currencyCode]}
+              {fmtAmount(adjustmentPreview.current)}
+            </Text>
+            {'  →  '}
+            {CURRENCY_SYMBOL[form.currencyCode]}
+            {fmtAmount(adjustmentPreview.next)}
+          </Text>
+        </View>
+      )}
 
       {/* Category (+ one-level subcategory drill) for expense/income */}
       {showCategory && (
@@ -489,6 +640,110 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
               <Text className="text-xs text-text-muted">
                 {t('transactions.form.your_share', { pct: form.splitFirstPct })}
               </Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* Recurrence ("Repetir") — gasto (no cuotas) / ingreso / transferencia */}
+      {showRepeat && (
+        <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-1 pr-3">
+              <Text className="text-sm font-semibold text-text">
+                {t('transactions.labels.make_recurrent')}
+              </Text>
+              <Text className="text-xs text-text-muted">
+                {t('transactions.drawer.repeat_note')}
+              </Text>
+            </View>
+            <Switch
+              ariaLabel={t('transactions.labels.make_recurrent')}
+              checked={form.isRecurrent}
+              onValueChange={form.setIsRecurrent}
+            />
+          </View>
+          {form.isRecurrent && (
+            <View className="flex-col gap-3 border-t border-border-soft pt-3">
+              <View className="rounded-lg bg-emerald-soft p-3">
+                <Text className="text-xs text-text">{t('transactions.drawer.repeat_hint')}</Text>
+              </View>
+              <Text className="text-xs font-semibold text-text-muted">
+                {t('transactions.drawer.repeat_question')}
+              </Text>
+              <View className="flex-row flex-wrap gap-2">
+                {FREQUENCIES.map((f) => {
+                  const active = form.frequency === f
+                  return (
+                    <Pressable
+                      key={f}
+                      onPress={() => form.setFrequency(f)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      className={`rounded-lg px-3.5 py-2 ${active ? 'bg-navy' : 'bg-border-soft'}`}
+                    >
+                      <Text
+                        className={`text-sm font-bold ${active ? 'text-white' : 'text-text-muted'}`}
+                      >
+                        {t(`transactions.frequencies.${f}`)}
+                      </Text>
+                    </Pressable>
+                  )
+                })}
+              </View>
+
+              {/* Custom interval: count + unit chips */}
+              {form.frequency === 'custom' && (
+                <View className="flex-col gap-2">
+                  <View className="flex-row items-center gap-2">
+                    <Text className="text-xs text-text-muted">
+                      {t('recurrences.custom_interval.every')}
+                    </Text>
+                    <Input
+                      value={String(form.intervalCount)}
+                      onChangeText={(v) => {
+                        const digits = v.replace(/\D/g, '')
+                        form.setIntervalCount(digits === '' ? 1 : Math.max(1, parseInt(digits)))
+                      }}
+                      keyboardType="number-pad"
+                      accessibilityLabel={t('recurrences.custom_interval.every')}
+                      className="w-16 text-center"
+                    />
+                  </View>
+                  <View className="flex-row flex-wrap gap-2">
+                    {INTERVAL_UNITS.map((u) => {
+                      const active = form.intervalUnit === u
+                      return (
+                        <Pressable
+                          key={u}
+                          onPress={() => form.setIntervalUnit(u)}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: active }}
+                          className={`rounded-lg px-3.5 py-2 ${active ? 'bg-navy' : 'bg-border-soft'}`}
+                        >
+                          <Text
+                            className={`text-sm font-bold ${active ? 'text-white' : 'text-text-muted'}`}
+                          >
+                            {t(`recurrences.custom_interval.units.${u}`, {
+                              count: form.intervalCount,
+                            })}
+                          </Text>
+                        </Pressable>
+                      )
+                    })}
+                  </View>
+                </View>
+              )}
+
+              {/* Optional end date */}
+              <View className="flex-col gap-1.5">
+                <Label>{t('transactions.drawer.repeat_until')}</Label>
+                <DateField
+                  value={form.recurrenceEndDate}
+                  onChange={form.setRecurrenceEndDate}
+                  placeholder={t('common.pick_date')}
+                />
+              </View>
             </View>
           )}
         </View>
