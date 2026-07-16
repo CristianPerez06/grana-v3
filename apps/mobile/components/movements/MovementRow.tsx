@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import {
   AlertTriangle,
   ArrowDownLeft,
@@ -77,6 +77,9 @@ type Props = {
   showAccount?: boolean
   /** Show the feed-only badges ("Revisar" for review flags, "Compartido" for shared). */
   showFeedBadges?: boolean
+  /** Navigate to the movement detail on tap. Absent ⇒ the row renders flat
+   *  (non-navigable) — the account/card panes keep their inert rows. */
+  onPress?: () => void
 }
 
 /**
@@ -85,7 +88,8 @@ type Props = {
  * from `resolveMovementView` + `resolveTone` (shared with web). The feed-only
  * enrichments (`showAccount`, `showFeedBadges`) are opt-in and off by default, so
  * the card statement pane — which passes neither — renders its lean 2-kind look
- * unchanged. Non-navigable (the caller renders it flat); no running balance.
+ * unchanged. Navigable when the caller passes `onPress` (the global feed opens
+ * the movement detail); flat otherwise (account/card panes); no running balance.
  */
 export function MovementRow({
   movement,
@@ -93,6 +97,7 @@ export function MovementRow({
   installmentChip = null,
   showAccount = false,
   showFeedBadges = false,
+  onPress,
 }: Props) {
   const t = useT()
   const showCents = useShowCents()
@@ -171,7 +176,12 @@ export function MovementRow({
     structureIcon[movement.kind] ?? categorizedFallbackIcon[movement.kind] ?? Tag
 
   return (
-    <View className="flex-row items-center gap-2.5 px-4 py-3">
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      className="flex-row items-center gap-2.5 px-4 py-3"
+    >
       {hasEmoji ? (
         <View
           className="h-9 w-9 items-center justify-center rounded-xl"
@@ -240,6 +250,6 @@ export function MovementRow({
         </Text>
         {view.currencyCode === 'USD' && <Text className="text-[11px] text-text-muted">USD</Text>}
       </View>
-    </View>
+    </Pressable>
   )
 }

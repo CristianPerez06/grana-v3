@@ -54,13 +54,15 @@ type Props = {
   showAccount?: boolean
   /** Show the feed-only row badges ("Revisar" / "Compartido"). */
   showFeedBadges?: boolean
+  /** Navigate to a movement's detail on tap. Absent ⇒ rows render flat. */
+  onPressMovement?: (movement: FinancialMovement) => void
 }
 
 /**
  * Native movement list, mirror of the web `MovementList` (same name + public
  * props), scoped to what the card statement pane uses. Groups rows by date with
- * Hoy/Ayer/weekday headers. Rows are **non-navigable** — mobile has no
- * `/transactions/[id]` route, so `detail_href` is ignored and rows render flat.
+ * Hoy/Ayer/weekday headers. Rows are navigable when `onPressMovement` is passed
+ * (the global feed opens `/transactions/[txId]`); otherwise they render flat.
  */
 export function MovementList({
   movements,
@@ -71,6 +73,7 @@ export function MovementList({
   emptyState,
   showAccount = false,
   showFeedBadges = false,
+  onPressMovement,
 }: Props) {
   const t = useT()
   const locale = useLocale()
@@ -104,6 +107,7 @@ export function MovementList({
         installmentChip={installmentChips?.get(movement.id) ?? null}
         showAccount={showAccount}
         showFeedBadges={showFeedBadges}
+        onPress={onPressMovement ? () => onPressMovement(movement) : undefined}
       />
     </View>
   )

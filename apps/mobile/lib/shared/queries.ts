@@ -66,3 +66,68 @@ export async function getHousehold(): Promise<Household | null> {
     })),
   }
 }
+
+// ── getMovementSharedInfo ─────────────────────────────────────────────────────
+// Thin mobile mirror of web's `getMovementSharedInfo` (`apps/web/lib/shared/queries.ts`),
+// feeding the "reparto compartido" tile of the movement detail. Same extraction
+// trigger as `getHousehold` above: it folds into a shared `@grana/*` package when
+// the mobile Hogar module lands. Reuses the local `getHousehold` for member names.
+
+export type MovementSharedInfo = {
+  ownShare: number
+  /** The OTHER members' shares (the current user is shown separately as "Tu parte"). */
+  bySplit: { userId: string; name: string; amount: number }[]
+}
+
+/**
+ * Split info for a movement detail. For an installment parent it aggregates the
+ * children's splits; for a simple/child movement it reads its own. Returns null
+ * when the movement is not shared (or has no splits).
+ */
+export async function getMovementSharedInfo(
+  transactionId: string,
+  isParent: boolean,
+): Promise<MovementSharedInfo | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return null
+  const userId = user.id
+
+  let ids = [transactionId]
+  if (isParent) {
+    const { data: children } = await supabase
+      .from('transactions')
+      .select('id')
+      .eq('parent_id', transactionId)
+    ids = (children ?? []).map((c) => c.id)
+  }
+  if (!ids.length) return null
+
+  const { data: splits } = await supabase
+    .from('shared_expense_split')
+    .select('user_id, amount_assigned')
+    .in('transaction_id', ids)
+  if (!splits?.length) return null
+
+  const byUser = new Map<string, number>()
+  for (const s of splits) {
+    byUser.set(s.user_id, (byUser.get(s.user_id) ?? 0) + Number(s.amount_assigned))
+  }
+
+  const household = await getHousehold()
+  const nameById = new Map((household?.members ?? []).map((m) => [m.userId, m.fullName]))
+
+  return {
+    ownShare: byUser.get(userId) ?? 0,
+    // Exclude the current user: their share is surfaced separately as "Tu parte",
+    // so listing them again by name would duplicate the figure.
+    bySplit: [...byUser]
+      .filter(([uid]) => uid !== userId)
+      .map(([uid, amount]) => ({
+        userId: uid,
+        name: nameById.get(uid) ?? '',
+        amount,
+      })),
+  }
+}

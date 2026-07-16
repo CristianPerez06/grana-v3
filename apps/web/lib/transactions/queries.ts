@@ -79,6 +79,17 @@ export async function getTransactions(
 // unchanged — same RPC (`get_movements_page`), same pagination, same query keys.
 export { getGlobalMovements, getGlobalMovementsPage, hasAnyTransaction } from '@grana/transactions'
 
+// The transaction-graph detail reads (detail + installment family + expense
+// reimbursements) now live in `@grana/transactions` (the mobile `/transactions/[txId]`
+// screen is the second consumer). Re-exported here so web keeps importing them from
+// `@/lib/transactions/queries` unchanged — same select shape and RLS path.
+export {
+  getTransactionDetail,
+  getInstallmentFamily,
+  getReimbursementsForExpense,
+} from '@grana/transactions'
+export type { ExpenseReimbursementVM } from '@grana/transactions'
+
 export async function getMovementFilterOptions(
   supabase: DbClient,
   options: { categoryId?: string } = {},
@@ -161,92 +172,6 @@ export async function getMovementFilterOptions(
       user_id: s.user_id,
     })),
   }
-}
-
-export async function getTransactionDetail(
-  supabase: DbClient,
-  id: string,
-): Promise<TransactionWithDetails | null> {
-  const { data, error } = await supabase
-    .from('transactions')
-    .select(TRANSACTION_SELECT)
-    .eq('id', id)
-    .single()
-
-  if (error) {
-    if (error.code === 'PGRST116') return null
-    throw error
-  }
-
-  const [enriched] = await attachLinkedExpenses(supabase, [
-    data as unknown as TransactionWithDetails,
-  ])
-  return enriched ?? null
-}
-
-// ── getInstallmentFamily ──────────────────────────────────────────────────────
-// Returns parent + all child rows for a given parent_id (or null if not found)
-
-export async function getInstallmentFamily(
-  supabase: DbClient,
-  parentId: string,
-): Promise<{
-  parent: TransactionWithDetails | null
-  children: TransactionWithDetails[]
-}> {
-  const [parentResult, childrenResult] = await Promise.all([
-    supabase.from('transactions').select(TRANSACTION_SELECT).eq('id', parentId).single(),
-    supabase
-      .from('transactions')
-      .select(TRANSACTION_SELECT)
-      .eq('parent_id', parentId)
-      .order('installment_n', { ascending: true }),
-  ])
-
-  if (parentResult.error && parentResult.error.code !== 'PGRST116') throw parentResult.error
-  if (childrenResult.error) throw childrenResult.error
-
-  return {
-    parent: parentResult.error ? null : (parentResult.data as unknown as TransactionWithDetails),
-    children: (childrenResult.data ?? []) as unknown as TransactionWithDetails[],
-  }
-}
-
-// ── getReimbursementsForExpense ────────────────────────────────────────────────
-// All reimbursements linked to an expense, in EVERY state (pending / received /
-// cancelled), to show on the expense detail. Cancelled ones are otherwise
-// invisible and unreachable.
-
-export type ExpenseReimbursementVM = {
-  id: string
-  amount: number
-  currencyCode: 'ARS' | 'USD'
-  target: 'account' | 'statement'
-  state: 'pending' | 'received' | 'cancelled'
-  date: string
-}
-
-export async function getReimbursementsForExpense(
-  supabase: DbClient,
-  expenseId: string,
-): Promise<ExpenseReimbursementVM[]> {
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('id, amount, currency_code, reimbursement_target, received_at, cancelled_at, date')
-    .eq('type', 'reimbursement')
-    .eq('linked_transaction_id', expenseId)
-    .order('created_at', { ascending: true })
-
-  if (error) throw error
-
-  return (data ?? []).map((r) => ({
-    id: r.id,
-    amount: r.amount,
-    currencyCode: r.currency_code as 'ARS' | 'USD',
-    target: r.reimbursement_target as 'account' | 'statement',
-    state: r.cancelled_at ? 'cancelled' : r.received_at ? 'received' : 'pending',
-    date: r.date,
-  }))
 }
 
 // ── getMonthCategoryBreakdown ──────────────────────────────────────────────────

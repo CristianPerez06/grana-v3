@@ -261,3 +261,94 @@ export async function hasAnyTransaction(supabase: GranaSupabaseClient): Promise<
   if (error) throw error
   return (data?.length ?? 0) > 0
 }
+
+// ── Transaction-graph detail reads ────────────────────────────────────────────
+// The reads that feed a movement's own detail graph: the transaction itself (+
+// linked expense), its installment family, and its reimbursements. Isomorphic
+// (`GranaSupabaseClient`) so both the web detail page and the mobile
+// `/transactions/[txId]` screen consume them from here — one implementation, same
+// select shape (`TRANSACTION_SELECT`) and linked-expense enrich as the feed.
+
+export async function getTransactionDetail(
+  supabase: GranaSupabaseClient,
+  id: string,
+): Promise<TransactionWithDetails | null> {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select(TRANSACTION_SELECT)
+    .eq('id', id)
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return null
+    throw error
+  }
+
+  const [enriched] = await attachLinkedExpenses(supabase, [
+    data as unknown as TransactionWithDetails,
+  ])
+  return enriched ?? null
+}
+
+// Returns parent + all child rows for a given parent_id (or null if not found).
+
+export async function getInstallmentFamily(
+  supabase: GranaSupabaseClient,
+  parentId: string,
+): Promise<{
+  parent: TransactionWithDetails | null
+  children: TransactionWithDetails[]
+}> {
+  const [parentResult, childrenResult] = await Promise.all([
+    supabase.from('transactions').select(TRANSACTION_SELECT).eq('id', parentId).single(),
+    supabase
+      .from('transactions')
+      .select(TRANSACTION_SELECT)
+      .eq('parent_id', parentId)
+      .order('installment_n', { ascending: true }),
+  ])
+
+  if (parentResult.error && parentResult.error.code !== 'PGRST116') throw parentResult.error
+  if (childrenResult.error) throw childrenResult.error
+
+  return {
+    parent: parentResult.error ? null : (parentResult.data as unknown as TransactionWithDetails),
+    children: (childrenResult.data ?? []) as unknown as TransactionWithDetails[],
+  }
+}
+
+// All reimbursements linked to an expense, in EVERY state (pending / received /
+// cancelled), to show on the expense detail. Cancelled ones are otherwise
+// invisible and unreachable.
+
+export type ExpenseReimbursementVM = {
+  id: string
+  amount: number
+  currencyCode: 'ARS' | 'USD'
+  target: 'account' | 'statement'
+  state: 'pending' | 'received' | 'cancelled'
+  date: string
+}
+
+export async function getReimbursementsForExpense(
+  supabase: GranaSupabaseClient,
+  expenseId: string,
+): Promise<ExpenseReimbursementVM[]> {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('id, amount, currency_code, reimbursement_target, received_at, cancelled_at, date')
+    .eq('type', 'reimbursement')
+    .eq('linked_transaction_id', expenseId)
+    .order('created_at', { ascending: true })
+
+  if (error) throw error
+
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    amount: r.amount,
+    currencyCode: r.currency_code as 'ARS' | 'USD',
+    target: r.reimbursement_target as 'account' | 'statement',
+    state: r.cancelled_at ? 'cancelled' : r.received_at ? 'received' : 'pending',
+    date: r.date,
+  }))
+}

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
+import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { getTodayAR, formatDateISO } from '@grana/money-logic'
 import { DEFAULT_MOVEMENTS_LIMIT, monthOf, shiftMonth } from '@grana/transactions'
@@ -34,13 +35,13 @@ const monthIndex = (month: string): number => {
 
 const HISTORY_MONTHS_BACK = 12
 
-// Global Movimientos feed (A-minimal): month-navigable list + load more, reusing
-// the shared read (`getMovementsFeedPage`) and the native MovementList. Read-only
-// in this scope — the FAB stays disabled (write flow lands later) and rows are
-// non-navigable (no movement-detail route yet).
+// Global Movimientos feed: month-navigable list + load more, reusing the shared
+// read (`getMovementsFeedPage`) and the native MovementList. The QuickAddFab opens
+// the create form; tapping a row opens the movement detail (`/transactions/[txId]`).
 export default function MovimientosScreen() {
   const t = useT()
   const locale = useLocale()
+  const router = useRouter()
 
   const todayISO = formatDateISO(getTodayAR())
   const currentMonth = monthOf(getTodayAR())
@@ -98,6 +99,7 @@ export default function MovimientosScreen() {
       emptyState={emptyState}
       showAccount
       showFeedBadges
+      onPressMovement={(m) => router.push(`/transactions/${m.id}`)}
     />
   )
 

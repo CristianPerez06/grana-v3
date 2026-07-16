@@ -6,13 +6,19 @@ export {
   getGlobalMovements,
   getGlobalMovementsPage,
   hasAnyTransaction,
+  // Transaction-graph detail reads (the web detail page + the mobile
+  // `/transactions/[txId]` screen). Isomorphic; same select/enrich as the feed.
+  getTransactionDetail,
+  getInstallmentFamily,
+  getReimbursementsForExpense,
   // Internal helpers shared with the web-retained transactions feed reads
-  // (getTransactions, getTransactionDetail, getInstallmentFamily) so the select
-  // shape and the linked-expense / history-row rules are not duplicated.
+  // (getTransactions, getMonthCategoryLines) so the select shape and the
+  // linked-expense / history-row rules are not duplicated.
   TRANSACTION_SELECT,
   attachLinkedExpenses,
   isHistoryRow,
 } from './queries'
+export type { ExpenseReimbursementVM } from './queries'
 
 export type {
   Transaction,
