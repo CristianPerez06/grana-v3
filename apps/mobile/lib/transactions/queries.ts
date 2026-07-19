@@ -50,6 +50,13 @@ export async function getMovementDetail(txId: string): Promise<MovementDetailDat
 
   const movement = toFinancialMovement(transaction)
 
+  // Owner (payer) gate for the edit/delete affordances: a shared movement is
+  // readable cross-user but only its owner manages it (mirror of web's page).
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const canManage = transaction.user_id === user?.id
+
   // Reimbursements hang off the simple expense or the installment parent (madre);
   // for a child row we look them up on the parent.
   const reimbursementExpenseId =
@@ -77,5 +84,6 @@ export async function getMovementDetail(txId: string): Promise<MovementDetailDat
     installmentSiblings: family?.children ?? null,
     reimbursements,
     sharedInfo,
+    canManage,
   }
 }

@@ -649,3 +649,52 @@ export async function updateExchange(
 
   return { ok: true }
 }
+
+// ─── deleteTransaction ────────────────────────────────────────────────────────
+// Delete a movement by id, running the same guards web used to inline in its
+// server action. Isomorphic: the guards (an installment child must be deleted
+// from its madre; a paid consumption is locked; a settlement leg is reverted
+// from the cuenta corriente) are surfaced as stable `errorCode` strings so each
+// platform localizes them — web maps them back to its literal strings (behavior
+// preserved), mobile to its i18n. The temporal guard on a settled shared expense
+// raises SQLSTATE `GRN01` from the DB, which flows through as `error.code`.
+
+export const DELETE_GUARD_CODES = {
+  installmentChild: 'installment_child',
+  paid: 'paid',
+  settlement: 'settlement',
+} as const
+
+export async function deleteTransaction(
+  supabase: GranaSupabaseClient,
+  userId: string,
+  id: string,
+): Promise<ThinMutationResult<never>> {
+  const { data: tx } = await supabase
+    .from('transactions')
+    .select('parent_id, status, type')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .single()
+
+  // An individual installment (cuota) is deleted from its madre, never alone.
+  if (tx?.parent_id) return { ok: false, errorCode: DELETE_GUARD_CODES.installmentChild }
+  // A paid credit-card consumption is locked (it already touched a resumen).
+  if (tx?.status === 'paid') return { ok: false, errorCode: DELETE_GUARD_CODES.paid }
+  // A settlement leg belongs to a household settlement — revert it from the
+  // cuenta corriente, not here (deleting orphans the other member's leg).
+  if (tx?.type === 'settlement') return { ok: false, errorCode: DELETE_GUARD_CODES.settlement }
+
+  const { error } = await supabase
+    .from('transactions')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId)
+
+  // GRN01 = the temporal guard (0043 + 0049): a same-currency settlement dated
+  // at/after this shared expense would rewrite a settled balance. Surfaced as
+  // `error.code` for the platform to localize.
+  if (error) return { ok: false, errorCode: error.code }
+
+  return { ok: true }
+}

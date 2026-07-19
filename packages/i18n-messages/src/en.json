@@ -929,7 +929,8 @@
   "transactions": {
     "route": {
       "feed_loading": "Loading your transactions…",
-      "feed_error": "We couldn't load your transactions."
+      "feed_error": "We couldn't load your transactions.",
+      "detail_loading": "Loading the transaction…"
     },
     "title": "Transactions",
     "description": "Chronological history of income, expenses, transfers, adjustments, and card purchases.",

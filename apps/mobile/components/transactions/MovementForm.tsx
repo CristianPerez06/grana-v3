@@ -9,6 +9,7 @@ import {
   type Frequency,
   type Household,
   type IntervalUnit,
+  type MovementEditContext,
   type MovementFormAccount,
   type Tab,
 } from '@grana/movement-form'
@@ -55,17 +56,21 @@ type Props = {
   accounts: MovementFormAccount[]
   categories: CategoryWithSubcategories[]
   household: Household | null
+  /** Present ⇒ the form is in edit mode (tabs hidden, fields gated). */
+  edit?: MovementEditContext
   onDone: () => void
 }
 
 /**
  * Native render of the cross-platform `useMovementForm` hook — the mobile twin
- * of `apps/web/lib/transactions/components/movement-form.tsx`, scoped to the
- * create flow (incl. the credit family: card purchase, installments and
- * reimbursement). The hook owns all state/cascades/submit; this file only
- * paints it and wires the native mutators + cache invalidation.
+ * of `apps/web/lib/transactions/components/movement-form.tsx`. Covers the create
+ * flow (incl. the credit family: card purchase, installments and reimbursement)
+ * and the edit flow (`edit` prop): in edit mode the type selector is hidden, the
+ * immutable fields render as read-only context rows, and each editable field is
+ * gated by `edit.editableFields`. The hook owns all state/cascades/submit; this
+ * file only paints it and wires the native mutators + cache invalidation.
  */
-export function MovementForm({ accounts, categories, household, onDone }: Props) {
+export function MovementForm({ accounts, categories, household, edit, onDone }: Props) {
   const t = useT()
   const queryClient = useQueryClient()
   const mutators = useMemo(() => createMovementMutators(t), [t])
@@ -74,6 +79,7 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
     mutators,
     accounts,
     categories,
+    edit,
     household,
     today: getTodayAR(),
     // Hook keys are relative to the `transactions` namespace (web wires this
@@ -87,21 +93,44 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
   // "Otras" keeps the stepper open even when the typed value lands on a preset.
   const [customInstallments, setCustomInstallments] = useState(false)
 
-  const members = household && household.members.length === 2 ? household.members : null
-  const showShared = form.tab === 'expense' && members !== null
-  const showCategory = form.tab === 'expense' || form.tab === 'income'
-  const showAdjustment = form.tab === 'adjustment'
-  const showExchange = form.tab === 'exchange'
+  // Edit mode: the type selector is hidden and each field is gated by
+  // `editableFields` (immutable ones render as read-only context rows). Mirror of
+  // web's `movement-form.tsx` isEdit branches.
+  const isEdit = form.isEdit
+  const editable = edit?.editableFields
 
-  // "Repetir": on gasto (non-installment) / ingreso / transferencia, mirror of
-  // the hook's recurrence gate in submitCreate.
+  const members = household && household.members.length === 2 ? household.members : null
+  // In edit: the share toggle only shows when the field is editable (simple
+  // expense / installment parent); the category/date/description fields likewise.
+  const showShared = (isEdit ? !!editable?.shared : form.tab === 'expense') && members !== null
+  const showCategory = isEdit ? !!editable?.category : form.tab === 'expense' || form.tab === 'income'
+  const showAdjustment = form.tab === 'adjustment'
+  // The adjustment sign toggle + banner: create shows it on the adjustment tab;
+  // edit gates it on the field being editable.
+  const showAdjustmentControls = isEdit ? !!editable?.adjustmentDirection : showAdjustment
+  const showExchange = form.tab === 'exchange'
+  const showDate = isEdit ? !!editable?.date : true
+  const showDescription = isEdit ? !!editable?.description : true
+  // Amount hero: always in create; in edit only when the amount is editable (a
+  // paid consumption / locked madre shows no amount field — web does the same).
+  const showAmount = isEdit ? !!editable?.amount : true
+  // Currency is immutable post-creation — only the create flow lets it switch.
+  const showCurrencySeg = !isEdit && form.currencyOptions.length > 1
+  // Source account: immutable context in edit, EXCEPT a statement payment whose
+  // debit account can move (`editable.account`).
+  const showSourceAccount = !isEdit || !!editable?.account
+  // Transfer/exchange destination account: immutable in edit (context row).
+  const showDestinationAccount = !isEdit
+
+  // "Repetir": create-only, on gasto (non-installment) / ingreso / transferencia,
+  // mirror of the hook's recurrence gate in submitCreate.
   const showRepeat =
-    form.tab !== 'adjustment' && form.tab !== 'exchange' && !form.isInstallments
+    !isEdit && form.tab !== 'adjustment' && form.tab !== 'exchange' && !form.isInstallments
 
   // Adjustment balance preview (create-only): current → resulting balance for
   // the selected currency, signed by the direction. Mirror of web's preview.
   const adjustmentPreview = (() => {
-    if (!showAdjustment || !form.selectedAccount) return null
+    if (isEdit || !showAdjustment || !form.selectedAccount) return null
     const current = form.selectedAccount.balances[form.currencyCode] ?? 0
     const parsed = parseMoneyInput(form.amount)
     if (parsed === null) return { current, next: current }
@@ -112,9 +141,11 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
     return { current, next }
   })()
 
-  // Exchange: the received currency is the destination's other currency; the
-  // implicit rate "1 {dst} = {src}" is derived read-only from both amounts.
-  const receivedCurrency: 'ARS' | 'USD' = form.exchangeDestCurrency ?? 'USD'
+  // Exchange: the received currency is the destination's other currency (in edit
+  // it's fixed from the movement); the implicit rate "1 {dst} = {src}" is derived
+  // read-only from both amounts.
+  const receivedCurrency: 'ARS' | 'USD' =
+    (isEdit ? edit?.destinationCurrency : form.exchangeDestCurrency) ?? 'USD'
   const exchangeRate = (() => {
     if (!showExchange) return null
     const src = parseMoneyInput(form.amount)
@@ -124,7 +155,9 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
   })()
 
   const isCredit = form.selectedAccount?.type === 'credit'
-  const showInstallmentsCard = form.tab === 'expense' && isCredit
+  // Installments picker is create-only (the count is immutable in edit; a madre
+  // shows it as a context row).
+  const showInstallmentsCard = !isEdit && form.tab === 'expense' && isCredit
   const installmentsNum = parseInt(form.installments) || 1
   const showInstallmentStepper =
     customInstallments || !INSTALLMENT_OPTIONS.includes(installmentsNum)
@@ -140,9 +173,17 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
 
   // Reimbursement is available on any expense, incl. installment purchases: the
   // hook declares it against the installment parent (statement subtype falls in
-  // the first cuota's period). Matches web after the `!isInstallments` gate was
-  // dropped when reimbursements-on-installments shipped.
-  const showReimbursement = form.tab === 'expense'
+  // the first cuota's period). In edit it's gated on the field being editable
+  // (simple expense / madre); a received/cancelled reintegro renders read-only
+  // via `form.reimbursementReadOnly`.
+  const showReimbursement = isEdit ? !!editable?.reimbursement : form.tab === 'expense'
+  // Exchange received amount + implicit rate: create shows it when a destination
+  // currency exists; edit gates it on `editable.destinationAmount`. The "no other
+  // currency" hint is create-only (submit blocked by the hook).
+  const showExchangeReceived = isEdit
+    ? !!editable?.destinationAmount
+    : showExchange && !!form.exchangeDestCurrency
+  const showExchangeNoCurrencyHint = !isEdit && showExchange && !form.exchangeDestCurrency
 
   // Default the credit-to account to the same-institution cash/bank — mirrored
   // from the hook for the UI-side toggle-on path (web does the same).
@@ -154,57 +195,130 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
     return match?.id ?? banks[0]?.id ?? ''
   }
 
+  // Read-only context rows shown in edit mode: the immutable fields (type,
+  // currency, account(s)). Mirror of web's `contextRows`.
+  const contextRows: { label: string; value: string }[] =
+    isEdit && edit
+      ? [
+          {
+            label: t('transactions.labels.type'),
+            value: edit.isParent
+              ? t('transactions.installment_purchase_label')
+              : t(`transactions.types.${edit.type}`),
+          },
+          { label: t('transactions.labels.currency'), value: edit.currencyCode },
+          ...(edit.isParent && edit.installmentsTotal
+            ? [
+                {
+                  label: t('transactions.labels.installments'),
+                  value: t('transactions.installments_count', { count: edit.installmentsTotal }),
+                },
+              ]
+            : []),
+          ...(edit.type === 'transfer' || edit.type === 'exchange'
+            ? [
+                {
+                  label: t('transactions.labels.source_account'),
+                  value: edit.sourceAccountName ?? edit.accountId,
+                },
+                {
+                  label: t('transactions.labels.destination_account'),
+                  value: edit.destinationAccountName ?? '—',
+                },
+              ]
+            : edit.sourceAccountName && !editable?.account
+              ? [{ label: t('transactions.labels.account'), value: edit.sourceAccountName }]
+              : []),
+        ]
+      : []
+
   return (
     <View className="flex-col gap-5">
-      {/* Tab selector — two-row wrapping pill group (see design 1b) */}
-      <View
-        accessibilityRole="radiogroup"
-        accessibilityLabel={t('transactions.form.type_label')}
-        className="flex-row flex-wrap gap-1.5 rounded-xl bg-border-soft p-1"
-      >
-        {TABS.map((tab) => {
-          const active = form.tab === tab
-          return (
-            <Pressable
-              key={tab}
-              onPress={() => form.setTab(tab)}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: active }}
-              className={`rounded-lg px-3.5 py-1.5 ${active ? 'bg-card' : ''}`}
-            >
-              <Text
-                className={`text-sm font-bold ${active ? 'text-text' : 'text-text-muted'}`}
+      {/* Tab selector — two-row wrapping pill group (see design 1b). Hidden in
+          edit mode: the type is immutable (shown as a context row). */}
+      {!isEdit && (
+        <View
+          accessibilityRole="radiogroup"
+          accessibilityLabel={t('transactions.form.type_label')}
+          className="flex-row flex-wrap gap-1.5 rounded-xl bg-border-soft p-1"
+        >
+          {TABS.map((tab) => {
+            const active = form.tab === tab
+            return (
+              <Pressable
+                key={tab}
+                onPress={() => form.setTab(tab)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                className={`rounded-lg px-3.5 py-1.5 ${active ? 'bg-card' : ''}`}
               >
-                {t(`transactions.types.${tab}`)}
-              </Text>
-            </Pressable>
-          )
-        })}
-      </View>
+                <Text
+                  className={`text-sm font-bold ${active ? 'text-text' : 'text-text-muted'}`}
+                >
+                  {t(`transactions.types.${tab}`)}
+                </Text>
+              </Pressable>
+            )
+          })}
+        </View>
+      )}
 
-      {/* Amount (+ currency when the account has both) */}
-      <View className="flex-col gap-1.5">
-        <Label>{t('transactions.form.amount_label')}</Label>
-        <MoneyAmountInput
-          value={form.amount}
-          onChangeText={form.setAmount}
-          placeholder="0"
-          autoFocus
-        />
-        {form.currencyOptions.length > 1 && (
-          <View className="pt-1">
-            <Segmented
-              ariaLabel={t('transactions.form.currency_label')}
-              value={form.currencyCode}
-              onValueChange={(v) => form.setCurrencyCode(v as 'ARS' | 'USD')}
-              options={form.currencyOptions.map((c) => ({ value: c, label: c }))}
-            />
-          </View>
-        )}
-      </View>
+      {/* Read-only context rows (edit): immutable fields as label/value with a
+          "no editable" caption. */}
+      {contextRows.length > 0 && (
+        <View className="overflow-hidden rounded-xl border border-border bg-card">
+          {contextRows.map((row, i) => (
+            <View
+              key={row.label}
+              className={`flex-row items-center justify-between gap-3 px-4 py-3 ${
+                i > 0 ? 'border-t border-border-soft' : ''
+              }`}
+            >
+              <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
+                {row.label}
+              </Text>
+              <Text className="flex-1 text-right text-[15px] font-semibold text-text" numberOfLines={1}>
+                {row.value}
+                <Text className="text-xs font-normal text-text-muted"> {t('common.not_editable')}</Text>
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Amount (+ currency when the account has both). In edit, only when the
+          amount is editable. */}
+      {showAmount && (
+        <View className="flex-col gap-1.5">
+          <Label>{t('transactions.form.amount_label')}</Label>
+          <MoneyAmountInput
+            value={form.amount}
+            onChangeText={form.setAmount}
+            placeholder="0"
+            autoFocus={!isEdit}
+          />
+          {isEdit && edit?.isParent && (
+            <Text className="pt-0.5 text-xs text-text-muted">
+              {t('transactions.installment_recalc_hint', {
+                count: edit.installmentsTotal ?? 0,
+              })}
+            </Text>
+          )}
+          {showCurrencySeg && (
+            <View className="pt-1">
+              <Segmented
+                ariaLabel={t('transactions.form.currency_label')}
+                value={form.currencyCode}
+                onValueChange={(v) => form.setCurrencyCode(v as 'ARS' | 'USD')}
+                options={form.currencyOptions.map((c) => ({ value: c, label: c }))}
+              />
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Adjustment direction (Suma / Resta) + informative banner */}
-      {showAdjustment && (
+      {showAdjustmentControls && (
         <>
           <Segmented
             ariaLabel={t('transactions.types.adjustment')}
@@ -226,17 +340,20 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
         </>
       )}
 
-      {/* Source account */}
-      <AccountSelectField
-        label={
-          showAdjustment
-            ? t('transactions.drawer.account_to_adjust')
-            : t('transactions.form.account_label')
-        }
-        accounts={form.eligibleAccounts}
-        selectedId={form.accountId}
-        onSelect={form.setAccountId}
-      />
+      {/* Source account. Immutable context in edit, except a statement payment
+          whose debit account can move (`editable.account`). */}
+      {showSourceAccount && (
+        <AccountSelectField
+          label={
+            showAdjustment
+              ? t('transactions.drawer.account_to_adjust')
+              : t('transactions.form.account_label')
+          }
+          accounts={form.eligibleAccounts}
+          selectedId={form.accountId}
+          onSelect={form.setAccountId}
+        />
+      )}
 
       {/* Installments (credit expense) — ARS gets chips + stepper + preview;
           USD gets the cuotas-sólo-ARS hint (simple USD purchase stays allowed) */}
@@ -360,8 +477,8 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
         </View>
       )}
 
-      {/* Destination account (transfer / exchange) */}
-      {form.tab === 'transfer' && (
+      {/* Destination account (transfer / exchange). Immutable context in edit. */}
+      {form.tab === 'transfer' && showDestinationAccount && (
         <AccountSelectField
           label={t('transactions.form.destination_label')}
           accounts={form.otherAccounts}
@@ -369,7 +486,7 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
           onSelect={form.setDestinationAccountId}
         />
       )}
-      {showExchange && (
+      {showExchange && showDestinationAccount && (
         <AccountSelectField
           label={t('transactions.drawer.account_toward')}
           accounts={form.cashBankAccounts}
@@ -378,47 +495,48 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
         />
       )}
 
-      {/* Exchange: received amount (destination currency) + implicit rate, or a
-          hint when the destination account has no other currency (submit blocked
-          by the hook). */}
-      {showExchange &&
-        (form.exchangeDestCurrency ? (
-          <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-sm font-semibold text-text">
-                {t('transactions.labels.exchange_received')}
-              </Text>
-              <View className="rounded-lg border border-border px-2.5 py-1">
-                <Text className="text-xs font-bold text-text">{receivedCurrency}</Text>
-              </View>
+      {/* Exchange: received amount (destination currency) + implicit rate. */}
+      {showExchangeReceived && (
+        <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-sm font-semibold text-text">
+              {t('transactions.labels.exchange_received')}
+            </Text>
+            <View className="rounded-lg border border-border px-2.5 py-1">
+              <Text className="text-xs font-bold text-text">{receivedCurrency}</Text>
             </View>
-            <MoneyAmountInput
-              value={form.destinationAmount}
-              onChangeText={form.setDestinationAmount}
-              placeholder="0"
-            />
-            {exchangeRate !== null && (
-              <Text className="text-xs text-text-muted">
-                1 {receivedCurrency} = {CURRENCY_SYMBOL[form.currencyCode]}
-                {fmtAmount(exchangeRate)} {form.currencyCode}
-              </Text>
-            )}
           </View>
-        ) : (
-          <Text className="text-sm text-text-muted">
-            {t('transactions.exchange.no_other_currency_hint', {
-              currency: form.currencyCode === 'ARS' ? 'USD' : 'ARS',
-            })}
-          </Text>
-        ))}
+          <MoneyAmountInput
+            value={form.destinationAmount}
+            onChangeText={form.setDestinationAmount}
+            placeholder="0"
+          />
+          {exchangeRate !== null && (
+            <Text className="text-xs text-text-muted">
+              1 {receivedCurrency} = {CURRENCY_SYMBOL[form.currencyCode]}
+              {fmtAmount(exchangeRate)} {form.currencyCode}
+            </Text>
+          )}
+        </View>
+      )}
+      {showExchangeNoCurrencyHint && (
+        <Text className="text-sm text-text-muted">
+          {t('transactions.exchange.no_other_currency_hint', {
+            currency: form.currencyCode === 'ARS' ? 'USD' : 'ARS',
+          })}
+        </Text>
+      )}
 
       {/* Date */}
-      <View className="flex-col gap-1.5">
-        <Label>{t('transactions.form.date_label')}</Label>
-        <DateField value={form.date} onChange={form.setDate} />
-      </View>
+      {showDate && (
+        <View className="flex-col gap-1.5">
+          <Label>{t('transactions.form.date_label')}</Label>
+          <DateField value={form.date} onChange={form.setDate} />
+        </View>
+      )}
 
       {/* Description (relabelled "Motivo del ajuste" for adjustments) */}
+      {showDescription && (
       <View className="flex-col gap-1.5">
         <Label>
           {showAdjustment
@@ -447,6 +565,7 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
           </Pressable>
         )}
       </View>
+      )}
 
       {/* Adjustment balance preview: current → resulting balance */}
       {adjustmentPreview && (
@@ -498,19 +617,39 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
                 {t('transactions.reimbursement.toggle')}
               </Text>
               <Text className="text-xs text-text-muted">
-                {t('transactions.reimbursement.pending_hint')}
+                {form.reimbursementReadOnly
+                  ? t(
+                      edit?.reimbursement?.status === 'cancelled'
+                        ? 'transactions.reimbursement.readonly_hint_cancelled'
+                        : 'transactions.reimbursement.readonly_hint_received',
+                    )
+                  : t('transactions.reimbursement.pending_hint')}
               </Text>
             </View>
             <Switch
               ariaLabel={t('transactions.reimbursement.toggle')}
               checked={form.reimbursementEnabled}
+              disabled={form.reimbursementReadOnly}
               onValueChange={(on) => {
                 form.setReimbursementEnabled(on)
                 if (on) form.setReimbursementAccountId(pickReimbursementAccount(form.accountId))
               }}
             />
           </View>
-          {form.reimbursementEnabled && (
+          {/* Received/cancelled reintegro: read-only summary (target + amount),
+              managed from its own confirm/cancel flow. */}
+          {form.reimbursementReadOnly && edit?.reimbursement && (
+            <View className="flex-row items-center justify-between gap-3 border-t border-border-soft pt-3">
+              <Text className="text-xs text-text-muted">
+                {t(`transactions.reimbursement.target.${edit.reimbursement.target}`)}
+              </Text>
+              <Text className="text-sm font-semibold text-text">
+                {CURRENCY_SYMBOL[form.currencyCode]}
+                {fmtAmount(edit.reimbursement.amount)}
+              </Text>
+            </View>
+          )}
+          {form.reimbursementEnabled && !form.reimbursementReadOnly && (
             <View className="flex-col gap-3 border-t border-border-soft pt-3">
               {/* Estimated amount */}
               <View className="flex-col gap-1.5">
@@ -768,9 +907,11 @@ export function MovementForm({ accounts, categories, household, onDone }: Props)
           </View>
         ) : (
           <Text className="text-base font-bold text-white">
-            {form.isInstallments
-              ? t('transactions.actions.register_installments', { count: installmentsNum })
-              : t('transactions.form.submit')}
+            {isEdit
+              ? t('common.save_changes')
+              : form.isInstallments
+                ? t('transactions.actions.register_installments', { count: installmentsNum })
+                : t('transactions.form.submit')}
           </Text>
         )}
       </Pressable>

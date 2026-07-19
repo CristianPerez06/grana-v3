@@ -56,6 +56,9 @@ export type MovementDetailData = {
   installmentSiblings: TransactionWithDetails[] | null
   reimbursements: ExpenseReimbursementVM[]
   sharedInfo: MovementSharedInfo | null
+  /** The current user is the movement's owner (payer) — gates edit/delete. A
+      shared movement paid by the other member is readable but not manageable. */
+  canManage: boolean
 }
 
 const HERO_ICON: Partial<Record<MovementKind, LucideIcon>> = {

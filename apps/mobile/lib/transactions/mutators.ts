@@ -14,6 +14,7 @@ import {
   registerInstallments,
   saveExpenseReimbursement as saveExpenseReimbursementImpl,
   createRecurrenceFromMovement,
+  deleteTransaction as deleteTransactionImpl,
   type ThinMutationResult,
 } from '@grana/transactions-mutations'
 import { updateInstallmentParent } from '@grana/cards'
@@ -151,4 +152,22 @@ export function createMovementMutators(t: Translate): Mutators {
     // the suggestion UX lands.
     suggestCategoryFromHistory: async () => null,
   }
+}
+
+// Delete a movement from the detail screen. Not part of the form `Mutators`
+// contract (the form never deletes) — it's a standalone one-shot the detail
+// action invokes. Delegates to the shared thin `deleteTransaction` (guards live
+// there) and localizes the result. The guard codes (installment child / paid /
+// settlement) are already prevented by the detail's `canDelete` gate, so they're
+// defensive here; the realistic runtime failure is `GRN01` (a settled shared
+// expense). Mobile surfaces the generic message — web keeps its specific copy.
+export async function deleteMovement(
+  id: string,
+  t: Translate,
+): Promise<{ ok: true } | { ok: false; formError: string }> {
+  const userId = await currentUserId()
+  if (!userId) return { ok: false, formError: t('transactions.errors.generic') }
+  const result = await deleteTransactionImpl(supabase, userId, id)
+  if (result.ok) return { ok: true }
+  return { ok: false, formError: t('transactions.errors.generic') }
 }

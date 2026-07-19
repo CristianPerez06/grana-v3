@@ -13,6 +13,8 @@ import {
   updateTransfer as updateTransferImpl,
   updateAdjustment as updateAdjustmentImpl,
   updateExchange as updateExchangeImpl,
+  deleteTransaction as deleteTransactionImpl,
+  DELETE_GUARD_CODES,
   type ThinMutationResult,
 } from '@grana/transactions-mutations'
 import type {
@@ -91,62 +93,37 @@ export async function deleteTransaction(id: string): Promise<ActionResult<never>
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
 
-  // Block deletion of individual installment children — must delete from parent
-  const { data: tx } = await supabase
-    .from('transactions')
-    .select('parent_id, status, is_shared, household_id, type')
-    .eq('id', id)
-    .eq('user_id', userId)
-    .single()
-
-  if (tx?.parent_id) {
-    return {
-      ok: false,
-      formError: 'Para eliminar una cuota, eliminá la compra completa desde el movimiento padre.',
-    }
+  const result = await deleteTransactionImpl(supabase, userId, id)
+  if (result.ok) {
+    revalidateAfterMovementMutation()
+    return { ok: true }
   }
 
-  // Block deletion of paid credit card transactions
-  if (tx?.status === 'paid') {
-    return {
-      ok: false,
-      formError: 'No podés eliminar un consumo que ya fue pagado en el resumen.',
-    }
-  }
-
-  // A settlement leg belongs to a household settlement (cuenta corriente).
-  // Deleting it here would orphan the other member's leg and bypass the
-  // reversal-by-contraasiento — it must be reverted from the cuenta corriente.
-  if (tx?.type === 'settlement') {
-    return {
-      ok: false,
-      formError: 'Es parte de una liquidación del hogar. Revertila desde la cuenta corriente.',
-    }
-  }
-
-  // Deleting a shared expense that a settlement already covered would rewrite a
-  // settled balance. The temporal guard (see 0043 + 0049) blocks the delete only
-  // when a same-currency settlement is dated at/after the expense, raising SQLSTATE
-  // GRN01 which we map to a friendly message. Reversal by contraasiento is Paso 3.
-  const { error } = await supabase
-    .from('transactions')
-    .delete()
-    .eq('id', id)
-    .eq('user_id', userId)
-
-  if (error) {
-    if (error.code === 'GRN01') {
+  // Map the shared mutator's stable `errorCode` back to web's literal messages
+  // (the guards used to live inline here; behavior is unchanged). Unknown codes
+  // are generic Postgres failures → the shell translator.
+  switch (result.errorCode) {
+    case DELETE_GUARD_CODES.installmentChild:
+      return {
+        ok: false,
+        formError: 'Para eliminar una cuota, eliminá la compra completa desde el movimiento padre.',
+      }
+    case DELETE_GUARD_CODES.paid:
+      return { ok: false, formError: 'No podés eliminar un consumo que ya fue pagado en el resumen.' }
+    case DELETE_GUARD_CODES.settlement:
+      return {
+        ok: false,
+        formError: 'Es parte de una liquidación del hogar. Revertila desde la cuenta corriente.',
+      }
+    case 'GRN01':
       return {
         ok: false,
         formError:
           'No se puede borrar: hay una liquidación registrada después de este gasto en el hogar. Revertí esa liquidación primero.',
       }
-    }
-    return { ok: false, formError: await translatePostgresError(error.code, 'transaction') }
+    default:
+      return { ok: false, formError: await translatePostgresError(result.errorCode, 'transaction') }
   }
-
-  revalidateAfterMovementMutation()
-  return { ok: true }
 }
 
 // ── createTransfer ────────────────────────────────────────────────────────────
