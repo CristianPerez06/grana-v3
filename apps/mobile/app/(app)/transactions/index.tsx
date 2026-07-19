@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
+import { Repeat } from 'lucide-react-native'
 import { getTodayAR, formatDateISO } from '@grana/money-logic'
 import { DEFAULT_MOVEMENTS_LIMIT, monthOf, shiftMonth } from '@grana/transactions'
 import { PageHeader } from '../../../components/ui/PageHeader'
@@ -9,8 +10,11 @@ import { MonthNavigator } from '../../../components/ui/MonthNavigator'
 import { MovementList } from '../../../components/movements/MovementList'
 import { MovementListSkeleton } from '../../../components/movements/MovementListSkeleton'
 import { QuickAddFab } from '../../../components/transactions/QuickAddFab'
+import { PendingRecurrencesBlock } from '../../../components/recurrences/PendingRecurrencesBlock'
+import { RecurrenceSuggestionBanner } from '../../../components/recurrences/RecurrenceSuggestionBanner'
 import { getMovementsFeedPage, hasAnyTransaction } from '../../../lib/transactions/queries'
 import { useLocale, useT } from '../../../lib/locale-context'
+import { colors } from '../../../lib/colors'
 import type { Locale } from '../../../lib/locale'
 
 // Hermes has no full `Intl`, so the month-year label for the empty-state copy is
@@ -105,7 +109,20 @@ export default function MovimientosScreen() {
 
   return (
     <View className="flex-1 bg-page">
-      <PageHeader title={t('nav.movements')} />
+      <PageHeader
+        title={t('nav.movements')}
+        actions={
+          <Pressable
+            onPress={() => router.push('/transactions/recurring')}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('recurrences.title')}
+            className="h-9 w-9 items-center justify-center rounded-lg"
+          >
+            <Repeat size={20} color={colors.white} />
+          </Pressable>
+        }
+      />
       <ScrollView contentContainerClassName="gap-4 px-6 py-6 pb-28">
         <MonthNavigator
           year={year}
@@ -113,6 +130,9 @@ export default function MovimientosScreen() {
           onPrev={canGoBack ? () => goToMonth(shiftMonth(month, -1)) : undefined}
           onNext={canGoForward ? () => goToMonth(shiftMonth(month, +1)) : undefined}
         />
+
+        <PendingRecurrencesBlock />
+        <RecurrenceSuggestionBanner />
 
         {feedQuery.isPending ? (
           <View className="overflow-hidden rounded-2xl border border-border bg-card">

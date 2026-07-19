@@ -180,7 +180,7 @@ export function MovementsSection({ movements, accountId, loading }: Props) {
         <ActionChip
           icon={<Repeat size={14} color={colors.textMuted} />}
           label={t('transactions.header.see_recurrences')}
-          onPress={() => router.push('/(app)/accounts/recurring')}
+          onPress={() => router.push('/transactions/recurring')}
         />
         <ActionChip
           icon={<SlidersHorizontal size={14} color={activeCount > 0 ? colors.emeraldDeep : colors.textMuted} />}
