@@ -475,7 +475,7 @@ export async function getMonthSubcategoryBreakdown(
   const [expensesResult, reimbursementsResult, categoryResult] = await Promise.all([
     supabase
       .from('transactions')
-      .select('id, subcategory_id, currency_code, amount, is_parent, is_shared, period_payments(id)')
+      .select('id, subcategory_id, currency_code, amount, is_parent, is_shared, period_payments!period_payments_transaction_id_fkey(id)')
       .eq('type', 'expense')
       .eq('category_id', categoryId)
       // Devengado: include card consumos/cuotas by their date (consistent with

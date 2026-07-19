@@ -132,7 +132,7 @@ export async function getMonthBalanceSeries(
   const { data: txs, error: txsErr } = await supabase
     .from('transactions')
     .select(
-      'id, date, type, amount, currency_code, account_id, transfer_destination_account_id, destination_amount, destination_currency, reimbursement_target, received_at, cancelled_at, settlement_direction, created_at, period_payments(id)',
+      'id, date, type, amount, currency_code, account_id, transfer_destination_account_id, destination_amount, destination_currency, reimbursement_target, received_at, cancelled_at, settlement_direction, created_at, period_payments!period_payments_transaction_id_fkey(id)',
     )
     .gte('date', fromISO)
     .lte('date', toISO)
@@ -192,7 +192,7 @@ export async function getMonthCategoryBreakdown(
   const [expensesResult, reimbursementsResult] = await Promise.all([
     supabase
       .from('transactions')
-      .select('id, category_id, currency_code, amount, is_parent, is_shared, period_payments(id)')
+      .select('id, category_id, currency_code, amount, is_parent, is_shared, period_payments!period_payments_transaction_id_fkey(id)')
       .eq('type', 'expense')
       // DEVENGADO (accrual): spending by category counts an expense in the
       // month it is INCURRED, regardless of how/when it is paid — so card

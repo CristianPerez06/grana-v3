@@ -22,7 +22,7 @@ export const TRANSACTION_SELECT = `
   subcategory:subcategories(id, name, canonical_name, category_id, user_id),
   destination_account:accounts!transactions_transfer_destination_account_id_fkey(id, name, type, institution:institutions(name)),
   source_account:accounts!transactions_account_id_fkey(id, name, type, institution:institutions(name)),
-  period_payments(
+  period_payments!period_payments_transaction_id_fkey(
     id,
     period_id,
     period:card_periods(
