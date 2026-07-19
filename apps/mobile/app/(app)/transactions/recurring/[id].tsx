@@ -1,10 +1,13 @@
+import { useState } from 'react'
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pause, Play, Trash2 } from 'lucide-react-native'
+import { Pause, Pencil, Play, Trash2 } from 'lucide-react-native'
 import { PageHeader } from '../../../../components/ui/PageHeader'
+import { Drawer } from '../../../../components/ui/Drawer'
 import { SkeletonBlock } from '../../../../components/ui/SkeletonBlock'
 import { RecurrenceInstancesList } from '../../../../components/recurrences/RecurrenceInstancesList'
+import { RecurrenceEditForm } from '../../../../components/recurrences/RecurrenceEditForm'
 import {
   amountSign,
   amountToneClass,
@@ -36,9 +39,9 @@ function Row({ label, value }: { label: string; value: string }) {
 
 /**
  * Recurrence rule detail. Read-only summary + generated-instance history, with
- * pause/resume and delete in the header (button-mutations — no form). Editing the
- * rule's fields and creating a rule from scratch are a later slice; this screen
- * never opens an edit form.
+ * edit / pause-resume / delete in the header. Edit opens a `Drawer` with the
+ * mutable-field form (amount/frequency/end date/description); pause-resume and
+ * delete are direct button-mutations.
  */
 export default function RecurrenceDetailScreen() {
   const t = useT()
@@ -47,6 +50,7 @@ export default function RecurrenceDetailScreen() {
   const router = useRouter()
   const queryClient = useQueryClient()
   const { id } = useLocalSearchParams<{ id: string }>()
+  const [editOpen, setEditOpen] = useState(false)
 
   const query = useQuery({
     queryKey: ['recurrences', 'detail', id] as const,
@@ -94,6 +98,15 @@ export default function RecurrenceDetailScreen() {
 
   const actions = rule ? (
     <View className="flex-row items-center gap-1">
+      <Pressable
+        onPress={() => setEditOpen(true)}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={t('recurrences.actions.edit')}
+        className="h-9 w-9 items-center justify-center rounded-lg"
+      >
+        <Pencil size={19} color={colors.white} />
+      </Pressable>
       <Pressable
         onPress={confirmDelete}
         hitSlop={8}
@@ -200,6 +213,12 @@ export default function RecurrenceDetailScreen() {
           </>
         )}
       </ScrollView>
+
+      {rule && (
+        <Drawer open={editOpen} onClose={() => setEditOpen(false)} ariaLabel={t('recurrences.edit_title')}>
+          <RecurrenceEditForm rule={rule} onClose={() => setEditOpen(false)} />
+        </Drawer>
+      )}
     </View>
   )
 }

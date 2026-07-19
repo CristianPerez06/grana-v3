@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react'
-import { ScrollView, Text, View } from 'react-native'
+import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Plus } from 'lucide-react-native'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import type { RecurrenceSummary } from '@grana/recurrences'
 import { PageHeader } from '../../../../components/ui/PageHeader'
@@ -10,6 +11,7 @@ import { SkeletonBlock } from '../../../../components/ui/SkeletonBlock'
 import { RecurrenceRuleCard } from '../../../../components/recurrences/RecurrenceRuleCard'
 import { getRecurrencesList } from '../../../../lib/recurrences/queries'
 import { generateDueInstances } from '../../../../lib/recurrences/mutators'
+import { colors } from '../../../../lib/colors'
 import { useT } from '../../../../lib/locale-context'
 
 type Tab = 'active' | 'paused' | 'finished'
@@ -83,6 +85,17 @@ export default function RecurringHubScreen() {
         title={t('recurrences.title')}
         backLink={{ href: '/transactions', label: t('recurrences.back_label') }}
         onBackPress={() => (router.canGoBack() ? router.back() : router.push('/transactions'))}
+        actions={
+          <Pressable
+            onPress={() => router.push('/transactions/recurring/new')}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('recurrences.create.title')}
+            className="h-9 w-9 items-center justify-center rounded-lg"
+          >
+            <Plus size={20} color={colors.white} />
+          </Pressable>
+        }
       />
       <ScrollView contentContainerClassName="gap-4 px-6 py-6 pb-16">
         <Segmented

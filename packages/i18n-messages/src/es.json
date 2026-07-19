@@ -1549,6 +1549,7 @@
     "errors": {
       "duplicate": "Ya existe una regla recurrente idéntica.",
       "amount_invalid": "El monto debe ser mayor a cero.",
+      "end_before_start": "La fecha de fin no puede ser anterior a la de inicio.",
       "save_failed": "No se pudo guardar.",
       "status_change_failed": "No se pudo cambiar el estado.",
       "delete_failed": "No se pudo eliminar.",

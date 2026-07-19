@@ -1549,6 +1549,7 @@
     "errors": {
       "duplicate": "An identical recurring rule already exists.",
       "amount_invalid": "Amount must be greater than zero.",
+      "end_before_start": "The end date can't be earlier than the start date.",
       "save_failed": "Failed to save.",
       "status_change_failed": "Failed to change status.",
       "delete_failed": "Failed to delete.",
