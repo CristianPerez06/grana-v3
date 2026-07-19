@@ -3081,7 +3081,7 @@ La paginación SHALL seguir el patrón limit+1 lookahead que el read expone (`{ 
 
 Cuando el mes seleccionado no tiene movimientos, la pantalla SHALL mostrar un empty-state con dos variantes, distinguidas por `hasAnyTransaction`: **bienvenida** (el usuario no tiene ningún movimiento aún) vs. **mes vacío** (tiene historial en otros meses, este mes está vacío). Los copies SHALL leerse del catálogo compartido `@grana/i18n-messages`.
 
-Las **filas del feed SHALL ser navegables**: tocar una fila SHALL abrir el detalle del movimiento (`/transactions/[txId]`, ver el requirement del detalle nativo), pasando el contexto de origen (`?from=…`) para resolver el back. El `QuickAddFab` está **habilitado** (alta de movimiento, ver su requirement). La **barra de filtros**, el **breakdown por categoría** y los **bloques de pendientes** (recurrencias / reintegros) del feed web siguen explícitamente fuera de este alcance.
+Las **filas del feed SHALL ser navegables**: tocar una fila SHALL abrir el detalle del movimiento (`/transactions/[txId]`, ver el requirement del detalle nativo), pasando el contexto de origen (`?from=…`) para resolver el back. El `QuickAddFab` está **habilitado** (alta de movimiento, ver su requirement). La **barra de filtros** y el **breakdown por categoría** del feed web siguen explícitamente fuera de este alcance. Los **bloques de pendientes** (recurrencias y reintegros) SÍ se renderizan sobre la lista, cada uno especificado en su propio requirement.
 
 El read SHALL usar el mismo RPC `get_movements_page` y el mismo anon-key/RLS path que web (sin cambios de datos, API ni RLS).
 
@@ -3115,7 +3115,7 @@ El read SHALL usar el mismo RPC `get_movements_page` y el mismo anon-key/RLS pat
 
 - **WHEN** el usuario toca una fila del feed de Movimientos
 - **THEN** navega al detalle `/transactions/[txId]` de ese movimiento, pasando el contexto de origen (`?from=…`) para resolver el back
-- **AND** el feed no renderiza barra de filtros, breakdown por categoría ni bloques de pendientes
+- **AND** el feed no renderiza barra de filtros ni breakdown por categoría
 
 ### Requirement: La app nativa expone la pantalla de alta de movimiento `/transactions/new`
 
@@ -3547,4 +3547,77 @@ Al guardar, el form SHALL validar el monto (> 0) y luego invocar `updateRecurren
 - **WHEN** el usuario abre el form de edición de una regla
 - **THEN** ve monto, frecuencia, fecha de fin y descripción, pero NO controles para cambiar la cuenta, la categoría o el tipo de movimiento
 - **AND** la frecuencia ofrece sólo los presets (sin `custom`)
+
+### Requirement: La app nativa muestra los reintegros pendientes accionables en el feed
+
+La pestaña **Movimientos** de la app mobile SHALL renderizar un bloque
+**"Reintegros a confirmar"** arriba del listado, hermano nativo del bloque de
+pendientes recurrentes, como thin consumer del read compartido
+`getPendingReimbursements(supabase)` de `@grana/transactions` (sin scope de
+cuenta = global). El bloque SHALL renderizar **nada** cuando no hay reintegros
+pendientes (mismo comportamiento que `PendingRecurrencesBlock` y que la card
+read-only de la cuenta).
+
+Cada fila del bloque SHALL permitir **confirmar** o **cancelar** el reintegro,
+delegando en los mutators nativos `confirmReimbursement` / `cancelReimbursement`
+(`apps/mobile/lib/transactions/mutators.ts`), que son thin shells sobre las
+impls isomórficas de `@grana/transactions-mutations` (auth + delegación +
+localización del `formError`). La invalidación de cache SHALL correr en el
+handler de éxito del bloque vía `invalidateAfterReimbursementMutation`, nunca
+dentro del mutator.
+
+**Confirmar** SHALL ser una reconciliación de **monto + fecha únicamente**,
+paridad con web: la fila SHALL exponer inline (expand in-place, sin sheet) un
+`MoneyAmountInput` con default = monto estimado y un `DateField` con default =
+fecha del gasto (o hoy). El commit SHALL enviar `{ id, amount, date }` — NO
+SHALL ofrecer selector de cuenta ni de período: para el subtipo `account` la
+cuenta declarada queda intacta, y para `statement` el período se deriva del
+lado del servidor a partir de la fecha (rechazando un período ya pagado).
+
+**Cancelar** SHALL pedir una confirmación destructiva (`Alert.alert`) antes de
+setear `cancelled_at`. La fila SHALL mostrar estado de carga por fila, error
+inline localizado y un aviso de éxito transitorio.
+
+Los copies SHALL leerse del catálogo compartido `@grana/i18n-messages`
+(`transactions.reimbursement.pending.*`, `reimbursement.confirm` / `.cancel`).
+
+#### Scenario: El feed muestra el bloque de reintegros pendientes
+
+- **WHEN** el usuario abre la pestaña Movimientos y tiene al menos un reintegro
+  pendiente (`type='reimbursement'`, `received_at IS NULL`, `cancelled_at IS NULL`)
+- **THEN** ve el bloque "Reintegros a confirmar" arriba del listado, resuelto vía
+  `getPendingReimbursements(supabase)` de `@grana/transactions`
+- **AND** cada fila muestra la descripción/categoría derivada y el monto esperado
+
+#### Scenario: Confirmar reconcilia monto y fecha inline
+
+- **WHEN** el usuario toca "Confirmar" en una fila
+- **THEN** la fila expande in-place un input de monto (default = estimado) y un
+  selector de fecha (default = fecha del gasto o hoy)
+- **AND** al commitear, envía `{ id, amount, date }` al mutator, que setea
+  `received_at`, sobrescribe `amount` y `date`, y NO altera `estimated_amount`
+- **AND** el bloque invalida cache vía `invalidateAfterReimbursementMutation`
+
+#### Scenario: Confirmar un reintegro en resumen deriva el período del lado del servidor
+
+- **WHEN** el usuario confirma un reintegro con subtipo `statement` eligiendo una
+  fecha
+- **THEN** el mutator resuelve el período de la tarjeta que cubre esa fecha vía
+  `getOrCreatePeriodForDate` y lo imputa, sin ofrecer un selector de período
+- **AND** si ese período ya fue pagado, la confirmación falla con un error
+  localizado y no modifica el reintegro
+
+#### Scenario: Cancelar un reintegro pendiente pide confirmación destructiva
+
+- **WHEN** el usuario toca "Cancelar" en una fila y confirma el diálogo destructivo
+- **THEN** el mutator setea `cancelled_at`, el reintegro desaparece del bloque y
+  el bloque invalida cache
+- **AND** si el reintegro ya estaba recibido, la operación falla con un error
+  localizado
+
+#### Scenario: Sin reintegros pendientes el bloque no se renderiza
+
+- **WHEN** el usuario no tiene reintegros pendientes
+- **THEN** el bloque "Reintegros a confirmar" no se renderiza (no ocupa espacio ni
+  muestra un empty-state en el feed)
 

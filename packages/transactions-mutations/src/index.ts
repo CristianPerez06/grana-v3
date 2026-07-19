@@ -56,6 +56,8 @@ export {
   updateAdjustment,
   updateExchange,
   deleteTransaction,
+  confirmReimbursement,
+  cancelReimbursement,
   DELETE_GUARD_CODES,
   type ThinMutationResult,
 } from './thin-mutations'

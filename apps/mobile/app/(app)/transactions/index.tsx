@@ -11,6 +11,7 @@ import { MovementList } from '../../../components/movements/MovementList'
 import { MovementListSkeleton } from '../../../components/movements/MovementListSkeleton'
 import { QuickAddFab } from '../../../components/transactions/QuickAddFab'
 import { PendingRecurrencesBlock } from '../../../components/recurrences/PendingRecurrencesBlock'
+import { PendingReimbursementsBlock } from '../../../components/transactions/PendingReimbursementsBlock'
 import { RecurrenceSuggestionBanner } from '../../../components/recurrences/RecurrenceSuggestionBanner'
 import { getMovementsFeedPage, hasAnyTransaction } from '../../../lib/transactions/queries'
 import { useLocale, useT } from '../../../lib/locale-context'
@@ -132,6 +133,7 @@ export default function MovimientosScreen() {
         />
 
         <PendingRecurrencesBlock />
+        <PendingReimbursementsBlock todayISO={todayISO} />
         <RecurrenceSuggestionBanner />
 
         {feedQuery.isPending ? (

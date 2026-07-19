@@ -1159,7 +1159,10 @@
         "confirming": "Confirmando…",
         "confirmed_success": "Reintegro confirmado.",
         "cancelled_success": "Reintegro cancelado.",
-        "close_notice": "Cerrar aviso"
+        "close_notice": "Cerrar aviso",
+        "cancel_confirm_title": "Cancelar reintegro",
+        "cancel_confirm_message": "Va a dejar de figurar como esperado. Si finalmente llega, podés volver a declararlo.",
+        "cancel_confirm_cta": "Sí, cancelar"
       },
       "errors": {
         "amount_positive": "Ingresá un monto de reintegro válido.",

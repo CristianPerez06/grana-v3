@@ -1159,7 +1159,10 @@
         "confirming": "Confirming…",
         "confirmed_success": "Reimbursement confirmed.",
         "cancelled_success": "Reimbursement cancelled.",
-        "close_notice": "Close notice"
+        "close_notice": "Close notice",
+        "cancel_confirm_title": "Cancel reimbursement",
+        "cancel_confirm_message": "It will stop showing as expected. If it does arrive, you can declare it again.",
+        "cancel_confirm_cta": "Yes, cancel"
       },
       "errors": {
         "amount_positive": "Enter a valid reimbursement amount.",

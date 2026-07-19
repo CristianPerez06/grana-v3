@@ -8,11 +8,13 @@ import { supabase } from '../supabase'
 import {
   getGlobalMovementsPage,
   getInstallmentFamily,
+  getPendingReimbursements as getPendingReimbursementsImpl,
   getReimbursementsForExpense,
   getTransactionDetail,
   hasAnyTransaction as hasAnyTransactionImpl,
   toFinancialMovement,
   type FinancialMovement,
+  type PendingReimbursementVM,
 } from '@grana/transactions'
 import { getMovementSharedInfo } from '../shared/queries'
 import type { MovementDetailData } from '../../components/transactions/detail/MovementDetailView'
@@ -38,6 +40,14 @@ export async function getMovementsFeedPage(
 // Welcome vs. month-empty empty-state discriminator (LIMIT 1, constant cost).
 export async function hasAnyTransaction(): Promise<boolean> {
   return hasAnyTransactionImpl(supabase)
+}
+
+// Pending reimbursements across all accounts (unscoped), for the feed's
+// "Reintegros a confirmar" block. The account detail uses the account-scoped
+// variant (`lib/accounts/queries.ts`).
+export type { PendingReimbursementVM }
+export async function getPendingReimbursementsFeed(): Promise<PendingReimbursementVM[]> {
+  return getPendingReimbursementsImpl(supabase)
 }
 
 // The movement detail graph, keyed by `txId`. Composes the extracted

@@ -15,6 +15,8 @@ import {
   saveExpenseReimbursement as saveExpenseReimbursementImpl,
   createRecurrenceFromMovement,
   deleteTransaction as deleteTransactionImpl,
+  confirmReimbursement as confirmReimbursementImpl,
+  cancelReimbursement as cancelReimbursementImpl,
   type ThinMutationResult,
 } from '@grana/transactions-mutations'
 import { updateInstallmentParent } from '@grana/cards'
@@ -170,4 +172,49 @@ export async function deleteMovement(
   const result = await deleteTransactionImpl(supabase, userId, id)
   if (result.ok) return { ok: true }
   return { ok: false, formError: t('transactions.errors.generic') }
+}
+
+export type ReimbursementMutationOutcome =
+  | { ok: true }
+  | { ok: false; formError: string }
+
+// Surface the package's own `formError` when it carries one — the confirm/cancel
+// guards ("Ese resumen ya fue pagado…", "El reintegro ya fue confirmado.") are
+// meaningful, actionable messages, same as web shows them. A `fieldErrors`-only
+// result (shouldn't happen — the block pre-validates the amount) degrades to a
+// generic error to stay locale-consistent.
+function localizeReimbursement(
+  result: ThinMutationResult<unknown>,
+  t: Translate,
+): ReimbursementMutationOutcome {
+  if (result.ok) return { ok: true }
+  if (result.formError) return { ok: false, formError: result.formError }
+  return { ok: false, formError: t('transactions.errors.generic') }
+}
+
+// Confirm a pending reintegro from the feed block: reconcile the real amount +
+// date (`{ id, amount, date }`). The package owns validation + the reconcile
+// (statement target derives the card period server-side). Auth here, cache
+// invalidation in the block's success handler.
+export async function confirmReimbursement(
+  input: unknown,
+  t: Translate,
+): Promise<ReimbursementMutationOutcome> {
+  const userId = await currentUserId()
+  if (!userId) return { ok: false, formError: t('transactions.errors.generic') }
+  return localizeReimbursement(
+    await confirmReimbursementImpl(supabase, userId, input, getTodayAR()),
+    t,
+  )
+}
+
+// Cancel a pending reintegro that never arrived (sets `cancelled_at`). Idempotent
+// in the package; a received reintegro can't be cancelled.
+export async function cancelReimbursement(
+  id: string,
+  t: Translate,
+): Promise<ReimbursementMutationOutcome> {
+  const userId = await currentUserId()
+  if (!userId) return { ok: false, formError: t('transactions.errors.generic') }
+  return localizeReimbursement(await cancelReimbursementImpl(supabase, userId, { id }), t)
 }
