@@ -6,6 +6,9 @@ import { RegisterMovementButton } from '@/lib/transactions/components/register-m
 import { QuickAddFab } from '@/lib/transactions/components/quick-add-fab'
 import { getHousehold } from '@/lib/shared/queries'
 import { createClient } from '@/lib/supabase/server'
+import { getTodayAR } from '@/lib/date'
+import { SharedMonthProvider } from './_components/shared-month-context'
+import { SharedHomeHeader } from './_components/shared-home-header'
 
 // Configuración del hogar — icon-only (no label), per the redesign.
 const SettingsIconLink = ({ label }: { label: string }) => (
@@ -35,11 +38,23 @@ const SharedHomeLayout = async ({ children }: { children: React.ReactNode }) => 
     </div>
   ) : undefined
 
+  const today = getTodayAR()
+
   return (
     <div className={`flex flex-col gap-6 ${isActive ? 'max-w-[960px]' : 'max-w-lg'}`}>
       <PageHeader title={title} actions={actions} />
-      {children}
-      {isActive && <QuickAddFab />}
+      {isActive ? (
+        <SharedMonthProvider
+          currentYear={today.getFullYear()}
+          currentMonth={today.getMonth() + 1}
+        >
+          <SharedHomeHeader />
+          {children}
+          <QuickAddFab />
+        </SharedMonthProvider>
+      ) : (
+        children
+      )}
     </div>
   )
 }

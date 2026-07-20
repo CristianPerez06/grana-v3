@@ -34,6 +34,10 @@ export function invalidateAfterMovementMutation(qc: QueryClient): void {
   // router.refresh() alone leaves them stale until a hard reload. Invalidate
   // the whole prefix so every dashboard card refetches after a movement.
   qc.invalidateQueries({ queryKey: ['dashboard'] })
+  // Compartido home month-scoped widgets (Gasto del hogar, Últimos movimientos)
+  // read from TanStack keyed by month; router.refresh() alone leaves them stale.
+  // Debt/outlook there are today-anchored RSC and refresh via router.refresh().
+  qc.invalidateQueries({ queryKey: ['shared'] })
   // /accounts/[id] shell: detail balances + ascending history + scoped
   // pending reimbursements. We invalidate by the `account` / `reimbursements`
   // prefixes so each account's slice refreshes without callers needing to
