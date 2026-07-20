@@ -11,6 +11,7 @@ import {
   getCardNetworks as getCardNetworksImpl,
   getCreditCardDetail as getCreditCardDetailImpl,
   getCardPeriods as getCardPeriodsImpl,
+  getCardPeriodDetail as getCardPeriodDetailImpl,
   getActiveInstallments as getActiveInstallmentsImpl,
   summarizeCardsMonth,
 } from '@grana/cards'
@@ -74,6 +75,10 @@ export async function getCreditCardDetail(id: string): Promise<CreditCardDetail 
 
 export async function getCardPeriods(id: string): Promise<CardPeriodDetail[]> {
   return getCardPeriodsImpl(supabase, id, getTodayAR())
+}
+
+export async function getCardPeriodDetail(periodId: string): Promise<CardPeriodDetail | null> {
+  return getCardPeriodDetailImpl(supabase, periodId, getTodayAR())
 }
 
 export async function getActiveInstallments(id: string): Promise<ActiveInstallmentsResult> {

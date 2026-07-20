@@ -1,6 +1,6 @@
 # Mobile ↔ Web Parity Guide
 
-_Snapshot: 2026-07-19. Source: automated web-vs-mobile feature sweep across all domains._
+_Snapshot: 2026-07-19; checkboxes refreshed 2026-07-20 (Cards write flows + recurring management + feed pending-blocks shipped since the sweep). Source: automated web-vs-mobile feature sweep across all domains._
 
 This is the working map of **what the web app does that the mobile app doesn't yet**. Use it to
 plan mobile changes. It is organised **by route, then by feature**.
@@ -49,9 +49,9 @@ are built differently. Surfaced by a second-pass review; easy to miss in a route
 | Domain | Mobile status | Headline gap |
 |---|---|---|
 | **Hogar / Shared** | ❌ Entire module missing | No `/shared` at all; tab is a disabled placeholder |
-| **Cards — lifecycle & pay** | ⚠️ Read-only | No edit, archive/reactivate, periods, or **pay statement** |
-| **Transactions — recurring** | ❌ Missing | No `/transactions/recurring` hub (create/pause/edit/delete rules) |
-| **Transactions — feed extras** | ⚠️ Partial | No filters, category breakdown, or pending blocks |
+| **Cards — lifecycle & pay** | ✅ ~Parity | Shipped: edit, archive/reactivate/delete, periods, statement, **pay** (`mobile-cards-write`) |
+| **Transactions — recurring** | ✅ ~Parity | Shipped: hub, create/edit, pause/resume/delete, instance history |
+| **Transactions — feed extras** | ⚠️ Partial | Pending/suggestion blocks shipped; filters + category breakdown remain |
 | **Transactions — detail tiles** | ⚠️ Partial | No month-weight / recurrence context tiles |
 | **Dashboard** | ⚠️ Partial | No "Compartido" household strip (depends on Hogar) |
 | **Settings — category form** | ⚠️ Partial | No emoji/color pickers (plain text inputs) |
@@ -112,71 +112,75 @@ Mobile has **no `/shared` route**. The "Hogar" tab in the bottom bar is a disabl
 
 ---
 
-## 2. Cards — _read-only; lifecycle & payment missing_
+## 2. Cards — ✅ _write flows shipped (`mobile-cards-write`, 2026-07-20)_
 
-The cards **screens** exist (list, detail, create) and read views are at parity. What's missing is
-everything that mutates a card or its statements.
+Card write flows shipped in `mobile-cards-write` (2026-07-20): edit, archive/reactivate/delete,
+register-first-purchase, the periods list, statement detail, and the pay-statement flow. Only two
+minor detail affordances remain (unchecked below).
 
 ### Card detail (`/cards/[id]`)
-> The mobile card-detail **header has no action affordances at all** — it's pure read display. Every
-> item below is absent, not merely disabled.
-- [ ] Edit card (name, institution, credit limit, billing-cycle dates) · `write`
-- [ ] Archive / delete card (header actions) · `write`
-- [ ] Reactivate archived card (banner + button) · `write`
-- [ ] Register first purchase CTA (empty state) · `write`
-- [ ] "Pagar / Registrar pago" CTA on the pay-hero (currently display-only) · `nav`
+> The card-detail header now carries an **Editar** action, and the pay-hero a **Pagar resumen** CTA.
+> Remaining: the inline edit-limit CTA on the limit panel (the limit is editable via the edit screen)
+> and a persistent inactive-card banner on an archived card that still has history.
+- [x] Edit card (name, institution, credit limit, billing-cycle dates) · `write`
+- [x] Archive / delete card (header actions) · `write`
+- [x] Reactivate archived card (banner + button) · `write`
+- [x] Register first purchase CTA (empty state) · `write`
+- [x] "Pagar / Registrar pago" CTA on the pay-hero (currently display-only) · `nav`
 - [ ] Edit-limit CTA on the credit-limit panel (currently read-only) · `write`
-- [ ] "View all periods" link → periods list · `nav`
+- [x] "View all periods" link → periods list · `nav`
 - [ ] Inactive-card banner when archived · `read`
 
 ### Card edit (`/cards/[id]/edit`)
-- [ ] Edit form (name, institution, credit limit) · `write`
-- [ ] Billing-cycle date editing (paid periods blocked) · `write`
+- [x] Edit form (name, institution, credit limit) · `write`
+- [x] Billing-cycle date editing (paid periods blocked) · `write`
 
-### Periods / statements (`/cards/[id]/periods`, period overview) — _no route_
-> Note: the card detail **already shows period *movements*** (`PeriodMovementsPane` in the detail's
-> movements tab) — that's not the gap. What's missing is the **dedicated periods/statement route
-> surface**: a list of past/upcoming statements and a per-period overview.
-- [ ] Periods list (paginated, status badges, estimated-date badges) · `nav`
-- [ ] Period detail / overview page · `nav`
-- [ ] Period amount summary (ARS + USD, paid vs pending) · `read`
-- [ ] Payment status indicator ("Pagado en…") · `read`
-- [ ] Edit period dates (validated; blocked when paid) · `write`
+### Periods / statements (`/cards/[id]/periods`, period overview) — ✅ _shipped_
+> The dedicated periods list and per-period statement detail (amount summary, movements, pay CTA,
+> edit-dates sheet) now exist as nested routes.
+- [x] Periods list (paginated, status badges, estimated-date badges) · `nav`
+- [x] Period detail / overview page · `nav`
+- [x] Period amount summary (ARS + USD, paid vs pending) · `read`
+- [x] Payment status indicator ("Pagado en…") · `read`
+- [x] Edit period dates (validated; blocked when paid) · `write`
 
-### Pay statement (`/cards/[id]/periods/[periodId]/pay`) — _no route; biggest single flow_
-- [ ] Pay form page + statement context header · `write`
-- [ ] Pending amount display (ARS big, USD subordinate) · `read`
-- [ ] Stamp tax (impuesto de sellos) auto-suggest / manual · `write`
-- [ ] USD FX-rate input (fx_rate_to_ars) when USD pending · `write`
-- [ ] Debit account selector (defaults to card's own bank) · `write`
-- [ ] Payment date picker · `write`
-- [ ] Running-period date confirmation (next end/due, editable) · `write`
-- [ ] Negative-balance warning · `read`
-- [ ] Submit payment · `write`
+### Pay statement (`/cards/[id]/periods/[periodId]/pay`) — ✅ _shipped_
+- [x] Pay form page + statement context header · `write`
+- [x] Pending amount display (ARS big, USD subordinate) · `read`
+- [x] Stamp tax (impuesto de sellos) auto-suggest / manual · `write`
+- [x] USD FX-rate input (fx_rate_to_ars) when USD pending · `write`
+- [x] Debit account selector (defaults to card's own bank) · `write`
+- [x] Payment date picker · `write`
+- [x] Running-period date confirmation (next end/due, editable) · `write`
+- [x] Negative-balance warning · `read`
+- [x] Submit payment · `write`
 
 ---
 
-## 3. Transactions — recurring management _missing_
+## 3. Transactions — ✅ _recurring management shipped_
 
-The create form can toggle "repetir" at creation, but there is **no management surface** for
-existing rules.
+The recurring hub, rule detail (with generated-instance history), create-from-scratch and edit
+forms all shipped (`mobile-recurring-hub` + `mobile-recurring-form`, 2026-07-19). Only the
+upcoming-occurrences projection card remains.
 
-### Recurring hub (`/transactions/recurring`) — _no route_
-- [ ] Recurring hub entry point · `nav`
-- [ ] Create a recurrence directly (frequency, amount, category, account, sharing) · `write`
-- [ ] Status tabs (active / paused / finished) · `read`
-- [ ] Recurrence detail page (`/transactions/recurring/[id]`) · `nav`
-- [ ] Edit a recurrence · `write`
-- [ ] Pause / resume · `write`
-- [ ] Delete (with confirmation) · `write`
-- [ ] Instances list (all occurrences, drillable) · `nav`
+### Recurring hub (`/transactions/recurring`) — ✅ _shipped_
+- [x] Recurring hub entry point · `nav`
+- [x] Create a recurrence directly (frequency, amount, category, account, sharing) · `write`
+- [x] Status tabs (active / paused / finished) · `read`
+- [x] Recurrence detail page (`/transactions/recurring/[id]`) · `nav`
+- [x] Edit a recurrence · `write`
+- [x] Pause / resume · `write`
+- [x] Delete (with confirmation) · `write`
+- [x] Instances list (all occurrences, drillable) · `nav`
 - [ ] Upcoming-occurrences projection card · `read`
 
 ---
 
 ## 4. Transactions — feed & detail extras
 
-Core loop (feed → create → detail → edit → delete) is **done**. These are the deferred extras.
+Core loop (feed → create → detail → edit → delete) is **done**, and the pending-recurrence /
+pending-reimbursement blocks + suggestion banner shipped. What remains: filters, search, category
+breakdown, and the movement-detail context tiles.
 
 ### Feed / list page (`/transactions`)
 - [ ] Filters: type, category, subcategory, account, currency, amount range · `read`
@@ -184,9 +188,9 @@ Core loop (feed → create → detail → edit → delete) is **done**. These ar
 - [ ] Toggle "show shared movements" — web persists the choice (localStorage `grana:tx:showShared`, default on) · `read`
 - [ ] Monthly spending overview (donut) with income/expense mode toggle · `read`
 - [ ] Category spending ranking + drill-down · `read`
-- [ ] Recurrence-suggestion banner · `nav`
-- [ ] Pending recurrence instances block (confirm auto-generated tx) · `read`/`write`
-- [ ] Pending **reimbursements** block (confirm/cancel a reintegro) · `write`
+- [x] Recurrence-suggestion banner · `nav`
+- [x] Pending recurrence instances block (confirm auto-generated tx) · `read`/`write`
+- [x] Pending **reimbursements** block (confirm/cancel a reintegro) · `write`
 
 ### Movement detail (`/transactions/[txId]`)
 - [ ] "Peso en el mes" (month-weight) ring · `read`
@@ -194,8 +198,9 @@ Core loop (feed → create → detail → edit → delete) is **done**. These ar
 - [ ] Recurrence history (last-6 bar chart) · `read`
 - [ ] Link to parent recurrence rule · `nav`
 
-> Note: `confirm/cancel a reimbursement` is the one genuine **write** capability hiding in the feed
-> extras — it's the mobile counterpart to declaring a reintegro (which mobile can already do).
+> Note: `confirm/cancel a reimbursement` (the one genuine **write** in the feed extras) shipped in
+> `mobile-reimbursement-confirm-cancel` — the mobile feed now has an actionable "Reintegros a
+> confirmar" block.
 
 ---
 

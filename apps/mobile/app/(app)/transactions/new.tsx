@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
-import { useFocusEffect, useRouter } from 'expo-router'
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { getAccounts } from '@grana/accounts'
 import { getTodayAR } from '@grana/money-logic'
@@ -29,6 +29,8 @@ const activeCodes = (currencies: AccountCurrency[]): ('ARS' | 'USD')[] =>
 export default function NewMovementScreen() {
   const t = useT()
   const router = useRouter()
+  // Deep-link preselection (e.g. register-first-purchase from a card detail).
+  const { presetAccount } = useLocalSearchParams<{ presetAccount?: string }>()
 
   // Form-scoped key OUTSIDE the ['accounts'] prefix: the accounts screens cache
   // cash/bank-only under `accountKeys.list` (different shape), and the
@@ -132,6 +134,7 @@ export default function NewMovementScreen() {
             accounts={accounts}
             categories={categoriesQ.data}
             household={householdQ.data}
+            preselectAccountId={presetAccount}
             onDone={() => router.back()}
           />
         )}

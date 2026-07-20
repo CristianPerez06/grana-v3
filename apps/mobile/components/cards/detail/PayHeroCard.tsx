@@ -12,14 +12,23 @@ type Props = {
   selected: boolean
   showCents?: boolean
   onSelect: () => void
+  /** Present ⇒ renders the "Pagar resumen" CTA that opens the pay flow. */
+  onPay?: () => void
 }
 
 /**
- * Terracota hero for the statement that must be paid. Read-only v1: the big ARS
- * amount (USD subordinate), close/due dates and the countdown — but NO "Registrar
- * pago" CTA (the payment flow is a follow-up change). Tapping selects the period.
+ * Terracota hero for the statement that must be paid: the big ARS amount (USD
+ * subordinate), close/due dates and the countdown. Tapping the body selects the
+ * period; the "Pagar resumen" CTA (when `onPay` is passed) opens the pay flow.
  */
-export const PayHeroCard = ({ period, daysToDue, selected, showCents = false, onSelect }: Props) => {
+export const PayHeroCard = ({
+  period,
+  daysToDue,
+  selected,
+  showCents = false,
+  onSelect,
+  onPay,
+}: Props) => {
   const t = useT()
   const overdue = daysToDue < 0
 
@@ -69,6 +78,19 @@ export const PayHeroCard = ({ period, daysToDue, selected, showCents = false, on
           </>
         )}
       </View>
+
+      {onPay && (
+        <Pressable
+          onPress={onPay}
+          accessibilityRole="button"
+          className="mt-4 w-full items-center justify-center rounded-xl py-3"
+          style={{ backgroundColor: detailColors.terracotta }}
+        >
+          <Text className="text-base font-semibold text-white">
+            {t('cards.actions.pay_statement')}
+          </Text>
+        </Pressable>
+      )}
     </Pressable>
   )
 }

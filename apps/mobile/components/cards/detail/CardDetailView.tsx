@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
+import type { FinancialMovement } from '@grana/transactions'
 import type { CardDetailViewModel, PeriodKey } from '@grana/cards'
 import { useShowCents } from '../../../lib/preferences-context'
 import { useT } from '../../../lib/locale-context'
@@ -18,17 +19,29 @@ type Props = {
   vm: CardDetailViewModel
   /** Financial "today" (from getTodayAR) — feeds the pane's date group labels. */
   todayISO: string
+  /** Open the pay flow for the "a pagar" statement. Wires the hero's Pay CTA. */
+  onPayApagar?: () => void
+  /** Open the full periods list. */
+  onOpenPeriods?: () => void
+  /** Navigate to a movement's detail on tap in the movements pane. */
+  onPressMovement?: (movement: FinancialMovement) => void
 }
 
 /**
- * Native read-only orchestrator for the active card detail (mirror of the web
- * `CardDetailView`, minus writes). Holds the selected statement so the timeline
- * and heroes stay in sync, plus a `[Movimientos | Cuotas]` segmented (default
- * Movimientos) that shows the selected period's movements pane or the active
- * installments. The "a pagar" hero is display-only. Default focus: "a pagar" if
- * it exists, else "en curso".
+ * Native orchestrator for the active card detail (mirror of the web
+ * `CardDetailView`). Holds the selected statement so the timeline and heroes stay
+ * in sync, plus a `[Movimientos | Cuotas]` segmented (default Movimientos) that
+ * shows the selected period's movements pane or the active installments. The
+ * "a pagar" hero exposes the Pay CTA. Default focus: "a pagar" if it exists, else
+ * "en curso".
  */
-export const CardDetailView = ({ vm, todayISO }: Props) => {
+export const CardDetailView = ({
+  vm,
+  todayISO,
+  onPayApagar,
+  onOpenPeriods,
+  onPressMovement,
+}: Props) => {
   const t = useT()
   const showCents = useShowCents()
   const [periodo, setPeriodo] = useState<PeriodKey>(vm.apagar ? 'apagar' : 'curso')
@@ -70,6 +83,7 @@ export const CardDetailView = ({ vm, todayISO }: Props) => {
               selected={active === 'apagar'}
               showCents={showCents}
               onSelect={() => selectPeriod('apagar')}
+              onPay={onPayApagar}
             />
             <EnCursoCard
               period={vm.curso}
@@ -141,6 +155,7 @@ export const CardDetailView = ({ vm, todayISO }: Props) => {
           period={selectedPeriod}
           periodKey={active}
           todayISO={todayISO}
+          onPressMovement={onPressMovement}
         />
       ) : (
         <CuotasEnCursoPane
@@ -149,6 +164,18 @@ export const CardDetailView = ({ vm, todayISO }: Props) => {
           accent={vm.accent}
           showCents={showCents}
         />
+      )}
+
+      {onOpenPeriods && (
+        <Pressable
+          onPress={onOpenPeriods}
+          accessibilityRole="button"
+          className="items-center justify-center rounded-xl border border-border bg-card py-3"
+        >
+          <Text className="text-sm font-semibold text-text-muted">
+            {t('cards.actions.view_all_periods')}
+          </Text>
+        </Pressable>
       )}
     </View>
   )

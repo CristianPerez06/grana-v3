@@ -1,4 +1,5 @@
 import { Text, View } from 'react-native'
+import type { FinancialMovement } from '@grana/transactions'
 import type { LifecyclePeriod, PeriodKey } from '@grana/cards'
 import { cardPeriodTransactionToMovement, installmentChip } from '@grana/cards'
 import { useT } from '../../../lib/locale-context'
@@ -9,6 +10,8 @@ type Props = {
   period: LifecyclePeriod
   periodKey: PeriodKey
   todayISO: string
+  /** Present ⇒ rows navigate to the movement detail on tap. */
+  onPressMovement?: (movement: FinancialMovement) => void
 }
 
 /**
@@ -19,7 +22,13 @@ type Props = {
  * "Sin movimientos". No reads: `period.transactions` already ships in
  * `CardPeriodDetail`.
  */
-export function PeriodMovementsPane({ cardId, period, periodKey, todayISO }: Props) {
+export function PeriodMovementsPane({
+  cardId,
+  period,
+  periodKey,
+  todayISO,
+  onPressMovement,
+}: Props) {
   const t = useT()
 
   const periodLabel = t(`cards.detail.period_label_${periodKey}`)
@@ -37,6 +46,7 @@ export function PeriodMovementsPane({ cardId, period, periodKey, todayISO }: Pro
       todayISO={todayISO}
       installmentChips={chips}
       groupByDate
+      onPressMovement={onPressMovement}
       emptyState={{
         title: t('cards.detail.movements_empty_title'),
         body: t('cards.detail.movements_empty_body'),

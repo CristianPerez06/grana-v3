@@ -53,6 +53,8 @@ type Props = {
   household: Household | null
   /** Present ⇒ the form is in edit mode (tabs hidden, fields gated). */
   edit?: MovementEditContext
+  /** Preselect this account/card on a fresh create form (e.g. register-first-purchase). */
+  preselectAccountId?: string
   onDone: () => void
 }
 
@@ -65,7 +67,14 @@ type Props = {
  * gated by `edit.editableFields`. The hook owns all state/cascades/submit; this
  * file only paints it and wires the native mutators + cache invalidation.
  */
-export function MovementForm({ accounts, categories, household, edit, onDone }: Props) {
+export function MovementForm({
+  accounts,
+  categories,
+  household,
+  edit,
+  preselectAccountId,
+  onDone,
+}: Props) {
   const t = useT()
   const queryClient = useQueryClient()
   const mutators = useMemo(() => createMovementMutators(t), [t])
@@ -75,6 +84,7 @@ export function MovementForm({ accounts, categories, household, edit, onDone }: 
     accounts,
     categories,
     edit,
+    preselectAccountId,
     household,
     today: getTodayAR(),
     // Hook keys are relative to the `transactions` namespace (web wires this
