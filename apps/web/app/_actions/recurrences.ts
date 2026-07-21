@@ -8,7 +8,7 @@ import {
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateDueRecurrenceInstances } from '@/lib/recurrences/queries'
-import { getHousehold } from '@/lib/shared/queries'
+import { getHousehold } from '@grana/shared'
 import {
   type AcceptRecurrenceSuggestionInput,
   type ConfirmRecurrenceInstanceInput,

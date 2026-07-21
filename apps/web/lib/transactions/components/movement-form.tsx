@@ -73,7 +73,7 @@ import { CategorySuggestionChip } from '@/lib/transactions/components/category-s
 import { CategorySuggestionHint } from '@/lib/transactions/components/category-suggestion-hint'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
-import type { Household } from '@/lib/shared/types'
+import type { Household } from '@grana/shared'
 
 const todayStr = (): string => formatDateISO(getTodayAR())
 

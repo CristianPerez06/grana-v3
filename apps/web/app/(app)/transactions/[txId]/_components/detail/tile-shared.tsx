@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { useShowCents } from '@/lib/preferences-context'
-import type { MovementSharedInfo } from '@/lib/shared/queries'
+import type { MovementSharedInfo } from '@grana/shared'
 import { Tile, TileHead } from './glance'
 import { fmtMoney } from './helpers'
 

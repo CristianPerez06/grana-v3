@@ -99,18 +99,12 @@ export type EditReimbursement = {
   cardPeriodId: string | null
 }
 
-export type HouseholdMember = {
-  userId: string
-  fullName: string
-  isCreator: boolean
-}
-
-export type Household = {
-  id: string
-  name: string
-  members: HouseholdMember[]
-  defaultSplit: { user_id: string; percentage: number }[]
-}
+// Canonical definition lives in @grana/ui-contracts (single home across web,
+// mobile and @grana/shared). Imported for local use in this file's types and
+// re-exported so movement-form's existing consumers keep importing `Household`
+// from this package unchanged.
+import type { Household, HouseholdMember } from '@grana/ui-contracts'
+export type { Household, HouseholdMember }
 
 export type CategorySubcategory = {
   id: string

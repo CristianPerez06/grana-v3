@@ -13,7 +13,7 @@ import {
 import { toFinancialMovement } from '@/lib/transactions/movements'
 import { getCardPeriodDetail } from '@/lib/cards/queries'
 import { getRecurrenceDetail, getRecurrenceLinkForTransaction } from '@/lib/recurrences/queries'
-import { getMovementSharedInfo } from '@/lib/shared/queries'
+import { getMovementSharedInfo } from '@grana/shared'
 import { buildMovementEditContext } from '@/lib/transactions/edit-context'
 import { GlobalTransactionDetail } from './_components/global-transaction-detail'
 import { summarizeRecurrence } from './_components/detail/recurrence-summary'

@@ -8,7 +8,7 @@ import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { assignSettlementAccount } from '@/app/_actions/shared'
-import type { PendingSettlement } from '@/lib/shared/types'
+import type { PendingSettlement } from '@grana/shared'
 import type { BalanceCurrency } from '@grana/money-logic'
 import { fmtMoney } from './money'
 

@@ -637,3 +637,25 @@ export type SwitchProps = {
   ariaLabel: string
   className?: string
 }
+
+// ── Household (Compartido domain shape) ───────────────────────────────────────
+
+// The active shared household as consumed by the UI (movement form's "Compartir"
+// toggle, the settings split editor, the Hogar module). Canonical home for this
+// shape: `@grana/movement-form` and `@grana/shared` both re-export it from here,
+// so there is exactly one definition across web + mobile. Not a component prop
+// contract, but the neutral cross-package shape home — same role this package
+// already plays for `AccountAvatarInput` and friends.
+
+export type HouseholdMember = {
+  userId: string
+  fullName: string
+  isCreator: boolean
+}
+
+export type Household = {
+  id: string
+  name: string
+  members: HouseholdMember[]
+  defaultSplit: { user_id: string; percentage: number }[]
+}

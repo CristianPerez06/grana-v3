@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentAccount } from '@/lib/shared/queries'
+import { getCurrentAccount } from '@grana/shared'
 import { CurrentAccountView } from './_components/current-account-view'
 
 export default async function CuentaCorrientePage() {

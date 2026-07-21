@@ -1,9 +1,10 @@
-import type { DbClient } from '@/lib/supabase/db-client'
-import { formatDateISO, getTodayAR } from '@/lib/date'
+import type { GranaSupabaseClient } from '@grana/supabase'
 import {
   computeHouseholdBalances,
   deriveCurrentAccount,
+  formatDateISO,
   gateSplit,
+  getTodayAR,
   householdDebtAt,
   householdOutlook,
   type BalanceCurrency,
@@ -23,7 +24,7 @@ import type {
 const CURRENCIES: BalanceCurrency[] = ['ARS', 'USD']
 const isBalanceCurrency = (c: string): c is BalanceCurrency => c === 'ARS' || c === 'USD'
 
-async function currentUserId(supabase: DbClient): Promise<string | null> {
+async function currentUserId(supabase: GranaSupabaseClient): Promise<string | null> {
   // Locally-verified claims (no network getUser): the id is only used to
   // filter own rows, which RLS already enforces.
   const { data } = await supabase.auth.getClaims()
@@ -33,7 +34,7 @@ async function currentUserId(supabase: DbClient): Promise<string | null> {
 // ── getHousehold ──────────────────────────────────────────────────────────────
 
 /** The current user's active household (members + default split), or null. */
-export async function getHousehold(supabase: DbClient): Promise<Household | null> {
+export async function getHousehold(supabase: GranaSupabaseClient): Promise<Household | null> {
   const userId = await currentUserId(supabase)
   if (!userId) return null
 
@@ -100,7 +101,7 @@ export async function getHousehold(supabase: DbClient): Promise<Household | null
  * deferring impacted movements.
  */
 async function collectDebtInputs(
-  supabase: DbClient,
+  supabase: GranaSupabaseClient,
   householdId: string,
 ): Promise<{ projectable: ProjectableSplit[]; settlements: DebtSettlement[] }> {
   const { data: splitRows } = await supabase
@@ -248,7 +249,7 @@ function nextMonths(fromYm: string, count: number): string[] {
 /** Net pairwise debt per currency, derived from splits + settlements, at `asOf`
  *  (defaults to today). */
 export async function getHouseholdDebt(
-  supabase: DbClient,
+  supabase: GranaSupabaseClient,
   asOf?: string,
 ): Promise<DebtByCurrency | null> {
   const household = await getHousehold(supabase)
@@ -270,7 +271,7 @@ export async function getHouseholdDebt(
 /** Per-month projection of what enters the debt in the next `monthsAhead`
  *  months, per currency. The current user is member A. */
 export async function getHouseholdOutlook(
-  supabase: DbClient,
+  supabase: GranaSupabaseClient,
   monthsAhead = 3,
 ): Promise<Record<BalanceCurrency, OutlookMonth[]> | null> {
   const household = await getHousehold(supabase)
@@ -320,7 +321,7 @@ export type CurrentAccountData = {
  * derived ledger (extracto + ecuación + saldo) plus the forward projection. The
  * ledger derivation is pure (`deriveCurrentAccount`); here we only gather inputs.
  */
-export async function getCurrentAccount(supabase: DbClient): Promise<CurrentAccountData | null> {
+export async function getCurrentAccount(supabase: GranaSupabaseClient): Promise<CurrentAccountData | null> {
   const household = await getHousehold(supabase)
   if (!household || household.members.length < 2) return null
 
@@ -375,7 +376,7 @@ export async function getCurrentAccount(supabase: DbClient): Promise<CurrentAcco
 // ── getPendingSettlements ─────────────────────────────────────────────────────
 
 /** Settlements awaiting the current user (receiver) to assign an account. */
-export async function getPendingSettlements(supabase: DbClient): Promise<PendingSettlement[]> {
+export async function getPendingSettlements(supabase: GranaSupabaseClient): Promise<PendingSettlement[]> {
   const userId = await currentUserId(supabase)
   if (!userId) return []
 
@@ -435,7 +436,7 @@ type TaxonomyHandle = { name: string; canonical_name: string; user_id: string | 
  * `getHouseholdDebt`/`getHouseholdOutlook`. This is the spending clock only.
  */
 export async function getSharedAccruedMovements(
-  supabase: DbClient,
+  supabase: GranaSupabaseClient,
   month: string,
 ): Promise<SharedExpenseItem[]> {
   const userId = await currentUserId(supabase)
@@ -570,7 +571,7 @@ export type MovementSharedInfo = {
  * when the movement is not shared (or has no splits).
  */
 export async function getMovementSharedInfo(
-  supabase: DbClient,
+  supabase: GranaSupabaseClient,
   transactionId: string,
   isParent: boolean,
 ): Promise<MovementSharedInfo | null> {
@@ -628,7 +629,7 @@ export async function getMovementSharedInfo(
  * served here — it has its own clock and grouping in `getSharedAccruedExpenses`.
  */
 export async function getSharedExpenses(
-  supabase: DbClient,
+  supabase: GranaSupabaseClient,
   opts: { limit?: number; month?: string } = {},
 ): Promise<SharedExpenseItem[]> {
   const { limit = 20, month } = opts

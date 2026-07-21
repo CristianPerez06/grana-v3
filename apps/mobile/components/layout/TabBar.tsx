@@ -14,6 +14,12 @@ const CHROMELESS_SECTIONS: readonly string[] = ['accounts', 'cards']
 // read as a dedicated full-screen flow, not "still in the tab".
 const CHROMELESS_SCREENS: readonly (readonly [parent: string, screen: string])[] = [
   ['transactions', 'new'],
+  // Hogar (Compartido) sub-screens pushed over the home tab — each reads as a
+  // dedicated full-screen flow, like `/transactions/new`. Setup is not here:
+  // it renders inline in the home tab's no-household state (mirrors web).
+  ['home', 'settle'],
+  ['home', 'settings'],
+  ['home', 'cuenta-corriente'],
 ]
 
 type TabRoute = { key: string; name: string }
@@ -38,7 +44,7 @@ type SlotConfig = {
 const SLOT_CONFIG: Record<string, SlotConfig> = {
   dashboard: { kind: 'tab', icon: Home, labelKey: 'nav.dashboard' },
   transactions: { kind: 'tab', icon: List, labelKey: 'nav.movements' },
-  home: { kind: 'tab-disabled', icon: Users, labelKey: 'nav.home' },
+  home: { kind: 'tab', icon: Users, labelKey: 'nav.home' },
   menu: { kind: 'menu' },
 }
 

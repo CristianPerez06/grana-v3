@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { PageHeader } from '@/components/ui/page-header'
-import { getHousehold } from '@/lib/shared/queries'
+import { getHousehold } from '@grana/shared'
 import { createClient } from '@/lib/supabase/server'
 
 const CuentaCorrienteLayout = async ({ children }: { children: React.ReactNode }) => {

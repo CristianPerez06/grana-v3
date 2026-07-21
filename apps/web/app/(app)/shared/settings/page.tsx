@@ -1,4 +1,4 @@
-import { getHousehold } from '@/lib/shared/queries'
+import { getHousehold } from '@grana/shared'
 import { SettingsForm } from './_components/settings-form'
 import { createClient } from '@/lib/supabase/server'
 

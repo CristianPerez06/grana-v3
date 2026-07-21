@@ -1,4 +1,4 @@
-import { getHousehold, getHouseholdDebt } from '@/lib/shared/queries'
+import { getHousehold, getHouseholdDebt } from '@grana/shared'
 import { createClient } from '@/lib/supabase/server'
 import { SharedStrip, type SharedNet } from './shared-strip'
 

@@ -10,7 +10,7 @@ import { RegisterMovementButton } from '@/lib/transactions/components/register-m
 import { createClient } from '@/lib/supabase/client'
 import { getAccounts } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
-import { getHousehold } from '@/lib/shared/queries'
+import { getHousehold } from '@grana/shared'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 
 /**

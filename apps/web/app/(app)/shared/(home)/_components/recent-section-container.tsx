@@ -2,8 +2,7 @@ import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { formatDateISO, getTodayAR } from '@/lib/date'
-import { getSharedExpenses } from '@/lib/shared/queries'
-import type { SharedExpenseItem } from '@/lib/shared/types'
+import { getSharedExpenses, type SharedExpenseItem } from '@grana/shared'
 import { RecentSection } from './recent-section'
 
 // Server-renders the current month; the list then follows the header's shared

@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getAccounts } from '@/lib/accounts/queries'
-import { getHousehold, getHouseholdDebt } from '@/lib/shared/queries'
+import { getHousehold, getHouseholdDebt } from '@grana/shared'
 import type { BalanceCurrency } from '@grana/money-logic'
 import { SettleForm } from './_components/settle-form'
 

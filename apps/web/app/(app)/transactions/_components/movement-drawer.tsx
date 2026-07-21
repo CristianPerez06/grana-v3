@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import { Drawer } from '@/components/ui/drawer'
 import { MovementDrawerContext } from '@/lib/transactions/movement-drawer-context'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
-import type { Household } from '@/lib/shared/types'
+import type { Household } from '@grana/shared'
 import { MovementForm, type MovementFormAccount } from '@/lib/transactions/components/movement-form'
 
 type Props = {

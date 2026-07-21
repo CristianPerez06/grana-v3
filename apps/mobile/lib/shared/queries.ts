@@ -1,133 +1,81 @@
-import type { Household } from '@grana/movement-form'
-import { supabase } from '../supabase'
+// Shared/Compartido read layer for mobile. The query bodies and debt/ledger
+// derivation live in `@grana/shared` (shared with web); these wrappers inject
+// the native Supabase client and keep the app's signatures. Types are
+// re-exported so the rest of the mobile app keeps importing them from here.
+// Same pattern as `lib/cards/queries.ts` and `lib/transactions/queries.ts`.
 
-// Thin, form-only household read — the mobile mirror of web's `getHousehold`
-// (`apps/web/lib/shared/queries.ts`), narrowed to exactly what the movement
-// form needs to populate the `Household` shape and enable the "Compartir gasto"
-// toggle. The full Hogar module (`/shared/*`: debt, settlements, outlook) stays
-// web-only for now.
-//
-// Extraction trigger: when the mobile Hogar module lands (parity backlog gap 3),
-// that second real consumer forces this read into a shared `@grana/*` package —
-// the same way the mobile Movimientos tab forced the global-feed read out of
-// `apps/web/lib/`. Until then a thin mirror of one stable-shaped query beats
-// standing up a shared household package prematurely.
+import { supabase } from '../supabase'
+import {
+  getHousehold as getHouseholdImpl,
+  getHouseholdDebt as getHouseholdDebtImpl,
+  getHouseholdOutlook as getHouseholdOutlookImpl,
+  getCurrentAccount as getCurrentAccountImpl,
+  getPendingSettlements as getPendingSettlementsImpl,
+  getSharedAccruedMovements as getSharedAccruedMovementsImpl,
+  getMovementSharedInfo as getMovementSharedInfoImpl,
+  getSharedExpenses as getSharedExpensesImpl,
+} from '@grana/shared'
+import type {
+  Household,
+  HouseholdMember,
+  DebtByCurrency,
+  PendingSettlement,
+  SharedExpenseItem,
+  CurrentAccountData,
+  MovementSharedInfo,
+} from '@grana/shared'
+
+export type {
+  Household,
+  HouseholdMember,
+  DebtByCurrency,
+  PendingSettlement,
+  SharedExpenseItem,
+  CurrentAccountData,
+  MovementSharedInfo,
+}
 
 /** The current user's active household (members + default split), or null. */
-export async function getHousehold(): Promise<Household | null> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
-  const userId = user.id
-
-  const { data: membership } = await supabase
-    .from('household_member')
-    .select('household_id')
-    .eq('user_id', userId)
-    .maybeSingle()
-  if (!membership) return null
-
-  const { data: hh } = await supabase
-    .from('household')
-    .select('id, name, default_split, created_by, is_active')
-    .eq('id', membership.household_id)
-    .maybeSingle()
-  if (!hh || !hh.is_active) return null
-
-  const { data: members } = await supabase
-    .from('household_member')
-    .select('user_id')
-    .eq('household_id', hh.id)
-  const ids = (members ?? []).map((m) => m.user_id)
-
-  // Co-member profiles are readable thanks to the 0024 profile-read policy.
-  const { data: profiles } = await supabase.from('profiles').select('id, full_name').in('id', ids)
-  const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]))
-
-  const defaultSplit = Array.isArray(hh.default_split)
-    ? (hh.default_split as { user_id: string; percentage: number }[])
-    : []
-
-  // Current user first: the split UI treats `members[0]` as "you" (it labels the
-  // editable share box and the "dividir con {members[1]}" hint positionally).
-  // DB order is creation order, so without this the member who joined second
-  // would see the other member's name in the "you" slot.
-  const orderedIds = [userId, ...ids.filter((id) => id !== userId)]
-
-  return {
-    id: hh.id,
-    name: hh.name,
-    defaultSplit,
-    members: orderedIds.map((id) => ({
-      userId: id,
-      fullName: nameById.get(id) ?? '',
-      isCreator: id === hh.created_by,
-    })),
-  }
+export function getHousehold(): Promise<Household | null> {
+  return getHouseholdImpl(supabase)
 }
 
-// ── getMovementSharedInfo ─────────────────────────────────────────────────────
-// Thin mobile mirror of web's `getMovementSharedInfo` (`apps/web/lib/shared/queries.ts`),
-// feeding the "reparto compartido" tile of the movement detail. Same extraction
-// trigger as `getHousehold` above: it folds into a shared `@grana/*` package when
-// the mobile Hogar module lands. Reuses the local `getHousehold` for member names.
-
-export type MovementSharedInfo = {
-  ownShare: number
-  /** The OTHER members' shares (the current user is shown separately as "Tu parte"). */
-  bySplit: { userId: string; name: string; amount: number }[]
+/** Net pairwise debt per currency at `asOf` (defaults to today). */
+export function getHouseholdDebt(asOf?: string): Promise<DebtByCurrency | null> {
+  return getHouseholdDebtImpl(supabase, asOf)
 }
 
-/**
- * Split info for a movement detail. For an installment parent it aggregates the
- * children's splits; for a simple/child movement it reads its own. Returns null
- * when the movement is not shared (or has no splits).
- */
-export async function getMovementSharedInfo(
+/** Per-month projection of what enters the debt in the next `monthsAhead` months. */
+export function getHouseholdOutlook(monthsAhead = 3) {
+  return getHouseholdOutlookImpl(supabase, monthsAhead)
+}
+
+/** The household current account (extracto + ecuación + saldo + projection). */
+export function getCurrentAccount(): Promise<CurrentAccountData | null> {
+  return getCurrentAccountImpl(supabase)
+}
+
+/** Settlements awaiting the current user (receiver) to assign an account. */
+export function getPendingSettlements(): Promise<PendingSettlement[]> {
+  return getPendingSettlementsImpl(supabase)
+}
+
+/** Shared movements of the household scoped by DEVENGADO for the month. */
+export function getSharedAccruedMovements(month: string): Promise<SharedExpenseItem[]> {
+  return getSharedAccruedMovementsImpl(supabase, month)
+}
+
+/** Split info for a movement detail (own share + other members' shares). */
+export function getMovementSharedInfo(
   transactionId: string,
   isParent: boolean,
 ): Promise<MovementSharedInfo | null> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
-  const userId = user.id
+  return getMovementSharedInfoImpl(supabase, transactionId, isParent)
+}
 
-  let ids = [transactionId]
-  if (isParent) {
-    const { data: children } = await supabase
-      .from('transactions')
-      .select('id')
-      .eq('parent_id', transactionId)
-    ids = (children ?? []).map((c) => c.id)
-  }
-  if (!ids.length) return null
-
-  const { data: splits } = await supabase
-    .from('shared_expense_split')
-    .select('user_id, amount_assigned')
-    .in('transaction_id', ids)
-  if (!splits?.length) return null
-
-  const byUser = new Map<string, number>()
-  for (const s of splits) {
-    byUser.set(s.user_id, (byUser.get(s.user_id) ?? 0) + Number(s.amount_assigned))
-  }
-
-  const household = await getHousehold()
-  const nameById = new Map((household?.members ?? []).map((m) => [m.userId, m.fullName]))
-
-  return {
-    ownShare: byUser.get(userId) ?? 0,
-    // Exclude the current user: their share is surfaced separately as "Tu parte",
-    // so listing them again by name would duplicate the figure.
-    bySplit: [...byUser]
-      .filter(([uid]) => uid !== userId)
-      .map(([uid, amount]) => ({
-        userId: uid,
-        name: nameById.get(uid) ?? '',
-        amount,
-      })),
-  }
+/** Recent shared expenses with this user's share (by month, or latest `limit`). */
+export function getSharedExpenses(
+  opts: { limit?: number; month?: string } = {},
+): Promise<SharedExpenseItem[]> {
+  return getSharedExpensesImpl(supabase, opts)
 }

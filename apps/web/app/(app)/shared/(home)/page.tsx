@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { getHousehold } from '@/lib/shared/queries'
+import { getHousehold } from '@grana/shared'
 import { Card } from '@/components/ui/card'
 import { InviteCard } from '../_components/invite-card'
 import { SetupForm } from '../setup/_components/setup-form'

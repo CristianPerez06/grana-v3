@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import type { BalanceCurrency, LedgerChange, LedgerEntry } from '@grana/money-logic'
 import { deleteSettlement } from '@/app/_actions/shared'
-import type { CurrentAccountData } from '@/lib/shared/queries'
+import type { CurrentAccountData } from '@grana/shared'
 import { fmtMoney } from '../../_components/money'
 
 const CURRENCIES: BalanceCurrency[] = ['ARS', 'USD']

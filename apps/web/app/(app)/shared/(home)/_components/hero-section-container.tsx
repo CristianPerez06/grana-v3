@@ -1,8 +1,7 @@
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { formatDateISO, getTodayAR } from '@/lib/date'
-import { getSharedAccruedMovements } from '@/lib/shared/queries'
-import type { SharedExpenseItem } from '@/lib/shared/types'
+import { getSharedAccruedMovements, type SharedExpenseItem } from '@grana/shared'
 import { HeroSection } from './hero-section'
 
 // Server-renders the current month; the hero then follows the header's shared

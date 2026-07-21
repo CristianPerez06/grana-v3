@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext } from 'react'
-import type { Household } from '@/lib/shared/types'
+import type { Household } from '@grana/shared'
 
 export type MovementDrawerContextValue = {
   /** Open the drawer in create mode, optionally pre-selecting an account. */

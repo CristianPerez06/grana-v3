@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { getPendingSettlements } from '@/lib/shared/queries'
+import { getPendingSettlements } from '@grana/shared'
 import { getAccounts } from '@/lib/accounts/queries'
 import { PendingSettlementCard } from '../../_components/pending-settlement-card'
 

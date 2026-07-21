@@ -26,6 +26,9 @@ importers:
       '@grana/dashboard':
         specifier: workspace:*
         version: link:../../packages/dashboard
+      '@grana/i18n-messages':
+        specifier: workspace:*
+        version: link:../../packages/i18n-messages
       '@grana/money-logic':
         specifier: workspace:*
         version: link:../../packages/money-logic
@@ -35,6 +38,9 @@ importers:
       '@grana/recurrences':
         specifier: workspace:*
         version: link:../../packages/recurrences
+      '@grana/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@grana/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -165,6 +171,9 @@ importers:
       '@grana/recurrences':
         specifier: workspace:*
         version: link:../../packages/recurrences
+      '@grana/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@grana/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -431,6 +440,21 @@ importers:
       vitest:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@20.19.41)(happy-dom@15.11.7)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.9.0)
+
+  packages/shared:
+    dependencies:
+      '@grana/money-logic':
+        specifier: workspace:*
+        version: link:../money-logic
+      '@grana/supabase':
+        specifier: workspace:*
+        version: link:../supabase
+      '@grana/ui-contracts':
+        specifier: workspace:*
+        version: link:../ui-contracts
+      '@grana/validation':
+        specifier: workspace:*
+        version: link:../validation
 
   packages/supabase:
     dependencies:

@@ -4,8 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import type { BalanceCurrency } from '@grana/money-logic'
 import { createClient } from '@/lib/supabase/client'
-import { getSharedAccruedMovements } from '@/lib/shared/queries'
-import type { SharedExpenseItem } from '@/lib/shared/types'
+import { getSharedAccruedMovements, type SharedExpenseItem } from '@grana/shared'
 import {
   groupSharedSpendingByCategory,
   sharedSpendingTotal,

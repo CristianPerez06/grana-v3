@@ -1,17 +1,9 @@
 import type { BalanceCurrency, PairwiseDebt } from '@grana/money-logic'
 
-export type HouseholdMember = {
-  userId: string
-  fullName: string
-  isCreator: boolean
-}
-
-export type Household = {
-  id: string
-  name: string
-  members: HouseholdMember[]
-  defaultSplit: { user_id: string; percentage: number }[]
-}
+// Canonical household types live in @grana/ui-contracts (single definition,
+// consumed by web, mobile and @grana/movement-form). Re-exported here so the
+// shared data layer is a one-stop import for the whole Compartido domain.
+export type { Household, HouseholdMember } from '@grana/ui-contracts'
 
 /** Pairwise debt per currency (ARS/USD never merged). */
 export type DebtByCurrency = Record<BalanceCurrency, PairwiseDebt>

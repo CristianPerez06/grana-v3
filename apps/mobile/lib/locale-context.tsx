@@ -3,7 +3,7 @@ import { defaultLocale, getLocale, setLocale as persistLocale, type Locale } fro
 import { translate } from './i18n'
 
 type Params = Record<string, string | number>
-type TFn = (path: string, params?: Params) => string
+export type TFn = (path: string, params?: Params) => string
 
 type LocaleContextValue = {
   locale: Locale

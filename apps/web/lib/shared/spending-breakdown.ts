@@ -1,5 +1,5 @@
 import type { BalanceCurrency } from '@grana/money-logic'
-import type { SharedExpenseItem } from './types'
+import type { SharedExpenseItem } from '@grana/shared'
 
 export type SharedCategoryGroup = {
   categoryId: string | null

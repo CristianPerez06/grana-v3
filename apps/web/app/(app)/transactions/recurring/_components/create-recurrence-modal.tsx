@@ -19,7 +19,7 @@ import {
   X,
 } from 'lucide-react'
 import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
-import type { Household } from '@/lib/shared/types'
+import type { Household } from '@grana/shared'
 import { Drawer } from '@/components/ui/drawer'
 import { Switch } from '@/components/ui/switch'
 import { Popover } from '@/components/ui/popover'

@@ -5,7 +5,7 @@ import {
   sharedReimbursementsTotal,
   sharedSpendingTotal,
 } from '../spending-breakdown'
-import type { SharedExpenseItem } from '../types'
+import type { SharedExpenseItem } from '@grana/shared'
 
 // Minimal factory — only the fields the breakdown reads.
 const item = (over: Partial<SharedExpenseItem>): SharedExpenseItem => ({

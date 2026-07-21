@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import { CreditCard, LogOut, PiggyBank, Settings, Wallet, X } from 'lucide-react-native'
+import { CreditCard, LogOut, Settings, Wallet, X } from 'lucide-react-native'
 import { supabase } from '../../lib/supabase'
 import { colors } from '../../lib/colors'
 import { useT } from '../../lib/locale-context'
@@ -56,7 +56,6 @@ export function AppMenu({ onClose }: Props) {
           label={t('nav.cards')}
           onPress={() => navigateAndClose('/cards')}
         />
-        <SheetItem Icon={PiggyBank} label={t('nav.savings')} onPress={onClose} comingSoon />
         <SheetItem
           Icon={Settings}
           label={t('nav.settings')}

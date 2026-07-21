@@ -5,7 +5,7 @@ import { getAllCategories } from '@/lib/categories/queries'
 import { getEditableFields } from '@grana/money-logic'
 import { resolveAccountAvatar } from '@grana/ui-contracts'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
-import type { Household } from '@/lib/shared/types'
+import type { Household } from '@grana/shared'
 import type {
   MovementEditContext,
   MovementFormAccount,
