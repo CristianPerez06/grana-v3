@@ -7,8 +7,8 @@ import { getTodayAR } from '@grana/money-logic'
 import { resolveAccountAvatar } from '@grana/ui-contracts'
 import type { MovementFormAccount } from '@grana/movement-form'
 import { PageHeader } from '../../../../components/ui/PageHeader'
-import { Spinner } from '../../../../components/ui/Spinner'
 import { MovementForm } from '../../../../components/transactions/MovementForm'
+import { MovementFormSkeleton } from '../../../../components/transactions/MovementFormSkeleton'
 import { getAllCategories } from '../../../../lib/categories'
 import { getHousehold } from '../../../../lib/shared/queries'
 import { buildMovementEditContext } from '../../../../lib/transactions/edit-context'
@@ -121,9 +121,7 @@ export default function EditMovementScreen() {
             </Text>
           </View>
         ) : !ready || !editQ.data ? (
-          <View className="items-center py-12">
-            <Spinner size="md" />
-          </View>
+          <MovementFormSkeleton variant="edit" />
         ) : (
           <MovementForm
             accounts={accounts}

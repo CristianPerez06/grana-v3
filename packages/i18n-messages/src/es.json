@@ -930,7 +930,8 @@
     "route": {
       "feed_loading": "Cargando tus movimientos…",
       "feed_error": "No pudimos cargar tus movimientos.",
-      "detail_loading": "Cargando el movimiento…"
+      "detail_loading": "Cargando el movimiento…",
+      "form_loading": "Cargando el formulario…"
     },
     "title": "Movimientos",
     "description": "Historial cronológico de ingresos, gastos, transferencias, ajustes y consumos.",
