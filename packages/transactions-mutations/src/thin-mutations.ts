@@ -667,6 +667,7 @@ export const DELETE_GUARD_CODES = {
   installmentChild: 'installment_child',
   paid: 'paid',
   settlement: 'settlement',
+  cardPayment: 'card_payment',
 } as const
 
 export async function deleteTransaction(
@@ -688,6 +689,18 @@ export async function deleteTransaction(
   // A settlement leg belongs to a household settlement — revert it from the
   // cuenta corriente, not here (deleting orphans the other member's leg).
   if (tx?.type === 'settlement') return { ok: false, errorCode: DELETE_GUARD_CODES.settlement }
+
+  // The payment of a card statement is the counterpart of an operation that also
+  // swept the whole statement to `paid` and may have registered a stamp tax.
+  // Deleting it in isolation is blocked by the RESTRICT FK on period_payments
+  // anyway; undoing it properly is a cards operation (revertCardPeriodPayment),
+  // from the period detail where the magnitude of the reversal is visible.
+  const { data: statementPayment } = await supabase
+    .from('period_payments')
+    .select('period_id')
+    .eq('transaction_id', id)
+    .maybeSingle()
+  if (statementPayment) return { ok: false, errorCode: DELETE_GUARD_CODES.cardPayment }
 
   const { error } = await supabase
     .from('transactions')

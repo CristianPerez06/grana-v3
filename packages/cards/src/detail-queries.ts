@@ -33,6 +33,16 @@ export type CardPeriodDetail = CardPeriodWithPayment & {
   /** Alícuota de sellos recordada de la tarjeta; null si todavía no se conoce. */
   stampTaxRate: number | null
   paymentDate: string | null
+  /** Monto del gasto-débito del pago — lo que vuelve a la cuenta si se deshace. */
+  paymentAmount: number | null
+  /** Nombre de la cuenta desde la que se pagó. */
+  paymentAccountName: string | null
+  /**
+   * El pago registró un impuesto de sellos vinculado. Solo es confiable para pagos
+   * posteriores a la migración 0050; en los viejos el vínculo no existe y la
+   * reversión resuelve el sello por heurística (ver `revertCardPeriodPayment`).
+   */
+  paymentHasStampTax: boolean
   paymentRecordId: string | null
   paymentExpenseId: string | null
   nextPeriodStart: string | null
@@ -175,17 +185,35 @@ export async function getCardPeriods(
   const { data: paymentRows, error: paymentError } = paidPeriodIds.length > 0
     ? await supabase
         .from('period_payments')
-        .select('id, period_id, transaction_id, transactions!transaction_id(date)')
+        .select(
+          'id, period_id, transaction_id, stamp_tax_transaction_id, transactions!transaction_id(date, amount, account:accounts(name))',
+        )
         .in('period_id', paidPeriodIds)
     : { data: [], error: null }
 
   if (paymentError) throw paymentError
 
-  type PaymentInfo = { date: string | null; recordId: string; expenseId: string }
+  type PaymentInfo = {
+    date: string | null
+    amount: number | null
+    accountName: string | null
+    hasStampTax: boolean
+    recordId: string
+    expenseId: string
+  }
   const paymentByPeriod = new Map<string, PaymentInfo>()
   for (const p of paymentRows ?? []) {
-    const txDate = (p.transactions as unknown as { date: string } | null)?.date ?? null
-    paymentByPeriod.set(p.period_id, { date: txDate, recordId: p.id, expenseId: p.transaction_id })
+    const tx = p.transactions as unknown as
+      | { date: string; amount: number | string; account: { name: string } | null }
+      | null
+    paymentByPeriod.set(p.period_id, {
+      date: tx?.date ?? null,
+      amount: tx ? Number(tx.amount) : null,
+      accountName: tx?.account?.name ?? null,
+      hasStampTax: p.stamp_tax_transaction_id != null,
+      recordId: p.id,
+      expenseId: p.transaction_id,
+    })
   }
 
   // Index next period (by chronological asc) before reversing for display order.
@@ -257,6 +285,9 @@ export async function getCardPeriods(
       paidAmountUSD: paidUSD,
       stampTaxRate,
       paymentDate: paymentInfo?.date ?? null,
+      paymentAmount: paymentInfo?.amount ?? null,
+      paymentAccountName: paymentInfo?.accountName ?? null,
+      paymentHasStampTax: paymentInfo?.hasStampTax ?? false,
       paymentRecordId: paymentInfo?.recordId ?? null,
       paymentExpenseId: paymentInfo?.expenseId ?? null,
       nextPeriodStart: nextInfo?.start_date ?? null,
@@ -296,7 +327,9 @@ export async function getCardPeriodDetail(
       .order('id', { ascending: false }),
     supabase
       .from('period_payments')
-      .select('id, period_id, transaction_id, transactions!transaction_id(date)')
+      .select(
+        'id, period_id, transaction_id, stamp_tax_transaction_id, transactions!transaction_id(date, amount, account:accounts(name))',
+      )
       .eq('period_id', periodId)
       .maybeSingle(),
     supabase
@@ -358,7 +391,10 @@ export async function getCardPeriodDetail(
   )
 
   const payment = paymentResult.data
-  const paymentTxDate = (payment?.transactions as unknown as { date: string } | null)?.date ?? null
+  const paymentTx = payment?.transactions as unknown as
+    | { date: string; amount: number | string; account: { name: string } | null }
+    | null
+  const paymentTxDate = paymentTx?.date ?? null
 
   return {
     ...periodWithPayment,
@@ -370,6 +406,9 @@ export async function getCardPeriodDetail(
     paidAmountUSD: paidUSD,
     stampTaxRate: accountResult.data?.stamp_tax_rate ?? null,
     paymentDate: paymentTxDate,
+    paymentAmount: paymentTx ? Number(paymentTx.amount) : null,
+    paymentAccountName: paymentTx?.account?.name ?? null,
+    paymentHasStampTax: payment?.stamp_tax_transaction_id != null,
     paymentRecordId: payment?.id ?? null,
     paymentExpenseId: payment?.transaction_id ?? null,
     nextPeriodStart: nextPeriod?.start_date ?? null,

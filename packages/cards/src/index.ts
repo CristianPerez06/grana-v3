@@ -15,6 +15,12 @@ export {
 
 export { payCardPeriod } from './pay-card-period'
 
+export {
+  revertCardPeriodPayment,
+  type RevertPaymentSummary,
+  type RevertedStampTax,
+} from './revert-card-period-payment'
+
 export type {
   CreditCardSummary,
   CreditCardDebtCheck,

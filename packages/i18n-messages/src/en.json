@@ -642,6 +642,7 @@
       "pay_now": "Pay now",
       "pay_statement": "Pay statement",
       "confirm_payment": "Confirm payment",
+      "revert_payment": "Undo payment",
       "edit_dates": "Edit dates",
       "create": "Create card",
       "save": "Save",
@@ -682,6 +683,17 @@
       "empty_movements": "No transactions in this statement.",
       "empty_movements_period": "No transactions in this period.",
       "pending_short": "Pending"
+    },
+    "revert": {
+      "title": "Undo this statement's payment?",
+      "intro": "The statement goes back to unpaid. Here's what will happen:",
+      "effect_amount_to_account": "{amount} goes back to {account}.",
+      "effect_amount": "{amount} goes back to the account you paid from.",
+      "effect_movements": "{count, plural, =0 {No charges go back to pending} =1 {1 charge goes back to pending} other {# charges go back to pending}}.",
+      "effect_stamp_tax": "The statement's stamp tax movement is deleted.",
+      "dates_kept": "The dates you already confirmed for the running cycle stay as they are: you read them off the real statement and they still hold.",
+      "confirm": "Undo payment",
+      "stamp_tax_ambiguous": "The payment was undone, but a stamp tax movement stayed in the statement: there was more than one and we'd rather not delete the wrong one. Review it and delete it if needed."
     },
     "thermometer": {
       "title": "How your card is doing",
@@ -912,6 +924,9 @@
       "running_cycle_invalid_dates": "Couldn’t confirm the running cycle: the dates are invalid or overlap an existing statement. The close must be after {date} and the due date after the close.",
       "eager_estimated_failed": "Couldn’t create the next estimated statement.",
       "stamp_tax_failed": "Couldn’t record the stamp tax.",
+      "period_not_paid": "This statement has no payment recorded.",
+      "revert_failed": "Couldn’t undo the payment. Nothing was changed.",
+      "revert_later_period_paid": "Undo the payment of the statement that closed on {date} first: payments are undone newest to oldest.",
       "period_paid_dates_locked": "You can’t edit the dates of an already-paid statement.",
       "close_after_start": "The closing date must be after the start of the statement.",
       "network_immutable": "The card network can’t be changed.",
@@ -966,6 +981,8 @@
         "delete_warning_default": "This action can't be undone.",
         "delete_warning_parent": "This will delete the purchase and all its installments. This action can't be undone.",
         "delete_warning_card_payment": "If you delete this payment, the installments for the period will go back to pending. Continue?",
+        "delete_blocked_card_payment": "This movement is the payment of a card statement. To undo it — and send the statement's charges back to pending — go to the period detail, under Cards.",
+        "got_it": "Got it",
         "more": "More",
         "edit_movement": "Edit movement"
       },

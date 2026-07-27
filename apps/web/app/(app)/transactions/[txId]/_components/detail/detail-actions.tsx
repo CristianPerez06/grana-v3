@@ -52,8 +52,12 @@ export const DetailActions = ({
   const goEdit = () =>
     onEdit ? onEdit() : router.push(`/transactions/${transactionId}/edit`)
 
+  // Un pago de resumen no se borra desde acá: deshacerlo revierte todo el resumen
+  // (movimientos a pendiente, sello, gasto-débito) y eso vive en el detalle del
+  // período. El diálogo explica dónde, en vez de ofrecer un borrado que la base
+  // rechaza igual (FK RESTRICT de period_payments). Mismo trato que la cuota hija.
   const deleteWarning = isCardPayment
-    ? t('delete_warning_card_payment')
+    ? t('delete_blocked_card_payment')
     : isParent
       ? t('delete_warning_parent')
       : t('delete_warning_default')
@@ -155,17 +159,21 @@ export const DetailActions = ({
                   className="h-10 rounded-[12px] border border-border bg-card px-4 text-[13px] font-medium text-text-muted transition-colors hover:text-text"
                   disabled={isPending}
                 >
-                  {t('cancel')}
+                  {isCardPayment ? t('got_it') : t('cancel')}
                 </button>
               </AlertDialog.Cancel>
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={isPending}
-                className="h-10 rounded-[12px] bg-expense px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                {t('delete_confirm')}
-              </button>
+              {/* Sin confirmación destructiva para un pago de resumen: el diálogo
+                  informa dónde se deshace, no ofrece borrarlo. */}
+              {!isCardPayment && (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={isPending}
+                  className="h-10 rounded-[12px] bg-expense px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                >
+                  {t('delete_confirm')}
+                </button>
+              )}
             </div>
           </AlertDialog.Content>
         </AlertDialog.Portal>

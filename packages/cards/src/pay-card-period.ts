@@ -457,10 +457,14 @@ export async function payCardPeriod(args: {
     return { ok: false, errorCode: updateError.code }
   }
 
-  // 3. INSERT period_payment
+  // 3. INSERT period_payment. `stamp_tax_transaction_id` links the sello explicitly so
+  // reverting this payment identifies it without guessing by category+period (which
+  // would delete a hand-entered sello). `stamp_tax_link_known` defaults to true in the
+  // schema: for payments written from here on, a null link means "there was no sello".
   const { error: paymentError } = await supabase.from('period_payments').insert({
     period_id: data.period_id,
     transaction_id: expense.id,
+    stamp_tax_transaction_id: stampTaxId,
   })
 
   if (paymentError) {

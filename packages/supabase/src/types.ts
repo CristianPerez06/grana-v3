@@ -379,18 +379,24 @@ export type Database = {
           created_at: string
           id: string
           period_id: string
+          stamp_tax_link_known: boolean
+          stamp_tax_transaction_id: string | null
           transaction_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           period_id: string
+          stamp_tax_link_known?: boolean
+          stamp_tax_transaction_id?: string | null
           transaction_id: string
         }
         Update: {
           created_at?: string
           id?: string
           period_id?: string
+          stamp_tax_link_known?: boolean
+          stamp_tax_transaction_id?: string | null
           transaction_id?: string
         }
         Relationships: [
@@ -399,6 +405,13 @@ export type Database = {
             columns: ["period_id"]
             isOneToOne: true
             referencedRelation: "card_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "period_payments_stamp_tax_transaction_id_fkey"
+            columns: ["stamp_tax_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
           {
@@ -1113,6 +1126,10 @@ export type Database = {
           p_date: string
         }
         Returns: string
+      }
+      revert_card_period_payment: {
+        Args: { p_period_id: string }
+        Returns: Json
       }
       reverse_settlement: {
         Args: { p_settlement_id: string }

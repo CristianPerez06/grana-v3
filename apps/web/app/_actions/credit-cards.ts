@@ -18,7 +18,9 @@ import {
   updateCreditCard as updateCreditCardMutation,
   updateInstallmentParent as updateInstallmentParentMutation,
   deleteInstallmentParent as deleteInstallmentParentMutation,
+  revertCardPeriodPayment as revertCardPeriodPaymentMutation,
   type CardMutationResult,
+  type RevertPaymentSummary,
 } from '@grana/cards'
 import { archiveAccount } from '@grana/accounts'
 import {
@@ -28,6 +30,7 @@ import {
 import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
 import { getAuthenticatedUserId } from './_lib/auth'
+import { revalidateAfterMovementMutation } from './_helpers'
 
 /**
  * Map a neutral `CardMutationResult` from `@grana/cards` to the web `ActionResult`:
@@ -154,6 +157,27 @@ export async function payCardPeriod(
   revalidatePath('/cards')
   revalidatePath('/transactions')
   return { ok: true, expenseId: result.expenseId }
+}
+
+// ── revertCardPeriodPayment ───────────────────────────────────────────────────
+// Shell over `@grana/cards.revertCardPeriodPayment`: the whole reversal is one
+// database transaction (RPC), so this layer only resolves the client, maps the
+// neutral result and revalidates. Reverts the MONEY only — the dates the payment
+// confirmed for the running cycle stay confirmed (see the change's design.md).
+
+export async function revertCardPeriodPayment(
+  periodId: string,
+): Promise<ActionResult<never> & { summary?: RevertPaymentSummary }> {
+  await getAuthenticatedUserId()
+  const supabase = await createClient()
+  const result = await revertCardPeriodPaymentMutation({ supabase, periodId })
+  if (!result.ok) return toCardActionResult(result)
+  // The reversal moves money back into an account, un-pays a statement and
+  // deletes movements, so it touches every surface a movement mutation does.
+  // `revalidatePath('/cards', 'layout')` inside the helper already covers the
+  // nested period detail this is called from.
+  revalidateAfterMovementMutation()
+  return { ok: true, summary: result.summary }
 }
 
 // ── updatePeriodDates ─────────────────────────────────────────────────────────

@@ -642,6 +642,7 @@
       "pay_now": "Pagar ahora",
       "pay_statement": "Pagar resumen",
       "confirm_payment": "Confirmar pago",
+      "revert_payment": "Deshacer pago",
       "edit_dates": "Editar fechas",
       "create": "Crear tarjeta",
       "save": "Guardar",
@@ -682,6 +683,17 @@
       "empty_movements": "Sin movimientos en este resumen.",
       "empty_movements_period": "Sin movimientos en este período.",
       "pending_short": "Pendiente"
+    },
+    "revert": {
+      "title": "¿Deshacer el pago de este resumen?",
+      "intro": "El resumen vuelve a quedar impago. Esto es lo que va a pasar:",
+      "effect_amount_to_account": "Vuelven {amount} a {account}.",
+      "effect_amount": "Vuelven {amount} a la cuenta desde la que pagaste.",
+      "effect_movements": "{count, plural, =0 {No hay movimientos que vuelvan a pendiente} =1 {1 movimiento del resumen vuelve a pendiente} other {# movimientos del resumen vuelven a pendiente}}.",
+      "effect_stamp_tax": "Se elimina el impuesto de sellos del resumen.",
+      "dates_kept": "Las fechas que ya confirmaste del ciclo en curso se mantienen: las leíste del resumen real y siguen siendo válidas.",
+      "confirm": "Deshacer pago",
+      "stamp_tax_ambiguous": "Se deshizo el pago, pero quedó un movimiento de impuesto de sellos en el resumen: había más de uno y preferimos no borrar el equivocado. Revisalo y borralo si corresponde."
     },
     "thermometer": {
       "title": "Cómo viene tu tarjeta",
@@ -912,6 +924,9 @@
       "running_cycle_invalid_dates": "No se pudo confirmar el ciclo en curso: las fechas son inválidas o se superponen con un resumen existente. El cierre debe ser posterior al {date} y el vencimiento posterior al cierre.",
       "eager_estimated_failed": "No se pudo crear el próximo resumen estimado.",
       "stamp_tax_failed": "No se pudo registrar el impuesto de sellos.",
+      "period_not_paid": "Este resumen no tiene un pago registrado.",
+      "revert_failed": "No se pudo deshacer el pago. No se modificó nada.",
+      "revert_later_period_paid": "Primero deshacé el pago del resumen que cerró el {date}: los pagos se deshacen del más nuevo al más viejo.",
       "period_paid_dates_locked": "No podés editar las fechas de un período ya pagado.",
       "close_after_start": "La fecha de cierre debe ser posterior al inicio del período.",
       "network_immutable": "La red de la tarjeta no se puede modificar.",
@@ -966,6 +981,8 @@
         "delete_warning_default": "Esta acción no se puede deshacer.",
         "delete_warning_parent": "Se van a eliminar la compra y todas sus cuotas. Esta acción no se puede deshacer.",
         "delete_warning_card_payment": "Al eliminar este pago, las cuotas del período volverán a pendientes. ¿Continuar?",
+        "delete_blocked_card_payment": "Este movimiento es el pago de un resumen de tarjeta. Para deshacerlo —y que los movimientos del resumen vuelvan a pendientes— andá al detalle del período, en Tarjetas.",
+        "got_it": "Entendido",
         "more": "Más",
         "edit_movement": "Editar movimiento"
       },

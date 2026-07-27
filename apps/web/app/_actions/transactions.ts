@@ -115,6 +115,12 @@ export async function deleteTransaction(id: string): Promise<ActionResult<never>
         ok: false,
         formError: 'Es parte de una liquidación del hogar. Revertila desde la cuenta corriente.',
       }
+    case DELETE_GUARD_CODES.cardPayment:
+      return {
+        ok: false,
+        formError:
+          'Es el pago de un resumen de tarjeta. Deshacelo desde el detalle del período, en Tarjetas.',
+      }
     case 'GRN01':
       return {
         ok: false,
