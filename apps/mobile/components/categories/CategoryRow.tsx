@@ -141,6 +141,15 @@ export function CategoryRow({
           </View>
         }
       >
+        <View className="flex-row items-center justify-between border-b border-border px-5 pb-3 pt-1">
+          <Text className="flex-1 text-lg font-semibold text-text" numberOfLines={1}>
+            {displayName}
+          </Text>
+          <Pressable onPress={() => setMenuOpen(false)} accessibilityRole="button" className="pl-3">
+            <Text className="text-sm font-medium text-emerald">{t('common.close')}</Text>
+          </Pressable>
+        </View>
+        <View className="px-2 pb-1 pt-2">
         <MenuItem
           label={t('settings.categories.actions.view_subcategories')}
           onPress={() =>
@@ -169,6 +178,7 @@ export function CategoryRow({
             />
           </>
         )}
+        </View>
       </Popover>
 
       {!isSystem && (

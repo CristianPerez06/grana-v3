@@ -1,14 +1,18 @@
 import { useMemo, useState } from 'react'
 import {
+  Dimensions,
   FlatList,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   Text,
   TextInput as RNTextInput,
   View,
 } from 'react-native'
+import { BottomSheet } from './BottomSheet'
+
+// Cap the results list so the sheet leaves room for the keyboard when searching.
+const LIST_MAX_HEIGHT = Math.round(Dimensions.get('window').height * 0.45)
 
 type Institution = { id: string; name: string }
 
@@ -53,17 +57,9 @@ export function InstitutionPickerModal({
   }
 
   return (
-    <Modal
-      visible={visible}
-      onRequestClose={handleClose}
-      animationType="slide"
-      presentationStyle="formSheet"
-    >
-      <KeyboardAvoidingView
-        className="flex-1 bg-page"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
+    <BottomSheet visible={visible} onClose={handleClose} ariaLabel={title}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View className="flex-row items-center justify-between border-b border-border px-5 pb-3 pt-1">
           <Text className="text-lg font-semibold text-text">{title}</Text>
           <Pressable onPress={handleClose} accessibilityRole="button">
             <Text className="text-sm font-medium text-emerald">{closeLabel}</Text>
@@ -86,7 +82,8 @@ export function InstitutionPickerModal({
           data={filtered}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
-          contentContainerClassName="px-5 pt-2 pb-6"
+          contentContainerClassName="px-5 pb-2 pt-2"
+          style={{ maxHeight: LIST_MAX_HEIGHT }}
           ListEmptyComponent={
             <Text className="px-1 pt-4 text-sm text-text-muted">
               Sin resultados.
@@ -112,6 +109,6 @@ export function InstitutionPickerModal({
           }}
         />
       </KeyboardAvoidingView>
-    </Modal>
+    </BottomSheet>
   )
 }

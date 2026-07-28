@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import {
+  Dimensions,
   FlatList,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   Text,
@@ -20,6 +20,10 @@ import type { Institution } from '@grana/accounts'
 import { createCustomInstitution } from '../../lib/accounts/mutations'
 import { useT } from '../../lib/locale-context'
 import { accountColors, colors } from '../../lib/colors'
+import { BottomSheet } from '../ui/BottomSheet'
+
+// Cap the results list so the sheet leaves room for the keyboard when searching.
+const LIST_MAX_HEIGHT = Math.round(Dimensions.get('window').height * 0.45)
 
 type Props = {
   institutions: Institution[]
@@ -128,17 +132,13 @@ function BankSelectorModal({
   }
 
   return (
-    <Modal
+    <BottomSheet
       visible={visible}
-      onRequestClose={handleClose}
-      animationType="slide"
-      presentationStyle="formSheet"
+      onClose={handleClose}
+      ariaLabel={t('accounts.labels.institution')}
     >
-      <KeyboardAvoidingView
-        className="flex-1 bg-page"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View className="flex-row items-center justify-between border-b border-border px-5 pb-3 pt-1">
           <Text className="text-lg font-semibold text-text">{t('accounts.labels.institution')}</Text>
           <Pressable onPress={handleClose} accessibilityRole="button">
             <Text className="text-sm font-medium text-emerald">{t('common.close')}</Text>
@@ -169,7 +169,8 @@ function BankSelectorModal({
               data={filtered}
               keyExtractor={(item) => item.id}
               keyboardShouldPersistTaps="handled"
-              contentContainerClassName="px-5 pt-2 pb-6"
+              contentContainerClassName="px-5 pb-2 pt-2"
+              style={{ maxHeight: LIST_MAX_HEIGHT }}
               ListFooterComponent={
                 <Pressable
                   onPress={() => setCreating(true)}
@@ -204,7 +205,7 @@ function BankSelectorModal({
           </>
         )}
       </KeyboardAvoidingView>
-    </Modal>
+    </BottomSheet>
   )
 }
 

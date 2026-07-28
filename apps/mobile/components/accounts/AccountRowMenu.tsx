@@ -103,8 +103,17 @@ export function AccountRowMenu({ account }: Props) {
         </View>
       }
     >
-      <MenuItem label={t('accounts.actions.edit')} onPress={() => runFromMenu(goEdit)} />
-      {account.is_active ? (
+      <View className="flex-row items-center justify-between border-b border-border px-5 pb-3 pt-1">
+        <Text className="flex-1 text-lg font-semibold text-text" numberOfLines={1}>
+          {account.name}
+        </Text>
+        <Pressable onPress={() => setMenuOpen(false)} accessibilityRole="button" className="pl-3">
+          <Text className="text-sm font-medium text-emerald">{t('common.close')}</Text>
+        </Pressable>
+      </View>
+      <View className="px-2 pb-1 pt-2">
+        <MenuItem label={t('accounts.actions.edit')} onPress={() => runFromMenu(goEdit)} />
+        {account.is_active ? (
         <>
           <MenuItem
             label={t('accounts.actions.archive')}
@@ -133,6 +142,7 @@ export function AccountRowMenu({ account }: Props) {
           )}
         </>
       )}
+      </View>
     </Popover>
   )
 }

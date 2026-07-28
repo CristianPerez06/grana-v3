@@ -116,18 +116,28 @@ function SubcategoryRow({
             </View>
           }
         >
-          <Pressable
-            onPress={() => runFromMenu(handleArchive)}
-            className="rounded-[10px] px-3 py-3 active:bg-border-soft"
-          >
-            <Text className="text-sm text-text">{t('settings.categories.actions.archive')}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => runFromMenu(handleDelete)}
-            className="rounded-[10px] px-3 py-3 active:bg-border-soft"
-          >
-            <Text className="text-sm text-negative">{t('settings.categories.actions.delete')}</Text>
-          </Pressable>
+          <View className="flex-row items-center justify-between border-b border-border px-5 pb-3 pt-1">
+            <Text className="flex-1 text-lg font-semibold text-text" numberOfLines={1}>
+              {subcategory.displayName}
+            </Text>
+            <Pressable onPress={() => setMenuOpen(false)} accessibilityRole="button" className="pl-3">
+              <Text className="text-sm font-medium text-emerald">{t('common.close')}</Text>
+            </Pressable>
+          </View>
+          <View className="px-2 pb-1 pt-2">
+            <Pressable
+              onPress={() => runFromMenu(handleArchive)}
+              className="rounded-[10px] px-3 py-3 active:bg-border-soft"
+            >
+              <Text className="text-sm text-text">{t('settings.categories.actions.archive')}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => runFromMenu(handleDelete)}
+              className="rounded-[10px] px-3 py-3 active:bg-border-soft"
+            >
+              <Text className="text-sm text-negative">{t('settings.categories.actions.delete')}</Text>
+            </Pressable>
+          </View>
         </Popover>
       )}
     </View>

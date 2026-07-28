@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Modal, Pressable, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { updatePeriodDates } from '../../lib/cards/mutations'
 import { useT } from '../../lib/locale-context'
+import { BottomSheet } from '../ui/BottomSheet'
 import { DateField } from '../ui/DateField'
 import { Button } from '../ui/Button'
 
@@ -77,23 +78,17 @@ export function EditDatesSheet({
   }
 
   return (
-    <Modal
-      visible={visible}
-      onRequestClose={onClose}
-      animationType="slide"
-      presentationStyle="formSheet"
-    >
-      <View className="flex-1 bg-page">
-        <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
-          <Text className="text-lg font-semibold text-text">
-            {t('cards.edit_dates.dialog_title')}
-          </Text>
-          <Pressable onPress={onClose} accessibilityRole="button">
-            <Text className="text-sm font-medium text-emerald">{t('common.close')}</Text>
-          </Pressable>
-        </View>
+    <BottomSheet visible={visible} onClose={onClose} ariaLabel={t('cards.edit_dates.dialog_title')}>
+      <View className="flex-row items-center justify-between border-b border-border px-5 pb-3 pt-1">
+        <Text className="text-lg font-semibold text-text">
+          {t('cards.edit_dates.dialog_title')}
+        </Text>
+        <Pressable onPress={onClose} accessibilityRole="button">
+          <Text className="text-sm font-medium text-emerald">{t('common.close')}</Text>
+        </Pressable>
+      </View>
 
-        <View className="flex-col gap-5 px-6 py-6">
+      <View className="flex-col gap-5 px-6 py-6">
           <View className="flex-col gap-1.5">
             <Text className="text-xs font-medium text-text-muted">
               {t('cards.edit_dates.close_label')}
@@ -124,7 +119,6 @@ export function EditDatesSheet({
             {t('cards.actions.save')}
           </Button>
         </View>
-      </View>
-    </Modal>
+    </BottomSheet>
   )
 }

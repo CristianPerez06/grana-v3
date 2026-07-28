@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { FlatList, Modal, Pressable, Text, View } from 'react-native'
+import { Dimensions, FlatList, Pressable, Text, View } from 'react-native'
+import { BottomSheet } from './BottomSheet'
 import { useT } from '../../lib/locale-context'
 
 type Props<T> = {
@@ -17,11 +18,16 @@ type Props<T> = {
   footer?: ReactNode
 }
 
+// Cap the list at ~half the screen so a long category list scrolls inside the
+// sheet; a short list (a handful of accounts) makes the sheet hug its content.
+const LIST_MAX_HEIGHT = Math.round(Dimensions.get('window').height * 0.5)
+
 /**
- * `formSheet` modal shell for a single-select picker: header (title + close) +
- * an optional `header` slot + a `FlatList` of caller-rendered rows + an optional
- * `footer` slot. Distilled from `InstitutionPickerModal` minus the search box
- * (web has none). Generic over the item type so accounts and categories reuse it.
+ * Single-select picker rendered as a content-sized `BottomSheet`: header (title +
+ * close) + an optional `header` slot + a `FlatList` of caller-rendered rows + an
+ * optional `footer` slot. Distilled from `InstitutionPickerModal` minus the
+ * search box (web has none). Generic over the item type so accounts and
+ * categories reuse it.
  */
 export function SelectSheet<T>({
   visible,
@@ -35,30 +41,24 @@ export function SelectSheet<T>({
 }: Props<T>) {
   const t = useT()
   return (
-    <Modal
-      visible={visible}
-      onRequestClose={onClose}
-      animationType="slide"
-      presentationStyle="formSheet"
-    >
-      <View className="flex-1 bg-page">
-        <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
-          <Text className="text-lg font-semibold text-text">{title}</Text>
-          <Pressable onPress={onClose} accessibilityRole="button">
-            <Text className="text-sm font-medium text-emerald">{t('common.close')}</Text>
-          </Pressable>
-        </View>
-
-        <FlatList
-          data={items}
-          keyExtractor={keyExtractor}
-          keyboardShouldPersistTaps="handled"
-          contentContainerClassName="px-5 pt-2 pb-6"
-          ListHeaderComponent={header ? <>{header}</> : null}
-          ListFooterComponent={footer ? <>{footer}</> : null}
-          renderItem={({ item }) => <>{renderRow(item)}</>}
-        />
+    <BottomSheet visible={visible} onClose={onClose} ariaLabel={title}>
+      <View className="flex-row items-center justify-between border-b border-border px-5 pb-3 pt-1">
+        <Text className="text-lg font-semibold text-text">{title}</Text>
+        <Pressable onPress={onClose} accessibilityRole="button">
+          <Text className="text-sm font-medium text-emerald">{t('common.close')}</Text>
+        </Pressable>
       </View>
-    </Modal>
+
+      <FlatList
+        data={items}
+        keyExtractor={keyExtractor}
+        keyboardShouldPersistTaps="handled"
+        contentContainerClassName="px-5 pb-2 pt-2"
+        style={{ maxHeight: LIST_MAX_HEIGHT }}
+        ListHeaderComponent={header ? <>{header}</> : null}
+        ListFooterComponent={footer ? <>{footer}</> : null}
+        renderItem={({ item }) => <>{renderRow(item)}</>}
+      />
+    </BottomSheet>
   )
 }
