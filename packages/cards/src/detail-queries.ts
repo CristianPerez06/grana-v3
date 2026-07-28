@@ -186,7 +186,7 @@ export async function getCardPeriods(
     ? await supabase
         .from('period_payments')
         .select(
-          'id, period_id, transaction_id, stamp_tax_transaction_id, transactions!transaction_id(date, amount, account:accounts(name))',
+          'id, period_id, transaction_id, stamp_tax_transaction_id, transactions!transaction_id(date, amount, account:accounts!transactions_account_id_fkey(name))',
         )
         .in('period_id', paidPeriodIds)
     : { data: [], error: null }
@@ -328,7 +328,7 @@ export async function getCardPeriodDetail(
     supabase
       .from('period_payments')
       .select(
-        'id, period_id, transaction_id, stamp_tax_transaction_id, transactions!transaction_id(date, amount, account:accounts(name))',
+        'id, period_id, transaction_id, stamp_tax_transaction_id, transactions!transaction_id(date, amount, account:accounts!transactions_account_id_fkey(name))',
       )
       .eq('period_id', periodId)
       .maybeSingle(),
