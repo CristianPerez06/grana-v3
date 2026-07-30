@@ -1,9 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
+  balanceSumsFromRows,
   categoryOwnPortion,
   computeCategoryNet,
   countsAsCategorySpend,
   getTodayAR,
+  type AccountBalanceSumRow,
   type CategoryAggRow,
   type CategorySliceInput,
 } from '@grana/money-logic'
@@ -12,10 +14,8 @@ import {
   aggregateHero,
   aggregateRecurrenceProjection,
   buildMonthBalanceSeries,
-  calculateTransactionSums,
   sumByCurrency,
   topCommittedItems,
-  type BalanceTransactionRow,
   type CardDebtRow,
   type CommittedItemRow,
   type CommittedRecurrenceRule,
@@ -55,47 +55,59 @@ export function resolveMonthRange(month: string): { from: string; to: string } {
 export async function getDashboardHero(
   supabase: SupabaseClient,
 ): Promise<DashboardHero> {
-  const { data: accounts, error } = await supabase
-    .from('accounts')
-    .select(
-      'id, name, type, color_key, icon_key, institution:institutions(name, brand_color, icon_type), currencies:account_currencies(currency_code, initial_balance)',
-    )
-    .in('type', ['cash', 'bank'])
-    .eq('is_active', true)
+  // Which accounts are "propias" is resolved by the normative SQL definition
+  // (`get_owned_account_ids`, migration 0051), not by rebuilding the predicate
+  // here. The Hero needs the account METADATA too, so it fetches the rows by id
+  // — same two sequential steps as before, the metadata read and the balance
+  // aggregate now run in parallel.
+  const { data: ownedIds, error: ownedErr } = await supabase.rpc('get_owned_account_ids')
+  if (ownedErr) throw ownedErr
+
+  const accountIds = (ownedIds ?? []) as string[]
+  if (accountIds.length === 0) return aggregateHero([], new Map())
+
+  const [{ data: accounts, error }, txSums] = await Promise.all([
+    supabase
+      .from('accounts')
+      .select(
+        'id, name, type, color_key, icon_key, institution:institutions(name, brand_color, icon_type), currencies:account_currencies(currency_code, initial_balance)',
+      )
+      .in('id', accountIds),
+    getTransactionSums(supabase, accountIds),
+  ])
 
   if (error) throw error
-
-  const accountIds = (accounts ?? []).map((a) => a.id)
-  const txSums = await getTransactionSums(supabase, accountIds)
 
   return aggregateHero((accounts ?? []) as unknown as HeroAccountRow[], txSums)
 }
 
+// Net per account and currency, aggregated in Postgres by the
+// `get_account_balance_sums` RPC (migration 0051) — the same read
+// `@grana/accounts` uses for account balances. It used to be a `.select()` of
+// the whole ledger summed in JS: no `.range()`, no `.limit()`, no `.order()`, so
+// PostgREST's `max-rows` truncated it in silence past the ceiling and the
+// Disponible came out plausible and wrong. The shared piece is the pure row →
+// map shaping in `@grana/money-logic`; the round-trip stays per package because
+// the dependency graph (`@grana/accounts → … → @grana/dashboard`) forbids
+// dashboard importing accounts.
 async function getTransactionSums(
   supabase: SupabaseClient,
   accountIds: string[],
 ): Promise<Map<string, { ARS: number; USD: number }>> {
   if (accountIds.length === 0) return new Map()
 
-  // Exclude credit card child transactions (status IS NOT NULL) and
-  // off-ledger parent rows (is_parent=true, account_id=NULL, auto-excluded by the or filter).
-  // destination_amount/currency feed the exchange leg; reimbursement_target +
-  // received_at + cancelled_at gate which reimbursements credit the account; and
-  // settlement_direction gates the settlement leg — all consumed by
-  // calculateTransactionSums. Omitting any of them silently drops that type from
-  // the disponible (the bug this reconciliation change fixes).
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('account_id, transfer_destination_account_id, currency_code, amount, type, destination_amount, destination_currency, reimbursement_target, received_at, cancelled_at, settlement_direction')
-    .or(
-      `account_id.in.(${accountIds.join(',')}),transfer_destination_account_id.in.(${accountIds.join(',')})`,
-    )
-    .is('status', null)
+  const { data, error } = await supabase.rpc('get_account_balance_sums', {
+    p_account_ids: accountIds,
+  })
 
   if (error) throw error
 
-  return calculateTransactionSums((data ?? []) as BalanceTransactionRow[], accountIds)
+  return balanceSumsFromRows((data ?? []) as AccountBalanceSumRow[])
 }
+
+/** Rows per round-trip of the month fetch. Independent of the server's
+ *  `max-rows`: the loop advances by what came back and stops on an empty page. */
+const MONTH_ROWS_PAGE_SIZE = 1000
 
 export async function getMonthBalanceSeries(
   supabase: SupabaseClient,
@@ -107,13 +119,17 @@ export async function getMonthBalanceSeries(
   const fromISO = formatDateISO(firstDay)
   const toISO = formatDateISO(lastDay)
 
-  const { data: accs, error: accsErr } = await supabase
-    .from('accounts')
-    .select('id')
-    .in('type', ['cash', 'bank'])
+  // The owned universe comes from its NORMATIVE definition in SQL
+  // (`get_owned_account_ids`, migration 0051) instead of rebuilding
+  // `type IN ('cash','bank') AND is_active = true` by hand. Rebuilding it here is
+  // what had already diverged: this query omitted `is_active` while the Hero
+  // applied it, so an archived account's movements moved the month net while its
+  // balance stayed out of the Disponible and the reconciliation the `dashboard`
+  // spec requires broke.
+  const { data: accs, error: accsErr } = await supabase.rpc('get_owned_account_ids')
 
   if (accsErr) throw accsErr
-  const accIds = (accs ?? []).map((a) => a.id)
+  const accIds = (accs ?? []) as string[]
   if (accIds.length === 0) {
     return {
       year,
@@ -129,28 +145,46 @@ export async function getMonthBalanceSeries(
   // see all rows and pick the leg(s) relevant to it (see buildMonthBalanceSeries).
   // The extra fields + `period_payments(id)` feed the per-type sign rules and the
   // card-payment detection (same embed `getMonthCategoryBreakdown` uses).
-  const { data: txs, error: txsErr } = await supabase
-    .from('transactions')
-    .select(
-      'id, date, type, amount, currency_code, account_id, transfer_destination_account_id, destination_amount, destination_currency, reimbursement_target, received_at, cancelled_at, settlement_direction, created_at, period_payments!period_payments_transaction_id_fkey(id)',
-    )
-    .gte('date', fromISO)
-    .lte('date', toISO)
-    .is('status', null)
-    .or(
-      `account_id.in.(${accIds.join(',')}),transfer_destination_account_id.in.(${accIds.join(',')})`,
-    )
-    .order('date', { ascending: true })
-    .order('created_at', { ascending: true })
-    .order('id', { ascending: true })
+  //
+  // This one cannot become an aggregate — the section needs the per-day series,
+  // so its product is rows. It takes the other form the `web-data-access` spec
+  // allows: exhaustive `.range()` over a deterministic order. A month is a small
+  // window, but "small" is not a guarantee: `finalBalance` is a money number and
+  // it must not depend on the month staying under PostgREST's `max-rows`.
+  const raw: Array<
+    Omit<MonthBalanceTxInput, 'is_card_payment'> & { period_payments: { id: string }[] | null }
+  > = []
 
-  if (txsErr) throw txsErr
+  for (let offset = 0; ; ) {
+    const { data: txs, error: txsErr } = await supabase
+      .from('transactions')
+      .select(
+        'id, date, type, amount, currency_code, account_id, transfer_destination_account_id, destination_amount, destination_currency, reimbursement_target, received_at, cancelled_at, settlement_direction, created_at, period_payments!period_payments_transaction_id_fkey(id)',
+      )
+      .gte('date', fromISO)
+      .lte('date', toISO)
+      .is('status', null)
+      .or(
+        `account_id.in.(${accIds.join(',')}),transfer_destination_account_id.in.(${accIds.join(',')})`,
+      )
+      .order('date', { ascending: true })
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
+      .range(offset, offset + MONTH_ROWS_PAGE_SIZE - 1)
 
-  const rows: MonthBalanceTxInput[] = (
-    (txs ?? []) as unknown as Array<
-      Omit<MonthBalanceTxInput, 'is_card_payment'> & { period_payments: { id: string }[] | null }
-    >
-  ).map((t) => ({ ...t, is_card_payment: (t.period_payments?.length ?? 0) > 0 }))
+    if (txsErr) throw txsErr
+
+    const batch = (txs ?? []) as unknown as typeof raw
+    if (batch.length === 0) break
+
+    raw.push(...batch)
+    offset += batch.length
+  }
+
+  const rows: MonthBalanceTxInput[] = raw.map((t) => ({
+    ...t,
+    is_card_payment: (t.period_payments?.length ?? 0) > 0,
+  }))
 
   return {
     year,
@@ -166,6 +200,14 @@ export async function getMonthBalanceSeries(
 // net per category and currency. Excludes installment parents (off-ledger) and
 // statement payments (the spend already counted as the consumos). Uncategorized
 // spend is bucketed under the `uncategorized` sentinel (the UI labels it).
+//
+// KNOWN GAP: the two `.select()` below have no `.range()`. They are bounded by
+// the month, which is not a guarantee — the balance reads carried the same
+// assumption until it became a defect. Their product IS a monetary aggregate, so
+// the `web-data-access` requirement ("reads that feed a money number are complete
+// by construction") reaches them. Left out of `fix-balance-read-path-defects`
+// (2026-07-30) to keep that change scoped to the balance path; fixing them means
+// the same exhaustive `.range()` loop `getMonthBalanceSeries` now uses.
 
 export const UNCATEGORIZED_ID = 'uncategorized'
 
@@ -384,6 +426,13 @@ export async function getMonthCategoryBreakdown(
 // Static "from today": card debt (a present stock) + next-calendar-month
 // recurrence projection. ARS and USD are never combined. The committed total
 // (computed by the UI) is debt + recurringExpense; recurringIncome is context.
+//
+// KNOWN GAP: same as getMonthCategoryBreakdown — the reads below (card_periods,
+// period_payments, the consumos of unpaid statements, recurrence_instances) have
+// no `.range()`. They are bounded by "statements already started and unpaid",
+// which is an observation about the data, not a property of the code, and their
+// product is a money number. Out of scope of `fix-balance-read-path-defects`
+// (2026-07-30); same fix applies.
 
 function emptyCommittedCurrency(): CommittedCurrency {
   return {

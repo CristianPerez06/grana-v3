@@ -135,13 +135,19 @@ type CashBucket =
   | 'reimbursement'
   | 'settlement'
   | 'exchange'
+  /**
+   * Residual of transfers whose two legs are NOT both owned. Zero whenever they
+   * are (the normal case), so it renders no row of its own — see `totalTransfer`.
+   */
+  | 'transfer'
 
 /**
  * Classify a row's contribution to ONE currency's running balance, mirroring
  * `calculateTransactionSums`. Returns the signed balance delta (what moves the
  * accumulated balance) and the bucket it should be tallied under, or `null` when
- * the row does not affect this currency on an owned account. `transfer` always
- * returns null: between owned cash/bank accounts both legs net to zero.
+ * the row does not affect this currency on an owned account. A `transfer` is
+ * evaluated leg by leg: both legs owned cancel out, a single owned leg moves the
+ * balance (see the `transfer` case).
  *
  * The bucket total is derived from `signed` (its magnitude or the signed value
  * for the signed buckets), so the per-type sign rules live in exactly one place.
@@ -203,9 +209,25 @@ function classifyCashContribution(
       }
       return null
     }
-    case 'transfer':
-      // Between owned cash/bank accounts both legs net to zero → no effect.
-      return null
+    case 'transfer': {
+      // Each leg is evaluated INDEPENDENTLY, the same shape
+      // `calculateTransactionSums` already had: the origin leg subtracts when
+      // the source account is owned, the destination leg adds when the
+      // destination is. With both legs owned they cancel (visible behaviour
+      // unchanged); with a single owned leg the money really enters or leaves
+      // the Disponible, so the month net must follow it. Assuming both legs are
+      // always owned was the bug: it made the series diverge from the Hero
+      // exactly for transfers touching an archived account.
+      if (row.currency_code !== currency) return null
+      const originOwned = owns(row.account_id)
+      const destinationOwned = owns(row.transfer_destination_account_id)
+      if (!originOwned && !destinationOwned) return null
+
+      let signed = Money.from(0)
+      if (originOwned) signed = Money.subtract(signed, amount)
+      if (destinationOwned) signed = Money.add(signed, amount)
+      return { bucket: 'transfer', signed }
+    }
   }
 }
 
@@ -237,6 +259,7 @@ export function buildMonthBalanceSeries(
     reimbursement: Money.from(0),
     settlement: Money.from(0),
     exchange: Money.from(0),
+    transfer: Money.from(0),
   }
 
   for (const row of rows) {
@@ -250,7 +273,12 @@ export function buildMonthBalanceSeries(
     // Accumulated balance always tracks the signed delta of every cash movement.
     dailyDelta[day] = Money.add(dailyDelta[day], signed)
     // Per-bucket totals: signed buckets keep the sign; flow buckets the magnitude.
-    if (bucket === 'adjustment' || bucket === 'settlement' || bucket === 'exchange') {
+    if (
+      bucket === 'adjustment' ||
+      bucket === 'settlement' ||
+      bucket === 'exchange' ||
+      bucket === 'transfer'
+    ) {
       totals[bucket] = Money.add(totals[bucket], signed)
     } else {
       totals[bucket] = Money.add(totals[bucket], moneyAbs(signed))
@@ -285,6 +313,7 @@ export function buildMonthBalanceSeries(
     totalReimbursement: Money.toNumber(totals.reimbursement),
     totalSettlement: Money.toNumber(totals.settlement),
     totalExchange: Money.toNumber(totals.exchange),
+    totalTransfer: Money.toNumber(totals.transfer),
     finalBalance: Money.toNumber(acc),
   }
 }
@@ -311,6 +340,7 @@ function emptyMonthSeries(
     totalReimbursement: 0,
     totalSettlement: 0,
     totalExchange: 0,
+    totalTransfer: 0,
     finalBalance: 0,
   }
 }

@@ -387,7 +387,13 @@ En **web**, el `eye toggle` SHALL permanecer montado y visible mientras el heade
 
 La sección "Balance del mes" SHALL mostrar, para el mes seleccionado en el navegador compartido: un eyebrow "BALANCE" y debajo el neto ARS del mes en tipografía grande con signo y color (positivo → emerald, negativo → terracota/expense); debajo, las filas de flujo, cada una con dot de color + label + monto y una barra horizontal proporcional.
 
-**Reconciliación con el Disponible (lente CAJA).** El neto del mes (`finalBalance`) SHALL reconciliar exactamente con el cambio del Disponible en ese mes: la sección SHALL contabilizar **todo** movimiento de caja del mes sobre cuentas propias (`type IN ('cash','bank')`) aplicando los **mismos signos** que `calculateTransactionSums` (la fuente del Hero/Disponible), por moneda, sin combinar ARS con USD. En consecuencia `finalBalance = totalIncome − totalExpense − totalCardPayment + totalAdjustment + totalReimbursement + totalSettlement + totalExchange`. Ningún tipo de movimiento de caja SHALL descartarse: los reintegros recibidos a cuenta, las liquidaciones de deuda compartida y los cambios de moneda — hoy ignorados — SHALL contabilizarse. Las transferencias entre cuentas propias netean cero y SHALL seguir sin contabilizarse. Solo cuentan transacciones confirmadas (los consumos `pending` de tarjeta no entran, igual que siempre).
+**Reconciliación con el Disponible (lente CAJA).** El neto del mes (`finalBalance`) SHALL reconciliar exactamente con el cambio del Disponible en ese mes: la sección SHALL contabilizar **todo** movimiento de caja del mes sobre cuentas propias aplicando los **mismos signos** que `calculateTransactionSums` (la fuente del Hero/Disponible), por moneda, sin combinar ARS con USD.
+
+**"Cuenta propia" es un único criterio en toda la app: `type IN ('cash','bank') AND is_active = true`.** El universo de cuentas de esta sección SHALL ser idéntico al del Hero/Disponible, sin excepción. Una cuenta **archivada** (`is_active = false`) NO SHALL aportar sus movimientos al neto del mes, porque su saldo tampoco está en el Disponible: contarla de un lado y no del otro rompe la reconciliación. El criterio NO SHALL replicarse a mano en cada query — SHALL derivarse de una única definición normativa compartida (ver spec `web-data-access`), de modo que Hero, "Dónde está", listado/detalle de cuentas y "Balance del mes" no puedan divergir por olvido. En consecuencia `finalBalance = totalIncome − totalExpense − totalCardPayment + totalAdjustment + totalReimbursement + totalSettlement + totalExchange + totalTransfer`, donde `totalTransfer` es el residuo de las transferencias con una sola pata propia (cero en el caso normal, ver más abajo). Ningún tipo de movimiento de caja SHALL descartarse: los reintegros recibidos a cuenta, las liquidaciones de deuda compartida y los cambios de moneda — hoy ignorados — SHALL contabilizarse. Solo cuentan transacciones confirmadas (los consumos `pending` de tarjeta no entran, igual que siempre).
+
+**Transferencias: cada pata se evalúa por separado.** Una `transfer` SHALL restar cuando su cuenta origen es propia y sumar cuando su cuenta destino lo es, evaluando cada condición de forma independiente — exactamente como `calculateTransactionSums`. Cuando **ambas** patas son cuentas propias el resultado neto es cero y la transferencia no mueve el neto del mes (comportamiento visible sin cambios). Cuando **solo una** pata es propia (la otra es una cuenta archivada), la transferencia SHALL contabilizarse por esa pata. El sistema NO SHALL descartar las transferencias de plano asumiendo que ambas patas son propias: esa suposición es la que hace divergir la serie del mes del Disponible.
+
+Ese efecto vive en su propio balde `totalTransfer` (signado: la plata que sale del universo propio resta, la que entra suma). El balde NO SHALL renderizar una fila propia en la card: vale exactamente cero cuando las dos patas son propias — el caso normal —, así que una fila "Transferencias" mostraría siempre `$0` y ensuciaría la lectura. Existe para que la identidad de baldes siga cerrando contra `finalBalance` en vez de que el residuo aparezca como una diferencia sin explicación.
 
 Cada tipo de movimiento de caja vive en su **balde propio**, con estas reglas de signo (idénticas a `calculateTransactionSums`):
 
@@ -413,7 +419,7 @@ Los anchos de las barras SHALL calcularse de los datos: la magnitud mayor entre 
 
 Al pie, un strip USD SHALL mostrar el chip "USD", el neto USD del mes con signo y color, y el detalle "Ingresos US$X · Gastos US$Y". El strip SHALL mostrarse siempre (bimoneda por defecto: sin actividad USD muestra ceros). ARS y USD nunca se combinan ni convierten.
 
-Los datos SHALL salir de `getMonthBalanceSeries` (totales por moneda, incluyendo `totalAdjustment`, `totalCardPayment`, `totalReimbursement`, `totalSettlement` y `totalExchange`). La sección NO SHALL renderizar el gráfico de línea acumulada en ninguna plataforma: `MonthBalanceChart` no existe ni en `apps/web` ni en `apps/mobile` (la serie diaria sigue disponible en el package para vistas futuras). Todos los importes participan del eye-mask.
+Los datos SHALL salir de `getMonthBalanceSeries` (totales por moneda, incluyendo `totalAdjustment`, `totalCardPayment`, `totalReimbursement`, `totalSettlement`, `totalExchange` y `totalTransfer`). La sección NO SHALL renderizar el gráfico de línea acumulada en ninguna plataforma: `MonthBalanceChart` no existe ni en `apps/web` ni en `apps/mobile` (la serie diaria sigue disponible en el package para vistas futuras). Todos los importes participan del eye-mask.
 
 #### Scenario: El neto del mes reconcilia con el cambio del Disponible
 
@@ -421,6 +427,19 @@ Los datos SHALL salir de `getMonthBalanceSeries` (totales por moneda, incluyendo
 - **THEN** el neto del mes es `+$250.000` (= 500.000 − 300.000 + 50.000)
 - **AND** ese neto es idéntico al cambio del Disponible del mes (que también cuenta el reintegro)
 - **AND** el reintegro se cuenta dentro de la fila "Ingresos" (que muestra `$550.000`), sin barra propia
+
+#### Scenario: Una cuenta archivada no aporta al neto del mes
+
+- **WHEN** el usuario tiene una cuenta `type='bank'` con `is_active = false` que registró gastos en el mes seleccionado
+- **THEN** esos gastos NO se cuentan en ninguna fila de "Balance del mes" ni en `finalBalance`
+- **AND** el neto del mes sigue siendo idéntico al cambio del Disponible (que tampoco incluye esa cuenta)
+
+#### Scenario: Una transferencia hacia una cuenta archivada se trata igual en las dos lentes
+
+- **WHEN** el usuario transfiere ARS $100.000 desde una cuenta activa hacia una cuenta archivada
+- **THEN** el Disponible baja $100.000 (la plata salió del universo de cuentas propias)
+- **AND** "Balance del mes" refleja esa misma bajada de $100.000
+- **AND** NO ocurre que la serie del mes netee la transferencia a cero mientras el Disponible sí se mueve
 
 #### Scenario: El Disponible cuenta los reintegros recibidos y las liquidaciones
 

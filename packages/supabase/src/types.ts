@@ -1106,9 +1106,21 @@ export type Database = {
         Args: { p_account_id: string; p_date: string; p_settlement_id: string }
         Returns: undefined
       }
+      get_account_balance_sums: {
+        Args: { p_account_ids?: string[] }
+        Returns: {
+          account_id: string
+          currency_code: string
+          net: number
+        }[]
+      }
       get_movements_page: {
         Args: { p_filters?: Json; p_limit?: number; p_offset?: number }
         Returns: Json[]
+      }
+      get_owned_account_ids: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
       }
       is_household_member: {
         Args: { p_household_id: string }

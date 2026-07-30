@@ -66,10 +66,20 @@ export type MonthBalanceSeries = {
    */
   totalExchange: number
   /**
+   * Residual of transfers with only ONE owned leg, signed: money leaving the
+   * owned universe subtracts, money arriving adds. **Zero whenever both legs are
+   * owned accounts** — the normal case — which is why the UI renders no row for
+   * it. It exists so `finalBalance` keeps reconciling with the Disponible when a
+   * transfer touches an account outside the owned universe (e.g. an archived
+   * one), instead of the series silently netting it to zero.
+   */
+  totalTransfer: number
+  /**
    * Net of the month, reconciling with the change in `disponible` by
    * construction (same per-type sign rules as `calculateTransactionSums`):
    * finalBalance = totalIncome − totalExpense − totalCardPayment
-   *   + totalAdjustment + totalReimbursement + totalSettlement + totalExchange.
+   *   + totalAdjustment + totalReimbursement + totalSettlement + totalExchange
+   *   + totalTransfer.
    */
   finalBalance: number
 }

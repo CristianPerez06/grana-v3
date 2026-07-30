@@ -53,6 +53,7 @@
     "yup": "^1.7.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.4",
     "@storybook/addon-themes": "^10.4.0",
     "@storybook/nextjs-vite": "^10.4.0",
     "@tailwindcss/postcss": "^4",

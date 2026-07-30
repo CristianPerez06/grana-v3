@@ -153,6 +153,36 @@ export function calculateTransactionSums(
   )
 }
 
+/** One row of the `get_account_balance_sums` RPC: net per account and currency. */
+export type AccountBalanceSumRow = {
+  account_id: string
+  currency_code: string
+  net: number | string
+}
+
+/**
+ * Shape the `get_account_balance_sums` RPC result like `calculateTransactionSums`
+ * returns it: accountId -> { ARS, USD }.
+ *
+ * The RPC emits one row per (account, currency) that has movements; this fills
+ * the missing currency with 0 so every entry carries both buckets, exactly as
+ * the TS aggregation does. Pure: the caller owns the round-trip.
+ */
+export function balanceSumsFromRows(
+  rows: AccountBalanceSumRow[],
+): Map<string, Record<BalanceCurrency, number>> {
+  const result = new Map<string, Record<BalanceCurrency, number>>()
+
+  for (const row of rows) {
+    if (!isBalanceCurrency(row.currency_code) || !row.account_id) continue
+    const entry = result.get(row.account_id) ?? { ARS: 0, USD: 0 }
+    entry[row.currency_code] = Money.toNumber(Money.from(row.net))
+    result.set(row.account_id, entry)
+  }
+
+  return result
+}
+
 export type RunningBalanceRow = BalanceTransactionRow & { id: string }
 
 /**

@@ -40,6 +40,11 @@ export const TRANSACTION_SELECT = `
 // stitch it in a second query (same approach grana-v2 used for cashback).
 // Only the per-row detail reads still need this — the global movements page
 // gets the linked expense embedded by the get_movements_page RPC.
+//
+// The `.in('id', …)` below has no explicit bound, but its product is DISPLAY
+// metadata (the origin expense's category), not a money number, so the
+// "complete by construction" requirement of `web-data-access` does not reach it:
+// a truncated result degrades a label, it never corrupts a balance.
 export async function attachLinkedExpenses(
   supabase: GranaSupabaseClient,
   rows: TransactionWithDetails[],
@@ -86,31 +91,53 @@ export const isHistoryRow = (r: TransactionWithDetails): boolean =>
   r.type !== 'reimbursement' || (r.received_at != null && r.cancelled_at == null)
 
 // ── getAccountMovementsAscending ──────────────────────────────────────────────
-// All movements affecting an account, in calculation order (date/created_at/id
-// ASC). No pagination, no filtering: the running balance needs the full history
-// to be correct, and /accounts/[id] applies the user-facing filters + slice
-// client-side over this dataset (the visible page and the balance share the
-// same underlying data — TanStack caches one fetch, not two). The caller
-// composes this with `computeRunningBalances` from `@grana/money-logic`.
+// Every movement affecting an account, in calculation order (date/created_at/id
+// ASC). No user-facing filtering: the running balance needs the full history to
+// be correct, and /accounts/[id] applies the filters + slice client-side over
+// this dataset (the visible page and the balance share the same underlying data
+// — TanStack caches one fetch, not two). The caller composes this with
+// `computeRunningBalances` from `@grana/money-logic`.
+//
+// It IS paginated, exhaustively: the read walks `.range()` until the set is
+// exhausted. Its product is a balance, so it must be complete BY CONSTRUCTION
+// (spec `web-data-access`) — a plain `.select()` is silently capped by
+// PostgREST's server-side `max-rows`, and an account whose history crosses that
+// ceiling would render a running balance missing its oldest movements with no
+// error to show for it.
+
+/** Rows per round-trip. Independent of the server's `max-rows`: the loop
+ *  advances by what actually came back and stops on an empty page, so a smaller
+ *  server cap costs extra round-trips but never truncates. */
+const ACCOUNT_MOVEMENTS_PAGE_SIZE = 1000
 
 export async function getAccountMovementsAscending(
   supabase: GranaSupabaseClient,
   accountId: string,
 ): Promise<TransactionWithDetails[]> {
-  const { data, error } = await supabase
-    .from('transactions')
-    .select(TRANSACTION_SELECT)
-    .or(`account_id.eq.${accountId},transfer_destination_account_id.eq.${accountId}`)
-    .order('date', { ascending: true })
-    .order('created_at', { ascending: true })
-    .order('id', { ascending: true })
+  const rows: TransactionWithDetails[] = []
 
-  if (error) throw error
+  for (let offset = 0; ; ) {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select(TRANSACTION_SELECT)
+      .or(`account_id.eq.${accountId},transfer_destination_account_id.eq.${accountId}`)
+      // Deterministic order is what makes the paging stable — without it the
+      // pages could overlap or skip rows.
+      .order('date', { ascending: true })
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
+      .range(offset, offset + ACCOUNT_MOVEMENTS_PAGE_SIZE - 1)
 
-  return attachLinkedExpenses(
-    supabase,
-    ((data ?? []) as unknown as TransactionWithDetails[]).filter(isHistoryRow),
-  )
+    if (error) throw error
+
+    const batch = (data ?? []) as unknown as TransactionWithDetails[]
+    if (batch.length === 0) break
+
+    rows.push(...batch)
+    offset += batch.length
+  }
+
+  return attachLinkedExpenses(supabase, rows.filter(isHistoryRow))
 }
 
 // ── getPendingReimbursements ───────────────────────────────────────────────────

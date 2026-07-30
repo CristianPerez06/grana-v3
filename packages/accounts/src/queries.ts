@@ -1,9 +1,5 @@
 import type { GranaSupabaseClient } from '@grana/supabase'
-import {
-  calculateTransactionSums,
-  type BalanceCurrency,
-  type BalanceTransactionRow,
-} from '@grana/money-logic'
+import { balanceSumsFromRows, type BalanceCurrency } from '@grana/money-logic'
 import { getCreditCards, type CreditCardSummary } from '@grana/cards'
 import { Money } from '@grana/validation'
 import { resolveAccountAvatar } from '@grana/ui-contracts'
@@ -25,68 +21,65 @@ function addMoneyAmounts(a: number | string, b: number | string): number {
 }
 
 // ── getTransactionSums ────────────────────────────────────────────────────────
-// Supabase-bound read; the pure aggregation lives in @grana/money-logic. Lives
-// in @grana/accounts because accounts is its only consumer (account balances).
-
-// Returns a map of accountId -> { ARS: net, USD: net }
-// net = income - expense - transfer_out + transfer_in + adjustment(signed)
+// Net per account and currency, aggregated in Postgres by the
+// `get_account_balance_sums` RPC (migration 0051).
+//
+// It used to `.select()` the whole ledger and sum it in JS. That read had no
+// `.range()`, no `.limit()` and no `.order()`, so PostgREST's server-side
+// `max-rows` truncated it in SILENCE past the ceiling: no error, fewer rows, an
+// arbitrary subset — and a plausible-but-wrong balance. Aggregating in SQL makes
+// the response size a function of the number of ACCOUNTS instead of the number
+// of MOVEMENTS, so the ceiling stops being reachable (spec `web-data-access`).
+//
+// `calculateTransactionSums` stays the source of truth for the per-type sign
+// rules; the RPC replicates them and a parity test anchors the equivalence
+// (apps/web/lib/accounts/__tests__/balance-sums-migration.test.ts).
 export async function getTransactionSums(
   supabase: GranaSupabaseClient,
   accountIds: string[],
 ): Promise<Map<string, Record<BalanceCurrency, number>>> {
   if (accountIds.length === 0) return new Map()
 
-  // Exclude credit card child transactions (status IS NOT NULL) and
-  // off-ledger parent rows (is_parent=true, account_id=NULL, auto-excluded by the or filter).
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('account_id, transfer_destination_account_id, currency_code, amount, type, destination_amount, destination_currency, reimbursement_target, received_at, cancelled_at, settlement_direction')
-    .or(
-      `account_id.in.(${accountIds.join(',')}),transfer_destination_account_id.in.(${accountIds.join(',')})`,
-    )
-    .is('status', null)
+  const { data, error } = await supabase.rpc('get_account_balance_sums', {
+    p_account_ids: accountIds,
+  })
 
   if (error) throw error
 
-  return calculateTransactionSums((data ?? []) as BalanceTransactionRow[], accountIds)
+  return balanceSumsFromRows(data ?? [])
 }
 
 // Returns the set of account IDs that have at least one transaction referencing
 // them (either as origin or as transfer destination), excluding off-ledger
-// parent rows. Single round-trip; the row's "archive vs delete" affordance reads
-// from this set per account.
+// parent rows. The row's "archive vs delete" affordance reads from this set.
+//
+// One EXISTS probe per account (`.limit(1)`) instead of pulling the whole ledger
+// and reducing it client-side. The old shape was the same uncapped `.select()`
+// the balance reads had: past PostgREST's `max-rows` it truncated in silence,
+// and an account whose movements fell outside the truncated window would look
+// empty — offering DELETE on an account that has history. The probe is bounded
+// by construction: it can never return more than one row.
 async function getAccountIdsWithTransactions(
   supabase: GranaSupabaseClient,
   accountIds: string[],
 ): Promise<Set<string>> {
   if (accountIds.length === 0) return new Set()
 
-  const idList = accountIds.join(',')
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('account_id, transfer_destination_account_id')
-    .or(
-      `account_id.in.(${idList}),transfer_destination_account_id.in.(${idList})`,
-    )
-    .or('is_parent.is.null,is_parent.eq.false')
+  const probes = await Promise.all(
+    accountIds.map(async (id) => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('id')
+        .or(`account_id.eq.${id},transfer_destination_account_id.eq.${id}`)
+        .or('is_parent.is.null,is_parent.eq.false')
+        .limit(1)
 
-  if (error) throw error
+      if (error) throw error
+      return [id, (data ?? []).length > 0] as const
+    }),
+  )
 
-  const ids = new Set(accountIds)
-  const hits = new Set<string>()
-  for (const row of (data ?? []) as Array<{
-    account_id: string | null
-    transfer_destination_account_id: string | null
-  }>) {
-    if (row.account_id && ids.has(row.account_id)) hits.add(row.account_id)
-    if (
-      row.transfer_destination_account_id &&
-      ids.has(row.transfer_destination_account_id)
-    ) {
-      hits.add(row.transfer_destination_account_id)
-    }
-  }
-  return hits
+  return new Set(probes.filter(([, hasAny]) => hasAny).map(([id]) => id))
 }
 
 // ── getAccounts ───────────────────────────────────────────────────────────────
