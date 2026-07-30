@@ -62,9 +62,9 @@ Tracker temporal de trabajo pendiente relacionado a la app mobile, builds y dist
 
 ### Triage de peer dependency warnings
 
-- **Qué**: `pnpm install` reporta "Issues with peer dependencies found". Correr `pnpm peers check`, revisar la lista, addressear lo addressable y/o aceptar explícitamente lo que sea benigno.
+- **Qué**: `pnpm install` reporta "Issues with peer dependencies found". Revisar la lista completa con `pnpm install --loglevel warn`, inspeccionar cada conflicto con `pnpm why <paquete>`, addressear lo addressable y/o aceptar explícitamente lo que sea benigno.
 - **Bloqueador**: ninguno.
-- **Listo cuando**: `pnpm peers check` corre sin warnings, o los warnings restantes están documentados como aceptados.
+- **Listo cuando**: `pnpm install` corre sin warnings de peer deps, o los warnings restantes están documentados como aceptados (dónde y por qué).
 - **Notas**: común en projects con React Native + monorepo, casi siempre benigno. Pero vale el triage para descartar issues latentes.
 
 ### Instalar y correr `expo-doctor`
@@ -73,13 +73,6 @@ Tracker temporal de trabajo pendiente relacionado a la app mobile, builds y dist
 - **Bloqueador**: ninguno.
 - **Listo cuando**: `pnpm --filter mobile exec expo-doctor` corre sin errores graves, y el comando está documentado en `EAS_SETUP.md` o `README.md` como parte del checklist pre-build.
 - **Notas**: `expo-doctor` cachea conocimiento sobre incompatibilidades de versiones de Expo SDK / RN / libs comunes. Podría haber catcheado el bug de Reanimated v4 sin plugin antes de hacer un build.
-
-### README raíz desactualizado sobre `apps/mobile`
-
-- **Qué**: El README raíz (`/README.md`) tiene un párrafo de "Estructura del proyecto" que dice `apps/mobile, todavía no creado`. Eso quedó stale — ya está creado y funcionando.
-- **Bloqueador**: ninguno.
-- **Listo cuando**: Párrafo actualizado para reflejar que `apps/mobile` existe, incluye `Expo + Expo Router + NativeWind + Supabase + EAS`, y referencia a `apps/mobile/README.md` para detalle.
-- **Notas**: low priority pero confuso para alguien que aterriza nuevo en el repo. Cambio chico.
 
 ### `apps/web/README.md` simétrico con `apps/mobile/README.md`
 
