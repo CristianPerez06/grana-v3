@@ -58,7 +58,7 @@ export default function DashboardScreen() {
   return (
     <EyeMaskProvider key={providersKey}>
       <DashboardMonthProvider currentYear={currentYear} currentMonth={currentMonth}>
-        <View className="flex-1 bg-background">
+        <View className="flex-1 bg-page">
           <DashboardHeader todayISO={formatDateISO(today)} />
           <ScrollView
             contentContainerClassName="px-6 pt-6 pb-28"

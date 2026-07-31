@@ -39,7 +39,7 @@ export default function Index() {
 
   if (target === null) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
+      <View className="flex-1 items-center justify-center bg-page">
         <ActivityIndicator />
       </View>
     )

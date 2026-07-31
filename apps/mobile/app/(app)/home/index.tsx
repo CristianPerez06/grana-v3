@@ -55,7 +55,7 @@ export default function HomeScreen() {
   )
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-page">
       <PageHeader title={household?.name ?? t('shared.title')} actions={settingsAction} />
 
       <ScrollView contentContainerClassName="px-6 pt-6 pb-28">

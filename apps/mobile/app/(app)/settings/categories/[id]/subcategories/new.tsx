@@ -9,7 +9,7 @@ export default function NewSubcategoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-page">
       <PageHeader
         title={t('settings.categories.subcategories.new.title')}
         backLink={{

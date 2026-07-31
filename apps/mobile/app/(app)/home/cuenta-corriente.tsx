@@ -53,7 +53,7 @@ export default function CuentaCorrienteScreen() {
   const backLink = { href: '/home', label: t('common.back') }
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-page">
       <PageHeader
         title={t('shared.cuenta_corriente.title')}
         description={t('shared.cuenta_corriente.subtitle')}

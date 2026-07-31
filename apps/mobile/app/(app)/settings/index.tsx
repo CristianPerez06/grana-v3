@@ -38,7 +38,7 @@ export default function SettingsScreen() {
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-page">
       <PageHeader title={t('settings.title')} />
       <ScrollView contentContainerClassName="px-6 py-6">
         <View className="flex-col gap-6">

@@ -7,7 +7,7 @@ export default function NewCategoryScreen() {
   const t = useT()
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-page">
       <PageHeader
         title={t('settings.categories.new.title')}
         backLink={{
