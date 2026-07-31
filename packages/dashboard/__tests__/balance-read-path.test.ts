@@ -6,7 +6,7 @@ import {
   type BalanceTransactionRow,
   type MonthBalanceTxInput,
 } from '../src/aggregations'
-import { getMonthBalanceSeries } from '../src/queries'
+import { getDashboardHero, getMonthBalanceSeries } from '../src/queries'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Regression coverage for the balance read-path defects (change
@@ -308,5 +308,63 @@ describe('month net reconciles with the Disponible (archived account + one-legge
         s.totalExchange +
         s.totalTransfer,
     ).toBeCloseTo(s.finalBalance, 6)
+  })
+})
+
+// ── Temporal cut (0052) — the Hero pins p_today to the AR financial date ─────
+//
+// The exclusion itself lives in SQL (parity-tested against
+// `calculateTransactionSums` in apps/web). What the dashboard read path owns is
+// the WIRING: every `get_account_balance_sums` call must pass `p_today` so the
+// balance "hoy" is the same "hoy" the UI renders, never the DB server clock.
+
+describe('getDashboardHero — temporal cut wiring', () => {
+  it('passes the AR financial date as p_today to get_account_balance_sums', async () => {
+    let capturedArgs: { p_account_ids?: string[]; p_today?: string } | undefined
+
+    const supabase = {
+      rpc: async (fn: string, args?: Record<string, unknown>) => {
+        if (fn === 'get_owned_account_ids') return { data: ['cash-1'], error: null }
+        if (fn === 'get_account_balance_sums') {
+          capturedArgs = args as typeof capturedArgs
+          return {
+            data: [{ account_id: 'cash-1', currency_code: 'ARS', net: 100 }],
+            error: null,
+          }
+        }
+        throw new Error(`unexpected rpc: ${fn}`)
+      },
+      from: () => ({
+        select: () => ({
+          in: async () => ({
+            data: [
+              {
+                id: 'cash-1',
+                name: 'Efectivo',
+                type: 'cash',
+                color_key: null,
+                icon_key: null,
+                institution: null,
+                currencies: [{ currency_code: 'ARS', initial_balance: 50 }],
+              },
+            ],
+            error: null,
+          }),
+        }),
+      }),
+    } as unknown as SupabaseClient
+
+    const hero = await getDashboardHero(supabase)
+
+    expect(capturedArgs?.p_account_ids).toEqual(['cash-1'])
+    // ISO YYYY-MM-DD, and exactly today in America/Argentina/Buenos_Aires.
+    expect(capturedArgs?.p_today).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    const arToday = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+    }).format(new Date())
+    expect(capturedArgs?.p_today).toBe(arToday)
+
+    // The hero composes initial_balance + the (already cut) SQL net.
+    expect(hero.ars).toBe(150)
   })
 })

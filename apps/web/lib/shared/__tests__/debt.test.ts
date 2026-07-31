@@ -11,6 +11,7 @@ import {
   calculateTransactionSums,
   summarizePeriod,
   type BalanceTransactionRow,
+  type DatedBalanceTransactionRow,
   type DebtMovementSplit,
   type DebtSettlement,
   type ProjectableSplit,
@@ -325,7 +326,9 @@ describe('computeHouseholdBalances', () => {
 // ─── settlement movement: impacts balance, excluded from analytics ───────────
 
 describe('settlement movement in balance math', () => {
-  const settleOut: BalanceTransactionRow = {
+  const TODAY = '2026-07-31'
+  const settleOut: DatedBalanceTransactionRow = {
+    date: TODAY,
     account_id: 'acct-payer',
     transfer_destination_account_id: null,
     currency_code: 'ARS',
@@ -333,7 +336,8 @@ describe('settlement movement in balance math', () => {
     type: 'settlement',
     settlement_direction: 'out',
   }
-  const settleIn: BalanceTransactionRow = {
+  const settleIn: DatedBalanceTransactionRow = {
+    date: TODAY,
     account_id: 'acct-receiver',
     transfer_destination_account_id: null,
     currency_code: 'ARS',
@@ -343,7 +347,7 @@ describe('settlement movement in balance math', () => {
   }
 
   it("debits the payer's account and credits the receiver's", () => {
-    const sums = calculateTransactionSums([settleOut, settleIn], ['acct-payer', 'acct-receiver'])
+    const sums = calculateTransactionSums([settleOut, settleIn], ['acct-payer', 'acct-receiver'], TODAY)
     expect(sums.get('acct-payer')?.ARS).toBe(-14)
     expect(sums.get('acct-receiver')?.ARS).toBe(14)
   })

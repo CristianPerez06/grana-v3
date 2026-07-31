@@ -5,17 +5,19 @@ import {
   computeCategoryNet,
   sumReceivedStatementReimbursements,
   suggestReimbursementAmount,
-  type BalanceTransactionRow,
+  type DatedBalanceTransactionRow,
   type RunningBalanceRow,
   type CategoryAggRow,
   type ReimbursementStateRow,
 } from '@grana/money-logic'
 
+const TODAY = '2026-07-31'
 const RECEIVED = '2026-05-20T12:00:00Z'
 const CANCELLED = '2026-05-21T12:00:00Z'
 
-function txRow(o: Partial<BalanceTransactionRow>): BalanceTransactionRow {
+function txRow(o: Partial<DatedBalanceTransactionRow>): DatedBalanceTransactionRow {
   return {
+    date: TODAY,
     account_id: 'caja',
     transfer_destination_account_id: null,
     currency_code: 'ARS',
@@ -27,31 +29,31 @@ function txRow(o: Partial<BalanceTransactionRow>): BalanceTransactionRow {
 
 describe('reimbursement in calculateTransactionSums', () => {
   it('a pending "a cuenta" reimbursement does NOT add to the account', () => {
-    const rows: BalanceTransactionRow[] = [
+    const rows: DatedBalanceTransactionRow[] = [
       txRow({ type: 'reimbursement', reimbursement_target: 'account', amount: '20000', received_at: null }),
     ]
-    expect(calculateTransactionSums(rows, ['caja']).get('caja')?.ARS ?? 0).toBe(0)
+    expect(calculateTransactionSums(rows, ['caja'], TODAY).get('caja')?.ARS ?? 0).toBe(0)
   })
 
   it('a received "a cuenta" reimbursement adds to the account like income', () => {
-    const rows: BalanceTransactionRow[] = [
+    const rows: DatedBalanceTransactionRow[] = [
       txRow({ type: 'reimbursement', reimbursement_target: 'account', amount: '20000', received_at: RECEIVED }),
     ]
-    expect(calculateTransactionSums(rows, ['caja']).get('caja')?.ARS).toBe(20000)
+    expect(calculateTransactionSums(rows, ['caja'], TODAY).get('caja')?.ARS).toBe(20000)
   })
 
   it('a cancelled reimbursement never adds, even if it has received_at null', () => {
-    const rows: BalanceTransactionRow[] = [
+    const rows: DatedBalanceTransactionRow[] = [
       txRow({ type: 'reimbursement', reimbursement_target: 'account', amount: '20000', received_at: null, cancelled_at: CANCELLED }),
     ]
-    expect(calculateTransactionSums(rows, ['caja']).get('caja')?.ARS ?? 0).toBe(0)
+    expect(calculateTransactionSums(rows, ['caja'], TODAY).get('caja')?.ARS ?? 0).toBe(0)
   })
 
   it('a received "en resumen" reimbursement does NOT affect an account balance', () => {
-    const rows: BalanceTransactionRow[] = [
+    const rows: DatedBalanceTransactionRow[] = [
       txRow({ account_id: 'visa', type: 'reimbursement', reimbursement_target: 'statement', amount: '20000', received_at: RECEIVED }),
     ]
-    expect(calculateTransactionSums(rows, ['visa']).get('visa')?.ARS ?? 0).toBe(0)
+    expect(calculateTransactionSums(rows, ['visa'], TODAY).get('visa')?.ARS ?? 0).toBe(0)
   })
 })
 

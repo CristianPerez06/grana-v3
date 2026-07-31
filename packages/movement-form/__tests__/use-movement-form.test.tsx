@@ -48,6 +48,7 @@ const stubMutators = (): Mutators => ({
   registerCardPurchase: vi.fn(async () => ({ ok: true as const, id: 'tx-6' })),
   registerInstallments: vi.fn(async () => ({ ok: true as const, parentId: 'tx-7' })),
   createRecurrenceFromMovement: vi.fn(async () => ({ ok: true as const, id: 'rec-1' })),
+  createRecurrenceDirect: vi.fn(async () => ({ ok: true as const, id: 'rec-2' })),
   suggestCategoryFromHistory: vi.fn(async () => null),
 })
 
@@ -143,6 +144,61 @@ describe('useMovementForm — submit dispatcher', () => {
     }
     expect(call.amount).toBe(1500)
     expect(call.category_id).toBe('cat-groceries')
+  })
+
+  it('recurrent + FUTURE date creates the rule directly, without a seed movement', async () => {
+    const mutators = stubMutators()
+    const { result } = renderHook(() => useMovementForm(baseArgs({ mutators })))
+    act(() => result.current.setAmount('9000'))
+    act(() => result.current.setCategoryId('cat-groceries'))
+    act(() => result.current.setIsRecurrent(true))
+    act(() => result.current.setDate('2026-06-10')) // today is 2026-06-01
+    await act(async () => {
+      result.current.onSubmit()
+    })
+    expect(mutators.createExpense).not.toHaveBeenCalled()
+    expect(mutators.createRecurrenceFromMovement).not.toHaveBeenCalled()
+    expect(mutators.createRecurrenceDirect).toHaveBeenCalledOnce()
+    const call = (mutators.createRecurrenceDirect as ReturnType<typeof vi.fn>).mock
+      .calls[0][0] as {
+      movement_type: string
+      start_date: string
+      amount: number
+      category_id: string
+      frequency: string
+    }
+    expect(call.movement_type).toBe('expense')
+    expect(call.start_date).toBe('2026-06-10')
+    expect(call.amount).toBe(9000)
+    expect(call.category_id).toBe('cat-groceries')
+    expect(call.frequency).toBe('monthly')
+  })
+
+  it('recurrent with TODAY date keeps the seed flow (movement + rule from movement)', async () => {
+    const mutators = stubMutators()
+    const { result } = renderHook(() => useMovementForm(baseArgs({ mutators })))
+    act(() => result.current.setAmount('9000'))
+    act(() => result.current.setCategoryId('cat-groceries'))
+    act(() => result.current.setIsRecurrent(true))
+    await act(async () => {
+      result.current.onSubmit()
+    })
+    expect(mutators.createExpense).toHaveBeenCalledOnce()
+    expect(mutators.createRecurrenceFromMovement).toHaveBeenCalledOnce()
+    expect(mutators.createRecurrenceDirect).not.toHaveBeenCalled()
+  })
+
+  it('a future-dated NON-recurrent expense still creates the movement', async () => {
+    const mutators = stubMutators()
+    const { result } = renderHook(() => useMovementForm(baseArgs({ mutators })))
+    act(() => result.current.setAmount('9000'))
+    act(() => result.current.setCategoryId('cat-groceries'))
+    act(() => result.current.setDate('2026-06-10'))
+    await act(async () => {
+      result.current.onSubmit()
+    })
+    expect(mutators.createExpense).toHaveBeenCalledOnce()
+    expect(mutators.createRecurrenceDirect).not.toHaveBeenCalled()
   })
 
   it('dispatches to registerInstallments when credit card + 3 cuotas', async () => {

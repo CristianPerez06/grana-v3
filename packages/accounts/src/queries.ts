@@ -1,5 +1,10 @@
 import type { GranaSupabaseClient } from '@grana/supabase'
-import { balanceSumsFromRows, type BalanceCurrency } from '@grana/money-logic'
+import {
+  balanceSumsFromRows,
+  formatDateISO,
+  getTodayAR,
+  type BalanceCurrency,
+} from '@grana/money-logic'
 import { getCreditCards, type CreditCardSummary } from '@grana/cards'
 import { Money } from '@grana/validation'
 import { resolveAccountAvatar } from '@grana/ui-contracts'
@@ -34,6 +39,9 @@ function addMoneyAmounts(a: number | string, b: number | string): number {
 // `calculateTransactionSums` stays the source of truth for the per-type sign
 // rules; the RPC replicates them and a parity test anchors the equivalence
 // (apps/web/lib/accounts/__tests__/balance-sums-migration.test.ts).
+//
+// `p_today` pins the temporal cut (migration 0052) to the same financial "hoy"
+// the rest of the UI renders: future-dated rows stay out of the balance.
 export async function getTransactionSums(
   supabase: GranaSupabaseClient,
   accountIds: string[],
@@ -42,6 +50,7 @@ export async function getTransactionSums(
 
   const { data, error } = await supabase.rpc('get_account_balance_sums', {
     p_account_ids: accountIds,
+    p_today: formatDateISO(getTodayAR()),
   })
 
   if (error) throw error

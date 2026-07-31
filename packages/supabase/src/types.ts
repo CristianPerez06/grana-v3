@@ -1107,7 +1107,7 @@ export type Database = {
         Returns: undefined
       }
       get_account_balance_sums: {
-        Args: { p_account_ids?: string[] }
+        Args: { p_account_ids?: string[]; p_today?: string }
         Returns: {
           account_id: string
           currency_code: string
