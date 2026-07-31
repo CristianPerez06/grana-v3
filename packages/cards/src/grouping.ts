@@ -13,6 +13,14 @@ export const NO_BANK_KEY = '__no_bank__'
 
 export type ViewFilter = 'by-bank' | 'all' | 'in-use' | 'due-soon' | 'with-balance'
 
+/**
+ * The subset of `ViewFilter` that is a predicate over the flat list. `by-bank`
+ * is a view mode (grouped vs flat), not a predicate: mobile keeps the two as
+ * separate controls, so it needs the narrowed type. Web still drives both from
+ * a single `ViewFilter`.
+ */
+export type CardPredicateFilter = Exclude<ViewFilter, 'by-bank'>
+
 export type BankGroup = {
   /** Institution name, or `NO_BANK_KEY` for the fallback group. */
   key: string
@@ -96,6 +104,29 @@ export const applyFilter = (cards: CreditCardSummary[], filter: ViewFilter): Cre
       return cards
   }
 }
+
+/** Every predicate filter, in the order the UI offers them. */
+export const CARD_PREDICATE_FILTERS: CardPredicateFilter[] = [
+  'all',
+  'in-use',
+  'due-soon',
+  'with-balance',
+]
+
+/**
+ * How many cards each predicate filter would yield. Built on `applyFilter` so a
+ * count can never drift from what selecting that filter actually shows.
+ */
+export const countByFilter = (
+  cards: CreditCardSummary[],
+): Record<CardPredicateFilter, number> =>
+  CARD_PREDICATE_FILTERS.reduce(
+    (acc, filter) => {
+      acc[filter] = applyFilter(cards, filter).length
+      return acc
+    },
+    {} as Record<CardPredicateFilter, number>,
+  )
 
 /**
  * Group cards by issuing bank. Cards without an institution fall into the

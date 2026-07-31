@@ -35,10 +35,13 @@ export {
   cardUsePercent,
   sortCardsByDue,
   applyFilter,
+  countByFilter,
   groupCardsByBank,
+  CARD_PREDICATE_FILTERS,
   NO_BANK_KEY,
   type CardTone,
   type ViewFilter,
+  type CardPredicateFilter,
   type BankGroup,
 } from './grouping'
 

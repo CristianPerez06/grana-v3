@@ -793,6 +793,7 @@
     "compact": {
       "filters": {
         "by_bank": "By bank",
+        "list": "List",
         "all": "All",
         "in_use": "In use",
         "due_soon": "Due soon",

@@ -3,9 +3,11 @@ import {
   groupCardsByBank,
   sortCardsByDue,
   applyFilter,
+  countByFilter,
   cardUsePercent,
   cardTone,
   cardHasBalance,
+  CARD_PREDICATE_FILTERS,
   NO_BANK_KEY,
 } from '../grouping'
 import type { CreditCardSummary } from '../types'
@@ -144,6 +146,43 @@ describe('applyFilter', () => {
   it('"by-bank" and "all" keep everything', () => {
     expect(applyFilter(cards, 'by-bank')).toHaveLength(4)
     expect(applyFilter(cards, 'all')).toHaveLength(4)
+  })
+})
+
+// ── countByFilter ───────────────────────────────────────────────────────────────
+
+describe('countByFilter', () => {
+  it('returns 0 for every predicate on an empty list', () => {
+    expect(countByFilter([])).toEqual({ all: 0, 'in-use': 0, 'due-soon': 0, 'with-balance': 0 })
+  })
+
+  it('counts a card under every predicate it satisfies', () => {
+    // One card that is in use, about to fall due, and carries a balance.
+    const overlapping = mkCard({
+      id: 'x',
+      inUse: true,
+      period: { alert: 'amber', pendingAmountARS: 4_200 },
+    })
+    expect(countByFilter([overlapping])).toEqual({
+      all: 1,
+      'in-use': 1,
+      'due-soon': 1,
+      'with-balance': 1,
+    })
+  })
+
+  it('never diverges from what applyFilter would show', () => {
+    const cards = [
+      mkCard({ id: 'u', inUse: true }),
+      mkCard({ id: 'i' }),
+      mkCard({ id: 'd', period: { alert: 'amber' } }),
+      mkCard({ id: 'b', period: { pendingAmountARS: 500 } }),
+      mkCard({ id: 'n', period: null }),
+    ]
+    const counts = countByFilter(cards)
+    for (const filter of CARD_PREDICATE_FILTERS) {
+      expect(counts[filter]).toBe(applyFilter(cards, filter).length)
+    }
   })
 })
 
