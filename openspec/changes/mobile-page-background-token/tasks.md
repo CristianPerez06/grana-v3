@@ -1,34 +1,35 @@
 ## 1. Espiga: confirmar que NativeWind resuelve `var()`
 
-- [ ] 1.1 Declarar a mano un `:root { --page: #F6F7F9; }` al tope de `apps/mobile/global.css` y aplicar `bg-background` en una pantalla de prueba.
-- [ ] 1.2 Verificar en el emulador si la superficie pinta gris. Si NO pinta, abandonar el enfoque de este change y ejecutar en su lugar la migración a tokens estructurales descartada en `design.md` (Decisión 1); el resto de las tareas de los grupos 2 y 3 queda sin efecto y el grupo 5 se reescribe.
-- [ ] 1.3 Revertir la declaración manual antes de seguir.
+- [x] 1.1 Verificar que el compilador de NativeWind extrae custom properties de un `:root`. Hecho offline con `react-native-css-interop/dist/css-to-rn` en lugar de la prueba manual en emulador: un `:root { --page: #F6F7F9; }` produce `rootVariables: {"--page":{"light":"#f6f7f9"}}`.
+- [x] 1.2 Verificar que una clase con alias compila a una instrucción de lookup: `.bg-background { background-color: var(--page) }` → `["var",["--page"]]`.
+- [x] 1.3 Enfoque confirmado; no hace falta el fallback de migrar a tokens estructurales.
 
 ## 2. Codegen de las variables
 
-- [ ] 2.1 Extender `packages/ui-tokens/scripts/codegen.mjs` para emitir `src/tokens.css` con el bloque `:root` de `theme.css` (sólo custom properties: sin `@custom-variant`, sin `@theme`, sin `.dark`).
-- [ ] 2.2 Exportar el archivo generado desde `packages/ui-tokens/package.json` (`exports`).
-- [ ] 2.3 Verificar que correr el codegen dos veces produce el mismo output (idempotente) y que `tokens.cjs` sigue generándose igual que antes.
+- [x] 2.1 `packages/ui-tokens/scripts/codegen.mjs` emite `tokens.css` con el `:root` de `theme.css` (sólo custom properties; sin `@custom-variant`, `@theme` ni `.dark`).
+- [x] 2.2 Exportado desde `packages/ui-tokens/package.json` como `./tokens.css`. Se emite en la **raíz** del package, no en `src/`: `postcss-import` resuelve subpaths literales y no lee el mapa `exports`.
+- [x] 2.3 Codegen idempotente (dos corridas, mismo output). `tokens.cjs` sigue generándose igual — con la salvedad de que estaba desactualizado y la corrida agregó 27 líneas de tokens que faltaban (sólo agregados, ningún valor cambió).
 
 ## 3. Consumo desde mobile
 
-- [ ] 3.1 Importar el CSS generado desde `apps/mobile/global.css`, antes de las directivas `@tailwind`.
-- [ ] 3.2 Verificar en el emulador que una clase alias (`bg-background`, `bg-muted`) pinta el color correcto.
+- [x] 3.1 `apps/mobile/global.css` importa `@grana/ui-tokens/tokens.css` antes de las directivas `@tailwind`.
+- [x] 3.2 Verificado offline: el CSS compilado de mobile pasado por `css-to-rn` produce 13 `rootVariables` y las reglas con alias resuelven contra ellas.
+- [ ] 3.3 **[usuario]** Confirmar en el emulador que los links de auth y el label del `Button` se ven en navy.
 
-## 4. Corregir los aliases mal elegidos
+## 4. Aliases en uso
 
-- [ ] 4.1 Revisar los ~230 usos de `text-muted` en `apps/mobile`: ahora resuelven a `var(--border-soft)` (#EEF1F4, un color de **borde**), casi ilegible como texto. Determinar si querían `text-text-muted` (#6B7683).
-- [ ] 4.2 Corregir los que estén mal. Es un reemplazo mecánico, pero SHALL verificarse por pantalla que el resultado es el color de texto secundario esperado.
-- [ ] 4.3 Repetir el chequeo para `text-primary` (resuelve a `var(--navy)`) y para cualquier otro alias en uso que apunte a un token de familia distinta a la del utility.
+- [x] 4.1 Inventario real, extraído del CSS compilado (no por grep sobre el fuente, que da falsos positivos: `text-muted` matchea dentro de `text-text-muted`). Clases en uso que resuelven a un `var()` suelto: `text-primary` (7 usos en `(auth)/login.tsx` ×3, `signup.tsx`, `forgot-password.tsx`, `ui/Button.tsx`, `auth/OtpVerifyForm.tsx`) y `text-muted-foreground` (1 uso en `auth/OtpVerifyForm.tsx`).
+- [x] 4.2 No hace falta corregirlas: con el `:root` declarado apuntan al color correcto (`--navy` y `--text-muted` respectivamente). Se dejan como están, que es la premisa de la Decisión 1 del `design.md`.
+- [x] 4.3 `bg-muted` aparecía en el CSS compilado pero sólo por menciones en **comentarios** de `components/ui/SkeletonBlock.tsx`. Ese archivo ya documenta un workaround a este mismo bug (usa `bg-border-soft`); se deja como está, funciona.
 
 ## 5. Fondo de la ventana (ya implementado)
 
 - [x] 5.1 Pintar `bg-page` en el root de `apps/mobile/app/_layout.tsx`, dentro de `SafeAreaProvider`. — commit `5ff1c91`
 - [x] 5.2 Reemplazar `bg-background` por `bg-page` en el root de las 13 pantallas mobile que lo usaban. — commit `5ff1c91`
-- [ ] 5.3 Verificar en el emulador que las esquinas redondeadas del tab bar muestran el gris de página y no negro.
+- [ ] 5.3 **[usuario]** Confirmar en el emulador que las esquinas redondeadas del tab bar muestran el gris de página y no negro.
 
 ## 6. Cierre
 
-- [ ] 6.1 Correr `pnpm typecheck` y `pnpm lint` en `apps/mobile` y en `packages/ui-tokens`.
-- [ ] 6.2 Actualizar el comentario de cabecera de `apps/mobile/lib/colors.ts` si el codegen cambia lo que ese mirror manual tiene que cubrir.
-- [ ] 6.3 Archivar el change y sincronizar los deltas en `openspec/specs/{project-conventions,mobile-app-shell,page-header}/spec.md`.
+- [x] 6.1 `pnpm typecheck` y `pnpm lint` en `apps/mobile` y `packages/ui-tokens`.
+- [x] 6.2 `apps/mobile/lib/colors.ts` no cambia: sigue siendo el mirror JS para props `color`/`style` de RN, que no leen clases de NativeWind. El codegen TS que lo reemplazaría sigue pendiente.
+- [ ] 6.3 Archivar el change y sincronizar los deltas en `openspec/specs/{project-conventions,mobile-app-shell,page-header}/spec.md`. **Bloqueado hasta que el usuario confirme 3.3 y 5.3.**

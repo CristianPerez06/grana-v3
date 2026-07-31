@@ -1,3 +1,9 @@
+/* Custom properties de la marca, generadas desde `theme.css` por el codegen de
+   @grana/ui-tokens. Sin este import, toda clase cuyo token sea un alias
+   (`bg-background`, `text-muted`, …) compila a un `var(--…)` que React Native
+   no puede resolver, y la superficie o el texto quedan sin color. */
+@import '@grana/ui-tokens/tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

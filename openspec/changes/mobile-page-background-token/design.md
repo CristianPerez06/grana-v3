@@ -31,16 +31,15 @@ Restricciones que acotan el diseño:
 
 **Elegido:** extender el codegen para emitir un CSS con el `:root` de `theme.css`, e importarlo desde `apps/mobile/global.css`.
 
-**Alternativa descartada:** migrar las ~230 ocurrencias de `text-muted` → `text-text-muted`, `text-primary` → `text-navy`, `bg-background` → `bg-page`, etc.
+**Alternativa descartada:** migrar las 8 ocurrencias en uso (`text-primary` → `text-navy`, `text-muted-foreground` → `text-text-muted`) a tokens literales.
 
 Razones:
 
-- Cuesta un archivo generado y una línea de import, contra ~100 archivos editados.
-- No deja el problema latente: cualquier alias que alguien escriba mañana funciona, en vez de depender de que recuerde una lista de clases prohibidas.
-- La migración además cambia colores de facto (hoy `text-muted` no pinta; migrarlo a `text-text-muted` haría que el texto secundario pase a gris), o sea que requiere revisión visual pantalla por pantalla. Declarar las variables produce el mismo cambio visual pero en un solo lugar y de una vez.
-- Preserva la simetría web↔mobile: la misma clase significa lo mismo en las dos plataformas, que es la premisa de `@grana/ui-tokens`.
+- La migración arregla los 8 casos de hoy y deja el problema latente: el próximo alias que alguien escriba vuelve a fallar en silencio, sin que typecheck ni lint lo detecten.
+- Declarar las variables cuesta un archivo generado y una línea de import, y cierra la clase entera de defectos.
+- Preserva la simetría web↔mobile: la misma clase significa lo mismo en las dos plataformas, que es la premisa de `@grana/ui-tokens`. Migrar la rompe: obligaría a mantener en la cabeza qué subconjunto de la paleta es escribible en cada app.
 
-**Costo aceptado:** el arreglo depende de que NativeWind resuelva `var()` contra un `:root` importado. Ver Riesgos.
+**Costo aceptado:** el arreglo depende de que NativeWind resuelva `var()` contra un `:root` importado. Verificado offline (ver Riesgos).
 
 ### Decisión 2: Generar un CSS aparte en vez de hacer que mobile importe `theme.css`
 
@@ -54,9 +53,10 @@ Aunque las variables resuelvan, el `<View className="flex-1 bg-page">` del root 
 
 ## Risks / Trade-offs
 
-- **NativeWind podría no resolver `var()` desde un `:root` importado** → el runtime de `react-native-css-interop` expone `rootVariables` y `universalVariables`, lo que indica que sí lo soporta, pero NO está verificado en dispositivo. Mitigación: la primera tarea del change es un espiga mínima (declarar una sola variable y verificar una clase alias en el emulador) antes de escribir el codegen. Si falla, se cae a la migración de la Decisión 1 y el resto del change no cambia.
-- **El cambio visual es amplio y de golpe** → al resolver los aliases, ~230 textos que hoy caen al color default pasan a tomar `var(--border-soft)`, que es un color de **borde** (#EEF1F4), no de texto: casi ilegible sobre fondo claro. Mitigación: este change SHALL incluir la revisión de si esos usos querían `text-text-muted` y corregir el alias mal elegido donde corresponda. Es el mismo trabajo de la migración descartada, pero acotado a los usos que quedan mal, no a los ~230.
-- **Verificación sólo en dispositivo** → `typecheck` y `lint` pasan con el bug presente y seguirán pasando después. Mitigación: ninguna automatizable hoy; la verificación la hace el usuario en el emulador.
+- **NativeWind podría no resolver `var()` desde un `:root` importado** → verificado offline: pasando el CSS compilado de mobile por `react-native-css-interop/dist/css-to-rn`, el `:root` importado produce `rootVariables` (13 variables, las referenciadas por las clases en uso) y las reglas con alias quedan como instrucciones `var()` que resuelven contra ellas. Queda pendiente la confirmación visual en emulador.
+- **`postcss-import` no lee el mapa `exports` del `package.json`** → por eso el CSS generado se emite en la **raíz** del package y no en `src/`: así `@grana/ui-tokens/tokens.css` resuelve tanto por exports (bundlers) como por ruta literal (postcss-import). Si alguien lo mueve a `src/`, el build de mobile falla con "Failed to find '@grana/ui-tokens/tokens.css'".
+- **Las variables anidadas del `:root` se descartan** → `--background: var(--page)` y similares no sobreviven a la compilación de NativeWind. No está en el camino crítico: las clases de Tailwind referencian la variable **estructural** directamente (`bg-background` compila a `var(--page)`, no a `var(--background)`). Sólo importaría si algún día se escribiera `var(--background)` a mano en un estilo.
+- **Verificación visual sólo en dispositivo** → `typecheck` y `lint` pasan con el bug presente y seguirán pasando después. Mitigación: ninguna automatizable hoy; la verificación la hace el usuario en el emulador.
 
 ## Migration Plan
 
@@ -64,5 +64,5 @@ Sin migración de datos ni rollback especial: el cambio es de estilos. Revertir 
 
 ## Open Questions
 
-- ¿`text-muted` en los ~230 usos quería el color de texto secundario (`text-text-muted`, #6B7683) o alguien eligió el alias a conciencia? La lectura de los mocks en `docs/design/` sugiere lo primero, pero no está confirmado. Se resuelve al ejecutar el change, no antes.
 - ¿Conviene que el codegen emita también un `.dark` para cuando mobile soporte dark mode, aunque hoy no se use? Decisión diferida: hoy sería código muerto.
+- `packages/ui-tokens/src/tokens.cjs` estaba **desactualizado** respecto de `theme.css`: correr el codegen agregó 27 líneas de tokens que nunca se habían regenerado (`hero-navy-*`, `terracotta-deep`, `slate-deep`, `income`, `expense`, `neutral-amount`). Sólo agregados, ningún valor existente cambió. ¿Vale la pena un chequeo en CI que falle si el codegen produce diff? Fuera del alcance de este change.
