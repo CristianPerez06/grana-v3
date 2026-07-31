@@ -96,8 +96,10 @@ async function getTransactionSums(
 ): Promise<Map<string, { ARS: number; USD: number }>> {
   if (accountIds.length === 0) return new Map()
 
+  // `p_today` pins the temporal cut (migration 0052) to the UI's financial "hoy".
   const { data, error } = await supabase.rpc('get_account_balance_sums', {
     p_account_ids: accountIds,
+    p_today: formatDateISO(getTodayAR()),
   })
 
   if (error) throw error

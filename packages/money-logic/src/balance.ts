@@ -59,6 +59,12 @@ function reimbursementCreditsAccount(row: BalanceTransactionRow): boolean {
   )
 }
 
+/** Row for the current-balance sum: the temporal cut needs the accounting date. */
+export type DatedBalanceTransactionRow = BalanceTransactionRow & {
+  /** Accounting date, ISO `YYYY-MM-DD`. */
+  date: string
+}
+
 /**
  * Sum a flat list of transaction rows by account and currency.
  *
@@ -66,10 +72,17 @@ function reimbursementCreditsAccount(row: BalanceTransactionRow): boolean {
  * credit-card transactions via `.is('status', null)`) and passes the relevant
  * account ids. Returns a map of accountId -> { ARS, USD } in `number` form
  * (already collapsed from Money).
+ *
+ * `todayISO` is the financial "today" (`formatDateISO(getTodayAR())`), injected
+ * by the caller — never an internal clock. Rows with `date > todayISO` are
+ * excluded: a future-dated transaction exists but does not reach a balance
+ * until its date arrives. Mirrors the `p_today` cut in
+ * `get_account_balance_sums` (migration 0052); the parity test pins both.
  */
 export function calculateTransactionSums(
-  rows: BalanceTransactionRow[],
+  rows: DatedBalanceTransactionRow[],
   accountIds: string[],
+  todayISO: string,
 ): Map<string, Record<BalanceCurrency, number>> {
   const accountIdSet = new Set(accountIds)
   const result = new Map<string, BalanceBuckets>()
@@ -80,6 +93,7 @@ export function calculateTransactionSums(
   }
 
   for (const row of rows) {
+    if (row.date > todayISO) continue
     if (!isBalanceCurrency(row.currency_code) || !row.account_id) continue
 
     const currency = row.currency_code

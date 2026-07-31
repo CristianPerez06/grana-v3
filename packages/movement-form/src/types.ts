@@ -6,6 +6,7 @@ import type {
   CreateExpenseInput,
   CreateIncomeInput,
   CreateRecurrenceFromMovementInput,
+  CreateRecurrenceInput,
   CreateTransferInput,
   RegisterCardPurchaseInput,
   RegisterInstallmentsInput,
@@ -205,6 +206,16 @@ export type Mutators = {
   createRecurrenceFromMovement: (
     input: unknown,
   ) => Promise<CreateResult<CreateRecurrenceFromMovementInput>>
+  /**
+   * Direct rule creation, no seed movement (`createRecurrence` in
+   * @grana/recurrences). The hook uses it when the user marks the movement
+   * recurrent with a FUTURE date: nothing is inserted in `transactions`; the
+   * rule's first pending instance lands on `start_date` and goes through the
+   * confirmation gate before any balance moves.
+   */
+  createRecurrenceDirect: (
+    input: unknown,
+  ) => Promise<CreateResult<CreateRecurrenceInput>>
 
   // ── Read-only (description blur suggestion fetch) ──
   suggestCategoryFromHistory: (

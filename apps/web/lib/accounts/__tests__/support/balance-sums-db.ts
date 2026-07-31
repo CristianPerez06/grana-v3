@@ -3,31 +3,49 @@ import { resolve } from 'node:path'
 import { PGlite } from '@electric-sql/pglite'
 
 /**
- * PGlite harness for migration 0051 (`get_account_balance_sums`).
+ * PGlite harness for migrations 0051 + 0052 (`get_account_balance_sums`).
  *
  * The repo is online-only (AGENTS.md: no local Supabase), so the shipped SQL is
  * exercised on a real Postgres compiled to WASM, over a MINIMAL schema carrying
  * only the columns the function reads. The function bodies are loaded verbatim
- * from the migration file — what runs is what ships, not a transcription.
+ * from the migration files — what runs is what ships, not a transcription.
+ * 0052 replaces the balance function (drop + create with the `p_today` temporal
+ * cut), applied here in the same order the dashboard SQL editor would.
  */
 
-const MIGRATION = resolve(
+const MIGRATION_0051 = resolve(
   __dirname,
   '../../../../../../supabase/migrations/0051_account_balance_sums.sql',
 )
+const MIGRATION_0052 = resolve(
+  __dirname,
+  '../../../../../../supabase/migrations/0052_balance_temporal_cut.sql',
+)
 
 /**
- * The two `create or replace function … $$;` blocks of the migration. The rest
- * (grants to Supabase roles, the DO self-check, comments) is environment-bound
- * and not what these tests are about.
+ * The function-defining statements of both migrations, in application order:
+ * 0051's two `create or replace function … $$;` blocks, then 0052's
+ * `drop function …;` + `create function … $$;`. The rest (grants to Supabase
+ * roles, the DO self-checks, comments) is environment-bound and not what these
+ * tests are about.
  */
 export function functionStatements(): string[] {
-  const sql = readFileSync(MIGRATION, 'utf-8')
-  const blocks = sql.match(/create or replace function[\s\S]*?\$\$;/gi) ?? []
-  if (blocks.length !== 2) {
-    throw new Error(`expected 2 function definitions in 0051, found ${blocks.length}`)
+  const sql51 = readFileSync(MIGRATION_0051, 'utf-8')
+  const blocks51 = sql51.match(/create or replace function[\s\S]*?\$\$;/gi) ?? []
+  if (blocks51.length !== 2) {
+    throw new Error(`expected 2 function definitions in 0051, found ${blocks51.length}`)
   }
-  return blocks
+
+  const sql52 = readFileSync(MIGRATION_0052, 'utf-8')
+  const drop52 = sql52.match(/drop function if exists[\s\S]*?;/i)
+  const blocks52 = sql52.match(/\ncreate function[\s\S]*?\$\$;/gi) ?? []
+  if (!drop52 || blocks52.length !== 1) {
+    throw new Error(
+      `expected 1 drop + 1 create function in 0052, found ${blocks52.length} creates`,
+    )
+  }
+
+  return [...blocks51, drop52[0], ...blocks52]
 }
 
 export const SCHEMA = `

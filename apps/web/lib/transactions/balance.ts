@@ -2,6 +2,7 @@ import {
   calculateTransactionSums,
   type BalanceCurrency,
   type BalanceTransactionRow,
+  type DatedBalanceTransactionRow,
 } from '@grana/money-logic'
 
 // Pure aggregation lives in @grana/money-logic so it can be reused from
@@ -12,6 +13,7 @@ export {
   calculateTransactionSums,
   type BalanceCurrency,
   type BalanceTransactionRow,
+  type DatedBalanceTransactionRow,
 }
 
 export { getTransactionSums } from '@grana/accounts'

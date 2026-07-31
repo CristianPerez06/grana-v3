@@ -50,7 +50,7 @@ import {
   registerInstallments,
   updateInstallmentParent,
 } from '@/app/_actions/credit-cards'
-import { createRecurrenceFromMovement } from '@/app/_actions/recurrences'
+import { createRecurrence, createRecurrenceFromMovement } from '@/app/_actions/recurrences'
 import { saveExpenseReimbursement } from '@/app/_actions/reimbursements'
 import { suggestCategoryFromHistory } from '@/app/_actions/category-suggestion'
 import { Money, parseMoneyInput } from '@grana/validation'
@@ -303,6 +303,7 @@ export const MovementForm = ({
     registerCardPurchase,
     registerInstallments,
     createRecurrenceFromMovement,
+    createRecurrenceDirect: createRecurrence,
     suggestCategoryFromHistory,
   }
 

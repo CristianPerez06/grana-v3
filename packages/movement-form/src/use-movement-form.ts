@@ -548,6 +548,44 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
     }
 
     runSubmit(async () => {
+      // Recurrente con fecha FUTURA: no se crea el movimiento semilla. La regla
+      // nace con la semántica de la creación directa (start_date = la fecha
+      // elegida, last_generated_date NULL), así la primera instancia pendiente
+      // cae en esa fecha y pasa por el gate de confirmación — ningún saldo ni
+      // resumen se mueve hasta que el usuario apruebe.
+      const recurrenceEligible =
+        isRecurrent && tab !== 'adjustment' && tab !== 'exchange' && !isInstallments
+      if (recurrenceEligible && date > todayStr()) {
+        const trimmedEnd = recurrenceEndDate.trim()
+        const directResult = await mutators.createRecurrenceDirect({
+          movement_type: tab,
+          account_id: accountId,
+          ...(tab === 'transfer'
+            ? { transfer_destination_account_id: destinationAccountId }
+            : {
+                category_id: categoryId,
+                ...(subcategoryId ? { subcategory_id: subcategoryId } : {}),
+              }),
+          currency_code: tab === 'transfer' ? effectiveCurrency : currencyCode,
+          amount: parsedAmount,
+          ...(description ? { description } : {}),
+          frequency,
+          ...(frequency === 'custom'
+            ? { interval_count: intervalCount, interval_unit: intervalUnit }
+            : {}),
+          start_date: date,
+          ...(trimmedEnd !== '' ? { end_date: trimmedEnd } : {}),
+          ...(sharedDecl && tab === 'expense' ? { shared: sharedDecl } : {}),
+        })
+        if (!directResult.ok) {
+          setFormError(directResult.formError ?? t('errors.save_failed'))
+          return
+        }
+        onMutationSuccess?.()
+        onSuccess?.()
+        return
+      }
+
       let result: { ok: boolean; formError?: string; id?: string; parentId?: string }
 
       if (tab === 'income') {
@@ -638,13 +676,7 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
 
       // Recurrence: not for adjustments, exchanges, or installment purchases.
       const createdId = 'id' in result ? result.id : undefined
-      if (
-        isRecurrent &&
-        tab !== 'adjustment' &&
-        tab !== 'exchange' &&
-        !isInstallments &&
-        createdId
-      ) {
+      if (recurrenceEligible && createdId) {
         const trimmedEnd = recurrenceEndDate.trim()
         const recurrenceResult = await mutators.createRecurrenceFromMovement({
           transaction_id: createdId,

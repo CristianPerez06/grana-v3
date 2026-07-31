@@ -20,6 +20,8 @@ import {
   type ThinMutationResult,
 } from '@grana/transactions-mutations'
 import { updateInstallmentParent } from '@grana/cards'
+import { createRecurrence } from '@grana/recurrences'
+import { getHousehold } from '@grana/shared'
 import { supabase } from '../supabase'
 
 // The mobile binding of the movement form's `Mutators` contract. The shared
@@ -146,6 +148,13 @@ export function createMovementMutators(t: Translate): Mutators {
       const userId = await currentUserId()
       if (!userId) return authError()
       return createRecurrenceFromMovement({ supabase, userId, input })
+    },
+    createRecurrenceDirect: async (input) => {
+      const userId = await currentUserId()
+      if (!userId) return authError()
+      // Shared-rule validation needs the household context, same as the web shell.
+      const household = await getHousehold(supabase)
+      return createRecurrence(supabase, userId, input, household)
     },
 
     // ── Read-only suggestion ──
