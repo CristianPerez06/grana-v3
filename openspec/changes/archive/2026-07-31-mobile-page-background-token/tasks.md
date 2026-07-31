@@ -14,7 +14,7 @@
 
 - [x] 3.1 `apps/mobile/global.css` importa `@grana/ui-tokens/tokens.css` antes de las directivas `@tailwind`.
 - [x] 3.2 Verificado offline: el CSS compilado de mobile pasado por `css-to-rn` produce 13 `rootVariables` y las reglas con alias resuelven contra ellas.
-- [ ] 3.3 **[usuario]** Confirmar en el emulador que los links de auth y el label del `Button` se ven en navy.
+- [x] 3.3 **[usuario]** Confirmado — en el emulador que los links de auth y el label del `Button` se ven en navy.
 
 ## 4. Aliases en uso
 
@@ -26,10 +26,10 @@
 
 - [x] 5.1 Pintar `bg-page` en el root de `apps/mobile/app/_layout.tsx`, dentro de `SafeAreaProvider`. — commit `5ff1c91`
 - [x] 5.2 Reemplazar `bg-background` por `bg-page` en el root de las 13 pantallas mobile que lo usaban. — commit `5ff1c91`
-- [ ] 5.3 **[usuario]** Confirmar en el emulador que las esquinas redondeadas del tab bar muestran el gris de página y no negro.
+- [x] 5.3 **[usuario]** Confirmado — en el emulador que las esquinas redondeadas del tab bar muestran el gris de página y no negro.
 
 ## 6. Cierre
 
 - [x] 6.1 `pnpm typecheck` y `pnpm lint` en `apps/mobile` y `packages/ui-tokens`.
 - [x] 6.2 `apps/mobile/lib/colors.ts` no cambia: sigue siendo el mirror JS para props `color`/`style` de RN, que no leen clases de NativeWind. El codegen TS que lo reemplazaría sigue pendiente.
-- [ ] 6.3 Archivar el change y sincronizar los deltas en `openspec/specs/{project-conventions,mobile-app-shell,page-header}/spec.md`. **Bloqueado hasta que el usuario confirme 3.3 y 5.3.**
+- [x] 6.3 Archivar el change y sincronizar los deltas en `openspec/specs/{project-conventions,mobile-app-shell,page-header}/spec.md`.
