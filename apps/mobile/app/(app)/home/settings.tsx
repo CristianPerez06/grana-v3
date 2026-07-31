@@ -25,7 +25,7 @@ export default function SettingsScreen() {
   const backLink = { href: '/home', label: t('common.back') }
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-page">
       <PageHeader title={t('shared.settings.title')} backLink={backLink} />
       <ScrollView contentContainerClassName="px-6 pt-6 pb-16">
         {householdQuery.isPending ? (

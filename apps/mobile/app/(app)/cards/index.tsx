@@ -10,7 +10,7 @@ import { useT } from '../../../lib/locale-context'
 
 export default function TarjetasScreen() {
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-page">
       <CardsHeader />
       <ScrollView contentContainerClassName="gap-6 px-6 py-6">
         <MonthHeroSection />

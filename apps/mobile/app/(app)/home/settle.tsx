@@ -94,7 +94,7 @@ export default function SettleScreen() {
 
   if (sent) {
     return (
-      <View className="flex-1 bg-background">
+      <View className="flex-1 bg-page">
         <PageHeader title={t('shared.settle.title')} backLink={backLink} />
         <ScrollView contentContainerClassName="px-6 pt-6">
           <View className="flex-col gap-3 rounded-2xl border border-border bg-card shadow-sm p-5">
@@ -116,7 +116,7 @@ export default function SettleScreen() {
   const loading = householdQuery.isPending || debtQuery.isPending
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-page">
       <PageHeader title={t('shared.settle.title')} backLink={backLink} />
       <ScrollView contentContainerClassName="px-6 pt-6 pb-16">
         {loading ? (

@@ -28,7 +28,7 @@ export default function EditCategoryScreen() {
   }, [id])
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-page">
       <PageHeader
         title={t('settings.categories.edit.title')}
         backLink={{

@@ -2,6 +2,7 @@ import '../global.css'
 import '../lib/yup-locale'
 
 import { useEffect, useState } from 'react'
+import { View } from 'react-native'
 import { Slot, useRouter } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import {
@@ -70,13 +71,19 @@ export default function RootLayout() {
   // (TabBar, AppMenu, screen-level SafeAreaView) gets non-zero insets.
   // LocaleProvider is next so translations reach auth screens.
   // QueryClientProvider has no dependency on the others and sits innermost.
+  // El `View className="flex-1 bg-page"` pinta el fondo de la ventana: sin él
+  // se ve el window background nativo (negro) por cualquier hueco que las
+  // pantallas no cubran — notablemente los `rounded-t-xl` del TabBar, que vive
+  // fuera del contenedor de pantallas del navigator.
   return (
     <SafeAreaProvider>
-      <LocaleProvider>
-        <QueryClientProvider client={queryClient}>
-          <Slot />
-        </QueryClientProvider>
-      </LocaleProvider>
+      <View className="flex-1 bg-page">
+        <LocaleProvider>
+          <QueryClientProvider client={queryClient}>
+            <Slot />
+          </QueryClientProvider>
+        </LocaleProvider>
+      </View>
     </SafeAreaProvider>
   )
 }

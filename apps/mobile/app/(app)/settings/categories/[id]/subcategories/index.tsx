@@ -64,7 +64,7 @@ export default function SubcategoriesScreen() {
     : t('settings.categories.subcategories.title')
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-page">
       <PageHeader
         title={screenTitle}
         backLink={{
