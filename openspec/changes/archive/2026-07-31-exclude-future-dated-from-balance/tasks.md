@@ -4,7 +4,7 @@
 
 - [x] 1.1 Crear `supabase/migrations/0052_balance_temporal_cut.sql`: `create or replace function get_account_balance_sums(p_account_ids uuid[] default null, p_today date default null)` con `v_today = coalesce(p_today, (now() at time zone 'America/Argentina/Buenos_Aires')::date)` y `and t.date <= v_today` en el CTE `tx`; conservar `SECURITY INVOKER`, `get_owned_account_ids` y la exclusión `status is null`
 - [x] 1.2 Agregar self-check del migration: functiondef contiene `America/Argentina/Buenos_Aires` y `p_today`, sigue `SECURITY INVOKER`, sigue derivando el universo propio y excluyendo off-ledger
-- [ ] 1.3 Aplicar la migración al proyecto Supabase según el flujo habitual del repo (online-only: pegar `0052_balance_temporal_cut.sql` en el SQL Editor del dashboard — la corre el usuario)
+- [x] 1.3 Aplicar la migración al proyecto Supabase según el flujo habitual del repo (online-only: pegar `0052_balance_temporal_cut.sql` en el SQL Editor del dashboard — la corre el usuario)
 
 ## 2. Espejos TS y tipos
 
@@ -32,4 +32,4 @@
 
 - [x] 5.1 `pnpm lint` + `pnpm typecheck` + suites afectadas en verde
 - [x] 5.2 Copy del caso "regla sin semilla": queda el éxito genérico actual (default del design); toast diferenciado fuera de scope
-- [ ] 5.3 Actualizar los specs base desde los deltas al archivar el change (flujo `opsx:archive` habitual)
+- [x] 5.3 Actualizar los specs base desde los deltas al archivar el change (flujo `opsx:archive` habitual)
