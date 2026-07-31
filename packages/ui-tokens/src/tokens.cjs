@@ -25,6 +25,15 @@ module.exports = {
       "DEFAULT": "#ECFDF5",
       "dark": "rgba(16, 185, 129, 0.14)"
     },
+    "hero-navy-from": {
+      "DEFAULT": "rgba(16, 185, 129, 0.16)"
+    },
+    "hero-navy-to": {
+      "DEFAULT": "var(--navy)"
+    },
+    "hero-navy-origin": {
+      "DEFAULT": "92% 12%"
+    },
     "plum": {
       "DEFAULT": "#8A6E98"
     },
@@ -37,11 +46,17 @@ module.exports = {
     "terracotta": {
       "DEFAULT": "#B56A5A"
     },
+    "terracotta-deep": {
+      "DEFAULT": "#9A5446"
+    },
     "terracotta-soft": {
       "DEFAULT": "rgba(181, 106, 90, 0.12)"
     },
     "slate": {
       "DEFAULT": "#3A6B8A"
+    },
+    "slate-deep": {
+      "DEFAULT": "#2C5269"
     },
     "slate-soft": {
       "DEFAULT": "#EAF1F6",
@@ -87,6 +102,18 @@ module.exports = {
     },
     "negative": {
       "DEFAULT": "#B56A5A"
+    },
+    "income": {
+      "DEFAULT": "var(--positive)"
+    },
+    "expense": {
+      "DEFAULT": "var(--negative)"
+    },
+    "neutral-amount": {
+      "DEFAULT": "var(--text)"
+    },
+    "pending": {
+      "DEFAULT": "var(--text-muted)"
     },
     "warning": {
       "DEFAULT": "#C49A3C"
