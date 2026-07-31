@@ -193,6 +193,8 @@ El `<body>` y los contenedores raíz del layout autenticado (`(app)/layout.tsx`)
 
 El elemento `<main>` SHALL ocupar el ancho completo del área disponible (todo el espacio horizontal que queda libre a la derecha del sidebar en desktop, y todo el ancho del viewport en mobile). El cap de ancho de contenido (`max-w-5xl` o el valor que defina el diseño), el centrado horizontal (`mx-auto`) y el padding horizontal SHALL aplicarse a un `<div>` hijo dentro de `<main>`, NO al `<main>` mismo. De esta forma `<main>` es el viewport scrolleable full-width y su scrollbar vertical se pinta pegado al borde derecho del área disponible (borde derecho del viewport, considerando el sidebar como el único hermano horizontal en desktop).
 
+El padding horizontal y vertical del `<div>` hijo SHALL ser responsive: SHALL usar un valor reducido en mobile y un valor mayor a partir del breakpoint `md`, en lugar de un padding fijo igual para todos los anchos. En anchos de mobile (320–420px) el padding horizontal NO SHALL exceder ~16px por lado, de modo que el contenido no se apriete; en `md` y mayores SHALL recuperar el padding holgado de desktop.
+
 El sidebar SHALL permanecer visible y fijo en pantalla mientras el `<main>` scrollea internamente. El logo y los items de pie del sidebar SHALL ser siempre alcanzables sin scrollear el contenido.
 
 #### Scenario: Scroll de contenido largo no mueve el sidebar
@@ -221,6 +223,13 @@ El sidebar SHALL permanecer visible y fijo en pantalla mientras el `<main>` scro
 - **THEN** el elemento `<main>` NO contiene clases de ancho máximo (`max-w-*`), centrado horizontal (`mx-auto`) ni padding horizontal (`px-*`)
 - **AND** un elemento hijo directo dentro de `<main>` aplica `mx-auto`, el `max-w-*` definido por el diseño y el padding horizontal/vertical
 - **AND** `<main>` conserva las clases de viewport scrolleable (`flex-1`, `overflow-y-auto` o equivalentes)
+
+#### Scenario: El padding del contenido se reduce en mobile
+
+- **WHEN** un usuario carga una ruta autenticada en un viewport de 360px de ancho
+- **THEN** el `<div>` hijo de `<main>` aplica un padding horizontal reducido (≤ ~16px por lado)
+- **AND** en un viewport ≥ 768px el mismo `<div>` aplica el padding holgado de desktop
+- **AND** el contenido no presenta scroll horizontal en el viewport de 360px
 
 ### Requirement: El sidebar organiza su contenido en header fijo, nav scrolleable y footer sticky
 

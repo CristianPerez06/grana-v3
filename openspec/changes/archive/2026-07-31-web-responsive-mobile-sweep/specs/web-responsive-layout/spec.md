@@ -50,9 +50,13 @@ El padding interno de los formularios montados dentro de drawers/modales SHALL s
 - **THEN** el padding interno del form es reducido respecto a desktop
 - **AND** los inputs y botones del form se renderizan a ancho usable sin recortarse
 
-### Requirement: Las superficies densas colapsan a una columna en mobile
+### Requirement: Las superficies densas reducen sus columnas en mobile
 
-Las superficies de datos densas —grids tipo tabla y grids multi-columna— SHALL reducir su número de columnas en mobile para evitar el aplastamiento. En particular: la cuenta corriente de Compartido (grid tipo tabla) SHALL presentar sus filas de forma legible en mobile sin recortar columnas clave; los grids de columnas fijas (`grid-cols-3` de cuotas en curso, `grid-cols-2` del form de tarjeta, `grid-cols-6` del icon-picker) SHALL colapsar a una (o menos) columnas en mobile mediante breakpoint; los headers de tarjeta con `flex-row` forzado SHALL apilar en mobile cuando su contenido no quepa en una fila.
+Las superficies de datos densas —grids tipo tabla y grids multi-columna— SHALL reducir su número de columnas en mobile para evitar el aplastamiento, mediante breakpoint (`grid-cols-N sm:grid-cols-M`) y conservando el valor de desktop a partir del breakpoint. El número de columnas en mobile SHALL ser el mayor que siga permitiendo leer cada celda completa: no es obligatorio colapsar a una sola columna cuando dos siguen siendo legibles (ej. las stats de cuotas en curso quedan en 2 columnas en mobile y 3 en `sm`, mientras que el form de alta de tarjeta sí colapsa a 1).
+
+Un grid multi-columna que ya entra en su contenedor en mobile —por ejemplo el `grid-cols-6` del icon-picker dentro de un popover clampado al viewport— NO SHALL requerir cambio: el contrato exige que se lea completo, no un número de columnas concreto.
+
+La cuenta corriente de Compartido (grid tipo tabla) SHALL presentar sus filas de forma legible en mobile sin recortar la información clave, ocultando en mobile únicamente columnas auxiliares (ej. saldo corriente / variación) y nunca el monto de la fila. Los headers de tarjeta con `flex-row` forzado SHALL apilar en mobile cuando su contenido no quepa en una fila.
 
 Las columnas laterales del módulo Tarjetas que hoy se activan en `md` SHALL activarse recién en `lg`, para no apretujar el contenido en tablets (420–768px).
 
@@ -64,11 +68,12 @@ Ningún ancho fijo de columna o etiqueta (`w-[Npx]`, `min-w-[...]`) ni `whitespa
 - **THEN** las filas se presentan de forma legible (apiladas o con columnas reducidas) sin recortar la información clave
 - **AND** no hay scroll horizontal ni etiquetas que se salgan del viewport
 
-#### Scenario: Los grids de columnas fijas colapsan en mobile
+#### Scenario: Los grids de columnas fijas reducen columnas en mobile
 
-- **WHEN** un usuario abre la vista de cuotas en curso (Tarjetas), el form de alta de tarjeta o el icon-picker (Ajustes) en un viewport de 360px
-- **THEN** el grid se muestra con menos columnas que en desktop (colapsado para mobile)
+- **WHEN** un usuario abre la vista de cuotas en curso (Tarjetas) o el form de alta de tarjeta en un viewport de 360px
+- **THEN** el grid se muestra con menos columnas que en desktop (2 y 1 respectivamente)
 - **AND** los textos y montos de cada celda se leen completos sin recortarse
+- **AND** en un viewport ≥ 640px cada grid recupera su cantidad de columnas de desktop
 
 #### Scenario: Los CardHeader forzados a fila apilan en mobile
 

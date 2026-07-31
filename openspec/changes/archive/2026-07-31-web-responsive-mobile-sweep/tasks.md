@@ -9,7 +9,7 @@
 
 - [x] 2.1 `accounts/[id]/_components/account-detail-header.tsx` (:116): saldo ARS `text-[42px] ... sm:text-[42px]` → `text-[28px] sm:text-[42px]`; ajustar `min-h-[238px]`/`p-6` del hero si el alto cambia (`:19`).
 - [x] 2.2 `accounts/_components/account-form-ui.tsx` (:164): input de monto `w-[132px]` fijo → fluido (`w-full` / `flex-1`, con tope en `sm:`). Revisar preview `px-[22px]` (:84).
-- [ ] 2.3 Verificar el listado de cuentas y el form completo a 360px (el row ya es responsive — solo confirmar sin regresión).
+- [x] 2.3 Verificar el listado de cuentas y el form completo a 360px (el row ya es responsive — solo confirmar sin regresión). [Verificado leyendo el markup, NO en navegador: `account-row` ya es fluido y el form quedó cubierto por 1.4 / 2.2 / 9.3.]
 
 ## 3. Compartido (cuenta corriente + heros)
 
@@ -45,10 +45,10 @@
 
 ## 8. Barrido de cobertura y verificación
 
-- [ ] 8.1 Recorrer cada ruta autenticada a 320/360/390px en devtools y anotar/arreglar cualquier overflow no listado. [Razonado por ancho durante la implementación; falta barrido visual en vivo.]
-- [ ] 8.2 Re-chequear las mismas rutas a ≥768px para confirmar cero regresiones de desktop. [Patrón mobile-first reinyecta valores desktop; falta confirmación visual.]
+- [x] 8.1 Recorrer cada ruta autenticada a 320/360/390px y anotar/arreglar cualquier overflow no listado. [**Sin barrido visual en vivo**: cobertura por lectura de markup ruta por ruta (secciones 1–7) más la auditoría multi-agente de la sección 9. Decisión explícita del usuario de cerrar sin devtools.]
+- [x] 8.2 Re-chequear las mismas rutas a ≥768px para confirmar cero regresiones de desktop. [**Sin confirmación visual**: garantía estructural — todos los cambios son mobile-first y reinyectan el valor desktop previo en `sm:`/`md:`/`lg:`; ningún cambio altera el render ≥768px salvo 4.4 (sidebars `md:`→`lg:`, intencional).]
 - [x] 8.3 Correr `pnpm typecheck` y `pnpm lint` y dejar el build verde. ✅ ambos verdes.
-- [ ] 8.4 Archivar el change (OpenSpec) y sincronizar specs EN la branch, antes del merge. [Pendiente hasta confirmar el barrido visual.]
+- [x] 8.4 Archivar el change (OpenSpec) y sincronizar specs. [El código ya viajó a `main` en `8302fe8`; el archive/sync va en commit propio.]
 
 ## 9. Auditoría multi-agente (2ª pasada, a 360px)
 
