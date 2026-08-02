@@ -6,9 +6,11 @@ import {
   type MonthCategoryBreakdown,
 } from '@grana/dashboard'
 import {
+  cajaCutOrFilter,
   categoryOwnPortion,
   computeCategoryNet,
   countsAsCategorySpend,
+  financialTodayISO,
   type CategoryAggRow,
   type CategorySliceInput,
   type SubcategorySliceInput,
@@ -182,8 +184,9 @@ export async function getMovementFilterOptions(
 export async function getMonthCategoryBreakdown(
   supabase: DbClient,
   month: string,
+  todayISO: string = financialTodayISO(),
 ): Promise<MonthCategoryBreakdown> {
-  return getMonthCategoryBreakdownShared(supabase, month)
+  return getMonthCategoryBreakdownShared(supabase, month, todayISO)
 }
 
 // ── getMonthCategoryLines (drilled reconciliation list) ────────────────────────
@@ -217,9 +220,13 @@ export async function getMonthCategoryLines(
   categoryId: string,
   currency: 'ARS' | 'USD',
   subcategoryId?: string,
+  todayISO: string = financialTodayISO(),
 ): Promise<MonthCategoryLines> {
   const { from, to } = resolveMonthRange(month)
   const isUncategorized = categoryId === UNCATEGORIZED_ID
+  // Same CAJA temporal cut the donut applies — the list must keep summing to the
+  // weight it drills into, so both sides discard exactly the same rows.
+  const cut = cajaCutOrFilter(todayISO)
 
   // Expenses of the category in the month (devengado): normal + card consumos +
   // cuota CHILDREN (their date lands in the month). No status filter — children
@@ -232,6 +239,7 @@ export async function getMonthCategoryLines(
     .eq('currency_code', currency)
     .gte('date', from ?? '')
     .lte('date', to ?? '')
+    .or(cut)
   expenseQuery = isUncategorized
     ? expenseQuery.is('category_id', null)
     : expenseQuery.eq('category_id', categoryId)
@@ -253,6 +261,7 @@ export async function getMonthCategoryLines(
     .is('cancelled_at', null)
     .gte('date', from ?? '')
     .lte('date', to ?? '')
+    .or(cut)
 
   const [expenseResult, reimbResult] = await Promise.all([expenseQuery, reimbQuery])
   if (expenseResult.error) throw expenseResult.error
@@ -367,6 +376,7 @@ export async function hasUsdAccount(supabase: DbClient): Promise<boolean> {
 export async function getMonthIncomeBreakdown(
   supabase: DbClient,
   month: string,
+  todayISO: string = financialTodayISO(),
 ): Promise<MonthCategoryBreakdown> {
   const { from, to } = resolveMonthRange(month)
 
@@ -376,6 +386,10 @@ export async function getMonthIncomeBreakdown(
     .eq('type', 'income')
     .gte('date', from ?? '')
     .lte('date', to ?? '')
+    // Temporal cut: income is always on-ledger (a card never receives income),
+    // so the CAJA rule applies unconditionally — money you expect to receive
+    // later this month has not arrived and is not part of "De dónde vino".
+    .or(cajaCutOrFilter(todayISO))
   if (error) throw error
 
   const rows = (data ?? []) as unknown as Array<{
@@ -469,8 +483,12 @@ export async function getMonthSubcategoryBreakdown(
   supabase: DbClient,
   month: string,
   categoryId: string,
+  todayISO: string = financialTodayISO(),
 ): Promise<MonthSubcategoryBreakdown> {
   const { from, to } = resolveMonthRange(month)
+  // Same CAJA cut as the parent donut: the subcategory slices must add up to the
+  // category weight they decompose.
+  const cut = cajaCutOrFilter(todayISO)
 
   const [expensesResult, reimbursementsResult, categoryResult] = await Promise.all([
     supabase
@@ -482,7 +500,8 @@ export async function getMonthSubcategoryBreakdown(
       // the category breakdown). The loop still skips the installment parent
       // (is_parent) and statement payments (period_payments).
       .gte('date', from ?? '')
-      .lte('date', to ?? ''),
+      .lte('date', to ?? '')
+      .or(cut),
     supabase
       .from('transactions')
       .select('id, amount, currency_code, linked_transaction_id, received_at, cancelled_at, is_shared')
@@ -490,7 +509,8 @@ export async function getMonthSubcategoryBreakdown(
       .not('received_at', 'is', null)
       .is('cancelled_at', null)
       .gte('date', from ?? '')
-      .lte('date', to ?? ''),
+      .lte('date', to ?? '')
+      .or(cut),
     supabase.from('categories').select('color').eq('id', categoryId).single(),
   ])
   if (expensesResult.error) throw expensesResult.error

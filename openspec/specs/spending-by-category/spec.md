@@ -27,11 +27,15 @@ El peso de cada categoría SHALL ser el **neto por moneda** = suma de gastos de 
 
 Cuentan los gastos con **fecha contable en el mes** seleccionado (base **devengado**): gastos cash/débito, consumos de tarjeta, y **cada cuota** de una compra en cuotas.
 
+**Corte temporal — de CAJA, no universal.** Un gasto **on-ledger** (efectivo/débito, `status IS NULL`) con `date > hoy_AR` NO SHALL contar en el desglose: la plata no salió de ninguna cuenta todavía, así que no es gasto del mes (mismo `hoy_AR` que corta el saldo y "Balance del mes": la fecha calendario en `America/Argentina/Buenos_Aires`). Las filas de **tarjeta** (`status` 'pending'/'paid') NO SHALL cortarse por fecha: para la lente devengado la unidad de acumulación es el **mes**, no el día, así que la cuota o el consumo fechados más adelante en el mes en curso SHALL contar desde el día 1 — ya están incurridos, y esconderlos hasta que llegue su día haría que la dona arrancara vacía cada mes y se llenara sin que exista gasto nuevo.
+
+Ese mismo corte SHALL aplicarse **idénticamente** en el desglose, en la lista drilleada de una categoría y en el drill de subcategorías: son la misma lente a distinto nivel de detalle, y la reconciliación exigida más abajo (la lista suma el peso del donut) solo se sostiene si las tres descartan exactamente las mismas filas.
+
 **Semántica de fecha (cuotas) — explícita para evitar ambigüedad:** una compra en cuotas NO impacta su total junto en el mes de compra. Cada cuota impacta el mes de la **fecha de su transacción hija** (`date` de cada cuota, que está alineada a su período de tarjeta), no la fecha de compra de la operación original. La compra "madre" (`is_parent`, off-ledger, `account_id=null`) NUNCA cuenta. Es decir: una compra de 12 cuotas en marzo aporta solo 1/12 en marzo, 1/12 en abril, etc., cada una en el mes de su cuota.
 
 El **pago del resumen de tarjeta NO es gasto** (cancela deuda) y NO cuenta en "En qué se fue". **El pago de resumen PUEDE aparecer en "Balance del mes" como salida de caja (lente CAJA), pero NUNCA en "En qué se fue" (lente CONSUMO)** — son lentes distintas que responden preguntas distintas, y por eso sus totales difieren a propósito.
 
-Los reintegros **recibidos** (no cancelados) de esa categoría restan, por su **fecha**, sin importar su destino (`reimbursement_target`: "a cuenta" o "en resumen") — para la categorización solo importa que volvió plata a esa categoría.
+Los reintegros **recibidos** (no cancelados) de esa categoría restan, por su **fecha**, sin importar su destino (`reimbursement_target`: "a cuenta" o "en resumen") — para la categorización solo importa que volvió plata a esa categoría. Les aplica el mismo corte de caja: un reintegro fechado adelante todavía no volvió.
 
 El neto de una categoría PUEDE quedar **negativo** (un **crédito**): cuando los reintegros recibidos de la categoría en el mes superan su gasto del mes (p. ej. un reintegro cuyo gasto original fue de un mes anterior, o un consumo de tarjeta aún no devengado). El sistema NO SHALL descartar ni capear a cero esos netos negativos: SHALL mostrarlos como **créditos** ("te devolvieron"), separados del peso de gasto y **fuera de la dona** (una dona no puede representar una porción negativa). El total/peso de la dona SHALL derivarse solo de los netos positivos.
 
@@ -69,6 +73,17 @@ El neto de una categoría PUEDE quedar **negativo** (un **crédito**): cuando lo
 - **WHEN** el usuario tuvo gastos en ARS y en USD en el mes
 - **THEN** el desglose muestra ARS por defecto y ofrece un toggle para ver USD
 - **AND** nunca suma ARS y USD en el mismo total
+
+#### Scenario: Un gasto de caja fechado adelante no pesa todavía
+
+- **WHEN** hoy es el 1 de agosto y la categoría Hogar tiene un gasto de débito de $300.000 fechado el 20 de agosto
+- **THEN** ese gasto NO cuenta en el desglose de agosto
+- **AND** el 20 de agosto pasa a contar automáticamente
+
+#### Scenario: La cuota de tarjeta del mes pesa desde el día 1
+
+- **WHEN** hoy es el 1 de agosto y la categoría Hogar tiene una cuota de tarjeta de $50.000 fechada el 20 de agosto
+- **THEN** esa cuota SÍ cuenta en el desglose de agosto desde hoy (ya está incurrida: la compra ocurrió antes)
 
 ### Requirement: El desglose se presenta como donut más ranking
 
