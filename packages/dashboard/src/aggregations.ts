@@ -231,15 +231,28 @@ function classifyCashContribution(
   }
 }
 
+/**
+ * `cutoffDay` — the last day of the month the series covers, inclusive. Defaults
+ * to the whole month (a past month: everything in it already happened). The
+ * current month passes TODAY, so days after it are neither accumulated nor
+ * emitted: a future-dated movement exists but has moved no money yet, and a day
+ * that has not arrived must not be drawn as a flat day with no activity (see the
+ * temporal cut in `@grana/money-logic` and migration 0052). `0` means the whole
+ * month is still ahead → an empty series.
+ */
 export function buildMonthBalanceSeries(
   year: number,
   month: number,
   rows: MonthBalanceTxInput[],
   ownedAccountIds: string[],
   currency: BalanceCurrency,
+  cutoffDay?: number,
 ): MonthBalanceSeries {
-  const lastDay = new Date(year, month, 0).getDate()
-  if (ownedAccountIds.length === 0) {
+  const monthDays = new Date(year, month, 0).getDate()
+  // Clamped both ways: a caller cannot stretch the series past the month, and a
+  // negative/absent cutoff falls back to the full month.
+  const lastDay = Math.max(0, Math.min(cutoffDay ?? monthDays, monthDays))
+  if (ownedAccountIds.length === 0 || lastDay === 0) {
     return emptyMonthSeries(year, month, lastDay)
   }
 

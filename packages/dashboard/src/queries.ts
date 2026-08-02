@@ -1,9 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   balanceSumsFromRows,
+  cajaCutOrFilter,
   categoryOwnPortion,
   computeCategoryNet,
   countsAsCategorySpend,
+  earlierISO,
+  financialTodayISO,
   getTodayAR,
   type AccountBalanceSumRow,
   type CategoryAggRow,
@@ -115,11 +118,39 @@ export async function getMonthBalanceSeries(
   supabase: SupabaseClient,
   year: number,
   month: number,
+  todayISO: string = financialTodayISO(),
 ): Promise<MonthBalanceByCurrency> {
   const firstDay = new Date(year, month - 1, 1)
   const lastDay = new Date(year, month, 0)
   const fromISO = formatDateISO(firstDay)
-  const toISO = formatDateISO(lastDay)
+  const monthEndISO = formatDateISO(lastDay)
+
+  // Temporal cut (same rule as migration 0052, here for the month lens): this
+  // series is CAJA — every row it reads is on-ledger (`status is null`) — so the
+  // cut is unconditional. A movement dated after today has not moved any money
+  // yet: it must not appear in "Balance del mes", which answers what ALREADY
+  // happened. Past months are untouched (their end is before today); the current
+  // month stops at today; a future month is empty.
+  //
+  // `todayISO` is a parameter so the boundary is injectable and tests are
+  // deterministic; the default is the AR financial date the rest of the UI uses.
+  const toISO = earlierISO(monthEndISO, todayISO)
+
+  // The whole month is still ahead: nothing has happened in it. Short-circuit —
+  // the query would return rows only to have every one of them discarded.
+  if (todayISO < fromISO) {
+    return {
+      year,
+      month,
+      ARS: buildMonthBalanceSeries(year, month, [], [], 'ARS', 0),
+      USD: buildMonthBalanceSeries(year, month, [], [], 'USD', 0),
+    }
+  }
+
+  // The last day the series draws: today for the current month, the full month
+  // for a past one. Days after it are not rendered at all — an empty future day
+  // and a day with no movements are different facts and must not look alike.
+  const cutoffDay = toISO === monthEndISO ? lastDay.getDate() : Number(toISO.slice(8, 10))
 
   // The owned universe comes from its NORMATIVE definition in SQL
   // (`get_owned_account_ids`, migration 0051) instead of rebuilding
@@ -136,8 +167,8 @@ export async function getMonthBalanceSeries(
     return {
       year,
       month,
-      ARS: buildMonthBalanceSeries(year, month, [], [], 'ARS'),
-      USD: buildMonthBalanceSeries(year, month, [], [], 'USD'),
+      ARS: buildMonthBalanceSeries(year, month, [], [], 'ARS', cutoffDay),
+      USD: buildMonthBalanceSeries(year, month, [], [], 'USD', cutoffDay),
     }
   }
 
@@ -191,8 +222,8 @@ export async function getMonthBalanceSeries(
   return {
     year,
     month,
-    ARS: buildMonthBalanceSeries(year, month, rows, accIds, 'ARS'),
-    USD: buildMonthBalanceSeries(year, month, rows, accIds, 'USD'),
+    ARS: buildMonthBalanceSeries(year, month, rows, accIds, 'ARS', cutoffDay),
+    USD: buildMonthBalanceSeries(year, month, rows, accIds, 'USD', cutoffDay),
   }
 }
 
@@ -230,8 +261,17 @@ export type MonthCategoryBreakdown = {
 export async function getMonthCategoryBreakdown(
   supabase: SupabaseClient,
   month: string,
+  todayISO: string = financialTodayISO(),
 ): Promise<MonthCategoryBreakdown> {
   const { from, to } = resolveMonthRange(month)
+
+  // Temporal cut, CAJA-scoped (`cajaCutOrFilter`): a cash/debit expense dated
+  // after today has not been spent yet and must not weigh in the donut, while
+  // card rows keep the DEVENGADO lens — a cuota accrues in its month from day 1,
+  // whatever day of the month it is dated (spec `spending-by-category`). Cutting
+  // those too would empty the donut at the start of every month even though the
+  // cuotas are already incurred.
+  const cut = cajaCutOrFilter(todayISO)
 
   const [expensesResult, reimbursementsResult] = await Promise.all([
     supabase
@@ -249,7 +289,8 @@ export async function getMonthCategoryBreakdown(
       // debt, it is not new spending; the consumos it covers already counted in
       // their own month).
       .gte('date', from)
-      .lte('date', to),
+      .lte('date', to)
+      .or(cut),
     supabase
       .from('transactions')
       .select('id, amount, currency_code, linked_transaction_id, received_at, cancelled_at, is_shared')
@@ -257,7 +298,8 @@ export async function getMonthCategoryBreakdown(
       .not('received_at', 'is', null)
       .is('cancelled_at', null)
       .gte('date', from)
-      .lte('date', to),
+      .lte('date', to)
+      .or(cut),
   ])
   if (expensesResult.error) throw expensesResult.error
   if (reimbursementsResult.error) throw reimbursementsResult.error
