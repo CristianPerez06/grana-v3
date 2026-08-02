@@ -60,9 +60,16 @@ export function invalidateAfterAccountMutation(qc: QueryClient): void {
 }
 
 /**
- * Invalidate the category-scoped keys after creating/editing/deleting a category
- * or subcategory, so the movement form's category picker (`categories tree`) and
- * the filter options pick it up without a manual page refresh.
+ * Invalidate the category-scoped keys after creating/editing/archiving/deleting
+ * a category or subcategory, so the movement form's category picker
+ * (`categories tree`) and the filter options pick it up without a manual page
+ * refresh.
+ *
+ * EVERY category mutation must call this — archive and delete included, not
+ * just create. The mutations are server actions whose `revalidatePath` refreshes
+ * only the settings route's RSC render; the picker reads the TanStack catalog,
+ * cached with a 15-minute `staleTime` (`lib/query-client.ts`). Skipping the call
+ * leaves an archived — or deleted — category on offer until that window expires.
  */
 export function invalidateAfterCategoryMutation(qc: QueryClient): void {
   qc.invalidateQueries({ queryKey: ['categories'] })

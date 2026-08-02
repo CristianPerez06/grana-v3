@@ -1362,6 +1362,7 @@
       "add_new_account": "Add new account",
       "add_new_category": "Add new category",
       "whole_category": "Whole category",
+      "archived": "Archived",
       "helper_income": "+ Goes into your accounts",
       "helper_adjustment": "Positive raises the balance · negative lowers it",
       "adjust_banner_title": "Manual adjustment.",

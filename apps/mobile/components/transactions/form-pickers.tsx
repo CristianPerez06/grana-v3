@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { ChevronLeft, ChevronRight } from 'lucide-react-native'
-import type { CategoryWithSubcategories, MovementFormAccount } from '@grana/movement-form'
+import {
+  selectableSubcategories,
+  type CategoryWithSubcategories,
+  type MovementFormAccount,
+} from '@grana/movement-form'
 import { Label } from '../ui/Label'
 import { AccountAvatar } from '../ui/AccountAvatar'
 import { SelectField, SheetRow } from '../ui/SelectField'
@@ -116,6 +120,14 @@ export function CategorySelectField({
                   </Text>
                 </>
               )}
+              {/* The value can be an archived row this movement was classified
+                  with before it was archived — say so instead of showing it as
+                  if it were still on offer. */}
+              {(selectedCat.is_active === false || selectedSub?.is_active === false) && (
+                <Text className="text-xs text-text-soft" numberOfLines={1}>
+                  {`(${t('transactions.drawer.archived')})`}
+                </Text>
+              )}
             </View>
           ) : undefined
         }
@@ -150,10 +162,15 @@ export function CategorySelectField({
         }
         renderRow={(item) => {
           if ('subcategories' in item) {
-            const drillable = item.subcategories.length > 0
+            // Only selectable subcategories make a category drillable: a grafted
+            // archived one is this movement's current value, not an option.
+            const drillable = selectableSubcategories(item).length > 0
             return (
               <SheetRow
                 primary={item.name}
+                secondary={
+                  item.is_active === false ? t('transactions.drawer.archived') : undefined
+                }
                 selected={!drillable && categoryId === item.id}
                 trailing={
                   drillable ? <ChevronRight size={18} color={colors.textSoft} /> : undefined
@@ -172,6 +189,7 @@ export function CategorySelectField({
           return (
             <SheetRow
               primary={item.name}
+              secondary={item.is_active === false ? t('transactions.drawer.archived') : undefined}
               selected={subcategoryId === item.id}
               onPress={() => {
                 if (drillCat) onPick(drillCat.id, item.id)

@@ -1,6 +1,25 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+
+# Required by Expo + React Native in pnpm monorepos.
+# RN libraries (Reanimated, nativewind/react-native-css-interop, etc.) resolve
+# sibling packages via bare `require()` at Metro-config load time; pnpm's
+# default isolated linker breaks those resolutions ("Cannot find module
+# 'connect'" when loading metro.config.js). Hoisted gives a flat npm-style
+# layout that works for RN and is harmless for Next.
+# https://docs.expo.dev/guides/monorepos/#pnpm
+#
+# This lives HERE and not in `.npmrc`: pnpm 11 no longer reads settings from
+# `.npmrc`, so the old entry was silently ignored and installs came out
+# isolated. https://pnpm.io/settings
+nodeLinker: hoisted
+
+# Also moved from `.npmrc` for the same reason.
+publicHoistPattern:
+  - '*eslint*'
+  - '*next*'
+
 allowBuilds:
   '@parcel/watcher': true
   '@swc/core': true

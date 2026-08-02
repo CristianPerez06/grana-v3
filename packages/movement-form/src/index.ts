@@ -1,5 +1,11 @@
 export { useMovementForm } from './use-movement-form'
+export {
+  archivedTaxonomyFrom,
+  graftArchivedTaxonomy,
+  selectableSubcategories,
+} from './archived-taxonomy'
 export type {
+  ArchivedTaxonomy,
   CategorySubcategory,
   CategoryWithSubcategories,
   CreateResult,

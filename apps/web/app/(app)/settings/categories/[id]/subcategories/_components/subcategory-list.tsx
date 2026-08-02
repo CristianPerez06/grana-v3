@@ -3,8 +3,10 @@
 import { MoreHorizontal } from 'lucide-react'
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
+import { useQueryClient } from '@tanstack/react-query'
 import type { Subcategory } from '@/lib/categories/types'
 import { archiveSubcategory, deleteSubcategory } from '@/app/_actions/categories'
+import { invalidateAfterCategoryMutation } from '@/lib/transactions/invalidation'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -54,6 +56,7 @@ const SubcategoryRow = ({ subcategory, displayName }: RowProps) => {
   // a user's custom subcategory under a system category is still theirs to
   // archive/delete; system subcategories (user_id === null) stay read-only.
   const isSystem = subcategory.user_id === null
+  const qc = useQueryClient()
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -61,7 +64,13 @@ const SubcategoryRow = ({ subcategory, displayName }: RowProps) => {
     startTransition(async () => {
       setError(null)
       const result = await archiveSubcategory(subcategory.id)
-      if (!result.ok) setError(result.formError ?? t('errors.archive_failed'))
+      if (!result.ok) {
+        setError(result.formError ?? t('errors.archive_failed'))
+        return
+      }
+      // The action's revalidatePath only refreshes this route's RSC render —
+      // the movement form's selector reads the TanStack catalog.
+      invalidateAfterCategoryMutation(qc)
     })
   }
 
@@ -70,7 +79,11 @@ const SubcategoryRow = ({ subcategory, displayName }: RowProps) => {
     startTransition(async () => {
       setError(null)
       const result = await deleteSubcategory(subcategory.id)
-      if (!result.ok) setError(result.formError ?? t('errors.delete_failed'))
+      if (!result.ok) {
+        setError(result.formError ?? t('errors.delete_failed'))
+        return
+      }
+      invalidateAfterCategoryMutation(qc)
     })
   }
 

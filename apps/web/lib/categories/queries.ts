@@ -7,10 +7,20 @@ export async function getAllCategories(
   // No explicit user filter: the RLS select policy on categories is exactly
   // "system (user_id IS NULL) or own", so the visible set is already right
   // for any caller (browser or server).
+  //
+  // Both levels filter `is_active`, and both filters live HERE rather than in
+  // each consumer. `eq('is_active')` narrows the parent rows; the embedded
+  // `subcategories.is_active` narrows the embedded rows only — a category with
+  // no active subcategories still comes back, with `subcategories: []`, so it
+  // stays selectable and merely stops being drillable. (`subcategories!inner`
+  // would instead DROP those categories, including every system category that
+  // never had subcategories.) A catalog that hands out archived items is a
+  // wrong read: consumers list what they get without re-filtering.
   const { data, error } = await supabase
     .from('categories')
     .select('*, subcategories(*)')
     .eq('is_active', true)
+    .eq('subcategories.is_active', true)
     .order('type')
     .order('name')
 

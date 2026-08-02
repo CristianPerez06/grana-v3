@@ -5,8 +5,10 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
+import { useQueryClient } from '@tanstack/react-query'
 import type { CategoryWithSubcategories, CategoryType } from '@/lib/categories/types'
 import { archiveCategory, deleteCategory } from '@/app/_actions/categories'
+import { invalidateAfterCategoryMutation } from '@/lib/transactions/invalidation'
 import { Button } from '@/components/ui/button'
 import { Drawer } from '@/components/ui/drawer'
 import { EditCategoryForm } from '../[id]/edit/_components/edit-category-form'
@@ -39,6 +41,7 @@ const textActionClass =
 export const CategoryRow = ({ category, displayName, subcategoryCount, isSystem }: Props) => {
   const t = useTranslations('settings.categories')
   const router = useRouter()
+  const qc = useQueryClient()
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [editOpen, setEditOpen] = useState(false)
@@ -55,7 +58,13 @@ export const CategoryRow = ({ category, displayName, subcategoryCount, isSystem 
     startTransition(async () => {
       setError(null)
       const result = await archiveCategory(category.id)
-      if (!result.ok) setError(result.formError ?? t('errors.archive_failed'))
+      if (!result.ok) {
+        setError(result.formError ?? t('errors.archive_failed'))
+        return
+      }
+      // The action's revalidatePath only refreshes this route's RSC render —
+      // the movement form's selector reads the TanStack catalog.
+      invalidateAfterCategoryMutation(qc)
     })
   }
 
@@ -64,7 +73,11 @@ export const CategoryRow = ({ category, displayName, subcategoryCount, isSystem 
     startTransition(async () => {
       setError(null)
       const result = await deleteCategory(category.id)
-      if (!result.ok) setError(result.formError ?? t('errors.delete_failed'))
+      if (!result.ok) {
+        setError(result.formError ?? t('errors.delete_failed'))
+        return
+      }
+      invalidateAfterCategoryMutation(qc)
     })
   }
 

@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Alert as RNAlert, Pressable, Text, View } from 'react-native'
 import { MoreHorizontal } from 'lucide-react-native'
+import { useQueryClient } from '@tanstack/react-query'
 import { archiveSubcategory, deleteSubcategory, type Subcategory } from '../../lib/categories'
+import { invalidateAfterCategoryMutation } from '../../lib/categories-invalidate'
 import { useT } from '../../lib/locale-context'
 import { colors } from '../../lib/colors'
 import { Popover } from '../ui/Popover'
@@ -45,6 +47,7 @@ function SubcategoryRow({
   onChanged?: () => void
 }) {
   const t = useT()
+  const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -59,6 +62,9 @@ function SubcategoryRow({
       setError(t(result.errorKey))
       return
     }
+    // `onChanged` only reloads this screen's own list; the movement form's
+    // picker reads the TanStack catalog.
+    invalidateAfterCategoryMutation(queryClient)
     onChanged?.()
   }
 
@@ -80,6 +86,7 @@ function SubcategoryRow({
               setError(t(result.errorKey))
               return
             }
+            invalidateAfterCategoryMutation(queryClient)
             onChanged?.()
           },
         },

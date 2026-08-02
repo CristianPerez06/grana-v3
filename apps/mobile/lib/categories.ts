@@ -139,11 +139,22 @@ async function isCategoryInUse(
 
 // ── Queries ──────────────────────────────────────────────────────────────────
 
+// Mirror of web's `getAllCategories` (`apps/web/lib/categories/queries.ts`).
+// The two are duplicated per platform: a fix applied to only one of them
+// leaves half the app broken, which is exactly how archived subcategories
+// reached the movement form.
 export async function getAllCategories(userId: string): Promise<CategoryWithSubcategories[]> {
+  // Both levels filter `is_active`, and both filters live HERE rather than in
+  // each consumer. `eq('is_active')` narrows the parent rows; the embedded
+  // `subcategories.is_active` narrows the embedded rows only — a category with
+  // no active subcategories still comes back, with `subcategories: []`, so it
+  // stays selectable and merely stops being drillable. (`subcategories!inner`
+  // would instead DROP those categories.)
   const { data, error } = await supabase
     .from('categories')
     .select('*, subcategories(*)')
     .eq('is_active', true)
+    .eq('subcategories.is_active', true)
     .or(`user_id.is.null,user_id.eq.${userId}`)
     .order('type')
     .order('name')

@@ -67,6 +67,12 @@ export type MovementEditContext = {
   destinationAmount: number | null
   categoryId: string | null
   subcategoryId: string | null
+  /**
+   * Set when `categoryId`/`subcategoryId` point at rows the catalog no longer
+   * serves because they were archived after this movement was classified.
+   * Absent/null when the classification is live (the common case).
+   */
+  archivedTaxonomy?: ArchivedTaxonomy | null
   description: string | null
   installmentsTotal: number | null
   sourceAccountName: string | null
@@ -112,6 +118,12 @@ export type CategorySubcategory = {
   name: string
   canonical_name: string
   user_id: string | null
+  /**
+   * Only ever `false` on a node grafted from `MovementEditContext.archivedTaxonomy`
+   * — the catalog itself serves active rows only. Renderers use it to badge the
+   * item as archived and to keep it out of the drillable count.
+   */
+  is_active?: boolean
 }
 
 export type CategoryWithSubcategories = {
@@ -119,6 +131,31 @@ export type CategoryWithSubcategories = {
   name: string
   type: 'income' | 'expense' | 'both'
   subcategories: CategorySubcategory[]
+  /** See `CategorySubcategory.is_active`. */
+  is_active?: boolean
+  // Consumers pass richer rows than the hook needs (web renders icons and
+  // resolves system names via canonical_name). Declared optional so a grafted
+  // node can carry them through without claiming every consumer supplies them.
+  canonical_name?: string
+  user_id?: string | null
+  icon?: string | null
+  color?: string | null
+}
+
+/**
+ * The archived category and/or subcategory a movement is ALREADY classified
+ * with. The catalog only serves active rows, so without this the edit form
+ * would open unable to resolve its own classification and could blank it on
+ * save. Each field is non-null only when that specific row is archived: a live
+ * category with an archived subcategory fills `subcategory` alone.
+ *
+ * This is the movement's current value, not a catalog entry — the hook grafts
+ * it only while it still matches the form's selection, and it disappears as
+ * soon as the user picks something else. It is never offered on create.
+ */
+export type ArchivedTaxonomy = {
+  category: CategoryWithSubcategories | null
+  subcategory: CategorySubcategory | null
 }
 
 // ─── Mutator interface ────────────────────────────────────────────────────────

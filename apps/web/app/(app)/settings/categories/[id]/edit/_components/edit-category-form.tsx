@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { useTranslations } from 'next-intl'
@@ -10,6 +11,7 @@ import { FormField } from '@/components/ui/form-field'
 import { SubmitButton } from '@/components/ui/submit-button'
 import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/alert'
+import { invalidateAfterCategoryMutation } from '@/lib/transactions/invalidation'
 import { updateCategory } from '@/app/_actions/categories'
 import { updateCategorySchema } from '@grana/validation'
 import type { Category } from '@/lib/categories/types'
@@ -30,6 +32,7 @@ export const EditCategoryForm = ({ category, variant = 'page', onClose, onSucces
   const t = useTranslations('settings.categories')
   const tCommon = useTranslations('common')
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [formError, setFormError] = useState<string | null>(null)
   const isDrawer = variant === 'drawer'
 
@@ -56,6 +59,7 @@ export const EditCategoryForm = ({ category, variant = 'page', onClose, onSucces
       color: values.color || null,
     })
     if (result.ok) {
+      invalidateAfterCategoryMutation(queryClient)
       if (onSuccess) {
         router.refresh()
         onSuccess()
