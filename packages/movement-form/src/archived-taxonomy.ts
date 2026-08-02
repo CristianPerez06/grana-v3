@@ -1,3 +1,9 @@
+// Reachable as `@grana/movement-form/archived-taxonomy` as well as from the
+// package root. The subpath exists for SERVER callers: the root entry re-exports
+// `useMovementForm`, so importing a value from it drags `useState` into a React
+// Server Component graph and fails `next build` (the edit context is built in an
+// RSC). Everything in this file is pure and its only import is type-only, so the
+// subpath pulls in no React at runtime — keep it that way.
 import type { ArchivedTaxonomy, CategoryWithSubcategories } from './types'
 
 /**

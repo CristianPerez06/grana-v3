@@ -3,7 +3,10 @@ import { getTransactionDetail, getInstallmentFamily } from '@/lib/transactions/q
 import { getAccountDetail, getAccounts } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
 import { getEditableFields } from '@grana/money-logic'
-import { archivedTaxonomyFrom } from '@grana/movement-form'
+// Subpath, not the package root: this module runs in a Server Component, and
+// the root entry re-exports `useMovementForm` (a `useState` consumer), which
+// Next refuses to pull into an RSC graph.
+import { archivedTaxonomyFrom } from '@grana/movement-form/archived-taxonomy'
 import { resolveAccountAvatar } from '@grana/ui-contracts'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 import type { Household } from '@grana/shared'
