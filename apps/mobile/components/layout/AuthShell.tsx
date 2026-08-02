@@ -1,13 +1,11 @@
 import type { ReactNode } from 'react'
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native'
+import { Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { GranaLogo } from '../ui/GranaLogo'
+import {
+  KEYBOARD_BOTTOM_OFFSET,
+  KeyboardAwareScrollView,
+} from './keyboard-aware-scroll-view'
 
 type Props = {
   title: string
@@ -18,18 +16,20 @@ type Props = {
 /**
  * Shell del grupo `(auth)` en mobile: tarjeta centrada minimalista, cardless.
  * A ancho de teléfono el contenido va directo sobre `bg-page` (sin borde ni
- * sombra), con el logo Grana arriba. Mantiene KeyboardAvoidingView + ScrollView
- * para que el teclado no tape el formulario.
+ * sombra), con el logo Grana arriba. El scroller keyboard-aware mantiene el
+ * campo enfocado por encima del teclado (ver capability `mobile-app-shell`).
+ *
+ * Antes usaba `KeyboardAvoidingView` con `behavior` por plataforma; se unificó
+ * con el resto de la app para que Android quede cubierto igual que iOS y para
+ * no dejar dos mecanismos de teclado conviviendo.
  */
 export function AuthShell({ title, subtitle, children }: Props) {
   const insets = useSafeAreaInsets()
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-page"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
+    <View className="flex-1 bg-page">
+      <KeyboardAwareScrollView
+        bottomOffset={KEYBOARD_BOTTOM_OFFSET}
         keyboardShouldPersistTaps="handled"
         contentContainerClassName="flex-grow justify-center px-6"
         contentContainerStyle={{
@@ -51,7 +51,7 @@ export function AuthShell({ title, subtitle, children }: Props) {
           </View>
           <View className="mt-8 flex-col gap-4">{children}</View>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   )
 }

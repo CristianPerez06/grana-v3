@@ -1,4 +1,4 @@
-import { ScrollView, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { getCashAndBankAccounts } from '@grana/accounts'
@@ -7,7 +7,7 @@ import { getCreditCardDetail, getCardPeriodDetail } from '../../../../../../lib/
 import { getTodayAR } from '../../../../../../lib/date'
 import { supabase } from '../../../../../../lib/supabase'
 import { useT } from '../../../../../../lib/locale-context'
-import { PageHeader } from '../../../../../../components/ui/PageHeader'
+import { FormScreen } from '../../../../../../components/layout/FormScreen'
 import { Spinner } from '../../../../../../components/ui/Spinner'
 import {
   PayCardPeriodForm,
@@ -94,30 +94,24 @@ export default function PayStatementScreen() {
   })()
 
   return (
-    <View className="flex-1 bg-page">
-      <PageHeader
-        title={t('cards.payment.title')}
-        backLink={{ href: '/(app)/cards/[id]', label: t('cards.back_label') }}
-        onBackPress={() => router.back()}
-      />
-      <ScrollView
-        contentContainerClassName="px-6 py-6 pb-28"
-        keyboardShouldPersistTaps="handled"
-      >
-        {query.isPending ? (
-          <View className="items-center py-12">
-            <Spinner size="md" />
-          </View>
-        ) : !props ? (
-          <View className="rounded-2xl border border-border-soft bg-card p-8">
-            <Text className="text-center text-sm text-text-muted">
-              {t('cards.period.pending_short')}
-            </Text>
-          </View>
-        ) : (
-          <PayCardPeriodForm {...props} />
-        )}
-      </ScrollView>
-    </View>
+    <FormScreen
+      title={t('cards.payment.title')}
+      backLink={{ href: '/(app)/cards/[id]', label: t('cards.back_label') }}
+      onBackPress={() => router.back()}
+    >
+      {query.isPending ? (
+        <View className="items-center py-12">
+          <Spinner size="md" />
+        </View>
+      ) : !props ? (
+        <View className="rounded-2xl border border-border-soft bg-card p-8">
+          <Text className="text-center text-sm text-text-muted">
+            {t('cards.period.pending_short')}
+          </Text>
+        </View>
+      ) : (
+        <PayCardPeriodForm {...props} />
+      )}
+    </FormScreen>
   )
 }

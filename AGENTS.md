@@ -54,6 +54,17 @@ UI components sit in three tiers by reusability. Each tier has a canonical locat
    - **Feature-shared:** shared across routes *within* a feature. Web colocates them under the route group at `apps/web/app/(group)/_components/` (Next.js ignores `_`-prefixed dirs). Mobile CANNOT colocate under `app/` (Expo Router treats `app/` as routes), so they live at `apps/mobile/components/<feature>/` (e.g. `components/auth/OtpVerifyForm.tsx`). This location asymmetry is router-driven and does NOT violate the Web ↔ Mobile policy — that policy bans sharing JSX and requires API parity via contracts, not identical folder paths.
 3. **Route/screen-local** — single-use, colocated with the route (`login/login-form.tsx` on web; inlined into the screen on mobile).
 
+#### Mobile form surfaces — never compose the chrome by hand
+
+Any `apps/mobile` surface with a text input MUST get its scroll container from `components/layout/`, never from a hand-rolled `ScrollView`. Otherwise the keyboard covers the focused field, and nothing in CI catches it (see spec `mobile-app-shell`):
+
+- **Pushed form screen** → `FormScreen`. It composes `PageHeader` + a keyboard-aware scroller; the screen passes `title`/`backLink` and its content. Do NOT rebuild the `View > PageHeader > ScrollView` triple.
+- **Overlay with form content** (`Drawer`, `BottomSheet`, `Modal`) → `FormSheetBody`. An RN `Modal` renders into its own native window, so it mounts its own nested `KeyboardProvider` — the root one does not reach inside.
+- **Overlay that already owns a `FlatList`** → `FormSheetKeyboardView`. Using `FormSheetBody` there would nest a VirtualizedList inside a ScrollView.
+- **Anything else needing the scroller directly** (a tab root that must keep a sibling FAB) → import `KeyboardAwareScrollView` from `components/layout/keyboard-aware-scroll-view`, **never** straight from `react-native-keyboard-controller`. That module registers the component with NativeWind; without it `className`/`contentContainerClassName` are silently dropped and the screen loses all padding. TypeScript does not catch this — NativeWind augments `ScrollViewProps` globally.
+
+`KeyboardAvoidingView` from `react-native` is banned in `apps/mobile`: it does not scroll the focused field into view and is unreliable on Android under edge-to-edge.
+
 ## Tech Stack (apps/web)
 
 - Next.js with App Router, TypeScript strict, Tailwind CSS v4, React Server Components by default.

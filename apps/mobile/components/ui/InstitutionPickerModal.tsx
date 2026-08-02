@@ -2,14 +2,13 @@ import { useMemo, useState } from 'react'
 import {
   Dimensions,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   Text,
   TextInput as RNTextInput,
   View,
 } from 'react-native'
 import { BottomSheet } from './BottomSheet'
+import { FormSheetKeyboardView } from '../layout/FormSheetKeyboardView'
 
 // Cap the results list so the sheet leaves room for the keyboard when searching.
 const LIST_MAX_HEIGHT = Math.round(Dimensions.get('window').height * 0.45)
@@ -58,7 +57,7 @@ export function InstitutionPickerModal({
 
   return (
     <BottomSheet visible={visible} onClose={handleClose} ariaLabel={title}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <FormSheetKeyboardView>
         <View className="flex-row items-center justify-between border-b border-border px-5 pb-3 pt-1">
           <Text className="text-lg font-semibold text-text">{title}</Text>
           <Pressable onPress={handleClose} accessibilityRole="button">
@@ -108,7 +107,7 @@ export function InstitutionPickerModal({
             )
           }}
         />
-      </KeyboardAvoidingView>
+      </FormSheetKeyboardView>
     </BottomSheet>
   )
 }

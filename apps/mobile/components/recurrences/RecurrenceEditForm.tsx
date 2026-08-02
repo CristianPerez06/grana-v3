@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { X } from 'lucide-react-native'
 import { useQueryClient } from '@tanstack/react-query'
@@ -12,6 +12,7 @@ import { MoneyAmountInput } from '../ui/MoneyAmountInput'
 import { DateField } from '../ui/DateField'
 import { FormError } from '../ui/FormError'
 import { Spinner } from '../ui/Spinner'
+import { FormSheetBody } from '../layout/FormSheetBody'
 import { colors } from '../../lib/colors'
 import { useT } from '../../lib/locale-context'
 import { updateRecurrence } from '../../lib/recurrences/mutators'
@@ -86,7 +87,7 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerClassName="gap-5 px-5 py-6" keyboardShouldPersistTaps="handled">
+      <FormSheetBody contentClassName="gap-5 px-5 py-6">
         {/* Amount */}
         <View className="flex-col gap-1.5">
           <Label>{t('recurrences.labels.amount')}</Label>
@@ -150,7 +151,7 @@ export function RecurrenceEditForm({ rule, onClose }: Props) {
             </Text>
           )}
         </Pressable>
-      </ScrollView>
+      </FormSheetBody>
     </SafeAreaView>
   )
 }

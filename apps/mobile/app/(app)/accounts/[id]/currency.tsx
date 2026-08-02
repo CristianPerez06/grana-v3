@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native'
+import { Alert, Pressable, Text, View } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { parseMoneyInput } from '@grana/validation'
-import { PageHeader } from '../../../../components/ui/PageHeader'
+import { FormScreen } from '../../../../components/layout/FormScreen'
 import { Spinner } from '../../../../components/ui/Spinner'
 import { Button } from '../../../../components/ui/Button'
 import { Label } from '../../../../components/ui/Label'
@@ -77,12 +77,11 @@ export default function AccountCurrencyScreen() {
   }
 
   return (
-    <View className="flex-1 bg-page">
-      <PageHeader
-        title={t('accounts.labels.currencies')}
-        backLink={{ href: `/(app)/accounts/${id}`, label: account?.name ?? t('accounts.title') }}
-      />
-      <ScrollView contentContainerClassName="gap-6 px-6 py-6" keyboardShouldPersistTaps="handled">
+    <FormScreen
+      title={t('accounts.labels.currencies')}
+      backLink={{ href: `/(app)/accounts/${id}`, label: account?.name ?? t('accounts.title') }}
+      contentClassName="gap-6 px-6 py-6"
+    >
         {accountQ.isPending ? (
           <View className="items-center py-12">
             <Spinner size="md" />
@@ -159,7 +158,6 @@ export default function AccountCurrencyScreen() {
             </View>
           </>
         )}
-      </ScrollView>
-    </View>
+    </FormScreen>
   )
 }

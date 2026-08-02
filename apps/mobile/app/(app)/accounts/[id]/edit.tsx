@@ -1,6 +1,6 @@
-import { ScrollView, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
-import { PageHeader } from '../../../../components/ui/PageHeader'
+import { FormScreen } from '../../../../components/layout/FormScreen'
 import { Spinner } from '../../../../components/ui/Spinner'
 import { EditAccountForm } from '../../../../components/accounts/EditAccountForm'
 import { useAccountDetail, useInstitutions } from '../../../../lib/accounts/queries'
@@ -15,24 +15,22 @@ export default function EditAccountScreen() {
   const ready = accountQ.data && institutionsQ.data
 
   return (
-    <View className="flex-1 bg-page">
-      <PageHeader
-        title={t('accounts.edit_title')}
-        backLink={{ href: `/(app)/accounts/${id}`, label: accountQ.data?.name ?? t('accounts.title') }}
-      />
-      <ScrollView contentContainerClassName="px-6 py-6" keyboardShouldPersistTaps="handled">
-        {accountQ.isPending || institutionsQ.isPending ? (
-          <View className="items-center py-12">
-            <Spinner size="md" />
-          </View>
-        ) : accountQ.isError || !ready ? (
-          <Text className="text-center text-sm text-text-muted">
-            {t('accounts.errors.account_not_found')}
-          </Text>
-        ) : (
-          <EditAccountForm account={accountQ.data!} institutions={institutionsQ.data!} />
-        )}
-      </ScrollView>
-    </View>
+    <FormScreen
+      title={t('accounts.edit_title')}
+      backLink={{ href: `/(app)/accounts/${id}`, label: accountQ.data?.name ?? t('accounts.title') }}
+      contentClassName="px-6 py-6"
+    >
+      {accountQ.isPending || institutionsQ.isPending ? (
+        <View className="items-center py-12">
+          <Spinner size="md" />
+        </View>
+      ) : accountQ.isError || !ready ? (
+        <Text className="text-center text-sm text-text-muted">
+          {t('accounts.errors.account_not_found')}
+        </Text>
+      ) : (
+        <EditAccountForm account={accountQ.data!} institutions={institutionsQ.data!} />
+      )}
+    </FormScreen>
   )
 }
