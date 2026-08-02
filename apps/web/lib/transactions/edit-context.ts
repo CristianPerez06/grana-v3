@@ -3,6 +3,7 @@ import { getTransactionDetail, getInstallmentFamily } from '@/lib/transactions/q
 import { getAccountDetail, getAccounts } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
 import { getEditableFields } from '@grana/money-logic'
+import { archivedTaxonomyFrom } from '@grana/movement-form'
 import { resolveAccountAvatar } from '@grana/ui-contracts'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 import type { Household } from '@grana/shared'
@@ -206,6 +207,10 @@ export async function buildMovementEditContext(
     destinationAmount: transaction.destination_amount,
     categoryId: transaction.category_id,
     subcategoryId: transaction.subcategory_id,
+    // Non-null only when this movement's classification was archived after
+    // it was set: the catalog stops serving it, so the form needs the row
+    // itself to keep showing (and not silently drop) the classification.
+    archivedTaxonomy: archivedTaxonomyFrom(transaction),
     description: transaction.description,
     installmentsTotal: transaction.installments_total,
     parentId: transaction.parent_id ?? null,

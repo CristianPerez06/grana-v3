@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { Alert } from '../ui/Alert'
 import { Button } from '../ui/Button'
 import { FormField } from '../ui/FormField'
 import { FormError } from '../ui/FormError'
 import { updateCategory, type Category } from '../../lib/categories'
+import { invalidateAfterCategoryMutation } from '../../lib/categories-invalidate'
 import { useT } from '../../lib/locale-context'
 
 type Props = {
@@ -16,6 +18,7 @@ type Props = {
 
 export function EditCategoryForm({ category, onSuccess }: Props) {
   const t = useT()
+  const queryClient = useQueryClient()
   const router = useRouter()
   const isSystem = category.user_id === null
 
@@ -45,6 +48,7 @@ export function EditCategoryForm({ category, onSuccess }: Props) {
     })
     setSubmitting(false)
     if (result.ok) {
+      invalidateAfterCategoryMutation(queryClient)
       if (onSuccess) onSuccess()
       else router.back()
       return

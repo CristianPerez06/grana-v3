@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { View } from 'react-native'
 import { useRouter } from 'expo-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '../ui/Button'
 import { FormField } from '../ui/FormField'
 import { FormError } from '../ui/FormError'
 import { createSubcategory } from '../../lib/categories'
+import { invalidateAfterCategoryMutation } from '../../lib/categories-invalidate'
 import { useT } from '../../lib/locale-context'
 
 type Props = {
@@ -15,6 +17,7 @@ type Props = {
 
 export function CreateSubcategoryForm({ categoryId, onSuccess }: Props) {
   const t = useT()
+  const queryClient = useQueryClient()
   const router = useRouter()
   const [name, setName] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -28,6 +31,7 @@ export function CreateSubcategoryForm({ categoryId, onSuccess }: Props) {
     const result = await createSubcategory({ category_id: categoryId, name })
     setSubmitting(false)
     if (result.ok) {
+      invalidateAfterCategoryMutation(queryClient)
       if (onSuccess) onSuccess()
       else router.back()
       return

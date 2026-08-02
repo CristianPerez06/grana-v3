@@ -11,6 +11,9 @@ const sectionTitleClass =
   'text-xs font-extrabold uppercase tracking-[0.08em] text-text-muted'
 const panelClass = 'overflow-hidden rounded-[18px] border border-border bg-card'
 
+// `subcategories` arrives already filtered to active rows by `getAllCategories`
+// — no defensive re-filter here on purpose: if the read ever hands out archived
+// items again, this list is where we want it to show, not be papered over.
 export const CategoryList = ({ categories, t }: Props) => {
   const system = categories.filter((c) => c.user_id === null)
   const user = categories.filter((c) => c.user_id !== null)
@@ -28,7 +31,7 @@ export const CategoryList = ({ categories, t }: Props) => {
                 key={category.id}
                 category={category}
                 displayName={getCategoryName(category, t)}
-                subcategoryCount={category.subcategories.filter((s) => s.is_active).length}
+                subcategoryCount={category.subcategories.length}
                 isSystem
               />
             ))}
@@ -47,7 +50,7 @@ export const CategoryList = ({ categories, t }: Props) => {
                 key={category.id}
                 category={category}
                 displayName={getCategoryName(category, t)}
-                subcategoryCount={category.subcategories.filter((s) => s.is_active).length}
+                subcategoryCount={category.subcategories.length}
                 isSystem={false}
               />
             ))}

@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '../ui/Button'
 import { FormField } from '../ui/FormField'
 import { FormError } from '../ui/FormError'
 import { createCategory, type CategoryType } from '../../lib/categories'
+import { invalidateAfterCategoryMutation } from '../../lib/categories-invalidate'
 import { useT } from '../../lib/locale-context'
 
 const TYPE_OPTIONS: CategoryType[] = ['expense', 'income', 'both']
@@ -16,6 +18,7 @@ type Props = {
 
 export function CreateCategoryForm({ onSuccess }: Props = {}) {
   const t = useT()
+  const queryClient = useQueryClient()
   const router = useRouter()
 
   const [name, setName] = useState('')
@@ -38,6 +41,7 @@ export function CreateCategoryForm({ onSuccess }: Props = {}) {
     })
     setSubmitting(false)
     if (result.ok) {
+      invalidateAfterCategoryMutation(queryClient)
       if (onSuccess) onSuccess()
       else router.back()
       return

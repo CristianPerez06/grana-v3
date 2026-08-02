@@ -16,10 +16,14 @@ import {
 // The select shape shared by every per-row detail read (movements list, detail,
 // installment family). The global movements feed uses the get_movements_page RPC
 // instead, so it does not go through this constant.
+// `is_active` on both taxonomy embeds is what lets the edit form tell an
+// archived classification from a live one: the category catalog only serves
+// active rows, so a movement classified with something since archived would
+// otherwise open with an unresolvable id and lose its category on save.
 export const TRANSACTION_SELECT = `
   *,
-  category:categories(id, name, canonical_name, color, icon, user_id),
-  subcategory:subcategories(id, name, canonical_name, category_id, user_id),
+  category:categories(id, name, canonical_name, color, icon, user_id, is_active, type),
+  subcategory:subcategories(id, name, canonical_name, category_id, user_id, is_active),
   destination_account:accounts!transactions_transfer_destination_account_id_fkey(id, name, type, institution:institutions(name)),
   source_account:accounts!transactions_account_id_fkey(id, name, type, institution:institutions(name)),
   period_payments!period_payments_transaction_id_fkey(

@@ -7,6 +7,7 @@ import {
   type CategorySuggestion,
 } from '@grana/money-logic'
 import { Money, parseMoneyInput } from '@grana/validation'
+import { graftArchivedTaxonomy } from './archived-taxonomy'
 import type {
   Frequency,
   IntervalUnit,
@@ -167,8 +168,16 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
 
   const isInstallments = isCredit && currencyCode === 'ARS' && parseInt(installments) >= 2
 
-  const expenseCategories = categories.filter((c) => c.type === 'expense' || c.type === 'both')
-  const incomeCategories = categories.filter((c) => c.type === 'income' || c.type === 'both')
+  // In edit mode the movement may be classified with a category/subcategory
+  // that has since been archived: the catalog no longer serves it, so it gets
+  // grafted back in while it is still the form's selection. A no-op everywhere
+  // else (create, or an edit whose classification is live).
+  const catalog = graftArchivedTaxonomy(categories, edit?.archivedTaxonomy, {
+    categoryId,
+    subcategoryId,
+  })
+  const expenseCategories = catalog.filter((c) => c.type === 'expense' || c.type === 'both')
+  const incomeCategories = catalog.filter((c) => c.type === 'income' || c.type === 'both')
   const transactionCategories = tab === 'income' ? incomeCategories : expenseCategories
   const selectedCategory = transactionCategories.find((c) => c.id === categoryId)
 

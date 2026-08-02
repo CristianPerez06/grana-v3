@@ -56,6 +56,14 @@ export type TransactionCategory = {
   icon: string | null
   /** NULL = system category (translatable via `categories.{canonical_name}`). */
   user_id: string | null
+  /**
+   * Only present on reads that select it (`TRANSACTION_SELECT`); `undefined`
+   * elsewhere. Test it as `is_active === false` — an omitted column must never
+   * read as archived, or a read that forgot it would strip live categories.
+   */
+  is_active?: boolean
+  /** Only present on reads that select it (`TRANSACTION_SELECT`). */
+  type?: 'income' | 'expense' | 'both'
 }
 
 export type TransactionSubcategory = {
@@ -65,6 +73,8 @@ export type TransactionSubcategory = {
   category_id: string
   /** NULL = system subcategory (translatable via `subcategories.{canonical_name}`). */
   user_id: string | null
+  /** See `TransactionCategory.is_active`. */
+  is_active?: boolean
 }
 
 export type TransactionAccount = {

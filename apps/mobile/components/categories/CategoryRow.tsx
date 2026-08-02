@@ -3,7 +3,9 @@ import { Alert, Pressable, ScrollView, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { MoreHorizontal, X } from 'lucide-react-native'
+import { useQueryClient } from '@tanstack/react-query'
 import { archiveCategory, deleteCategory, type CategoryWithSubcategories } from '../../lib/categories'
+import { invalidateAfterCategoryMutation } from '../../lib/categories-invalidate'
 import { useT } from '../../lib/locale-context'
 import { colors } from '../../lib/colors'
 import { Drawer } from '../ui/Drawer'
@@ -39,6 +41,7 @@ export function CategoryRow({
 }: Props) {
   const t = useT()
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -61,6 +64,9 @@ export function CategoryRow({
       setError(t(result.errorKey))
       return
     }
+    // `onChanged` only reloads this screen's own list; the movement form's
+    // picker reads the TanStack catalog.
+    invalidateAfterCategoryMutation(queryClient)
     onChanged?.()
   }
 
@@ -82,6 +88,7 @@ export function CategoryRow({
               setError(t(result.errorKey))
               return
             }
+            invalidateAfterCategoryMutation(queryClient)
             onChanged?.()
           },
         },

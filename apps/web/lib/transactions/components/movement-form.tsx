@@ -60,6 +60,8 @@ import {
   type MovementType,
 } from '@grana/money-logic'
 import {
+  graftArchivedTaxonomy,
+  selectableSubcategories,
   useMovementForm,
   type MovementEditContext as PackageMovementEditContext,
   type MovementFormAccount as PackageMovementFormAccount,
@@ -405,9 +407,15 @@ export const MovementForm = ({
   } = form
   const cashBank = cashBankAccounts
   // Categories are projected locally to keep the rich web type (icon, color,
-  // canonical_name, is_system) — the hook only narrows to id+type.
-  const expenseCategories = categories.filter((c) => c.type === 'expense' || c.type === 'both')
-  const incomeCategories = categories.filter((c) => c.type === 'income' || c.type === 'both')
+  // canonical_name, is_system) — the hook only narrows to id+type. The graft
+  // has to be repeated here for the same reason: the hook's copy of the tree
+  // isn't the one this component renders.
+  const catalog = graftArchivedTaxonomy(categories, edit?.archivedTaxonomy, {
+    categoryId,
+    subcategoryId,
+  })
+  const expenseCategories = catalog.filter((c) => c.type === 'expense' || c.type === 'both')
+  const incomeCategories = catalog.filter((c) => c.type === 'income' || c.type === 'both')
   const transactionCategories = tab === 'income' ? incomeCategories : expenseCategories
   const selectedCategory = transactionCategories.find((c) => c.id === categoryId)
 
@@ -680,6 +688,11 @@ export const MovementForm = ({
           className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-page"
         >
           <span className="flex-1 truncate text-sm text-text">{getSubcategoryName(s, tRoot)}</span>
+          {s.is_active === false && (
+            <span className="shrink-0 rounded-full bg-border-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-text-muted">
+              {t('drawer.archived')}
+            </span>
+          )}
           {subcategoryId === s.id && <Check className="size-4 shrink-0 text-emerald" aria-hidden />}
         </button>
       ))}
@@ -687,7 +700,10 @@ export const MovementForm = ({
   ) : (
     <div className="flex flex-col gap-0.5">
       {transactionCategories.map((c) => {
-        const drillable = c.subcategories.length > 0
+        // Only selectable subcategories make a category drillable: a grafted
+        // archived one is this movement's current value, not an option, and
+        // must not open a second level holding nothing but itself.
+        const drillable = selectableSubcategories(c).length > 0
         return (
           <button
             key={c.id}
@@ -699,6 +715,11 @@ export const MovementForm = ({
               {c.icon ? `${c.icon} ` : ''}
               {getCategoryName(c, tRoot)}
             </span>
+            {c.is_active === false && (
+              <span className="shrink-0 rounded-full bg-border-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-text-muted">
+                {t('drawer.archived')}
+              </span>
+            )}
             {drillable ? (
               <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
             ) : (
@@ -734,6 +755,13 @@ export const MovementForm = ({
           <span className="text-text-soft">{'›'}</span>
           <span className="truncate text-text-muted">{subcategoryName}</span>
         </>
+      )}
+      {/* The value can be an archived row this movement was classified with
+          before it was archived — say so instead of showing it as if it were
+          still on offer. */}
+      {(selectedCategory.is_active === false ||
+        selectedSubcategory?.is_active === false) && (
+        <span className="shrink-0 text-xs text-text-soft">{`(${t('drawer.archived')})`}</span>
       )}
     </span>
   ) : (
