@@ -28,7 +28,7 @@ Este change no toca código. Todas las tareas son sobre specs y sobre la verific
 - [x] 3.5 Verificar que `project-conventions` queda con exactamente 10 requirements y que ninguno de los 17 reubicados sobrevive ahí.
 - [x] 3.6 Actualizar `AGENTS.md`: la línea "Cross-cutting modules (`schema-base`, `profiles`, `i18n`, `card-networks`, `project-conventions`) underpin everything else" debe incluir `repo-architecture` y `ui-foundations`. Revisar también si la tabla "Modules" necesita filas para las dos capabilities nuevas.
 - [x] 3.7 Mover la carpeta a `openspec/changes/archive/YYYY-MM-DD-split-project-conventions/`.
-- [ ] 3.8 `pnpm openspec:check` pasa (falla si quedó algún `Purpose: TBD`). **PENDIENTE DE EJECUCIÓN REAL.** Se corrieron directamente los dos greps que compone el script (`^TBD - created by archiving` y `^(## )?Purpose: TBD` sobre `openspec/specs/`) y ambos dan limpio, pero el wrapper `pnpm` nunca corrió: en esa shell `pnpm` resuelve a un shim de corepack roto (`ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING`). Tampoco lo cubre CI — `.github/workflows/ci.yml` no referencia openspec (ver 4.5). Queda sin tildar hasta que alguien corra `pnpm openspec:check` de verdad.
+- [x] 3.8 `pnpm openspec:check` pasa (falla si quedó algún `Purpose: TBD`). Ejecutado de verdad: `openspec:check OK`, exit 0. NOTA operativa: el `pnpm` del PATH resuelve a un shim de corepack roto en este entorno (`ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING` con Node 22 + pnpm 11); el script corrió vía `npx pnpm@10 openspec:check`. El gate no lo cubre CI todavía (ver 4.5).
 - [x] 3.9 `npx openspec validate --specs --strict` pasa sobre los specs maestros ya sincronizados.
 
 ## 4. Coordinación
