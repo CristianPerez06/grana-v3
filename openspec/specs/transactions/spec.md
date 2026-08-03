@@ -1020,7 +1020,9 @@ El sistema SHALL rechazar la inserción de cualquier transacción de tarjeta cuy
 
 ### Requirement: Las transacciones de tarjeta NO impactan el saldo disponible del usuario
 
-El sistema SHALL excluir del cálculo de saldo de cualquier cuenta a las transacciones de `type='expense'` con `account.type='credit'` (tanto `pending` como `paid`). El saldo de las cuentas `cash`/`bank` SHALL afectarse únicamente por:
+La regla normativa completa del off-ledger de tarjetas es el invariante `I-CRED-1`, y vive en la capability `cards` (requirement "Las tarjetas no descuentan disponible hasta el pago del resumen"). Este requirement NO la redefine: fija su consecuencia sobre el motor de saldos de esta capability y remite a la fuente para el enunciado completo.
+
+El sistema SHALL excluir del cálculo de saldo de cualquier cuenta a las transacciones de `type='expense'` con `account.type='credit'`, **en cualquier status** (`pending` y `paid` por igual). El saldo de las cuentas `cash`/`bank` SHALL afectarse únicamente por:
 
 - Sus propias transacciones `income` y `expense` (no de tarjeta).
 - Transferencias entrantes/salientes con esa cuenta.
@@ -1037,7 +1039,11 @@ El sistema SHALL excluir del cálculo de saldo de cualquier cuenta a las transac
 - **WHEN** el usuario paga el resumen por `$300.000` desde "Galicia"
 - **THEN** "Galicia" baja a `$200.000`
 
----
+#### Scenario: Un consumo de tarjeta ya pagado tampoco vuelve al saldo
+
+- **WHEN** un consumo de tarjeta pasa de `status='pending'` a `status='paid'` al pagarse el resumen
+- **THEN** ese `expense` sigue excluido del cálculo de saldo de toda cuenta
+- **AND** el único movimiento que afecta el saldo es el `expense` de pago en la cuenta `cash`/`bank`
 
 ### Requirement: Editar una compra en cuotas propaga campos no monetarios y bloquea cambios monetarios si hay cuotas paid
 
@@ -1080,7 +1086,9 @@ El sistema SHALL permitir eliminar una transacción madre con `is_parent=true` �
 
 ### Requirement: El sistema enforza que `fx_rate_to_ars` se popule solo y solamente en consumos de tarjeta no-ARS
 
-El sistema SHALL validar mediante constraint `CHECK` y/o lógica de action que `transactions.fx_rate_to_ars` esté populado (NOT NULL, > 0) si y solo si `account.type='credit'` AND `currency_code != 'ARS'` AND `type='expense'` AND `is_parent=false`. En cualquier otro caso, `fx_rate_to_ars` SHALL ser `NULL`.
+El sistema SHALL respetar el invariante `I-CRED-11`: `transactions.fx_rate_to_ars` SHALL estar populado (NOT NULL, > 0) si y solo si `account.type='credit'` AND `currency_code != 'ARS'` AND `type='expense'` AND `is_parent=false`. En cualquier otro caso, `fx_rate_to_ars` SHALL ser `NULL`.
+
+El sistema SHALL enforzar esto vía constraint `CHECK` con subquery sobre `accounts.type` (o trigger equivalente) y vía validación en las actions de inserción.
 
 #### Scenario: Consumo USD en tarjeta exige fx_rate_to_ars
 
@@ -1096,8 +1104,6 @@ El sistema SHALL validar mediante constraint `CHECK` y/o lógica de action que `
 
 - **WHEN** se intenta insertar `income` con `fx_rate_to_ars` no nulo
 - **THEN** la DB o action rechaza
-
----
 
 ### Requirement: Las transacciones de pago de resumen y reversión preservan el orden determinístico
 
@@ -3710,25 +3716,4 @@ Esta regla aplica en todos los módulos: `transactions`, `cards`, `accounts`, y 
 - **WHEN** el sistema calcula el saldo disponible de una cuenta sumando transacciones
 - **THEN** la query interna usa `ORDER BY date ASC, created_at ASC, id ASC` para consistencia determinística
 - **AND** el resultado no varía si se invierte el orden (la suma es conmutativa, pero el orden explícito evita bugs sutiles en running totals)
-
-### Requirement: La columna `fx_rate_to_ars` se popula solo en consumos de tarjeta no-ARS
-
-El sistema SHALL respetar el invariante `I-CRED-11`: `transactions.fx_rate_to_ars` SHALL ser NOT NULL y mayor a cero si y solo si `account.type='credit'`, `currency_code != 'ARS'`, `type='expense'` y `is_parent=false`. En cualquier otra combinación, SHALL ser `NULL`.
-
-El sistema SHALL enforce esto vía constraint `CHECK` con subquery sobre `accounts.type` (o trigger equivalente) y vía validación en las actions de inserción.
-
-#### Scenario: Consumo ARS con fx_rate_to_ars no nulo es rechazado
-
-- **WHEN** se intenta INSERT con `currency_code='ARS'` y `fx_rate_to_ars=1400`
-- **THEN** la DB rechaza por el constraint
-
-#### Scenario: Consumo USD sin fx_rate_to_ars es rechazado
-
-- **WHEN** se intenta INSERT con `currency_code='USD'` en tarjeta y `fx_rate_to_ars=NULL`
-- **THEN** la DB rechaza por el constraint
-
-#### Scenario: Income en cuenta cash con fx_rate_to_ars no nulo es rechazado
-
-- **WHEN** se intenta INSERT con `type='income'`, `account.type='cash'`, y `fx_rate_to_ars=1400`
-- **THEN** la DB rechaza
 
