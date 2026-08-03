@@ -5,6 +5,7 @@ import type { BalanceCurrency } from '@grana/money-logic'
 import { createClient } from '@/lib/supabase/server'
 import { getHousehold, getHouseholdDebt } from '@grana/shared'
 import { getAccounts } from '@/lib/accounts/queries'
+import { getAppStartDate } from '@/lib/profile/queries'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { fmtMoney } from '../../_components/money'
@@ -27,10 +28,11 @@ export const DebtSection = async () => {
   if (!user) redirect('/login')
   const userId = user.id
 
-  const [household, debt, accounts] = await Promise.all([
+  const [household, debt, accounts, appStartDate] = await Promise.all([
     getHousehold(supabase),
     getHouseholdDebt(supabase),
     getAccounts(supabase),
+    getAppStartDate(supabase),
   ])
   if (!household || !debt) return null
 
@@ -52,6 +54,7 @@ export const DebtSection = async () => {
     name: a.name,
     institutionName: a.institution?.name ?? null,
     balances: a.balances,
+    avatar: a.avatar,
   }))
 
   const balanceForYou = (cur: BalanceCurrency): number => {
@@ -138,6 +141,7 @@ export const DebtSection = async () => {
             owed={owed}
             accounts={settleAccounts}
             partnerName={partnerName}
+            appStartDate={appStartDate}
             triggerClassName="flex-1 justify-center px-4"
           />
         )}

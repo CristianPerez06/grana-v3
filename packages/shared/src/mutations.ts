@@ -258,25 +258,19 @@ export async function registerSettlementCore(
     return { ok: false, formError: 'No tenés un hogar activo.' }
   }
 
-  // The amount cannot exceed what THIS user currently owes in that currency.
-  // The debt derivation lives in TS (money-logic), so this ceiling stays here;
-  // the RPC only guarantees atomicity and server-side authorship. See 0043.
+  // Overpayment is allowed: paying more than the current debt settles it and
+  // flips the balance so the partner owes the excess back. The debt derivation
+  // (money-logic) handles the sign flip, and the receiver still confirms which
+  // account received it, so no ceiling is enforced here — only shape/positivity
+  // (schema) and household/account ownership (the RPC). See 0043.
   const currency = validation.data.currency_code
-  const debt = await getHouseholdDebt(supabase)
-  const entry = debt?.[currency]
-  const youOwe = entry?.kind === 'owes' && entry.from === userId ? entry.amount : 0
-  if (validation.data.amount > youOwe + 0.0001) {
-    return { ok: false, fieldErrors: { amount: 'El monto no puede superar la deuda.' } }
-  }
-
-  const today = formatDateISO(getTodayAR())
 
   // Atomic: payer leg (settlement movement that debits the account) + settlement row.
   const { data: settlementId, error } = await supabase.rpc('register_settlement', {
     p_account_id: validation.data.account_id,
     p_amount: validation.data.amount,
     p_currency: currency,
-    p_date: today,
+    p_date: validation.data.date,
   })
   if (error || !settlementId) {
     return { ok: false, formError: error?.message ?? 'No se pudo registrar la liquidación.' }

@@ -89,6 +89,10 @@ export const settlementSchema = yup
     currency_code: yup.string().label('currency_code').required().oneOf(SUPPORTED_CURRENCIES),
     amount: yup.number().label('amount').required().positive(),
     account_id: yup.string().label('account_id').uuid().required(),
+    // Accounting date of the settlement movement (ISO YYYY-MM-DD). Defaults to
+    // today in the form; the payer can back- or forward-date the payment like
+    // any other movement.
+    date: yup.string().label('date').required(),
   })
   .strict()
 

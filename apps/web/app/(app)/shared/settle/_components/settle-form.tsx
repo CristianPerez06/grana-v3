@@ -1,34 +1,43 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { ArrowRight, Check, ChevronDown, Clock, CreditCard, Send } from 'lucide-react'
+import { ArrowRight, Check, ChevronDown, Clock, Send } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Segmented } from '@/components/ui/segmented'
+import { DatePicker } from '@/components/ui/date-picker'
+import { AccountAvatar } from '@/components/ui/account-avatar'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { parseMoneyInput } from '@grana/validation'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { checkNegativeBalance, type BalanceCurrency } from '@grana/money-logic'
+import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
+import { todayISO } from '@/lib/date'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
 import { registerSettlement } from '@/app/_actions/shared'
 
-const ACCENT = ['#11B981', '#E79A2B', '#7C5CD6', '#3A6B8A', '#C95C86']
-
-type SettleAccount = {
+export type SettleAccount = {
   id: string
   name: string
   institutionName?: string | null
   balances: Record<BalanceCurrency, number>
+  /** Resolved visual identity (color + icon), same as every other account picker. */
+  avatar: ResolvedAccountAvatar
 }
 
 type Props = {
   owed: Partial<Record<BalanceCurrency, number>>
   accounts: SettleAccount[]
   partnerName: string
+  /**
+   * Lower bound for the settlement date (the user's signup date). You can't date
+   * a settlement before you started using the app. Null ⇒ no floor.
+   */
+  appStartDate?: string | null
   /** Called after a successful settle (e.g. to close the drawer). */
   onDone?: () => void
 }
@@ -40,7 +49,7 @@ const accountSecondaryName = (a: SettleAccount): string | null => {
   return inst && inst !== a.name ? a.name : null
 }
 
-export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
+export function SettleForm({ owed, accounts, partnerName, appStartDate = null, onDone }: Props) {
   const t = useTranslations('shared')
   const router = useRouter()
   const partner = firstName(partnerName)
@@ -49,11 +58,21 @@ export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
   const [currency, setCurrency] = useState<BalanceCurrency>(currencies[0])
   const [amount, setAmount] = useState(String(owed[currencies[0]] ?? ''))
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? '')
+  const [date, setDate] = useState(todayISO())
   const [pickerOpen, setPickerOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  // The submit button sits at the bottom of a scrollable drawer; a server error
+  // renders at the top and would go unseen. Scroll it into view when it appears.
+  const errorRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [error])
   // Post-submit "Enviado · esperando confirmación" state (the payer's view).
-  const [sent, setSent] = useState<{ amount: string; balance: string } | null>(null)
+  // `excess` is set (formatted) only when the payment overpaid the debt.
+  const [sent, setSent] = useState<{ amount: string; balance: string; excess: string | null } | null>(
+    null,
+  )
 
   const onCurrencyChange = (c: BalanceCurrency) => {
     setCurrency(c)
@@ -67,7 +86,12 @@ export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
     setSubmitting(true)
     setError(null)
     try {
-      const result = await registerSettlement({ currency_code: currency, amount: parsed, account_id: accountId })
+      const result = await registerSettlement({
+        currency_code: currency,
+        amount: parsed,
+        account_id: accountId,
+        date,
+      })
       if (!result.ok) {
         const fieldError = 'fieldErrors' in result ? Object.values(result.fieldErrors ?? {})[0] : undefined
         setError(result.formError ?? fieldError ?? 'Error')
@@ -77,7 +101,12 @@ export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
       // the settlement is pending until the receiver confirms the account.
       const fmtNow = (n: number) => (currency === 'ARS' ? formatARS(n) : formatUSD(n))
       const owedAtSubmit = owed[currency] ?? 0
-      setSent({ amount: fmtNow(parsed), balance: fmtNow(Math.max(owedAtSubmit - parsed, 0)) })
+      const excessAtSubmit = Math.max(parsed - owedAtSubmit, 0)
+      setSent({
+        amount: fmtNow(parsed),
+        balance: fmtNow(Math.max(owedAtSubmit - parsed, 0)),
+        excess: excessAtSubmit > 0.01 ? fmtNow(excessAtSubmit) : null,
+      })
       router.refresh()
     } finally {
       setSubmitting(false)
@@ -89,6 +118,10 @@ export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
   const amt = parsedAmount ?? 0
   const owedNow = owed[currency] ?? 0
   const remaining = Math.max(owedNow - amt, 0)
+  // Overpayment: paying more than the debt settles it and leaves the partner
+  // owing the excess back. Surfaced in the preview + the "sent" state so the
+  // flip is explicit, never a silent $0.
+  const excess = Math.max(amt - owedNow, 0)
   const accBal = selectedAccount?.balances[currency] ?? 0
   const accAfter = accBal - amt
   const negative =
@@ -118,7 +151,9 @@ export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
           </div>
         </div>
         <p className="text-xs leading-relaxed text-text-muted">
-          {t('settle.sent_note', { name: partner, balance: sent.balance })}
+          {sent.excess
+            ? t('settle.sent_note_overpaid', { name: partner, amount: sent.excess })
+            : t('settle.sent_note', { name: partner, balance: sent.balance })}
         </p>
         <Button type="button" className="mt-auto" onPress={onDone ?? (() => router.push('/shared'))}>
           {t('settle.sent_done')}
@@ -129,7 +164,11 @@ export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="flex min-h-full flex-col gap-5" noValidate>
-      {error && <Alert variant="error">{error}</Alert>}
+      {error && (
+        <div ref={errorRef}>
+          <Alert variant="error">{error}</Alert>
+        </div>
+      )}
 
       {currencies.length > 1 && (
         <Segmented
@@ -180,9 +219,7 @@ export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
               pickerOpen ? 'border-emerald-500' : 'border-border'
             }`}
           >
-            <span className="grid size-9 shrink-0 place-items-center rounded-lg text-white" style={{ background: ACCENT[0] }}>
-              <CreditCard size={17} />
-            </span>
+            {selectedAccount && <AccountAvatar {...selectedAccount.avatar} size="sm" />}
             <span className="min-w-0">
               <span className="block truncate text-sm font-bold text-text">
                 {selectedAccount ? accountPrimaryName(selectedAccount) : '—'}
@@ -195,7 +232,7 @@ export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
           </button>
           {pickerOpen && (
             <div className="absolute inset-x-0 top-[calc(100%+6px)] z-10 rounded-xl border border-border bg-card p-1.5 shadow-[0_18px_44px_-16px_rgba(11,26,43,0.45)]">
-              {accounts.map((a, i) => {
+              {accounts.map((a) => {
                 const secondary = accountSecondaryName(a)
                 const sel = a.id === accountId
                 return (
@@ -208,9 +245,7 @@ export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
                     }}
                     className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors ${sel ? 'bg-emerald-50' : 'hover:bg-muted'}`}
                   >
-                    <span className="grid size-8 shrink-0 place-items-center rounded-lg text-white" style={{ background: ACCENT[i % ACCENT.length] }}>
-                      <CreditCard size={15} />
-                    </span>
+                    <AccountAvatar {...a.avatar} size="sm" />
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-bold text-text">{accountPrimaryName(a)}</span>
                       {secondary && <span className="block truncate text-[11.5px] font-semibold text-text-muted">{secondary}</span>}
@@ -223,6 +258,12 @@ export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* fecha del movimiento — igual que en agregar un movimiento */}
+      <div className="flex flex-col gap-1.5">
+        <Label>{t('settle.date_label')}</Label>
+        <DatePicker value={date} onChange={setDate} min={appStartDate ?? undefined} modal={!!onDone} />
       </div>
 
       {/* qué pasa al pagar — dos cards (cuenta + deuda), antes→después */}
@@ -260,9 +301,11 @@ export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
         >
           <Check size={16} className="shrink-0" />
           <span>
-            {remaining < 0.01
-              ? t('settle.after_settled', { name: partner })
-              : t('settle.after_remaining', { name: partner, amount: fmt(remaining) })}
+            {excess > 0.01
+              ? t('settle.after_overpaid', { name: partner, amount: fmt(excess) })
+              : remaining < 0.01
+                ? t('settle.after_settled', { name: partner })
+                : t('settle.after_remaining', { name: partner, amount: fmt(remaining) })}
           </span>
         </div>
       )}

@@ -220,7 +220,7 @@ La pantalla SHALL ofrecer el **alta de movimiento** (CTA primary en web; FAB en 
 
 ### Requirement: El usuario puede saldar deuda registrando una liquidación
 
-El sistema SHALL permitir que el miembro deudor registre una liquidación (total o parcial) mediante un **drawer** (primitivo `Drawer` de `overlay-primitives`, mismo patrón que el alta de movimiento), disparado desde la home o la cuenta corriente. El drawer SHALL ofrecer **montos rápidos** (Total y parciales; el resto queda registrado en la cuenta corriente), la cuenta cash/bank de origen **con su saldo disponible**, una **anotación pedagógica** del monto por persona ("la parte de {otro} se registra como deuda a tu favor"), y un **aviso no bloqueante de saldo negativo** cuando la cuenta elegida quedaría en `disponible < 0`. El registro SHALL ejecutarse mediante una operación privilegiada atómica que crea la pata del pagador (movimiento `settlement`, `payer_id` server-side) y la fila `settlement` (pendiente de asignación), sin pata huérfana. El movimiento `settlement` impacta el saldo pero NO cuenta como gasto. El monto SHALL ser mayor a cero y no exceder la deuda vigente en esa moneda.
+El sistema SHALL permitir que el miembro deudor registre una liquidación (total o parcial) mediante un **drawer** (primitivo `Drawer` de `overlay-primitives`, mismo patrón que el alta de movimiento), disparado desde la home o la cuenta corriente. El drawer SHALL ofrecer **montos rápidos** (Total y parciales; el resto queda registrado en la cuenta corriente), la cuenta cash/bank de origen **con su saldo disponible** y su **identidad visual heredada** (color e icono resueltos server-side, igual que el resto de los selectores de cuenta — nunca una paleta propia por posición), la **fecha del movimiento** (editable, por defecto hoy y con piso en la fecha de alta del usuario, mismo control `DatePicker` que el alta de movimiento), una **anotación pedagógica** del monto por persona ("la parte de {otro} se registra como deuda a tu favor"), y un **aviso no bloqueante de saldo negativo** cuando la cuenta elegida quedaría en `disponible < 0`. El registro SHALL ejecutarse mediante una operación privilegiada atómica que crea la pata del pagador (movimiento `settlement`, `payer_id` server-side, en la fecha elegida) y la fila `settlement` (pendiente de asignación), sin pata huérfana. El movimiento `settlement` impacta el saldo pero NO cuenta como gasto. El monto SHALL ser mayor a cero. Un monto **mayor a la deuda vigente** en esa moneda SHALL estar permitido: salda la deuda e **invierte el saldo** por el excedente (el otro miembro queda debiéndolo), coherente con la deuda derivada; el drawer SHALL explicitar esa inversión tanto en el preview como en el estado de "enviado".
 
 #### Scenario: Saldar total desde el drawer
 
@@ -242,10 +242,16 @@ El sistema SHALL permitir que el miembro deudor registre una liquidación (total
 - **WHEN** A elige una cuenta cuyo `disponible` quedaría en negativo tras pagar
 - **THEN** el drawer muestra el aviso no bloqueante de saldo negativo, sin impedir el pago
 
-#### Scenario: Monto que excede la deuda es rechazado
+#### Scenario: Monto que excede la deuda invierte el saldo
 
-- **WHEN** A intenta una liquidación por más que su deuda vigente en esa moneda
-- **THEN** el sistema la rechaza con error de validación
+- **WHEN** A debe `$50 ARS` y registra una liquidación de `$70 ARS`
+- **THEN** se registra la liquidación de `$70 ARS`, la deuda con B queda saldada y el saldo se invierte: B le queda debiendo `$20 ARS` a A, coherente con la deuda derivada
+- **AND** el drawer explicita la inversión en el preview y en el estado de "enviado", en lugar de mostrar un `$0` silencioso
+
+#### Scenario: Elegir la fecha de la liquidación
+
+- **WHEN** A abre el drawer de saldar y elige una fecha anterior a hoy (no previa a su alta)
+- **THEN** la pata del pagador (`settlement`) se registra con esa fecha, igual que cualquier otro movimiento
 
 ### Requirement: El receptor asigna la cuenta donde recibió la liquidación
 

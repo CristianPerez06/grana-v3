@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getAccounts } from '@/lib/accounts/queries'
+import { getAppStartDate } from '@/lib/profile/queries'
 import { getHousehold, getHouseholdDebt } from '@grana/shared'
 import type { BalanceCurrency } from '@grana/money-logic'
 import { SettleForm } from './_components/settle-form'
@@ -14,10 +15,11 @@ export default async function SharedSettlePage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [household, debt, accounts] = await Promise.all([
+  const [household, debt, accounts, appStartDate] = await Promise.all([
     getHousehold(supabase),
     getHouseholdDebt(supabase),
     getAccounts(supabase),
+    getAppStartDate(supabase),
   ])
   if (!household) return null
 
@@ -35,8 +37,17 @@ export default async function SharedSettlePage() {
     // Available balance per currency — drives the non-blocking negative-balance
     // notice when a settlement would push the chosen account below zero.
     balances: a.balances,
+    // Resolved color/icon so the picker shows each account's own identity.
+    avatar: a.avatar,
   }))
   const partnerName = household.members.find((m) => m.userId !== user.id)?.fullName ?? ''
 
-  return <SettleForm owed={owed} accounts={myAccounts} partnerName={partnerName} />
+  return (
+    <SettleForm
+      owed={owed}
+      accounts={myAccounts}
+      partnerName={partnerName}
+      appStartDate={appStartDate}
+    />
+  )
 }

@@ -116,16 +116,34 @@ describe('updateHouseholdConfigSchema', () => {
 })
 
 describe('settlementSchema', () => {
-  it('accepts a positive amount with a currency and account', () => {
+  it('accepts a positive amount with a currency, account and date', () => {
     expect(
-      settlementSchema.isValidSync({ currency_code: 'ARS', amount: 14000, account_id: UUID_A }),
+      settlementSchema.isValidSync({
+        currency_code: 'ARS',
+        amount: 14000,
+        account_id: UUID_A,
+        date: '2026-08-03',
+      }),
     ).toBe(true)
   })
 
   it('rejects a non-positive amount and a missing account', () => {
     expect(
-      settlementSchema.isValidSync({ currency_code: 'ARS', amount: 0, account_id: UUID_A }),
+      settlementSchema.isValidSync({
+        currency_code: 'ARS',
+        amount: 0,
+        account_id: UUID_A,
+        date: '2026-08-03',
+      }),
     ).toBe(false)
-    expect(settlementSchema.isValidSync({ currency_code: 'ARS', amount: 14000 })).toBe(false)
+    expect(
+      settlementSchema.isValidSync({ currency_code: 'ARS', amount: 14000, date: '2026-08-03' }),
+    ).toBe(false)
+  })
+
+  it('rejects a missing date', () => {
+    expect(
+      settlementSchema.isValidSync({ currency_code: 'ARS', amount: 14000, account_id: UUID_A }),
+    ).toBe(false)
   })
 })
