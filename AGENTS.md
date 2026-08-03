@@ -252,7 +252,7 @@ These affect every feature. Not knowing them causes silent bugs anywhere in the 
 
 ### Modules
 
-Build order matters — each module generally depends on the ones above it. Cross-cutting modules (`schema-base`, `profiles`, `i18n`, `card-networks`, `project-conventions`) underpin everything else.
+Build order matters — each module generally depends on the ones above it. Cross-cutting modules (`schema-base`, `profiles`, `i18n`, `card-networks`, `project-conventions`, `repo-architecture`, `ui-foundations`) underpin everything else.
 
 | # | Module | Status | Qué incluye |
 |---|--------|--------|-------------|

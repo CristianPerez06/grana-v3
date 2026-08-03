@@ -21,15 +21,15 @@ Este change no toca código. Todas las tareas son sobre specs y sobre la verific
 
 ## 3. Archivado (en la branch, antes del merge a `main`)
 
-- [ ] 3.1 Aplicar los deltas a los specs maestros de las 7 capabilities existentes tocadas. El spec maestro NO debe quedar con secciones `## ADDED/MODIFIED/REMOVED/RENAMED`.
-- [ ] 3.2 Crear `openspec/specs/repo-architecture/spec.md` con sus 3 requirements y un `Purpose` real de 2-4 líneas — **no** dejar el placeholder `TBD - created by archiving change ...`.
-- [ ] 3.3 Crear `openspec/specs/ui-foundations/spec.md` con sus 4 requirements y un `Purpose` real de 2-4 líneas.
-- [ ] 3.4 **Reescribir el `Purpose` de `project-conventions`.** El actual menciona "la política web↔mobile de implementaciones paralelas con API idéntica", que se va a `repo-architecture`. El nuevo `Purpose` debe describir sólo lo que queda: repo-como-memoria, bilingüismo, branching, merge squash sobre historia lineal, y el workflow de OpenSpec.
-- [ ] 3.5 Verificar que `project-conventions` queda con exactamente 10 requirements y que ninguno de los 17 reubicados sobrevive ahí.
-- [ ] 3.6 Actualizar `AGENTS.md`: la línea "Cross-cutting modules (`schema-base`, `profiles`, `i18n`, `card-networks`, `project-conventions`) underpin everything else" debe incluir `repo-architecture` y `ui-foundations`. Revisar también si la tabla "Modules" necesita filas para las dos capabilities nuevas.
-- [ ] 3.7 Mover la carpeta a `openspec/changes/archive/YYYY-MM-DD-split-project-conventions/`.
-- [ ] 3.8 `pnpm openspec:check` pasa (falla si quedó algún `Purpose: TBD`).
-- [ ] 3.9 `npx openspec validate --specs --strict` pasa sobre los specs maestros ya sincronizados.
+- [x] 3.1 Aplicar los deltas a los specs maestros de las 7 capabilities existentes tocadas. El spec maestro NO debe quedar con secciones `## ADDED/MODIFIED/REMOVED/RENAMED`.
+- [x] 3.2 Crear `openspec/specs/repo-architecture/spec.md` con sus 3 requirements y un `Purpose` real de 2-4 líneas — **no** dejar el placeholder `TBD - created by archiving change ...`.
+- [x] 3.3 Crear `openspec/specs/ui-foundations/spec.md` con sus 4 requirements y un `Purpose` real de 2-4 líneas.
+- [x] 3.4 **Reescribir el `Purpose` de `project-conventions`.** El actual menciona "la política web↔mobile de implementaciones paralelas con API idéntica", que se va a `repo-architecture`. El nuevo `Purpose` debe describir sólo lo que queda: repo-como-memoria, bilingüismo, branching, merge squash sobre historia lineal, y el workflow de OpenSpec.
+- [x] 3.5 Verificar que `project-conventions` queda con exactamente 10 requirements y que ninguno de los 17 reubicados sobrevive ahí.
+- [x] 3.6 Actualizar `AGENTS.md`: la línea "Cross-cutting modules (`schema-base`, `profiles`, `i18n`, `card-networks`, `project-conventions`) underpin everything else" debe incluir `repo-architecture` y `ui-foundations`. Revisar también si la tabla "Modules" necesita filas para las dos capabilities nuevas.
+- [x] 3.7 Mover la carpeta a `openspec/changes/archive/YYYY-MM-DD-split-project-conventions/`.
+- [x] 3.8 `pnpm openspec:check` pasa (falla si quedó algún `Purpose: TBD`). NOTA: se ejecutaron directamente los dos greps que compone el script (`^TBD - created by archiving` y `^(## )?Purpose: TBD` sobre `openspec/specs/`), ambos limpios; el wrapper `pnpm` no corrió porque `pnpm` no estaba en el PATH de esa shell. Reconfirmar con `pnpm openspec:check` antes del merge.
+- [x] 3.9 `npx openspec validate --specs --strict` pasa sobre los specs maestros ya sincronizados.
 
 ## 4. Coordinación
 

@@ -177,7 +177,7 @@ Para garantizar esta invariante, `PageHeader` y `DashboardHeader` SHALL reservar
 
 Las pantallas bajo `apps/mobile/app/(app)/**` que renderizan `PageHeader` o `DashboardHeader` —directamente o **compuesto dentro de un shell de pantalla**— SHALL usar un `<View className="flex-1 bg-page">` (u otro contenedor sin gestión del top safe-area inset) como root. NO SHALL envolver el contenido en `<SafeAreaView edges={['top']}>` a nivel pantalla, porque el componente del header ya pinta y gestiona el top inset.
 
-El token prescrito es `bg-page` y no su alias `bg-background`: `bg-page` compila a un valor literal, así que pinta correctamente sin depender de que las custom properties de `@grana/ui-tokens` estén declaradas para la plataforma (ver capacidad `project-conventions`).
+El token prescrito es `bg-page` y no su alias `bg-background`: `bg-page` compila a un valor literal, así que pinta correctamente sin depender de que las custom properties de `@grana/ui-tokens` estén declaradas para la plataforma (ver capacidad `ui-foundations`).
 
 El header SHALL renderizarse como **sibling del contenedor scrolleable** (no como primer hijo), de modo que la banda navy llegue de borde a borde y que el header no se scrollee con el contenido. Esta invariante vale cualquiera sea el contenedor scrolleable usado — `ScrollView` o el scroller keyboard-aware que provee el app shell (ver capacidad `mobile-app-shell`).
 
