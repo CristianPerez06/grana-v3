@@ -6,6 +6,7 @@
 #   - web-build      : next build for apps/web with placeholder env
 #   - web-test       : vitest tests for apps/web
 #   - monorepo-health: pnpm-lock.yaml freshness + peer dep dedup
+#   - specs          : openspec master-spec validation + TBD placeholder gate
 #
 # Mobile builds (eas build) are NOT run from CI today — they consume
 # EAS free-tier credits. Local validation (pnpm eas:android:local /
@@ -98,6 +99,41 @@ jobs:
 
       - name: Run tests (vitest)
         run: pnpm --filter web test
+
+  # The spec is the memory of this project — lint, build, tests and the
+  # lockfile are all guarded by CI, and until this job existed the specs
+  # were the only artifact with no automated gate. Enforcement lives here
+  # rather than in a local pre-merge step because the local run depends on
+  # someone remembering to do it *and* reporting the result honestly; a
+  # checklist box was once ticked for a run that never happened.
+  specs:
+    name: OpenSpec validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Parses every master spec: catches residual delta sections,
+      # requirements missing SHALL/MUST, requirements with no scenarios,
+      # and Purpose blocks that are too brief.
+      - name: Validate master specs
+        run: npx openspec validate --specs --strict
+
+      # Greps for the placeholders `openspec archive` leaves behind when a
+      # new capability's Purpose was never written. Runs even if the step
+      # above failed, so a broken PR surfaces both problems in one go.
+      - name: Check for TBD placeholders
+        if: always()
+        run: pnpm openspec:check
 
   monorepo-health:
     name: Monorepo health (lockfile + peer dep dedup)

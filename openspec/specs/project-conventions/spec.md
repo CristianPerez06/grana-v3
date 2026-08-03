@@ -238,14 +238,28 @@ Esta regla sostiene dos invariantes del proyecto:
 - El estado de `main` post-merge SHALL cumplir que cada implementación tiene su spec maestro alineado.
 - Cualquier feedback de PR que requiera ajustar el spec MUST aplicarse en la misma branch (commit adicional, lo colapsa el squash). NO se abre un segundo PR de "archive housekeeping".
 
-El gate de validación SHALL ser el comando `pnpm openspec:check`, que falla si encuentra `TBD - created by archiving` o `Purpose: TBD` dentro de `openspec/specs/`. Este comando MUST correrse sobre la branch (con el archive ya aplicado) antes del merge, y MUST pasar.
+Los gates de validación SHALL ser dos comandos complementarios, que cubren fallas distintas:
+
+- `pnpm openspec:check`, que falla si encuentra `TBD - created by archiving` o `Purpose: TBD` dentro de `openspec/specs/`.
+- `npx openspec validate --specs --strict`, que falla si algún spec maestro quedó malformado: secciones delta residuales, requirements sin `SHALL`/`MUST`, requirements sin scenarios, o un `Purpose` demasiado breve.
+
+Ambos gates SHALL ejecutarse en CI sobre cada pull request dirigido a `main` y sobre cada push a `main`, y ambos MUST pasar. **CI es el punto de enforcement**: una branch NO SHALL poder mergear con la spec rota, aunque nadie haya corrido nada localmente.
+
+La corrida local de ambos comandos SHALL seguir siendo parte del flujo de trabajo, pero con rol de **loop de feedback rápido**, no de garantía: el colaborador los corre para no descubrir el problema recién en el PR. El proyecto NO SHALL depender de que alguien se acuerde de correrlos, ni de que reporte fielmente el resultado.
 
 #### Scenario: Branch lista para merge tiene la change archivada
 
 - **WHEN** un colaborador termina la implementación de una change y se prepara para mergear
 - **THEN** la branch contiene la carpeta movida a `openspec/changes/archive/YYYY-MM-DD-<name>/`, los deltas aplicados al spec maestro, `Purpose` completado y `AGENTS.md` actualizado si corresponde
-- **AND** `pnpm openspec:check` corre localmente sobre la branch y pasa con exit code 0
+- **AND** el job de specs de CI corre ambos gates sobre el PR y los dos pasan con exit code 0
 - **AND** el merge a `main` (por el método elegido) produce un commit squasheado que contiene todo eso
+
+#### Scenario: CI rechaza un PR cuyo archive quedó incompleto
+
+- **WHEN** un PR a `main` contiene un archive que dejó `Purpose: TBD - created by archiving change ...` en un spec maestro, o secciones `## ADDED/MODIFIED/REMOVED/RENAMED Requirements` residuales
+- **THEN** el job de specs de CI falla con exit code distinto de 0 y el check del PR queda en rojo
+- **AND** el merge queda bloqueado hasta que se corrija en la misma branch
+- **AND** el resultado NO depende de que el colaborador haya corrido los comandos localmente ni de lo que haya reportado
 
 #### Scenario: Merge a main rechazado si quedan TBD residuales
 
