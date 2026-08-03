@@ -213,16 +213,21 @@ El sistema SHALL renderizar el listado de tarjetas de crédito (`/cards`) como u
    - **A pagar (ahora)** (`summary.toPayARS` / `toPayUSD`): la suma del total a pagar de **todas** las tarjetas activas que ya tienen un resumen **cerrado e impago** (deuda firme, vence ~este mes). Cuando la cifra es cero, el hero SHALL mostrar **`$ 0`** — NO un texto de empty-state.
    - **En curso** (`summary.inProgressARS` / `inProgressUSD`): la suma de los resúmenes **abiertos (aún no cerraron) con saldo > 0** de **todas** las tarjetas activas. Es el **acumulado real** de los consumos del ciclo abierto (no una proyección): un piso que sigue creciendo hasta el cierre. SHALL llevar el caption **"se sigue sumando hasta el cierre"**. Cuando es cero, SHALL mostrar `$ 0`.
    A la **derecha**, **"Próximos cierres"**: una lista de **una tarjeta por fila** (`fecha de cierre · nombre`, **sin monto** — el monto por tarjeta vive en el detalle de cada tarjeta del listado), ordenada por **fecha de cierre** (NO de vencimiento) ascendente y **capada en `NEXT_CLOSES_CAP` (6)** (`summary.nextCloses`). En viewports angostos las dos zonas se apilan.
-3. **Controles de vista**: una fila de filtros/orden con `Por banco` (default) y `Todas` (plano), más filtros opcionales `En uso`, `Vencen pronto`, `Con saldo`. Los controles NO SHALL alterar la semántica contable, solo el agrupado, el orden y el subconjunto visible.
+3. **Controles de vista**: exponen el modo de vista (`Por banco` agrupado, default; o plano) y los predicados `Todas`, `En uso`, `Vencen pronto`, `Con saldo`. Los controles NO SHALL alterar la semántica contable, solo el agrupado, el orden y el subconjunto visible. La **composición** de los controles se resuelve por plataforma según el ancho disponible:
+   - **Web**: un único control segmentado de cinco opciones (`Por banco` / `Todas` / `En uso` / `Vencen pronto` / `Con saldo`) en una sola fila.
+   - **Mobile**: **dos** controles separados, porque cinco opciones no entran legibles en el ancho de un teléfono y porque `Por banco` es un modo de vista, no un predicado. (a) un control segmentado de **dos** opciones — `Por banco` (default) y `Lista` (plano); (b) una fila de **chips de filtro** que SHALL renderizarse **solo en modo `Lista`**, con los cuatro predicados (`Todas` default, `En uso`, `Vencen pronto`, `Con saldo`), cada chip acompañado de **su conteo de resultados**. Un chip cuyo conteo es 0 SHALL renderizarse deshabilitado (no seleccionable). Los chips SHALL dimensionarse por contenido y desplazarse horizontalmente si no entran, NUNCA repartirse el ancho a la fuerza. La selección de chip SHALL sobrevivir al ida y vuelta a `Por banco`.
 4. **Vista compacta de tarjetas activas**. El componente público SHALL llamarse `Wallet` en ambas plataformas (mismo nombre que el actual), con presentación compacta agrupada por banco:
-   - **Grupos por banco desplegables (collapsible).** Cada grupo tiene un encabezado con: chevron de colapso, dot del color del banco, nombre del banco, "N tarjetas · M en uso", total a pagar del banco (si > 0) y un **badge de urgencia** con el próximo vencimiento del grupo (color heredado del peor estado del grupo: rojo > ámbar > neutro). Tap/click en el encabezado expande/colapsa el cuerpo.
+   - **Grupos por banco desplegables (collapsible).** Cada grupo tiene un encabezado con: chevron de colapso, dot del color del banco, nombre del banco, "N tarjetas · M en uso", total a pagar del banco (si > 0) y un **badge de urgencia** con el próximo vencimiento del grupo (color heredado del peor estado del grupo: rojo > ámbar > neutro). Tap/click en el encabezado expande/colapsa el cuerpo. La **disposición** de ese contenido se resuelve por plataforma:
+     - **Web**: una sola línea, con el nombre truncado y el resto de los elementos sin encogerse.
+     - **Mobile**: **dos líneas** — línea 1 = dot + nombre del banco (una sola línea, truncado) + total a pagar alineado a la derecha; línea 2 = "N tarjetas · M en uso" + badge de urgencia alineado a la derecha. El chevron queda alineado al centro vertical de las dos líneas. El nombre del banco SHALL truncar antes que empujar el monto fuera del ancho visible.
+     - **Badge en estado neutro**: en web el badge se renderiza siempre (mostrando "Al día" cuando el grupo no tiene urgencia); en **mobile** el badge SHALL renderizarse **solo cuando el grupo tiene urgencia** (peor tono ≠ neutro), porque el ancho es escaso y el estado "al día" ya se lee de la ausencia de deuda y del indicador por fila.
    - **Auto-colapso inicial.** Un grupo SHALL arrancar **colapsado solo si todas sus tarjetas están al día y en $0** (sin deuda, sin saldo en ninguna moneda, sin alert de vencimiento). Cualquier grupo con al menos una tarjeta vencida, por vencer, o con saldo > 0 SHALL arrancar **expandido**.
    - **2 filas por tarjeta.** Cada tarjeta se renderiza en dos filas: **fila 1** = monograma de red + nombre | monto del resumen vigente | indicador de estado; **fila 2** = tres etiquetas micro apiladas **Cierre**, **Vence** y **Uso** (label en mayúscula + valor debajo). El valor de Uso es el **porcentaje del resumen vigente** sobre el límite (o el texto **"Sin límite"** cuando no hay límite).
    - **Web**: filas dentro de los grupos desplegables (no una tabla rígida de una sola fila por tarjeta).
    - **Mobile**: lista densa equivalente (filas de ~2 líneas) agrupada por banco, sin tabla horizontal.
 5. **Sección "Archivadas"** colapsable debajo, cerrada por defecto, solo cuando existe ≥1 tarjeta archivada, con encabezado "Archivadas (N)" y enlace al detalle de cada una. Web usa `<details>` nativo; mobile usa `Pressable` + `useState`.
 
-**Estado por fila (vinculante).** Cada fila SHALL exponer SIEMPRE un indicador de estado derivado de `pillTone(activePeriod.alert, activePeriod.variant)` (vencido / por vencer / al día). El indicador SHALL permanecer visible en cualquier orden o agrupado, de modo que una deuda no quede escondida; combinado con el badge de urgencia del encabezado y la regla de auto-colapso, un grupo con deuda nunca queda oculto sin señal.
+**Estado por fila (vinculante).** Cada fila SHALL exponer SIEMPRE un indicador de estado derivado de `pillTone(activePeriod.alert, activePeriod.variant)` (vencido / por vencer / al día). El indicador SHALL permanecer visible en cualquier orden o agrupado, de modo que una deuda no quede escondida; combinado con el badge de urgencia del encabezado y la regla de auto-colapso, un grupo con deuda nunca queda oculto sin señal. "Visible" es literal: los tres tonos SHALL pintarse con **tokens existentes del design system de la plataforma**. Una clase de color que el sistema de estilos no resuelve (p. ej. un color inexistente en `@grana/ui-tokens`) deja el indicador transparente y viola este requirement, aunque el elemento esté en el árbol.
 
 **Bimoneda en el monto (vinculante).** La zona de monto del resumen SHALL respetar Bimoneda: si solo una moneda tiene saldo, ese monto; si ambas tienen saldo, ARS primario arriba y USD subordinado debajo, **nunca sumados ni convertidos**. Los montos de dinero usan los tonos editoriales (`text-income`/`text-expense`), no tokens crudos.
 
@@ -271,6 +276,46 @@ La navegación de una fila (click web / tap mobile) SHALL ir a `/cards/[id]`. La
 - **WHEN** el usuario está en `/cards` mobile con las queries de catálogo ya cargadas y toca "Agregar tarjeta"
 - **THEN** la app navega a la ruta de alta de tarjeta nativa (`/cards/new`)
 - **AND** el CTA NO se renderiza como placeholder permanentemente disabled
+
+#### Scenario: El encabezado de grupo se muestra en dos líneas (mobile)
+
+- **WHEN** el usuario abre `/cards` en la app nativa y un grupo de banco tiene nombre largo ("Banco Patagonia"), 3 tarjetas, 2 en uso, `$284.500` a pagar y vencimiento el 25/06
+- **THEN** la línea 1 del encabezado muestra el dot del banco, el nombre en una sola línea y el total a pagar alineado a la derecha
+- **AND** la línea 2 muestra "3 tarjetas · 2 en uso" y el badge "vence 25/06" alineado a la derecha
+- **AND** el nombre del banco se trunca si no entra, sin desplazar el total a pagar fuera del ancho visible ni cortar el badge
+
+#### Scenario: El badge de urgencia no se renderiza en un grupo al día (mobile)
+
+- **WHEN** un grupo de banco tiene todas sus tarjetas al día (peor tono neutro)
+- **THEN** el encabezado del grupo en la app nativa NO renderiza badge de urgencia
+- **AND** el mismo grupo en web SÍ renderiza el badge con el texto "Al día"
+
+#### Scenario: El modo de vista y el filtro son controles separados (mobile)
+
+- **WHEN** el usuario abre `/cards` en la app nativa
+- **THEN** ve un control segmentado de dos opciones, `Por banco` (seleccionada por default) y `Lista`
+- **AND** los chips de filtro NO se muestran mientras el modo es `Por banco`
+- **WHEN** el usuario selecciona `Lista`
+- **THEN** aparece la fila de chips `Todas` (seleccionado), `En uso`, `Vencen pronto` y `Con saldo`, cada uno con su conteo de resultados
+- **AND** la lista se muestra plana, ordenada por próximo vencimiento ascendente
+
+#### Scenario: Un chip de filtro sin resultados no es seleccionable (mobile)
+
+- **WHEN** el usuario está en modo `Lista` y ninguna tarjeta cumple el predicado `Con saldo`
+- **THEN** el chip `Con saldo` muestra conteo 0 y se renderiza deshabilitado
+- **AND** tocarlo no cambia el filtro aplicado
+
+#### Scenario: La elección de filtro sobrevive al ida y vuelta al agrupado (mobile)
+
+- **WHEN** el usuario selecciona el chip `En uso`, vuelve a `Por banco` y luego vuelve a `Lista`
+- **THEN** el filtro aplicado sigue siendo `En uso`
+- **AND** mientras estuvo en `Por banco` la vista mostró todos los grupos con todas sus tarjetas
+
+#### Scenario: El indicador del tono "por vencer" se pinta con un token existente (mobile)
+
+- **WHEN** una tarjeta tiene su resumen próximo a vencer (tono ámbar) en la app nativa
+- **THEN** el dot de estado de su fila y el badge de urgencia de su grupo se pintan con el token `warning` del design system
+- **AND** ninguna de las dos superficies usa una clase de color que `@grana/ui-tokens` no define
 
 ### Requirement: El detalle de tarjeta muestra el resumen actual, próximo, y acciones primarias
 
@@ -933,7 +978,7 @@ A la derecha, **"Próximos cierres"** — una tarjeta por fila (`fecha de cierre
 **Reglas de presentación de la vista compacta.**
 
 - **Web**: grupos por banco **desplegables** con encabezado (chevron, dot del banco, nombre, "N tarjetas · M en uso", total a pagar del banco, badge de urgencia). Default "Por banco"; toggle "Todas" (plano). Auto-colapso de bancos 100% al día y en $0. Cada tarjeta en **2 filas** (identidad + resumen + estado; etiquetas apiladas Cierre/Vence/Uso, con Uso = % del resumen o "Sin límite"). NO SHALL renderizarse como wallet de cards grandes ni como carrusel.
-- **Mobile**: lista densa equivalente (filas de ~2 líneas) agrupada por banco y desplegable, sin tabla horizontal, con dot de estado por fila. NO SHALL renderizarse como carrusel de cards grandes.
+- **Mobile**: lista densa equivalente (filas de ~2 líneas) agrupada por banco y desplegable, sin tabla horizontal, con dot de estado por fila. NO SHALL renderizarse como carrusel de cards grandes. Los controles de vista son **dos** (segmented `Por banco` / `Lista` + chips de filtro con conteo, visibles solo en `Lista`) y el encabezado de grupo ocupa **dos líneas**, según fija el requirement del listado; el dot de estado y el badge de urgencia usan tokens existentes de `@grana/ui-tokens`.
 
 **Datos habilitados (actualizado).** Además de los datos que ya devolvían `getCreditCards()` y `getCardsMonthSummary()`, este requirement HABILITA y REQUIERE:
 - `institution.name` en el embed de `getCreditCards()`, expuesto en `CreditCardSummary`, para agrupar y labelar por banco.
@@ -966,7 +1011,7 @@ Cualquier propuesta que viole un no-goal vigente SHALL abrir un change OpenSpec 
 #### Scenario: La ruta sigue el mockup de la vista compacta
 
 - **WHEN** un desarrollador implementa el rediseño visual de `/cards`
-- **THEN** la composición sigue la estructura del mockup `docs/mockups/cards-compact-final.png`: header con título + acción primaria, hero unificado (A pagar + En curso, ARS/USD; próximos cierres), controles de vista (Por banco / Todas), vista compacta de grupos desplegables con filas de 2 líneas, y sección archivadas opcional al final
+- **THEN** la composición sigue la estructura del mockup `docs/mockups/cards-compact-final.png`: header con título + acción primaria, hero unificado (A pagar + En curso, ARS/USD; próximos cierres), controles de vista (en web `Por banco` / `Todas` en un segmented único; en mobile el segmented `Por banco` / `Lista` más los chips de filtro), vista compacta de grupos desplegables con filas de 2 líneas, y sección archivadas opcional al final
 - **AND** los valores visuales se derivan de tokens y primitivos existentes, no de hex literales copiados del mock
 
 #### Scenario: El hero navy muestra "A pagar" y "En curso", y próximos cierres con monto
@@ -985,7 +1030,7 @@ Cualquier propuesta que viole un no-goal vigente SHALL abrir un change OpenSpec 
 #### Scenario: Filtros, agrupación y colapso están permitidos; la búsqueda de texto no
 
 - **WHEN** se revisa la ruta implementada
-- **THEN** existen controles de orden/filtro (al menos "Por banco" y "Todas") y los grupos de banco se pueden colapsar/expandir
+- **THEN** existen controles de orden/filtro (al menos el modo agrupado "Por banco" y el modo plano sin predicado) y los grupos de banco se pueden colapsar/expandir
 - **AND** NO existe un input de búsqueda de texto libre en el header ni en las secciones
 
 #### Scenario: Los campos y queries nuevos están habilitados

@@ -29,9 +29,9 @@
 
 - [x] 5.1 `pnpm --filter @grana/cards test` (el `pnpm test` de la raíz solo corre `apps/web/lib/**`), `pnpm typecheck:mobile` y `pnpm lint:mobile` en verde.
 - [x] 5.2 `pnpm typecheck` y `pnpm lint` (web) en verde — garantiza que el agregado a `@grana/cards` no rompió el consumidor web.
-- [ ] 5.3 Chequeo visual en device/simulador de `/cards`: encabezado de dos líneas con banco de nombre largo, grupo al día sin chip, tono "por vencer" visible en dot y chip, modo `Lista` con chips y conteos, chip en 0 deshabilitado. PENDIENTE: el simulador de la máquina está ocupado por otro proyecto (Metro en 8081) y el deep link del dev-client abrió esa app; lo corre el usuario.
+- [ ] 5.3 **NO EJECUTADO — se archiva igual, a decisión del usuario.** Chequeo visual en device/simulador de `/cards`: encabezado de dos líneas con banco de nombre largo, grupo al día sin chip, tono "por vencer" visible en dot y chip, modo `Lista` con chips y conteos, chip en 0 deshabilitado. El simulador estaba ocupado por otro proyecto (Metro en 8081). La implementación ya está mergeada a `main` (commit `d86ec30`), así que este chequeo es verificación visual de código en producción, no un bloqueo del archive. Queda como deuda de QA, no de spec.
 - [x] 5.4 Confirmar que `apps/web/app/(app)/cards/_components/cards-compact-view.tsx` quedó sin cambios.
 
 ## 6. Cierre
 
-- [ ] 6.1 Archivar el change siguiendo el checklist post-archive de `AGENTS.md` (mover a `openspec/changes/archive/YYYY-MM-DD-cards-mobile-density/`, aplicar los deltas sobre `openspec/specs/cards/spec.md` sin dejar secciones delta, `pnpm openspec:check` en verde).
+- [x] 6.1 Archivar el change siguiendo el checklist post-archive de `AGENTS.md` (mover a `openspec/changes/archive/YYYY-MM-DD-cards-mobile-density/`, aplicar los deltas sobre `openspec/specs/cards/spec.md` sin dejar secciones delta, `pnpm openspec:check` en verde).
