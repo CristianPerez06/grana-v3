@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
-import { ScrollView, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { getAccounts } from '@grana/accounts'
 import { getTodayAR } from '@grana/money-logic'
 import { resolveAccountAvatar } from '@grana/ui-contracts'
 import type { MovementFormAccount } from '@grana/movement-form'
-import { PageHeader } from '../../../../components/ui/PageHeader'
+import { FormScreen } from '../../../../components/layout/FormScreen'
 import { Spinner } from '../../../../components/ui/Spinner'
 import { RecurrenceForm } from '../../../../components/recurrences/RecurrenceForm'
 import { getAllCategories } from '../../../../lib/categories'
@@ -84,33 +84,27 @@ export default function NewRecurrenceScreen() {
   const failed = accountsQ.isError || categoriesQ.isError || householdQ.isError
 
   return (
-    <View className="flex-1 bg-page">
-      <PageHeader
-        title={t('recurrences.create.title')}
-        backLink={{ href: '/transactions/recurring', label: t('recurrences.back_label') }}
-        onBackPress={() => (router.canGoBack() ? router.back() : router.push('/transactions/recurring'))}
-      />
-      <ScrollView
-        contentContainerClassName="px-6 py-6 pb-28"
-        keyboardShouldPersistTaps="handled"
-      >
-        {failed ? (
-          <Text className="text-center text-sm text-text-muted">
-            {t('transactions.new.load_error')}
-          </Text>
-        ) : !ready ? (
-          <View className="items-center py-12">
-            <Spinner size="md" />
-          </View>
-        ) : (
-          <RecurrenceForm
-            accounts={accounts}
-            categories={categoriesQ.data}
-            household={householdQ.data}
-            onDone={() => (router.canGoBack() ? router.back() : router.push('/transactions/recurring'))}
-          />
-        )}
-      </ScrollView>
-    </View>
+    <FormScreen
+      title={t('recurrences.create.title')}
+      backLink={{ href: '/transactions/recurring', label: t('recurrences.back_label') }}
+      onBackPress={() => (router.canGoBack() ? router.back() : router.push('/transactions/recurring'))}
+    >
+      {failed ? (
+        <Text className="text-center text-sm text-text-muted">
+          {t('transactions.new.load_error')}
+        </Text>
+      ) : !ready ? (
+        <View className="items-center py-12">
+          <Spinner size="md" />
+        </View>
+      ) : (
+        <RecurrenceForm
+          accounts={accounts}
+          categories={categoriesQ.data}
+          household={householdQ.data}
+          onDone={() => (router.canGoBack() ? router.back() : router.push('/transactions/recurring'))}
+        />
+      )}
+    </FormScreen>
   )
 }

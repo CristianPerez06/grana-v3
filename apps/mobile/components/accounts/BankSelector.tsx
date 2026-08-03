@@ -2,13 +2,12 @@ import { useMemo, useState } from 'react'
 import {
   Dimensions,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   Text,
   TextInput,
   View,
 } from 'react-native'
+import { FormSheetKeyboardView } from '../layout/FormSheetKeyboardView'
 import { useQueryClient } from '@tanstack/react-query'
 import { ChevronDown } from 'lucide-react-native'
 import {
@@ -137,7 +136,7 @@ function BankSelectorModal({
       onClose={handleClose}
       ariaLabel={t('accounts.labels.institution')}
     >
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <FormSheetKeyboardView>
         <View className="flex-row items-center justify-between border-b border-border px-5 pb-3 pt-1">
           <Text className="text-lg font-semibold text-text">{t('accounts.labels.institution')}</Text>
           <Pressable onPress={handleClose} accessibilityRole="button">
@@ -204,7 +203,7 @@ function BankSelectorModal({
             />
           </>
         )}
-      </KeyboardAvoidingView>
+      </FormSheetKeyboardView>
     </BottomSheet>
   )
 }

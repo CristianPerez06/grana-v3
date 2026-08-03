@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
-import { ScrollView, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { getAccounts } from '@grana/accounts'
 import { getTodayAR } from '@grana/money-logic'
 import { resolveAccountAvatar } from '@grana/ui-contracts'
 import type { MovementFormAccount } from '@grana/movement-form'
-import { PageHeader } from '../../../../components/ui/PageHeader'
+import { FormScreen } from '../../../../components/layout/FormScreen'
 import { MovementForm } from '../../../../components/transactions/MovementForm'
 import { MovementFormSkeleton } from '../../../../components/transactions/MovementFormSkeleton'
 import { getAllCategories } from '../../../../lib/categories'
@@ -100,38 +100,35 @@ export default function EditMovementScreen() {
   }
 
   return (
-    <View className="flex-1 bg-page">
-      <PageHeader
-        title={t('transactions.edit_title')}
-        backLink={{ href: `/transactions/${txId}`, label: t('common.back') }}
-        onBackPress={goBack}
-      />
-      <ScrollView contentContainerClassName="px-6 py-6 pb-28" keyboardShouldPersistTaps="handled">
-        {failed ? (
-          <Text className="text-center text-sm text-text-muted">
-            {t('transactions.new.load_error')}
+    <FormScreen
+      title={t('transactions.edit_title')}
+      backLink={{ href: `/transactions/${txId}`, label: t('common.back') }}
+      onBackPress={goBack}
+    >
+      {failed ? (
+        <Text className="text-center text-sm text-text-muted">
+          {t('transactions.new.load_error')}
+        </Text>
+      ) : notFound ? (
+        <View className="rounded-2xl border border-border-soft bg-card p-8">
+          <Text className="text-center text-base font-bold text-text">
+            {t('notFound.transactions.title')}
           </Text>
-        ) : notFound ? (
-          <View className="rounded-2xl border border-border-soft bg-card p-8">
-            <Text className="text-center text-base font-bold text-text">
-              {t('notFound.transactions.title')}
-            </Text>
-            <Text className="mt-1.5 text-center text-sm text-text-muted">
-              {t('notFound.transactions.description')}
-            </Text>
-          </View>
-        ) : !ready || !editQ.data ? (
-          <MovementFormSkeleton variant="edit" />
-        ) : (
-          <MovementForm
-            accounts={accounts}
-            categories={categoriesQ.data}
-            household={householdQ.data}
-            edit={editQ.data}
-            onDone={goBack}
-          />
-        )}
-      </ScrollView>
-    </View>
+          <Text className="mt-1.5 text-center text-sm text-text-muted">
+            {t('notFound.transactions.description')}
+          </Text>
+        </View>
+      ) : !ready || !editQ.data ? (
+        <MovementFormSkeleton variant="edit" />
+      ) : (
+        <MovementForm
+          accounts={accounts}
+          categories={categoriesQ.data}
+          household={householdQ.data}
+          edit={editQ.data}
+          onDone={goBack}
+        />
+      )}
+    </FormScreen>
   )
 }

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { parseMoneyInput } from '@grana/validation'
@@ -7,7 +7,7 @@ import type { BalanceCurrency } from '@grana/money-logic'
 import { getHousehold, getHouseholdDebt } from '../../../lib/shared/queries'
 import { useAccountsList } from '../../../lib/accounts/queries'
 import { registerSettlement } from '../../../lib/shared/mutators'
-import { PageHeader } from '../../../components/ui/PageHeader'
+import { FormScreen } from '../../../components/layout/FormScreen'
 import { MoneyAmountInput } from '../../../components/ui/MoneyAmountInput'
 import { Segmented } from '../../../components/ui/Segmented'
 import { SelectSheet } from '../../../components/ui/SelectSheet'
@@ -94,31 +94,34 @@ export default function SettleScreen() {
 
   if (sent) {
     return (
-      <View className="flex-1 bg-page">
-        <PageHeader title={t('shared.settle.title')} backLink={backLink} />
-        <ScrollView contentContainerClassName="px-6 pt-6">
-          <View className="flex-col gap-3 rounded-2xl border border-border bg-card shadow-sm p-5">
-            <Text className="text-lg font-semibold text-text">
-              {t('shared.settle.sent_title', { amount: fmtMoney(sent.amount, sent.currency) })}
-            </Text>
-            <Text className="text-sm text-text-muted">
-              {t('shared.settle.sent_waiting', { name: partnerName })}
-            </Text>
-            <Button variant="primary" onPress={() => router.back()}>
-              {t('shared.settle.sent_done')}
-            </Button>
-          </View>
-        </ScrollView>
-      </View>
+      <FormScreen
+        title={t('shared.settle.title')}
+        backLink={backLink}
+        contentClassName="px-6 pt-6"
+      >
+        <View className="flex-col gap-3 rounded-2xl border border-border bg-card shadow-sm p-5">
+          <Text className="text-lg font-semibold text-text">
+            {t('shared.settle.sent_title', { amount: fmtMoney(sent.amount, sent.currency) })}
+          </Text>
+          <Text className="text-sm text-text-muted">
+            {t('shared.settle.sent_waiting', { name: partnerName })}
+          </Text>
+          <Button variant="primary" onPress={() => router.back()}>
+            {t('shared.settle.sent_done')}
+          </Button>
+        </View>
+      </FormScreen>
     )
   }
 
   const loading = householdQuery.isPending || debtQuery.isPending
 
   return (
-    <View className="flex-1 bg-page">
-      <PageHeader title={t('shared.settle.title')} backLink={backLink} />
-      <ScrollView contentContainerClassName="px-6 pt-6 pb-16">
+    <FormScreen
+      title={t('shared.settle.title')}
+      backLink={backLink}
+      contentClassName="px-6 pt-6 pb-16"
+    >
         {loading ? (
           <View className="flex-col gap-4">
             <View className={`${CARD} p-5`}>
@@ -234,8 +237,10 @@ export default function SettleScreen() {
             </Button>
           </View>
         )}
-      </ScrollView>
 
+      {/* Renders into its own native window (RN Modal), so sitting inside the
+          scroll content has no layout effect — it just keeps the picker next to
+          the field that opens it. */}
       <SelectSheet
         visible={pickerOpen}
         onClose={() => setPickerOpen(false)}
@@ -255,6 +260,6 @@ export default function SettleScreen() {
           </Pressable>
         )}
       />
-    </View>
+    </FormScreen>
   )
 }

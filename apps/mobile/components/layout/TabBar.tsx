@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from 'react-native'
+import { useKeyboardState } from 'react-native-keyboard-controller'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useSegments } from 'expo-router'
 import { Home, List, MoreHorizontal, Users } from 'lucide-react-native'
@@ -59,6 +60,9 @@ export function TabBar({ state, navigation, onMenuPress, menuActive }: Props) {
   const t = useT()
   const insets = useSafeAreaInsets()
   const segments = useSegments()
+  // Selector form on purpose: the tab bar only cares about visibility, so it
+  // does not re-render on every height frame while the keyboard animates.
+  const keyboardVisible = useKeyboardState((s) => s.isVisible)
 
   // Hide the tab bar on chromeless routes: whole non-tab sections (accounts,
   // cards) and specific pushed screens inside a tab (e.g. `/transactions/new`),
@@ -73,6 +77,13 @@ export function TabBar({ state, navigation, onMenuPress, menuActive }: Props) {
     (section !== undefined && CHROMELESS_SECTIONS.includes(section)) ||
     CHROMELESS_SCREENS.some(([p, s]) => parent === p && screen === s)
   if (chromeless) return null
+
+  // The tab bar is rendered by the navigator OUTSIDE the screen container, so it
+  // stays pinned to the bottom edge even with the keyboard open — sitting
+  // between the form content and the top of the keyboard, eating the vertical
+  // space the focused field needs. It offers no useful navigation mid-edit, so
+  // it steps aside and comes back on dismiss.
+  if (keyboardVisible) return null
 
   return (
     <View

@@ -328,48 +328,20 @@ Los nombres de categorías y subcategorías de sistema SHALL renderearse a trav�
 
 ---
 
-### Requirement: Alta de categoría propia en mobile (mobile)
-
-`apps/mobile` SHALL permitir crear una categoría propia desde un **bottom-sheet** (`components/ui/Drawer`) disparado desde el listado de categorías, sin navegar a otra pantalla. El formulario SHALL validar con `createCategorySchema` de `@grana/validation` antes de invocar el insert en Supabase. Al éxito, el sheet se cierra y la lista de categorías refleja la nueva categoría.
-
-La pantalla `/(app)/settings/categories/new` SHALL conservarse como fallback de deep-link, montando el mismo form. El botón físico de back de Android SHALL cerrar el sheet cuando está abierto, sin popear la pantalla del listado.
-
-#### Scenario: Creación exitosa desde mobile
-
-- **WHEN** un usuario abre el sheet de crear categoría desde la lista y lo envía con nombre "Mascotas", tipo "expense"
-- **THEN** el cliente Supabase mobile inserta la categoría con `user_id = auth.uid()`, `canonical_name = "mascotas"`, `is_active = true`
-- **AND** el sheet se cierra y la nueva categoría aparece en la lista sin navegar a otra pantalla
-
-#### Scenario: Colisión de nombre desde mobile
-
-- **WHEN** un usuario intenta crear una segunda categoría con `canonical_name = "mascotas"`
-- **THEN** el insert falla con Postgres `23505`
-- **AND** el form en el sheet muestra un mensaje i18n indicando que ya existe una categoría con ese nombre, y el sheet permanece abierto
-
-#### Scenario: Validación de nombre vacío desde mobile
-
-- **WHEN** un usuario envía el form con nombre vacío
-- **THEN** la validación Yup falla antes de tocar Supabase
-- **AND** el form muestra el error de validación localizado y el sheet permanece abierto
-
-#### Scenario: Back de Android cierra el sheet de alta
-
-- **WHEN** el sheet de crear categoría está abierto y el usuario presiona el back físico de Android
-- **THEN** el sheet se cierra
-- **AND** la app permanece en `/(app)/settings/categories`
-
 ### Requirement: Edición de categoría propia en mobile (mobile)
 
-`apps/mobile` SHALL permitir editar `name`, `icon` y `color` de una categoría propia desde un **bottom-sheet** (`components/ui/Drawer`) disparado desde la fila/lista de categorías, sin navegar a otra pantalla. El sheet SHALL bloquear la edición (no permitir guardar y mostrar un mensaje) si el `id` corresponde a una categoría con `user_id IS NULL` (sistema); las filas de sistema no exponen la acción de editar. RLS rechaza la operación; el cliente solo evita el viaje a DB innecesario.
+`apps/mobile` SHALL permitir editar `name`, `icon` y `color` de una categoría propia desde la **pantalla pusheada** `/(app)/settings/categories/[id]/edit`, navegada desde la acción "Editar" del menú de la fila. La pantalla SHALL bloquear la edición (no permitir guardar y mostrar un mensaje) si el `id` corresponde a una categoría con `user_id IS NULL` (sistema); las filas de sistema no exponen la acción de editar. RLS rechaza la operación; el cliente solo evita el viaje a DB innecesario.
 
-El `canonical_name` SHALL NO ser editable (campo no presente en el form). La pantalla `/(app)/settings/categories/[id]/edit` SHALL conservarse como fallback de deep-link. El back físico de Android SHALL cerrar el sheet cuando está abierto.
+El `canonical_name` SHALL NO ser editable (campo no presente en el form). La pantalla SHALL usar `FormScreen`, con el mismo chrome que el resto de los formularios mobile. El back físico de Android y el gesto de back de iOS SHALL popear la pantalla sin guardar.
+
+Misma divergencia deliberada respecto de web que en el alta: web conserva el drawer.
 
 #### Scenario: Edición de nombre de categoría propia desde mobile
 
-- **WHEN** un usuario abre el sheet de edición de su categoría y cambia el nombre a "Fast food"
+- **WHEN** un usuario abre la pantalla de edición de su categoría y cambia el nombre a "Fast food"
 - **THEN** el update en Supabase actualiza solo el campo `name`
 - **AND** el `canonical_name` permanece sin cambios
-- **AND** el sheet se cierra y la lista muestra el nombre actualizado
+- **AND** la pantalla se popea y la lista muestra el nombre actualizado
 
 #### Scenario: Categoría del sistema no es editable desde mobile
 
@@ -380,21 +352,23 @@ El `canonical_name` SHALL NO ser editable (campo no presente en el form). La pan
 
 ### Requirement: Alta de subcategoría propia en mobile (mobile)
 
-`apps/mobile` SHALL permitir crear una subcategoría propia bajo una categoría existente (sistema o propia) desde un **bottom-sheet** (`components/ui/Drawer`) disparado desde el listado de subcategorías (`/(app)/settings/categories/[id]/subcategories`), sin navegar a otra pantalla. El insert SHALL setear `user_id = auth.uid()` y `category_id = [id]`. La validación SHALL usar `createSubcategorySchema` de `@grana/validation`.
+`apps/mobile` SHALL permitir crear una subcategoría propia bajo una categoría existente (sistema o propia) desde la **pantalla pusheada** `/(app)/settings/categories/[id]/subcategories/new`, navegada desde la acción "Agregar" del header del listado de subcategorías. El insert SHALL setear `user_id = auth.uid()` y `category_id = [id]`. La validación SHALL usar `createSubcategorySchema` de `@grana/validation`.
 
-La pantalla `/(app)/settings/categories/[id]/subcategories/new` SHALL conservarse como fallback de deep-link. El back físico de Android SHALL cerrar el sheet cuando está abierto. No existe edición de subcategoría y este change NO la agrega.
+La pantalla SHALL usar `FormScreen`, con el mismo chrome que el resto de los formularios mobile. El back físico de Android y el gesto de back de iOS SHALL popear la pantalla sin guardar. No existe edición de subcategoría y este change NO la agrega.
+
+Misma divergencia deliberada respecto de web que en el alta de categoría.
 
 #### Scenario: Subcategoría bajo categoría sistema desde mobile
 
-- **WHEN** un usuario abre el sheet de crear subcategoría desde la lista de subcategorías de la categoría sistema "Comida" y crea "Verdulería"
+- **WHEN** un usuario navega a la pantalla de crear subcategoría desde la lista de subcategorías de la categoría sistema "Comida" y crea "Verdulería"
 - **THEN** el insert tiene `user_id = auth.uid()`, `category_id = <comida_id>`
-- **AND** el sheet se cierra y la subcategoría aparece en la lista de subcategorías de "Comida"
+- **AND** la pantalla se popea y la subcategoría aparece en la lista de subcategorías de "Comida"
 
 #### Scenario: Colisión de subcategoría desde mobile
 
 - **WHEN** un usuario intenta crear dos subcategorías con el mismo `canonical_name` bajo la misma categoría
 - **THEN** el segundo insert falla con Postgres `23505`
-- **AND** el form en el sheet muestra un mensaje i18n indicando duplicado y el sheet permanece abierto
+- **AND** el form muestra un mensaje i18n indicando duplicado y la pantalla permanece abierta
 
 ### Requirement: Archivar categoría propia desde mobile (mobile)
 
@@ -441,4 +415,44 @@ La creación de subcategoría SHALL permitirse bajo categorías propias y catego
 
 - **WHEN** un usuario abre directamente `/settings/categories/[id]/subcategories/new` (deep-link o sin JS)
 - **THEN** la page monta el form de crear subcategoría en `variant="page"` con su comportamiento actual
+
+### Requirement: Crear categoría propia en mobile (mobile)
+
+Sucede a la antigua "Alta de categoría propia en mobile (mobile)", que fijaba esta misma capacidad sobre un bottom-sheet (`components/ui/Drawer`); el cambio de superficie se archivó en `2026-08-02-mobile-keyboard-avoidance`.
+
+`apps/mobile` SHALL permitir crear una categoría propia desde la **pantalla pusheada** `/(app)/settings/categories/new`, navegada desde la acción "Agregar" del header del listado. El formulario SHALL validar con `createCategorySchema` de `@grana/validation` antes de invocar el insert en Supabase. Al éxito, la pantalla se popea y la lista de categorías refleja la nueva categoría (el listado refetchea on focus).
+
+La pantalla SHALL usar el shell de formulario del app shell (`FormScreen`, ver capability `mobile-app-shell`), de modo que presente el mismo chrome que cualquier otra pantalla de formulario mobile: banda navy de `PageHeader` con título y back-link, y compensación de teclado. NO SHALL renderizar un header ad-hoc ni un botón de cierre propio.
+
+**Divergencia deliberada respecto de web**: `apps/web` conserva el drawer modal (alineado con `accounts` y `cards`), donde el patrón funciona porque el drawer es un panel lateral sobre contenido visible. En un teléfono ese drawer ocupa el 100% del ancho, con lo cual deja de leerse como panel y pasa a ser una pantalla completa — pero sin las affordances de navegación de una: sin gesto de back en iOS, sin back físico de Android popeando, y con el cierre dependiendo de un único botón X. Cuando ese botón no responde, el usuario queda encerrado en el formulario. La pantalla pusheada elimina la clase de bug entera en vez de parchearla.
+
+#### Scenario: Creación exitosa desde mobile
+
+- **WHEN** un usuario navega a la pantalla de crear categoría desde la lista y la envía con nombre "Mascotas", tipo "expense"
+- **THEN** el cliente Supabase mobile inserta la categoría con `user_id = auth.uid()`, `canonical_name = "mascotas"`, `is_active = true`
+- **AND** la pantalla se popea y la nueva categoría aparece en la lista
+
+#### Scenario: Colisión de nombre desde mobile
+
+- **WHEN** un usuario intenta crear una segunda categoría con `canonical_name = "mascotas"`
+- **THEN** el insert falla con Postgres `23505`
+- **AND** el form muestra un mensaje i18n indicando que ya existe una categoría con ese nombre, y la pantalla permanece abierta
+
+#### Scenario: Validación de nombre vacío desde mobile
+
+- **WHEN** un usuario envía el form con nombre vacío
+- **THEN** la validación Yup falla antes de tocar Supabase
+- **AND** el form muestra el error de validación localizado y la pantalla permanece abierta
+
+#### Scenario: La pantalla de alta usa el chrome estándar de formulario
+
+- **WHEN** un usuario abre la pantalla de crear categoría
+- **THEN** ve la banda navy de `PageHeader` con el título y un back-link "← Categorías", igual que el alta de movimiento
+- **AND** NO ve un header blanco con un botón X de cierre
+
+#### Scenario: Back de Android vuelve al listado
+
+- **WHEN** la pantalla de crear categoría está abierta y el usuario presiona el back físico de Android (o el gesto de back en iOS)
+- **THEN** la pantalla se popea sin crear nada
+- **AND** la app vuelve a `/(app)/settings/categories`
 

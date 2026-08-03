@@ -1,5 +1,9 @@
 import { useState } from 'react'
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
+import {
+  KEYBOARD_BOTTOM_OFFSET,
+  KeyboardAwareScrollView,
+} from '../../../components/layout/keyboard-aware-scroll-view'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { Settings } from 'lucide-react-native'
@@ -58,7 +62,14 @@ export default function HomeScreen() {
     <View className="flex-1 bg-page">
       <PageHeader title={household?.name ?? t('shared.title')} actions={settingsAction} />
 
-      <ScrollView contentContainerClassName="px-6 pt-6 pb-28">
+      {/* Keyboard-aware scroller instead of FormScreen: this is a tab root, and
+          the FAB has to stay a sibling of the scroller (FormScreen puts every
+          child inside it). The no-household branch renders SetupForm inline. */}
+      <KeyboardAwareScrollView
+        bottomOffset={KEYBOARD_BOTTOM_OFFSET}
+        keyboardShouldPersistTaps="handled"
+        contentContainerClassName="px-6 pt-6 pb-28"
+      >
         {householdQuery.isPending ? (
           <HogarHomeSkeleton />
         ) : householdQuery.isError ? (
@@ -76,7 +87,7 @@ export default function HomeScreen() {
             partnerName={household.members[1].fullName}
           />
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {isActive ? <QuickAddFab /> : null}
     </View>

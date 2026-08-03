@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native'
+import { ActivityIndicator, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import {
+  KEYBOARD_BOTTOM_OFFSET,
+  KeyboardAwareScrollView,
+} from '../../components/layout/keyboard-aware-scroll-view'
 import { useRouter } from 'expo-router'
 import { parseMoneyInput, initialBalanceSchema } from '@grana/validation'
 import { Button } from '../../components/ui/Button'
@@ -154,14 +158,11 @@ export default function InitialBalanceScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-page" edges={['top']}>
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      <KeyboardAwareScrollView
+        bottomOffset={KEYBOARD_BOTTOM_OFFSET}
+        contentContainerClassName="flex-grow px-6 py-10"
+        keyboardShouldPersistTaps="handled"
       >
-        <ScrollView
-          contentContainerClassName="flex-grow px-6 py-10"
-          keyboardShouldPersistTaps="handled"
-        >
         <View className="mx-auto w-full max-w-md gap-8">
           <View className="gap-2">
             <Text className="text-center text-2xl font-bold tracking-tight text-text">
@@ -202,8 +203,7 @@ export default function InitialBalanceScreen() {
             loading={submitting}
           />
         </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   )
 }

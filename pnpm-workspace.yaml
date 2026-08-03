@@ -15,6 +15,24 @@ packages:
 # isolated. https://pnpm.io/settings
 nodeLinker: hoisted
 
+# Consecuencia en Vercel: con `hoisted` NO existe `apps/web/node_modules/next`
+# (Next vive solo en el `node_modules` de la raíz; `apps/web/node_modules` queda
+# con `@grana`, `@radix-ui`, `tailwindcss` y ni siquiera un `.bin`). El builder
+# de Next de Vercel resuelve el binario contra el Root Directory del proyecto
+# —`apps/web`— así que busca `apps/web/node_modules/next/dist/bin/next` y falla
+# con "Cannot find module", aunque CI pase (CI buildea desde la raíz, donde el
+# `.bin` de la raíz sí está en PATH).
+#
+# Correr el build desde la raíz NO alcanza: se probó `buildCommand` con
+# `cd ../..` y el error es idéntico, porque la resolución la hace el builder
+# contra el Root Directory, no el cwd del comando. Lo que hay que cambiar es el
+# layout, no el cwd. Por eso `apps/web/vercel.json` instala con
+# `--node-linker=isolated`: el deploy de web nunca corre Metro, así que no
+# necesita el layout hoisted, y con isolated `apps/web/node_modules/next` existe.
+# El `hoisted` de acá sigue siendo el default para todo lo demás (dev local, CI,
+# Expo). Si algún día se mueve el Root Directory del proyecto Vercel a la raíz
+# del repo, este override deja de hacer falta.
+
 # Also moved from `.npmrc` for the same reason.
 publicHoistPattern:
   - '*eslint*'

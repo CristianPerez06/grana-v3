@@ -1,12 +1,12 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { ScrollView, Text, View } from 'react-native'
+import { Text } from 'react-native'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { getAccounts } from '@grana/accounts'
 import { getTodayAR } from '@grana/money-logic'
 import { resolveAccountAvatar } from '@grana/ui-contracts'
 import type { MovementFormAccount } from '@grana/movement-form'
-import { PageHeader } from '../../../components/ui/PageHeader'
+import { FormScreen } from '../../../components/layout/FormScreen'
 import { MovementForm } from '../../../components/transactions/MovementForm'
 import { MovementFormSkeleton } from '../../../components/transactions/MovementFormSkeleton'
 import { getAllCategories } from '../../../lib/categories'
@@ -111,32 +111,26 @@ export default function NewMovementScreen() {
   )
 
   return (
-    <View className="flex-1 bg-page">
-      <PageHeader
-        title={t('transactions.new.title')}
-        backLink={{ href: '/(app)/transactions', label: t('nav.movements') }}
-      />
-      <ScrollView
-        contentContainerClassName="px-6 py-6 pb-28"
-        keyboardShouldPersistTaps="handled"
-      >
-        {failed ? (
-          <Text className="text-center text-sm text-text-muted">
-            {t('transactions.new.load_error')}
-          </Text>
-        ) : !ready ? (
-          <MovementFormSkeleton />
-        ) : (
-          <MovementForm
-            key={formKey}
-            accounts={accounts}
-            categories={categoriesQ.data}
-            household={householdQ.data}
-            preselectAccountId={presetAccount}
-            onDone={() => router.back()}
-          />
-        )}
-      </ScrollView>
-    </View>
+    <FormScreen
+      title={t('transactions.new.title')}
+      backLink={{ href: '/(app)/transactions', label: t('nav.movements') }}
+    >
+      {failed ? (
+        <Text className="text-center text-sm text-text-muted">
+          {t('transactions.new.load_error')}
+        </Text>
+      ) : !ready ? (
+        <MovementFormSkeleton />
+      ) : (
+        <MovementForm
+          key={formKey}
+          accounts={accounts}
+          categories={categoriesQ.data}
+          household={householdQ.data}
+          preselectAccountId={presetAccount}
+          onDone={() => router.back()}
+        />
+      )}
+    </FormScreen>
   )
 }

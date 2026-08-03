@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { ScrollView, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
-import { PageHeader } from '../../../../../components/ui/PageHeader'
+import { FormScreen } from '../../../../../components/layout/FormScreen'
 import { Spinner } from '../../../../../components/ui/Spinner'
 import { EditCategoryForm } from '../../../../../components/categories/EditCategoryForm'
 import { getCategoryById, type Category } from '../../../../../lib/categories'
@@ -28,30 +28,25 @@ export default function EditCategoryScreen() {
   }, [id])
 
   return (
-    <View className="flex-1 bg-page">
-      <PageHeader
-        title={t('settings.categories.edit.title')}
-        backLink={{
-          href: '/(app)/settings/categories',
-          label: t('settings.categories.label'),
-        }}
-      />
-      <ScrollView
-        contentContainerClassName="px-6 py-6"
-        keyboardShouldPersistTaps="handled"
-      >
-        {category === undefined ? (
-          <View className="items-center py-12">
-            <Spinner size="md" />
-          </View>
-        ) : category === null ? (
-          <Text className="text-sm text-error">
-            {t('settings.categories.errors.not_found')}
-          </Text>
-        ) : (
-          <EditCategoryForm category={category} />
-        )}
-      </ScrollView>
-    </View>
+    <FormScreen
+      title={t('settings.categories.edit.title')}
+      backLink={{
+        href: '/(app)/settings/categories',
+        label: t('settings.categories.label'),
+      }}
+      contentClassName="px-6 py-6"
+    >
+      {category === undefined ? (
+        <View className="items-center py-12">
+          <Spinner size="md" />
+        </View>
+      ) : category === null ? (
+        <Text className="text-sm text-error">
+          {t('settings.categories.errors.not_found')}
+        </Text>
+      ) : (
+        <EditCategoryForm category={category} />
+      )}
+    </FormScreen>
   )
 }

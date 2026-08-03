@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native'
+import { Modal, Pressable, Text, View } from 'react-native'
 import { parseMoneyInput } from '@grana/validation'
 import type { TransactionType } from '@grana/transactions'
 import { useT } from '../../lib/locale-context'
 import { Label } from '../ui/Label'
 import { MoneyAmountInput } from '../ui/MoneyAmountInput'
+import { FormSheetBody } from '../layout/FormSheetBody'
 import type { AccountMovementFilters } from '../../lib/accounts/movement-filters'
 
 export type CategoryOption = {
@@ -106,7 +107,7 @@ export function MovementFiltersSheet({ visible, onClose, filters, onApply, categ
             </Pressable>
           </View>
 
-          <ScrollView contentContainerClassName="gap-5 px-5 py-5" keyboardShouldPersistTaps="handled">
+          <FormSheetBody contentClassName="gap-5 px-5 py-5">
             {/* Type */}
             <View className="gap-2">
               <Label>{t('transactions.filters.type')}</Label>
@@ -232,7 +233,7 @@ export function MovementFiltersSheet({ visible, onClose, filters, onApply, categ
                 </Text>
               </Pressable>
             </View>
-          </ScrollView>
+          </FormSheetBody>
         </Pressable>
       </Pressable>
     </Modal>
