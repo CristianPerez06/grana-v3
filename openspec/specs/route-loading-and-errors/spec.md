@@ -3,7 +3,6 @@
 ## Purpose
 
 Define los estados de carga y error a nivel de ruta para `apps/web` y `apps/mobile`. Cubre los componentes primitivos compartidos (`Spinner`, `RouteError`) — sus variantes de tamaño, su API común vía `@grana/ui-contracts` y sus reglas de contenido (mensaje genérico, retry, ocultar detalles en producción) — y la regla de presencia por ruta en cada plataforma. Web usa `loading.tsx` y `error.tsx` de Next App Router por layout group; mobile usa los componentes inline contra los estados `isPending`/`error` de los hooks de TanStack Query.
-
 ## Requirements
 ### Requirement: La app provee un componente Spinner con tres variantes de tamaño
 
@@ -314,7 +313,7 @@ La distribución concreta es:
 1. `apps/web/app/(app)/settings/layout.tsx` SHALL montar `<SettingsHeader />` envolviendo `{children}`. `SettingsHeader` es un Client Component que renderiza `<PageHeader title="Configuración" />` **únicamente** cuando `usePathname() === '/settings'`, y retorna `null` en cualquier sub-ruta. El pathname guard existe para evitar que el header de `/settings` se apile sobre el `CategoriesHeader` cuando el usuario navega a `/settings/categories/**`.
 2. `apps/web/app/(app)/settings/categories/layout.tsx` SHALL montar `<CategoriesHeader />` envolviendo `{children}`. `CategoriesHeader` es un Client Component que conmuta su `PageHeaderProps` (`title`, `description`, `backLink`, `actions`) según `usePathname()` y `useParams()`, cubriendo las cinco rutas hijas (`/settings/categories`, `/new`, `/[id]/edit`, `/[id]/subcategories`, `/[id]/subcategories/new`).
 3. Para las rutas con segmento `[id]` (`/edit`, `/subcategories`, `/subcategories/new`), `CategoriesHeader` SHALL fetchear `category.name` client-side y mostrar un placeholder vacío (non-breaking space, U+00A0) en la `description` mientras el fetch no resuelve. El placeholder SHALL preservar la altura de la línea sin texto visible — el objetivo es evitar reflow del título cuando la descripción aparece, no mostrar feedback textual al usuario. NO SHALL mostrar un skeleton animado, ni texto "Cargando...", ni una descripción vacía que colapse la línea.
-4. Las acciones de los headers de `/settings/categories` y `/settings/categories/[id]/subcategories` SHALL componerse como `<Button asChild><Link href={…/new}>…</Link></Button>` (primitivo `Button` del UI library), nunca como `<Link>` con clases inline de botón. Esta regla ya está specceada en `project-conventions` y este requirement la aplica explícitamente al segmento de settings.
+4. Las acciones de los headers de `/settings/categories` y `/settings/categories/[id]/subcategories` SHALL componerse como `<Button asChild><Link href={…/new}>…</Link></Button>` (primitivo `Button` del UI library), nunca como `<Link>` con clases inline de botón. Esta regla ya está specceada en `ui-foundations` y este requirement la aplica explícitamente al segmento de settings.
 5. `apps/web/app/(app)/settings/loading.tsx` NO SHALL renderizar `<PageHeaderSkeleton />`: el header ya vive en el layout y no necesita placeholder. SHALL renderizar únicamente skeletons del cuerpo.
 6. `apps/web/app/(app)/settings/categories/loading.tsx` SHALL renderizar un skeleton shape-matched de la lista de categorías. NO SHALL renderizar `<PageHeaderSkeleton />`.
 
@@ -544,3 +543,28 @@ Cada sub-namespace SHALL contener las tres claves (`title`, `description`, `back
 - **THEN** ambos archivos contienen el namespace `notFound`
 - **AND** los sub-namespaces `generic`, `cards`, `accounts`, `transactions`, `categories` están presentes en ambos
 - **AND** cada sub-namespace tiene las claves `title`, `description`, `back_label`
+
+### Requirement: Toda nueva ruta o pantalla entrega loading y error states desde su primera implementación
+
+Cuando un colaborador agrega una ruta nueva a `apps/web` o una pantalla nueva con fetching cliente a `apps/mobile`, esa ruta/pantalla SHALL incluir loading y error states desde el commit que la introduce (no en un follow-up).
+
+Aplicación concreta por plataforma:
+
+- **Web** (`apps/web/app/.../page.tsx`): el segmento SHALL tener un `loading.tsx` y un `error.tsx` colocalizados, o estar cubierto por un par a nivel de layout group ancestro. La regla operativa es: si la ruta nueva queda cubierta por el `loading.tsx`/`error.tsx` del layout group superior con un fallback aceptable, no hace falta duplicar; si necesita un fallback distinto, agregar el par específico.
+- **Mobile** (`apps/mobile/app/.../<screen>.tsx`): la pantalla SHALL manejar explícitamente los estados `isPending` y `error` de sus queries, usando `<Spinner size="lg" />` y `<RouteError>` (componentes provistos por la capability `route-loading-and-errors`). Pantallas placeholder (sin queries) están exentas hasta su primera implementación real.
+
+Esta regla NO aplica retroactivamente a rutas anteriores al change que introdujo la capability `route-loading-and-errors` — aunque ese change agrega el par a las rutas existentes en un solo commit, lo que importa para esta convención es que **de aquí en adelante** ninguna ruta nueva se mergee sin loading/error.
+
+#### Scenario: Una ruta web nueva entrega loading.tsx y error.tsx en el mismo PR
+
+- **WHEN** un colaborador crea un nuevo `apps/web/app/<group>/<route>/page.tsx`
+- **AND** el segmento NO queda cubierto por un `loading.tsx` o `error.tsx` de un layout ancestro con fallback aceptable
+- **THEN** el mismo PR agrega `loading.tsx` y `error.tsx` colocalizados con el `page.tsx` nuevo
+- **AND** el PR es revisado antes de merge para validar que ambos archivos están presentes o que el fallback ancestro aplica
+
+#### Scenario: Una pantalla mobile nueva con queries entrega loading y error states en el mismo PR
+
+- **WHEN** un colaborador crea una nueva pantalla `apps/mobile/app/(app)/<screen>.tsx` que invoca `useQuery({ ... })`
+- **THEN** el componente maneja `isPending` (renderizando `<Spinner size="lg" />`) y `error` (renderizando `<RouteError>`) antes de renderizar contenido
+- **AND** el PR no se mergea sin esa cobertura
+

@@ -252,7 +252,9 @@ These affect every feature. Not knowing them causes silent bugs anywhere in the 
 
 ### Modules
 
-Build order matters — each module generally depends on the ones above it. Cross-cutting modules (`schema-base`, `profiles`, `i18n`, `card-networks`, `project-conventions`) underpin everything else.
+Build order matters — each module generally depends on the ones above it. Cross-cutting modules (`schema-base`, `profiles`, `i18n`, `card-networks`, `project-conventions`, `repo-architecture`, `ui-foundations`) underpin everything else.
+
+The table below tracks **product modules** in build order. Meta capabilities — `project-conventions`, `repo-architecture`, `ui-foundations` — deliberately have no rows: they describe how the repo is worked on, architected and styled rather than a shippable slice of product, so a "Status" column is meaningless for them. Find them in `openspec/specs/` instead.
 
 | # | Module | Status | Qué incluye |
 |---|--------|--------|-------------|
