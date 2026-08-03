@@ -46,7 +46,7 @@ Ambos corren siempre — el segundo NO se saltea si el primero falla, para que u
 
 `openspec` no está en `package.json`; el repo lo invoca vía `npx` en todos lados, incluido el script `openspec:check` que sí está en `package.json` pero sólo usa `grep`. El job mantiene esa convención en lugar de agregar una devDependency, que obligaría a tocar el lockfile y a que `monorepo-health` la validara.
 
-**Trade-off asumido:** `npx` resuelve la última versión publicada en cada corrida, así que una release de OpenSpec con validación más estricta puede poner en rojo un PR que no cambió nada. Es el mismo riesgo que ya corre cualquiera que archive local, y a cambio evita pinear una versión que después nadie actualiza. Si molesta en la práctica, pinear `openspec@<major>` es un cambio de una línea.
+**Corregido durante el PR.** La primera versión del job usaba `npx openspec`, que falló en el runner con `could not determine executable to run`. El paquete real es `@fission-ai/openspec`; el nombre `openspec` en npm es un stub v0.0.0 sin binario. Local parecía andar sólo porque el paquete scoped estaba instalado global y `npx` caía al binario del PATH — un falso positivo que sólo se ve en un entorno limpio. El job invoca ahora `npx --yes @fission-ai/openspec@1.7.0`, con versión pineada para que una release nueva no ponga en rojo un PR que no cambió nada. Esto resuelve además lo que la tarea 5.2 dejaba para más adelante.
 
 ### Decisión 4 — El job NO valida las changes activas
 

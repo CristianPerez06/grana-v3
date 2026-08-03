@@ -241,7 +241,7 @@ Esta regla sostiene dos invariantes del proyecto:
 Los gates de validación SHALL ser dos comandos complementarios, que cubren fallas distintas:
 
 - `pnpm openspec:check`, que falla si encuentra `TBD - created by archiving` o `Purpose: TBD` dentro de `openspec/specs/`.
-- `npx openspec validate --specs --strict`, que falla si algún spec maestro quedó malformado: secciones delta residuales, requirements sin `SHALL`/`MUST`, requirements sin scenarios, o un `Purpose` demasiado breve.
+- `openspec validate --specs --strict`, que falla si algún spec maestro quedó malformado: secciones delta residuales, requirements sin `SHALL`/`MUST`, requirements sin scenarios, o un `Purpose` demasiado breve. El paquete es **`@fission-ai/openspec`**, NO el paquete `openspec` de npm (un stub v0.0.0 sin binario). En una máquina con el paquete instalado global, `npx openspec` parece funcionar porque cae al binario del PATH; en un entorno limpio falla con `could not determine executable to run`. Cualquier automatización SHALL invocarlo por su nombre completo y con versión pineada (`npx --yes @fission-ai/openspec@<version> validate ...`).
 
 Ambos gates SHALL ejecutarse en CI sobre cada pull request dirigido a `main` y sobre cada push a `main`, y ambos MUST pasar. **CI es el punto de enforcement**: una branch NO SHALL poder mergear con la spec rota, aunque nadie haya corrido nada localmente.
 

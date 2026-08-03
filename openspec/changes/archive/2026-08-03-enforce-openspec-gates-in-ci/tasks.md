@@ -32,4 +32,4 @@ Este change toca un solo archivo de código (`.github/workflows/ci.yml`) y un so
 ## 5. Seguimiento
 
 - [ ] 5.1 **Agregar el check `specs` a las required status checks de la branch protection de `main`** en la configuración del repo en GitHub. Hasta que eso pase, el check se pone en rojo pero no bloquea el botón de merge. Es config de repo, no de código, y la hace el dueño del repo — queda registrada acá para que no se pierda como supuesto implícito.
-- [ ] 5.2 Evaluar más adelante si conviene pinear la versión de OpenSpec (`npx openspec@<major>`) en vez de resolver la última en cada corrida. Ver `design.md` → Decisión 3.
+- [x] 5.2 Pinear la versión de OpenSpec en CI. Resuelto durante el PR: el job usa `npx --yes @fission-ai/openspec@1.7.0`. El nombre corto `npx openspec` no sirve — resuelve a un stub v0.0.0 de npm y sólo parecía andar local por un install global. Ver `design.md` → Decisión 3.
