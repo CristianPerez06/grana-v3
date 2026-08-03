@@ -72,9 +72,11 @@ El sistema SHALL proveer un catálogo de redes de tarjeta de crédito (`card_net
 
 ### Requirement: Aritmética monetaria con tipo Money
 
-Todo cálculo o comparación monetaria de la aplicación SHALL usar el tipo `Money` (branded type sobre `decimal.js`) o un helper compartido que lo use internamente. Está prohibido usar operadores aritméticos nativos de JavaScript (`+`, `-`, `*`, `/`) directamente para combinar valores monetarios dentro del motor contable.
+Todo cálculo o comparación monetaria de la aplicación SHALL usar el tipo `Money` (branded type sobre `decimal.js`) o un helper compartido que lo use internamente. Está prohibido usar operadores aritméticos nativos de JavaScript (`+`, `-`, `*`, `/`) directamente para combinar valores monetarios dentro del motor contable. Esto aplica a saldos derivados, sumatorias de transacciones, pagos, límites, cuotas, ajustes y cualquier operación que combine montos.
 
 El tipo `Money` provee métodos seguros: `add`, `subtract`, `multiply`, `divide`, `toNumber`, `toFixed`, `isZero`, `isNegative`, `compare`. Los helpers compartidos MAY convertir el resultado a `number` cuando están construyendo un modelo de lectura para UI o normalizando un valor justo antes de persistir.
+
+Los campos monetarios MAY cruzar bordes de UI/API como `number` o `string` cuando sea necesario por formularios, Supabase o formateo visual, pero la conversión a `number` SHALL ocurrir **únicamente en el borde de presentación o persistencia**. Entre lectura, cálculo y comparación de montos, el código SHALL usar `Money`.
 
 Los valores monetarios en DB se almacenan como `NUMERIC(18,2)` y `fx_rate_to_ars` se almacena como `NUMERIC(18,6)`. Los tipos generados de Supabase pueden transportar esos valores como `number`; esa representación se considera un borde de IO, no una autorización para hacer aritmética binaria. Al escribir a DB, las server actions SHALL normalizar los montos con la escala correspondiente.
 
@@ -82,6 +84,7 @@ Los valores monetarios en DB se almacenan como `NUMERIC(18,2)` y `fx_rate_to_ars
 
 - **WHEN** se suman `Money(0.1)` y `Money(0.2)` usando `Money.add`
 - **THEN** el resultado es `Money(0.3)`, no `Money(0.30000000000000004)`
+- **AND** la comparación contra cero se hace con `Money.isZero` o equivalente decimal
 
 #### Scenario: División de monto en cuotas
 
@@ -94,7 +97,36 @@ Los valores monetarios en DB se almacenan como `NUMERIC(18,2)` y `fx_rate_to_ars
 - **THEN** el código puede pasarlo a la UI para display sin cálculo intermedio
 - **AND** si necesita sumarlo, restarlo, compararlo contra cero o persistirlo de nuevo, lo convierte mediante `Money` o un helper monetario compartido
 
----
+#### Scenario: Una query convierte a number solo al devolver datos para display
+
+- **WHEN** una query de saldos lee `numeric(18,2)` desde Supabase
+- **THEN** acumula los montos con `Money`
+- **AND** convierte a `number` recién al construir el modelo de lectura que consume la UI
+
+#### Scenario: Un cálculo contable nuevo no usa `Number(row.amount)` para sumar
+
+- **WHEN** un colaborador agrega una sumatoria de montos de transacciones
+- **THEN** convierte cada monto con `Money.from(row.amount)`
+- **AND** usa `Money.add`/`Money.subtract` para acumular
+
+#### Scenario: Un formulario monetario no usa parseFloat directo
+
+- **WHEN** un formulario convierte un string ingresado por el usuario en un monto
+- **THEN** usa un parser monetario compartido que rechaza parseos parciales como `123abc`
+- **AND** recién después pasa el monto normalizado a la action o schema correspondiente
+
+#### Scenario: Una server action normaliza antes de persistir
+
+- **WHEN** una server action persiste `amount`, `initial_balance`, `credit_limit` o un campo monetario equivalente
+- **THEN** normaliza el valor con el helper monetario compartido antes del INSERT/UPDATE
+- **AND** usa la escala de DB correspondiente (`2` decimales para montos, `6` para `fx_rate_to_ars`)
+
+#### Scenario: El baseline monetario actual queda auditado
+
+- **WHEN** un colaborador revisa el baseline monetario de la V3
+- **THEN** encuentra cubiertos con helpers decimales: cálculo de balances de cuentas, totales de tarjetas/períodos, inputs monetarios de formularios, normalización previa a persistencia, cuotas y comparación contra saldo cero
+- **AND** considera aceptables los usos residuales de `number` en bordes de IO/display, formateo de una fila individual, cálculo de porcentajes visuales, y tipos generados de Supabase
+- **AND** mantiene como pendiente consciente cualquier migración futura para representar `NUMERIC` como `string` o `Money` en tipos generados/curados de Supabase
 
 ### Requirement: Fecha contable y zona horaria financiera
 
@@ -133,47 +165,4 @@ El sistema SHOULD evolucionar hacia un helper general `getTodayForTimezone(timez
 - **WHEN** un usuario con zona horaria financiera `America/Argentina/Buenos_Aires` usa la app desde otro país
 - **THEN** los defaults de "hoy" siguen el calendario financiero configurado para ese usuario
 - **AND** la ubicación física temporal no cambia automáticamente el día contable
-
-### Requirement: Los cálculos monetarios usan aritmética decimal
-
-Todo cálculo monetario del producto SHALL usar aritmética decimal (`Money`/`decimal.js` o una primitiva equivalente), no aritmética binaria de JavaScript con `number`, mientras el valor esté dentro del motor contable. Esto aplica a saldos derivados, sumatorias de transacciones, pagos, límites, cuotas, ajustes y cualquier operación que combine montos.
-
-Los campos monetarios pueden cruzar bordes de UI/API como `number` o `string` cuando sea necesario por formularios, Supabase o formateo visual, pero la conversión a `number` SHALL ocurrir únicamente en el borde de presentación o persistencia. Entre lectura, cálculo y comparación de montos, el código SHALL usar `Money`.
-
-#### Scenario: Sumar centavos no deja residuo binario
-
-- **WHEN** el sistema calcula `0.10 + 0.20 - 0.30` para un saldo o total monetario
-- **THEN** el resultado contable es exactamente `0`
-- **AND** la comparación contra cero se hace con `Money.isZero` o equivalente decimal
-
-#### Scenario: Una query convierte a number solo al devolver datos para display
-
-- **WHEN** una query de saldos lee `numeric(18,2)` desde Supabase
-- **THEN** acumula los montos con `Money`
-- **AND** convierte a `number` recién al construir el modelo de lectura que consume la UI
-
-#### Scenario: Un cálculo contable nuevo no usa `Number(row.amount)` para sumar
-
-- **WHEN** un colaborador agrega una sumatoria de montos de transacciones
-- **THEN** convierte cada monto con `Money.from(row.amount)`
-- **AND** usa `Money.add`/`Money.subtract` para acumular
-
-#### Scenario: Un formulario monetario no usa parseFloat directo
-
-- **WHEN** un formulario convierte un string ingresado por el usuario en un monto
-- **THEN** usa un parser monetario compartido que rechaza parseos parciales como `123abc`
-- **AND** recién después pasa el monto normalizado a la action o schema correspondiente
-
-#### Scenario: Una server action normaliza antes de persistir
-
-- **WHEN** una server action persiste `amount`, `initial_balance`, `credit_limit` o un campo monetario equivalente
-- **THEN** normaliza el valor con el helper monetario compartido antes del INSERT/UPDATE
-- **AND** usa la escala de DB correspondiente (`2` decimales para montos, `6` para `fx_rate_to_ars`)
-
-#### Scenario: El baseline monetario actual queda auditado
-
-- **WHEN** un colaborador revisa el baseline monetario de la V3
-- **THEN** encuentra cubiertos con helpers decimales: cálculo de balances de cuentas, totales de tarjetas/períodos, inputs monetarios de formularios, normalización previa a persistencia, cuotas y comparación contra saldo cero
-- **AND** considera aceptables los usos residuales de `number` en bordes de IO/display, formateo de una fila individual, cálculo de porcentajes visuales, y tipos generados de Supabase
-- **AND** mantiene como pendiente consciente cualquier migración futura para representar `NUMERIC` como `string` o `Money` en tipos generados/curados de Supabase
 

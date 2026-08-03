@@ -60,7 +60,7 @@ El sistema SHALL NOT mantener una columna `status` ni un trigger que la actualic
 
 ### Requirement: El sistema mantiene siempre al menos un período abierto por delante de hoy
 
-El sistema SHALL garantizar que para toda cuenta `credit` activa exista al menos un `card_periods` con estado derivado `open` (`today ≤ end_date`). El mantenimiento es **lazy**: cuando una operación necesita un período cubriendo una fecha futura y no existe ningún período cuyo rango lo cubra, el sistema SHALL generar uno nuevo al vuelo siguiendo el algoritmo de sugerencia (ver requirement de algoritmo). El período auto-generado SHALL marcarse con `is_estimated=true`.
+El sistema SHALL respetar el invariante `I-CRED-12`: para toda cuenta `accounts.type='credit'` con `is_active=true`, SHALL existir al menos un `card_periods` con estado derivado `open` (`today ≤ end_date`). El mantenimiento es **lazy**: cuando una operación necesita un período cubriendo una fecha futura y no existe ningún período cuyo rango lo cubra, el sistema SHALL generar uno nuevo al vuelo siguiendo el algoritmo de sugerencia (ver requirement de algoritmo). El período auto-generado SHALL marcarse con `is_estimated=true`.
 
 #### Scenario: Inserción de consumo con fecha fuera de período existente genera el siguiente
 
@@ -79,7 +79,10 @@ El sistema SHALL garantizar que para toda cuenta `credit` activa exista al menos
 - **WHEN** dos requests intentan generar el mismo período "siguiente" en paralelo y uno gana la UNIQUE `(account_id, start_date)`
 - **THEN** el segundo request lee el período recién creado por el primero y continúa la operación sin error visible al usuario
 
----
+#### Scenario: Tarjeta archivada (inactiva) no requiere períodos open
+
+- **WHEN** una tarjeta tiene `is_active=false`
+- **THEN** el invariante no exige períodos open (la tarjeta no acepta consumos nuevos)
 
 ### Requirement: El algoritmo de sugerencia de fechas usa el promedio de períodos previos
 
@@ -1393,18 +1396,41 @@ En un período impago la acción NO SHALL renderizarse.
 
 ### Requirement: Las tarjetas no descuentan disponible hasta el pago del resumen
 
-El sistema SHALL respetar el invariante `I-CRED-1` en todo el motor contable: las cuentas `accounts.type='credit'` tienen siempre `initial_balance=0` en todas sus monedas, y las transacciones `type='expense'` con `account.type='credit'` SHALL ser excluidas del cálculo del saldo de cualquier cuenta. El único efecto contable de una transacción de tarjeta sobre el saldo disponible del usuario SHALL ser indirecto, vía el `expense` que genera el flujo "pago de resumen" en una cuenta `cash`/`bank`.
+El sistema SHALL respetar el invariante `I-CRED-1` en todo el motor contable: las cuentas `accounts.type='credit'` tienen siempre `initial_balance=0` en todas sus monedas, y las transacciones `type='expense'` con `account.type='credit'` SHALL ser excluidas del cálculo del saldo de cualquier cuenta. La exclusión SHALL aplicar **en cualquier status** de la transacción —`pending` y `paid` por igual—: pagar el resumen no reincorpora el consumo al saldo. El único efecto contable de una transacción de tarjeta sobre el saldo disponible del usuario SHALL ser indirecto, vía el `expense` que genera el flujo "pago de resumen" en una cuenta `cash`/`bank`.
+
+Como corolario, el saldo de una cuenta `cash`/`bank` SHALL afectarse únicamente por sus propias transacciones `income`/`expense` no-tarjeta, por transferencias entrantes/salientes, por ajustes, y por el `expense` de pago de resumen.
+
+Este requirement es la **fuente normativa** de la regla off-ledger. Las capabilities `accounts` y `transactions` la referencian desde su propio ángulo (saldo de cuenta y motor de movimientos respectivamente) sin redefinirla.
 
 Este invariante SHALL ser enforced en:
 
-- Constraint `CHECK` que rechaza `initial_balance != 0` para cualquier `account_currencies` cuya cuenta padre tenga `type='credit'`.
+- Constraint `CHECK` (o trigger equivalente, `chk_credit_initial_balance`) que rechaza `initial_balance != 0` para cualquier `account_currencies` cuya cuenta padre tenga `type='credit'`.
 - Todas las queries del motor contable (función helper centralizada) que computen saldos.
 - Tests unitarios y de integración que validen el invariante.
+
+Invariantes relacionados y dónde viven: `I-CRED-11` (`fx_rate_to_ars` sólo en consumos de tarjeta no-ARS) vive en la capability `transactions`, porque la columna y su enforcement son de `transactions`.
 
 #### Scenario: Inserción de transacción `pending` en tarjeta no cambia saldo
 
 - **WHEN** se inserta una transacción `expense` con `status='pending'` en una cuenta `credit`
 - **THEN** el saldo derivado de cualquier cuenta `cash`/`bank` propia no cambia
+
+#### Scenario: Un consumo `paid` tampoco cambia el saldo
+
+- **WHEN** un consumo de tarjeta pasa a `status='paid'` porque se pagó el resumen que lo contiene
+- **THEN** ese `expense` sigue excluido del cálculo de saldo de toda cuenta
+- **AND** el descuento lo produce únicamente el `expense` de pago en la cuenta `cash`/`bank`
+
+#### Scenario: Consumo en tarjeta no descuenta saldo
+
+- **WHEN** el usuario tiene `$500.000` en su cuenta "Galicia" y registra un consumo de `$50.000` en su tarjeta de crédito
+- **THEN** el saldo de "Galicia" sigue siendo `$500.000`
+- **AND** el saldo de "Mi plata" o cualquier otra cuenta `cash`/`bank` no cambia
+
+#### Scenario: Pago de resumen sí descuenta saldo
+
+- **WHEN** el usuario paga el resumen de la tarjeta por `$50.000` desde "Galicia"
+- **THEN** el saldo de "Galicia" baja a `$450.000`
 
 #### Scenario: initial_balance distinto de cero en cuenta credit es rechazado por DB
 
@@ -1452,23 +1478,6 @@ El sistema SHALL respetar el invariante `I-CRED-6`: toda transacción con `type=
 
 - **WHEN** se intenta INSERT de un `expense` en tarjeta con `status='posted'`
 - **THEN** la DB o action rechaza (status válidos son `'pending'` y `'paid'`)
-
-### Requirement: Toda tarjeta activa tiene siempre al menos un período abierto por delante de hoy
-
-El sistema SHALL respetar el invariante `I-CRED-12`: para toda cuenta `accounts.type='credit'` con `is_active=true`, SHALL existir al menos un `card_periods` cuyo estado derivado sea `open` (`today ≤ end_date`) o, alternativamente, SHALL existir un período "actual" cuyo `start_date ≤ today` y la app SHALL haber generado el siguiente bajo demanda.
-
-El invariante SHALL mantenerse vía el rolling automático (lazy on-demand): si una operación necesita un período cubriendo una fecha futura y no existe, el sistema lo genera al vuelo usando el algoritmo de sugerencia.
-
-#### Scenario: Tarjeta sin períodos open dispara rolling al primer consumo
-
-- **WHEN** una tarjeta tiene solamente un período `paid` y se intenta registrar un consumo con `date` después del `end_date` de ese período
-- **THEN** el sistema genera un nuevo `card_periods` con fechas estimadas antes de insertar el consumo
-- **AND** el consumo se asigna al nuevo período
-
-#### Scenario: Tarjeta archivada (inactiva) no requiere períodos open
-
-- **WHEN** una tarjeta tiene `is_active=false`
-- **THEN** el invariante no exige períodos open (la tarjeta no acepta consumos nuevos)
 
 ### Requirement: Las cuotas N>1 solo aplican a transacciones en ARS
 
