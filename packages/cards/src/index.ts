@@ -76,6 +76,12 @@ export {
 } from './detail-queries'
 
 export {
+  computePeriodAmounts,
+  type PeriodAmountRow,
+  type PeriodAmounts,
+} from './period-amounts'
+
+export {
   resolveCardDetailState,
   type CardDetailViewModel,
   type CardDetailState,

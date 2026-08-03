@@ -1,11 +1,8 @@
 import type { Database, GranaSupabaseClient } from '@grana/supabase'
-import {
-  derivePeriodVariant,
-  sumMoneyValues,
-  subtractMoneyValues,
-} from '@grana/money-logic'
+import { derivePeriodVariant, sumMoneyValues } from '@grana/money-logic'
 import { getCardPeriodsWithStatus } from '@grana/transactions-mutations'
 import { derivePeriodAlert, getCreditCardDebtCheck } from './queries'
+import { computePeriodAmounts } from './period-amounts'
 import type {
   CardPeriodWithPayment,
   PeriodVariant,
@@ -235,43 +232,9 @@ export async function getCardPeriods(
           t.type !== 'reimbursement' || (t.received_at != null && t.cancelled_at == null),
       )
 
-    // Received statement reimbursements reduce the period total (they are credits).
-    const reimbARS = sumMoneyValues(
-      periodTxs
-        .filter((t) => t.type === 'reimbursement' && t.currency_code === 'ARS')
-        .map((t) => t.amount),
-    )
-    const reimbUSD = sumMoneyValues(
-      periodTxs
-        .filter((t) => t.type === 'reimbursement' && t.currency_code === 'USD')
-        .map((t) => t.amount),
-    )
-    const pendingARS = subtractMoneyValues(
-      sumMoneyValues(
-        periodTxs
-          .filter((t) => t.status === 'pending' && t.currency_code === 'ARS')
-          .map((t) => t.amount),
-      ),
-      reimbARS,
-    )
-    const pendingUSD = subtractMoneyValues(
-      sumMoneyValues(
-        periodTxs
-          .filter((t) => t.status === 'pending' && t.currency_code === 'USD')
-          .map((t) => t.amount),
-      ),
-      reimbUSD,
-    )
-    const paidARS = sumMoneyValues(
-      periodTxs
-        .filter((t) => t.status === 'paid' && t.currency_code === 'ARS')
-        .map((t) => t.amount),
-    )
-    const paidUSD = sumMoneyValues(
-      periodTxs
-        .filter((t) => t.status === 'paid' && t.currency_code === 'USD')
-        .map((t) => t.amount),
-    )
+    // Statement totals per currency. A received "en resumen" reimbursement
+    // reduces whichever total the statement shows (paid when paid, else pending).
+    const amounts = computePeriodAmounts(periodTxs, period.has_payment)
     const paymentInfo = paymentByPeriod.get(period.id)
     const nextInfo = nextByPeriodId.get(period.id) ?? null
 
@@ -279,10 +242,10 @@ export async function getCardPeriods(
       ...period,
       variant: derivePeriodVariant(period, today, period.has_payment, period.tx_count),
       alert: derivePeriodAlert(period, today, period.has_payment),
-      pendingAmountARS: pendingARS,
-      pendingAmountUSD: pendingUSD,
-      paidAmountARS: paidARS,
-      paidAmountUSD: paidUSD,
+      pendingAmountARS: amounts.pendingAmountARS,
+      pendingAmountUSD: amounts.pendingAmountUSD,
+      paidAmountARS: amounts.paidAmountARS,
+      paidAmountUSD: amounts.paidAmountUSD,
       stampTaxRate,
       paymentDate: paymentInfo?.date ?? null,
       paymentAmount: paymentInfo?.amount ?? null,
@@ -353,42 +316,9 @@ export async function getCardPeriodDetail(
   const txRows = (txResult.data ?? []).filter(
     (t) => t.type !== 'reimbursement' || (t.received_at != null && t.cancelled_at == null),
   )
-  const reimbARS = sumMoneyValues(
-    txRows
-      .filter((t) => t.type === 'reimbursement' && t.currency_code === 'ARS')
-      .map((t) => t.amount),
-  )
-  const reimbUSD = sumMoneyValues(
-    txRows
-      .filter((t) => t.type === 'reimbursement' && t.currency_code === 'USD')
-      .map((t) => t.amount),
-  )
-  const pendingARS = subtractMoneyValues(
-    sumMoneyValues(
-      txRows
-        .filter((t) => t.status === 'pending' && t.currency_code === 'ARS')
-        .map((t) => t.amount),
-    ),
-    reimbARS,
-  )
-  const pendingUSD = subtractMoneyValues(
-    sumMoneyValues(
-      txRows
-        .filter((t) => t.status === 'pending' && t.currency_code === 'USD')
-        .map((t) => t.amount),
-    ),
-    reimbUSD,
-  )
-  const paidARS = sumMoneyValues(
-    txRows
-      .filter((t) => t.status === 'paid' && t.currency_code === 'ARS')
-      .map((t) => t.amount),
-  )
-  const paidUSD = sumMoneyValues(
-    txRows
-      .filter((t) => t.status === 'paid' && t.currency_code === 'USD')
-      .map((t) => t.amount),
-  )
+  // Statement totals per currency. A received "en resumen" reimbursement reduces
+  // whichever total the statement shows (paid when paid, else pending).
+  const amounts = computePeriodAmounts(txRows, periodWithPayment.has_payment)
 
   const payment = paymentResult.data
   const paymentTx = payment?.transactions as unknown as
@@ -400,10 +330,10 @@ export async function getCardPeriodDetail(
     ...periodWithPayment,
     variant: derivePeriodVariant(periodWithPayment, today, periodWithPayment.has_payment, periodWithPayment.tx_count),
     alert: derivePeriodAlert(periodWithPayment, today, periodWithPayment.has_payment),
-    pendingAmountARS: pendingARS,
-    pendingAmountUSD: pendingUSD,
-    paidAmountARS: paidARS,
-    paidAmountUSD: paidUSD,
+    pendingAmountARS: amounts.pendingAmountARS,
+    pendingAmountUSD: amounts.pendingAmountUSD,
+    paidAmountARS: amounts.paidAmountARS,
+    paidAmountUSD: amounts.paidAmountUSD,
     stampTaxRate: accountResult.data?.stamp_tax_rate ?? null,
     paymentDate: paymentTxDate,
     paymentAmount: paymentTx ? Number(paymentTx.amount) : null,

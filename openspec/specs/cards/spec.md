@@ -468,10 +468,17 @@ Cada item SHALL mostrar el rango de fechas, el monto total de transacciones impu
 
 El sistema SHALL renderizar una pantalla `/cards/[id]/periods/[periodId]` con: rango de fechas del período, monto total, lista de movimientos imputados ordenados por `date ASC, created_at ASC, id ASC`, información del pago si el período es `paid` (monto, fecha, cuenta de pago), y link "Editar fechas" si las fechas son editables según las reglas del requirement de edición.
 
+El **monto total** del resumen SHALL netear los reintegros "en resumen" recibidos (`reimbursement_target='statement'`, `received_at` seteado, `cancelled_at` nulo): `total = Σ consumos − Σ reintegros recibidos`, por moneda. Como los consumos de un período son homogéneos en estado (`pending` mientras el resumen está abierto, `paid` una vez pagado), el reintegro descuenta el total que efectivamente se muestra: el **pagado** cuando el período está pagado, el **pendiente** en caso contrario. Un reintegro pendiente o cancelado NO descuenta el total (vive en el bloque "Reintegros a confirmar", no en el resumen).
+
 #### Scenario: Detalle de período pagado muestra info del pago
 
 - **WHEN** el usuario abre un período `paid` que se pagó el `2026-05-15` desde la cuenta "Banco Galicia"
 - **THEN** la pantalla muestra "Pagado el 15-may desde Banco Galicia"
+
+#### Scenario: El total de un resumen pagado descuenta el reintegro recibido
+
+- **WHEN** el usuario abre un período `paid` cuyos consumos suman `$128.841,06` y tiene un reintegro "en resumen" recibido de `$3.155,55`
+- **THEN** el monto total del resumen muestra `$125.685,51` (consumos menos reintegro), no `$128.841,06`
 
 #### Scenario: Detalle de período open muestra link "Editar fechas"
 
