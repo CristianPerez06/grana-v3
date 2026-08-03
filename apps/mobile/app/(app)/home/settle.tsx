@@ -72,6 +72,8 @@ export default function SettleScreen() {
   const amt = parseMoneyInput(amount) ?? 0
   const accAfter = selected ? selected.balance - amt : 0
   const remaining = Math.max(owedNow - amt, 0)
+  // Overpayment settles the debt and flips the balance: the partner owes the excess.
+  const excess = Math.max(amt - owedNow, 0)
   const goesNegative = selected != null && accAfter < 0
 
   const submit = async () => {
@@ -220,12 +222,17 @@ export default function SettleScreen() {
                   <Text className="text-sm text-text">{fmtMoney(remaining, activeCurrency)}</Text>
                 </View>
                 <Text className="text-xs text-text-soft">
-                  {remaining < 0.01
-                    ? t('shared.settle.after_settled', { name: partnerName })
-                    : t('shared.settle.after_remaining', {
-                        amount: fmtMoney(remaining, activeCurrency),
+                  {excess > 0.01
+                    ? t('shared.settle.after_overpaid', {
+                        amount: fmtMoney(excess, activeCurrency),
                         name: partnerName,
-                      })}
+                      })
+                    : remaining < 0.01
+                      ? t('shared.settle.after_settled', { name: partnerName })
+                      : t('shared.settle.after_remaining', {
+                          amount: fmtMoney(remaining, activeCurrency),
+                          name: partnerName,
+                        })}
                 </Text>
               </View>
             )}

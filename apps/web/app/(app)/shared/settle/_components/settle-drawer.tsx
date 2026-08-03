@@ -6,14 +6,7 @@ import { Send, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Drawer } from '@/components/ui/drawer'
 import type { BalanceCurrency } from '@grana/money-logic'
-import { SettleForm } from './settle-form'
-
-type SettleAccount = {
-  id: string
-  name: string
-  institutionName?: string | null
-  balances: Record<BalanceCurrency, number>
-}
+import { SettleForm, type SettleAccount } from './settle-form'
 
 /**
  * "Saldar" as a drawer (same pattern as the movement form) — triggered from the

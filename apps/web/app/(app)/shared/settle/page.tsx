@@ -37,6 +37,8 @@ export default async function SharedSettlePage() {
     // Available balance per currency — drives the non-blocking negative-balance
     // notice when a settlement would push the chosen account below zero.
     balances: a.balances,
+    // Resolved color/icon so the picker shows each account's own identity.
+    avatar: a.avatar,
   }))
   const partnerName = household.members.find((m) => m.userId !== user.id)?.fullName ?? ''
 

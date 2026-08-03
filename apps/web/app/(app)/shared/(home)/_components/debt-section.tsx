@@ -54,6 +54,7 @@ export const DebtSection = async () => {
     name: a.name,
     institutionName: a.institution?.name ?? null,
     balances: a.balances,
+    avatar: a.avatar,
   }))
 
   const balanceForYou = (cur: BalanceCurrency): number => {
