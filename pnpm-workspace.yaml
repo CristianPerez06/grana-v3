@@ -15,6 +15,16 @@ packages:
 # isolated. https://pnpm.io/settings
 nodeLinker: hoisted
 
+# Consecuencia en Vercel: con `hoisted` NO existe `apps/web/node_modules/next`
+# (Next vive solo en el `node_modules` de la raíz). El builder de Vercel corre
+# `pnpm run build` con cwd `apps/web` y resuelve el binario en
+# `apps/web/node_modules/next/dist/bin/next`, que bajo este layout nunca se
+# crea → "Cannot find module .../next/dist/bin/next" y el deploy falla, aunque
+# CI pase (CI buildea con `pnpm --filter web build` desde la raíz, donde el
+# `.bin` de la raíz sí está en PATH). Por eso `apps/web/vercel.json` sobreescribe
+# el buildCommand para correr desde la raíz. Si algún día se vuelve al linker
+# isolated, ese override deja de hacer falta.
+
 # Also moved from `.npmrc` for the same reason.
 publicHoistPattern:
   - '*eslint*'
