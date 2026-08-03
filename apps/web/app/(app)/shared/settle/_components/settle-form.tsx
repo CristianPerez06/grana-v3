@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { ArrowRight, Check, ChevronDown, Clock, Send } from 'lucide-react'
@@ -62,6 +62,12 @@ export function SettleForm({ owed, accounts, partnerName, appStartDate = null, o
   const [pickerOpen, setPickerOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  // The submit button sits at the bottom of a scrollable drawer; a server error
+  // renders at the top and would go unseen. Scroll it into view when it appears.
+  const errorRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [error])
   // Post-submit "Enviado · esperando confirmación" state (the payer's view).
   // `excess` is set (formatted) only when the payment overpaid the debt.
   const [sent, setSent] = useState<{ amount: string; balance: string; excess: string | null } | null>(
@@ -158,7 +164,11 @@ export function SettleForm({ owed, accounts, partnerName, appStartDate = null, o
 
   return (
     <form onSubmit={handleSubmit} className="flex min-h-full flex-col gap-5" noValidate>
-      {error && <Alert variant="error">{error}</Alert>}
+      {error && (
+        <div ref={errorRef}>
+          <Alert variant="error">{error}</Alert>
+        </div>
+      )}
 
       {currencies.length > 1 && (
         <Segmented
