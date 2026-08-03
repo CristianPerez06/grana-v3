@@ -25,11 +25,13 @@ export function SettleDrawer({
   owed,
   accounts,
   partnerName,
+  appStartDate = null,
   triggerClassName,
 }: {
   owed: Partial<Record<BalanceCurrency, number>>
   accounts: SettleAccount[]
   partnerName: string
+  appStartDate?: string | null
   triggerClassName?: string
 }) {
   const t = useTranslations('shared')
@@ -62,6 +64,7 @@ export function SettleDrawer({
             owed={owed}
             accounts={accounts}
             partnerName={partnerName}
+            appStartDate={appStartDate}
             onDone={() => setOpen(false)}
           />
         </div>

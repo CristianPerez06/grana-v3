@@ -1889,6 +1889,7 @@
       "amount_label": "Amount to pay",
       "currency_label": "Currency",
       "account_label": "From which account?",
+      "date_label": "Date",
       "total_action": "Total",
       "submit": "Register payment",
       "you_owe_total": "You owe {amount} to {name}",

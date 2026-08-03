@@ -3,12 +3,13 @@ import { Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { parseMoneyInput } from '@grana/validation'
-import type { BalanceCurrency } from '@grana/money-logic'
+import { formatDateISO, getTodayAR, type BalanceCurrency } from '@grana/money-logic'
 import { getHousehold, getHouseholdDebt } from '../../../lib/shared/queries'
 import { useAccountsList } from '../../../lib/accounts/queries'
 import { registerSettlement } from '../../../lib/shared/mutators'
 import { FormScreen } from '../../../components/layout/FormScreen'
 import { MoneyAmountInput } from '../../../components/ui/MoneyAmountInput'
+import { DateField } from '../../../components/ui/DateField'
 import { Segmented } from '../../../components/ui/Segmented'
 import { SelectSheet } from '../../../components/ui/SelectSheet'
 import { Button } from '../../../components/ui/Button'
@@ -51,6 +52,7 @@ export default function SettleScreen() {
   const owedNow = owed[activeCurrency] ?? 0
 
   const [amount, setAmount] = useState('')
+  const [date, setDate] = useState(formatDateISO(getTodayAR()))
   const [accountId, setAccountId] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -81,6 +83,7 @@ export default function SettleScreen() {
         currency_code: activeCurrency,
         amount: amt,
         account_id: accountId,
+        date,
       })
       if (res.ok) setSent({ amount: amt, currency: activeCurrency })
       else
@@ -176,6 +179,13 @@ export default function SettleScreen() {
                   {t('shared.settle.quick_half')}
                 </Button>
               </View>
+            </View>
+
+            <View className="flex-col gap-2 rounded-2xl border border-border bg-card shadow-sm p-5">
+              <Text className="text-xs font-medium uppercase text-text-soft">
+                {t('shared.settle.date_label')}
+              </Text>
+              <DateField value={date} onChange={setDate} placeholder={t('common.pick_date')} />
             </View>
 
             <Pressable

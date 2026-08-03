@@ -8,11 +8,13 @@ import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Segmented } from '@/components/ui/segmented'
+import { DatePicker } from '@/components/ui/date-picker'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { parseMoneyInput } from '@grana/validation'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { checkNegativeBalance, type BalanceCurrency } from '@grana/money-logic'
+import { todayISO } from '@/lib/date'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
 import { registerSettlement } from '@/app/_actions/shared'
 
@@ -29,6 +31,11 @@ type Props = {
   owed: Partial<Record<BalanceCurrency, number>>
   accounts: SettleAccount[]
   partnerName: string
+  /**
+   * Lower bound for the settlement date (the user's signup date). You can't date
+   * a settlement before you started using the app. Null ⇒ no floor.
+   */
+  appStartDate?: string | null
   /** Called after a successful settle (e.g. to close the drawer). */
   onDone?: () => void
 }
@@ -40,7 +47,7 @@ const accountSecondaryName = (a: SettleAccount): string | null => {
   return inst && inst !== a.name ? a.name : null
 }
 
-export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
+export function SettleForm({ owed, accounts, partnerName, appStartDate = null, onDone }: Props) {
   const t = useTranslations('shared')
   const router = useRouter()
   const partner = firstName(partnerName)
@@ -49,6 +56,7 @@ export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
   const [currency, setCurrency] = useState<BalanceCurrency>(currencies[0])
   const [amount, setAmount] = useState(String(owed[currencies[0]] ?? ''))
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? '')
+  const [date, setDate] = useState(todayISO())
   const [pickerOpen, setPickerOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -67,7 +75,12 @@ export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
     setSubmitting(true)
     setError(null)
     try {
-      const result = await registerSettlement({ currency_code: currency, amount: parsed, account_id: accountId })
+      const result = await registerSettlement({
+        currency_code: currency,
+        amount: parsed,
+        account_id: accountId,
+        date,
+      })
       if (!result.ok) {
         const fieldError = 'fieldErrors' in result ? Object.values(result.fieldErrors ?? {})[0] : undefined
         setError(result.formError ?? fieldError ?? 'Error')
@@ -223,6 +236,12 @@ export function SettleForm({ owed, accounts, partnerName, onDone }: Props) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* fecha del movimiento — igual que en agregar un movimiento */}
+      <div className="flex flex-col gap-1.5">
+        <Label>{t('settle.date_label')}</Label>
+        <DatePicker value={date} onChange={setDate} min={appStartDate ?? undefined} modal={!!onDone} />
       </div>
 
       {/* qué pasa al pagar — dos cards (cuenta + deuda), antes→después */}

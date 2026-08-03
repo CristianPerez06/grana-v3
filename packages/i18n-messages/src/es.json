@@ -1889,6 +1889,7 @@
       "amount_label": "Monto a pagar",
       "currency_label": "Moneda",
       "account_label": "¿De qué cuenta sale?",
+      "date_label": "Fecha",
       "total_action": "Total",
       "submit": "Registrar pago",
       "you_owe_total": "Le debés {amount} a {name}",

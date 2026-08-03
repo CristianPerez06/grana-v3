@@ -269,14 +269,12 @@ export async function registerSettlementCore(
     return { ok: false, fieldErrors: { amount: 'El monto no puede superar la deuda.' } }
   }
 
-  const today = formatDateISO(getTodayAR())
-
   // Atomic: payer leg (settlement movement that debits the account) + settlement row.
   const { data: settlementId, error } = await supabase.rpc('register_settlement', {
     p_account_id: validation.data.account_id,
     p_amount: validation.data.amount,
     p_currency: currency,
-    p_date: today,
+    p_date: validation.data.date,
   })
   if (error || !settlementId) {
     return { ok: false, formError: error?.message ?? 'No se pudo registrar la liquidación.' }
