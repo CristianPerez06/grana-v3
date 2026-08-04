@@ -342,6 +342,61 @@ end $$;
 
 
 -- =============================================================================
+-- 8.1H — INVARIANTE: integridad de las reglas recurrentes (migración 0053).
+--   (a) created_from_transaction_id es ON DELETE RESTRICT: borrar el movimiento
+--       semilla no puede dejar la regla huérfana en silencio, desde ningún
+--       cliente. Antes era SET NULL y por eso existieron reglas huérfanas.
+--   (b) La etiqueta `frequency` no puede contradecir el cronograma real
+--       (interval_count + interval_unit), que es lo que obedece el generador.
+-- =============================================================================
+
+do $$
+declare
+  v_deltype "char";
+  v_desync  integer;
+begin
+  select con.confdeltype into v_deltype
+    from pg_constraint con
+    join pg_attribute att on att.attrelid = con.conrelid and att.attnum = any (con.conkey)
+   where con.contype = 'f'
+     and con.conrelid = 'public.recurrences'::regclass
+     and att.attname = 'created_from_transaction_id'
+     and array_length(con.conkey, 1) = 1;
+
+  if v_deltype is null then
+    raise exception 'FK recurrences.created_from_transaction_id -> transactions no existe';
+  end if;
+  if v_deltype <> 'r' then
+    raise exception 'FK recurrences.created_from_transaction_id debe ser ON DELETE RESTRICT (confdeltype=%)', v_deltype;
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+     where conrelid = 'public.recurrences'::regclass
+       and contype = 'c'
+       and conname = 'chk_recurrences_frequency_matches_interval'
+  ) then
+    raise exception 'CHECK chk_recurrences_frequency_matches_interval no existe en recurrences';
+  end if;
+
+  select count(*) into v_desync
+    from public.recurrences
+   where frequency <> 'custom'
+     and not (
+           (frequency = 'weekly'   and interval_count = 1 and interval_unit = 'week')
+        or (frequency = 'biweekly' and interval_count = 2 and interval_unit = 'week')
+        or (frequency = 'monthly'  and interval_count = 1 and interval_unit = 'month')
+        or (frequency = 'annual'   and interval_count = 1 and interval_unit = 'year')
+     );
+  if v_desync > 0 then
+    raise exception 'recurrences: % filas con frequency incoherente con su intervalo', v_desync;
+  end if;
+
+  raise notice '✓ 8.1H — recurrences: FK semilla RESTRICT + coherencia frequency/intervalo';
+end $$;
+
+
+-- =============================================================================
 -- 8.2 — RLS: políticas en todas las tablas
 -- =============================================================================
 

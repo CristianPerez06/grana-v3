@@ -486,6 +486,7 @@ export function aggregateRecurrenceProjection(
       interval_count: r.interval_count,
       interval_unit: r.interval_unit,
       max_occurrences: r.max_occurrences,
+      last_generated_date: r.last_generated_date,
     })),
     windowStart,
     windowEnd,

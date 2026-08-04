@@ -60,4 +60,7 @@ export {
   cancelReimbursement,
   DELETE_GUARD_CODES,
   type ThinMutationResult,
+  type DeleteTransactionResult,
+  type SeededRecurrenceInfo,
+  type SeedResolution,
 } from './thin-mutations'

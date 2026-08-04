@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { ChevronRight, Repeat } from 'lucide-react'
+import { AlertTriangle, ChevronRight, Repeat } from 'lucide-react'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
+import { duplicateRuleIds } from '@grana/recurrences'
 import { getCategoryName } from '@/lib/categories/display'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
 
@@ -33,6 +34,10 @@ const formatDate = (iso: string | null) => {
 
 export const RecurringTabs = ({ active, paused, finished }: Props) => {
   const [tab, setTab] = useState<Tab>('active')
+  // Reglas activas que colisionan con otra por (cuenta, moneda, tipo, monto).
+  // Solo se SEÑALAN: la clave admite falsos positivos legítimos (dos servicios
+  // del mismo precio en la misma cuenta), así que el usuario decide.
+  const duplicateIds = useMemo(() => duplicateRuleIds(active), [active])
   const tRec = useTranslations('recurrences')
   const tTx = useTranslations('transactions')
   const tRoot = useTranslations()
@@ -161,6 +166,15 @@ export const RecurringTabs = ({ active, paused, finished }: Props) => {
                     <span className="shrink-0 rounded-[6px] bg-[#F1F3F6] px-2 py-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-text-muted">
                       {freqLabel}
                     </span>
+                    {duplicateIds.has(rule.id) && (
+                      <span
+                        title={tRec('duplicate_hint')}
+                        className="flex shrink-0 items-center gap-1 rounded-[6px] bg-warning-soft px-2 py-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-warning-deep"
+                      >
+                        <AlertTriangle className="size-3" aria-hidden />
+                        {tRec('duplicate_badge')}
+                      </span>
+                    )}
                   </div>
                   <span className="truncate text-[13px] font-medium text-text-muted">{meta}</span>
                 </div>

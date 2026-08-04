@@ -3,12 +3,18 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Trash2 } from 'lucide-react-native'
 import type { MovementKind } from '@grana/money-logic'
+import type { SeededRecurrenceInfo } from '@grana/transactions-mutations'
+import type { SeededRecurrenceResolution } from '@grana/recurrences'
 import { PageHeader } from '../../../../components/ui/PageHeader'
 import { MovementDetailView } from '../../../../components/transactions/detail/MovementDetailView'
 import { MovementDetailSkeleton } from '../../../../components/transactions/detail/MovementDetailSkeleton'
 import { getMovementDetail } from '../../../../lib/transactions/queries'
-import { deleteMovement } from '../../../../lib/transactions/mutators'
+import {
+  deleteMovement,
+  resolveSeededRecurrenceAndDelete,
+} from '../../../../lib/transactions/mutators'
 import { invalidateAfterMovementMutation } from '../../../../lib/transactions/invalidate'
+import { invalidateAfterRecurrenceMutation } from '../../../../lib/recurrences/invalidate'
 import { colors } from '../../../../lib/colors'
 import { useT } from '../../../../lib/locale-context'
 
@@ -99,12 +105,47 @@ export default function MovementDetailScreen() {
         onPress: async () => {
           const result = await deleteMovement(txId, t)
           if (result.ok) {
-            invalidateAfterMovementMutation(queryClient)
-            router.push('/transactions')
+            finishDeleted()
+          } else if ('seededRecurrence' in result) {
+            askSeededRecurrence(result.seededRecurrence)
           } else {
             Alert.alert(result.formError)
           }
         },
+      },
+    ])
+  }
+
+  const finishDeleted = () => {
+    invalidateAfterMovementMutation(queryClient)
+    invalidateAfterRecurrenceMutation(queryClient)
+    router.push('/transactions')
+  }
+
+  // The movement created a recurrence rule, so the DB refuses to delete it until
+  // the rule is resolved (FK RESTRICT). Same two choices as web, asked with the
+  // native Alert instead of a dialog.
+  const askSeededRecurrence = (rule: SeededRecurrenceInfo) => {
+    const body = rule.description
+      ? t('transactions.seeded_recurrence.body', { rule: rule.description })
+      : t('transactions.seeded_recurrence.body_untitled')
+
+    const resolve = async (resolution: SeededRecurrenceResolution) => {
+      const result = await resolveSeededRecurrenceAndDelete(txId, rule.id, resolution, t)
+      if (result.ok) finishDeleted()
+      else Alert.alert(result.formError)
+    }
+
+    Alert.alert(t('transactions.seeded_recurrence.title'), body, [
+      { text: t('transactions.seeded_recurrence.cancel'), style: 'cancel' },
+      {
+        text: t('transactions.seeded_recurrence.unlink'),
+        onPress: () => void resolve('unlink'),
+      },
+      {
+        text: t('transactions.seeded_recurrence.delete_rule'),
+        style: 'destructive',
+        onPress: () => void resolve('delete_rule'),
       },
     ])
   }

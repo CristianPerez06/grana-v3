@@ -33,5 +33,13 @@ export async function translatePostgresError(
   if (code === '23505') {
     return kind === 'subcategory' ? t('duplicate_subcategory') : t('duplicate')
   }
+  // 23503 = foreign_key_violation. For a transaction this is almost always the
+  // RESTRICT on `recurrences.created_from_transaction_id` (0053): the movement
+  // seeded a recurrence rule. `deleteTransaction` pre-checks it and returns the
+  // actionable `seeded_recurrence` guard, so reaching here means a caller that
+  // bypassed the shared mutation — a net, not the expected path.
+  if (code === '23503' && kind === 'transaction') {
+    return t('seeded_recurrence')
+  }
   return t('generic')
 }

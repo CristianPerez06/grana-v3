@@ -1,8 +1,15 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { getTodayAR } from '@/lib/date'
-import { revalidateAfterMovementMutation } from './_helpers'
+import { formatDateISO, getTodayAR } from '@/lib/date'
+import {
+  revalidateAfterMovementMutation,
+  revalidateAfterRecurrenceMutation,
+} from './_helpers'
+import {
+  deleteMovementResolvingRecurrence,
+  type SeededRecurrenceResolution,
+} from '@grana/recurrences'
 import {
   createIncome as createIncomeImpl,
   createExpense as createExpenseImpl,
@@ -16,6 +23,7 @@ import {
   deleteTransaction as deleteTransactionImpl,
   DELETE_GUARD_CODES,
   type ThinMutationResult,
+  type SeededRecurrenceInfo,
 } from '@grana/transactions-mutations'
 import type {
   CreateIncomeInput,
@@ -89,14 +97,35 @@ export async function updateTransaction(
 
 // ── deleteTransaction ─────────────────────────────────────────────────────────
 
-export async function deleteTransaction(id: string): Promise<ActionResult<never>> {
+/**
+ * A delete can come back needing a decision: the movement seeded a recurrence
+ * rule, and the user must say whether the rule goes with it. The payload names
+ * the rule so the dialog can ask about it instead of showing a raw error.
+ */
+export type DeleteTransactionActionResult = ActionResult<never> & {
+  seededRecurrence?: SeededRecurrenceInfo
+}
+
+export async function deleteTransaction(id: string): Promise<DeleteTransactionActionResult> {
   const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
 
-  const result = await deleteTransactionImpl(supabase, userId, id)
+  const result = await deleteTransactionImpl(supabase, userId, id, {
+    today: formatDateISO(getTodayAR()),
+  })
   if (result.ok) {
     revalidateAfterMovementMutation()
     return { ok: true }
+  }
+
+  if (result.errorCode === DELETE_GUARD_CODES.seededRecurrence) {
+    // Not a failure the user can only read — it's a question. The dialog turns
+    // this into the two choices; `resolveSeededRecurrenceAndDelete` executes them.
+    return {
+      ok: false,
+      formError: await translatePostgresError('23503', 'transaction'),
+      seededRecurrence: result.seededRecurrence,
+    }
   }
 
   // Map the shared mutator's stable `errorCode` back to web's literal messages
@@ -129,6 +158,42 @@ export async function deleteTransaction(id: string): Promise<ActionResult<never>
       }
     default:
       return { ok: false, formError: await translatePostgresError(result.errorCode, 'transaction') }
+  }
+}
+
+// ── resolveSeededRecurrenceAndDelete ──────────────────────────────────────────
+// Segundo paso del borrado de un movimiento semilla: el usuario ya eligió qué
+// hacer con la regla. La orquestación vive en `@grana/recurrences` (es el
+// paquete que consume `@grana/transactions-mutations`, nunca al revés).
+
+export async function resolveSeededRecurrenceAndDelete(
+  transactionId: string,
+  recurrenceId: string,
+  resolution: SeededRecurrenceResolution,
+): Promise<ActionResult<never>> {
+  const userId = await getAuthenticatedUserId()
+  const supabase = await createClient()
+
+  const result = await deleteMovementResolvingRecurrence({
+    supabase,
+    userId,
+    transactionId,
+    recurrenceId,
+    resolution,
+    today: formatDateISO(getTodayAR()),
+  })
+
+  if (result.ok) {
+    // Toca movimientos Y recurrencias: se invalidan ambos conjuntos de rutas.
+    revalidateAfterMovementMutation()
+    revalidateAfterRecurrenceMutation()
+    return { ok: true }
+  }
+
+  return {
+    ok: false,
+    formError:
+      result.formError ?? (await translatePostgresError(result.errorCode, 'transaction')),
   }
 }
 

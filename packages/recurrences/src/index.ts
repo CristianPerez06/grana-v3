@@ -15,6 +15,7 @@ export {
   getRecurrenceLinkForTransaction,
   generateDueRecurrenceInstances,
   getTopRecurrenceSuggestion,
+  getDuplicateRulesFor,
   buildPendingInstanceInsert,
   type RecurrenceRuleForGeneration,
 } from './queries'
@@ -27,11 +28,21 @@ export {
   pauseRecurrence,
   resumeRecurrence,
   deleteRecurrence,
+  deleteMovementResolvingRecurrence,
   acceptRecurrenceSuggestion,
   dismissRecurrenceSuggestion,
   type RecurrenceActionResult,
   type RecurrenceHousehold,
+  type SeededRecurrenceResolution,
 } from './mutations'
+export {
+  findDuplicateRules,
+  groupDuplicateRules,
+  duplicateRuleIds,
+  type DuplicateCandidate,
+  type DuplicateMatch,
+  type ExistingRuleForDuplicateCheck,
+} from './duplicates'
 
 export {
   mapInstanceToConfirmPlan,

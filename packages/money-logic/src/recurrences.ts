@@ -172,8 +172,9 @@ export function decideRecurrenceInstance(
 // screen's "next 7 days / later this month" informational cards. Amounts are
 // NOT summed (bimoneda invariant): each occurrence carries its own currency.
 
-export type RuleForProjection = {
-  id: string
+// The schedule of a rule: everything needed to walk its calendar, and nothing
+// else. Both the "próximo" calculation and the window projection take this.
+export type OccurrenceSchedule = {
   start_date: string
   end_date: string | null
   interval_count: number
@@ -181,69 +182,114 @@ export type RuleForProjection = {
   max_occurrences: number | null
 }
 
+export type RuleForProjection = OccurrenceSchedule & {
+  id: string
+  // Cursor of the last occurrence already materialized — by the seed movement
+  // that created the rule, or by an instance the user confirmed/omitted. Every
+  // projection MUST honor it (see walkOccurrences).
+  last_generated_date: string | null
+}
+
 export type ProjectedOccurrence = {
   rule_id: string
   scheduled_date: string
 }
 
+// Safety cap: at most ~750 steps (e.g. >2 years of daily) before bailing.
+const MAX_WALK_STEPS = 750
+
+export type OccurrenceWindow = {
+  /** Inclusive lower bound. Occurrences before it are stepped over, not emitted. */
+  from: string
+  /** Inclusive upper bound. Omit for an open-ended walk (bounded by MAX_WALK_STEPS). */
+  to?: string | null
+  /**
+   * Occurrences on or before this date are already materialized — by the rule's
+   * seed movement, or by an instance the user confirmed/omitted. They are NOT
+   * emitted: announcing one as upcoming would double-count a movement that
+   * already exists. Null for a rule with nothing materialized yet.
+   *
+   * A pending-but-unconfirmed instance does NOT advance the cursor, so its date
+   * is intentionally still emitted — it lives in the "por confirmar" surfaces
+   * AND in the projection until the user resolves it.
+   */
+  cursor?: string | null
+  /** Stop after this many emitted occurrences. Use 1 to ask "the next one". */
+  limit?: number
+}
+
+// THE calendar walker. Every question about when a rule fires — the next
+// expected occurrence, the ones inside a window, the generator's own decision —
+// resolves through this single function, so the answers cannot diverge.
+//
+// Walks from start_date forward, stepping by the rule's interval anchored to
+// start_date (so end-of-month clamping restores the original day: 31-jan →
+// 28-feb → 31-mar). Honors end_date and max_occurrences, where max_occurrences
+// counts occurrences from start_date, not emitted ones.
+export function walkOccurrences(
+  schedule: OccurrenceSchedule,
+  window: OccurrenceWindow,
+): string[] {
+  const { from, to = null, cursor = null, limit } = window
+  const out: string[] = []
+  let current = schedule.start_date
+
+  // `produced` counts occurrences stepped past — the max_occurrences gate.
+  for (let produced = 0; produced < MAX_WALK_STEPS; produced++) {
+    if (schedule.max_occurrences != null && produced >= schedule.max_occurrences) break
+    if (to != null && current > to) break
+    if (schedule.end_date != null && current > schedule.end_date) break
+
+    const inWindow = current >= from
+    const afterCursor = cursor == null || current > cursor
+    if (inWindow && afterCursor) {
+      out.push(current)
+      if (limit != null && out.length >= limit) break
+    }
+
+    current = addInterval(current, schedule.interval_unit, schedule.interval_count, {
+      anchorDate: schedule.start_date,
+    })
+  }
+
+  return out
+}
+
 // All occurrences of one rule whose date is within [windowStart, windowEnd]
-// (inclusive). Walks from start_date forward, honoring end_date and
-// max_occurrences. Bounded by a hard cap to avoid pathological loops.
+// (inclusive) and that the generator can still produce. An occurrence already
+// covered by a real movement (the rule's seed, or a confirmed instance) is NOT
+// returned: drawing it as upcoming would announce a gasto the user already has.
 export function projectRuleOccurrences(
   rule: RuleForProjection,
   windowStart: string,
   windowEnd: string,
 ): string[] {
-  const out: string[] = []
-  let current = rule.start_date
-  let produced = 0
-  // Safety cap: at most ~750 steps (e.g. >2 years of daily) before bailing.
-  for (let i = 0; i < 750; i++) {
-    if (rule.max_occurrences != null && produced >= rule.max_occurrences) break
-    if (current > windowEnd) break
-    if (rule.end_date != null && current > rule.end_date) break
-    if (current >= windowStart) out.push(current)
-    produced++
-    current = addInterval(current, rule.interval_unit, rule.interval_count, {
-      anchorDate: rule.start_date,
-    })
-  }
-  return out
+  return walkOccurrences(rule, {
+    from: windowStart,
+    to: windowEnd,
+    cursor: rule.last_generated_date,
+  })
 }
 
 // The next occurrence a rule is still expected to produce — the calendar
-// "próximo" for display. Walks the schedule forward from start_date and returns
-// the earliest occurrence that is BOTH:
+// "próximo" for display. The earliest occurrence that is BOTH:
 //   (a) on or after `today` — never surface a past date as "próximo"; and
 //   (b) strictly after `lastGeneratedDate` — the cursor of the last occurrence
 //       already confirmed/omitted (advanced by confirm & skip). Without (b), a
 //       rule whose occurrence for *today* was already confirmed would still show
 //       today as "próximo" instead of rolling to the next interval.
-// `lastGeneratedDate` is null for direct rules with nothing confirmed yet, in
-// which case only (a) applies. A pending-but-unconfirmed instance does NOT
-// advance the cursor, so its (past) date is intentionally skipped here — it
-// lives in the "por confirmar" surfaces, not in "próximo".
-// Honors end_date and max_occurrences; returns null when the rule has no further
-// occurrence (finished or capped out).
+// Returns null when the rule has no further occurrence (finished or capped out).
 export function getNextExpectedOccurrence(
-  rule: RuleForProjection,
+  rule: OccurrenceSchedule,
   today: string,
   lastGeneratedDate: string | null,
 ): string | null {
-  let current = rule.start_date
-  // `produced` counts occurrences stepped past — doubles as the max_occurrences
-  // gate and a hard safety cap (~750 steps ≈ >2 years of daily) against loops.
-  for (let produced = 0; produced < 750; produced++) {
-    if (rule.max_occurrences != null && produced >= rule.max_occurrences) return null
-    if (rule.end_date != null && current > rule.end_date) return null
-    const afterToday = current >= today
-    const afterCursor = lastGeneratedDate == null || current > lastGeneratedDate
-    if (afterToday && afterCursor) return current
-    current = addInterval(current, rule.interval_unit, rule.interval_count, {
-      anchorDate: rule.start_date,
-    })
-  }
-  return null
+  const [next] = walkOccurrences(rule, {
+    from: today,
+    cursor: lastGeneratedDate,
+    limit: 1,
+  })
+  return next ?? null
 }
 
 // Flatten every rule's in-window occurrences into a single date-sorted list.
