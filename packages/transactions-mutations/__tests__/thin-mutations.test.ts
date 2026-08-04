@@ -267,3 +267,98 @@ describe('thin-mutations — updateTransaction debit account change', () => {
     if (!result.ok) expect(result.formError).toContain('moneda activa')
   })
 })
+
+// Mock for updateTransaction's date-cascade path: a simple expense (no card
+// period, no parent) whose date changes. Captures the expense's own UPDATE and
+// the follow-up UPDATE on the linked reimbursement. The chainable `.eq()` is
+// awaitable so both the 2-eq (expense) and 4-eq (reimbursement) filters resolve.
+function cascadeClient(opts: {
+  existing: Record<string, unknown>
+  capture: {
+    expenseDate?: unknown
+    reimbDate?: unknown
+    reimbFilter?: Record<string, unknown>
+  }
+}): GranaSupabaseClient {
+  return {
+    from(table: string) {
+      if (table !== 'transactions') throw new Error(`unexpected table ${table}`)
+      return {
+        select: () => ({
+          eq: () => ({
+            eq: () => ({ single: async () => ({ data: opts.existing, error: null }) }),
+          }),
+        }),
+        update(payload: Record<string, unknown>) {
+          const filter: Record<string, unknown> = {}
+          const chain = {
+            eq(col: string, val: unknown) {
+              filter[col] = val
+              return chain
+            },
+            then(resolve: (v: unknown) => void) {
+              if ('linked_transaction_id' in filter) {
+                opts.capture.reimbDate = payload.date
+                opts.capture.reimbFilter = filter
+              } else {
+                opts.capture.expenseDate = payload.date
+              }
+              resolve({ error: null })
+            },
+          }
+          return chain
+        },
+      }
+    },
+  } as unknown as GranaSupabaseClient
+}
+
+describe('thin-mutations — updateTransaction reimbursement date cascade', () => {
+  const expenseRow = {
+    id: TX,
+    status: null,
+    account_id: ACCOUNT,
+    card_period_id: null,
+    parent_id: null,
+    currency_code: 'ARS',
+    date: '2026-08-03',
+  }
+
+  it('cascades the new date to a reimbursement that still followed the old date', async () => {
+    const capture: {
+      expenseDate?: unknown
+      reimbDate?: unknown
+      reimbFilter?: Record<string, unknown>
+    } = {}
+    const result = await updateTransaction(
+      cascadeClient({ existing: expenseRow, capture }),
+      USER,
+      TX,
+      { date: '2026-07-15' },
+      today,
+    )
+    expect(result.ok).toBe(true)
+    expect(capture.expenseDate).toBe('2026-07-15')
+    expect(capture.reimbDate).toBe('2026-07-15')
+    // Only reimbursements still sitting on the expense's OLD date are moved.
+    expect(capture.reimbFilter).toMatchObject({
+      linked_transaction_id: TX,
+      type: 'reimbursement',
+      user_id: USER,
+      date: '2026-08-03',
+    })
+  })
+
+  it('does not cascade when the date is unchanged', async () => {
+    const capture: { reimbDate?: unknown } = {}
+    const result = await updateTransaction(
+      cascadeClient({ existing: expenseRow, capture }),
+      USER,
+      TX,
+      { date: '2026-08-03' },
+      today,
+    )
+    expect(result.ok).toBe(true)
+    expect(capture.reimbDate).toBeUndefined()
+  })
+})
