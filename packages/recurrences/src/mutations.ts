@@ -19,6 +19,7 @@ import {
   createExpense,
   createIncome,
   createTransfer,
+  deleteTransaction,
   registerCardPurchase,
 } from '@grana/transactions-mutations'
 import { generateDueRecurrenceInstances } from './queries'
@@ -706,6 +707,54 @@ export async function deleteRecurrence(
   }
 
   return { ok: true }
+}
+
+// ── deleteMovementResolvingRecurrence ─────────────────────────────────────────
+// Borrar un movimiento que sembró una regla recurrente, resolviendo la regla
+// primero. Desde 0053 el FK es ON DELETE RESTRICT: la base rechaza el borrado
+// mientras la regla lo apunte, así que la decisión del usuario es obligatoria.
+//
+// Vive acá y no en @grana/transactions-mutations por la dirección de la
+// dependencia: este paquete ya consume aquél (nunca al revés), y la rama
+// 'delete_rule' necesita `deleteRecurrence` con su limpieza de instancias
+// pendientes, que no se duplica.
+//
+//   'delete_rule'  elimina la regla (soft-delete + borra sus pendientes) y luego
+//                  el movimiento. Las transacciones ya confirmadas se conservan.
+//   'unlink'       conserva la regla, la desvincula y —si su cursor apuntaba a la
+//                  semilla futura que se está borrando— lo repara. Lo ejecuta
+//                  `deleteTransaction` con `seedResolution: 'unlink'`.
+
+export type SeededRecurrenceResolution = 'delete_rule' | 'unlink'
+
+export async function deleteMovementResolvingRecurrence(args: {
+  supabase: GranaSupabaseClient
+  userId: string
+  transactionId: string
+  recurrenceId: string
+  resolution: SeededRecurrenceResolution
+  today?: string
+}): Promise<RecurrenceActionResult<never>> {
+  const { supabase, userId, transactionId, recurrenceId, resolution, today } = args
+
+  if (resolution === 'delete_rule') {
+    const ruleResult = await deleteRecurrence(supabase, userId, recurrenceId)
+    if (!ruleResult.ok) return ruleResult
+
+    // La regla quedó en 'deleted' pero la FILA sigue existiendo (conserva la
+    // trazabilidad de los movimientos que ya confirmó), así que su FK todavía
+    // apunta al movimiento y RESTRICT bloquearía el borrado. `deleteTransaction`
+    // desvincula sin preguntar cuando la regla ya está soft-deleted: no hay nada
+    // que decidir sobre una regla que el usuario acaba de eliminar.
+    const txResult = await deleteTransaction(supabase, userId, transactionId, { today })
+    return txResult.ok ? { ok: true } : { ok: false, errorCode: txResult.errorCode }
+  }
+
+  const txResult = await deleteTransaction(supabase, userId, transactionId, {
+    seedResolution: 'unlink',
+    today,
+  })
+  return txResult.ok ? { ok: true } : { ok: false, errorCode: txResult.errorCode }
 }
 
 // ── acceptRecurrenceSuggestion ─────────────────────────────────────────────────

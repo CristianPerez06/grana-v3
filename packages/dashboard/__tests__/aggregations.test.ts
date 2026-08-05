@@ -422,6 +422,7 @@ describe('aggregateRecurrenceProjection', () => {
     interval_count: 1,
     interval_unit: 'month',
     max_occurrences: null,
+    last_generated_date: null,
     currency_code: 'ARS',
     ...over,
   })

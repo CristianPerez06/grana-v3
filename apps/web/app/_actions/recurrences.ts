@@ -28,6 +28,9 @@ import {
   resumeRecurrence as resumeRecurrenceImpl,
   skipRecurrenceInstance as skipRecurrenceInstanceImpl,
   updateRecurrence as updateRecurrenceImpl,
+  getDuplicateRulesFor,
+  type DuplicateCandidate,
+  type DuplicateMatch,
 } from '@grana/recurrences'
 import type { ActionResult } from './types'
 import { translatePostgresError } from './_lib/translate-error'
@@ -55,6 +58,20 @@ export async function createRecurrenceFromMovement(
     revalidateAfterRecurrenceMutation()
   }
   return result
+}
+
+// ── checkDuplicateRecurrences ─────────────────────────────────────────────────
+// Aviso PREVIO al alta: reglas activas que colisionan con la candidata por
+// (cuenta, moneda, tipo, monto). Es informativo — la UI avisa y deja crear
+// igual. La clave admite falsos positivos legítimos a propósito (ver
+// `duplicates.ts` en @grana/recurrences), por eso nunca bloquea.
+
+export async function checkDuplicateRecurrences(
+  candidate: DuplicateCandidate,
+): Promise<DuplicateMatch[]> {
+  await getAuthenticatedUserId()
+  const supabase = await createClient()
+  return getDuplicateRulesFor(supabase, candidate)
 }
 
 // ── createRecurrence ──────────────────────────────────────────────────────────

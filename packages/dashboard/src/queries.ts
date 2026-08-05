@@ -634,7 +634,7 @@ export async function getCommittedOutlook(
   const { data: rules, error: rulesErr } = await supabase
     .from('recurrences')
     .select(
-      'id, start_date, end_date, interval_count, interval_unit, max_occurrences, amount, currency_code, movement_type',
+      'id, start_date, end_date, interval_count, interval_unit, max_occurrences, last_generated_date, amount, currency_code, movement_type',
     )
     .eq('status', 'active')
   if (rulesErr) throw rulesErr

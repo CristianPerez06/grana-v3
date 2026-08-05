@@ -48,6 +48,9 @@ export const UpcomingRecurrences = async ({ rules }: Props) => {
     interval_count: r.interval_count,
     interval_unit: r.interval_unit as IntervalUnit,
     max_occurrences: r.max_occurrences,
+    // Cursor: an occurrence already covered by the rule's seed movement or by a
+    // confirmed instance is not "próxima" — it already exists as a movement.
+    last_generated_date: r.last_generated_date,
   }))
 
   // Next 7 days, then the remainder of the month (day 8 → month end).

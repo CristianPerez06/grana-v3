@@ -13,6 +13,7 @@ const monthly = (overrides: Partial<RuleForProjection> = {}): RuleForProjection 
   interval_count: 1,
   interval_unit: 'month',
   max_occurrences: null,
+  last_generated_date: null,
   ...overrides,
 })
 
@@ -137,6 +138,73 @@ describe('getNextExpectedOccurrence', () => {
       getNextExpectedOccurrence(monthly({ start_date: '2026-01-31' }), '2026-03-01', null),
     ).toBe('2026-03-31')
   })
+})
+
+describe('projectRuleOccurrences — cursor (last_generated_date)', () => {
+  it('does NOT project an occurrence already covered by the seed movement', () => {
+    // The real case: a movement loaded on Aug 4 marked "Recurrente" seeds the
+    // rule (last_generated_date = Aug 4). Announcing Aug 4 as upcoming would
+    // draw a gasto the user already registered.
+    const out = projectRuleOccurrences(
+      monthly({ start_date: '2026-08-04', last_generated_date: '2026-08-04' }),
+      '2026-08-04',
+      '2026-08-11',
+    )
+    expect(out).toEqual([])
+  })
+
+  it('projects start_date for a direct rule with nothing materialized', () => {
+    const out = projectRuleOccurrences(
+      monthly({ start_date: '2026-08-07', last_generated_date: null }),
+      '2026-08-04',
+      '2026-08-11',
+    )
+    expect(out).toEqual(['2026-08-07'])
+  })
+
+  it('skips an occurrence whose cursor sits in the future, and finds the next one', () => {
+    // The orphaned-zombie shape: cursor on a future date whose seed movement was
+    // deleted. The rule cannot fire on Aug 7 — it must not be drawn as upcoming.
+    const rule = monthly({ start_date: '2026-08-07', last_generated_date: '2026-08-07' })
+    expect(projectRuleOccurrences(rule, '2026-08-04', '2026-08-31')).toEqual([])
+    expect(projectRuleOccurrences(rule, '2026-08-04', '2026-09-30')).toEqual(['2026-09-07'])
+  })
+
+  it('still projects occurrences past the cursor', () => {
+    const out = projectRuleOccurrences(
+      monthly({ start_date: '2026-06-05', last_generated_date: '2026-07-05' }),
+      '2026-08-01',
+      '2026-09-30',
+    )
+    expect(out).toEqual(['2026-08-05', '2026-09-05'])
+  })
+})
+
+describe('projection and próximo cannot diverge', () => {
+  // The defect this guards: projectRuleOccurrences and getNextExpectedOccurrence
+  // used to walk the calendar independently, and one ignored the cursor. They
+  // now share one walker; this asserts they keep agreeing.
+  const cases: RuleForProjection[] = [
+    monthly({ id: 'a', start_date: '2026-08-04', last_generated_date: '2026-08-04' }),
+    monthly({ id: 'b', start_date: '2026-08-07', last_generated_date: null }),
+    monthly({ id: 'c', start_date: '2026-08-07', last_generated_date: '2026-08-07' }),
+    monthly({ id: 'd', start_date: '2026-06-05', last_generated_date: '2026-07-05' }),
+    monthly({ id: 'e', start_date: '2026-01-31', last_generated_date: '2026-01-31' }),
+    monthly({ id: 'f', start_date: '2026-06-01', interval_count: 2, interval_unit: 'week', last_generated_date: '2026-07-27' }),
+    monthly({ id: 'g', start_date: '2026-05-01', end_date: '2026-08-01', last_generated_date: '2026-07-01' }),
+    monthly({ id: 'h', start_date: '2026-05-01', max_occurrences: 2, last_generated_date: '2026-05-01' }),
+  ]
+
+  it.each(cases.map((r) => [r.id, r] as const))(
+    'rule %s: the first projected occurrence is the next expected one',
+    (_id, rule) => {
+      const today = '2026-08-04'
+      // A wide window so the projection is not truncated by its upper bound.
+      const [firstProjected] = projectRuleOccurrences(rule, today, '2028-12-31')
+      const next = getNextExpectedOccurrence(rule, today, rule.last_generated_date)
+      expect(firstProjected ?? null).toBe(next)
+    },
+  )
 })
 
 describe('projectUpcomingOccurrences', () => {

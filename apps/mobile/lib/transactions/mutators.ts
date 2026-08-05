@@ -1,5 +1,5 @@
 import type { Mutators, MutationResult } from '@grana/movement-form'
-import { getTodayAR } from '@grana/money-logic'
+import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import {
   createIncome as createIncomeImpl,
   createExpense as createExpenseImpl,
@@ -17,10 +17,16 @@ import {
   deleteTransaction as deleteTransactionImpl,
   confirmReimbursement as confirmReimbursementImpl,
   cancelReimbursement as cancelReimbursementImpl,
+  DELETE_GUARD_CODES,
   type ThinMutationResult,
+  type SeededRecurrenceInfo,
 } from '@grana/transactions-mutations'
 import { updateInstallmentParent } from '@grana/cards'
-import { createRecurrence } from '@grana/recurrences'
+import {
+  createRecurrence,
+  deleteMovementResolvingRecurrence,
+  type SeededRecurrenceResolution,
+} from '@grana/recurrences'
 import { getHousehold } from '@grana/shared'
 import { supabase } from '../supabase'
 
@@ -172,15 +178,48 @@ export function createMovementMutators(t: Translate): Mutators {
 // settlement) are already prevented by the detail's `canDelete` gate, so they're
 // defensive here; the realistic runtime failure is `GRN01` (a settled shared
 // expense). Mobile surfaces the generic message — web keeps its specific copy.
-export async function deleteMovement(
-  id: string,
+export type DeleteMovementOutcome =
+  | { ok: true }
+  | { ok: false; formError: string }
+  // The movement seeded a recurrence rule: the DB refuses to delete it (FK
+  // RESTRICT, 0053) until the user says what happens to the rule. Not an error
+  // to display — a question the screen must ask, same two options as web.
+  | { ok: false; seededRecurrence: SeededRecurrenceInfo }
+
+export async function deleteMovement(id: string, t: Translate): Promise<DeleteMovementOutcome> {
+  const userId = await currentUserId()
+  if (!userId) return { ok: false, formError: t('transactions.errors.generic') }
+  const result = await deleteTransactionImpl(supabase, userId, id, {
+    today: formatDateISO(getTodayAR()),
+  })
+  if (result.ok) return { ok: true }
+  if (result.errorCode === DELETE_GUARD_CODES.seededRecurrence && result.seededRecurrence) {
+    return { ok: false, seededRecurrence: result.seededRecurrence }
+  }
+  return { ok: false, formError: t('transactions.errors.generic') }
+}
+
+// Second step of deleting a seeded movement: the user chose. Same shared
+// orchestration web uses — `@grana/recurrences` owns it because it is the
+// package that consumes `@grana/transactions-mutations`, never the reverse.
+export async function resolveSeededRecurrenceAndDelete(
+  transactionId: string,
+  recurrenceId: string,
+  resolution: SeededRecurrenceResolution,
   t: Translate,
 ): Promise<{ ok: true } | { ok: false; formError: string }> {
   const userId = await currentUserId()
   if (!userId) return { ok: false, formError: t('transactions.errors.generic') }
-  const result = await deleteTransactionImpl(supabase, userId, id)
+  const result = await deleteMovementResolvingRecurrence({
+    supabase,
+    userId,
+    transactionId,
+    recurrenceId,
+    resolution,
+    today: formatDateISO(getTodayAR()),
+  })
   if (result.ok) return { ok: true }
-  return { ok: false, formError: t('transactions.errors.generic') }
+  return { ok: false, formError: result.formError ?? t('transactions.errors.generic') }
 }
 
 export type ReimbursementMutationOutcome =
