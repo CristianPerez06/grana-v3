@@ -389,6 +389,7 @@
     "salud": "Health",
     "educacion": "Education",
     "entretenimiento": "Entertainment",
+    "viajes-escapadas": "Travel / Getaways",
     "ropa-y-calzado": "Clothing & Footwear",
     "hogar": "Home",
     "servicios": "Utilities",
@@ -1696,6 +1697,7 @@
     "cine": "Cinema",
     "salidas": "Going Out",
     "juegos": "Gaming",
+    "juntadas": "Get-togethers",
     "luz": "Electricity",
     "gas": "Gas",
     "internet": "Internet",
@@ -1753,7 +1755,11 @@
     "alquileres-cobrados": "Rental Income",
     "dolar-mep": "USD / MEP",
     "venta": "Sale",
-    "regalo-recibido": "Gift Received"
+    "regalo-recibido": "Gift Received",
+    "viaje-transporte": "Transport",
+    "viaje-hospedaje": "Lodging",
+    "viaje-comida": "Food",
+    "viaje-excursiones": "Excursions"
   },
   "shared": {
     "title": "Shared",
