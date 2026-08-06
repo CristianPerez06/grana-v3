@@ -10,6 +10,7 @@ import {
   getCardPeriodsWithStatus,
   getOrCreatePeriodForDate,
   CardPurchasePredatesHistoryError,
+  CardConsumoInPaidPeriodError,
 } from './internal/card-periods'
 import { insertDeclaredReimbursement } from './internal/declared-reimbursement'
 
@@ -86,19 +87,21 @@ export async function registerCardPurchase(
         formError: `La fecha del consumo es anterior al primer resumen de la tarjeta (${formatHistoryDate(e.oldestStartDate)}). Grana registra consumos desde ese resumen en adelante.`,
       }
     }
+    if (e instanceof CardConsumoInPaidPeriodError) {
+      return {
+        ok: false,
+        formError:
+          'No podés registrar un consumo con fecha dentro de un resumen ya pagado. Elegí una fecha en un resumen abierto.',
+      }
+    }
     return { ok: false, formError: 'No se pudo asignar un período a esta fecha.' }
   }
 
+  // The date resolved to a non-paid period (getOrCreatePeriodForDate rejects a
+  // paid-covered date above, so `has_payment` is provably false here). Fetch it
+  // only for its due_date, which the consumo mirrors.
   const periods = await getCardPeriodsWithStatus(supabase, data.account_id)
   const targetPeriod = periods.find((p) => p.id === periodId)
-  if (targetPeriod && targetPeriod.has_payment) {
-    return {
-      ok: false,
-      formError:
-        'No podés registrar consumos en un período ya pagado. Elegí una fecha en un período abierto.',
-    }
-  }
-
   const dueDate = targetPeriod?.due_date ?? null
 
   const { data: tx, error: txError } = await supabase

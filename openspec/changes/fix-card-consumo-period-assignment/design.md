@@ -77,6 +77,36 @@ No hay cambio de esquema. Los consumos ya mal asignados se detectan (transacció
 
 Ninguna migración de esquema. Despliegue de código estándar. Post-deploy, opcional: correr la query de detección de consumos mal asignados y revisarlos con el dueño de cada cuenta.
 
+### Query de detección (sin auto-reparación)
+
+Detecta consumos de tarjeta cuya `date` no cae en el rango de su `card_period_id` **y** existe un `card_periods` pagado que sí la cubre — la firma exacta del bug:
+
+```sql
+select
+  t.id            as tx_id,
+  p_email.email   as usuario,
+  a.name          as tarjeta,
+  t.date          as fecha_consumo,
+  t.amount,
+  asignado.start_date as periodo_asignado_start,
+  asignado.end_date   as periodo_asignado_end,
+  correcto.start_date as periodo_correcto_start,
+  correcto.end_date   as periodo_correcto_end
+from public.transactions t
+join public.accounts a        on a.id = t.account_id and a.type = 'credit'
+join public.profiles p_email  on p_email.id = t.user_id
+join public.card_periods asignado on asignado.id = t.card_period_id
+join public.card_periods correcto
+  on correcto.account_id = t.account_id
+ and t.date between correcto.start_date and correcto.end_date
+join public.period_payments pp on pp.period_id = correcto.id      -- el correcto está pagado
+where t.is_parent = false
+  and not (t.date between asignado.start_date and asignado.end_date)  -- mal asignado
+order by usuario, fecha_consumo;
+```
+
+Los resultados se revisan a mano: adónde va un consumo cuyo resumen natural está cerrado y pagado es una decisión del dueño (correr la fecha, registrar un ajuste, etc.), no del código. El consumo "Finquality" (`2026-06-25`, tx `5d2d26cb-02dc-4d58-8e72-ba769bfe0a01`) ya fue corregido manualmente por el usuario y no debería aparecer.
+
 ## Open Questions
 
 - ¿Se repara la data pre-existente mal asignada, o solo se detecta? Propuesta: solo detección + revisión manual. El consumo "Finquality" del caso ya fue corregido por el usuario; queda confirmar si hay otros y cómo tratarlos.
