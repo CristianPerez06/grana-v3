@@ -389,6 +389,7 @@
     "salud": "Salud",
     "educacion": "Educación",
     "entretenimiento": "Entretenimiento",
+    "viajes-escapadas": "Viajes / Escapadas",
     "ropa-y-calzado": "Ropa y calzado",
     "hogar": "Hogar",
     "servicios": "Servicios",
@@ -1696,6 +1697,7 @@
     "cine": "Cine",
     "salidas": "Salidas",
     "juegos": "Juegos",
+    "juntadas": "Juntadas",
     "luz": "Luz",
     "gas": "Gas",
     "internet": "Internet",
@@ -1753,7 +1755,11 @@
     "alquileres-cobrados": "Alquileres cobrados",
     "dolar-mep": "Dólar / MEP",
     "venta": "Venta",
-    "regalo-recibido": "Regalo recibido"
+    "regalo-recibido": "Regalo recibido",
+    "viaje-transporte": "Transporte",
+    "viaje-hospedaje": "Hospedaje",
+    "viaje-comida": "Comida",
+    "viaje-excursiones": "Excursiones"
   },
   "shared": {
     "title": "Compartido",
