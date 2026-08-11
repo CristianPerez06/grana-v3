@@ -389,6 +389,7 @@
     "salud": "Health",
     "educacion": "Education",
     "entretenimiento": "Entertainment",
+    "viajes-escapadas": "Travel / Getaways",
     "ropa-y-calzado": "Clothing & Footwear",
     "hogar": "Home",
     "servicios": "Utilities",
@@ -1302,7 +1303,8 @@
       "delete_failed": "Failed to delete.",
       "recurrence_failed": "Transaction saved, but the recurring rule couldn't be created: {detail}",
       "recurrence_unknown_error": "unknown error",
-      "generic": "Something went wrong. Please try again."
+      "generic": "Something went wrong. Please try again.",
+      "seeded_recurrence": "This movement created a recurrence. Resolve the rule before deleting it."
     },
     "empty": {
       "title": "No transactions yet",
@@ -1487,6 +1489,17 @@
     "new": {
       "title": "New movement",
       "load_error": "We couldn't load the form. Please try again."
+    },
+    "seeded_recurrence": {
+      "title": "This movement created a recurrence",
+      "body": "“{rule}” repeats and came from this movement. Choose what to do with the rule before deleting it.",
+      "body_untitled": "This movement created a repeating rule. Choose what to do with it before deleting it.",
+      "next_occurrence": "Next: {date}",
+      "delete_rule": "Delete the rule too",
+      "delete_rule_hint": "The rule and its pending proposals are deleted. Movements already confirmed are kept.",
+      "unlink": "Keep the rule",
+      "unlink_hint": "The rule stays active and is detached from this movement.",
+      "cancel": "Cancel"
     }
   },
   "recurrences": {
@@ -1660,7 +1673,12 @@
       "empty": "Nothing here."
     },
     "created_on": "Created on {date}",
-    "edit_title": "Edit recurring rule"
+    "edit_title": "Edit recurring rule",
+    "duplicate_badge": "Duplicate",
+    "duplicate_hint": "You already have another active rule with the same account, currency, type and amount. If they are different expenses, ignore this.",
+    "duplicate_warning_title": "You already have a rule like this",
+    "duplicate_warning_body": "“{rule}” has the same account, currency, type and amount. You can create it anyway if they are different expenses.",
+    "duplicate_warning_body_untitled": "You already have an active rule with the same account, currency, type and amount. You can create it anyway if they are different expenses."
   },
   "subcategories": {
     "supermercado": "Supermarket",
@@ -1679,6 +1697,7 @@
     "cine": "Cinema",
     "salidas": "Going Out",
     "juegos": "Gaming",
+    "juntadas": "Get-togethers",
     "luz": "Electricity",
     "gas": "Gas",
     "internet": "Internet",
@@ -1736,7 +1755,11 @@
     "alquileres-cobrados": "Rental Income",
     "dolar-mep": "USD / MEP",
     "venta": "Sale",
-    "regalo-recibido": "Gift Received"
+    "regalo-recibido": "Gift Received",
+    "viaje-transporte": "Transport",
+    "viaje-hospedaje": "Lodging",
+    "viaje-comida": "Food",
+    "viaje-excursiones": "Excursions"
   },
   "shared": {
     "title": "Shared",

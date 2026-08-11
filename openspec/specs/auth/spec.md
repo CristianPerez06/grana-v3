@@ -3,7 +3,6 @@
 ## Purpose
 
 Define los flujos de autenticación de Grana: alta de usuario con confirmación vía código OTP de 8 dígitos, inicio de sesión, recuperación de contraseña, reenvío de códigos con cooldown, y los templates de email versionados que los soportan. Cubre tanto el cliente web (Next.js + `@supabase/ssr`) como el cliente mobile (Expo + `@supabase/supabase-js` sobre AsyncStorage), y los callbacks que cierran cada flujo en cada plataforma.
-
 ## Requirements
 ### Requirement: Los templates de email viven versionados en el repo
 
@@ -449,7 +448,7 @@ El sistema SHALL extender el middleware de Next.js (`apps/web/lib/supabase/middl
 
 #### Scenario: Usuario sin sesión accede a /onboarding/perfil (web)
 
-- **WHEN** un usuario sin sesión navega a `/onboarding/perfil`
+- **WHEN** un usuario sin sesión navega a `/onboarding/initial-balance`
 - **THEN** el middleware emite un redirect a `/login`
 
 #### Scenario: Usuario sin onboarding accede a /login (web)

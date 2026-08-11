@@ -25,6 +25,12 @@ import {
   type ConfirmReimbursementInput,
   type CancelReimbursementInput,
 } from '@grana/validation'
+import {
+  formatDateISO,
+  getNextExpectedOccurrence,
+  getTodayAR,
+  type IntervalUnit,
+} from '@grana/money-logic'
 import { applySharedSplits } from './internal/shared-splits'
 import { insertDeclaredReimbursement } from './internal/declared-reimbursement'
 import { getCardPeriodsWithStatus, getOrCreatePeriodForDate } from './internal/card-periods'
@@ -668,13 +674,38 @@ export const DELETE_GUARD_CODES = {
   paid: 'paid',
   settlement: 'settlement',
   cardPayment: 'card_payment',
+  seededRecurrence: 'seeded_recurrence',
 } as const
+
+/** The rule a movement seeded, named well enough for the shell to ask about it. */
+export type SeededRecurrenceInfo = {
+  id: string
+  description: string | null
+  next_occurrence: string | null
+}
+
+export type DeleteTransactionResult = ThinMutationResult<never> & {
+  /** Present only with errorCode `seeded_recurrence`: what the user must resolve. */
+  seededRecurrence?: SeededRecurrenceInfo
+}
+
+/**
+ * How to resolve the rule this movement seeded. Absent = don't resolve it, just
+ * report it (the default: the user has not chosen yet).
+ *
+ * `unlink` keeps the rule and detaches it. RESTRICT blocks the DELETE cascade,
+ * not a deliberate UPDATE, so clearing the column first is a legitimate path.
+ * Deleting the rule instead is orchestrated in `@grana/recurrences`, which owns
+ * `deleteRecurrence` (and depends on this package, so the call cannot live here).
+ */
+export type SeedResolution = 'unlink'
 
 export async function deleteTransaction(
   supabase: GranaSupabaseClient,
   userId: string,
   id: string,
-): Promise<ThinMutationResult<never>> {
+  options: { seedResolution?: SeedResolution; today?: string } = {},
+): Promise<DeleteTransactionResult> {
   const { data: tx } = await supabase
     .from('transactions')
     .select('parent_id, status, type')
@@ -701,6 +732,76 @@ export async function deleteTransaction(
     .eq('transaction_id', id)
     .maybeSingle()
   if (statementPayment) return { ok: false, errorCode: DELETE_GUARD_CODES.cardPayment }
+
+  // A movement that seeded a recurrence cannot be deleted silently: the FK is
+  // ON DELETE RESTRICT (0053), so the DB would reject it anyway. We look it up
+  // first so the shell can name the rule instead of surfacing a raw FK error,
+  // and so the user gets the two real choices (delete the rule, or keep it and
+  // unlink). Only the row being deleted is checked: no cascade descendant can
+  // be a seed (installment children and reimbursements cannot carry a rule).
+  // NOTE: no status filter. RESTRICT blocks the DELETE for ANY row still holding
+  // the link, including a rule already soft-deleted (`status='deleted'` keeps the
+  // row for the audit trail of its confirmed movements). A soft-deleted rule
+  // needs no decision from the user — it is already gone from every list — so it
+  // is unlinked automatically below. Only a LIVE rule is a real choice.
+  const { data: seededRule } = await supabase
+    .from('recurrences')
+    .select(
+      'id, status, description, start_date, end_date, interval_count, interval_unit, max_occurrences, last_generated_date',
+    )
+    .eq('created_from_transaction_id', id)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (seededRule) {
+    const rule = seededRule as unknown as {
+      id: string
+      status: string
+      description: string | null
+      start_date: string
+      end_date: string | null
+      interval_count: number
+      interval_unit: IntervalUnit
+      max_occurrences: number | null
+      last_generated_date: string | null
+    }
+    const today = options.today ?? formatDateISO(getTodayAR())
+    const ruleIsLive = rule.status !== 'deleted'
+
+    if (ruleIsLive && options.seedResolution !== 'unlink') {
+      return {
+        ok: false,
+        errorCode: DELETE_GUARD_CODES.seededRecurrence,
+        seededRecurrence: {
+          id: rule.id,
+          description: rule.description,
+          next_occurrence: getNextExpectedOccurrence(rule, today, rule.last_generated_date),
+        },
+      }
+    }
+
+    // Unlink so the RESTRICT lets the movement go. For a live rule being kept:
+    // if the cursor sits on a FUTURE start_date, the occurrence it claims to
+    // have covered is precisely the movement being deleted — leaving it would
+    // make the rule skip that period entirely (the orphan defect 0053 repairs).
+    const cursorCoversDeletedSeed =
+      ruleIsLive &&
+      rule.last_generated_date != null &&
+      rule.last_generated_date === rule.start_date &&
+      rule.last_generated_date > today
+
+    const { error: unlinkError } = await supabase
+      .from('recurrences')
+      .update(
+        (cursorCoversDeletedSeed
+          ? { created_from_transaction_id: null, last_generated_date: null }
+          : { created_from_transaction_id: null }) as never,
+      )
+      .eq('id', rule.id)
+      .eq('user_id', userId)
+
+    if (unlinkError) return { ok: false, errorCode: unlinkError.code }
+  }
 
   const { error } = await supabase
     .from('transactions')

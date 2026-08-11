@@ -389,6 +389,7 @@
     "salud": "Salud",
     "educacion": "Educación",
     "entretenimiento": "Entretenimiento",
+    "viajes-escapadas": "Viajes / Escapadas",
     "ropa-y-calzado": "Ropa y calzado",
     "hogar": "Hogar",
     "servicios": "Servicios",
@@ -1302,7 +1303,8 @@
       "delete_failed": "Error al eliminar.",
       "recurrence_failed": "Movimiento guardado, pero no se pudo crear la regla recurrente: {detail}",
       "recurrence_unknown_error": "error desconocido",
-      "generic": "Algo salió mal. Intentá de nuevo."
+      "generic": "Algo salió mal. Intentá de nuevo.",
+      "seeded_recurrence": "Este movimiento creó una recurrencia. Resolvé la regla antes de eliminarlo."
     },
     "empty": {
       "title": "Todavía no hay movimientos",
@@ -1487,6 +1489,17 @@
     "new": {
       "title": "Nuevo movimiento",
       "load_error": "No pudimos cargar el formulario. Intentá de nuevo."
+    },
+    "seeded_recurrence": {
+      "title": "Este movimiento creó una recurrencia",
+      "body": "«{rule}» se repite y nació de este movimiento. Elegí qué hacer con la regla antes de eliminarlo.",
+      "body_untitled": "Este movimiento creó una regla que se repite. Elegí qué hacer con ella antes de eliminarlo.",
+      "next_occurrence": "Próxima: {date}",
+      "delete_rule": "Eliminar también la regla",
+      "delete_rule_hint": "Se eliminan la regla y sus propuestas pendientes. Los movimientos ya confirmados se conservan.",
+      "unlink": "Conservar la regla",
+      "unlink_hint": "La regla sigue activa y se desvincula de este movimiento.",
+      "cancel": "Cancelar"
     }
   },
   "recurrences": {
@@ -1660,7 +1673,12 @@
       "empty": "Nada por aquí."
     },
     "created_on": "Creada el {date}",
-    "edit_title": "Editar regla recurrente"
+    "edit_title": "Editar regla recurrente",
+    "duplicate_badge": "Duplicada",
+    "duplicate_hint": "Ya tenés otra regla activa con la misma cuenta, moneda, tipo y monto. Si son gastos distintos, ignorá el aviso.",
+    "duplicate_warning_title": "Ya tenés una regla así",
+    "duplicate_warning_body": "«{rule}» tiene la misma cuenta, moneda, tipo y monto. Podés crearla igual si son gastos distintos.",
+    "duplicate_warning_body_untitled": "Ya tenés una regla activa con la misma cuenta, moneda, tipo y monto. Podés crearla igual si son gastos distintos."
   },
   "subcategories": {
     "supermercado": "Supermercado",
@@ -1679,6 +1697,7 @@
     "cine": "Cine",
     "salidas": "Salidas",
     "juegos": "Juegos",
+    "juntadas": "Juntadas",
     "luz": "Luz",
     "gas": "Gas",
     "internet": "Internet",
@@ -1736,7 +1755,11 @@
     "alquileres-cobrados": "Alquileres cobrados",
     "dolar-mep": "Dólar / MEP",
     "venta": "Venta",
-    "regalo-recibido": "Regalo recibido"
+    "regalo-recibido": "Regalo recibido",
+    "viaje-transporte": "Transporte",
+    "viaje-hospedaje": "Hospedaje",
+    "viaje-comida": "Comida",
+    "viaje-excursiones": "Excursiones"
   },
   "shared": {
     "title": "Compartido",

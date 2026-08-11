@@ -31,6 +31,21 @@ async function currentUserId(supabase: GranaSupabaseClient): Promise<string | nu
   return data?.claims.sub ?? null
 }
 
+/** Full names of the caller's household members (including the caller), by user id.
+ *
+ * Goes through the `get_household_member_profiles` RPC rather than reading
+ * `profiles` directly. RLS has no column granularity, so a policy that let a
+ * member read their co-member's row exposed it whole — email included — and the
+ * allowlist survived only because every call site remembered to enumerate
+ * columns. Since 0055 the allowlist is the function's return signature, so there
+ * is no `select` a caller could widen. */
+async function householdMemberNames(
+  supabase: GranaSupabaseClient,
+): Promise<Map<string, string>> {
+  const { data } = await supabase.rpc('get_household_member_profiles')
+  return new Map((data ?? []).map((p) => [p.id, p.full_name]))
+}
+
 // ── getHousehold ──────────────────────────────────────────────────────────────
 
 /** The current user's active household (members + default split), or null. */
@@ -58,12 +73,7 @@ export async function getHousehold(supabase: GranaSupabaseClient): Promise<House
     .eq('household_id', hh.id)
   const ids = (members ?? []).map((m) => m.user_id)
 
-  // Co-member profiles are readable thanks to the 0024 profile-read policy.
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, full_name')
-    .in('id', ids)
-  const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]))
+  const nameById = await householdMemberNames(supabase)
 
   const defaultSplit = Array.isArray(hh.default_split)
     ? (hh.default_split as { user_id: string; percentage: number }[])
@@ -387,12 +397,8 @@ export async function getPendingSettlements(supabase: GranaSupabaseClient): Prom
     .eq('status', 'pending_receipt')
   if (!data?.length) return []
 
-  const payerIds = [...new Set(data.map((s) => s.payer_id))]
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, full_name')
-    .in('id', payerIds)
-  const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]))
+  // Every payer is a member of the caller's household, so the RPC covers them.
+  const nameById = await householdMemberNames(supabase)
 
   return data.flatMap((s) =>
     isBalanceCurrency(s.currency_code)

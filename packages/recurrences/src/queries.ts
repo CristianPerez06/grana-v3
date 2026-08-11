@@ -10,6 +10,12 @@ import {
   type RecurrenceSuggestion,
   type SuggestionMovement,
 } from '@grana/money-logic'
+import {
+  findDuplicateRules,
+  type DuplicateCandidate,
+  type DuplicateMatch,
+  type ExistingRuleForDuplicateCheck,
+} from './duplicates'
 import type {
   PendingRecurrenceInstance,
   Recurrence,
@@ -52,7 +58,6 @@ function mapRecurrenceSummary(
     // date sits at <= today. See RecurrenceSummary.next_occurrence.
     next_occurrence: getNextExpectedOccurrence(
       {
-        id: recurrence.id,
         start_date: recurrence.start_date,
         end_date: recurrence.end_date,
         interval_count: recurrence.interval_count,
@@ -528,4 +533,45 @@ export async function getTopRecurrenceSuggestion(
         }
       : null,
   }
+}
+
+// ── Reglas duplicadas ─────────────────────────────────────────────────────────
+// Lectura que alimenta el aviso no bloqueante de "ya tenés una regla así". Se
+// consulta ANTES de confirmar el alta, no después: el objetivo es que el usuario
+// no cree el duplicado, no enterarse cuando ya existe. Nunca bloquea (ver la
+// nota sobre falsos positivos en `duplicates.ts`).
+
+export async function getDuplicateRulesFor(
+  supabase: GranaSupabaseClient,
+  candidate: DuplicateCandidate,
+  options: { excludeId?: string } = {},
+): Promise<DuplicateMatch[]> {
+  const { data, error } = await supabase
+    .from('recurrences')
+    .select(
+      'id, status, description, account_id, currency_code, movement_type, amount, start_date, end_date, interval_count, interval_unit, max_occurrences, last_generated_date',
+    )
+    .eq('status', 'active')
+  if (error) throw error
+
+  const today = formatDateISO(getTodayAR())
+  const rules = (data ?? []) as unknown as Array<
+    ExistingRuleForDuplicateCheck & {
+      start_date: string
+      end_date: string | null
+      interval_count: number
+      interval_unit: IntervalUnit
+      max_occurrences: number | null
+      last_generated_date: string | null
+    }
+  >
+
+  return findDuplicateRules(
+    candidate,
+    rules.map((rule) => ({
+      ...rule,
+      next_occurrence: getNextExpectedOccurrence(rule, today, rule.last_generated_date),
+    })),
+    options,
+  )
 }

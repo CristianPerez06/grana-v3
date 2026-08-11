@@ -29,7 +29,11 @@ import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { parseMoneyInput } from '@grana/validation'
 import { formatDateISO, getTodayAR } from '@/lib/date'
-import { createRecurrence } from '@/app/_actions/recurrences'
+import {
+  checkDuplicateRecurrences,
+  createRecurrence,
+} from '@/app/_actions/recurrences'
+import type { DuplicateMatch } from '@grana/recurrences'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 import { getCategoryName, getSubcategoryName } from '@/lib/categories/display'
 
@@ -124,6 +128,10 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories, hou
   const tRoot = useTranslations()
   const [isPending, startTransition] = useTransition()
   const [formError, setFormError] = useState<string | null>(null)
+  // Reglas activas equivalentes a la que se está creando. Se muestran como aviso
+  // y `duplicateAck` deja pasar el siguiente submit: nunca impiden crear.
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[] | null>(null)
+  const [duplicateAck, setDuplicateAck] = useState(false)
 
   const [type, setType] = useState<MovementType>('expense')
   const eligibleAccounts = useMemo(() => eligibleFor(accounts, type), [accounts, type])
@@ -326,6 +334,24 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories, hou
     }
 
     startTransition(async () => {
+      // Aviso de duplicado ANTES de crear: si ya hay una regla equivalente, se
+      // muestra y se corta este submit. El siguiente submit (ya avisado) crea
+      // igual — el aviso informa, no bloquea: dos reglas con la misma cuenta,
+      // moneda, tipo y monto pueden ser dos servicios distintos.
+      if (!duplicateAck) {
+        const matches = await checkDuplicateRecurrences({
+          account_id: accountId,
+          currency_code: currencyCode,
+          movement_type: type,
+          amount: parsedAmount,
+        })
+        if (matches.length > 0) {
+          setDuplicates(matches)
+          setDuplicateAck(true)
+          return
+        }
+      }
+
       const result = await createRecurrence(payload)
       if (!result.ok) {
         const formMsg = 'formError' in result ? result.formError : undefined
@@ -844,6 +870,18 @@ export const CreateRecurrenceModal = ({ open, onClose, accounts, categories, hou
 
         {/* Footer */}
         <footer className="shrink-0 border-t border-border bg-card px-5 py-4 sm:px-7">
+          {duplicates && duplicates.length > 0 && (
+            <div className="mb-3 rounded-[12px] border border-[#E8D9B0] bg-warning-soft px-3.5 py-3">
+              <p className="text-[13px] font-bold text-warning-deep">
+                {tRec('duplicate_warning_title')}
+              </p>
+              <p className="mt-1 text-[12.5px] leading-snug text-text-muted">
+                {duplicates[0].description
+                  ? tRec('duplicate_warning_body', { rule: duplicates[0].description })
+                  : tRec('duplicate_warning_body_untitled')}
+              </p>
+            </div>
+          )}
           {formError && <p className="mb-3 text-sm text-destructive">{formError}</p>}
           <button
             type="submit"

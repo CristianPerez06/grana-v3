@@ -189,23 +189,26 @@ begin
     raise exception 'card_networks: falta amex';
   end if;
 
-  -- categories: exactamente 18 del sistema
+  -- categories: exactamente 20 del sistema
+  -- (17 de la 0006 + Cuidado personal de la 0028 + Financiero-ingresos de la 0036
+  --  + Viajes / Escapadas de la 0054)
   select count(*) into n from categories where user_id is null;
-  if n <> 18 then raise exception 'categories sistema: esperaba 18, encontré %', n; end if;
+  if n <> 20 then raise exception 'categories sistema: esperaba 20, encontré %', n; end if;
 
-  -- categorías de gastos: 13
+  -- categorías de gastos: 14
   select count(*) into n from categories where user_id is null and type = 'expense';
-  if n <> 13 then raise exception 'categories expense: esperaba 13, encontré %', n; end if;
+  if n <> 14 then raise exception 'categories expense: esperaba 14, encontré %', n; end if;
 
-  -- categorías de ingresos: 5
+  -- categorías de ingresos: 6
   select count(*) into n from categories where user_id is null and type = 'income';
-  if n <> 5 then raise exception 'categories income: esperaba 5, encontré %', n; end if;
+  if n <> 6 then raise exception 'categories income: esperaba 6, encontré %', n; end if;
 
-  -- subcategories: exactamente 71 del sistema
+  -- subcategories: exactamente 79 del sistema
+  -- (71 tras la 0028 + intereses-ganados de la 0036 + 2 de la 0040 + 5 de la 0054)
   select count(*) into n from subcategories where user_id is null;
-  if n <> 71 then raise exception 'subcategories sistema: esperaba 71, encontré %', n; end if;
+  if n <> 79 then raise exception 'subcategories sistema: esperaba 79, encontré %', n; end if;
 
-  raise notice '✓ 8.1D — seed data OK (3 currencies, >= 23 institutions, 7 card_networks, 18 categories, 71 subcategories)';
+  raise notice '✓ 8.1D — seed data OK (3 currencies, >= 23 institutions, 7 card_networks, 20 categories, 79 subcategories)';
 end $$;
 
 
@@ -221,7 +224,9 @@ begin
     'comida','transporte','salud','educacion','entretenimiento',
     'ropa-y-calzado','hogar','servicios','cuidado-personal','tecnologia',
     'impuestos','financiero','otros-gastos','sueldo','freelance',
-    'inversiones','otros-ingresos','reintegros-cashback'
+    'inversiones','otros-ingresos','reintegros-cashback',
+    -- 0036 y 0054: faltaban en la lista, así que 8.1E validaba 18 de 20
+    'financiero-ingresos','viajes-escapadas'
   ])
   loop
     if not exists (
@@ -252,7 +257,10 @@ begin
     'salario','aguinaldo','bono',
     'honorarios','proyectos',
     'plazo-fijo','dividendos','alquileres-cobrados','dolar-mep',
-    'venta','regalo-recibido'
+    'venta','regalo-recibido',
+    -- 0036 / 0040 / 0054: faltaban en la lista, así que 8.1E validaba 71 de 79
+    'intereses-ganados','cuota-prestamo','seguro-hogar',
+    'juntadas','viaje-transporte','viaje-hospedaje','viaje-comida','viaje-excursiones'
   ])
   loop
     if not exists (
@@ -263,7 +271,7 @@ begin
     end if;
   end loop;
 
-  raise notice '✓ 8.1E — canonical_names de sistema OK (18 categories, 71 subcategories)';
+  raise notice '✓ 8.1E — canonical_names de sistema OK (20 categories, 79 subcategories)';
 end $$;
 
 
@@ -338,6 +346,61 @@ begin
   end if;
 
   raise notice '✓ 8.1G — los 6 FK category_id/subcategory_id existen y son ON DELETE RESTRICT';
+end $$;
+
+
+-- =============================================================================
+-- 8.1H — INVARIANTE: integridad de las reglas recurrentes (migración 0053).
+--   (a) created_from_transaction_id es ON DELETE RESTRICT: borrar el movimiento
+--       semilla no puede dejar la regla huérfana en silencio, desde ningún
+--       cliente. Antes era SET NULL y por eso existieron reglas huérfanas.
+--   (b) La etiqueta `frequency` no puede contradecir el cronograma real
+--       (interval_count + interval_unit), que es lo que obedece el generador.
+-- =============================================================================
+
+do $$
+declare
+  v_deltype "char";
+  v_desync  integer;
+begin
+  select con.confdeltype into v_deltype
+    from pg_constraint con
+    join pg_attribute att on att.attrelid = con.conrelid and att.attnum = any (con.conkey)
+   where con.contype = 'f'
+     and con.conrelid = 'public.recurrences'::regclass
+     and att.attname = 'created_from_transaction_id'
+     and array_length(con.conkey, 1) = 1;
+
+  if v_deltype is null then
+    raise exception 'FK recurrences.created_from_transaction_id -> transactions no existe';
+  end if;
+  if v_deltype <> 'r' then
+    raise exception 'FK recurrences.created_from_transaction_id debe ser ON DELETE RESTRICT (confdeltype=%)', v_deltype;
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+     where conrelid = 'public.recurrences'::regclass
+       and contype = 'c'
+       and conname = 'chk_recurrences_frequency_matches_interval'
+  ) then
+    raise exception 'CHECK chk_recurrences_frequency_matches_interval no existe en recurrences';
+  end if;
+
+  select count(*) into v_desync
+    from public.recurrences
+   where frequency <> 'custom'
+     and not (
+           (frequency = 'weekly'   and interval_count = 1 and interval_unit = 'week')
+        or (frequency = 'biweekly' and interval_count = 2 and interval_unit = 'week')
+        or (frequency = 'monthly'  and interval_count = 1 and interval_unit = 'month')
+        or (frequency = 'annual'   and interval_count = 1 and interval_unit = 'year')
+     );
+  if v_desync > 0 then
+    raise exception 'recurrences: % filas con frequency incoherente con su intervalo', v_desync;
+  end if;
+
+  raise notice '✓ 8.1H — recurrences: FK semilla RESTRICT + coherencia frequency/intervalo';
 end $$;
 
 
@@ -440,6 +503,118 @@ begin
   end if;
 
   raise notice '✓ 8.2B — RLS bloquea UPDATE/DELETE en categorías de sistema (0 filas afectadas)';
+end $$;
+
+
+-- =============================================================================
+-- 8.2C — COBERTURA RLS: invariante sobre TODA tabla de public (migración 0055)
+--
+-- A diferencia de 8.2, que enumera cinco tablas por nombre, esta sección deriva
+-- el universo de pg_class. Es deliberado: una aserción que enumera solo cubre lo
+-- que alguien se acordó de agregar, y el riesgo real es la tabla 21 — la que se
+-- cree en el dashboard sin RLS y sin que nadie vuelva a leer este archivo.
+--
+-- Acá las migraciones se aplican a mano desde el SQL Editor, sin CLI ni pipeline,
+-- así que esta es la única defensa automatizada contra una tabla mal configurada.
+--
+-- Ver openspec/changes/harden-supabase-anon-boundary/.
+-- =============================================================================
+
+do $$
+declare
+  faltante text;
+  n int;
+begin
+  -- (1) Toda tabla de public tiene RLS habilitado.
+  for faltante in
+    select c.relname
+      from pg_class c
+      join pg_namespace ns on ns.oid = c.relnamespace
+     where ns.nspname = 'public'
+       and c.relkind = 'r'
+       and c.relrowsecurity = false
+     order by c.relname
+  loop
+    raise exception 'COBERTURA RLS: public.% no tiene RLS habilitado', faltante;
+  end loop;
+
+  -- (2) Toda tabla con RLS tiene al menos una policy. RLS habilitado y cero
+  --     policies deniega todo, que es seguro pero casi siempre es un olvido:
+  --     la tabla queda ilegible incluso para su dueño.
+  for faltante in
+    select c.relname
+      from pg_class c
+      join pg_namespace ns on ns.oid = c.relnamespace
+     where ns.nspname = 'public'
+       and c.relkind = 'r'
+       and c.relrowsecurity = true
+       and not exists (
+         select 1 from pg_policies p
+          where p.schemaname = 'public' and p.tablename = c.relname
+       )
+     order by c.relname
+  loop
+    raise exception 'COBERTURA RLS: public.% tiene RLS pero cero policies', faltante;
+  end loop;
+
+  -- (3) El rol anon no conserva privilegios sobre ninguna tabla de public.
+  --     Es la red que hace que (1) deje de ser un punto único de falla: aunque
+  --     alguien cree una tabla sin RLS, sin GRANT no es legible sin sesión.
+  for faltante in
+    select c.relname
+      from pg_class c
+      join pg_namespace ns on ns.oid = c.relnamespace
+     where ns.nspname = 'public'
+       and c.relkind = 'r'
+       and (has_table_privilege('anon', c.oid, 'SELECT')
+         or has_table_privilege('anon', c.oid, 'INSERT')
+         or has_table_privilege('anon', c.oid, 'UPDATE')
+         or has_table_privilege('anon', c.oid, 'DELETE'))
+     order by c.relname
+  loop
+    raise exception 'COBERTURA RLS: anon conserva privilegios sobre public.%', faltante;
+  end loop;
+
+  -- (4) anon tampoco ejecuta ninguna función de public. Ojo: `revoke from public`
+  --     NO alcanza — el default privilege de Supabase le otorga EXECUTE a anon
+  --     DIRECTAMENTE sobre cada función nueva, así que hay que revocarle a anon.
+  --     Se excluyen las funciones de trigger: PostgREST las expone en /rpc/ igual,
+  --     pero devuelven `trigger` y Postgres rechaza invocarlas fuera de un trigger,
+  --     así que su EXECUTE heredado de PUBLIC no habilita nada.
+  for faltante in
+    select p.proname
+      from pg_proc p
+      join pg_namespace ns on ns.oid = p.pronamespace
+     where ns.nspname = 'public'
+       and p.prorettype <> 'pg_catalog.trigger'::regtype
+       and has_function_privilege('anon', p.oid, 'EXECUTE')
+     order by p.proname
+  loop
+    raise exception 'COBERTURA RLS: anon conserva EXECUTE sobre public.%', faltante;
+  end loop;
+
+  -- (5) Y los default privileges no se lo van a devolver en el próximo objeto,
+  --     ni para tablas ni para funciones. Se mira solo el rol que crea los objetos
+  --     de la app (current_user): los defaults de un rol aplican únicamente a lo
+  --     que ESE rol crea, así que un rol interno de Supabase no expone nada nuestro.
+  select count(*) into n
+    from pg_default_acl d
+    join pg_namespace ns on ns.oid = d.defaclnamespace
+    join pg_roles     rol on rol.oid = d.defaclrole
+   where ns.nspname = 'public'
+     and d.defaclobjtype in ('r', 'f')
+     and rol.rolname = current_user
+     and array_to_string(d.defaclacl, ',') like '%anon=%';
+  if n > 0 then
+    raise exception 'COBERTURA RLS: el default de % en public sigue otorgando a anon', current_user;
+  end if;
+
+  select count(*) into n
+    from pg_class c
+    join pg_namespace ns on ns.oid = c.relnamespace
+   where ns.nspname = 'public' and c.relkind = 'r';
+
+  raise notice '✓ 8.2C — cobertura RLS OK en las % tablas de public; anon sin privilegios', n;
 end $$;
 
 
