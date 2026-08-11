@@ -124,6 +124,9 @@ Capabilities that are genuinely single-platform get a prefix: `web-middleware-ro
   - ✓ `feature/add-login-form`, `chore/cleanup-storybook`, `bugfix/race-condition`
   - ✗ `feature/add-login-form-xA43I`, `chore/cleanup-7b3f9`
 - Semantically meaningful suffixes are allowed (they carry meaning, not randomness): `feature/migration-step-2`, `bugfix/race-condition-v2`, `chore/cleanup-rollback`.
+- An issue number MAY be prefixed to the body as `<prefix>/<issue-number>-<descriptive-kebab-case>`. This is the **only** allowed numeric identifier, and it is not arbitrary: `/grana-create-pr` reads it to fill the `🔗 Ticket` section of the PR, which is what drives the `ticket-to-done` workflow after merge. It stays optional — a branch with no issue behind it takes no number.
+  - ✓ `feature/31-movement-form-mobile`, `bugfix/29-usd-negative-balance`
+  - ✗ `feature/movement-form-mobile-31` (trailing → indistinguishable from an arbitrary suffix)
 
 ### Pre-commit check — MANDATORY
 
