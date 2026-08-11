@@ -1,27 +1,26 @@
-# Mueve el ticket de un PR mergeado a la columna "Done" del GitHub Project.
+# Moves the ticket of a merged PR to the "Done" column of the GitHub Project.
 #
-# El ticket se detecta de dos formas (ambas opcionales — si no hay ninguna,
-# el workflow termina sin hacer nada):
+# The ticket is detected two ways (both optional — with neither, the job
+# finishes without doing anything):
 #
-#   1. La sección "🔗 Ticket" del cuerpo del PR (ver PULL_REQUEST_TEMPLATE.md).
-#      Acepta `#26` o la URL completa del issue.
-#   2. Closing keywords en cualquier parte del cuerpo (`Closes #26`, `Fixes #26`).
+#   1. The "🔗 Ticket" section of the PR body (see PULL_REQUEST_TEMPLATE.md).
+#      Accepts `#26` or the full issue URL.
+#   2. Closing keywords anywhere in the body (`Closes #26`, `Fixes #26`).
 #
-# Solo se manejan issues de ESTE repo: un link a un tracker externo se loguea
-# y se ignora, porque no hay nada que mover en el Project.
+# Only issues of THIS repo are handled: a link to an external tracker is
+# logged and skipped, since there is nothing to move on the board.
 #
-# Auth: el GITHUB_TOKEN por defecto NO puede escribir en Projects v2, ni
-# siquiera con `permissions: write-all` — los Projects viven a nivel usuario/org,
-# fuera del scope del repo. Hace falta un PAT en el secret
-# MOVE_PR_IN_REVIEW_TO_DONE:
+# Auth: the default GITHUB_TOKEN CANNOT write to Projects v2, not even with
+# `permissions: write-all` — Projects live at the user/org level, outside the
+# repo's scope. A PAT is required, stored as MOVE_PR_IN_REVIEW_TO_DONE:
 #
 #   1. https://github.com/settings/tokens → "Generate new token (classic)"
-#   2. Scopes: `project` (read+write) y `repo`
-#   3. Guardarlo en el repo como secret `MOVE_PR_IN_REVIEW_TO_DONE`
+#   2. Scopes: `project` (read+write) and `repo`
+#   3. Save it on the repo as secret `MOVE_PR_IN_REVIEW_TO_DONE`
 #      (Settings → Secrets and variables → Actions → New repository secret)
 #
-# Si el secret no existe, el job falla con un mensaje explícito en vez de
-# fallar silenciosamente con un 403 críptico.
+# If the secret is missing, the job fails with an explicit message instead of
+# a cryptic 403 from the GraphQL API.
 
 name: Ticket → Done
 
@@ -29,17 +28,17 @@ on:
   pull_request:
     types: [closed]
 
-# Un PR mergeado se procesa de a uno para evitar dos updates simultáneos
-# sobre el mismo item del Project.
+# Process one merged PR at a time to avoid two concurrent updates against the
+# same Project item.
 concurrency:
   group: ticket-to-done-${{ github.event.pull_request.number }}
   cancel-in-progress: false
 
 jobs:
   move-ticket:
-    name: Mover ticket a Done
-    # Solo corre si el PR se mergeó de verdad. Un PR cerrado sin mergear
-    # deja el ticket donde está.
+    name: Move ticket to Done
+    # Only runs if the PR was actually merged. A PR closed without merging
+    # leaves its ticket untouched.
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions:
@@ -47,27 +46,27 @@ jobs:
       issues: read
       pull-requests: read
     env:
-      # El Project es user-owned. Si algún día se mueve a una org, solo
-      # cambia PROJECT_OWNER — el script resuelve user u org dinámicamente.
+      # The Project is user-owned. If it ever moves to an org, only
+      # PROJECT_OWNER changes — the script resolves user or org dynamically.
       PROJECT_OWNER: CristianPerez06
       PROJECT_NUMBER: '1'
-      # Nombres, no IDs opacos: el script resuelve los IDs por nombre en
-      # cada corrida, así renombrar/reordenar columnas no rompe el workflow.
+      # Names, not opaque IDs: the script resolves IDs by name on every run,
+      # so renaming or reordering columns doesn't silently break the workflow.
       STATUS_FIELD: Status
       TARGET_STATUS: Done
     steps:
-      # El contexto `secrets` no está disponible en un `if:` de step, así que
-      # el chequeo va por env var dentro del shell.
-      - name: Verificar que MOVE_PR_IN_REVIEW_TO_DONE existe
+      # The `secrets` context is not available in a step-level `if:`, so the
+      # check goes through an env var inside the shell.
+      - name: Check that MOVE_PR_IN_REVIEW_TO_DONE exists
         env:
           PROJECTS_TOKEN: ${{ secrets.MOVE_PR_IN_REVIEW_TO_DONE }}
         run: |
           if [ -z "$PROJECTS_TOKEN" ]; then
-            echo "::error::Falta el secret MOVE_PR_IN_REVIEW_TO_DONE. El GITHUB_TOKEN por defecto no puede escribir en Projects v2. Creá un PAT classic con scope 'project' + 'repo' y guardalo como MOVE_PR_IN_REVIEW_TO_DONE en Settings → Secrets and variables → Actions."
+            echo "::error::Missing secret MOVE_PR_IN_REVIEW_TO_DONE. The default GITHUB_TOKEN cannot write to Projects v2. Create a classic PAT with scopes 'project' + 'repo' and save it as MOVE_PR_IN_REVIEW_TO_DONE under Settings → Secrets and variables → Actions."
             exit 1
           fi
 
-      - name: Mover el ticket a "${{ env.TARGET_STATUS }}"
+      - name: Move the ticket to "${{ env.TARGET_STATUS }}"
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.MOVE_PR_IN_REVIEW_TO_DONE }}
@@ -77,18 +76,18 @@ jobs:
             const { owner, repo } = context.repo
 
             // ---------------------------------------------------------------
-            // 1. Extraer referencias a issues del cuerpo del PR
+            // 1. Extract issue references from the PR body
             // ---------------------------------------------------------------
 
-            // Los comentarios HTML del template contienen texto de ejemplo y
-            // la palabra "Ticket". Sin esto, la plantilla vacía haría match.
+            // The template's HTML comments contain sample text and the word
+            // "Ticket". Without stripping them, an unfilled template matches.
             const body = (context.payload.pull_request.body || '').replace(/<!--[\s\S]*?-->/g, '')
 
             const issueNumbers = new Set()
             const foreignLinks = []
 
             const collectFrom = (text) => {
-              // URLs completas de issues: solo las de este repo son accionables.
+              // Full issue URLs: only the ones from this repo are actionable.
               for (const m of text.matchAll(/https?:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/issues\/(\d+)/g)) {
                 const [, mOwner, mRepo, num] = m
                 if (mOwner.toLowerCase() === owner.toLowerCase() && mRepo.toLowerCase() === repo.toLowerCase()) {
@@ -97,15 +96,15 @@ jobs:
                   foreignLinks.push(m[0])
                 }
               }
-              // Referencias cortas `#26`.
+              // Short `#26` references.
               for (const m of text.matchAll(/(?:^|[^\w/])#(\d+)\b/gm)) {
                 issueNumbers.add(Number(m[1]))
               }
             }
 
-            // (a) Sección "Ticket" del template: desde el heading que contiene
-            //     "Ticket" hasta el siguiente heading. Acotar el scope evita
-            //     que un `#N` suelto en la descripción se tome por un ticket.
+            // (a) The template's "Ticket" section: from the heading containing
+            //     "Ticket" up to the next heading. Narrowing the scope keeps a
+            //     stray `#N` in the description from being read as a ticket.
             const lines = body.split('\n')
             const isHeading = (line) => /^#{2,4}\s/.test(line)
             let inTicketSection = false
@@ -119,29 +118,29 @@ jobs:
             }
             if (ticketSection.length) collectFrom(ticketSection.join('\n'))
 
-            // (b) Closing keywords en cualquier parte del cuerpo. GitHub ya
-            //     cierra el issue con esto; acá además lo movemos a Done.
+            // (b) Closing keywords anywhere in the body. GitHub already closes
+            //     the issue on merge; here we also move it to Done.
             for (const m of body.matchAll(/\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+(?:https?:\/\/github\.com\/[\w.-]+\/[\w.-]+\/issues\/|#)(\d+)\b/gi)) {
               issueNumbers.add(Number(m[1]))
             }
 
             for (const link of foreignLinks) {
-              core.info(`Ticket externo ignorado (no es un issue de ${owner}/${repo}): ${link}`)
+              core.info(`Skipped external ticket (not an issue of ${owner}/${repo}): ${link}`)
             }
 
             if (issueNumbers.size === 0) {
-              core.info('El PR no referencia ningún issue de este repo. Nada que mover.')
+              core.info('The PR references no issue of this repo. Nothing to move.')
               await core.summary
                 .addHeading('Ticket → Done', 3)
-                .addRaw('El PR no incluye ticket. No se movió nada.')
+                .addRaw('The PR carries no ticket. Nothing was moved.')
                 .write()
               return
             }
 
-            core.info(`Issues detectados: ${[...issueNumbers].map((n) => `#${n}`).join(', ')}`)
+            core.info(`Detected issues: ${[...issueNumbers].map((n) => `#${n}`).join(', ')}`)
 
             // ---------------------------------------------------------------
-            // 2. Resolver el Project, el campo Status y la opción destino
+            // 2. Resolve the Project, the Status field and the target option
             // ---------------------------------------------------------------
 
             const projectQuery = (root) => `
@@ -173,18 +172,19 @@ jobs:
                   break
                 }
               } catch (err) {
-                // Un owner que no es user devuelve error, no null. Probamos org.
-                core.debug(`Lookup como ${root} falló: ${err.message}`)
+                // An owner that isn't a user errors out rather than returning
+                // null, so fall through and retry as an organization.
+                core.debug(`Lookup as ${root} failed: ${err.message}`)
               }
             }
 
             if (!project) {
-              core.setFailed(`No se encontró el Project #${projectNumber} de ${PROJECT_OWNER}. Verificá PROJECT_OWNER/PROJECT_NUMBER y que MOVE_PR_IN_REVIEW_TO_DONE tenga scope 'project'.`)
+              core.setFailed(`Project #${projectNumber} of ${PROJECT_OWNER} not found. Check PROJECT_OWNER/PROJECT_NUMBER and that MOVE_PR_IN_REVIEW_TO_DONE carries the 'project' scope.`)
               return
             }
 
             if (!project.field) {
-              core.setFailed(`El Project "${project.title}" no tiene un campo single-select llamado "${STATUS_FIELD}".`)
+              core.setFailed(`Project "${project.title}" has no single-select field named "${STATUS_FIELD}".`)
               return
             }
 
@@ -193,12 +193,12 @@ jobs:
             )
             if (!targetOption) {
               const available = project.field.options.map((o) => o.name).join(', ')
-              core.setFailed(`El campo "${STATUS_FIELD}" no tiene la opción "${TARGET_STATUS}". Opciones: ${available}`)
+              core.setFailed(`Field "${STATUS_FIELD}" has no option "${TARGET_STATUS}". Available: ${available}`)
               return
             }
 
             // ---------------------------------------------------------------
-            // 3. Mover cada issue
+            // 3. Move each issue
             // ---------------------------------------------------------------
 
             const results = []
@@ -222,16 +222,16 @@ jobs:
 
                 const issue = repository?.issue
                 if (!issue) {
-                  // `#123` puede referirse a un PR, no a un issue. No es un error.
-                  results.push({ number, status: '⏭️', detail: 'No es un issue (probablemente un PR). Ignorado.' })
+                  // `#123` may point at a PR rather than an issue. Not an error.
+                  results.push({ number, status: '⏭️', detail: 'Not an issue (likely a PR). Skipped.' })
                   continue
                 }
 
                 let item = issue.projectItems.nodes.find((n) => n.project.id === project.id)
 
-                // Un ticket referenciado que no está en el board igual se
-                // agrega: el objetivo es que quede en Done, no fallar por un
-                // paso manual que alguien olvidó.
+                // A referenced ticket that isn't on the board still gets added:
+                // the goal is for it to end up in Done, not to fail because
+                // someone forgot a manual step.
                 if (!item) {
                   const added = await github.graphql(
                     `mutation($project: ID!, $content: ID!) {
@@ -242,7 +242,7 @@ jobs:
                     { project: project.id, content: issue.id },
                   )
                   item = { id: added.addProjectV2ItemById.item.id }
-                  core.info(`#${number} no estaba en el Project — agregado.`)
+                  core.info(`#${number} was not on the Project — added.`)
                 }
 
                 await github.graphql(
@@ -267,27 +267,27 @@ jobs:
                 )
 
                 results.push({ number, status: '✅', detail: `"${issue.title}" → ${TARGET_STATUS}` })
-                core.info(`#${number} movido a ${TARGET_STATUS}.`)
+                core.info(`#${number} moved to ${TARGET_STATUS}.`)
               } catch (err) {
-                // Un ticket que falla no debe impedir que se muevan los otros.
+                // One failing ticket must not stop the others from moving.
                 results.push({ number, status: '❌', detail: err.message })
-                core.error(`Error moviendo #${number}: ${err.message}`)
+                core.error(`Failed to move #${number}: ${err.message}`)
               }
             }
 
             await core.summary
               .addHeading('Ticket → Done', 3)
-              .addRaw(`Project: <strong>${project.title}</strong> · Estado destino: <strong>${TARGET_STATUS}</strong>`)
+              .addRaw(`Project: <strong>${project.title}</strong> · Target status: <strong>${TARGET_STATUS}</strong>`)
               .addTable([
                 [
                   { data: 'Issue', header: true },
                   { data: '', header: true },
-                  { data: 'Detalle', header: true },
+                  { data: 'Detail', header: true },
                 ],
                 ...results.map((r) => [`#${r.number}`, r.status, r.detail]),
               ])
               .write()
 
             if (results.some((r) => r.status === '❌')) {
-              core.setFailed('Al menos un ticket no se pudo mover. Ver la tabla de arriba.')
+              core.setFailed('At least one ticket could not be moved. See the table above.')
             }
