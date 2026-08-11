@@ -23,6 +23,21 @@ En modo create y en los tipos `gasto` e `ingreso`, el formulario SHALL ofrecer l
 - **THEN** no se muestran categorías recientes
 - **AND** el flujo usa el selector completo
 
+### Requirement: La descripción es opcional y acelera la clasificación cuando se usa
+
+La descripción de un movimiento SHALL seguir siendo opcional: nunca bloquea el guardado ni es requisito para clasificar. Cuando el usuario la completa con un texto ya visto en su historial, el sistema MAY prefiltrar la clasificación (categoría y subcategoría) a partir de ese historial, como acelerador y no como imposición.
+
+#### Scenario: Guardar sin descripción
+
+- **WHEN** el usuario registra un gasto con monto y categoría pero sin descripción
+- **THEN** el movimiento se guarda correctamente
+
+#### Scenario: Una descripción conocida acelera la clasificación
+
+- **WHEN** el usuario tipea una descripción que coincide con un movimiento anterior sin haber elegido categoría
+- **THEN** el sistema ofrece la categoría (y subcategoría) usada históricamente para ese texto como sugerencia de un tap
+- **AND** el usuario puede aceptarla o ignorarla sin que sea obligatoria
+
 ### Requirement: Registrar un gasto simple no supera un presupuesto de interacciones
 
 El camino de registro de un gasto simple (cuenta cash/bank, sin secciones avanzadas) SHALL completarse con un máximo de tres interacciones discretas además de tipear el monto: abrir el formulario, elegir la categoría y guardar. La cuenta no agrega interacciones cuando hay una sola elegible o cuando la preselección acierta.
