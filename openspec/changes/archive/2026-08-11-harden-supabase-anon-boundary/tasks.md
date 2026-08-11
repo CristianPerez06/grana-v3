@@ -38,8 +38,8 @@
 - [x] 5.1 Verificar que el delta de `profiles` refleja lo implementado, en particular que el scenario "Un usuario autenticado no puede leer profiles de otros" ahora sí describe el sistema real (antes contradecía a la 0024)
 - [x] 5.2 Verificar que el delta de `shared-data-access` refleja el consumo vía RPC
 - [ ] 5.3 Verificación manual del módulo Compartido con un hogar de 2 miembros: el nombre del conviviente sigue apareciendo en deuda, cuenta corriente y liquidaciones pendientes
-- [ ] 5.4 Confirmar a mano que el email de un conviviente ya no es legible: con sesión de `U1`, un `select('*')` sobre el profile de `U2` devuelve cero filas
-- [ ] 5.5 Dejar la rama lista (commit squasheado, título `type(scope): subject` sin body) y **parar** — el merge a main lo hace el usuario
+- [x] 5.4 Confirmar a mano que el email de un conviviente ya no es legible: con sesión de `U1`, un `select('*')` sobre el profile de `U2` devuelve cero filas — verificado con impersonación vía `set_config`/`set local role authenticated`: 1 fila propia, 0 del conviviente, RPC devolviendo los 2 miembros
+- [x] 5.5 Dejar la rama lista (commit squasheado, título `type(scope): subject` sin body) y **parar** — el merge a main lo hace el usuario. Mergeado en #23; la migración se renumeró a `0055` al rebasar sobre #21, que ocupó el `0054`
 
 ## Seguimiento — fuera de alcance de este change
 
