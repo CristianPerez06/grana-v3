@@ -11,6 +11,8 @@ El monorepo SHALL exponer las lecturas del dominio Compartido (hogar, deuda, pro
 
 Las funciones de lectura SHALL cubrir al menos: `getHousehold`, `getHouseholdDebt`, `getHouseholdOutlook`, `getCurrentAccount`, `getPendingSettlements`, `getSharedAccruedMovements`, `getMovementSharedInfo`, `getSharedExpenses`.
 
+Cuando una lectura necesite el nombre de un conviviente, SHALL obtenerlo invocando el RPC de profiles de convivientes y NO SHALL leer la tabla `profiles` directamente. El paquete NO SHALL depender de enumerar columnas en el `select` para evitar exponer datos ajenos: el allowlist es responsabilidad de la base, y la capa de datos se limita a consumirlo.
+
 #### Scenario: Una lectura recibe el cliente y no lo construye
 
 - **WHEN** un desarrollador invoca cualquier lectura de `@grana/shared`
@@ -23,6 +25,17 @@ Las funciones de lectura SHALL cubrir al menos: `getHousehold`, `getHouseholdDeb
 - **THEN** la derivación usa `@grana/money-logic`
 - **AND** el resultado no lee un saldo persistido ni reimplementa la matemática de reparto
 
+#### Scenario: El nombre del conviviente se resuelve vía RPC
+
+- **WHEN** una lectura de `@grana/shared` necesita el `full_name` de un conviviente
+- **THEN** lo obtiene invocando el RPC de profiles de convivientes
+- **AND** no existe en el paquete ninguna consulta directa a la tabla `profiles` para leer filas ajenas
+
+#### Scenario: La lectura sigue funcionando tras mover el allowlist a la base
+
+- **WHEN** un usuario abre el módulo Compartido teniendo un conviviente en su hogar
+- **THEN** la UI muestra el nombre del conviviente igual que antes del cambio
+- **AND** ningún flujo del módulo cambia de comportamiento visible
 ### Requirement: El dominio Compartido expone núcleos de mutación agnósticos de plataforma
 
 `@grana/shared` SHALL exponer núcleos de mutación (validación de input + llamada a la RPC atómica correspondiente) para las operaciones de escritura del dominio: crear hogar, generar invitación, unirse con código, actualizar configuración (nombre / split por defecto), salir del hogar, registrar liquidación, asignar cuenta receptora y revertir/cancelar liquidación. Cada núcleo SHALL devolver un resultado tipado de éxito o error de campo/formulario, y NO SHALL contener acoplamiento de plataforma (ni `revalidatePath`, ni invalidación de react-query, ni redirecciones).
