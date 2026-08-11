@@ -15,6 +15,7 @@ import {
   getCardPeriodsWithStatus,
   getOrCreatePeriodForDate,
   CardPurchasePredatesHistoryError,
+  CardConsumoInPaidPeriodError,
 } from './internal/card-periods'
 import { insertDeclaredReimbursement } from './internal/declared-reimbursement'
 
@@ -111,6 +112,16 @@ export async function registerInstallments(
           formError: `La fecha de la compra es anterior al primer resumen de la tarjeta (${formatHistoryDate(e.oldestStartDate)}). Grana registra consumos desde ese resumen en adelante.`,
         }
       }
+      // A cuota whose date falls inside an already-paid statement is rejected at
+      // the assignment step (nothing inserted yet). getOrCreatePeriodForDate never
+      // returns a paid period id, so the old post-loop paid-period guard is gone.
+      if (e instanceof CardConsumoInPaidPeriodError) {
+        return {
+          ok: false,
+          formError:
+            'Alguna cuota entra en un resumen que ya pagaste, donde no se pueden sumar consumos. Cambiá la fecha de la compra para que las cuotas caigan en resúmenes abiertos.',
+        }
+      }
       return {
         ok: false,
         formError: `No se pudo asignar un período para la cuota del ${txDate}.`,
@@ -118,16 +129,10 @@ export async function registerInstallments(
     }
   }
 
+  // Fetched only for each child's due_date below. The paid-period guard now lives
+  // in getOrCreatePeriodForDate (it rejects a paid-covered date in the loop above),
+  // so no post-loop paid-period check is needed here.
   const periods = await getCardPeriodsWithStatus(supabase, data.account_id)
-  const paidPeriodIds = new Set(periods.filter((p) => p.has_payment).map((p) => p.id))
-  for (const pid of periodIds) {
-    if (paidPeriodIds.has(pid)) {
-      return {
-        ok: false,
-        formError: 'Una o más cuotas caerían en un período ya pagado.',
-      }
-    }
-  }
 
   const { data: parent, error: parentError } = await supabase
     .from('transactions')
