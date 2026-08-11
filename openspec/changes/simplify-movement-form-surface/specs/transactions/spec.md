@@ -1,5 +1,43 @@
 ## ADDED Requirements
 
+### Requirement: El alta ofrece las categorías recientes como selección de un tap
+
+En modo create y en los tipos `gasto` e `ingreso`, el formulario SHALL ofrecer las categorías recientes del usuario (del tipo activo) como opciones de selección directa: un solo gesto las asigna, sin abrir el selector completo ni entrar al segundo nivel de subcategorías. El selector completo con drill de subcategorías SHALL seguir disponible como camino secundario. Elegir una categoría SHALL ser suficiente para guardar; la subcategoría es un refinamiento opcional.
+
+#### Scenario: Clasificar con una categoría reciente en un tap
+
+- **WHEN** el usuario tiene historial y abre el alta en `gasto`
+- **THEN** se muestran sus categorías recientes como opciones de selección directa
+- **AND** un solo gesto sobre una de ellas la asigna como categoría del movimiento
+- **AND** el movimiento puede guardarse sin elegir subcategoría
+
+#### Scenario: El selector completo sigue disponible
+
+- **WHEN** la categoría buscada no está entre las recientes
+- **THEN** el usuario abre el selector completo ("Ver todas") con todas las categorías y sus subcategorías
+- **AND** puede clasificar con o sin subcategoría
+
+#### Scenario: Sin historial no hay selección rápida
+
+- **WHEN** el usuario no tiene movimientos previos del tipo activo (primer movimiento)
+- **THEN** no se muestran categorías recientes
+- **AND** el flujo usa el selector completo
+
+### Requirement: Registrar un gasto simple no supera un presupuesto de interacciones
+
+El camino de registro de un gasto simple (cuenta cash/bank, sin secciones avanzadas) SHALL completarse con un máximo de tres interacciones discretas además de tipear el monto: abrir el formulario, elegir la categoría y guardar. La cuenta no agrega interacciones cuando hay una sola elegible o cuando la preselección acierta.
+
+#### Scenario: Gasto simple dentro del presupuesto de taps
+
+- **WHEN** un usuario con una sola cuenta elegible abre el alta, tipea el monto, elige una categoría reciente y guarda
+- **THEN** el gasto queda registrado
+- **AND** no se requirió abrir el selector de cuenta, el drill de subcategoría ni ninguna sección avanzada
+
+#### Scenario: El monto no requiere un tap para enfocarse
+
+- **WHEN** el usuario abre el formulario de alta
+- **THEN** el campo de monto queda enfocado y listo para tipear sin un gesto adicional
+
 ### Requirement: El selector de tipo prioriza los movimientos de uso diario
 
 El formulario de alta de movimientos SHALL presentar `gasto`, `ingreso` y `transferencia` como opciones primarias, y `ajuste` y `cambio de moneda` como opciones secundarias alcanzables mediante una affordance explícita (ej. "Otros"). La partición es fija (deriva de la naturaleza del tipo, no del usuario) y no altera ninguna regla contable ni la disponibilidad de los tipos secundarios.

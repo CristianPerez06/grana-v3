@@ -4,10 +4,29 @@ El alta de movimientos vive en un hook cross-platform (`@grana/movement-form`) q
 
 El principio rector ya está escrito en `AGENTS.md`: *"perfil único (sin modos de usuario); la profundidad sigue a los datos, no a un flag guardado. Un usuario que mantiene todo en la `Billetera` por defecto obtiene la experiencia simple; crear más cuentas hace aparecer la dimensión cuenta."* La lista de cuentas ya cumple esto. El formulario todavía no.
 
+### Auditoría de taps (estado actual en `main`)
+
+Tarea "cargar un gasto simple" en cuenta cash/bank:
+
+| Paso | Taps | Mecánica actual |
+|------|------|-----------------|
+| Abrir drawer (FAB) | 1 | — |
+| Monto | 0 | `amountRef.current?.focus()` (`movement-form.tsx:446`) autoenfoca al abrir |
+| Tipo | 0 | `initialTab = 'expense'` es el default |
+| Cuenta (2+) | 2 | `FieldRow` → `Popover` de cuentas (abrir + elegir) |
+| Categoría (con subcategorías) | 3 | `FieldRow` → `Popover`; una categoría "drillable" entra al segundo nivel (`setCatDrill`) y recién ahí se elige sub o "toda la categoría" |
+| Fecha | 0 | default hoy AR |
+| Guardar | 1 | — |
+
+Total ~7 taps; mejor caso 4 (una sola cuenta + categoría sin subcategorías). El chip de sugerencia por descripción (`CategorySuggestionChip`) ya existe y baja categoría a 1 tap **cuando** el usuario tipeó una descripción con historial — no es el camino por defecto.
+
+**Wins ya ganados (no re-descubrir):** autofocus del monto, default de fecha hoy, moneda por cuenta, y el chip de sugerencia por descripción. Este change ataca lo que queda: categoría y cuenta.
+
 ## Goals / Non-Goals
 
 **Goals:**
 
+- **Bajar el gasto simple a ≤3 taps** (abrir · categoría de un tap · guardar), con monto tipeado y cuenta autoresuelta — desde los ~7 actuales.
 - Reducir las decisiones visibles en el camino del gasto simple sin quitar ninguna capacidad.
 - Derivar la simplicidad de los datos del usuario (cantidad de cuentas, contexto de origen), nunca de un flag ni de un modo.
 - Mantener el hook I/O-free: cualquier dato nuevo (última cuenta usada) lo inyecta el caller.
@@ -21,6 +40,18 @@ El principio rector ya está escrito en `AGENTS.md`: *"perfil único (sin modos 
 - No se cambia el modo edición: el tipo sigue inmutable y todos los campos editables siguen visibles.
 
 ## Decisions
+
+### D0 — Categoría de un tap con chips de recientes (el recorte principal)
+
+El alta muestra las categorías recientes/frecuentes del usuario como chips de selección directa arriba del campo de categoría. Un tap sobre un chip clasifica y no abre nada. El `FieldRow` de categoría pasa a ser "Ver todas" y conserva el picker completo con drill para el resto.
+
+**Rationale.** El drill obligatorio de subcategoría es el sink más caro (3 taps) en la tarea más común. La gente repite pocas categorías: mostrar sus recientes como chips convierte 3 taps en 1 para la mayoría de los gastos. Es exactamente el patrón de grilla de íconos de Mobills, pero alimentado por el historial del usuario en vez de una grilla fija.
+
+**Subcategoría deja de ser obligatoria en el camino rápido.** Elegir la categoría (chip o tile) alcanza para guardar; la subcategoría queda como refinamiento opcional desde "Ver todas". Esto ya es válido en el dominio (`subcategory_id` es opcional en `createExpense`), así que no cambia ninguna regla — solo deja de forzar el segundo nivel.
+
+**El hook queda I/O-free.** El caller inyecta `recentCategoryIds` (una query barata: categorías distintas de los últimos N movimientos del usuario, del tipo activo). El hook deriva `quickCategories` intersecando con el catálogo activo del tab. Si el usuario no tiene historial (primer movimiento), no hay chips y el flujo cae al picker completo — coherente con el tour de `guidance` para el primer movimiento.
+
+**Decisión de PO pendiente:** ¿cuántos chips (3, 5)? ¿recientes puros u ordenados por frecuencia? Arranco con "hasta 5, por recencia".
 
 ### D1 — Tipos primarios vs secundarios, no un flag
 
@@ -63,5 +94,6 @@ Reintegro, compartido, repetir y cuotas ya arrancan colapsadas. Fijarlo como req
 
 ## Open Questions
 
+- D0: cantidad de chips (3 vs 5) y orden (recencia vs frecuencia). Arranco con 5 por recencia.
 - ¿"Otros" como pestaña extra dentro del `Segmented`, o como un link/acción aparte debajo? (UI, no contrato — se resuelve en implementación.)
 - D3: adoptar o no "última cuenta usada".
