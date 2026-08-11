@@ -119,7 +119,7 @@ export async function registerInstallments(
         return {
           ok: false,
           formError:
-            'Una o más cuotas caen dentro de un resumen ya pagado. Elegí otra fecha para la compra.',
+            'Alguna cuota entra en un resumen que ya pagaste, donde no se pueden sumar consumos. Cambiá la fecha de la compra para que las cuotas caigan en resúmenes abiertos.',
         }
       }
       return {

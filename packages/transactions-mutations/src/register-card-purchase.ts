@@ -91,7 +91,7 @@ export async function registerCardPurchase(
       return {
         ok: false,
         formError:
-          'No podés registrar un consumo con fecha dentro de un resumen ya pagado. Elegí una fecha en un resumen abierto.',
+          'Esa fecha entra en un resumen que ya pagaste, y a un resumen pagado no se le pueden sumar consumos. Elegí una fecha dentro de un resumen abierto.',
       }
     }
     return { ok: false, formError: 'No se pudo asignar un período a esta fecha.' }
