@@ -499,6 +499,118 @@ end $$;
 
 
 -- =============================================================================
+-- 8.2C — COBERTURA RLS: invariante sobre TODA tabla de public (migración 0055)
+--
+-- A diferencia de 8.2, que enumera cinco tablas por nombre, esta sección deriva
+-- el universo de pg_class. Es deliberado: una aserción que enumera solo cubre lo
+-- que alguien se acordó de agregar, y el riesgo real es la tabla 21 — la que se
+-- cree en el dashboard sin RLS y sin que nadie vuelva a leer este archivo.
+--
+-- Acá las migraciones se aplican a mano desde el SQL Editor, sin CLI ni pipeline,
+-- así que esta es la única defensa automatizada contra una tabla mal configurada.
+--
+-- Ver openspec/changes/harden-supabase-anon-boundary/.
+-- =============================================================================
+
+do $$
+declare
+  faltante text;
+  n int;
+begin
+  -- (1) Toda tabla de public tiene RLS habilitado.
+  for faltante in
+    select c.relname
+      from pg_class c
+      join pg_namespace ns on ns.oid = c.relnamespace
+     where ns.nspname = 'public'
+       and c.relkind = 'r'
+       and c.relrowsecurity = false
+     order by c.relname
+  loop
+    raise exception 'COBERTURA RLS: public.% no tiene RLS habilitado', faltante;
+  end loop;
+
+  -- (2) Toda tabla con RLS tiene al menos una policy. RLS habilitado y cero
+  --     policies deniega todo, que es seguro pero casi siempre es un olvido:
+  --     la tabla queda ilegible incluso para su dueño.
+  for faltante in
+    select c.relname
+      from pg_class c
+      join pg_namespace ns on ns.oid = c.relnamespace
+     where ns.nspname = 'public'
+       and c.relkind = 'r'
+       and c.relrowsecurity = true
+       and not exists (
+         select 1 from pg_policies p
+          where p.schemaname = 'public' and p.tablename = c.relname
+       )
+     order by c.relname
+  loop
+    raise exception 'COBERTURA RLS: public.% tiene RLS pero cero policies', faltante;
+  end loop;
+
+  -- (3) El rol anon no conserva privilegios sobre ninguna tabla de public.
+  --     Es la red que hace que (1) deje de ser un punto único de falla: aunque
+  --     alguien cree una tabla sin RLS, sin GRANT no es legible sin sesión.
+  for faltante in
+    select c.relname
+      from pg_class c
+      join pg_namespace ns on ns.oid = c.relnamespace
+     where ns.nspname = 'public'
+       and c.relkind = 'r'
+       and (has_table_privilege('anon', c.oid, 'SELECT')
+         or has_table_privilege('anon', c.oid, 'INSERT')
+         or has_table_privilege('anon', c.oid, 'UPDATE')
+         or has_table_privilege('anon', c.oid, 'DELETE'))
+     order by c.relname
+  loop
+    raise exception 'COBERTURA RLS: anon conserva privilegios sobre public.%', faltante;
+  end loop;
+
+  -- (4) anon tampoco ejecuta ninguna función de public. Ojo: `revoke from public`
+  --     NO alcanza — el default privilege de Supabase le otorga EXECUTE a anon
+  --     DIRECTAMENTE sobre cada función nueva, así que hay que revocarle a anon.
+  --     Se excluyen las funciones de trigger: PostgREST las expone en /rpc/ igual,
+  --     pero devuelven `trigger` y Postgres rechaza invocarlas fuera de un trigger,
+  --     así que su EXECUTE heredado de PUBLIC no habilita nada.
+  for faltante in
+    select p.proname
+      from pg_proc p
+      join pg_namespace ns on ns.oid = p.pronamespace
+     where ns.nspname = 'public'
+       and p.prorettype <> 'pg_catalog.trigger'::regtype
+       and has_function_privilege('anon', p.oid, 'EXECUTE')
+     order by p.proname
+  loop
+    raise exception 'COBERTURA RLS: anon conserva EXECUTE sobre public.%', faltante;
+  end loop;
+
+  -- (5) Y los default privileges no se lo van a devolver en el próximo objeto,
+  --     ni para tablas ni para funciones. Se mira solo el rol que crea los objetos
+  --     de la app (current_user): los defaults de un rol aplican únicamente a lo
+  --     que ESE rol crea, así que un rol interno de Supabase no expone nada nuestro.
+  select count(*) into n
+    from pg_default_acl d
+    join pg_namespace ns on ns.oid = d.defaclnamespace
+    join pg_roles     rol on rol.oid = d.defaclrole
+   where ns.nspname = 'public'
+     and d.defaclobjtype in ('r', 'f')
+     and rol.rolname = current_user
+     and array_to_string(d.defaclacl, ',') like '%anon=%';
+  if n > 0 then
+    raise exception 'COBERTURA RLS: el default de % en public sigue otorgando a anon', current_user;
+  end if;
+
+  select count(*) into n
+    from pg_class c
+    join pg_namespace ns on ns.oid = c.relnamespace
+   where ns.nspname = 'public' and c.relkind = 'r';
+
+  raise notice '✓ 8.2C — cobertura RLS OK en las % tablas de public; anon sin privilegios', n;
+end $$;
+
+
+-- =============================================================================
 -- 8.3 — CRUD DE CATEGORÍAS PROPIAS
 -- Inserta una categoría de usuario, la actualiza y la archiva, verifica
 -- que todo funciona, y limpia los datos de prueba.
