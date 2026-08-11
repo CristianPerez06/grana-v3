@@ -189,23 +189,26 @@ begin
     raise exception 'card_networks: falta amex';
   end if;
 
-  -- categories: exactamente 18 del sistema
+  -- categories: exactamente 20 del sistema
+  -- (17 de la 0006 + Cuidado personal de la 0028 + Financiero-ingresos de la 0036
+  --  + Viajes / Escapadas de la 0054)
   select count(*) into n from categories where user_id is null;
-  if n <> 18 then raise exception 'categories sistema: esperaba 18, encontré %', n; end if;
+  if n <> 20 then raise exception 'categories sistema: esperaba 20, encontré %', n; end if;
 
-  -- categorías de gastos: 13
+  -- categorías de gastos: 14
   select count(*) into n from categories where user_id is null and type = 'expense';
-  if n <> 13 then raise exception 'categories expense: esperaba 13, encontré %', n; end if;
+  if n <> 14 then raise exception 'categories expense: esperaba 14, encontré %', n; end if;
 
-  -- categorías de ingresos: 5
+  -- categorías de ingresos: 6
   select count(*) into n from categories where user_id is null and type = 'income';
-  if n <> 5 then raise exception 'categories income: esperaba 5, encontré %', n; end if;
+  if n <> 6 then raise exception 'categories income: esperaba 6, encontré %', n; end if;
 
-  -- subcategories: exactamente 71 del sistema
+  -- subcategories: exactamente 79 del sistema
+  -- (71 tras la 0028 + intereses-ganados de la 0036 + 2 de la 0040 + 5 de la 0054)
   select count(*) into n from subcategories where user_id is null;
-  if n <> 71 then raise exception 'subcategories sistema: esperaba 71, encontré %', n; end if;
+  if n <> 79 then raise exception 'subcategories sistema: esperaba 79, encontré %', n; end if;
 
-  raise notice '✓ 8.1D — seed data OK (3 currencies, >= 23 institutions, 7 card_networks, 18 categories, 71 subcategories)';
+  raise notice '✓ 8.1D — seed data OK (3 currencies, >= 23 institutions, 7 card_networks, 20 categories, 79 subcategories)';
 end $$;
 
 
@@ -221,7 +224,9 @@ begin
     'comida','transporte','salud','educacion','entretenimiento',
     'ropa-y-calzado','hogar','servicios','cuidado-personal','tecnologia',
     'impuestos','financiero','otros-gastos','sueldo','freelance',
-    'inversiones','otros-ingresos','reintegros-cashback'
+    'inversiones','otros-ingresos','reintegros-cashback',
+    -- 0036 y 0054: faltaban en la lista, así que 8.1E validaba 18 de 20
+    'financiero-ingresos','viajes-escapadas'
   ])
   loop
     if not exists (
@@ -252,7 +257,10 @@ begin
     'salario','aguinaldo','bono',
     'honorarios','proyectos',
     'plazo-fijo','dividendos','alquileres-cobrados','dolar-mep',
-    'venta','regalo-recibido'
+    'venta','regalo-recibido',
+    -- 0036 / 0040 / 0054: faltaban en la lista, así que 8.1E validaba 71 de 79
+    'intereses-ganados','cuota-prestamo','seguro-hogar',
+    'juntadas','viaje-transporte','viaje-hospedaje','viaje-comida','viaje-excursiones'
   ])
   loop
     if not exists (
@@ -263,7 +271,7 @@ begin
     end if;
   end loop;
 
-  raise notice '✓ 8.1E — canonical_names de sistema OK (18 categories, 71 subcategories)';
+  raise notice '✓ 8.1E — canonical_names de sistema OK (20 categories, 79 subcategories)';
 end $$;
 
 
