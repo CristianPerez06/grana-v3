@@ -63,11 +63,13 @@ import {
   graftArchivedTaxonomy,
   selectableSubcategories,
   useMovementForm,
+  PRIMARY_TABS,
   type MovementEditContext as PackageMovementEditContext,
   type MovementFormAccount as PackageMovementFormAccount,
   type Mutators,
   type Tab,
 } from '@grana/movement-form'
+import { useIsMobile } from '@/lib/use-is-mobile'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
@@ -258,6 +260,11 @@ export const MovementForm = ({
   // UI-only state owned by the form (popover open, drill, refs, autofocus).
   // All form domain state + cascades + submit dispatcher live in the hook.
   const isDrawer = variant === 'drawer'
+  // Mobile-web layout gate. Desktop keeps the current rendering untouched
+  // (`isMobile ? <mobile> : <desktop>`); only the phone viewport gets the
+  // redesign. Behavior gating (e.g. category drill) needs this JS flag — CSS
+  // alone can't branch onClick handlers.
+  const isMobile = useIsMobile()
   const [activePopover, setActivePopover] = useState<string | null>(null)
   const [catDrill, setCatDrill] = useState<string | null>(null)
   // Reveals the free-form installments input. Also implicitly active when the
@@ -387,6 +394,9 @@ export const MovementForm = ({
     setSplitFirstPct,
     isInstallments,
     eligibleAccounts,
+    showAccountSelector,
+    secondaryTabs,
+    isSecondaryTab,
     selectedAccount,
     cashBankAccounts,
     otherAccounts,
@@ -769,20 +779,78 @@ export const MovementForm = ({
   )
 
   // ── Type selector (Segmented). Disabled in edit: type is immutable. ─────────
-  const typeSelector = (
-    <div className="flex flex-col gap-2">
-      <Segmented
-        ariaLabel={t('labels.type')}
-        value={tab}
-        onValueChange={(v) => setTab(v as Tab)}
-        options={(['expense', 'income', 'transfer', 'adjustment', 'exchange'] as Tab[]).map((k) => ({
-          value: k,
-          label: TAB_LABELS[k],
-          disabled: isEdit,
-        }))}
-      />
-    </div>
-  )
+  const typeSelector =
+    isMobile && !isEdit ? (
+      // Mobile-web: two primaries + "Otros" (secondary types behind a popover).
+      <div
+        className="flex gap-1 rounded-[11px] border border-border p-1"
+        style={{ backgroundColor: FIELD_BG }}
+      >
+        {PRIMARY_TABS.map((k) => {
+          const active = tab === k
+          return (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setTab(k)}
+              className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-bold transition-colors ${
+                active ? 'bg-card text-text shadow-sm' : 'text-text-muted'
+              }`}
+            >
+              {TAB_LABELS[k]}
+            </button>
+          )
+        })}
+        {secondaryTabs.length > 0 && (
+          <Popover
+            modal={isDrawer}
+            open={activePopover === 'otros'}
+            onOpenChange={(o) => setActivePopover(o ? 'otros' : null)}
+            trigger={
+              <button
+                type="button"
+                className={`inline-flex flex-1 items-center justify-center gap-1 rounded-[9px] px-3 py-2 text-sm font-bold transition-colors ${
+                  isSecondaryTab ? 'bg-card text-text shadow-sm' : 'text-text-muted'
+                }`}
+              >
+                {isSecondaryTab ? TAB_LABELS[tab] : t('form.other_types')}
+                <ChevronDown className="size-3" aria-hidden />
+              </button>
+            }
+          >
+            <div className="flex flex-col gap-0.5">
+              {secondaryTabs.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => {
+                    setTab(k)
+                    setActivePopover(null)
+                  }}
+                  className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-sm font-medium text-text transition-colors hover:bg-page"
+                >
+                  {TAB_LABELS[k]}
+                  {tab === k && <Check className="ml-auto size-4 text-emerald" aria-hidden />}
+                </button>
+              ))}
+            </div>
+          </Popover>
+        )}
+      </div>
+    ) : (
+      <div className="flex flex-col gap-2">
+        <Segmented
+          ariaLabel={t('labels.type')}
+          value={tab}
+          onValueChange={(v) => setTab(v as Tab)}
+          options={(['expense', 'income', 'transfer', 'adjustment', 'exchange'] as Tab[]).map((k) => ({
+            value: k,
+            label: TAB_LABELS[k],
+            disabled: isEdit,
+          }))}
+        />
+      </div>
+    )
 
   // ── Amount hero ─────────────────────────────────────────────────────────────
   const showAmountHero = isEdit ? editable?.amount : true
@@ -910,6 +978,70 @@ export const MovementForm = ({
     />
   )
 
+  // Source account row (create) — extracted so the mobile and desktop branches
+  // of `fieldGroup` reuse the exact same JSX in a different order.
+  const accountRow = (
+    <div className="relative" data-tour="account">
+      <Popover
+        modal={isDrawer}
+        open={activePopover === 'account'}
+        onOpenChange={(o) => setActivePopover(o ? 'account' : null)}
+        trigger={
+          <FieldRow
+            icon={isCredit ? <CreditCard className="size-[18px]" /> : <Wallet className="size-[18px]" />}
+            label={accountLabel}
+            value={<AccountValue account={selectedAccount} />}
+            hint={isCredit && tab === 'expense' ? t('drawer.credit_hint') : undefined}
+          />
+        }
+      >
+        {renderAccountPicker(eligibleAccounts, accountId, (id) => {
+          setAccountId(id)
+          setActivePopover(null)
+        })}
+      </Popover>
+      {tab === 'transfer' && (
+        <button
+          type="button"
+          onClick={handleSwap}
+          aria-label={t('drawer.swap')}
+          className="absolute bottom-0 right-4 z-10 flex size-8 translate-y-1/2 items-center justify-center rounded-full bg-navy text-white shadow-md transition-transform hover:rotate-180"
+        >
+          <ArrowLeftRight className="size-4" aria-hidden />
+        </button>
+      )}
+    </div>
+  )
+
+  const destinationRow =
+    tab === 'transfer' || tab === 'exchange' ? (
+      <Popover
+        modal={isDrawer}
+        open={activePopover === 'destination'}
+        onOpenChange={(o) => setActivePopover(o ? 'destination' : null)}
+        trigger={
+          <FieldRow
+            icon={<Wallet className="size-[18px]" />}
+            label={t('drawer.account_toward')}
+            value={<AccountValue account={tab === 'transfer' ? destinationAccount : exchangeDestAccount} />}
+          />
+        }
+      >
+        {tab === 'transfer'
+          ? renderAccountPicker(otherAccounts, destinationAccountId, (id) => {
+              setDestinationAccountId(id)
+              setActivePopover(null)
+            })
+          : renderAccountPicker(cashBank, destinationAccountId, (id) => {
+              setDestinationAccountId(id)
+              setActivePopover(null)
+            })}
+      </Popover>
+    ) : null
+
+  const categoryRowWrapped =
+    tab === 'income' || tab === 'expense' ? <div data-tour="category">{categoryRow}</div> : null
+
   const fieldGroup = (
     <div className="overflow-hidden rounded-[15px] border border-border bg-card [&>*+*]:border-t [&>*+*]:border-[#F1F3F6]">
       {isEdit ? (
@@ -954,72 +1086,20 @@ export const MovementForm = ({
           {editable?.category && categoryRow}
           {editable?.date && dateRow}
         </>
+      ) : isMobile ? (
+        // Mobile-web: category first (it's the primary decision and drives the
+        // account); the account row is hidden when a single account is eligible.
+        <>
+          {categoryRowWrapped}
+          {(showAccountSelector || tab === 'transfer' || tab === 'exchange') && accountRow}
+          {destinationRow}
+          {dateRow}
+        </>
       ) : (
         <>
-          {/* Source account (+ swap for transfer) */}
-          <div className="relative" data-tour="account">
-            <Popover
-              modal={isDrawer}
-              open={activePopover === 'account'}
-              onOpenChange={(o) => setActivePopover(o ? 'account' : null)}
-              trigger={
-                <FieldRow
-                  icon={isCredit ? <CreditCard className="size-[18px]" /> : <Wallet className="size-[18px]" />}
-                  label={accountLabel}
-                  value={<AccountValue account={selectedAccount} />}
-                  hint={isCredit && tab === 'expense' ? t('drawer.credit_hint') : undefined}
-                />
-              }
-            >
-              {renderAccountPicker(eligibleAccounts, accountId, (id) => {
-                setAccountId(id)
-                setActivePopover(null)
-              })}
-            </Popover>
-            {tab === 'transfer' && (
-              <button
-                type="button"
-                onClick={handleSwap}
-                aria-label={t('drawer.swap')}
-                className="absolute bottom-0 right-4 z-10 flex size-8 translate-y-1/2 items-center justify-center rounded-full bg-navy text-white shadow-md transition-transform hover:rotate-180"
-              >
-                <ArrowLeftRight className="size-4" aria-hidden />
-              </button>
-            )}
-          </div>
-
-          {/* Destination (transfer / exchange) */}
-          {(tab === 'transfer' || tab === 'exchange') && (
-            <Popover
-              modal={isDrawer}
-              open={activePopover === 'destination'}
-              onOpenChange={(o) => setActivePopover(o ? 'destination' : null)}
-              trigger={
-                <FieldRow
-                  icon={<Wallet className="size-[18px]" />}
-                  label={t('drawer.account_toward')}
-                  value={<AccountValue account={tab === 'transfer' ? destinationAccount : exchangeDestAccount} />}
-                />
-              }
-            >
-              {tab === 'transfer'
-                ? renderAccountPicker(otherAccounts, destinationAccountId, (id) => {
-                    setDestinationAccountId(id)
-                    setActivePopover(null)
-                  })
-                : renderAccountPicker(cashBank, destinationAccountId, (id) => {
-                    setDestinationAccountId(id)
-                    setActivePopover(null)
-                  })}
-            </Popover>
-          )}
-
-          {/* Category (income / expense) */}
-          {(tab === 'income' || tab === 'expense') && (
-            <div data-tour="category">{categoryRow}</div>
-          )}
-
-          {/* Date (always) */}
+          {accountRow}
+          {destinationRow}
+          {categoryRowWrapped}
           {dateRow}
         </>
       )}
