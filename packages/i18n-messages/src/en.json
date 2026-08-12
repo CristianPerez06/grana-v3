@@ -1468,6 +1468,7 @@
     },
     "form": {
       "type_label": "Movement type",
+      "other_types": "Other",
       "amount_label": "Amount",
       "currency_label": "Currency",
       "account_label": "Account",
@@ -1477,6 +1478,7 @@
       "description_placeholder": "Optional",
       "suggestion_apply": "Use suggestion: {category}",
       "category_label": "Category",
+      "category_drill": "See subcategories of {category}",
       "negative_warning": "This leaves the available balance negative ({amount}).",
       "shared_toggle": "Share expense",
       "split_label": "How to split",

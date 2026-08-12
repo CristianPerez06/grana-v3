@@ -1,16 +1,17 @@
 import { useMemo, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
+import { ChevronDown } from 'lucide-react-native'
 import { getTodayAR } from '@grana/money-logic'
 import { Money, parseMoneyInput } from '@grana/validation'
 import {
   useMovementForm,
+  PRIMARY_TABS,
   type CategoryWithSubcategories,
   type Frequency,
   type Household,
   type IntervalUnit,
   type MovementEditContext,
   type MovementFormAccount,
-  type Tab,
 } from '@grana/movement-form'
 import { Label } from '../ui/Label'
 import { Input } from '../ui/Input'
@@ -21,17 +22,17 @@ import { Switch } from '../ui/Switch'
 import { FormError } from '../ui/FormError'
 import { Spinner } from '../ui/Spinner'
 import { AccountSelectField, CategorySelectField } from './form-pickers'
+import { SelectSheet } from '../ui/SelectSheet'
+import { SheetRow } from '../ui/SelectField'
 import { colors } from '../../lib/colors'
 import { useT } from '../../lib/locale-context'
 import { createMovementMutators } from '../../lib/transactions/mutators'
 import { invalidateAfterMovementMutation } from '../../lib/transactions/invalidate'
 import { useQueryClient } from '@tanstack/react-query'
 
-// The five tabs of the unified form. Rendered as a two-row wrapping pill group
-// (not the shared `Segmented`): five `flex-1` segments would squeeze
-// "Transferencia" into two/three lines on a narrow phone. The hook still gates
-// what each tab shows (credit only in Gasto, etc.).
-const TABS: Tab[] = ['expense', 'income', 'transfer', 'adjustment', 'exchange']
+// Tabs: only Gasto/Ingreso are primary; the rest live behind "Otros" (design
+// D1). `PRIMARY_TABS` comes from the hook; `form.secondaryTabs` are the ones
+// eligible from the user's accounts.
 
 // Recurrence frequency chips + custom-interval units, mirror of the web form.
 const FREQUENCIES: Frequency[] = ['weekly', 'biweekly', 'monthly', 'annual', 'custom']
@@ -97,6 +98,8 @@ export function MovementForm({
 
   // "Otras" keeps the stepper open even when the typed value lands on a preset.
   const [customInstallments, setCustomInstallments] = useState(false)
+  // "Otros" sheet: reveals the eligible secondary types (transfer/ajuste/cambio).
+  const [otrosOpen, setOtrosOpen] = useState(false)
 
   // Edit mode: the type selector is hidden and each field is gated by
   // `editableFields` (immutable ones render as read-only context rows). Mirror of
@@ -122,8 +125,15 @@ export function MovementForm({
   // Currency is immutable post-creation — only the create flow lets it switch.
   const showCurrencySeg = !isEdit && form.currencyOptions.length > 1
   // Source account: immutable context in edit, EXCEPT a statement payment whose
-  // debit account can move (`editable.account`).
-  const showSourceAccount = !isEdit || !!editable?.account
+  // debit account can move (`editable.account`). In create, hide the selector
+  // when there is a single eligible account (D2) — but transfer/exchange always
+  // show it (they need to pick among ≥2 accounts by their own semantics).
+  const singleAccountHides = form.tab !== 'transfer' && form.tab !== 'exchange'
+  const showSourceAccount = isEdit
+    ? !!editable?.account
+    : singleAccountHides
+      ? form.showAccountSelector
+      : true
   // Transfer/exchange destination account: immutable in edit (context row).
   const showDestinationAccount = !isEdit
 
@@ -245,9 +255,9 @@ export function MovementForm({
         <View
           accessibilityRole="radiogroup"
           accessibilityLabel={t('transactions.form.type_label')}
-          className="flex-row flex-wrap gap-1.5 rounded-xl bg-border-soft p-1"
+          className="flex-row gap-1.5 rounded-xl bg-border-soft p-1"
         >
-          {TABS.map((tab) => {
+          {PRIMARY_TABS.map((tab) => {
             const active = form.tab === tab
             return (
               <Pressable
@@ -255,17 +265,55 @@ export function MovementForm({
                 onPress={() => form.setTab(tab)}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
-                className={`rounded-lg px-3.5 py-1.5 ${active ? 'bg-card' : ''}`}
+                className={`flex-1 items-center rounded-lg px-3.5 py-1.5 ${active ? 'bg-card' : ''}`}
               >
-                <Text
-                  className={`text-sm font-bold ${active ? 'text-text' : 'text-text-muted'}`}
-                >
+                <Text className={`text-sm font-bold ${active ? 'text-text' : 'text-text-muted'}`}>
                   {t(`transactions.types.${tab}`)}
                 </Text>
               </Pressable>
             )
           })}
+          {form.secondaryTabs.length > 0 && (
+            <Pressable
+              onPress={() => setOtrosOpen(true)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: form.isSecondaryTab }}
+              className={`flex-1 flex-row items-center justify-center gap-1 rounded-lg px-3 py-1.5 ${
+                form.isSecondaryTab ? 'bg-card' : ''
+              }`}
+            >
+              <Text
+                className={`text-sm font-bold ${form.isSecondaryTab ? 'text-text' : 'text-text-muted'}`}
+              >
+                {form.isSecondaryTab
+                  ? t(`transactions.types.${form.tab}`)
+                  : t('transactions.form.other_types')}
+              </Text>
+              <ChevronDown size={13} color={form.isSecondaryTab ? colors.text : colors.textMuted} />
+            </Pressable>
+          )}
         </View>
+      )}
+
+      {/* "Otros" sheet: eligible secondary types */}
+      {!isEdit && (
+        <SelectSheet
+          visible={otrosOpen}
+          onClose={() => setOtrosOpen(false)}
+          title={t('transactions.form.other_types')}
+          items={form.secondaryTabs}
+          keyExtractor={(tab) => tab}
+          renderRow={(tab) => (
+            <SheetRow
+              primary={t(`transactions.types.${tab}`)}
+              selected={form.tab === tab}
+              onPress={() => {
+                form.setTab(tab)
+                setOtrosOpen(false)
+              }}
+            />
+          )}
+        />
       )}
 
       {/* Read-only context rows (edit): immutable fields as label/value with a

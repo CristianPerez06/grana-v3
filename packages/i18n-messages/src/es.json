@@ -1468,6 +1468,7 @@
     },
     "form": {
       "type_label": "Tipo de movimiento",
+      "other_types": "Otros",
       "amount_label": "Monto",
       "currency_label": "Moneda",
       "account_label": "Cuenta",
@@ -1477,6 +1478,7 @@
       "description_placeholder": "Opcional",
       "suggestion_apply": "Usar sugerencia: {category}",
       "category_label": "Categoría",
+      "category_drill": "Ver subcategorías de {category}",
       "negative_warning": "Esta operación deja el disponible en negativo ({amount}).",
       "shared_toggle": "Compartir gasto",
       "split_label": "Cómo se divide",

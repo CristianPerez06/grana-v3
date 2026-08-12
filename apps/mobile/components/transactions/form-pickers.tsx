@@ -165,23 +165,33 @@ export function CategorySelectField({
             // Only selectable subcategories make a category drillable: a grafted
             // archived one is this movement's current value, not an option.
             const drillable = selectableSubcategories(item).length > 0
+            // No forced drill: tapping the row assigns the bare category; the
+            // chevron (its own Pressable — RN routes the touch to the child)
+            // drills into subcategories for whoever wants to refine.
             return (
               <SheetRow
                 primary={item.name}
                 secondary={
                   item.is_active === false ? t('transactions.drawer.archived') : undefined
                 }
-                selected={!drillable && categoryId === item.id}
+                selected={categoryId === item.id && !subcategoryId}
                 trailing={
-                  drillable ? <ChevronRight size={18} color={colors.textSoft} /> : undefined
+                  drillable ? (
+                    <Pressable
+                      onPress={() => setDrillId(item.id)}
+                      hitSlop={12}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('transactions.form.category_drill', {
+                        category: item.name,
+                      })}
+                    >
+                      <ChevronRight size={18} color={colors.textSoft} />
+                    </Pressable>
+                  ) : undefined
                 }
                 onPress={() => {
-                  if (drillable) {
-                    setDrillId(item.id)
-                  } else {
-                    onPick(item.id, '')
-                    close()
-                  }
+                  onPick(item.id, '')
+                  close()
                 }}
               />
             )
