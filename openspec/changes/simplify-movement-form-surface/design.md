@@ -79,21 +79,15 @@ El alta muestra, arriba del campo de categoría, las **clasificaciones más frec
 
 **Rationale.** El sink más caro (3 taps) es el drill obligatorio de subcategoría en la tarea más común. La gente repite pocas hojas: mostrarlas como chips convierte 3 taps en 1 para la mayoría, y la granularidad de subcategoría viaja **dentro** del chip (no se infiere en silencio) — así entra en este change sin una "memoria de subcategoría" aparte ni riesgo de ensuciar el breakdown.
 
-### D1 — Tercer tipo dinámico, derivado de datos (reemplaza la partición estática)
+### D1 — Tabs: Gasto · Ingreso · Otros (partición estática y mínima)
 
-> **Alcance:** la partición **por elegibilidad** (gasto/ingreso anclados + un tercer slot secundario elegible, "Otros" solo si hay secundario elegible, ajuste siempre en Otros) se queda en este change — usa datos que ya existen. El **ranking por frecuencia** del tercer slot (más su cadencia/desempate/cold-start) → **#31**. En este change, con transfer y cambio ambos elegibles, el tercer slot toma un default estable (transferencia); #31 lo vuelve "el más usado".
+> **Cerrado con el PO en el pase de diseño (reemplaza la versión anterior).** Se descarta el "tercer slot dinámico". Las tabs primarias son **solo dos** — Gasto e Ingreso —, fijas. Todo el resto (Transferencia, Ajuste, Cambio) vive en **"Otros"**. Esto **elimina el ítem de tab dinámico de #31** (ya no hay tercer slot que rankear): más simple, más predecible, y sin queries nuevas.
 
-La versión anterior congelaba la partición (primarios fijos = gasto/ingreso/transferencia; secundarios = ajuste/cambio). Se reemplaza por una **derivada de los datos del usuario**, que es más fiel al principio "la profundidad sigue a los datos, no a un flag":
+- **Gasto e Ingreso** son las únicas primarias, en posición fija (gasto es el default). Son los verbos diarios que usa todo el mundo.
+- **"Otros"** es una affordance de un tap que abre una hoja con **Transferencia, Ajuste y Cambio de moneda**, cada uno gateado por su elegibilidad (Transferencia requiere ≥2 cuentas propias; Cambio requiere capacidad bimoneda; Ajuste está siempre disponible). "Otros" se muestra siempre que haya ≥1 secundario elegible — en la práctica siempre, porque Ajuste lo está.
+- La partición es **estática** (deriva de la naturaleza del tipo, no del usuario ni de un flag): vive como constante del hook. No hay ranking, ni cadencia, ni cold-start que resolver.
 
-- **Gasto e Ingreso quedan anclados** y en posición fija (los usa todo el mundo; gasto es el default).
-- **El tercer lugar primario es dinámico:** el más usado **entre los elegibles** de {Transferencia, Cambio}. El otro cae en "Otros".
-- **Ajuste siempre en "Otros".** Corrige un saldo desviado: es mantenimiento, no un verbo diario. Nunca compite por el slot primario.
-- **Elegibilidad primero.** Transferencia requiere ≥2 cuentas propias; Cambio requiere capacidad bimoneda (una cuenta ARS+USD, o dos cuentas de monedas distintas). Un usuario con una sola Billetera ARS **no ve tercer slot ni "Otros"**: solo Gasto/Ingreso. Es el estado más simple, caído de los datos (misma lógica que ocultar la cuenta).
-- **"Otros" aparece solo si hay ≥1 secundario elegible**, y en posición fija, para que los verbos "escondidos" tengan una casa estable a un tap.
-- **Predictibilidad (el costo, y sus mitigaciones):** solo se mueve el tercer chip; Gasto/Ingreso nunca cambian de lugar; se recalcula en **cadencia lenta** (por sesión/día, no en vivo mientras se carga) para que no titile.
-- **Cold-start:** sin secundarios elegibles → sin tercer slot; empate con ambos elegibles y sin historial → default **Transferencia** (es lo de hoy; se autocorrige a Cambio con el uso, y el costo de errar es un tap de "Otros" hasta que el historial manda).
-
-No cambia nada contable: los cinco tipos siguen existiendo y funcionando; esto solo gobierna cuáles se muestran como primarios vs detrás de "Otros".
+No cambia nada contable: los cinco tipos siguen existiendo y funcionando; esto solo gobierna cuáles se muestran como primarias (2) vs detrás de "Otros". La presentación visual (header compacto, monto centrado, categorías sin borde, íconos de línea, avatares con color de marca, selector de cuenta por familia Débito/Crédito que escala, avanzadas symbol-forward) está en **`docs/design/movement-form/README.md`**.
 
 ### D2 — Ocultar la cuenta se deriva de la elegibilidad por tipo Y moneda
 
@@ -161,6 +155,17 @@ Reintegro, compartir y repetir dejan de ser tres toggles gordos siempre visibles
 - **Chips a la vista, sin envoltorio "Más opciones" (decisión de PO).** Se eligió la fila slim siempre visible (0 tap extra para activar, misma cuenta que hoy) por sobre colapsar todo detrás de "Más opciones" (+1 tap). Reclama casi el mismo espacio —una fila flaca vs tres gordas— y mantiene el CTA arriba del fold.
 - **Cuotas NO está en esta fila.** Es parte de la **forma de pago**, no un add-on: sigue apareciendo pegada al bloque de cuenta cuando la cuenta es tarjeta (chips [1,3,6,12] + "Otras" en ARS; pago único en USD). Como la memoria categoría→cuenta (D3) puede setear una tarjeta, cuotas aparece ahí, coherente.
 - Refuerza el invariante de D4 (nada de esto en el camino del gasto simple). Presentación-only; mismos gates; en web gateado por breakpoint (el desktop conserva el `togglesGroup` actual).
+
+### D10 — Presentación del selector de cuenta: familia Débito/Crédito que escala (nueva)
+
+Refina la presentación de D2 (no su regla). El eje del selector es la **familia Débito/Crédito**, y su forma escala con la cantidad de cuentas — "la profundidad sigue a los datos". Elegir la familia Crédito revela las cuotas (que van pegadas a la cuenta, D9/C3).
+
+- **1 cuenta elegible** → sin selector (implícita, D2).
+- **Billetera + 1 tarjeta** → un **toggle Débito/Crédito** ("¿Cómo pagás?"): el toggle *es* la cuenta.
+- **Hasta ~3 cuentas + 3 tarjetas** → **toggle de familia + chips** de la familia activa.
+- **Muchas (3+ cuentas, 4+ tarjetas)** → **drilldown**: dos secciones plegables (Débito / Crédito). Con memoria (Fase 2, #31), default "cuenta habitual" (0 taps) + "Cambiar".
+
+Los **avatares usan el color de marca de la institución** (`resolveAccountAvatar`), no colores arbitrarios. Se reusa `@grana/ui` (Segmented, Switch, SelectSheet, chips) — nada nuevo. Detalle visual completo en `docs/design/movement-form/README.md`.
 
 ## Risks / Trade-offs
 

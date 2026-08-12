@@ -35,32 +35,27 @@ La descripción de un movimiento SHALL seguir siendo opcional: nunca bloquea el 
 - **WHEN** el usuario registra un gasto con monto y categoría pero sin descripción
 - **THEN** el movimiento se guarda correctamente
 
-### Requirement: El selector de tipo prioriza los movimientos de uso diario por elegibilidad
+### Requirement: El selector de tipo ofrece dos primarias y "Otros"
 
-El formulario de alta SHALL presentar `gasto` e `ingreso` como opciones primarias fijas. El tercer lugar primario SHALL ofrecer un tipo secundario elegible entre `transferencia` y `cambio de moneda`; los tipos secundarios restantes SHALL quedar tras una affordance explícita ("Otros"). `ajuste` SHALL ser siempre secundario y nunca ocupar el lugar primario. La affordance "Otros" SHALL aparecer solo cuando existe al menos un tipo secundario elegible. La elegibilidad depende de los datos del usuario (`transferencia` requiere dos o más cuentas propias; `cambio de moneda` requiere capacidad bimoneda), de modo que un usuario sin secundarios elegibles ve solo `gasto` e `ingreso`. La priorización no altera ninguna regla contable ni la disponibilidad de los tipos.
+El formulario de alta SHALL presentar `gasto` e `ingreso` como las únicas opciones primarias fijas. Los demás tipos —`transferencia`, `ajuste` y `cambio de moneda`— SHALL quedar tras una affordance explícita ("Otros") que los ofrece gateados por su elegibilidad (`transferencia` requiere dos o más cuentas propias; `cambio de moneda` requiere capacidad bimoneda; `ajuste` está siempre disponible). La affordance "Otros" SHALL mostrarse siempre que exista al menos un tipo secundario elegible. La partición es fija y no altera ninguna regla contable ni la disponibilidad de los tipos.
 
-#### Scenario: Gasto e ingreso son siempre primarios
-
-- **WHEN** el usuario abre el formulario de alta en modo create
-- **THEN** el selector de tipo muestra `gasto` e `ingreso` como opciones primarias fijas
-
-#### Scenario: Ajuste nunca ocupa el lugar primario
+#### Scenario: Solo gasto e ingreso son primarios
 
 - **WHEN** el usuario abre el formulario de alta en modo create
-- **THEN** `ajuste` no ocupa el tercer lugar primario
-- **AND** queda accesible mediante la affordance "Otros"
+- **THEN** el selector de tipo muestra `gasto` e `ingreso` como opciones primarias
+- **AND** ni `transferencia`, ni `ajuste`, ni `cambio de moneda` ocupan un lugar primario
 
-#### Scenario: Sin secundarios elegibles no hay affordance
+#### Scenario: Los tipos secundarios están en "Otros"
 
-- **WHEN** el usuario tiene una sola cuenta en una sola moneda (ni `transferencia` ni `cambio` son elegibles)
-- **THEN** el selector de tipo muestra solo `gasto` e `ingreso`
-- **AND** no se muestra la affordance "Otros"
+- **WHEN** el usuario activa la affordance "Otros"
+- **THEN** puede elegir `transferencia` (si tiene dos o más cuentas), `ajuste` o `cambio de moneda` (si tiene capacidad bimoneda)
+- **AND** el flujo de ese tipo funciona igual que antes de este cambio
 
 #### Scenario: En edición el tipo no cambia
 
 - **WHEN** el formulario se abre en modo edición de un movimiento existente
 - **THEN** el tipo del movimiento se muestra como contexto inmutable
-- **AND** la priorización primario/secundario no ofrece cambiarlo
+- **AND** la partición primario/"Otros" no ofrece cambiarlo
 
 ### Requirement: El formulario oculta la dimensión cuenta cuando hay una sola cuenta elegible para la moneda activa
 

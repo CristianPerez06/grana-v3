@@ -1,4 +1,6 @@
-> **Alcance:** solo superficie. Las funcionalidades data-driven (chips de clasificación frecuente, memoria categoría→cuenta / última usada, ranking del tercer tab por frecuencia, sugerencia→cuenta) están en el epic **#31** y NO se implementan acá.
+> **Alcance:** solo superficie. Las funcionalidades data-driven (chips de clasificación frecuente, memoria categoría→cuenta / última usada, sugerencia→cuenta) están en el epic **#31** y NO se implementan acá.
+>
+> **Diseño visual:** `docs/design/movement-form/README.md` (mockups + decisiones de UI cerradas con el PO).
 
 ## 1. OpenSpec y contrato
 
@@ -8,7 +10,7 @@
 
 ## 2. Hook `@grana/movement-form`
 
-- [ ] 2.1 Exponer la partición de tipos por elegibilidad: `PRIMARY_TABS` ancla `expense`/`income`; tercer slot = secundario elegible (default estable `transfer` si ambos elegibles — el ranking por uso es #31); `adjustment` siempre secundario; derivado `secondaryTabs` y flag de si el tab activo es secundario. "Otros" solo si hay ≥1 secundario elegible.
+- [ ] 2.1 Exponer la partición de tipos: `PRIMARY_TABS = [expense, income]` (fijo); `transfer`/`adjustment`/`exchange` en "Otros", gateados por elegibilidad. Derivado `secondaryTabs` (elegibles) y flag de si el tab activo es secundario. Sin ranking dinámico.
 - [ ] 2.2 Exponer `showAccountSelector` derivado de "una sola cuenta elegible para el tipo **y la moneda** activos".
 - [ ] 2.3 Preselección de `accountId` en create con datos existentes: contexto (`preselectAccountId`) → única elegible → primera elegible (`firstFor`). (La memoria categoría→cuenta y "última usada" son #31.)
 - [ ] 2.4 Verificar que cambiar de tab/moneda recomputa `eligibleAccounts`, `showAccountSelector`, la partición de tipos y la elegibilidad de la cuenta seleccionada sin romper las cascadas existentes.
@@ -17,8 +19,8 @@
 
 - [ ] 3.1 Orden invertido: el bloque de categoría queda **arriba** del de cuenta.
 - [ ] 3.2 En el selector de categoría eliminar el drill obligatorio: tocar el nombre de la categoría la asigna a secas; un chevron aparte expande las subcategorías. Confirmar que se guarda sin subcategoría.
-- [ ] 3.3 Partición de tipos por elegibilidad + affordance "Otros" (solo si hay secundario elegible) que revela `transfer`/`exchange`/`adjustment` según corresponda.
-- [ ] 3.4 Condicionar el bloque de cuenta a `showAccountSelector`; cuando aparece, chips de cuenta inline (pocas) o fila+popover con secciones crédito/débito (muchas).
+- [ ] 3.3 Tabs Gasto · Ingreso · Otros; "Otros" abre una hoja con `transfer`/`ajuste`/`cambio` gateados por elegibilidad.
+- [ ] 3.4 Selector de cuenta según `docs/design/movement-form/README.md` (D10): oculto con 1 elegible; toggle Débito/Crédito (1 tarjeta); familia + chips (pocas); drilldown (muchas). Avatares con color de marca (`resolveAccountAvatar`). Reusar `@grana/ui` (Segmented, Switch, SelectSheet). Elegir Crédito revela cuotas.
 - [ ] 3.5 Monto recortado (padding + número ~34–38px) y filas secundarias (fecha, descripción) a una sola línea, sin recuadro de icono ni label en mayúsculas. Solo bajo breakpoint móvil; desktop intacto.
 - [ ] 3.6 Capa 1: reemplazar el `togglesGroup` por una **fila slim de chips de activación** gateados por contexto (reintegro/compartir/repetir); tocar un chip activa la funcionalidad y despliega sus params inline; tocar de nuevo desactiva. Sin "Más opciones". Cuotas fuera de la fila, pegada a la cuenta.
 - [ ] 3.7 Verificar que reintegro/compartido/repetir/cuotas siguen sin activar por defecto y fuera del camino del gasto simple.
