@@ -891,7 +891,9 @@ export const MovementForm = ({
   const hero = showAmountHero ? (
     <div
       data-tour="amount"
-      className="rounded-[18px] border border-border bg-card px-[22px] pb-[22px] pt-5 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]"
+      className={`rounded-[18px] border border-border bg-card transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)] ${
+        isMobile ? 'px-4 pb-4 pt-3.5' : 'px-[22px] pb-[22px] pt-5'
+      }`}
     >
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
@@ -910,9 +912,9 @@ export const MovementForm = ({
       </div>
       <div className="mt-2 flex items-baseline gap-1.5">
         {signChar && (
-          <span className={`text-[46px] font-bold leading-none ${amountColor}`}>{signChar}</span>
+          <span className={`${isMobile ? 'text-[34px]' : 'text-[46px]'} font-bold leading-none ${amountColor}`}>{signChar}</span>
         )}
-        <span className={`text-[27px] font-semibold leading-none opacity-50 ${amountColor}`}>
+        <span className={`${isMobile ? 'text-[20px]' : 'text-[27px]'} font-semibold leading-none opacity-50 ${amountColor}`}>
           {CURRENCY_SYMBOL[effectiveCurrency]}
         </span>
         <MoneyAmountInput
@@ -922,7 +924,7 @@ export const MovementForm = ({
           value={amount}
           onChange={setAmount}
           placeholder="0"
-          className={`w-full min-w-0 bg-transparent text-[46px] font-bold leading-none tracking-[-0.045em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
+          className={`w-full min-w-0 bg-transparent ${isMobile ? 'text-[34px]' : 'text-[46px]'} font-bold leading-none tracking-[-0.045em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
         />
         <MoneyCalculatorPopover seed={amount} onResult={setAmount} className="shrink-0 self-center" />
       </div>
