@@ -1,61 +1,53 @@
+> **Alcance:** solo superficie. Las funcionalidades data-driven (chips de clasificación frecuente, memoria categoría→cuenta / última usada, ranking del tercer tab por frecuencia, sugerencia→cuenta) están en el epic **#31** y NO se implementan acá.
+
 ## 1. OpenSpec y contrato
 
-- [x] 1.1 Confirmar con PO el orden de preselección de cuenta, incl. "última cuenta usada" y la memoria clasificación→cuenta (D3).
-- [x] 1.2 Documentar que el tercer tipo primario es **dinámico** (más usado y elegible entre `transfer`/`exchange`; `adjustment` siempre secundario; `Gasto`/`Ingreso` anclados) — reemplaza la partición estática (D1).
-- [x] 1.3 Documentar el orden invertido (categoría antes que cuenta, D7) y que ninguna regla contable cambia (balance, signo, corte temporal, `transactions.status`).
+- [x] 1.1 Cerrar con PO el alcance: superficie en este change; funcionalidad data-driven a #31.
+- [x] 1.2 Documentar la partición de tipos **por elegibilidad** (`expense`/`income` anclados; tercer slot secundario elegible entre `transfer`/`exchange`; `adjustment` siempre secundario; "Otros" solo si hay secundario elegible).
+- [x] 1.3 Documentar el orden invertido (categoría antes que cuenta, D7) y que ninguna regla contable cambia.
 
 ## 2. Hook `@grana/movement-form`
 
-- [ ] 2.1 Agregar `frequentClassifications?` a `UseMovementFormArgs` (hojas `(category_id, subcategory_id)` por recencia/frecuencia) y derivar `quickClassifications` (intersección con el catálogo activo del tab; hojas archivadas/ausentes descartadas; label = subcategoría si existe, si no categoría; fallback a "Cat › Sub" ante ambigüedad). El hook sigue I/O-free.
-- [ ] 2.2 Exponer el **tercer tab dinámico**: `PRIMARY_TABS` ancla `expense`/`income`; el tercer slot es el más usado y elegible entre `transfer`/`exchange`; `adjustment` siempre secundario; derivado `secondaryTabs` y flag de si el tab activo es secundario. La affordance "Otros" solo existe si hay ≥1 secundario elegible.
-- [ ] 2.3 Exponer `showAccountSelector` derivado de "una sola cuenta elegible para el tipo **y la moneda** activos".
-- [ ] 2.4 Agregar `classificationAccountId?` (mapa clasificación → cuenta-más-usada) y `lastUsedAccountId?` a `UseMovementFormArgs`; ajustar el default de `accountId` en create al orden de D3 (contexto → memoria de la clasificación → única elegible → última usada → primera elegible).
-- [ ] 2.5 Al elegir una clasificación (chip o picker), aplicar la cuenta de la memoria si existe y es elegible; la cuenta resultante queda expuesta para que la UI la muestre y permita override.
-- [ ] 2.6 Verificar que cambiar de tab/moneda/clasificación recomputa `eligibleAccounts`, `showAccountSelector`, `quickClassifications`, el tercer tab y la elegibilidad de la cuenta seleccionada sin romper las cascadas existentes.
+- [ ] 2.1 Exponer la partición de tipos por elegibilidad: `PRIMARY_TABS` ancla `expense`/`income`; tercer slot = secundario elegible (default estable `transfer` si ambos elegibles — el ranking por uso es #31); `adjustment` siempre secundario; derivado `secondaryTabs` y flag de si el tab activo es secundario. "Otros" solo si hay ≥1 secundario elegible.
+- [ ] 2.2 Exponer `showAccountSelector` derivado de "una sola cuenta elegible para el tipo **y la moneda** activos".
+- [ ] 2.3 Preselección de `accountId` en create con datos existentes: contexto (`preselectAccountId`) → única elegible → primera elegible (`firstFor`). (La memoria categoría→cuenta y "última usada" son #31.)
+- [ ] 2.4 Verificar que cambiar de tab/moneda recomputa `eligibleAccounts`, `showAccountSelector`, la partición de tipos y la elegibilidad de la cuenta seleccionada sin romper las cascadas existentes.
 
-## 3. Lectura de datos derivados (inyectados por el caller)
+## 3. UI web (`apps/web/lib/transactions/components/movement-form.tsx`) — gateado por breakpoint
 
-- [ ] 3.1 Query barata de hojas `(category_id, subcategory_id)` frecuentes en ventana (~30–60 días) por tipo (web RSC + equivalente mobile).
-- [ ] 3.2 Query barata del mapa clasificación → cuenta-más-usada, y de la frecuencia de tipos secundarios (para el tercer slot). Cadencia lenta (por sesión/día) para no titilar.
+- [ ] 3.1 Orden invertido: el bloque de categoría queda **arriba** del de cuenta.
+- [ ] 3.2 En el selector de categoría eliminar el drill obligatorio: tocar el nombre de la categoría la asigna a secas; un chevron aparte expande las subcategorías. Confirmar que se guarda sin subcategoría.
+- [ ] 3.3 Partición de tipos por elegibilidad + affordance "Otros" (solo si hay secundario elegible) que revela `transfer`/`exchange`/`adjustment` según corresponda.
+- [ ] 3.4 Condicionar el bloque de cuenta a `showAccountSelector`; cuando aparece, chips de cuenta inline (pocas) o fila+popover con secciones crédito/débito (muchas).
+- [ ] 3.5 Monto recortado (padding + número ~34–38px) y filas secundarias (fecha, descripción) a una sola línea, sin recuadro de icono ni label en mayúsculas. Solo bajo breakpoint móvil; desktop intacto.
+- [ ] 3.6 Capa 1: reemplazar el `togglesGroup` por una **fila slim de chips de activación** gateados por contexto (reintegro/compartir/repetir); tocar un chip activa la funcionalidad y despliega sus params inline; tocar de nuevo desactiva. Sin "Más opciones". Cuotas fuera de la fila, pegada a la cuenta.
+- [ ] 3.7 Verificar que reintegro/compartido/repetir/cuotas siguen sin activar por defecto y fuera del camino del gasto simple.
+- [ ] 3.8 Edición intacta: tipo inmutable, todos los campos editables visibles, sin reordenar.
 
-## 4. UI web (`apps/web/lib/transactions/components/movement-form.tsx`) — gateado por breakpoint
+## 4. UI mobile (`apps/mobile`)
 
-- [ ] 4.1 Orden invertido: chips de `quickClassifications` (un tap → `pickCategory(catId, subId)`) **arriba** del campo de categoría; la cuenta baja debajo de la categoría.
-- [ ] 4.2 En "Ver todas" eliminar el drill obligatorio: tocar el nombre de la categoría la asigna a secas; un chevron aparte expande las subcategorías.
-- [ ] 4.3 Tercer tab dinámico + affordance "Otros" (solo si hay secundario elegible) que revela `transfer`/`exchange`/`adjustment` según corresponda.
-- [ ] 4.4 Condicionar el bloque de cuenta a `showAccountSelector`; cuando aparece, chips de cuenta inline (pocas) o fila+popover con secciones crédito/débito (muchas); mostrar la cuenta inferida como override liviano ("Se debita de · …").
-- [ ] 4.5 Monto recortado (padding + número ~34–38px) y filas secundarias (fecha, descripción) a una sola línea, sin recuadro de icono ni label en mayúsculas. Solo bajo breakpoint móvil; desktop intacto.
-- [ ] 4.6 Verificar que reintegro/compartido/repetir/cuotas siguen sin activar por defecto y fuera del camino del gasto simple.
-- [ ] 4.7 Edición intacta: tipo inmutable, todos los campos editables visibles, sin reordenar.
-- [ ] 4.8 Capa 1: reemplazar el `togglesGroup` (tres toggles apilados) por una **fila slim de chips de activación** gateados por contexto (reintegro/compartir/repetir); tocar un chip activa la funcionalidad y despliega sus params inline; tocar de nuevo desactiva. Sin envoltorio "Más opciones". Solo bajo breakpoint móvil; desktop conserva el `togglesGroup`.
-- [ ] 4.9 Cuotas fuera de la fila de chips: pegada al bloque de cuenta, contextual a tarjeta (chips ARS / pago único USD), como forma de pago.
+- [ ] 4.1 Consumir la partición de tipos por elegibilidad y `showAccountSelector` desde el hook compartido (sin lógica duplicada).
+- [ ] 4.2 Orden invertido (categoría antes que cuenta), picker sin drill obligatorio, affordance idiomática para "Otros" y filas secundarias livianas.
+- [ ] 4.3 Capa 1: fila de chips de activación gateados por contexto con params inline, y cuotas pegada a la cuenta.
 
-## 5. UI mobile (`apps/mobile`)
+## 5. i18n
 
-- [ ] 5.1 Consumir `quickClassifications`, el tercer tab dinámico, `showAccountSelector` y la cuenta inferida desde el hook compartido (sin lógica duplicada).
-- [ ] 5.2 Chips de clasificación, orden invertido (categoría antes que cuenta), affordance idiomática para "Otros", picker sin drill obligatorio y filas secundarias livianas en la plataforma nativa.
-- [ ] 5.3 Capa 1: fila de chips de activación gateados por contexto (reintegro/compartir/repetir) con params inline, y cuotas pegada a la cuenta — heredando los gates del hook, sin lógica duplicada.
+- [ ] 5.1 Copy para la affordance de tipos secundarios ("Otros movimientos") y el placeholder de descripción ("Agregá una nota") en `packages/i18n-messages` (es).
 
-## 6. i18n
+## 6. Tests
 
-- [ ] 6.1 Copy para "Ver todas" (categorías), la affordance de tipos secundarios ("Otros movimientos"), el placeholder de descripción ("Agregá una nota") y la línea de cuenta inferida ("Se debita de …") en `packages/i18n-messages` (es).
+- [ ] 6.1 El selector de categoría asigna una categoría con subcategorías sin forzar el drill; la subcategoría queda como refinamiento opcional; guarda sin subcategoría.
+- [ ] 6.2 La partición de tipos por elegibilidad: `expense`/`income` primarios; `adjustment` nunca primario; sin secundarios elegibles no hay "Otros".
+- [ ] 6.3 `showAccountSelector === false` con una sola cuenta elegible para el tipo y la moneda activos (incl. Billetera ARS + cuenta USD por moneda); `true` con dos o más.
+- [ ] 6.4 La preselección de cuenta respeta contexto → única elegible → primera elegible, y nunca elige una no elegible.
+- [ ] 6.5 El gasto simple se completa sin abrir cuenta (cuando hay una sola elegible), drill de subcategoría ni secciones avanzadas.
+- [ ] 6.6 Capa 1: el conjunto de chips de activación es contextual (income → solo repetir; compartir solo con hogar de 2; repetir off en cuotas; ninguno en ajuste/cambio); activar un chip revela sus params; cuotas se ofrece junto a la cuenta de crédito.
+- [ ] 6.7 Los tipos secundarios (`adjustment`, `exchange`, `transfer`) siguen alcanzables vía "Otros" y funcionan igual que hoy.
 
-## 7. Tests
+## 7. Cierre
 
-- [ ] 7.1 `quickClassifications` deriva de `frequentClassifications` intersecando el catálogo activo; hojas archivadas excluidas; label correcto (sub o categoría); sin historial queda vacío.
-- [ ] 7.2 Un tap sobre un chip clasifica (categoría + subcategoría si aplica) y permite guardar sin abrir el picker ni el drill.
-- [ ] 7.3 El picker completo asigna una categoría con subcategorías sin forzar el drill; la subcategoría queda como refinamiento opcional.
-- [ ] 7.4 El tercer tab primario es el más usado y elegible entre `transfer`/`exchange`; `adjustment` nunca es primario; sin secundarios elegibles no hay "Otros".
-- [ ] 7.5 `showAccountSelector === false` con una sola cuenta elegible para el tipo y la moneda activos (incl. el caso Billetera ARS + cuenta USD por moneda); `true` con dos o más.
-- [ ] 7.6 Elegir una clasificación con memoria aplica su cuenta habitual (elegible); la cuenta queda expuesta para override.
-- [ ] 7.7 El default de cuenta en create respeta el orden de D3 (contexto → memoria → única → última usada → primera).
-- [ ] 7.8 **Presupuesto de taps:** el gasto simple (1 cuenta elegible + clasificación frecuente) se completa con abrir + 1 tap de chip + guardar, sin abrir cuenta, drill de subcategoría ni secciones avanzadas.
-- [ ] 7.9 Los tipos secundarios (`adjustment`, `exchange`, `transfer`) siguen alcanzables vía "Otros" y funcionan igual que hoy.
-- [ ] 7.10 Capa 1: el conjunto de chips de activación es contextual (income → solo repetir; compartir solo con hogar de 2; repetir off en cuotas; ninguno en ajuste/cambio); activar un chip revela sus params; cuotas se ofrece junto a la cuenta de crédito, no en la fila de chips.
-
-## 8. Cierre
-
-- [ ] 8.1 `pnpm lint` y `pnpm typecheck` en verde.
-- [ ] 8.2 Suite de `@grana/movement-form` en verde con los casos nuevos.
-- [ ] 8.3 `pnpm openspec:check` en verde.
-- [ ] 8.4 Archivar el change antes del merge a `main` (mover a `archive/`, integrar deltas en `openspec/specs/transactions/spec.md`, actualizar `AGENTS.md` si aplica).
+- [ ] 7.1 `pnpm lint` y `pnpm typecheck` en verde.
+- [ ] 7.2 Suite de `@grana/movement-form` en verde con los casos nuevos.
+- [ ] 7.3 `pnpm openspec:check` en verde.
+- [ ] 7.4 Archivar el change antes del merge a `main` (mover a `archive/`, integrar deltas en `openspec/specs/transactions/spec.md`, actualizar `AGENTS.md` si aplica).
+- [ ] 7.5 Confirmar que el epic #31 (aceleradores data-driven) queda listo para atacarse después del merge.

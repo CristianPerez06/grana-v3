@@ -1,72 +1,48 @@
 ## ADDED Requirements
 
-### Requirement: El alta ofrece las clasificaciones frecuentes como selección de un tap
+> Alcance: este change es **solo superficie** (reshape de lo que ya existe). Las funcionalidades data-driven (chips de clasificación frecuente, memoria categoría→cuenta, ranking del tercer tab por frecuencia, sugerencia→cuenta) viven en el epic **#31** y no se especifican acá.
 
-En modo create y en los tipos `gasto` e `ingreso`, el formulario SHALL ofrecer las clasificaciones más frecuentes del usuario (del tipo activo) como opciones de selección directa. Una clasificación frecuente es una hoja del historial: una categoría, o una categoría con su subcategoría. Un solo gesto sobre ella SHALL asignar la categoría y —cuando la clasificación la incluye— también la subcategoría, sin abrir el selector completo ni entrar a un segundo nivel. El selector completo SHALL seguir disponible como camino secundario ("Ver todas"); en él, un solo gesto sobre una categoría SHALL asignarla directamente, con sus subcategorías accesibles como refinamiento opcional y nunca como paso obligatorio. Elegir una categoría SHALL ser suficiente para guardar.
+### Requirement: El selector de categoría no obliga a elegir subcategoría
 
-#### Scenario: Clasificar con una hoja frecuente en un tap
+En modo create, elegir una categoría SHALL ser suficiente para guardar un movimiento de `gasto` o `ingreso`: la subcategoría es un refinamiento opcional. El selector completo SHALL asignar la categoría con un solo gesto sobre su nombre, aun cuando la categoría tenga subcategorías, dejando el segundo nivel accesible como refinamiento explícito (no como un paso obligatorio).
 
-- **WHEN** el usuario tiene historial y abre el alta en `gasto`
-- **THEN** se muestran sus clasificaciones frecuentes como opciones de selección directa
-- **AND** un solo gesto sobre una de ellas asigna su categoría, y su subcategoría si la hoja la incluye
-- **AND** el movimiento puede guardarse sin abrir el selector completo
+#### Scenario: Elegir una categoría con subcategorías sin entrar al segundo nivel
 
-#### Scenario: El selector completo no fuerza el drill de subcategoría
+- **WHEN** el usuario abre el selector de categoría y toca una categoría que tiene subcategorías
+- **THEN** esa categoría queda asignada a secas
+- **AND** el movimiento puede guardarse sin elegir subcategoría
 
-- **WHEN** la clasificación buscada no está entre las frecuentes y el usuario abre "Ver todas"
-- **THEN** un solo gesto sobre una categoría la asigna a secas, aun cuando tenga subcategorías
-- **AND** las subcategorías quedan accesibles como refinamiento opcional, no como un paso obligatorio
+#### Scenario: El segundo nivel sigue disponible como refinamiento
 
-#### Scenario: Sin historial no hay selección rápida
+- **WHEN** el usuario quiere clasificar con una subcategoría
+- **THEN** puede abrir el segundo nivel de esa categoría explícitamente y elegir una subcategoría
 
-- **WHEN** el usuario no tiene movimientos previos del tipo activo (primer movimiento)
-- **THEN** no se muestran clasificaciones frecuentes
-- **AND** el flujo usa el selector completo, que igual permite asignar una categoría en un gesto
+### Requirement: El monto queda enfocado al abrir el alta
 
-### Requirement: La descripción es opcional y acelera la clasificación cuando se usa
-
-La descripción de un movimiento SHALL seguir siendo opcional: nunca bloquea el guardado ni es requisito para clasificar. Cuando el usuario la completa con un texto ya visto en su historial, el sistema MAY prefiltrar la clasificación (categoría y subcategoría) a partir de ese historial, como acelerador y no como imposición.
-
-#### Scenario: Guardar sin descripción
-
-- **WHEN** el usuario registra un gasto con monto y categoría pero sin descripción
-- **THEN** el movimiento se guarda correctamente
-
-#### Scenario: Una descripción conocida acelera la clasificación
-
-- **WHEN** el usuario tipea una descripción que coincide con un movimiento anterior sin haber elegido categoría
-- **THEN** el sistema ofrece la categoría (y subcategoría) usada históricamente para ese texto como sugerencia de un tap
-- **AND** el usuario puede aceptarla o ignorarla sin que sea obligatoria
-
-### Requirement: Registrar un gasto simple no supera un presupuesto de interacciones
-
-El camino de registro de un gasto simple (cuenta cash/bank, sin secciones avanzadas) SHALL completarse con un máximo de tres interacciones discretas además de tipear el monto: abrir el formulario, elegir la clasificación y guardar. La cuenta no agrega interacciones cuando hay una sola elegible para la moneda activa, cuando la clasificación elegida resuelve la cuenta habitual, o cuando la preselección acierta.
-
-#### Scenario: Gasto simple dentro del presupuesto de taps
-
-- **WHEN** un usuario con una sola cuenta elegible abre el alta, tipea el monto, elige una clasificación frecuente y guarda
-- **THEN** el gasto queda registrado
-- **AND** no se requirió abrir el selector de cuenta, el drill de subcategoría ni ninguna sección avanzada
+Al abrir el formulario de alta, el campo de monto SHALL quedar enfocado y listo para tipear sin un gesto adicional.
 
 #### Scenario: El monto no requiere un tap para enfocarse
 
 - **WHEN** el usuario abre el formulario de alta
 - **THEN** el campo de monto queda enfocado y listo para tipear sin un gesto adicional
 
-### Requirement: El selector de tipo prioriza los movimientos de uso diario, derivado de los datos
+### Requirement: La descripción es opcional
 
-El formulario de alta SHALL presentar `gasto` e `ingreso` como opciones primarias fijas. El tercer lugar primario SHALL ofrecer el tipo secundario más usado y elegible entre `transferencia` y `cambio de moneda`; los tipos secundarios restantes SHALL quedar tras una affordance explícita ("Otros"). `ajuste` SHALL ser siempre secundario y nunca ocupar el lugar primario. La affordance "Otros" SHALL aparecer solo cuando existe al menos un tipo secundario elegible. La elegibilidad depende de los datos del usuario (`transferencia` requiere dos o más cuentas propias; `cambio de moneda` requiere capacidad bimoneda), de modo que un usuario sin secundarios elegibles ve solo `gasto` e `ingreso`. La priorización no altera ninguna regla contable ni la disponibilidad de los tipos.
+La descripción de un movimiento SHALL seguir siendo opcional: nunca bloquea el guardado ni es requisito para clasificar.
+
+#### Scenario: Guardar sin descripción
+
+- **WHEN** el usuario registra un gasto con monto y categoría pero sin descripción
+- **THEN** el movimiento se guarda correctamente
+
+### Requirement: El selector de tipo prioriza los movimientos de uso diario por elegibilidad
+
+El formulario de alta SHALL presentar `gasto` e `ingreso` como opciones primarias fijas. El tercer lugar primario SHALL ofrecer un tipo secundario elegible entre `transferencia` y `cambio de moneda`; los tipos secundarios restantes SHALL quedar tras una affordance explícita ("Otros"). `ajuste` SHALL ser siempre secundario y nunca ocupar el lugar primario. La affordance "Otros" SHALL aparecer solo cuando existe al menos un tipo secundario elegible. La elegibilidad depende de los datos del usuario (`transferencia` requiere dos o más cuentas propias; `cambio de moneda` requiere capacidad bimoneda), de modo que un usuario sin secundarios elegibles ve solo `gasto` e `ingreso`. La priorización no altera ninguna regla contable ni la disponibilidad de los tipos.
 
 #### Scenario: Gasto e ingreso son siempre primarios
 
 - **WHEN** el usuario abre el formulario de alta en modo create
 - **THEN** el selector de tipo muestra `gasto` e `ingreso` como opciones primarias fijas
-
-#### Scenario: El tercer lugar es el secundario más usado y elegible
-
-- **WHEN** el usuario usa `cambio de moneda` más que `transferencia` y ambos son elegibles
-- **THEN** `cambio de moneda` ocupa el tercer lugar primario
-- **AND** `transferencia` queda accesible mediante la affordance "Otros"
 
 #### Scenario: Ajuste nunca ocupa el lugar primario
 
@@ -110,11 +86,11 @@ El formulario de alta SHALL omitir el selector de cuenta cuando el usuario tiene
 
 ### Requirement: El gasto simple no atraviesa ninguna sección avanzada
 
-Las secciones avanzadas del alta —reintegro, gasto compartido, repetir (recurrencia) y cuotas— SHALL arrancar colapsadas y SHALL NOT ser obligatorias para registrar un gasto simple. El camino mínimo de un gasto simple es: monto, clasificación, cuenta (si el selector aplica), fecha y guardar.
+Las secciones avanzadas del alta —reintegro, gasto compartido, repetir (recurrencia) y cuotas— SHALL arrancar sin activar y SHALL NOT ser obligatorias para registrar un gasto simple. El camino mínimo de un gasto simple es: monto, categoría, cuenta (si el selector aplica), fecha y guardar.
 
 #### Scenario: Registrar un gasto simple sin abrir secciones avanzadas
 
-- **WHEN** el usuario completa monto, clasificación y fecha en una cuenta cash/bank y confirma, sin tocar reintegro, compartido, repetir ni cuotas
+- **WHEN** el usuario completa monto, categoría y fecha en una cuenta cash/bank y confirma, sin tocar reintegro, compartido, repetir ni cuotas
 - **THEN** el gasto se registra correctamente
 - **AND** no se creó ningún reintegro, split de gasto compartido ni regla recurrente
 
@@ -150,22 +126,21 @@ Las funcionalidades avanzadas del alta —reintegro, gasto compartido y repetir 
 - **THEN** la elección de cuotas aparece junto a la cuenta, como parte de la forma de pago
 - **AND** no aparece entre las funcionalidades avanzadas
 
-### Requirement: El alta preselecciona la cuenta según la clasificación y los datos del usuario
+### Requirement: El alta preselecciona la cuenta con los datos disponibles
 
-En modo create, el formulario SHALL preseleccionar la cuenta según este orden de preferencia: (1) la cuenta de contexto cuando el usuario llega desde una vista de cuenta; (2) la cuenta más usada para la clasificación elegida, cuando el caller la provee y el usuario tiene historial para esa clasificación; (3) la única cuenta elegible cuando hay una sola; (4) la última cuenta usada por el usuario, si el caller la provee; (5) la primera cuenta elegible como fallback. La preselección nunca elige una cuenta no elegible para el tipo o la moneda activos, y la cuenta resultante SHALL ser visible y modificable.
+En modo create, el formulario SHALL preseleccionar la cuenta según este orden de preferencia, usando solo datos ya disponibles: (1) la cuenta de contexto cuando el usuario llega desde una vista de cuenta; (2) la única cuenta elegible cuando hay una sola para el tipo y la moneda activos; (3) la primera cuenta elegible como fallback. La preselección nunca elige una cuenta no elegible para el tipo o la moneda activos.
 
 #### Scenario: Preselección desde una vista de cuenta
 
 - **WHEN** el usuario abre el alta desde la vista de una cuenta específica
 - **THEN** esa cuenta queda preseleccionada
 
-#### Scenario: La clasificación resuelve la cuenta habitual
+#### Scenario: Preselección con una sola cuenta elegible
 
-- **WHEN** el usuario elige una clasificación para la que tiene una cuenta más usada en su historial
-- **THEN** esa cuenta queda preseleccionada
-- **AND** se muestra de forma visible y puede cambiarse
+- **WHEN** el usuario tiene una sola cuenta elegible para el tipo y la moneda activos
+- **THEN** esa cuenta queda seleccionada de forma implícita
 
 #### Scenario: Fallback a la primera elegible
 
-- **WHEN** no hay cuenta de contexto, la clasificación no resuelve una cuenta habitual, hay varias cuentas elegibles y el caller no provee una última cuenta usada
+- **WHEN** no hay cuenta de contexto y hay varias cuentas elegibles
 - **THEN** queda preseleccionada la primera cuenta elegible

@@ -60,8 +60,12 @@ Total ~7; mejor caso 4. **Mobile-web** (el mismo `apps/web/.../movement-form.tsx
 ## Decisions
 
 > Las decisiones D0–D3 se revisaron con el PO leyendo el código. D7 (orden invertido) y D8 (peso visual por rol) son nuevas. D4/D5/D6 se confirman, con detalles agregados.
+>
+> **Alcance (post-revisión del tech lead).** Este change es **solo superficie** (reshape de lo que ya existe, sin pipelines de datos nuevos). Las partes que introducen **funcionalidad data-driven** se extrajeron al epic **#31** (aceleradores del alta), a atacar después de mergear este change. Cada decisión abajo lleva su tag de alcance. El rationale se conserva acá completo a propósito (el repo es la memoria; #31 arranca de esto, no de cero).
 
 ### D0 — El chip es la clasificación (hoja) más frecuente, de un tap
+
+> **Alcance:** los **chips de clasificación frecuente** (y su query de historial) → **#31**. Se quedan en este change, como superficie: **matar el drill obligatorio** en "Ver todas" (tap = elige categoría, chevron = expande subs) y que **la subcategoría nunca sea gate** (elegir categoría alcanza para guardar). Es decir: el mecanismo del picker es superficie; el chip alimentado por frecuencia es #31.
 
 El alta muestra, arriba del campo de categoría, las **clasificaciones más frecuentes del usuario como chips de un tap**. Un chip NO es siempre una categoría: es la **hoja** que el usuario más repite, que puede ser una categoría a secas o una categoría + subcategoría.
 
@@ -76,6 +80,8 @@ El alta muestra, arriba del campo de categoría, las **clasificaciones más frec
 **Rationale.** El sink más caro (3 taps) es el drill obligatorio de subcategoría en la tarea más común. La gente repite pocas hojas: mostrarlas como chips convierte 3 taps en 1 para la mayoría, y la granularidad de subcategoría viaja **dentro** del chip (no se infiere en silencio) — así entra en este change sin una "memoria de subcategoría" aparte ni riesgo de ensuciar el breakdown.
 
 ### D1 — Tercer tipo dinámico, derivado de datos (reemplaza la partición estática)
+
+> **Alcance:** la partición **por elegibilidad** (gasto/ingreso anclados + un tercer slot secundario elegible, "Otros" solo si hay secundario elegible, ajuste siempre en Otros) se queda en este change — usa datos que ya existen. El **ranking por frecuencia** del tercer slot (más su cadencia/desempate/cold-start) → **#31**. En este change, con transfer y cambio ambos elegibles, el tercer slot toma un default estable (transferencia); #31 lo vuelve "el más usado".
 
 La versión anterior congelaba la partición (primarios fijos = gasto/ingreso/transferencia; secundarios = ajuste/cambio). Se reemplaza por una **derivada de los datos del usuario**, que es más fiel al principio "la profundidad sigue a los datos, no a un flag":
 
@@ -100,6 +106,8 @@ Cuando, **para la moneda activa**, hay una sola cuenta elegible, el hook expone 
 
 ### D3 — Memoria categoría→cuenta; preselección derivada
 
+> **Alcance:** la **memoria categoría→cuenta** y la **"última cuenta usada"** (queries/map nuevos) → **#31**. Se queda en este change la preselección con datos existentes: contexto (`preselectAccountId`) → única elegible → primera elegible (`firstFor`, comportamiento actual). Que la clasificación *maneje* la cuenta es #31.
+
 Elegir una categoría (chip o picker) **autocompleta la cuenta/tarjeta más usada para esa clasificación**, tomada del historial. Reemplaza el default `firstFor(tab)` de hoy como preselección principal.
 
 - **La cuenta inferida se muestra** ("Se debita de · Naranja"), tappable para cambiar. Inferir en silencio y errar la cuenta sería peor que preguntar: la memoria acelera, no decide a ciegas.
@@ -118,6 +126,8 @@ El monto se queda primero, con autofocus. Un usuario de Mobills pidió descripci
 **Agregado esta pasada (tamaño):** en mobile-web (gateado por breakpoint; el desktop no se toca) la card del monto se **recorta** — menos padding vertical y número más chico (~34–38px vs 46px) — para que la fila de chips de categoría entre **sin scroll** con el teclado numérico abierto. Sigue siendo el número héroe; deja de comerse media pantalla. Descartado un preferencia de "orden de campos" por usuario (es un modo de usuario, prohibido en `AGENTS.md`).
 
 ### D6 — Descripción opcional; dos aceleradores; fila liviana
+
+> **Alcance:** "descripción opcional" y la **fila liviana** son superficie (se quedan). El acelerador por chips es #31 (chips), y **extender `suggestCategoryFromHistory` para traer la cuenta** → **#31**. La sugerencia por texto tal cual hoy (categoría/subcategoría) ya existe: no cambia.
 
 La descripción SIGUE opcional: nunca bloquea el guardado ni es requisito para clasificar. Volverla obligatoria le cobraría fricción a todas las cargas (incluidas las que los chips resuelven en un tap) y produciría descripciones basura que ensucian el historial de sugerencias.
 
