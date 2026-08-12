@@ -1137,6 +1137,63 @@ export const MovementForm = ({
   const categoryRowWrapped =
     tab === 'income' || tab === 'expense' ? <div data-tour="category">{categoryRow}</div> : null
 
+  // Mobile-web account selector grouped by Débito/Crédito family (design D10).
+  // Used for expense/income; transfer/exchange keep the popover `accountRow`.
+  const debitAccounts = eligibleAccounts.filter((a) => a.type !== 'credit')
+  const creditAccounts = eligibleAccounts.filter((a) => a.type === 'credit')
+  const bothFamilies = debitAccounts.length > 0 && creditAccounts.length > 0
+  const accountFamily: 'debit' | 'credit' = isCredit ? 'credit' : 'debit'
+  const familyList = accountFamily === 'credit' ? creditAccounts : debitAccounts
+  const accountFamilyRow = (
+    <div className="flex flex-col gap-2.5 px-4 py-3">
+      <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+        {accountLabel}
+      </span>
+      {bothFamilies && (
+        <div className="flex gap-1 rounded-[10px] border border-border p-1" style={{ backgroundColor: FIELD_BG }}>
+          {(['debit', 'credit'] as const).map((f) => {
+            const active = accountFamily === f
+            const first = (f === 'credit' ? creditAccounts : debitAccounts)[0]
+            return (
+              <button
+                key={f}
+                type="button"
+                onClick={() => first && setAccountId(first.id)}
+                className={`flex-1 rounded-[8px] px-3 py-1.5 text-xs font-bold transition-colors ${
+                  active ? 'bg-card text-text shadow-sm' : 'text-text-muted'
+                }`}
+              >
+                {f === 'debit' ? t('form.family_debit') : t('form.family_credit')}
+              </button>
+            )
+          })}
+        </div>
+      )}
+      {familyList.length > 1 && (
+        <div className="flex flex-wrap gap-2">
+          {familyList.map((a) => {
+            const active = a.id === accountId
+            return (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => setAccountId(a.id)}
+                className={`flex items-center gap-2 rounded-[10px] border px-2.5 py-1.5 text-sm font-semibold transition-colors ${
+                  active
+                    ? 'border-emerald bg-[var(--emerald-soft)] text-emerald-deep'
+                    : 'border-border text-text'
+                }`}
+              >
+                <AccountAvatar {...avatarOf(a)} size="sm" />
+                <span className="max-w-[120px] truncate">{accountPrimaryName(a)}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+
   const fieldGroup = (
     <div className="overflow-hidden rounded-[15px] border border-border bg-card [&>*+*]:border-t [&>*+*]:border-[#F1F3F6]">
       {isEdit ? (
@@ -1186,7 +1243,9 @@ export const MovementForm = ({
         // account); the account row is hidden when a single account is eligible.
         <>
           {categoryRowWrapped}
-          {(showAccountSelector || tab === 'transfer' || tab === 'exchange') && accountRow}
+          {tab === 'expense' || tab === 'income'
+            ? showAccountSelector && accountFamilyRow
+            : (showAccountSelector || tab === 'transfer' || tab === 'exchange') && accountRow}
           {destinationRow}
           {dateRow}
         </>
