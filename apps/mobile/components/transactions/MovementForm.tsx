@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
-import { ChevronDown } from 'lucide-react-native'
+import { ChevronDown, Undo2, Users, Repeat } from 'lucide-react-native'
 import { getTodayAR, formatDateISO } from '@grana/money-logic'
 import { Money, parseMoneyInput } from '@grana/validation'
 import {
@@ -701,40 +701,51 @@ export function MovementForm({
         </View>
       )}
 
-      {/* Reimbursement declaration (expense, no installments) — full web parity:
-          estimated amount, %/cap auto-calc, target radio (credit only),
-          credit-to picker and received-now. */}
-      {showReimbursement && (
-        <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-1 pr-3">
-              <Text className="text-sm font-semibold text-text">
-                {t('transactions.reimbursement.toggle')}
-              </Text>
-              <Text className="text-xs text-text-muted">
-                {form.reimbursementReadOnly
-                  ? t(
-                      edit?.reimbursement?.status === 'cancelled'
-                        ? 'transactions.reimbursement.readonly_hint_cancelled'
-                        : 'transactions.reimbursement.readonly_hint_received',
-                    )
-                  : t('transactions.reimbursement.pending_hint')}
-              </Text>
-            </View>
-            <Switch
-              ariaLabel={t('transactions.reimbursement.toggle')}
-              checked={form.reimbursementEnabled}
+      {/* Advanced (Capa 1, design D9): symbol-forward chips that activate each
+          section directly (0 tap for the simple path). The section's params
+          appear below when its chip is on. Contextual set. */}
+      {(showReimbursement || (showShared && members) || showRepeat) && (
+        <View className="flex-row flex-wrap gap-2">
+          {showReimbursement && (
+            <AdvChip
+              renderIcon={(c) => <Undo2 size={15} color={c} />}
+              label={t('transactions.reimbursement.toggle')}
+              active={form.reimbursementEnabled}
               disabled={form.reimbursementReadOnly}
-              onValueChange={(on) => {
+              onPress={() => {
+                const on = !form.reimbursementEnabled
                 form.setReimbursementEnabled(on)
                 if (on) form.setReimbursementAccountId(pickReimbursementAccount(form.accountId))
               }}
             />
-          </View>
+          )}
+          {showShared && members && (
+            <AdvChip
+              renderIcon={(c) => <Users size={15} color={c} />}
+              label={t('transactions.form.shared_toggle')}
+              active={form.sharedEnabled}
+              onPress={() => form.setSharedEnabled(!form.sharedEnabled)}
+            />
+          )}
+          {showRepeat && (
+            <AdvChip
+              renderIcon={(c) => <Repeat size={15} color={c} />}
+              label={t('transactions.labels.make_recurrent')}
+              active={form.isRecurrent}
+              onPress={() => form.setIsRecurrent(!form.isRecurrent)}
+            />
+          )}
+        </View>
+      )}
+
+      {/* Reimbursement params (shown when its chip is on, or a read-only summary
+          for an already received/cancelled one in edit). */}
+      {showReimbursement && (form.reimbursementEnabled || form.reimbursementReadOnly) && (
+        <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
           {/* Received/cancelled reintegro: read-only summary (target + amount),
               managed from its own confirm/cancel flow. */}
           {form.reimbursementReadOnly && edit?.reimbursement && (
-            <View className="flex-row items-center justify-between gap-3 border-t border-border-soft pt-3">
+            <View className="flex-row items-center justify-between gap-3">
               <Text className="text-xs text-text-muted">
                 {t(`transactions.reimbursement.target.${edit.reimbursement.target}`)}
               </Text>
@@ -745,7 +756,7 @@ export function MovementForm({
             </View>
           )}
           {form.reimbursementEnabled && !form.reimbursementReadOnly && (
-            <View className="flex-col gap-3 border-t border-border-soft pt-3">
+            <View className="flex-col gap-3">
               {/* Estimated amount */}
               <View className="flex-col gap-1.5">
                 <Label>{t('transactions.reimbursement.estimated_amount')}</Label>
@@ -841,19 +852,9 @@ export function MovementForm({
         </View>
       )}
 
-      {/* Shared split (expense, 2-member household) */}
-      {showShared && members && (
+      {/* Shared split params (shown when its chip is on) */}
+      {showShared && members && form.sharedEnabled && (
         <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-sm font-semibold text-text">
-              {t('transactions.form.shared_toggle')}
-            </Text>
-            <Switch
-              ariaLabel={t('transactions.form.shared_toggle')}
-              checked={form.sharedEnabled}
-              onValueChange={form.setSharedEnabled}
-            />
-          </View>
           {form.sharedEnabled && (
             <View className="flex-col gap-2">
               <Segmented
@@ -879,26 +880,11 @@ export function MovementForm({
         </View>
       )}
 
-      {/* Recurrence ("Repetir") — gasto (no cuotas) / ingreso / transferencia */}
-      {showRepeat && (
+      {/* Recurrence ("Repetir") params — gasto (no cuotas) / ingreso / transferencia */}
+      {showRepeat && form.isRecurrent && (
         <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-1 pr-3">
-              <Text className="text-sm font-semibold text-text">
-                {t('transactions.labels.make_recurrent')}
-              </Text>
-              <Text className="text-xs text-text-muted">
-                {t('transactions.drawer.repeat_note')}
-              </Text>
-            </View>
-            <Switch
-              ariaLabel={t('transactions.labels.make_recurrent')}
-              checked={form.isRecurrent}
-              onValueChange={form.setIsRecurrent}
-            />
-          </View>
           {form.isRecurrent && (
-            <View className="flex-col gap-3 border-t border-border-soft pt-3">
+            <View className="flex-col gap-3">
               <View className="rounded-lg bg-emerald-soft p-3">
                 <Text className="text-xs text-text">{t('transactions.drawer.repeat_hint')}</Text>
               </View>
@@ -1011,6 +997,41 @@ export function MovementForm({
         )}
       </Pressable>
     </View>
+  )
+}
+
+// A light, symbol-forward pill that activates an advanced section (reintegro /
+// compartir / repetir). The icon leads; it fills emerald when on.
+function AdvChip({
+  renderIcon,
+  label,
+  active,
+  disabled,
+  onPress,
+}: {
+  renderIcon: (color: string) => ReactNode
+  label: string
+  active: boolean
+  disabled?: boolean
+  onPress: () => void
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active, disabled: !!disabled }}
+      className={`flex-row items-center gap-1.5 rounded-full px-3 py-2 ${
+        active ? 'bg-emerald-soft' : 'bg-border-soft'
+      } ${disabled ? 'opacity-40' : ''}`}
+    >
+      {renderIcon(active ? colors.emeraldDeep : colors.textMuted)}
+      <Text
+        className={`text-xs font-semibold ${active ? 'text-emerald-deep' : 'text-text-muted'}`}
+      >
+        {label}
+      </Text>
+    </Pressable>
   )
 }
 
