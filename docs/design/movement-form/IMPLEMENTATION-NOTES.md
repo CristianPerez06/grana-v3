@@ -11,21 +11,31 @@ Cada tajada quedó commiteada con `lint` + `typecheck` + tests pasando.
 | Hook `@grana/movement-form` | `PRIMARY_TABS`/`SECONDARY_TABS`, `secondaryTabs` (elegibles), `isSecondaryTab`, `showAccountSelector` — con tests (37/37) | `feat(movement-form): add tab partition and account-selector derivations` |
 | Mobile | Tabs **Gasto · Ingreso · Otros** (hoja para transfer/ajuste/cambio elegibles); ocultar cuenta con una sola elegible; picker **sin drill obligatorio** (tap = elige categoría, chevron = subcategorías) | `feat(mobile): tabs Gasto/Ingreso/Otros, hide single account, no forced category drill` |
 | Mobile | **Orden invertido** (categoría antes que cuenta); **chips Fecha Hoy/Ayer** + calendario | `feat(mobile): invert order (category before account) and add Hoy/Ayer date chips` |
-| i18n | `category_drill`, `other_types`, `date_today`, `date_yesterday` (es + en, paridad OK) | (en los commits mobile) |
+| Mobile | **Selector de cuenta por familia Débito/Crédito** (`AccountFamilySelect`): toggle de familia + chips con avatar de marca; con una sola por familia el toggle la elige | `feat(mobile): account selector grouped by Débito/Crédito family` |
+| Mobile | **Avanzadas como chips symbol-forward** (reintegro/compartir/repetir): fila de chips que activan; los params aparecen inline | `feat(mobile): advanced sections as symbol-forward activation chips` |
+| i18n | `category_drill`, `other_types`, `date_today`, `date_yesterday`, `family_debit`, `family_credit` (es + en, paridad OK) | (en los commits mobile) |
 
-**Verificado:** `@grana/movement-form` tests 37/37; `apps/mobile` typecheck 0 errores; eslint limpio en los archivos tocados; paridad de claves es/en 0 diferencias.
+**El alta mobile quedó completamente rediseñada** (Fase 1) y en verde. **Verificado:** `@grana/movement-form` tests 37/37; `apps/mobile` typecheck 0 errores; eslint limpio; paridad de claves es/en 0 diferencias.
 
 ## Decisiones que tomé (ante ambigüedad, la conservadora)
 
 - **`showAccountSelector` se basa en "una sola cuenta elegible para el tipo"**, no por moneda. El refinamiento por moneda (Billetera ARS + cuenta USD → ocultar y que el toggle de moneda desambigüe) **quedó diferido**: hacerlo bien requiere que el toggle de moneda maneje la selección de cuenta (cambio en la cascada de moneda), riesgoso para este pase. Está comentado en `use-movement-form.ts`.
 - **Transferencia/Cambio siempre muestran el selector de cuenta** (necesitan elegir entre ≥2 por su semántica), aunque `showAccountSelector` sea false por otra razón.
 
-## Diferido a propósito (necesita tu revisión / es más grande)
+## Refinamiento pendiente en mobile (menor)
 
-- **Selector de cuenta por familia Débito/Crédito (D10)** — el componente nuevo grande (toggle → familia+chips → drilldown). El hook ya expone lo necesario (`showAccountSelector`, `eligibleAccounts`); falta la UI. Lo dejé para hacerlo con vos mirando, es lo más nuevo.
-- **Avanzadas symbol-forward (D9)** en mobile — hoy siguen como cards con switch (funcionan). Pasarlas a la fila de chips livianos es un restyle de reintegro/compartir/repetir; lo dejé para no arriesgar el flujo de reintegro/cuotas overnight.
-- **Monto centrado + compacto** en mobile — tweak menor, pendiente.
-- **Web (`apps/web/.../movement-form.tsx`) — TODO diferido.** El componente sirve **desktop y mobile-web**; cada cambio debe ir **gateado por breakpoint** (Tailwind `md:`) para no tocar desktop. Es pesado y de riesgo alto; lo dejé entero para una pasada revisada. El hook nuevo **no** cambia el render de web (web todavía no consume los derivados nuevos), así que web quedó intacto y seguro.
+- Selector de cuenta con **muchas** cuentas: hoy los chips de la familia activa **envuelven** (wrap). El drilldown/hoja del escenario 3 (design D10) es un refinamiento; con pocas cuentas —el caso común— ya queda bien.
+- **Monto centrado** en mobile — el input de monto no es un "hero card" como en web; tweak menor, pendiente.
+
+## Web — diferido a una pasada revisada (recomendado)
+
+**`apps/web/.../movement-form.tsx` no se tocó** (queda intacto y seguro; el hook nuevo no cambia su render porque web todavía no consume los derivados nuevos).
+
+El componente sirve **desktop y mobile-web**, y el scope prohíbe tocar desktop. Por eso el rediseño web necesita:
+1. Un hook `useIsMobile` (matchMedia) para **branchear layout en JS** — los cambios de comportamiento (drill, tabs) no se pueden gatear solo con CSS.
+2. Rendear la variante mobile-web sin alterar el árbol de desktop.
+
+Es un refactor delicado y **no puedo validar la no-regresión de desktop de forma autónoma** (requiere prueba visual en ambos anchos). Recomiendo hacerlo en una sesión con tu revisión, no a ciegas. Cuando arranquemos: agrego `useIsMobile`, y voy gateando pieza por pieza (empezando por ocultar cuenta con una sola + tabs), verificando desktop a cada paso.
 
 ## No hice (por regla)
 
