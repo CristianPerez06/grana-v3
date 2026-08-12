@@ -1474,6 +1474,8 @@
       "account_label": "Cuenta",
       "destination_label": "Cuenta destino",
       "date_label": "Fecha",
+      "date_today": "Hoy",
+      "date_yesterday": "Ayer",
       "description_label": "Descripción",
       "description_placeholder": "Opcional",
       "suggestion_apply": "Usar sugerencia: {category}",

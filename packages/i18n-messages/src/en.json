@@ -1474,6 +1474,8 @@
       "account_label": "Account",
       "destination_label": "Destination account",
       "date_label": "Date",
+      "date_today": "Today",
+      "date_yesterday": "Yesterday",
       "description_label": "Description",
       "description_placeholder": "Optional",
       "suggestion_apply": "Use suggestion: {category}",

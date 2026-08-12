@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { ChevronDown } from 'lucide-react-native'
-import { getTodayAR } from '@grana/money-logic'
+import { getTodayAR, formatDateISO } from '@grana/money-logic'
 import { Money, parseMoneyInput } from '@grana/validation'
 import {
   useMovementForm,
@@ -100,6 +100,14 @@ export function MovementForm({
   const [customInstallments, setCustomInstallments] = useState(false)
   // "Otros" sheet: reveals the eligible secondary types (transfer/ajuste/cambio).
   const [otrosOpen, setOtrosOpen] = useState(false)
+
+  // Quick-date chips: Hoy / Ayer cover the ~95% of cases without the calendar.
+  const todayStr = formatDateISO(getTodayAR())
+  const yesterdayStr = (() => {
+    const d = getTodayAR()
+    d.setDate(d.getDate() - 1)
+    return formatDateISO(d)
+  })()
 
   // Edit mode: the type selector is hidden and each field is gated by
   // `editableFields` (immutable ones render as read-only context rows). Mirror of
@@ -370,6 +378,17 @@ export function MovementForm({
         </View>
       )}
 
+      {/* Category (+ one-level subcategory drill) — primary decision, above the
+          account (design D7: the category drives the account). */}
+      {showCategory && (
+        <CategorySelectField
+          categories={form.transactionCategories}
+          categoryId={form.categoryId}
+          subcategoryId={form.subcategoryId}
+          onPick={form.pickCategory}
+        />
+      )}
+
       {/* Adjustment direction (Suma / Resta) + informative banner */}
       {showAdjustmentControls && (
         <>
@@ -584,7 +603,32 @@ export function MovementForm({
       {showDate && (
         <View className="flex-col gap-1.5">
           <Label>{t('transactions.form.date_label')}</Label>
-          <DateField value={form.date} onChange={form.setDate} />
+          <View className="flex-row items-center gap-2">
+            {(
+              [
+                { key: 'today', label: t('transactions.form.date_today'), value: todayStr },
+                { key: 'yesterday', label: t('transactions.form.date_yesterday'), value: yesterdayStr },
+              ] as const
+            ).map((opt) => {
+              const active = form.date === opt.value
+              return (
+                <Pressable
+                  key={opt.key}
+                  onPress={() => form.setDate(opt.value)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  className={`rounded-lg px-3.5 py-2 ${active ? 'bg-navy' : 'bg-border-soft'}`}
+                >
+                  <Text className={`text-sm font-bold ${active ? 'text-white' : 'text-text-muted'}`}>
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              )
+            })}
+            <View className="flex-1">
+              <DateField value={form.date} onChange={form.setDate} />
+            </View>
+          </View>
         </View>
       )}
 
@@ -636,16 +680,6 @@ export function MovementForm({
             {fmtAmount(adjustmentPreview.next)}
           </Text>
         </View>
-      )}
-
-      {/* Category (+ one-level subcategory drill) for expense/income */}
-      {showCategory && (
-        <CategorySelectField
-          categories={form.transactionCategories}
-          categoryId={form.categoryId}
-          subcategoryId={form.subcategoryId}
-          onPick={form.pickCategory}
-        />
       )}
 
       {/* Negative-balance warning (non-blocking) */}
