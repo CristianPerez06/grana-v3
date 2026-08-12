@@ -36,107 +36,123 @@ El flujo nativo tiene la **misma cuenta de taps** que el web (la lógica es el h
 | Fecha | 0 | `DateField` default hoy AR |
 | Guardar | 1 | submit → `onDone` → `router.back()` (el pop es automático, sin tap extra) |
 
-Total ~7; mejor caso 4. **Mobile-web** (el mismo `apps/web/.../movement-form.tsx` bajo breakpoint móvil) = la auditoría web de arriba (drawer + `Popover`). Los tres recortes del change (chips de categoría, ocultar cuenta con una sola, subcategoría no obligatoria) aplican igual a las dos superficies porque atacan el hook compartido y el patrón de picker, no el chrome.
+Total ~7; mejor caso 4. **Mobile-web** (el mismo `apps/web/.../movement-form.tsx` bajo breakpoint móvil) = la auditoría web de arriba (drawer + `Popover`). Los recortes del change (chips de clasificación, ocultar cuenta con una sola, subcategoría no obligatoria, orden invertido) aplican igual a las dos superficies porque atacan el hook compartido y el patrón de picker, no el chrome.
+
+> **Revalidación (pasada actual con el PO).** La auditoría se reconfirmó leyendo el código real y se cerraron las decisiones de abajo. Cambió el modelo del chip (hoja frecuente, no categoría — D0), la partición de tipos pasó de estática a derivada de datos (D1), y se invirtió el orden categoría→cuenta (D7). El **presupuesto ≤3 taps se mantiene**; el gasto simple queda: abrir · 1 tap de chip (resuelve categoría + subcategoría + cuenta) · guardar.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- **Bajar el gasto simple a ≤3 taps** (abrir · categoría de un tap · guardar), con monto tipeado y cuenta autoresuelta — desde los ~7 actuales.
+- **Bajar el gasto simple a ≤3 taps** (abrir · clasificación de un tap · guardar), con monto tipeado y cuenta autoresuelta — desde los ~7 actuales.
 - Reducir las decisiones visibles en el camino del gasto simple sin quitar ninguna capacidad.
-- Derivar la simplicidad de los datos del usuario (cantidad de cuentas, contexto de origen), nunca de un flag ni de un modo.
-- Mantener el hook I/O-free: cualquier dato nuevo (última cuenta usada) lo inyecta el caller.
+- Derivar la simplicidad de los datos del usuario (cantidad de cuentas, moneda, historial de clasificación), nunca de un flag ni de un modo.
+- Mantener el hook I/O-free: cualquier dato nuevo (hojas frecuentes, mapa categoría→cuenta, última cuenta usada) lo inyecta el caller.
 - Paridad web/mobile por contrato: los derivados nuevos viven en el hook, no se retipean por plataforma.
 
 **Non-Goals:**
 
 - No se toca ninguna regla contable: balance, signo por tipo, corte temporal, off-ledger de tarjeta, `transactions.status`.
 - No se agregan features (presupuestos, metas, alertas) — son otros módulos.
-- No se rediseña el layout visual del drawer; solo cambia qué se muestra por defecto y el peso relativo de los tipos.
+- **La web desktop no se rediseña.** Los cambios de layout de este change (orden invertido, monto recortado, filas secundarias a una línea, chips de cuenta/categoría) son para el **viewport mobile de `apps/web` y `apps/mobile`**, y en web van **gateados por breakpoint** para preservar el desktop actual.
 - No se cambia el modo edición: el tipo sigue inmutable y todos los campos editables siguen visibles.
 
 ## Decisions
 
-### D0 — Categoría de un tap con chips de recientes (el recorte principal)
+> Las decisiones D0–D3 se revisaron con el PO leyendo el código. D7 (orden invertido) y D8 (peso visual por rol) son nuevas. D4/D5/D6 se confirman, con detalles agregados.
 
-El alta muestra las categorías recientes/frecuentes del usuario como chips de selección directa arriba del campo de categoría. Un tap sobre un chip clasifica y no abre nada. El `FieldRow` de categoría pasa a ser "Ver todas" y conserva el picker completo con drill para el resto.
+### D0 — El chip es la clasificación (hoja) más frecuente, de un tap
 
-**Rationale.** El drill obligatorio de subcategoría es el sink más caro (3 taps) en la tarea más común. La gente repite pocas categorías: mostrar sus recientes como chips convierte 3 taps en 1 para la mayoría de los gastos. Es exactamente el patrón de grilla de íconos de Mobills, pero alimentado por el historial del usuario en vez de una grilla fija.
+El alta muestra, arriba del campo de categoría, las **clasificaciones más frecuentes del usuario como chips de un tap**. Un chip NO es siempre una categoría: es la **hoja** que el usuario más repite, que puede ser una categoría a secas o una categoría + subcategoría.
 
-**Subcategoría deja de ser obligatoria en el camino rápido.** Elegir la categoría (chip o tile) alcanza para guardar; la subcategoría queda como refinamiento opcional desde "Ver todas". Esto ya es válido en el dominio (`subcategory_id` es opcional en `createExpense`), así que no cambia ninguna regla — solo deja de forzar el segundo nivel.
+- **Icono = el de la categoría; label = la hoja.** Si el usuario siempre carga Comida › Pedidos Ya, el chip dice "🍽️ Pedidos Ya": el paraguas (Comida) sobrevive en el icono, no en el texto ("comida ya ni lo veo"). Si a Transporte nunca le pone subcategoría, su chip es "🚗 Transporte".
+- **Un tap setea categoría + subcategoría + cuenta habitual** (la memoria de cuenta de D3). Es el "kiosco → todo listo" en un gesto, sin introducir una dimensión de comercio/payee nueva.
+- **Derivación.** Agrupar los movimientos del usuario del tipo activo por `(category_id, subcategory_id)`, rankear por **frecuencia en ventana** (~30–60 días), tomar top 4–6. Niveles mezclados conviven. El hook queda I/O-free: el caller inyecta las hojas frecuentes; el hook interseca con el catálogo activo del tab (descarta hojas archivadas/ausentes).
+- **Cantidad y orden (cerrado):** 4–6 chips, por **frecuencia-en-ventana** — ni recencia pura (titila el set en cada carga) ni frecuencia histórica (queda vieja si cambia la vida del usuario). "Ver todas" para la cola.
+- **Bordes.** Label ambiguo o genérico (dos subcategorías con el mismo nombre bajo distintas categorías, o una hoja tipo "Otros") → el chip cae a "Categoría › Sub" o al nombre de la categoría. Hoja archivada → no se ofrece (mismo criterio que `selectableSubcategories`).
 
-**El hook queda I/O-free.** El caller inyecta `recentCategoryIds` (una query barata: categorías distintas de los últimos N movimientos del usuario, del tipo activo). El hook deriva `quickCategories` intersecando con el catálogo activo del tab. Si el usuario no tiene historial (primer movimiento), no hay chips y el flujo cae al picker completo — coherente con el tour de `guidance` para el primer movimiento.
+**Subcategoría deja de ser un peaje, en todos lados.** Elegir la categoría alcanza para guardar (`subcategory_id` ya es opcional en `createExpense`). Y el **drill obligatorio del picker completo se elimina**: en "Ver todas", tocar el nombre de la categoría la asigna a secas; un chevron aparte expande las subcategorías para quien quiera refinar. Hoy tocar una categoría drillable fuerza el segundo nivel (`setCatDrill` en web / `setDrillId` en mobile); eso pasa a ser opcional. Esto vale también para el caso "la categoría que quiero no está entre los chips".
 
-**Qué lleva el chip (nivel).** El chip puede clasificar solo la categoría (nivel 1) o resolver también la cuenta habitual (nivel 2). Se adopta **nivel 2**: un chip pone categoría **+ cuenta más usada para esa categoría**, de modo que el "kiosco → categoría + cuenta" ocurre en un tap sin tipear. El label del chip es la categoría ("Almacén", "Transporte"), no el comercio ("Kiosco") — un chip con nombre de comercio implicaría una dimensión de comercio/payee que Grana hoy no tiene (ver Open Questions).
+**Rationale.** El sink más caro (3 taps) es el drill obligatorio de subcategoría en la tarea más común. La gente repite pocas hojas: mostrarlas como chips convierte 3 taps en 1 para la mayoría, y la granularidad de subcategoría viaja **dentro** del chip (no se infiere en silencio) — así entra en este change sin una "memoria de subcategoría" aparte ni riesgo de ensuciar el breakdown.
 
-**Decisión de PO pendiente:** ¿cuántos chips (3, 5)? ¿recientes puros u ordenados por frecuencia? Arranco con "hasta 5, por recencia".
+### D1 — Tercer tipo dinámico, derivado de datos (reemplaza la partición estática)
 
-### D1 — Tipos primarios vs secundarios, no un flag
+La versión anterior congelaba la partición (primarios fijos = gasto/ingreso/transferencia; secundarios = ajuste/cambio). Se reemplaza por una **derivada de los datos del usuario**, que es más fiel al principio "la profundidad sigue a los datos, no a un flag":
 
-`gasto`, `ingreso`, `transferencia` son primarios; `ajuste` y `cambio` secundarios, detrás de una affordance "Otros". La partición es **estática** (deriva de la naturaleza del tipo, no del usuario), así que vive como una constante en el hook (`PRIMARY_TABS` / `SECONDARY_TABS`) y ambas plataformas la consumen.
+- **Gasto e Ingreso quedan anclados** y en posición fija (los usa todo el mundo; gasto es el default).
+- **El tercer lugar primario es dinámico:** el más usado **entre los elegibles** de {Transferencia, Cambio}. El otro cae en "Otros".
+- **Ajuste siempre en "Otros".** Corrige un saldo desviado: es mantenimiento, no un verbo diario. Nunca compite por el slot primario.
+- **Elegibilidad primero.** Transferencia requiere ≥2 cuentas propias; Cambio requiere capacidad bimoneda (una cuenta ARS+USD, o dos cuentas de monedas distintas). Un usuario con una sola Billetera ARS **no ve tercer slot ni "Otros"**: solo Gasto/Ingreso. Es el estado más simple, caído de los datos (misma lógica que ocultar la cuenta).
+- **"Otros" aparece solo si hay ≥1 secundario elegible**, y en posición fija, para que los verbos "escondidos" tengan una casa estable a un tap.
+- **Predictibilidad (el costo, y sus mitigaciones):** solo se mueve el tercer chip; Gasto/Ingreso nunca cambian de lugar; se recalcula en **cadencia lenta** (por sesión/día, no en vivo mientras se carga) para que no titile.
+- **Cold-start:** sin secundarios elegibles → sin tercer slot; empate con ambos elegibles y sin historial → default **Transferencia** (es lo de hoy; se autocorrige a Cambio con el uso, y el costo de errar es un tap de "Otros" hasta que el historial manda).
 
-**Rationale.** `ajuste` corrige un saldo que se desvió y `cambio` convierte entre monedas: son operaciones de mantenimiento, no de registro diario. Bajarles el peso visual no las esconde (un tap las trae) pero limpia la decisión primaria de 5 a 3.
+No cambia nada contable: los cinco tipos siguen existiendo y funcionando; esto solo gobierna cuáles se muestran como primarios vs detrás de "Otros".
 
-**Alternativa descartada.** Ocultar los secundarios según frecuencia de uso del usuario: agrega estado y un borde ("¿cuándo reaparecen?") sin beneficio claro. La partición estática es predecible.
+### D2 — Ocultar la cuenta se deriva de la elegibilidad por tipo Y moneda
 
-### D2 — Ocultar la dimensión cuenta se deriva de `eligibleAccounts`
+Cuando, **para la moneda activa**, hay una sola cuenta elegible, el hook expone `showAccountSelector = false` y el caller no renderiza el bloque de cuenta; la cuenta queda implícita. Con ≥2, se muestra.
 
-Cuando `eligibleAccounts.length === 1`, el hook expone `showAccountSelector = false` y el caller no renderiza el bloque de cuenta; la cuenta implícita es esa única. Con ≥2, se muestra como hoy.
+- **Elegibilidad = tipo Y moneda.** Ej.: Billetera (ARS) + una cuenta USD. Para un gasto en ARS hay una sola elegible; para uno en USD, una sola. El selector se oculta en ambos, y **la desambiguación la hace el toggle ARS/USD del hero del monto** — elegís moneda, la cuenta cae sola. La dimensión "cuenta" se colapsa dentro de la de "moneda", que ya estás tocando.
+- **Con 2+ elegibles:** en vez de fila-que-abre-popover (2 taps), **chips de cuenta inline** (avatar + nombre; 1 tap, 0 si el default acierta) cuando son pocas; con muchas, cae al row + popover, y ahí el split **crédito vs débito/efvo** va como encabezados de sección (estructura útil: se comportan distinto — off-ledger, cuotas), sin sumar un tap de filtro.
+- **La cuenta es un override,** no la decisión principal: la categoría ya la setea (D3). Por eso el bloque puede ser liviano y optimizarse por claridad, no por taps.
+- **Cuidado (se mantiene).** "Una sola elegible" ≠ "una sola cuenta". En transferencia hacen falta ≥2 propias; con una sola, el flujo no aplica (se maneja aparte).
 
-**Rationale.** Es exactamente la regla que la lista de cuentas ya aplica, movida al formulario. Coherente con el principio single-profile. La elegibilidad ya depende del tab (`gasto` puede apuntar a crédito; el resto no), así que "una sola elegible" puede variar por tab — el derivado se recalcula por render, sin estado extra.
+### D3 — Memoria categoría→cuenta; preselección derivada
 
-**Cuidado.** No confundir "una sola cuenta elegible" con "una sola cuenta". En el tab `transferencia` hacen falta ≥2 cuentas propias; si hay una sola, el flujo de transferencia ya no aplica y eso se maneja por separado (no es parte de este change).
+Elegir una categoría (chip o picker) **autocompleta la cuenta/tarjeta más usada para esa clasificación**, tomada del historial. Reemplaza el default `firstFor(tab)` de hoy como preselección principal.
 
-### D3 — Preselección de cuenta: decisión de PO
-
-Orden de preferencia propuesto para el default de `accountId` en create:
-
-1. `preselectAccountId` (viene de una vista de cuenta) — ya existe.
-2. La única elegible, si hay una sola.
-3. **Última cuenta usada** por el usuario en un movimiento de ese tipo — *propuesto*.
-4. Fallback: primera elegible (comportamiento actual).
-
-El paso 3 requiere que el caller lea la última cuenta usada (una query barata: el `account_id` del movimiento más reciente del usuario) y la pase como `lastUsedAccountId`. El hook queda I/O-free.
-
-**Decisión de PO pendiente:** ¿adoptamos "última usada" (paso 3) o alcanza con 1-2-4? "Última usada" acierta más seguido para quien tiene 2-3 cuentas, a cambio de una lectura extra y de un default menos predecible. Si el PO prefiere no agregar la query, se implementan solo 1-2-4 y el requirement de preselección se cumple igual.
+- **La cuenta inferida se muestra** ("Se debita de · Naranja"), tappable para cambiar. Inferir en silencio y errar la cuenta sería peor que preguntar: la memoria acelera, no decide a ciegas.
+- **La tarjeta es un destino válido** ("Almacén lo pago con la Naranja") — y ahí aparece la card de cuotas, coherente.
+- **Orden de preselección de `accountId` en create** (cuando la categoría no alcanza para decidir): (1) `preselectAccountId` (viene de una vista de cuenta); (2) memoria categoría→cuenta, si existe para esa clasificación; (3) única elegible; (4) última usada, si el caller la provee; (5) primera elegible (fallback actual). Nunca elige una cuenta no elegible para el tipo/moneda activos.
+- **Datos.** El caller inyecta un mapa `clasificación → cuenta-más-usada` (query barata; el hook sigue I/O-free). Es una pieza más que la lista de hojas frecuentes, mismo patrón.
 
 ### D4 — El invariante de secciones avanzadas es anti-regresión
 
-Reintegro, compartido, repetir y cuotas ya arrancan colapsadas. Fijarlo como requirement evita que un rediseño futuro (o un merge distraído) las ponga en el camino del gasto simple. No hay cambio de código si el estado actual ya lo cumple; el valor es el test/scenario que lo pinta.
+Reintegro, compartido, repetir y cuotas ya arrancan colapsadas. Fijarlo como requirement evita que un rediseño futuro (o un merge distraído) las ponga en el camino del gasto simple. No hay cambio de código si el estado actual ya lo cumple; el valor es el test/scenario que lo pinta. La presentación de la Capa 1 (una fila "Agregar…" con chips que expanden inline) se diseña aparte.
 
-### D5 — Orden de campos: monto primero (confirmado)
+### D5 — Monto primero, con autofocus; card recortada en mobile-web
 
-Un usuario de Mobills pidió **descripción antes que monto**, porque carga mientras compra y a veces el monto es lo último que sabe. Verdict: **el monto se queda primero**, con autofocus.
+El monto se queda primero, con autofocus. Un usuario de Mobills pidió descripción-antes-que-monto (carga mientras compra); verdict: más edge case que hábito mayoritario, amplificado por sesgo de feedback. El monto es el único campo siempre obligatorio, es el número héroe y abre teclado numérico; anteponer texto libre opcional le cobra a la mayoría y rompe el presupuesto de ≤3 taps. La necesidad válida ("capturo mientras compro, monto al final") se atiende mejor con **captura en borrador** (change propio, fuera de alcance).
 
-**Rationale.** Es más edge case que hábito mayoritario, amplificado por sesgo de feedback (el que más opina es el power-user que carga en el pasillo; la mediana carga después de pagar, con el monto ya sabido). El monto es el único campo siempre obligatorio, es el número héroe y abre teclado numérico; anteponer texto libre opcional le cobra a la mayoría (teclado de texto → cambiar a numérico) y rompe el presupuesto de ≤3 taps. La propia Mobills es monto-primero (a confirmar en hands-on).
+**Agregado esta pasada (tamaño):** en mobile-web (gateado por breakpoint; el desktop no se toca) la card del monto se **recorta** — menos padding vertical y número más chico (~34–38px vs 46px) — para que la fila de chips de categoría entre **sin scroll** con el teclado numérico abierto. Sigue siendo el número héroe; deja de comerse media pantalla. Descartado un preferencia de "orden de campos" por usuario (es un modo de usuario, prohibido en `AGENTS.md`).
 
-**Pero la necesidad es válida y se honra sin reordenar:** (1) el drawer es scrolleable — nada bloquea empezar por descripción; solo hay que garantizar que la descripción sea alcanzable sin scroll. (2) El caso "capturo mientras compro, monto al final" se resuelve mejor con **captura en borrador** (guardar incompleto, completar el monto en la caja) que con un reorden estático — candidato a change propio, fuera de este alcance.
+### D6 — Descripción opcional; dos aceleradores; fila liviana
 
-**Descartado:** un preferencia de "orden de campos" por usuario — es un modo de usuario, y `AGENTS.md` los prohíbe ("la profundidad sigue a los datos, no a un flag").
+La descripción SIGUE opcional: nunca bloquea el guardado ni es requisito para clasificar. Volverla obligatoria le cobraría fricción a todas las cargas (incluidas las que los chips resuelven en un tap) y produciría descripciones basura que ensucian el historial de sugerencias.
 
-### D6 — Descripción opcional; dos aceleradores, no un campo obligatorio
+**Dos aceleradores coexisten, el usuario elige por comportamiento:** (1) sin descripción → chips (D0), un tap resuelve clasificación + cuenta; (2) con descripción → sugerencia (`suggestCategoryFromHistory`) al tipear un comercio conocido. La extensión natural es que esa sugerencia también traiga la **cuenta** habitual del texto (se apoya en la memoria de D3) — ver Open Questions.
 
-**Decisión:** la descripción SIGUE opcional. Se descartó volverla obligatoria para forzar auto-clasificación (categoría/subcategoría/cuenta).
+**Agregado esta pasada (posición y tamaño):** en el orden invertido (D7) la descripción cae al fondo (arriba de lo avanzado) y se **adelgaza a una sola línea** (sin recuadro de icono ni label en mayúsculas). No se esconde detrás de un tap ("+ Nota" que se expande): al que prefiere tipear el comercio no le cobramos un gesto.
 
-**Rationale.** Volver obligatorio un campo para habilitar una comodidad le cobra fricción a todas las cargas —incluidas las que los chips ya resuelven en un tap— y produce descripciones basura ("varios", ".") que ensucian el historial que alimenta las sugerencias. Las categorías ya son suficientemente descriptivas para la mayoría.
+### D7 — Orden invertido: categoría antes que cuenta (nueva)
 
-**Dos aceleradores coexisten, el usuario elige por comportamiento:**
+Como la categoría ahora maneja la cuenta (D3), la categoría es la decisión principal y va **antes** que la cuenta. Orden vertical del alta en create:
 
-1. **Sin descripción → chips de categoría** (D0, nivel 2): un tap resuelve categoría + cuenta habitual.
-2. **Con descripción → sugerencia** (`suggestCategoryFromHistory`): tipear un comercio conocido ("kiosco") prefiltra la clasificación. Hoy devuelve categoría + subcategoría (`packages/money-logic/src/category-suggestion.ts`); **la extensión natural es que también recuerde la cuenta habitual** para ese texto, completando el "kiosco → categoría + cuenta" para quien tipea.
+1. Tipo (tabs) · 2. Monto (recortado) · 3. **Categoría (chips + "Ver todas")** · 4. Cuenta (derivada; oculta si hay una sola elegible; si no, override liviano) · 5. Fecha · 6. Descripción (opcional) · 7. Avanzado (colapsado, Capa 1).
 
-Ninguno bloquea al otro ni introduce un modo: son dos puertas al mismo resultado.
+Reemplaza el orden actual (web: cuenta arriba de categoría; mobile: categoría abajo del todo, después de fecha/descripción). Es solo presentación — ninguna regla contable cambia. En edición no aplica (los campos editables mantienen su tratamiento).
+
+### D8 — El peso visual sigue al rol del campo (nueva)
+
+Monto = héroe (recortado). Chips de categoría = la acción principal. Los campos secundarios (cuenta-override, fecha, descripción) van con tratamiento **de una sola línea**: sin recuadro de icono de 36px, sin label en mayúsculas. Declutterea y sube lo importante arriba del fold.
+
+- **Fecha:** una línea con el valor al frente ("📅 Hoy · mar 11 ago ›"); el label "FECHA" es redundante (el valor ya se lee como fecha). Sigue en 0 taps.
+- **Descripción:** una línea con placeholder ("Agregá una nota (opcional)"), visible (no tap-to-expand).
+
+Es una regla general para las filas secundarias, no ad-hoc por campo. Todo gateado por breakpoint: el desktop conserva su tratamiento actual (recuadros de icono + labels en mayúsculas).
 
 ## Risks / Trade-offs
 
-- **Descubribilidad de `ajuste`/`cambio`.** Bajarles el peso puede hacer que un usuario que los busca tarde un segundo más. Mitigación: la affordance "Otros" es visible y de un solo tap; no se esconden en un menú profundo.
-- **Default menos predecible con "última usada".** Ver D3: es opt-in del PO; si molesta, se queda en "primera elegible".
-- **Paridad mobile.** Todo derivado nuevo vive en el hook; si mobile no lee `showAccountSelector`/la partición, TypeScript no lo obliga (son datos, no tipos). Mitigación: el scenario de paridad y una nota en el contrato.
+- **Predictibilidad del tercer tab (D1).** Que el tercer verbo cambie de identidad puede desorientar. Mitigación: Gasto/Ingreso fijos, solo se mueve el tercer chip, recálculo en cadencia lenta, "Otros" con casa estable.
+- **Cuenta inferida equivocada (D3).** La memoria puede errar. Mitigación: la cuenta inferida siempre se muestra y es tappable; nunca se infiere en silencio.
+- **Descubribilidad de `ajuste`/`cambio`.** Bajarles el peso puede costar un segundo. Mitigación: "Otros" visible y de un tap; no se esconden en un menú profundo.
+- **Paridad mobile.** Todo derivado nuevo (hojas frecuentes, `showAccountSelector`, tercer tab, mapa de cuenta) vive en el hook; si mobile no lo lee, TypeScript no lo obliga (son datos, no tipos). Mitigación: el scenario de paridad y una nota en el contrato.
 
 ## Open Questions
 
-- **Dimensión comercio/payee.** ¿Grana desarrolla el comercio como concepto de primera clase (chips/labels que digan "Kiosco", "Carrefour", con su categoría y cuenta asociadas), o la clasificación se queda a nivel categoría? Es la decisión que separa el nivel 2 del nivel 3 de los chips, y excede este change. Requiere decisión de producto antes de comprometerla.
-- ¿Se extiende `suggestCategoryFromHistory` para devolver también la cuenta habitual del texto? (Enhancement acotado, alto valor; decidir si entra en este change o en uno de seguimiento.)
-- D0: cantidad de chips (3 vs 5) y orden (recencia vs frecuencia). Arranco con 5 por recencia.
-- ¿"Otros" como pestaña extra dentro del `Segmented`, o como un link/acción aparte debajo? (UI, no contrato — se resuelve en implementación.)
-- D3: adoptar o no "última cuenta usada".
+- **Dimensión comercio/payee.** Sigue parkeada como decisión de producto. El modelo de chip-como-hoja (D0) cubre buena parte del caso "Pedidos Ya" **sin** crear la dimensión, mientras el usuario lo modele como subcategoría. Un comercio de primera clase (con su propia categoría/cuenta) sigue fuera de alcance.
+- **Cadencia exacta de recálculo** del tercer tab (D1) y de las hojas frecuentes (D0): "por sesión/día" es la intención; el punto fino (memoizar por request RSC en web / query key en mobile) se resuelve en implementación.
+- **Extender `suggestCategoryFromHistory` para traer también la cuenta** del texto (D6/D3): cae casi solo sobre la memoria de cuenta; decidir si entra en este change o en uno de seguimiento.
+
+**Cerradas esta pasada** (salían de Open Questions): cantidad de chips y recencia-vs-frecuencia → 4–6 por frecuencia-en-ventana (D0); memoria de subcategoría separada → disuelta, viaja dentro del chip-hoja (D0); adoptar "última cuenta usada" → sí, dentro del orden de preselección, detrás de la memoria categoría→cuenta (D3); "Otros" como pestaña o link → affordance de un tap que aparece solo con secundario elegible (D1).
