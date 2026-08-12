@@ -714,6 +714,44 @@ export const MovementForm = ({
         // archived one is this movement's current value, not an option, and
         // must not open a second level holding nothing but itself.
         const drillable = selectableSubcategories(c).length > 0
+        const archivedBadge = c.is_active === false && (
+          <span className="shrink-0 rounded-full bg-border-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-text-muted">
+            {t('drawer.archived')}
+          </span>
+        )
+        // Mobile-web: tapping the row assigns the bare category; a separate
+        // chevron button drills into subcategories (no forced drill).
+        if (drillable && isMobile) {
+          return (
+            <div
+              key={c.id}
+              className="flex items-center gap-1 rounded-[10px] pr-1 transition-colors hover:bg-page"
+            >
+              <button
+                type="button"
+                onClick={() => pickCategory(c.id, '')}
+                className="flex min-w-0 flex-1 items-center gap-2.5 px-2.5 py-2 text-left"
+              >
+                <span className="flex-1 truncate text-sm font-medium text-text">
+                  {c.icon ? `${c.icon} ` : ''}
+                  {getCategoryName(c, tRoot)}
+                </span>
+                {archivedBadge}
+                {categoryId === c.id && !subcategoryId && (
+                  <Check className="size-4 shrink-0 text-emerald" aria-hidden />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCatDrill(c.id)}
+                aria-label={t('form.category_drill', { category: getCategoryName(c, tRoot) })}
+                className="shrink-0 rounded-md p-1.5 text-text-soft transition-colors hover:bg-border-soft"
+              >
+                <ChevronRight className="size-4" aria-hidden />
+              </button>
+            </div>
+          )
+        }
         return (
           <button
             key={c.id}
@@ -725,11 +763,7 @@ export const MovementForm = ({
               {c.icon ? `${c.icon} ` : ''}
               {getCategoryName(c, tRoot)}
             </span>
-            {c.is_active === false && (
-              <span className="shrink-0 rounded-full bg-border-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-text-muted">
-                {t('drawer.archived')}
-              </span>
-            )}
+            {archivedBadge}
             {drillable ? (
               <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
             ) : (
@@ -966,7 +1000,66 @@ export const MovementForm = ({
     </Popover>
   )
 
-  const dateRow = (
+  const yesterdayISO = (() => {
+    const d = getTodayAR()
+    d.setDate(d.getDate() - 1)
+    return formatDateISO(d)
+  })()
+  const dateRow = isMobile ? (
+    // Mobile-web: Hoy / Ayer quick chips + a calendar trigger for any date.
+    <div className="flex items-center gap-3 px-4 py-3">
+      <span
+        className="flex size-9 shrink-0 items-center justify-center rounded-[11px] text-text-muted"
+        style={{ backgroundColor: FIELD_BG }}
+      >
+        <Calendar className="size-[18px]" aria-hidden />
+      </span>
+      <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+        {t('labels.date')}
+      </span>
+      <div className="ml-auto flex items-center gap-1.5">
+        {(
+          [
+            { label: t('form.date_today'), value: todayStr() },
+            { label: t('form.date_yesterday'), value: yesterdayISO },
+          ] as const
+        ).map((o) => {
+          const active = date === o.value
+          return (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => setDate(o.value)}
+              className={`rounded-[8px] px-2.5 py-1.5 text-xs font-bold transition-colors ${
+                active ? 'bg-navy text-white' : 'border border-border text-text-muted'
+              }`}
+            >
+              {o.label}
+            </button>
+          )
+        })}
+        <DatePicker
+          value={date}
+          onChange={setDate}
+          min={appStartDate ?? undefined}
+          modal={isDrawer}
+          trigger={
+            <button
+              type="button"
+              aria-label={t('labels.date')}
+              className="flex items-center gap-1 rounded-[8px] border border-border px-2 py-1.5 text-xs font-semibold text-text-muted transition-colors hover:bg-border-soft"
+            >
+              {date !== todayStr() && date !== yesterdayISO ? (
+                formatDateValue(date)
+              ) : (
+                <Calendar className="size-4" aria-hidden />
+              )}
+            </button>
+          }
+        />
+      </div>
+    </div>
+  ) : (
     <DatePicker
       value={date}
       onChange={setDate}
