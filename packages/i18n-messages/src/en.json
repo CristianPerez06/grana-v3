@@ -1472,6 +1472,8 @@
       "amount_label": "Amount",
       "currency_label": "Currency",
       "account_label": "Account",
+      "family_debit": "Debit · Cash",
+      "family_credit": "Credit",
       "destination_label": "Destination account",
       "date_label": "Date",
       "date_today": "Today",

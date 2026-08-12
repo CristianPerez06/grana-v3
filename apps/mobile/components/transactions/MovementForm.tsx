@@ -21,7 +21,7 @@ import { Segmented } from '../ui/Segmented'
 import { Switch } from '../ui/Switch'
 import { FormError } from '../ui/FormError'
 import { Spinner } from '../ui/Spinner'
-import { AccountSelectField, CategorySelectField } from './form-pickers'
+import { AccountSelectField, AccountFamilySelect, CategorySelectField } from './form-pickers'
 import { SelectSheet } from '../ui/SelectSheet'
 import { SheetRow } from '../ui/SelectField'
 import { colors } from '../../lib/colors'
@@ -414,18 +414,26 @@ export function MovementForm({
 
       {/* Source account. Immutable context in edit, except a statement payment
           whose debit account can move (`editable.account`). */}
-      {showSourceAccount && (
-        <AccountSelectField
-          label={
-            showAdjustment
-              ? t('transactions.drawer.account_to_adjust')
-              : t('transactions.form.account_label')
-          }
-          accounts={form.eligibleAccounts}
-          selectedId={form.accountId}
-          onSelect={form.setAccountId}
-        />
-      )}
+      {showSourceAccount &&
+        (isEdit ? (
+          <AccountSelectField
+            label={t('transactions.form.account_label')}
+            accounts={form.eligibleAccounts}
+            selectedId={form.accountId}
+            onSelect={form.setAccountId}
+          />
+        ) : (
+          <AccountFamilySelect
+            label={
+              showAdjustment
+                ? t('transactions.drawer.account_to_adjust')
+                : t('transactions.form.account_label')
+            }
+            accounts={form.eligibleAccounts}
+            selectedId={form.accountId}
+            onSelect={form.setAccountId}
+          />
+        ))}
 
       {/* Installments (credit expense) — ARS gets chips + stepper + preview;
           USD gets the cuotas-sólo-ARS hint (simple USD purchase stays allowed) */}

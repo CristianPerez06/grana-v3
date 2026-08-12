@@ -10,6 +10,7 @@ import { Label } from '../ui/Label'
 import { AccountAvatar } from '../ui/AccountAvatar'
 import { SelectField, SheetRow } from '../ui/SelectField'
 import { SelectSheet } from '../ui/SelectSheet'
+import { Segmented } from '../ui/Segmented'
 import { colors } from '../../lib/colors'
 import { useT } from '../../lib/locale-context'
 
@@ -70,6 +71,82 @@ export function AccountSelectField({
           />
         )}
       />
+    </View>
+  )
+}
+
+// Account picker organized by family (design D10): when the eligible accounts
+// span both Débito/Efectivo and Crédito, a family toggle sits on top and the
+// accounts of the active family show as chips. With a single account in a
+// family, the toggle already selects it (no redundant chip). One family only ⇒
+// no toggle, just the chips. Only rendered when there are ≥2 eligible accounts
+// (the caller hides it otherwise). Avatars carry each institution's brand color.
+export function AccountFamilySelect({
+  label,
+  accounts,
+  selectedId,
+  onSelect,
+}: {
+  label: string
+  accounts: MovementFormAccount[]
+  selectedId: string
+  onSelect: (id: string) => void
+}) {
+  const t = useT()
+  const debit = accounts.filter((a) => a.type !== 'credit')
+  const credit = accounts.filter((a) => a.type === 'credit')
+  const bothFamilies = debit.length > 0 && credit.length > 0
+  const selected = accounts.find((a) => a.id === selectedId)
+  const family: 'debit' | 'credit' = selected?.type === 'credit' ? 'credit' : 'debit'
+  const list = family === 'credit' ? credit : debit
+
+  // Switching family selects that family's first account (the toggle "is" the
+  // account when a family holds a single one).
+  const pickFamily = (next: string) => {
+    const target = (next === 'credit' ? credit : debit)[0]
+    if (target && target.id !== selectedId) onSelect(target.id)
+  }
+
+  return (
+    <View className="flex-col gap-1.5">
+      <Label>{label}</Label>
+      {bothFamilies && (
+        <Segmented
+          ariaLabel={label}
+          value={family}
+          onValueChange={pickFamily}
+          options={[
+            { value: 'debit', label: t('transactions.form.family_debit') },
+            { value: 'credit', label: t('transactions.form.family_credit') },
+          ]}
+        />
+      )}
+      {list.length > 1 && (
+        <View className="flex-row flex-wrap gap-2">
+          {list.map((a) => {
+            const active = a.id === selectedId
+            return (
+              <Pressable
+                key={a.id}
+                onPress={() => onSelect(a.id)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                className={`flex-row items-center gap-2 rounded-xl border px-3 py-2 ${
+                  active ? 'border-emerald bg-emerald-soft' : 'border-border bg-card'
+                }`}
+              >
+                {a.avatar && <AccountAvatar {...a.avatar} size="sm" />}
+                <Text
+                  className={`text-sm font-semibold ${active ? 'text-emerald-deep' : 'text-text'}`}
+                  numberOfLines={1}
+                >
+                  {a.institutionName ?? a.name}
+                </Text>
+              </Pressable>
+            )
+          })}
+        </View>
+      )}
     </View>
   )
 }

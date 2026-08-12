@@ -1472,6 +1472,8 @@
       "amount_label": "Monto",
       "currency_label": "Moneda",
       "account_label": "Cuenta",
+      "family_debit": "Débito · Efvo",
+      "family_credit": "Crédito",
       "destination_label": "Cuenta destino",
       "date_label": "Fecha",
       "date_today": "Hoy",
