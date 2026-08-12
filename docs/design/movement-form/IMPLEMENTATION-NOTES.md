@@ -27,15 +27,23 @@ Cada tajada quedó commiteada con `lint` + `typecheck` + tests pasando.
 - Selector de cuenta con **muchas** cuentas: hoy los chips de la familia activa **envuelven** (wrap). El drilldown/hoja del escenario 3 (design D10) es un refinamiento; con pocas cuentas —el caso común— ya queda bien.
 - **Monto centrado** en mobile — el input de monto no es un "hero card" como en web; tweak menor, pendiente.
 
-## Web — diferido a una pasada revisada (recomendado)
+## Web (mobile-web) — en curso, gateado por breakpoint
 
-**`apps/web/.../movement-form.tsx` no se tocó** (queda intacto y seguro; el hook nuevo no cambia su render porque web todavía no consume los derivados nuevos).
+Enfoque: hook **`useIsMobile`** (`apps/web/lib/use-is-mobile.ts`, matchMedia `max-width:767px`) + `isMobile ? <mobile> : <desktop-intacto>`. **El desktop queda byte-idéntico** (mismo JSX vía variables extraídas); lo único que falta validar es visual en el ancho mobile.
 
-El componente sirve **desktop y mobile-web**, y el scope prohíbe tocar desktop. Por eso el rediseño web necesita:
-1. Un hook `useIsMobile` (matchMedia) para **branchear layout en JS** — los cambios de comportamiento (drill, tabs) no se pueden gatear solo con CSS.
-2. Rendear la variante mobile-web sin alterar el árbol de desktop.
+| Hecho (mobile-web) | Commit |
+|---|---|
+| `useIsMobile`; tabs **Gasto/Ingreso/Otros** (Otros = popover); **orden invertido** (categoría antes que cuenta); **ocultar cuenta** con una sola elegible | `feat(web): mobile-web movement form — useIsMobile, tabs Otros, order inversion, hide single account` |
+| Picker **sin drill obligatorio** (tap elige, chevron drillea); **Fecha Hoy/Ayer** + calendario | `feat(web): mobile-web no forced category drill and Hoy/Ayer date chips` |
+| **Monto compacto** (número/padding más chicos) | `feat(web): compact amount hero on mobile-web` |
 
-Es un refactor delicado y **no puedo validar la no-regresión de desktop de forma autónoma** (requiere prueba visual en ambos anchos). Recomiendo hacerlo en una sesión con tu revisión, no a ciegas. Cuando arranquemos: agrego `useIsMobile`, y voy gateando pieza por pieza (empezando por ocultar cuenta con una sola + tabs), verificando desktop a cada paso.
+**Verificado:** `apps/web` typecheck 0 errores, eslint limpio. Desktop no tocado (rama `else` = JSX original).
+**Falta validar:** que se vea bien en el ancho mobile (probalo en Chrome → F12 → modo dispositivo).
+
+### Pendiente en mobile-web (web)
+- **Selector de cuenta por familia Débito/Crédito** (como en `apps/mobile`) — hoy usa el Popover de cuenta actual.
+- **Avanzadas como chips symbol-forward** — hoy siguen como los tres toggles del `togglesGroup`.
+Son los dos más grandes; los dejo para seguir después de que testees lo anterior.
 
 ## No hice (por regla)
 
