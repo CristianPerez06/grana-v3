@@ -215,3 +215,62 @@ describe('useMovementForm — submit dispatcher', () => {
     expect(mutators.registerCardPurchase).not.toHaveBeenCalled()
   })
 })
+
+describe('useMovementForm — tab partition and account selector (surface)', () => {
+  const bankArs2: MovementFormAccount = {
+    id: 'acc-bank2',
+    name: 'Banco',
+    type: 'bank',
+    activeCurrencies: ['ARS'],
+    balances: { ARS: 5_000, USD: 0 },
+    institutionId: 'bank-2',
+  }
+  const usdAccount: MovementFormAccount = {
+    id: 'acc-usd',
+    name: 'Dólares',
+    type: 'bank',
+    activeCurrencies: ['USD'],
+    balances: { ARS: 0, USD: 500 },
+    institutionId: 'bank-3',
+  }
+
+  it('one cash account + a card ⇒ only adjustment is an eligible secondary', () => {
+    const { result } = renderHook(() => useMovementForm(baseArgs()))
+    expect(result.current.secondaryTabs).toEqual(['adjustment'])
+  })
+
+  it('two own accounts ⇒ transfer becomes eligible', () => {
+    const { result } = renderHook(() =>
+      useMovementForm(baseArgs({ accounts: [cashAccount, bankArs2] })),
+    )
+    expect(result.current.secondaryTabs).toContain('transfer')
+    expect(result.current.secondaryTabs).toContain('adjustment')
+    expect(result.current.secondaryTabs).not.toContain('exchange')
+  })
+
+  it('accounts covering ARS and USD ⇒ exchange becomes eligible', () => {
+    const { result } = renderHook(() =>
+      useMovementForm(baseArgs({ accounts: [cashAccount, usdAccount] })),
+    )
+    expect(result.current.secondaryTabs).toContain('exchange')
+  })
+
+  it('isSecondaryTab reflects the active tab', () => {
+    const { result } = renderHook(() => useMovementForm(baseArgs()))
+    expect(result.current.isSecondaryTab).toBe(false)
+    act(() => result.current.setTab('adjustment'))
+    expect(result.current.isSecondaryTab).toBe(true)
+  })
+
+  it('showAccountSelector is false with a single eligible account, true with two', () => {
+    const single = renderHook(() =>
+      useMovementForm(baseArgs({ accounts: [cashAccount] })),
+    )
+    expect(single.result.current.showAccountSelector).toBe(false)
+
+    const many = renderHook(() =>
+      useMovementForm(baseArgs({ accounts: [cashAccount, cardAccount] })),
+    )
+    expect(many.result.current.showAccountSelector).toBe(true)
+  })
+})
