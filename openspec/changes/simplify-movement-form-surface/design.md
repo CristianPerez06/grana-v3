@@ -22,6 +22,22 @@ Total ~7 taps; mejor caso 4 (una sola cuenta + categoría sin subcategorías). E
 
 **Wins ya ganados (no re-descubrir):** autofocus del monto, default de fecha hoy, moneda por cuenta, y el chip de sugerencia por descripción. Este change ataca lo que queda: categoría y cuenta.
 
+#### Auditoría de taps — alta simple en `apps/mobile` (app nativa)
+
+El flujo nativo tiene la **misma cuenta de taps** que el web (la lógica es el hook compartido; solo cambia el chrome). Verificado en código:
+
+| Paso | Taps | Mecánica nativa |
+|------|------|-----------------|
+| Abrir (FAB) | 1 | `QuickAddFab` → `router.push('/transactions/new')` (`components/transactions/QuickAddFab.tsx:13`); el alta es una **pantalla pushed** (`FormScreen`), no un drawer |
+| Monto | 0 | `MovementForm.tsx:303` `autoFocus={!isEdit}` — teclado numérico al entrar |
+| Tipo | 0 | default `expense` (`Segmented`) |
+| Cuenta (2+) | 2 | `AccountSelectField` → `SelectField` abre `SelectSheet` + elegir fila (`form-pickers.tsx`) |
+| Categoría (con subcategorías) | 3 | `CategorySelectField` → abrir sheet + entrar al drill (`setDrillId`) + elegir sub/"toda la categoría" |
+| Fecha | 0 | `DateField` default hoy AR |
+| Guardar | 1 | submit → `onDone` → `router.back()` (el pop es automático, sin tap extra) |
+
+Total ~7; mejor caso 4. **Mobile-web** (el mismo `apps/web/.../movement-form.tsx` bajo breakpoint móvil) = la auditoría web de arriba (drawer + `Popover`). Los tres recortes del change (chips de categoría, ocultar cuenta con una sola, subcategoría no obligatoria) aplican igual a las dos superficies porque atacan el hook compartido y el patrón de picker, no el chrome.
+
 ## Goals / Non-Goals
 
 **Goals:**
