@@ -25,13 +25,16 @@
 - [ ] 4.3 Tercer tab dinámico + affordance "Otros" (solo si hay secundario elegible) que revela `transfer`/`exchange`/`adjustment` según corresponda.
 - [ ] 4.4 Condicionar el bloque de cuenta a `showAccountSelector`; cuando aparece, chips de cuenta inline (pocas) o fila+popover con secciones crédito/débito (muchas); mostrar la cuenta inferida como override liviano ("Se debita de · …").
 - [ ] 4.5 Monto recortado (padding + número ~34–38px) y filas secundarias (fecha, descripción) a una sola línea, sin recuadro de icono ni label en mayúsculas. Solo bajo breakpoint móvil; desktop intacto.
-- [ ] 4.6 Verificar que reintegro/compartido/repetir/cuotas siguen colapsados por defecto y fuera del camino del gasto simple.
+- [ ] 4.6 Verificar que reintegro/compartido/repetir/cuotas siguen sin activar por defecto y fuera del camino del gasto simple.
 - [ ] 4.7 Edición intacta: tipo inmutable, todos los campos editables visibles, sin reordenar.
+- [ ] 4.8 Capa 1: reemplazar el `togglesGroup` (tres toggles apilados) por una **fila slim de chips de activación** gateados por contexto (reintegro/compartir/repetir); tocar un chip activa la funcionalidad y despliega sus params inline; tocar de nuevo desactiva. Sin envoltorio "Más opciones". Solo bajo breakpoint móvil; desktop conserva el `togglesGroup`.
+- [ ] 4.9 Cuotas fuera de la fila de chips: pegada al bloque de cuenta, contextual a tarjeta (chips ARS / pago único USD), como forma de pago.
 
 ## 5. UI mobile (`apps/mobile`)
 
 - [ ] 5.1 Consumir `quickClassifications`, el tercer tab dinámico, `showAccountSelector` y la cuenta inferida desde el hook compartido (sin lógica duplicada).
 - [ ] 5.2 Chips de clasificación, orden invertido (categoría antes que cuenta), affordance idiomática para "Otros", picker sin drill obligatorio y filas secundarias livianas en la plataforma nativa.
+- [ ] 5.3 Capa 1: fila de chips de activación gateados por contexto (reintegro/compartir/repetir) con params inline, y cuotas pegada a la cuenta — heredando los gates del hook, sin lógica duplicada.
 
 ## 6. i18n
 
@@ -48,6 +51,7 @@
 - [ ] 7.7 El default de cuenta en create respeta el orden de D3 (contexto → memoria → única → última usada → primera).
 - [ ] 7.8 **Presupuesto de taps:** el gasto simple (1 cuenta elegible + clasificación frecuente) se completa con abrir + 1 tap de chip + guardar, sin abrir cuenta, drill de subcategoría ni secciones avanzadas.
 - [ ] 7.9 Los tipos secundarios (`adjustment`, `exchange`, `transfer`) siguen alcanzables vía "Otros" y funcionan igual que hoy.
+- [ ] 7.10 Capa 1: el conjunto de chips de activación es contextual (income → solo repetir; compartir solo con hogar de 2; repetir off en cuotas; ninguno en ajuste/cambio); activar un chip revela sus params; cuotas se ofrece junto a la cuenta de crédito, no en la fila de chips.
 
 ## 8. Cierre
 

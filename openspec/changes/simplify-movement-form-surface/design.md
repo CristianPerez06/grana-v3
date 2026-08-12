@@ -142,6 +142,16 @@ Monto = héroe (recortado). Chips de categoría = la acción principal. Los camp
 
 Es una regla general para las filas secundarias, no ad-hoc por campo. Todo gateado por breakpoint: el desktop conserva su tratamiento actual (recuadros de icono + labels en mayúsculas).
 
+### D9 — Capa 1: funcionalidades avanzadas como chips de activación en el lugar (nueva)
+
+Reintegro, compartir y repetir dejan de ser tres toggles gordos siempre visibles (icono + título + subtítulo + switch, `togglesGroup` en `movement-form.tsx:1287`) y pasan a una **fila slim de chips de activación**. Tocar un chip **activa la funcionalidad** (equivale al switch de hoy) y **despliega sus parámetros inline** debajo; tocarlo de nuevo la apaga y colapsa. "Primero la intención, después el detalle."
+
+- **La fila es contextual (1–3 chips), no siempre tres.** Repetir: en `gasto` no-cuotas / `ingreso` / `transferencia`. Reintegro: en `gasto`. Compartir: en `gasto` con hogar de 2. Si no aplica ninguno (`ajuste`/`cambio`), no hay fila. Son los gates que ya existen (`showReimbursementToggle`, `showSharedToggle`, `showRepeatToggle`, `!isInstallments`) — presentación, no lógica nueva.
+- **Params sin cambios**, con sus defaults sanos: compartir = 50/50; repetir = mensual; reintegro = monto (+ %/tope, target radio en crédito, cuenta destino, recibido-ahora). Cada feature paga solo su mínimo; el gasto simple no toca ninguna.
+- **Chips a la vista, sin envoltorio "Más opciones" (decisión de PO).** Se eligió la fila slim siempre visible (0 tap extra para activar, misma cuenta que hoy) por sobre colapsar todo detrás de "Más opciones" (+1 tap). Reclama casi el mismo espacio —una fila flaca vs tres gordas— y mantiene el CTA arriba del fold.
+- **Cuotas NO está en esta fila.** Es parte de la **forma de pago**, no un add-on: sigue apareciendo pegada al bloque de cuenta cuando la cuenta es tarjeta (chips [1,3,6,12] + "Otras" en ARS; pago único en USD). Como la memoria categoría→cuenta (D3) puede setear una tarjeta, cuotas aparece ahí, coherente.
+- Refuerza el invariante de D4 (nada de esto en el camino del gasto simple). Presentación-only; mismos gates; en web gateado por breakpoint (el desktop conserva el `togglesGroup` actual).
+
 ## Risks / Trade-offs
 
 - **Predictibilidad del tercer tab (D1).** Que el tercer verbo cambie de identidad puede desorientar. Mitigación: Gasto/Ingreso fijos, solo se mueve el tercer chip, recálculo en cadencia lenta, "Otros" con casa estable.

@@ -118,11 +118,37 @@ Las secciones avanzadas del alta —reintegro, gasto compartido, repetir (recurr
 - **THEN** el gasto se registra correctamente
 - **AND** no se creó ningún reintegro, split de gasto compartido ni regla recurrente
 
-#### Scenario: Las secciones avanzadas están colapsadas al abrir
+#### Scenario: Las funcionalidades avanzadas están sin activar al abrir
 
 - **WHEN** el usuario abre el formulario de alta en el tipo `gasto`
-- **THEN** las secciones de reintegro, compartido y repetir se muestran colapsadas (solo su toggle)
-- **AND** la sección de cuotas no aparece salvo que la cuenta sea de crédito en ARS
+- **THEN** reintegro, compartido y repetir se ofrecen como chips de activación sin activar (sin sus parámetros)
+- **AND** las cuotas no aparecen salvo que la cuenta sea de crédito
+
+### Requirement: El formulario ofrece las funcionalidades avanzadas según el contexto y las activa en el lugar
+
+Las funcionalidades avanzadas del alta —reintegro, gasto compartido y repetir (recurrencia)— SHALL ofrecerse como opciones de activación directa gateadas por el contexto: un solo gesto SHALL activar la funcionalidad y revelar sus parámetros en el lugar, y otro gesto SHALL desactivarla. El conjunto ofrecido depende del contexto y de los datos (gasto compartido solo con un hogar de dos miembros; repetir no disponible en compras en cuotas; ninguna en `ajuste` ni `cambio de moneda`), de modo que puede ir de una a tres opciones o ninguna. Las cuotas SHALL ofrecerse junto a la cuenta cuando esta es una tarjeta de crédito, por ser parte de la forma de pago, y no dentro de las funcionalidades avanzadas. Ninguna de estas funcionalidades SHALL estar activa por defecto ni ser obligatoria para un gasto simple.
+
+#### Scenario: Activar una funcionalidad revela sus parámetros en el lugar
+
+- **WHEN** el usuario activa "compartir" en un gasto
+- **THEN** aparecen los parámetros del split (con un default 50/50) sin abrir otra pantalla
+- **AND** desactivarla los oculta de nuevo
+
+#### Scenario: El conjunto de funcionalidades es contextual
+
+- **WHEN** el usuario abre el alta en `ingreso`
+- **THEN** se ofrece "repetir" pero no "reintegro" ni "gasto compartido"
+
+#### Scenario: El gasto compartido requiere un hogar de dos
+
+- **WHEN** el usuario no tiene un hogar de dos miembros
+- **THEN** no se ofrece la opción de gasto compartido
+
+#### Scenario: Las cuotas se ofrecen junto a la cuenta de crédito
+
+- **WHEN** el usuario selecciona una tarjeta de crédito para un gasto
+- **THEN** la elección de cuotas aparece junto a la cuenta, como parte de la forma de pago
+- **AND** no aparece entre las funcionalidades avanzadas
 
 ### Requirement: El alta preselecciona la cuenta según la clasificación y los datos del usuario
 
