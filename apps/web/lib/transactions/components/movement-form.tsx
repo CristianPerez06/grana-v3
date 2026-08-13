@@ -1055,19 +1055,20 @@ export const MovementForm = ({
           // catalog lives behind a slim "Elegir otra categoría" trigger. It
           // shows the current selection when it isn't one of the active chips,
           // so what's picked is always visible.
-          <button type="button" className="flex w-full items-center gap-3 px-4 py-3 text-left">
+          <button type="button" className="flex w-full items-center gap-2 px-4 py-2.5 text-left">
+            <Tag className="size-4 shrink-0 text-text-soft" aria-hidden />
             <span
-              className="flex size-9 shrink-0 items-center justify-center rounded-[11px] text-text-muted"
-              style={{ backgroundColor: FIELD_BG }}
+              className={`min-w-0 flex-1 truncate text-[13px] ${
+                selectedCategory && !frequentChips.some((c) => c.active)
+                  ? 'font-semibold text-text'
+                  : 'font-medium text-text-muted'
+              }`}
             >
-              <Tag className="size-[18px]" aria-hidden />
-            </span>
-            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-text">
               {selectedCategory && !frequentChips.some((c) => c.active)
                 ? categoryValue
                 : t('drawer.pick_other_category')}
             </span>
-            <ChevronRight className="size-4 shrink-0 text-text-soft/60" aria-hidden />
+            <ChevronRight className="size-3.5 shrink-0 text-text-soft/50" aria-hidden />
           </button>
         ) : (
           <FieldRow icon={<Tag className="size-[18px]" />} label={t('labels.category')} value={categoryValue} />

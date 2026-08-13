@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
-import { ChevronLeft, ChevronRight } from 'lucide-react-native'
+import { ChevronLeft, ChevronRight, Tag } from 'lucide-react-native'
 import {
   selectableSubcategories,
   type CategoryWithSubcategories,
@@ -187,40 +187,70 @@ export function CategorySelectField({
 
   return (
     <View className="flex-col gap-1.5">
-      {!compact && <Label>{t('transactions.form.category_label')}</Label>}
-      <SelectField
-        placeholder={
-          compact
-            ? t('transactions.drawer.pick_other_category')
-            : t('transactions.placeholders.category')
-        }
-        onPress={() => setOpen(true)}
-        value={
-          selectedCat && !(compact && selectionIsActiveChip) ? (
-            <View className="flex-row items-center gap-1">
-              <Text className="text-sm text-text" numberOfLines={1}>
+      {compact ? (
+        // Light, borderless "Elegir otra categoría" — a secondary action below
+        // the chips. Shows the current selection when it isn't an active chip.
+        <Pressable
+          onPress={() => setOpen(true)}
+          accessibilityRole="button"
+          className="flex-row items-center gap-2 py-1.5"
+        >
+          <Tag size={16} color={colors.textSoft} />
+          {selectedCat && !selectionIsActiveChip ? (
+            <View className="flex-1 flex-row items-center gap-1">
+              <Text className="text-[13px] font-semibold text-text" numberOfLines={1}>
                 {selectedCat.name}
               </Text>
               {selectedSub && (
                 <>
                   <Text className="text-text-soft">›</Text>
-                  <Text className="text-sm text-text-muted" numberOfLines={1}>
+                  <Text className="text-[13px] text-text-muted" numberOfLines={1}>
                     {selectedSub.name}
                   </Text>
                 </>
               )}
-              {/* The value can be an archived row this movement was classified
-                  with before it was archived — say so instead of showing it as
-                  if it were still on offer. */}
-              {(selectedCat.is_active === false || selectedSub?.is_active === false) && (
-                <Text className="text-xs text-text-soft" numberOfLines={1}>
-                  {`(${t('transactions.drawer.archived')})`}
-                </Text>
-              )}
             </View>
-          ) : undefined
-        }
-      />
+          ) : (
+            <Text className="flex-1 text-[13px] font-medium text-text-muted">
+              {t('transactions.drawer.pick_other_category')}
+            </Text>
+          )}
+          <ChevronRight size={16} color={colors.textSoft} />
+        </Pressable>
+      ) : (
+        <>
+          <Label>{t('transactions.form.category_label')}</Label>
+          <SelectField
+            placeholder={t('transactions.placeholders.category')}
+            onPress={() => setOpen(true)}
+            value={
+              selectedCat ? (
+                <View className="flex-row items-center gap-1">
+                  <Text className="text-sm text-text" numberOfLines={1}>
+                    {selectedCat.name}
+                  </Text>
+                  {selectedSub && (
+                    <>
+                      <Text className="text-text-soft">›</Text>
+                      <Text className="text-sm text-text-muted" numberOfLines={1}>
+                        {selectedSub.name}
+                      </Text>
+                    </>
+                  )}
+                  {/* The value can be an archived row this movement was classified
+                      with before it was archived — say so instead of showing it as
+                      if it were still on offer. */}
+                  {(selectedCat.is_active === false || selectedSub?.is_active === false) && (
+                    <Text className="text-xs text-text-soft" numberOfLines={1}>
+                      {`(${t('transactions.drawer.archived')})`}
+                    </Text>
+                  )}
+                </View>
+              ) : undefined
+            }
+          />
+        </>
+      )}
       <SelectSheet<CategoryWithSubcategories | Subcategory>
         visible={open}
         onClose={close}
