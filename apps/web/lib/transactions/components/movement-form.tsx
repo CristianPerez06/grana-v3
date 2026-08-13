@@ -954,50 +954,89 @@ export const MovementForm = ({
         isMobile ? 'px-4 pb-4 pt-3.5' : 'px-[22px] pb-[22px] pt-5'
       }`}
     >
-      <div className="flex items-start justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
-          {t('labels.amount')}
-        </span>
-        {/* Right column on mobile: currency chip on top, calculator below it. */}
-        <div className={`flex ${isMobile ? 'flex-col items-end gap-1.5' : 'items-center gap-2'}`}>
-          <button
-            type="button"
-            onClick={cycleCurrency}
-            disabled={currencyOptions.length < 2}
-            className="inline-flex items-center gap-1 rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
-            style={{ backgroundColor: FIELD_BG }}
-          >
-            {effectiveCurrency}
-            {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
-          </button>
-          {isMobile && (
-            <MoneyCalculatorPopover seed={amount} onResult={setAmount} />
-          )}
-        </div>
-      </div>
-      <div className={`mt-2 flex gap-1.5 ${isMobile ? 'items-center justify-center' : 'items-baseline'}`}>
-        {signChar && (
-          <span className={`${isMobile ? 'text-[34px]' : 'text-[46px]'} font-bold leading-none ${amountColor}`}>{signChar}</span>
-        )}
-        <span className={`${isMobile ? 'text-[34px] font-bold' : 'text-[27px] font-semibold opacity-50'} leading-none ${amountColor}`}>
-          {CURRENCY_SYMBOL[effectiveCurrency]}
-        </span>
-        <MoneyAmountInput
-          ref={amountRef}
-          id="amount"
-          required
-          value={amount}
-          onChange={setAmount}
-          placeholder="0"
-          style={isMobile ? { width: `${amountDisplayCh}ch` } : undefined}
-          className={`bg-transparent ${
-            isMobile ? 'min-w-0 text-left' : 'w-full min-w-0'
-          } ${isMobile ? 'text-[34px]' : 'text-[46px]'} font-bold leading-none tracking-[-0.045em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
-        />
-        {!isMobile && (
-          <MoneyCalculatorPopover seed={amount} onResult={setAmount} className="shrink-0 self-center" />
-        )}
-      </div>
+      {isMobile ? (
+        // Mobile: eyebrow on top, then the big number centered vertically against
+        // the chip+calculator column (so it sits at ~their height, with breathing
+        // room above and below — not pinned to the bottom border). A matching-width
+        // left spacer keeps the number optically centered.
+        <>
+          <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+            {t('labels.amount')}
+          </span>
+          <div className="mt-1.5 flex items-center gap-2">
+            <div className="w-16 shrink-0" aria-hidden />
+            <div className="flex flex-1 items-center justify-center gap-1.5">
+              {signChar && (
+                <span className={`text-[34px] font-bold leading-none ${amountColor}`}>{signChar}</span>
+              )}
+              <span className={`text-[34px] font-bold leading-none ${amountColor}`}>
+                {CURRENCY_SYMBOL[effectiveCurrency]}
+              </span>
+              <MoneyAmountInput
+                ref={amountRef}
+                id="amount"
+                required
+                value={amount}
+                onChange={setAmount}
+                placeholder="0"
+                style={{ width: `${amountDisplayCh}ch` }}
+                className={`min-w-0 bg-transparent text-left text-[34px] font-bold leading-none tracking-[-0.045em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
+              />
+            </div>
+            <div className="flex w-16 shrink-0 flex-col items-end gap-1.5">
+              <button
+                type="button"
+                onClick={cycleCurrency}
+                disabled={currencyOptions.length < 2}
+                className="inline-flex items-center gap-1 rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
+                style={{ backgroundColor: FIELD_BG }}
+              >
+                {effectiveCurrency}
+                {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
+              </button>
+              <MoneyCalculatorPopover seed={amount} onResult={setAmount} />
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="flex items-start justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+              {t('labels.amount')}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={cycleCurrency}
+                disabled={currencyOptions.length < 2}
+                className="inline-flex items-center gap-1 rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
+                style={{ backgroundColor: FIELD_BG }}
+              >
+                {effectiveCurrency}
+                {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
+              </button>
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-1.5">
+            {signChar && (
+              <span className={`text-[46px] font-bold leading-none ${amountColor}`}>{signChar}</span>
+            )}
+            <span className={`text-[27px] font-semibold leading-none opacity-50 ${amountColor}`}>
+              {CURRENCY_SYMBOL[effectiveCurrency]}
+            </span>
+            <MoneyAmountInput
+              ref={amountRef}
+              id="amount"
+              required
+              value={amount}
+              onChange={setAmount}
+              placeholder="0"
+              className={`w-full min-w-0 bg-transparent text-[46px] font-bold leading-none tracking-[-0.045em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
+            />
+            <MoneyCalculatorPopover seed={amount} onResult={setAmount} className="shrink-0 self-center" />
+          </div>
+        </>
+      )}
       {tab === 'income' && (
         <p className="mt-2.5 text-[12.5px] font-medium text-emerald-deep">{t('drawer.helper_income')}</p>
       )}

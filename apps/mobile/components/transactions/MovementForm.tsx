@@ -379,12 +379,33 @@ export function MovementForm({
           and a calculator trigger beneath the chip. Mirror of web's hero. */}
       {showAmount && (
         <View className="rounded-2xl border border-border bg-card px-4 pb-4 pt-3.5">
-          <View className="flex-row items-start justify-between">
-            <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
-              {t('transactions.form.amount_label')}
-            </Text>
-            {/* Right column: currency chip on top, calculator trigger below it. */}
-            <View className="items-end gap-1.5">
+          {/* Eyebrow on top; the big number is centered vertically against the
+              chip+calculator column (so it sits at ~their height, with room above
+              and below — not pinned to the bottom border). A matching-width left
+              spacer keeps the number optically centered. */}
+          <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
+            {t('transactions.form.amount_label')}
+          </Text>
+          <View className="mt-1.5 flex-row items-center gap-2">
+            <View className="w-16" />
+            <View className="flex-1 flex-row items-center justify-center">
+              {signChar !== '' && (
+                <Text className={`text-[34px] font-bold ${amountColorClass}`}>{signChar}</Text>
+              )}
+              <Text className={`pl-1 text-[34px] font-bold ${amountColorClass}`}>
+                {CURRENCY_SYMBOL[form.currencyCode]}
+              </Text>
+              <MoneyAmountInput
+                bare
+                value={form.amount}
+                onChangeText={form.setAmount}
+                placeholder="0"
+                autoFocus={!isEdit}
+                style={{ width: amountInputWidth, paddingVertical: 0 }}
+                className={`ml-1 text-[34px] font-bold ${amountColorClass}`}
+              />
+            </View>
+            <View className="w-16 items-end gap-1.5">
               <Pressable
                 onPress={cycleCurrency}
                 disabled={form.currencyOptions.length < 2}
@@ -399,23 +420,6 @@ export function MovementForm({
               </Pressable>
               <MoneyCalculator seed={form.amount} onResult={form.setAmount} />
             </View>
-          </View>
-          <View className="mt-2 flex-row items-center justify-center">
-            {signChar !== '' && (
-              <Text className={`text-[34px] font-bold ${amountColorClass}`}>{signChar}</Text>
-            )}
-            <Text className={`pl-1 text-[34px] font-bold ${amountColorClass}`}>
-              {CURRENCY_SYMBOL[form.currencyCode]}
-            </Text>
-            <MoneyAmountInput
-              bare
-              value={form.amount}
-              onChangeText={form.setAmount}
-              placeholder="0"
-              autoFocus={!isEdit}
-              style={{ width: amountInputWidth, paddingVertical: 0 }}
-              className={`ml-1 text-[34px] font-bold ${amountColorClass}`}
-            />
           </View>
           {isEdit && edit?.isParent && (
             <Text className="pt-2 text-center text-xs text-text-muted">
