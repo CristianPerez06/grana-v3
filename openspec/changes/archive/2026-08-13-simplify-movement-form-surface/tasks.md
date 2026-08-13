@@ -53,5 +53,5 @@
 - [x] 7.1 `pnpm lint` y `pnpm typecheck` en verde.
 - [x] 7.2 Suite de `@grana/movement-form` en verde con los casos nuevos.
 - [x] 7.3 `pnpm openspec:check` en verde.
-- [ ] 7.4 Archivar el change antes del merge a `main` (mover a `archive/`, integrar deltas en `openspec/specs/transactions/spec.md`).
+- [x] 7.4 Archivar el change antes del merge a `main` (mover a `archive/`, integrar deltas en `openspec/specs/transactions/spec.md`).
 - [x] 7.5 Confirmar que el epic #31 (aceleradores data-driven) queda listo para atacarse después del merge.
