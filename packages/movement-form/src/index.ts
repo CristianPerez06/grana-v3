@@ -9,6 +9,12 @@ export {
   graftArchivedTaxonomy,
   selectableSubcategories,
 } from './archived-taxonomy'
+export {
+  rankFrequentClassifications,
+  EXCLUDED_CHIP_CATEGORY_CANONICALS,
+  EXCLUDED_CHIP_SUBCATEGORY_CANONICALS,
+} from './frequent-classifications'
+export type { FrequentLeafRow } from './frequent-classifications'
 export type {
   ArchivedTaxonomy,
   CategorySubcategory,

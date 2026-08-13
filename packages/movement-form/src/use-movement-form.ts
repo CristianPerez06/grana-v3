@@ -8,6 +8,7 @@ import {
 } from '@grana/money-logic'
 import { Money, parseMoneyInput } from '@grana/validation'
 import { graftArchivedTaxonomy } from './archived-taxonomy'
+import { FREQUENT_CHIPS_MAX } from './frequent-classifications'
 import type {
   Frequency,
   FrequentChip,
@@ -17,6 +18,10 @@ import type {
   Tab,
   UseMovementFormArgs,
 } from './types'
+
+// Re-exported so existing importers (the package index, tests) keep resolving it
+// here even though the constant now lives in the React-free ranker module.
+export { FREQUENT_CHIPS_MAX } from './frequent-classifications'
 
 // Accounts eligible per tab: only Gasto can target a credit card.
 function eligibleFor(accounts: MovementFormAccount[], tab: Tab): MovementFormAccount[] {
@@ -28,10 +33,6 @@ function eligibleFor(accounts: MovementFormAccount[], tab: Tab): MovementFormAcc
 // "dynamic third slot" idea was dropped (ranking-by-frequency moved to #31).
 export const PRIMARY_TABS: Tab[] = ['expense', 'income']
 export const SECONDARY_TABS: Tab[] = ['transfer', 'exchange', 'adjustment']
-
-// How many frequent-classification chips to surface at most (#31 item 1). Kept
-// small so they fit one row on mobile and never become a wall of chips.
-export const FREQUENT_CHIPS_MAX = 4
 
 // New-user default chips (#31 item 1): shown when the user has no history yet,
 // so the accelerator is useful from day one. Referenced by immutable
