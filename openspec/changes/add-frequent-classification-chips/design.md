@@ -35,14 +35,14 @@ Igual que `accounts`/`categories`: el caller (web server action + TanStack; mobi
 - **Web:** gateado por `isMobile` (mobile-web), desktop intacto. Extender al desktop es un opt-in de una línea, se decide aparte.
 - **Edición:** los chips no aplican en modo edición (el tipo y la clasificación ya existen); solo en create.
 
-### F6 — Defaults para el usuario nuevo (por `canonical_name`)
+### F6 — Sugerencias que rellenan (top-up), por `canonical_name`
 
-Un usuario sin historial no tendría chips — pero justo ahí el acelerador es más valioso (todavía no aprendió el flujo). Así que cuando el historial no resuelve ninguna hoja para el tipo activo, se cae a un set de **defaults** de categorías semilla del sistema:
+Los chips envuelven en mobile y la última fila suele quedar con huecos; y un usuario sin historial no tendría chips justo cuando el acelerador es más valioso. Por eso el historial se **completa con clasificaciones sugeridas** hasta llenar (`FREQUENT_CHIPS_MAX`), sin repetir una hoja ya presente:
 
-- **Gasto:** Comida › Supermercado, Entretenimiento › Salidas, Transporte.
-- **Ingreso:** Sueldo, Freelance, Otros ingresos.
+- **Gasto:** Comida › Supermercado, Entretenimiento › Salidas, Transporte, Servicios, Salud, Hogar.
+- **Ingreso:** Sueldo, Freelance, Inversiones, Otros ingresos.
 
-Se referencian por **`canonical_name`** (inmutable) y no por nombre visible ni id: el label lo puede renombrar el usuario o cambiarlo i18n, y el id es por-DB. Se resuelven contra el catálogo vigente en el hook; cualquier default que el catálogo no sirva (archivado, borrado) se omite. **El historial gana**: si hay al menos una hoja de historial, los defaults no aparecen (no se mezcla lo personal con lo genérico). Todo esto vive en el hook (I/O-free), así que web y nativo lo heredan igual.
+Las sugerencias van **después** del historial (que lidera por ser lo más relevante) y rellenan la cola. Un usuario nuevo (sin historial) ve solo sugerencias. Se referencian por **`canonical_name`** (inmutable) y no por nombre visible ni id: el label lo puede renombrar el usuario o cambiarlo i18n, y el id es por-DB. Se resuelven contra el catálogo vigente en el hook; cualquier sugerencia que el catálogo no sirva (archivada, borrada) se omite. Todo vive en el hook (I/O-free), así que web y nativo lo heredan igual.
 
 ### F5 — Qué NO hace
 

@@ -477,7 +477,7 @@ describe('useMovementForm — frequent-classification chips (surface, #31 item 1
     })
   })
 
-  it('history wins over defaults when the user has history', () => {
+  it('history comes first, then suggestions top up the remaining slots (deduped)', () => {
     const { result } = renderHook(() =>
       useMovementForm(
         baseArgs({
@@ -486,7 +486,13 @@ describe('useMovementForm — frequent-classification chips (surface, #31 item 1
         }),
       ),
     )
-    expect(result.current.frequentChips.map((c) => c.label)).toEqual(['Transporte'])
+    // Transporte (history) leads; Supermercado + Salidas (suggestions resolvable
+    // in seedCats) fill after it, and Transporte isn't repeated.
+    expect(result.current.frequentChips.map((c) => c.label)).toEqual([
+      'Transporte',
+      'Supermercado',
+      'Salidas',
+    ])
   })
 
   it('caps the chip count', () => {
@@ -505,6 +511,6 @@ describe('useMovementForm — frequent-classification chips (surface, #31 item 1
       ),
     )
     expect(result.current.frequentChips.length).toBeLessThanOrEqual(FREQUENT_CHIPS_MAX)
-    expect(result.current.frequentChips).toHaveLength(4)
+    expect(result.current.frequentChips).toHaveLength(FREQUENT_CHIPS_MAX)
   })
 })

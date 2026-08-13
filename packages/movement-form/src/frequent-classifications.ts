@@ -4,11 +4,11 @@ import type { FrequentClassification } from './types'
 // ranker and its shapes from this React-free entry point in one import.
 export type { FrequentClassification } from './types'
 
-// How many frequent-classification chips to surface at most (#31 item 1). Kept
-// small so they fit one row on mobile and never become a wall of chips. Also the
-// per-type ranking limit. Lives here (React-free) so the query layer can import
-// it without pulling in the hook module.
-export const FREQUENT_CHIPS_MAX = 4
+// How many frequent-classification chips to surface at most (#31 item 1). Enough
+// to fill the chip rows on mobile (history topped up with suggestions) without
+// becoming a wall. Also the per-type ranking limit. Lives here (React-free) so
+// the query layer can import it without pulling in the hook module.
+export const FREQUENT_CHIPS_MAX = 6
 
 // Classifications that are system-generated rather than manually loaded, so they
 // must never be offered as quick-add chips even if they rank high by frequency.

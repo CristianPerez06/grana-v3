@@ -34,20 +34,25 @@ function eligibleFor(accounts: MovementFormAccount[], tab: Tab): MovementFormAcc
 export const PRIMARY_TABS: Tab[] = ['expense', 'income']
 export const SECONDARY_TABS: Tab[] = ['transfer', 'exchange', 'adjustment']
 
-// New-user default chips (#31 item 1): shown when the user has no history yet,
-// so the accelerator is useful from day one. Referenced by immutable
-// `canonical_name` (visible labels get renamed / i18n'd; canonicals don't), and
-// resolved against the live catalog — any default the catalog doesn't serve is
-// skipped. Expense: Comida › Supermercado, Entretenimiento › Salidas, Transporte.
+// Suggested classifications (#31 item 1): used to TOP UP the user's frequent
+// chips so the rows fill instead of leaving a gap, and as the full set for a
+// brand-new user with no history. Referenced by immutable `canonical_name`
+// (visible labels get renamed / i18n'd; canonicals don't) and resolved against
+// the live catalog — any the catalog doesn't serve is skipped. Ordered by how
+// commonly they're used, since they fill the tail after the real frequent ones.
 type LeafCanonical = { category: string; subcategory: string | null }
-const DEFAULT_EXPENSE_LEAVES: LeafCanonical[] = [
+const SUGGESTED_EXPENSE_LEAVES: LeafCanonical[] = [
   { category: 'comida', subcategory: 'supermercado' },
   { category: 'entretenimiento', subcategory: 'salidas' },
   { category: 'transporte', subcategory: null },
+  { category: 'servicios', subcategory: null },
+  { category: 'salud', subcategory: null },
+  { category: 'hogar', subcategory: null },
 ]
-const DEFAULT_INCOME_LEAVES: LeafCanonical[] = [
+const SUGGESTED_INCOME_LEAVES: LeafCanonical[] = [
   { category: 'sueldo', subcategory: null },
   { category: 'freelance', subcategory: null },
+  { category: 'inversiones', subcategory: null },
   { category: 'otros-ingresos', subcategory: null },
 ]
 
@@ -264,22 +269,20 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
     return sub ? chipFromIds(cat.id, sub.id) : null
   }
 
-  // Frequent-classification chips (#31 item 1): the user's history first; when
-  // there's none yet (new user), fall back to the default set so the accelerator
-  // is useful from day one. Create-only, expense/income only, deduped and capped.
+  // Frequent-classification chips (#31 item 1): the user's history first, then
+  // suggested categories topping up the remaining slots so the rows fill instead
+  // of leaving a gap (a brand-new user sees only the suggestions). Create-only,
+  // expense/income only, deduped and capped.
   const frequentChips: FrequentChip[] = ((): FrequentChip[] => {
     if (isEdit || (tab !== 'expense' && tab !== 'income')) return []
     const history = (frequentClassifications ?? [])
       .map((f) => chipFromIds(f.categoryId, f.subcategoryId))
       .filter((c): c is FrequentChip => c !== null)
-    const base =
-      history.length > 0
-        ? history
-        : (tab === 'expense' ? DEFAULT_EXPENSE_LEAVES : DEFAULT_INCOME_LEAVES)
-            .map((d) => chipFromCanonical(d.category, d.subcategory))
-            .filter((c): c is FrequentChip => c !== null)
+    const suggestions = (tab === 'expense' ? SUGGESTED_EXPENSE_LEAVES : SUGGESTED_INCOME_LEAVES)
+      .map((d) => chipFromCanonical(d.category, d.subcategory))
+      .filter((c): c is FrequentChip => c !== null)
     const seen = new Set<string>()
-    return base
+    return [...history, ...suggestions]
       .filter((c) => {
         const key = `${c.categoryId}:${c.subcategoryId ?? ''}`
         if (seen.has(key)) return false
