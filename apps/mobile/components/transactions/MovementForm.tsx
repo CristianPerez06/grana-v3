@@ -524,18 +524,18 @@ export function MovementForm({
                 </Pressable>
               </View>
               {showInstallmentStepper && (
-                <View className="flex-col items-center gap-1.5">
-                  <View className="flex-row items-center gap-3">
+                <View className="flex-col items-center gap-0.5">
+                  <View className="flex-row items-center gap-2">
                     <Pressable
                       onPress={() => stepInstallments(-1)}
                       disabled={installmentsNum <= 1}
                       accessibilityRole="button"
                       accessibilityLabel={t('transactions.installments_options.custom_decrease')}
-                      className={`h-10 w-10 items-center justify-center rounded-lg border border-border bg-border-soft ${
+                      className={`h-8 w-8 items-center justify-center rounded-lg border border-border bg-border-soft ${
                         installmentsNum <= 1 ? 'opacity-40' : ''
                       }`}
                     >
-                      <Text className="text-xl font-bold text-navy">−</Text>
+                      <Text className="text-base font-bold text-navy">−</Text>
                     </Pressable>
                     <Input
                       value={form.installments}
@@ -549,18 +549,18 @@ export function MovementForm({
                       }}
                       keyboardType="number-pad"
                       accessibilityLabel={t('transactions.installments_options.custom_label')}
-                      className="w-16 text-center text-xl font-bold text-navy"
+                      className="w-14 text-center text-lg font-bold text-navy"
                     />
                     <Pressable
                       onPress={() => stepInstallments(1)}
                       disabled={installmentsNum >= MAX_INSTALLMENTS}
                       accessibilityRole="button"
                       accessibilityLabel={t('transactions.installments_options.custom_increase')}
-                      className={`h-10 w-10 items-center justify-center rounded-lg border border-border bg-border-soft ${
+                      className={`h-8 w-8 items-center justify-center rounded-lg border border-border bg-border-soft ${
                         installmentsNum >= MAX_INSTALLMENTS ? 'opacity-40' : ''
                       }`}
                     >
-                      <Text className="text-xl font-bold text-navy">+</Text>
+                      <Text className="text-base font-bold text-navy">+</Text>
                     </Pressable>
                   </View>
                   <Text className="text-[11px] text-text-soft">

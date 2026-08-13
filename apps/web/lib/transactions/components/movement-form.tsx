@@ -1437,14 +1437,16 @@ export const MovementForm = ({
           </>
         )}
         {showInstallmentStepper && (
-          <div className="mt-3.5 flex flex-col items-center gap-1.5">
-            <div className="flex items-center gap-3">
+          <div className={`flex flex-col items-center ${isMobile ? 'mt-2 gap-0.5' : 'mt-3.5 gap-1.5'}`}>
+            <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-3'}`}>
               <button
                 type="button"
                 onClick={() => stepInstallments(-1)}
                 disabled={installmentsNum <= 1}
                 aria-label={t('installments_options.custom_decrease')}
-                className="flex size-9 items-center justify-center rounded-[10px] border border-border text-xl font-bold leading-none text-navy transition-colors enabled:hover:bg-page disabled:opacity-40"
+                className={`flex items-center justify-center rounded-[10px] border border-border font-bold leading-none text-navy transition-colors enabled:hover:bg-page disabled:opacity-40 ${
+                  isMobile ? 'size-7 text-base' : 'size-9 text-xl'
+                }`}
                 style={{ backgroundColor: FIELD_BG }}
               >
                 −
@@ -1462,14 +1464,18 @@ export const MovementForm = ({
                   if (installmentsNum < 1) setInstallments('1')
                 }}
                 aria-label={t('installments_options.custom_label')}
-                className="w-16 bg-transparent text-center text-2xl font-bold tabular-nums text-navy outline-none"
+                className={`bg-transparent text-center font-bold tabular-nums text-navy outline-none ${
+                  isMobile ? 'w-12 text-lg' : 'w-16 text-2xl'
+                }`}
               />
               <button
                 type="button"
                 onClick={() => stepInstallments(1)}
                 disabled={installmentsNum >= MAX_INSTALLMENTS}
                 aria-label={t('installments_options.custom_increase')}
-                className="flex size-9 items-center justify-center rounded-[10px] border border-border text-xl font-bold leading-none text-navy transition-colors enabled:hover:bg-page disabled:opacity-40"
+                className={`flex items-center justify-center rounded-[10px] border border-border font-bold leading-none text-navy transition-colors enabled:hover:bg-page disabled:opacity-40 ${
+                  isMobile ? 'size-7 text-base' : 'size-9 text-xl'
+                }`}
                 style={{ backgroundColor: FIELD_BG }}
               >
                 +
