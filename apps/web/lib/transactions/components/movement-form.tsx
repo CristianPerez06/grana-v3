@@ -954,14 +954,12 @@ export const MovementForm = ({
         isMobile ? 'px-4 pb-4 pt-3.5' : 'px-[22px] pb-[22px] pt-5'
       }`}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
           {t('labels.amount')}
         </span>
-        <div className="flex items-center gap-2">
-          {isMobile && (
-            <MoneyCalculatorPopover seed={amount} onResult={setAmount} />
-          )}
+        {/* Right column on mobile: currency chip on top, calculator below it. */}
+        <div className={`flex ${isMobile ? 'flex-col items-end gap-1.5' : 'items-center gap-2'}`}>
           <button
             type="button"
             onClick={cycleCurrency}
@@ -972,6 +970,9 @@ export const MovementForm = ({
             {effectiveCurrency}
             {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
           </button>
+          {isMobile && (
+            <MoneyCalculatorPopover seed={amount} onResult={setAmount} />
+          )}
         </div>
       </div>
       <div className={`mt-2 flex items-baseline gap-1.5 ${isMobile ? 'justify-center' : ''}`}>
@@ -1115,7 +1116,7 @@ export const MovementForm = ({
               <Calendar className="size-[18px]" aria-hidden />
             </span>
             <span className="truncate text-[13px] font-semibold text-text">
-              {date !== todayStr() && date !== yesterdayISO ? formatDateValue(date) : t('labels.date')}
+              {date ? formatDateValue(date) : t('labels.date')}
             </span>
           </button>
         }
