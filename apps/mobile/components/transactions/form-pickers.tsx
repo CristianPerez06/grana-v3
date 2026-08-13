@@ -150,13 +150,13 @@ export function AccountFamilySelect({
                 onPress={() => onSelect(a.id)}
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
-                className={`flex-row items-center gap-2 rounded-xl border px-2.5 py-1.5 ${
+                className={`flex-row items-center gap-1.5 rounded-lg border px-2.5 py-1 ${
                   active ? 'border-emerald bg-emerald-soft' : 'border-border bg-card'
                 }`}
               >
                 {a.avatar && <AccountAvatar {...a.avatar} size="sm" />}
                 <Text
-                  className={`text-sm font-semibold ${active ? 'text-emerald-deep' : 'text-text'}`}
+                  className={`text-[13px] font-semibold ${active ? 'text-emerald-deep' : 'text-text'}`}
                   numberOfLines={1}
                 >
                   {a.institutionName ?? a.name}

@@ -1313,13 +1313,13 @@ export const MovementForm = ({
                 key={a.id}
                 type="button"
                 onClick={() => setAccountId(a.id)}
-                className={`flex items-center gap-2 rounded-[10px] border px-2.5 py-1.5 text-sm font-semibold transition-colors ${
+                className={`flex items-center gap-1.5 rounded-[10px] border px-2.5 py-1 text-[13px] font-semibold transition-colors ${
                   active
                     ? 'border-emerald bg-[var(--emerald-soft)] text-emerald-deep'
                     : 'border-border text-text'
                 }`}
               >
-                <AccountAvatar {...avatarOf(a)} size="sm" />
+                <AccountAvatar {...avatarOf(a)} size="sm" className="h-6 w-6 rounded" />
                 <span className="max-w-[140px] truncate">{accountPrimaryName(a)}</span>
               </button>
             )
@@ -1366,134 +1366,6 @@ export const MovementForm = ({
     </div>
   )
 
-  const fieldGroup = (
-    <div className="overflow-hidden rounded-[15px] border border-border bg-card [&>*+*]:border-t [&>*+*]:border-[#F1F3F6]">
-      {isEdit ? (
-        <>
-          {contextRows.map((row) => (
-            <div key={row.label} className="flex items-center justify-between gap-3 px-4 py-3">
-              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">{row.label}</span>
-              <span className="truncate text-right text-[15px] font-semibold text-text">
-                {row.value}
-                <span className="ml-1.5 text-xs font-normal text-text-muted">{tCommon('not_editable')}</span>
-              </span>
-            </div>
-          ))}
-          {/* Editable debit account — statement payment only (getEditableFields
-              gates it). The account is a pure debit pointer here, so it can move
-              to any cash/bank account with the payment currency active. */}
-          {editable?.account && (
-            <div className="relative">
-              <Popover
-                modal={isDrawer}
-                open={activePopover === 'account'}
-                onOpenChange={(o) => setActivePopover(o ? 'account' : null)}
-                trigger={
-                  <FieldRow
-                    icon={<Wallet className="size-[18px]" />}
-                    label={t('labels.account')}
-                    value={<AccountValue account={selectedAccount} />}
-                  />
-                }
-              >
-                {renderAccountPicker(
-                  cashBank.filter((a) => a.activeCurrencies.includes(currencyCode)),
-                  accountId,
-                  (id) => {
-                    setAccountId(id)
-                    setActivePopover(null)
-                  },
-                )}
-              </Popover>
-            </div>
-          )}
-          {editable?.category && categoryRow}
-          {editable?.date && dateRow}
-        </>
-      ) : isMobile ? (
-        // Mobile-web: frequent chips + category first (it's the primary decision
-        // and drives the account); the account row is hidden when a single
-        // account is eligible.
-        <>
-          {frequentChipsRow}
-          {categoryRowWrapped}
-          {tab === 'expense' || tab === 'income'
-            ? showAccountSelector && accountFamilyRow
-            : (showAccountSelector || tab === 'transfer' || tab === 'exchange') && accountRow}
-          {destinationRow}
-          {dateRow}
-        </>
-      ) : (
-        <>
-          {accountRow}
-          {destinationRow}
-          {categoryRowWrapped}
-          {dateRow}
-        </>
-      )}
-    </div>
-  )
-
-  // ── Exchange: no-other-currency hint + received amount ──────────────────────
-  // Destination currency shown on the received-amount card.
-  const receivedCurrency: 'ARS' | 'USD' =
-    (isEdit ? edit?.destinationCurrency : exchangeDestCurrency) ?? 'USD'
-  // Implicit rate "1 {received} = ${origin}", derived from both amounts (read-only).
-  const exchangeRate = (() => {
-    if (tab !== 'exchange') return null
-    const src = parseMoneyInput(amount)
-    const dst = parseMoneyInput(destinationAmount)
-    if (src === null || dst === null || src <= 0 || dst <= 0) return null
-    return Money.toNumber(Money.divide(Money.from(src), dst))
-  })()
-  const exchangeReceived =
-    (!isEdit && tab === 'exchange' && exchangeDestCurrency) || (isEdit && editable?.destinationAmount) ? (
-      <div className="rounded-[18px] border border-border bg-card px-[22px] pb-[22px] pt-5 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]">
-        <div className="flex items-center justify-between">
-          <label htmlFor="exchange-dest-amount" className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
-            {t('labels.exchange_received')}
-          </label>
-          <span
-            className="inline-flex items-center rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text"
-            style={{ backgroundColor: FIELD_BG }}
-          >
-            {receivedCurrency}
-          </span>
-        </div>
-        <div className="mt-2 flex items-baseline gap-1.5">
-          <span className="text-[27px] font-semibold leading-none opacity-50 text-text">
-            {CURRENCY_SYMBOL[receivedCurrency]}
-          </span>
-          <MoneyAmountInput
-            id="exchange-dest-amount"
-            required
-            value={destinationAmount}
-            onChange={setDestinationAmount}
-            placeholder="0"
-            className="w-full min-w-0 bg-transparent text-[46px] font-bold leading-none tracking-[-0.045em] tabular-nums text-text outline-none placeholder:text-text-soft/40"
-          />
-          <MoneyCalculatorPopover seed={destinationAmount} onResult={setDestinationAmount} className="shrink-0 self-center" />
-        </div>
-        {exchangeRate !== null && (
-          <p className="mt-2.5 text-[12.5px] text-text-muted tabular-nums">
-            1 {receivedCurrency} = {CURRENCY_SYMBOL[currencyCode]}
-            {fmtBalance(exchangeRate)} {currencyCode}
-          </p>
-        )}
-      </div>
-    ) : null
-
-  const exchangeNoCurrencyHint =
-    !isEdit && tab === 'exchange' && !exchangeDestCurrency ? (
-      <p className="text-sm text-text-muted">
-        {t('exchange.no_other_currency_hint', { currency: currencyCode === 'ARS' ? 'USD' : 'ARS' })}
-      </p>
-    ) : null
-
-  // ── Cuotas card (create + Gasto + credit + ARS) ─────────────────────────────
-  // Four common counts as one-tap chips; "Otras" opens a stepper for anything
-  // else (incl. 5), 1–MAX. The stepper is also shown when the current value
-  // isn't a preset. Any integer ≥ 2 is valid per `registerInstallmentsSchema`.
   const installmentsNum = parseInt(installments) || 1
   const showInstallmentStepper =
     customInstallments || !INSTALLMENT_OPTIONS.includes(installmentsNum)
@@ -1541,9 +1413,9 @@ export const MovementForm = ({
       </button>
     </>
   )
-  const cuotasCard =
-    !isEdit && tab === 'expense' && isCredit && currencyCode === 'ARS' ? (
-      <div className="rounded-[15px] border border-border bg-card p-4">
+  const showCuotas = !isEdit && tab === 'expense' && isCredit && currencyCode === 'ARS'
+  const cuotasContent = showCuotas ? (
+    <>
         {isMobile ? (
           // Mobile: label inline with the chips, no icon — one row to save space.
           <div className="flex flex-wrap items-center gap-2">
@@ -1619,8 +1491,146 @@ export const MovementForm = ({
             })}
           </div>
         )}
+    </>
+  ) : null
+  // Desktop: bordered card in the body. Mobile: borderless row placed inside the
+  // fieldGroup between the account and the date, so cuotas sits with the payment.
+  const cuotasCard =
+    cuotasContent && !isMobile ? (
+      <div className="rounded-[15px] border border-border bg-card p-4">{cuotasContent}</div>
+    ) : null
+  const cuotasRow =
+    cuotasContent && isMobile ? <div className="px-4 py-3">{cuotasContent}</div> : null
+
+  const fieldGroup = (
+    <div className="overflow-hidden rounded-[15px] border border-border bg-card [&>*+*]:border-t [&>*+*]:border-[#F1F3F6]">
+      {isEdit ? (
+        <>
+          {contextRows.map((row) => (
+            <div key={row.label} className="flex items-center justify-between gap-3 px-4 py-3">
+              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">{row.label}</span>
+              <span className="truncate text-right text-[15px] font-semibold text-text">
+                {row.value}
+                <span className="ml-1.5 text-xs font-normal text-text-muted">{tCommon('not_editable')}</span>
+              </span>
+            </div>
+          ))}
+          {/* Editable debit account — statement payment only (getEditableFields
+              gates it). The account is a pure debit pointer here, so it can move
+              to any cash/bank account with the payment currency active. */}
+          {editable?.account && (
+            <div className="relative">
+              <Popover
+                modal={isDrawer}
+                open={activePopover === 'account'}
+                onOpenChange={(o) => setActivePopover(o ? 'account' : null)}
+                trigger={
+                  <FieldRow
+                    icon={<Wallet className="size-[18px]" />}
+                    label={t('labels.account')}
+                    value={<AccountValue account={selectedAccount} />}
+                  />
+                }
+              >
+                {renderAccountPicker(
+                  cashBank.filter((a) => a.activeCurrencies.includes(currencyCode)),
+                  accountId,
+                  (id) => {
+                    setAccountId(id)
+                    setActivePopover(null)
+                  },
+                )}
+              </Popover>
+            </div>
+          )}
+          {editable?.category && categoryRow}
+          {editable?.date && dateRow}
+        </>
+      ) : isMobile ? (
+        // Mobile-web: frequent chips + category first (it's the primary decision
+        // and drives the account); the account row is hidden when a single
+        // account is eligible.
+        <>
+          {frequentChipsRow}
+          {categoryRowWrapped}
+          {tab === 'expense' || tab === 'income'
+            ? showAccountSelector && accountFamilyRow
+            : (showAccountSelector || tab === 'transfer' || tab === 'exchange') && accountRow}
+          {destinationRow}
+          {cuotasRow}
+          {dateRow}
+        </>
+      ) : (
+        <>
+          {accountRow}
+          {destinationRow}
+          {categoryRowWrapped}
+          {dateRow}
+        </>
+      )}
+    </div>
+  )
+
+  // ── Exchange: no-other-currency hint + received amount ──────────────────────
+  // Destination currency shown on the received-amount card.
+  const receivedCurrency: 'ARS' | 'USD' =
+    (isEdit ? edit?.destinationCurrency : exchangeDestCurrency) ?? 'USD'
+  // Implicit rate "1 {received} = ${origin}", derived from both amounts (read-only).
+  const exchangeRate = (() => {
+    if (tab !== 'exchange') return null
+    const src = parseMoneyInput(amount)
+    const dst = parseMoneyInput(destinationAmount)
+    if (src === null || dst === null || src <= 0 || dst <= 0) return null
+    return Money.toNumber(Money.divide(Money.from(src), dst))
+  })()
+  const exchangeReceived =
+    (!isEdit && tab === 'exchange' && exchangeDestCurrency) || (isEdit && editable?.destinationAmount) ? (
+      <div className="rounded-[18px] border border-border bg-card px-[22px] pb-[22px] pt-5 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]">
+        <div className="flex items-center justify-between">
+          <label htmlFor="exchange-dest-amount" className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+            {t('labels.exchange_received')}
+          </label>
+          <span
+            className="inline-flex items-center rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text"
+            style={{ backgroundColor: FIELD_BG }}
+          >
+            {receivedCurrency}
+          </span>
+        </div>
+        <div className="mt-2 flex items-baseline gap-1.5">
+          <span className="text-[27px] font-semibold leading-none opacity-50 text-text">
+            {CURRENCY_SYMBOL[receivedCurrency]}
+          </span>
+          <MoneyAmountInput
+            id="exchange-dest-amount"
+            required
+            value={destinationAmount}
+            onChange={setDestinationAmount}
+            placeholder="0"
+            className="w-full min-w-0 bg-transparent text-[46px] font-bold leading-none tracking-[-0.045em] tabular-nums text-text outline-none placeholder:text-text-soft/40"
+          />
+          <MoneyCalculatorPopover seed={destinationAmount} onResult={setDestinationAmount} className="shrink-0 self-center" />
+        </div>
+        {exchangeRate !== null && (
+          <p className="mt-2.5 text-[12.5px] text-text-muted tabular-nums">
+            1 {receivedCurrency} = {CURRENCY_SYMBOL[currencyCode]}
+            {fmtBalance(exchangeRate)} {currencyCode}
+          </p>
+        )}
       </div>
     ) : null
+
+  const exchangeNoCurrencyHint =
+    !isEdit && tab === 'exchange' && !exchangeDestCurrency ? (
+      <p className="text-sm text-text-muted">
+        {t('exchange.no_other_currency_hint', { currency: currencyCode === 'ARS' ? 'USD' : 'ARS' })}
+      </p>
+    ) : null
+
+  // ── Cuotas card (create + Gasto + credit + ARS) ─────────────────────────────
+  // Four common counts as one-tap chips; "Otras" opens a stepper for anything
+  // else (incl. 5), 1–MAX. The stepper is also shown when the current value
+  // isn't a preset. Any integer ≥ 2 is valid per `registerInstallmentsSchema`.
 
   // ── Description ──────────────────────────────────────────────────────────────
   const isAdjustment = isEdit ? edit?.type === 'adjustment' : tab === 'adjustment'
