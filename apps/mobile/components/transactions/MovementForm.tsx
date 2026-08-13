@@ -404,7 +404,7 @@ export function MovementForm({
             {signChar !== '' && (
               <Text className={`text-[34px] font-bold ${amountColorClass}`}>{signChar}</Text>
             )}
-            <Text className={`pl-1 text-[20px] font-semibold opacity-50 ${amountColorClass}`}>
+            <Text className={`pl-1 text-[34px] font-bold ${amountColorClass}`}>
               {CURRENCY_SYMBOL[form.currencyCode]}
             </Text>
             <MoneyAmountInput

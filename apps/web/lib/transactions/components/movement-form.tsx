@@ -979,7 +979,7 @@ export const MovementForm = ({
         {signChar && (
           <span className={`${isMobile ? 'text-[34px]' : 'text-[46px]'} font-bold leading-none ${amountColor}`}>{signChar}</span>
         )}
-        <span className={`${isMobile ? 'text-[20px]' : 'text-[27px]'} font-semibold leading-none opacity-50 ${amountColor}`}>
+        <span className={`${isMobile ? 'text-[34px] font-bold' : 'text-[27px] font-semibold opacity-50'} leading-none ${amountColor}`}>
           {CURRENCY_SYMBOL[effectiveCurrency]}
         </span>
         <MoneyAmountInput
