@@ -209,7 +209,7 @@ const AdvChip = ({
     onClick={onClick}
     disabled={disabled}
     aria-pressed={active}
-    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-bold transition-colors disabled:opacity-50 ${
+    className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-[13px] font-bold transition-colors disabled:opacity-50 ${
       active ? 'border-transparent text-emerald-deep' : 'border-border text-text-muted'
     }`}
     style={{ backgroundColor: active ? 'var(--emerald-soft)' : FIELD_BG }}
@@ -1595,11 +1595,11 @@ export const MovementForm = ({
         }
       >
         {isMobile && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2">
             {showReimbursementToggle && (
               <AdvChip
                 icon={<Undo2 aria-hidden />}
-                label={t('reimbursement.toggle')}
+                label={t('reimbursement.chip')}
                 active={reimbursementEnabled}
                 disabled={reimbursementReadOnly}
                 onClick={() => {
@@ -1620,7 +1620,7 @@ export const MovementForm = ({
             {showRepeatToggle && (
               <AdvChip
                 icon={<Repeat aria-hidden />}
-                label={t('labels.make_recurrent')}
+                label={t('labels.recurrent')}
                 active={isRecurrent}
                 onClick={() => setIsRecurrent(!isRecurrent)}
               />

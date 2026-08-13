@@ -709,7 +709,7 @@ export function MovementForm({
           {showReimbursement && (
             <AdvChip
               renderIcon={(c) => <Undo2 size={15} color={c} />}
-              label={t('transactions.reimbursement.toggle')}
+              label={t('transactions.reimbursement.chip')}
               active={form.reimbursementEnabled}
               disabled={form.reimbursementReadOnly}
               onPress={() => {
@@ -730,7 +730,7 @@ export function MovementForm({
           {showRepeat && (
             <AdvChip
               renderIcon={(c) => <Repeat size={15} color={c} />}
-              label={t('transactions.labels.make_recurrent')}
+              label={t('transactions.labels.recurrent')}
               active={form.isRecurrent}
               onPress={() => form.setIsRecurrent(!form.isRecurrent)}
             />

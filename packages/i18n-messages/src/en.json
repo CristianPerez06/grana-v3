@@ -1143,6 +1143,7 @@
     "reimbursement": {
       "label": "Reimbursement",
       "toggle": "Has a reimbursement",
+      "chip": "Reimbursement",
       "estimated_amount": "Reimbursement amount",
       "estimated_label": "Expected amount",
       "linked_expense_title": "Reimbursement for this expense",
@@ -1225,6 +1226,7 @@
       "fx_rate_daily": "Today's rate",
       "frequency": "Frequency",
       "make_recurrent": "Make recurring",
+      "recurrent": "Recurring",
       "no_subcategory": "No subcategory",
       "no_category": "No category",
       "exchange_received": "Amount received",
