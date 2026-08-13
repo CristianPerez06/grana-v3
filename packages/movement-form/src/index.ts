@@ -1,4 +1,4 @@
-export { useMovementForm } from './use-movement-form'
+export { useMovementForm, PRIMARY_TABS, SECONDARY_TABS } from './use-movement-form'
 export {
   archivedTaxonomyFrom,
   graftArchivedTaxonomy,

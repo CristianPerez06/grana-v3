@@ -387,6 +387,12 @@ export type MovementFormState = {
   isCredit: boolean
   isInstallments: boolean
   eligibleAccounts: MovementFormAccount[]
+  /** False when the active tab has a single eligible account (selector hidden). */
+  showAccountSelector: boolean
+  /** Secondary types the user can do, shown behind the "Otros" affordance. */
+  secondaryTabs: Tab[]
+  /** True when the active tab is a secondary type (transfer/adjustment/exchange). */
+  isSecondaryTab: boolean
   selectedAccount: MovementFormAccount | undefined
   activeCurrencies: ('ARS' | 'USD')[]
   cashBankAccounts: MovementFormAccount[]

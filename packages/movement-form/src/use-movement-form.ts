@@ -22,6 +22,25 @@ function eligibleFor(accounts: MovementFormAccount[], tab: Tab): MovementFormAcc
   return tab === 'expense' ? accounts : accounts.filter((a) => a.type !== 'credit')
 }
 
+// Tab partition (design D1): only the daily verbs are primary; the rest live
+// behind "Otros", each gated by its own eligibility. Static — the earlier
+// "dynamic third slot" idea was dropped (ranking-by-frequency moved to #31).
+export const PRIMARY_TABS: Tab[] = ['expense', 'income']
+export const SECONDARY_TABS: Tab[] = ['transfer', 'exchange', 'adjustment']
+
+// Which secondary types the user can actually do, from their accounts:
+// transfer needs ≥2 own (cash/bank) accounts; exchange needs both ARS and USD
+// reachable across cash/bank accounts; adjustment needs any cash/bank account.
+function eligibleSecondaryTabs(accounts: MovementFormAccount[]): Tab[] {
+  const cashBank = accounts.filter((a) => a.type !== 'credit')
+  const currencies = new Set(cashBank.flatMap((a) => a.activeCurrencies))
+  return SECONDARY_TABS.filter((tab) => {
+    if (tab === 'transfer') return cashBank.length >= 2
+    if (tab === 'exchange') return currencies.has('ARS') && currencies.has('USD')
+    return cashBank.length >= 1 // adjustment
+  })
+}
+
 // Default reimbursement credit-to account: same-institution cash/bank if any,
 // else first cash/bank, else ''.
 function pickReimbursementAccount(
@@ -152,6 +171,15 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
   const eligibleAccounts = eligibleFor(accounts, tab)
   const selectedAccount = accounts.find((a) => a.id === accountId) ?? eligibleAccounts[0]
   const isCredit = selectedAccount?.type === 'credit'
+  // Which secondary types "Otros" offers, and whether the active tab is one.
+  const secondaryTabs = eligibleSecondaryTabs(accounts)
+  const isSecondaryTab = SECONDARY_TABS.includes(tab)
+  // Hide the account selector when the active tab has a single eligible account
+  // (D2). NOTE: the finer "one eligible account for the active *currency*" rule
+  // (an ARS wallet + a USD-only account) is deferred — hiding there would need
+  // the currency toggle to drive account selection, a currency-cascade change
+  // out of scope for this surface pass.
+  const showAccountSelector = eligibleAccounts.length > 1
   const activeCurrencies = (selectedAccount?.activeCurrencies ?? ['ARS']) as ('ARS' | 'USD')[]
   const cashBankAccounts = accounts.filter((a) => a.type !== 'credit')
   const otherAccounts = cashBankAccounts.filter((a) => a.id !== selectedAccount?.id)
@@ -782,6 +810,9 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
     isCredit,
     isInstallments,
     eligibleAccounts,
+    showAccountSelector,
+    secondaryTabs,
+    isSecondaryTab,
     selectedAccount,
     activeCurrencies,
     cashBankAccounts,

@@ -63,12 +63,15 @@ import {
   graftArchivedTaxonomy,
   selectableSubcategories,
   useMovementForm,
+  PRIMARY_TABS,
   type MovementEditContext as PackageMovementEditContext,
   type MovementFormAccount as PackageMovementFormAccount,
   type Mutators,
   type Tab,
 } from '@grana/movement-form'
+import { useIsMobile } from '@/lib/use-is-mobile'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { formatForDisplay } from '@/lib/money-input-format'
 import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
 import { CategorySuggestionChip } from '@/lib/transactions/components/category-suggestion-chip'
@@ -184,6 +187,40 @@ const FieldRow = forwardRef<HTMLButtonElement, RowProps & Omit<React.ButtonHTMLA
 )
 FieldRow.displayName = 'FieldRow'
 
+// Mobile-web: a light, symbol-forward pill that activates an advanced section
+// (reintegro / compartir / repetir). The icon leads; it fills emerald when on.
+// Its params render below the chip row when active. Desktop keeps the row+switch
+// layout instead.
+const AdvChip = ({
+  icon,
+  label,
+  active,
+  disabled,
+  onClick,
+}: {
+  icon: ReactNode
+  label: string
+  active: boolean
+  disabled?: boolean
+  onClick: () => void
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    aria-pressed={active}
+    className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-[13px] font-bold transition-colors disabled:opacity-50 ${
+      active ? 'border-transparent text-emerald-deep' : 'border-border text-text-muted'
+    }`}
+    style={{ backgroundColor: active ? 'var(--emerald-soft)' : FIELD_BG }}
+  >
+    <span className="flex size-4 shrink-0 items-center justify-center [&>svg]:size-[15px]" aria-hidden>
+      {icon}
+    </span>
+    {label}
+  </button>
+)
+
 // Account display: the institution is the headline; the account's own name is
 // the secondary detail (omitted when it would just repeat the institution, e.g.
 // auto-named bank accounts). Cash accounts have no institution → name leads.
@@ -258,6 +295,11 @@ export const MovementForm = ({
   // UI-only state owned by the form (popover open, drill, refs, autofocus).
   // All form domain state + cascades + submit dispatcher live in the hook.
   const isDrawer = variant === 'drawer'
+  // Mobile-web layout gate. Desktop keeps the current rendering untouched
+  // (`isMobile ? <mobile> : <desktop>`); only the phone viewport gets the
+  // redesign. Behavior gating (e.g. category drill) needs this JS flag — CSS
+  // alone can't branch onClick handlers.
+  const isMobile = useIsMobile()
   const [activePopover, setActivePopover] = useState<string | null>(null)
   const [catDrill, setCatDrill] = useState<string | null>(null)
   // Reveals the free-form installments input. Also implicitly active when the
@@ -387,6 +429,9 @@ export const MovementForm = ({
     setSplitFirstPct,
     isInstallments,
     eligibleAccounts,
+    showAccountSelector,
+    secondaryTabs,
+    isSecondaryTab,
     selectedAccount,
     cashBankAccounts,
     otherAccounts,
@@ -704,6 +749,44 @@ export const MovementForm = ({
         // archived one is this movement's current value, not an option, and
         // must not open a second level holding nothing but itself.
         const drillable = selectableSubcategories(c).length > 0
+        const archivedBadge = c.is_active === false && (
+          <span className="shrink-0 rounded-full bg-border-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-text-muted">
+            {t('drawer.archived')}
+          </span>
+        )
+        // Mobile-web: tapping the row assigns the bare category; a separate
+        // chevron button drills into subcategories (no forced drill).
+        if (drillable && isMobile) {
+          return (
+            <div
+              key={c.id}
+              className="flex items-center gap-1 rounded-[10px] pr-1 transition-colors hover:bg-page"
+            >
+              <button
+                type="button"
+                onClick={() => pickCategory(c.id, '')}
+                className="flex min-w-0 flex-1 items-center gap-2.5 px-2.5 py-2 text-left"
+              >
+                <span className="flex-1 truncate text-sm font-medium text-text">
+                  {c.icon ? `${c.icon} ` : ''}
+                  {getCategoryName(c, tRoot)}
+                </span>
+                {archivedBadge}
+                {categoryId === c.id && !subcategoryId && (
+                  <Check className="size-4 shrink-0 text-emerald" aria-hidden />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCatDrill(c.id)}
+                aria-label={t('form.category_drill', { category: getCategoryName(c, tRoot) })}
+                className="shrink-0 rounded-md p-1.5 text-text-soft transition-colors hover:bg-border-soft"
+              >
+                <ChevronRight className="size-4" aria-hidden />
+              </button>
+            </div>
+          )
+        }
         return (
           <button
             key={c.id}
@@ -715,11 +798,7 @@ export const MovementForm = ({
               {c.icon ? `${c.icon} ` : ''}
               {getCategoryName(c, tRoot)}
             </span>
-            {c.is_active === false && (
-              <span className="shrink-0 rounded-full bg-border-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-text-muted">
-                {t('drawer.archived')}
-              </span>
-            )}
+            {archivedBadge}
             {drillable ? (
               <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
             ) : (
@@ -769,48 +848,117 @@ export const MovementForm = ({
   )
 
   // ── Type selector (Segmented). Disabled in edit: type is immutable. ─────────
-  const typeSelector = (
-    <div className="flex flex-col gap-2">
-      <Segmented
-        ariaLabel={t('labels.type')}
-        value={tab}
-        onValueChange={(v) => setTab(v as Tab)}
-        options={(['expense', 'income', 'transfer', 'adjustment', 'exchange'] as Tab[]).map((k) => ({
-          value: k,
-          label: TAB_LABELS[k],
-          disabled: isEdit,
-        }))}
-      />
-    </div>
-  )
+  const typeSelector =
+    isMobile && !isEdit ? (
+      // Mobile-web: two primaries + "Otros" (secondary types behind a popover).
+      <div
+        className="flex gap-1 rounded-[11px] border border-border p-1"
+        style={{ backgroundColor: FIELD_BG }}
+      >
+        {PRIMARY_TABS.map((k) => {
+          const active = tab === k
+          return (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setTab(k)}
+              className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-bold transition-colors ${
+                active ? 'bg-card text-text shadow-sm' : 'text-text-muted'
+              }`}
+            >
+              {TAB_LABELS[k]}
+            </button>
+          )
+        })}
+        {secondaryTabs.length > 0 && (
+          <Popover
+            modal={isDrawer}
+            open={activePopover === 'otros'}
+            onOpenChange={(o) => setActivePopover(o ? 'otros' : null)}
+            trigger={
+              <button
+                type="button"
+                className={`inline-flex flex-1 items-center justify-center gap-1 rounded-[9px] px-3 py-2 text-sm font-bold transition-colors ${
+                  isSecondaryTab ? 'bg-card text-text shadow-sm' : 'text-text-muted'
+                }`}
+              >
+                {isSecondaryTab ? TAB_LABELS[tab] : t('form.other_types')}
+                <ChevronDown className="size-3" aria-hidden />
+              </button>
+            }
+          >
+            <div className="flex flex-col gap-0.5">
+              {secondaryTabs.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => {
+                    setTab(k)
+                    setActivePopover(null)
+                  }}
+                  className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-sm font-medium text-text transition-colors hover:bg-page"
+                >
+                  {TAB_LABELS[k]}
+                  {tab === k && <Check className="ml-auto size-4 text-emerald" aria-hidden />}
+                </button>
+              ))}
+            </div>
+          </Popover>
+        )}
+      </div>
+    ) : (
+      <div className="flex flex-col gap-2">
+        <Segmented
+          ariaLabel={t('labels.type')}
+          value={tab}
+          onValueChange={(v) => setTab(v as Tab)}
+          options={(['expense', 'income', 'transfer', 'adjustment', 'exchange'] as Tab[]).map((k) => ({
+            value: k,
+            label: TAB_LABELS[k],
+            disabled: isEdit,
+          }))}
+        />
+      </div>
+    )
 
   // ── Amount hero ─────────────────────────────────────────────────────────────
   const showAmountHero = isEdit ? editable?.amount : true
+  // Mobile: size the input to its content so the whole "− $ 1.234" group centers
+  // (justify-center on the row). `ch` from the grouped display keeps it robust
+  // across browsers that don't support CSS `field-sizing: content`.
+  const amountDisplayCh = Math.max(1, formatForDisplay(amount).length) + 0.5
   const hero = showAmountHero ? (
     <div
       data-tour="amount"
-      className="rounded-[18px] border border-border bg-card px-[22px] pb-[22px] pt-5 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]"
+      className={`rounded-[18px] border border-border bg-card transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)] ${
+        isMobile ? 'px-4 pb-4 pt-3.5' : 'px-[22px] pb-[22px] pt-5'
+      }`}
     >
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
           {t('labels.amount')}
         </span>
-        <button
-          type="button"
-          onClick={cycleCurrency}
-          disabled={currencyOptions.length < 2}
-          className="inline-flex items-center gap-1 rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
-          style={{ backgroundColor: FIELD_BG }}
-        >
-          {effectiveCurrency}
-          {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
-        </button>
+        <div className="flex items-center gap-2">
+          {isMobile && (
+            <MoneyCalculatorPopover seed={amount} onResult={setAmount} />
+          )}
+          <button
+            type="button"
+            onClick={cycleCurrency}
+            disabled={currencyOptions.length < 2}
+            className="inline-flex items-center gap-1 rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
+            style={{ backgroundColor: FIELD_BG }}
+          >
+            {effectiveCurrency}
+            {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
+          </button>
+        </div>
       </div>
-      <div className="mt-2 flex items-baseline gap-1.5">
+      <div className={`mt-2 flex items-baseline gap-1.5 ${isMobile ? 'justify-center' : ''}`}>
         {signChar && (
-          <span className={`text-[46px] font-bold leading-none ${amountColor}`}>{signChar}</span>
+          <span className={`${isMobile ? 'text-[34px]' : 'text-[46px]'} font-bold leading-none ${amountColor}`}>{signChar}</span>
         )}
-        <span className={`text-[27px] font-semibold leading-none opacity-50 ${amountColor}`}>
+        <span className={`${isMobile ? 'text-[20px]' : 'text-[27px]'} font-semibold leading-none opacity-50 ${amountColor}`}>
           {CURRENCY_SYMBOL[effectiveCurrency]}
         </span>
         <MoneyAmountInput
@@ -820,9 +968,14 @@ export const MovementForm = ({
           value={amount}
           onChange={setAmount}
           placeholder="0"
-          className={`w-full min-w-0 bg-transparent text-[46px] font-bold leading-none tracking-[-0.045em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
+          style={isMobile ? { width: `${amountDisplayCh}ch` } : undefined}
+          className={`bg-transparent ${
+            isMobile ? 'min-w-0 text-left' : 'w-full min-w-0'
+          } ${isMobile ? 'text-[34px]' : 'text-[46px]'} font-bold leading-none tracking-[-0.045em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
         />
-        <MoneyCalculatorPopover seed={amount} onResult={setAmount} className="shrink-0 self-center" />
+        {!isMobile && (
+          <MoneyCalculatorPopover seed={amount} onResult={setAmount} className="shrink-0 self-center" />
+        )}
       </div>
       {tab === 'income' && (
         <p className="mt-2.5 text-[12.5px] font-medium text-emerald-deep">{t('drawer.helper_income')}</p>
@@ -898,7 +1051,57 @@ export const MovementForm = ({
     </Popover>
   )
 
-  const dateRow = (
+  const yesterdayISO = (() => {
+    const d = getTodayAR()
+    d.setDate(d.getDate() - 1)
+    return formatDateISO(d)
+  })()
+  const dateRow = isMobile ? (
+    // Mobile-web: Hoy / Ayer quick chips + a calendar trigger for any date.
+    <div className="flex items-center gap-3 px-4 py-3">
+      <DatePicker
+        value={date}
+        onChange={setDate}
+        min={appStartDate ?? undefined}
+        modal={isDrawer}
+        trigger={
+          <button type="button" className="flex min-w-0 items-center gap-3 text-left">
+            <span
+              className="flex size-9 shrink-0 items-center justify-center rounded-[11px] text-text-muted"
+              style={{ backgroundColor: FIELD_BG }}
+            >
+              <Calendar className="size-[18px]" aria-hidden />
+            </span>
+            <span className="truncate text-[13px] font-semibold text-text">
+              {date !== todayStr() && date !== yesterdayISO ? formatDateValue(date) : t('labels.date')}
+            </span>
+          </button>
+        }
+      />
+      <div className="ml-auto flex shrink-0 items-center gap-1.5">
+        {(
+          [
+            { label: t('form.date_today'), value: todayStr() },
+            { label: t('form.date_yesterday'), value: yesterdayISO },
+          ] as const
+        ).map((o) => {
+          const active = date === o.value
+          return (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => setDate(o.value)}
+              className={`rounded-[8px] px-2.5 py-1.5 text-xs font-bold transition-colors ${
+                active ? 'bg-navy text-white' : 'border border-border text-text-muted'
+              }`}
+            >
+              {o.label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  ) : (
     <DatePicker
       value={date}
       onChange={setDate}
@@ -908,6 +1111,154 @@ export const MovementForm = ({
         <FieldRow icon={<Calendar className="size-[18px]" />} label={t('labels.date')} value={formatDateValue(date)} />
       }
     />
+  )
+
+  // Source account row (create) — extracted so the mobile and desktop branches
+  // of `fieldGroup` reuse the exact same JSX in a different order.
+  const accountRow = (
+    <div className="relative" data-tour="account">
+      <Popover
+        modal={isDrawer}
+        open={activePopover === 'account'}
+        onOpenChange={(o) => setActivePopover(o ? 'account' : null)}
+        trigger={
+          <FieldRow
+            icon={isCredit ? <CreditCard className="size-[18px]" /> : <Wallet className="size-[18px]" />}
+            label={accountLabel}
+            value={<AccountValue account={selectedAccount} />}
+            hint={isCredit && tab === 'expense' ? t('drawer.credit_hint') : undefined}
+          />
+        }
+      >
+        {renderAccountPicker(eligibleAccounts, accountId, (id) => {
+          setAccountId(id)
+          setActivePopover(null)
+        })}
+      </Popover>
+      {tab === 'transfer' && (
+        <button
+          type="button"
+          onClick={handleSwap}
+          aria-label={t('drawer.swap')}
+          className="absolute bottom-0 right-4 z-10 flex size-8 translate-y-1/2 items-center justify-center rounded-full bg-navy text-white shadow-md transition-transform hover:rotate-180"
+        >
+          <ArrowLeftRight className="size-4" aria-hidden />
+        </button>
+      )}
+    </div>
+  )
+
+  const destinationRow =
+    tab === 'transfer' || tab === 'exchange' ? (
+      <Popover
+        modal={isDrawer}
+        open={activePopover === 'destination'}
+        onOpenChange={(o) => setActivePopover(o ? 'destination' : null)}
+        trigger={
+          <FieldRow
+            icon={<Wallet className="size-[18px]" />}
+            label={t('drawer.account_toward')}
+            value={<AccountValue account={tab === 'transfer' ? destinationAccount : exchangeDestAccount} />}
+          />
+        }
+      >
+        {tab === 'transfer'
+          ? renderAccountPicker(otherAccounts, destinationAccountId, (id) => {
+              setDestinationAccountId(id)
+              setActivePopover(null)
+            })
+          : renderAccountPicker(cashBank, destinationAccountId, (id) => {
+              setDestinationAccountId(id)
+              setActivePopover(null)
+            })}
+      </Popover>
+    ) : null
+
+  const categoryRowWrapped =
+    tab === 'income' || tab === 'expense' ? <div data-tour="category">{categoryRow}</div> : null
+
+  // Mobile-web account selector grouped by Débito/Crédito family (design D10).
+  // Used for expense/income; transfer/exchange keep the popover `accountRow`.
+  const debitAccounts = eligibleAccounts.filter((a) => a.type !== 'credit')
+  const creditAccounts = eligibleAccounts.filter((a) => a.type === 'credit')
+  const bothFamilies = debitAccounts.length > 0 && creditAccounts.length > 0
+  const accountFamily: 'debit' | 'credit' = isCredit ? 'credit' : 'debit'
+  const familyList = accountFamily === 'credit' ? creditAccounts : debitAccounts
+  const accountFamilyRow = (
+    <div className="flex flex-col gap-2.5 px-4 py-3">
+      <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+        {accountLabel}
+      </span>
+      {bothFamilies && (
+        <div className="flex gap-1 rounded-[10px] border border-border p-1" style={{ backgroundColor: FIELD_BG }}>
+          {(['debit', 'credit'] as const).map((f) => {
+            const active = accountFamily === f
+            const first = (f === 'credit' ? creditAccounts : debitAccounts)[0]
+            return (
+              <button
+                key={f}
+                type="button"
+                onClick={() => first && setAccountId(first.id)}
+                className={`flex-1 rounded-[8px] px-3 py-1.5 text-xs font-bold transition-colors ${
+                  active ? 'bg-card text-text shadow-sm' : 'text-text-muted'
+                }`}
+              >
+                {f === 'debit' ? t('form.family_debit') : t('form.family_credit')}
+              </button>
+            )
+          })}
+        </div>
+      )}
+      {familyList.length > 1 &&
+        (familyList.length > 5 ? (
+          // Many accounts in the family: a compact selector that opens the list,
+          // instead of a wall of chips.
+          <Popover
+            modal={isDrawer}
+            open={activePopover === 'account'}
+            onOpenChange={(o) => setActivePopover(o ? 'account' : null)}
+            trigger={
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-[11px] border border-border px-3 py-2.5 text-left transition-colors hover:bg-[var(--row-hover)]"
+                style={{ '--row-hover': ROW_HOVER } as React.CSSProperties}
+              >
+                {selectedAccount && <AccountAvatar {...avatarOf(selectedAccount)} size="sm" />}
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text">
+                  {selectedAccount ? accountPrimaryName(selectedAccount) : '—'}
+                </span>
+                <ChevronDown className="size-4 shrink-0 text-text-soft" aria-hidden />
+              </button>
+            }
+          >
+            {renderAccountPicker(familyList, accountId, (id) => {
+              setAccountId(id)
+              setActivePopover(null)
+            })}
+          </Popover>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {familyList.map((a) => {
+              const active = a.id === accountId
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => setAccountId(a.id)}
+                  className={`flex items-center gap-2 rounded-[10px] border px-2.5 py-1.5 text-sm font-semibold transition-colors ${
+                    active
+                      ? 'border-emerald bg-[var(--emerald-soft)] text-emerald-deep'
+                      : 'border-border text-text'
+                  }`}
+                >
+                  <AccountAvatar {...avatarOf(a)} size="sm" />
+                  <span className="max-w-[120px] truncate">{accountPrimaryName(a)}</span>
+                </button>
+              )
+            })}
+          </div>
+        ))}
+    </div>
   )
 
   const fieldGroup = (
@@ -954,72 +1305,22 @@ export const MovementForm = ({
           {editable?.category && categoryRow}
           {editable?.date && dateRow}
         </>
+      ) : isMobile ? (
+        // Mobile-web: category first (it's the primary decision and drives the
+        // account); the account row is hidden when a single account is eligible.
+        <>
+          {categoryRowWrapped}
+          {tab === 'expense' || tab === 'income'
+            ? showAccountSelector && accountFamilyRow
+            : (showAccountSelector || tab === 'transfer' || tab === 'exchange') && accountRow}
+          {destinationRow}
+          {dateRow}
+        </>
       ) : (
         <>
-          {/* Source account (+ swap for transfer) */}
-          <div className="relative" data-tour="account">
-            <Popover
-              modal={isDrawer}
-              open={activePopover === 'account'}
-              onOpenChange={(o) => setActivePopover(o ? 'account' : null)}
-              trigger={
-                <FieldRow
-                  icon={isCredit ? <CreditCard className="size-[18px]" /> : <Wallet className="size-[18px]" />}
-                  label={accountLabel}
-                  value={<AccountValue account={selectedAccount} />}
-                  hint={isCredit && tab === 'expense' ? t('drawer.credit_hint') : undefined}
-                />
-              }
-            >
-              {renderAccountPicker(eligibleAccounts, accountId, (id) => {
-                setAccountId(id)
-                setActivePopover(null)
-              })}
-            </Popover>
-            {tab === 'transfer' && (
-              <button
-                type="button"
-                onClick={handleSwap}
-                aria-label={t('drawer.swap')}
-                className="absolute bottom-0 right-4 z-10 flex size-8 translate-y-1/2 items-center justify-center rounded-full bg-navy text-white shadow-md transition-transform hover:rotate-180"
-              >
-                <ArrowLeftRight className="size-4" aria-hidden />
-              </button>
-            )}
-          </div>
-
-          {/* Destination (transfer / exchange) */}
-          {(tab === 'transfer' || tab === 'exchange') && (
-            <Popover
-              modal={isDrawer}
-              open={activePopover === 'destination'}
-              onOpenChange={(o) => setActivePopover(o ? 'destination' : null)}
-              trigger={
-                <FieldRow
-                  icon={<Wallet className="size-[18px]" />}
-                  label={t('drawer.account_toward')}
-                  value={<AccountValue account={tab === 'transfer' ? destinationAccount : exchangeDestAccount} />}
-                />
-              }
-            >
-              {tab === 'transfer'
-                ? renderAccountPicker(otherAccounts, destinationAccountId, (id) => {
-                    setDestinationAccountId(id)
-                    setActivePopover(null)
-                  })
-                : renderAccountPicker(cashBank, destinationAccountId, (id) => {
-                    setDestinationAccountId(id)
-                    setActivePopover(null)
-                  })}
-            </Popover>
-          )}
-
-          {/* Category (income / expense) */}
-          {(tab === 'income' || tab === 'expense') && (
-            <div data-tour="category">{categoryRow}</div>
-          )}
-
-          {/* Date (always) */}
+          {accountRow}
+          {destinationRow}
+          {categoryRowWrapped}
           {dateRow}
         </>
       )}
@@ -1286,9 +1587,49 @@ export const MovementForm = ({
 
   const togglesGroup =
     showReimbursementToggle || showSharedToggle || showRepeatToggle ? (
-      <div className="overflow-hidden rounded-[15px] border border-border bg-card [&>*+*]:border-t [&>*+*]:border-[#F1F3F6]">
-        {showReimbursementToggle && (
-          <div className="px-4 py-3.5">
+      <div
+        className={
+          isMobile
+            ? 'flex flex-col gap-3'
+            : 'overflow-hidden rounded-[15px] border border-border bg-card [&>*+*]:border-t [&>*+*]:border-[#F1F3F6]'
+        }
+      >
+        {isMobile && (
+          <div className="flex gap-2">
+            {showReimbursementToggle && (
+              <AdvChip
+                icon={<Undo2 aria-hidden />}
+                label={t('reimbursement.chip')}
+                active={reimbursementEnabled}
+                disabled={reimbursementReadOnly}
+                onClick={() => {
+                  const on = !reimbursementEnabled
+                  setReimbursementEnabled(on)
+                  if (on) setReimbursementAccountId(pickReimbursementAccount(accountId))
+                }}
+              />
+            )}
+            {showSharedToggle && sharedMembers && (
+              <AdvChip
+                icon={<Users aria-hidden />}
+                label={tShared('split.toggle_label')}
+                active={sharedEnabled}
+                onClick={() => setSharedEnabled(!sharedEnabled)}
+              />
+            )}
+            {showRepeatToggle && (
+              <AdvChip
+                icon={<Repeat aria-hidden />}
+                label={t('labels.recurrent')}
+                active={isRecurrent}
+                onClick={() => setIsRecurrent(!isRecurrent)}
+              />
+            )}
+          </div>
+        )}
+        {showReimbursementToggle && (!isMobile || reimbursementEnabled || reimbursementReadOnly) && (
+          <div className={isMobile ? 'rounded-[15px] border border-border bg-card px-4 py-3.5' : 'px-4 py-3.5'}>
+            {!isMobile && (
             <div className="flex items-center gap-3">
               <span
                 className={`flex size-9 shrink-0 items-center justify-center rounded-[11px] transition-colors ${
@@ -1320,10 +1661,11 @@ export const MovementForm = ({
                 }}
               />
             </div>
+            )}
             {reimbursementReadOnly && edit?.reimbursement && (
               <div
-                className="mt-3.5 flex items-center justify-between gap-3 border-t pt-3.5"
-                style={{ borderColor: ROW_DIVIDER }}
+                className={`flex items-center justify-between gap-3 ${isMobile ? '' : 'mt-3.5 border-t pt-3.5'}`}
+                style={isMobile ? undefined : { borderColor: ROW_DIVIDER }}
               >
                 <span className="text-xs text-text-muted">
                   {t(`reimbursement.target.${edit.reimbursement.target}`)}
@@ -1335,7 +1677,10 @@ export const MovementForm = ({
               </div>
             )}
             {reimbursementEnabled && !reimbursementReadOnly && (
-              <div className="mt-3.5 flex flex-col gap-3 border-t pt-3.5" style={{ borderColor: ROW_DIVIDER }}>
+              <div
+                className={`flex flex-col gap-3 ${isMobile ? '' : 'mt-3.5 border-t pt-3.5'}`}
+                style={isMobile ? undefined : { borderColor: ROW_DIVIDER }}
+              >
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="reimb-amount" className="text-xs font-semibold text-text-muted">
                     {t('reimbursement.estimated_amount')}
@@ -1460,8 +1805,9 @@ export const MovementForm = ({
           </div>
         )}
 
-        {showSharedToggle && sharedMembers && (
-          <div className="px-4 py-3.5">
+        {showSharedToggle && sharedMembers && (!isMobile || sharedEnabled) && (
+          <div className={isMobile ? 'rounded-[15px] border border-border bg-card px-4 py-3.5' : 'px-4 py-3.5'}>
+            {!isMobile && (
             <div className="flex items-center gap-3">
               <span
                 className={`flex size-9 shrink-0 items-center justify-center rounded-[11px] transition-colors ${
@@ -1483,9 +1829,10 @@ export const MovementForm = ({
                 onValueChange={setSharedEnabled}
               />
             </div>
+            )}
             {sharedEnabled && (
               <div
-                className="mt-3.5 flex flex-col gap-3 border-t pt-3.5"
+                className={`flex flex-col gap-3 ${isMobile ? '' : 'mt-3.5 border-t pt-3.5'}`}
                 style={{ borderColor: ROW_DIVIDER }}
               >
                 {!fullyOther && (
@@ -1545,8 +1892,9 @@ export const MovementForm = ({
           </div>
         )}
 
-        {showRepeatToggle && (
-          <div className="px-4 py-3.5">
+        {showRepeatToggle && (!isMobile || isRecurrent) && (
+          <div className={isMobile ? 'rounded-[15px] border border-border bg-card px-4 py-3.5' : 'px-4 py-3.5'}>
+            {!isMobile && (
             <div className="flex items-center gap-3">
               <span
                 className={`flex size-9 shrink-0 items-center justify-center rounded-[11px] transition-colors ${
@@ -1566,8 +1914,12 @@ export const MovementForm = ({
                 onValueChange={setIsRecurrent}
               />
             </div>
+            )}
             {isRecurrent && (
-              <div className="mt-3.5 flex flex-col gap-3 border-t pt-3.5" style={{ borderColor: ROW_DIVIDER }}>
+              <div
+                className={`flex flex-col gap-3 ${isMobile ? '' : 'mt-3.5 border-t pt-3.5'}`}
+                style={isMobile ? undefined : { borderColor: ROW_DIVIDER }}
+              >
                 <div
                   className="flex items-start gap-2.5 rounded-[11px] p-3"
                   style={{ backgroundColor: 'var(--emerald-soft)' }}

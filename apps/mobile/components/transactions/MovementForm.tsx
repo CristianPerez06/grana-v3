@@ -1,16 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
-import { getTodayAR } from '@grana/money-logic'
+import { ChevronDown, Undo2, Users, Repeat } from 'lucide-react-native'
+import { getTodayAR, formatDateISO } from '@grana/money-logic'
 import { Money, parseMoneyInput } from '@grana/validation'
 import {
   useMovementForm,
+  PRIMARY_TABS,
   type CategoryWithSubcategories,
   type Frequency,
   type Household,
   type IntervalUnit,
   type MovementEditContext,
   type MovementFormAccount,
-  type Tab,
 } from '@grana/movement-form'
 import { Label } from '../ui/Label'
 import { Input } from '../ui/Input'
@@ -20,18 +21,18 @@ import { Segmented } from '../ui/Segmented'
 import { Switch } from '../ui/Switch'
 import { FormError } from '../ui/FormError'
 import { Spinner } from '../ui/Spinner'
-import { AccountSelectField, CategorySelectField } from './form-pickers'
+import { AccountSelectField, AccountFamilySelect, CategorySelectField } from './form-pickers'
+import { SelectSheet } from '../ui/SelectSheet'
+import { SheetRow } from '../ui/SelectField'
 import { colors } from '../../lib/colors'
 import { useT } from '../../lib/locale-context'
 import { createMovementMutators } from '../../lib/transactions/mutators'
 import { invalidateAfterMovementMutation } from '../../lib/transactions/invalidate'
 import { useQueryClient } from '@tanstack/react-query'
 
-// The five tabs of the unified form. Rendered as a two-row wrapping pill group
-// (not the shared `Segmented`): five `flex-1` segments would squeeze
-// "Transferencia" into two/three lines on a narrow phone. The hook still gates
-// what each tab shows (credit only in Gasto, etc.).
-const TABS: Tab[] = ['expense', 'income', 'transfer', 'adjustment', 'exchange']
+// Tabs: only Gasto/Ingreso are primary; the rest live behind "Otros" (design
+// D1). `PRIMARY_TABS` comes from the hook; `form.secondaryTabs` are the ones
+// eligible from the user's accounts.
 
 // Recurrence frequency chips + custom-interval units, mirror of the web form.
 const FREQUENCIES: Frequency[] = ['weekly', 'biweekly', 'monthly', 'annual', 'custom']
@@ -97,6 +98,16 @@ export function MovementForm({
 
   // "Otras" keeps the stepper open even when the typed value lands on a preset.
   const [customInstallments, setCustomInstallments] = useState(false)
+  // "Otros" sheet: reveals the eligible secondary types (transfer/ajuste/cambio).
+  const [otrosOpen, setOtrosOpen] = useState(false)
+
+  // Quick-date chips: Hoy / Ayer cover the ~95% of cases without the calendar.
+  const todayStr = formatDateISO(getTodayAR())
+  const yesterdayStr = (() => {
+    const d = getTodayAR()
+    d.setDate(d.getDate() - 1)
+    return formatDateISO(d)
+  })()
 
   // Edit mode: the type selector is hidden and each field is gated by
   // `editableFields` (immutable ones render as read-only context rows). Mirror of
@@ -122,8 +133,15 @@ export function MovementForm({
   // Currency is immutable post-creation — only the create flow lets it switch.
   const showCurrencySeg = !isEdit && form.currencyOptions.length > 1
   // Source account: immutable context in edit, EXCEPT a statement payment whose
-  // debit account can move (`editable.account`).
-  const showSourceAccount = !isEdit || !!editable?.account
+  // debit account can move (`editable.account`). In create, hide the selector
+  // when there is a single eligible account (D2) — but transfer/exchange always
+  // show it (they need to pick among ≥2 accounts by their own semantics).
+  const singleAccountHides = form.tab !== 'transfer' && form.tab !== 'exchange'
+  const showSourceAccount = isEdit
+    ? !!editable?.account
+    : singleAccountHides
+      ? form.showAccountSelector
+      : true
   // Transfer/exchange destination account: immutable in edit (context row).
   const showDestinationAccount = !isEdit
 
@@ -245,9 +263,9 @@ export function MovementForm({
         <View
           accessibilityRole="radiogroup"
           accessibilityLabel={t('transactions.form.type_label')}
-          className="flex-row flex-wrap gap-1.5 rounded-xl bg-border-soft p-1"
+          className="flex-row gap-1.5 rounded-xl bg-border-soft p-1"
         >
-          {TABS.map((tab) => {
+          {PRIMARY_TABS.map((tab) => {
             const active = form.tab === tab
             return (
               <Pressable
@@ -255,17 +273,55 @@ export function MovementForm({
                 onPress={() => form.setTab(tab)}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
-                className={`rounded-lg px-3.5 py-1.5 ${active ? 'bg-card' : ''}`}
+                className={`flex-1 items-center rounded-lg px-3.5 py-1.5 ${active ? 'bg-card' : ''}`}
               >
-                <Text
-                  className={`text-sm font-bold ${active ? 'text-text' : 'text-text-muted'}`}
-                >
+                <Text className={`text-sm font-bold ${active ? 'text-text' : 'text-text-muted'}`}>
                   {t(`transactions.types.${tab}`)}
                 </Text>
               </Pressable>
             )
           })}
+          {form.secondaryTabs.length > 0 && (
+            <Pressable
+              onPress={() => setOtrosOpen(true)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: form.isSecondaryTab }}
+              className={`flex-1 flex-row items-center justify-center gap-1 rounded-lg px-3 py-1.5 ${
+                form.isSecondaryTab ? 'bg-card' : ''
+              }`}
+            >
+              <Text
+                className={`text-sm font-bold ${form.isSecondaryTab ? 'text-text' : 'text-text-muted'}`}
+              >
+                {form.isSecondaryTab
+                  ? t(`transactions.types.${form.tab}`)
+                  : t('transactions.form.other_types')}
+              </Text>
+              <ChevronDown size={13} color={form.isSecondaryTab ? colors.text : colors.textMuted} />
+            </Pressable>
+          )}
         </View>
+      )}
+
+      {/* "Otros" sheet: eligible secondary types */}
+      {!isEdit && (
+        <SelectSheet
+          visible={otrosOpen}
+          onClose={() => setOtrosOpen(false)}
+          title={t('transactions.form.other_types')}
+          items={form.secondaryTabs}
+          keyExtractor={(tab) => tab}
+          renderRow={(tab) => (
+            <SheetRow
+              primary={t(`transactions.types.${tab}`)}
+              selected={form.tab === tab}
+              onPress={() => {
+                form.setTab(tab)
+                setOtrosOpen(false)
+              }}
+            />
+          )}
+        />
       )}
 
       {/* Read-only context rows (edit): immutable fields as label/value with a
@@ -322,6 +378,17 @@ export function MovementForm({
         </View>
       )}
 
+      {/* Category (+ one-level subcategory drill) — primary decision, above the
+          account (design D7: the category drives the account). */}
+      {showCategory && (
+        <CategorySelectField
+          categories={form.transactionCategories}
+          categoryId={form.categoryId}
+          subcategoryId={form.subcategoryId}
+          onPick={form.pickCategory}
+        />
+      )}
+
       {/* Adjustment direction (Suma / Resta) + informative banner */}
       {showAdjustmentControls && (
         <>
@@ -347,18 +414,26 @@ export function MovementForm({
 
       {/* Source account. Immutable context in edit, except a statement payment
           whose debit account can move (`editable.account`). */}
-      {showSourceAccount && (
-        <AccountSelectField
-          label={
-            showAdjustment
-              ? t('transactions.drawer.account_to_adjust')
-              : t('transactions.form.account_label')
-          }
-          accounts={form.eligibleAccounts}
-          selectedId={form.accountId}
-          onSelect={form.setAccountId}
-        />
-      )}
+      {showSourceAccount &&
+        (isEdit ? (
+          <AccountSelectField
+            label={t('transactions.form.account_label')}
+            accounts={form.eligibleAccounts}
+            selectedId={form.accountId}
+            onSelect={form.setAccountId}
+          />
+        ) : (
+          <AccountFamilySelect
+            label={
+              showAdjustment
+                ? t('transactions.drawer.account_to_adjust')
+                : t('transactions.form.account_label')
+            }
+            accounts={form.eligibleAccounts}
+            selectedId={form.accountId}
+            onSelect={form.setAccountId}
+          />
+        ))}
 
       {/* Installments (credit expense) — ARS gets chips + stepper + preview;
           USD gets the cuotas-sólo-ARS hint (simple USD purchase stays allowed) */}
@@ -536,7 +611,32 @@ export function MovementForm({
       {showDate && (
         <View className="flex-col gap-1.5">
           <Label>{t('transactions.form.date_label')}</Label>
-          <DateField value={form.date} onChange={form.setDate} />
+          <View className="flex-row items-center gap-2">
+            {(
+              [
+                { key: 'today', label: t('transactions.form.date_today'), value: todayStr },
+                { key: 'yesterday', label: t('transactions.form.date_yesterday'), value: yesterdayStr },
+              ] as const
+            ).map((opt) => {
+              const active = form.date === opt.value
+              return (
+                <Pressable
+                  key={opt.key}
+                  onPress={() => form.setDate(opt.value)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  className={`rounded-lg px-3.5 py-2 ${active ? 'bg-navy' : 'bg-border-soft'}`}
+                >
+                  <Text className={`text-sm font-bold ${active ? 'text-white' : 'text-text-muted'}`}>
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              )
+            })}
+            <View className="flex-1">
+              <DateField value={form.date} onChange={form.setDate} />
+            </View>
+          </View>
         </View>
       )}
 
@@ -590,16 +690,6 @@ export function MovementForm({
         </View>
       )}
 
-      {/* Category (+ one-level subcategory drill) for expense/income */}
-      {showCategory && (
-        <CategorySelectField
-          categories={form.transactionCategories}
-          categoryId={form.categoryId}
-          subcategoryId={form.subcategoryId}
-          onPick={form.pickCategory}
-        />
-      )}
-
       {/* Negative-balance warning (non-blocking) */}
       {form.negativeWarning && (
         <View className="rounded-xl border border-warning-deep/30 bg-warning-deep/5 p-3">
@@ -611,40 +701,51 @@ export function MovementForm({
         </View>
       )}
 
-      {/* Reimbursement declaration (expense, no installments) — full web parity:
-          estimated amount, %/cap auto-calc, target radio (credit only),
-          credit-to picker and received-now. */}
-      {showReimbursement && (
-        <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-1 pr-3">
-              <Text className="text-sm font-semibold text-text">
-                {t('transactions.reimbursement.toggle')}
-              </Text>
-              <Text className="text-xs text-text-muted">
-                {form.reimbursementReadOnly
-                  ? t(
-                      edit?.reimbursement?.status === 'cancelled'
-                        ? 'transactions.reimbursement.readonly_hint_cancelled'
-                        : 'transactions.reimbursement.readonly_hint_received',
-                    )
-                  : t('transactions.reimbursement.pending_hint')}
-              </Text>
-            </View>
-            <Switch
-              ariaLabel={t('transactions.reimbursement.toggle')}
-              checked={form.reimbursementEnabled}
+      {/* Advanced (Capa 1, design D9): symbol-forward chips that activate each
+          section directly (0 tap for the simple path). The section's params
+          appear below when its chip is on. Contextual set. */}
+      {(showReimbursement || (showShared && members) || showRepeat) && (
+        <View className="flex-row flex-wrap gap-2">
+          {showReimbursement && (
+            <AdvChip
+              renderIcon={(c) => <Undo2 size={15} color={c} />}
+              label={t('transactions.reimbursement.chip')}
+              active={form.reimbursementEnabled}
               disabled={form.reimbursementReadOnly}
-              onValueChange={(on) => {
+              onPress={() => {
+                const on = !form.reimbursementEnabled
                 form.setReimbursementEnabled(on)
                 if (on) form.setReimbursementAccountId(pickReimbursementAccount(form.accountId))
               }}
             />
-          </View>
+          )}
+          {showShared && members && (
+            <AdvChip
+              renderIcon={(c) => <Users size={15} color={c} />}
+              label={t('transactions.form.shared_toggle')}
+              active={form.sharedEnabled}
+              onPress={() => form.setSharedEnabled(!form.sharedEnabled)}
+            />
+          )}
+          {showRepeat && (
+            <AdvChip
+              renderIcon={(c) => <Repeat size={15} color={c} />}
+              label={t('transactions.labels.recurrent')}
+              active={form.isRecurrent}
+              onPress={() => form.setIsRecurrent(!form.isRecurrent)}
+            />
+          )}
+        </View>
+      )}
+
+      {/* Reimbursement params (shown when its chip is on, or a read-only summary
+          for an already received/cancelled one in edit). */}
+      {showReimbursement && (form.reimbursementEnabled || form.reimbursementReadOnly) && (
+        <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
           {/* Received/cancelled reintegro: read-only summary (target + amount),
               managed from its own confirm/cancel flow. */}
           {form.reimbursementReadOnly && edit?.reimbursement && (
-            <View className="flex-row items-center justify-between gap-3 border-t border-border-soft pt-3">
+            <View className="flex-row items-center justify-between gap-3">
               <Text className="text-xs text-text-muted">
                 {t(`transactions.reimbursement.target.${edit.reimbursement.target}`)}
               </Text>
@@ -655,7 +756,7 @@ export function MovementForm({
             </View>
           )}
           {form.reimbursementEnabled && !form.reimbursementReadOnly && (
-            <View className="flex-col gap-3 border-t border-border-soft pt-3">
+            <View className="flex-col gap-3">
               {/* Estimated amount */}
               <View className="flex-col gap-1.5">
                 <Label>{t('transactions.reimbursement.estimated_amount')}</Label>
@@ -751,19 +852,9 @@ export function MovementForm({
         </View>
       )}
 
-      {/* Shared split (expense, 2-member household) */}
-      {showShared && members && (
+      {/* Shared split params (shown when its chip is on) */}
+      {showShared && members && form.sharedEnabled && (
         <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-sm font-semibold text-text">
-              {t('transactions.form.shared_toggle')}
-            </Text>
-            <Switch
-              ariaLabel={t('transactions.form.shared_toggle')}
-              checked={form.sharedEnabled}
-              onValueChange={form.setSharedEnabled}
-            />
-          </View>
           {form.sharedEnabled && (
             <View className="flex-col gap-2">
               <Segmented
@@ -789,26 +880,11 @@ export function MovementForm({
         </View>
       )}
 
-      {/* Recurrence ("Repetir") — gasto (no cuotas) / ingreso / transferencia */}
-      {showRepeat && (
+      {/* Recurrence ("Repetir") params — gasto (no cuotas) / ingreso / transferencia */}
+      {showRepeat && form.isRecurrent && (
         <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-1 pr-3">
-              <Text className="text-sm font-semibold text-text">
-                {t('transactions.labels.make_recurrent')}
-              </Text>
-              <Text className="text-xs text-text-muted">
-                {t('transactions.drawer.repeat_note')}
-              </Text>
-            </View>
-            <Switch
-              ariaLabel={t('transactions.labels.make_recurrent')}
-              checked={form.isRecurrent}
-              onValueChange={form.setIsRecurrent}
-            />
-          </View>
           {form.isRecurrent && (
-            <View className="flex-col gap-3 border-t border-border-soft pt-3">
+            <View className="flex-col gap-3">
               <View className="rounded-lg bg-emerald-soft p-3">
                 <Text className="text-xs text-text">{t('transactions.drawer.repeat_hint')}</Text>
               </View>
@@ -921,6 +997,41 @@ export function MovementForm({
         )}
       </Pressable>
     </View>
+  )
+}
+
+// A light, symbol-forward pill that activates an advanced section (reintegro /
+// compartir / repetir). The icon leads; it fills emerald when on.
+function AdvChip({
+  renderIcon,
+  label,
+  active,
+  disabled,
+  onPress,
+}: {
+  renderIcon: (color: string) => ReactNode
+  label: string
+  active: boolean
+  disabled?: boolean
+  onPress: () => void
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active, disabled: !!disabled }}
+      className={`flex-row items-center gap-1.5 rounded-full px-3 py-2 ${
+        active ? 'bg-emerald-soft' : 'bg-border-soft'
+      } ${disabled ? 'opacity-40' : ''}`}
+    >
+      {renderIcon(active ? colors.emeraldDeep : colors.textMuted)}
+      <Text
+        className={`text-xs font-semibold ${active ? 'text-emerald-deep' : 'text-text-muted'}`}
+      >
+        {label}
+      </Text>
+    </Pressable>
   )
 }
 
