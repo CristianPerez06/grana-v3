@@ -470,12 +470,13 @@ export function MovementForm({
           USD gets the cuotas-sólo-ARS hint (simple USD purchase stays allowed) */}
       {showInstallmentsCard && (
         <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
-          <Text className="text-sm font-semibold text-text">
-            {t('transactions.labels.installments')}
-          </Text>
           {form.currencyCode === 'ARS' ? (
             <>
-              <View className="flex-row flex-wrap gap-2">
+              {/* Label inline with the chips — one row to save space. */}
+              <View className="flex-row flex-wrap items-center gap-2">
+                <Text className="mr-0.5 text-sm font-semibold text-text">
+                  {t('transactions.labels.installments')}
+                </Text>
                 {INSTALLMENT_OPTIONS.map((n) => {
                   const active = !showInstallmentStepper && form.installments === String(n)
                   return (
@@ -581,9 +582,14 @@ export function MovementForm({
               )}
             </>
           ) : (
-            <Text className="text-xs text-text-muted">
-              {t('transactions.installments_options.ars_only_hint')}
-            </Text>
+            <View className="flex-col gap-1">
+              <Text className="text-sm font-semibold text-text">
+                {t('transactions.labels.installments')}
+              </Text>
+              <Text className="text-xs text-text-muted">
+                {t('transactions.installments_options.ars_only_hint')}
+              </Text>
+            </View>
           )}
         </View>
       )}

@@ -138,41 +138,69 @@ export function AccountFamilySelect({
           ]}
         />
       )}
-      {/* One full-width row per account — name left, balance right — stacked
-          vertically. The selected one is highlighted. Credit cards are off-ledger
-          so they carry no balance. */}
-      <View className="flex-col gap-1.5">
-        {list.map((a) => {
-          const active = a.id === selectedId
-          return (
-            <Pressable
-              key={a.id}
-              onPress={() => onSelect(a.id)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              className={`flex-row items-center gap-2.5 rounded-xl border px-3 py-1.5 ${
-                active ? 'border-emerald bg-emerald-soft' : 'border-border bg-card'
-              }`}
-            >
-              {a.avatar && <AccountAvatar {...a.avatar} size="sm" />}
-              <Text
-                className={`flex-1 text-sm font-semibold ${active ? 'text-emerald-deep' : 'text-text'}`}
-                numberOfLines={1}
+      {family === 'credit' ? (
+        // Credit cards carry no balance, so lay them out as compact chips side by
+        // side — the saved vertical space goes to the installments row.
+        <View className="flex-row flex-wrap gap-2">
+          {list.map((a) => {
+            const active = a.id === selectedId
+            return (
+              <Pressable
+                key={a.id}
+                onPress={() => onSelect(a.id)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                className={`flex-row items-center gap-2 rounded-xl border px-2.5 py-1.5 ${
+                  active ? 'border-emerald bg-emerald-soft' : 'border-border bg-card'
+                }`}
               >
-                {a.institutionName ?? a.name}
-              </Text>
-              {a.type !== 'credit' && (
+                {a.avatar && <AccountAvatar {...a.avatar} size="sm" />}
                 <Text
-                  className={`text-xs ${active ? 'text-emerald-deep' : 'text-text-muted'}`}
+                  className={`text-sm font-semibold ${active ? 'text-emerald-deep' : 'text-text'}`}
                   numberOfLines={1}
                 >
-                  {formatBalance(a)}
+                  {a.institutionName ?? a.name}
                 </Text>
-              )}
-            </Pressable>
-          )
-        })}
-      </View>
+              </Pressable>
+            )
+          })}
+        </View>
+      ) : (
+        // Cash/bank: one full-width row per account — name left, balance right —
+        // stacked vertically. The selected one is highlighted.
+        <View className="flex-col gap-1.5">
+          {list.map((a) => {
+            const active = a.id === selectedId
+            return (
+              <Pressable
+                key={a.id}
+                onPress={() => onSelect(a.id)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                className={`flex-row items-center gap-2.5 rounded-xl border px-3 py-1.5 ${
+                  active ? 'border-emerald bg-emerald-soft' : 'border-border bg-card'
+                }`}
+              >
+                {a.avatar && <AccountAvatar {...a.avatar} size="sm" />}
+                <Text
+                  className={`flex-1 text-sm font-semibold ${active ? 'text-emerald-deep' : 'text-text'}`}
+                  numberOfLines={1}
+                >
+                  {a.institutionName ?? a.name}
+                </Text>
+                {a.type !== 'credit' && (
+                  <Text
+                    className={`text-xs ${active ? 'text-emerald-deep' : 'text-text-muted'}`}
+                    numberOfLines={1}
+                  >
+                    {formatBalance(a)}
+                  </Text>
+                )}
+              </Pressable>
+            )
+          })}
+        </View>
+      )}
     </View>
   )
 }

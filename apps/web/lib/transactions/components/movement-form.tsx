@@ -1302,6 +1302,29 @@ export const MovementForm = ({
             setActivePopover(null)
           })}
         </Popover>
+      ) : accountFamily === 'credit' ? (
+        // Credit cards carry no balance, so lay them out as compact chips side by
+        // side — the saved vertical space goes to the installments row below.
+        <div className="flex flex-wrap gap-2">
+          {familyList.map((a) => {
+            const active = a.id === accountId
+            return (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => setAccountId(a.id)}
+                className={`flex items-center gap-2 rounded-[10px] border px-2.5 py-1.5 text-sm font-semibold transition-colors ${
+                  active
+                    ? 'border-emerald bg-[var(--emerald-soft)] text-emerald-deep'
+                    : 'border-border text-text'
+                }`}
+              >
+                <AccountAvatar {...avatarOf(a)} size="sm" />
+                <span className="max-w-[140px] truncate">{accountPrimaryName(a)}</span>
+              </button>
+            )
+          })}
+        </div>
       ) : (
         // Up to 5: one full-width row per account — name left, balance right —
         // stacked vertically. The selected one is highlighted.
@@ -1476,58 +1499,71 @@ export const MovementForm = ({
     customInstallments || !INSTALLMENT_OPTIONS.includes(installmentsNum)
   const stepInstallments = (delta: number) =>
     setInstallments(String(Math.max(1, Math.min(MAX_INSTALLMENTS, installmentsNum + delta))))
+  const installmentChips = (
+    <>
+      {INSTALLMENT_OPTIONS.map((n) => {
+        const active = !showInstallmentStepper && installments === String(n)
+        return (
+          <button
+            key={n}
+            type="button"
+            onClick={() => {
+              setCustomInstallments(false)
+              setInstallments(String(n))
+            }}
+            className={`rounded-[10px] font-bold transition-colors ${
+              isMobile ? 'px-2.5 py-1 text-[13px]' : 'px-3.5 py-1.5 text-sm'
+            } ${active ? 'bg-navy text-white' : 'text-text-muted'}`}
+            style={active ? undefined : { backgroundColor: FIELD_BG }}
+          >
+            {n}×
+          </button>
+        )
+      })}
+      <button
+        key="custom"
+        type="button"
+        onClick={() => {
+          setCustomInstallments(true)
+          // Open the stepper at a real installment count, never "1 cuota".
+          if (installmentsNum < 2) setInstallments('2')
+        }}
+        className={`inline-flex items-center gap-1 rounded-[10px] font-bold transition-colors ${
+          isMobile ? 'px-2.5 py-1 text-[13px]' : 'px-3.5 py-1.5 text-sm'
+        } ${showInstallmentStepper ? 'bg-navy text-white' : 'text-text-muted'}`}
+        style={showInstallmentStepper ? undefined : { backgroundColor: FIELD_BG }}
+      >
+        {t('installments_options.custom')}
+        <ChevronDown
+          className={`size-3.5 transition-transform ${showInstallmentStepper ? 'rotate-180' : ''}`}
+          aria-hidden
+        />
+      </button>
+    </>
+  )
   const cuotasCard =
     !isEdit && tab === 'expense' && isCredit && currencyCode === 'ARS' ? (
       <div className="rounded-[15px] border border-border bg-card p-4">
-        <div className="flex items-center gap-2.5">
-          <span
-            className="flex size-9 items-center justify-center rounded-[11px] text-terracotta"
-            style={{ backgroundColor: 'var(--terracotta-soft)' }}
-          >
-            <CreditCard className="size-[18px]" aria-hidden />
-          </span>
-          <span className="text-[15px] font-semibold text-text">{t('labels.installments')}</span>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {INSTALLMENT_OPTIONS.map((n) => {
-            const active = !showInstallmentStepper && installments === String(n)
-            return (
-              <button
-                key={n}
-                type="button"
-                onClick={() => {
-                  setCustomInstallments(false)
-                  setInstallments(String(n))
-                }}
-                className={`rounded-[10px] px-3.5 py-1.5 text-sm font-bold transition-colors ${
-                  active ? 'bg-navy text-white' : 'text-text-muted'
-                }`}
-                style={active ? undefined : { backgroundColor: FIELD_BG }}
+        {isMobile ? (
+          // Mobile: label inline with the chips, no icon — one row to save space.
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="mr-0.5 text-[13px] font-semibold text-text">{t('labels.installments')}</span>
+            {installmentChips}
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-2.5">
+              <span
+                className="flex size-9 items-center justify-center rounded-[11px] text-terracotta"
+                style={{ backgroundColor: 'var(--terracotta-soft)' }}
               >
-                {n}×
-              </button>
-            )
-          })}
-          <button
-            key="custom"
-            type="button"
-            onClick={() => {
-              setCustomInstallments(true)
-              // Open the stepper at a real installment count, never "1 cuota".
-              if (installmentsNum < 2) setInstallments('2')
-            }}
-            className={`inline-flex items-center gap-1 rounded-[10px] px-3.5 py-1.5 text-sm font-bold transition-colors ${
-              showInstallmentStepper ? 'bg-navy text-white' : 'text-text-muted'
-            }`}
-            style={showInstallmentStepper ? undefined : { backgroundColor: FIELD_BG }}
-          >
-            {t('installments_options.custom')}
-            <ChevronDown
-              className={`size-3.5 transition-transform ${showInstallmentStepper ? 'rotate-180' : ''}`}
-              aria-hidden
-            />
-          </button>
-        </div>
+                <CreditCard className="size-[18px]" aria-hidden />
+              </span>
+              <span className="text-[15px] font-semibold text-text">{t('labels.installments')}</span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">{installmentChips}</div>
+          </>
+        )}
         {showInstallmentStepper && (
           <div className="mt-3.5 flex flex-col items-center gap-1.5">
             <div className="flex items-center gap-3">
