@@ -187,6 +187,40 @@ const FieldRow = forwardRef<HTMLButtonElement, RowProps & Omit<React.ButtonHTMLA
 )
 FieldRow.displayName = 'FieldRow'
 
+// Mobile-web: a light, symbol-forward pill that activates an advanced section
+// (reintegro / compartir / repetir). The icon leads; it fills emerald when on.
+// Its params render below the chip row when active. Desktop keeps the row+switch
+// layout instead.
+const AdvChip = ({
+  icon,
+  label,
+  active,
+  disabled,
+  onClick,
+}: {
+  icon: ReactNode
+  label: string
+  active: boolean
+  disabled?: boolean
+  onClick: () => void
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    aria-pressed={active}
+    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-bold transition-colors disabled:opacity-50 ${
+      active ? 'border-transparent text-emerald-deep' : 'border-border text-text-muted'
+    }`}
+    style={{ backgroundColor: active ? 'var(--emerald-soft)' : FIELD_BG }}
+  >
+    <span className="flex size-4 shrink-0 items-center justify-center [&>svg]:size-[15px]" aria-hidden>
+      {icon}
+    </span>
+    {label}
+  </button>
+)
+
 // Account display: the institution is the headline; the account's own name is
 // the secondary detail (omitted when it would just repeat the institution, e.g.
 // auto-named bank accounts). Cash accounts have no institution → name leads.
@@ -1553,9 +1587,49 @@ export const MovementForm = ({
 
   const togglesGroup =
     showReimbursementToggle || showSharedToggle || showRepeatToggle ? (
-      <div className="overflow-hidden rounded-[15px] border border-border bg-card [&>*+*]:border-t [&>*+*]:border-[#F1F3F6]">
-        {showReimbursementToggle && (
-          <div className="px-4 py-3.5">
+      <div
+        className={
+          isMobile
+            ? 'flex flex-col gap-3'
+            : 'overflow-hidden rounded-[15px] border border-border bg-card [&>*+*]:border-t [&>*+*]:border-[#F1F3F6]'
+        }
+      >
+        {isMobile && (
+          <div className="flex flex-wrap gap-2">
+            {showReimbursementToggle && (
+              <AdvChip
+                icon={<Undo2 aria-hidden />}
+                label={t('reimbursement.toggle')}
+                active={reimbursementEnabled}
+                disabled={reimbursementReadOnly}
+                onClick={() => {
+                  const on = !reimbursementEnabled
+                  setReimbursementEnabled(on)
+                  if (on) setReimbursementAccountId(pickReimbursementAccount(accountId))
+                }}
+              />
+            )}
+            {showSharedToggle && sharedMembers && (
+              <AdvChip
+                icon={<Users aria-hidden />}
+                label={tShared('split.toggle_label')}
+                active={sharedEnabled}
+                onClick={() => setSharedEnabled(!sharedEnabled)}
+              />
+            )}
+            {showRepeatToggle && (
+              <AdvChip
+                icon={<Repeat aria-hidden />}
+                label={t('labels.make_recurrent')}
+                active={isRecurrent}
+                onClick={() => setIsRecurrent(!isRecurrent)}
+              />
+            )}
+          </div>
+        )}
+        {showReimbursementToggle && (!isMobile || reimbursementEnabled || reimbursementReadOnly) && (
+          <div className={isMobile ? 'rounded-[15px] border border-border bg-card px-4 py-3.5' : 'px-4 py-3.5'}>
+            {!isMobile && (
             <div className="flex items-center gap-3">
               <span
                 className={`flex size-9 shrink-0 items-center justify-center rounded-[11px] transition-colors ${
@@ -1587,10 +1661,11 @@ export const MovementForm = ({
                 }}
               />
             </div>
+            )}
             {reimbursementReadOnly && edit?.reimbursement && (
               <div
-                className="mt-3.5 flex items-center justify-between gap-3 border-t pt-3.5"
-                style={{ borderColor: ROW_DIVIDER }}
+                className={`flex items-center justify-between gap-3 ${isMobile ? '' : 'mt-3.5 border-t pt-3.5'}`}
+                style={isMobile ? undefined : { borderColor: ROW_DIVIDER }}
               >
                 <span className="text-xs text-text-muted">
                   {t(`reimbursement.target.${edit.reimbursement.target}`)}
@@ -1602,7 +1677,10 @@ export const MovementForm = ({
               </div>
             )}
             {reimbursementEnabled && !reimbursementReadOnly && (
-              <div className="mt-3.5 flex flex-col gap-3 border-t pt-3.5" style={{ borderColor: ROW_DIVIDER }}>
+              <div
+                className={`flex flex-col gap-3 ${isMobile ? '' : 'mt-3.5 border-t pt-3.5'}`}
+                style={isMobile ? undefined : { borderColor: ROW_DIVIDER }}
+              >
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="reimb-amount" className="text-xs font-semibold text-text-muted">
                     {t('reimbursement.estimated_amount')}
@@ -1727,8 +1805,9 @@ export const MovementForm = ({
           </div>
         )}
 
-        {showSharedToggle && sharedMembers && (
-          <div className="px-4 py-3.5">
+        {showSharedToggle && sharedMembers && (!isMobile || sharedEnabled) && (
+          <div className={isMobile ? 'rounded-[15px] border border-border bg-card px-4 py-3.5' : 'px-4 py-3.5'}>
+            {!isMobile && (
             <div className="flex items-center gap-3">
               <span
                 className={`flex size-9 shrink-0 items-center justify-center rounded-[11px] transition-colors ${
@@ -1750,9 +1829,10 @@ export const MovementForm = ({
                 onValueChange={setSharedEnabled}
               />
             </div>
+            )}
             {sharedEnabled && (
               <div
-                className="mt-3.5 flex flex-col gap-3 border-t pt-3.5"
+                className={`flex flex-col gap-3 ${isMobile ? '' : 'mt-3.5 border-t pt-3.5'}`}
                 style={{ borderColor: ROW_DIVIDER }}
               >
                 {!fullyOther && (
@@ -1812,8 +1892,9 @@ export const MovementForm = ({
           </div>
         )}
 
-        {showRepeatToggle && (
-          <div className="px-4 py-3.5">
+        {showRepeatToggle && (!isMobile || isRecurrent) && (
+          <div className={isMobile ? 'rounded-[15px] border border-border bg-card px-4 py-3.5' : 'px-4 py-3.5'}>
+            {!isMobile && (
             <div className="flex items-center gap-3">
               <span
                 className={`flex size-9 shrink-0 items-center justify-center rounded-[11px] transition-colors ${
@@ -1833,8 +1914,12 @@ export const MovementForm = ({
                 onValueChange={setIsRecurrent}
               />
             </div>
+            )}
             {isRecurrent && (
-              <div className="mt-3.5 flex flex-col gap-3 border-t pt-3.5" style={{ borderColor: ROW_DIVIDER }}>
+              <div
+                className={`flex flex-col gap-3 ${isMobile ? '' : 'mt-3.5 border-t pt-3.5'}`}
+                style={isMobile ? undefined : { borderColor: ROW_DIVIDER }}
+              >
                 <div
                   className="flex items-start gap-2.5 rounded-[11px] p-3"
                   style={{ backgroundColor: 'var(--emerald-soft)' }}

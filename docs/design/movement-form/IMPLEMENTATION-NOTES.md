@@ -42,7 +42,7 @@ Enfoque: hook **`useIsMobile`** (`apps/web/lib/use-is-mobile.ts`, matchMedia `ma
 
 ### Pendiente en mobile-web (web)
 - **Selector de cuenta por familia Débito/Crédito** — ✅ hecho (`feat(web): mobile-web account selector grouped by Débito/Crédito family`). Toggle Débito/Crédito + chips con avatar, para gasto/ingreso; transfer/exchange mantienen el popover actual.
-- **Avanzadas como chips symbol-forward** — ⏸️ **la única pieza que dejé pendiente, a propósito.** El `togglesGroup` tiene los tres headers con classNames idénticos (difícil de matchear sin riesgo) y los params de reintegro tocan saldo/resumen; reestructurarlo a ciegas, sin poder validar el visual en mobile, es riesgoso. Hoy los toggles **funcionan** en mobile-web (solo no están como chips). Recomiendo hacerlo juntos, viendo el resultado en el navegador. Referencia de cómo quedó en nativo: `apps/mobile` commit `feat(mobile): advanced sections as symbol-forward activation chips`.
+- **Avanzadas como chips symbol-forward** — ✅ hecho (`feat(web): mobile-web advanced sections as symbol-forward chips`). En mobile-web el `togglesGroup` ahora muestra una fila de chips (`AdvChip`: Undo2/Users/Repeat, se llenan de emerald al activarse) y los params de cada sección aparecen como card debajo cuando el chip está activo; los headers con Switch se ocultan en mobile. Desktop queda byte-idéntico (rama `!isMobile` = fila+switch original, dividers `mt-3.5 border-t pt-3.5` intactos).
 
 ## No hice (por regla)
 
