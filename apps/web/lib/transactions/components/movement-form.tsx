@@ -1272,80 +1272,73 @@ export const MovementForm = ({
           })}
         </div>
       )}
-      {familyList.length > 1 &&
-        (familyList.length > 5 ? (
-          // Many accounts in the family: a compact selector that opens the list,
-          // instead of a wall of chips.
-          <Popover
-            modal={isDrawer}
-            open={activePopover === 'account'}
-            onOpenChange={(o) => setActivePopover(o ? 'account' : null)}
-            trigger={
+      {familyList.length > 5 ? (
+        // Many accounts in the family: a compact dropdown instead of a long list.
+        <Popover
+          modal={isDrawer}
+          open={activePopover === 'account'}
+          onOpenChange={(o) => setActivePopover(o ? 'account' : null)}
+          trigger={
+            <button
+              type="button"
+              className="flex w-full items-center gap-2.5 rounded-[11px] border border-border px-3 py-2.5 text-left transition-colors hover:bg-[var(--row-hover)]"
+              style={{ '--row-hover': ROW_HOVER } as React.CSSProperties}
+            >
+              {selectedAccount && <AccountAvatar {...avatarOf(selectedAccount)} size="sm" />}
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text">
+                {selectedAccount ? accountPrimaryName(selectedAccount) : '—'}
+              </span>
+              {selectedAccount && selectedAccount.type !== 'credit' && (
+                <span className="shrink-0 text-xs font-medium text-text-muted">
+                  {formatBalance(selectedAccount)}
+                </span>
+              )}
+              <ChevronDown className="size-4 shrink-0 text-text-soft" aria-hidden />
+            </button>
+          }
+        >
+          {renderAccountPicker(familyList, accountId, (id) => {
+            setAccountId(id)
+            setActivePopover(null)
+          })}
+        </Popover>
+      ) : (
+        // Up to 5: one full-width row per account — name left, balance right —
+        // stacked vertically. The selected one is highlighted.
+        <div className="flex flex-col gap-2">
+          {familyList.map((a) => {
+            const active = a.id === accountId
+            return (
               <button
+                key={a.id}
                 type="button"
-                className="flex w-full items-center gap-2.5 rounded-[11px] border border-border px-3 py-2.5 text-left transition-colors hover:bg-[var(--row-hover)]"
+                onClick={() => setAccountId(a.id)}
+                className={`flex items-center gap-2.5 rounded-[11px] border px-3 py-2.5 text-left transition-colors ${
+                  active
+                    ? 'border-emerald bg-[var(--emerald-soft)]'
+                    : 'border-border hover:bg-[var(--row-hover)]'
+                }`}
                 style={{ '--row-hover': ROW_HOVER } as React.CSSProperties}
               >
-                {selectedAccount && <AccountAvatar {...avatarOf(selectedAccount)} size="sm" />}
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text">
-                  {selectedAccount ? accountPrimaryName(selectedAccount) : '—'}
-                </span>
-                {selectedAccount && selectedAccount.type !== 'credit' && (
-                  <span className="shrink-0 text-xs font-medium text-text-muted">
-                    {formatBalance(selectedAccount)}
-                  </span>
-                )}
-                <ChevronDown className="size-4 shrink-0 text-text-soft" aria-hidden />
-              </button>
-            }
-          >
-            {renderAccountPicker(familyList, accountId, (id) => {
-              setAccountId(id)
-              setActivePopover(null)
-            })}
-          </Popover>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {familyList.map((a) => {
-              const active = a.id === accountId
-              return (
-                <button
-                  key={a.id}
-                  type="button"
-                  onClick={() => setAccountId(a.id)}
-                  className={`flex items-center gap-2 rounded-[10px] border px-2.5 py-1.5 text-sm font-semibold transition-colors ${
-                    active
-                      ? 'border-emerald bg-[var(--emerald-soft)] text-emerald-deep'
-                      : 'border-border text-text'
+                <AccountAvatar {...avatarOf(a)} size="sm" />
+                <span
+                  className={`min-w-0 flex-1 truncate text-sm font-semibold ${
+                    active ? 'text-emerald-deep' : 'text-text'
                   }`}
                 >
-                  <AccountAvatar {...avatarOf(a)} size="sm" />
-                  <span className="max-w-[120px] truncate">{accountPrimaryName(a)}</span>
-                </button>
-              )
-            })}
-          </div>
-        ))}
-      {/* Single account in the family: show it read-only so the default one is
-          visible — with its balance, since a single cash/bank account otherwise
-          renders nothing here. */}
-      {familyList.length === 1 && (
-        <div className="flex items-center gap-2.5">
-          <AccountAvatar {...avatarOf(familyList[0])} size="sm" />
-          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text">
-            {accountPrimaryName(familyList[0])}
-          </span>
-          {familyList[0].type !== 'credit' && (
-            <span className="shrink-0 text-xs text-text-muted">{formatBalance(familyList[0])}</span>
-          )}
+                  {accountPrimaryName(a)}
+                </span>
+                {a.type !== 'credit' && (
+                  <span
+                    className={`shrink-0 text-xs ${active ? 'text-emerald-deep/70' : 'text-text-muted'}`}
+                  >
+                    {formatBalance(a)}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
-      )}
-      {/* Chips case (2–5): the pills carry no balance, so show the selected
-          account's below. The 1-account and >5 (dropdown) cases show it inline. */}
-      {familyList.length > 1 && familyList.length <= 5 && selectedAccount && selectedAccount.type !== 'credit' && (
-        <span className="text-xs text-text-muted">
-          {accountPrimaryName(selectedAccount)} · {formatBalance(selectedAccount)}
-        </span>
       )}
     </div>
   )

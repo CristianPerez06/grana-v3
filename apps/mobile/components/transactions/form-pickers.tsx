@@ -138,53 +138,41 @@ export function AccountFamilySelect({
           ]}
         />
       )}
-      {list.length > 1 && (
-        <View className="flex-row flex-wrap gap-2">
-          {list.map((a) => {
-            const active = a.id === selectedId
-            return (
-              <Pressable
-                key={a.id}
-                onPress={() => onSelect(a.id)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                className={`flex-row items-center gap-2 rounded-xl border px-3 py-2 ${
-                  active ? 'border-emerald bg-emerald-soft' : 'border-border bg-card'
-                }`}
+      {/* One full-width row per account — name left, balance right — stacked
+          vertically. The selected one is highlighted. Credit cards are off-ledger
+          so they carry no balance. */}
+      <View className="flex-col gap-2">
+        {list.map((a) => {
+          const active = a.id === selectedId
+          return (
+            <Pressable
+              key={a.id}
+              onPress={() => onSelect(a.id)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              className={`flex-row items-center gap-2.5 rounded-xl border px-3 py-2.5 ${
+                active ? 'border-emerald bg-emerald-soft' : 'border-border bg-card'
+              }`}
+            >
+              {a.avatar && <AccountAvatar {...a.avatar} size="sm" />}
+              <Text
+                className={`flex-1 text-sm font-semibold ${active ? 'text-emerald-deep' : 'text-text'}`}
+                numberOfLines={1}
               >
-                {a.avatar && <AccountAvatar {...a.avatar} size="sm" />}
+                {a.institutionName ?? a.name}
+              </Text>
+              {a.type !== 'credit' && (
                 <Text
-                  className={`text-sm font-semibold ${active ? 'text-emerald-deep' : 'text-text'}`}
+                  className={`text-xs ${active ? 'text-emerald-deep' : 'text-text-muted'}`}
                   numberOfLines={1}
                 >
-                  {a.institutionName ?? a.name}
+                  {formatBalance(a)}
                 </Text>
-              </Pressable>
-            )
-          })}
-        </View>
-      )}
-      {/* Single account in the family: show it read-only (with balance) so the
-          default one — and its available funds — is visible. */}
-      {list.length === 1 && (
-        <View className="flex-row items-center gap-2.5">
-          {list[0].avatar && <AccountAvatar {...list[0].avatar} size="sm" />}
-          <Text className="flex-1 text-sm font-semibold text-text" numberOfLines={1}>
-            {list[0].institutionName ?? list[0].name}
-          </Text>
-          {list[0].type !== 'credit' && (
-            <Text className="text-xs text-text-muted" numberOfLines={1}>
-              {formatBalance(list[0])}
-            </Text>
-          )}
-        </View>
-      )}
-      {/* Selected cash/bank account's balance (credit cards are off-ledger). */}
-      {list.length > 1 && selected && selected.type !== 'credit' && (
-        <Text className="text-xs text-text-muted" numberOfLines={1}>
-          {(selected.institutionName ?? selected.name)} · {formatBalance(selected)}
-        </Text>
-      )}
+              )}
+            </Pressable>
+          )
+        })}
+      </View>
     </View>
   )
 }
