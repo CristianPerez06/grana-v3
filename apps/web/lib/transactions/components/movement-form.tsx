@@ -1311,6 +1311,29 @@ export const MovementForm = ({
             })}
           </div>
         ))}
+      {/* Single account in the family: show it read-only so the default one is
+          visible — with its balance, since a single cash/bank account otherwise
+          renders nothing here. */}
+      {familyList.length === 1 && (
+        <div className="flex items-center gap-2.5">
+          <AccountAvatar {...avatarOf(familyList[0])} size="sm" />
+          <div className="flex min-w-0 flex-col">
+            <span className="truncate text-sm font-semibold text-text">
+              {accountPrimaryName(familyList[0])}
+            </span>
+            {familyList[0].type !== 'credit' && (
+              <span className="truncate text-xs text-text-muted">{formatBalance(familyList[0])}</span>
+            )}
+          </div>
+        </div>
+      )}
+      {/* Selected cash/bank account's balance — the "default" account should show
+          its available funds (credit cards are off-ledger, so they don't). */}
+      {familyList.length > 1 && selectedAccount && selectedAccount.type !== 'credit' && (
+        <span className="text-xs text-text-muted">
+          {accountPrimaryName(selectedAccount)} · {formatBalance(selectedAccount)}
+        </span>
+      )}
     </div>
   )
 
@@ -1559,7 +1582,51 @@ export const MovementForm = ({
 
   // ── Description ──────────────────────────────────────────────────────────────
   const isAdjustment = isEdit ? edit?.type === 'adjustment' : tab === 'adjustment'
-  const descriptionField = (
+  const descriptionInput = (className: string) => (
+    <input
+      id="description"
+      type="text"
+      value={description}
+      onChange={(e) => {
+        setDescription(e.target.value)
+        setSuggestion(null)
+        setDescriptionHasNoHistory(false)
+      }}
+      onBlur={handleDescriptionBlur}
+      placeholder={isAdjustment ? t('drawer.adjust_reason_placeholder') : t('placeholders.description')}
+      className={className}
+    />
+  )
+  const descriptionHints = (
+    <>
+      {isAdjustment && (
+        <p className={`text-xs text-text-muted ${isMobile ? 'mt-1.5 pl-[26px]' : 'mt-2 pl-12'}`}>
+          {t('drawer.adjust_reason_required')}
+        </p>
+      )}
+      {!isEdit && (tab === 'income' || tab === 'expense') && descriptionHasNoHistory && selectedCategory && (
+        <div className={`mt-2 ${isMobile ? 'pl-[26px]' : 'pl-12'}`}>
+          <CategorySuggestionHint
+            description={description}
+            categoryName={getCategoryName(selectedCategory, tRoot)}
+          />
+        </div>
+      )}
+    </>
+  )
+  const descriptionField = isMobile ? (
+    // Mobile-web: the description is optional and secondary — a slim single line
+    // (small inline icon, no eyebrow, less padding) instead of the tall card.
+    <div className="rounded-[15px] border border-border bg-card px-4 py-2.5" data-tour="description">
+      <div className="flex items-center gap-2.5">
+        <FileText className="size-4 shrink-0 text-text-soft" aria-hidden />
+        {descriptionInput(
+          'w-full bg-transparent text-[14px] text-text outline-none placeholder:text-text-soft/60',
+        )}
+      </div>
+      {descriptionHints}
+    </div>
+  ) : (
     <div className="rounded-[15px] border border-border bg-card px-4 py-3" data-tour="description">
       <div className="flex items-center gap-3">
         <span
@@ -1572,30 +1639,12 @@ export const MovementForm = ({
           <label htmlFor="description" className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
             {isAdjustment ? t('drawer.adjust_reason') : t('labels.description')}
           </label>
-          <input
-            id="description"
-            type="text"
-            value={description}
-            onChange={(e) => {
-              setDescription(e.target.value)
-              setSuggestion(null)
-              setDescriptionHasNoHistory(false)
-            }}
-            onBlur={handleDescriptionBlur}
-            placeholder={isAdjustment ? t('drawer.adjust_reason_placeholder') : t('placeholders.description')}
-            className="w-full bg-transparent text-[15px] font-semibold text-text outline-none placeholder:font-normal placeholder:text-text-soft/60"
-          />
+          {descriptionInput(
+            'w-full bg-transparent text-[15px] font-semibold text-text outline-none placeholder:font-normal placeholder:text-text-soft/60',
+          )}
         </div>
       </div>
-      {isAdjustment && <p className="mt-2 pl-12 text-xs text-text-muted">{t('drawer.adjust_reason_required')}</p>}
-      {!isEdit && (tab === 'income' || tab === 'expense') && descriptionHasNoHistory && selectedCategory && (
-        <div className="mt-2 pl-12">
-          <CategorySuggestionHint
-            description={description}
-            categoryName={getCategoryName(selectedCategory, tRoot)}
-          />
-        </div>
-      )}
+      {descriptionHints}
     </div>
   )
 

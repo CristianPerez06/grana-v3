@@ -16,6 +16,14 @@ import { useT } from '../../lib/locale-context'
 
 type Subcategory = CategoryWithSubcategories['subcategories'][number]
 
+const CURRENCY_SYMBOL: Record<'ARS' | 'USD', string> = { ARS: '$', USD: 'U$D' }
+// Balance across the account's active currencies, e.g. "$12.345 · U$D 100".
+// Cash/bank only — credit cards are off-ledger and carry no available balance.
+const formatBalance = (a: MovementFormAccount): string =>
+  a.activeCurrencies
+    .map((c) => `${CURRENCY_SYMBOL[c]}${(a.balances[c] ?? 0).toLocaleString('es-AR')}`)
+    .join(' · ')
+
 // Account picker: compact trigger (avatar + name) that opens a sheet with the
 // account list. Shared by the movement form (source / transfer destination /
 // reimbursement credit-to) and the recurrence create form.
@@ -146,6 +154,29 @@ export function AccountFamilySelect({
             )
           })}
         </View>
+      )}
+      {/* Single account in the family: show it read-only (with balance) so the
+          default one — and its available funds — is visible. */}
+      {list.length === 1 && (
+        <View className="flex-row items-center gap-2.5">
+          {list[0].avatar && <AccountAvatar {...list[0].avatar} size="sm" />}
+          <View className="flex-1 flex-col">
+            <Text className="text-sm font-semibold text-text" numberOfLines={1}>
+              {list[0].institutionName ?? list[0].name}
+            </Text>
+            {list[0].type !== 'credit' && (
+              <Text className="text-xs text-text-muted" numberOfLines={1}>
+                {formatBalance(list[0])}
+              </Text>
+            )}
+          </View>
+        </View>
+      )}
+      {/* Selected cash/bank account's balance (credit cards are off-ledger). */}
+      {list.length > 1 && selected && selected.type !== 'credit' && (
+        <Text className="text-xs text-text-muted" numberOfLines={1}>
+          {(selected.institutionName ?? selected.name)} · {formatBalance(selected)}
+        </Text>
       )}
     </View>
   )
