@@ -57,27 +57,23 @@ El formulario de alta SHALL presentar `gasto` e `ingreso` como las únicas opcio
 - **THEN** el tipo del movimiento se muestra como contexto inmutable
 - **AND** la partición primario/"Otros" no ofrece cambiarlo
 
-### Requirement: El formulario oculta la dimensión cuenta cuando hay una sola cuenta elegible para la moneda activa
+### Requirement: El formulario oculta la dimensión cuenta cuando hay una sola cuenta elegible para el tipo activo
 
-El formulario de alta SHALL omitir el selector de cuenta cuando el usuario tiene exactamente una cuenta elegible para el tipo de movimiento y la moneda activos, usando esa cuenta de forma implícita. Con dos o más cuentas elegibles, el selector SHALL mostrarse. La elegibilidad depende del tipo (solo `gasto` puede apuntar a una cuenta de crédito) y de la moneda activa, de modo que el resultado puede variar por tipo y por moneda y se recalcula por render.
+El formulario de alta SHALL omitir el selector de cuenta cuando el usuario tiene exactamente una cuenta elegible para el tipo de movimiento activo, usando esa cuenta de forma implícita. Con dos o más cuentas elegibles, el selector SHALL mostrarse. La elegibilidad depende del tipo (solo `gasto` puede apuntar a una cuenta de crédito), de modo que el resultado puede variar por tipo y se recalcula por render.
+
+> **Follow-up (fuera de esta pasada de superficie):** el refinamiento por *moneda* —ocultar también cuando hay una sola cuenta elegible para la moneda activa, p. ej. una `Billetera` en ARS y una cuenta solo en USD, dejando que el toggle de moneda desambigüe— queda diferido: hoy el toggle de moneda es por cuenta (`currencyOptions` = monedas de la cuenta seleccionada), así que hacerlo bien requiere que el toggle maneje la selección de cuenta, un cambio en la cascada de moneda. Está anotado en `use-movement-form.ts`.
 
 #### Scenario: Una sola cuenta elegible oculta el selector
 
-- **WHEN** el usuario tiene una sola cuenta elegible para el tipo y la moneda activos
+- **WHEN** el usuario tiene una sola cuenta elegible para el tipo activo
 - **THEN** el formulario no muestra el selector de cuenta
 - **AND** el movimiento se registra en esa cuenta implícita
 
 #### Scenario: Dos o más cuentas elegibles muestran el selector
 
-- **WHEN** el usuario tiene dos o más cuentas elegibles para el tipo y la moneda activos
+- **WHEN** el usuario tiene dos o más cuentas elegibles para el tipo activo
 - **THEN** el formulario muestra el selector de cuenta
 - **AND** el usuario elige entre ellas
-
-#### Scenario: La elegibilidad depende de la moneda
-
-- **WHEN** el usuario tiene una `Billetera` en ARS y otra cuenta solo en USD, y el monto está en ARS
-- **THEN** para ARS hay una sola cuenta elegible y el selector se oculta
-- **AND** al cambiar la moneda a USD la cuenta implícita pasa a ser la cuenta en USD, sin abrir un selector
 
 ### Requirement: El gasto simple no atraviesa ninguna sección avanzada
 
@@ -123,7 +119,7 @@ Las funcionalidades avanzadas del alta —reintegro, gasto compartido y repetir 
 
 ### Requirement: El alta preselecciona la cuenta con los datos disponibles
 
-En modo create, el formulario SHALL preseleccionar la cuenta según este orden de preferencia, usando solo datos ya disponibles: (1) la cuenta de contexto cuando el usuario llega desde una vista de cuenta; (2) la única cuenta elegible cuando hay una sola para el tipo y la moneda activos; (3) la primera cuenta elegible como fallback. La preselección nunca elige una cuenta no elegible para el tipo o la moneda activos.
+En modo create, el formulario SHALL preseleccionar la cuenta según este orden de preferencia, usando solo datos ya disponibles: (1) la cuenta de contexto cuando el usuario llega desde una vista de cuenta; (2) la única cuenta elegible cuando hay una sola para el tipo activo; (3) la primera cuenta elegible como fallback. La preselección nunca elige una cuenta no elegible para el tipo activo.
 
 #### Scenario: Preselección desde una vista de cuenta
 
@@ -132,7 +128,7 @@ En modo create, el formulario SHALL preseleccionar la cuenta según este orden d
 
 #### Scenario: Preselección con una sola cuenta elegible
 
-- **WHEN** el usuario tiene una sola cuenta elegible para el tipo y la moneda activos
+- **WHEN** el usuario tiene una sola cuenta elegible para el tipo activo
 - **THEN** esa cuenta queda seleccionada de forma implícita
 
 #### Scenario: Fallback a la primera elegible

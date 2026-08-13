@@ -89,11 +89,13 @@ El alta muestra, arriba del campo de categoría, las **clasificaciones más frec
 
 No cambia nada contable: los cinco tipos siguen existiendo y funcionando; esto solo gobierna cuáles se muestran como primarias (2) vs detrás de "Otros". La presentación visual (header compacto, monto centrado, categorías sin borde, íconos de línea, avatares con color de marca, selector de cuenta por familia Débito/Crédito que escala, avanzadas symbol-forward) está en **`docs/design/movement-form/README.md`**.
 
-### D2 — Ocultar la cuenta se deriva de la elegibilidad por tipo Y moneda
+### D2 — Ocultar la cuenta se deriva de la elegibilidad por tipo (moneda: diferido)
 
-Cuando, **para la moneda activa**, hay una sola cuenta elegible, el hook expone `showAccountSelector = false` y el caller no renderiza el bloque de cuenta; la cuenta queda implícita. Con ≥2, se muestra.
+Cuando hay una sola cuenta elegible **para el tipo activo**, el hook expone `showAccountSelector = false` y el caller no renderiza el bloque de cuenta; la cuenta queda implícita. Con ≥2, se muestra.
 
-- **Elegibilidad = tipo Y moneda.** Ej.: Billetera (ARS) + una cuenta USD. Para un gasto en ARS hay una sola elegible; para uno en USD, una sola. El selector se oculta en ambos, y **la desambiguación la hace el toggle ARS/USD del hero del monto** — elegís moneda, la cuenta cae sola. La dimensión "cuenta" se colapsa dentro de la de "moneda", que ya estás tocando.
+> **Estado (implementado):** la elegibilidad se deriva **solo del tipo** (`gasto` alcanza cuentas de crédito; el resto solo cash/bank). El refinamiento **por moneda** de abajo quedó **diferido** (no implementado en esta pasada) — ver la nota al final de la viñeta.
+
+- **Elegibilidad = tipo (target) Y moneda (diferido).** Ej.: Billetera (ARS) + una cuenta USD. Para un gasto en ARS habría una sola elegible; para uno en USD, una sola. El selector se ocultaría en ambos, y **la desambiguación la haría el toggle ARS/USD del hero del monto** — elegís moneda, la cuenta cae sola. La dimensión "cuenta" se colapsa dentro de la de "moneda", que ya estás tocando. **Diferido:** hoy el toggle de moneda es **por cuenta** (`currencyOptions` = monedas de la cuenta seleccionada; con una cuenta ARS-only el toggle queda deshabilitado), así que para que el toggle maneje la selección de cuenta hace falta un cambio en la cascada de moneda, fuera de esta pasada de superficie. Anotado en `use-movement-form.ts`.
 - **Con 2+ elegibles:** en vez de fila-que-abre-popover (2 taps), **chips de cuenta inline** (avatar + nombre; 1 tap, 0 si el default acierta) cuando son pocas; con muchas, cae al row + popover, y ahí el split **crédito vs débito/efvo** va como encabezados de sección (estructura útil: se comportan distinto — off-ledger, cuotas), sin sumar un tap de filtro.
 - **La cuenta es un override,** no la decisión principal: la categoría ya la setea (D3). Por eso el bloque puede ser liviano y optimizarse por claridad, no por taps.
 - **Cuidado (se mantiene).** "Una sola elegible" ≠ "una sola cuenta". En transferencia hacen falta ≥2 propias; con una sola, el flujo no aplica (se maneja aparte).
