@@ -141,7 +141,7 @@ export function AccountFamilySelect({
       {/* One full-width row per account — name left, balance right — stacked
           vertically. The selected one is highlighted. Credit cards are off-ledger
           so they carry no balance. */}
-      <View className="flex-col gap-2">
+      <View className="flex-col gap-1.5">
         {list.map((a) => {
           const active = a.id === selectedId
           return (
@@ -150,7 +150,7 @@ export function AccountFamilySelect({
               onPress={() => onSelect(a.id)}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
-              className={`flex-row items-center gap-2.5 rounded-xl border px-3 py-2.5 ${
+              className={`flex-row items-center gap-2.5 rounded-xl border px-3 py-1.5 ${
                 active ? 'border-emerald bg-emerald-soft' : 'border-border bg-card'
               }`}
             >

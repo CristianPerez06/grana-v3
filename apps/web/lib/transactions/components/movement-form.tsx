@@ -1305,7 +1305,7 @@ export const MovementForm = ({
       ) : (
         // Up to 5: one full-width row per account — name left, balance right —
         // stacked vertically. The selected one is highlighted.
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           {familyList.map((a) => {
             const active = a.id === accountId
             return (
@@ -1313,7 +1313,7 @@ export const MovementForm = ({
                 key={a.id}
                 type="button"
                 onClick={() => setAccountId(a.id)}
-                className={`flex items-center gap-2.5 rounded-[11px] border px-3 py-2.5 text-left transition-colors ${
+                className={`flex items-center gap-2.5 rounded-[10px] border px-3 py-1.5 text-left transition-colors ${
                   active
                     ? 'border-emerald bg-[var(--emerald-soft)]'
                     : 'border-border hover:bg-[var(--row-hover)]'
