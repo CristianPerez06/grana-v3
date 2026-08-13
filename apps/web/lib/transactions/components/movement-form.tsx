@@ -1050,7 +1050,28 @@ export const MovementForm = ({
         if (!o) setCatDrill(null)
       }}
       trigger={
-        <FieldRow icon={<Tag className="size-[18px]" />} label={t('labels.category')} value={categoryValue} />
+        isMobile ? (
+          // Mobile-web: the frequent chips carry the common case; the full
+          // catalog lives behind a slim "Elegir otra categoría" trigger. It
+          // shows the current selection when it isn't one of the active chips,
+          // so what's picked is always visible.
+          <button type="button" className="flex w-full items-center gap-3 px-4 py-3 text-left">
+            <span
+              className="flex size-9 shrink-0 items-center justify-center rounded-[11px] text-text-muted"
+              style={{ backgroundColor: FIELD_BG }}
+            >
+              <Tag className="size-[18px]" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-text">
+              {selectedCategory && !frequentChips.some((c) => c.active)
+                ? categoryValue
+                : t('drawer.pick_other_category')}
+            </span>
+            <ChevronRight className="size-4 shrink-0 text-text-soft/60" aria-hidden />
+          </button>
+        ) : (
+          <FieldRow icon={<Tag className="size-[18px]" />} label={t('labels.category')} value={categoryValue} />
+        )
       }
     >
       {categoryPickerContent}
