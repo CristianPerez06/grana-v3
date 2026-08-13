@@ -22,14 +22,21 @@
 > Por eso la "tarjeta única con divisores" quedó como **polish opcional pendiente**
 > sobre campos que ya están prolijos, y la descripción slim ya viene **hecha**.
 
-- [ ] 3.1 Envolver categoría, cuenta y fecha en **un único contenedor** con divisores (`GroupCard`). **Pendiente** sobre esta base (los campos ya son filas prolijas; falta la cáscara de tarjeta).
-- [ ] 3.2 **Fecha** como fila calendario + Hoy/Ayer dentro del contenedor agrupado. **Pendiente** (depende de 3.1).
+- [—] 3.1 Envolver categoría, cuenta y fecha en **un único contenedor** con divisores (`GroupCard`). **Diferido (follow-up):** sobre esta base los campos ya son filas/chips prolijos y la "tarjeta única" choca con la UX de chips frecuentes + categoría `compact` (caja-en-caja, riesgo sin preview). Decisión con el usuario: no entra en esta pasada.
+- [—] 3.2 **Fecha** como fila dentro del contenedor agrupado. **Diferido** junto con 3.1 (la fecha nativa ya tiene sus chips Hoy/Ayer).
 - [x] 3.3 **Descripción**: una sola línea slim. **Ya hecho** en la base (`e9ff06f`).
 - [x] 3.4 **Cuotas**: fila borderless antes de fecha. **Ya hecho** en la base (`faf0f07`).
 - [~] 3.5 Verificar estados de **edición** (cuotas madre, reintegro read-only): typecheck en verde; falta **QA visual en device**.
 
-## 4. Verde + entrega
+## 4. Paridad de entrada de monto (miles + coma + cap)
 
-- [x] 4.1 Typecheck + lint del workspace mobile **y web** en verde.
-- [~] 4.2 Revisión visual del alta (native + web-mobile): **pendiente de QA en device/navegador** (no reproducible en este entorno headless).
-- [x] 4.3 Commits con títulos conventional-commits; push a la branch (rebasada sobre la de chips).
+- [x] 4.1 Mover la agrupación de miles es-AR (`toCanonical`/`formatForDisplay`) a **`@grana/validation`** (fuente única) y que web (re-export) y native la usen — antes vivía solo en web.
+- [x] 4.2 **Cap de 10 dígitos** enteros en `toCanonical`, compartido por las dos superficies.
+- [x] 4.3 Native `MoneyAmountInput` **agrupa miles** al tipear (`654545` → `654.545`) emitiendo el canónico sin cambios.
+- [x] 4.4 Native mapea el `.` tipeado a la **coma decimal** es-AR (contraparte del keydown de web).
+
+## 5. Verde + entrega
+
+- [x] 5.1 Typecheck + lint de mobile **y web** en verde; tests de `@grana/validation` (17) y web (550) en verde.
+- [~] 5.2 Revisión visual del alta (native + web-mobile): **QA en device/navegador** por el usuario (no reproducible en este entorno headless).
+- [x] 5.3 Commits con títulos conventional-commits; push a la branch (rebasada sobre la de chips).
