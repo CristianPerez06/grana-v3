@@ -445,6 +445,7 @@ export const MovementForm = ({
     exchangeDestCurrency,
     effectiveCurrency,
     currencyOptions,
+    frequentChips,
     negativeWarning,
     isSubmitting: isPending,
     formError,
@@ -1182,6 +1183,31 @@ export const MovementForm = ({
   const categoryRowWrapped =
     tab === 'income' || tab === 'expense' ? <div data-tour="category">{categoryRow}</div> : null
 
+  // Mobile-web: frequent-classification chips (#31 item 1) above the category
+  // row — one tap pre-fills category (+ subcategory). Create-only and only when
+  // history resolved some; `frequentChips` is already empty otherwise. Desktop
+  // is untouched (rendered only in the mobile branch below).
+  const frequentChipsRow =
+    frequentChips.length > 0 ? (
+      <div className="flex flex-wrap gap-1.5 px-4 py-3">
+        {frequentChips.map((chip) => (
+          <button
+            key={`${chip.categoryId}:${chip.subcategoryId ?? ''}`}
+            type="button"
+            onClick={() => pickCategory(chip.categoryId, chip.subcategoryId ?? '')}
+            aria-pressed={chip.active}
+            className={`inline-flex max-w-full items-center gap-1 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+              chip.active ? 'border-navy bg-navy text-white' : 'border-border text-text'
+            }`}
+            style={chip.active ? undefined : { backgroundColor: FIELD_BG }}
+          >
+            {chip.icon && <span aria-hidden>{chip.icon}</span>}
+            <span className="truncate">{chip.label}</span>
+          </button>
+        ))}
+      </div>
+    ) : null
+
   // Mobile-web account selector grouped by Débito/Crédito family (design D10).
   // Used for expense/income; transfer/exchange keep the popover `accountRow`.
   const debitAccounts = eligibleAccounts.filter((a) => a.type !== 'credit')
@@ -1311,9 +1337,11 @@ export const MovementForm = ({
           {editable?.date && dateRow}
         </>
       ) : isMobile ? (
-        // Mobile-web: category first (it's the primary decision and drives the
-        // account); the account row is hidden when a single account is eligible.
+        // Mobile-web: frequent chips + category first (it's the primary decision
+        // and drives the account); the account row is hidden when a single
+        // account is eligible.
         <>
+          {frequentChipsRow}
           {categoryRowWrapped}
           {tab === 'expense' || tab === 'income'
             ? showAccountSelector && accountFamilyRow
