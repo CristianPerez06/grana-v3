@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useMovementForm } from '../src/use-movement-form'
+import { useMovementForm, FREQUENT_CHIPS_MAX } from '../src/use-movement-form'
 import type {
   CategoryWithSubcategories,
   MovementFormAccount,
@@ -272,5 +272,183 @@ describe('useMovementForm — tab partition and account selector (surface)', () 
       useMovementForm(baseArgs({ accounts: [cashAccount, cardAccount] })),
     )
     expect(many.result.current.showAccountSelector).toBe(true)
+  })
+})
+
+describe('useMovementForm — frequent-classification chips (surface, #31 item 1)', () => {
+  const comida: CategoryWithSubcategories = {
+    id: 'cat-comida',
+    name: 'Comida',
+    type: 'expense',
+    icon: '🍽️',
+    subcategories: [
+      { id: 'sub-pedidosya', name: 'Pedidos Ya', canonical_name: 'pedidos_ya', user_id: 'u1' },
+    ],
+  }
+  const sueldo: CategoryWithSubcategories = {
+    id: 'cat-sueldo',
+    name: 'Sueldo',
+    type: 'income',
+    icon: '💰',
+    subcategories: [],
+  }
+  const cats = [comida, sueldo]
+
+  it('resolves a leaf chip with the subcategory label, icon and inactive state', () => {
+    const { result } = renderHook(() =>
+      useMovementForm(
+        baseArgs({
+          categories: cats,
+          frequentClassifications: [{ categoryId: 'cat-comida', subcategoryId: 'sub-pedidosya' }],
+        }),
+      ),
+    )
+    expect(result.current.frequentChips).toHaveLength(1)
+    const chip = result.current.frequentChips[0]
+    expect(chip).toMatchObject({
+      categoryId: 'cat-comida',
+      subcategoryId: 'sub-pedidosya',
+      label: 'Pedidos Ya',
+      icon: '🍽️',
+      active: false,
+    })
+  })
+
+  it('a category-only leaf labels with the category name', () => {
+    const { result } = renderHook(() =>
+      useMovementForm(
+        baseArgs({
+          categories: cats,
+          frequentClassifications: [{ categoryId: 'cat-comida', subcategoryId: null }],
+        }),
+      ),
+    )
+    expect(result.current.frequentChips[0]).toMatchObject({ label: 'Comida', subcategoryId: null })
+  })
+
+  it('filters by the active tab type', () => {
+    const { result } = renderHook(() =>
+      useMovementForm(
+        baseArgs({
+          categories: cats,
+          frequentClassifications: [
+            { categoryId: 'cat-comida', subcategoryId: 'sub-pedidosya' },
+            { categoryId: 'cat-sueldo', subcategoryId: null },
+          ],
+        }),
+      ),
+    )
+    // Expense tab: only the expense leaf.
+    expect(result.current.frequentChips.map((c) => c.categoryId)).toEqual(['cat-comida'])
+    act(() => result.current.setTab('income'))
+    expect(result.current.frequentChips.map((c) => c.categoryId)).toEqual(['cat-sueldo'])
+  })
+
+  it('drops a leaf whose category is not in the catalog (archived/missing)', () => {
+    const { result } = renderHook(() =>
+      useMovementForm(
+        baseArgs({
+          categories: cats,
+          frequentClassifications: [{ categoryId: 'cat-gone', subcategoryId: null }],
+        }),
+      ),
+    )
+    expect(result.current.frequentChips).toEqual([])
+  })
+
+  it('drops a leaf whose subcategory is not in the category (archived sub)', () => {
+    const { result } = renderHook(() =>
+      useMovementForm(
+        baseArgs({
+          categories: cats,
+          frequentClassifications: [{ categoryId: 'cat-comida', subcategoryId: 'sub-gone' }],
+        }),
+      ),
+    )
+    expect(result.current.frequentChips).toEqual([])
+  })
+
+  it('applying a chip assigns category + subcategory and flips it active', () => {
+    const { result } = renderHook(() =>
+      useMovementForm(
+        baseArgs({
+          categories: cats,
+          frequentClassifications: [{ categoryId: 'cat-comida', subcategoryId: 'sub-pedidosya' }],
+        }),
+      ),
+    )
+    const chip = result.current.frequentChips[0]
+    act(() => result.current.pickCategory(chip.categoryId, chip.subcategoryId ?? ''))
+    expect(result.current.categoryId).toBe('cat-comida')
+    expect(result.current.subcategoryId).toBe('sub-pedidosya')
+    expect(result.current.frequentChips[0].active).toBe(true)
+  })
+
+  it('offers no chips in edit mode', () => {
+    const { result } = renderHook(() =>
+      useMovementForm(
+        baseArgs({
+          categories: cats,
+          frequentClassifications: [{ categoryId: 'cat-comida', subcategoryId: 'sub-pedidosya' }],
+          edit: {
+            id: 'tx-old',
+            type: 'expense',
+            status: null,
+            accountId: 'acc-cash',
+            destinationAccountId: null,
+            isParent: false,
+            parentId: null,
+            amount: 5_000,
+            signedAmount: -5_000,
+            date: '2026-05-10',
+            currencyCode: 'ARS',
+            destinationCurrency: null,
+            destinationAmount: null,
+            categoryId: 'cat-comida',
+            subcategoryId: 'sub-pedidosya',
+            archivedTaxonomy: null,
+            description: 'Pedido',
+            installmentsTotal: null,
+            sourceAccountName: 'Efectivo',
+            destinationAccountName: null,
+            editableFields: {
+              amount: true,
+              date: true,
+              category: true,
+              subcategory: true,
+              description: true,
+              adjustmentDirection: false,
+              destinationAmount: false,
+            },
+            availableBalance: 10_000,
+          },
+        }),
+      ),
+    )
+    expect(result.current.frequentChips).toEqual([])
+  })
+
+  it('shows no chips without injected classifications', () => {
+    const { result } = renderHook(() => useMovementForm(baseArgs({ categories: cats })))
+    expect(result.current.frequentChips).toEqual([])
+  })
+
+  it('caps the chip count', () => {
+    const many: CategoryWithSubcategories[] = Array.from({ length: 8 }, (_, i) => ({
+      id: `cat-${i}`,
+      name: `Cat ${i}`,
+      type: 'expense' as const,
+      subcategories: [],
+    }))
+    const { result } = renderHook(() =>
+      useMovementForm(
+        baseArgs({
+          categories: many,
+          frequentClassifications: many.map((c) => ({ categoryId: c.id, subcategoryId: null })),
+        }),
+      ),
+    )
+    expect(result.current.frequentChips.length).toBeLessThanOrEqual(FREQUENT_CHIPS_MAX)
+    expect(result.current.frequentChips).toHaveLength(4)
   })
 })

@@ -158,6 +158,35 @@ export type ArchivedTaxonomy = {
   subcategory: CategorySubcategory | null
 }
 
+/**
+ * A leaf classification `(category, optional subcategory)` the user has used
+ * frequently, resolved by the caller from movement history (#31 item 1). The
+ * hook stays I/O-free: the caller injects these; the hook resolves the icon,
+ * label and type-compatibility against the live `categories` tree it already
+ * has, so this shape is deliberately minimal and never carries display data.
+ */
+export type FrequentClassification = {
+  categoryId: string
+  subcategoryId: string | null
+}
+
+/**
+ * A frequent classification the hook resolved against the active catalog and
+ * tab: display-ready and safe to render as a one-tap chip. A tap applies it via
+ * `pickCategory(categoryId, subcategoryId ?? '')`.
+ */
+export type FrequentChip = {
+  categoryId: string
+  subcategoryId: string | null
+  /** The leaf's label: the subcategory name when present, else the category. */
+  label: string
+  /** Category icon/color, resolved from the catalog for the chip's avatar. */
+  icon?: string | null
+  color?: string | null
+  /** True when this chip matches the form's current category/subcategory. */
+  active: boolean
+}
+
 // ─── Mutator interface ────────────────────────────────────────────────────────
 
 /**
@@ -277,6 +306,12 @@ export type UseMovementFormArgs = {
   mutators: Mutators
   accounts: MovementFormAccount[]
   categories: CategoryWithSubcategories[]
+  /**
+   * The user's most-frequent leaf classifications (from history), injected by
+   * the caller. The hook derives `frequentChips` from these — offered as
+   * one-tap accelerators on create. Omit/empty ⇒ no chips (#31 item 1).
+   */
+  frequentClassifications?: FrequentClassification[]
   /** Edit context flips the form into edit mode. */
   edit?: MovementEditContext
   /** Create mode: pre-select this account (e.g. arriving from an account view). */
@@ -407,6 +442,12 @@ export type MovementFormState = {
   incomeCategories: CategoryWithSubcategories[]
   transactionCategories: CategoryWithSubcategories[]
   selectedCategory: CategoryWithSubcategories | undefined
+  /**
+   * Frequent leaf classifications resolved for the active tab, ready to render
+   * as one-tap chips (create only; empty in edit or without history). A tap
+   * applies one via `pickCategory`.
+   */
+  frequentChips: FrequentChip[]
   negativeWarning: { projected: number; currency: 'ARS' | 'USD' } | null
 
   // ── Submission ──

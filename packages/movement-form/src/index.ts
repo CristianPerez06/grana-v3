@@ -1,4 +1,9 @@
-export { useMovementForm, PRIMARY_TABS, SECONDARY_TABS } from './use-movement-form'
+export {
+  useMovementForm,
+  PRIMARY_TABS,
+  SECONDARY_TABS,
+  FREQUENT_CHIPS_MAX,
+} from './use-movement-form'
 export {
   archivedTaxonomyFrom,
   graftArchivedTaxonomy,
@@ -11,6 +16,8 @@ export type {
   CreateResult,
   EditableFields,
   Frequency,
+  FrequentChip,
+  FrequentClassification,
   Household,
   HouseholdMember,
   IntervalUnit,

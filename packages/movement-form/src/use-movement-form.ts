@@ -10,6 +10,7 @@ import { Money, parseMoneyInput } from '@grana/validation'
 import { graftArchivedTaxonomy } from './archived-taxonomy'
 import type {
   Frequency,
+  FrequentChip,
   IntervalUnit,
   MovementFormAccount,
   MovementFormState,
@@ -27,6 +28,10 @@ function eligibleFor(accounts: MovementFormAccount[], tab: Tab): MovementFormAcc
 // "dynamic third slot" idea was dropped (ranking-by-frequency moved to #31).
 export const PRIMARY_TABS: Tab[] = ['expense', 'income']
 export const SECONDARY_TABS: Tab[] = ['transfer', 'exchange', 'adjustment']
+
+// How many frequent-classification chips to surface at most (#31 item 1). Kept
+// small so they fit one row on mobile and never become a wall of chips.
+export const FREQUENT_CHIPS_MAX = 4
 
 // Which secondary types the user can actually do, from their accounts:
 // transfer needs ≥2 own (cash/bank) accounts; exchange needs both ARS and USD
@@ -67,6 +72,7 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
     mutators,
     accounts,
     categories,
+    frequentClassifications,
     edit,
     preselectAccountId,
     household,
@@ -208,6 +214,38 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
   const incomeCategories = catalog.filter((c) => c.type === 'income' || c.type === 'both')
   const transactionCategories = tab === 'income' ? incomeCategories : expenseCategories
   const selectedCategory = transactionCategories.find((c) => c.id === categoryId)
+
+  // Frequent-classification chips (#31 item 1): resolve the caller-injected leaf
+  // list against the active tab's catalog. `transactionCategories` already
+  // filters by tab and, on create, excludes archived rows — so a leaf whose
+  // category or subcategory is archived/missing simply doesn't resolve and is
+  // dropped. Create-only, expense/income only, capped for one row.
+  const frequentChips: FrequentChip[] =
+    !isEdit && (tab === 'expense' || tab === 'income')
+      ? (frequentClassifications ?? [])
+          .map((f): FrequentChip | null => {
+            const cat = transactionCategories.find((c) => c.id === f.categoryId)
+            if (!cat) return null
+            let subLabel: string | null = null
+            if (f.subcategoryId) {
+              const sub = cat.subcategories.find(
+                (s) => s.id === f.subcategoryId && s.is_active !== false,
+              )
+              if (!sub) return null
+              subLabel = sub.name
+            }
+            return {
+              categoryId: cat.id,
+              subcategoryId: f.subcategoryId,
+              label: subLabel ?? cat.name,
+              icon: cat.icon ?? null,
+              color: cat.color ?? null,
+              active: cat.id === categoryId && (f.subcategoryId ?? '') === subcategoryId,
+            }
+          })
+          .filter((c): c is FrequentChip => c !== null)
+          .slice(0, FREQUENT_CHIPS_MAX)
+      : []
 
   const effectiveCurrency: 'ARS' | 'USD' = !isEdit && tab === 'transfer'
     ? (sharedCurrencies.includes(currencyCode) ? currencyCode : sharedCurrencies[0] ?? currencyCode)
@@ -827,6 +865,7 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
     incomeCategories,
     transactionCategories,
     selectedCategory,
+    frequentChips,
     negativeWarning,
 
     // Submission
