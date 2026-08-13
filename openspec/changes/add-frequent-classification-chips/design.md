@@ -34,6 +34,15 @@ Igual que `accounts`/`categories`: el caller (web server action + TanStack; mobi
 - **Web:** gateado por `isMobile` (mobile-web), desktop intacto. Extender al desktop es un opt-in de una línea, se decide aparte.
 - **Edición:** los chips no aplican en modo edición (el tipo y la clasificación ya existen); solo en create.
 
+### F6 — Defaults para el usuario nuevo (por `canonical_name`)
+
+Un usuario sin historial no tendría chips — pero justo ahí el acelerador es más valioso (todavía no aprendió el flujo). Así que cuando el historial no resuelve ninguna hoja para el tipo activo, se cae a un set de **defaults** de categorías semilla del sistema:
+
+- **Gasto:** Comida › Supermercado, Entretenimiento › Salidas, Transporte.
+- **Ingreso:** Sueldo, Freelance, Otros ingresos.
+
+Se referencian por **`canonical_name`** (inmutable) y no por nombre visible ni id: el label lo puede renombrar el usuario o cambiarlo i18n, y el id es por-DB. Se resuelven contra el catálogo vigente en el hook; cualquier default que el catálogo no sirva (archivado, borrado) se omite. **El historial gana**: si hay al menos una hoja de historial, los defaults no aparecen (no se mezcla lo personal con lo genérico). Todo esto vive en el hook (I/O-free), así que web y nativo lo heredan igual.
+
 ### F5 — Qué NO hace
 
 - No autocompleta la **cuenta** (eso es la memoria categoría→cuenta, ítem #2 de #31).

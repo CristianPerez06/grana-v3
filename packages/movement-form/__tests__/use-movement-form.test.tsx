@@ -428,9 +428,65 @@ describe('useMovementForm — frequent-classification chips (surface, #31 item 1
     expect(result.current.frequentChips).toEqual([])
   })
 
-  it('shows no chips without injected classifications', () => {
+  it('shows no chips without history when the catalog has no default leaves', () => {
+    // `cats` lacks the default canonical_names, so nothing resolves.
     const { result } = renderHook(() => useMovementForm(baseArgs({ categories: cats })))
     expect(result.current.frequentChips).toEqual([])
+  })
+
+  // New-user defaults, resolved by canonical_name (labels can be renamed/i18n'd).
+  const seedComida: CategoryWithSubcategories = {
+    id: 'c-comida',
+    name: 'Comida',
+    type: 'expense',
+    icon: '🍔',
+    canonical_name: 'comida',
+    subcategories: [
+      { id: 's-super', name: 'Supermercado', canonical_name: 'supermercado', user_id: null },
+    ],
+  }
+  const seedEnt: CategoryWithSubcategories = {
+    id: 'c-ent',
+    name: 'Entretenimiento',
+    type: 'expense',
+    icon: '🎬',
+    canonical_name: 'entretenimiento',
+    subcategories: [{ id: 's-salidas', name: 'Salidas', canonical_name: 'salidas', user_id: null }],
+  }
+  const seedTransporte: CategoryWithSubcategories = {
+    id: 'c-trans',
+    name: 'Transporte',
+    type: 'expense',
+    icon: '🚌',
+    canonical_name: 'transporte',
+    subcategories: [],
+  }
+  const seedCats = [seedComida, seedEnt, seedTransporte]
+
+  it('falls back to default chips for a new user (no history)', () => {
+    const { result } = renderHook(() => useMovementForm(baseArgs({ categories: seedCats })))
+    expect(result.current.frequentChips.map((c) => c.label)).toEqual([
+      'Supermercado',
+      'Salidas',
+      'Transporte',
+    ])
+    // The Supermercado default carries its subcategory, ready to assign in one tap.
+    expect(result.current.frequentChips[0]).toMatchObject({
+      categoryId: 'c-comida',
+      subcategoryId: 's-super',
+    })
+  })
+
+  it('history wins over defaults when the user has history', () => {
+    const { result } = renderHook(() =>
+      useMovementForm(
+        baseArgs({
+          categories: seedCats,
+          frequentClassifications: [{ categoryId: 'c-trans', subcategoryId: null }],
+        }),
+      ),
+    )
+    expect(result.current.frequentChips.map((c) => c.label)).toEqual(['Transporte'])
   })
 
   it('caps the chip count', () => {

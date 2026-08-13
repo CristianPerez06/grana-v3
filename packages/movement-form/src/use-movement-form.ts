@@ -33,6 +33,23 @@ export const SECONDARY_TABS: Tab[] = ['transfer', 'exchange', 'adjustment']
 // small so they fit one row on mobile and never become a wall of chips.
 export const FREQUENT_CHIPS_MAX = 4
 
+// New-user default chips (#31 item 1): shown when the user has no history yet,
+// so the accelerator is useful from day one. Referenced by immutable
+// `canonical_name` (visible labels get renamed / i18n'd; canonicals don't), and
+// resolved against the live catalog — any default the catalog doesn't serve is
+// skipped. Expense: Comida › Supermercado, Entretenimiento › Salidas, Transporte.
+type LeafCanonical = { category: string; subcategory: string | null }
+const DEFAULT_EXPENSE_LEAVES: LeafCanonical[] = [
+  { category: 'comida', subcategory: 'supermercado' },
+  { category: 'entretenimiento', subcategory: 'salidas' },
+  { category: 'transporte', subcategory: null },
+]
+const DEFAULT_INCOME_LEAVES: LeafCanonical[] = [
+  { category: 'sueldo', subcategory: null },
+  { category: 'freelance', subcategory: null },
+  { category: 'otros-ingresos', subcategory: null },
+]
+
 // Which secondary types the user can actually do, from their accounts:
 // transfer needs ≥2 own (cash/bank) accounts; exchange needs both ARS and USD
 // reachable across cash/bank accounts; adjustment needs any cash/bank account.
@@ -215,37 +232,61 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
   const transactionCategories = tab === 'income' ? incomeCategories : expenseCategories
   const selectedCategory = transactionCategories.find((c) => c.id === categoryId)
 
-  // Frequent-classification chips (#31 item 1): resolve the caller-injected leaf
-  // list against the active tab's catalog. `transactionCategories` already
+  // Resolve a leaf (category id + optional subcategory id) into a display-ready
+  // chip against the active tab's catalog. `transactionCategories` already
   // filters by tab and, on create, excludes archived rows — so a leaf whose
-  // category or subcategory is archived/missing simply doesn't resolve and is
-  // dropped. Create-only, expense/income only, capped for one row.
-  const frequentChips: FrequentChip[] =
-    !isEdit && (tab === 'expense' || tab === 'income')
-      ? (frequentClassifications ?? [])
-          .map((f): FrequentChip | null => {
-            const cat = transactionCategories.find((c) => c.id === f.categoryId)
-            if (!cat) return null
-            let subLabel: string | null = null
-            if (f.subcategoryId) {
-              const sub = cat.subcategories.find(
-                (s) => s.id === f.subcategoryId && s.is_active !== false,
-              )
-              if (!sub) return null
-              subLabel = sub.name
-            }
-            return {
-              categoryId: cat.id,
-              subcategoryId: f.subcategoryId,
-              label: subLabel ?? cat.name,
-              icon: cat.icon ?? null,
-              color: cat.color ?? null,
-              active: cat.id === categoryId && (f.subcategoryId ?? '') === subcategoryId,
-            }
-          })
-          .filter((c): c is FrequentChip => c !== null)
-          .slice(0, FREQUENT_CHIPS_MAX)
-      : []
+  // category or subcategory is archived/missing simply doesn't resolve.
+  const chipFromIds = (catId: string, subId: string | null): FrequentChip | null => {
+    const cat = transactionCategories.find((c) => c.id === catId)
+    if (!cat) return null
+    let subLabel: string | null = null
+    if (subId) {
+      const sub = cat.subcategories.find((s) => s.id === subId && s.is_active !== false)
+      if (!sub) return null
+      subLabel = sub.name
+    }
+    return {
+      categoryId: cat.id,
+      subcategoryId: subId,
+      label: subLabel ?? cat.name,
+      icon: cat.icon ?? null,
+      color: cat.color ?? null,
+      active: cat.id === categoryId && (subId ?? '') === subcategoryId,
+    }
+  }
+  // Same, but by immutable canonical_name — used to resolve the new-user defaults.
+  const chipFromCanonical = (catCanonical: string, subCanonical: string | null): FrequentChip | null => {
+    const cat = transactionCategories.find((c) => c.canonical_name === catCanonical)
+    if (!cat) return null
+    if (!subCanonical) return chipFromIds(cat.id, null)
+    const sub = cat.subcategories.find((s) => s.canonical_name === subCanonical && s.is_active !== false)
+    return sub ? chipFromIds(cat.id, sub.id) : null
+  }
+
+  // Frequent-classification chips (#31 item 1): the user's history first; when
+  // there's none yet (new user), fall back to the default set so the accelerator
+  // is useful from day one. Create-only, expense/income only, deduped and capped.
+  const frequentChips: FrequentChip[] = ((): FrequentChip[] => {
+    if (isEdit || (tab !== 'expense' && tab !== 'income')) return []
+    const history = (frequentClassifications ?? [])
+      .map((f) => chipFromIds(f.categoryId, f.subcategoryId))
+      .filter((c): c is FrequentChip => c !== null)
+    const base =
+      history.length > 0
+        ? history
+        : (tab === 'expense' ? DEFAULT_EXPENSE_LEAVES : DEFAULT_INCOME_LEAVES)
+            .map((d) => chipFromCanonical(d.category, d.subcategory))
+            .filter((c): c is FrequentChip => c !== null)
+    const seen = new Set<string>()
+    return base
+      .filter((c) => {
+        const key = `${c.categoryId}:${c.subcategoryId ?? ''}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+      .slice(0, FREQUENT_CHIPS_MAX)
+  })()
 
   const effectiveCurrency: 'ARS' | 'USD' = !isEdit && tab === 'transfer'
     ? (sharedCurrencies.includes(currencyCode) ? currencyCode : sharedCurrencies[0] ?? currencyCode)
