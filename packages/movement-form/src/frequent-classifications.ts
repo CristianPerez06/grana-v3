@@ -1,5 +1,9 @@
 import type { FrequentClassification } from './types'
 
+// Re-exported so the query layer (web server action, mobile) can import the
+// ranker and its shapes from this React-free entry point in one import.
+export type { FrequentClassification } from './types'
+
 // How many frequent-classification chips to surface at most (#31 item 1). Kept
 // small so they fit one row on mobile and never become a wall of chips. Also the
 // per-type ranking limit. Lives here (React-free) so the query layer can import

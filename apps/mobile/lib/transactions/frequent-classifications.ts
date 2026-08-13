@@ -1,9 +1,11 @@
 import { addDaysToISO, formatDateISO, getTodayAR } from '@grana/money-logic'
+// React-free subpath (mirrors the web action): keeps the hook out of the query
+// bundle and stays consistent across platforms.
 import {
   rankFrequentClassifications,
   type FrequentClassification,
   type FrequentLeafRow,
-} from '@grana/movement-form'
+} from '@grana/movement-form/frequent-classifications'
 import { supabase } from '../supabase'
 
 // Native twin of the web `getFrequentClassifications` action (#31 item 1). Same

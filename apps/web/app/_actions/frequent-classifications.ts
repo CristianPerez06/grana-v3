@@ -1,11 +1,14 @@
 'use server'
 
 import { addDaysToISO, formatDateISO, getTodayAR } from '@grana/money-logic'
+// Import from the React-free subpath, NOT the package index: the index
+// re-exports the `useMovementForm` hook (useState/useEffect), and pulling that
+// into this server action trips Next's "React hook in a Server Component" error.
 import {
   rankFrequentClassifications,
   type FrequentClassification,
   type FrequentLeafRow,
-} from '@grana/movement-form'
+} from '@grana/movement-form/frequent-classifications'
 import { createClient } from '@/lib/supabase/server'
 
 // Rolling window for the frequent-classification chips (#31 item 1). The ranking
