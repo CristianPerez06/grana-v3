@@ -553,7 +553,17 @@ export const MovementForm = ({
 
   const formatBalance = (account: MovementFormAccount): string =>
     account.activeCurrencies
-      .map((c) => `${CURRENCY_SYMBOL[c]}${account.balances[c].toLocaleString('es-AR')}`)
+      .map((c) => {
+        const n = account.balances[c] ?? 0
+        // Sign before the symbol ("-$1.234", not "$-1.234"); a space after the
+        // multi-char USD code reads cleaner ("U$D 10").
+        const sign = n < 0 ? '-' : ''
+        const amount = Math.abs(n).toLocaleString('es-AR', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        })
+        return `${sign}${CURRENCY_SYMBOL[c]}${c === 'USD' ? ' ' : ''}${amount}`
+      })
       .join(' · ')
 
   // ── Derived presentation values + handlers for the hi-fi shell ──────────────

@@ -17,11 +17,20 @@ import { useT } from '../../lib/locale-context'
 type Subcategory = CategoryWithSubcategories['subcategories'][number]
 
 const CURRENCY_SYMBOL: Record<'ARS' | 'USD', string> = { ARS: '$', USD: 'U$D' }
-// Balance across the account's active currencies, e.g. "$12.345 · U$D 100".
-// Cash/bank only — credit cards are off-ledger and carry no available balance.
+// Balance across the account's active currencies, e.g. "-$12.345 · U$D 100".
+// Sign before the symbol; a space after the multi-char USD code. Cash/bank only
+// — credit cards are off-ledger and carry no available balance.
 const formatBalance = (a: MovementFormAccount): string =>
   a.activeCurrencies
-    .map((c) => `${CURRENCY_SYMBOL[c]}${(a.balances[c] ?? 0).toLocaleString('es-AR')}`)
+    .map((c) => {
+      const n = a.balances[c] ?? 0
+      const sign = n < 0 ? '-' : ''
+      const amount = Math.abs(n).toLocaleString('es-AR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      })
+      return `${sign}${CURRENCY_SYMBOL[c]}${c === 'USD' ? ' ' : ''}${amount}`
+    })
     .join(' · ')
 
 // Account picker: compact trigger (avatar + name) that opens a sheet with the
