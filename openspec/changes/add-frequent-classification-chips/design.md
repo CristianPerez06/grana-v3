@@ -31,6 +31,7 @@ Igual que `accounts`/`categories`: el caller (web server action + TanStack; mobi
 - Fila horizontal de chips **sobre el selector de categoría** (la clasificación es la decisión principal, D7 del change anterior). Icono de categoría + label de la hoja (subcategoría si existe, si no la categoría).
 - **Estado activo:** el chip cuya hoja coincide con la selección actual se marca (mismo lenguaje que los chips de cuenta/fecha del change anterior).
 - **Ausencia de datos:** sin chips elegibles, no se renderiza la fila — nada de placeholders vacíos.
+- **La fila de chips reemplaza a la fila "Categoría" en mobile.** Con los chips llevando el caso común arriba, el selector completo pasa a un trigger slim **"Elegir otra categoría"** debajo (abre el mismo picker con drill de subcategoría). Cuando la selección no es uno de los chips activos, ese trigger muestra la categoría elegida, así lo seleccionado siempre queda visible. Desktop conserva la fila `FieldRow` de siempre.
 - **Web:** gateado por `isMobile` (mobile-web), desktop intacto. Extender al desktop es un opt-in de una línea, se decide aparte.
 - **Edición:** los chips no aplican en modo edición (el tipo y la clasificación ya existen); solo en create.
 

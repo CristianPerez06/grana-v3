@@ -158,11 +158,19 @@ export function CategorySelectField({
   categoryId,
   subcategoryId,
   onPick,
+  compact = false,
+  selectionIsActiveChip = false,
 }: {
   categories: CategoryWithSubcategories[]
   categoryId: string
   subcategoryId: string
   onPick: (categoryId: string, subcategoryId: string) => void
+  /** Compact mode: no label, "Elegir otra categoría" placeholder — used when
+   *  frequent-classification chips carry the common case above this field. */
+  compact?: boolean
+  /** In compact mode, whether the current selection is already shown as an
+   *  active chip (then this field stays as the generic "pick other" trigger). */
+  selectionIsActiveChip?: boolean
 }) {
   const t = useT()
   const [open, setOpen] = useState(false)
@@ -179,12 +187,16 @@ export function CategorySelectField({
 
   return (
     <View className="flex-col gap-1.5">
-      <Label>{t('transactions.form.category_label')}</Label>
+      {!compact && <Label>{t('transactions.form.category_label')}</Label>}
       <SelectField
-        placeholder={t('transactions.placeholders.category')}
+        placeholder={
+          compact
+            ? t('transactions.drawer.pick_other_category')
+            : t('transactions.placeholders.category')
+        }
         onPress={() => setOpen(true)}
         value={
-          selectedCat ? (
+          selectedCat && !(compact && selectionIsActiveChip) ? (
             <View className="flex-row items-center gap-1">
               <Text className="text-sm text-text" numberOfLines={1}>
                 {selectedCat.name}

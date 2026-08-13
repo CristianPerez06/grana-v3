@@ -415,6 +415,8 @@ export function MovementForm({
           categoryId={form.categoryId}
           subcategoryId={form.subcategoryId}
           onPick={form.pickCategory}
+          compact={form.frequentChips.length > 0}
+          selectionIsActiveChip={form.frequentChips.some((c) => c.active)}
         />
       )}
 
