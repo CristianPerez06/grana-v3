@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { ChevronDown, Undo2, Users, Repeat } from 'lucide-react-native'
 import { getTodayAR, formatDateISO } from '@grana/money-logic'
-import { Money, parseMoneyInput } from '@grana/validation'
+import { Money, parseMoneyInput, formatForDisplay } from '@grana/validation'
 import {
   useMovementForm,
   PRIMARY_TABS,
@@ -280,8 +280,9 @@ export function MovementForm({
     form.setInstallments('1')
   }
   // Content-sized width for the centered amount input (RN has no `ch` unit): hug
-  // the text so sign + symbol + number stay centered as a group (~20px/glyph).
-  const amountInputWidth = Math.max(1, form.amount.length) * 20 + 2
+  // the GROUPED text (with thousands dots) so sign + symbol + number stay
+  // centered as a group (~20px/glyph).
+  const amountInputWidth = Math.max(1, formatForDisplay(form.amount).length) * 20 + 2
 
   return (
     <View className="flex-col gap-5">

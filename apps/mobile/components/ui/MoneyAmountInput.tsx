@@ -1,17 +1,15 @@
 import { type ComponentProps } from 'react'
 import type { MoneyAmountInputProps } from '@grana/ui-contracts'
+import { toCanonical, formatForDisplay } from '@grana/validation'
 import { Input } from './Input'
 
 // Money fields MUST use this instead of a plain `<Input>` for currency.
-// It forces the decimal keypad and sanitizes keystrokes down to digits plus a
-// single decimal separator, so the value parsed at submit (via parseMoneyInput,
-// decimal.js-backed) can't be corrupted by stray separators or letters.
-//
-// Mirror of apps/web/components/ui/money-amount-input.tsx. Web's reason was
-// `type="number"`: wheel/arrow/spinner nudges did float math and silently
-// dropped a centavo (a card-payment expense once stored 1 centavo short). RN's
-// TextInput has no spinner, but forcing `decimal-pad` + the same keystroke
-// sanitization keeps money input behaving identically across platforms.
+// It forces the decimal keypad and, in the default grouping mode, groups the
+// integer part es-AR style ("125000" → "125.000") while emitting a CANONICAL
+// value upstream (plain digits + optional `.` decimal), so `parseMoneyInput`
+// (decimal.js-backed) keeps working. The grouping/cap/canonical logic is the
+// SHARED `@grana/validation` module, so this behaves identically to web's
+// `money-amount-input.tsx` — same thousands dots, same 10-digit cap.
 //
 // Bare input shape on purpose (no label/error/margin) — mirrors web's
 // abstraction level. Callers compose a `<Label>` + `<MoneyAmountInput>` + error
@@ -27,9 +25,14 @@ type Props = MoneyAmountInputProps &
   Omit<InputComponentProps, 'keyboardType' | 'inputMode' | 'onChangeText'> & {
     value: string
     onChangeText: (value: string) => void
+    // Group the integer part with thousands dots while typing (default true).
+    // Set false for non-2dp money fields (FX rates) — same opt-out as web.
+    groupThousands?: boolean
+    // Allow a leading `-` (e.g. an account opening "en rojo"). Default false.
+    allowNegative?: boolean
   }
 
-// Keep digits and a single decimal separator ('.' or ','); drop everything else.
+// Non-grouped fallback: keep digits and a single decimal separator.
 const sanitize = (raw: string): string => {
   const numericOnly = raw.replace(/[^\d.,]/g, '')
   const firstSepIdx = numericOnly.search(/[.,]/)
@@ -39,13 +42,24 @@ const sanitize = (raw: string): string => {
   return head + tail
 }
 
-export function MoneyAmountInput({ onChangeText, ...rest }: Props) {
+export function MoneyAmountInput({
+  value,
+  onChangeText,
+  groupThousands = true,
+  allowNegative = false,
+  ...rest
+}: Props) {
+  // Display the grouped text; emit canonical upstream (unchanged contract).
+  const display = groupThousands ? formatForDisplay(value) : value
   return (
     <Input
       {...rest}
+      value={display}
       keyboardType="decimal-pad"
       inputMode="decimal"
-      onChangeText={(text) => onChangeText(sanitize(text))}
+      onChangeText={(text) =>
+        onChangeText(groupThousands ? toCanonical(text, allowNegative) : sanitize(text))
+      }
     />
   )
 }
