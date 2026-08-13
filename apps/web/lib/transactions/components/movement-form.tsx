@@ -1010,16 +1010,31 @@ export const MovementForm = ({
   const dateRow = isMobile ? (
     // Mobile-web: Hoy / Ayer quick chips + a calendar trigger for any date.
     <div className="flex items-center gap-3 px-4 py-3">
-      <span
-        className="flex size-9 shrink-0 items-center justify-center rounded-[11px] text-text-muted"
-        style={{ backgroundColor: FIELD_BG }}
-      >
-        <Calendar className="size-[18px]" aria-hidden />
-      </span>
-      <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
-        {t('labels.date')}
-      </span>
-      <div className="ml-auto flex items-center gap-1.5">
+      <DatePicker
+        value={date}
+        onChange={setDate}
+        min={appStartDate ?? undefined}
+        modal={isDrawer}
+        trigger={
+          <button type="button" className="flex min-w-0 flex-1 items-center gap-3 text-left">
+            <span
+              className="flex size-9 shrink-0 items-center justify-center rounded-[11px] text-text-muted"
+              style={{ backgroundColor: FIELD_BG }}
+            >
+              <Calendar className="size-[18px]" aria-hidden />
+            </span>
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+                {t('labels.date')}
+              </span>
+              <span className="truncate text-[15px] font-semibold leading-snug text-text">
+                {formatDateValue(date)}
+              </span>
+            </span>
+          </button>
+        }
+      />
+      <div className="ml-auto flex shrink-0 items-center gap-1.5">
         {(
           [
             { label: t('form.date_today'), value: todayStr() },
@@ -1040,25 +1055,6 @@ export const MovementForm = ({
             </button>
           )
         })}
-        <DatePicker
-          value={date}
-          onChange={setDate}
-          min={appStartDate ?? undefined}
-          modal={isDrawer}
-          trigger={
-            <button
-              type="button"
-              aria-label={t('labels.date')}
-              className="flex items-center gap-1 rounded-[8px] border border-border px-2 py-1.5 text-xs font-semibold text-text-muted transition-colors hover:bg-border-soft"
-            >
-              {date !== todayStr() && date !== yesterdayISO ? (
-                formatDateValue(date)
-              ) : (
-                <Calendar className="size-4" aria-hidden />
-              )}
-            </button>
-          }
-        />
       </div>
     </div>
   ) : (
@@ -1169,28 +1165,55 @@ export const MovementForm = ({
           })}
         </div>
       )}
-      {familyList.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          {familyList.map((a) => {
-            const active = a.id === accountId
-            return (
+      {familyList.length > 1 &&
+        (familyList.length > 5 ? (
+          // Many accounts in the family: a compact selector that opens the list,
+          // instead of a wall of chips.
+          <Popover
+            modal={isDrawer}
+            open={activePopover === 'account'}
+            onOpenChange={(o) => setActivePopover(o ? 'account' : null)}
+            trigger={
               <button
-                key={a.id}
                 type="button"
-                onClick={() => setAccountId(a.id)}
-                className={`flex items-center gap-2 rounded-[10px] border px-2.5 py-1.5 text-sm font-semibold transition-colors ${
-                  active
-                    ? 'border-emerald bg-[var(--emerald-soft)] text-emerald-deep'
-                    : 'border-border text-text'
-                }`}
+                className="flex w-full items-center gap-2.5 rounded-[11px] border border-border px-3 py-2.5 text-left transition-colors hover:bg-[var(--row-hover)]"
+                style={{ '--row-hover': ROW_HOVER } as React.CSSProperties}
               >
-                <AccountAvatar {...avatarOf(a)} size="sm" />
-                <span className="max-w-[120px] truncate">{accountPrimaryName(a)}</span>
+                {selectedAccount && <AccountAvatar {...avatarOf(selectedAccount)} size="sm" />}
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text">
+                  {selectedAccount ? accountPrimaryName(selectedAccount) : '—'}
+                </span>
+                <ChevronDown className="size-4 shrink-0 text-text-soft" aria-hidden />
               </button>
-            )
-          })}
-        </div>
-      )}
+            }
+          >
+            {renderAccountPicker(familyList, accountId, (id) => {
+              setAccountId(id)
+              setActivePopover(null)
+            })}
+          </Popover>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {familyList.map((a) => {
+              const active = a.id === accountId
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => setAccountId(a.id)}
+                  className={`flex items-center gap-2 rounded-[10px] border px-2.5 py-1.5 text-sm font-semibold transition-colors ${
+                    active
+                      ? 'border-emerald bg-[var(--emerald-soft)] text-emerald-deep'
+                      : 'border-border text-text'
+                  }`}
+                >
+                  <AccountAvatar {...avatarOf(a)} size="sm" />
+                  <span className="max-w-[120px] truncate">{accountPrimaryName(a)}</span>
+                </button>
+              )
+            })}
+          </div>
+        ))}
     </div>
   )
 
