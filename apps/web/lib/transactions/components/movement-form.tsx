@@ -975,7 +975,7 @@ export const MovementForm = ({
           )}
         </div>
       </div>
-      <div className={`mt-2 flex items-baseline gap-1.5 ${isMobile ? 'justify-center' : ''}`}>
+      <div className={`mt-2 flex gap-1.5 ${isMobile ? 'items-center justify-center' : 'items-baseline'}`}>
         {signChar && (
           <span className={`${isMobile ? 'text-[34px]' : 'text-[46px]'} font-bold leading-none ${amountColor}`}>{signChar}</span>
         )}

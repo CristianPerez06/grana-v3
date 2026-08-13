@@ -400,7 +400,7 @@ export function MovementForm({
               <MoneyCalculator seed={form.amount} onResult={form.setAmount} />
             </View>
           </View>
-          <View className="mt-2 flex-row items-end justify-center">
+          <View className="mt-2 flex-row items-center justify-center">
             {signChar !== '' && (
               <Text className={`text-[34px] font-bold ${amountColorClass}`}>{signChar}</Text>
             )}
