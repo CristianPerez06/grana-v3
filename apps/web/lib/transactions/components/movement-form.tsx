@@ -1280,6 +1280,11 @@ export const MovementForm = ({
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text">
                   {selectedAccount ? accountPrimaryName(selectedAccount) : '—'}
                 </span>
+                {selectedAccount && selectedAccount.type !== 'credit' && (
+                  <span className="shrink-0 text-xs font-medium text-text-muted">
+                    {formatBalance(selectedAccount)}
+                  </span>
+                )}
                 <ChevronDown className="size-4 shrink-0 text-text-soft" aria-hidden />
               </button>
             }
@@ -1325,9 +1330,9 @@ export const MovementForm = ({
           )}
         </div>
       )}
-      {/* Selected cash/bank account's balance — the "default" account should show
-          its available funds (credit cards are off-ledger, so they don't). */}
-      {familyList.length > 1 && selectedAccount && selectedAccount.type !== 'credit' && (
+      {/* Chips case (2–5): the pills carry no balance, so show the selected
+          account's below. The 1-account and >5 (dropdown) cases show it inline. */}
+      {familyList.length > 1 && familyList.length <= 5 && selectedAccount && selectedAccount.type !== 'credit' && (
         <span className="text-xs text-text-muted">
           {accountPrimaryName(selectedAccount)} · {formatBalance(selectedAccount)}
         </span>
