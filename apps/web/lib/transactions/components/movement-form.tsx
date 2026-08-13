@@ -64,6 +64,7 @@ import {
   selectableSubcategories,
   useMovementForm,
   PRIMARY_TABS,
+  type FrequentClassification,
   type MovementEditContext as PackageMovementEditContext,
   type MovementFormAccount as PackageMovementFormAccount,
   type Mutators,
@@ -97,6 +98,8 @@ export type MovementEditContext = PackageMovementEditContext & {
 type Props = {
   accounts: MovementFormAccount[]
   categories: CategoryWithSubcategories[]
+  /** Frequent leaf classifications (create-only accelerator, #31 item 1). */
+  frequentClassifications?: FrequentClassification[]
   /** Edit mode when present. Absent ⇒ create mode. */
   edit?: MovementEditContext
   /** Create mode: pre-select this account (e.g. arriving from a card/account). */
@@ -258,6 +261,7 @@ const AccountValue = ({ account }: { account: MovementFormAccount | undefined })
 export const MovementForm = ({
   accounts,
   categories,
+  frequentClassifications,
   edit,
   preselectAccountId,
   onSuccess,
@@ -355,6 +359,7 @@ export const MovementForm = ({
     mutators,
     accounts,
     categories,
+    frequentClassifications,
     edit: editForHook,
     preselectAccountId,
     household,

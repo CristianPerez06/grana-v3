@@ -7,11 +7,13 @@ import { Drawer } from '@/components/ui/drawer'
 import { MovementDrawerContext } from '@/lib/transactions/movement-drawer-context'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 import type { Household } from '@grana/shared'
+import type { FrequentClassification } from '@grana/movement-form'
 import { MovementForm, type MovementFormAccount } from '@/lib/transactions/components/movement-form'
 
 type Props = {
   accounts: MovementFormAccount[]
   categories: CategoryWithSubcategories[]
+  frequentClassifications?: FrequentClassification[]
   household?: Household | null
   /** Lower bound for the date picker (user signup date); null ⇒ no floor. */
   appStartDate?: string | null
@@ -28,6 +30,7 @@ type Props = {
 export function MovementDrawerProvider({
   accounts,
   categories,
+  frequentClassifications,
   household,
   appStartDate = null,
   showFirstMovementGuidance = false,
@@ -81,6 +84,7 @@ export function MovementDrawerProvider({
           variant="drawer"
           accounts={accounts}
           categories={categories}
+          frequentClassifications={frequentClassifications}
           household={household}
           appStartDate={appStartDate}
           showFirstMovementGuidance={showFirstMovementGuidance}

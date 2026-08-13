@@ -6,6 +6,7 @@ import { resolveAccountAvatar } from '@grana/ui-contracts'
 import { createClient } from '@/lib/supabase/client'
 import { getAccounts } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
+import { getFrequentClassifications } from '@/app/_actions/frequent-classifications'
 import { getHousehold } from '@grana/shared'
 import { getAppStartDate } from '@/lib/profile/queries'
 import { hasAnyTransaction } from '@/lib/transactions/queries'
@@ -45,10 +46,12 @@ export function MovementDrawerLoader({ children }: Props) {
       { queryKey: QUERY_KEYS.householdDetail, queryFn: () => getHousehold(createClient()) },
       { queryKey: ['transactionsHasAny'], queryFn: () => hasAnyTransaction(createClient()) },
       { queryKey: QUERY_KEYS.appStartDate, queryFn: () => getAppStartDate(createClient()) },
+      // Non-critical accelerator (#31 item 1): must never gate the drawer open.
+      { queryKey: ['frequentClassifications'], queryFn: () => getFrequentClassifications() },
     ],
   })
 
-  const [accountsQ, categoriesQ, householdQ, hasAnyTxQ, appStartDateQ] = queries
+  const [accountsQ, categoriesQ, householdQ, hasAnyTxQ, appStartDateQ, frequentQ] = queries
   const accountsData = accountsQ.data
   const categoriesData = categoriesQ.data
   const householdData = householdQ.data
@@ -100,6 +103,7 @@ export function MovementDrawerLoader({ children }: Props) {
       <MovementDrawerProvider
         accounts={drawerAccounts}
         categories={categoriesData}
+        frequentClassifications={frequentQ.data ?? undefined}
         household={householdData}
         appStartDate={appStartDate}
         showFirstMovementGuidance={!hasAnyTxData}
