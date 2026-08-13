@@ -71,6 +71,7 @@ import {
 } from '@grana/movement-form'
 import { useIsMobile } from '@/lib/use-is-mobile'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { formatForDisplay } from '@/lib/money-input-format'
 import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
 import { CategorySuggestionChip } from '@/lib/transactions/components/category-suggestion-chip'
@@ -888,6 +889,10 @@ export const MovementForm = ({
 
   // ── Amount hero ─────────────────────────────────────────────────────────────
   const showAmountHero = isEdit ? editable?.amount : true
+  // Mobile: size the input to its content so the whole "− $ 1.234" group centers
+  // (justify-center on the row). `ch` from the grouped display keeps it robust
+  // across browsers that don't support CSS `field-sizing: content`.
+  const amountDisplayCh = Math.max(1, formatForDisplay(amount).length) + 0.5
   const hero = showAmountHero ? (
     <div
       data-tour="amount"
@@ -929,8 +934,9 @@ export const MovementForm = ({
           value={amount}
           onChange={setAmount}
           placeholder="0"
+          style={isMobile ? { width: `${amountDisplayCh}ch` } : undefined}
           className={`bg-transparent ${
-            isMobile ? 'w-auto min-w-0 [field-sizing:content] text-center' : 'w-full min-w-0'
+            isMobile ? 'min-w-0 text-left' : 'w-full min-w-0'
           } ${isMobile ? 'text-[34px]' : 'text-[46px]'} font-bold leading-none tracking-[-0.045em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
         />
         {!isMobile && (
@@ -1025,25 +1031,20 @@ export const MovementForm = ({
         min={appStartDate ?? undefined}
         modal={isDrawer}
         trigger={
-          <button type="button" className="flex items-center gap-3 text-left">
+          <button type="button" className="flex min-w-0 items-center gap-3 text-left">
             <span
               className="flex size-9 shrink-0 items-center justify-center rounded-[11px] text-text-muted"
               style={{ backgroundColor: FIELD_BG }}
             >
               <Calendar className="size-[18px]" aria-hidden />
             </span>
-            <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
-              {t('labels.date')}
+            <span className="truncate text-[13px] font-semibold text-text">
+              {date !== todayStr() && date !== yesterdayISO ? formatDateValue(date) : t('labels.date')}
             </span>
           </button>
         }
       />
       <div className="ml-auto flex shrink-0 items-center gap-1.5">
-        {date !== todayStr() && date !== yesterdayISO && (
-          <span className="rounded-[8px] bg-navy px-2.5 py-1.5 text-xs font-bold text-white">
-            {formatDateValue(date)}
-          </span>
-        )}
         {(
           [
             { label: t('form.date_today'), value: todayStr() },
