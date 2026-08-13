@@ -379,16 +379,29 @@ export function MovementForm({
           and a calculator trigger beneath the chip. Mirror of web's hero. */}
       {showAmount && (
         <View className="rounded-2xl border border-border bg-card px-4 pb-4 pt-3.5">
-          {/* Eyebrow on top; the big number is centered vertically against the
-              chip+calculator column (so it sits at ~their height, with room above
-              and below — not pinned to the bottom border). A matching-width left
-              spacer keeps the number optically centered. */}
-          <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
-            {t('transactions.form.amount_label')}
-          </Text>
-          <View className="mt-1.5 flex-row items-center gap-2">
-            <View className="w-16" />
-            <View className="flex-1 flex-row items-center justify-center">
+          {/* Eyebrow top-left and chip+calculator pinned top-right (both absolute,
+              so they don't drag the number down); the number is centered inside a
+              min-height so it has room above and below, not on the bottom border. */}
+          <View className="relative">
+            <Text className="absolute left-0 top-0 text-[11px] font-bold uppercase tracking-wider text-text-soft">
+              {t('transactions.form.amount_label')}
+            </Text>
+            <View className="absolute right-0 top-0 items-end gap-1.5">
+              <Pressable
+                onPress={cycleCurrency}
+                disabled={form.currencyOptions.length < 2}
+                accessibilityRole="button"
+                accessibilityLabel={t('transactions.form.currency_label')}
+                className="flex-row items-center gap-1 rounded-lg border border-border bg-border-soft px-2.5 py-1"
+              >
+                <Text className="text-xs font-bold text-text">{form.currencyCode}</Text>
+                {form.currencyOptions.length > 1 && (
+                  <ChevronDown size={12} color={colors.text} />
+                )}
+              </Pressable>
+              <MoneyCalculator seed={form.amount} onResult={form.setAmount} />
+            </View>
+            <View className="min-h-[72px] flex-row items-center justify-center">
               {signChar !== '' && (
                 <Text className={`text-[34px] font-bold ${amountColorClass}`}>{signChar}</Text>
               )}
@@ -404,21 +417,6 @@ export function MovementForm({
                 style={{ width: amountInputWidth, paddingVertical: 0 }}
                 className={`ml-1 text-[34px] font-bold ${amountColorClass}`}
               />
-            </View>
-            <View className="w-16 items-end gap-1.5">
-              <Pressable
-                onPress={cycleCurrency}
-                disabled={form.currencyOptions.length < 2}
-                accessibilityRole="button"
-                accessibilityLabel={t('transactions.form.currency_label')}
-                className="flex-row items-center gap-1 rounded-lg border border-border bg-border-soft px-2.5 py-1"
-              >
-                <Text className="text-xs font-bold text-text">{form.currencyCode}</Text>
-                {form.currencyOptions.length > 1 && (
-                  <ChevronDown size={12} color={colors.text} />
-                )}
-              </Pressable>
-              <MoneyCalculator seed={form.amount} onResult={form.setAmount} />
             </View>
           </View>
           {isEdit && edit?.isParent && (

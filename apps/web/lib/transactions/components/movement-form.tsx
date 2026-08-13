@@ -955,49 +955,46 @@ export const MovementForm = ({
       }`}
     >
       {isMobile ? (
-        // Mobile: eyebrow on top, then the big number centered vertically against
-        // the chip+calculator column (so it sits at ~their height, with breathing
-        // room above and below — not pinned to the bottom border). A matching-width
-        // left spacer keeps the number optically centered.
-        <>
-          <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+        // Mobile: eyebrow top-left and chip+calculator pinned to the top-right
+        // corner (both absolute, so they don't drag the number down), and the big
+        // number centered — horizontally and within a min-height, so it has room
+        // above and below instead of sitting on the bottom border.
+        <div className="relative">
+          <span className="absolute left-0 top-0 text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
             {t('labels.amount')}
           </span>
-          <div className="mt-1.5 flex items-center gap-2">
-            <div className="w-16 shrink-0" aria-hidden />
-            <div className="flex flex-1 items-center justify-center gap-1.5">
-              {signChar && (
-                <span className={`text-[34px] font-bold leading-none ${amountColor}`}>{signChar}</span>
-              )}
-              <span className={`text-[34px] font-bold leading-none ${amountColor}`}>
-                {CURRENCY_SYMBOL[effectiveCurrency]}
-              </span>
-              <MoneyAmountInput
-                ref={amountRef}
-                id="amount"
-                required
-                value={amount}
-                onChange={setAmount}
-                placeholder="0"
-                style={{ width: `${amountDisplayCh}ch` }}
-                className={`min-w-0 bg-transparent text-left text-[34px] font-bold leading-none tracking-[-0.045em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
-              />
-            </div>
-            <div className="flex w-16 shrink-0 flex-col items-end gap-1.5">
-              <button
-                type="button"
-                onClick={cycleCurrency}
-                disabled={currencyOptions.length < 2}
-                className="inline-flex items-center gap-1 rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
-                style={{ backgroundColor: FIELD_BG }}
-              >
-                {effectiveCurrency}
-                {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
-              </button>
-              <MoneyCalculatorPopover seed={amount} onResult={setAmount} />
-            </div>
+          <div className="absolute right-0 top-0 flex flex-col items-end gap-1.5">
+            <button
+              type="button"
+              onClick={cycleCurrency}
+              disabled={currencyOptions.length < 2}
+              className="inline-flex items-center gap-1 rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
+              style={{ backgroundColor: FIELD_BG }}
+            >
+              {effectiveCurrency}
+              {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
+            </button>
+            <MoneyCalculatorPopover seed={amount} onResult={setAmount} />
           </div>
-        </>
+          <div className="flex min-h-[72px] items-center justify-center gap-1.5">
+            {signChar && (
+              <span className={`text-[34px] font-bold leading-none ${amountColor}`}>{signChar}</span>
+            )}
+            <span className={`text-[34px] font-bold leading-none ${amountColor}`}>
+              {CURRENCY_SYMBOL[effectiveCurrency]}
+            </span>
+            <MoneyAmountInput
+              ref={amountRef}
+              id="amount"
+              required
+              value={amount}
+              onChange={setAmount}
+              placeholder="0"
+              style={{ width: `${amountDisplayCh}ch` }}
+              className={`min-w-0 bg-transparent text-left text-[34px] font-bold leading-none tracking-[-0.045em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
+            />
+          </div>
+        </div>
       ) : (
         <>
           <div className="flex items-start justify-between">
