@@ -17,6 +17,7 @@ import {
 import { Label } from '../ui/Label'
 import { Input } from '../ui/Input'
 import { MoneyAmountInput } from '../ui/MoneyAmountInput'
+import { MoneyCalculator } from '../ui/MoneyCalculator'
 import { DateField } from '../ui/DateField'
 import { Segmented } from '../ui/Segmented'
 import { Switch } from '../ui/Switch'
@@ -135,8 +136,6 @@ export function MovementForm({
   // Amount hero: always in create; in edit only when the amount is editable (a
   // paid consumption / locked madre shows no amount field — web does the same).
   const showAmount = isEdit ? !!editable?.amount : true
-  // Currency is immutable post-creation — only the create flow lets it switch.
-  const showCurrencySeg = !isEdit && form.currencyOptions.length > 1
   // Source account: immutable context in edit, EXCEPT a statement payment whose
   // debit account can move (`editable.account`). In create, hide the selector
   // when there is a single eligible account (D2) — but transfer/exchange always
@@ -260,6 +259,30 @@ export function MovementForm({
         ]
       : []
 
+  // ── Amount hero derivations (mirror of web's movement-form hero) ────────────
+  const amountColorClass = form.tab === 'income' ? 'text-emerald-deep' : 'text-text'
+  const signChar =
+    form.tab === 'income'
+      ? '+'
+      : form.tab === 'expense'
+        ? '−'
+        : form.tab === 'adjustment'
+          ? form.adjustmentDirection === 'decrease'
+            ? '−'
+            : '+'
+          : ''
+  // Cycle the currency chip through the eligible options (create only has >1).
+  const cycleCurrency = () => {
+    if (form.currencyOptions.length < 2) return
+    const idx = form.currencyOptions.indexOf(form.currencyCode)
+    const next = form.currencyOptions[(idx + 1) % form.currencyOptions.length]
+    form.setCurrencyCode(next as 'ARS' | 'USD')
+    form.setInstallments('1')
+  }
+  // Content-sized width for the centered amount input (RN has no `ch` unit): hug
+  // the text so sign + symbol + number stay centered as a group (~20px/glyph).
+  const amountInputWidth = Math.max(1, form.amount.length) * 20 + 2
+
   return (
     <View className="flex-col gap-5">
       {/* Tab selector — two-row wrapping pill group (see design 1b). Hidden in
@@ -352,33 +375,64 @@ export function MovementForm({
         </View>
       )}
 
-      {/* Amount (+ currency when the account has both). In edit, only when the
-          amount is editable. */}
+      {/* Amount hero — big centered number, faded currency glyph, currency chip,
+          and a calculator trigger beneath the chip. Mirror of web's hero. */}
       {showAmount && (
-        <View className="flex-col gap-1.5">
-          <Label>{t('transactions.form.amount_label')}</Label>
-          <MoneyAmountInput
-            value={form.amount}
-            onChangeText={form.setAmount}
-            placeholder="0"
-            autoFocus={!isEdit}
-          />
+        <View className="rounded-2xl border border-border bg-card px-4 pb-4 pt-3.5">
+          <View className="flex-row items-start justify-between">
+            <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
+              {t('transactions.form.amount_label')}
+            </Text>
+            {/* Right column: currency chip on top, calculator trigger below it. */}
+            <View className="items-end gap-1.5">
+              <Pressable
+                onPress={cycleCurrency}
+                disabled={form.currencyOptions.length < 2}
+                accessibilityRole="button"
+                accessibilityLabel={t('transactions.form.currency_label')}
+                className="flex-row items-center gap-1 rounded-lg border border-border bg-border-soft px-2.5 py-1"
+              >
+                <Text className="text-xs font-bold text-text">{form.currencyCode}</Text>
+                {form.currencyOptions.length > 1 && (
+                  <ChevronDown size={12} color={colors.text} />
+                )}
+              </Pressable>
+              <MoneyCalculator seed={form.amount} onResult={form.setAmount} />
+            </View>
+          </View>
+          <View className="mt-2 flex-row items-end justify-center">
+            {signChar !== '' && (
+              <Text className={`text-[34px] font-bold ${amountColorClass}`}>{signChar}</Text>
+            )}
+            <Text className={`pl-1 text-[20px] font-semibold opacity-50 ${amountColorClass}`}>
+              {CURRENCY_SYMBOL[form.currencyCode]}
+            </Text>
+            <MoneyAmountInput
+              bare
+              value={form.amount}
+              onChangeText={form.setAmount}
+              placeholder="0"
+              autoFocus={!isEdit}
+              style={{ width: amountInputWidth, paddingVertical: 0 }}
+              className={`ml-1 text-[34px] font-bold ${amountColorClass}`}
+            />
+          </View>
           {isEdit && edit?.isParent && (
-            <Text className="pt-0.5 text-xs text-text-muted">
+            <Text className="pt-2 text-center text-xs text-text-muted">
               {t('transactions.installment_recalc_hint', {
                 count: edit.installmentsTotal ?? 0,
               })}
             </Text>
           )}
-          {showCurrencySeg && (
-            <View className="pt-1">
-              <Segmented
-                ariaLabel={t('transactions.form.currency_label')}
-                value={form.currencyCode}
-                onValueChange={(v) => form.setCurrencyCode(v as 'ARS' | 'USD')}
-                options={form.currencyOptions.map((c) => ({ value: c, label: c }))}
-              />
-            </View>
+          {form.tab === 'income' && (
+            <Text className="mt-2 text-center text-[12.5px] font-medium text-emerald-deep">
+              {t('transactions.drawer.helper_income')}
+            </Text>
+          )}
+          {form.tab === 'adjustment' && (
+            <Text className="mt-2 text-center text-[12.5px] text-text-muted">
+              {t('transactions.drawer.helper_adjustment')}
+            </Text>
           )}
         </View>
       )}

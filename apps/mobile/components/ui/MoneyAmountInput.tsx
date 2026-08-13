@@ -20,8 +20,11 @@ import { Input } from './Input'
 
 type InputComponentProps = ComponentProps<typeof Input>
 
+// `className` stays in (the shared `MoneyAmountInputProps` contract declares it):
+// the amount hero composes a large, centered, borderless variant by passing
+// override classes (with `bare`), mirroring web's bare `money-amount-input`.
 type Props = MoneyAmountInputProps &
-  Omit<InputComponentProps, 'keyboardType' | 'inputMode' | 'onChangeText' | 'className'> & {
+  Omit<InputComponentProps, 'keyboardType' | 'inputMode' | 'onChangeText'> & {
     value: string
     onChangeText: (value: string) => void
   }
