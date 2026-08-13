@@ -570,6 +570,10 @@ export const MovementForm = ({
 
   const eyebrow = isEdit ? t('drawer.eyebrow_edit') : t('drawer.eyebrow_new')
   const title = isEdit ? t('edit_title') : t('actions.register_movement')
+  // Mobile create: drop the "NUEVO" eyebrow and use a single-line "Nuevo
+  // movimiento" title (matches the native screen title). Desktop/edit unchanged.
+  const showEyebrow = !(isMobile && !isEdit)
+  const headerTitle = isMobile && !isEdit ? t('new.title') : title
 
   // Amount tint + leading sign by type.
   const amountColor = tab === 'income' ? 'text-emerald-deep' : 'text-text'
@@ -2236,9 +2240,11 @@ export const MovementForm = ({
         <header className="shrink-0 border-b border-border bg-card px-5 pb-4 pt-[22px] sm:px-7">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-text-soft">{eyebrow}</p>
+              {showEyebrow && (
+                <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-text-soft">{eyebrow}</p>
+              )}
               <h2 className="truncate text-[20px] font-extrabold leading-tight tracking-[-0.03em] text-text sm:text-[25px]">
-                {title}
+                {headerTitle}
               </h2>
             </div>
             <button
