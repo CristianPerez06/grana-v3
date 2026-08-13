@@ -10,6 +10,7 @@ import { FormScreen } from '../../../components/layout/FormScreen'
 import { MovementForm } from '../../../components/transactions/MovementForm'
 import { MovementFormSkeleton } from '../../../components/transactions/MovementFormSkeleton'
 import { getAllCategories } from '../../../lib/categories'
+import { getFrequentClassifications } from '../../../lib/transactions/frequent-classifications'
 import { getHousehold } from '../../../lib/shared/queries'
 import { supabase } from '../../../lib/supabase'
 import { useT } from '../../../lib/locale-context'
@@ -53,6 +54,12 @@ export default function NewMovementScreen() {
   const householdQ = useQuery({
     queryKey: ['household', 'form'] as const,
     queryFn: getHousehold,
+  })
+  // Non-critical accelerator (#31 item 1): kept out of the `ready` gate so it
+  // never delays the form.
+  const frequentQ = useQuery({
+    queryKey: ['movement-form', 'frequent-classifications'] as const,
+    queryFn: getFrequentClassifications,
   })
 
   // Project the grouped accounts onto the form's account shape — mirror of the
@@ -126,6 +133,7 @@ export default function NewMovementScreen() {
           key={formKey}
           accounts={accounts}
           categories={categoriesQ.data}
+          frequentClassifications={frequentQ.data ?? undefined}
           household={householdQ.data}
           preselectAccountId={presetAccount}
           onDone={() => router.back()}

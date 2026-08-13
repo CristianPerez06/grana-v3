@@ -8,6 +8,7 @@ import {
   PRIMARY_TABS,
   type CategoryWithSubcategories,
   type Frequency,
+  type FrequentClassification,
   type Household,
   type IntervalUnit,
   type MovementEditContext,
@@ -51,6 +52,8 @@ const fmtAmount = (n: number) =>
 type Props = {
   accounts: MovementFormAccount[]
   categories: CategoryWithSubcategories[]
+  /** Frequent leaf classifications (create-only accelerator, #31 item 1). */
+  frequentClassifications?: FrequentClassification[]
   household: Household | null
   /** Present ⇒ the form is in edit mode (tabs hidden, fields gated). */
   edit?: MovementEditContext
@@ -71,6 +74,7 @@ type Props = {
 export function MovementForm({
   accounts,
   categories,
+  frequentClassifications,
   household,
   edit,
   preselectAccountId,
@@ -84,6 +88,7 @@ export function MovementForm({
     mutators,
     accounts,
     categories,
+    frequentClassifications,
     edit,
     preselectAccountId,
     household,
