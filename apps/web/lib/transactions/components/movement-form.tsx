@@ -899,18 +899,23 @@ export const MovementForm = ({
         <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
           {t('labels.amount')}
         </span>
-        <button
-          type="button"
-          onClick={cycleCurrency}
-          disabled={currencyOptions.length < 2}
-          className="inline-flex items-center gap-1 rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
-          style={{ backgroundColor: FIELD_BG }}
-        >
-          {effectiveCurrency}
-          {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
-        </button>
+        <div className="flex items-center gap-2">
+          {isMobile && (
+            <MoneyCalculatorPopover seed={amount} onResult={setAmount} />
+          )}
+          <button
+            type="button"
+            onClick={cycleCurrency}
+            disabled={currencyOptions.length < 2}
+            className="inline-flex items-center gap-1 rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
+            style={{ backgroundColor: FIELD_BG }}
+          >
+            {effectiveCurrency}
+            {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
+          </button>
+        </div>
       </div>
-      <div className="mt-2 flex items-baseline gap-1.5">
+      <div className={`mt-2 flex items-baseline gap-1.5 ${isMobile ? 'justify-center' : ''}`}>
         {signChar && (
           <span className={`${isMobile ? 'text-[34px]' : 'text-[46px]'} font-bold leading-none ${amountColor}`}>{signChar}</span>
         )}
@@ -924,9 +929,13 @@ export const MovementForm = ({
           value={amount}
           onChange={setAmount}
           placeholder="0"
-          className={`w-full min-w-0 bg-transparent ${isMobile ? 'text-[34px]' : 'text-[46px]'} font-bold leading-none tracking-[-0.045em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
+          className={`bg-transparent ${
+            isMobile ? 'w-auto min-w-0 [field-sizing:content] text-center' : 'w-full min-w-0'
+          } ${isMobile ? 'text-[34px]' : 'text-[46px]'} font-bold leading-none tracking-[-0.045em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
         />
-        <MoneyCalculatorPopover seed={amount} onResult={setAmount} className="shrink-0 self-center" />
+        {!isMobile && (
+          <MoneyCalculatorPopover seed={amount} onResult={setAmount} className="shrink-0 self-center" />
+        )}
       </div>
       {tab === 'income' && (
         <p className="mt-2.5 text-[12.5px] font-medium text-emerald-deep">{t('drawer.helper_income')}</p>
@@ -1016,25 +1025,25 @@ export const MovementForm = ({
         min={appStartDate ?? undefined}
         modal={isDrawer}
         trigger={
-          <button type="button" className="flex min-w-0 flex-1 items-center gap-3 text-left">
+          <button type="button" className="flex items-center gap-3 text-left">
             <span
               className="flex size-9 shrink-0 items-center justify-center rounded-[11px] text-text-muted"
               style={{ backgroundColor: FIELD_BG }}
             >
               <Calendar className="size-[18px]" aria-hidden />
             </span>
-            <span className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
-                {t('labels.date')}
-              </span>
-              <span className="truncate text-[15px] font-semibold leading-snug text-text">
-                {formatDateValue(date)}
-              </span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+              {t('labels.date')}
             </span>
           </button>
         }
       />
       <div className="ml-auto flex shrink-0 items-center gap-1.5">
+        {date !== todayStr() && date !== yesterdayISO && (
+          <span className="rounded-[8px] bg-navy px-2.5 py-1.5 text-xs font-bold text-white">
+            {formatDateValue(date)}
+          </span>
+        )}
         {(
           [
             { label: t('form.date_today'), value: todayStr() },
