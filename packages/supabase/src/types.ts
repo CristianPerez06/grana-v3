@@ -1056,35 +1056,35 @@ export type Database = {
       user_guidance_events: {
         Row: {
           completed_at: string | null
-          created_at: string
+          created_at: string | null
           dismissed_at: string | null
           guidance_id: string
           id: string
           metadata: Json | null
           seen_at: string | null
-          updated_at: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
           completed_at?: string | null
-          created_at?: string
+          created_at?: string | null
           dismissed_at?: string | null
           guidance_id: string
           id?: string
           metadata?: Json | null
           seen_at?: string | null
-          updated_at?: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
           completed_at?: string | null
-          created_at?: string
+          created_at?: string | null
           dismissed_at?: string | null
           guidance_id?: string
           id?: string
           metadata?: Json | null
           seen_at?: string | null
-          updated_at?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1114,22 +1114,23 @@ export type Database = {
           net: number
         }[]
       }
+      get_household_member_profiles: {
+        Args: never
+        Returns: {
+          full_name: string
+          id: string
+        }[]
+      }
       get_movements_page: {
         Args: { p_filters?: Json; p_limit?: number; p_offset?: number }
         Returns: Json[]
       }
-      get_owned_account_ids: {
-        Args: Record<PropertyKey, never>
-        Returns: string[]
-      }
+      get_owned_account_ids: { Args: never; Returns: string[] }
       is_household_member: {
         Args: { p_household_id: string }
         Returns: boolean
       }
-      join_household_by_code: {
-        Args: { p_code: string }
-        Returns: string
-      }
+      join_household_by_code: { Args: { p_code: string }; Returns: string }
       register_settlement: {
         Args: {
           p_account_id: string
@@ -1139,18 +1140,15 @@ export type Database = {
         }
         Returns: string
       }
-      revert_card_period_payment: {
-        Args: { p_period_id: string }
-        Returns: Json
-      }
       reverse_settlement: {
         Args: { p_settlement_id: string }
         Returns: undefined
       }
-      unshare_movement: {
-        Args: { p_root_id: string }
-        Returns: undefined
+      revert_card_period_payment: {
+        Args: { p_period_id: string }
+        Returns: Json
       }
+      unshare_movement: { Args: { p_root_id: string }; Returns: undefined }
     }
     Enums: {
       account_type: "cash" | "bank" | "credit"

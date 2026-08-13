@@ -1,37 +1,4 @@
-# profiles Specification
-
-## Purpose
-
-Define la tabla `public.profiles` como espejo de `auth.users` con la información de perfil que Grana necesita por encima de lo que provee Supabase Auth. Cada alta de usuario crea automáticamente su fila de profile vía trigger, y el row queda protegido por Row Level Security para que cada usuario solo pueda leer y modificar el suyo. Es la base sobre la que otras capabilities suman campos de perfil (zona horaria financiera, marca de onboarding completado, etc.) mediante migraciones y deltas posteriores.
-
-## Requirements
-### Requirement: La tabla profiles refleja a los usuarios de auth
-
-El sistema SHALL mantener una tabla `public.profiles` con una fila por cada fila de `auth.users`. La tabla SHALL contener `id` (uuid primary key referenciando `auth.users(id)` con `on delete cascade`), `full_name` (text, not null), `email` (text, not null, unique) y `created_at` (timestamptz, not null, default `now()`).
-
-#### Scenario: Un nuevo usuario de auth obtiene su fila en profiles
-
-- **WHEN** se inserta una fila en `auth.users` (vía signup)
-- **THEN** se inserta una fila correspondiente en `public.profiles` con el mismo `id`, el `full_name` tomado de `auth.users.raw_user_meta_data->>'full_name'` (string vacío si falta) y el mismo `email`
-
-#### Scenario: Eliminar el usuario de auth cascadea hacia profiles
-
-- **WHEN** se elimina una fila de `auth.users`
-- **THEN** la fila correspondiente en `public.profiles` se elimina automáticamente
-
-### Requirement: Creación automática de profile vía trigger
-
-El sistema SHALL implementar `handle_new_user` como una función PL/pgSQL con `security definer` y `search_path=public`, y SHALL registrarla como un trigger `AFTER INSERT ... FOR EACH ROW` sobre `auth.users`.
-
-#### Scenario: El trigger dispara en signup
-
-- **WHEN** Supabase Auth completa un signup que inserta en `auth.users`
-- **THEN** el trigger ejecuta `handle_new_user`, que inserta en `public.profiles` sin requerir una llamada separada del lado de la app
-
-#### Scenario: El trigger usa privilegios elevados
-
-- **WHEN** la función del trigger inserta en `public.profiles`
-- **THEN** la inserción tiene éxito aunque `public.profiles` no tenga ninguna policy de insert para el rol authenticated (porque la función corre como `security definer`)
+## MODIFIED Requirements
 
 ### Requirement: Row Level Security sobre profiles
 
@@ -59,38 +26,9 @@ El sistema SHALL NOT definir sobre la tabla ninguna policy adicional que ensanch
 
 - **WHEN** un cliente anónimo (sin sesión) ejecuta `select * from profiles`
 - **THEN** la query devuelve cero filas
-### Requirement: La tabla profiles persiste la zona horaria financiera y el estado del onboarding
 
-El sistema SHALL extender la tabla `public.profiles` con dos columnas adicionales:
+## ADDED Requirements
 
-- `financial_timezone` (`text`, `NOT NULL`, default `'America/Argentina/Buenos_Aires'`): zona horaria con la que se calculan fechas contables como "hoy" para el usuario.
-- `onboarding_completed_at` (`timestamptz`, `NULL`): instante técnico en que el usuario completó el onboarding. NULL significa que aún no lo completó. El sistema usa esta columna para decidir si redirigir al wizard.
-
-#### Scenario: Inserción de nuevo profile rellena los defaults
-
-- **WHEN** se inserta una fila nueva en `public.profiles` vía el trigger `handle_new_user`
-- **THEN** la fila tiene `financial_timezone='America/Argentina/Buenos_Aires'`, `onboarding_completed_at=NULL`
-- **AND** estos valores provienen de los defaults declarados en el schema, no de literales en la función del trigger
-
-#### Scenario: Usuario existente al aplicar la migración hereda los defaults
-
-- **WHEN** se aplica la migración `ALTER TABLE profiles ADD COLUMN ...` sobre una tabla con filas existentes
-- **THEN** todas las filas previas tienen `financial_timezone='America/Argentina/Buenos_Aires'`, `onboarding_completed_at=NULL`
-- **AND** los usuarios existentes ven el wizard al próximo ingreso
-
-### Requirement: Los campos de profiles respetan RLS
-
-El sistema SHALL incluir los campos (`financial_timezone`, `onboarding_completed_at`) en la policy de update existente, de modo que un usuario autenticado SHALL poder UPDATE estos campos solo en su propia fila. La policy de select existente SHALL seguir funcionando sin cambios.
-
-#### Scenario: Usuario actualiza su propio onboarding_completed_at
-
-- **WHEN** un usuario autenticado con id `U1` ejecuta `UPDATE profiles SET onboarding_completed_at=now() WHERE id=U1`
-- **THEN** el update afecta una fila
-
-#### Scenario: Usuario intenta actualizar el profile de otro usuario
-
-- **WHEN** un usuario autenticado con id `U1` ejecuta `UPDATE profiles SET onboarding_completed_at=now() WHERE id='U2'`
-- **THEN** el update afecta cero filas
 ### Requirement: La lectura de profiles de convivientes expone solo las columnas del allowlist
 
 El sistema SHALL exponer un RPC `SECURITY DEFINER` que devuelva los profiles de los miembros del hogar del invocante — incluido el propio invocante — restringido a las columnas `(id, full_name)`. El RPC SHALL resolver la pertenencia al hogar con `auth.uid()` internamente — no SHALL aceptar el id del otro usuario como parámetro de confianza — y SHALL tener `REVOKE EXECUTE ... FROM public` + `GRANT EXECUTE ... TO authenticated`.
