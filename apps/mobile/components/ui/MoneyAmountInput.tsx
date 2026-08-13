@@ -42,6 +42,12 @@ const sanitize = (raw: string): string => {
   return head + tail
 }
 
+// A `.` the user typed for cents (grouping dots never sit at the end): a dot at
+// the end followed by ≤2 digits is a decimal — map it to the es-AR comma before
+// canonicalizing so the numeric keypad's `.` reaches cents. RN counterpart of
+// web's `.`→`,` keydown remap; a mid-number `.` stays grouping and is dropped.
+const remapDecimalDot = (text: string): string => text.replace(/\.(\d{0,2})$/, ',$1')
+
 export function MoneyAmountInput({
   value,
   onChangeText,
@@ -58,7 +64,9 @@ export function MoneyAmountInput({
       keyboardType="decimal-pad"
       inputMode="decimal"
       onChangeText={(text) =>
-        onChangeText(groupThousands ? toCanonical(text, allowNegative) : sanitize(text))
+        onChangeText(
+          groupThousands ? toCanonical(remapDecimalDot(text), allowNegative) : sanitize(text),
+        )
       }
     />
   )
