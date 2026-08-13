@@ -383,6 +383,30 @@ export function MovementForm({
         </View>
       )}
 
+      {/* Frequent-classification chips (#31 item 1): one tap pre-fills the
+          category (+ subcategory). Create-only and only when history resolved
+          some — `frequentChips` is empty otherwise. */}
+      {form.frequentChips.length > 0 && (
+        <View className="flex-row flex-wrap gap-2">
+          {form.frequentChips.map((chip) => (
+            <Pressable
+              key={`${chip.categoryId}:${chip.subcategoryId ?? ''}`}
+              onPress={() => form.pickCategory(chip.categoryId, chip.subcategoryId ?? '')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: chip.active }}
+              className={`rounded-full px-3 py-2 ${chip.active ? 'bg-navy' : 'bg-border-soft'}`}
+            >
+              <Text
+                className={`text-xs font-semibold ${chip.active ? 'text-white' : 'text-text'}`}
+              >
+                {chip.icon ? `${chip.icon} ` : ''}
+                {chip.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
       {/* Category (+ one-level subcategory drill) — primary decision, above the
           account (design D7: the category drives the account). */}
       {showCategory && (
