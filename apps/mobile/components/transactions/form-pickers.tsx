@@ -160,16 +160,14 @@ export function AccountFamilySelect({
       {list.length === 1 && (
         <View className="flex-row items-center gap-2.5">
           {list[0].avatar && <AccountAvatar {...list[0].avatar} size="sm" />}
-          <View className="flex-1 flex-col">
-            <Text className="text-sm font-semibold text-text" numberOfLines={1}>
-              {list[0].institutionName ?? list[0].name}
+          <Text className="flex-1 text-sm font-semibold text-text" numberOfLines={1}>
+            {list[0].institutionName ?? list[0].name}
+          </Text>
+          {list[0].type !== 'credit' && (
+            <Text className="text-xs text-text-muted" numberOfLines={1}>
+              {formatBalance(list[0])}
             </Text>
-            {list[0].type !== 'credit' && (
-              <Text className="text-xs text-text-muted" numberOfLines={1}>
-                {formatBalance(list[0])}
-              </Text>
-            )}
-          </View>
+          )}
         </View>
       )}
       {/* Selected cash/bank account's balance (credit cards are off-ledger). */}

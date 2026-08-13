@@ -1317,14 +1317,12 @@ export const MovementForm = ({
       {familyList.length === 1 && (
         <div className="flex items-center gap-2.5">
           <AccountAvatar {...avatarOf(familyList[0])} size="sm" />
-          <div className="flex min-w-0 flex-col">
-            <span className="truncate text-sm font-semibold text-text">
-              {accountPrimaryName(familyList[0])}
-            </span>
-            {familyList[0].type !== 'credit' && (
-              <span className="truncate text-xs text-text-muted">{formatBalance(familyList[0])}</span>
-            )}
-          </div>
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text">
+            {accountPrimaryName(familyList[0])}
+          </span>
+          {familyList[0].type !== 'credit' && (
+            <span className="shrink-0 text-xs text-text-muted">{formatBalance(familyList[0])}</span>
+          )}
         </div>
       )}
       {/* Selected cash/bank account's balance — the "default" account should show
