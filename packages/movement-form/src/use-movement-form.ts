@@ -8,14 +8,20 @@ import {
 } from '@grana/money-logic'
 import { Money, parseMoneyInput } from '@grana/validation'
 import { graftArchivedTaxonomy } from './archived-taxonomy'
+import { FREQUENT_CHIPS_MAX } from './frequent-classifications'
 import type {
   Frequency,
+  FrequentChip,
   IntervalUnit,
   MovementFormAccount,
   MovementFormState,
   Tab,
   UseMovementFormArgs,
 } from './types'
+
+// Re-exported so existing importers (the package index, tests) keep resolving it
+// here even though the constant now lives in the React-free ranker module.
+export { FREQUENT_CHIPS_MAX } from './frequent-classifications'
 
 // Accounts eligible per tab: only Gasto can target a credit card.
 function eligibleFor(accounts: MovementFormAccount[], tab: Tab): MovementFormAccount[] {
@@ -27,6 +33,28 @@ function eligibleFor(accounts: MovementFormAccount[], tab: Tab): MovementFormAcc
 // "dynamic third slot" idea was dropped (ranking-by-frequency moved to #31).
 export const PRIMARY_TABS: Tab[] = ['expense', 'income']
 export const SECONDARY_TABS: Tab[] = ['transfer', 'exchange', 'adjustment']
+
+// Suggested classifications (#31 item 1): used to TOP UP the user's frequent
+// chips so the rows fill instead of leaving a gap, and as the full set for a
+// brand-new user with no history. Referenced by immutable `canonical_name`
+// (visible labels get renamed / i18n'd; canonicals don't) and resolved against
+// the live catalog — any the catalog doesn't serve is skipped. Ordered by how
+// commonly they're used, since they fill the tail after the real frequent ones.
+type LeafCanonical = { category: string; subcategory: string | null }
+const SUGGESTED_EXPENSE_LEAVES: LeafCanonical[] = [
+  { category: 'comida', subcategory: 'supermercado' },
+  { category: 'entretenimiento', subcategory: 'salidas' },
+  { category: 'transporte', subcategory: null },
+  { category: 'servicios', subcategory: null },
+  { category: 'salud', subcategory: null },
+  { category: 'hogar', subcategory: null },
+]
+const SUGGESTED_INCOME_LEAVES: LeafCanonical[] = [
+  { category: 'sueldo', subcategory: null },
+  { category: 'freelance', subcategory: null },
+  { category: 'inversiones', subcategory: null },
+  { category: 'otros-ingresos', subcategory: null },
+]
 
 // Which secondary types the user can actually do, from their accounts:
 // transfer needs ≥2 own (cash/bank) accounts; exchange needs both ARS and USD
@@ -67,6 +95,7 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
     mutators,
     accounts,
     categories,
+    frequentClassifications,
     edit,
     preselectAccountId,
     household,
@@ -208,6 +237,60 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
   const incomeCategories = catalog.filter((c) => c.type === 'income' || c.type === 'both')
   const transactionCategories = tab === 'income' ? incomeCategories : expenseCategories
   const selectedCategory = transactionCategories.find((c) => c.id === categoryId)
+
+  // Resolve a leaf (category id + optional subcategory id) into a display-ready
+  // chip against the active tab's catalog. `transactionCategories` already
+  // filters by tab and, on create, excludes archived rows — so a leaf whose
+  // category or subcategory is archived/missing simply doesn't resolve.
+  const chipFromIds = (catId: string, subId: string | null): FrequentChip | null => {
+    const cat = transactionCategories.find((c) => c.id === catId)
+    if (!cat) return null
+    let subLabel: string | null = null
+    if (subId) {
+      const sub = cat.subcategories.find((s) => s.id === subId && s.is_active !== false)
+      if (!sub) return null
+      subLabel = sub.name
+    }
+    return {
+      categoryId: cat.id,
+      subcategoryId: subId,
+      label: subLabel ?? cat.name,
+      icon: cat.icon ?? null,
+      color: cat.color ?? null,
+      active: cat.id === categoryId && (subId ?? '') === subcategoryId,
+    }
+  }
+  // Same, but by immutable canonical_name — used to resolve the new-user defaults.
+  const chipFromCanonical = (catCanonical: string, subCanonical: string | null): FrequentChip | null => {
+    const cat = transactionCategories.find((c) => c.canonical_name === catCanonical)
+    if (!cat) return null
+    if (!subCanonical) return chipFromIds(cat.id, null)
+    const sub = cat.subcategories.find((s) => s.canonical_name === subCanonical && s.is_active !== false)
+    return sub ? chipFromIds(cat.id, sub.id) : null
+  }
+
+  // Frequent-classification chips (#31 item 1): the user's history first, then
+  // suggested categories topping up the remaining slots so the rows fill instead
+  // of leaving a gap (a brand-new user sees only the suggestions). Create-only,
+  // expense/income only, deduped and capped.
+  const frequentChips: FrequentChip[] = ((): FrequentChip[] => {
+    if (isEdit || (tab !== 'expense' && tab !== 'income')) return []
+    const history = (frequentClassifications ?? [])
+      .map((f) => chipFromIds(f.categoryId, f.subcategoryId))
+      .filter((c): c is FrequentChip => c !== null)
+    const suggestions = (tab === 'expense' ? SUGGESTED_EXPENSE_LEAVES : SUGGESTED_INCOME_LEAVES)
+      .map((d) => chipFromCanonical(d.category, d.subcategory))
+      .filter((c): c is FrequentChip => c !== null)
+    const seen = new Set<string>()
+    return [...history, ...suggestions]
+      .filter((c) => {
+        const key = `${c.categoryId}:${c.subcategoryId ?? ''}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+      .slice(0, FREQUENT_CHIPS_MAX)
+  })()
 
   const effectiveCurrency: 'ARS' | 'USD' = !isEdit && tab === 'transfer'
     ? (sharedCurrencies.includes(currencyCode) ? currencyCode : sharedCurrencies[0] ?? currencyCode)
@@ -827,6 +910,7 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
     incomeCategories,
     transactionCategories,
     selectedCategory,
+    frequentChips,
     negativeWarning,
 
     // Submission

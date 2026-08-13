@@ -64,6 +64,7 @@ import {
   selectableSubcategories,
   useMovementForm,
   PRIMARY_TABS,
+  type FrequentClassification,
   type MovementEditContext as PackageMovementEditContext,
   type MovementFormAccount as PackageMovementFormAccount,
   type Mutators,
@@ -97,6 +98,8 @@ export type MovementEditContext = PackageMovementEditContext & {
 type Props = {
   accounts: MovementFormAccount[]
   categories: CategoryWithSubcategories[]
+  /** Frequent leaf classifications (create-only accelerator, #31 item 1). */
+  frequentClassifications?: FrequentClassification[]
   /** Edit mode when present. Absent ⇒ create mode. */
   edit?: MovementEditContext
   /** Create mode: pre-select this account (e.g. arriving from a card/account). */
@@ -258,6 +261,7 @@ const AccountValue = ({ account }: { account: MovementFormAccount | undefined })
 export const MovementForm = ({
   accounts,
   categories,
+  frequentClassifications,
   edit,
   preselectAccountId,
   onSuccess,
@@ -355,6 +359,7 @@ export const MovementForm = ({
     mutators,
     accounts,
     categories,
+    frequentClassifications,
     edit: editForHook,
     preselectAccountId,
     household,
@@ -440,6 +445,7 @@ export const MovementForm = ({
     exchangeDestCurrency,
     effectiveCurrency,
     currencyOptions,
+    frequentChips,
     negativeWarning,
     isSubmitting: isPending,
     formError,
@@ -547,13 +553,27 @@ export const MovementForm = ({
 
   const formatBalance = (account: MovementFormAccount): string =>
     account.activeCurrencies
-      .map((c) => `${CURRENCY_SYMBOL[c]}${account.balances[c].toLocaleString('es-AR')}`)
+      .map((c) => {
+        const n = account.balances[c] ?? 0
+        // Sign before the symbol ("-$1.234", not "$-1.234"); a space after the
+        // multi-char USD code reads cleaner ("U$D 10").
+        const sign = n < 0 ? '-' : ''
+        const amount = Math.abs(n).toLocaleString('es-AR', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        })
+        return `${sign}${CURRENCY_SYMBOL[c]}${c === 'USD' ? ' ' : ''}${amount}`
+      })
       .join(' · ')
 
   // ── Derived presentation values + handlers for the hi-fi shell ──────────────
 
   const eyebrow = isEdit ? t('drawer.eyebrow_edit') : t('drawer.eyebrow_new')
   const title = isEdit ? t('edit_title') : t('actions.register_movement')
+  // Mobile create: drop the "NUEVO" eyebrow and use a single-line "Nuevo
+  // movimiento" title (matches the native screen title). Desktop/edit unchanged.
+  const showEyebrow = !(isMobile && !isEdit)
+  const headerTitle = isMobile && !isEdit ? t('new.title') : title
 
   // Amount tint + leading sign by type.
   const amountColor = tab === 'income' ? 'text-emerald-deep' : 'text-text'
@@ -934,49 +954,86 @@ export const MovementForm = ({
         isMobile ? 'px-4 pb-4 pt-3.5' : 'px-[22px] pb-[22px] pt-5'
       }`}
     >
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
-          {t('labels.amount')}
-        </span>
-        <div className="flex items-center gap-2">
-          {isMobile && (
+      {isMobile ? (
+        // Mobile: eyebrow top-left and chip+calculator pinned to the top-right
+        // corner (both absolute, so they don't drag the number down), and the big
+        // number centered — horizontally and within a min-height, so it has room
+        // above and below instead of sitting on the bottom border.
+        <div className="relative">
+          <span className="absolute left-0 top-0 text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+            {t('labels.amount')}
+          </span>
+          <div className="absolute right-0 top-0 flex flex-col items-end gap-1.5">
+            <button
+              type="button"
+              onClick={cycleCurrency}
+              disabled={currencyOptions.length < 2}
+              className="inline-flex items-center gap-1 rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
+              style={{ backgroundColor: FIELD_BG }}
+            >
+              {effectiveCurrency}
+              {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
+            </button>
             <MoneyCalculatorPopover seed={amount} onResult={setAmount} />
-          )}
-          <button
-            type="button"
-            onClick={cycleCurrency}
-            disabled={currencyOptions.length < 2}
-            className="inline-flex items-center gap-1 rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
-            style={{ backgroundColor: FIELD_BG }}
-          >
-            {effectiveCurrency}
-            {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
-          </button>
+          </div>
+          <div className="flex min-h-[72px] items-center justify-center gap-1.5">
+            {signChar && (
+              <span className={`text-[34px] font-bold leading-none ${amountColor}`}>{signChar}</span>
+            )}
+            <span className={`text-[34px] font-bold leading-none ${amountColor}`}>
+              {CURRENCY_SYMBOL[effectiveCurrency]}
+            </span>
+            <MoneyAmountInput
+              ref={amountRef}
+              id="amount"
+              required
+              value={amount}
+              onChange={setAmount}
+              placeholder="0"
+              style={{ width: `${amountDisplayCh}ch` }}
+              className={`min-w-0 bg-transparent text-left text-[34px] font-bold leading-none tracking-[-0.045em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
+            />
+          </div>
         </div>
-      </div>
-      <div className={`mt-2 flex items-baseline gap-1.5 ${isMobile ? 'justify-center' : ''}`}>
-        {signChar && (
-          <span className={`${isMobile ? 'text-[34px]' : 'text-[46px]'} font-bold leading-none ${amountColor}`}>{signChar}</span>
-        )}
-        <span className={`${isMobile ? 'text-[20px]' : 'text-[27px]'} font-semibold leading-none opacity-50 ${amountColor}`}>
-          {CURRENCY_SYMBOL[effectiveCurrency]}
-        </span>
-        <MoneyAmountInput
-          ref={amountRef}
-          id="amount"
-          required
-          value={amount}
-          onChange={setAmount}
-          placeholder="0"
-          style={isMobile ? { width: `${amountDisplayCh}ch` } : undefined}
-          className={`bg-transparent ${
-            isMobile ? 'min-w-0 text-left' : 'w-full min-w-0'
-          } ${isMobile ? 'text-[34px]' : 'text-[46px]'} font-bold leading-none tracking-[-0.045em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
-        />
-        {!isMobile && (
-          <MoneyCalculatorPopover seed={amount} onResult={setAmount} className="shrink-0 self-center" />
-        )}
-      </div>
+      ) : (
+        <>
+          <div className="flex items-start justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+              {t('labels.amount')}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={cycleCurrency}
+                disabled={currencyOptions.length < 2}
+                className="inline-flex items-center gap-1 rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
+                style={{ backgroundColor: FIELD_BG }}
+              >
+                {effectiveCurrency}
+                {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
+              </button>
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-1.5">
+            {signChar && (
+              <span className={`text-[46px] font-bold leading-none ${amountColor}`}>{signChar}</span>
+            )}
+            <span className={`text-[27px] font-semibold leading-none opacity-50 ${amountColor}`}>
+              {CURRENCY_SYMBOL[effectiveCurrency]}
+            </span>
+            <MoneyAmountInput
+              ref={amountRef}
+              id="amount"
+              required
+              value={amount}
+              onChange={setAmount}
+              placeholder="0"
+              className={`w-full min-w-0 bg-transparent text-[46px] font-bold leading-none tracking-[-0.045em] tabular-nums outline-none placeholder:text-text-soft/40 ${amountColor}`}
+            />
+            <MoneyCalculatorPopover seed={amount} onResult={setAmount} className="shrink-0 self-center" />
+          </div>
+        </>
+      )}
       {tab === 'income' && (
         <p className="mt-2.5 text-[12.5px] font-medium text-emerald-deep">{t('drawer.helper_income')}</p>
       )}
@@ -1044,7 +1101,29 @@ export const MovementForm = ({
         if (!o) setCatDrill(null)
       }}
       trigger={
-        <FieldRow icon={<Tag className="size-[18px]" />} label={t('labels.category')} value={categoryValue} />
+        isMobile ? (
+          // Mobile-web: the frequent chips carry the common case; the full
+          // catalog lives behind a slim "Elegir otra categoría" trigger. It
+          // shows the current selection when it isn't one of the active chips,
+          // so what's picked is always visible.
+          <button type="button" className="flex w-full items-center gap-2 px-4 py-2.5 text-left">
+            <Tag className="size-4 shrink-0 text-text-soft" aria-hidden />
+            <span
+              className={`min-w-0 flex-1 truncate text-[13px] ${
+                selectedCategory && !frequentChips.some((c) => c.active)
+                  ? 'font-semibold text-text'
+                  : 'font-medium text-text-muted'
+              }`}
+            >
+              {selectedCategory && !frequentChips.some((c) => c.active)
+                ? categoryValue
+                : t('drawer.pick_other_category')}
+            </span>
+            <ChevronRight className="size-3.5 shrink-0 text-text-soft/50" aria-hidden />
+          </button>
+        ) : (
+          <FieldRow icon={<Tag className="size-[18px]" />} label={t('labels.category')} value={categoryValue} />
+        )
       }
     >
       {categoryPickerContent}
@@ -1073,7 +1152,7 @@ export const MovementForm = ({
               <Calendar className="size-[18px]" aria-hidden />
             </span>
             <span className="truncate text-[13px] font-semibold text-text">
-              {date !== todayStr() && date !== yesterdayISO ? formatDateValue(date) : t('labels.date')}
+              {date ? formatDateValue(date) : t('labels.date')}
             </span>
           </button>
         }
@@ -1177,6 +1256,31 @@ export const MovementForm = ({
   const categoryRowWrapped =
     tab === 'income' || tab === 'expense' ? <div data-tour="category">{categoryRow}</div> : null
 
+  // Mobile-web: frequent-classification chips (#31 item 1) above the category
+  // row — one tap pre-fills category (+ subcategory). Create-only and only when
+  // history resolved some; `frequentChips` is already empty otherwise. Desktop
+  // is untouched (rendered only in the mobile branch below).
+  const frequentChipsRow =
+    frequentChips.length > 0 ? (
+      <div className="flex flex-wrap gap-1.5 px-4 py-3">
+        {frequentChips.map((chip) => (
+          <button
+            key={`${chip.categoryId}:${chip.subcategoryId ?? ''}`}
+            type="button"
+            onClick={() => pickCategory(chip.categoryId, chip.subcategoryId ?? '')}
+            aria-pressed={chip.active}
+            className={`inline-flex max-w-full items-center gap-1 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+              chip.active ? 'border-navy bg-navy text-white' : 'border-border text-text'
+            }`}
+            style={chip.active ? undefined : { backgroundColor: FIELD_BG }}
+          >
+            {chip.icon && <span aria-hidden>{chip.icon}</span>}
+            <span className="truncate">{chip.label}</span>
+          </button>
+        ))}
+      </div>
+    ) : null
+
   // Mobile-web account selector grouped by Débito/Crédito family (design D10).
   // Used for expense/income; transfer/exchange keep the popover `accountRow`.
   const debitAccounts = eligibleAccounts.filter((a) => a.type !== 'credit')
@@ -1209,57 +1313,241 @@ export const MovementForm = ({
           })}
         </div>
       )}
-      {familyList.length > 1 &&
-        (familyList.length > 5 ? (
-          // Many accounts in the family: a compact selector that opens the list,
-          // instead of a wall of chips.
-          <Popover
-            modal={isDrawer}
-            open={activePopover === 'account'}
-            onOpenChange={(o) => setActivePopover(o ? 'account' : null)}
-            trigger={
+      {familyList.length > 5 ? (
+        // Many accounts in the family: a compact dropdown instead of a long list.
+        <Popover
+          modal={isDrawer}
+          open={activePopover === 'account'}
+          onOpenChange={(o) => setActivePopover(o ? 'account' : null)}
+          trigger={
+            <button
+              type="button"
+              className="flex w-full items-center gap-2.5 rounded-[11px] border border-border px-3 py-2.5 text-left transition-colors hover:bg-[var(--row-hover)]"
+              style={{ '--row-hover': ROW_HOVER } as React.CSSProperties}
+            >
+              {selectedAccount && <AccountAvatar {...avatarOf(selectedAccount)} size="sm" />}
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text">
+                {selectedAccount ? accountPrimaryName(selectedAccount) : '—'}
+              </span>
+              {selectedAccount && selectedAccount.type !== 'credit' && (
+                <span className="shrink-0 text-xs font-medium text-text-muted">
+                  {formatBalance(selectedAccount)}
+                </span>
+              )}
+              <ChevronDown className="size-4 shrink-0 text-text-soft" aria-hidden />
+            </button>
+          }
+        >
+          {renderAccountPicker(familyList, accountId, (id) => {
+            setAccountId(id)
+            setActivePopover(null)
+          })}
+        </Popover>
+      ) : accountFamily === 'credit' ? (
+        // Credit cards carry no balance, so lay them out as compact chips side by
+        // side — the saved vertical space goes to the installments row below.
+        <div className="flex flex-wrap gap-2">
+          {familyList.map((a) => {
+            const active = a.id === accountId
+            return (
               <button
+                key={a.id}
                 type="button"
-                className="flex w-full items-center gap-2.5 rounded-[11px] border border-border px-3 py-2.5 text-left transition-colors hover:bg-[var(--row-hover)]"
+                onClick={() => setAccountId(a.id)}
+                className={`flex items-center gap-1.5 rounded-[10px] border px-2.5 py-1 text-[13px] font-semibold transition-colors ${
+                  active
+                    ? 'border-emerald bg-[var(--emerald-soft)] text-emerald-deep'
+                    : 'border-border text-text'
+                }`}
+              >
+                <AccountAvatar {...avatarOf(a)} size="sm" className="h-6 w-6 rounded" />
+                <span className="max-w-[140px] truncate">{accountPrimaryName(a)}</span>
+              </button>
+            )
+          })}
+        </div>
+      ) : (
+        // Up to 5: one full-width row per account — name left, balance right —
+        // stacked vertically. The selected one is highlighted.
+        <div className="flex flex-col gap-1.5">
+          {familyList.map((a) => {
+            const active = a.id === accountId
+            return (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => setAccountId(a.id)}
+                className={`flex items-center gap-2.5 rounded-[10px] border px-3 py-1.5 text-left transition-colors ${
+                  active
+                    ? 'border-emerald bg-[var(--emerald-soft)]'
+                    : 'border-border hover:bg-[var(--row-hover)]'
+                }`}
                 style={{ '--row-hover': ROW_HOVER } as React.CSSProperties}
               >
-                {selectedAccount && <AccountAvatar {...avatarOf(selectedAccount)} size="sm" />}
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text">
-                  {selectedAccount ? accountPrimaryName(selectedAccount) : '—'}
-                </span>
-                <ChevronDown className="size-4 shrink-0 text-text-soft" aria-hidden />
-              </button>
-            }
-          >
-            {renderAccountPicker(familyList, accountId, (id) => {
-              setAccountId(id)
-              setActivePopover(null)
-            })}
-          </Popover>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {familyList.map((a) => {
-              const active = a.id === accountId
-              return (
-                <button
-                  key={a.id}
-                  type="button"
-                  onClick={() => setAccountId(a.id)}
-                  className={`flex items-center gap-2 rounded-[10px] border px-2.5 py-1.5 text-sm font-semibold transition-colors ${
-                    active
-                      ? 'border-emerald bg-[var(--emerald-soft)] text-emerald-deep'
-                      : 'border-border text-text'
+                <AccountAvatar {...avatarOf(a)} size="sm" />
+                <span
+                  className={`min-w-0 flex-1 truncate text-sm font-semibold ${
+                    active ? 'text-emerald-deep' : 'text-text'
                   }`}
                 >
-                  <AccountAvatar {...avatarOf(a)} size="sm" />
-                  <span className="max-w-[120px] truncate">{accountPrimaryName(a)}</span>
-                </button>
-              )
-            })}
-          </div>
-        ))}
+                  {accountPrimaryName(a)}
+                </span>
+                {a.type !== 'credit' && (
+                  <span
+                    className={`shrink-0 text-xs ${active ? 'text-emerald-deep/70' : 'text-text-muted'}`}
+                  >
+                    {formatBalance(a)}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
+
+  const installmentsNum = parseInt(installments) || 1
+  const showInstallmentStepper =
+    customInstallments || !INSTALLMENT_OPTIONS.includes(installmentsNum)
+  const stepInstallments = (delta: number) =>
+    setInstallments(String(Math.max(1, Math.min(MAX_INSTALLMENTS, installmentsNum + delta))))
+  const installmentChips = (
+    <>
+      {INSTALLMENT_OPTIONS.map((n) => {
+        const active = !showInstallmentStepper && installments === String(n)
+        return (
+          <button
+            key={n}
+            type="button"
+            onClick={() => {
+              setCustomInstallments(false)
+              setInstallments(String(n))
+            }}
+            className={`rounded-[10px] font-bold transition-colors ${
+              isMobile ? 'px-2.5 py-1 text-[13px]' : 'px-3.5 py-1.5 text-sm'
+            } ${active ? 'bg-navy text-white' : 'text-text-muted'}`}
+            style={active ? undefined : { backgroundColor: FIELD_BG }}
+          >
+            {n}×
+          </button>
+        )
+      })}
+      <button
+        key="custom"
+        type="button"
+        onClick={() => {
+          setCustomInstallments(true)
+          // Open the stepper at a real installment count, never "1 cuota".
+          if (installmentsNum < 2) setInstallments('2')
+        }}
+        className={`inline-flex items-center gap-1 rounded-[10px] font-bold transition-colors ${
+          isMobile ? 'px-2.5 py-1 text-[13px]' : 'px-3.5 py-1.5 text-sm'
+        } ${showInstallmentStepper ? 'bg-navy text-white' : 'text-text-muted'}`}
+        style={showInstallmentStepper ? undefined : { backgroundColor: FIELD_BG }}
+      >
+        {t('installments_options.custom')}
+        <ChevronDown
+          className={`size-3.5 transition-transform ${showInstallmentStepper ? 'rotate-180' : ''}`}
+          aria-hidden
+        />
+      </button>
+    </>
+  )
+  const showCuotas = !isEdit && tab === 'expense' && isCredit && currencyCode === 'ARS'
+  const cuotasContent = showCuotas ? (
+    <>
+        {isMobile ? (
+          // Mobile: label inline with the chips, no icon — one row to save space.
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="mr-0.5 text-[13px] font-semibold text-text">{t('labels.installments')}</span>
+            {installmentChips}
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-2.5">
+              <span
+                className="flex size-9 items-center justify-center rounded-[11px] text-terracotta"
+                style={{ backgroundColor: 'var(--terracotta-soft)' }}
+              >
+                <CreditCard className="size-[18px]" aria-hidden />
+              </span>
+              <span className="text-[15px] font-semibold text-text">{t('labels.installments')}</span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">{installmentChips}</div>
+          </>
+        )}
+        {showInstallmentStepper && (
+          <div className={`flex flex-col items-center ${isMobile ? 'mt-2 gap-0.5' : 'mt-3.5 gap-1.5'}`}>
+            <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-3'}`}>
+              <button
+                type="button"
+                onClick={() => stepInstallments(-1)}
+                disabled={installmentsNum <= 1}
+                aria-label={t('installments_options.custom_decrease')}
+                className={`flex items-center justify-center rounded-[10px] border border-border font-bold leading-none text-navy transition-colors enabled:hover:bg-page disabled:opacity-40 ${
+                  isMobile ? 'size-7 text-base' : 'size-9 text-xl'
+                }`}
+                style={{ backgroundColor: FIELD_BG }}
+              >
+                −
+              </button>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={installments}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '')
+                  if (digits === '') return setInstallments('')
+                  setInstallments(String(Math.min(MAX_INSTALLMENTS, parseInt(digits))))
+                }}
+                onBlur={() => {
+                  if (installmentsNum < 1) setInstallments('1')
+                }}
+                aria-label={t('installments_options.custom_label')}
+                className={`bg-transparent text-center font-bold tabular-nums text-navy outline-none ${
+                  isMobile ? 'w-12 text-lg' : 'w-16 text-2xl'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => stepInstallments(1)}
+                disabled={installmentsNum >= MAX_INSTALLMENTS}
+                aria-label={t('installments_options.custom_increase')}
+                className={`flex items-center justify-center rounded-[10px] border border-border font-bold leading-none text-navy transition-colors enabled:hover:bg-page disabled:opacity-40 ${
+                  isMobile ? 'size-7 text-base' : 'size-9 text-xl'
+                }`}
+                style={{ backgroundColor: FIELD_BG }}
+              >
+                +
+              </button>
+            </div>
+            <p className="text-[11px] text-text-soft">
+              {t('installments_options.custom_range', { max: MAX_INSTALLMENTS })}
+            </p>
+          </div>
+        )}
+        {isInstallments && perInstallment !== null && (
+          <div
+            className="mt-3 rounded-[11px] px-3 py-2 text-center text-[13px] text-text-muted"
+            style={{ backgroundColor: FIELD_BG }}
+          >
+            {t('drawer.installments_breakdown', {
+              count: installmentsNum,
+              amount: fmtBalance(perInstallment),
+            })}
+          </div>
+        )}
+    </>
+  ) : null
+  // Desktop: bordered card in the body. Mobile: borderless row placed inside the
+  // fieldGroup between the account and the date, so cuotas sits with the payment.
+  const cuotasCard =
+    cuotasContent && !isMobile ? (
+      <div className="rounded-[15px] border border-border bg-card p-4">{cuotasContent}</div>
+    ) : null
+  const cuotasRow =
+    cuotasContent && isMobile ? <div className="px-4 py-3">{cuotasContent}</div> : null
 
   const fieldGroup = (
     <div className="overflow-hidden rounded-[15px] border border-border bg-card [&>*+*]:border-t [&>*+*]:border-[#F1F3F6]">
@@ -1306,14 +1594,17 @@ export const MovementForm = ({
           {editable?.date && dateRow}
         </>
       ) : isMobile ? (
-        // Mobile-web: category first (it's the primary decision and drives the
-        // account); the account row is hidden when a single account is eligible.
+        // Mobile-web: frequent chips + category first (it's the primary decision
+        // and drives the account); the account row is hidden when a single
+        // account is eligible.
         <>
+          {frequentChipsRow}
           {categoryRowWrapped}
           {tab === 'expense' || tab === 'income'
             ? showAccountSelector && accountFamilyRow
             : (showAccountSelector || tab === 'transfer' || tab === 'exchange') && accountRow}
           {destinationRow}
+          {cuotasRow}
           {dateRow}
         </>
       ) : (
@@ -1387,124 +1678,54 @@ export const MovementForm = ({
   // Four common counts as one-tap chips; "Otras" opens a stepper for anything
   // else (incl. 5), 1–MAX. The stepper is also shown when the current value
   // isn't a preset. Any integer ≥ 2 is valid per `registerInstallmentsSchema`.
-  const installmentsNum = parseInt(installments) || 1
-  const showInstallmentStepper =
-    customInstallments || !INSTALLMENT_OPTIONS.includes(installmentsNum)
-  const stepInstallments = (delta: number) =>
-    setInstallments(String(Math.max(1, Math.min(MAX_INSTALLMENTS, installmentsNum + delta))))
-  const cuotasCard =
-    !isEdit && tab === 'expense' && isCredit && currencyCode === 'ARS' ? (
-      <div className="rounded-[15px] border border-border bg-card p-4">
-        <div className="flex items-center gap-2.5">
-          <span
-            className="flex size-9 items-center justify-center rounded-[11px] text-terracotta"
-            style={{ backgroundColor: 'var(--terracotta-soft)' }}
-          >
-            <CreditCard className="size-[18px]" aria-hidden />
-          </span>
-          <span className="text-[15px] font-semibold text-text">{t('labels.installments')}</span>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {INSTALLMENT_OPTIONS.map((n) => {
-            const active = !showInstallmentStepper && installments === String(n)
-            return (
-              <button
-                key={n}
-                type="button"
-                onClick={() => {
-                  setCustomInstallments(false)
-                  setInstallments(String(n))
-                }}
-                className={`rounded-[10px] px-3.5 py-1.5 text-sm font-bold transition-colors ${
-                  active ? 'bg-navy text-white' : 'text-text-muted'
-                }`}
-                style={active ? undefined : { backgroundColor: FIELD_BG }}
-              >
-                {n}×
-              </button>
-            )
-          })}
-          <button
-            key="custom"
-            type="button"
-            onClick={() => {
-              setCustomInstallments(true)
-              // Open the stepper at a real installment count, never "1 cuota".
-              if (installmentsNum < 2) setInstallments('2')
-            }}
-            className={`inline-flex items-center gap-1 rounded-[10px] px-3.5 py-1.5 text-sm font-bold transition-colors ${
-              showInstallmentStepper ? 'bg-navy text-white' : 'text-text-muted'
-            }`}
-            style={showInstallmentStepper ? undefined : { backgroundColor: FIELD_BG }}
-          >
-            {t('installments_options.custom')}
-            <ChevronDown
-              className={`size-3.5 transition-transform ${showInstallmentStepper ? 'rotate-180' : ''}`}
-              aria-hidden
-            />
-          </button>
-        </div>
-        {showInstallmentStepper && (
-          <div className="mt-3.5 flex flex-col items-center gap-1.5">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => stepInstallments(-1)}
-                disabled={installmentsNum <= 1}
-                aria-label={t('installments_options.custom_decrease')}
-                className="flex size-9 items-center justify-center rounded-[10px] border border-border text-xl font-bold leading-none text-navy transition-colors enabled:hover:bg-page disabled:opacity-40"
-                style={{ backgroundColor: FIELD_BG }}
-              >
-                −
-              </button>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={installments}
-                onChange={(e) => {
-                  const digits = e.target.value.replace(/\D/g, '')
-                  if (digits === '') return setInstallments('')
-                  setInstallments(String(Math.min(MAX_INSTALLMENTS, parseInt(digits))))
-                }}
-                onBlur={() => {
-                  if (installmentsNum < 1) setInstallments('1')
-                }}
-                aria-label={t('installments_options.custom_label')}
-                className="w-16 bg-transparent text-center text-2xl font-bold tabular-nums text-navy outline-none"
-              />
-              <button
-                type="button"
-                onClick={() => stepInstallments(1)}
-                disabled={installmentsNum >= MAX_INSTALLMENTS}
-                aria-label={t('installments_options.custom_increase')}
-                className="flex size-9 items-center justify-center rounded-[10px] border border-border text-xl font-bold leading-none text-navy transition-colors enabled:hover:bg-page disabled:opacity-40"
-                style={{ backgroundColor: FIELD_BG }}
-              >
-                +
-              </button>
-            </div>
-            <p className="text-[11px] text-text-soft">
-              {t('installments_options.custom_range', { max: MAX_INSTALLMENTS })}
-            </p>
-          </div>
-        )}
-        {isInstallments && perInstallment !== null && (
-          <div
-            className="mt-3 rounded-[11px] px-3 py-2 text-center text-[13px] text-text-muted"
-            style={{ backgroundColor: FIELD_BG }}
-          >
-            {t('drawer.installments_breakdown', {
-              count: installmentsNum,
-              amount: fmtBalance(perInstallment),
-            })}
-          </div>
-        )}
-      </div>
-    ) : null
 
   // ── Description ──────────────────────────────────────────────────────────────
   const isAdjustment = isEdit ? edit?.type === 'adjustment' : tab === 'adjustment'
-  const descriptionField = (
+  const descriptionInput = (className: string) => (
+    <input
+      id="description"
+      type="text"
+      value={description}
+      onChange={(e) => {
+        setDescription(e.target.value)
+        setSuggestion(null)
+        setDescriptionHasNoHistory(false)
+      }}
+      onBlur={handleDescriptionBlur}
+      placeholder={isAdjustment ? t('drawer.adjust_reason_placeholder') : t('placeholders.description')}
+      className={className}
+    />
+  )
+  const descriptionHints = (
+    <>
+      {isAdjustment && (
+        <p className={`text-xs text-text-muted ${isMobile ? 'mt-1.5 pl-[26px]' : 'mt-2 pl-12'}`}>
+          {t('drawer.adjust_reason_required')}
+        </p>
+      )}
+      {!isEdit && (tab === 'income' || tab === 'expense') && descriptionHasNoHistory && selectedCategory && (
+        <div className={`mt-2 ${isMobile ? 'pl-[26px]' : 'pl-12'}`}>
+          <CategorySuggestionHint
+            description={description}
+            categoryName={getCategoryName(selectedCategory, tRoot)}
+          />
+        </div>
+      )}
+    </>
+  )
+  const descriptionField = isMobile ? (
+    // Mobile-web: the description is optional and secondary — a slim single line
+    // (small inline icon, no eyebrow, less padding) instead of the tall card.
+    <div className="rounded-[15px] border border-border bg-card px-4 py-2.5" data-tour="description">
+      <div className="flex items-center gap-2.5">
+        <FileText className="size-4 shrink-0 text-text-soft" aria-hidden />
+        {descriptionInput(
+          'w-full bg-transparent text-[14px] text-text outline-none placeholder:text-text-soft/60',
+        )}
+      </div>
+      {descriptionHints}
+    </div>
+  ) : (
     <div className="rounded-[15px] border border-border bg-card px-4 py-3" data-tour="description">
       <div className="flex items-center gap-3">
         <span
@@ -1517,30 +1738,12 @@ export const MovementForm = ({
           <label htmlFor="description" className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
             {isAdjustment ? t('drawer.adjust_reason') : t('labels.description')}
           </label>
-          <input
-            id="description"
-            type="text"
-            value={description}
-            onChange={(e) => {
-              setDescription(e.target.value)
-              setSuggestion(null)
-              setDescriptionHasNoHistory(false)
-            }}
-            onBlur={handleDescriptionBlur}
-            placeholder={isAdjustment ? t('drawer.adjust_reason_placeholder') : t('placeholders.description')}
-            className="w-full bg-transparent text-[15px] font-semibold text-text outline-none placeholder:font-normal placeholder:text-text-soft/60"
-          />
+          {descriptionInput(
+            'w-full bg-transparent text-[15px] font-semibold text-text outline-none placeholder:font-normal placeholder:text-text-soft/60',
+          )}
         </div>
       </div>
-      {isAdjustment && <p className="mt-2 pl-12 text-xs text-text-muted">{t('drawer.adjust_reason_required')}</p>}
-      {!isEdit && (tab === 'income' || tab === 'expense') && descriptionHasNoHistory && selectedCategory && (
-        <div className="mt-2 pl-12">
-          <CategorySuggestionHint
-            description={description}
-            categoryName={getCategoryName(selectedCategory, tRoot)}
-          />
-        </div>
-      )}
+      {descriptionHints}
     </div>
   )
 
@@ -2074,9 +2277,11 @@ export const MovementForm = ({
         <header className="shrink-0 border-b border-border bg-card px-5 pb-4 pt-[22px] sm:px-7">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-text-soft">{eyebrow}</p>
+              {showEyebrow && (
+                <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-text-soft">{eyebrow}</p>
+              )}
               <h2 className="truncate text-[20px] font-extrabold leading-tight tracking-[-0.03em] text-text sm:text-[25px]">
-                {title}
+                {headerTitle}
               </h2>
             </div>
             <button

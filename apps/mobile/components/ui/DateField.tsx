@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Platform, Pressable, Text, View } from 'react-native'
+import { Calendar } from 'lucide-react-native'
 import DateTimePicker, {
   type DateTimePickerEvent,
 } from '@react-native-community/datetimepicker'
 import { useLocale, useT } from '../../lib/locale-context'
+import { colors } from '../../lib/colors'
 
 type Props = {
   /** Date-only ISO string (`YYYY-MM-DD`), or `''` when empty. */
@@ -19,6 +21,11 @@ type Props = {
    */
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  /**
+   * Borderless trigger (leading calendar icon + text, no pill) for use inside a
+   * grouped field card row. Omit for the standalone bordered field.
+   */
+  bare?: boolean
 }
 
 // `YYYY-MM-DD` ⇄ Date using LOCAL components so a date-only value never shifts a
@@ -40,7 +47,7 @@ function dateToISO(date: Date): string {
 // and emits `YYYY-MM-DD`. iOS renders an inline spinner with a Done button;
 // Android shows the native dialog and commits on "set". Reusable across forms
 // (cards alta today, movement form next).
-export function DateField({ value, onChange, placeholder, invalid, open, onOpenChange }: Props) {
+export function DateField({ value, onChange, placeholder, invalid, open, onOpenChange, bare }: Props) {
   const t = useT()
   const locale = useLocale()
   const [internalShow, setInternalShow] = useState(false)
@@ -71,12 +78,25 @@ export function DateField({ value, onChange, placeholder, invalid, open, onOpenC
 
   return (
     <View className="flex-col gap-2">
-      <Pressable
-        onPress={() => setShow(!show)}
-        className={`h-11 w-full justify-center rounded-lg border bg-card px-3 ${borderClass}`}
-      >
-        <Text className={`text-sm ${value ? 'text-text' : 'text-text-soft'}`}>{display}</Text>
-      </Pressable>
+      {bare ? (
+        <Pressable
+          onPress={() => setShow(!show)}
+          accessibilityRole="button"
+          className="flex-row items-center gap-2"
+        >
+          <Calendar size={18} color={colors.textMuted} />
+          <Text className={`text-[13px] font-semibold ${value ? 'text-text' : 'text-text-soft'}`}>
+            {display}
+          </Text>
+        </Pressable>
+      ) : (
+        <Pressable
+          onPress={() => setShow(!show)}
+          className={`h-11 w-full justify-center rounded-lg border bg-card px-3 ${borderClass}`}
+        >
+          <Text className={`text-sm ${value ? 'text-text' : 'text-text-soft'}`}>{display}</Text>
+        </Pressable>
+      )}
 
       {show && (
         <View>

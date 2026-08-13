@@ -6,7 +6,8 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./archived-taxonomy": "./src/archived-taxonomy.ts"
+    "./archived-taxonomy": "./src/archived-taxonomy.ts",
+    "./frequent-classifications": "./src/frequent-classifications.ts"
   },
   "scripts": {
     "test": "vitest run",

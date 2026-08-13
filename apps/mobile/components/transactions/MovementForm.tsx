@@ -2,12 +2,13 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { ChevronDown, Undo2, Users, Repeat } from 'lucide-react-native'
 import { getTodayAR, formatDateISO } from '@grana/money-logic'
-import { Money, parseMoneyInput } from '@grana/validation'
+import { Money, parseMoneyInput, formatForDisplay } from '@grana/validation'
 import {
   useMovementForm,
   PRIMARY_TABS,
   type CategoryWithSubcategories,
   type Frequency,
+  type FrequentClassification,
   type Household,
   type IntervalUnit,
   type MovementEditContext,
@@ -16,6 +17,7 @@ import {
 import { Label } from '../ui/Label'
 import { Input } from '../ui/Input'
 import { MoneyAmountInput } from '../ui/MoneyAmountInput'
+import { MoneyCalculator } from '../ui/MoneyCalculator'
 import { DateField } from '../ui/DateField'
 import { Segmented } from '../ui/Segmented'
 import { Switch } from '../ui/Switch'
@@ -51,6 +53,8 @@ const fmtAmount = (n: number) =>
 type Props = {
   accounts: MovementFormAccount[]
   categories: CategoryWithSubcategories[]
+  /** Frequent leaf classifications (create-only accelerator, #31 item 1). */
+  frequentClassifications?: FrequentClassification[]
   household: Household | null
   /** Present ⇒ the form is in edit mode (tabs hidden, fields gated). */
   edit?: MovementEditContext
@@ -71,6 +75,7 @@ type Props = {
 export function MovementForm({
   accounts,
   categories,
+  frequentClassifications,
   household,
   edit,
   preselectAccountId,
@@ -84,6 +89,7 @@ export function MovementForm({
     mutators,
     accounts,
     categories,
+    frequentClassifications,
     edit,
     preselectAccountId,
     household,
@@ -130,8 +136,6 @@ export function MovementForm({
   // Amount hero: always in create; in edit only when the amount is editable (a
   // paid consumption / locked madre shows no amount field — web does the same).
   const showAmount = isEdit ? !!editable?.amount : true
-  // Currency is immutable post-creation — only the create flow lets it switch.
-  const showCurrencySeg = !isEdit && form.currencyOptions.length > 1
   // Source account: immutable context in edit, EXCEPT a statement payment whose
   // debit account can move (`editable.account`). In create, hide the selector
   // when there is a single eligible account (D2) — but transfer/exchange always
@@ -255,6 +259,31 @@ export function MovementForm({
         ]
       : []
 
+  // ── Amount hero derivations (mirror of web's movement-form hero) ────────────
+  const amountColorClass = form.tab === 'income' ? 'text-emerald-deep' : 'text-text'
+  const signChar =
+    form.tab === 'income'
+      ? '+'
+      : form.tab === 'expense'
+        ? '−'
+        : form.tab === 'adjustment'
+          ? form.adjustmentDirection === 'decrease'
+            ? '−'
+            : '+'
+          : ''
+  // Cycle the currency chip through the eligible options (create only has >1).
+  const cycleCurrency = () => {
+    if (form.currencyOptions.length < 2) return
+    const idx = form.currencyOptions.indexOf(form.currencyCode)
+    const next = form.currencyOptions[(idx + 1) % form.currencyOptions.length]
+    form.setCurrencyCode(next as 'ARS' | 'USD')
+    form.setInstallments('1')
+  }
+  // Content-sized width for the centered amount input (RN has no `ch` unit): hug
+  // the GROUPED text (with thousands dots) so sign + symbol + number stay
+  // centered as a group (~20px/glyph).
+  const amountInputWidth = Math.max(1, formatForDisplay(form.amount).length) * 20 + 2
+
   return (
     <View className="flex-col gap-5">
       {/* Tab selector — two-row wrapping pill group (see design 1b). Hidden in
@@ -347,34 +376,91 @@ export function MovementForm({
         </View>
       )}
 
-      {/* Amount (+ currency when the account has both). In edit, only when the
-          amount is editable. */}
+      {/* Amount hero — big centered number, faded currency glyph, currency chip,
+          and a calculator trigger beneath the chip. Mirror of web's hero. */}
       {showAmount && (
-        <View className="flex-col gap-1.5">
-          <Label>{t('transactions.form.amount_label')}</Label>
-          <MoneyAmountInput
-            value={form.amount}
-            onChangeText={form.setAmount}
-            placeholder="0"
-            autoFocus={!isEdit}
-          />
+        <View className="rounded-2xl border border-border bg-card px-4 pb-4 pt-3.5">
+          {/* Eyebrow top-left and chip+calculator pinned top-right (both absolute,
+              so they don't drag the number down); the number is centered inside a
+              min-height so it has room above and below, not on the bottom border. */}
+          <View className="relative">
+            <Text className="absolute left-0 top-0 text-[11px] font-bold uppercase tracking-wider text-text-soft">
+              {t('transactions.form.amount_label')}
+            </Text>
+            <View className="absolute right-0 top-0 items-end gap-1.5">
+              <Pressable
+                onPress={cycleCurrency}
+                disabled={form.currencyOptions.length < 2}
+                accessibilityRole="button"
+                accessibilityLabel={t('transactions.form.currency_label')}
+                className="flex-row items-center gap-1 rounded-lg border border-border bg-border-soft px-2.5 py-1"
+              >
+                <Text className="text-xs font-bold text-text">{form.currencyCode}</Text>
+                {form.currencyOptions.length > 1 && (
+                  <ChevronDown size={12} color={colors.text} />
+                )}
+              </Pressable>
+              <MoneyCalculator seed={form.amount} onResult={form.setAmount} />
+            </View>
+            <View className="min-h-[72px] flex-row items-center justify-center">
+              {signChar !== '' && (
+                <Text className={`text-[34px] font-bold ${amountColorClass}`}>{signChar}</Text>
+              )}
+              <Text className={`pl-1 text-[34px] font-bold ${amountColorClass}`}>
+                {CURRENCY_SYMBOL[form.currencyCode]}
+              </Text>
+              <MoneyAmountInput
+                bare
+                value={form.amount}
+                onChangeText={form.setAmount}
+                placeholder="0"
+                autoFocus={!isEdit}
+                style={{ width: amountInputWidth, paddingVertical: 0 }}
+                className={`ml-1 text-[34px] font-bold ${amountColorClass}`}
+              />
+            </View>
+          </View>
           {isEdit && edit?.isParent && (
-            <Text className="pt-0.5 text-xs text-text-muted">
+            <Text className="pt-2 text-center text-xs text-text-muted">
               {t('transactions.installment_recalc_hint', {
                 count: edit.installmentsTotal ?? 0,
               })}
             </Text>
           )}
-          {showCurrencySeg && (
-            <View className="pt-1">
-              <Segmented
-                ariaLabel={t('transactions.form.currency_label')}
-                value={form.currencyCode}
-                onValueChange={(v) => form.setCurrencyCode(v as 'ARS' | 'USD')}
-                options={form.currencyOptions.map((c) => ({ value: c, label: c }))}
-              />
-            </View>
+          {form.tab === 'income' && (
+            <Text className="mt-2 text-center text-[12.5px] font-medium text-emerald-deep">
+              {t('transactions.drawer.helper_income')}
+            </Text>
           )}
+          {form.tab === 'adjustment' && (
+            <Text className="mt-2 text-center text-[12.5px] text-text-muted">
+              {t('transactions.drawer.helper_adjustment')}
+            </Text>
+          )}
+        </View>
+      )}
+
+      {/* Frequent-classification chips (#31 item 1): one tap pre-fills the
+          category (+ subcategory). Create-only and only when history resolved
+          some — `frequentChips` is empty otherwise. */}
+      {form.frequentChips.length > 0 && (
+        <View className="flex-row flex-wrap gap-2">
+          {form.frequentChips.map((chip) => (
+            <Pressable
+              key={`${chip.categoryId}:${chip.subcategoryId ?? ''}`}
+              onPress={() => form.pickCategory(chip.categoryId, chip.subcategoryId ?? '')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: chip.active }}
+              className={`rounded-full px-3 py-2 ${chip.active ? 'bg-navy' : 'bg-border-soft'}`}
+            >
+              <Text
+                className={`text-xs font-semibold ${chip.active ? 'text-white' : 'text-text'}`}
+              >
+                {chip.icon ? `${chip.icon} ` : ''}
+                {chip.label}
+              </Text>
+            </Pressable>
+          ))}
         </View>
       )}
 
@@ -386,6 +472,8 @@ export function MovementForm({
           categoryId={form.categoryId}
           subcategoryId={form.subcategoryId}
           onPick={form.pickCategory}
+          compact={form.frequentChips.length > 0}
+          selectionIsActiveChip={form.frequentChips.some((c) => c.active)}
         />
       )}
 
@@ -439,12 +527,13 @@ export function MovementForm({
           USD gets the cuotas-sólo-ARS hint (simple USD purchase stays allowed) */}
       {showInstallmentsCard && (
         <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
-          <Text className="text-sm font-semibold text-text">
-            {t('transactions.labels.installments')}
-          </Text>
           {form.currencyCode === 'ARS' ? (
             <>
-              <View className="flex-row flex-wrap gap-2">
+              {/* Label inline with the chips — one row to save space. */}
+              <View className="flex-row flex-wrap items-center gap-2">
+                <Text className="mr-0.5 text-sm font-semibold text-text">
+                  {t('transactions.labels.installments')}
+                </Text>
                 {INSTALLMENT_OPTIONS.map((n) => {
                   const active = !showInstallmentStepper && form.installments === String(n)
                   return (
@@ -492,18 +581,18 @@ export function MovementForm({
                 </Pressable>
               </View>
               {showInstallmentStepper && (
-                <View className="flex-col items-center gap-1.5">
-                  <View className="flex-row items-center gap-3">
+                <View className="flex-col items-center gap-0.5">
+                  <View className="flex-row items-center gap-2">
                     <Pressable
                       onPress={() => stepInstallments(-1)}
                       disabled={installmentsNum <= 1}
                       accessibilityRole="button"
                       accessibilityLabel={t('transactions.installments_options.custom_decrease')}
-                      className={`h-10 w-10 items-center justify-center rounded-lg border border-border bg-border-soft ${
+                      className={`h-8 w-8 items-center justify-center rounded-lg border border-border bg-border-soft ${
                         installmentsNum <= 1 ? 'opacity-40' : ''
                       }`}
                     >
-                      <Text className="text-xl font-bold text-navy">−</Text>
+                      <Text className="text-base font-bold text-navy">−</Text>
                     </Pressable>
                     <Input
                       value={form.installments}
@@ -517,18 +606,18 @@ export function MovementForm({
                       }}
                       keyboardType="number-pad"
                       accessibilityLabel={t('transactions.installments_options.custom_label')}
-                      className="w-16 text-center text-xl font-bold text-navy"
+                      className="w-14 text-center text-lg font-bold text-navy"
                     />
                     <Pressable
                       onPress={() => stepInstallments(1)}
                       disabled={installmentsNum >= MAX_INSTALLMENTS}
                       accessibilityRole="button"
                       accessibilityLabel={t('transactions.installments_options.custom_increase')}
-                      className={`h-10 w-10 items-center justify-center rounded-lg border border-border bg-border-soft ${
+                      className={`h-8 w-8 items-center justify-center rounded-lg border border-border bg-border-soft ${
                         installmentsNum >= MAX_INSTALLMENTS ? 'opacity-40' : ''
                       }`}
                     >
-                      <Text className="text-xl font-bold text-navy">+</Text>
+                      <Text className="text-base font-bold text-navy">+</Text>
                     </Pressable>
                   </View>
                   <Text className="text-[11px] text-text-soft">
@@ -550,9 +639,14 @@ export function MovementForm({
               )}
             </>
           ) : (
-            <Text className="text-xs text-text-muted">
-              {t('transactions.installments_options.ars_only_hint')}
-            </Text>
+            <View className="flex-col gap-1">
+              <Text className="text-sm font-semibold text-text">
+                {t('transactions.labels.installments')}
+              </Text>
+              <Text className="text-xs text-text-muted">
+                {t('transactions.installments_options.ars_only_hint')}
+              </Text>
+            </View>
           )}
         </View>
       )}

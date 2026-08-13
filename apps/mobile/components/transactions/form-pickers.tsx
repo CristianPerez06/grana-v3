@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
-import { ChevronLeft, ChevronRight } from 'lucide-react-native'
+import { ChevronLeft, ChevronRight, Tag } from 'lucide-react-native'
 import {
   selectableSubcategories,
   type CategoryWithSubcategories,
@@ -15,6 +15,23 @@ import { colors } from '../../lib/colors'
 import { useT } from '../../lib/locale-context'
 
 type Subcategory = CategoryWithSubcategories['subcategories'][number]
+
+const CURRENCY_SYMBOL: Record<'ARS' | 'USD', string> = { ARS: '$', USD: 'U$D' }
+// Balance across the account's active currencies, e.g. "-$12.345 · U$D 100".
+// Sign before the symbol; a space after the multi-char USD code. Cash/bank only
+// — credit cards are off-ledger and carry no available balance.
+const formatBalance = (a: MovementFormAccount): string =>
+  a.activeCurrencies
+    .map((c) => {
+      const n = a.balances[c] ?? 0
+      const sign = n < 0 ? '-' : ''
+      const amount = Math.abs(n).toLocaleString('es-AR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      })
+      return `${sign}${CURRENCY_SYMBOL[c]}${c === 'USD' ? ' ' : ''}${amount}`
+    })
+    .join(' · ')
 
 // Account picker: compact trigger (avatar + name) that opens a sheet with the
 // account list. Shared by the movement form (source / transfer destination /
@@ -121,7 +138,9 @@ export function AccountFamilySelect({
           ]}
         />
       )}
-      {list.length > 1 && (
+      {family === 'credit' ? (
+        // Credit cards carry no balance, so lay them out as compact chips side by
+        // side — the saved vertical space goes to the installments row.
         <View className="flex-row flex-wrap gap-2">
           {list.map((a) => {
             const active = a.id === selectedId
@@ -131,17 +150,52 @@ export function AccountFamilySelect({
                 onPress={() => onSelect(a.id)}
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
-                className={`flex-row items-center gap-2 rounded-xl border px-3 py-2 ${
+                className={`flex-row items-center gap-1.5 rounded-lg border px-2.5 py-1 ${
                   active ? 'border-emerald bg-emerald-soft' : 'border-border bg-card'
                 }`}
               >
                 {a.avatar && <AccountAvatar {...a.avatar} size="sm" />}
                 <Text
-                  className={`text-sm font-semibold ${active ? 'text-emerald-deep' : 'text-text'}`}
+                  className={`text-[13px] font-semibold ${active ? 'text-emerald-deep' : 'text-text'}`}
                   numberOfLines={1}
                 >
                   {a.institutionName ?? a.name}
                 </Text>
+              </Pressable>
+            )
+          })}
+        </View>
+      ) : (
+        // Cash/bank: one full-width row per account — name left, balance right —
+        // stacked vertically. The selected one is highlighted.
+        <View className="flex-col gap-1.5">
+          {list.map((a) => {
+            const active = a.id === selectedId
+            return (
+              <Pressable
+                key={a.id}
+                onPress={() => onSelect(a.id)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                className={`flex-row items-center gap-2.5 rounded-xl border px-3 py-1.5 ${
+                  active ? 'border-emerald bg-emerald-soft' : 'border-border bg-card'
+                }`}
+              >
+                {a.avatar && <AccountAvatar {...a.avatar} size="sm" />}
+                <Text
+                  className={`flex-1 text-sm font-semibold ${active ? 'text-emerald-deep' : 'text-text'}`}
+                  numberOfLines={1}
+                >
+                  {a.institutionName ?? a.name}
+                </Text>
+                {a.type !== 'credit' && (
+                  <Text
+                    className={`text-xs ${active ? 'text-emerald-deep' : 'text-text-muted'}`}
+                    numberOfLines={1}
+                  >
+                    {formatBalance(a)}
+                  </Text>
+                )}
               </Pressable>
             )
           })}
@@ -158,11 +212,19 @@ export function CategorySelectField({
   categoryId,
   subcategoryId,
   onPick,
+  compact = false,
+  selectionIsActiveChip = false,
 }: {
   categories: CategoryWithSubcategories[]
   categoryId: string
   subcategoryId: string
   onPick: (categoryId: string, subcategoryId: string) => void
+  /** Compact mode: no label, "Elegir otra categoría" placeholder — used when
+   *  frequent-classification chips carry the common case above this field. */
+  compact?: boolean
+  /** In compact mode, whether the current selection is already shown as an
+   *  active chip (then this field stays as the generic "pick other" trigger). */
+  selectionIsActiveChip?: boolean
 }) {
   const t = useT()
   const [open, setOpen] = useState(false)
@@ -179,36 +241,70 @@ export function CategorySelectField({
 
   return (
     <View className="flex-col gap-1.5">
-      <Label>{t('transactions.form.category_label')}</Label>
-      <SelectField
-        placeholder={t('transactions.placeholders.category')}
-        onPress={() => setOpen(true)}
-        value={
-          selectedCat ? (
-            <View className="flex-row items-center gap-1">
-              <Text className="text-sm text-text" numberOfLines={1}>
+      {compact ? (
+        // Light, borderless "Elegir otra categoría" — a secondary action below
+        // the chips. Shows the current selection when it isn't an active chip.
+        <Pressable
+          onPress={() => setOpen(true)}
+          accessibilityRole="button"
+          className="flex-row items-center gap-2 py-1.5"
+        >
+          <Tag size={16} color={colors.textSoft} />
+          {selectedCat && !selectionIsActiveChip ? (
+            <View className="flex-1 flex-row items-center gap-1">
+              <Text className="text-[13px] font-semibold text-text" numberOfLines={1}>
                 {selectedCat.name}
               </Text>
               {selectedSub && (
                 <>
                   <Text className="text-text-soft">›</Text>
-                  <Text className="text-sm text-text-muted" numberOfLines={1}>
+                  <Text className="text-[13px] text-text-muted" numberOfLines={1}>
                     {selectedSub.name}
                   </Text>
                 </>
               )}
-              {/* The value can be an archived row this movement was classified
-                  with before it was archived — say so instead of showing it as
-                  if it were still on offer. */}
-              {(selectedCat.is_active === false || selectedSub?.is_active === false) && (
-                <Text className="text-xs text-text-soft" numberOfLines={1}>
-                  {`(${t('transactions.drawer.archived')})`}
-                </Text>
-              )}
             </View>
-          ) : undefined
-        }
-      />
+          ) : (
+            <Text className="flex-1 text-[13px] font-medium text-text-muted">
+              {t('transactions.drawer.pick_other_category')}
+            </Text>
+          )}
+          <ChevronRight size={16} color={colors.textSoft} />
+        </Pressable>
+      ) : (
+        <>
+          <Label>{t('transactions.form.category_label')}</Label>
+          <SelectField
+            placeholder={t('transactions.placeholders.category')}
+            onPress={() => setOpen(true)}
+            value={
+              selectedCat ? (
+                <View className="flex-row items-center gap-1">
+                  <Text className="text-sm text-text" numberOfLines={1}>
+                    {selectedCat.name}
+                  </Text>
+                  {selectedSub && (
+                    <>
+                      <Text className="text-text-soft">›</Text>
+                      <Text className="text-sm text-text-muted" numberOfLines={1}>
+                        {selectedSub.name}
+                      </Text>
+                    </>
+                  )}
+                  {/* The value can be an archived row this movement was classified
+                      with before it was archived — say so instead of showing it as
+                      if it were still on offer. */}
+                  {(selectedCat.is_active === false || selectedSub?.is_active === false) && (
+                    <Text className="text-xs text-text-soft" numberOfLines={1}>
+                      {`(${t('transactions.drawer.archived')})`}
+                    </Text>
+                  )}
+                </View>
+              ) : undefined
+            }
+          />
+        </>
+      )}
       <SelectSheet<CategoryWithSubcategories | Subcategory>
         visible={open}
         onClose={close}
