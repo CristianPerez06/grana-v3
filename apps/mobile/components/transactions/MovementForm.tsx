@@ -695,15 +695,13 @@ export function MovementForm({
           />
         )}
 
-        {/* Date — calendar trigger (bare) + Hoy/Ayer chips (grouped row). The row
-            is top-aligned so the chips stay put when the inline calendar (iOS
-            spinner) expands the DateField downward, instead of re-centering. */}
+        {/* Date — calendar trigger (bare) + Hoy/Ayer chips (grouped row).
+            `DateField` presents its picker over the layout, so opening it leaves
+            this row (and the chips) exactly where they are. */}
         {showDate && (
-          <View className="flex-row items-start justify-between gap-3 px-4 py-3">
-            <View className="pt-1.5">
-              <DateField bare value={form.date} onChange={form.setDate} />
-            </View>
-            <View className="flex-row items-center gap-1.5 pt-1">
+          <View className="flex-row items-center justify-between gap-3 px-4 py-3">
+            <DateField bare value={form.date} onChange={form.setDate} />
+            <View className="flex-row items-center gap-1.5">
               {(
                 [
                   { key: 'today', label: t('transactions.form.date_today'), value: todayStr },

@@ -6,6 +6,7 @@ import DateTimePicker, {
 } from '@react-native-community/datetimepicker'
 import { useLocale, useT } from '../../lib/locale-context'
 import { colors } from '../../lib/colors'
+import { BottomSheet } from './BottomSheet'
 
 type Props = {
   /** Date-only ISO string (`YYYY-MM-DD`), or `''` when empty. */
@@ -44,9 +45,20 @@ function dateToISO(date: Date): string {
 }
 
 // Native date field: a tappable trigger that opens the platform DateTimePicker
-// and emits `YYYY-MM-DD`. iOS renders an inline spinner with a Done button;
-// Android shows the native dialog and commits on "set". Reusable across forms
-// (cards alta today, movement form next).
+// and emits `YYYY-MM-DD`. Reusable across forms (cards, recurrences, movement
+// form, reimbursements).
+//
+// The picker is ALWAYS presented over the layout, never inside it: the trigger
+// keeps its size while open, so a host that puts something next to the field
+// (the Hoy/Ayer chips of the movement form) never shifts. On iOS that means the
+// spinner lives in a `BottomSheet` — the same surface the account/category
+// pickers use via `Popover`/`SelectSheet`; on Android the OS dialog is already
+// modal and renders outside the tree, so it stays as-is. That per-platform
+// placement split is an allowed divergence under the Web↔Mobile policy.
+//
+// The value commits live as the spinner moves (unchanged from the in-flow
+// version), so the sheet's only affordance is "close" — there is no cancel that
+// reverts. The header echoes the selection because the scrim covers the trigger.
 export function DateField({ value, onChange, placeholder, invalid, open, onOpenChange, bare }: Props) {
   const t = useT()
   const locale = useLocale()
@@ -77,7 +89,7 @@ export function DateField({ value, onChange, placeholder, invalid, open, onOpenC
   const borderClass = invalid ? 'border-error' : 'border-border'
 
   return (
-    <View className="flex-col gap-2">
+    <View className="flex-col">
       {bare ? (
         <Pressable
           onPress={() => setShow(!show)}
@@ -98,20 +110,44 @@ export function DateField({ value, onChange, placeholder, invalid, open, onOpenC
         </Pressable>
       )}
 
-      {show && (
-        <View>
+      {Platform.OS === 'ios' ? (
+        <BottomSheet
+          visible={show}
+          onClose={() => setShow(false)}
+          ariaLabel={t('common.pick_date')}
+        >
+          <View className="flex-row items-center justify-between border-b border-border px-5 pb-3 pt-1">
+            <View className="flex-col">
+              <Text className="text-lg font-semibold text-text">{t('common.pick_date')}</Text>
+              {!!value && (
+                <Text className="text-[13px] tabular-nums text-text-muted">{display}</Text>
+              )}
+            </View>
+            <Pressable onPress={() => setShow(false)} accessibilityRole="button">
+              <Text className="text-sm font-medium text-emerald">{t('common.close')}</Text>
+            </Pressable>
+          </View>
+
+          <View className="px-5 pt-1">
+            <DateTimePicker
+              value={isoToDate(value)}
+              mode="date"
+              display="spinner"
+              onChange={handleChange}
+            />
+          </View>
+        </BottomSheet>
+      ) : (
+        // Android: the OS dialog presents itself outside the view tree, so
+        // mounting it here costs no layout.
+        show && (
           <DateTimePicker
             value={isoToDate(value)}
             mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            display="default"
             onChange={handleChange}
           />
-          {Platform.OS === 'ios' && (
-            <Pressable onPress={() => setShow(false)} className="self-end px-3 py-1.5">
-              <Text className="text-sm font-semibold text-emerald">{t('common.close')}</Text>
-            </Pressable>
-          )}
-        </View>
+        )
       )}
     </View>
   )

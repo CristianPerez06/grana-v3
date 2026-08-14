@@ -1,7 +1,7 @@
 # web-date-picker Specification
 
 ## Purpose
-Define el primitivo de selección de fecha de la web (`DatePicker`): un único control que, al hacer click, abre directamente el calendario de mes completo (sin el paso intermedio del `<input type="date">` nativo). Cubre el contrato de valor (ISO `YYYY-MM-DD` sin desfase de zona), el "hoy" en zona financiera, las restricciones `min`/`max`, y la regla de que TODOS los campos de fecha de la web lo usan. Scope solo web; la contraparte mobile la maneja el tech lead.
+Define el primitivo de selección de fecha de la web (`DatePicker`): un único control que, al hacer click, abre directamente el calendario de mes completo (sin el paso intermedio del `<input type="date">` nativo). Cubre el contrato de valor (ISO `YYYY-MM-DD` sin desfase de zona), el "hoy" en zona financiera, las restricciones `min`/`max`, y la regla de que TODOS los campos de fecha de la web lo usan. Scope solo web; la contraparte nativa vive en la capability `mobile-date-field`.
 
 ## Requirements
 ### Requirement: Selección de fecha que abre el mes completo
