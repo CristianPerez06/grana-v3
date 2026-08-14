@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { Children, useMemo, useState, type ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { ChevronDown, Undo2, Users, Repeat } from 'lucide-react-native'
 import { getTodayAR, formatDateISO } from '@grana/money-logic'
@@ -49,6 +49,25 @@ const CURRENCY_SYMBOL: Record<'ARS' | 'USD', string> = { ARS: '$', USD: 'U$D' }
 
 const fmtAmount = (n: number) =>
   n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+
+// Groups the secondary fields (frequent chips, category, account, destination,
+// cuotas, date) into one bordered card with hairline dividers between rows —
+// native counterpart of web's mobile `fieldGroup`. Falsy children (gated-off
+// rows) are dropped, and dividers are inserted only between the rows that render.
+function GroupCard({ children }: { children: ReactNode }) {
+  const rows = Children.toArray(children).filter(Boolean)
+  if (rows.length === 0) return null
+  return (
+    <View className="overflow-hidden rounded-2xl border border-border bg-card">
+      {rows.map((row, i) => (
+        <View key={i}>
+          {i > 0 && <View className="h-px bg-border-soft" />}
+          {row}
+        </View>
+      ))}
+    </View>
+  )
+}
 
 type Props = {
   accounts: MovementFormAccount[]
@@ -440,44 +459,8 @@ export function MovementForm({
         </View>
       )}
 
-      {/* Frequent-classification chips (#31 item 1): one tap pre-fills the
-          category (+ subcategory). Create-only and only when history resolved
-          some — `frequentChips` is empty otherwise. */}
-      {form.frequentChips.length > 0 && (
-        <View className="flex-row flex-wrap gap-2">
-          {form.frequentChips.map((chip) => (
-            <Pressable
-              key={`${chip.categoryId}:${chip.subcategoryId ?? ''}`}
-              onPress={() => form.pickCategory(chip.categoryId, chip.subcategoryId ?? '')}
-              accessibilityRole="button"
-              accessibilityState={{ selected: chip.active }}
-              className={`rounded-full px-3 py-2 ${chip.active ? 'bg-navy' : 'bg-border-soft'}`}
-            >
-              <Text
-                className={`text-xs font-semibold ${chip.active ? 'text-white' : 'text-text'}`}
-              >
-                {chip.icon ? `${chip.icon} ` : ''}
-                {chip.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
-
-      {/* Category (+ one-level subcategory drill) — primary decision, above the
-          account (design D7: the category drives the account). */}
-      {showCategory && (
-        <CategorySelectField
-          categories={form.transactionCategories}
-          categoryId={form.categoryId}
-          subcategoryId={form.subcategoryId}
-          onPick={form.pickCategory}
-          compact={form.frequentChips.length > 0}
-          selectionIsActiveChip={form.frequentChips.some((c) => c.active)}
-        />
-      )}
-
-      {/* Adjustment direction (Suma / Resta) + informative banner */}
+      {/* Adjustment direction (Suma / Resta) + informative banner — before the
+          grouped card (mirror of web's adjustmentSign/banner ahead of fieldGroup). */}
       {showAdjustmentControls && (
         <>
           <Segmented
@@ -500,33 +483,74 @@ export function MovementForm({
         </>
       )}
 
-      {/* Source account. Immutable context in edit, except a statement payment
-          whose debit account can move (`editable.account`). */}
-      {showSourceAccount &&
-        (isEdit ? (
-          <AccountSelectField
-            label={t('transactions.form.account_label')}
-            accounts={form.eligibleAccounts}
-            selectedId={form.accountId}
-            onSelect={form.setAccountId}
-          />
-        ) : (
-          <AccountFamilySelect
-            label={
-              showAdjustment
-                ? t('transactions.drawer.account_to_adjust')
-                : t('transactions.form.account_label')
-            }
-            accounts={form.eligibleAccounts}
-            selectedId={form.accountId}
-            onSelect={form.setAccountId}
-          />
-        ))}
+      {/* Secondary fields grouped into one bordered card with hairline dividers
+          (mirror of web's mobile fieldGroup): frequent chips → category → account
+          → destination → cuotas → date. Adjustment renders above, exchange-received
+          and description below. */}
+      <GroupCard>
+        {/* Frequent-classification chips (#31 item 1): one tap pre-fills the
+            category (+ subcategory). Create-only; empty otherwise. */}
+        {form.frequentChips.length > 0 && (
+          <View className="flex-row flex-wrap gap-2 px-4 py-3">
+            {form.frequentChips.map((chip) => (
+            <Pressable
+              key={`${chip.categoryId}:${chip.subcategoryId ?? ''}`}
+              onPress={() => form.pickCategory(chip.categoryId, chip.subcategoryId ?? '')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: chip.active }}
+              className={`rounded-full px-3 py-2 ${chip.active ? 'bg-navy' : 'bg-border-soft'}`}
+            >
+              <Text
+                className={`text-xs font-semibold ${chip.active ? 'text-white' : 'text-text'}`}
+              >
+                {chip.icon ? `${chip.icon} ` : ''}
+                {chip.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
 
-      {/* Installments (credit expense) — ARS gets chips + stepper + preview;
-          USD gets the cuotas-sólo-ARS hint (simple USD purchase stays allowed) */}
-      {showInstallmentsCard && (
-        <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
+        {/* Category — slim "pick other" trigger inside the card (grouped). */}
+        {showCategory && (
+          <CategorySelectField
+            grouped
+            categories={form.transactionCategories}
+            categoryId={form.categoryId}
+            subcategoryId={form.subcategoryId}
+            onPick={form.pickCategory}
+            selectionIsActiveChip={form.frequentChips.some((c) => c.active)}
+          />
+        )}
+
+        {/* Source account (grouped row). Immutable context in edit, except a
+            statement payment whose debit account can move (`editable.account`). */}
+        {showSourceAccount &&
+          (isEdit ? (
+            <AccountSelectField
+              grouped
+              label={t('transactions.form.account_label')}
+              accounts={form.eligibleAccounts}
+              selectedId={form.accountId}
+              onSelect={form.setAccountId}
+            />
+          ) : (
+            <AccountFamilySelect
+              grouped
+              label={
+                showAdjustment
+                  ? t('transactions.drawer.account_to_adjust')
+                  : t('transactions.form.account_label')
+              }
+              accounts={form.eligibleAccounts}
+              selectedId={form.accountId}
+              onSelect={form.setAccountId}
+            />
+          ))}
+
+        {/* Installments — borderless cuotas row inside the grouped card. */}
+        {showInstallmentsCard && (
+          <View className="flex-col gap-3 px-4 py-3">
           {form.currencyCode === 'ARS' ? (
             <>
               {/* Label inline with the chips — one row to save space. */}
@@ -651,25 +675,69 @@ export function MovementForm({
         </View>
       )}
 
-      {/* Destination account (transfer / exchange). Immutable context in edit. */}
-      {form.tab === 'transfer' && showDestinationAccount && (
-        <AccountSelectField
-          label={t('transactions.form.destination_label')}
-          accounts={form.otherAccounts}
-          selectedId={form.destinationAccountId}
-          onSelect={form.setDestinationAccountId}
-        />
-      )}
-      {showExchange && showDestinationAccount && (
-        <AccountSelectField
-          label={t('transactions.drawer.account_toward')}
-          accounts={form.cashBankAccounts}
-          selectedId={form.destinationAccountId}
-          onSelect={form.setDestinationAccountId}
-        />
-      )}
+        {/* Destination account (transfer / exchange) — grouped row. */}
+        {form.tab === 'transfer' && showDestinationAccount && (
+          <AccountSelectField
+            grouped
+            label={t('transactions.form.destination_label')}
+            accounts={form.otherAccounts}
+            selectedId={form.destinationAccountId}
+            onSelect={form.setDestinationAccountId}
+          />
+        )}
+        {showExchange && showDestinationAccount && (
+          <AccountSelectField
+            grouped
+            label={t('transactions.drawer.account_toward')}
+            accounts={form.cashBankAccounts}
+            selectedId={form.destinationAccountId}
+            onSelect={form.setDestinationAccountId}
+          />
+        )}
 
-      {/* Exchange: received amount (destination currency) + implicit rate. */}
+        {/* Date — calendar trigger (bare) + Hoy/Ayer chips (grouped row).
+            `DateField` presents its picker over the layout, so opening it leaves
+            this row (and the chips) exactly where they are. */}
+        {showDate && (
+          <View className="flex-row items-center justify-between gap-3 px-4 py-3">
+            <DateField bare value={form.date} onChange={form.setDate} />
+            <View className="flex-row items-center gap-1.5">
+              {(
+                [
+                  { key: 'today', label: t('transactions.form.date_today'), value: todayStr },
+                  {
+                    key: 'yesterday',
+                    label: t('transactions.form.date_yesterday'),
+                    value: yesterdayStr,
+                  },
+                ] as const
+              ).map((opt) => {
+                const active = form.date === opt.value
+                return (
+                  <Pressable
+                    key={opt.key}
+                    onPress={() => form.setDate(opt.value)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    className={`rounded-lg px-2.5 py-1.5 ${
+                      active ? 'bg-navy' : 'border border-border'
+                    }`}
+                  >
+                    <Text
+                      className={`text-xs font-bold ${active ? 'text-white' : 'text-text-muted'}`}
+                    >
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                )
+              })}
+            </View>
+          </View>
+        )}
+      </GroupCard>
+
+      {/* Exchange: received amount + implicit rate — after the grouped card (it's
+          a mini amount hero, not a row). */}
       {showExchangeReceived && (
         <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
           <View className="flex-row items-center justify-between">
@@ -699,39 +767,6 @@ export function MovementForm({
             currency: form.currencyCode === 'ARS' ? 'USD' : 'ARS',
           })}
         </Text>
-      )}
-
-      {/* Date */}
-      {showDate && (
-        <View className="flex-col gap-1.5">
-          <Label>{t('transactions.form.date_label')}</Label>
-          <View className="flex-row items-center gap-2">
-            {(
-              [
-                { key: 'today', label: t('transactions.form.date_today'), value: todayStr },
-                { key: 'yesterday', label: t('transactions.form.date_yesterday'), value: yesterdayStr },
-              ] as const
-            ).map((opt) => {
-              const active = form.date === opt.value
-              return (
-                <Pressable
-                  key={opt.key}
-                  onPress={() => form.setDate(opt.value)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  className={`rounded-lg px-3.5 py-2 ${active ? 'bg-navy' : 'bg-border-soft'}`}
-                >
-                  <Text className={`text-sm font-bold ${active ? 'text-white' : 'text-text-muted'}`}>
-                    {opt.label}
-                  </Text>
-                </Pressable>
-              )
-            })}
-            <View className="flex-1">
-              <DateField value={form.date} onChange={form.setDate} />
-            </View>
-          </View>
-        </View>
       )}
 
       {/* Description (relabelled "Motivo del ajuste" for adjustments) */}

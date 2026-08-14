@@ -41,33 +41,63 @@ export function AccountSelectField({
   accounts,
   selectedId,
   onSelect,
+  grouped = false,
 }: {
   label: string
   accounts: MovementFormAccount[]
   selectedId: string
   onSelect: (id: string) => void
+  // Borderless label-left / value-right row inside the grouped field card.
+  grouped?: boolean
 }) {
   const t = useT()
   const [open, setOpen] = useState(false)
   const selected = accounts.find((a) => a.id === selectedId)
 
   return (
-    <View className="flex-col gap-1.5">
-      <Label>{label}</Label>
-      <SelectField
-        placeholder={t('transactions.placeholders.account')}
-        onPress={() => setOpen(true)}
-        value={
-          selected ? (
-            <View className="flex-row items-center gap-2">
-              {selected.avatar && <AccountAvatar {...selected.avatar} size="sm" />}
-              <Text className="flex-1 text-sm text-text" numberOfLines={1}>
-                {selected.institutionName ?? selected.name}
+    <>
+      {grouped ? (
+        <Pressable
+          onPress={() => setOpen(true)}
+          accessibilityRole="button"
+          className="flex-row items-center justify-between gap-3 px-4 py-3"
+        >
+          <Text className="text-[13px] font-semibold text-text-muted">{label}</Text>
+          <View className="flex-1 flex-row items-center justify-end gap-2">
+            {selected ? (
+              <>
+                {selected.avatar && <AccountAvatar {...selected.avatar} size="sm" />}
+                <Text className="text-sm font-semibold text-text" numberOfLines={1}>
+                  {selected.institutionName ?? selected.name}
+                </Text>
+              </>
+            ) : (
+              <Text className="text-sm text-text-soft">
+                {t('transactions.placeholders.account')}
               </Text>
-            </View>
-          ) : undefined
-        }
-      />
+            )}
+            <ChevronRight size={18} color={colors.textSoft} />
+          </View>
+        </Pressable>
+      ) : (
+        <View className="flex-col gap-1.5">
+          <Label>{label}</Label>
+          <SelectField
+            placeholder={t('transactions.placeholders.account')}
+            onPress={() => setOpen(true)}
+            value={
+              selected ? (
+                <View className="flex-row items-center gap-2">
+                  {selected.avatar && <AccountAvatar {...selected.avatar} size="sm" />}
+                  <Text className="flex-1 text-sm text-text" numberOfLines={1}>
+                    {selected.institutionName ?? selected.name}
+                  </Text>
+                </View>
+              ) : undefined
+            }
+          />
+        </View>
+      )}
       <SelectSheet
         visible={open}
         onClose={() => setOpen(false)}
@@ -88,7 +118,7 @@ export function AccountSelectField({
           />
         )}
       />
-    </View>
+    </>
   )
 }
 
@@ -103,11 +133,16 @@ export function AccountFamilySelect({
   accounts,
   selectedId,
   onSelect,
+  grouped = false,
 }: {
   label: string
   accounts: MovementFormAccount[]
   selectedId: string
   onSelect: (id: string) => void
+  // Row presentation inside the grouped field card: uppercase eyebrow + row
+  // padding instead of a standalone `<Label>` block (mirror of web's
+  // accountFamilyRow inside fieldGroup).
+  grouped?: boolean
 }) {
   const t = useT()
   const debit = accounts.filter((a) => a.type !== 'credit')
@@ -125,8 +160,14 @@ export function AccountFamilySelect({
   }
 
   return (
-    <View className="flex-col gap-1.5">
-      <Label>{label}</Label>
+    <View className={grouped ? 'flex-col gap-2.5 px-4 py-3' : 'flex-col gap-1.5'}>
+      {grouped ? (
+        <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
+          {label}
+        </Text>
+      ) : (
+        <Label>{label}</Label>
+      )}
       {bothFamilies && (
         <Segmented
           ariaLabel={label}
@@ -214,6 +255,7 @@ export function CategorySelectField({
   onPick,
   compact = false,
   selectionIsActiveChip = false,
+  grouped = false,
 }: {
   categories: CategoryWithSubcategories[]
   categoryId: string
@@ -225,6 +267,9 @@ export function CategorySelectField({
   /** In compact mode, whether the current selection is already shown as an
    *  active chip (then this field stays as the generic "pick other" trigger). */
   selectionIsActiveChip?: boolean
+  /** Row presentation inside the grouped field card: the same slim trigger as
+   *  compact, but with card-row padding and no standalone wrapper. */
+  grouped?: boolean
 }) {
   const t = useT()
   const [open, setOpen] = useState(false)
@@ -239,15 +284,17 @@ export function CategorySelectField({
     setDrillId(null)
   }
 
+  // The slim, borderless "Elegir otra categoría" trigger is used both in compact
+  // mode (below the frequent chips) and inside the grouped field card (card-row
+  // padding). It shows the current selection when it isn't an active chip.
+  const slim = compact || grouped
   return (
-    <View className="flex-col gap-1.5">
-      {compact ? (
-        // Light, borderless "Elegir otra categoría" — a secondary action below
-        // the chips. Shows the current selection when it isn't an active chip.
+    <>
+      {slim ? (
         <Pressable
           onPress={() => setOpen(true)}
           accessibilityRole="button"
-          className="flex-row items-center gap-2 py-1.5"
+          className={`flex-row items-center gap-2 ${grouped ? 'px-4 py-3' : 'py-1.5'}`}
         >
           <Tag size={16} color={colors.textSoft} />
           {selectedCat && !selectionIsActiveChip ? (
@@ -272,7 +319,7 @@ export function CategorySelectField({
           <ChevronRight size={16} color={colors.textSoft} />
         </Pressable>
       ) : (
-        <>
+        <View className="flex-col gap-1.5">
           <Label>{t('transactions.form.category_label')}</Label>
           <SelectField
             placeholder={t('transactions.placeholders.category')}
@@ -303,7 +350,7 @@ export function CategorySelectField({
               ) : undefined
             }
           />
-        </>
+        </View>
       )}
       <SelectSheet<CategoryWithSubcategories | Subcategory>
         visible={open}
@@ -382,6 +429,6 @@ export function CategorySelectField({
           )
         }}
       />
-    </View>
+    </>
   )
 }

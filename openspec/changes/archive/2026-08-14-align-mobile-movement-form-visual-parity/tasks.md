@@ -16,16 +16,14 @@
 
 ## 3. Agrupación de campos secundarios (native)
 
-> **Nota de base:** esta branch se rebasó sobre `feature/movement-form-frequent-chips`,
-> que ya trae buena parte de la paridad de campos (descripción slim, cuotas como
-> fila borderless antes de fecha, cuentas como filas full-width, credit chips).
-> Por eso la "tarjeta única con divisores" quedó como **polish opcional pendiente**
-> sobre campos que ya están prolijos, y la descripción slim ya viene **hecha**.
+> **Nota:** hecha en un follow-up sobre `main` (branch `feature/movement-form-grouped-field-card`),
+> espejando el `fieldGroup` mobile del web: una tarjeta única con divisores que
+> contiene chips frecuentes → categoría → cuenta → cuotas → destino → fecha.
 
-- [—] 3.1 Envolver categoría, cuenta y fecha en **un único contenedor** con divisores (`GroupCard`). **Diferido (follow-up):** sobre esta base los campos ya son filas/chips prolijos y la "tarjeta única" choca con la UX de chips frecuentes + categoría `compact` (caja-en-caja, riesgo sin preview). Decisión con el usuario: no entra en esta pasada.
-- [—] 3.2 **Fecha** como fila dentro del contenedor agrupado. **Diferido** junto con 3.1 (la fecha nativa ya tiene sus chips Hoy/Ayer).
+- [x] 3.1 Envolver los campos secundarios en **un único contenedor** con divisores (`GroupCard`). Los pickers ganan un modo `grouped` opt-in (fila slim de categoría, eyebrow + filas para cuenta, cuotas borderless).
+- [x] 3.2 **Fecha** como fila dentro del contenedor: `DateField bare` (calendario) + chips Hoy/Ayer.
 - [x] 3.3 **Descripción**: una sola línea slim. **Ya hecho** en la base (`e9ff06f`).
-- [x] 3.4 **Cuotas**: fila borderless antes de fecha. **Ya hecho** en la base (`faf0f07`).
+- [x] 3.4 **Cuotas**: fila borderless dentro del contenedor. **Ya hecho** en la base (`faf0f07`), reubicada dentro de la tarjeta.
 - [~] 3.5 Verificar estados de **edición** (cuotas madre, reintegro read-only): typecheck en verde; falta **QA visual en device**.
 
 ## 4. Paridad de entrada de monto (miles + coma + cap)
