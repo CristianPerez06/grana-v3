@@ -3911,3 +3911,84 @@ En modo create, el formulario SHALL preseleccionar la cuenta según este orden d
 - **WHEN** no hay cuenta de contexto y hay varias cuentas elegibles
 - **THEN** queda preseleccionada la primera cuenta elegible
 
+### Requirement: El alta ofrece las clasificaciones más frecuentes como aceleradores de un tap
+
+En modo create, el formulario de alta SHALL ofrecer las clasificaciones-hoja `(categoría, subcategoría)` que el usuario usó con más frecuencia recientemente, como chips de un solo gesto, derivadas de su historial de movimientos. Un gesto sobre un chip SHALL asignar su categoría y —si la hoja la incluye— su subcategoría, dejando el movimiento listo para guardar sin abrir el selector de categoría. Los chips son una sugerencia: la selección resultante SHALL seguir siendo visible y editable, y elegir un chip nunca clasifica en silencio.
+
+El conjunto ofrecido SHALL comenzar por las hojas del historial del propio usuario, acotadas a las compatibles con el tipo de movimiento activo, y SHALL completarse con **clasificaciones sugeridas** (categorías semilla del sistema) hasta llenar los chips, sin repetir una hoja ya presente; un usuario nuevo, sin historial, ve solo las sugerencias. Tanto el historial como las sugerencias SHALL excluir toda hoja cuya categoría o subcategoría esté archivada o ya no exista en el catálogo vigente, resolviéndose por identidad estable de la categoría/subcategoría. El ranking del historial SHALL excluir además las clasificaciones **generadas por el sistema** —las que se agregan automáticamente en otro flujo y casi nunca se cargan a mano, como el `impuesto de sellos` del pago de resumen de tarjeta— **antes** de tomar las más frecuentes, de modo que un pico de esas no desplace a las que el usuario sí carga manualmente. Si ni el historial ni las sugerencias resuelven ninguna hoja, el formulario SHALL no mostrar chips y comportarse igual que sin esta funcionalidad. Esta funcionalidad no modifica ninguna regla contable ni el significado de los campos del movimiento.
+
+#### Scenario: Un chip frecuente asigna la clasificación de un tap
+
+- **WHEN** el usuario abre el alta en un tipo con historial y toca un chip de clasificación frecuente cuya hoja es "Comida › Pedidos Ya"
+- **THEN** el movimiento queda con esa categoría y esa subcategoría asignadas
+- **AND** puede guardarse sin abrir el selector de categoría
+
+#### Scenario: Los chips respetan el tipo activo
+
+- **WHEN** el usuario está en el tipo `ingreso`
+- **THEN** los chips ofrecidos son solo clasificaciones compatibles con `ingreso`
+- **AND** ninguna hoja exclusiva de `gasto` aparece como chip
+
+#### Scenario: Las hojas archivadas no se ofrecen
+
+- **WHEN** una de las clasificaciones históricamente frecuentes del usuario tiene su categoría o subcategoría archivada
+- **THEN** esa hoja no aparece entre los chips
+
+#### Scenario: Una clasificación generada por el sistema no aparece aunque sea frecuente
+
+- **WHEN** el usuario pagó un resumen de tarjeta y quedaron muchos movimientos de `impuesto de sellos` (agregados automáticamente por ese flujo) en la ventana reciente
+- **THEN** `impuesto de sellos` no se ofrece como chip
+- **AND** su lugar lo ocupa la siguiente clasificación más frecuente que el usuario sí carga a mano
+
+#### Scenario: Un usuario nuevo ve clasificaciones por defecto
+
+- **WHEN** el usuario todavía no tiene historial para el tipo activo
+- **THEN** el formulario ofrece un conjunto de clasificaciones por defecto (categorías semilla del sistema)
+- **AND** un tap sobre uno asigna su categoría (y subcategoría si la incluye), igual que un chip de historial
+
+#### Scenario: Sin historial ni defaults resolubles no hay chips
+
+- **WHEN** el usuario no tiene historial para el tipo activo y el catálogo vigente no sirve ninguna de las clasificaciones por defecto
+- **THEN** el formulario no muestra chips de clasificación frecuente
+- **AND** el selector de categoría funciona igual que sin esta funcionalidad
+
+#### Scenario: En edición no se ofrecen chips
+
+- **WHEN** el formulario se abre en modo edición de un movimiento existente
+- **THEN** no se ofrecen chips de clasificación frecuente
+
+### Requirement: La superficie del alta presenta la misma jerarquía visual en las superficies mobile (web y nativa)
+
+El formulario de alta de movimientos SHALL presentar la misma jerarquía visual en la superficie **mobile-web** (gateada por breakpoint) y en la **app nativa**, de modo que ambas se lean como el mismo producto. Esta paridad es de **presentación**: no altera ningún campo, tipo de movimiento, regla contable ni el contrato del hook compartido. En web sigue gateada por breakpoint y el formulario **desktop** no se ve afectado.
+
+La jerarquía compartida SHALL incluir:
+
+- **Monto como hero.** El campo de monto SHALL presentarse como un bloque destacado con el número en tamaño grande y **centrado**, precedido por el signo del tipo activo y por el **símbolo de la moneda atenuado**. La **moneda** SHALL ofrecerse como un **chip inline** dentro del bloque de monto —no como un control segmentado separado— que al accionarse rota entre las monedas elegibles y SHALL quedar inerte cuando hay una sola. En el bloque de monto SHALL haber un **disparador de calculadora** cuando el campo la habilita.
+- **Campos secundarios agrupados.** Categoría, cuenta, cuotas (cuando aplican) y fecha SHALL presentarse dentro de **un único contenedor** con separadores entre filas, en lugar de contenedores sueltos e independientes.
+- **Fecha compacta.** La fecha SHALL presentarse como un disparador de calendario junto a chips de acceso rápido **Hoy/Ayer**, sin una etiqueta de campo propia.
+- **Descripción slim.** La descripción SHALL presentarse como una sola línea compacta, sin una etiqueta de campo propia.
+
+La paridad se evalúa por **rol y estructura** de los elementos (qué es el hero, qué comparte contenedor), no por igualdad de píxeles. El comportamiento de cada campo (ocultamiento de la cuenta, chips de avanzado, cuotas junto a la cuenta de crédito, etc.) SHALL permanecer como lo definen los requirements de comportamiento vigentes.
+
+#### Scenario: El monto se presenta como hero en ambas superficies mobile
+
+- **WHEN** el usuario abre el alta en la web-mobile o en la app nativa
+- **THEN** el monto se muestra como un bloque destacado con el número grande y centrado, el signo del tipo y el símbolo de moneda atenuado
+- **AND** la moneda aparece como un chip dentro de ese bloque, no como un control segmentado aparte
+
+#### Scenario: Los campos secundarios comparten un único contenedor
+
+- **WHEN** el usuario abre el alta en la web-mobile o en la app nativa
+- **THEN** categoría, cuenta (si el selector aplica), cuotas (si aplican) y fecha se presentan dentro de un único contenedor con separadores
+- **AND** no aparecen como contenedores independientes y sueltos
+
+#### Scenario: La fecha usa disparador de calendario más chips Hoy/Ayer
+
+- **WHEN** el usuario mira la fila de fecha del alta en cualquiera de las dos superficies mobile
+- **THEN** ve un disparador de calendario acompañado de chips Hoy/Ayer
+- **AND** no ve una etiqueta de campo separada para la fecha
+
+#### Scenario: El desktop no se ve afectado
+
+- **WHEN** el formulario de alta se renderiza en viewport de escritorio
+- **THEN** conserva su maqueta de escritorio y no adopta la presentación mobile
