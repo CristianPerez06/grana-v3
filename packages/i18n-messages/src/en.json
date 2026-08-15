@@ -1151,13 +1151,17 @@
       "percent_hint": "Optional: compute the amount as a percentage of the expense.",
       "percent_label": "% of the expense",
       "cap_label": "Cap (optional)",
+      "cap_short": "cap",
       "target_label": "How is it credited?",
       "target": {
         "account": "To an account — the bank deposits the money",
-        "statement": "On the statement — discounted from the card"
+        "statement": "On the statement — discounted from the card",
+        "account_short": "Account",
+        "statement_short": "Statement"
       },
       "credit_to": "Credit to",
       "credit_to_placeholder": "Choose an account",
+      "same_bank": "same bank",
       "received_now": "Already credited to me",
       "received_now_hint": "Recorded as a received reimbursement.",
       "pending_hint": "It stays as an expected reimbursement. Confirm it when it actually arrives.",

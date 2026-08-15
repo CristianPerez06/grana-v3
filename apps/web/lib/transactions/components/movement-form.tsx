@@ -1788,6 +1788,51 @@ export const MovementForm = ({
   const showRepeatToggle =
     !isEdit && tab !== 'adjustment' && tab !== 'exchange' && !isInstallments
 
+  // Reimbursement account list ordered "same bank first" (the institution of
+  // the payment method), for the compact mobile block's account selector.
+  const reimbInstitutionId = selectedAccount?.institutionId ?? null
+  const reimbAccountsOrdered = [...cashBank].sort(
+    (a, b) =>
+      (a.institutionId === reimbInstitutionId ? 0 : 1) -
+      (b.institutionId === reimbInstitutionId ? 0 : 1),
+  )
+  const reimbSelectedAccount = cashBank.find((a) => a.id === reimbursementAccountId)
+  // The cap "applied" when a percent is set and the derived amount was clamped
+  // down to the cap (amount === cap). Used to highlight the cap in emerald.
+  const reimbDigits = (s: string): string => s.replace(/\D/g, '')
+  const reimbCapApplied =
+    Number(reimbDigits(reimbursementPercent)) > 0 &&
+    reimbDigits(reimbursementCap) !== '' &&
+    reimbDigits(reimbursementCap) !== '0' &&
+    reimbDigits(reimbursementAmount) === reimbDigits(reimbursementCap)
+  // Compact account selector for the mobile reimbursement block: shows the
+  // picked account name; tapping it opens the native picker (same bank first).
+  const reimbAccountSelect = (
+    <div
+      className="relative flex min-w-0 flex-1 items-center gap-1 rounded-[9px] border border-border px-2.5 py-1.5"
+      style={{ backgroundColor: FIELD_BG }}
+    >
+      <span className="min-w-0 flex-1 truncate text-xs text-text">
+        {reimbSelectedAccount ? accountPrimaryName(reimbSelectedAccount) : t('reimbursement.credit_to_placeholder')}
+      </span>
+      <ChevronDown className="size-3.5 shrink-0 text-text-soft" aria-hidden />
+      <select
+        value={reimbursementAccountId}
+        onChange={(e) => setReimbursementAccountId(e.target.value)}
+        aria-label={t('reimbursement.credit_to')}
+        className="absolute inset-0 cursor-pointer opacity-0"
+      >
+        <option value="">{t('reimbursement.credit_to_placeholder')}</option>
+        {reimbAccountsOrdered.map((a) => (
+          <option key={a.id} value={a.id}>
+            {accountPrimaryName(a)}
+            {a.institutionId === reimbInstitutionId ? ` · ${t('reimbursement.same_bank')}` : ''}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+
   const togglesGroup =
     showReimbursementToggle || showSharedToggle || showRepeatToggle ? (
       <div
@@ -1879,7 +1924,123 @@ export const MovementForm = ({
                 </span>
               </div>
             )}
-            {reimbursementEnabled && !reimbursementReadOnly && (
+            {reimbursementEnabled && !reimbursementReadOnly && (isMobile ? (
+              <div className="flex flex-col gap-2">
+                {/* Fila 1 — monto + regla % / tope (visible inline, sin disclosure) */}
+                <div className="flex items-stretch gap-2">
+                  <div
+                    className="flex items-center gap-1 rounded-[9px] border border-border px-2.5 py-2"
+                    style={{ backgroundColor: FIELD_BG }}
+                  >
+                    <span className="text-sm text-text-soft">{CURRENCY_SYMBOL[currencyCode]}</span>
+                    <MoneyAmountInput
+                      value={reimbursementAmount}
+                      onChange={(v) => {
+                        setReimbursementAmount(v)
+                        setReimbursementPercent('')
+                      }}
+                      placeholder="0"
+                      className="w-[92px] bg-transparent text-sm text-text outline-none"
+                    />
+                  </div>
+                  <div
+                    className="flex flex-1 items-center justify-between gap-2 rounded-[9px] border border-border px-2.5 py-2"
+                    style={{ backgroundColor: FIELD_BG }}
+                  >
+                    <div className="flex items-center gap-0.5">
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={reimbursementPercent}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(',', '.')
+                          setReimbursementPercent(v)
+                          applyReimbursementPercent(v, reimbursementCap)
+                        }}
+                        placeholder="—"
+                        aria-label={t('reimbursement.percent_label')}
+                        className="w-8 bg-transparent text-right text-sm text-text outline-none"
+                      />
+                      <span className="text-sm text-text-muted">%</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span
+                        className={`whitespace-nowrap text-[11px] ${
+                          reimbCapApplied ? 'font-semibold text-emerald-deep' : 'text-text-soft'
+                        }`}
+                      >
+                        {t('reimbursement.cap_short')} {CURRENCY_SYMBOL[currencyCode]}
+                      </span>
+                      <MoneyAmountInput
+                        value={reimbursementCap}
+                        onChange={(v) => {
+                          setReimbursementCap(v)
+                          applyReimbursementPercent(reimbursementPercent, v)
+                        }}
+                        placeholder="—"
+                        className="w-14 bg-transparent text-sm text-text outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Fila 2 — destino (crédito: Resumen | Cuenta) + estado (Acreditado) */}
+                <div className="flex items-center gap-2">
+                  {isCredit ? (
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <Segmented
+                        ariaLabel={t('reimbursement.target_label')}
+                        value={reimbursementTarget}
+                        onValueChange={(v) => setReimbursementTarget(v as 'account' | 'statement')}
+                        options={[
+                          { value: 'statement', label: t('reimbursement.target.statement_short') },
+                          { value: 'account', label: t('reimbursement.target.account_short') },
+                        ]}
+                      />
+                      {reimbursementTarget === 'account' ? (
+                        cashBank.length > 1 ? (
+                          reimbAccountSelect
+                        ) : (
+                          <span className="min-w-0 flex-1 truncate text-xs text-text">
+                            {reimbSelectedAccount ? accountPrimaryName(reimbSelectedAccount) : ''}
+                          </span>
+                        )
+                      ) : (
+                        <span className="min-w-0 flex-1 truncate text-xs text-text-soft">
+                          {reimbSelectedAccount ? accountPrimaryName(reimbSelectedAccount) : ''}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    cashBank.length > 1 && reimbAccountSelect
+                  )}
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={reimbursementReceivedNow}
+                    onClick={() => setReimbursementReceivedNow(!reimbursementReceivedNow)}
+                    className="ml-auto flex flex-none items-center gap-1.5"
+                  >
+                    <span
+                      className={`flex size-[18px] items-center justify-center rounded-[6px] border ${
+                        reimbursementReceivedNow ? 'border-transparent bg-emerald' : 'border-[#D9DEE5] bg-card'
+                      }`}
+                    >
+                      {reimbursementReceivedNow && (
+                        <Check className="size-3 text-white" strokeWidth={3.2} aria-hidden />
+                      )}
+                    </span>
+                    <span
+                      className={`text-xs ${
+                        reimbursementReceivedNow ? 'font-semibold text-emerald-deep' : 'text-text-muted'
+                      }`}
+                    >
+                      {t('reimbursement.received_now')}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            ) : (
               <div
                 className={`flex flex-col gap-3 ${isMobile ? '' : 'mt-3.5 border-t pt-3.5'}`}
                 style={isMobile ? undefined : { borderColor: ROW_DIVIDER }}
@@ -2004,7 +2165,7 @@ export const MovementForm = ({
                   {reimbursementReceivedNow ? t('reimbursement.received_now_hint') : t('reimbursement.pending_hint')}
                 </p>
               </div>
-            )}
+            ))}
           </div>
         )}
 

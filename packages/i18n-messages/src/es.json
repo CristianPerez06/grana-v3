@@ -1151,13 +1151,17 @@
       "percent_hint": "Opcional: calculá el monto por porcentaje del gasto.",
       "percent_label": "% del gasto",
       "cap_label": "Tope (opcional)",
+      "cap_short": "tope",
       "target_label": "¿Cómo se acredita?",
       "target": {
         "account": "A una cuenta — el banco te deposita la plata",
-        "statement": "En el resumen — se descuenta de la tarjeta"
+        "statement": "En el resumen — se descuenta de la tarjeta",
+        "account_short": "Cuenta",
+        "statement_short": "Resumen"
       },
       "credit_to": "Acreditar en",
       "credit_to_placeholder": "Elegí una cuenta",
+      "same_bank": "mismo banco",
       "received_now": "Ya me lo acreditaron",
       "received_now_hint": "Se registra como reintegro recibido.",
       "pending_hint": "Queda como reintegro pendiente. Lo confirmás cuando realmente llegue.",
