@@ -1984,10 +1984,11 @@ export const MovementForm = ({
                   </div>
                 </div>
 
-                {/* Fila 2 — destino (crédito: Resumen | Cuenta) + estado (Acreditado) */}
-                <div className="flex items-center gap-2">
-                  {isCredit ? (
-                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                {/* Fila 2 — destino (crédito: Resumen | Cuenta) + estado (Acreditado);
+                    el selector de cuenta va a lo ancho debajo para no apretar la fila. */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    {isCredit && (
                       <Segmented
                         ariaLabel={t('reimbursement.target_label')}
                         value={reimbursementTarget}
@@ -1997,47 +1998,35 @@ export const MovementForm = ({
                           { value: 'account', label: t('reimbursement.target.account_short') },
                         ]}
                       />
-                      {reimbursementTarget === 'account' ? (
-                        cashBank.length > 1 ? (
-                          reimbAccountSelect
-                        ) : (
-                          <span className="min-w-0 flex-1 truncate text-xs text-text">
-                            {reimbSelectedAccount ? accountPrimaryName(reimbSelectedAccount) : ''}
-                          </span>
-                        )
-                      ) : (
-                        <span className="min-w-0 flex-1 truncate text-xs text-text-soft">
-                          {reimbSelectedAccount ? accountPrimaryName(reimbSelectedAccount) : ''}
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    cashBank.length > 1 && reimbAccountSelect
+                    )}
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={reimbursementReceivedNow}
+                      onClick={() => setReimbursementReceivedNow(!reimbursementReceivedNow)}
+                      className={`flex flex-none items-center gap-1.5 ${isCredit ? 'ml-auto' : ''}`}
+                    >
+                      <span
+                        className={`flex size-[18px] items-center justify-center rounded-[6px] border ${
+                          reimbursementReceivedNow ? 'border-transparent bg-emerald' : 'border-[#D9DEE5] bg-card'
+                        }`}
+                      >
+                        {reimbursementReceivedNow && (
+                          <Check className="size-3 text-white" strokeWidth={3.2} aria-hidden />
+                        )}
+                      </span>
+                      <span
+                        className={`text-xs ${
+                          reimbursementReceivedNow ? 'font-semibold text-emerald-deep' : 'text-text-muted'
+                        }`}
+                      >
+                        {t('reimbursement.received_short')}
+                      </span>
+                    </button>
+                  </div>
+                  {(!isCredit || reimbursementTarget === 'account') && cashBank.length > 1 && (
+                    <div className="flex">{reimbAccountSelect}</div>
                   )}
-                  <button
-                    type="button"
-                    role="checkbox"
-                    aria-checked={reimbursementReceivedNow}
-                    onClick={() => setReimbursementReceivedNow(!reimbursementReceivedNow)}
-                    className="ml-auto flex flex-none items-center gap-1.5"
-                  >
-                    <span
-                      className={`flex size-[18px] items-center justify-center rounded-[6px] border ${
-                        reimbursementReceivedNow ? 'border-transparent bg-emerald' : 'border-[#D9DEE5] bg-card'
-                      }`}
-                    >
-                      {reimbursementReceivedNow && (
-                        <Check className="size-3 text-white" strokeWidth={3.2} aria-hidden />
-                      )}
-                    </span>
-                    <span
-                      className={`text-xs ${
-                        reimbursementReceivedNow ? 'font-semibold text-emerald-deep' : 'text-text-muted'
-                      }`}
-                    >
-                      {t('reimbursement.received_now')}
-                    </span>
-                  </button>
                 </div>
               </div>
             ) : (

@@ -1005,7 +1005,7 @@ export function MovementForm({
                       : 'text-sm text-text-muted'
                   }
                 >
-                  {t('transactions.reimbursement.received_now')}
+                  {t('transactions.reimbursement.received_short')}
                 </Text>
               </Pressable>
             </View>

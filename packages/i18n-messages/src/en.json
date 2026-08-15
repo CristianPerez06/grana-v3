@@ -1163,6 +1163,7 @@
       "credit_to_placeholder": "Choose an account",
       "same_bank": "same bank",
       "received_now": "Already credited to me",
+      "received_short": "Credited",
       "received_now_hint": "Recorded as a received reimbursement.",
       "pending_hint": "It stays as an expected reimbursement. Confirm it when it actually arrives.",
       "readonly_hint_received": "It was already credited. Managed from the reimbursement.",

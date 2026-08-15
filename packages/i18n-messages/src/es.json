@@ -1163,6 +1163,7 @@
       "credit_to_placeholder": "Elegí una cuenta",
       "same_bank": "mismo banco",
       "received_now": "Ya me lo acreditaron",
+      "received_short": "Acreditado",
       "received_now_hint": "Se registra como reintegro recibido.",
       "pending_hint": "Queda como reintegro pendiente. Lo confirmás cuando realmente llegue.",
       "readonly_hint_received": "Ya te lo acreditaron. Se gestiona desde el reintegro.",
