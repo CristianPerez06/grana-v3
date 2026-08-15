@@ -20,7 +20,7 @@ Restricciones del repo que enmarcan el diseño:
 
 **Goals:**
 
-- Que al activar una sección avanzada se revele **la superficie mínima**: lo secundario (cálculo por %/tope; cuenta de acreditación redundante) queda a un gesto de distancia, no volcado de entrada.
+- Que al activar una sección avanzada se revele **la superficie mínima**, por densidad (reintegro: bloque compacto de 2 filas, sin labels) o por disclosure donde corresponda (editor de % libre del split tras "Otro %"), no volcando todos los controles de entrada.
 - Que los parámetros revelados de las tres secciones se lean como **el mismo producto** en web-mobile y en nativo, por rol y estructura y por primitivos equivalentes.
 - Que el split soporte **cualquier reparto** en ambas superficies (hoy nativo no puede 70/30), resolviendo el caso común de un tap.
 - Unificar el copy i18n del split en una sola familia de claves.
@@ -35,17 +35,22 @@ Restricciones del repo que enmarcan el diseño:
 
 ## Decisions
 
-### 1. Reintegro: disclosure progresivo, no un card volcado
+### 1. Reintegro: bloque compacto de dos filas, superficie mínima por densidad
 
-El card revelado muestra por defecto **monto estimado** + **"ya me lo acreditaron"** (los dos datos que definen el reintegro). El **cálculo por %/tope** —una conveniencia para derivar el monto, no un dato propio— pasa detrás de un disparador de un gesto ("calcular por %"): al accionarlo aparecen los campos `% del gasto` y `Tope`, que siguen escribiendo `reimbursementAmount` vía `applyReimbursementPercent`. La **cuenta de acreditación** se oculta cuando hay una sola cuenta cash/bank elegible (el hook ya la prerellena por institución), misma disciplina que el ocultamiento de la cuenta de origen del alta.
+Diseño **cerrado con el PO** (canvas + handoff en `docs/design/movement-form/reintegro/`). El card deja de apilar 5 campos con labels (~330 px) y pasa a **dos filas compactas (~79 px), sin labels sobre los campos**:
 
-Alternativa considerada: dejar todo visible y solo unificar primitivos. Se descarta: el usuario señaló explícitamente este card como el que "hay que simplificar", y la superficie mínima es la lente de toda la épica.
+- **Fila 1 — monto + regla.** El monto del reintegro (editable) y la regla **`% + tope` visible inline**, en dos cajas con borde propio. El % deriva el monto de forma **bidireccional** (`applyReimbursementPercent`); escribir un monto a mano descarta el %; el tope acota el monto calculado y su texto se resalta cuando aplicó.
+- **Fila 2 — destino + estado.** Un control **`Resumen | Cuenta`** (solo con crédito; default **Resumen**) y el estado **"Acreditado"**.
 
-Por qué el %/tope detrás de disclosure y no eliminado: sigue siendo la forma natural de cargar "me reintegran el 50% con tope $X" y el requirement nativo lo exige disponible (`applyReimbursementPercent`). Se conserva, se desprioriza.
+Cambio de rumbo respecto de la hipótesis previa (%/tope detrás de un disparador "calcular por %"): **se descarta el disclosure**. En el layout compacto el %/tope no agrega altura significativa, así que esconderlo solo sumaba un tap sin ahorrar superficie real; además es la forma natural de cargar "me reintegran el 30% con tope $X". La superficie mínima se logra por **densidad** (2 filas, sin labels), no ocultando el control. El usuario había señalado este card como el que "hay que simplificar"; el diseño cerrado lo resuelve haciéndolo compacto, no progresivo.
 
-### 2. Reintegro: primitivos equivalentes en web-mobile
+### 2. Reintegro: destino Resumen/Cuenta y estado Acreditado; primitivos diseñados en web-mobile
 
-Web-mobile adopta lo que nativo ya usa: **`Switch`** para "ya me lo acreditaron" (hoy `<input type=checkbox>`) y **filas de opción tipo `RadioRow`** para el destino *a cuenta / a resumen* en crédito (hoy `<input type=radio>` crudos). La cuenta de acreditación en web-mobile puede seguir siendo un `<select>` nativo del sistema (es el equivalente idiomático del picker de sheet nativo; ambos son "elegir de una lista"), pero cuando hay una sola cuenta no se renderiza en ninguna de las dos. La dirección de convergencia es **web-mobile → primitivos nativos** porque cumple la regla del repo y porque el usuario verifica el web-mobile en el navegador.
+El **destino** (solo con crédito) es un control **`Resumen | Cuenta`** con default **Resumen** (el resumen de la tarjeta con la que se paga). Preserva y hace explícita la funcionalidad activa: tocar **Cuenta** elige la cuenta de la **misma entidad del medio de pago** sin abrir nada (`pickReimbursementAccount`, ya existente), y tocar el **nombre** abre el selector con la cuenta de la misma entidad primero (rótulo "mismo banco"). Con cash/bank no hay resumen: el destino es *a cuenta*, y el selector se oculta cuando hay una sola cuenta cash/bank elegible.
+
+El **estado** es un control **"Acreditado"** —en el diseño cerrado, un **checkbox compacto**, no un toggle-switch— coherente con el layout de 2 filas: off deja el reintegro pendiente de confirmación (sin chip ni texto "Pendiente"), on lo registra como recibido. Web-mobile reemplaza sus controles crudos (`<input type=checkbox>`, `<input type=radio>`, `<select>`) por los equivalentes diseñados, con la misma estructura que el nativo; la paridad se evalúa por rol, no por widget.
+
+Nota sobre el primitivo del estado: la iteración previa proponía `Switch` (el que ya usa el nativo). El diseño cerrado optó por un **check** por densidad visual del bloque de 2 filas; la spec lo fija por rol ("control binario 'Acreditado', on=recibido / off=pendiente") y ambas superficies convergen en el check, no en el Switch.
 
 ### 3. Compartido: presets + escape a "Otro %", un solo modelo en las dos superficies
 
@@ -65,11 +70,12 @@ El `<select>` de unidad (día/semana/mes/año) de web-mobile pasa a chips, espej
 
 ### 5. i18n unificado del split
 
-Hoy web usa `shared.split.*` y nativo `transactions.form.split_*` para el mismo control. Se elige **una** familia de claves para los tres presets, el "Otro %" y las etiquetas de reparto, consumida por ambas superficies. La familia canónica queda en el namespace que ya usa el resto del control compartido (a decidir en implementación; preferencia por `shared.split.*` por dominio). El copy nuevo: labels de los presets Vos/Mitad/El otro, el disparador "Otro %" y el disparador "calcular por %" del reintegro. Sin exponer jerga contable (regla `shared` de lenguaje llano).
+Hoy web usa `shared.split.*` y nativo `transactions.form.split_*` para el mismo control. Se elige **una** familia de claves para los tres presets, el "Otro %" y las etiquetas de reparto, consumida por ambas superficies. La familia canónica queda en el namespace que ya usa el resto del control compartido (a decidir en implementación; preferencia por `shared.split.*` por dominio). El copy nuevo del split: labels de los presets Vos/Mitad/El otro y el disparador "Otro %". Para el reintegro, el copy nuevo son las etiquetas del destino **`Resumen` / `Cuenta`** y el rótulo **"mismo banco"** del selector (ya no hay disparador "calcular por %", porque el %/tope queda visible). Sin exponer jerga contable (regla `shared` de lenguaje llano).
 
 ## Risks / Trade-offs
 
-- **Regresión de descubribilidad del %/tope y del 0/100.** Al esconder el %/tope tras un disclosure y el 0/100 dentro de "El otro", un usuario que los conocía debe re-descubrirlos. Mitigación: los presets son autoexplicativos ("El otro" nombra al miembro) y el "calcular por %" es un affordance visible; ninguno se elimina, solo se despriorizan.
+- **Regresión de descubribilidad del 0/100.** Al mover el 0/100 dentro del preset "El otro", un usuario que usaba el toggle dedicado debe re-descubrirlo. Mitigación: el preset es autoexplicativo (nombra al miembro) y queda a la vista; no se elimina la capacidad, cambia cómo se alcanza. (El %/tope del reintegro **no** entra en este riesgo: el diseño cerrado lo deja visible inline.)
+- **Check vs Switch en "Acreditado".** El diseño cerrado usa un checkbox donde el nativo hoy usa `Switch` y donde la iteración previa proponía `Switch`. Es una decisión deliberada por la densidad del bloque de 2 filas; la paridad se mantiene por rol (control binario on=recibido/off=pendiente) y ambas superficies convergen en el check. Riesgo bajo: es un cambio de widget, no de estado (`reimbursementReceivedNow` no cambia).
 - **Paridad evaluada por rol, no por píxeles.** Nativo puede conservar `Segmented` para los presets mientras web usa chips; alguien podría leerlo como "no idéntico". Es deliberado y consistente con el requirement de paridad vigente (rol/estructura, no pixel-parity).
 - **Verificación asimétrica.** El nativo no se prueba en device en esta sesión (lo revisa el tech lead). Mitigación: los cambios nativos se apoyan en primitivos y estado ya existentes; el riesgo se concentra en el web-mobile, que sí se verifica en navegador.
 

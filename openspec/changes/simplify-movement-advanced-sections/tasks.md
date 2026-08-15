@@ -3,14 +3,16 @@
 ## 1. i18n — unificar y agregar copy
 
 - [ ] 1.1 Elegir la familia de claves canónica del control de split (preferencia `shared.split.*`) y agregar/renombrar: labels de presets `Vos` / `Mitad` / `El otro {name}`, disparador `Otro %`, y las etiquetas del editor de porcentaje libre. Retirar el copy huérfano del `Switch` fully-other si deja de usarse.
-- [ ] 1.2 Agregar el copy del disparador del reintegro ("calcular por %") en `packages/i18n-messages` (es), sin jerga contable.
+- [ ] 1.2 Agregar el copy del reintegro en `packages/i18n-messages` (es): labels del destino `Resumen` / `Cuenta` y el rótulo "mismo banco" del selector, sin jerga contable. (Ya no hay disparador "calcular por %": el %/tope queda visible inline.)
 - [ ] 1.3 Verificar que ambas superficies (web-mobile y nativo) consumen la **misma** familia de claves del split — no dos juegos paralelos.
 
 ## 2. Web-mobile — Reintegro (`apps/web/lib/transactions/components/movement-form.tsx`, rama `isMobile`)
 
-- [ ] 2.1 Reordenar el card revelado para mostrar por defecto solo **monto estimado** + **"ya me lo acreditaron"**; mover los campos `% del gasto` / `Tope` detrás de un disparador de un gesto ("calcular por %") que los revela, siguiendo escribiendo `reimbursementAmount` vía `applyReimbursementPercent`.
-- [ ] 2.2 Reemplazar el `<input type="checkbox">` de "ya me lo acreditaron" por el primitivo `Switch`.
-- [ ] 2.3 Reemplazar los `<input type="radio">` del destino *a cuenta / a resumen* (crédito) por filas de opción con superficie propia (equivalente a `RadioRow` nativo).
+> Diseño cerrado: `docs/design/movement-form/reintegro/` (canvas + handoff con medidas, estados y reglas). **Solo rediseño**: preservar toda la funcionalidad activa.
+
+- [ ] 2.1 Rehacer el card como **bloque compacto de 2 filas** (ref. handoff). Fila 1: monto del reintegro + regla `% + tope` **visible inline** (nada de disclosure). Mantener la bidireccionalidad monto↔% vía `applyReimbursementPercent` (escribir monto a mano descarta el %) y el resaltado del tope cuando aplicó.
+- [ ] 2.2 Reemplazar el `<input type="checkbox">` de "ya me lo acreditaron" por el control **"Acreditado"** diseñado (checkbox compacto, no raw input; **no** un `Switch`). Conservar el comportamiento pendiente/recibido de `reimbursementReceivedNow` (off = pendiente, sin chip "Pendiente").
+- [ ] 2.3 Reemplazar los `<input type="radio">` del destino por el control **`Resumen | Cuenta`** (solo crédito; default Resumen). Preservar `pickReimbursementAccount` (tocar "Cuenta" = cuenta de la misma entidad, sin abrir selector); tocar el **nombre** abre el selector con la cuenta de la misma entidad primero ("mismo banco").
 - [ ] 2.4 Ocultar el selector de cuenta de acreditación cuando hay una sola cuenta cash/bank elegible; renderizarlo cuando hay más de una. No romper el prerellenado por institución.
 - [ ] 2.5 No tocar la rama **desktop** ni el flujo de edición read-only del reintegro (`reimbursementReadOnly`).
 
@@ -31,15 +33,15 @@
 
 ## 6. Nativo — Reintegro (mismo archivo)
 
-- [ ] 6.1 Mover los campos `% del gasto` / `Tope` detrás de un disparador de un gesto ("calcular por %"), dejando visibles por defecto solo monto + `Switch` "ya me lo acreditaron".
-- [ ] 6.2 Ocultar el `AccountSelectField` de cuenta de acreditación cuando hay una sola cuenta cash/bank elegible. (El `Switch` y el `RadioRow` ya existen — verificar que no cambian.)
+- [ ] 6.1 Rehacer el bloque como **2 filas compactas** espejo del web-mobile: monto + regla `% + tope` **visible inline** (sin disclosure), destino `Resumen | Cuenta` (crédito) + estado "Acreditado" (checkbox). Preservar la vinculación a la madre en compras en cuotas.
+- [ ] 6.2 Migrar el destino al control `Resumen | Cuenta` (default Resumen; "Cuenta" = misma entidad vía la lógica ya existente; tocar el nombre abre el `AccountSelectField`, misma entidad primero) y el estado del `Switch` "ya me lo acreditaron" al **check "Acreditado"**. Ocultar el `AccountSelectField` cuando hay una sola cuenta cash/bank elegible.
 
 ## 7. Verificación
 
 - [ ] 7.1 `pnpm --filter web lint` + typecheck web; typecheck mobile. Sin errores nuevos.
 - [ ] 7.2 Tests existentes del hook y del form verdes (el hook no cambia; confirmar que ninguna aserción dependía del `Switch` fully-other ni del split `Segmented`).
 - [ ] 7.3 `pnpm openspec:check` OK.
-- [ ] 7.4 Verificación manual web-mobile (viewport de celular, el usuario en el navegador): las tres secciones abren con superficie mínima; split de un tap + "Otro %" funciona; reintegro arranca con dos controles y el %/tope aparece a demanda; cuenta de acreditación oculta con una sola cuenta.
+- [ ] 7.4 Verificación manual web-mobile (viewport de celular, el usuario en el navegador): las tres secciones abren con superficie mínima; split de un tap + "Otro %" funciona; el reintegro es el bloque compacto de 2 filas con el `% + tope` visible inline, destino `Resumen | Cuenta` (default Resumen; "Cuenta" toma la misma entidad; el nombre abre el selector) y check "Acreditado"; cuenta de acreditación oculta con una sola cuenta.
 - [ ] 7.5 Handoff al tech lead para revisión del nativo (sin device en esta sesión): mismos criterios de paridad por rol/estructura.
 
 ## 8. Cierre

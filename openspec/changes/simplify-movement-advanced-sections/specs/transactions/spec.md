@@ -4,7 +4,12 @@
 
 Al activarse, cada sección avanzada del alta —Reintegro, Compartido (split) y Repetir (recurrencia)— SHALL revelar sus parámetros con **superficie mínima** y con la **misma estructura y controles equivalentes** en la superficie **mobile-web** (gateada por breakpoint) y en la **app nativa**, de modo que ambas se lean como el mismo producto. Esta paridad es de **presentación**: no altera ningún campo, tipo de movimiento, regla contable ni el contrato del hook compartido (`splitFirstPct`, `reimbursementReceivedNow`, `reimbursementPercent`/`Cap`, `intervalUnit` ya existen). La paridad se evalúa por **rol y estructura** de los controles, no por igualdad de píxeles ni por el widget exacto de cada plataforma. La superficie **desktop** de web NO SHALL verse afectada.
 
-**Reintegro.** El bloque revelado SHALL mostrar por defecto solo lo que define el reintegro: el **monto estimado** y el control **"ya me lo acreditaron"**. El **cálculo por porcentaje/tope** (que deriva el monto vía `applyReimbursementPercent`) SHALL quedar detrás de un **disparador de un gesto**, no volcado junto al monto. La **cuenta de acreditación** NO SHALL renderizarse cuando hay una sola cuenta cash/bank elegible (el sistema ya la prerellena por institución); SHALL renderizarse cuando hay más de una. El control "ya me lo acreditaron" SHALL ser el primitivo **Switch** en ambas superficies mobile (no un checkbox crudo). El destino *a cuenta / a resumen* (solo con tarjeta de crédito) SHALL presentarse como **filas de opción** (radio con superficie propia por opción), no como radios crudos, en ambas superficies mobile.
+**Reintegro.** El bloque revelado SHALL presentarse como **dos filas compactas** (diseño cerrado con el PO, ref. visual en `docs/design/movement-form/reintegro/`), logrando la superficie mínima por **densidad** —sin labels sobre los campos— en vez de esconder controles:
+
+- **Fila 1 — monto y regla de cálculo.** El **monto del reintegro** (editable a mano) junto a la **regla `% + tope` visible inline** (no detrás de un disparador). El porcentaje deriva el monto vía `applyReimbursementPercent` de forma **bidireccional** (cargar un % calcula el monto; escribir un monto a mano descarta el %); el **tope** acota el monto calculado y su texto se resalta cuando efectivamente aplicó.
+- **Fila 2 — destino y estado.** El **destino**, *solo con tarjeta de crédito*, SHALL presentarse como un control **`Resumen | Cuenta`** cuyo default es **Resumen** (el resumen de la tarjeta con la que se paga). Tocar **Cuenta** SHALL seleccionar la cuenta de la **misma entidad bancaria del medio de pago** sin abrir ningún selector (prerellenada por institución; comportamiento ya existente que este rediseño preserva); tocar el **nombre** de la cuenta SHALL abrir el selector, con la cuenta de la misma entidad primero (rotulada "mismo banco") y el resto después. Con cash/bank el destino es *a cuenta* sin control de resumen, y el selector de cuenta NO SHALL renderizarse cuando hay una sola cuenta cash/bank elegible. El **estado** SHALL ofrecerse como un control **"Acreditado"** (checkbox compacto, no un input crudo): apagado deja el reintegro **pendiente de confirmación** —sin chip ni texto "Pendiente"—, encendido lo registra como recibido.
+
+Los controles crudos de web-mobile (`<input type=checkbox>`, `<input type=radio>`, `<select>`) SHALL reemplazarse por los equivalentes diseñados, con la **misma estructura** que la app nativa. La paridad se evalúa por rol/estructura, no por el widget exacto.
 
 **Compartido (split).** El control de split SHALL ofrecer **tres presets de un gesto** —**Vos** (`splitFirstPct = 100`), **Mitad** (`50`) y **El otro** (`0`)— más un disparador **"Otro %"** que revela el editor de **porcentaje libre**. El preset **"El otro" SHALL fijar el reparto 0/100** (`{pagador: 0, otro: 100}`), absorbiendo el caso "lo pagué yo pero es 100% del otro": NO SHALL existir un toggle dedicado aparte para ese caso. El editor de porcentaje libre, cuando está revelado, SHALL permitir cualquier reparto válido (porcentajes entre 0 y 100 que suman 100). Ambas superficies mobile SHALL usar la **misma familia de claves i18n** para este control.
 
@@ -12,23 +17,29 @@ Al activarse, cada sección avanzada del alta —Reintegro, Compartido (split) y
 
 Ninguna de estas reglas cambia el comportamiento del gasto simple: las secciones SHALL seguir arrancando desactivadas y sin parámetros (según el requirement «El gasto simple no atraviesa ninguna sección avanzada»).
 
-#### Scenario: El reintegro revela solo su superficie esencial
+#### Scenario: El reintegro se despliega como dos filas compactas con el %/tope visible
 
 - **WHEN** el usuario activa "reintegro" en un gasto, en la web-mobile o en la app nativa
-- **THEN** el bloque muestra el monto estimado y el control "ya me lo acreditaron" (un Switch)
-- **AND** el cálculo por porcentaje/tope no se muestra hasta que el usuario lo pide con un gesto
+- **THEN** el bloque muestra dos filas compactas: la primera con el monto y la regla `% + tope` visible inline, la segunda con el destino y el control "Acreditado"
+- **AND** el cálculo por porcentaje/tope está a la vista, no detrás de un disparador
 
-#### Scenario: El cálculo por porcentaje se revela a demanda y sigue derivando el monto
+#### Scenario: El porcentaje deriva el monto de forma bidireccional y el tope lo acota
 
-- **WHEN** el usuario, con el reintegro activo, acciona el disparador de "calcular por %" e ingresa un porcentaje (y opcionalmente un tope)
-- **THEN** aparecen los campos de porcentaje y tope
-- **AND** el monto estimado del reintegro se deriva de ese porcentaje sobre el gasto, acotado por el tope
+- **WHEN** el usuario, con el reintegro activo, ingresa un porcentaje (y opcionalmente un tope)
+- **THEN** el monto del reintegro se deriva de ese porcentaje sobre el gasto, acotado por el tope, y el texto del tope se resalta cuando efectivamente aplicó
+- **AND** si el usuario luego escribe un monto a mano, el porcentaje se descarta
+
+#### Scenario: El destino por defecto es Resumen y tocar Cuenta usa la misma entidad del medio de pago
+
+- **WHEN** el usuario activa un reintegro sobre un gasto pagado con tarjeta de crédito
+- **THEN** el destino arranca en "Resumen" (el resumen de la tarjeta con la que se paga)
+- **AND** tocar "Cuenta" selecciona la cuenta de la misma entidad bancaria del medio de pago sin abrir ningún selector, y tocar el nombre de esa cuenta abre el selector con la cuenta de la misma entidad primero
 
 #### Scenario: La cuenta de acreditación se oculta cuando hay una sola cuenta elegible
 
-- **WHEN** el usuario activa un reintegro "a cuenta" y tiene una sola cuenta cash/bank elegible
+- **WHEN** el usuario activa un reintegro "a cuenta" (cash/bank, o crédito con destino Cuenta) y tiene una sola cuenta cash/bank elegible
 - **THEN** el selector de cuenta de acreditación no se renderiza y el sistema usa esa cuenta (prerellenada por institución)
-- **AND** cuando hay más de una cuenta cash/bank elegible, el selector se renderiza
+- **AND** cuando hay más de una cuenta cash/bank elegible, tocar el nombre de la cuenta abre el selector
 
 #### Scenario: El split se resuelve de un tap en el caso común
 
@@ -59,7 +70,7 @@ Ninguna de estas reglas cambia el comportamiento del gasto simple: las secciones
 
 Las funcionalidades avanzadas del alta —reintegro, gasto compartido y repetir (recurrencia)— SHALL ofrecerse como opciones de activación directa gateadas por el contexto: un solo gesto SHALL activar la funcionalidad y revelar sus parámetros en el lugar, y otro gesto SHALL desactivarla. El conjunto ofrecido depende del contexto y de los datos (gasto compartido solo con un hogar de dos miembros; repetir no disponible en compras en cuotas; ninguna en `ajuste` ni `cambio de moneda`), de modo que puede ir de una a tres opciones o ninguna. Las cuotas SHALL ofrecerse junto a la cuenta cuando esta es una tarjeta de crédito, por ser parte de la forma de pago, y no dentro de las funcionalidades avanzadas. Ninguna de estas funcionalidades SHALL estar activa por defecto ni ser obligatoria para un gasto simple.
 
-Al revelar sus parámetros, cada funcionalidad SHALL mostrar la **superficie mínima**: los datos que la definen quedan visibles y los controles secundarios o de conveniencia (p. ej. el cálculo por porcentaje/tope de un reintegro, o el editor de porcentaje libre de un split) SHALL quedar a un gesto de distancia detrás de un disparador, en lugar de volcarse todos de una. El detalle de qué queda visible y qué detrás de un disparador, y la paridad de estos parámetros entre las superficies mobile, lo fija el requirement «El despliegue de las secciones avanzadas es de superficie mínima y paritario entre las superficies mobile».
+Al revelar sus parámetros, cada funcionalidad SHALL mostrar la **superficie mínima**, sea por **densidad** (bloque compacto sin labels redundantes, como el reintegro) o por **disclosure** (los controles de conveniencia poco frecuentes a un gesto de distancia detrás de un disparador, como el editor de porcentaje libre de un split tras "Otro %"), en lugar de volcar todos los controles de una. El detalle de qué queda visible y cómo se alcanza lo secundario en cada sección, y la paridad de estos parámetros entre las superficies mobile, lo fija el requirement «El despliegue de las secciones avanzadas es de superficie mínima y paritario entre las superficies mobile».
 
 #### Scenario: Activar una funcionalidad revela sus parámetros en el lugar
 
@@ -67,11 +78,11 @@ Al revelar sus parámetros, cada funcionalidad SHALL mostrar la **superficie mí
 - **THEN** aparecen los parámetros del split (con un default 50/50) sin abrir otra pantalla
 - **AND** desactivarla los oculta de nuevo
 
-#### Scenario: Al activar una funcionalidad se revela solo su superficie esencial
+#### Scenario: Al activar una funcionalidad se revela su superficie mínima
 
 - **WHEN** el usuario activa "reintegro" en un gasto
-- **THEN** el bloque muestra el monto estimado y el control de "ya me lo acreditaron"
-- **AND** el cálculo por porcentaje/tope no se muestra hasta que el usuario lo pide con un gesto
+- **THEN** el bloque muestra el monto y la regla `% + tope` en una fila compacta, y el destino más el control "Acreditado" en otra
+- **AND** no se vuelcan labels ni controles redundantes; la densidad hace las veces de la superficie mínima
 
 #### Scenario: El conjunto de funcionalidades es contextual
 
@@ -99,7 +110,7 @@ El alcance de esta pantalla es **create-completo**: SHALL ofrecer las cinco tabs
 
 Con una cuenta credit seleccionada en Gasto, la pantalla SHALL ofrecer **cuotas** cuando la moneda es ARS: chips preset `1·3·6·12` más un stepper custom acotado a 2–60, con preview del monto por cuota y CTA dinámico (`actions.register_installments`); con moneda USD SHALL mostrar el hint de cuotas-sólo-ARS en lugar de los chips, sin bloquear el consumo simple en USD. El submit SHALL rutear vía el hook a `registerCardPurchase` (consumo simple) o `registerInstallments` (cuotas), sin lógica de ruteo propia en la pantalla.
 
-En la tab Gasto la pantalla SHALL ofrecer la **declaración de reintegro** con paridad web y **superficie mínima**: toggle, monto estimado, el **Switch** *ya lo recibí* con su hint condicional, y —detrás de un disparador de un gesto, no volcado junto al monto— el auto-cálculo por porcentaje/tope (`applyReimbursementPercent`); el destino *a cuenta / a resumen* como filas de opción (sólo con credit; cash/bank implica 'account'), y el picker de cuenta de acreditación cuando aplica (oculto cuando hay una sola cuenta cash/bank elegible). El bloque SHALL estar disponible también sobre una compra **en cuotas**: el hook vincula el reintegro a la madre de la compra (el subtipo *a resumen* cae en el período de la primera cuota), igual que web. La superficie mínima y la paridad de estos controles con la web-mobile la fija el requirement «El despliegue de las secciones avanzadas es de superficie mínima y paritario entre las superficies mobile».
+En la tab Gasto la pantalla SHALL ofrecer la **declaración de reintegro** con paridad web y **superficie mínima**, como el **bloque compacto de dos filas** del diseño cerrado (`docs/design/movement-form/reintegro/`): fila 1 con el **monto del reintegro** y la regla **`% + tope` visible inline** (`applyReimbursementPercent`, bidireccional, con el tope resaltado cuando aplica); fila 2 con el **destino** *Resumen | Cuenta* (sólo con credit; cash/bank implica 'account', sin control de resumen) y el estado **"Acreditado"** (checkbox compacto, con su comportamiento pendiente/recibido, no un input crudo). El destino default es Resumen; tocar "Cuenta" elige la cuenta de la **misma entidad del medio de pago** sin abrir el picker, y tocar el **nombre** abre el picker de cuenta de acreditación (misma entidad primero; oculto cuando hay una sola cuenta cash/bank elegible). El bloque SHALL estar disponible también sobre una compra **en cuotas**: el hook vincula el reintegro a la madre de la compra (el subtipo *a resumen* cae en el período de la primera cuota), igual que web. La superficie mínima y la paridad de estos controles con la web-mobile la fija el requirement «El despliegue de las secciones avanzadas es de superficie mínima y paritario entre las superficies mobile».
 
 La pantalla SHALL soportar el **gasto compartido**: cuando el hogar tiene exactamente dos miembros, SHALL exponer el toggle "Compartir gasto" y el control de split como **presets de un gesto** (Vos / Mitad / El otro) más un escape a **porcentaje libre** ("Otro %"), permitiendo **cualquier reparto** incluido el **100%-al-otro-miembro** (preset "El otro", que fija 0/100). Si no hay hogar de dos miembros (o el read falla), el toggle NO SHALL renderizarse y el alta simple SHALL seguir funcionando.
 
@@ -145,9 +156,9 @@ Al guardar con éxito, `onSuccess` SHALL navegar de vuelta al feed y `onMutation
 
 #### Scenario: Declarar un reintegro desde mobile
 
-- **WHEN** el usuario registra un gasto (cash/bank, o credit con o sin cuotas), activa el toggle Reintegro y completa el monto estimado (directo o por %/tope tras el disparador)
+- **WHEN** el usuario registra un gasto (cash/bank, o credit con o sin cuotas), activa el toggle Reintegro y completa el monto (directo o por %/tope, ambos visibles inline)
 - **THEN** el submit envía la declaración al mutator (`createExpense`, `registerCardPurchase` o `registerInstallments`), que la inserta atómicamente con rollback
-- **AND** con credit el usuario puede elegir destino *a resumen* (reduce el período) o *a cuenta*; con cash/bank el destino es *a cuenta* sin selector
+- **AND** con credit el usuario puede elegir destino *Resumen* (reduce el período) o *Cuenta* (misma entidad del medio de pago por defecto); con cash/bank el destino es *a cuenta* sin control de resumen
 - **AND** sobre una compra en cuotas el reintegro se vincula a la madre (el subtipo *a resumen* cae en el período de la primera cuota)
 
 #### Scenario: Gasto compartido 100%-al-otro desde mobile
