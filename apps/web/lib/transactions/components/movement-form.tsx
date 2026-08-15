@@ -1809,7 +1809,7 @@ export const MovementForm = ({
   // picked account name; tapping it opens the native picker (same bank first).
   const reimbAccountSelect = (
     <div
-      className="relative flex min-w-0 flex-1 items-center gap-1 rounded-[9px] border border-border px-2.5 py-1.5"
+      className="relative flex h-9 min-w-0 flex-1 items-center gap-1 rounded-[9px] border border-border px-2.5"
       style={{ backgroundColor: FIELD_BG }}
     >
       <span className="min-w-0 flex-1 truncate text-xs text-text">
@@ -1926,10 +1926,10 @@ export const MovementForm = ({
             )}
             {reimbursementEnabled && !reimbursementReadOnly && (isMobile ? (
               <div className="flex flex-col gap-2">
-                {/* Fila 1 — monto + regla % / tope (visible inline, sin disclosure) */}
-                <div className="flex items-stretch gap-2">
+                {/* Fila 1 — monto + regla % / tope (compacto, visible inline) */}
+                <div className="flex items-center gap-2">
                   <div
-                    className="flex items-center gap-1 rounded-[9px] border border-border px-2.5 py-2"
+                    className="flex h-9 w-28 items-center gap-1 rounded-[9px] border border-border px-2.5"
                     style={{ backgroundColor: FIELD_BG }}
                   >
                     <span className="text-sm text-text-soft">{CURRENCY_SYMBOL[currencyCode]}</span>
@@ -1940,11 +1940,11 @@ export const MovementForm = ({
                         setReimbursementPercent('')
                       }}
                       placeholder="0"
-                      className="w-[92px] bg-transparent text-sm text-text outline-none"
+                      className="w-full min-w-0 bg-transparent text-sm text-text outline-none"
                     />
                   </div>
                   <div
-                    className="flex flex-1 items-center justify-between gap-2 rounded-[9px] border border-border px-2.5 py-2"
+                    className="flex h-9 flex-1 items-center justify-between gap-2 rounded-[9px] border border-border px-2.5"
                     style={{ backgroundColor: FIELD_BG }}
                   >
                     <div className="flex items-center gap-0.5">
@@ -1984,49 +1984,101 @@ export const MovementForm = ({
                   </div>
                 </div>
 
-                {/* Fila 2 — destino (crédito: Resumen | Cuenta) + estado (Acreditado);
-                    el selector de cuenta va a lo ancho debajo para no apretar la fila. */}
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    {isCredit && (
-                      <Segmented
-                        ariaLabel={t('reimbursement.target_label')}
-                        value={reimbursementTarget}
-                        onValueChange={(v) => setReimbursementTarget(v as 'account' | 'statement')}
-                        options={[
-                          { value: 'statement', label: t('reimbursement.target.statement_short') },
-                          { value: 'account', label: t('reimbursement.target.account_short') },
-                        ]}
-                      />
-                    )}
-                    <button
-                      type="button"
-                      role="checkbox"
-                      aria-checked={reimbursementReceivedNow}
-                      onClick={() => setReimbursementReceivedNow(!reimbursementReceivedNow)}
-                      className={`flex flex-none items-center gap-1.5 ${isCredit ? 'ml-auto' : ''}`}
+                {/* Fila 2 — destino (crédito: Resumen | Cuenta con el nombre adentro) +
+                    estado (Acreditado), todo en una sola fila densa como el handoff. */}
+                <div className="flex items-center gap-2">
+                  {isCredit ? (
+                    <div
+                      className="flex h-9 min-w-0 flex-1 items-center gap-0.5 rounded-[9px] border border-border p-0.5"
+                      style={{ backgroundColor: ROW_DIVIDER }}
                     >
-                      <span
-                        className={`flex size-[18px] items-center justify-center rounded-[6px] border ${
-                          reimbursementReceivedNow ? 'border-transparent bg-emerald' : 'border-[#D9DEE5] bg-card'
+                      <button
+                        type="button"
+                        onClick={() => setReimbursementTarget('statement')}
+                        className={`flex h-full flex-none items-center justify-center rounded-[7px] px-2.5 text-[11.5px] ${
+                          reimbursementTarget === 'statement'
+                            ? 'bg-white font-semibold text-text shadow-[0_1px_2px_rgba(11,26,43,0.1)]'
+                            : 'font-medium text-text-muted'
                         }`}
                       >
-                        {reimbursementReceivedNow && (
-                          <Check className="size-3 text-white" strokeWidth={3.2} aria-hidden />
+                        {t('reimbursement.target.statement_short')}
+                      </button>
+                      <div className="relative flex h-full min-w-0 flex-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (reimbursementTarget !== 'account') {
+                              setReimbursementTarget('account')
+                              if (!reimbursementAccountId)
+                                setReimbursementAccountId(pickReimbursementAccount(accountId))
+                            }
+                          }}
+                          className={`flex h-full w-full min-w-0 items-center justify-start gap-1 rounded-[7px] px-2.5 text-[11.5px] ${
+                            reimbursementTarget === 'account'
+                              ? 'bg-white font-semibold text-text shadow-[0_1px_2px_rgba(11,26,43,0.1)]'
+                              : 'font-medium text-text-muted'
+                          }`}
+                        >
+                          <span className="min-w-0 flex-1 truncate text-left">
+                            {reimbursementTarget === 'account' && reimbSelectedAccount
+                              ? accountPrimaryName(reimbSelectedAccount)
+                              : t('reimbursement.target.account_short')}
+                          </span>
+                          {reimbursementTarget === 'account' && (
+                            <ChevronDown className="size-3.5 shrink-0 text-text-soft" aria-hidden />
+                          )}
+                        </button>
+                        {reimbursementTarget === 'account' && cashBank.length > 1 && (
+                          <select
+                            value={reimbursementAccountId}
+                            onChange={(e) => setReimbursementAccountId(e.target.value)}
+                            aria-label={t('reimbursement.credit_to')}
+                            className="absolute inset-0 cursor-pointer opacity-0"
+                          >
+                            <option value="">{t('reimbursement.credit_to_placeholder')}</option>
+                            {reimbAccountsOrdered.map((a) => (
+                              <option key={a.id} value={a.id}>
+                                {accountPrimaryName(a)}
+                                {a.institutionId === reimbInstitutionId
+                                  ? ` · ${t('reimbursement.same_bank')}`
+                                  : ''}
+                              </option>
+                            ))}
+                          </select>
                         )}
-                      </span>
-                      <span
-                        className={`text-xs ${
-                          reimbursementReceivedNow ? 'font-semibold text-emerald-deep' : 'text-text-muted'
-                        }`}
-                      >
-                        {t('reimbursement.received_short')}
-                      </span>
-                    </button>
-                  </div>
-                  {(!isCredit || reimbursementTarget === 'account') && cashBank.length > 1 && (
-                    <div className="flex">{reimbAccountSelect}</div>
+                      </div>
+                    </div>
+                  ) : cashBank.length > 1 ? (
+                    reimbAccountSelect
+                  ) : (
+                    <span className="min-w-0 flex-1 truncate text-xs text-text-soft">
+                      {reimbSelectedAccount ? accountPrimaryName(reimbSelectedAccount) : ''}
+                    </span>
                   )}
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={reimbursementReceivedNow}
+                    onClick={() => setReimbursementReceivedNow(!reimbursementReceivedNow)}
+                    className="flex flex-none items-center gap-1.5"
+                  >
+                    <span
+                      className={`flex size-[18px] items-center justify-center rounded-[6px] border ${
+                        reimbursementReceivedNow ? 'border-transparent bg-emerald' : 'border-[#D9DEE5] bg-card'
+                      }`}
+                    >
+                      {reimbursementReceivedNow && (
+                        <Check className="size-3 text-white" strokeWidth={3.2} aria-hidden />
+                      )}
+                    </span>
+                    <span
+                      className={`text-xs ${
+                        reimbursementReceivedNow ? 'font-semibold text-emerald-deep' : 'text-text-muted'
+                      }`}
+                    >
+                      {t('reimbursement.received_short')}
+                    </span>
+                  </button>
                 </div>
               </div>
             ) : (
