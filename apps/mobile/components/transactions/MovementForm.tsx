@@ -1,6 +1,6 @@
 import { Children, useMemo, useState, type ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
-import { ChevronDown, Undo2, Users, Repeat } from 'lucide-react-native'
+import { ChevronDown, Undo2, Users, Repeat, Check } from 'lucide-react-native'
 import { getTodayAR, formatDateISO } from '@grana/money-logic'
 import { Money, parseMoneyInput, formatForDisplay } from '@grana/validation'
 import {
@@ -20,7 +20,6 @@ import { MoneyAmountInput } from '../ui/MoneyAmountInput'
 import { MoneyCalculator } from '../ui/MoneyCalculator'
 import { DateField } from '../ui/DateField'
 import { Segmented } from '../ui/Segmented'
-import { Switch } from '../ui/Switch'
 import { FormError } from '../ui/FormError'
 import { Spinner } from '../ui/Spinner'
 import { AccountSelectField, AccountFamilySelect, CategorySelectField } from './form-pickers'
@@ -240,6 +239,22 @@ export function MovementForm({
     const match = inst ? banks.find((a) => a.institutionId === inst) : undefined
     return match?.id ?? banks[0]?.id ?? ''
   }
+
+  // Reimbursement account list ordered "same bank first" (institution of the
+  // payment method) + cap-applied flag, for the compact 2-row block (parity
+  // with mobile-web).
+  const reimbInstitutionId = form.selectedAccount?.institutionId ?? null
+  const reimbAccountsOrdered = [...form.cashBankAccounts].sort(
+    (a, b) =>
+      (a.institutionId === reimbInstitutionId ? 0 : 1) -
+      (b.institutionId === reimbInstitutionId ? 0 : 1),
+  )
+  const reimbDigits = (s: string): string => s.replace(/\D/g, '')
+  const reimbCapApplied =
+    Number(reimbDigits(form.reimbursementPercent)) > 0 &&
+    reimbDigits(form.reimbursementCap) !== '' &&
+    reimbDigits(form.reimbursementCap) !== '0' &&
+    reimbDigits(form.reimbursementAmount) === reimbDigits(form.reimbursementCap)
 
   // Read-only context rows shown in edit mode: the immutable fields (type,
   // currency, account(s)). Mirror of web's `contextRows`.
@@ -885,26 +900,26 @@ export function MovementForm({
             </View>
           )}
           {form.reimbursementEnabled && !form.reimbursementReadOnly && (
-            <View className="flex-col gap-3">
-              {/* Estimated amount */}
-              <View className="flex-col gap-1.5">
-                <Label>{t('transactions.reimbursement.estimated_amount')}</Label>
-                <MoneyAmountInput
-                  value={form.reimbursementAmount}
-                  onChangeText={form.setReimbursementAmount}
-                  placeholder="0"
-                />
-              </View>
-
-              {/* Auto-calc by percent / cap */}
-              <View className="flex-col gap-1.5">
-                <Text className="text-xs text-text-muted">
-                  {t('transactions.reimbursement.percent_hint')}
-                </Text>
-                <View className="flex-row gap-2">
-                  <View className="flex-1 flex-col gap-1">
-                    <Label>{t('transactions.reimbursement.percent_label')}</Label>
+            <View className="flex-col gap-2">
+              {/* Fila 1 — monto + regla % / tope (visible inline, sin disclosure) */}
+              <View className="flex-row gap-2">
+                <View className="flex-row items-center gap-1 rounded-lg border border-border bg-card px-3 py-2">
+                  <Text className="text-sm text-text-soft">{CURRENCY_SYMBOL[form.currencyCode]}</Text>
+                  <MoneyAmountInput
+                    bare
+                    value={form.reimbursementAmount}
+                    onChangeText={(v) => {
+                      form.setReimbursementAmount(v)
+                      form.setReimbursementPercent('')
+                    }}
+                    placeholder="0"
+                    className="w-24 text-sm text-text"
+                  />
+                </View>
+                <View className="flex-1 flex-row items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2">
+                  <View className="flex-row items-center gap-0.5">
                     <Input
+                      bare
                       value={form.reimbursementPercent}
                       onChangeText={(v) => {
                         const norm = v.replace(',', '.')
@@ -912,70 +927,87 @@ export function MovementForm({
                         form.applyReimbursementPercent(norm, form.reimbursementCap)
                       }}
                       keyboardType="decimal-pad"
-                      placeholder="0"
+                      placeholder="—"
+                      className="w-9 text-right text-sm text-text"
                     />
+                    <Text className="text-sm text-text-muted">%</Text>
                   </View>
-                  <View className="flex-1 flex-col gap-1">
-                    <Label>{t('transactions.reimbursement.cap_label')}</Label>
+                  <View className="flex-row items-center gap-1">
+                    <Text
+                      className={
+                        reimbCapApplied
+                          ? 'text-xs font-semibold text-emerald-deep'
+                          : 'text-xs text-text-soft'
+                      }
+                    >
+                      {t('transactions.reimbursement.cap_short')} {CURRENCY_SYMBOL[form.currencyCode]}
+                    </Text>
                     <MoneyAmountInput
+                      bare
                       value={form.reimbursementCap}
                       onChangeText={(v) => {
                         form.setReimbursementCap(v)
                         form.applyReimbursementPercent(form.reimbursementPercent, v)
                       }}
-                      placeholder="0"
+                      placeholder="—"
+                      className="w-16 text-sm text-text"
                     />
                   </View>
                 </View>
               </View>
 
-              {/* Target radio — credit only (cash/bank implies 'account'). A
-                  vertical radio, not Segmented: the labels are long explanatory
-                  strings that would wrap badly in a two-option segmented. */}
+              {/* Destino (crédito): Resumen | Cuenta. El default lo fija el hook. */}
               {isCredit && (
-                <View className="flex-col gap-1.5">
-                  <Text className="text-xs text-text-muted">
-                    {t('transactions.reimbursement.target_label')}
-                  </Text>
-                  <View className="flex-col gap-2">
-                    {(['account', 'statement'] as const).map((tg) => (
-                      <RadioRow
-                        key={tg}
-                        label={t(`transactions.reimbursement.target.${tg}`)}
-                        selected={form.reimbursementTarget === tg}
-                        onPress={() => form.setReimbursementTarget(tg)}
-                      />
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {/* Credit-to account (cash/bank) */}
-              {(!isCredit || form.reimbursementTarget === 'account') && (
-                <AccountSelectField
-                  label={t('transactions.reimbursement.credit_to')}
-                  accounts={form.cashBankAccounts}
-                  selectedId={form.reimbursementAccountId}
-                  onSelect={form.setReimbursementAccountId}
+                <Segmented
+                  ariaLabel={t('transactions.reimbursement.target_label')}
+                  value={form.reimbursementTarget}
+                  onValueChange={(v) =>
+                    form.setReimbursementTarget(v as 'account' | 'statement')
+                  }
+                  options={[
+                    { value: 'statement', label: t('transactions.reimbursement.target.statement_short') },
+                    { value: 'account', label: t('transactions.reimbursement.target.account_short') },
+                  ]}
                 />
               )}
 
-              {/* Received now */}
-              <View className="flex-row items-center justify-between">
-                <Text className="flex-1 pr-3 text-sm text-text">
+              {/* Cuenta de acreditación — mismo banco primero; oculta si hay una sola */}
+              {(!isCredit || form.reimbursementTarget === 'account') &&
+                form.cashBankAccounts.length > 1 && (
+                  <AccountSelectField
+                    label={t('transactions.reimbursement.credit_to')}
+                    accounts={reimbAccountsOrdered}
+                    selectedId={form.reimbursementAccountId}
+                    onSelect={form.setReimbursementAccountId}
+                  />
+                )}
+
+              {/* Estado — Acreditado (checkbox; off = pendiente, sin chip) */}
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: form.reimbursementReceivedNow }}
+                onPress={() => form.setReimbursementReceivedNow(!form.reimbursementReceivedNow)}
+                className="flex-row items-center gap-2"
+              >
+                <View
+                  className={
+                    form.reimbursementReceivedNow
+                      ? 'h-5 w-5 items-center justify-center rounded-md bg-emerald'
+                      : 'h-5 w-5 items-center justify-center rounded-md border border-border'
+                  }
+                >
+                  {form.reimbursementReceivedNow && <Check size={12} color="#fff" strokeWidth={3.2} />}
+                </View>
+                <Text
+                  className={
+                    form.reimbursementReceivedNow
+                      ? 'text-sm font-semibold text-emerald-deep'
+                      : 'text-sm text-text-muted'
+                  }
+                >
                   {t('transactions.reimbursement.received_now')}
                 </Text>
-                <Switch
-                  ariaLabel={t('transactions.reimbursement.received_now')}
-                  checked={form.reimbursementReceivedNow}
-                  onValueChange={form.setReimbursementReceivedNow}
-                />
-              </View>
-              <Text className="text-xs text-text-muted">
-                {form.reimbursementReceivedNow
-                  ? t('transactions.reimbursement.received_now_hint')
-                  : t('transactions.reimbursement.pending_hint')}
-              </Text>
+              </Pressable>
             </View>
           )}
         </View>
@@ -1160,32 +1192,6 @@ function AdvChip({
       >
         {label}
       </Text>
-    </Pressable>
-  )
-}
-
-// A bordered radio card — emerald border + ✓ when selected. Used only for the
-// reimbursement target (two options with long explanatory labels).
-function RadioRow({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string
-  selected: boolean
-  onPress: () => void
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      className={`flex-row items-center justify-between rounded-xl border-2 bg-card px-3 py-2 ${
-        selected ? 'border-emerald' : 'border-border'
-      }`}
-    >
-      <Text className="flex-1 pr-2 text-sm font-semibold text-text">{label}</Text>
-      {selected && <Text className="text-emerald">✓</Text>}
     </Pressable>
   )
 }
