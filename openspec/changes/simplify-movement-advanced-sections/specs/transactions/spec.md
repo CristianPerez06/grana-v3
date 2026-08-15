@@ -7,7 +7,7 @@ Al activarse, cada sección avanzada del alta —Reintegro, Compartido (split) y
 **Reintegro.** El bloque revelado SHALL presentarse como **dos filas compactas** (diseño cerrado con el PO, ref. visual en `docs/design/movement-form/reintegro/`), logrando la superficie mínima por **densidad** —sin labels sobre los campos— en vez de esconder controles:
 
 - **Fila 1 — monto y regla de cálculo.** El **monto del reintegro** (editable a mano) junto a la **regla `% + tope` visible inline** (no detrás de un disparador). El porcentaje deriva el monto vía `applyReimbursementPercent` de forma **bidireccional** (cargar un % calcula el monto; escribir un monto a mano descarta el %); el **tope** acota el monto calculado y su texto se resalta cuando efectivamente aplicó.
-- **Fila 2 — destino y estado.** El **destino**, *solo con tarjeta de crédito*, SHALL presentarse como un control **`Resumen | Cuenta`** cuyo default es **Resumen** (el resumen de la tarjeta con la que se paga). Tocar **Cuenta** SHALL seleccionar la cuenta de la **misma entidad bancaria del medio de pago** sin abrir ningún selector (prerellenada por institución; comportamiento ya existente que este rediseño preserva); tocar el **nombre** de la cuenta SHALL abrir el selector, con la cuenta de la misma entidad primero (rotulada "mismo banco") y el resto después. Con cash/bank el destino es *a cuenta* sin control de resumen, y el selector de cuenta NO SHALL renderizarse cuando hay una sola cuenta cash/bank elegible. El **estado** SHALL ofrecerse como un control **"Acreditado"** (checkbox compacto, no un input crudo): apagado deja el reintegro **pendiente de confirmación** —sin chip ni texto "Pendiente"—, encendido lo registra como recibido.
+- **Fila 2 — destino y estado.** El **destino**, *solo con tarjeta de crédito*, SHALL presentarse como un control **`Resumen | Cuenta`**. El valor por defecto lo fija el hook **sin cambio de comportamiento** (hoy `'account'` → "Cuenta"); este rediseño es de presentación y NO SHALL alterar ese default. Tocar **Cuenta** SHALL seleccionar la cuenta de la **misma entidad bancaria del medio de pago** sin abrir ningún selector (prerellenada por institución; comportamiento ya existente que este rediseño preserva); tocar el **nombre** de la cuenta SHALL abrir el selector, con la cuenta de la misma entidad primero (rotulada "mismo banco") y el resto después. Con cash/bank el destino es *a cuenta* sin control de resumen, y el selector de cuenta NO SHALL renderizarse cuando hay una sola cuenta cash/bank elegible. El **estado** SHALL ofrecerse como un control **"Acreditado"** (checkbox compacto, no un input crudo): apagado deja el reintegro **pendiente de confirmación** —sin chip ni texto "Pendiente"—, encendido lo registra como recibido.
 
 Los controles crudos de web-mobile (`<input type=checkbox>`, `<input type=radio>`, `<select>`) SHALL reemplazarse por los equivalentes diseñados, con la **misma estructura** que la app nativa. La paridad se evalúa por rol/estructura, no por el widget exacto.
 
@@ -29,10 +29,10 @@ Ninguna de estas reglas cambia el comportamiento del gasto simple: las secciones
 - **THEN** el monto del reintegro se deriva de ese porcentaje sobre el gasto, acotado por el tope, y el texto del tope se resalta cuando efectivamente aplicó
 - **AND** si el usuario luego escribe un monto a mano, el porcentaje se descarta
 
-#### Scenario: El destino por defecto es Resumen y tocar Cuenta usa la misma entidad del medio de pago
+#### Scenario: El destino ofrece Resumen y Cuenta, y tocar Cuenta usa la misma entidad del medio de pago
 
 - **WHEN** el usuario activa un reintegro sobre un gasto pagado con tarjeta de crédito
-- **THEN** el destino arranca en "Resumen" (el resumen de la tarjeta con la que se paga)
+- **THEN** el destino se ofrece como el control "Resumen | Cuenta" (el default lo fija el hook, sin cambio de comportamiento)
 - **AND** tocar "Cuenta" selecciona la cuenta de la misma entidad bancaria del medio de pago sin abrir ningún selector, y tocar el nombre de esa cuenta abre el selector con la cuenta de la misma entidad primero
 
 #### Scenario: La cuenta de acreditación se oculta cuando hay una sola cuenta elegible
