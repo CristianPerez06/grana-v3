@@ -3,18 +3,18 @@
 ## 1. i18n — unificar y agregar copy
 
 - [ ] 1.1 Elegir la familia de claves canónica del control de split (preferencia `shared.split.*`) y agregar/renombrar: labels de presets `Vos` / `Mitad` / `El otro {name}`, disparador `Otro %`, y las etiquetas del editor de porcentaje libre. Retirar el copy huérfano del `Switch` fully-other si deja de usarse.
-- [ ] 1.2 Agregar el copy del reintegro en `packages/i18n-messages` (es): labels del destino `Resumen` / `Cuenta` y el rótulo "mismo banco" del selector, sin jerga contable. (Ya no hay disparador "calcular por %": el %/tope queda visible inline.)
+- [x] 1.2 Agregar el copy del reintegro en `packages/i18n-messages` (es y en): labels del destino `Resumen` / `Cuenta` (`target.statement_short` / `target.account_short`), el rótulo `same_bank` ("mismo banco") y `cap_short` ("tope"), sin jerga contable. (Ya no hay disparador "calcular por %": el %/tope queda visible inline.)
 - [ ] 1.3 Verificar que ambas superficies (web-mobile y nativo) consumen la **misma** familia de claves del split — no dos juegos paralelos.
 
 ## 2. Web-mobile — Reintegro (`apps/web/lib/transactions/components/movement-form.tsx`, rama `isMobile`)
 
 > Diseño cerrado: `docs/design/movement-form/reintegro/` (canvas + handoff con medidas, estados y reglas). **Solo rediseño**: preservar toda la funcionalidad activa.
 
-- [ ] 2.1 Rehacer el card como **bloque compacto de 2 filas** (ref. handoff). Fila 1: monto del reintegro + regla `% + tope` **visible inline** (nada de disclosure). Mantener la bidireccionalidad monto↔% vía `applyReimbursementPercent` (escribir monto a mano descarta el %) y el resaltado del tope cuando aplicó.
-- [ ] 2.2 Reemplazar el `<input type="checkbox">` de "ya me lo acreditaron" por el control **"Acreditado"** diseñado (checkbox compacto, no raw input; **no** un `Switch`). Conservar el comportamiento pendiente/recibido de `reimbursementReceivedNow` (off = pendiente, sin chip "Pendiente").
-- [ ] 2.3 Reemplazar los `<input type="radio">` del destino por el control **`Resumen | Cuenta`** (solo crédito; default Resumen). Preservar `pickReimbursementAccount` (tocar "Cuenta" = cuenta de la misma entidad, sin abrir selector); tocar el **nombre** abre el selector con la cuenta de la misma entidad primero ("mismo banco").
-- [ ] 2.4 Ocultar el selector de cuenta de acreditación cuando hay una sola cuenta cash/bank elegible; renderizarlo cuando hay más de una. No romper el prerellenado por institución.
-- [ ] 2.5 No tocar la rama **desktop** ni el flujo de edición read-only del reintegro (`reimbursementReadOnly`).
+- [x] 2.1 Rehacer el card como **bloque compacto de 2 filas** (ref. handoff). Fila 1: monto del reintegro + regla `% + tope` **visible inline** (nada de disclosure). Mantener la bidireccionalidad monto↔% vía `applyReimbursementPercent` (escribir monto a mano descarta el %) y el resaltado del tope cuando aplicó.
+- [x] 2.2 Reemplazar el `<input type="checkbox">` de "ya me lo acreditaron" por el control **"Acreditado"** diseñado (checkbox compacto, no raw input; **no** un `Switch`). Conservar el comportamiento pendiente/recibido de `reimbursementReceivedNow` (off = pendiente, sin chip "Pendiente").
+- [x] 2.3 Reemplazar los `<input type="radio">` del destino por el control **`Resumen | Cuenta`** (solo crédito; el default lo fija el hook, sin cambio de comportamiento). Preservar `pickReimbursementAccount` (tocar "Cuenta" = cuenta de la misma entidad, sin abrir selector); tocar el **nombre** abre el selector con la cuenta de la misma entidad primero ("mismo banco").
+- [x] 2.4 Ocultar el selector de cuenta de acreditación cuando hay una sola cuenta cash/bank elegible; renderizarlo cuando hay más de una. No romper el prerellenado por institución.
+- [x] 2.5 No tocar la rama **desktop** ni el flujo de edición read-only del reintegro (`reimbursementReadOnly`).
 
 ## 3. Web-mobile — Compartido (mismo archivo, rama `isMobile`)
 
@@ -33,8 +33,8 @@
 
 ## 6. Nativo — Reintegro (mismo archivo)
 
-- [ ] 6.1 Rehacer el bloque como **2 filas compactas** espejo del web-mobile: monto + regla `% + tope` **visible inline** (sin disclosure), destino `Resumen | Cuenta` (crédito) + estado "Acreditado" (checkbox). Preservar la vinculación a la madre en compras en cuotas.
-- [ ] 6.2 Migrar el destino al control `Resumen | Cuenta` (default Resumen; "Cuenta" = misma entidad vía la lógica ya existente; tocar el nombre abre el `AccountSelectField`, misma entidad primero) y el estado del `Switch` "ya me lo acreditaron" al **check "Acreditado"**. Ocultar el `AccountSelectField` cuando hay una sola cuenta cash/bank elegible.
+- [x] 6.1 Rehacer el bloque como **2 filas compactas** espejo del web-mobile: monto + regla `% + tope` **visible inline** (sin disclosure), destino `Resumen | Cuenta` (crédito) + estado "Acreditado" (checkbox). Preservar la vinculación a la madre en compras en cuotas.
+- [x] 6.2 Migrar el destino al control `Resumen | Cuenta` (el default lo fija el hook; "Cuenta" = misma entidad vía la lógica ya existente; el `AccountSelectField` recibe la lista ordenada "mismo banco primero") y el estado del `Switch` "ya me lo acreditaron" al **check "Acreditado"**. Ocultar el `AccountSelectField` cuando hay una sola cuenta cash/bank elegible.
 
 ## 7. Verificación
 
