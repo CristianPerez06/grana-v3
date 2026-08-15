@@ -52,5 +52,8 @@ Opcional, como fila liviana "**Agregar nota**", después de Fecha (no al fondo d
 ### Avanzadas (Capa 1)
 **Directas y livianas**, sin colapsar: `↩️ Reintegro · 👥 Compartir · 🔁 Repetir` (símbolo primero, palabra chica, sin recuadro; se encienden en verde al tocar). Set contextual (1–3 según tipo/hogar/cuotas): en cuotas no aparece Repetir; en ingreso solo Repetir; en ajuste/cambio, ninguna. Activar una revela sus parámetros en el lugar.
 
+#### Reintegro — bloque desplegado
+Handoff visual detallado (2 rows de 38 px, estados, spec y reglas) en [`reintegro/README.md`](./reintegro/README.md) + canvas [`reintegro/reintegro-bloque-final.html`](./reintegro/reintegro-bloque-final.html). **Solo rediseño**: preserva toda la funcionalidad activa (sugerencia de cuenta de la misma entidad del medio de pago, monto ↔ %, tope, acreditado/pendiente).
+
 ## Estados pendientes de mockear
 Primer movimiento (sin historial → sin chips), y una avanzada expandida (ej. Compartir con el 50/50). No bloquean la implementación de superficie.
