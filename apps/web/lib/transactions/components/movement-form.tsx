@@ -1805,32 +1805,16 @@ export const MovementForm = ({
     reimbDigits(reimbursementCap) !== '' &&
     reimbDigits(reimbursementCap) !== '0' &&
     reimbDigits(reimbursementAmount) === reimbDigits(reimbursementCap)
-  // Compact account selector for the mobile reimbursement block: shows the
-  // picked account name; tapping it opens the native picker (same bank first).
-  const reimbAccountSelect = (
-    <div
-      className="relative flex h-9 min-w-0 flex-1 items-center gap-1 rounded-[9px] border border-border px-2.5"
-      style={{ backgroundColor: FIELD_BG }}
-    >
-      <span className="min-w-0 flex-1 truncate text-xs text-text">
-        {reimbSelectedAccount ? accountPrimaryName(reimbSelectedAccount) : t('reimbursement.credit_to_placeholder')}
-      </span>
-      <ChevronDown className="size-3.5 shrink-0 text-text-soft" aria-hidden />
-      <select
-        value={reimbursementAccountId}
-        onChange={(e) => setReimbursementAccountId(e.target.value)}
-        aria-label={t('reimbursement.credit_to')}
-        className="absolute inset-0 cursor-pointer opacity-0"
-      >
-        <option value="">{t('reimbursement.credit_to_placeholder')}</option>
-        {reimbAccountsOrdered.map((a) => (
-          <option key={a.id} value={a.id}>
-            {accountPrimaryName(a)}
-            {a.institutionId === reimbInstitutionId ? ` · ${t('reimbursement.same_bank')}` : ''}
-          </option>
-        ))}
-      </select>
-    </div>
+  // Reimbursement account picker content — the app's styled account list
+  // (avatar + name + check), same bank first. Rendered inside a Popover so it
+  // matches every other account picker in the form (no raw <select>).
+  const reimbAccountPickerContent = renderAccountPicker(
+    reimbAccountsOrdered,
+    reimbursementAccountId,
+    (id) => {
+      setReimbursementAccountId(id)
+      setActivePopover(null)
+    },
   )
 
   const togglesGroup =
@@ -2003,53 +1987,67 @@ export const MovementForm = ({
                       >
                         {t('reimbursement.target.statement_short')}
                       </button>
-                      <div className="relative flex h-full min-w-0 flex-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (reimbursementTarget !== 'account') {
-                              setReimbursementTarget('account')
-                              if (!reimbursementAccountId)
-                                setReimbursementAccountId(pickReimbursementAccount(accountId))
-                            }
-                          }}
-                          className={`flex h-full w-full min-w-0 items-center justify-start gap-1 rounded-[7px] px-2.5 text-[11.5px] ${
-                            reimbursementTarget === 'account'
-                              ? 'bg-white font-semibold text-text shadow-[0_1px_2px_rgba(11,26,43,0.1)]'
-                              : 'font-medium text-text-muted'
-                          }`}
-                        >
-                          <span className="min-w-0 flex-1 truncate text-left">
-                            {reimbursementTarget === 'account' && reimbSelectedAccount
-                              ? accountPrimaryName(reimbSelectedAccount)
-                              : t('reimbursement.target.account_short')}
-                          </span>
-                          {reimbursementTarget === 'account' && (
-                            <ChevronDown className="size-3.5 shrink-0 text-text-soft" aria-hidden />
-                          )}
-                        </button>
-                        {reimbursementTarget === 'account' && cashBank.length > 1 && (
-                          <select
-                            value={reimbursementAccountId}
-                            onChange={(e) => setReimbursementAccountId(e.target.value)}
-                            aria-label={t('reimbursement.credit_to')}
-                            className="absolute inset-0 cursor-pointer opacity-0"
+                      <Popover
+                        modal={isDrawer}
+                        open={activePopover === 'reimbAccount'}
+                        onOpenChange={(o) => {
+                          setActivePopover(o ? 'reimbAccount' : null)
+                          if (o && reimbursementTarget !== 'account') {
+                            setReimbursementTarget('account')
+                            if (!reimbursementAccountId)
+                              setReimbursementAccountId(pickReimbursementAccount(accountId))
+                          }
+                        }}
+                        trigger={
+                          <button
+                            type="button"
+                            className={`flex h-full min-w-0 flex-1 items-center justify-start gap-1 rounded-[7px] px-2.5 text-[11.5px] ${
+                              reimbursementTarget === 'account'
+                                ? 'bg-white font-semibold text-text shadow-[0_1px_2px_rgba(11,26,43,0.1)]'
+                                : 'font-medium text-text-muted'
+                            }`}
                           >
-                            <option value="">{t('reimbursement.credit_to_placeholder')}</option>
-                            {reimbAccountsOrdered.map((a) => (
-                              <option key={a.id} value={a.id}>
-                                {accountPrimaryName(a)}
-                                {a.institutionId === reimbInstitutionId
-                                  ? ` · ${t('reimbursement.same_bank')}`
-                                  : ''}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                      </div>
+                            <span className="min-w-0 flex-1 truncate text-left">
+                              {reimbursementTarget === 'account' && reimbSelectedAccount
+                                ? accountPrimaryName(reimbSelectedAccount)
+                                : t('reimbursement.target.account_short')}
+                            </span>
+                            <ChevronDown className="size-3.5 shrink-0 text-text-soft" aria-hidden />
+                          </button>
+                        }
+                      >
+                        {reimbAccountPickerContent}
+                      </Popover>
                     </div>
                   ) : cashBank.length > 1 ? (
-                    reimbAccountSelect
+                    <Popover
+                      modal={isDrawer}
+                      open={activePopover === 'reimbAccount'}
+                      onOpenChange={(o) => setActivePopover(o ? 'reimbAccount' : null)}
+                      trigger={
+                        <button
+                          type="button"
+                          className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-[9px] border border-border px-2.5 text-left"
+                          style={{ backgroundColor: FIELD_BG }}
+                        >
+                          {reimbSelectedAccount && (
+                            <AccountAvatar
+                              {...avatarOf(reimbSelectedAccount)}
+                              size="sm"
+                              className="h-5 w-5 rounded"
+                            />
+                          )}
+                          <span className="min-w-0 flex-1 truncate text-xs text-text">
+                            {reimbSelectedAccount
+                              ? accountPrimaryName(reimbSelectedAccount)
+                              : t('reimbursement.credit_to_placeholder')}
+                          </span>
+                          <ChevronDown className="size-3.5 shrink-0 text-text-soft" aria-hidden />
+                        </button>
+                      }
+                    >
+                      {reimbAccountPickerContent}
+                    </Popover>
                   ) : (
                     <span className="min-w-0 flex-1 truncate text-xs text-text-soft">
                       {reimbSelectedAccount ? accountPrimaryName(reimbSelectedAccount) : ''}
