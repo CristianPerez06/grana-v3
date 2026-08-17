@@ -1384,6 +1384,11 @@
       "installments_breakdown": "{count} installments of ${amount}",
       "repeat_note": "For what you pay regularly: rent, subscriptions, your salary.",
       "repeat_hint": "When it's due, Grana gets it ready and you log it with one tap. It never goes through without your OK.",
+      "repeat_reassure": "Grana gets it ready and you log it with one tap. It never posts on its own.",
+      "repeat_until_placeholder": "Repeat until — optional",
+      "repeat_no_end": "No end date",
+      "repeat_summary_prefix": "Repeats every",
+      "repeat_summary_no_end": ", no end date",
       "repeat_question": "How often?",
       "cta": {
         "expense": "Register expense",
@@ -1556,6 +1561,11 @@
         "week": "{count, plural, one {week} other {weeks}}",
         "month": "{count, plural, one {month} other {months}}",
         "year": "{count, plural, one {year} other {years}}"
+      },
+      "units_short": {
+        "day": "days",
+        "week": "wk.",
+        "month": "mo."
       },
       "end_after_occurrences": "{count, plural, one {Ends after # occurrence} other {Ends after # occurrences}}",
       "end_label": "Occurrence limit (optional)"

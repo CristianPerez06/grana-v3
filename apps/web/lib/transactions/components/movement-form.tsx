@@ -17,6 +17,7 @@ import {
   ChevronRight,
   CreditCard,
   FileText,
+  Info,
   Lightbulb,
   Plus,
   Repeat,
@@ -1827,6 +1828,19 @@ export const MovementForm = ({
     },
   )
 
+  // Format an ISO end date for the recurrence field / summary. `withYear` off
+  // for the tight custom-mode calendar button (e.g. "31 dic" vs "31 dic 2026").
+  const fmtEndDate = (iso: string, withYear: boolean): string => {
+    const parts = iso.split('-')
+    if (parts.length !== 3) return iso
+    const dt = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+    return new Intl.DateTimeFormat('es-AR', {
+      day: '2-digit',
+      month: 'short',
+      ...(withYear ? { year: 'numeric' } : {}),
+    }).format(dt)
+  }
+
   const togglesGroup =
     showReimbursementToggle || showSharedToggle || showRepeatToggle ? (
       <div
@@ -2305,8 +2319,161 @@ export const MovementForm = ({
           </div>
         )}
 
-        {showRepeatToggle && (!isMobile || isRecurrent) && (
-          <div className={isMobile ? 'rounded-[15px] border border-border bg-card px-4 py-3.5' : 'px-4 py-3.5'}>
+        {showRepeatToggle && (!isMobile || isRecurrent) && (isMobile ? (
+          <div className="flex flex-col">
+            <div className="rounded-[15px] border border-border bg-card px-4 py-3.5">
+              <div className="flex flex-col gap-2">
+                {/* Fila 1 — chips de frecuencia (sin Anual en mobile) */}
+                <div className="flex flex-wrap gap-1">
+                  {(['weekly', 'biweekly', 'monthly', 'custom'] as const).map((f) => {
+                    const active = frequency === f
+                    return (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => setFrequency(f)}
+                        className={`rounded-full border px-2 py-1 text-[11.5px] leading-none transition-colors ${
+                          active ? 'font-semibold text-emerald-deep' : 'border-border font-medium text-text-muted'
+                        }`}
+                        style={
+                          active
+                            ? { backgroundColor: 'var(--emerald-soft)', borderColor: '#BFE9D6' }
+                            : { backgroundColor: '#fff' }
+                        }
+                      >
+                        {t(`frequencies.${f}`)}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Fila 2 — "Repetir hasta" (o "cada N unidad" en Personalizado) */}
+                {frequency === 'custom' ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11.5px] text-text-soft">
+                      {tRec('custom_interval.every').toLowerCase()}
+                    </span>
+                    <div className="flex h-[26px] items-center overflow-hidden rounded-lg border border-border">
+                      <button
+                        type="button"
+                        aria-label="−"
+                        onClick={() => setIntervalCount(Math.max(1, intervalCount - 1))}
+                        className="grid h-full w-6 place-items-center text-sm font-semibold text-text-muted"
+                        style={{ backgroundColor: ROW_DIVIDER }}
+                      >
+                        −
+                      </button>
+                      <span className="min-w-[30px] text-center text-[12.5px] font-semibold tabular-nums">
+                        {intervalCount}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label="+"
+                        onClick={() => setIntervalCount(intervalCount + 1)}
+                        className="grid h-full w-6 place-items-center text-sm font-semibold text-text-muted"
+                        style={{ backgroundColor: ROW_DIVIDER }}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div
+                      className="flex h-[26px] w-[150px] items-center gap-0.5 rounded-lg p-0.5"
+                      style={{ backgroundColor: ROW_DIVIDER }}
+                    >
+                      {(['day', 'week', 'month'] as const).map((u) => (
+                        <button
+                          key={u}
+                          type="button"
+                          onClick={() => setIntervalUnit(u)}
+                          className={`h-full flex-1 rounded-md text-[11px] ${
+                            intervalUnit === u
+                              ? 'bg-white font-semibold text-text shadow-[0_1px_2px_rgba(11,26,43,0.1)]'
+                              : 'font-medium text-text-muted'
+                          }`}
+                        >
+                          {tRec(`custom_interval.units_short.${u}`)}
+                        </button>
+                      ))}
+                    </div>
+                    <DatePicker
+                      value={recurrenceEndDate}
+                      onChange={setRecurrenceEndDate}
+                      min={date}
+                      modal={isDrawer}
+                      onClear={() => setRecurrenceEndDate('')}
+                      clearLabel={t('drawer.repeat_no_end')}
+                      trigger={
+                        <button
+                          type="button"
+                          aria-label={t('drawer.repeat_until_placeholder')}
+                          className="flex h-[34px] shrink-0 items-center justify-center rounded-[9px] border px-2"
+                          style={{
+                            backgroundColor: recurrenceEndDate ? 'var(--emerald-soft)' : FIELD_BG,
+                            borderColor: recurrenceEndDate ? '#BFE9D6' : 'var(--border)',
+                          }}
+                        >
+                          {recurrenceEndDate ? (
+                            <span className="text-[11.5px] font-semibold text-text">
+                              {fmtEndDate(recurrenceEndDate, false)}
+                            </span>
+                          ) : (
+                            <Calendar className="size-[15px]" style={{ color: '#3A6B8A' }} aria-hidden />
+                          )}
+                        </button>
+                      }
+                    />
+                  </div>
+                ) : (
+                  <DatePicker
+                    value={recurrenceEndDate}
+                    onChange={setRecurrenceEndDate}
+                    min={date}
+                    modal={isDrawer}
+                    onClear={() => setRecurrenceEndDate('')}
+                    clearLabel={t('drawer.repeat_no_end')}
+                    trigger={
+                      <button
+                        type="button"
+                        className="flex h-9 w-full items-center gap-1.5 rounded-[9px] border border-border px-2.5 text-left"
+                        style={{ backgroundColor: FIELD_BG }}
+                      >
+                        <Calendar className="size-[15px] shrink-0" style={{ color: '#3A6B8A' }} aria-hidden />
+                        <span
+                          className={`min-w-0 flex-1 truncate text-[12.5px] ${
+                            recurrenceEndDate ? 'font-semibold text-text' : 'text-text-soft'
+                          }`}
+                        >
+                          {recurrenceEndDate
+                            ? tRec('until_template', { date: fmtEndDate(recurrenceEndDate, true) })
+                            : t('drawer.repeat_until_placeholder')}
+                        </span>
+                        <ChevronDown className="size-3.5 shrink-0 text-text-soft" aria-hidden />
+                      </button>
+                    }
+                  />
+                )}
+              </div>
+            </div>
+            <p className="flex items-start gap-1.5 px-1 pt-1.5 text-[11.5px] leading-relaxed text-text-soft">
+              <Info className="mt-px size-3 shrink-0" style={{ color: '#AEB6C0' }} aria-hidden />
+              <span>
+                {frequency === 'custom' ? (
+                  <>
+                    {t('drawer.repeat_summary_prefix')} {intervalCount}{' '}
+                    {tRec(`custom_interval.units.${intervalUnit}`, { count: intervalCount })}
+                    {recurrenceEndDate
+                      ? ` ${tRec('until_template', { date: fmtEndDate(recurrenceEndDate, true) })}`
+                      : t('drawer.repeat_summary_no_end')}
+                    .
+                  </>
+                ) : (
+                  t('drawer.repeat_reassure')
+                )}
+              </span>
+            </p>
+          </div>
+        ) : (
+          <div className="px-4 py-3.5">
             {!isMobile && (
             <div className="flex items-center gap-3">
               <span
@@ -2409,7 +2576,7 @@ export const MovementForm = ({
               </div>
             )}
           </div>
-        )}
+        ))}
       </div>
     ) : null
 

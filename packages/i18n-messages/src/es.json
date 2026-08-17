@@ -1384,6 +1384,11 @@
       "installments_breakdown": "{count} cuotas de ${amount}",
       "repeat_note": "Para lo que pagás seguido: alquiler, suscripciones, el sueldo.",
       "repeat_hint": "Cuando toca, Grana te lo deja listo y vos lo registrás con un toque. Nunca se carga solo sin tu OK.",
+      "repeat_reassure": "Grana te lo deja listo y lo registrás con un toque. Nunca se carga solo.",
+      "repeat_until_placeholder": "Repetir hasta — opcional",
+      "repeat_no_end": "Sin fecha de fin",
+      "repeat_summary_prefix": "Se repite cada",
+      "repeat_summary_no_end": ", sin fecha de fin",
       "repeat_question": "¿Cada cuánto?",
       "cta": {
         "expense": "Registrar gasto",
@@ -1556,6 +1561,11 @@
         "week": "{count, plural, one {semana} other {semanas}}",
         "month": "{count, plural, one {mes} other {meses}}",
         "year": "{count, plural, one {año} other {años}}"
+      },
+      "units_short": {
+        "day": "días",
+        "week": "sem.",
+        "month": "meses"
       },
       "end_after_occurrences": "{count, plural, one {Termina tras # ocurrencia} other {Termina tras # ocurrencias}}",
       "end_label": "Límite de ocurrencias (opcional)"
