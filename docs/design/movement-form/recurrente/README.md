@@ -10,12 +10,17 @@ Referencia visual: [`recurrente-bloque-final.html`](./recurrente-bloque-final.ht
 > (reglas de recurrencia, generación de instancias) vive en `openspec/` y la spec `transactions`.
 > Parte del rediseño del alta — ver el doc padre [`../README.md`](../README.md).
 >
-> ⚠️ **Cambio funcional a confirmar antes de implementar:** el diseño **quita "Anual"** de las
-> frecuencias y limita las unidades del modo personalizado a **días · sem. · meses** (sin "años").
-> Hoy el modelo soporta `annual` / `year` (`packages/movement-form` `Frequency`/`IntervalUnit`,
-> `packages/money-logic` `RecurrenceFrequency`). Sacarlos de la UI impide crear recurrencias anuales
-> desde el alta. Se debe confirmar (y decidir qué pasa con la edición de una recurrencia anual
-> existente) antes de tocar código.
+> **Alcance de "Anual"/"años" (decidido con el PO):** el diseño **oculta "Anual"** de las frecuencias
+> y limita las unidades del modo personalizado a **días · sem. · meses** (sin "años"), **solo en las
+> superficies mobile** (web-vista-mobile + app nativa). La funcionalidad **NO se elimina**: el modelo
+> sigue soportando `annual`/`year` (`packages/movement-form` `Frequency`/`IntervalUnit`,
+> `packages/money-logic` `RecurrenceFrequency`), el desktop no se toca, y una recurrencia anual se
+> crea desde mobile con **Personalizado → cada 12 meses**. Falta definir el detalle de **editar** una
+> recurrencia `annual` existente desde mobile (mostrarla/permitir editarla) al implementar.
+>
+> **Ícono de calendario en modo Personalizado:** es el campo **"Repetir hasta" (fecha de fin
+> opcional)** compactado (la fila 2 la ocupa `cada N · unidad`). No es un control aparte ni se elimina;
+> con una fecha cargada el botón muestra `31 dic`.
 
 ---
 
