@@ -27,7 +27,7 @@ Restricciones del repo que enmarcan el diseño:
 
 **Non-Goals:**
 
-- **No** se toca el hook `useMovementForm` ni sus tipos: el estado ya alcanza. Este change es de presentación.
+- **No** se toca el hook `useMovementForm` ni sus tipos: el estado ya alcanza. Este change es de presentación. (Excepción acotada: un fix de robustez en el helper `pickReimbursementAccount` para que la sugerencia de cuenta de la misma entidad matchee por `institutionId` **o**, si difiere, por nombre de institución — una tarjeta y una cuenta del mismo banco pueden vivir en filas de institución distintas. No cambia estado, tipos ni contrato del hook; solo hace más confiable una funcionalidad ya existente.)
 - **No** se toca la superficie **desktop** de web (sigue gateada por breakpoint).
 - **No** se toca el editor del **split por defecto del hogar** en `/shared/settings` (sigue `1..99`, el 0/100 es una decisión por-gasto).
 - **No** hay migración ni cambios de schema: no hay columnas nuevas.
