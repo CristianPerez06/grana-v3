@@ -55,5 +55,8 @@ Opcional, como fila liviana "**Agregar nota**", después de Fecha (no al fondo d
 #### Reintegro — bloque desplegado
 Handoff visual detallado (2 rows de 38 px, estados, spec y reglas) en [`reintegro/README.md`](./reintegro/README.md) + canvas [`reintegro/reintegro-bloque-final.html`](./reintegro/reintegro-bloque-final.html). **Solo rediseño**: preserva toda la funcionalidad activa (sugerencia de cuenta de la misma entidad del medio de pago, monto ↔ %, tope, acreditado/pendiente).
 
+#### Recurrente — bloque desplegado
+Handoff visual (2 rows de 38 px; chips de frecuencia + "Repetir hasta" opcional; modo personalizado transforma la row 2; línea gris con resumen en lenguaje natural) en [`recurrente/README.md`](./recurrente/README.md) + canvas [`recurrente/recurrente-bloque-final.html`](./recurrente/recurrente-bloque-final.html). ⚠️ **Decisión pendiente**: el diseño quita **Anual** y las unidades **años** — reducción de funcionalidad a confirmar antes de implementar (ver la nota del doc).
+
 ## Estados pendientes de mockear
 Primer movimiento (sin historial → sin chips), y una avanzada expandida (ej. Compartir con el 50/50). No bloquean la implementación de superficie.
