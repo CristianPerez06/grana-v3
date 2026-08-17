@@ -36,8 +36,10 @@ import { useQueryClient } from '@tanstack/react-query'
 // eligible from the user's accounts.
 
 // Recurrence frequency chips + custom-interval units, mirror of the web form.
-const FREQUENCIES: Frequency[] = ['weekly', 'biweekly', 'monthly', 'annual', 'custom']
-const INTERVAL_UNITS: IntervalUnit[] = ['day', 'week', 'month', 'year']
+// Mobile hides "annual" and the "year" unit (the model still supports them; a
+// yearly recurrence is created as "cada 12 meses"). See docs/design/movement-form/recurrente.
+const FREQUENCIES: Frequency[] = ['weekly', 'biweekly', 'monthly', 'custom']
+const INTERVAL_UNITS: IntervalUnit[] = ['day', 'week', 'month']
 
 // The common counts as one-tap chips; anything else via the stepper. Local
 // presentation mirror of the web form's constants (component-local there too).
@@ -265,6 +267,16 @@ export function MovementForm({
     reimbDigits(form.reimbursementCap) !== '' &&
     reimbDigits(form.reimbursementCap) !== '0' &&
     reimbDigits(form.reimbursementAmount) === reimbDigits(form.reimbursementCap)
+
+  // Format an ISO end date for the recurrence summary line ("31 dic 2026").
+  const fmtEndDate = (iso: string): string => {
+    const parts = iso.split('-')
+    if (parts.length !== 3) return iso
+    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])).toLocaleDateString(
+      'es-AR',
+      { day: '2-digit', month: 'short', year: 'numeric' },
+    )
+  }
 
   // Read-only context rows shown in edit mode: the immutable fields (type,
   // currency, account(s)). Mirror of web's `contextRows`.
@@ -1053,90 +1065,123 @@ export function MovementForm({
 
       {/* Recurrence ("Repetir") params — gasto (no cuotas) / ingreso / transferencia */}
       {showRepeat && form.isRecurrent && (
-        <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
-          {form.isRecurrent && (
-            <View className="flex-col gap-3">
-              <View className="rounded-lg bg-emerald-soft p-3">
-                <Text className="text-xs text-text">{t('transactions.drawer.repeat_hint')}</Text>
-              </View>
-              <Text className="text-xs font-semibold text-text-muted">
-                {t('transactions.drawer.repeat_question')}
-              </Text>
-              <View className="flex-row flex-wrap gap-2">
-                {FREQUENCIES.map((f) => {
-                  const active = form.frequency === f
-                  return (
-                    <Pressable
-                      key={f}
-                      onPress={() => form.setFrequency(f)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}
-                      className={`rounded-lg px-3.5 py-2 ${active ? 'bg-navy' : 'bg-border-soft'}`}
+        <View className="flex-col">
+          <View className="flex-col gap-2 rounded-xl border border-border bg-card p-4">
+            {/* Fila 1 — chips de frecuencia (sin Anual en mobile) */}
+            <View className="flex-row flex-wrap gap-1.5">
+              {FREQUENCIES.map((f) => {
+                const active = form.frequency === f
+                return (
+                  <Pressable
+                    key={f}
+                    onPress={() => form.setFrequency(f)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    className={`rounded-full border px-2.5 py-1 ${
+                      active ? 'border-emerald bg-emerald-soft' : 'border-border'
+                    }`}
+                  >
+                    <Text
+                      className={`text-xs ${
+                        active ? 'font-semibold text-emerald-deep' : 'font-medium text-text-muted'
+                      }`}
                     >
-                      <Text
-                        className={`text-sm font-bold ${active ? 'text-white' : 'text-text-muted'}`}
-                      >
-                        {t(`transactions.frequencies.${f}`)}
-                      </Text>
-                    </Pressable>
-                  )
-                })}
-              </View>
-
-              {/* Custom interval: count + unit chips */}
-              {form.frequency === 'custom' && (
-                <View className="flex-col gap-2">
-                  <View className="flex-row items-center gap-2">
-                    <Text className="text-xs text-text-muted">
-                      {t('recurrences.custom_interval.every')}
+                      {t(`transactions.frequencies.${f}`)}
                     </Text>
-                    <Input
-                      value={String(form.intervalCount)}
-                      onChangeText={(v) => {
-                        const digits = v.replace(/\D/g, '')
-                        form.setIntervalCount(digits === '' ? 1 : Math.max(1, parseInt(digits)))
-                      }}
-                      keyboardType="number-pad"
-                      accessibilityLabel={t('recurrences.custom_interval.every')}
-                      className="w-16 text-center"
+                  </Pressable>
+                )
+              })}
+            </View>
+
+            {/* Fila 2 — "cada N unidad" (Personalizado) o "Repetir hasta" */}
+            {form.frequency === 'custom' ? (
+              <View className="flex-col gap-2">
+                <View className="flex-row items-center gap-2">
+                  <Text className="text-xs text-text-soft">
+                    {t('recurrences.custom_interval.every').toLowerCase()}
+                  </Text>
+                  <View className="h-9 flex-row items-center overflow-hidden rounded-lg border border-border">
+                    <Pressable
+                      onPress={() => form.setIntervalCount(Math.max(1, form.intervalCount - 1))}
+                      accessibilityLabel="−"
+                      className="h-full w-8 items-center justify-center bg-border-soft"
+                    >
+                      <Text className="text-base font-semibold text-text-muted">−</Text>
+                    </Pressable>
+                    <Text className="min-w-[34px] text-center text-sm font-semibold text-text">
+                      {form.intervalCount}
+                    </Text>
+                    <Pressable
+                      onPress={() => form.setIntervalCount(form.intervalCount + 1)}
+                      accessibilityLabel="+"
+                      className="h-full w-8 items-center justify-center bg-border-soft"
+                    >
+                      <Text className="text-base font-semibold text-text-muted">+</Text>
+                    </Pressable>
+                  </View>
+                  <View className="flex-1">
+                    <Segmented
+                      ariaLabel={t('recurrences.custom_interval.every')}
+                      value={form.intervalUnit}
+                      onValueChange={(v) => form.setIntervalUnit(v as IntervalUnit)}
+                      options={INTERVAL_UNITS.map((u) => ({
+                        value: u,
+                        label: t(`recurrences.custom_interval.units_short.${u}`),
+                      }))}
                     />
                   </View>
-                  <View className="flex-row flex-wrap gap-2">
-                    {INTERVAL_UNITS.map((u) => {
-                      const active = form.intervalUnit === u
-                      return (
-                        <Pressable
-                          key={u}
-                          onPress={() => form.setIntervalUnit(u)}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected: active }}
-                          className={`rounded-lg px-3.5 py-2 ${active ? 'bg-navy' : 'bg-border-soft'}`}
-                        >
-                          <Text
-                            className={`text-sm font-bold ${active ? 'text-white' : 'text-text-muted'}`}
-                          >
-                            {t(`recurrences.custom_interval.units.${u}`, {
-                              count: form.intervalCount,
-                            })}
-                          </Text>
-                        </Pressable>
-                      )
-                    })}
-                  </View>
                 </View>
-              )}
-
-              {/* Optional end date */}
-              <View className="flex-col gap-1.5">
-                <Label>{t('transactions.drawer.repeat_until')}</Label>
-                <DateField
-                  value={form.recurrenceEndDate}
-                  onChange={form.setRecurrenceEndDate}
-                  placeholder={t('common.pick_date')}
-                />
+                <View className="flex-row items-center justify-between gap-2">
+                  <DateField
+                    bare
+                    value={form.recurrenceEndDate}
+                    onChange={form.setRecurrenceEndDate}
+                    placeholder={t('transactions.drawer.repeat_until_placeholder')}
+                  />
+                  {form.recurrenceEndDate !== '' && (
+                    <Pressable onPress={() => form.setRecurrenceEndDate('')} accessibilityRole="button">
+                      <Text className="text-xs font-medium text-text-muted">
+                        {t('transactions.drawer.repeat_no_end')}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
               </View>
-            </View>
-          )}
+            ) : (
+              <View className="flex-row items-center justify-between gap-2">
+                <View className="flex-1">
+                  <DateField
+                    value={form.recurrenceEndDate}
+                    onChange={form.setRecurrenceEndDate}
+                    placeholder={t('transactions.drawer.repeat_until_placeholder')}
+                  />
+                </View>
+                {form.recurrenceEndDate !== '' && (
+                  <Pressable onPress={() => form.setRecurrenceEndDate('')} accessibilityRole="button">
+                    <Text className="text-xs font-medium text-text-muted">
+                      {t('transactions.drawer.repeat_no_end')}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* Línea de aviso fuera de la card (reemplaza el banner verde) */}
+          <View className="px-1 pt-1.5">
+            <Text className="text-xs text-text-soft">
+              {form.frequency === 'custom'
+                ? `${t('transactions.drawer.repeat_summary_prefix')} ${form.intervalCount} ${t(
+                    `recurrences.custom_interval.units.${form.intervalUnit}`,
+                    { count: form.intervalCount },
+                  )}${
+                    form.recurrenceEndDate
+                      ? ` ${t('recurrences.until_template', { date: fmtEndDate(form.recurrenceEndDate) })}`
+                      : t('transactions.drawer.repeat_summary_no_end')
+                  }.`
+                : t('transactions.drawer.repeat_reassure')}
+            </Text>
+          </View>
         </View>
       )}
 
