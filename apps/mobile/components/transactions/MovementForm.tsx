@@ -235,8 +235,15 @@ export function MovementForm({
   const pickReimbursementAccount = (expenseAccountId: string): string => {
     const expenseAccount = accounts.find((a) => a.id === expenseAccountId)
     const inst = expenseAccount?.institutionId ?? null
+    // Same-bank card and account can have different institution ids but the
+    // same name, so fall back to name before defaulting to the first cash/bank.
+    const instName = expenseAccount?.institutionName?.trim().toLowerCase() || null
     const banks = accounts.filter((a) => a.type !== 'credit')
-    const match = inst ? banks.find((a) => a.institutionId === inst) : undefined
+    const match =
+      (inst ? banks.find((a) => a.institutionId === inst) : undefined) ??
+      (instName
+        ? banks.find((a) => (a.institutionName?.trim().toLowerCase() ?? '') === instName)
+        : undefined)
     return match?.id ?? banks[0]?.id ?? ''
   }
 
@@ -244,10 +251,13 @@ export function MovementForm({
   // payment method) + cap-applied flag, for the compact 2-row block (parity
   // with mobile-web).
   const reimbInstitutionId = form.selectedAccount?.institutionId ?? null
+  const reimbInstitutionName = form.selectedAccount?.institutionName?.trim().toLowerCase() || null
+  const isSameReimbEntity = (a: MovementFormAccount): boolean =>
+    (reimbInstitutionId != null && a.institutionId === reimbInstitutionId) ||
+    (reimbInstitutionName != null &&
+      (a.institutionName?.trim().toLowerCase() ?? '') === reimbInstitutionName)
   const reimbAccountsOrdered = [...form.cashBankAccounts].sort(
-    (a, b) =>
-      (a.institutionId === reimbInstitutionId ? 0 : 1) -
-      (b.institutionId === reimbInstitutionId ? 0 : 1),
+    (a, b) => (isSameReimbEntity(a) ? 0 : 1) - (isSameReimbEntity(b) ? 0 : 1),
   )
   const reimbDigits = (s: string): string => s.replace(/\D/g, '')
   const reimbCapApplied =
