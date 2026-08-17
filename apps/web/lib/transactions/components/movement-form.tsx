@@ -2001,13 +2001,13 @@ export const MovementForm = ({
                         trigger={
                           <button
                             type="button"
-                            className={`flex h-full min-w-0 flex-1 items-center justify-start gap-1 rounded-[7px] px-2.5 text-[11.5px] ${
+                            className={`flex h-full min-w-0 flex-1 items-center justify-center gap-1 rounded-[7px] px-2.5 text-[11.5px] ${
                               reimbursementTarget === 'account'
                                 ? 'bg-white font-semibold text-text shadow-[0_1px_2px_rgba(11,26,43,0.1)]'
                                 : 'font-medium text-text-muted'
                             }`}
                           >
-                            <span className="min-w-0 flex-1 truncate text-left">
+                            <span className="min-w-0 truncate text-center">
                               {reimbursementTarget === 'account' && reimbSelectedAccount
                                 ? accountPrimaryName(reimbSelectedAccount)
                                 : t('reimbursement.target.account_short')}
