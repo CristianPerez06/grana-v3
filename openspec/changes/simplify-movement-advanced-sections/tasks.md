@@ -22,9 +22,17 @@
 - [ ] 3.2 Confirmar que "El otro" fija `splitFirstPct = 0` (0/100) y que se elimina el `Switch`/estado `fullyOther`/`prevSplitPct` ahora redundante.
 - [ ] 3.3 Migrar el copy a la familia i18n unificada (tarea 1).
 
-## 4. Web-mobile — Repetir (mismo archivo, rama `isMobile`)
+## 4. Web-mobile + Nativo — Recurrente (diseño cerrado)
 
-- [ ] 4.1 Reemplazar el `<select>` de unidad del intervalo custom por chips (día/semana/mes/año) sobre `intervalUnit`, espejo del nativo. No tocar frecuencia, count ni fecha fin.
+> Diseño cerrado: `docs/design/movement-form/recurrente/`. Rediseño a **bloque compacto de 2 filas**
+> (no solo el `<select>`→chips). Decisión con el PO: **Anual y unidad "años" se ocultan solo en
+> mobile** (el modelo los mantiene; anual = "cada 12 meses"). El ícono de calendario en modo
+> Personalizado es "Repetir hasta" compactado.
+
+- [x] 4.1 Web-mobile: chips de frecuencia `Semanal · Quincenal · Mensual · Personalizado` (sin Anual); fila 2 = campo "Repetir hasta — opcional" (o `cada N · días/sem./meses` + botón calendario en Personalizado); línea de aviso gris fuera de la card con resumen en lenguaje natural. Desktop intacto.
+- [x] 4.2 Agregar `onClear`/`clearLabel` opcional al `DatePicker` (web) → footer "Sin fecha de fin" en el popover. Aditivo, no afecta otros usos.
+- [x] 4.3 Nativo: mismo rediseño por rol (chips sin Anual; Personalizado con stepper + `Segmented` días/sem./meses; `DateField` de fin + "Sin fecha de fin"; línea de aviso). `FREQUENCIES`/`INTERVAL_UNITS` recortados al subset mobile.
+- [x] 4.4 i18n: `drawer.repeat_until_placeholder`, `drawer.repeat_no_end`, `drawer.repeat_reassure`, `drawer.repeat_summary_prefix`, `drawer.repeat_summary_no_end`, `recurrences.custom_interval.units_short` (es + en).
 
 ## 5. Nativo — Compartido (`apps/mobile/components/transactions/MovementForm.tsx`)
 
