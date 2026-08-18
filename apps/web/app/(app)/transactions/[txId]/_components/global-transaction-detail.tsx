@@ -497,7 +497,7 @@ export const GlobalTransactionDetail = ({
   if (monthWeightTile) tiles.push(monthWeightTile)
 
   return (
-    <div style={toneVars(detailTone)} className="mx-auto w-full max-w-[760px] pb-24 sm:pb-2">
+    <div style={toneVars(detailTone)} className="mx-auto w-full max-w-[760px] pb-6 sm:pb-2">
       <DetailTopbar
         backHref={backFor(from)}
         backLabel={t('back_label')}

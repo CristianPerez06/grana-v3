@@ -975,7 +975,6 @@
     "card_payment_label": "Card payment",
     "detail": {
       "actions": {
-        "menu_label": "Options",
         "edit": "Edit",
         "delete": "Delete",
         "delete_confirm": "Yes, delete",
@@ -984,9 +983,7 @@
         "delete_warning_parent": "This will delete the purchase and all its installments. This action can't be undone.",
         "delete_warning_card_payment": "If you delete this payment, the installments for the period will go back to pending. Continue?",
         "delete_blocked_card_payment": "This movement is the payment of a card statement. To undo it — and send the statement's charges back to pending — go to the period detail, under Cards.",
-        "got_it": "Got it",
-        "more": "More",
-        "edit_movement": "Edit movement"
+        "got_it": "Got it"
       },
       "installment_child_note": "This is one installment. The amount is edited from the original purchase, not from each installment.",
       "installment_child_link": "Go to the original purchase",

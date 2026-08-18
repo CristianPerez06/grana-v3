@@ -526,23 +526,24 @@ A diferencia del hero anterior, el nuevo hero **SÍ** lleva chips de contexto (f
 - **THEN** la fila de chips incluye la fecha, el medio de pago, la categoría y la subcategoría
 - **AND** el chip del medio de pago NO muestra ningún número de tarjeta, solo el nombre del medio
 
-### Requirement: Las acciones del detalle viven en un kebab menu
+### Requirement: Las acciones del detalle viven en la topbar
 
-El sistema SHALL exponer las acciones del detalle en la **topbar** de la pantalla, no en un kebab ni como botones planos al pie. En **desktop**, **Editar** SHALL ser un botón sólido navy a la derecha de la topbar y **Eliminar** un icon button (con hover en tono peligro). En **mobile**, la topbar es sticky: las acciones secundarias (incluida Eliminar) colapsan en un menú **"···"**, y **Editar** SHALL renderearse como un **botón fijo full-width en una barra inferior** (thumb-reach, respetando `safe-area-inset-bottom`).
+El sistema SHALL exponer las acciones del detalle en la **topbar** de la pantalla, no en un kebab, no en un menú "···" y no como botones al pie. **Eliminar** y **Editar** SHALL ser dos icon buttons contiguos a la derecha de la topbar —Eliminar con hover en tono peligro, Editar en sólido navy—, **con la misma disposición en todos los viewports y en las tres superficies** (web escritorio, web en viewport angosto y app nativa). En viewport angosto la topbar es sticky, de modo que las dos acciones quedan a la vista durante todo el scroll. Cada plataforma SHALL adaptar el tratamiento visual a su propio header (la app nativa dibuja los iconos en blanco sobre el `PageHeader` navy); lo que NO SHALL divergir es la disposición: dos iconos, juntos, en la topbar.
 
 Las acciones disponibles dependen de los permisos del usuario y del editable-state del movimiento (igual que hoy): **Editar** abre el drawer de edición en contexto cuando está disponible, o navega a `[txId]/edit`; **Eliminar** abre el `AlertDialog` con copy contextual (parent / card payment / default). Cuando el movimiento no permite ninguna acción, la topbar deja el slot de acciones vacío.
 
-#### Scenario: En desktop, Editar y Eliminar están en la topbar
+#### Scenario: Editar y Eliminar están en la topbar, en cualquier viewport
 
-- **WHEN** el sistema renderiza en viewport ancho el detalle de un gasto editable y eliminable
-- **THEN** la topbar muestra a la derecha el botón sólido "Editar" y un icon button de "Eliminar"
-- **AND** no se renderea ningún menú kebab `⋯`
+- **WHEN** el sistema renderiza el detalle de un gasto editable y eliminable, en viewport ancho o angosto
+- **THEN** la topbar muestra a la derecha dos icon buttons contiguos: "Eliminar" y "Editar"
+- **AND** no se renderea ningún menú kebab `⋯` ni menú "···"
+- **AND** no se renderea ninguna barra inferior fija con la acción de editar
 
-#### Scenario: En mobile, Editar pasa a una barra inferior fija
+#### Scenario: En viewport angosto la topbar acompaña el scroll
 
-- **WHEN** el sistema renderiza en viewport angosto (≤600px) el detalle de un gasto editable
-- **THEN** la topbar es sticky y las acciones secundarias viven en un menú "···"
-- **AND** "Editar" se muestra como un botón fijo full-width en una barra inferior
+- **WHEN** el usuario baja por el detalle en viewport angosto (≤600px)
+- **THEN** la topbar queda sticky y las dos acciones siguen accesibles sin volver al principio
+- **AND** el final de la página no queda tapado por ninguna barra fija
 
 #### Scenario: Editar abre el drawer de edición en contexto
 

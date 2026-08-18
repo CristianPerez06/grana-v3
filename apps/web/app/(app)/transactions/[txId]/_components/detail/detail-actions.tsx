@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 import * as AlertDialog from '@radix-ui/react-alert-dialog'
 import { useTranslations } from 'next-intl'
 import {
@@ -13,19 +13,12 @@ import {
 import type { SeededRecurrenceInfo } from '@grana/transactions-mutations'
 import type { SeededRecurrenceResolution } from '@grana/recurrences'
 import { invalidateAfterMovementMutation } from '@/lib/transactions/invalidation'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItemDestructive,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
 
-// Acciones del detalle en la topbar (handoff): desktop muestra "Eliminar"
-// (icon button) + "Editar" (botón sólido navy); mobile colapsa "Eliminar" en
-// un menú "···" y deja "Editar" en una barra fija inferior (thumb-reach).
-// La lógica (permisos, borrado con AlertDialog contextual, invalidación) es la
-// misma que el TxActionsMenu original — solo cambia la disposición.
+// Acciones del detalle en la topbar: "Eliminar" (icon button) + "Editar" (icon
+// button navy), iguales en todos los viewports. En mobile la topbar es sticky,
+// así que las dos quedan a la vista durante todo el scroll — mejor que el par
+// "···" + barra inferior fija que había antes, que partía las dos acciones en
+// dos lugares distintos y tapaba el final de la página.
 
 type Props = {
   transactionId: string
@@ -119,8 +112,7 @@ export const DetailActions = ({
 
   return (
     <>
-      {/* Desktop: Eliminar (icon) + Editar (solid) */}
-      <div className="hidden items-center gap-1.5 sm:flex">
+      <div className="flex items-center gap-1.5">
         {canDelete && (
           <button
             type="button"
@@ -144,43 +136,6 @@ export const DetailActions = ({
           </button>
         )}
       </div>
-
-      {/* Mobile: "···" con las acciones secundarias (Eliminar) */}
-      {canDelete && (
-        <div className="flex sm:hidden">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label={t('more')}
-                className="grid size-[42px] place-items-center rounded-xl border border-border bg-card text-text"
-              >
-                <MoreHorizontal size={20} strokeWidth={2.2} aria-hidden />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItemDestructive onSelect={() => setDeleteOpen(true)}>
-                <Trash2 size={16} strokeWidth={2} aria-hidden />
-                {t('delete')}
-              </DropdownMenuItemDestructive>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      )}
-
-      {/* Mobile: barra inferior fija con "Editar" (thumb-reach) */}
-      {canEdit && (
-        <div className="fixed inset-x-0 bottom-0 z-30 flex bg-gradient-to-t from-page from-70% to-transparent px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 sm:hidden">
-          <Button
-            size="lg"
-            className="h-[50px] rounded-[14px] bg-navy text-[15.5px] font-bold text-white hover:bg-navy/90"
-            onPress={goEdit}
-          >
-            <Pencil size={16} strokeWidth={2.2} aria-hidden />
-            {t('edit_movement')}
-          </Button>
-        </div>
-      )}
 
       <AlertDialog.Root
         open={deleteOpen}
