@@ -251,6 +251,141 @@ junto con lo que se aprendió analizándolo:
 
 ---
 
+## D-004 · Exportación a Excel del módulo Movimientos
+
+**Estado: cerrada (diseño).** **Capacidad nueva** — hoy no existe ninguna exportación en
+la app, ni librería de planillas, ni manejo de archivos en la app nativa. Alcance de esta
+etapa: **solo web desktop**.
+
+### Punto de entrada
+
+Un ícono de planilla en la **micro-toolbar del listado** — la fila que actúa sobre la
+lista, que es donde corresponde: exportar es "llevarme esta lista".
+
+No engorda la barra. Hoy tiene cuatro íconos y uno de ellos —el toggle "mostrar
+compartidos"— es un filtro disfrazado que se muda al panel de filtros (pendiente ya
+anotado). Quedan tres, entra la planilla, vuelven a ser cuatro.
+
+### La regla: se exporta lo que estás viendo
+
+Con los filtros y la búsqueda aplicados. **El panel de filtros es el armador del reporte**:
+un solo botón da infinitos reportes, sin asistente de exportación con opciones propias.
+Con D-001 andando, también permite exportar una búsqueda de todo el historial — la serie
+completa de un concepto, para analizarla en Excel.
+
+**Debe exportar TODAS las filas que cumplen el filtro, no la página cargada.** Hoy el
+listado trae 50 y ofrece "cargar más": si el export tomara lo cargado, se bajarían 50
+filas y faltaría el resto sin ningún aviso. Mismo criterio de D-001 — el archivo no miente.
+
+**La hoja de contexto declara la lente** (ver D-002). Si se exporta desde la vista de
+composición de una categoría, el archivo lleva la lente devengada; desde el listado
+general, la lente caja. Las dos son válidas, pero el archivo tiene que decir cuál es —
+si no, dos exportaciones con el mismo filtro dan números distintos y nada lo explica.
+
+### Formato: `.xlsx`, no CSV
+
+Un CSV se abre mal en un Excel configurado en español: los acentos se rompen y **todo
+entra en una sola columna**, porque espera punto y coma como separador, no coma. Es lo
+primero que pasa al abrirlo.
+
+El `.xlsx` además permite mandar **fechas como fechas e importes como números** — no como
+texto—, que es lo que hace que la tabla dinámica funcione sin tocar nada. Requiere sumar
+una librería de planillas, que hoy no existe en el repo.
+
+### Estructura: dos hojas
+
+- **Hoja "Movimientos"** — la tabla plana. **El encabezado va en A1 y no hay NADA arriba.**
+  Un título o un resumen de filtros sobre el encabezado hace que Excel deje de reconocer
+  la tabla: los filtros no agarran y la tabla dinámica toma el título como encabezado.
+- **Hoja "Reporte"** — filtros aplicados, lente (ver arriba), fecha de generación, cantidad
+  de filas, y el aviso de que ARS y USD no se suman. Contexto auditable, fuera de los datos.
+
+Datos crudos, no reporte terminado: **sin fila de totales, sin subtotales, sin celdas
+combinadas, sin colores que signifiquen algo.** El reporte lo arma la usuaria con una tabla
+dinámica.
+
+### Modelo de filas: una fila por PATA
+
+**Una transferencia y un cambio de moneda bajan como DOS filas** (salida y entrada). Se
+evaluó una sola fila con columna "Cuenta destino" y **se descartó**, porque rompe dos cosas:
+
+- pivotear "suma de Importe por Cuenta" deja la cuenta de destino en cero — la plata que
+  entró no figura;
+- sumar la columna Importe de todo el archivo **da un número falso**: una transferencia no
+  es un gasto, pero la fila negativa la resta como si lo fuera.
+
+Con una sola fila no existe un signo correcto posible (negativo miente, positivo miente,
+cero es inútil). Eso es lo que prueba que el modelo estaba mal.
+
+```
+Fecha       Tipo            Cuenta      Moneda  Importe     Pata      ID
+10/03/26    Transferencia   Galicia     ARS     -200.000    Salida    a1b2
+10/03/26    Transferencia   Billetera   ARS     +200.000    Entrada   a1b2
+```
+
+Suma por cuenta: cierra. Suma total: **cero**, que es lo que una transferencia es. El
+cambio de moneda funciona igual y de paso respeta bimoneda, porque cada pata queda en su
+propia moneda.
+
+**El costo y cómo se paga:** la operación aparece dos veces, así que contar filas infla el
+número de movimientos. Se resuelve con dos columnas: el **ID es el mismo en ambas filas**
+(contar IDs distintos da el número real), y **Pata** ("Salida" / "Entrada", vacía en todo
+lo que tiene una sola pata).
+
+### Columnas
+
+**Núcleo:**
+
+| Columna | Tipo | Nota |
+|---|---|---|
+| Fecha | **fecha real** | la tabla dinámica agrupa sola por mes/trimestre/año |
+| Tipo | texto | Gasto · Ingreso · Transferencia · Ajuste · Cambio · Compra en cuotas · Pago de resumen · Reintegro |
+| Descripción | texto | |
+| Categoría | texto | |
+| Subcategoría | texto | |
+| Cuenta | texto | |
+| Tipo de cuenta | texto | Efectivo · Débito · **Crédito** — separa lo que impacta el disponible de lo que no |
+| Moneda | texto | ARS · USD |
+| **Importe** | **número con signo** | negativo = salió plata. Sumar la columna da el neto sin fórmulas |
+| **Tu parte** | número | **el gasto total va en Importe; acá va lo que corresponde al usuario logueado**. Vacía cuando el movimiento no es compartido |
+| Pata | texto | Salida · Entrada · vacía |
+
+**Contexto** (cada una es un eje más para pivotear):
+
+Institución · Cuenta destino · Importe destino · Moneda destino · Compartido (Sí/No) ·
+Recurrente (Sí/No) · Cuota N · Cuotas total · Estado tarjeta (Pendiente/Pagado) ·
+Período tarjeta · Estado reintegro (Pendiente/Recibido/Cancelado) · Cotización (solo
+consumos de tarjeta en moneda extranjera) · ID.
+
+Las banderas van **"Sí" / "No"**, nunca vacías: una celda vacía no filtra bien en una tabla
+dinámica.
+
+**Nota sobre "Tu parte":** en la vista de composición de una categoría el Importe **ya es**
+la parte propia (lente devengada, D-002), así que ahí la columna se omite para no
+duplicar — la hoja "Reporte" ya declara la lente. Mismo criterio que el carve-out de D-003.
+
+### Lo que NO va, y por qué
+
+- **Emojis y colores de categoría.** Ayudan en pantalla; en una planilla ensucian y rompen filtros.
+- **Totales.** Rompen la tabla dinámica y, con dos monedas, un total sería directamente falso.
+- **Columnas Mes y Año.** Con una Fecha real, la tabla dinámica las deriva sola. Duplicar
+  un dato derivable es deuda.
+- **El link al detalle.** Para eso está el ID.
+
+### Superficies
+
+**Solo web desktop en esta etapa.** N y WM quedan sin el botón — o sea, **siguen siendo
+idénticas entre sí y D-000 se cumple**: el principio exige paridad entre las dos mobile,
+no que toda capacidad llegue a todas partes.
+
+Si más adelante se lleva a mobile: en la web desde el celular es gratis (el navegador
+descarga), pero en la app nativa hay que sumar librerías de archivos que hoy no están, y
+el gesto natural no es "descargar a una carpeta" sino **"Compartir"** (mail, WhatsApp,
+Drive). Misma capacidad, entrega nativa de cada plataforma — eso también cumpliría D-000,
+que habla de capacidades, no de gestos.
+
+---
+
 ## Pendientes de la conversación
 
 Anotados para no perderlos, en el orden en que los vamos a tratar:
