@@ -245,15 +245,19 @@ export function MovementForm({
     return match?.id ?? banks[0]?.id ?? ''
   }
 
-  // Read-only context rows shown in edit mode: the immutable fields (type,
-  // currency, account(s)). Mirror of web's `contextRows`.
+  // Immutable context in edit mode, collapsed into a SINGLE muted line under the
+  // hero: "−$200.000 · Gasto · ARS · Cta remunerada — no editable". Mirror of
+  // web's `contextLine`.
   //
-  // Amount and date join the list when `getEditableFields` locks them (a paid
-  // card consumption, an installment parent with a paid cuota). They are not
-  // dropped from the screen: without them you would be editing a movement whose
-  // two identifying facts — how much and when — are nowhere to be seen. The
-  // amount leads the block (where the hero would have been) and the date closes
-  // it, so the immutable facts stay together and the editable fields follow.
+  // It used to be a card of label/value rows — three of them, and up to six once
+  // a locked amount and date joined. That is a lot of vertical space, in the best
+  // part of the screen, for facts the user cannot act on, pushing the fields they
+  // came to change below the fold.
+  //
+  // The amount is the exception inside the exception: when `getEditableFields`
+  // locks it (a paid card consumption, an installment parent with a paid cuota)
+  // it leads the line with full weight, because it is the movement's headline
+  // number and the rest of the line is metadata around it.
   const lockedAmountValue = (): string => {
     if (!edit) return ''
     const sign =
@@ -267,44 +271,25 @@ export function MovementForm({
     const symbol = CURRENCY_SYMBOL[edit.currencyCode]
     return `${sign}${symbol}${edit.currencyCode === 'USD' ? ' ' : ''}${formatForDisplay(form.amount)}`
   }
-  const contextRows: { label: string; value: string }[] =
+  const lockedAmount = isEdit && edit && !showAmount ? lockedAmountValue() : null
+  const contextParts: string[] =
     isEdit && edit
       ? [
-          ...(showAmount
-            ? []
-            : [{ label: t('transactions.labels.amount'), value: lockedAmountValue() }]),
-          {
-            label: t('transactions.labels.type'),
-            value: edit.isParent
-              ? t('transactions.installment_purchase_label')
-              : t(`transactions.types.${edit.type}`),
-          },
-          { label: t('transactions.labels.currency'), value: edit.currencyCode },
+          edit.isParent
+            ? t('transactions.installment_purchase_label')
+            : t(`transactions.types.${edit.type}`),
+          edit.currencyCode,
           ...(edit.isParent && edit.installmentsTotal
-            ? [
-                {
-                  label: t('transactions.labels.installments'),
-                  value: t('transactions.installments_count', { count: edit.installmentsTotal }),
-                },
-              ]
+            ? [t('transactions.installments_count', { count: edit.installmentsTotal })]
             : []),
           ...(edit.type === 'transfer' || edit.type === 'exchange'
             ? [
-                {
-                  label: t('transactions.labels.source_account'),
-                  value: edit.sourceAccountName ?? edit.accountId,
-                },
-                {
-                  label: t('transactions.labels.destination_account'),
-                  value: edit.destinationAccountName ?? '—',
-                },
+                `${edit.sourceAccountName ?? edit.accountId} → ${edit.destinationAccountName ?? '—'}`,
               ]
             : edit.sourceAccountName && !editable?.account
-              ? [{ label: t('transactions.labels.account'), value: edit.sourceAccountName }]
+              ? [edit.sourceAccountName]
               : []),
-          ...(showDate
-            ? []
-            : [{ label: t('transactions.labels.date'), value: formatShortDate(form.date, locale) }]),
+          ...(showDate ? [] : [formatShortDate(form.date, locale)]),
         ]
       : []
 
@@ -402,29 +387,6 @@ export function MovementForm({
         />
       )}
 
-      {/* Read-only context rows (edit): immutable fields as label/value with a
-          "no editable" caption. */}
-      {contextRows.length > 0 && (
-        <View className="overflow-hidden rounded-xl border border-border bg-card">
-          {contextRows.map((row, i) => (
-            <View
-              key={row.label}
-              className={`flex-row items-center justify-between gap-3 px-4 py-3 ${
-                i > 0 ? 'border-t border-border-soft' : ''
-              }`}
-            >
-              <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
-                {row.label}
-              </Text>
-              <Text className="flex-1 text-right text-[15px] font-semibold text-text" numberOfLines={1}>
-                {row.value}
-                <Text className="text-xs font-normal text-text-muted"> {t('common.not_editable')}</Text>
-              </Text>
-            </View>
-          ))}
-        </View>
-      )}
-
       {/* Amount hero — big centered number, faded currency glyph, currency chip,
           and a calculator trigger beneath the chip. Mirror of web's hero. */}
       {showAmount && (
@@ -487,6 +449,18 @@ export function MovementForm({
             </Text>
           )}
         </View>
+      )}
+
+      {/* Immutable context, one muted line under the hero (mirror of web's
+          `contextLine`). A locked amount leads it in full weight. */}
+      {isEdit && (
+        <Text className="px-1 text-[12.5px] leading-5 text-text-muted">
+          {lockedAmount ? (
+            <Text className="font-bold text-text">{lockedAmount} · </Text>
+          ) : null}
+          {contextParts.join(' · ')}
+          <Text className="text-text-soft"> {t('common.not_editable')}</Text>
+        </Text>
       )}
 
       {/* Adjustment direction (Suma / Resta) + informative banner — before the

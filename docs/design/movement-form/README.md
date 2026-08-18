@@ -26,7 +26,10 @@ Decisiones visuales del rediseño del alta, cerradas con el PO. Acompaña al cha
 ### Tabs
 Tres: **Gasto · Ingreso · Otros**. Gasto/Ingreso primarios fijos; "Otros" abre una hoja con Transferencia, Ajuste y Cambio (gateados por elegibilidad). Reemplaza el selector de 5 y descarta el "tercer slot dinámico" (más simple y predecible). Header compacto: sin eyebrow "Nuevo" ni título gordo — las tabs + el CTA dan el contexto.
 
-**Son del alta y sólo del alta** (change `drop-edit-type-selector`). En edición no hay selector de tipo en ninguna superficie: el tipo es inmutable, así que se enuncia como fila de contexto read-only junto a la moneda y la cuenta, con el mismo caption de "no editable". Un control que no se puede operar —la tira simplificada tanto como el `Segmented` de 5 deshabilitado— es chrome con forma de acción, y "Otros" es el caso peor: la palabra promete una lista que nunca se abre.
+**Son del alta y sólo del alta** (change `drop-edit-type-selector`). En edición no hay selector de tipo en ninguna superficie: el tipo es inmutable, así que se enuncia en la línea de contexto read-only junto a la moneda y la cuenta (ver abajo). Un control que no se puede operar —la tira simplificada tanto como el `Segmented` de 5 deshabilitado— es chrome con forma de acción, y "Otros" es el caso peor: la palabra promete una lista que nunca se abre.
+
+### Edición — el contexto inmutable
+Todo lo que en edición no se puede cambiar (tipo, moneda, cuenta/s, cuotas, y el monto y la fecha cuando están bloqueados) va en **una sola línea atenuada bajo el monto**, separada por `·` y cerrada por un único "— no editable" (change `collapse-edit-context-into-one-line`). No son campos, así que no se dibujan como filas etiquetadas: eso costaba hasta seis filas antes del primer campo editable. **Excepción**: un monto bloqueado encabeza la línea en negrita — es el número identificatorio del movimiento y atenuarlo sería volver a esconderlo. Esta parte **sí** aplica también al escritorio: la card era la misma en los dos viewports y mantener dos versiones no aportaba nada.
 
 ### Monto
 **Centrado**, con el **chip de moneda (ARS ▾) y la calculadora a la derecha** (la calculadora es la que ya existe). Tamaño contenido (~32px), autofocus al abrir.

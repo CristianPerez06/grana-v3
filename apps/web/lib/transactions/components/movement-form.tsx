@@ -555,16 +555,19 @@ export const MovementForm = ({
     return d === todayStr() ? `${t('drawer.today')} · ${label}` : label
   }
 
-  // Read-only context rows shown in edit mode (immutable fields). The type is
-  // one of them: edit renders no type selector at all, so this row is where the
-  // type is stated, right next to the currency and the account.
+  // Immutable context in edit mode, collapsed into a SINGLE muted line under the
+  // hero: "−$200.000 · Gasto · ARS · Cta remunerada — no editable".
   //
-  // Amount and date join the list when `getEditableFields` locks them (a paid
-  // card consumption, an installment parent with a paid cuota). They are not
-  // dropped from the screen: without them you would be editing a movement whose
-  // two identifying facts — how much and when — are nowhere to be seen. The
-  // amount leads the block (where the hero would have been) and the date closes
-  // it, so the immutable facts stay together and the editable fields follow.
+  // It used to be a card of label/value rows — three of them, and up to six once
+  // a locked amount and date joined. That is a lot of vertical space, in the best
+  // part of the screen, for facts the user cannot act on, pushing the fields they
+  // came to change below the fold. One line says the same and puts the editable
+  // fields first.
+  //
+  // The amount is the exception inside the exception: when `getEditableFields`
+  // locks it (a paid card consumption, an installment parent with a paid cuota)
+  // it leads the line with full weight, because it is the movement's headline
+  // number and the rest of the line is metadata around it.
   const lockedAmountValue = (): string => {
     if (!edit) return ''
     const sign =
@@ -578,28 +581,29 @@ export const MovementForm = ({
     const symbol = CURRENCY_SYMBOL[edit.currencyCode]
     return `${sign}${symbol}${edit.currencyCode === 'USD' ? ' ' : ''}${formatForDisplay(amount)}`
   }
-  const contextRows: Array<{ label: string; value: string }> = isEdit && edit
+  const lockedAmount = isEdit && edit && !editable?.amount ? lockedAmountValue() : null
+  const contextParts: string[] = isEdit && edit
     ? [
-        ...(editable?.amount ? [] : [{ label: t('labels.amount'), value: lockedAmountValue() }]),
-        {
-          label: t('labels.type'),
-          value: edit.isParent ? t('installment_purchase_label') : TYPE_LABELS[edit.type],
-        },
-        { label: t('labels.currency'), value: edit.currencyCode },
+        edit.isParent ? t('installment_purchase_label') : TYPE_LABELS[edit.type],
+        edit.currencyCode,
         ...(edit.isParent && edit.installmentsTotal
-          ? [{ label: t('labels.installments'), value: t('installments_count', { count: edit.installmentsTotal }) }]
+          ? [t('installments_count', { count: edit.installmentsTotal })]
           : []),
         ...(edit.type === 'transfer' || edit.type === 'exchange'
-          ? [
-              { label: t('labels.source_account'), value: edit.sourceAccountName ?? edit.accountId },
-              { label: t('labels.destination_account'), value: edit.destinationAccountName ?? '—' },
-            ]
+          ? [`${edit.sourceAccountName ?? edit.accountId} → ${edit.destinationAccountName ?? '—'}`]
           : edit.sourceAccountName && !edit.editableFields?.account
-            ? [{ label: t('labels.account'), value: edit.sourceAccountName }]
+            ? [edit.sourceAccountName]
             : []),
-        ...(editable?.date ? [] : [{ label: t('labels.date'), value: formatDateValue(date) }]),
+        ...(editable?.date ? [] : [formatDateValue(date)]),
       ]
     : []
+  const contextLine = isEdit ? (
+    <p className="px-1 text-[12.5px] leading-relaxed text-text-muted">
+      {lockedAmount && <span className="font-bold text-text">{lockedAmount} · </span>}
+      {contextParts.join(' · ')}
+      <span className="text-text-soft"> {tCommon('not_editable')}</span>
+    </p>
+  ) : null
 
   const formatBalance = (account: MovementFormAccount): string =>
     account.activeCurrencies
@@ -1593,19 +1597,13 @@ export const MovementForm = ({
   const cuotasRow =
     cuotasContent && isMobile ? <div className="px-4 py-3">{cuotasContent}</div> : null
 
-  const fieldGroup = (
+  // In edit the group holds only the editable rows; when none of them apply
+  // (everything is locked) there is no card to draw.
+  const hasEditRows = !!(editable?.account || editable?.category || editable?.date)
+  const fieldGroup = isEdit && !hasEditRows ? null : (
     <div className="overflow-hidden rounded-[15px] border border-border bg-card [&>*+*]:border-t [&>*+*]:border-[#F1F3F6]">
       {isEdit ? (
         <>
-          {contextRows.map((row) => (
-            <div key={row.label} className="flex items-center justify-between gap-3 px-4 py-3">
-              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">{row.label}</span>
-              <span className="truncate text-right text-[15px] font-semibold text-text">
-                {row.value}
-                <span className="ml-1.5 text-xs font-normal text-text-muted">{tCommon('not_editable')}</span>
-              </span>
-            </div>
-          ))}
           {/* Editable debit account — statement payment only (getEditableFields
               gates it). The account is a pure debit pointer here, so it can move
               to any cash/bank account with the payment currency active. */}
@@ -2251,6 +2249,7 @@ export const MovementForm = ({
   const body = (
     <>
       {hero}
+      {contextLine}
       {adjustmentSign}
       {adjustmentBanner}
       {exchangeNoCurrencyHint}
