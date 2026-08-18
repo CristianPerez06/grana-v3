@@ -157,6 +157,8 @@ export function MovementForm({
   // Amount hero: always in create; in edit only when the amount is editable (a
   // paid consumption / locked madre shows no amount field — web does the same).
   const showAmount = isEdit ? !!editable?.amount : true
+  // Nothing to save yet: in edit the CTA waits for a real change.
+  const submitDisabled = form.isSubmitting || (isEdit && !form.isDirty)
   // Source account: immutable context in edit, EXCEPT a statement payment whose
   // debit account can move (`editable.account`). In create, hide the selector
   // when there is a single eligible account (D2) — but transfer/exchange always
@@ -1128,14 +1130,16 @@ export function MovementForm({
 
       {form.formError && <FormError message={form.formError} />}
 
-      {/* Submit */}
+      {/* Submit. In edit the CTA stays disabled until something actually changed:
+          "Guardar cambios" with nothing to save is a no-op that still fires the
+          mutation, invalidates the cache and closes as if it had done something. */}
       <Pressable
         onPress={form.onSubmit}
-        disabled={form.isSubmitting}
+        disabled={submitDisabled}
         accessibilityRole="button"
-        accessibilityState={{ disabled: form.isSubmitting }}
+        accessibilityState={{ disabled: submitDisabled }}
         className={`mt-1 h-14 flex-row items-center justify-center rounded-2xl bg-emerald ${
-          form.isSubmitting ? 'opacity-60' : ''
+          submitDisabled ? 'opacity-60' : ''
         }`}
       >
         {form.isSubmitting ? (

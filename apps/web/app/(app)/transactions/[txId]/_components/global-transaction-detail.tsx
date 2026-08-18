@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import {
   AlertTriangle,
@@ -39,6 +39,8 @@ import {
   type MovementFormAccount,
 } from '@/lib/transactions/components/movement-form'
 import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
+
+import { useDiscardGuard } from '../../_components/use-discard-guard'
 
 import { DetailTopbar } from './detail/detail-topbar'
 import { DetailActions } from './detail/detail-actions'
@@ -137,6 +139,8 @@ export const GlobalTransactionDetail = ({
   const tDetail = useTranslations('transactions.detail')
   const tRoot = useTranslations()
   const [editOpen, setEditOpen] = useState(false)
+  // Closing the edit drawer with unsaved edits (✕, Esc or scrim) asks first.
+  const editGuard = useDiscardGuard(useCallback(() => setEditOpen(false), []))
   const canUseEditDrawer = edit != null && editCategories != null
 
   const isPendingReimbursement =
@@ -516,17 +520,21 @@ export const GlobalTransactionDetail = ({
       />
 
       {canUseEditDrawer && (
-        <Drawer open={editOpen} onClose={() => setEditOpen(false)} ariaLabel={t('edit_title')}>
-          <MovementForm
-            variant="drawer"
-            accounts={editAccounts ?? []}
-            categories={editCategories!}
-            edit={edit!}
-            household={editHouseholdResolved}
-            onClose={() => setEditOpen(false)}
-            onSuccess={() => setEditOpen(false)}
-          />
-        </Drawer>
+        <>
+          <Drawer open={editOpen} onClose={editGuard.requestClose} ariaLabel={t('edit_title')}>
+            <MovementForm
+              variant="drawer"
+              accounts={editAccounts ?? []}
+              categories={editCategories!}
+              edit={edit!}
+              household={editHouseholdResolved}
+              onClose={editGuard.requestClose}
+              onDirtyChange={editGuard.setDirty}
+              onSuccess={() => setEditOpen(false)}
+            />
+          </Drawer>
+          {editGuard.dialog}
+        </>
       )}
 
       <div className="flex flex-col gap-3.5 sm:gap-[18px]">

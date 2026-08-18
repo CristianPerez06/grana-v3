@@ -1506,6 +1506,12 @@
       "unlink": "Conservar la regla",
       "unlink_hint": "La regla sigue activa y se desvincula de este movimiento.",
       "cancel": "Cancelar"
+    },
+    "discard_changes": {
+      "title": "¿Descartar los cambios?",
+      "body": "Editaste el movimiento y todavía no guardaste. Si cerrás ahora, los cambios se pierden.",
+      "discard": "Descartar",
+      "keep_editing": "Seguir editando"
     }
   },
   "recurrences": {

@@ -1591,6 +1591,12 @@ Qué campos son editables y cuáles visibles según el tipo y el estado del movi
 
 En **modo creación**, el selector de cuenta SHALL mostrar el **saldo disponible actual de cada cuenta por moneda** (bimoneda). Las tarjetas de crédito NO muestran saldo (son off-ledger).
 
+**Cambios sin guardar.** El formulario SHALL exponer si algún campo que el usuario puede cambiar difiere de lo que el formulario abrió (estado *dirty*), derivado en el hook compartido y no en cada plataforma. Sobre eso:
+
+- En **modo edición**, el CTA de guardar SHALL estar deshabilitado mientras no haya ningún cambio. Guardar sin cambios dispararía igual la mutation, invalidaría el cache y cerraría como si hubiera pasado algo.
+- Cuando el formulario vive en un **overlay** (el drawer de alta y el de edición en web), cerrarlo con cambios sin guardar SHALL pedir confirmación antes de descartarlos, y SHALL hacerlo por **todos** los caminos de cierre —la ✕ del propio formulario, `Esc` y el click en el scrim—, no sólo por el botón. La confirmación ofrece descartar o seguir editando; descartar cierra y pierde los cambios, seguir editando deja el formulario intacto.
+- Un submit exitoso NO SHALL pedir confirmación: ya no hay nada que perder.
+
 #### Scenario: El mismo formulario crea y edita
 
 - **WHEN** el usuario crea un movimiento nuevo y, en otro momento, edita uno existente
@@ -1609,6 +1615,25 @@ En **modo creación**, el selector de cuenta SHALL mostrar el **saldo disponible
 - **THEN** el formulario NO ofrece el campo de monto ni el de fecha para editarlos
 - **AND** muestra el monto y la fecha como filas de contexto read-only, con caption de "no editable", junto al tipo, la moneda y la cuenta
 - **AND** el monto conserva su signo y su símbolo de moneda, de modo que se lee igual que en el detalle
+
+#### Scenario: Guardar está deshabilitado mientras no haya cambios
+
+- **WHEN** el usuario abre un movimiento en modo edición y no toca ningún campo
+- **THEN** el CTA de guardar está deshabilitado
+- **AND** en cuanto cambia un campo, se habilita
+- **AND** si deshace el cambio y vuelve al valor original, se deshabilita de nuevo
+
+#### Scenario: Cerrar el overlay con cambios pide confirmación
+
+- **WHEN** el usuario editó algún campo en el drawer y lo cierra —con la ✕, con `Esc` o clickeando el scrim—
+- **THEN** el sistema pide confirmación antes de descartar
+- **AND** "seguir editando" deja el formulario como estaba, con los cambios intactos
+- **AND** "descartar" cierra el drawer y pierde los cambios
+
+#### Scenario: Cerrar sin cambios no molesta
+
+- **WHEN** el usuario abre el drawer, no cambia nada y lo cierra
+- **THEN** el drawer se cierra directamente, sin confirmación
 
 #### Scenario: El selector de cuenta muestra el saldo por moneda
 

@@ -122,6 +122,12 @@ type Props = {
   variant?: 'page' | 'drawer'
   /** Drawer chrome: close handler for the header ✕ and footer cancel paths. */
   onClose?: () => void
+  /**
+   * Reports whether the form has unsaved changes. The host wires its own close
+   * handler (which Radix also calls for Esc and scrim clicks) through a confirm
+   * when this is true — see `useDiscardGuard`.
+   */
+  onDirtyChange?: (dirty: boolean) => void
   /** The user's household when it has two members — enables the "Compartir" toggle. */
   household?: Household | null
   /**
@@ -267,6 +273,7 @@ export const MovementForm = ({
   onSuccess,
   variant = 'page',
   onClose,
+  onDirtyChange,
   household,
   appStartDate = null,
   showFirstMovementGuidance = false,
@@ -448,6 +455,7 @@ export const MovementForm = ({
     frequentChips,
     negativeWarning,
     isSubmitting: isPending,
+    isDirty,
     formError,
     onSubmit: hookSubmit,
     swapAccounts,
@@ -457,6 +465,14 @@ export const MovementForm = ({
     fetchSuggestionForDescription,
   } = form
   const cashBank = cashBankAccounts
+
+  // The host owns every close path — the X calls its `onClose`, and Radix routes
+  // Esc and scrim clicks to the same handler — so it is the host that guards the
+  // close. It only needs to know whether there is anything to lose.
+  useEffect(() => {
+    onDirtyChange?.(isDirty)
+  }, [isDirty, onDirtyChange])
+
   // Categories are projected locally to keep the rich web type (icon, color,
   // canonical_name, is_system) — the hook only narrows to id+type. The graft
   // has to be repeated here for the same reason: the hook's copy of the tree
@@ -2256,6 +2272,9 @@ export const MovementForm = ({
       type="submit"
       variant="primary"
       loading={isPending}
+      // Edit only: "Guardar cambios" with nothing changed is a no-op that still
+      // fires the mutation, invalidates the cache and closes as if it had saved.
+      disabled={isEdit && !isDirty}
       data-tour={isEdit ? undefined : 'submit'}
       className="h-[52px] flex-1 rounded-[14px] text-[15.5px] font-bold tracking-[-0.01em]"
     >

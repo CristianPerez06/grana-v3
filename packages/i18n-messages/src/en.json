@@ -1506,6 +1506,12 @@
       "unlink": "Keep the rule",
       "unlink_hint": "The rule stays active and is detached from this movement.",
       "cancel": "Cancel"
+    },
+    "discard_changes": {
+      "title": "Discard your changes?",
+      "body": "You edited this movement and haven't saved yet. Closing now loses the changes.",
+      "discard": "Discard",
+      "keep_editing": "Keep editing"
     }
   },
   "recurrences": {
