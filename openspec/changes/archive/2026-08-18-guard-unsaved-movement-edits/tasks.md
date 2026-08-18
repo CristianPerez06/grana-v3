@@ -30,9 +30,11 @@
 - [x] 4.4 **Edición web**: "seguir editando" deja los cambios intactos; "descartar" cierra y los pierde.
 
 > **El scrim del drawer no es alcanzable en viewport angosto.** El panel es `width: 528px` con `max-w-full` (`components/ui/drawer.tsx`), así que abajo de 528px ocupa todo el ancho y no queda página oscurecida para clickear. Los tres caminos de cierre coexisten **sólo en desktop**; en un teléfono real el único camino es la ✕ (no hay `Esc` ni scrim). No es un defecto de este cambio — es la geometría del drawer — pero conviene saberlo antes de escribir un caso de prueba que a ese ancho no existe.
-- [ ] 4.5 **Alta web**: cargar monto y categoría, cerrar por los tres caminos → confirma. Abrir el drawer y cerrarlo sin tocar nada → cierra directo, sin diálogo.
+- [ ] 4.5 **Alta web**: cargar monto y categoría, cerrar por los tres caminos → confirma. Abrir el drawer y cerrarlo sin tocar nada → cierra directo, sin diálogo. **Verificado en escritorio**; falta viewport angosto.
 - [ ] 4.6 **Guardado exitoso** (alta y edición): cierra sin preguntar.
 - [ ] 4.7 **Nativa**: en edición el CTA arranca deshabilitado y se habilita al primer cambio; el alta no cambió.
+
+> La verificación manual pendiente en la **app nativa** está consolidada en el issue #38 (`QA App Mobile — formulario de edición de movimiento`), asignado y con checklist propio.
 
 ## 5. Cierre
 

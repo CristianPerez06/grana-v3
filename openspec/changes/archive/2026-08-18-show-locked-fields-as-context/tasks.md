@@ -19,6 +19,8 @@
 - [ ] 3.4 **Sin regresión en los casos normales**: un gasto cash/bank editable sigue mostrando el héroe del monto y la fila de fecha editable, y NO duplica ninguna de las dos en el bloque de contexto.
 - [x] 3.5 **Formato**: el monto se lee con signo y símbolo (`−$200.000`, `+U$D 350`), con centavos cuando los tiene, igual que en el detalle.
 
+> La verificación manual pendiente en la **app nativa** está consolidada en el issue #38 (`QA App Mobile — formulario de edición de movimiento`), asignado y con checklist propio.
+
 ## 4. Cierre
 
 - [x] 4.1 Archivar la change antes del merge según el checklist de `AGENTS.md` y aplicar el delta sobre `openspec/specs/transactions/spec.md`.

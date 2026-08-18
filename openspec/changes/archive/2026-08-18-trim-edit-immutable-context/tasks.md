@@ -20,7 +20,9 @@
 - [ ] 3.3 **Transferencia / cambio**: dos filas, cuenta origen y cuenta destino.
 - [x] 3.4 **Consumo de tarjeta pagado**: héroe read-only con el monto grande y su caption; debajo, CUENTA y FECHA.
 - [ ] 3.5 **Madre de compra en cuotas con cuota paga**: héroe read-only; debajo CUENTA, CUOTAS y FECHA.
-- [ ] 3.6 **Alta**: sin cambios en ninguna superficie — el contexto inmutable es exclusivo de edición.
+- [ ] 3.6 **Alta**: sin cambios en ninguna superficie — el contexto inmutable es exclusivo de edición. **Web escritorio verificado**; pendientes web angosto y nativa (issue #38).
+
+> La verificación manual pendiente en la **app nativa** está consolidada en el issue #38 (`QA App Mobile — formulario de edición de movimiento`), asignado y con checklist propio.
 
 ## 4. Cierre
 

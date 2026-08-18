@@ -18,7 +18,9 @@
 - [ ] 3.3 **Web, viewport ancho**: mismas dos superficies. Ya no está el `Segmented` deshabilitado y la fila "TIPO" sigue en su lugar.
 - [ ] 3.4 **Web**: editar una transferencia y un cambio de moneda — el contexto muestra el tipo y las dos cuentas; y la madre de una compra en cuotas — la fila dice "Compra en cuotas".
 - [ ] 3.5 **Web**: guardar un gasto y una transferencia editados; los cambios persisten.
-- [ ] 3.6 **Alta (regresión)**: en web angosto, web ancho y nativa, el selector de tipo funciona igual que antes — tres slots parejos en mobile, popover/hoja de "Otros" operativa, `Segmented` de cinco en escritorio.
+- [ ] 3.6 **Alta (regresión)**: el selector de tipo funciona igual que antes. **Web ancho verificado** (`Segmented` de cinco). Pendientes: web angosto (tres slots parejos + popover "Otros") y nativa (hoja "Otros") — ver issue #38.
+
+> La verificación manual pendiente en la **app nativa** está consolidada en el issue #38 (`QA App Mobile — formulario de edición de movimiento`), asignado y con checklist propio.
 
 ## 4. Cierre
 

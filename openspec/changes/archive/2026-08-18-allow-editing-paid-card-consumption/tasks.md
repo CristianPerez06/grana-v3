@@ -22,6 +22,8 @@
 - [ ] 3.5 **Nativa**: repetir 3.2 y 3.3.
 - [ ] 3.6 **Regresión**: un consumo `pending` y un gasto cash/bank siguen con lápiz + papelera; una cuota hija sigue sin ninguna de las dos.
 
+> La verificación manual pendiente en la **app nativa** está consolidada en el issue #38 (`QA App Mobile — formulario de edición de movimiento`), asignado y con checklist propio.
+
 ## 4. Cierre
 
 - [x] 4.1 Archivar la change y aplicar el delta sobre `openspec/specs/transactions/spec.md`.
