@@ -530,12 +530,20 @@ export const MovementForm = ({
 
 
   // Read-only context rows shown in edit mode (immutable fields).
+  // On mobile the read-only type strip already names the type, so the "TIPO"
+  // row would say it twice in a row. An installment parent keeps it: its value
+  // is "Compra en cuotas", which a plain "Gasto" slot doesn't convey.
+  const showTypeContextRow = !isMobile || edit?.isParent === true
   const contextRows: Array<{ label: string; value: string }> = isEdit && edit
     ? [
-        {
-          label: t('labels.type'),
-          value: edit.isParent ? t('installment_purchase_label') : TYPE_LABELS[edit.type],
-        },
+        ...(showTypeContextRow
+          ? [
+              {
+                label: t('labels.type'),
+                value: edit.isParent ? t('installment_purchase_label') : TYPE_LABELS[edit.type],
+              },
+            ]
+          : []),
         { label: t('labels.currency'), value: edit.currencyCode },
         ...(edit.isParent && edit.installmentsTotal
           ? [{ label: t('labels.installments'), value: t('installments_count', { count: edit.installmentsTotal }) }]
@@ -867,30 +875,46 @@ export const MovementForm = ({
     <span className="text-text-soft">{t('placeholders.category')}</span>
   )
 
-  // ── Type selector (Segmented). Disabled in edit: type is immutable. ─────────
-  const typeSelector =
-    isMobile && !isEdit ? (
-      // Mobile-web: two primaries + "Otros" (secondary types behind a popover).
-      <div
-        className="flex gap-1 rounded-[11px] border border-border p-1"
-        style={{ backgroundColor: FIELD_BG }}
-      >
-        {PRIMARY_TABS.map((k) => {
-          const active = tab === k
-          return (
-            <button
-              key={k}
-              type="button"
-              onClick={() => setTab(k)}
-              className={`flex-1 rounded-[9px] px-3 py-2 text-sm font-bold transition-colors ${
-                active ? 'bg-card text-text shadow-sm' : 'text-text-muted'
-              }`}
-            >
-              {TAB_LABELS[k]}
-            </button>
-          )
-        })}
-        {secondaryTabs.length > 0 && (
+  // ── Type selector ───────────────────────────────────────────────────────────
+  // Mobile-web (create AND edit): two primaries + "Otros" (secondary types).
+  // In edit the same three slots render read-only — the type is immutable, so
+  // nothing is pressable and the popover never mounts; the movement's type is
+  // simply the active slot (a secondary type takes over the "Otros" slot).
+  // Desktop keeps the full Segmented, disabled in edit.
+  const typeSlotClass = (active: boolean) =>
+    `flex-1 rounded-[9px] px-3 py-2 text-sm font-bold transition-colors ${
+      active ? 'bg-card text-text shadow-sm' : 'text-text-muted'
+    }`
+  // The "Otros" slot also has to appear in edit when the movement's own type is
+  // a secondary one but no secondary type is currently eligible (e.g. editing a
+  // transfer after closing the second account) — otherwise the type vanishes.
+  const showOtrosSlot = secondaryTabs.length > 0 || (isEdit && isSecondaryTab)
+  const otrosLabel = isSecondaryTab ? TAB_LABELS[tab] : t('form.other_types')
+  const typeSelector = isMobile ? (
+    <div
+      role="group"
+      aria-label={t('labels.type')}
+      className="flex gap-1 rounded-[11px] border border-border p-1"
+      style={{ backgroundColor: FIELD_BG }}
+    >
+      {PRIMARY_TABS.map((k) => {
+        const active = tab === k
+        return isEdit ? (
+          <span key={k} aria-current={active || undefined} className={`${typeSlotClass(active)} text-center`}>
+            {TAB_LABELS[k]}
+          </span>
+        ) : (
+          <button key={k} type="button" onClick={() => setTab(k)} className={typeSlotClass(active)}>
+            {TAB_LABELS[k]}
+          </button>
+        )
+      })}
+      {showOtrosSlot &&
+        (isEdit ? (
+          <span aria-current={isSecondaryTab || undefined} className={`${typeSlotClass(isSecondaryTab)} text-center`}>
+            {otrosLabel}
+          </span>
+        ) : (
           <Popover
             modal={isDrawer}
             open={activePopover === 'otros'}
@@ -898,11 +922,9 @@ export const MovementForm = ({
             trigger={
               <button
                 type="button"
-                className={`inline-flex flex-1 items-center justify-center gap-1 rounded-[9px] px-3 py-2 text-sm font-bold transition-colors ${
-                  isSecondaryTab ? 'bg-card text-text shadow-sm' : 'text-text-muted'
-                }`}
+                className={`inline-flex items-center justify-center gap-1 ${typeSlotClass(isSecondaryTab)}`}
               >
-                {isSecondaryTab ? TAB_LABELS[tab] : t('form.other_types')}
+                {otrosLabel}
                 <ChevronDown className="size-3" aria-hidden />
               </button>
             }
@@ -924,22 +946,22 @@ export const MovementForm = ({
               ))}
             </div>
           </Popover>
-        )}
-      </div>
-    ) : (
-      <div className="flex flex-col gap-2">
-        <Segmented
-          ariaLabel={t('labels.type')}
-          value={tab}
-          onValueChange={(v) => setTab(v as Tab)}
-          options={(['expense', 'income', 'transfer', 'adjustment', 'exchange'] as Tab[]).map((k) => ({
-            value: k,
-            label: TAB_LABELS[k],
-            disabled: isEdit,
-          }))}
-        />
-      </div>
-    )
+        ))}
+    </div>
+  ) : (
+    <div className="flex flex-col gap-2">
+      <Segmented
+        ariaLabel={t('labels.type')}
+        value={tab}
+        onValueChange={(v) => setTab(v as Tab)}
+        options={(['expense', 'income', 'transfer', 'adjustment', 'exchange'] as Tab[]).map((k) => ({
+          value: k,
+          label: TAB_LABELS[k],
+          disabled: isEdit,
+        }))}
+      />
+    </div>
+  )
 
   // ── Amount hero ─────────────────────────────────────────────────────────────
   const showAmountHero = isEdit ? editable?.amount : true
