@@ -1919,7 +1919,13 @@
       "sum_error": "Percentages must add up to 100.",
       "shared_label": "Shared expense",
       "fully_other_label": "It's 100% {name}'s",
-      "fully_other_hint": "You pay it and {name} owes you the whole amount"
+      "fully_other_hint": "You pay it and {name} owes you the whole amount",
+      "half": "Half",
+      "all_other": "All theirs",
+      "you": "You",
+      "other_short": "Other",
+      "owes": "owes you",
+      "write_your_share": "Enter your share"
     },
     "invite": {
       "title": "Invite a member",

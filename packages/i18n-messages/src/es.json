@@ -1919,7 +1919,13 @@
       "sum_error": "Los porcentajes deben sumar 100.",
       "shared_label": "Gasto compartido",
       "fully_other_label": "Es 100% de {name}",
-      "fully_other_hint": "Lo pagás vos y {name} te lo debe entero"
+      "fully_other_hint": "Lo pagás vos y {name} te lo debe entero",
+      "half": "Mitad",
+      "all_other": "Todo suyo",
+      "you": "Vos",
+      "other_short": "Otro",
+      "owes": "te debe",
+      "write_your_share": "Escribí tu parte"
     },
     "invite": {
       "title": "Invitar miembro",

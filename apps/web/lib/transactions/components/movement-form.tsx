@@ -314,6 +314,8 @@ export const MovementForm = ({
   // retyping (e.g. clearing "50" to enter "60"). `null` = show the committed
   // value; a string = the in-progress text. Clamped/committed on blur.
   const [splitDraft, setSplitDraft] = useState<string | null>(null)
+  // Mobile split "Otro" editor: row 1 chips are replaced by two % fields.
+  const [splitOtherMode, setSplitOtherMode] = useState(false)
   const amountRef = useRef<HTMLInputElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
@@ -2259,7 +2261,158 @@ export const MovementForm = ({
               />
             </div>
             )}
-            {sharedEnabled && (
+            {sharedEnabled && (isMobile ? (
+              <div className="flex flex-col gap-2">
+                {/* Fila 1 — atajos (o los dos campos % en modo "Otro") */}
+                {splitOtherMode ? (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSplitOtherMode(false)
+                        setSplitDraft(null)
+                      }}
+                      aria-label={tCommon('back')}
+                      className="flex size-6 shrink-0 items-center justify-center text-text-soft"
+                    >
+                      <ChevronLeft className="size-4" aria-hidden />
+                    </button>
+                    <span className="text-[11.5px] text-text-soft">{tShared('split.you')}</span>
+                    <div
+                      className="flex min-w-[56px] items-center justify-between gap-1 rounded-[9px] border border-border px-2 py-1"
+                      style={{ backgroundColor: FIELD_BG }}
+                    >
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoFocus
+                        value={splitDraft ?? String(splitFirstPct)}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/\D/g, '').slice(0, 2)
+                          setSplitDraft(raw)
+                          if (raw !== '') setSplitFirstPct(Math.max(0, Math.min(99, parseInt(raw, 10))))
+                        }}
+                        onBlur={() => setSplitDraft(null)}
+                        aria-label={sharedMembers[0].fullName}
+                        className="w-8 bg-transparent text-sm font-semibold text-text outline-none"
+                      />
+                      <span className="text-xs text-text-muted">%</span>
+                    </div>
+                    <span className="ml-auto min-w-0 truncate text-[11.5px] text-text-soft">
+                      {sharedMembers[1].fullName}
+                    </span>
+                    <div
+                      className="flex min-w-[56px] items-center justify-between gap-1 rounded-[9px] px-2 py-1"
+                      style={{ backgroundColor: ROW_DIVIDER }}
+                    >
+                      <span className="text-sm font-semibold text-text-muted">
+                        {100 - (splitDraft === '' ? 0 : splitFirstPct)}
+                      </span>
+                      <span className="text-xs text-text-muted">%</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {([['half', 50], ['70/30', 70], ['75/25', 75], ['all_other', 0]] as const).map(
+                      ([key, val]) => {
+                        const active = splitFirstPct === val
+                        const label =
+                          key === 'half'
+                            ? tShared('split.half')
+                            : key === 'all_other'
+                              ? tShared('split.all_other')
+                              : key
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => {
+                              setSplitOtherMode(false)
+                              setSplitDraft(null)
+                              setSplitFirstPct(val)
+                            }}
+                            className={`rounded-full border px-2.5 py-1.5 text-[11.5px] leading-none tabular-nums transition-colors ${
+                              active ? 'font-semibold text-emerald-deep' : 'border-border font-medium text-text-muted'
+                            }`}
+                            style={
+                              active
+                                ? { backgroundColor: 'var(--emerald-soft)', borderColor: '#BFE9D6' }
+                                : { backgroundColor: '#fff' }
+                            }
+                          >
+                            {label}
+                          </button>
+                        )
+                      },
+                    )}
+                    {(() => {
+                      const custom = ![50, 70, 75, 0].includes(splitFirstPct)
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSplitOtherMode(true)
+                            setSplitDraft('')
+                          }}
+                          className={`rounded-full border px-2.5 py-1.5 text-[11.5px] leading-none tabular-nums transition-colors ${
+                            custom ? 'font-semibold text-emerald-deep' : 'border-border font-medium text-text-muted'
+                          }`}
+                          style={
+                            custom
+                              ? { backgroundColor: 'var(--emerald-soft)', borderColor: '#BFE9D6' }
+                              : { backgroundColor: '#fff' }
+                          }
+                        >
+                          {custom ? `${splitFirstPct}%` : tShared('split.other_short')}
+                        </button>
+                      )
+                    })()}
+                  </div>
+                )}
+
+                {/* Fila 2 — barra de reparto Vos / otro integrante */}
+                {splitOtherMode && splitDraft === '' ? (
+                  <div
+                    className="flex h-[26px] items-center justify-center rounded-[9px] text-[11px] text-text-soft"
+                    style={{ backgroundColor: ROW_DIVIDER }}
+                  >
+                    {tShared('split.write_your_share')}
+                  </div>
+                ) : splitFirstPct === 0 ? (
+                  <div
+                    className="flex h-[26px] w-full items-center gap-1 overflow-hidden rounded-[9px] px-2 text-[11px] font-semibold text-white"
+                    style={{ backgroundColor: '#0E9E6E' }}
+                  >
+                    <span className="truncate">
+                      {sharedMembers[1].fullName} 100%
+                      {amount
+                        ? ` — ${tShared('split.owes')} ${CURRENCY_SYMBOL[currencyCode]}${formatForDisplay(amount)}`
+                        : ''}
+                    </span>
+                  </div>
+                ) : (
+                  <div
+                    className="flex h-[26px] w-full overflow-hidden rounded-[9px]"
+                    style={{ backgroundColor: ROW_DIVIDER }}
+                  >
+                    <div
+                      className="flex h-full items-center gap-1 overflow-hidden px-2 text-[11px] font-semibold text-white"
+                      style={{ width: `${splitFirstPct}%`, backgroundColor: '#3A6B8A' }}
+                    >
+                      <span className="truncate">{tShared('split.you')}</span>
+                      <span className="shrink-0">{splitFirstPct}%</span>
+                    </div>
+                    <div
+                      className="flex h-full items-center justify-end gap-1 overflow-hidden px-2 text-[11px] font-semibold text-white"
+                      style={{ width: `${100 - splitFirstPct}%`, backgroundColor: '#0E9E6E' }}
+                    >
+                      <span className="truncate">{sharedMembers[1].fullName}</span>
+                      <span className="shrink-0">{100 - splitFirstPct}%</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
               <div
                 className={`flex flex-col gap-3 ${isMobile ? '' : 'mt-3.5 border-t pt-3.5'}`}
                 style={{ borderColor: ROW_DIVIDER }}
@@ -2317,7 +2470,7 @@ export const MovementForm = ({
                   />
                 </div>
               </div>
-            )}
+            ))}
           </div>
         )}
 
