@@ -2,7 +2,7 @@
 
 ## 1. i18n — unificar y agregar copy
 
-- [ ] 1.1 Elegir la familia de claves canónica del control de split (preferencia `shared.split.*`) y agregar/renombrar: labels de presets `Vos` / `Mitad` / `El otro {name}`, disparador `Otro %`, y las etiquetas del editor de porcentaje libre. Retirar el copy huérfano del `Switch` fully-other si deja de usarse.
+- [x] 1.1 Familia canónica del split en `shared.split.*` (consumida por web-mobile y nativo). Agregadas: `half` ("Mitad"), `all_other` ("Todo suyo"), `you` ("Vos"), `other_short` ("Otro"), `owes` ("te debe"), `write_your_share` ("Escribí tu parte") (es + en). Los labels viejos `transactions.form.split_you/even/other`/`your_share` quedan sin uso en mobile.
 - [x] 1.2 Agregar el copy del reintegro en `packages/i18n-messages` (es y en): labels del destino `Resumen` / `Cuenta` (`target.statement_short` / `target.account_short`), el rótulo `same_bank` ("mismo banco") y `cap_short` ("tope"), sin jerga contable. (Ya no hay disparador "calcular por %": el %/tope queda visible inline.)
 - [ ] 1.3 Verificar que ambas superficies (web-mobile y nativo) consumen la **misma** familia de claves del split — no dos juegos paralelos.
 
@@ -16,11 +16,13 @@
 - [x] 2.4 Ocultar el selector de cuenta de acreditación cuando hay una sola cuenta cash/bank elegible; renderizarlo cuando hay más de una. No romper el prerellenado por institución.
 - [x] 2.5 No tocar la rama **desktop** ni el flujo de edición read-only del reintegro (`reimbursementReadOnly`).
 
-## 3. Web-mobile — Compartido (mismo archivo, rama `isMobile`)
+## 3. Web-mobile — Compartir (diseño cerrado, mismo archivo, rama `isMobile`)
 
-- [ ] 3.1 Reemplazar el input de porcentaje libre + `Switch` "es 100% del otro" por: presets `Vos` (100) / `Mitad` (50) / `El otro` (0) como chips de un gesto sobre `splitFirstPct`, más un chip `Otro %` que revela el input de porcentaje libre (el editor `1..99` actual).
-- [ ] 3.2 Confirmar que "El otro" fija `splitFirstPct = 0` (0/100) y que se elimina el `Switch`/estado `fullyOther`/`prevSplitPct` ahora redundante.
-- [ ] 3.3 Migrar el copy a la familia i18n unificada (tarea 1).
+> Diseño cerrado: `docs/design/movement-form/compartir/`. Atajos finales `Mitad · 70/30 · 75/25 · Todo suyo · Otro` (5 chips, una fila) + **barra de reparto Vos / [otro integrante]**. Sin chip "todo mío".
+
+- [x] 3.1 Reemplazar el input libre + `Switch` "es 100% del otro" por: chips `Mitad` (50) / `70/30` (70) / `75/25` (75) / `Todo suyo` (0) sobre `splitFirstPct`, más un chip `Otro` que transforma la fila 1 en dos campos % (el tuyo editable 0–99; el del otro calculado, gris, no editable). El chip "Otro" muestra el valor (`65%`) cuando es custom.
+- [x] 3.2 Agregar la **barra de reparto** (fila 2): Vos (`#3A6B8A`) / otro integrante (`#0E9E6E`), nombre del Hogar, truncado del nombre primero; caso `Todo suyo` = barra entera + "te debe {monto}". Estado `splitOtherMode` local; desktop intacto (branch `isMobile`).
+- [x] 3.3 Copy en la familia unificada `shared.split.*` (tarea 1).
 
 ## 4. Web-mobile + Nativo — Recurrente (diseño cerrado)
 
@@ -34,10 +36,10 @@
 - [x] 4.3 Nativo: mismo rediseño por rol (chips sin Anual; Personalizado con stepper + `Segmented` días/sem./meses; `DateField` de fin + "Sin fecha de fin"; línea de aviso). `FREQUENCIES`/`INTERVAL_UNITS` recortados al subset mobile.
 - [x] 4.4 i18n: `drawer.repeat_until_placeholder`, `drawer.repeat_no_end`, `drawer.repeat_reassure`, `drawer.repeat_summary_prefix`, `drawer.repeat_summary_no_end`, `recurrences.custom_interval.units_short` (es + en).
 
-## 5. Nativo — Compartido (`apps/mobile/components/transactions/MovementForm.tsx`)
+## 5. Nativo — Compartir (`apps/mobile/components/transactions/MovementForm.tsx`)
 
-- [ ] 5.1 Reemplazar el `Segmented` de 3 presets por presets `Vos` / `Mitad` / `El otro` **más** un disparador `Otro %` que revela un input de porcentaje libre (`MoneyAmountInput`/`Input` numérico) escribiendo `splitFirstPct` (0–100, validado). Mantener el hint "tu parte: X%".
-- [ ] 5.2 Migrar el copy a la familia i18n unificada (tarea 1).
+- [x] 5.1 Reemplazar el `Segmented` de 3 presets por los mismos chips que web (`Mitad · 70/30 · 75/25 · Todo suyo · Otro`) + la **barra de reparto** (Views proporcionales) + el modo "Otro" de dos campos (`Input` bare + campo calculado). Estado local `splitOtherMode`/`splitDraft`.
+- [x] 5.2 Copy en la familia unificada `shared.split.*` (tarea 1).
 
 ## 6. Nativo — Reintegro (mismo archivo)
 
@@ -49,7 +51,7 @@
 - [ ] 7.1 `pnpm --filter web lint` + typecheck web; typecheck mobile. Sin errores nuevos.
 - [ ] 7.2 Tests existentes del hook y del form verdes (el hook no cambia; confirmar que ninguna aserción dependía del `Switch` fully-other ni del split `Segmented`).
 - [ ] 7.3 `pnpm openspec:check` OK.
-- [ ] 7.4 Verificación manual web-mobile (viewport de celular, el usuario en el navegador): las tres secciones abren con superficie mínima; split de un tap + "Otro %" funciona; el reintegro es el bloque compacto de 2 filas con el `% + tope` visible inline, destino `Resumen | Cuenta` (default Resumen; "Cuenta" toma la misma entidad; el nombre abre el selector) y check "Acreditado"; cuenta de acreditación oculta con una sola cuenta.
+- [ ] 7.4 Verificación manual web-mobile (viewport de celular, el usuario en el navegador): (a) **Reintegro** — bloque compacto de 2 filas con `% + tope` visible inline, destino `Resumen | Cuenta` ("Cuenta" toma la misma entidad; el nombre abre el picker de la app), check "Acreditado", cuenta oculta con una sola. (b) **Compartir** — atajos `Mitad · 70/30 · 75/25 · Todo suyo · Otro` en una fila, barra de reparto Vos/[otro] con el nombre del Hogar, "Todo suyo" = barra entera + "te debe", "Otro" = dos campos %. (c) **Recurrente** — chips sin Anual, "Repetir hasta" + "Sin fecha de fin", Personalizado con stepper + días/sem./meses, línea de aviso. En las tres: nada se scrollea de más.
 - [ ] 7.5 Handoff al tech lead para revisión del nativo (sin device en esta sesión): mismos criterios de paridad por rol/estructura.
 
 ## 8. Cierre

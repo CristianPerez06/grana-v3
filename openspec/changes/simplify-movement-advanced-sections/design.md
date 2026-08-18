@@ -20,7 +20,7 @@ Restricciones del repo que enmarcan el diseño:
 
 **Goals:**
 
-- Que al activar una sección avanzada se revele **la superficie mínima**, por densidad (reintegro: bloque compacto de 2 filas, sin labels) o por disclosure donde corresponda (editor de % libre del split tras "Otro %"), no volcando todos los controles de entrada.
+- Que al activar una sección avanzada se revele **la superficie mínima**, por densidad (reintegro/recurrente: bloques compactos de 2 filas, sin labels) o por disclosure donde corresponda (editor de % libre del split tras "Otro"), no volcando todos los controles de entrada.
 - Que los parámetros revelados de las tres secciones se lean como **el mismo producto** en web-mobile y en nativo, por rol y estructura y por primitivos equivalentes.
 - Que el split soporte **cualquier reparto** en ambas superficies (hoy nativo no puede 70/30), resolviendo el caso común de un tap.
 - Unificar el copy i18n del split en una sola familia de claves.
@@ -52,17 +52,18 @@ El **estado** es un control **"Acreditado"** —en el diseño cerrado, un **chec
 
 Nota sobre el primitivo del estado: la iteración previa proponía `Switch` (el que ya usa el nativo). El diseño cerrado optó por un **check** por densidad visual del bloque de 2 filas; la spec lo fija por rol ("control binario 'Acreditado', on=recibido / off=pendiente") y ambas superficies convergen en el check, no en el Switch.
 
-### 3. Compartido: presets + escape a "Otro %", un solo modelo en las dos superficies
+### 3. Compartido: atajos + barra de reparto (diseño cerrado con el PO)
 
-Ambas superficies ofrecen tres chips de un gesto —**Vos** (`splitFirstPct = 100`), **Mitad** (`50`), **El otro** (`0`)— más un chip **"Otro %"** que revela el input de porcentaje libre (el editor `1..99` que hoy tiene web). El estado sigue siendo el único `splitFirstPct` del hook; los presets son escrituras directas, "Otro %" abre el editor fino.
+Diseño cerrado en `docs/design/movement-form/compartir/`. Ambas superficies ofrecen **atajos de un gesto** —**Mitad** (`splitFirstPct = 50`), **70/30** (`70`), **75/25** (`75`) (los % son *tu parte*) y **Todo suyo** (`0`)— más un chip **"Otro"** que transforma la fila de chips en **dos campos %** (el tuyo editable con teclado del sistema; el del otro se calcula solo, gris, no editable). Debajo, una **barra de reparto** proporcional muestra **Vos** (izq, `#3A6B8A`) y el **otro integrante** (der, `#0E9E6E`), con el nombre traído del Hogar; el nombre se cae primero si el segmento no alcanza, el `%` queda. El estado sigue siendo el único `splitFirstPct` del hook.
 
-Consecuencia clave: **el preset "El otro" ES el caso 0/100**, así que el `Switch` dedicado "es 100% del otro" **se elimina** de web-mobile — su función queda absorbida en un preset visible en vez de un toggle que había que descubrir. Esto **modifica** `shared/spec.md` (hoy manda un "toggle dedicado" para el 0/100): la semántica no cambia (`{pagador: 0, otro: 100}`), cambia cómo se alcanza.
+Decisiones respecto del canvas original (con el PO):
+- Se **quita "80/20"** para que los 5 chips entren en una fila (con "Todo suyo", más ancho).
+- "100%" se **renombra a "Todo suyo"** (los otros chips son *tu parte*; este es el inverso: `{pagador: 0, otro: 100}`). Reemplaza al `Switch` "es 100% del otro", que **se elimina**. Esto **modifica** `shared/spec.md`: la semántica no cambia, cambia cómo se alcanza.
+- **No** hay chip "todo mío" (100% propio no se marca compartido).
 
-Nativo **gana** el reparto arbitrario: hoy su `Segmented` de 3 presets viola su propio requirement ("cualquier reparto") y el `shared` §split (editor `1..99`). Con "Otro %" queda compliant.
+Nativo **gana** el reparto arbitrario: hoy su `Segmented` de 3 presets viola su propio requirement ("cualquier reparto"). Con los atajos + "Otro" queda compliant.
 
-Alternativa considerada: converger en solo-presets (100/50/0). Se descarta: es una regresión funcional (se pierde el 70/30 que hoy existe en web) y contradice `shared/spec.md`. Alternativa opuesta: % libre siempre visible en ambas. Se descarta por fricción — el caso común es un tap.
-
-Presentación por plataforma: en web-mobile los presets son botones-chip; en nativo pueden seguir sobre `Segmented` **más** el chip "Otro %" al lado, o migrar a chips — la paridad se evalúa por rol (tres presets de un gesto + escape a % libre), no por el widget exacto. El editor libre usa el `MoneyAmountInput`/`Input` numérico equivalente de cada plataforma.
+Presentación por plataforma: web-mobile usa botones-chip + una barra con `flex` proporcional; nativo replica los chips (Pressables) y la barra con `View`s proporcionales. La paridad se evalúa por rol (atajos de un gesto + barra + escape a % libre), no por el widget exacto. El editor libre usa el input numérico equivalente de cada plataforma (teclado del sistema, no uno propio).
 
 ### 4. Repetir: unidad de intervalo como chips en ambas
 
@@ -70,11 +71,11 @@ El `<select>` de unidad (día/semana/mes/año) de web-mobile pasa a chips, espej
 
 ### 5. i18n unificado del split
 
-Hoy web usa `shared.split.*` y nativo `transactions.form.split_*` para el mismo control. Se elige **una** familia de claves para los tres presets, el "Otro %" y las etiquetas de reparto, consumida por ambas superficies. La familia canónica queda en el namespace que ya usa el resto del control compartido (a decidir en implementación; preferencia por `shared.split.*` por dominio). El copy nuevo del split: labels de los presets Vos/Mitad/El otro y el disparador "Otro %". Para el reintegro, el copy nuevo son las etiquetas del destino **`Resumen` / `Cuenta`** y el rótulo **"mismo banco"** del selector (ya no hay disparador "calcular por %", porque el %/tope queda visible). Sin exponer jerga contable (regla `shared` de lenguaje llano).
+Hoy web usa `shared.split.*` y nativo `transactions.form.split_*` para el mismo control. Se elige **una** familia de claves (`shared.split.*`) para los atajos, el "Otro" y las etiquetas de la barra, consumida por ambas superficies. El copy nuevo del split: `half` ("Mitad"), `all_other` ("Todo suyo"), `you` ("Vos"), `other_short` ("Otro"), `owes` ("te debe") y `write_your_share` ("Escribí tu parte") — los ratios `70/30`/`75/25` son literales numéricos. Los labels viejos `transactions.form.split_*`/`your_share` quedan sin uso en mobile. Para el reintegro, el copy nuevo son las etiquetas del destino **`Resumen` / `Cuenta`** y el rótulo **"mismo banco"** del selector (ya no hay disparador "calcular por %", porque el %/tope queda visible). Sin exponer jerga contable (regla `shared` de lenguaje llano).
 
 ## Risks / Trade-offs
 
-- **Regresión de descubribilidad del 0/100.** Al mover el 0/100 dentro del preset "El otro", un usuario que usaba el toggle dedicado debe re-descubrirlo. Mitigación: el preset es autoexplicativo (nombra al miembro) y queda a la vista; no se elimina la capacidad, cambia cómo se alcanza. (El %/tope del reintegro **no** entra en este riesgo: el diseño cerrado lo deja visible inline.)
+- **Regresión de descubribilidad del 0/100.** Al mover el 0/100 al atajo "Todo suyo", un usuario que usaba el toggle dedicado debe re-descubrirlo. Mitigación: el atajo es autoexplicativo ("Todo suyo") y queda a la vista, con la barra reforzando el reparto; no se elimina la capacidad, cambia cómo se alcanza. (El %/tope del reintegro **no** entra en este riesgo: el diseño cerrado lo deja visible inline.)
 - **Check vs Switch en "Acreditado".** El diseño cerrado usa un checkbox donde el nativo hoy usa `Switch` y donde la iteración previa proponía `Switch`. Es una decisión deliberada por la densidad del bloque de 2 filas; la paridad se mantiene por rol (control binario on=recibido/off=pendiente) y ambas superficies convergen en el check. Riesgo bajo: es un cambio de widget, no de estado (`reimbursementReceivedNow` no cambia).
 - **Paridad evaluada por rol, no por píxeles.** Nativo puede conservar `Segmented` para los presets mientras web usa chips; alguien podría leerlo como "no idéntico". Es deliberado y consistente con el requirement de paridad vigente (rol/estructura, no pixel-parity).
 - **Verificación asimétrica.** El nativo no se prueba en device en esta sesión (lo revisa el tech lead). Mitigación: los cambios nativos se apoyan en primitivos y estado ya existentes; el riesgo se concentra en el web-mobile, que sí se verifica en navegador.
