@@ -24,7 +24,7 @@
 > 4.2–4.7 son verificación manual. El hook tiene tests; el cableado de UI no.
 
 - [x] 4.1 `pnpm typecheck`, `pnpm lint`, `pnpm test` (web), `pnpm --filter @grana/movement-form test`, `pnpm typecheck:mobile`, `pnpm lint:mobile`.
-- [ ] 4.2 **Edición web**: abrir el drawer y no tocar nada → "Guardar cambios" deshabilitado. Cambiar el monto → se habilita. Volver al valor original → se deshabilita.
+- [x] 4.2 **Edición web**: abrir el drawer y no tocar nada → "Guardar cambios" deshabilitado. Cambiar el monto → se habilita. Volver al valor original → se deshabilita.
 - [x] 4.3 **Edición web**: cambiar algo y cerrar con la ✕ → pide confirmación. Ídem con `Esc`. **El click en el scrim no se pudo probar en viewport angosto**: ver la nota de abajo.
 - [x] 4.3b **Los dos botones responden al click** (el bug que motivó la decisión 4): "Seguir editando" cierra la confirmación y deja el formulario intacto; "Descartar" cierra el drawer. También: click en el fondo oscurecido de la confirmación = seguir editando, y `Esc` con la confirmación abierta la cierra sin cerrar el drawer.
 - [x] 4.4 **Edición web**: "seguir editando" deja los cambios intactos; "descartar" cierra y los pierde.

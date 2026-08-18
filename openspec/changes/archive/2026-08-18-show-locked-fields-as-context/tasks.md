@@ -14,10 +14,10 @@
 > 3.2–3.5 son verificación manual. No hay tests de componente para este formulario en ninguna de las dos apps; el diff no cubre lo visual.
 
 - [x] 3.1 `pnpm typecheck`, `pnpm lint`, `pnpm test` (web) y `pnpm typecheck:mobile`, `pnpm lint:mobile`.
-- [ ] 3.2 **Consumo de tarjeta pagado**: abrir en edición en web (angosto y ancho) y en la nativa. Se ven MONTO y FECHA como filas read-only con caption "no editable"; categoría y descripción siguen editables.
+- [x] 3.2 **Consumo de tarjeta pagado**: abrir en edición en web (angosto y ancho) y en la nativa. Se ven MONTO y FECHA como filas read-only con caption "no editable"; categoría y descripción siguen editables.
 - [ ] 3.3 **Madre de compra en cuotas con una cuota paga**: mismo control, más la fila "Compra en cuotas" y la de cantidad de cuotas.
 - [ ] 3.4 **Sin regresión en los casos normales**: un gasto cash/bank editable sigue mostrando el héroe del monto y la fila de fecha editable, y NO duplica ninguna de las dos en el bloque de contexto.
-- [ ] 3.5 **Formato**: el monto se lee con signo y símbolo (`−$200.000`, `+U$D 350`), con centavos cuando los tiene, igual que en el detalle.
+- [x] 3.5 **Formato**: el monto se lee con signo y símbolo (`−$200.000`, `+U$D 350`), con centavos cuando los tiene, igual que en el detalle.
 
 ## 4. Cierre
 

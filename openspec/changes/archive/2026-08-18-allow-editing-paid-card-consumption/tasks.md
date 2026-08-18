@@ -16,8 +16,8 @@
 > 3.2–3.5 son manuales: no hay tests de componente para el detalle.
 
 - [x] 3.1 `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm --filter @grana/movement-form test`, `pnpm typecheck:mobile`, `pnpm lint:mobile`.
-- [ ] 3.2 **Consumo pagado, web**: el detalle muestra el lápiz y NO la papelera.
-- [ ] 3.3 Abrir a editar: sin héroe; la línea de contexto arranca con el monto en negrita y termina con la fecha; categoría y descripción editables.
+- [x] 3.2 **Consumo pagado, web**: el detalle muestra el lápiz y NO la papelera.
+- [x] 3.3 Abrir a editar: sin héroe; la línea de contexto arranca con el monto en negrita y termina con la fecha; categoría y descripción editables.
 - [ ] 3.4 Cambiar la categoría y guardar: persiste, y el saldo/resumen no se mueve.
 - [ ] 3.5 **Nativa**: repetir 3.2 y 3.3.
 - [ ] 3.6 **Regresión**: un consumo `pending` y un gasto cash/bank siguen con lápiz + papelera; una cuota hija sigue sin ninguna de las dos.

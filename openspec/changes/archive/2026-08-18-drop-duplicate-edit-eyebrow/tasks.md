@@ -9,7 +9,7 @@
 ## 3. Verificación
 
 - [x] 3.1 `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm typecheck:mobile`, `pnpm lint:mobile`.
-- [ ] 3.2 **Edición web** (drawer, ancho y angosto): el encabezado dice solo "Editar movimiento".
+- [x] 3.2 **Edición web** (drawer, ancho y angosto): el encabezado dice solo "Editar movimiento".
 - [ ] 3.3 **Alta web escritorio**: conserva su eyebrow "NUEVO". **Alta web angosto**: sigue sin eyebrow.
 - [ ] 3.4 **Nativa**: sin cambios en el encabezado de edición.
 

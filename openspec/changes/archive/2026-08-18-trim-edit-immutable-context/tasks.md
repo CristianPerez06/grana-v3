@@ -18,7 +18,7 @@
 - [x] 3.1 `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm --filter @grana/movement-form test`, `pnpm typecheck:mobile`, `pnpm lint:mobile`.
 - [ ] 3.2 **Gasto cash/bank en edición** (web angosto, web ancho, nativa): héroe editable, y debajo una card con una sola fila — CUENTA. Sin filas de tipo ni moneda.
 - [ ] 3.3 **Transferencia / cambio**: dos filas, cuenta origen y cuenta destino.
-- [ ] 3.4 **Consumo de tarjeta pagado**: héroe read-only con el monto grande y su caption; debajo, CUENTA y FECHA.
+- [x] 3.4 **Consumo de tarjeta pagado**: héroe read-only con el monto grande y su caption; debajo, CUENTA y FECHA.
 - [ ] 3.5 **Madre de compra en cuotas con cuota paga**: héroe read-only; debajo CUENTA, CUOTAS y FECHA.
 - [ ] 3.6 **Alta**: sin cambios en ninguna superficie — el contexto inmutable es exclusivo de edición.
 
