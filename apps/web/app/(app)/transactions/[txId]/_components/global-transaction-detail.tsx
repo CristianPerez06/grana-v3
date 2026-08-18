@@ -167,11 +167,13 @@ export const GlobalTransactionDetail = ({
     transaction.parent_id != null ? `/transactions/${transaction.parent_id}` : null
   // Only the owner (payer) can edit/delete. A shared movement paid by the other
   // member is read-only here even though it's visible via the household RLS.
-  const canEdit =
-    canManage &&
-    actionAccountId != null &&
-    transaction.status !== 'paid' &&
-    installmentParentHref == null
+  // A `paid` card consumption stays EDITABLE: its statement is settled, so the
+  // amount and the date are frozen (`getEditableFields` locks them and the
+  // server action rejects them), but the category and the description are not —
+  // re-categorizing an expense you already paid is an ordinary correction.
+  // Deleting it is a different matter and stays blocked: undoing a settled
+  // statement belongs to the period, and `period_payments` has an FK RESTRICT.
+  const canEdit = canManage && actionAccountId != null && installmentParentHref == null
   const canDelete =
     canManage && actionAccountId != null && !transaction.parent_id && transaction.status !== 'paid'
 

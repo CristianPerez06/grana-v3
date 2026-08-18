@@ -694,7 +694,7 @@ El sistema SHALL permitir editar los campos mutables de una transacción según 
 - **Ingresos y gastos en cash/bank**: monto, fecha, descripción, categoría y subcategoría. Los campos `type`, `account_id` y `currency_code` son inmutables.
 - **Transferencias**: ver requirement específico.
 - **Ajustes**: ver requirement específico.
-- **Consumos en tarjeta (1 cuota, `status='pending'`)**: monto, fecha, descripción, categoría, subcategoría. NO editable: cuenta, moneda, cuotas. Si `status='paid'`, sólo editables descripción y categoría.
+- **Consumos en tarjeta (1 cuota, `status='pending'`)**: monto, fecha, descripción, categoría, subcategoría. NO editable: cuenta, moneda, cuotas. Si `status='paid'`, sólo editables descripción y categoría — el consumo **sigue siendo editable, no se congela**: el detalle SHALL ofrecer la acción Editar y el formulario SHALL mostrar monto y fecha como contexto read-only. Recategorizar un gasto ya pagado es una corrección corriente. **Borrarlo** sí SHALL quedar bloqueado: deshacer un resumen liquidado se hace desde el período, y `period_payments` lo impide con una FK `RESTRICT`.
 - **Compras en cuotas (madre)**: ver requirement específico "Editar una compra en cuotas".
 
 Los campos `type`, `account_id`, `currency_code`, `is_parent` y `parent_id` SHALL ser siempre inmutables post-creación.
@@ -725,6 +725,13 @@ Los campos `type`, `account_id`, `currency_code`, `is_parent` y `parent_id` SHAL
 - **WHEN** el usuario intenta editar el monto de un consumo con `status='paid'`
 - **THEN** el sistema rechaza el cambio de monto (campo inmutable post-pago)
 - **AND** acepta cambios de descripción o categoría
+
+#### Scenario: Un consumo pagado se puede recategorizar
+
+- **WHEN** el dueño abre el detalle de un consumo de tarjeta cuyo resumen ya se pagó (`status='paid'`)
+- **THEN** el detalle ofrece la acción Editar
+- **AND** NO ofrece la acción Borrar
+- **AND** el formulario de edición muestra monto y fecha como contexto read-only, y permite cambiar categoría, subcategoría y descripción
 
 ### Requirement: El usuario puede eliminar una transacción
 
@@ -3471,7 +3478,7 @@ El **hero** SHALL mostrar: banda tintada por el **tono del tipo** (gasto → ter
 
 Los **tiles core por tipo** SHALL incluir: **medio de pago** (nombre + tipo de cuenta, NUNCA número de tarjeta), **progreso de cuotas** (barra pagadas/restantes + próxima/fin) para compras en cuotas, **flujo de transferencia/cambio** (origen → destino) con el callout "no cuenta como gasto ni ingreso", **reintegro-neto** (pagaste + reintegro = costo neto, con el gasto vinculado **tappable** a su detalle), **reparto compartido** ("Te toca pagar" + "Dividido entre", sin badge de liquidación) y **descripción**. El detalle SHALL mostrar un estado sólo cuando informa algo real (*Reintegrado* / *Completada* / *Acreditado*).
 
-El detalle SHALL exponer las afordancias de **editar** y **borrar** el movimiento, gateadas por permiso: SHALL calcular `canManage` (= el usuario actual es el dueño/pagador), `canEdit` (`canManage` && cuenta resoluble && `status !== 'paid'` && no es cuota hija) y `canDelete` (`canManage` && cuenta resoluble && sin `parent_id` && `status !== 'paid'`), con las mismas reglas que el detalle web. Un movimiento compartido pagado por el **otro** miembro SHALL ser legible pero NO editable ni borrable (las acciones se ocultan). La acción **Editar** SHALL navegar a `/transactions/[txId]/edit`; la acción **Borrar** SHALL confirmar de forma destructiva antes de ejecutar (ver el requirement de edición/borrado).
+El detalle SHALL exponer las afordancias de **editar** y **borrar** el movimiento, gateadas por permiso: SHALL calcular `canManage` (= el usuario actual es el dueño/pagador), `canEdit` (`canManage` && cuenta resoluble && no es cuota hija — un consumo con `status='paid'` **SÍ** es editable: conserva categoría y descripción, ver el requirement "El usuario puede editar una transacción") y `canDelete` (`canManage` && cuenta resoluble && sin `parent_id` && `status !== 'paid'`), con las mismas reglas que el detalle web. Un movimiento compartido pagado por el **otro** miembro SHALL ser legible pero NO editable ni borrable (las acciones se ocultan). La acción **Editar** SHALL navegar a `/transactions/[txId]/edit`; la acción **Borrar** SHALL confirmar de forma destructiva antes de ejecutar (ver el requirement de edición/borrado).
 
 Los tiles de **contexto** que requieren reads adicionales — **"Peso en el mes"** (breakdown del mes), **recurrencia** (tile + historial + banner) y **composición de pago de resumen** — quedan **fuera de este alcance**; la pantalla SHALL omitirlos sin romper para esos kinds.
 

@@ -82,8 +82,10 @@ export default function MovementDetailScreen() {
     ? (tx.account_id ?? data?.installmentSiblings?.[0]?.account_id ?? null)
     : null
   const isInstallmentChild = tx ? !tx.is_parent && tx.parent_id != null : false
-  const canEdit =
-    !!data?.canManage && actionAccountId != null && tx?.status !== 'paid' && !isInstallmentChild
+  // A `paid` card consumption stays EDITABLE (category/description; the amount
+  // and date are locked by `getEditableFields` and rejected by the mutator).
+  // Deleting it stays blocked. Mirror of web's detail.
+  const canEdit = !!data?.canManage && actionAccountId != null && !isInstallmentChild
   const canDelete =
     !!data?.canManage && actionAccountId != null && !tx?.parent_id && tx?.status !== 'paid'
 
