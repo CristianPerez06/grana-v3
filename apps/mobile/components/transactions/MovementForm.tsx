@@ -254,24 +254,8 @@ export function MovementForm({
   // part of the screen, for facts the user cannot act on, pushing the fields they
   // came to change below the fold.
   //
-  // The amount is the exception inside the exception: when `getEditableFields`
-  // locks it (a paid card consumption, an installment parent with a paid cuota)
-  // it leads the line with full weight, because it is the movement's headline
-  // number and the rest of the line is metadata around it.
-  const lockedAmountValue = (): string => {
-    if (!edit) return ''
-    const sign =
-      edit.type === 'income'
-        ? '+'
-        : edit.type === 'expense'
-          ? '−'
-          : edit.type === 'adjustment'
-            ? form.adjustmentDirection === 'decrease' ? '−' : '+'
-            : ''
-    const symbol = CURRENCY_SYMBOL[edit.currencyCode]
-    return `${sign}${symbol}${edit.currencyCode === 'USD' ? ' ' : ''}${formatForDisplay(form.amount)}`
-  }
-  const lockedAmount = isEdit && edit && !showAmount ? lockedAmountValue() : null
+  // The amount is NOT part of this line, locked or not: it always lives in the
+  // hero, which renders read-only when `getEditableFields` locks it.
   const contextParts: string[] =
     isEdit && edit
       ? [
@@ -387,6 +371,36 @@ export function MovementForm({
         />
       )}
 
+      {/* Locked amount (a paid card consumption, an installment parent with a paid
+          cuota): the same card, read-only — no input, no calculator, currency as a
+          static chip. Mirror of web's locked hero. */}
+      {isEdit && !showAmount && (
+        <View className="rounded-2xl border border-border bg-card px-4 pb-4 pt-3.5">
+          <View className="flex-row items-start justify-between">
+            <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
+              {t('transactions.form.amount_label')}
+            </Text>
+            <View className="rounded-lg border border-border bg-border-soft px-2.5 py-1">
+              <Text className="text-xs font-bold text-text">{form.currencyCode}</Text>
+            </View>
+          </View>
+          <View className="mt-2 flex-row items-center justify-center">
+            {signChar !== '' && (
+              <Text className={`text-[34px] font-bold ${amountColorClass}`}>{signChar}</Text>
+            )}
+            <Text className={`pl-1 text-[34px] font-bold ${amountColorClass}`}>
+              {CURRENCY_SYMBOL[form.currencyCode]}
+            </Text>
+            <Text className={`ml-1 text-[34px] font-bold ${amountColorClass}`}>
+              {formatForDisplay(form.amount)}
+            </Text>
+          </View>
+          <Text className="mt-2 text-center text-[12px] text-text-soft">
+            {t('common.not_editable')}
+          </Text>
+        </View>
+      )}
+
       {/* Amount hero — big centered number, faded currency glyph, currency chip,
           and a calculator trigger beneath the chip. Mirror of web's hero. */}
       {showAmount && (
@@ -452,12 +466,10 @@ export function MovementForm({
       )}
 
       {/* Immutable context, one muted line under the hero (mirror of web's
-          `contextLine`). A locked amount leads it in full weight. */}
+          `contextLine`). The amount is never here — it lives in the hero, which
+          renders read-only when it is locked. */}
       {isEdit && (
         <Text className="px-1 text-[12.5px] leading-5 text-text-muted">
-          {lockedAmount ? (
-            <Text className="font-bold text-text">{lockedAmount} · </Text>
-          ) : null}
           {contextParts.join(' · ')}
           <Text className="text-text-soft"> {t('common.not_editable')}</Text>
         </Text>

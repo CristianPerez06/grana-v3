@@ -556,7 +556,7 @@ export const MovementForm = ({
   }
 
   // Immutable context in edit mode, collapsed into a SINGLE muted line under the
-  // hero: "−$200.000 · Gasto · ARS · Cta remunerada — no editable".
+  // hero: "Gasto · ARS · Cta remunerada — no editable".
   //
   // It used to be a card of label/value rows — three of them, and up to six once
   // a locked amount and date joined. That is a lot of vertical space, in the best
@@ -564,24 +564,10 @@ export const MovementForm = ({
   // came to change below the fold. One line says the same and puts the editable
   // fields first.
   //
-  // The amount is the exception inside the exception: when `getEditableFields`
-  // locks it (a paid card consumption, an installment parent with a paid cuota)
-  // it leads the line with full weight, because it is the movement's headline
-  // number and the rest of the line is metadata around it.
-  const lockedAmountValue = (): string => {
-    if (!edit) return ''
-    const sign =
-      edit.type === 'income'
-        ? '+'
-        : edit.type === 'expense'
-          ? '−'
-          : edit.type === 'adjustment'
-            ? adjustmentDirection === 'decrease' ? '−' : '+'
-            : ''
-    const symbol = CURRENCY_SYMBOL[edit.currencyCode]
-    return `${sign}${symbol}${edit.currencyCode === 'USD' ? ' ' : ''}${formatForDisplay(amount)}`
-  }
-  const lockedAmount = isEdit && edit && !editable?.amount ? lockedAmountValue() : null
+  // The amount is NOT part of this line, locked or not: it always lives in the
+  // hero, which renders read-only when `getEditableFields` locks it. A caption
+  // under a hero reads as a caption; a caption opening a panel with the movement's
+  // headline number buried in it reads as leftover text.
   const contextParts: string[] = isEdit && edit
     ? [
         edit.isParent ? t('installment_purchase_label') : TYPE_LABELS[edit.type],
@@ -599,7 +585,6 @@ export const MovementForm = ({
     : []
   const contextLine = isEdit ? (
     <p className="px-1 text-[12.5px] leading-relaxed text-text-muted">
-      {lockedAmount && <span className="font-bold text-text">{lockedAmount} · </span>}
       {contextParts.join(' · ')}
       <span className="text-text-soft"> {tCommon('not_editable')}</span>
     </p>
@@ -626,7 +611,9 @@ export const MovementForm = ({
   const title = isEdit ? t('edit_title') : t('actions.register_movement')
   // Mobile create: drop the "NUEVO" eyebrow and use a single-line "Nuevo
   // movimiento" title (matches the native screen title). Desktop/edit unchanged.
-  const showEyebrow = !(isMobile && !isEdit)
+  // No eyebrow in edit: "EDITAR" over "Editar movimiento" says the same word
+  // twice. Mobile create dropped it earlier for the same reason.
+  const showEyebrow = !isEdit && !isMobile
   const headerTitle = isMobile && !isEdit ? t('new.title') : title
 
   // Amount tint + leading sign by type.
@@ -1098,6 +1085,51 @@ export const MovementForm = ({
           <NegativeBalanceNotice projected={negativeWarning.projected} currency={negativeWarning.currency} />
         </div>
       )}
+    </div>
+  ) : isEdit ? (
+    // Locked amount (a paid card consumption, an installment parent with a paid
+    // cuota): the same card, read-only. No input, no calculator, and the currency
+    // as a static chip — nothing here can be operated. Rendering it as part of the
+    // muted context line instead was the first attempt and read as stray text: the
+    // number that identifies the movement was the smallest thing on the panel.
+    <div
+      className={`rounded-[18px] border border-border bg-card ${
+        isMobile ? 'px-4 pb-4 pt-3.5' : 'px-[22px] pb-[22px] pt-5'
+      }`}
+    >
+      <div className="flex items-start justify-between">
+        <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+          {t('labels.amount')}
+        </span>
+        <span
+          className="inline-flex items-center rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text"
+          style={{ backgroundColor: FIELD_BG }}
+        >
+          {effectiveCurrency}
+        </span>
+      </div>
+      <div
+        className={`flex items-baseline gap-1.5 ${isMobile ? 'mt-2 justify-center' : 'mt-2'}`}
+      >
+        {signChar && (
+          <span className={`font-bold leading-none ${isMobile ? 'text-[34px]' : 'text-[46px]'} ${amountColor}`}>
+            {signChar}
+          </span>
+        )}
+        <span
+          className={`font-semibold leading-none opacity-50 ${isMobile ? 'text-[24px]' : 'text-[27px]'} ${amountColor}`}
+        >
+          {CURRENCY_SYMBOL[effectiveCurrency]}
+        </span>
+        <span
+          className={`font-bold leading-none tracking-[-0.045em] tabular-nums ${
+            isMobile ? 'text-[34px]' : 'text-[46px]'
+          } ${amountColor}`}
+        >
+          {formatForDisplay(amount)}
+        </span>
+      </div>
+      <p className="mt-2 text-[12px] text-text-soft">{tCommon('not_editable')}</p>
     </div>
   ) : null
 

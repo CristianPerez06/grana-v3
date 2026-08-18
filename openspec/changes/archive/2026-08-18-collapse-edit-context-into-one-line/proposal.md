@@ -12,7 +12,7 @@ El problema no es que la información esté: es el **formato**. Un par label/val
 
 - **Una sola línea de contexto**, atenuada, debajo del monto: `Gasto · ARS · Cta remunerada — no editable`. Reemplaza la card de filas en las tres superficies.
 - **El caption se dice una vez**, al final de la línea, en lugar de una vez por fila.
-- **El monto bloqueado encabeza la línea con peso pleno** (`−$200.000` en negrita sobre el resto atenuado). Es el número identificatorio del movimiento: colapsarlo a micro-texto junto al resto sería perder lo que la change anterior acaba de recuperar.
+- **El monto nunca entra en la línea.** Vive siempre en el héroe: cuando `getEditableFields` lo bloquea, el héroe se dibuja **read-only** (misma card y mismo tamaño de número, sin input, sin calculadora, la moneda como chip estático y un `no editable` al pie). La línea queda como metadata pura. La primera versión lo ponía en negrita al frente de la línea y en escritorio leía como texto suelto — ver la decisión 2 del design.
 - **Transferencia y cambio de moneda unen sus dos cuentas** en un segmento con flecha (`Galicia → Brubank`) en vez de dos filas.
 - **La card de campos deja de dibujarse vacía**: en web se omite cuando en edición no queda ninguna fila editable (la nativa ya lo hacía — su `GroupCard` devuelve `null` sin hijos).
 - **La línea se ubica debajo del héroe en las dos plataformas.** En la nativa el bloque de contexto estaba *arriba* del monto; ahora el héroe abre la pantalla en ambas.

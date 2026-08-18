@@ -1594,7 +1594,11 @@ El sistema SHALL usar **un único formulario** para crear y editar todo tipo de 
 
 Un campo bloqueado NO SHALL desaparecer de la pantalla: cuando `getEditableFields` bloquea el **monto** o la **fecha** —un consumo de tarjeta ya pagado, una compra en cuotas madre con alguna cuota paga—, el formulario SHALL mostrar ese valor como contexto read-only. Bloquear un campo significa impedir su edición, nunca ocultar el dato: sin el monto y la fecha a la vista, el usuario estaría editando un movimiento cuyos dos hechos identificatorios no aparecen en ninguna parte.
 
-**El contexto inmutable es una sola línea.** Todo lo que en edición no se puede cambiar —tipo, moneda, cuenta(s), cantidad de cuotas, y el monto y la fecha cuando están bloqueados— SHALL presentarse como **una única línea de texto atenuado debajo del monto**, con los valores separados por `·` y un solo caption de "no editable" al final. NO SHALL presentarse como filas etiquetadas apiladas: son datos sobre los que el usuario no puede actuar y no deben empujar hacia abajo los campos que vino a editar. Cuando el **monto** está bloqueado SHALL encabezar esa línea con peso visual pleno —es el número identificatorio del movimiento— y el resto SHALL quedar atenuado. La regla vale para las tres superficies (web escritorio, web en viewport angosto y app nativa).
+**El contexto inmutable es una sola línea.** Todo lo que en edición no se puede cambiar —tipo, moneda, cuenta(s), cantidad de cuotas, y la fecha cuando está bloqueada— SHALL presentarse como **una única línea de texto atenuado debajo del monto**, con los valores separados por `·` y un solo caption de "no editable" al final. NO SHALL presentarse como filas etiquetadas apiladas: son datos sobre los que el usuario no puede actuar y no deben empujar hacia abajo los campos que vino a editar.
+
+**El monto es la excepción y nunca entra en esa línea.** Es el número que identifica al movimiento, así que SHALL conservar siempre su lugar y su tamaño de héroe. Cuando está bloqueado, el héroe SHALL renderizarse **read-only** —mismo bloque y mismo cuerpo tipográfico, sin campo de entrada, sin calculadora, con la moneda como indicador estático y el caption de "no editable"— en vez de omitirse o degradarse a texto de la línea.
+
+Ambas reglas valen para las tres superficies (web escritorio, web en viewport angosto y app nativa).
 
 Qué campos son editables y cuáles visibles según el tipo y el estado del movimiento SHALL derivarse de una **función pura** (`getEditableFields`) en `@grana/money-logic`, única fuente de verdad de esas reglas, reutilizable por web y mobile. Esta función NO cambia las reglas de editabilidad ya especificadas (ingreso/gasto, transferencia, ajuste, consumo `pending`/`paid`, madre de cuotas con o sin cuota pagada, pago de resumen sin categoría); las centraliza.
 
@@ -1622,14 +1626,15 @@ En **modo creación**, el selector de cuenta SHALL mostrar el **saldo disponible
 
 - **WHEN** el usuario abre en edición un consumo de tarjeta ya pagado, o la madre de una compra en cuotas con alguna cuota paga
 - **THEN** el formulario NO ofrece el campo de monto ni el de fecha para editarlos
-- **AND** muestra el monto y la fecha en la línea de contexto read-only, con caption de "no editable"
-- **AND** el monto encabeza la línea con peso pleno y conserva su signo y su símbolo de moneda, de modo que se lee igual que en el detalle
+- **AND** muestra el monto en el héroe read-only, con su signo y su símbolo de moneda, de modo que se lee igual que en el detalle
+- **AND** muestra la fecha en la línea de contexto read-only, con caption de "no editable"
 
 #### Scenario: El contexto inmutable ocupa una línea, no una card
 
 - **WHEN** el usuario abre cualquier movimiento en modo edición
 - **THEN** el tipo, la moneda y la(s) cuenta(s) se leen en una sola línea atenuada debajo del monto, separados por `·`, cerrada por un único "no editable"
 - **AND** NO se dibuja una card de filas etiquetadas para esos datos
+- **AND** el monto NO forma parte de esa línea: conserva su bloque de héroe, read-only si está bloqueado
 - **AND** los campos editables quedan inmediatamente debajo, sin bloque intermedio que los empuje
 
 #### Scenario: Guardar está deshabilitado mientras no haya cambios
@@ -2872,7 +2877,7 @@ El sistema SHALL soportar, con el drawer abierto, `Esc` para cerrar el popover a
 
 ### Requirement: El drawer en modo edición ajusta chrome y CTA
 
-El sistema SHALL precargar el movimiento real al abrir el drawer en modo edición y NO SHALL renderizar el selector de tipo: el tipo es inmutable y se enuncia como fila de contexto read-only. El conjunto de campos editables SHALL derivarse de `getEditableFields` (regla ya especificada para el formulario único). En modo edición el CTA SHALL decir "Guardar cambios". El borrado SHALL respetar las reglas existentes (no borrar hijas de cuotas aisladas, no borrar consumos pagados).
+El sistema SHALL precargar el movimiento real al abrir el drawer en modo edición y NO SHALL renderizar el selector de tipo: el tipo es inmutable y se enuncia como fila de contexto read-only. El conjunto de campos editables SHALL derivarse de `getEditableFields` (regla ya especificada para el formulario único). En modo edición el encabezado SHALL mostrar **solo el título** "Editar movimiento", sin eyebrow: un "EDITAR" en versalitas sobre un título que ya empieza con esa palabra la dice dos veces. El CTA SHALL decir "Guardar cambios". El borrado SHALL respetar las reglas existentes (no borrar hijas de cuotas aisladas, no borrar consumos pagados).
 
 #### Scenario: El tipo no se ofrece como control en edición
 
@@ -2889,6 +2894,12 @@ El sistema SHALL precargar el movimiento real al abrir el drawer en modo edició
 
 - **WHEN** el usuario intenta eliminar una cuota hija desde la edición
 - **THEN** el sistema aplica las reglas de borrado existentes y no permite borrarla aislada
+
+#### Scenario: El encabezado de edición no repite la palabra
+
+- **WHEN** el usuario abre un movimiento en modo edición, en cualquier superficie
+- **THEN** el encabezado muestra únicamente "Editar movimiento"
+- **AND** NO muestra un eyebrow "EDITAR" encima
 
 ### Requirement: La lógica del formulario vive en `@grana/movement-form` y los orquestadores en `@grana/transactions-mutations`
 

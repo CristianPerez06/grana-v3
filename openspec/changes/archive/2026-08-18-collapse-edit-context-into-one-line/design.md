@@ -10,13 +10,13 @@ Tres formatos posibles para el contexto inmutable:
 
 Se eligió (3). Es el tratamiento que el producto ya usa para metadata inerte, no compite con nada y cuesta una línea (dos cuando envuelve). El costo aceptado es que se pierden las etiquetas: la línea dice `ARS`, no `MONEDA: ARS`. Es aceptable porque los valores son autodescriptivos en su contexto —un código de moneda, un nombre de cuenta, un tipo de movimiento— y el caption final aclara la naturaleza del conjunto.
 
-## Decisión 2 — El monto bloqueado no se atenúa
+## Decisión 2 — El monto bloqueado vuelve al héroe, no a la línea
 
-La change anterior (`show-locked-fields-as-context`) existió justamente para que el monto de un consumo pagado no desapareciera. Mandarlo a micro-texto atenuado dentro de la línea sería deshacer eso por la puerta de atrás: técnicamente visible, prácticamente perdido.
+Primera versión: el monto bloqueado encabezaba la línea en negrita, con el resto atenuado. La idea era no perder el número identificatorio al colapsar el bloque. **En web escritorio quedó mal**: como un monto bloqueado no dibuja héroe, esa línea pasaba a ser lo primero del panel — texto chico y gris, sin contenedor, encima de cards redondeadas. Leía como sobra de debug, y el número que identifica al movimiento terminaba siendo lo más chico de la pantalla.
 
-Por eso el monto, cuando está bloqueado, encabeza la línea en `font-bold text-text` mientras el resto va en `text-text-muted`. La línea queda con dos niveles: el hecho que importa, y la metadata alrededor. Cuando el monto **sí** es editable no aparece en la línea — ya está el héroe arriba, en tamaño completo.
+La regla final es más simple: **el monto siempre vive en el héroe**, esté bloqueado o no. Cuando lo está, el héroe se dibuja **read-only** — la misma card, el mismo tamaño de número, sin input, sin calculadora, con la moneda como chip estático y un `no editable` al pie. La línea queda como metadata pura (tipo · moneda · cuenta(s) · fecha si está bloqueada), que es lo que una línea atenuada sabe hacer bien: anotar al héroe, no reemplazarlo.
 
-Esto refina la decisión del design anterior ("el monto abre el bloque y la fecha lo cierra"), que anticipaba explícitamente esta pasada: *"si más adelante el bloque inmutable se colapsa en una sola línea, esta decisión no estorba"*. Se cumplió: las filas ya eran un conjunto homogéneo y colapsarlas fue directo.
+Esto revisa la decisión de `show-locked-fields-as-context`, que había descartado el héroe read-only por costo ("obliga a construir una variante de un bloque complejo por duplicado"). El costo real fue menor de lo estimado: la variante no necesita input, calculadora ni chip operable, así que es una card corta por plataforma. Y el motivo por el que se descartó —ahorrar trabajo— no compensaba el resultado visual.
 
 ## Decisión 3 — Debajo del héroe, en las dos plataformas
 
