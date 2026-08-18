@@ -1,6 +1,6 @@
 import { Children, useMemo, useState, type ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
-import { ChevronDown, Undo2, Users, Repeat, Check } from 'lucide-react-native'
+import { ChevronDown, ChevronLeft, Undo2, Users, Repeat, Check } from 'lucide-react-native'
 import { getTodayAR, formatDateISO } from '@grana/money-logic'
 import { Money, parseMoneyInput, formatForDisplay } from '@grana/validation'
 import {
@@ -126,6 +126,9 @@ export function MovementForm({
   const [customInstallments, setCustomInstallments] = useState(false)
   // "Otros" sheet: reveals the eligible secondary types (transfer/ajuste/cambio).
   const [otrosOpen, setOtrosOpen] = useState(false)
+  // Split "Otro" editor: row 1 shortcuts are replaced by two % fields.
+  const [splitOtherMode, setSplitOtherMode] = useState(false)
+  const [splitDraft, setSplitDraft] = useState<string | null>(null)
 
   // Quick-date chips: Hoy / Ayer cover the ~95% of cases without the calendar.
   const todayStr = formatDateISO(getTodayAR())
@@ -1037,27 +1040,167 @@ export function MovementForm({
 
       {/* Shared split params (shown when its chip is on) */}
       {showShared && members && form.sharedEnabled && (
-        <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
-          {form.sharedEnabled && (
-            <View className="flex-col gap-2">
-              <Segmented
-                ariaLabel={t('transactions.form.split_label')}
-                value={String(form.splitFirstPct)}
-                onValueChange={(v) => form.setSplitFirstPct(Number(v))}
-                options={[
-                  { value: '100', label: t('transactions.form.split_you') },
-                  { value: '50', label: t('transactions.form.split_even') },
-                  {
-                    value: '0',
-                    label: t('transactions.form.split_other', {
-                      name: members[1].fullName,
-                    }),
-                  },
-                ]}
-              />
-              <Text className="text-xs text-text-muted">
-                {t('transactions.form.your_share', { pct: form.splitFirstPct })}
+        <View className="flex-col gap-2 rounded-xl border border-border bg-card p-4">
+          {/* Fila 1 — atajos (o los dos campos % en modo "Otro") */}
+          {splitOtherMode ? (
+            <View className="flex-row items-center gap-1.5">
+              <Pressable
+                onPress={() => {
+                  setSplitOtherMode(false)
+                  setSplitDraft(null)
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.back')}
+                className="h-6 w-6 items-center justify-center"
+              >
+                <ChevronLeft size={16} color="#8A94A3" />
+              </Pressable>
+              <Text className="text-xs text-text-soft">{t('shared.split.you')}</Text>
+              <View
+                className="min-w-[56px] flex-row items-center justify-between rounded-lg border border-border bg-card px-2"
+                style={{ height: 32 }}
+              >
+                <Input
+                  bare
+                  value={splitDraft ?? String(form.splitFirstPct)}
+                  onChangeText={(v) => {
+                    const raw = v.replace(/\D/g, '').slice(0, 2)
+                    setSplitDraft(raw)
+                    if (raw !== '')
+                      form.setSplitFirstPct(Math.max(0, Math.min(99, parseInt(raw, 10))))
+                  }}
+                  onBlur={() => setSplitDraft(null)}
+                  keyboardType="number-pad"
+                  accessibilityLabel={members[0].fullName}
+                  className="w-8 text-sm font-semibold text-text"
+                />
+                <Text className="text-xs text-text-muted">%</Text>
+              </View>
+              <Text className="ml-auto text-xs text-text-soft" numberOfLines={1}>
+                {members[1].fullName}
               </Text>
+              <View
+                className="min-w-[56px] flex-row items-center justify-between rounded-lg bg-border-soft px-2"
+                style={{ height: 32 }}
+              >
+                <Text className="text-sm font-semibold text-text-muted">
+                  {100 - (splitDraft === '' ? 0 : form.splitFirstPct)}
+                </Text>
+                <Text className="text-xs text-text-muted">%</Text>
+              </View>
+            </View>
+          ) : (
+            <View className="flex-row flex-wrap gap-1">
+              {([['half', 50], ['70/30', 70], ['75/25', 75], ['all_other', 0]] as const).map(
+                ([key, val]) => {
+                  const active = form.splitFirstPct === val
+                  const label =
+                    key === 'half'
+                      ? t('shared.split.half')
+                      : key === 'all_other'
+                        ? t('shared.split.all_other')
+                        : key
+                  return (
+                    <Pressable
+                      key={key}
+                      onPress={() => {
+                        setSplitOtherMode(false)
+                        setSplitDraft(null)
+                        form.setSplitFirstPct(val)
+                      }}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      className={`rounded-full border px-2.5 py-1 ${
+                        active ? 'border-emerald bg-emerald-soft' : 'border-border'
+                      }`}
+                    >
+                      <Text
+                        className={`text-xs ${
+                          active ? 'font-semibold text-emerald-deep' : 'font-medium text-text-muted'
+                        }`}
+                      >
+                        {label}
+                      </Text>
+                    </Pressable>
+                  )
+                },
+              )}
+              {(() => {
+                const custom = ![50, 70, 75, 0].includes(form.splitFirstPct)
+                return (
+                  <Pressable
+                    onPress={() => {
+                      setSplitOtherMode(true)
+                      setSplitDraft('')
+                    }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: custom }}
+                    className={`rounded-full border px-2.5 py-1 ${
+                      custom ? 'border-emerald bg-emerald-soft' : 'border-border'
+                    }`}
+                  >
+                    <Text
+                      className={`text-xs ${
+                        custom ? 'font-semibold text-emerald-deep' : 'font-medium text-text-muted'
+                      }`}
+                    >
+                      {custom ? `${form.splitFirstPct}%` : t('shared.split.other_short')}
+                    </Text>
+                  </Pressable>
+                )
+              })()}
+            </View>
+          )}
+
+          {/* Fila 2 — barra de reparto Vos / otro integrante */}
+          {splitOtherMode && splitDraft === '' ? (
+            <View
+              className="h-[26px] items-center justify-center rounded-lg bg-border-soft"
+            >
+              <Text className="text-[11px] text-text-soft">
+                {t('shared.split.write_your_share')}
+              </Text>
+            </View>
+          ) : form.splitFirstPct === 0 ? (
+            <View
+              className="h-[26px] flex-row items-center overflow-hidden rounded-lg px-2"
+              style={{ backgroundColor: '#0E9E6E' }}
+            >
+              <Text numberOfLines={1} className="text-[11px] font-semibold text-white">
+                {members[1].fullName} 100%
+                {(() => {
+                  const total = parseMoneyInput(form.amount)
+                  return form.amount && total
+                    ? ` — ${t('shared.split.owes')} ${CURRENCY_SYMBOL[form.currencyCode]}${fmtAmount(total)}`
+                    : ''
+                })()}
+              </Text>
+            </View>
+          ) : (
+            <View
+              className="h-[26px] flex-row overflow-hidden rounded-lg"
+              style={{ backgroundColor: '#F1F3F6' }}
+            >
+              <View
+                className="h-full flex-row items-center gap-1 overflow-hidden px-2"
+                style={{ width: `${form.splitFirstPct}%`, backgroundColor: '#3A6B8A' }}
+              >
+                <Text numberOfLines={1} className="text-[11px] font-semibold text-white" style={{ flexShrink: 1 }}>
+                  {t('shared.split.you')}
+                </Text>
+                <Text className="text-[11px] font-semibold text-white">{form.splitFirstPct}%</Text>
+              </View>
+              <View
+                className="h-full flex-row items-center justify-end gap-1 overflow-hidden px-2"
+                style={{ width: `${100 - form.splitFirstPct}%`, backgroundColor: '#0E9E6E' }}
+              >
+                <Text numberOfLines={1} className="text-[11px] font-semibold text-white" style={{ flexShrink: 1 }}>
+                  {members[1].fullName}
+                </Text>
+                <Text className="text-[11px] font-semibold text-white">
+                  {100 - form.splitFirstPct}%
+                </Text>
+              </View>
             </View>
           )}
         </View>
