@@ -114,14 +114,150 @@ Quedan fuera, explícitamente, para tratar por separado:
 
 ---
 
+## D-002 · El filtro de categoría y el drill del gráfico son dos informes distintos
+
+**Estado: cerrada.** Cambia presentación y rotulado, **no** cambia ninguna base contable.
+Alcance: las tres superficies.
+
+### El problema
+
+Filtrar por categoría devuelve **un conjunto distinto de movimientos** según si hay o no
+otro filtro activo, y el cambio es silencioso.
+
+Con **solo** la categoría (`MovementListContainer`, estado `pureCategoryDrill`) el listado
+sale de `getMonthCategoryLines`: lente **devengada**, que es la del gráfico. Al agregar
+cualquier otro filtro (cuenta, tipo, importe, texto) cae a `get_movements_page`: lente
+**caja**.
+
+Ejemplo real — heladera en 12 cuotas de $145.000 ($1.740.000) con la Visa, categoría Hogar:
+
+| Filtro | marzo | abril |
+|---|---|---|
+| solo "Hogar" | una cuota de **$145.000** | otra cuota de $145.000 |
+| "Hogar" + cuenta "Visa" | la compra completa, **$1.740.000** | nada |
+
+Y lo mismo en otros tres puntos: un gasto compartido de $620.000 con parte propia de
+$310.000 muestra $310.000 en el drill y $620.000 en el feed; un reintegro recibido de la
+categoría aparece en el drill (netcando) y no en el feed; un movimiento con fecha futura
+aparece en el feed y no en el drill (corte temporal CAJA).
+
+**Las dos contabilidades son correctas.** Lo que falta es que la pantalla diga en cuál estás.
+
+### La decisión
+
+Se descartaron unificar todo a caja (rompería la conciliación con el gráfico) y unificar
+todo a devengado (rompería el listado como registro, y chocaría con los saldos).
+
+Se separan los dos actos y se les pone nombre:
+
+- **Tocar una categoría en el gráfico** abre una vista con encabezado propio —
+  *"Hogar en agosto — composición"*— que aclara qué incluye (las cuotas imputadas al mes,
+  la parte propia de los gastos compartidos, los reintegros restando). **Su suma sigue
+  dando exactamente el peso de la categoría en la torta**: esa garantía se preserva, es
+  lo primero que la PO confirmó querer.
+- **El filtro de categoría del panel** es siempre lente caja, como cualquier otro filtro.
+- Si estando en la composición se agrega otro filtro, la app **avisa** que se sale de esa
+  vista, en vez de cambiar los números en silencio.
+
+### El gráfico NO se toca
+
+Queda explícito porque se discutió y se descartó: el gráfico conserva su base **devengada**
+(lente Consumo). Una cuota se imputa al mes que corresponde, no cuando se paga el resumen.
+Cambiar eso sería tocar el corazón contable de la app y está fuera de este barrido.
+
+Vocabulario del proyecto, para no confundirlo (ver `docs/design/shared/decisiones-rediseno.md`):
+**Consumo** = devengado, impacta al comprar → es el gráfico. **Caja** = impacta cuando la
+plata se mueve → es el listado. **Compromiso** = proyección.
+
+---
+
+## D-003 · Insignias de la fila: bandera → ícono, valor → texto
+
+**Estado: cerrada.** Solo presentación.
+
+### La regla
+
+- **Insignia que es una bandera de sí/no** → en **mobile (nativo y web-vista-mobile)** va
+  **solo el ícono**; en **desktop** va **ícono + palabra**.
+- **Insignia que lleva un valor o un estado** → **texto siempre**, en las tres superficies.
+  Ningún ícono puede decir "Cuota 2 de 6" ni distinguir tres estados de reintegro.
+
+Es una regla general, no una lista: cuando aparezca una insignia nueva, se clasifica y se
+aplica sola.
+
+| Insignia | Clase | Mobile | Desktop |
+|---|---|---|---|
+| Compartido | bandera | 👥 solo | 👥 + "Compartido" |
+| Recurrente | bandera | ↻ solo | ↻ + "Recurrente" |
+| **Revisar** | **excepción** | ⚠ + "Revisar" | ⚠ + "Revisar" |
+| Cuotas ("3 cuotas" / "Cuota 2 de 6") | valor | texto | texto |
+| Estado del reintegro (pendiente / recibido / cancelado) | estado | texto | texto |
+
+### Por qué "Revisar" es la excepción
+
+Técnicamente es una bandera, pero no es una etiqueta descriptiva: es **la única insignia
+que pide una acción**. Un triángulo amarillo solo comunica "algo raro", no "falta la
+categoría". Conserva la palabra en las tres superficies. Queda escrito para que nadie lo
+"corrija" después en nombre de la consistencia.
+
+### Esto cumple D-000
+
+Las dos superficies mobile quedan idénticas entre sí. El desktop diverge **solo en
+densidad** —muestra lo mismo con más letra—, nunca en capacidad. Es exactamente la
+excepción que D-000 permite.
+
+### Obligatorio: etiqueta de accesibilidad
+
+Un ícono sin texto visible **debe** llevar su etiqueta accesible (`aria-label` en web,
+`accessibilityLabel` en nativo). Sin ella, quien usa lector de pantalla no tiene forma de
+saber qué significa. Es una línea de código y por eso mismo se olvida.
+
+### Beneficio de rebote: se descomprime la fila
+
+El relevamiento marcaba que con dos o más insignias el título se trunca en 360px. Pasar
+Compartido y Recurrente a ícono lleva cada una de ~90px a ~16px. **El problema de
+saturación se resuelve casi entero sin esconder ninguna insignia**, que era la salida fea
+(un "presupuesto de badges" con colapso). Esa propuesta queda descartada por innecesaria.
+
+### Consecuencias a resolver al implementar
+
+1. **La app nativa no muestra "Recurrente".** La insignia no existe en
+   `apps/mobile/components/movements/MovementRow.tsx`. Por D-000 hay que agregarla — como
+   ícono solo, según esta regla.
+2. **El gate `showFeedBadges` de nativo contradice a web.** En web las insignias de
+   compartido y revisar se muestran siempre, en los cuatro contextos donde vive la fila.
+   En nativo están detrás de un flag que solo el feed global activa, así que el panel de
+   período de tarjeta no las muestra. O las muestran las dos plataformas o ninguna; hoy
+   difieren, y eso viola D-000.
+3. **Prerrequisito: unificar la fila nativa.** El detalle de cuenta en nativo usa otra fila
+   (`apps/mobile/components/accounts/MovementRow.tsx`, 72 líneas) que no muestra ninguna
+   insignia. Esta decisión no puede aterrizar ahí sin unificar antes las dos filas en una
+   sola, como ya hace web. Deja de ser limpieza opcional y pasa a ser prerrequisito.
+
+### Considerado y descartado (por ahora)
+
+**Mostrar "tu parte $310.000" bajo el importe de un gasto compartido.** Se evaluó a fondo
+y se dio de baja. Queda registrado para que no vuelva dentro de tres meses como idea nueva,
+junto con lo que se aprendió analizándolo:
+
+- Mostrar **solo** la parte propia como importe de la fila **no** es viable: el saldo de las
+  cuentas se calcula con el **monto completo** (verificado: `get_account_balance_sums`,
+  migración 0051, no tiene ninguna noción de `is_shared` ni de splits). En el detalle de
+  cuenta, donde cada fila lleva su saldo corriente al lado, la columna dejaría de cerrar.
+- Si algún día se retoma, el lugar correcto es **debajo del importe, en la columna de
+  números** — no en el subtítulo, que en 360px ya se trunca con `categoría · cuenta`.
+- El total con el desglose por persona vive en el módulo **Compartido**. Movimientos no lo
+  duplica.
+
+---
+
 ## Pendientes de la conversación
 
 Anotados para no perderlos, en el orden en que los vamos a tratar:
 
-1. **El panel de filtros.** Incluye un tema contable fino ya detectado: filtrar por
-   categoría **cambia el conjunto de movimientos** según si hay otro filtro activo o
-   no. Con solo la categoría, el listado muestra lo que compone el peso de esa
-   categoría en el gráfico (lente devengado: cuotas por mes de imputación, la parte
-   propia de un gasto compartido, reintegros netcados). Al agregar cualquier otro
-   filtro, cae al feed general (lente caja). Mismo filtro, distinto resultado.
-2. El resto del inventario del relevamiento (detalle, fila, recurrencias, embebidos).
+1. El resto del panel de filtros: el toggle "mostrar compartidos" (hoy es un ícono en la
+   toolbar que no suma al conteo de "Filtros (N)" y cuyo estado activo se lee al revés),
+   y los dos huecos de búsqueda que D-001 dejó abiertos (subcategoría e importe).
+2. El resto del inventario del relevamiento: detalle del movimiento (hay un handoff
+   preliminar en `detalle-compacto/`, escrito antes de estas decisiones — **revisarlo
+   contra D-003 antes de darlo por bueno**), recurrencias y contextos embebidos.
