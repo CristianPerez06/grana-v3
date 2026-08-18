@@ -2821,13 +2821,13 @@ El sistema SHALL soportar, con el drawer abierto, `Esc` para cerrar el popover a
 
 ### Requirement: El drawer en modo edición ajusta chrome y CTA
 
-El sistema SHALL precargar el movimiento real al abrir el drawer en modo edición y SHALL deshabilitar el cambio de tipo. El conjunto de campos editables SHALL derivarse de `getEditableFields` (regla ya especificada para el formulario único). En modo edición el CTA SHALL decir "Guardar cambios". El borrado SHALL respetar las reglas existentes (no borrar hijas de cuotas aisladas, no borrar consumos pagados).
+El sistema SHALL precargar el movimiento real al abrir el drawer en modo edición y NO SHALL renderizar el selector de tipo: el tipo es inmutable y se enuncia como fila de contexto read-only. El conjunto de campos editables SHALL derivarse de `getEditableFields` (regla ya especificada para el formulario único). En modo edición el CTA SHALL decir "Guardar cambios". El borrado SHALL respetar las reglas existentes (no borrar hijas de cuotas aisladas, no borrar consumos pagados).
 
-#### Scenario: Tipo no editable en edición
+#### Scenario: El tipo no se ofrece como control en edición
 
 - **WHEN** el usuario abre un movimiento existente en el drawer de edición
-- **THEN** el selector de tipo no permite cambiar el tipo
-- **AND** en viewport ancho se muestra como el selector completo deshabilitado, y en viewport angosto como el selector simplificado read-only (dos primarias + "Otros")
+- **THEN** el drawer no muestra selector de tipo, en ningún viewport
+- **AND** el tipo aparece como fila de contexto read-only con caption de "no editable"
 
 #### Scenario: CTA en edición
 
@@ -3478,7 +3478,7 @@ Los tiles de **contexto** que requieren reads adicionales — **"Peso en el mes"
 
 La app nativa SHALL permitir **editar** y **borrar** un movimiento desde el detalle, reusando la capa compartida: la edición SHALL usar `useMovementForm` en modo edición (`edit: MovementEditContext`) con el mismo `submitEdit()` y los mismos `update*` mutators ya bindeados en mobile; el borrado SHALL usar un thin `deleteTransaction(supabase, userId, id)` compartido en `@grana/transactions-mutations`, consumido por **web y mobile** (una sola implementación de los guards). **Cero i18n nuevo**: las acciones y los warnings de borrado ya viven en `@grana/i18n-messages`.
 
-**Edición.** La app SHALL exponer una pantalla `/transactions/[txId]/edit` que arma el `MovementEditContext` vía un mirror mobile de `buildMovementEditContext` (mismos reads del detalle + `getEditableFields` puro/compartido) y renderiza el `MovementForm` en modo edición. En modo edición el form SHALL: mostrar el selector de tipo **read-only** con la misma forma que en el alta (dos primarias + "Otros", el tipo del movimiento activo, nada accionable — ver el requirement del selector de tipo); mostrar **filas de contexto read-only** (moneda · cuenta(s), y el tipo sólo cuando aporta información que el selector no da, como "Compra en cuotas") con caption de "no editable"; y **gatear cada campo** por `editableFields` — monto/fecha editables sólo cuando lo permite el estado (un consumo `paid` bloquea monto y fecha; una compra en cuotas madre bloquea el monto si alguna cuota está pagada; una cuota hija es totalmente inmutable), categoría/descripción según el tipo, la cuenta de débito editable **sólo** en un pago de resumen (`editable.account`), y el reintegro editable sólo si está **pendiente** (uno recibido/cancelado se muestra read-only). El submit SHALL rutear al `updateX` correspondiente (o `updateInstallmentParent` para la madre) y, si aplica, a `saveExpenseReimbursement`.
+**Edición.** La app SHALL exponer una pantalla `/transactions/[txId]/edit` que arma el `MovementEditContext` vía un mirror mobile de `buildMovementEditContext` (mismos reads del detalle + `getEditableFields` puro/compartido) y renderiza el `MovementForm` en modo edición. En modo edición el form SHALL: ocultar el selector de tipo (el tipo es inmutable); mostrar **filas de contexto read-only** (tipo · moneda · cuenta(s)) con caption de "no editable"; y **gatear cada campo** por `editableFields` — monto/fecha editables sólo cuando lo permite el estado (un consumo `paid` bloquea monto y fecha; una compra en cuotas madre bloquea el monto si alguna cuota está pagada; una cuota hija es totalmente inmutable), categoría/descripción según el tipo, la cuenta de débito editable **sólo** en un pago de resumen (`editable.account`), y el reintegro editable sólo si está **pendiente** (uno recibido/cancelado se muestra read-only). El submit SHALL rutear al `updateX` correspondiente (o `updateInstallmentParent` para la madre) y, si aplica, a `saveExpenseReimbursement`.
 
 **Permisos.** El edit-context SHALL devolver `null` cuando el movimiento no es editable por este form — ajeno (`transaction.user_id !== user.id`), reintegro/liquidación, o padre sin cuenta resoluble — y la pantalla de edición SHALL responder con su estado de "no encontrado". El detalle SHALL ocultar la acción Editar en esos casos (ver `canEdit` en el requirement del detalle).
 
@@ -3489,7 +3489,7 @@ El borrado y la edición SHALL usar el mismo anon-key/RLS path que web (las muta
 #### Scenario: Editar un gasto simple
 
 - **WHEN** el dueño abre el detalle de un gasto propio cash/bank no pagado y toca Editar
-- **THEN** llega a `/transactions/[txId]/edit` con el form en modo edición, el tipo como selector read-only, la moneda y la cuenta como contexto read-only, y los campos monto/categoría/fecha/descripción editables
+- **THEN** llega a `/transactions/[txId]/edit` con el form en modo edición, el tipo/moneda/cuenta como contexto read-only y los campos monto/categoría/fecha/descripción editables
 - **AND** al guardar, el `updateTransaction` persiste los cambios, se invalida el cache y vuelve al detalle
 
 #### Scenario: Los campos bloqueados no se editan
@@ -3805,9 +3805,9 @@ La descripción de un movimiento SHALL seguir siendo opcional: nunca bloquea el 
 
 ### Requirement: El selector de tipo ofrece dos primarias y "Otros"
 
-El formulario SHALL presentar `gasto` e `ingreso` como las únicas opciones primarias fijas, tanto en alta como en edición. Los demás tipos —`transferencia`, `ajuste` y `cambio de moneda`— SHALL quedar tras una affordance explícita ("Otros") que los ofrece gateados por su elegibilidad (`transferencia` requiere dos o más cuentas propias; `cambio de moneda` requiere capacidad bimoneda; `ajuste` está siempre disponible). La affordance "Otros" SHALL mostrarse siempre que exista al menos un tipo secundario elegible. La partición es fija y no altera ninguna regla contable ni la disponibilidad de los tipos.
+Este requirement gobierna el **alta**. En **edición** no hay selector de tipo en ninguna superficie (ver el requirement del formulario único y el del drawer en modo edición): el tipo es inmutable, así que se enuncia como fila de contexto read-only y no como control.
 
-En **modo edición** el selector SHALL renderizarse con esa misma forma pero **read-only**: el tipo del movimiento aparece como la opción activa —en su slot primario, o en el slot "Otros" si es un tipo secundario— y ninguna opción SHALL ser accionable. El slot "Otros" SHALL mostrarse en edición siempre que exista al menos un tipo secundario elegible **o** el propio movimiento sea de un tipo secundario, para que el tipo nunca quede sin representación. Como el selector ya nombra el tipo, las filas de contexto read-only NO SHALL repetirlo, salvo en la madre de una compra en cuotas, donde la fila dice "Compra en cuotas" y aporta información que el selector no da.
+El formulario de alta SHALL presentar `gasto` e `ingreso` como las únicas opciones primarias fijas. Los demás tipos —`transferencia`, `ajuste` y `cambio de moneda`— SHALL quedar tras una affordance explícita ("Otros") que los ofrece gateados por su elegibilidad (`transferencia` requiere dos o más cuentas propias; `cambio de moneda` requiere capacidad bimoneda; `ajuste` está siempre disponible). La affordance "Otros" SHALL mostrarse siempre que exista al menos un tipo secundario elegible. La partición es fija y no altera ninguna regla contable ni la disponibilidad de los tipos.
 
 #### Scenario: Solo gasto e ingreso son primarios
 
@@ -3821,23 +3821,11 @@ En **modo edición** el selector SHALL renderizarse con esa misma forma pero **r
 - **THEN** puede elegir `transferencia` (si tiene dos o más cuentas), `ajuste` o `cambio de moneda` (si tiene capacidad bimoneda)
 - **AND** el flujo de ese tipo funciona igual que antes de este cambio
 
-#### Scenario: En edición el selector se muestra igual pero read-only
+#### Scenario: En edición no hay selector de tipo
 
-- **WHEN** el formulario se abre en modo edición de un movimiento existente en una superficie mobile (app nativa o web en viewport angosto)
-- **THEN** el selector de tipo se dibuja con la misma partición del alta —dos primarias más "Otros"— y el tipo del movimiento como opción activa
-- **AND** ninguna opción es accionable: no hay cambio de tipo, la affordance "Otros" no despliega su lista y el tipo permanece inmutable
-
-#### Scenario: Un tipo secundario ocupa el slot "Otros" en edición
-
-- **WHEN** el formulario se abre en modo edición de una transferencia, un ajuste o un cambio de moneda
-- **THEN** el slot "Otros" muestra el nombre de ese tipo como opción activa, en lugar de la etiqueta genérica
-- **AND** lo hace aunque ese tipo ya no sea elegible para un alta nueva (por ejemplo una transferencia cuya segunda cuenta se cerró)
-
-#### Scenario: El tipo no se dice dos veces
-
-- **WHEN** el formulario en modo edición mobile dibuja el selector de tipo read-only
-- **THEN** las filas de contexto read-only NO repiten el tipo como una fila más
-- **AND** la excepción es la madre de una compra en cuotas, cuya fila aporta información que el selector no da ("Compra en cuotas", no "Gasto")
+- **WHEN** el formulario se abre en modo edición de un movimiento existente, en cualquier superficie (web escritorio, web en viewport angosto o app nativa)
+- **THEN** el formulario NO dibuja el selector de tipo — ni la partición primario/"Otros", ni el selector completo en estado deshabilitado
+- **AND** el tipo del movimiento se enuncia como fila de contexto read-only, junto a la moneda y la(s) cuenta(s), con el mismo caption de "no editable"
 
 ---
 

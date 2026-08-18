@@ -134,20 +134,11 @@ export function MovementForm({
     return formatDateISO(d)
   })()
 
-  // Edit mode: the type selector is read-only and each field is gated by
+  // Edit mode: the type selector is hidden and each field is gated by
   // `editableFields` (immutable ones render as read-only context rows). Mirror of
   // web's `movement-form.tsx` isEdit branches.
   const isEdit = form.isEdit
   const editable = edit?.editableFields
-
-  // "Otros" slot of the type strip. It also has to appear in edit when the
-  // movement's own type is a secondary one but no secondary type is currently
-  // eligible (e.g. editing a transfer after closing the second account) —
-  // otherwise the type would have nowhere to show.
-  const showOtrosSlot = form.secondaryTabs.length > 0 || (isEdit && form.isSecondaryTab)
-  const otrosLabel = form.isSecondaryTab
-    ? t(`transactions.types.${form.tab}`)
-    : t('transactions.form.other_types')
 
   const members = household && household.members.length === 2 ? household.members : null
   // In edit: the share toggle only shows when the field is editable (simple
@@ -250,22 +241,17 @@ export function MovementForm({
     return match?.id ?? banks[0]?.id ?? ''
   }
 
-  // Read-only context rows shown in edit mode: the immutable fields (currency,
-  // account(s)). Mirror of web's `contextRows`.
-  // The read-only type strip already names the type, so the "TIPO" row
-  // would repeat it. An installment parent keeps it: its value is "Compra en
-  // cuotas", which a plain "Gasto" slot doesn't convey.
+  // Read-only context rows shown in edit mode: the immutable fields (type,
+  // currency, account(s)). Mirror of web's `contextRows`.
   const contextRows: { label: string; value: string }[] =
     isEdit && edit
       ? [
-          ...(edit.isParent
-            ? [
-                {
-                  label: t('transactions.labels.type'),
-                  value: t('transactions.installment_purchase_label'),
-                },
-              ]
-            : []),
+          {
+            label: t('transactions.labels.type'),
+            value: edit.isParent
+              ? t('transactions.installment_purchase_label')
+              : t(`transactions.types.${edit.type}`),
+          },
           { label: t('transactions.labels.currency'), value: edit.currencyCode },
           ...(edit.isParent && edit.installmentsTotal
             ? [
@@ -319,53 +305,31 @@ export function MovementForm({
 
   return (
     <View className="flex-col gap-5">
-      {/* Tab selector — two primaries + "Otros" (see design 1b). Edit renders the
-          same three slots read-only: the type is immutable, so nothing is
-          pressable, the "Otros" sheet never opens and the movement's type is
-          simply the active slot. */}
-      <View
-        accessibilityRole={isEdit ? 'none' : 'radiogroup'}
-        accessibilityLabel={t('transactions.form.type_label')}
-        className="flex-row gap-1.5 rounded-xl bg-border-soft p-1"
-      >
-        {PRIMARY_TABS.map((tab) => {
-          const active = form.tab === tab
-          const label = (
-            <Text className={`text-sm font-bold ${active ? 'text-text' : 'text-text-muted'}`}>
-              {t(`transactions.types.${tab}`)}
-            </Text>
-          )
-          const slotClass = `flex-1 items-center rounded-lg px-3.5 py-1.5 ${active ? 'bg-card' : ''}`
-          return isEdit ? (
-            <View key={tab} className={slotClass}>
-              {label}
-            </View>
-          ) : (
-            <Pressable
-              key={tab}
-              onPress={() => form.setTab(tab)}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: active }}
-              className={slotClass}
-            >
-              {label}
-            </Pressable>
-          )
-        })}
-        {showOtrosSlot &&
-          (isEdit ? (
-            <View
-              className={`flex-1 flex-row items-center justify-center gap-1 rounded-lg px-3 py-1.5 ${
-                form.isSecondaryTab ? 'bg-card' : ''
-              }`}
-            >
-              <Text
-                className={`text-sm font-bold ${form.isSecondaryTab ? 'text-text' : 'text-text-muted'}`}
+      {/* Tab selector — two-row wrapping pill group (see design 1b). Hidden in
+          edit mode: the type is immutable (shown as a context row). */}
+      {!isEdit && (
+        <View
+          accessibilityRole="radiogroup"
+          accessibilityLabel={t('transactions.form.type_label')}
+          className="flex-row gap-1.5 rounded-xl bg-border-soft p-1"
+        >
+          {PRIMARY_TABS.map((tab) => {
+            const active = form.tab === tab
+            return (
+              <Pressable
+                key={tab}
+                onPress={() => form.setTab(tab)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                className={`flex-1 items-center rounded-lg px-3.5 py-1.5 ${active ? 'bg-card' : ''}`}
               >
-                {otrosLabel}
-              </Text>
-            </View>
-          ) : (
+                <Text className={`text-sm font-bold ${active ? 'text-text' : 'text-text-muted'}`}>
+                  {t(`transactions.types.${tab}`)}
+                </Text>
+              </Pressable>
+            )
+          })}
+          {form.secondaryTabs.length > 0 && (
             <Pressable
               onPress={() => setOtrosOpen(true)}
               accessibilityRole="button"
@@ -377,12 +341,15 @@ export function MovementForm({
               <Text
                 className={`text-sm font-bold ${form.isSecondaryTab ? 'text-text' : 'text-text-muted'}`}
               >
-                {otrosLabel}
+                {form.isSecondaryTab
+                  ? t(`transactions.types.${form.tab}`)
+                  : t('transactions.form.other_types')}
               </Text>
               <ChevronDown size={13} color={form.isSecondaryTab ? colors.text : colors.textMuted} />
             </Pressable>
-          ))}
-      </View>
+          )}
+        </View>
+      )}
 
       {/* "Otros" sheet: eligible secondary types */}
       {!isEdit && (
