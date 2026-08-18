@@ -2324,7 +2324,7 @@ export const MovementForm = ({
             <div className="rounded-[15px] border border-border bg-card px-4 py-3.5">
               <div className="flex flex-col gap-2">
                 {/* Fila 1 — chips de frecuencia (sin Anual en mobile) */}
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1.5">
                   {(['weekly', 'biweekly', 'monthly', 'custom'] as const).map((f) => {
                     const active = frequency === f
                     return (
@@ -2332,7 +2332,7 @@ export const MovementForm = ({
                         key={f}
                         type="button"
                         onClick={() => setFrequency(f)}
-                        className={`rounded-full border px-2 py-1 text-[11.5px] leading-none transition-colors ${
+                        className={`rounded-full border px-2.5 py-1.5 text-[11.5px] leading-none transition-colors ${
                           active ? 'font-semibold text-emerald-deep' : 'border-border font-medium text-text-muted'
                         }`}
                         style={
