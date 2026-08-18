@@ -1151,14 +1151,19 @@
       "percent_hint": "Opcional: calculá el monto por porcentaje del gasto.",
       "percent_label": "% del gasto",
       "cap_label": "Tope (opcional)",
+      "cap_short": "tope",
       "target_label": "¿Cómo se acredita?",
       "target": {
         "account": "A una cuenta — el banco te deposita la plata",
-        "statement": "En el resumen — se descuenta de la tarjeta"
+        "statement": "En el resumen — se descuenta de la tarjeta",
+        "account_short": "Cuenta",
+        "statement_short": "Resumen"
       },
       "credit_to": "Acreditar en",
       "credit_to_placeholder": "Elegí una cuenta",
+      "same_bank": "mismo banco",
       "received_now": "Ya me lo acreditaron",
+      "received_short": "Acreditado",
       "received_now_hint": "Se registra como reintegro recibido.",
       "pending_hint": "Queda como reintegro pendiente. Lo confirmás cuando realmente llegue.",
       "readonly_hint_received": "Ya te lo acreditaron. Se gestiona desde el reintegro.",
@@ -1379,6 +1384,11 @@
       "installments_breakdown": "{count} cuotas de ${amount}",
       "repeat_note": "Para lo que pagás seguido: alquiler, suscripciones, el sueldo.",
       "repeat_hint": "Cuando toca, Grana te lo deja listo y vos lo registrás con un toque. Nunca se carga solo sin tu OK.",
+      "repeat_reassure": "Grana te lo deja listo y lo registrás con un toque. Nunca se carga solo.",
+      "repeat_until_placeholder": "Repetir hasta — opcional",
+      "repeat_no_end": "Sin fecha de fin",
+      "repeat_summary_prefix": "Se repite cada",
+      "repeat_summary_no_end": ", sin fecha de fin",
       "repeat_question": "¿Cada cuánto?",
       "cta": {
         "expense": "Registrar gasto",
@@ -1551,6 +1561,11 @@
         "week": "{count, plural, one {semana} other {semanas}}",
         "month": "{count, plural, one {mes} other {meses}}",
         "year": "{count, plural, one {año} other {años}}"
+      },
+      "units_short": {
+        "day": "días",
+        "week": "sem.",
+        "month": "meses"
       },
       "end_after_occurrences": "{count, plural, one {Termina tras # ocurrencia} other {Termina tras # ocurrencias}}",
       "end_label": "Límite de ocurrencias (opcional)"
@@ -1904,7 +1919,13 @@
       "sum_error": "Los porcentajes deben sumar 100.",
       "shared_label": "Gasto compartido",
       "fully_other_label": "Es 100% de {name}",
-      "fully_other_hint": "Lo pagás vos y {name} te lo debe entero"
+      "fully_other_hint": "Lo pagás vos y {name} te lo debe entero",
+      "half": "Mitad",
+      "all_other": "Todo suyo",
+      "you": "Vos",
+      "other_short": "Otro",
+      "owes": "te debe",
+      "write_your_share": "Escribí tu parte"
     },
     "invite": {
       "title": "Invitar miembro",

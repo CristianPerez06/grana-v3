@@ -66,9 +66,9 @@ El sistema SHALL permitir que un usuario sin hogar se una a un hogar existente i
 
 El sistema SHALL permitir, mediante un toggle en el formulario de gasto, marcar un `expense` (cuenta cash/bank o tarjeta de crédito) como compartido. Un gasto compartido es una transacción **real** que impacta el saldo de quien paga, persistida con `is_shared = true` y `household_id`, más un reparto en `shared_expense_split` (una fila por miembro con su porcentaje y su monto asignado). El toggle solo está disponible si el usuario tiene un hogar activo con dos miembros. Los porcentajes SHALL sumar exactamente 100, cada uno SHALL estar entre **0 y 100**, y todos los miembros del hogar SHALL estar listados. Un porcentaje de **0** para un miembro es válido y significa que el gasto corresponde **íntegramente al otro miembro** (el pagador lo adelanta): no genera consumo propio del pagador y el otro le queda debiendo el total.
 
-Para el caso extremo "lo pagué yo pero es 100% del otro", el formulario SHALL ofrecer un **toggle dedicado** (rotulado en términos de la acción, ej. "Lo pagué yo, pero es 100% de {nombre}") que fija el split en `{pagador: 0, otro: 100}` y oculta el campo de porcentaje libre; al desactivarlo, vuelve el editor de reparto normal (`1..99`). El toggle SHALL estar disponible tanto en el alta como en la edición.
+El control de reparto SHALL ofrecer los repartos frecuentes como **atajos de un gesto** —**Mitad** (50/50), **70/30**, **75/25** (los porcentajes son *tu parte*) y **Todo suyo** (el gasto es íntegramente del otro; fija `{pagador: 0, otro: 100}`)— más un disparador **"Otro"** que revela un editor de **porcentaje libre** (tu parte editable con el teclado del sistema; la del otro se calcula sola y se muestra no editable). El caso "lo pagué yo pero es 100% del otro" SHALL alcanzarse mediante el atajo **"Todo suyo"**: NO SHALL existir un toggle dedicado aparte para ese caso. NO SHALL ofrecerse un atajo "todo mío" (100% del pagador): un gasto 100% propio no se marca como compartido (se alcanza con "Otro" si hiciera falta). En **mobile**, el reparto SHALL visualizarse con una **barra proporcional Vos / [otro integrante]** —el nombre lo trae el registro de Hogar, no se escribe—, que puede mostrar porcentajes o montos. Los atajos y el editor SHALL estar disponibles tanto en el alta como en la edición. La presentación mobile de este control y su paridad entre web-mobile y nativo la fija el requirement «El despliegue de las secciones avanzadas es de superficie mínima y paritario entre las superficies mobile» de la capability `transactions`.
 
-El split **por defecto del hogar** NO forma parte de esta relajación: su editor SHALL seguir acotado a `1..99` (el 0/100 es una decisión por-gasto, no la norma del hogar).
+El split **por defecto del hogar** NO forma parte de esta relajación: su editor SHALL seguir acotado a `1..99` (el 0/100 es una decisión por-gasto, no la norma del hogar) y NO SHALL exponer el atajo "Todo suyo".
 
 #### Scenario: Gasto compartido cash creado con split
 
@@ -78,7 +78,7 @@ El split **por defecto del hogar** NO forma parte de esta relajación: su editor
 
 #### Scenario: Gasto que paga el usuario pero corresponde 100% al otro
 
-- **WHEN** un usuario registra un gasto compartido y activa el toggle "es 100% de {nombre}"
+- **WHEN** un usuario registra un gasto compartido y toca el atajo "Todo suyo"
 - **THEN** el split queda `{pagador: 0%, otro: 100%}`, el saldo de la cuenta del pagador baja por el total, y se inserta la fila del otro con `amount_assigned` = total (y la del pagador con `0`)
 - **AND** la deuda derivada refleja que el otro le debe el total al pagador
 - **AND** el gasto NO aparece en el desglose "en qué se fue" del pagador (su parte es 0) y SÍ aparece completo en el del otro miembro
@@ -97,6 +97,7 @@ El split **por defecto del hogar** NO forma parte de esta relajación: su editor
 
 - **WHEN** un usuario edita el split por defecto del hogar en `/shared/settings`
 - **THEN** el editor lo mantiene acotado a `1..99` (el complemento del otro entre `99..1`)
+- **AND** no se ofrece el atajo "Todo suyo" (0/100) en esa superficie
 
 ### Requirement: El reparto de un split no pierde ni inventa centavos
 

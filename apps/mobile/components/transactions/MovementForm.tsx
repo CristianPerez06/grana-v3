@@ -1,6 +1,6 @@
 import { Children, useMemo, useState, type ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
-import { ChevronDown, Undo2, Users, Repeat } from 'lucide-react-native'
+import { ChevronDown, ChevronLeft, Undo2, Users, Repeat, Check } from 'lucide-react-native'
 import { getTodayAR, formatDateISO } from '@grana/money-logic'
 import { Money, parseMoneyInput, formatForDisplay } from '@grana/validation'
 import {
@@ -20,7 +20,6 @@ import { MoneyAmountInput } from '../ui/MoneyAmountInput'
 import { MoneyCalculator } from '../ui/MoneyCalculator'
 import { DateField } from '../ui/DateField'
 import { Segmented } from '../ui/Segmented'
-import { Switch } from '../ui/Switch'
 import { FormError } from '../ui/FormError'
 import { Spinner } from '../ui/Spinner'
 import { AccountSelectField, AccountFamilySelect, CategorySelectField } from './form-pickers'
@@ -37,8 +36,10 @@ import { useQueryClient } from '@tanstack/react-query'
 // eligible from the user's accounts.
 
 // Recurrence frequency chips + custom-interval units, mirror of the web form.
-const FREQUENCIES: Frequency[] = ['weekly', 'biweekly', 'monthly', 'annual', 'custom']
-const INTERVAL_UNITS: IntervalUnit[] = ['day', 'week', 'month', 'year']
+// Mobile hides "annual" and the "year" unit (the model still supports them; a
+// yearly recurrence is created as "cada 12 meses"). See docs/design/movement-form/recurrente.
+const FREQUENCIES: Frequency[] = ['weekly', 'biweekly', 'monthly', 'custom']
+const INTERVAL_UNITS: IntervalUnit[] = ['day', 'week', 'month']
 
 // The common counts as one-tap chips; anything else via the stepper. Local
 // presentation mirror of the web form's constants (component-local there too).
@@ -125,6 +126,9 @@ export function MovementForm({
   const [customInstallments, setCustomInstallments] = useState(false)
   // "Otros" sheet: reveals the eligible secondary types (transfer/ajuste/cambio).
   const [otrosOpen, setOtrosOpen] = useState(false)
+  // Split "Otro" editor: row 1 shortcuts are replaced by two % fields.
+  const [splitOtherMode, setSplitOtherMode] = useState(false)
+  const [splitDraft, setSplitDraft] = useState<string | null>(null)
 
   // Quick-date chips: Hoy / Ayer cover the ~95% of cases without the calendar.
   const todayStr = formatDateISO(getTodayAR())
@@ -236,9 +240,45 @@ export function MovementForm({
   const pickReimbursementAccount = (expenseAccountId: string): string => {
     const expenseAccount = accounts.find((a) => a.id === expenseAccountId)
     const inst = expenseAccount?.institutionId ?? null
+    // Same-bank card and account can have different institution ids but the
+    // same name, so fall back to name before defaulting to the first cash/bank.
+    const instName = expenseAccount?.institutionName?.trim().toLowerCase() || null
     const banks = accounts.filter((a) => a.type !== 'credit')
-    const match = inst ? banks.find((a) => a.institutionId === inst) : undefined
+    const match =
+      (inst ? banks.find((a) => a.institutionId === inst) : undefined) ??
+      (instName
+        ? banks.find((a) => (a.institutionName?.trim().toLowerCase() ?? '') === instName)
+        : undefined)
     return match?.id ?? banks[0]?.id ?? ''
+  }
+
+  // Reimbursement account list ordered "same bank first" (institution of the
+  // payment method) + cap-applied flag, for the compact 2-row block (parity
+  // with mobile-web).
+  const reimbInstitutionId = form.selectedAccount?.institutionId ?? null
+  const reimbInstitutionName = form.selectedAccount?.institutionName?.trim().toLowerCase() || null
+  const isSameReimbEntity = (a: MovementFormAccount): boolean =>
+    (reimbInstitutionId != null && a.institutionId === reimbInstitutionId) ||
+    (reimbInstitutionName != null &&
+      (a.institutionName?.trim().toLowerCase() ?? '') === reimbInstitutionName)
+  const reimbAccountsOrdered = [...form.cashBankAccounts].sort(
+    (a, b) => (isSameReimbEntity(a) ? 0 : 1) - (isSameReimbEntity(b) ? 0 : 1),
+  )
+  const reimbDigits = (s: string): string => s.replace(/\D/g, '')
+  const reimbCapApplied =
+    Number(reimbDigits(form.reimbursementPercent)) > 0 &&
+    reimbDigits(form.reimbursementCap) !== '' &&
+    reimbDigits(form.reimbursementCap) !== '0' &&
+    reimbDigits(form.reimbursementAmount) === reimbDigits(form.reimbursementCap)
+
+  // Format an ISO end date for the recurrence summary line ("31 dic 2026").
+  const fmtEndDate = (iso: string): string => {
+    const parts = iso.split('-')
+    if (parts.length !== 3) return iso
+    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])).toLocaleDateString(
+      'es-AR',
+      { day: '2-digit', month: 'short', year: 'numeric' },
+    )
   }
 
   // Read-only context rows shown in edit mode: the immutable fields (type,
@@ -885,26 +925,26 @@ export function MovementForm({
             </View>
           )}
           {form.reimbursementEnabled && !form.reimbursementReadOnly && (
-            <View className="flex-col gap-3">
-              {/* Estimated amount */}
-              <View className="flex-col gap-1.5">
-                <Label>{t('transactions.reimbursement.estimated_amount')}</Label>
-                <MoneyAmountInput
-                  value={form.reimbursementAmount}
-                  onChangeText={form.setReimbursementAmount}
-                  placeholder="0"
-                />
-              </View>
-
-              {/* Auto-calc by percent / cap */}
-              <View className="flex-col gap-1.5">
-                <Text className="text-xs text-text-muted">
-                  {t('transactions.reimbursement.percent_hint')}
-                </Text>
-                <View className="flex-row gap-2">
-                  <View className="flex-1 flex-col gap-1">
-                    <Label>{t('transactions.reimbursement.percent_label')}</Label>
+            <View className="flex-col gap-2">
+              {/* Fila 1 — monto + regla % / tope (visible inline, sin disclosure) */}
+              <View className="flex-row gap-2">
+                <View className="flex-row items-center gap-1 rounded-lg border border-border bg-card px-3 py-2">
+                  <Text className="text-sm text-text-soft">{CURRENCY_SYMBOL[form.currencyCode]}</Text>
+                  <MoneyAmountInput
+                    bare
+                    value={form.reimbursementAmount}
+                    onChangeText={(v) => {
+                      form.setReimbursementAmount(v)
+                      form.setReimbursementPercent('')
+                    }}
+                    placeholder="0"
+                    className="w-24 text-sm text-text"
+                  />
+                </View>
+                <View className="flex-1 flex-row items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2">
+                  <View className="flex-row items-center gap-0.5">
                     <Input
+                      bare
                       value={form.reimbursementPercent}
                       onChangeText={(v) => {
                         const norm = v.replace(',', '.')
@@ -912,70 +952,87 @@ export function MovementForm({
                         form.applyReimbursementPercent(norm, form.reimbursementCap)
                       }}
                       keyboardType="decimal-pad"
-                      placeholder="0"
+                      placeholder="—"
+                      className="w-9 text-right text-sm text-text"
                     />
+                    <Text className="text-sm text-text-muted">%</Text>
                   </View>
-                  <View className="flex-1 flex-col gap-1">
-                    <Label>{t('transactions.reimbursement.cap_label')}</Label>
+                  <View className="flex-row items-center gap-1">
+                    <Text
+                      className={
+                        reimbCapApplied
+                          ? 'text-xs font-semibold text-emerald-deep'
+                          : 'text-xs text-text-soft'
+                      }
+                    >
+                      {t('transactions.reimbursement.cap_short')} {CURRENCY_SYMBOL[form.currencyCode]}
+                    </Text>
                     <MoneyAmountInput
+                      bare
                       value={form.reimbursementCap}
                       onChangeText={(v) => {
                         form.setReimbursementCap(v)
                         form.applyReimbursementPercent(form.reimbursementPercent, v)
                       }}
-                      placeholder="0"
+                      placeholder="—"
+                      className="w-16 text-sm text-text"
                     />
                   </View>
                 </View>
               </View>
 
-              {/* Target radio — credit only (cash/bank implies 'account'). A
-                  vertical radio, not Segmented: the labels are long explanatory
-                  strings that would wrap badly in a two-option segmented. */}
+              {/* Destino (crédito): Resumen | Cuenta. El default lo fija el hook. */}
               {isCredit && (
-                <View className="flex-col gap-1.5">
-                  <Text className="text-xs text-text-muted">
-                    {t('transactions.reimbursement.target_label')}
-                  </Text>
-                  <View className="flex-col gap-2">
-                    {(['account', 'statement'] as const).map((tg) => (
-                      <RadioRow
-                        key={tg}
-                        label={t(`transactions.reimbursement.target.${tg}`)}
-                        selected={form.reimbursementTarget === tg}
-                        onPress={() => form.setReimbursementTarget(tg)}
-                      />
-                    ))}
-                  </View>
+                <Segmented
+                  ariaLabel={t('transactions.reimbursement.target_label')}
+                  value={form.reimbursementTarget}
+                  onValueChange={(v) =>
+                    form.setReimbursementTarget(v as 'account' | 'statement')
+                  }
+                  options={[
+                    { value: 'statement', label: t('transactions.reimbursement.target.statement_short') },
+                    { value: 'account', label: t('transactions.reimbursement.target.account_short') },
+                  ]}
+                />
+              )}
+
+              {/* Cuenta de acreditación — mismo banco primero; oculta si hay una sola */}
+              {(!isCredit || form.reimbursementTarget === 'account') &&
+                form.cashBankAccounts.length > 1 && (
+                  <AccountSelectField
+                    label={t('transactions.reimbursement.credit_to')}
+                    accounts={reimbAccountsOrdered}
+                    selectedId={form.reimbursementAccountId}
+                    onSelect={form.setReimbursementAccountId}
+                  />
+                )}
+
+              {/* Estado — Acreditado (checkbox; off = pendiente, sin chip) */}
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: form.reimbursementReceivedNow }}
+                onPress={() => form.setReimbursementReceivedNow(!form.reimbursementReceivedNow)}
+                className="flex-row items-center gap-2"
+              >
+                <View
+                  className={
+                    form.reimbursementReceivedNow
+                      ? 'h-5 w-5 items-center justify-center rounded-md bg-emerald'
+                      : 'h-5 w-5 items-center justify-center rounded-md border border-border'
+                  }
+                >
+                  {form.reimbursementReceivedNow && <Check size={12} color="#fff" strokeWidth={3.2} />}
                 </View>
-              )}
-
-              {/* Credit-to account (cash/bank) */}
-              {(!isCredit || form.reimbursementTarget === 'account') && (
-                <AccountSelectField
-                  label={t('transactions.reimbursement.credit_to')}
-                  accounts={form.cashBankAccounts}
-                  selectedId={form.reimbursementAccountId}
-                  onSelect={form.setReimbursementAccountId}
-                />
-              )}
-
-              {/* Received now */}
-              <View className="flex-row items-center justify-between">
-                <Text className="flex-1 pr-3 text-sm text-text">
-                  {t('transactions.reimbursement.received_now')}
+                <Text
+                  className={
+                    form.reimbursementReceivedNow
+                      ? 'text-sm font-semibold text-emerald-deep'
+                      : 'text-sm text-text-muted'
+                  }
+                >
+                  {t('transactions.reimbursement.received_short')}
                 </Text>
-                <Switch
-                  ariaLabel={t('transactions.reimbursement.received_now')}
-                  checked={form.reimbursementReceivedNow}
-                  onValueChange={form.setReimbursementReceivedNow}
-                />
-              </View>
-              <Text className="text-xs text-text-muted">
-                {form.reimbursementReceivedNow
-                  ? t('transactions.reimbursement.received_now_hint')
-                  : t('transactions.reimbursement.pending_hint')}
-              </Text>
+              </Pressable>
             </View>
           )}
         </View>
@@ -983,27 +1040,167 @@ export function MovementForm({
 
       {/* Shared split params (shown when its chip is on) */}
       {showShared && members && form.sharedEnabled && (
-        <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
-          {form.sharedEnabled && (
-            <View className="flex-col gap-2">
-              <Segmented
-                ariaLabel={t('transactions.form.split_label')}
-                value={String(form.splitFirstPct)}
-                onValueChange={(v) => form.setSplitFirstPct(Number(v))}
-                options={[
-                  { value: '100', label: t('transactions.form.split_you') },
-                  { value: '50', label: t('transactions.form.split_even') },
-                  {
-                    value: '0',
-                    label: t('transactions.form.split_other', {
-                      name: members[1].fullName,
-                    }),
-                  },
-                ]}
-              />
-              <Text className="text-xs text-text-muted">
-                {t('transactions.form.your_share', { pct: form.splitFirstPct })}
+        <View className="flex-col gap-2 rounded-xl border border-border bg-card p-4">
+          {/* Fila 1 — atajos (o los dos campos % en modo "Otro") */}
+          {splitOtherMode ? (
+            <View className="flex-row items-center gap-1.5">
+              <Pressable
+                onPress={() => {
+                  setSplitOtherMode(false)
+                  setSplitDraft(null)
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.back')}
+                className="h-6 w-6 items-center justify-center"
+              >
+                <ChevronLeft size={16} color="#8A94A3" />
+              </Pressable>
+              <Text className="text-xs text-text-soft">{t('shared.split.you')}</Text>
+              <View
+                className="min-w-[56px] flex-row items-center justify-between rounded-lg border border-border bg-card px-2"
+                style={{ height: 32 }}
+              >
+                <Input
+                  bare
+                  value={splitDraft ?? String(form.splitFirstPct)}
+                  onChangeText={(v) => {
+                    const raw = v.replace(/\D/g, '').slice(0, 2)
+                    setSplitDraft(raw)
+                    if (raw !== '')
+                      form.setSplitFirstPct(Math.max(0, Math.min(99, parseInt(raw, 10))))
+                  }}
+                  onBlur={() => setSplitDraft(null)}
+                  keyboardType="number-pad"
+                  accessibilityLabel={members[0].fullName}
+                  className="w-8 text-sm font-semibold text-text"
+                />
+                <Text className="text-xs text-text-muted">%</Text>
+              </View>
+              <Text className="ml-auto text-xs text-text-soft" numberOfLines={1}>
+                {members[1].fullName}
               </Text>
+              <View
+                className="min-w-[56px] flex-row items-center justify-between rounded-lg bg-border-soft px-2"
+                style={{ height: 32 }}
+              >
+                <Text className="text-sm font-semibold text-text-muted">
+                  {100 - (splitDraft === '' ? 0 : form.splitFirstPct)}
+                </Text>
+                <Text className="text-xs text-text-muted">%</Text>
+              </View>
+            </View>
+          ) : (
+            <View className="flex-row flex-wrap gap-1">
+              {([['half', 50], ['70/30', 70], ['75/25', 75], ['all_other', 0]] as const).map(
+                ([key, val]) => {
+                  const active = form.splitFirstPct === val
+                  const label =
+                    key === 'half'
+                      ? t('shared.split.half')
+                      : key === 'all_other'
+                        ? t('shared.split.all_other')
+                        : key
+                  return (
+                    <Pressable
+                      key={key}
+                      onPress={() => {
+                        setSplitOtherMode(false)
+                        setSplitDraft(null)
+                        form.setSplitFirstPct(val)
+                      }}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      className={`rounded-full border px-2.5 py-1 ${
+                        active ? 'border-emerald bg-emerald-soft' : 'border-border'
+                      }`}
+                    >
+                      <Text
+                        className={`text-xs ${
+                          active ? 'font-semibold text-emerald-deep' : 'font-medium text-text-muted'
+                        }`}
+                      >
+                        {label}
+                      </Text>
+                    </Pressable>
+                  )
+                },
+              )}
+              {(() => {
+                const custom = ![50, 70, 75, 0].includes(form.splitFirstPct)
+                return (
+                  <Pressable
+                    onPress={() => {
+                      setSplitOtherMode(true)
+                      setSplitDraft('')
+                    }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: custom }}
+                    className={`rounded-full border px-2.5 py-1 ${
+                      custom ? 'border-emerald bg-emerald-soft' : 'border-border'
+                    }`}
+                  >
+                    <Text
+                      className={`text-xs ${
+                        custom ? 'font-semibold text-emerald-deep' : 'font-medium text-text-muted'
+                      }`}
+                    >
+                      {custom ? `${form.splitFirstPct}%` : t('shared.split.other_short')}
+                    </Text>
+                  </Pressable>
+                )
+              })()}
+            </View>
+          )}
+
+          {/* Fila 2 — barra de reparto Vos / otro integrante */}
+          {splitOtherMode && splitDraft === '' ? (
+            <View
+              className="h-[26px] items-center justify-center rounded-lg bg-border-soft"
+            >
+              <Text className="text-[11px] text-text-soft">
+                {t('shared.split.write_your_share')}
+              </Text>
+            </View>
+          ) : form.splitFirstPct === 0 ? (
+            <View
+              className="h-[26px] flex-row items-center overflow-hidden rounded-lg px-2"
+              style={{ backgroundColor: '#0E9E6E' }}
+            >
+              <Text numberOfLines={1} className="text-[11px] font-semibold text-white">
+                {members[1].fullName} 100%
+                {(() => {
+                  const total = parseMoneyInput(form.amount)
+                  return form.amount && total
+                    ? ` — ${t('shared.split.owes')} ${CURRENCY_SYMBOL[form.currencyCode]}${fmtAmount(total)}`
+                    : ''
+                })()}
+              </Text>
+            </View>
+          ) : (
+            <View
+              className="h-[26px] flex-row overflow-hidden rounded-lg"
+              style={{ backgroundColor: '#F1F3F6' }}
+            >
+              <View
+                className="h-full flex-row items-center gap-1 overflow-hidden px-2"
+                style={{ width: `${form.splitFirstPct}%`, backgroundColor: '#3A6B8A' }}
+              >
+                <Text numberOfLines={1} className="text-[11px] font-semibold text-white" style={{ flexShrink: 1 }}>
+                  {t('shared.split.you')}
+                </Text>
+                <Text className="text-[11px] font-semibold text-white">{form.splitFirstPct}%</Text>
+              </View>
+              <View
+                className="h-full flex-row items-center justify-end gap-1 overflow-hidden px-2"
+                style={{ width: `${100 - form.splitFirstPct}%`, backgroundColor: '#0E9E6E' }}
+              >
+                <Text numberOfLines={1} className="text-[11px] font-semibold text-white" style={{ flexShrink: 1 }}>
+                  {members[1].fullName}
+                </Text>
+                <Text className="text-[11px] font-semibold text-white">
+                  {100 - form.splitFirstPct}%
+                </Text>
+              </View>
             </View>
           )}
         </View>
@@ -1011,90 +1208,123 @@ export function MovementForm({
 
       {/* Recurrence ("Repetir") params — gasto (no cuotas) / ingreso / transferencia */}
       {showRepeat && form.isRecurrent && (
-        <View className="flex-col gap-3 rounded-xl border border-border bg-card p-4">
-          {form.isRecurrent && (
-            <View className="flex-col gap-3">
-              <View className="rounded-lg bg-emerald-soft p-3">
-                <Text className="text-xs text-text">{t('transactions.drawer.repeat_hint')}</Text>
-              </View>
-              <Text className="text-xs font-semibold text-text-muted">
-                {t('transactions.drawer.repeat_question')}
-              </Text>
-              <View className="flex-row flex-wrap gap-2">
-                {FREQUENCIES.map((f) => {
-                  const active = form.frequency === f
-                  return (
-                    <Pressable
-                      key={f}
-                      onPress={() => form.setFrequency(f)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}
-                      className={`rounded-lg px-3.5 py-2 ${active ? 'bg-navy' : 'bg-border-soft'}`}
+        <View className="flex-col">
+          <View className="flex-col gap-2 rounded-xl border border-border bg-card p-4">
+            {/* Fila 1 — chips de frecuencia (sin Anual en mobile) */}
+            <View className="flex-row flex-wrap gap-1.5">
+              {FREQUENCIES.map((f) => {
+                const active = form.frequency === f
+                return (
+                  <Pressable
+                    key={f}
+                    onPress={() => form.setFrequency(f)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    className={`rounded-full border px-2.5 py-1 ${
+                      active ? 'border-emerald bg-emerald-soft' : 'border-border'
+                    }`}
+                  >
+                    <Text
+                      className={`text-xs ${
+                        active ? 'font-semibold text-emerald-deep' : 'font-medium text-text-muted'
+                      }`}
                     >
-                      <Text
-                        className={`text-sm font-bold ${active ? 'text-white' : 'text-text-muted'}`}
-                      >
-                        {t(`transactions.frequencies.${f}`)}
-                      </Text>
-                    </Pressable>
-                  )
-                })}
-              </View>
-
-              {/* Custom interval: count + unit chips */}
-              {form.frequency === 'custom' && (
-                <View className="flex-col gap-2">
-                  <View className="flex-row items-center gap-2">
-                    <Text className="text-xs text-text-muted">
-                      {t('recurrences.custom_interval.every')}
+                      {t(`transactions.frequencies.${f}`)}
                     </Text>
-                    <Input
-                      value={String(form.intervalCount)}
-                      onChangeText={(v) => {
-                        const digits = v.replace(/\D/g, '')
-                        form.setIntervalCount(digits === '' ? 1 : Math.max(1, parseInt(digits)))
-                      }}
-                      keyboardType="number-pad"
-                      accessibilityLabel={t('recurrences.custom_interval.every')}
-                      className="w-16 text-center"
+                  </Pressable>
+                )
+              })}
+            </View>
+
+            {/* Fila 2 — "cada N unidad" (Personalizado) o "Repetir hasta" */}
+            {form.frequency === 'custom' ? (
+              <View className="flex-col gap-2">
+                <View className="flex-row items-center gap-2">
+                  <Text className="text-xs text-text-soft">
+                    {t('recurrences.custom_interval.every').toLowerCase()}
+                  </Text>
+                  <View className="h-9 flex-row items-center overflow-hidden rounded-lg border border-border">
+                    <Pressable
+                      onPress={() => form.setIntervalCount(Math.max(1, form.intervalCount - 1))}
+                      accessibilityLabel="−"
+                      className="h-full w-8 items-center justify-center bg-border-soft"
+                    >
+                      <Text className="text-base font-semibold text-text-muted">−</Text>
+                    </Pressable>
+                    <Text className="min-w-[34px] text-center text-sm font-semibold text-text">
+                      {form.intervalCount}
+                    </Text>
+                    <Pressable
+                      onPress={() => form.setIntervalCount(form.intervalCount + 1)}
+                      accessibilityLabel="+"
+                      className="h-full w-8 items-center justify-center bg-border-soft"
+                    >
+                      <Text className="text-base font-semibold text-text-muted">+</Text>
+                    </Pressable>
+                  </View>
+                  <View className="flex-1">
+                    <Segmented
+                      ariaLabel={t('recurrences.custom_interval.every')}
+                      value={form.intervalUnit}
+                      onValueChange={(v) => form.setIntervalUnit(v as IntervalUnit)}
+                      options={INTERVAL_UNITS.map((u) => ({
+                        value: u,
+                        label: t(`recurrences.custom_interval.units_short.${u}`),
+                      }))}
                     />
                   </View>
-                  <View className="flex-row flex-wrap gap-2">
-                    {INTERVAL_UNITS.map((u) => {
-                      const active = form.intervalUnit === u
-                      return (
-                        <Pressable
-                          key={u}
-                          onPress={() => form.setIntervalUnit(u)}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected: active }}
-                          className={`rounded-lg px-3.5 py-2 ${active ? 'bg-navy' : 'bg-border-soft'}`}
-                        >
-                          <Text
-                            className={`text-sm font-bold ${active ? 'text-white' : 'text-text-muted'}`}
-                          >
-                            {t(`recurrences.custom_interval.units.${u}`, {
-                              count: form.intervalCount,
-                            })}
-                          </Text>
-                        </Pressable>
-                      )
-                    })}
-                  </View>
                 </View>
-              )}
-
-              {/* Optional end date */}
-              <View className="flex-col gap-1.5">
-                <Label>{t('transactions.drawer.repeat_until')}</Label>
-                <DateField
-                  value={form.recurrenceEndDate}
-                  onChange={form.setRecurrenceEndDate}
-                  placeholder={t('common.pick_date')}
-                />
+                <View className="flex-row items-center justify-between gap-2">
+                  <DateField
+                    bare
+                    value={form.recurrenceEndDate}
+                    onChange={form.setRecurrenceEndDate}
+                    placeholder={t('transactions.drawer.repeat_until_placeholder')}
+                  />
+                  {form.recurrenceEndDate !== '' && (
+                    <Pressable onPress={() => form.setRecurrenceEndDate('')} accessibilityRole="button">
+                      <Text className="text-xs font-medium text-text-muted">
+                        {t('transactions.drawer.repeat_no_end')}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
               </View>
-            </View>
-          )}
+            ) : (
+              <View className="flex-row items-center justify-between gap-2">
+                <View className="flex-1">
+                  <DateField
+                    value={form.recurrenceEndDate}
+                    onChange={form.setRecurrenceEndDate}
+                    placeholder={t('transactions.drawer.repeat_until_placeholder')}
+                  />
+                </View>
+                {form.recurrenceEndDate !== '' && (
+                  <Pressable onPress={() => form.setRecurrenceEndDate('')} accessibilityRole="button">
+                    <Text className="text-xs font-medium text-text-muted">
+                      {t('transactions.drawer.repeat_no_end')}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* Línea de aviso fuera de la card (reemplaza el banner verde) */}
+          <View className="px-1 pt-1.5">
+            <Text className="text-xs text-text-soft">
+              {form.frequency === 'custom'
+                ? `${t('transactions.drawer.repeat_summary_prefix')} ${form.intervalCount} ${t(
+                    `recurrences.custom_interval.units.${form.intervalUnit}`,
+                    { count: form.intervalCount },
+                  )}${
+                    form.recurrenceEndDate
+                      ? ` ${t('recurrences.until_template', { date: fmtEndDate(form.recurrenceEndDate) })}`
+                      : t('transactions.drawer.repeat_summary_no_end')
+                  }.`
+                : t('transactions.drawer.repeat_reassure')}
+            </Text>
+          </View>
         </View>
       )}
 
@@ -1160,32 +1390,6 @@ function AdvChip({
       >
         {label}
       </Text>
-    </Pressable>
-  )
-}
-
-// A bordered radio card — emerald border + ✓ when selected. Used only for the
-// reimbursement target (two options with long explanatory labels).
-function RadioRow({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string
-  selected: boolean
-  onPress: () => void
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      className={`flex-row items-center justify-between rounded-xl border-2 bg-card px-3 py-2 ${
-        selected ? 'border-emerald' : 'border-border'
-      }`}
-    >
-      <Text className="flex-1 pr-2 text-sm font-semibold text-text">{label}</Text>
-      {selected && <Text className="text-emerald">✓</Text>}
     </Pressable>
   )
 }

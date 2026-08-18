@@ -77,8 +77,16 @@ function pickReimbursementAccount(
 ): string {
   const expenseAccount = accounts.find((a) => a.id === expenseAccountId)
   const inst = expenseAccount?.institutionId ?? null
+  // A card and a bank account of the same bank may live under different
+  // institution rows (different id) yet share the display name, so fall back
+  // to matching by institution name before giving up to the first cash/bank.
+  const instName = expenseAccount?.institutionName?.trim().toLowerCase() || null
   const cashBank = accounts.filter((a) => a.type !== 'credit')
-  const match = inst ? cashBank.find((a) => a.institutionId === inst) : undefined
+  const match =
+    (inst ? cashBank.find((a) => a.institutionId === inst) : undefined) ??
+    (instName
+      ? cashBank.find((a) => (a.institutionName?.trim().toLowerCase() ?? '') === instName)
+      : undefined)
   return match?.id ?? cashBank[0]?.id ?? ''
 }
 

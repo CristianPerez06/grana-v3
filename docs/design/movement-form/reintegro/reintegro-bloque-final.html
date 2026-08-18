@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="design_doc_mode" content="canvas">
+<title>Grana · Bloque Reintegro — entrega</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F6F7F9;--ink:#142231;--navy:#0B1A2B;--muted:#6B7683;--soft:#8C97A4;--faint:#AEB6C0;--border:#E6EAEF;--border-soft:#EEF1F4;--field:#F1F3F6;--emerald:#10B981;--emerald-deep:#0E9E6E;--emerald-soft:#E7F8F0;--slate:#3A6B8A;--brand:#15B981}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+a{color:var(--slate)}a:hover{color:var(--navy)}
+.tnum{font-variant-numeric:tabular-nums}
+.frame{position:absolute;width:372px}
+.fnum{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--soft);text-transform:uppercase}
+.ftitle{font-size:18px;font-weight:700;letter-spacing:-.02em;margin-top:4px}
+.fnote{font-size:12.5px;font-weight:400;color:var(--muted);line-height:1.5;margin:6px 0 12px;text-wrap:pretty}
+.fnote b{color:var(--ink);font-weight:600}
+.h{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);margin:14px 0 6px}
+.phone{width:372px;background:var(--bg);border:1px solid var(--border);border-radius:22px;padding:13px;box-shadow:0 18px 40px -26px rgba(11,26,43,.35);display:flex;flex-direction:column}
+.card{background:#fff;border:1px solid var(--border);border-radius:14px}
+.row{display:flex;align-items:center;gap:8px}
+.chips{display:flex;gap:7px;margin-bottom:9px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 11px;border-radius:999px;border:1px solid var(--border);background:#fff;font-size:12.5px;font-weight:500}
+.chip svg{width:13px;height:13px;color:var(--soft)}
+.chip.on{background:var(--emerald-soft);border-color:#BFE9D6;color:var(--emerald-deep);font-weight:600}
+.chip.on svg{color:var(--emerald-deep)}
+.k{font-size:11.5px;font-weight:400;color:var(--soft);white-space:nowrap}
+.r{height:38px;padding:0 12px}
+.r.tight{padding:0 10px}
+.sep{height:1px;background:var(--border-soft)}
+.box{height:28px;border:1px solid var(--border);border-radius:9px;display:flex;align-items:center;gap:6px;padding:0 9px;background:#fff;min-width:0}
+.box.money{flex:none;width:112px}
+.box.rule{flex:1;justify-content:space-between}
+.box.focus{border-color:#BFE9D6;box-shadow:0 0 0 2px var(--emerald-soft)}
+.cur{font-size:12.5px;font-weight:500;color:var(--faint)}
+.num{font-size:14.5px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;font-variant-numeric:tabular-nums}
+.num.ph{color:var(--faint);font-weight:500}
+.pcell{font-size:13px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pcell.ph{color:var(--faint);font-weight:500}
+.cbx{width:18px;height:18px;border-radius:6px;background:var(--emerald);display:grid;place-items:center;flex:none}
+.cbx svg{width:12px;height:12px}
+.cbx.off{background:#fff;border:1.5px solid #D9DEE5}
+.seg{display:flex;background:var(--field);border-radius:9px;padding:2px;flex:1;min-width:0}
+.seg span{height:22px;padding:0 9px;display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:500;color:var(--muted);border-radius:7px;white-space:nowrap;min-width:0;overflow:hidden}
+.seg span svg{width:12px;height:12px;flex:none}
+.seg span.fixed{flex:none}
+.seg span.sel{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(11,26,43,.1)}
+.seg span.ghost{color:var(--faint)}
+.seg .nm{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seg .cv{opacity:.5}
+.ack{display:inline-flex;align-items:center;gap:6px;flex:none}
+.ack .lb{font-size:11.5px;font-weight:500;color:var(--muted);white-space:nowrap}
+.ack.on .lb{color:var(--emerald-deep);font-weight:600}
+.ico{width:22px;height:22px;border-radius:7px;background:var(--field);display:grid;place-items:center;color:var(--slate);flex:none}
+.ico svg{width:13px;height:13px}
+.spacer{height:16px}
+.cta{height:46px;border-radius:14px;background:var(--brand);color:#fff;font-size:15px;font-weight:700;display:grid;place-items:center}
+.px{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500;color:var(--emerald-deep);letter-spacing:.04em;margin-left:6px}
+h1.big2{position:absolute;left:40px;top:32px;font-size:25px;font-weight:700;letter-spacing:-.025em}
+p.sub{position:absolute;left:40px;top:66px;font-size:13.5px;font-weight:400;color:var(--muted);width:820px;line-height:1.5}
+.spec{position:absolute;width:372px;font-size:12.5px;line-height:1.6;color:var(--muted)}
+.spec h3{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.spec ul{list-style:none;display:flex;flex-direction:column;gap:5px}
+.spec li{padding-left:12px;position:relative}
+.spec li:before{content:"";position:absolute;left:0;top:8px;width:4px;height:4px;border-radius:50%;background:var(--faint)}
+.spec b{color:var(--ink);font-weight:600}
+.spec code{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--emerald-deep)}
+</style></head>
+<body>
+<h1 class="big2">Bloque Reintegro · entrega</h1>
+<p class="sub">Se despliega al activar el chip “Reintegro” en el form de nuevo movimiento (mobile). Dos rows de 38 px, alto total 79 px. La row 1 son dos campos con borde propio: monto (6 dígitos) y regla de cálculo (% + tope). La row 2 resuelve destino y estado juntos.</p>
+
+<!-- 1 · principal -->
+<div class="frame" style="left:40px;top:160px">
+<div class="fnum">Estado base</div><div class="ftitle">Cuenta elegida · pendiente<span class="px">card 79 px</span></div>
+<div class="fnote">Al activar el chip, el default es <b>Resumen</b>. Acá el usuario tocó “Cuenta”: queda seleccionada la cuenta de la entidad con la que se paga, sin abrir nada.</div>
+<div class="phone">
+<div class="chips"><div class="chip on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10H8"/></svg>Reintegro</div><div class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 6a3 3 0 0 1 0 6"/></svg>Compartir</div><div class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10a7 7 0 0 1 12-4l3 3"/><path d="M21 14a7 7 0 0 1-12 4l-3-3"/></svg>Recurrente</div></div>
+<div class="card">
+  <div class="r tight row">
+    <div class="box money"><span class="cur">$</span><span class="num">2.000</span></div>
+    <div class="box rule"><span class="pcell">30 %</span><span class="k">tope $ 2.000</span></div>
+  </div>
+  <div class="sep"></div>
+  <div class="r row">
+    <div class="seg"><span class="fixed">Resumen</span><span class="sel"><span class="nm">Galicia caja ahorro</span><svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span></div>
+    <div class="ack"><div class="cbx off"><svg viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></div><span class="lb">Acreditado</span></div>
+  </div>
+</div>
+<div class="spacer"></div>
+<div class="cta">Registrar gasto</div>
+<div class="h">resumen activo (default)</div>
+<div class="card">
+  <div class="r tight row">
+    <div class="box money"><span class="cur">$</span><span class="num">2.000</span></div>
+    <div class="box rule"><span class="pcell">30 %</span><span class="k">tope $ 2.000</span></div>
+  </div>
+  <div class="sep"></div>
+  <div class="r row">
+    <div class="seg"><span class="sel fixed">Resumen</span><span class="ghost"><span class="nm">Galicia caja ahorro</span></span></div>
+    <div class="ack"><div class="cbx off"><svg viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></div><span class="lb">Acreditado</span></div>
+  </div>
+</div>
+<div class="h">acreditado (check on)</div>
+<div class="card">
+  <div class="r tight row">
+    <div class="box money"><span class="cur">$</span><span class="num">2.000</span></div>
+    <div class="box rule"><span class="pcell">30 %</span><span class="k">tope $ 2.000</span></div>
+  </div>
+  <div class="sep"></div>
+  <div class="r row">
+    <div class="seg"><span class="sel fixed">Resumen</span><span class="ghost"><span class="nm">Galicia caja ahorro</span></span></div>
+    <div class="ack on"><div class="cbx"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2"><path d="m5 13 4 4L19 7"/></svg></div><span class="lb">Acreditado</span></div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- 2 · estados de la row 1 -->
+<div class="frame" style="left:452px;top:160px">
+<div class="fnum">Row 1 · estados</div><div class="ftitle">Monto y regla de cálculo</div>
+<div class="fnote">Los dos campos son editables por separado. El monto acepta importe libre; el % calcula y pisa el monto; el tope limita el resultado.</div>
+<div class="phone">
+<div class="h" style="margin-top:0">vacío</div>
+<div class="card">
+  <div class="r tight row">
+    <div class="box money"><span class="cur">$</span><span class="num ph">0</span></div>
+    <div class="box rule"><span class="pcell ph">— %</span><span class="k">tope</span></div>
+  </div>
+</div>
+<div class="h">monto a mano, sin %</div>
+<div class="card">
+  <div class="r tight row">
+    <div class="box money focus"><span class="cur">$</span><span class="num">7.350</span></div>
+    <div class="box rule"><span class="pcell ph">— %</span><span class="k">tope</span></div>
+  </div>
+</div>
+<div class="h">6 dígitos · el campo no crece</div>
+<div class="card">
+  <div class="r tight row">
+    <div class="box money"><span class="cur">$</span><span class="num">148.500</span></div>
+    <div class="box rule"><span class="pcell">30 %</span><span class="k">tope $ 150.000</span></div>
+  </div>
+</div>
+<div class="h">tope aplicado · el monto quedó limitado</div>
+<div class="card">
+  <div class="r tight row">
+    <div class="box money"><span class="cur">$</span><span class="num">2.000</span></div>
+    <div class="box rule"><span class="pcell">30 %</span><span class="k" style="color:var(--emerald-deep)">tope $ 2.000</span></div>
+  </div>
+</div>
+<div class="h">% sin tope</div>
+<div class="card">
+  <div class="r tight row">
+    <div class="box money"><span class="cur">$</span><span class="num">2.700</span></div>
+    <div class="box rule"><span class="pcell">30 %</span><span class="k">sin tope</span></div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- 3 · selector de cuenta -->
+<div class="frame" style="left:864px;top:160px">
+<div class="fnum">Selector de cuenta</div><div class="ftitle">Solo si toca el nombre</div>
+<div class="fnote">Se abre al tocar el nombre de la cuenta (no al tocar “Cuenta”, que ya elige la default). Primero la del mismo banco que el medio de pago, después el resto.</div>
+<div class="phone">
+<div class="card" style="padding:3px 0">
+  <div class="r row"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10 12 4l9 6"/><path d="M5 10v9h14v-9"/></svg></div><span style="font-size:12.5px;font-weight:600">Galicia caja ahorro</span><span class="k">mismo banco</span><svg viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="3" style="width:14px;height:14px;margin-left:auto"><path d="m5 13 4 4L19 7"/></svg></div>
+  <div class="sep"></div>
+  <div class="r row"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10 12 4l9 6"/><path d="M5 10v9h14v-9"/></svg></div><span style="font-size:12.5px;font-weight:500;color:var(--muted)">Nación cuenta sueldo</span></div>
+  <div class="sep"></div>
+  <div class="r row"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M16 12h2"/></svg></div><span style="font-size:12.5px;font-weight:500;color:var(--muted)">Billetera</span></div>
+</div>
+<div class="h">nombre largo · trunca dentro del segmento</div>
+<div class="card">
+  <div class="r tight row">
+    <div class="box money"><span class="cur">$</span><span class="num">2.000</span></div>
+    <div class="box rule"><span class="pcell">30 %</span><span class="k">tope $ 2.000</span></div>
+  </div>
+  <div class="sep"></div>
+  <div class="r row">
+    <div class="seg"><span class="fixed">Resumen</span><span class="sel"><span class="nm">Nación cuenta sueldo principal</span><svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span></div>
+    <div class="ack"><div class="cbx off"><svg viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></div><span class="lb">Acreditado</span></div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- spec -->
+<div class="spec" style="left:1276px;top:196px">
+<h3>Medidas</h3>
+<ul>
+<li>Card: <code>border 1px #E6EAEF</code>, <code>radius 14</code>, sin sombra.</li>
+<li>Rows de <b>38 px</b> exactos, separador <code>1px #EEF1F4</code>. Total <b>79 px</b>.</li>
+<li>Row 1: padding <code>0 10</code>; row 2: <code>0 12</code>; gap entre hijos <code>8</code>.</li>
+<li>Cajas de la row 1: <code>h 28 · radius 9 · border #E6EAEF</code>. Monto <code>width 112</code> fijo (cabe <code>$ 999.999</code>), regla <code>flex 1</code>.</li>
+<li>Segmented: <code>bg #F1F3F6 · radius 9 · padding 2</code>, ítems <code>h 22 · radius 7</code>; activo blanco con <code>shadow 0 1 2 rgba(11,26,43,.1)</code>.</li>
+<li>Check: <code>18×18 · radius 6</code>; on = <code>#10B981</code>, off = borde <code>#D9DEE5</code>.</li>
+</ul>
+<h3>Tipografía</h3>
+<ul>
+<li>Plus Jakarta Sans. Valores <b>600</b>, claves y labels <b>400/500</b>. Nada en 700/800 dentro del bloque.</li>
+<li>Monto <code>14.5px</code>, % <code>13px</code>, claves <code>11.5px</code>, labels del segmented <code>11.5px</code>.</li>
+<li>Todos los números con <code>font-variant-numeric: tabular-nums</code>.</li>
+</ul>
+<h3>Reglas</h3>
+<ul>
+<li>Destino default: <b>Resumen</b> (el resumen de la tarjeta con la que se paga, no se elige).</li>
+<li>Tocar <b>Cuenta</b> selecciona la cuenta de la misma entidad del medio de pago. El nombre es tocable y abre el selector.</li>
+<li>Con Resumen activo, el segmento de cuenta muestra igual la cuenta default en gris (<code>#AEB6C0</code>), como preview de lo que pasaría al tocarlo.</li>
+<li>Monto y % son bidireccionales: cargar % calcula el monto; escribir un monto a mano borra el %.</li>
+<li>El tope recorta el monto calculado y se resalta en verde cuando efectivamente aplicó.</li>
+<li>Sin el check, el reintegro queda <b>pendiente de confirmación</b>. No mostrar chips ni textos de estado “Pendiente”.</li>
+<li>El CTA “Registrar gasto” siempre al final del form.</li>
+</ul>
+</div>
+
+</body></html>

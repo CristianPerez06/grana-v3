@@ -47,6 +47,10 @@ export type DatePickerProps = {
   className?: string
   /** Render the value as `dd/mm/aa` instead of `29 jun 2026` — for tight inline boxes. */
   compact?: boolean
+  /** When set, renders a footer action inside the popover that clears the value
+   *  (e.g. "Sin fecha de fin"). `clearLabel` is required for it to render. */
+  onClear?: () => void
+  clearLabel?: string
 }
 
 const dateFmt = new Intl.DateTimeFormat('es-AR', {
@@ -75,6 +79,8 @@ export function DatePicker({
   id,
   className,
   compact = false,
+  onClear,
+  clearLabel,
 }: DatePickerProps) {
   const t = useTranslations('common')
   const [open, setOpen] = useState(false)
@@ -138,6 +144,18 @@ export function DatePicker({
       >
         {t('today')}
       </button>
+      {onClear && clearLabel && (
+        <button
+          type="button"
+          onClick={() => {
+            onClear()
+            setOpen(false)
+          }}
+          className="w-full rounded-[10px] px-2.5 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-page"
+        >
+          {clearLabel}
+        </button>
+      )}
     </div>
   )
 

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="design_doc_mode" content="canvas">
+<title>Grana · Bloque Recurrente — entrega</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F6F7F9;--ink:#142231;--navy:#0B1A2B;--muted:#6B7683;--soft:#8C97A4;--faint:#AEB6C0;--border:#E6EAEF;--border-soft:#EEF1F4;--field:#F1F3F6;--emerald:#10B981;--emerald-deep:#0E9E6E;--emerald-soft:#E7F8F0;--slate:#3A6B8A;--brand:#15B981}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+a{color:var(--slate)}a:hover{color:var(--navy)}
+.tnum{font-variant-numeric:tabular-nums}
+.frame{position:absolute;width:372px}
+.fnum{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--soft);text-transform:uppercase}
+.ftitle{font-size:18px;font-weight:700;letter-spacing:-.02em;margin-top:4px}
+.fnote{font-size:12.5px;font-weight:400;color:var(--muted);line-height:1.5;margin:6px 0 12px;text-wrap:pretty}
+.fnote b{color:var(--ink);font-weight:600}
+.h{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);margin:14px 0 6px}
+.phone{width:372px;background:var(--bg);border:1px solid var(--border);border-radius:22px;padding:13px;box-shadow:0 18px 40px -26px rgba(11,26,43,.35);display:flex;flex-direction:column}
+.card{background:#fff;border:1px solid var(--border);border-radius:14px}
+.row{display:flex;align-items:center;gap:8px}
+.chips{display:flex;gap:7px;margin-bottom:9px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 11px;border-radius:999px;border:1px solid var(--border);background:#fff;font-size:12.5px;font-weight:500}
+.chip svg{width:13px;height:13px;color:var(--soft)}
+.chip.on{background:var(--emerald-soft);border-color:#BFE9D6;color:var(--emerald-deep);font-weight:600}
+.chip.on svg{color:var(--emerald-deep)}
+.k{font-size:11.5px;font-weight:400;color:var(--soft);white-space:nowrap}
+.r{height:38px;padding:0 12px}
+.r.tight{padding:0 10px}
+.sep{height:1px;background:var(--border-soft)}
+.pill{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:999px;border:1px solid var(--border);background:#fff;font-size:11.5px;font-weight:500;color:var(--muted);white-space:nowrap;flex:none}
+.pill svg{width:12px;height:12px}
+.pill.sel{background:var(--emerald-soft);border-color:#BFE9D6;color:var(--emerald-deep);font-weight:600}
+.box{height:28px;border:1px solid var(--border);border-radius:9px;display:flex;align-items:center;gap:6px;padding:0 9px;background:#fff;min-width:0;flex:1}
+.box .val{font-size:12.5px;font-weight:600;white-space:nowrap}
+.box .val.ph{color:var(--faint);font-weight:500}
+.box svg.cv{width:13px;height:13px;color:var(--faint);flex:none;margin-left:auto}
+.box svg.li{width:13px;height:13px;color:var(--slate);flex:none}
+.box.focus{border-color:#BFE9D6;box-shadow:0 0 0 2px var(--emerald-soft)}
+.seg{display:flex;background:var(--field);border-radius:9px;padding:2px;min-width:0}
+.seg span{height:22px;flex:1;padding:0 6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--muted);border-radius:7px;white-space:nowrap;min-width:0}
+.seg span.sel{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(11,26,43,.1)}
+.stepper{display:flex;align-items:center;height:26px;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex:none}
+.stepper i{width:24px;height:26px;display:grid;place-items:center;font-style:normal;font-size:13px;font-weight:600;color:var(--muted);background:var(--field)}
+.stepper b{min-width:30px;text-align:center;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.info{display:flex;align-items:flex-start;gap:7px;padding:7px 4px 0;font-size:11.5px;font-weight:400;color:var(--soft);line-height:1.4}
+.info svg{width:13px;height:13px;color:var(--faint);flex:none;margin-top:1px}
+.info b{color:var(--ink);font-weight:600}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal b{font-size:9.5px;font-weight:600;color:var(--faint);text-align:center;height:18px;line-height:18px}
+.cal i{font-style:normal;font-size:11.5px;font-weight:500;color:var(--ink);height:28px;display:grid;place-items:center;border-radius:8px;font-variant-numeric:tabular-nums}
+.cal i.out{color:var(--faint)}
+.cal i.sel{background:var(--emerald);color:#fff;font-weight:600}
+.spacer{height:16px}
+.cta{height:46px;border-radius:14px;background:var(--brand);color:#fff;font-size:15px;font-weight:700;display:grid;place-items:center}
+.px{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500;color:var(--emerald-deep);letter-spacing:.04em;margin-left:6px}
+h1.big2{position:absolute;left:40px;top:32px;font-size:25px;font-weight:700;letter-spacing:-.025em}
+p.sub{position:absolute;left:40px;top:66px;font-size:13.5px;font-weight:400;color:var(--muted);width:820px;line-height:1.5}
+.spec{position:absolute;width:372px;font-size:12.5px;line-height:1.6;color:var(--muted)}
+.spec h3{font-size:13px;font-weight:700;color:var(--ink);margin:14px 0 6px}
+.spec h3:first-child{margin-top:0}
+.spec ul{list-style:none;display:flex;flex-direction:column;gap:5px}
+.spec li{padding-left:12px;position:relative}
+.spec li:before{content:"";position:absolute;left:0;top:8px;width:4px;height:4px;border-radius:50%;background:var(--faint)}
+.spec b{color:var(--ink);font-weight:600}
+.spec code{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--emerald-deep)}
+</style></head>
+<body>
+<h1 class="big2">Bloque Recurrente · entrega</h1>
+<p class="sub">Se despliega al activar el chip “Recurrente”. Dos rows de 38 px, alto total 79 px (antes ~250). Row 1: los cuatro chips de frecuencia. Row 2: “Repetir hasta”, que abre el calendario. El banner verde se reemplaza por una línea gris fuera de la card.</p>
+
+<!-- 1 · base -->
+<div class="frame" style="left:40px;top:160px">
+<div class="fnum">Estado base</div><div class="ftitle">Mensual · sin fecha de fin<span class="px">card 79 px</span></div>
+<div class="fnote">Default <b>Mensual</b> ya seleccionado. El campo de fecha es opcional y arranca en placeholder.</div>
+<div class="phone">
+<div class="chips"><div class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10H8"/></svg>Reintegro</div><div class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 6a3 3 0 0 1 0 6"/></svg>Compartir</div><div class="chip on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10a7 7 0 0 1 12-4l3 3"/><path d="M21 14a7 7 0 0 1-12 4l-3-3"/></svg>Recurrente</div></div>
+<div class="card">
+  <div class="r tight row" style="gap:5px"><span class="pill">Semanal</span><span class="pill">Quincenal</span><span class="pill sel">Mensual</span><span class="pill">Personalizado</span></div>
+  <div class="sep"></div>
+  <div class="r tight row">
+    <div class="box"><svg class="li" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg><span class="val ph">Repetir hasta — opcional</span><svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+  </div>
+</div>
+<div class="info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>Grana te lo deja listo y lo registrás con un toque. Nunca se carga solo.</div>
+<div class="spacer"></div>
+<div class="cta">Registrar gasto</div>
+<div class="h">con fecha de fin</div>
+<div class="card">
+  <div class="r tight row" style="gap:5px"><span class="pill">Semanal</span><span class="pill">Quincenal</span><span class="pill sel">Mensual</span><span class="pill">Personalizado</span></div>
+  <div class="sep"></div>
+  <div class="r tight row">
+    <div class="box"><svg class="li" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg><span class="val">hasta 31 dic 2026</span><svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+  </div>
+</div>
+<div class="h">semanal elegido</div>
+<div class="card">
+  <div class="r tight row" style="gap:5px"><span class="pill sel">Semanal</span><span class="pill">Quincenal</span><span class="pill">Mensual</span><span class="pill">Personalizado</span></div>
+  <div class="sep"></div>
+  <div class="r tight row">
+    <div class="box"><svg class="li" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg><span class="val ph">Repetir hasta — opcional</span><svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- 2 · personalizado -->
+<div class="frame" style="left:452px;top:160px">
+<div class="fnum">Personalizado</div><div class="ftitle">La row 2 se transforma<span class="px">card 79 px</span></div>
+<div class="fnote">Al elegir <b>Personalizado</b>, la segunda row pasa a ser <b>cada N · unidad</b> y la fecha se corre al ícono de calendario a la derecha. El alto del bloque no cambia.</div>
+<div class="phone">
+<div class="chips"><div class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10H8"/></svg>Reintegro</div><div class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 6a3 3 0 0 1 0 6"/></svg>Compartir</div><div class="chip on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10a7 7 0 0 1 12-4l3 3"/><path d="M21 14a7 7 0 0 1-12 4l-3-3"/></svg>Recurrente</div></div>
+<div class="card">
+  <div class="r tight row" style="gap:5px"><span class="pill">Semanal</span><span class="pill">Quincenal</span><span class="pill">Mensual</span><span class="pill sel">Personalizado</span></div>
+  <div class="sep"></div>
+  <div class="r tight row" style="gap:6px">
+    <span class="k">cada</span>
+    <div class="stepper"><i>−</i><b>3</b><i>+</i></div>
+    <div class="seg" style="flex:none;width:150px"><span>días</span><span>sem.</span><span class="sel">meses</span></div>
+    <div class="box" style="flex:none;width:34px;justify-content:center;padding:0"><svg class="li" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg></div>
+  </div>
+</div>
+<div class="info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>Se repite cada 3 meses, sin fecha de fin.</div>
+<div class="spacer"></div>
+<div class="cta">Registrar gasto</div>
+<div class="h">personalizado con fecha de fin</div>
+<div class="card">
+  <div class="r tight row" style="gap:5px"><span class="pill">Semanal</span><span class="pill">Quincenal</span><span class="pill">Mensual</span><span class="pill sel">Personalizado</span></div>
+  <div class="sep"></div>
+  <div class="r tight row" style="gap:6px">
+    <span class="k">cada</span>
+    <div class="stepper"><i>−</i><b>2</b><i>+</i></div>
+    <div class="seg" style="flex:none;width:150px"><span>días</span><span class="sel">sem.</span><span>meses</span></div>
+    <div class="box focus" style="flex:none;width:auto;padding:0 8px"><span class="val" style="font-size:11.5px">31 dic</span></div>
+  </div>
+</div>
+<div class="info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>Se repite cada 2 semanas hasta <b>31 dic 2026</b>.</div>
+</div>
+</div>
+
+<!-- 3 · calendario -->
+<div class="frame" style="left:864px;top:160px">
+<div class="fnum">Calendario</div><div class="ftitle">Se abre desde “Repetir hasta”</div>
+<div class="fnote">El campo, y el ícono de calendario en el modo personalizado, abren el mismo date picker. <b>Sin fecha de fin</b> limpia el valor y cierra.</div>
+<div class="phone">
+<div class="card" style="padding:11px 12px">
+  <div class="row" style="margin-bottom:9px"><span style="font-size:13px;font-weight:600">Repetir hasta</span><span class="k" style="margin-left:auto">diciembre 2026</span></div>
+  <div class="cal">
+    <b>L</b><b>M</b><b>M</b><b>J</b><b>V</b><b>S</b><b>D</b>
+    <i class="out">30</i><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i>
+    <i>7</i><i>8</i><i>9</i><i>10</i><i>11</i><i>12</i><i>13</i>
+    <i>14</i><i>15</i><i>16</i><i>17</i><i>18</i><i>19</i><i>20</i>
+    <i>21</i><i>22</i><i>23</i><i>24</i><i>25</i><i>26</i><i>27</i>
+    <i>28</i><i>29</i><i>30</i><i class="sel">31</i><i class="out">1</i><i class="out">2</i><i class="out">3</i>
+  </div>
+  <div class="sep" style="margin:10px -12px"></div>
+  <div class="row"><span class="k">Sin fecha de fin</span><span style="font-size:12.5px;font-weight:600;color:var(--emerald-deep);margin-left:auto">Listo</span></div>
+</div>
+<div class="h">campo con foco (antes de abrir)</div>
+<div class="card">
+  <div class="r tight row" style="gap:5px"><span class="pill">Semanal</span><span class="pill">Quincenal</span><span class="pill sel">Mensual</span><span class="pill">Personalizado</span></div>
+  <div class="sep"></div>
+  <div class="r tight row">
+    <div class="box focus"><svg class="li" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg><span class="val ph">Repetir hasta — opcional</span><svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+  </div>
+</div>
+<div class="h">antes / después</div>
+<div class="card" style="padding:11px 12px;display:flex;flex-direction:column;gap:7px">
+  <div class="row"><span class="k" style="width:52px">Hoy</span><div style="flex:1;height:8px;border-radius:4px;background:#E3E7EC"><div style="height:8px;width:100%;border-radius:4px;background:#D8DEE5"></div></div><span class="k tnum" style="width:42px;text-align:right">250 px</span></div>
+  <div class="row"><span class="k" style="width:52px">Nuevo</span><div style="flex:1;height:8px;border-radius:4px;background:#E3E7EC"><div style="height:8px;width:32%;border-radius:4px;background:var(--emerald)"></div></div><span class="k tnum" style="width:42px;text-align:right">79 px</span></div>
+</div>
+</div>
+</div>
+
+<!-- spec -->
+<div class="spec" style="left:1276px;top:196px">
+<h3>Medidas</h3>
+<ul>
+<li>Card: <code>bg #FFF · border 1px #E6EAEF · radius 14</code>, sin sombra. Rows de <b>38 px</b>, separador <code>1px #EEF1F4</code>. Total <b>79 px</b>.</li>
+<li>Las dos rows con padding <code>0 10</code>. Gap entre chips <code>5</code>; gap en la row personalizada <code>6</code>.</li>
+<li>Chips de frecuencia: <code>h 26 · radius 999 · padding 0 9 · border 1px #E6EAEF · 11.5px/500</code>. Activo: <code>bg #E7F8F0 · border #BFE9D6 · color #0E9E6E · 600</code>.</li>
+<li>Campo de fecha: <code>h 28 · radius 9 · border 1px #E6EAEF</code>, <code>flex 1</code>, ícono calendario <code>13px #3A6B8A</code> + chevron <code>#AEB6C0</code>. Foco: <code>border #BFE9D6 + shadow 0 0 0 2px #E7F8F0</code>.</li>
+<li>Stepper: <code>h 26 · radius 8</code>, botones <code>24×26</code> sobre <code>#F1F3F6</code>. Segmented de unidades: <code>w 150</code>, ítems <code>flex 1 · h 22</code>, labels abreviados (<code>días · sem. · meses</code>).</li>
+<li>Línea de aviso: fuera de la card, padding <code>7px 4px 0</code>, <code>11.5px/400 #8C97A4</code>, ícono ⓘ <code>13px #AEB6C0</code>.</li>
+</ul>
+<h3>Comportamiento</h3>
+<ul>
+<li>Frecuencias: <b>Semanal · Quincenal · Mensual · Personalizado</b>. Default <b>Mensual</b>. Selección única. Se quitó <b>Anual</b>.</li>
+<li><b>Personalizado</b> transforma la row 2 en <code>cada N + unidad</code> y mueve la fecha de fin a un botón de calendario de <code>34 px</code> al final de la misma row. El alto no cambia.</li>
+<li><b>Repetir hasta</b> abre el date picker. Es opcional: vacío = se repite sin fin. El sheet incluye <b>Sin fecha de fin</b> para limpiar.</li>
+<li>Con fecha cargada el campo muestra <code>hasta 31 dic 2026</code>; en modo personalizado, solo <code>31 dic</code>.</li>
+<li>La línea gris resume la regla en lenguaje natural y reemplaza al banner verde: “Se repite cada 3 meses, sin fecha de fin.”</li>
+<li>El CTA <b>Registrar gasto</b> siempre al final del form.</li>
+</ul>
+<h3>Qué no hacer</h3>
+<ul>
+<li>No volver al banner verde de 3 líneas ni al label “¿Cada cuánto?”.</li>
+<li>No poner labels arriba de los controles ni “Repetir hasta (opcional)” como texto separado — va dentro del campo.</li>
+<li>No usar pesos 700/800 dentro del bloque.</li>
+<li>No dejar que los chips toquen el borde de la card: con los 4 labels enteros el ancho justo es <code>~305 px</code> sobre <code>323</code> útiles.</li>
+</ul>
+</div>
+
+</body></html>

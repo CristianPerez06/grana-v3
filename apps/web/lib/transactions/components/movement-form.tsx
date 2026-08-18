@@ -17,6 +17,7 @@ import {
   ChevronRight,
   CreditCard,
   FileText,
+  Info,
   Lightbulb,
   Plus,
   Repeat,
@@ -313,6 +314,8 @@ export const MovementForm = ({
   // retyping (e.g. clearing "50" to enter "60"). `null` = show the committed
   // value; a string = the in-progress text. Clamped/committed on blur.
   const [splitDraft, setSplitDraft] = useState<string | null>(null)
+  // Mobile split "Otro" editor: row 1 chips are replaced by two % fields.
+  const [splitOtherMode, setSplitOtherMode] = useState(false)
   const amountRef = useRef<HTMLInputElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
@@ -523,8 +526,15 @@ export const MovementForm = ({
   const pickReimbursementAccount = (expenseAccountId: string): string => {
     const expenseAccount = accounts.find((a) => a.id === expenseAccountId)
     const inst = expenseAccount?.institutionId ?? null
+    // Same-bank card and account can have different institution ids but the
+    // same name, so fall back to name before defaulting to the first cash/bank.
+    const instName = expenseAccount?.institutionName?.trim().toLowerCase() || null
     const banks = accounts.filter((a) => a.type !== 'credit')
-    const match = inst ? banks.find((a) => a.institutionId === inst) : undefined
+    const match =
+      (inst ? banks.find((a) => a.institutionId === inst) : undefined) ??
+      (instName
+        ? banks.find((a) => (a.institutionName?.trim().toLowerCase() ?? '') === instName)
+        : undefined)
     return match?.id ?? banks[0]?.id ?? ''
   }
 
@@ -1289,10 +1299,12 @@ export const MovementForm = ({
   const accountFamily: 'debit' | 'credit' = isCredit ? 'credit' : 'debit'
   const familyList = accountFamily === 'credit' ? creditAccounts : debitAccounts
   const accountFamilyRow = (
-    <div className="flex flex-col gap-2.5 px-4 py-3">
-      <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
-        {accountLabel}
-      </span>
+    <div className={`flex flex-col gap-2.5 px-4 ${isMobile ? 'py-2.5' : 'py-3'}`}>
+      {!isMobile && (
+        <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+          {accountLabel}
+        </span>
+      )}
       {bothFamilies && (
         <div className="flex gap-1 rounded-[10px] border border-border p-1" style={{ backgroundColor: FIELD_BG }}>
           {(['debit', 'credit'] as const).map((f) => {
@@ -1788,6 +1800,51 @@ export const MovementForm = ({
   const showRepeatToggle =
     !isEdit && tab !== 'adjustment' && tab !== 'exchange' && !isInstallments
 
+  // Reimbursement account list ordered "same bank first" (the institution of
+  // the payment method), for the compact mobile block's account selector.
+  const reimbInstitutionId = selectedAccount?.institutionId ?? null
+  const reimbInstitutionName = selectedAccount?.institutionName?.trim().toLowerCase() || null
+  const isSameReimbEntity = (a: MovementFormAccount): boolean =>
+    (reimbInstitutionId != null && a.institutionId === reimbInstitutionId) ||
+    (reimbInstitutionName != null &&
+      (a.institutionName?.trim().toLowerCase() ?? '') === reimbInstitutionName)
+  const reimbAccountsOrdered = [...cashBank].sort(
+    (a, b) => (isSameReimbEntity(a) ? 0 : 1) - (isSameReimbEntity(b) ? 0 : 1),
+  )
+  const reimbSelectedAccount = cashBank.find((a) => a.id === reimbursementAccountId)
+  // The cap "applied" when a percent is set and the derived amount was clamped
+  // down to the cap (amount === cap). Used to highlight the cap in emerald.
+  const reimbDigits = (s: string): string => s.replace(/\D/g, '')
+  const reimbCapApplied =
+    Number(reimbDigits(reimbursementPercent)) > 0 &&
+    reimbDigits(reimbursementCap) !== '' &&
+    reimbDigits(reimbursementCap) !== '0' &&
+    reimbDigits(reimbursementAmount) === reimbDigits(reimbursementCap)
+  // Reimbursement account picker content — the app's styled account list
+  // (avatar + name + check), same bank first. Rendered inside a Popover so it
+  // matches every other account picker in the form (no raw <select>).
+  const reimbAccountPickerContent = renderAccountPicker(
+    reimbAccountsOrdered,
+    reimbursementAccountId,
+    (id) => {
+      setReimbursementAccountId(id)
+      setActivePopover(null)
+    },
+  )
+
+  // Format an ISO end date for the recurrence field / summary. `withYear` off
+  // for the tight custom-mode calendar button (e.g. "31 dic" vs "31 dic 2026").
+  const fmtEndDate = (iso: string, withYear: boolean): string => {
+    const parts = iso.split('-')
+    if (parts.length !== 3) return iso
+    const dt = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+    return new Intl.DateTimeFormat('es-AR', {
+      day: '2-digit',
+      month: 'short',
+      ...(withYear ? { year: 'numeric' } : {}),
+    }).format(dt)
+  }
+
   const togglesGroup =
     showReimbursementToggle || showSharedToggle || showRepeatToggle ? (
       <div
@@ -1879,7 +1936,178 @@ export const MovementForm = ({
                 </span>
               </div>
             )}
-            {reimbursementEnabled && !reimbursementReadOnly && (
+            {reimbursementEnabled && !reimbursementReadOnly && (isMobile ? (
+              <div className="flex flex-col gap-2">
+                {/* Fila 1 — monto + regla % / tope (compacto, visible inline) */}
+                <div className="flex items-center gap-2">
+                  <div
+                    className="flex h-9 w-28 items-center gap-1 rounded-[9px] border border-border px-2.5"
+                    style={{ backgroundColor: FIELD_BG }}
+                  >
+                    <span className="text-sm text-text-soft">{CURRENCY_SYMBOL[currencyCode]}</span>
+                    <MoneyAmountInput
+                      value={reimbursementAmount}
+                      onChange={(v) => {
+                        setReimbursementAmount(v)
+                        setReimbursementPercent('')
+                      }}
+                      placeholder="0"
+                      className="w-full min-w-0 bg-transparent text-sm text-text outline-none"
+                    />
+                  </div>
+                  <div
+                    className="flex h-9 flex-1 items-center justify-between gap-2 rounded-[9px] border border-border px-2.5"
+                    style={{ backgroundColor: FIELD_BG }}
+                  >
+                    <div className="flex items-center gap-0.5">
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={reimbursementPercent}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(',', '.')
+                          setReimbursementPercent(v)
+                          applyReimbursementPercent(v, reimbursementCap)
+                        }}
+                        placeholder="—"
+                        aria-label={t('reimbursement.percent_label')}
+                        className="w-8 bg-transparent text-right text-sm text-text outline-none"
+                      />
+                      <span className="text-sm text-text-muted">%</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span
+                        className={`whitespace-nowrap text-[11px] ${
+                          reimbCapApplied ? 'font-semibold text-emerald-deep' : 'text-text-soft'
+                        }`}
+                      >
+                        {t('reimbursement.cap_short')} {CURRENCY_SYMBOL[currencyCode]}
+                      </span>
+                      <MoneyAmountInput
+                        value={reimbursementCap}
+                        onChange={(v) => {
+                          setReimbursementCap(v)
+                          applyReimbursementPercent(reimbursementPercent, v)
+                        }}
+                        placeholder="—"
+                        className="w-14 bg-transparent text-sm text-text outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Fila 2 — destino (crédito: Resumen | Cuenta con el nombre adentro) +
+                    estado (Acreditado), todo en una sola fila densa como el handoff. */}
+                <div className="flex items-center gap-2">
+                  {isCredit ? (
+                    <div
+                      className="flex h-9 min-w-0 flex-1 items-center gap-0.5 rounded-[9px] border border-border p-0.5"
+                      style={{ backgroundColor: ROW_DIVIDER }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setReimbursementTarget('statement')}
+                        className={`flex h-full flex-none items-center justify-center rounded-[7px] px-2.5 text-[11.5px] ${
+                          reimbursementTarget === 'statement'
+                            ? 'bg-white font-semibold text-text shadow-[0_1px_2px_rgba(11,26,43,0.1)]'
+                            : 'font-medium text-text-muted'
+                        }`}
+                      >
+                        {t('reimbursement.target.statement_short')}
+                      </button>
+                      <Popover
+                        modal={isDrawer}
+                        open={activePopover === 'reimbAccount'}
+                        onOpenChange={(o) => {
+                          setActivePopover(o ? 'reimbAccount' : null)
+                          if (o && reimbursementTarget !== 'account') {
+                            setReimbursementTarget('account')
+                            if (!reimbursementAccountId)
+                              setReimbursementAccountId(pickReimbursementAccount(accountId))
+                          }
+                        }}
+                        trigger={
+                          <button
+                            type="button"
+                            className={`flex h-full min-w-0 flex-1 items-center justify-center gap-1 rounded-[7px] px-2.5 text-[11.5px] ${
+                              reimbursementTarget === 'account'
+                                ? 'bg-white font-semibold text-text shadow-[0_1px_2px_rgba(11,26,43,0.1)]'
+                                : 'font-medium text-text-muted'
+                            }`}
+                          >
+                            <span className="min-w-0 truncate text-center">
+                              {reimbursementTarget === 'account' && reimbSelectedAccount
+                                ? accountPrimaryName(reimbSelectedAccount)
+                                : t('reimbursement.target.account_short')}
+                            </span>
+                            <ChevronDown className="size-3.5 shrink-0 text-text-soft" aria-hidden />
+                          </button>
+                        }
+                      >
+                        {reimbAccountPickerContent}
+                      </Popover>
+                    </div>
+                  ) : cashBank.length > 1 ? (
+                    <Popover
+                      modal={isDrawer}
+                      open={activePopover === 'reimbAccount'}
+                      onOpenChange={(o) => setActivePopover(o ? 'reimbAccount' : null)}
+                      trigger={
+                        <button
+                          type="button"
+                          className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-[9px] border border-border px-2.5 text-left"
+                          style={{ backgroundColor: FIELD_BG }}
+                        >
+                          {reimbSelectedAccount && (
+                            <AccountAvatar
+                              {...avatarOf(reimbSelectedAccount)}
+                              size="sm"
+                              className="h-5 w-5 rounded"
+                            />
+                          )}
+                          <span className="min-w-0 flex-1 truncate text-xs text-text">
+                            {reimbSelectedAccount
+                              ? accountPrimaryName(reimbSelectedAccount)
+                              : t('reimbursement.credit_to_placeholder')}
+                          </span>
+                          <ChevronDown className="size-3.5 shrink-0 text-text-soft" aria-hidden />
+                        </button>
+                      }
+                    >
+                      {reimbAccountPickerContent}
+                    </Popover>
+                  ) : (
+                    <span className="min-w-0 flex-1 truncate text-xs text-text-soft">
+                      {reimbSelectedAccount ? accountPrimaryName(reimbSelectedAccount) : ''}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={reimbursementReceivedNow}
+                    onClick={() => setReimbursementReceivedNow(!reimbursementReceivedNow)}
+                    className="flex flex-none items-center gap-1.5"
+                  >
+                    <span
+                      className={`flex size-[18px] items-center justify-center rounded-[6px] border ${
+                        reimbursementReceivedNow ? 'border-transparent bg-emerald' : 'border-[#D9DEE5] bg-card'
+                      }`}
+                    >
+                      {reimbursementReceivedNow && (
+                        <Check className="size-3 text-white" strokeWidth={3.2} aria-hidden />
+                      )}
+                    </span>
+                    <span
+                      className={`text-xs ${
+                        reimbursementReceivedNow ? 'font-semibold text-emerald-deep' : 'text-text-muted'
+                      }`}
+                    >
+                      {t('reimbursement.received_short')}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            ) : (
               <div
                 className={`flex flex-col gap-3 ${isMobile ? '' : 'mt-3.5 border-t pt-3.5'}`}
                 style={isMobile ? undefined : { borderColor: ROW_DIVIDER }}
@@ -2004,7 +2232,7 @@ export const MovementForm = ({
                   {reimbursementReceivedNow ? t('reimbursement.received_now_hint') : t('reimbursement.pending_hint')}
                 </p>
               </div>
-            )}
+            ))}
           </div>
         )}
 
@@ -2033,7 +2261,158 @@ export const MovementForm = ({
               />
             </div>
             )}
-            {sharedEnabled && (
+            {sharedEnabled && (isMobile ? (
+              <div className="flex flex-col gap-2">
+                {/* Fila 1 — atajos (o los dos campos % en modo "Otro") */}
+                {splitOtherMode ? (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSplitOtherMode(false)
+                        setSplitDraft(null)
+                      }}
+                      aria-label={tCommon('back')}
+                      className="flex size-6 shrink-0 items-center justify-center text-text-soft"
+                    >
+                      <ChevronLeft className="size-4" aria-hidden />
+                    </button>
+                    <span className="text-[11.5px] text-text-soft">{tShared('split.you')}</span>
+                    <div
+                      className="flex min-w-[56px] items-center justify-between gap-1 rounded-[9px] border border-border px-2 py-1"
+                      style={{ backgroundColor: FIELD_BG }}
+                    >
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoFocus
+                        value={splitDraft ?? String(splitFirstPct)}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/\D/g, '').slice(0, 2)
+                          setSplitDraft(raw)
+                          if (raw !== '') setSplitFirstPct(Math.max(0, Math.min(99, parseInt(raw, 10))))
+                        }}
+                        onBlur={() => setSplitDraft(null)}
+                        aria-label={sharedMembers[0].fullName}
+                        className="w-8 bg-transparent text-sm font-semibold text-text outline-none"
+                      />
+                      <span className="text-xs text-text-muted">%</span>
+                    </div>
+                    <span className="ml-auto min-w-0 truncate text-[11.5px] text-text-soft">
+                      {sharedMembers[1].fullName}
+                    </span>
+                    <div
+                      className="flex min-w-[56px] items-center justify-between gap-1 rounded-[9px] px-2 py-1"
+                      style={{ backgroundColor: ROW_DIVIDER }}
+                    >
+                      <span className="text-sm font-semibold text-text-muted">
+                        {100 - (splitDraft === '' ? 0 : splitFirstPct)}
+                      </span>
+                      <span className="text-xs text-text-muted">%</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {([['half', 50], ['70/30', 70], ['75/25', 75], ['all_other', 0]] as const).map(
+                      ([key, val]) => {
+                        const active = splitFirstPct === val
+                        const label =
+                          key === 'half'
+                            ? tShared('split.half')
+                            : key === 'all_other'
+                              ? tShared('split.all_other')
+                              : key
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => {
+                              setSplitOtherMode(false)
+                              setSplitDraft(null)
+                              setSplitFirstPct(val)
+                            }}
+                            className={`rounded-full border px-2.5 py-1.5 text-[11.5px] leading-none tabular-nums transition-colors ${
+                              active ? 'font-semibold text-emerald-deep' : 'border-border font-medium text-text-muted'
+                            }`}
+                            style={
+                              active
+                                ? { backgroundColor: 'var(--emerald-soft)', borderColor: '#BFE9D6' }
+                                : { backgroundColor: '#fff' }
+                            }
+                          >
+                            {label}
+                          </button>
+                        )
+                      },
+                    )}
+                    {(() => {
+                      const custom = ![50, 70, 75, 0].includes(splitFirstPct)
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSplitOtherMode(true)
+                            setSplitDraft('')
+                          }}
+                          className={`rounded-full border px-2.5 py-1.5 text-[11.5px] leading-none tabular-nums transition-colors ${
+                            custom ? 'font-semibold text-emerald-deep' : 'border-border font-medium text-text-muted'
+                          }`}
+                          style={
+                            custom
+                              ? { backgroundColor: 'var(--emerald-soft)', borderColor: '#BFE9D6' }
+                              : { backgroundColor: '#fff' }
+                          }
+                        >
+                          {custom ? `${splitFirstPct}%` : tShared('split.other_short')}
+                        </button>
+                      )
+                    })()}
+                  </div>
+                )}
+
+                {/* Fila 2 — barra de reparto Vos / otro integrante */}
+                {splitOtherMode && splitDraft === '' ? (
+                  <div
+                    className="flex h-[26px] items-center justify-center rounded-[9px] text-[11px] text-text-soft"
+                    style={{ backgroundColor: ROW_DIVIDER }}
+                  >
+                    {tShared('split.write_your_share')}
+                  </div>
+                ) : splitFirstPct === 0 ? (
+                  <div
+                    className="flex h-[26px] w-full items-center gap-1 overflow-hidden rounded-[9px] px-2 text-[11px] font-semibold text-white"
+                    style={{ backgroundColor: '#0E9E6E' }}
+                  >
+                    <span className="truncate">
+                      {sharedMembers[1].fullName} 100%
+                      {amount
+                        ? ` — ${tShared('split.owes')} ${CURRENCY_SYMBOL[currencyCode]}${formatForDisplay(amount)}`
+                        : ''}
+                    </span>
+                  </div>
+                ) : (
+                  <div
+                    className="flex h-[26px] w-full overflow-hidden rounded-[9px]"
+                    style={{ backgroundColor: ROW_DIVIDER }}
+                  >
+                    <div
+                      className="flex h-full items-center gap-1 overflow-hidden px-2 text-[11px] font-semibold text-white"
+                      style={{ width: `${splitFirstPct}%`, backgroundColor: '#3A6B8A' }}
+                    >
+                      <span className="truncate">{tShared('split.you')}</span>
+                      <span className="shrink-0">{splitFirstPct}%</span>
+                    </div>
+                    <div
+                      className="flex h-full items-center justify-end gap-1 overflow-hidden px-2 text-[11px] font-semibold text-white"
+                      style={{ width: `${100 - splitFirstPct}%`, backgroundColor: '#0E9E6E' }}
+                    >
+                      <span className="truncate">{sharedMembers[1].fullName}</span>
+                      <span className="shrink-0">{100 - splitFirstPct}%</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
               <div
                 className={`flex flex-col gap-3 ${isMobile ? '' : 'mt-3.5 border-t pt-3.5'}`}
                 style={{ borderColor: ROW_DIVIDER }}
@@ -2091,12 +2470,165 @@ export const MovementForm = ({
                   />
                 </div>
               </div>
-            )}
+            ))}
           </div>
         )}
 
-        {showRepeatToggle && (!isMobile || isRecurrent) && (
-          <div className={isMobile ? 'rounded-[15px] border border-border bg-card px-4 py-3.5' : 'px-4 py-3.5'}>
+        {showRepeatToggle && (!isMobile || isRecurrent) && (isMobile ? (
+          <div className="flex flex-col">
+            <div className="rounded-[15px] border border-border bg-card px-4 py-3.5">
+              <div className="flex flex-col gap-2">
+                {/* Fila 1 — chips de frecuencia (sin Anual en mobile) */}
+                <div className="flex flex-wrap gap-1.5">
+                  {(['weekly', 'biweekly', 'monthly', 'custom'] as const).map((f) => {
+                    const active = frequency === f
+                    return (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => setFrequency(f)}
+                        className={`rounded-full border px-2.5 py-1.5 text-[11.5px] leading-none transition-colors ${
+                          active ? 'font-semibold text-emerald-deep' : 'border-border font-medium text-text-muted'
+                        }`}
+                        style={
+                          active
+                            ? { backgroundColor: 'var(--emerald-soft)', borderColor: '#BFE9D6' }
+                            : { backgroundColor: '#fff' }
+                        }
+                      >
+                        {t(`frequencies.${f}`)}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Fila 2 — "Repetir hasta" (o "cada N unidad" en Personalizado) */}
+                {frequency === 'custom' ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11.5px] text-text-soft">
+                      {tRec('custom_interval.every').toLowerCase()}
+                    </span>
+                    <div className="flex h-[26px] items-center overflow-hidden rounded-lg border border-border">
+                      <button
+                        type="button"
+                        aria-label="−"
+                        onClick={() => setIntervalCount(Math.max(1, intervalCount - 1))}
+                        className="grid h-full w-6 place-items-center text-sm font-semibold text-text-muted"
+                        style={{ backgroundColor: ROW_DIVIDER }}
+                      >
+                        −
+                      </button>
+                      <span className="min-w-[30px] text-center text-[12.5px] font-semibold tabular-nums">
+                        {intervalCount}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label="+"
+                        onClick={() => setIntervalCount(intervalCount + 1)}
+                        className="grid h-full w-6 place-items-center text-sm font-semibold text-text-muted"
+                        style={{ backgroundColor: ROW_DIVIDER }}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div
+                      className="flex h-[26px] w-[150px] items-center gap-0.5 rounded-lg p-0.5"
+                      style={{ backgroundColor: ROW_DIVIDER }}
+                    >
+                      {(['day', 'week', 'month'] as const).map((u) => (
+                        <button
+                          key={u}
+                          type="button"
+                          onClick={() => setIntervalUnit(u)}
+                          className={`h-full flex-1 rounded-md text-[11px] ${
+                            intervalUnit === u
+                              ? 'bg-white font-semibold text-text shadow-[0_1px_2px_rgba(11,26,43,0.1)]'
+                              : 'font-medium text-text-muted'
+                          }`}
+                        >
+                          {tRec(`custom_interval.units_short.${u}`)}
+                        </button>
+                      ))}
+                    </div>
+                    <DatePicker
+                      value={recurrenceEndDate}
+                      onChange={setRecurrenceEndDate}
+                      min={date}
+                      modal={isDrawer}
+                      onClear={() => setRecurrenceEndDate('')}
+                      clearLabel={t('drawer.repeat_no_end')}
+                      trigger={
+                        <button
+                          type="button"
+                          aria-label={t('drawer.repeat_until_placeholder')}
+                          className="flex h-[34px] shrink-0 items-center justify-center rounded-[9px] border px-2"
+                          style={{
+                            backgroundColor: recurrenceEndDate ? 'var(--emerald-soft)' : FIELD_BG,
+                            borderColor: recurrenceEndDate ? '#BFE9D6' : 'var(--border)',
+                          }}
+                        >
+                          {recurrenceEndDate ? (
+                            <span className="text-[11.5px] font-semibold text-text">
+                              {fmtEndDate(recurrenceEndDate, false)}
+                            </span>
+                          ) : (
+                            <Calendar className="size-[15px]" style={{ color: '#3A6B8A' }} aria-hidden />
+                          )}
+                        </button>
+                      }
+                    />
+                  </div>
+                ) : (
+                  <DatePicker
+                    value={recurrenceEndDate}
+                    onChange={setRecurrenceEndDate}
+                    min={date}
+                    modal={isDrawer}
+                    onClear={() => setRecurrenceEndDate('')}
+                    clearLabel={t('drawer.repeat_no_end')}
+                    trigger={
+                      <button
+                        type="button"
+                        className="flex h-9 w-full items-center gap-1.5 rounded-[9px] border border-border px-2.5 text-left"
+                        style={{ backgroundColor: FIELD_BG }}
+                      >
+                        <Calendar className="size-[15px] shrink-0" style={{ color: '#3A6B8A' }} aria-hidden />
+                        <span
+                          className={`min-w-0 flex-1 truncate text-[12.5px] ${
+                            recurrenceEndDate ? 'font-semibold text-text' : 'text-text-soft'
+                          }`}
+                        >
+                          {recurrenceEndDate
+                            ? tRec('until_template', { date: fmtEndDate(recurrenceEndDate, true) })
+                            : t('drawer.repeat_until_placeholder')}
+                        </span>
+                        <ChevronDown className="size-3.5 shrink-0 text-text-soft" aria-hidden />
+                      </button>
+                    }
+                  />
+                )}
+              </div>
+            </div>
+            <p className="flex items-start gap-1.5 px-1 pt-1.5 text-[11.5px] leading-relaxed text-text-soft">
+              <Info className="mt-px size-3 shrink-0" style={{ color: '#AEB6C0' }} aria-hidden />
+              <span>
+                {frequency === 'custom' ? (
+                  <>
+                    {t('drawer.repeat_summary_prefix')} {intervalCount}{' '}
+                    {tRec(`custom_interval.units.${intervalUnit}`, { count: intervalCount })}
+                    {recurrenceEndDate
+                      ? ` ${tRec('until_template', { date: fmtEndDate(recurrenceEndDate, true) })}`
+                      : t('drawer.repeat_summary_no_end')}
+                    .
+                  </>
+                ) : (
+                  t('drawer.repeat_reassure')
+                )}
+              </span>
+            </p>
+          </div>
+        ) : (
+          <div className="px-4 py-3.5">
             {!isMobile && (
             <div className="flex items-center gap-3">
               <span
@@ -2199,7 +2731,7 @@ export const MovementForm = ({
               </div>
             )}
           </div>
-        )}
+        ))}
       </div>
     ) : null
 
@@ -2274,7 +2806,7 @@ export const MovementForm = ({
   if (isDrawer) {
     return (
       <form ref={formRef} onSubmit={(e) => { e.preventDefault(); hookSubmit() }} onKeyDown={handleKeyDown} className="flex min-h-0 flex-1 flex-col">
-        <header className="shrink-0 border-b border-border bg-card px-5 pb-4 pt-[22px] sm:px-7">
+        <header className={`shrink-0 border-b border-border bg-card px-5 pt-[22px] sm:px-7 ${isMobile ? 'pb-3' : 'pb-4'}`}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               {showEyebrow && (
@@ -2296,8 +2828,8 @@ export const MovementForm = ({
           <div className="mt-4">{typeSelector}</div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-7">
-          <div className="flex flex-col gap-4">{body}</div>
+        <div className={`min-h-0 flex-1 overflow-y-auto px-5 sm:px-7 ${isMobile ? 'py-3' : 'py-5'}`}>
+          <div className={`flex flex-col ${isMobile ? 'gap-2.5' : 'gap-4'}`}>{body}</div>
         </div>
 
         <footer className="shrink-0 border-t border-border bg-card px-5 py-4 sm:px-7">
