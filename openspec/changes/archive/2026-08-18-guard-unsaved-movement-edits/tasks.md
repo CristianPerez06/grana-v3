@@ -25,9 +25,11 @@
 
 - [x] 4.1 `pnpm typecheck`, `pnpm lint`, `pnpm test` (web), `pnpm --filter @grana/movement-form test`, `pnpm typecheck:mobile`, `pnpm lint:mobile`.
 - [ ] 4.2 **Edición web**: abrir el drawer y no tocar nada → "Guardar cambios" deshabilitado. Cambiar el monto → se habilita. Volver al valor original → se deshabilita.
-- [ ] 4.3 **Edición web**: cambiar algo y cerrar con la ✕ → pide confirmación. Repetir con `Esc` y con un click en el scrim → mismo diálogo.
-- [ ] 4.3b **Los dos botones responden al click** (el bug que motivó la decisión 4): "Seguir editando" cierra la confirmación y deja el formulario intacto; "Descartar" cierra el drawer. También: click en el fondo oscurecido de la confirmación = seguir editando, y `Esc` con la confirmación abierta la cierra sin cerrar el drawer.
-- [ ] 4.4 **Edición web**: "seguir editando" deja los cambios intactos; "descartar" cierra y los pierde.
+- [x] 4.3 **Edición web**: cambiar algo y cerrar con la ✕ → pide confirmación. Ídem con `Esc`. **El click en el scrim no se pudo probar en viewport angosto**: ver la nota de abajo.
+- [x] 4.3b **Los dos botones responden al click** (el bug que motivó la decisión 4): "Seguir editando" cierra la confirmación y deja el formulario intacto; "Descartar" cierra el drawer. También: click en el fondo oscurecido de la confirmación = seguir editando, y `Esc` con la confirmación abierta la cierra sin cerrar el drawer.
+- [x] 4.4 **Edición web**: "seguir editando" deja los cambios intactos; "descartar" cierra y los pierde.
+
+> **El scrim del drawer no es alcanzable en viewport angosto.** El panel es `width: 528px` con `max-w-full` (`components/ui/drawer.tsx`), así que abajo de 528px ocupa todo el ancho y no queda página oscurecida para clickear. Los tres caminos de cierre coexisten **sólo en desktop**; en un teléfono real el único camino es la ✕ (no hay `Esc` ni scrim). No es un defecto de este cambio — es la geometría del drawer — pero conviene saberlo antes de escribir un caso de prueba que a ese ancho no existe.
 - [ ] 4.5 **Alta web**: cargar monto y categoría, cerrar por los tres caminos → confirma. Abrir el drawer y cerrarlo sin tocar nada → cierra directo, sin diálogo.
 - [ ] 4.6 **Guardado exitoso** (alta y edición): cierra sin preguntar.
 - [ ] 4.7 **Nativa**: en edición el CTA arranca deshabilitado y se habilita al primer cambio; el alta no cambió.
