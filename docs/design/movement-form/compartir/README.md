@@ -14,17 +14,24 @@ Referencia visual: [`compartir-bloque-final.html`](./compartir-bloque-final.html
 > ⚠️ **Este diseño reemplaza lo que la propuesta OpenSpec `simplify-movement-advanced-sections`
 > tenía escrito para Compartido** (presets `Vos / Mitad / El otro` + disparador "Otro %"). El diseño
 > cerrado es más rico y hay que actualizar la spec + los deltas cuando se implemente:
-> - **Atajos nuevos:** `Mitad · 70/30 · 75/25 · 80/20 · 100% · Otro` (tu parte). Ya **no** hay chip
->   "Vos" (100% tuyo = no tiene sentido compartir); ese caso se hace con "Otro".
-> - **"100%"** = pagás todo y te lo deben entero → **tu parte = 0** (`splitFirstPct = 0`); reemplaza
->   al toggle "Es 100% de X". El label "100%" significa "es 100% del otro", no "100% tuyo".
+>
+> **Atajos finales (decididos con el PO):** `Mitad · 70/30 · 75/25 · Todo suyo · Otro` — **5 chips en
+> una sola fila**. Cambios respecto del canvas original:
+> - Se **quita "80/20"** (para que los 5 entren en una fila con el label "Todo suyo", más ancho).
+> - El chip "100%" se **renombra a "Todo suyo"**: pagás todo y te lo deben entero → **tu parte = 0**
+>   (`splitFirstPct = 0`); reemplaza al toggle "Es 100% de X". (Los otros chips son *tu parte*; este es
+>   el caso inverso, por eso el label explícito en vez de "100%".)
+> - **No** hay chip "Vos"/todo-tuyo: si es 100% tuyo no se marca Compartido (confirmado con el PO).
+>
+> El resto, tal cual el canvas:
 > - **Barra de reparto** (row 2) con el **nombre del integrante del Hogar** (dato ya existente) y,
 >   opcionalmente, los montos (`te debe $ 9.000`). Es presentación sobre `splitFirstPct` + el total.
 > - **"Otro"** transforma la row 1 en **dos campos %** (el tuyo editable con teclado del sistema; el
 >   del otro se calcula solo, gris, no editable) escribiendo `splitFirstPct`.
 >
 > El estado del hook (`splitFirstPct` 0–100) alcanza; el rediseño es de presentación (mismo criterio
-> que reintegro/recurrente: no tocar reglas contables).
+> que reintegro/recurrente: no tocar reglas contables). Nota: el canvas `compartir-bloque-final.html`
+> muestra el set original de 6 chips con "100%" — la fuente de verdad para implementar es esta nota.
 
 ---
 
