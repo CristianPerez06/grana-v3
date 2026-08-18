@@ -11,6 +11,11 @@
 - [x] 2.1 Eliminar `transactions.detail.actions.more` y `transactions.detail.actions.edit_movement` de `es.json` y `en.json` (sin uso tras 1.2).
 - [x] 2.2 Eliminar también `transactions.detail.actions.menu_label`, huérfana desde que se sacó el kebab, verificando antes que no la referencie ningún `.ts`/`.tsx`.
 
+## 2b. Ruta de edición — una sola afordancia de volver
+
+- [x] 2b.1 Sacar `<TxBackLink />` de `transactions/[txId]/edit/page.tsx`: el layout ya monta `EditChrome`, cuyo `PageHeader` trae el título y el "← Detalle". Había dos flechas apiladas hacia destinos distintos.
+- [x] 2b.2 Eliminar `_components/tx-back-link.tsx`, sin otro consumidor tras 2b.1.
+
 ## 3. Nativa — verificar que ya cumple
 
 - [x] 3.1 Confirmar que `apps/mobile/app/(app)/transactions/[txId]/index.tsx` ya renderiza Eliminar + Editar como icon buttons en el `actions` del `PageHeader`, gateados por `canDelete` / `canEdit`. No editar el archivo.
@@ -24,6 +29,7 @@
 - [ ] 4.3 **Web angosto**: scrollear hasta abajo y confirmar que la topbar sticky mantiene los dos iconos accesibles.
 - [ ] 4.4 **Web angosto**: tocar Editar (abre el drawer en contexto donde está disponible, o navega a `[txId]/edit`) y tocar Eliminar (abre el `AlertDialog` con la copy que corresponda: default, madre de cuotas, pago de resumen).
 - [ ] 4.5 **Web angosto**: un movimiento sin acciones (cuota hija, movimiento ajeno) no muestra ningún icono y la topbar queda sólo con el "volver".
+- [ ] 4.5b **Ruta `/transactions/<id>/edit`**: una sola afordancia de volver ("← Detalle", del layout), no dos apiladas.
 - [ ] 4.6 **Web ancho y app nativa**: sin regresión — el escritorio queda igual que antes y la nativa no se tocó.
 
 ## 5. Cierre
