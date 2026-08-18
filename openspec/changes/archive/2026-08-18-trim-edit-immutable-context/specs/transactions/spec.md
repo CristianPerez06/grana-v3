@@ -6,7 +6,11 @@ El sistema SHALL usar **un único formulario** para crear y editar todo tipo de 
 
 Un campo bloqueado NO SHALL desaparecer de la pantalla: cuando `getEditableFields` bloquea el **monto** o la **fecha** —un consumo de tarjeta ya pagado, una compra en cuotas madre con alguna cuota paga—, el formulario SHALL mostrar ese valor como contexto read-only. Bloquear un campo significa impedir su edición, nunca ocultar el dato: sin el monto y la fecha a la vista, el usuario estaría editando un movimiento cuyos dos hechos identificatorios no aparecen en ninguna parte.
 
-**El contexto inmutable es una sola línea.** Todo lo que en edición no se puede cambiar —tipo, moneda, cuenta(s), cantidad de cuotas, y el monto y la fecha cuando están bloqueados— SHALL presentarse como **una única línea de texto atenuado debajo del monto**, con los valores separados por `·` y un solo caption de "no editable" al final. NO SHALL presentarse como filas etiquetadas apiladas: son datos sobre los que el usuario no puede actuar y no deben empujar hacia abajo los campos que vino a editar. Cuando el **monto** está bloqueado SHALL encabezar esa línea con peso visual pleno —es el número identificatorio del movimiento— y el resto SHALL quedar atenuado. La regla vale para las tres superficies (web escritorio, web en viewport angosto y app nativa).
+**El contexto inmutable enuncia sólo lo que no está a la vista en otro lado.** En edición, el formulario SHALL mostrar como filas read-only —etiqueta, valor y caption de "no editable"— únicamente: la **cuenta** (o las dos puntas de una transferencia o cambio), la **cantidad de cuotas** de una compra en cuotas madre, y la **fecha** cuando `getEditableFields` la bloquea. NO SHALL enunciar el **tipo** ni la **moneda**: el tipo se lee del signo y el color del monto, y la moneda es el indicador del propio bloque del monto. Restar esas dos filas importa: son datos sobre los que el usuario no puede actuar y empujaban hacia abajo los campos que vino a editar.
+
+**El monto conserva siempre su bloque de héroe.** Es el número que identifica al movimiento, así que NO SHALL degradarse a una fila ni omitirse. Cuando `getEditableFields` lo bloquea, el héroe SHALL renderizarse **read-only** —mismo bloque y mismo cuerpo tipográfico, sin campo de entrada, sin calculadora, con la moneda como indicador estático y el caption de "no editable"—.
+
+Ambas reglas valen para las tres superficies (web escritorio, web en viewport angosto y app nativa).
 
 Qué campos son editables y cuáles visibles según el tipo y el estado del movimiento SHALL derivarse de una **función pura** (`getEditableFields`) en `@grana/money-logic`, única fuente de verdad de esas reglas, reutilizable por web y mobile. Esta función NO cambia las reglas de editabilidad ya especificadas (ingreso/gasto, transferencia, ajuste, consumo `pending`/`paid`, madre de cuotas con o sin cuota pagada, pago de resumen sin categoría); las centraliza.
 
@@ -34,15 +38,15 @@ En **modo creación**, el selector de cuenta SHALL mostrar el **saldo disponible
 
 - **WHEN** el usuario abre en edición un consumo de tarjeta ya pagado, o la madre de una compra en cuotas con alguna cuota paga
 - **THEN** el formulario NO ofrece el campo de monto ni el de fecha para editarlos
-- **AND** muestra el monto y la fecha en la línea de contexto read-only, con caption de "no editable"
-- **AND** el monto encabeza la línea con peso pleno y conserva su signo y su símbolo de moneda, de modo que se lee igual que en el detalle
+- **AND** muestra el monto en el héroe read-only, con su signo y su símbolo de moneda, de modo que se lee igual que en el detalle
+- **AND** muestra la fecha como fila read-only, con caption de "no editable"
 
-#### Scenario: El contexto inmutable ocupa una línea, no una card
+#### Scenario: El contexto inmutable no repite lo que ya está a la vista
 
-- **WHEN** el usuario abre cualquier movimiento en modo edición
-- **THEN** el tipo, la moneda y la(s) cuenta(s) se leen en una sola línea atenuada debajo del monto, separados por `·`, cerrada por un único "no editable"
-- **AND** NO se dibuja una card de filas etiquetadas para esos datos
-- **AND** los campos editables quedan inmediatamente debajo, sin bloque intermedio que los empuje
+- **WHEN** el usuario abre en edición un gasto con todos sus campos editables
+- **THEN** el contexto read-only muestra la cuenta y nada más
+- **AND** NO muestra una fila de tipo ni una de moneda: el tipo se lee del signo y el color del monto, y la moneda es el indicador del bloque del monto
+- **AND** el monto conserva su bloque de héroe, read-only si está bloqueado
 
 #### Scenario: Guardar está deshabilitado mientras no haya cambios
 

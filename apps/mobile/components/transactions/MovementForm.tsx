@@ -245,35 +245,41 @@ export function MovementForm({
     return match?.id ?? banks[0]?.id ?? ''
   }
 
-  // Immutable context in edit mode, collapsed into a SINGLE muted line under the
-  // hero: "−$200.000 · Gasto · ARS · Cta remunerada — no editable". Mirror of
-  // web's `contextLine`.
-  //
-  // It used to be a card of label/value rows — three of them, and up to six once
-  // a locked amount and date joined. That is a lot of vertical space, in the best
-  // part of the screen, for facts the user cannot act on, pushing the fields they
-  // came to change below the fold.
-  //
-  // The amount is NOT part of this line, locked or not: it always lives in the
-  // hero, which renders read-only when `getEditableFields` locks it.
-  const contextParts: string[] =
+  // Immutable context in edit mode: labelled rows, but ONLY for what is not
+  // visible anywhere else on the screen. The type reads off the amount's sign and
+  // colour, the currency is the hero's chip, and the amount is the hero itself —
+  // restating them cost half a screen of rows the user cannot act on, above the
+  // fields they came to change. What survives is genuinely only here: the account
+  // (or the two ends of a transfer), the installment count of a parent purchase,
+  // and the date when `getEditableFields` locks it. Mirror of web's `contextRows`.
+  const contextRows: { label: string; value: string }[] =
     isEdit && edit
       ? [
-          edit.isParent
-            ? t('transactions.installment_purchase_label')
-            : t(`transactions.types.${edit.type}`),
-          edit.currencyCode,
-          ...(edit.isParent && edit.installmentsTotal
-            ? [t('transactions.installments_count', { count: edit.installmentsTotal })]
-            : []),
           ...(edit.type === 'transfer' || edit.type === 'exchange'
             ? [
-                `${edit.sourceAccountName ?? edit.accountId} → ${edit.destinationAccountName ?? '—'}`,
+                {
+                  label: t('transactions.labels.source_account'),
+                  value: edit.sourceAccountName ?? edit.accountId,
+                },
+                {
+                  label: t('transactions.labels.destination_account'),
+                  value: edit.destinationAccountName ?? '—',
+                },
               ]
             : edit.sourceAccountName && !editable?.account
-              ? [edit.sourceAccountName]
+              ? [{ label: t('transactions.labels.account'), value: edit.sourceAccountName }]
               : []),
-          ...(showDate ? [] : [formatShortDate(form.date, locale)]),
+          ...(edit.isParent && edit.installmentsTotal
+            ? [
+                {
+                  label: t('transactions.labels.installments'),
+                  value: t('transactions.installments_count', { count: edit.installmentsTotal }),
+                },
+              ]
+            : []),
+          ...(showDate
+            ? []
+            : [{ label: t('transactions.labels.date'), value: formatShortDate(form.date, locale) }]),
         ]
       : []
 
@@ -465,14 +471,27 @@ export function MovementForm({
         </View>
       )}
 
-      {/* Immutable context, one muted line under the hero (mirror of web's
-          `contextLine`). The amount is never here — it lives in the hero, which
-          renders read-only when it is locked. */}
-      {isEdit && (
-        <Text className="px-1 text-[12.5px] leading-5 text-text-muted">
-          {contextParts.join(' · ')}
-          <Text className="text-text-soft"> {t('common.not_editable')}</Text>
-        </Text>
+      {/* Immutable context (edit): the few facts that live nowhere else, as
+          label/value rows with a "no editable" caption. Mirror of web's card. */}
+      {contextRows.length > 0 && (
+        <View className="overflow-hidden rounded-xl border border-border bg-card">
+          {contextRows.map((row, i) => (
+            <View
+              key={row.label}
+              className={`flex-row items-center justify-between gap-3 px-4 py-3 ${
+                i > 0 ? 'border-t border-border-soft' : ''
+              }`}
+            >
+              <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
+                {row.label}
+              </Text>
+              <Text className="flex-1 text-right text-[15px] font-semibold text-text" numberOfLines={1}>
+                {row.value}
+                <Text className="text-xs font-normal text-text-muted"> {t('common.not_editable')}</Text>
+              </Text>
+            </View>
+          ))}
+        </View>
       )}
 
       {/* Adjustment direction (Suma / Resta) + informative banner — before the

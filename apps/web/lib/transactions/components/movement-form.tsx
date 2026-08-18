@@ -57,7 +57,6 @@ import { Money, parseMoneyInput } from '@grana/validation'
 import {
   formatDateISO,
   getTodayAR,
-  type MovementType,
 } from '@grana/money-logic'
 import {
   graftArchivedTaxonomy,
@@ -295,13 +294,6 @@ export const MovementForm = ({
     transfer: t('tabs.transfer'),
     adjustment: t('tabs.adjustment'),
     exchange: t('tabs.exchange'),
-  }
-  const TYPE_LABELS: Record<MovementType, string> = {
-    income: t('types.income'),
-    expense: t('types.expense'),
-    transfer: t('types.transfer'),
-    adjustment: t('types.adjustment'),
-    exchange: t('types.exchange'),
   }
   // UI-only state owned by the form (popover open, drill, refs, autofocus).
   // All form domain state + cascades + submit dispatcher live in the hook.
@@ -555,39 +547,47 @@ export const MovementForm = ({
     return d === todayStr() ? `${t('drawer.today')} · ${label}` : label
   }
 
-  // Immutable context in edit mode, collapsed into a SINGLE muted line under the
-  // hero: "Gasto · ARS · Cta remunerada — no editable".
+  // Immutable context in edit mode: labelled rows, but ONLY for what is not
+  // visible anywhere else on the screen.
   //
-  // It used to be a card of label/value rows — three of them, and up to six once
-  // a locked amount and date joined. That is a lot of vertical space, in the best
-  // part of the screen, for facts the user cannot act on, pushing the fields they
-  // came to change below the fold. One line says the same and puts the editable
-  // fields first.
+  // It used to list type, currency and account(s) — and grew to six rows once a
+  // locked amount and date joined. Most of that was already on screen: the type
+  // reads off the amount's sign and colour, the currency is the hero's chip, and
+  // the amount is the hero itself. Restating them cost half a phone screen of
+  // rows the user cannot act on, above the fields they came to change.
   //
-  // The amount is NOT part of this line, locked or not: it always lives in the
-  // hero, which renders read-only when `getEditableFields` locks it. A caption
-  // under a hero reads as a caption; a caption opening a panel with the movement's
-  // headline number buried in it reads as leftover text.
-  const contextParts: string[] = isEdit && edit
+  // What survives is genuinely only here: the account (or the two ends of a
+  // transfer), how many installments a parent purchase has, and the date when
+  // `getEditableFields` locks it. A collapsed one-line version of this was tried
+  // in between and read as stray text floating between cards.
+  const contextRows: Array<{ label: string; value: string }> = isEdit && edit
     ? [
-        edit.isParent ? t('installment_purchase_label') : TYPE_LABELS[edit.type],
-        edit.currencyCode,
-        ...(edit.isParent && edit.installmentsTotal
-          ? [t('installments_count', { count: edit.installmentsTotal })]
-          : []),
         ...(edit.type === 'transfer' || edit.type === 'exchange'
-          ? [`${edit.sourceAccountName ?? edit.accountId} → ${edit.destinationAccountName ?? '—'}`]
+          ? [
+              { label: t('labels.source_account'), value: edit.sourceAccountName ?? edit.accountId },
+              { label: t('labels.destination_account'), value: edit.destinationAccountName ?? '—' },
+            ]
           : edit.sourceAccountName && !edit.editableFields?.account
-            ? [edit.sourceAccountName]
+            ? [{ label: t('labels.account'), value: edit.sourceAccountName }]
             : []),
-        ...(editable?.date ? [] : [formatDateValue(date)]),
+        ...(edit.isParent && edit.installmentsTotal
+          ? [{ label: t('labels.installments'), value: t('installments_count', { count: edit.installmentsTotal }) }]
+          : []),
+        ...(editable?.date ? [] : [{ label: t('labels.date'), value: formatDateValue(date) }]),
       ]
     : []
-  const contextLine = isEdit ? (
-    <p className="px-1 text-[12.5px] leading-relaxed text-text-muted">
-      {contextParts.join(' · ')}
-      <span className="text-text-soft"> {tCommon('not_editable')}</span>
-    </p>
+  const contextCard = contextRows.length > 0 ? (
+    <div className="overflow-hidden rounded-[15px] border border-border bg-card [&>*+*]:border-t [&>*+*]:border-[#F1F3F6]">
+      {contextRows.map((row) => (
+        <div key={row.label} className="flex items-center justify-between gap-3 px-4 py-3">
+          <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">{row.label}</span>
+          <span className="truncate text-right text-[15px] font-semibold text-text">
+            {row.value}
+            <span className="ml-1.5 text-xs font-normal text-text-muted">{tCommon('not_editable')}</span>
+          </span>
+        </div>
+      ))}
+    </div>
   ) : null
 
   const formatBalance = (account: MovementFormAccount): string =>
@@ -2281,7 +2281,7 @@ export const MovementForm = ({
   const body = (
     <>
       {hero}
-      {contextLine}
+      {contextCard}
       {adjustmentSign}
       {adjustmentBanner}
       {exchangeNoCurrencyHint}
