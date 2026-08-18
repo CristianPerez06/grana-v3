@@ -48,11 +48,11 @@
 
 ## 7. Verificación
 
-- [ ] 7.1 `pnpm --filter web lint` + typecheck web; typecheck mobile. Sin errores nuevos.
-- [ ] 7.2 Tests existentes del hook y del form verdes (el hook no cambia; confirmar que ninguna aserción dependía del `Switch` fully-other ni del split `Segmented`).
-- [ ] 7.3 `pnpm openspec:check` OK.
-- [ ] 7.4 Verificación manual web-mobile (viewport de celular, el usuario en el navegador): (a) **Reintegro** — bloque compacto de 2 filas con `% + tope` visible inline, destino `Resumen | Cuenta` ("Cuenta" toma la misma entidad; el nombre abre el picker de la app), check "Acreditado", cuenta oculta con una sola. (b) **Compartir** — atajos `Mitad · 70/30 · 75/25 · Todo suyo · Otro` en una fila, barra de reparto Vos/[otro] con el nombre del Hogar, "Todo suyo" = barra entera + "te debe", "Otro" = dos campos %. (c) **Recurrente** — chips sin Anual, "Repetir hasta" + "Sin fecha de fin", Personalizado con stepper + días/sem./meses, línea de aviso. En las tres: nada se scrollea de más.
-- [ ] 7.5 Handoff al tech lead para revisión del nativo (sin device en esta sesión): mismos criterios de paridad por rol/estructura.
+- [x] 7.1 `pnpm --filter web lint` + typecheck web; typecheck mobile. Sin errores nuevos.
+- [x] 7.2 Tests existentes del hook y del form verdes (54/54). El hook solo ganó el fallback por nombre de institución en `pickReimbursementAccount`; ninguna aserción dependía del `Switch` fully-other ni del split `Segmented`.
+- [x] 7.3 `pnpm openspec:check` OK.
+- [x] 7.4 Verificación manual web-mobile (viewport de celular, el usuario en el navegador): (a) **Reintegro** — bloque compacto de 2 filas con `% + tope` visible inline, destino `Resumen | Cuenta` ("Cuenta" toma la misma entidad; el nombre abre el picker de la app), check "Acreditado", cuenta oculta con una sola. (b) **Compartir** — atajos `Mitad · 70/30 · 75/25 · Todo suyo · Otro` en una fila, barra de reparto Vos/[otro] con el nombre del Hogar, "Todo suyo" = barra entera + "te debe", "Otro" = dos campos %. (c) **Recurrente** — chips sin Anual, "Repetir hasta" + "Sin fecha de fin", Personalizado con stepper + días/sem./meses, línea de aviso. En las tres: nada se scrollea de más.
+- [ ] 7.5 Handoff al tech lead para revisión del nativo (sin device en esta sesión): mismos criterios de paridad por rol/estructura. **Pendiente: lo revisa el tech lead (mañana).**
 
 ## 8. Cierre
 
