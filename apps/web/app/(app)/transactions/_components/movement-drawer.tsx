@@ -10,6 +10,7 @@ import type { Household } from '@grana/shared'
 import type { FrequentClassification } from '@grana/movement-form'
 import { MovementForm, type MovementFormAccount } from '@/lib/transactions/components/movement-form'
 import { useDiscardGuard } from './use-discard-guard'
+import { DiscardChangesDialog } from './discard-changes-dialog'
 
 type Props = {
   accounts: MovementFormAccount[]
@@ -98,8 +99,12 @@ export function MovementDrawerProvider({
           onDirtyChange={guard.setDirty}
           onSuccess={() => setOpen(false)}
         />
+        <DiscardChangesDialog
+          open={guard.asking}
+          onDiscard={guard.discard}
+          onKeepEditing={guard.keepEditing}
+        />
       </Drawer>
-      {guard.dialog}
     </MovementDrawerContext.Provider>
   )
 }

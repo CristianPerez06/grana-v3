@@ -41,6 +41,7 @@ import {
 import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
 
 import { useDiscardGuard } from '../../_components/use-discard-guard'
+import { DiscardChangesDialog } from '../../_components/discard-changes-dialog'
 
 import { DetailTopbar } from './detail/detail-topbar'
 import { DetailActions } from './detail/detail-actions'
@@ -520,21 +521,23 @@ export const GlobalTransactionDetail = ({
       />
 
       {canUseEditDrawer && (
-        <>
-          <Drawer open={editOpen} onClose={editGuard.requestClose} ariaLabel={t('edit_title')}>
-            <MovementForm
-              variant="drawer"
-              accounts={editAccounts ?? []}
-              categories={editCategories!}
-              edit={edit!}
-              household={editHouseholdResolved}
-              onClose={editGuard.requestClose}
-              onDirtyChange={editGuard.setDirty}
-              onSuccess={() => setEditOpen(false)}
-            />
-          </Drawer>
-          {editGuard.dialog}
-        </>
+        <Drawer open={editOpen} onClose={editGuard.requestClose} ariaLabel={t('edit_title')}>
+          <MovementForm
+            variant="drawer"
+            accounts={editAccounts ?? []}
+            categories={editCategories!}
+            edit={edit!}
+            household={editHouseholdResolved}
+            onClose={editGuard.requestClose}
+            onDirtyChange={editGuard.setDirty}
+            onSuccess={() => setEditOpen(false)}
+          />
+          <DiscardChangesDialog
+            open={editGuard.asking}
+            onDiscard={editGuard.discard}
+            onKeepEditing={editGuard.keepEditing}
+          />
+        </Drawer>
       )}
 
       <div className="flex flex-col gap-3.5 sm:gap-[18px]">

@@ -9,9 +9,10 @@
 
 - [x] 2.1 `movement-form.tsx`: nueva prop `onDirtyChange`, reportada por efecto, documentada como el canal hacia el host.
 - [x] 2.2 `movement-form.tsx`: CTA deshabilitado cuando `isEdit && !isDirty`.
-- [x] 2.3 Nuevo `use-discard-guard.tsx` en `transactions/_components/`: devuelve `requestClose`, `setDirty` (identidad estable) y el `AlertDialog` de confirmación.
-- [x] 2.4 Cablearlo en `movement-drawer.tsx` (alta) y en `global-transaction-detail.tsx` (edición): el `onClose` del `Drawer` y el del formulario pasan por `requestClose`; `onSuccess` sigue cerrando directo.
-- [x] 2.5 i18n: `transactions.discard_changes.{title,body,discard,keep_editing}` en `es.json` y `en.json`.
+- [x] 2.3 Nuevo `use-discard-guard.tsx` en `transactions/_components/`: hook de estado con `requestClose`, `setDirty`, `asking`, `discard` y `keepEditing`.
+- [x] 2.4 Nuevo `discard-changes-dialog.tsx`: la confirmación como capa absoluta **dentro del panel del drawer**, sin Radix — un segundo modal anidado sobre el `Dialog` abierto no recibe los clicks (design, decisión 4).
+- [x] 2.5 Cablearlos en `movement-drawer.tsx` (alta) y en `global-transaction-detail.tsx` (edición): el `onClose` del `Drawer` y el del formulario pasan por `requestClose`, el diálogo se monta dentro del `<Drawer>`; `onSuccess` sigue cerrando directo.
+- [x] 2.6 i18n: `transactions.discard_changes.{title,body,discard,keep_editing}` en `es.json` y `en.json`.
 
 ## 3. Nativa
 
@@ -25,6 +26,7 @@
 - [x] 4.1 `pnpm typecheck`, `pnpm lint`, `pnpm test` (web), `pnpm --filter @grana/movement-form test`, `pnpm typecheck:mobile`, `pnpm lint:mobile`.
 - [ ] 4.2 **Edición web**: abrir el drawer y no tocar nada → "Guardar cambios" deshabilitado. Cambiar el monto → se habilita. Volver al valor original → se deshabilita.
 - [ ] 4.3 **Edición web**: cambiar algo y cerrar con la ✕ → pide confirmación. Repetir con `Esc` y con un click en el scrim → mismo diálogo.
+- [ ] 4.3b **Los dos botones responden al click** (el bug que motivó la decisión 4): "Seguir editando" cierra la confirmación y deja el formulario intacto; "Descartar" cierra el drawer. También: click en el fondo oscurecido de la confirmación = seguir editando, y `Esc` con la confirmación abierta la cierra sin cerrar el drawer.
 - [ ] 4.4 **Edición web**: "seguir editando" deja los cambios intactos; "descartar" cierra y los pierde.
 - [ ] 4.5 **Alta web**: cargar monto y categoría, cerrar por los tres caminos → confirma. Abrir el drawer y cerrarlo sin tocar nada → cierra directo, sin diálogo.
 - [ ] 4.6 **Guardado exitoso** (alta y edición): cierra sin preguntar.

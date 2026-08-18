@@ -13,7 +13,7 @@ El segundo pega más fuerte en el **alta**, donde se pierde un formulario entero
 
 - **El hook compartido expone `isDirty`**: un snapshot serializado de todo lo que el usuario puede cambiar y el submit lee, comparado contra el snapshot del primer render. Se deriva una sola vez en `@grana/movement-form` y lo consumen web y nativa — no se recalcula por plataforma.
 - **CTA deshabilitado en edición mientras no haya cambios**, en web y en la nativa. En alta el CTA no cambia: ahí el gate es la validación, no el estado *dirty*.
-- **Confirmación al cerrar el drawer con cambios**, en los dos hosts de overlay de web (alta y edición). Cubre **los tres caminos** de cierre porque el host es el embudo: la ✕ del formulario llama a su `onClose`, y Radix rutea `Esc` y el click en el scrim a ese mismo handler. El formulario sólo reporta si está sucio (`onDirtyChange`); la confirmación vive en el host, en un hook compartido (`useDiscardGuard`).
+- **Confirmación al cerrar el drawer con cambios**, en los dos hosts de overlay de web (alta y edición). Cubre **los tres caminos** de cierre porque el host es el embudo: la ✕ del formulario llama a su `onClose`, y Radix rutea `Esc` y el click en el scrim a ese mismo handler. El formulario sólo reporta si está sucio (`onDirtyChange`); la decisión vive en el host, en un hook compartido (`useDiscardGuard`), y la confirmación se dibuja como una capa **dentro del panel del drawer** (`DiscardChangesDialog`) en vez de como un segundo modal de Radix — ver la decisión 4 del design.
 - **Un guardado exitoso no pregunta**: `onSuccess` cierra sin pasar por el guard.
 
 Sin cambios de datos, validación ni contables.
@@ -33,7 +33,8 @@ Sin cambios de datos, validación ni contables.
 ## Impact
 
 - **`packages/movement-form/src/use-movement-form.ts`** — nuevo `isDirty` derivado y expuesto; `types.ts` lo declara en el resultado del hook. Seis tests nuevos cubren el caso pristine (alta y edición), el cambio, el deshacer, el default de reintegro en el mount y el enable del reintegro.
-- **`apps/web/app/(app)/transactions/_components/use-discard-guard.tsx`** (nuevo) — hook que devuelve `requestClose`, `setDirty` y el `AlertDialog` de confirmación, para no duplicarlo en los dos hosts.
+- **`apps/web/app/(app)/transactions/_components/use-discard-guard.tsx`** (nuevo) — hook de estado: `requestClose`, `setDirty`, `asking`, `discard`, `keepEditing`.
+- **`apps/web/app/(app)/transactions/_components/discard-changes-dialog.tsx`** (nuevo) — la confirmación, como capa absoluta dentro del panel del drawer. Sin Radix: un segundo modal anidado no recibe los clicks (design, decisión 4).
 - **`apps/web/lib/transactions/components/movement-form.tsx`** — nueva prop `onDirtyChange`, reporte por efecto, y CTA deshabilitado en edición sin cambios.
 - **`apps/web/app/(app)/transactions/_components/movement-drawer.tsx`** y **`.../[txId]/_components/global-transaction-detail.tsx`** — cablean el guard en el `onClose` del `Drawer` y del formulario, y montan su diálogo.
 - **`apps/mobile/components/transactions/MovementForm.tsx`** — CTA deshabilitado en edición sin cambios.
