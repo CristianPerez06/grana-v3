@@ -529,11 +529,42 @@ export const MovementForm = ({
   }
 
 
+  const formatDateValue = (d: string) => {
+    const [y, m, day] = d.split('-').map(Number)
+    const label = new Date(y, m - 1, day).toLocaleDateString('es-AR', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    })
+    return d === todayStr() ? `${t('drawer.today')} · ${label}` : label
+  }
+
   // Read-only context rows shown in edit mode (immutable fields). The type is
   // one of them: edit renders no type selector at all, so this row is where the
   // type is stated, right next to the currency and the account.
+  //
+  // Amount and date join the list when `getEditableFields` locks them (a paid
+  // card consumption, an installment parent with a paid cuota). They are not
+  // dropped from the screen: without them you would be editing a movement whose
+  // two identifying facts — how much and when — are nowhere to be seen. The
+  // amount leads the block (where the hero would have been) and the date closes
+  // it, so the immutable facts stay together and the editable fields follow.
+  const lockedAmountValue = (): string => {
+    if (!edit) return ''
+    const sign =
+      edit.type === 'income'
+        ? '+'
+        : edit.type === 'expense'
+          ? '−'
+          : edit.type === 'adjustment'
+            ? adjustmentDirection === 'decrease' ? '−' : '+'
+            : ''
+    const symbol = CURRENCY_SYMBOL[edit.currencyCode]
+    return `${sign}${symbol}${edit.currencyCode === 'USD' ? ' ' : ''}${formatForDisplay(amount)}`
+  }
   const contextRows: Array<{ label: string; value: string }> = isEdit && edit
     ? [
+        ...(editable?.amount ? [] : [{ label: t('labels.amount'), value: lockedAmountValue() }]),
         {
           label: t('labels.type'),
           value: edit.isParent ? t('installment_purchase_label') : TYPE_LABELS[edit.type],
@@ -550,6 +581,7 @@ export const MovementForm = ({
           : edit.sourceAccountName && !edit.editableFields?.account
             ? [{ label: t('labels.account'), value: edit.sourceAccountName }]
             : []),
+        ...(editable?.date ? [] : [{ label: t('labels.date'), value: formatDateValue(date) }]),
       ]
     : []
 
@@ -634,16 +666,6 @@ export const MovementForm = ({
       e.preventDefault()
       formRef.current?.requestSubmit()
     }
-  }
-
-  const formatDateValue = (d: string) => {
-    const [y, m, day] = d.split('-').map(Number)
-    const label = new Date(y, m - 1, day).toLocaleDateString('es-AR', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    })
-    return d === todayStr() ? `${t('drawer.today')} · ${label}` : label
   }
 
   // Adjustment balance preview (create only — edit lacks the live balance set).

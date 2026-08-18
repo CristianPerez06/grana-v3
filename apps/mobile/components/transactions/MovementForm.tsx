@@ -27,7 +27,8 @@ import { AccountSelectField, AccountFamilySelect, CategorySelectField } from './
 import { SelectSheet } from '../ui/SelectSheet'
 import { SheetRow } from '../ui/SelectField'
 import { colors } from '../../lib/colors'
-import { useT } from '../../lib/locale-context'
+import { useT, useLocale } from '../../lib/locale-context'
+import { formatShortDate } from './detail/format'
 import { createMovementMutators } from '../../lib/transactions/mutators'
 import { invalidateAfterMovementMutation } from '../../lib/transactions/invalidate'
 import { useQueryClient } from '@tanstack/react-query'
@@ -101,6 +102,7 @@ export function MovementForm({
   onDone,
 }: Props) {
   const t = useT()
+  const locale = useLocale()
   const queryClient = useQueryClient()
   const mutators = useMemo(() => createMovementMutators(t), [t])
 
@@ -243,9 +245,32 @@ export function MovementForm({
 
   // Read-only context rows shown in edit mode: the immutable fields (type,
   // currency, account(s)). Mirror of web's `contextRows`.
+  //
+  // Amount and date join the list when `getEditableFields` locks them (a paid
+  // card consumption, an installment parent with a paid cuota). They are not
+  // dropped from the screen: without them you would be editing a movement whose
+  // two identifying facts — how much and when — are nowhere to be seen. The
+  // amount leads the block (where the hero would have been) and the date closes
+  // it, so the immutable facts stay together and the editable fields follow.
+  const lockedAmountValue = (): string => {
+    if (!edit) return ''
+    const sign =
+      edit.type === 'income'
+        ? '+'
+        : edit.type === 'expense'
+          ? '−'
+          : edit.type === 'adjustment'
+            ? form.adjustmentDirection === 'decrease' ? '−' : '+'
+            : ''
+    const symbol = CURRENCY_SYMBOL[edit.currencyCode]
+    return `${sign}${symbol}${edit.currencyCode === 'USD' ? ' ' : ''}${formatForDisplay(form.amount)}`
+  }
   const contextRows: { label: string; value: string }[] =
     isEdit && edit
       ? [
+          ...(showAmount
+            ? []
+            : [{ label: t('transactions.labels.amount'), value: lockedAmountValue() }]),
           {
             label: t('transactions.labels.type'),
             value: edit.isParent
@@ -275,6 +300,9 @@ export function MovementForm({
             : edit.sourceAccountName && !editable?.account
               ? [{ label: t('transactions.labels.account'), value: edit.sourceAccountName }]
               : []),
+          ...(showDate
+            ? []
+            : [{ label: t('transactions.labels.date'), value: formatShortDate(form.date, locale) }]),
         ]
       : []
 
