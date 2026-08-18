@@ -4,6 +4,10 @@ Estado: **entrega 1, 2 y 4** (inventario, oportunidades priorizadas, decisiones)
 **Entrega 3 en curso:** primer handoff cerrado publicado en
 [`detalle-compacto/`](./detalle-compacto/) (oportunidad P1).
 
+> **Las decisiones cerradas con la PO viven en [`decisiones.md`](./decisiones.md)**, no
+> acá. Este documento es el inventario; ese otro es el acuerdo. Ante una contradicción,
+> manda `decisiones.md`.
+
 Fecha del relevamiento: rama `claude/grana-movimientos-relevamiento-m8jn1v`, sobre
 `8ec5218` (post `#32/#33/#34`, alta de movimientos ya rediseñada).
 
@@ -230,7 +234,7 @@ Orden = frecuencia de uso × taps/scroll ahorrados × divergencia, contra esfuer
 - **Riesgo:** bajo. **Solo visual.**
 - **Esfuerzo:** medio (toca el orquestador web + el nativo, pero los tiles ya existen).
 
-### P2 · Feed nativo: darle búsqueda y filtros (cerrar D1)
+### P2 · Feed nativo: darle búsqueda y filtros (cerrar D1) — **decidido, ver D-001**
 - **Superficies:** N. (WD/WM ya lo tienen.)
 - **Qué:** montar en el feed global la misma toolbar que **ya existe** en
   `components/accounts/MovementsSection.tsx` + `MovementFiltersSheet.tsx`. No hay que
