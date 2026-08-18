@@ -1297,10 +1297,12 @@ export const MovementForm = ({
   const accountFamily: 'debit' | 'credit' = isCredit ? 'credit' : 'debit'
   const familyList = accountFamily === 'credit' ? creditAccounts : debitAccounts
   const accountFamilyRow = (
-    <div className="flex flex-col gap-2.5 px-4 py-3">
-      <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
-        {accountLabel}
-      </span>
+    <div className={`flex flex-col gap-2.5 px-4 ${isMobile ? 'py-2.5' : 'py-3'}`}>
+      {!isMobile && (
+        <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+          {accountLabel}
+        </span>
+      )}
       {bothFamilies && (
         <div className="flex gap-1 rounded-[10px] border border-border p-1" style={{ backgroundColor: FIELD_BG }}>
           {(['debit', 'credit'] as const).map((f) => {
