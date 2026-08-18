@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="design_doc_mode" content="canvas">
+<title>Grana · Compartir — atajos + barra</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F6F7F9;--ink:#142231;--navy:#0B1A2B;--muted:#6B7683;--soft:#8C97A4;--faint:#AEB6C0;--border:#E6EAEF;--border-soft:#EEF1F4;--field:#F1F3F6;--emerald:#10B981;--emerald-deep:#0E9E6E;--emerald-soft:#E7F8F0;--slate:#3A6B8A;--brand:#15B981}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+a{color:var(--slate)}a:hover{color:var(--navy)}
+.tnum{font-variant-numeric:tabular-nums}
+.frame{position:absolute;width:372px}
+.fnum{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--soft);text-transform:uppercase}
+.ftitle{font-size:18px;font-weight:700;letter-spacing:-.02em;margin-top:4px}
+.fnote{font-size:12.5px;font-weight:400;color:var(--muted);line-height:1.5;margin:6px 0 12px;text-wrap:pretty}
+.fnote b{color:var(--ink);font-weight:600}
+.h{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);margin:13px 0 6px}
+.phone{width:372px;background:var(--bg);border:1px solid var(--border);border-radius:22px;padding:13px;box-shadow:0 18px 40px -26px rgba(11,26,43,.35);display:flex;flex-direction:column}
+.card{background:#fff;border:1px solid var(--border);border-radius:14px}
+.row{display:flex;align-items:center;gap:8px}
+.chips{display:flex;gap:7px;margin-bottom:9px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 11px;border-radius:999px;border:1px solid var(--border);background:#fff;font-size:12.5px;font-weight:500}
+.chip svg{width:13px;height:13px;color:var(--soft)}
+.chip.on{background:var(--emerald-soft);border-color:#BFE9D6;color:var(--emerald-deep);font-weight:600}
+.chip.on svg{color:var(--emerald-deep)}
+.k{font-size:11.5px;font-weight:400;color:var(--soft);white-space:nowrap}
+.r{height:38px;padding:0 12px}
+.r.tight{padding:0 10px}
+.sep{height:1px;background:var(--border-soft)}
+.pill{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 8px;border-radius:999px;border:1px solid var(--border);background:#fff;font-size:11.5px;font-weight:500;color:var(--muted);white-space:nowrap;flex:none;font-variant-numeric:tabular-nums}
+.pill.sel{background:var(--emerald-soft);border-color:#BFE9D6;color:var(--emerald-deep);font-weight:600}
+.box{height:28px;border:1px solid var(--border);border-radius:9px;display:flex;align-items:center;gap:5px;padding:0 9px;background:#fff;min-width:0}
+.box.focus{border-color:#BFE9D6;box-shadow:0 0 0 2px var(--emerald-soft)}
+.box .val{font-size:12.5px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.av{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:9px;font-weight:700;color:#fff;flex:none}
+.av.j{background:#3A6B8A}
+.bar{display:flex;height:26px;border-radius:9px;overflow:hidden;background:var(--field);flex:1;min-width:0}
+.bar>div{display:flex;align-items:center;padding:0 9px;font-size:11px;font-weight:600;color:#fff;min-width:0;white-space:nowrap;overflow:hidden}
+.bar>div span{overflow:hidden;text-overflow:ellipsis}
+.bar .me{background:#3A6B8A}
+.bar .them{background:#0E9E6E;justify-content:flex-end}
+.bar .empty{background:transparent;color:var(--faint);font-weight:500}
+.caret{display:inline-block;width:1.5px;height:15px;background:var(--emerald);vertical-align:-2px;margin-left:1px}
+.kb{margin-top:9px;border-radius:14px;background:#E9ECF1;border:1px solid var(--border);padding:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.kb i{height:34px;border-radius:9px;background:#fff;display:grid;place-items:center;font-style:normal;font-size:16px;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums}
+.kb i.mu{background:transparent;color:var(--soft);font-size:13px}
+.info{display:flex;align-items:flex-start;gap:7px;padding:7px 4px 0;font-size:11.5px;font-weight:400;color:var(--soft);line-height:1.4}
+.info svg{width:13px;height:13px;color:var(--faint);flex:none;margin-top:1px}
+.info>span{flex:1;min-width:0}
+.info b{color:var(--ink);font-weight:600}
+.spacer{height:16px}
+.cta{height:46px;border-radius:14px;background:var(--brand);color:#fff;font-size:15px;font-weight:700;display:grid;place-items:center}
+.px{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500;color:var(--emerald-deep);letter-spacing:.04em;margin-left:6px}
+h1.big2{position:absolute;left:40px;top:32px;font-size:25px;font-weight:700;letter-spacing:-.025em}
+p.sub{position:absolute;left:40px;top:66px;font-size:13.5px;font-weight:400;color:var(--muted);width:830px;line-height:1.5}
+.spec{position:absolute;width:372px;font-size:12.5px;line-height:1.6;color:var(--muted)}
+.spec h3{font-size:13px;font-weight:700;color:var(--ink);margin:14px 0 6px}
+.spec h3:first-child{margin-top:0}
+.spec ul{list-style:none;display:flex;flex-direction:column;gap:5px}
+.spec li{padding-left:12px;position:relative}
+.spec li:before{content:"";position:absolute;left:0;top:8px;width:4px;height:4px;border-radius:50%;background:var(--faint)}
+.spec b{color:var(--ink);font-weight:600}
+.spec code{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--emerald-deep)}
+</style></head>
+<body>
+<h1 class="big2">Atajos + barra “Vos / [integrante del hogar]”</h1>
+<p class="sub">Row 1: los atajos (default <b>Mitad</b>). Row 2: la barra que muestra el reparto — <b>Vos 50%</b> a la izquierda y el nombre del integrante del Hogar a la derecha, tomado del registro que Grana ya tiene. 79 px.</p>
+
+<!-- 1 · base -->
+<div class="frame" style="left:40px;top:150px">
+<div class="fnum">Estado base</div><div class="ftitle">Mitad<span class="px">2 rows · 79 px</span></div>
+<div class="fnote">La barra reemplaza la línea de texto: la proporción se ve y se lee en el mismo lugar. El nombre sale del Hogar, no se escribe.</div>
+<div class="phone">
+<div class="chips"><div class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10H8"/></svg>Reintegro</div><div class="chip on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 6a3 3 0 0 1 0 6"/></svg>Compartir</div><div class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10a7 7 0 0 1 12-4l3 3"/><path d="M21 14a7 7 0 0 1-12 4l-3-3"/></svg>Recurrente</div></div>
+<div class="card">
+  <div class="r tight row" style="gap:4px"><span class="pill sel">Mitad</span><span class="pill">70/30</span><span class="pill">75/25</span><span class="pill">80/20</span><span class="pill">100%</span><span class="pill">Otro</span></div>
+  <div class="sep"></div>
+  <div class="r tight row"><div class="bar"><div class="me" style="width:50%"><span>Vos 50%</span></div><div class="them" style="width:50%"><span>Cristian 50%</span></div></div></div>
+</div>
+<div class="spacer"></div>
+<div class="cta">Registrar gasto</div>
+<div class="h">70/30</div>
+<div class="card">
+  <div class="r tight row" style="gap:4px"><span class="pill">Mitad</span><span class="pill sel">70/30</span><span class="pill">75/25</span><span class="pill">80/20</span><span class="pill">100%</span><span class="pill">Otro</span></div>
+  <div class="sep"></div>
+  <div class="r tight row"><div class="bar"><div class="me" style="width:70%"><span>Vos 70%</span></div><div class="them" style="width:30%"><span>Cristian 30%</span></div></div></div>
+</div>
+<div class="h">80/20 · el nombre se trunca si no entra</div>
+<div class="card">
+  <div class="r tight row" style="gap:4px"><span class="pill">Mitad</span><span class="pill">70/30</span><span class="pill">75/25</span><span class="pill sel">80/20</span><span class="pill">100%</span><span class="pill">Otro</span></div>
+  <div class="sep"></div>
+  <div class="r tight row"><div class="bar"><div class="me" style="width:80%"><span>Vos 80%</span></div><div class="them" style="width:20%"><span>20%</span></div></div></div>
+</div>
+</div>
+</div>
+
+<!-- 2 · 100% -->
+<div class="frame" style="left:452px;top:150px">
+<div class="fnum">100%</div><div class="ftitle">El caso del toggle de hoy<span class="px">2 rows · 79 px</span></div>
+<div class="fnote">Pagás todo y te lo deben entero. La barra queda completa del otro lado y dice el monto: la bajada del toggle (“Lo pagás vos y Cristian te lo debe entero”) ya no hace falta.</div>
+<div class="phone">
+<div class="chips"><div class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10H8"/></svg>Reintegro</div><div class="chip on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 6a3 3 0 0 1 0 6"/></svg>Compartir</div><div class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10a7 7 0 0 1 12-4l3 3"/><path d="M21 14a7 7 0 0 1-12 4l-3-3"/></svg>Recurrente</div></div>
+<div class="card">
+  <div class="r tight row" style="gap:4px"><span class="pill">Mitad</span><span class="pill">70/30</span><span class="pill">75/25</span><span class="pill">80/20</span><span class="pill sel">100%</span><span class="pill">Otro</span></div>
+  <div class="sep"></div>
+  <div class="r tight row"><div class="bar"><div class="them" style="width:100%;justify-content:flex-start"><span>Cristian 100% — te debe $ 9.000</span></div></div></div>
+</div>
+<div class="spacer"></div>
+<div class="cta">Registrar gasto</div>
+<div class="h">la barra también puede mostrar los pesos</div>
+<div class="card">
+  <div class="r tight row" style="gap:4px"><span class="pill sel">Mitad</span><span class="pill">70/30</span><span class="pill">75/25</span><span class="pill">80/20</span><span class="pill">100%</span><span class="pill">Otro</span></div>
+  <div class="sep"></div>
+  <div class="r tight row"><div class="bar"><div class="me" style="width:50%"><span>Vos $ 4.500</span></div><div class="them" style="width:50%"><span>Cristian $ 4.500</span></div></div></div>
+</div>
+</div>
+</div>
+
+<!-- 3 · otro -->
+<div class="frame" style="left:864px;top:150px">
+<div class="fnum">Otro</div><div class="ftitle">Se tipea tu porcentaje<span class="px">2 rows · 79 px</span></div>
+<div class="fnote">Al tocar <b>Otro</b> la row de atajos se convierte en <b>los dos porcentajes</b>: escribís el tuyo con el teclado del sistema y el de Cristian se completa solo (campo gris, no editable). La barra de abajo se mueve en vivo.</div>
+<div class="phone">
+<div class="h" style="margin-top:0">1 · tu campo en foco · el otro ya dice 100</div>
+<div class="card">
+  <div class="r tight row" style="gap:6px">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2" style="width:15px;height:15px;flex:none"><path d="m14 6-6 6 6 6"/></svg>
+    <span class="k">Vos</span>
+    <div class="box focus" style="flex:none;min-width:58px;justify-content:space-between"><span class="val" style="color:var(--faint)">0<span class="caret"></span></span><span class="k">%</span></div>
+    <span class="k" style="margin-left:auto">Cristian</span>
+    <div class="box" style="flex:none;min-width:58px;justify-content:space-between;background:var(--field);border-color:transparent"><span class="val" style="color:var(--muted)">100</span><span class="k">%</span></div>
+  </div>
+  <div class="sep"></div>
+  <div class="r tight row"><div class="bar"><div class="empty" style="width:100%;font-size:11px">Escribí tu parte</div></div></div>
+</div>
+<div class="h">2 · primer dígito</div>
+<div class="card">
+  <div class="r tight row" style="gap:6px">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2" style="width:15px;height:15px;flex:none"><path d="m14 6-6 6 6 6"/></svg>
+    <span class="k">Vos</span>
+    <div class="box focus" style="flex:none;min-width:58px;justify-content:space-between"><span class="val">6<span class="caret"></span></span><span class="k">%</span></div>
+    <span class="k" style="margin-left:auto">Cristian</span>
+    <div class="box" style="flex:none;min-width:58px;justify-content:space-between;background:var(--field);border-color:transparent"><span class="val" style="color:var(--muted)">94</span><span class="k">%</span></div>
+  </div>
+  <div class="sep"></div>
+  <div class="r tight row"><div class="bar"><div class="me" style="width:6%;padding:0 4px"></div><div class="them" style="width:94%"><span>Cristian 94%</span></div></div></div>
+</div>
+<div class="h">3 · segundo dígito · el otro se recalcula</div>
+<div class="card">
+  <div class="r tight row" style="gap:6px">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2" style="width:15px;height:15px;flex:none"><path d="m14 6-6 6 6 6"/></svg>
+    <span class="k">Vos</span>
+    <div class="box focus" style="flex:none;min-width:58px;justify-content:space-between"><span class="val">65<span class="caret"></span></span><span class="k">%</span></div>
+    <span class="k" style="margin-left:auto">Cristian</span>
+    <div class="box" style="flex:none;min-width:58px;justify-content:space-between;background:var(--field);border-color:transparent"><span class="val" style="color:var(--muted)">35</span><span class="k">%</span></div>
+  </div>
+  <div class="sep"></div>
+  <div class="r tight row"><div class="bar"><div class="me" style="width:65%"><span>Vos 65%</span></div><div class="them" style="width:35%"><span>Cristian 35%</span></div></div></div>
+</div>
+<div class="h">4 · al salir del campo · el chip guarda el valor</div>
+<div class="card">
+  <div class="r tight row" style="gap:4px"><span class="pill">Mitad</span><span class="pill">70/30</span><span class="pill">75/25</span><span class="pill">80/20</span><span class="pill">100%</span><span class="pill sel">65%</span></div>
+  <div class="sep"></div>
+  <div class="r tight row"><div class="bar"><div class="me" style="width:65%"><span>Vos 65%</span></div><div class="them" style="width:35%"><span>Cristian 35%</span></div></div></div>
+</div>
+<div class="spacer"></div>
+<div class="cta">Registrar gasto</div>
+</div>
+</div>
+
+<!-- spec -->
+<div class="spec" style="left:1276px;top:186px">
+<h3>Anatomía</h3>
+<ul>
+<li>Row 1 (38 px): atajos <b>Mitad · 70/30 · 75/25 · 80/20 · 100% · Otro</b>, gap <code>4</code>, padding <code>0 10</code>. Default <b>Mitad</b>, selección única.</li>
+<li>Row 2 (38 px): barra de reparto, <code>h 26 · radius 9</code>, <code>flex 1</code>. Izquierda <b>Vos</b> en <code>#3A6B8A</code>, derecha el integrante del Hogar en <code>#0E9E6E</code>.</li>
+<li>Total <b>79 px</b>. Separador <code>1px #EEF1F4</code>.</li>
+</ul>
+<h3>Comportamiento</h3>
+<ul>
+<li>El nombre de la derecha lo trae el registro de <b>Hogar</b> (la funcionalidad que ya existe). No se escribe ni se elige acá.</li>
+<li>Cada segmento muestra <code>nombre + %</code>; si el ancho no alcanza, se cae primero el nombre y queda solo el <code>%</code> (por eso 80/20 muestra “20%”).</li>
+<li><b>100%</b> = pagás todo y te lo deben entero: la barra queda entera del otro lado y suma el monto. Reemplaza al toggle “Es 100% de X” y a su bajada.</li>
+<li><b>Otro</b>: la row 1 pasa a mostrar <b>los dos porcentajes en una sola row</b>. Solo el tuyo es editable, con <code>inputmode="numeric"</code> (teclado del sistema, no uno propio); el del otro integrante se completa solo y se muestra en gris sobre <code>#F1F3F6</code>, sin borde.</li>
+<li>Al salir del campo, el chip <b>Otro</b> queda con el valor (<code>65%</code>) y sigue siendo tocable para reeditar.</li>
+<li>El hogar tiene <b>dos integrantes</b>: siempre vos y el otro. La barra tiene dos segmentos.</li>
+</ul>
+<h3>Qué no hacer</h3>
+<ul>
+<li>No volver al toggle “Es 100% de X” ni a su texto de dos líneas.</li>
+<li>No usar el label “División” arriba de la card.</li>
+<li>No hacer editable el % del otro integrante: se calcula a partir del tuyo.</li>
+<li>No usar pesos 700/800 dentro del bloque.</li>
+</ul>
+</div>
+
+</body></html>
