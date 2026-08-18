@@ -1,0 +1,128 @@
+/* Tokens reales de @grana/ui-tokens (packages/ui-tokens/src/theme.css).
+   NO inventar hex: si falta un color, se agrega al token file, no acá. */
+:root {
+  --navy: #0B1A2B;
+  --emerald: #10B981;
+  --emerald-deep: #059669;
+  --emerald-soft: rgba(16, 185, 129, 0.12);
+  --terracotta: #B56A5A;
+  --terracotta-deep: #9A5446;
+  --terracotta-soft: rgba(181, 106, 90, 0.12);
+  --slate: #3A6B8A;
+  --slate-deep: #2C5269;
+  --slate-soft: #EAF1F6;
+  --warning: #C49A3C;
+  --warning-deep: #B45309;
+  --warning-soft: rgba(196, 154, 60, 0.12);
+  --warning-bg: rgba(196, 154, 60, 0.10);
+  --page: #F6F7F9;
+  --card: #FFFFFF;
+  --border: #E4E8EF;
+  --border-soft: #EEF1F4;
+  --text: #142033;
+  --text-muted: #6B7683;
+  --text-soft: #8A94A3;
+  --white: #FFFFFF;
+  font-family: "Plus Jakarta Sans", Inter, ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+}
+
+/* Tono del detalle. Se setea en el contenedor raíz de cada estado; los bloques
+   lo consumen con var(--tone*). Mismo mecanismo que `toneVars()` en el código. */
+.t-gasto    { --tone: var(--terracotta);   --tone-soft: var(--terracotta-soft); --tone-deep: var(--terracotta-deep); }
+.t-ingreso  { --tone: var(--emerald-deep); --tone-soft: var(--emerald-soft);    --tone-deep: var(--emerald-deep); }
+.t-transfer { --tone: var(--slate);        --tone-soft: var(--slate-soft);      --tone-deep: var(--slate-deep); }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--text); }
+
+/* ── Canvas ─────────────────────────────────────────────────────────────── */
+.canvas { padding: 40px 32px 80px; }
+.canvas > header { max-width: 1180px; margin: 0 auto 36px; }
+.canvas h1 { margin: 0; font-size: 26px; font-weight: 850; letter-spacing: -0.02em; }
+.canvas header p { margin: 8px 0 0; color: var(--text-muted); font-size: 14px; font-weight: 600; max-width: 70ch; line-height: 1.55; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.legend span { border: 1px solid var(--border); background: var(--card); border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 750; color: var(--text-muted); }
+
+.state { max-width: 1180px; margin: 0 auto 44px; }
+.state > h2 { margin: 0 0 4px; font-size: 15px; font-weight: 850; letter-spacing: -0.01em; }
+.state > p { margin: 0 0 16px; color: var(--text-muted); font-size: 13px; font-weight: 600; }
+.pair { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+.frame { }
+.frame > figcaption { margin: 0 0 8px; font-size: 11px; font-weight: 850; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-soft); }
+.mobile { width: 390px; }
+.desktop { width: 720px; }
+
+/* ── Topbar ─────────────────────────────────────────────────────────────── */
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.iconbtn { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 15px; font-weight: 800; }
+.iconbtn.danger { color: var(--terracotta-deep); }
+.iconbtn.solid { background: var(--navy); border-color: var(--navy); color: var(--white); }
+.topbar-actions { display: flex; gap: 6px; }
+
+/* ── Hero ───────────────────────────────────────────────────────────────── */
+.hero { border: 1px solid var(--border); border-radius: 22px; background: var(--card); overflow: hidden; }
+.hero-in { padding: 26px 22px 22px; text-align: center; background: radial-gradient(120% 150% at 50% -35%, var(--tone-soft) 0%, var(--card) 70%); }
+.desktop .hero-in { padding: 32px 36px 26px; }
+.hero-ico { width: 60px; height: 60px; margin: 0 auto 12px; display: grid; place-items: center; border-radius: 19px; font-size: 28px; background: var(--tone-soft); color: var(--tone); }
+.desktop .hero-ico { width: 68px; height: 68px; font-size: 32px; border-radius: 21px; }
+.hero-title { font-size: 19px; font-weight: 850; letter-spacing: -0.025em; line-height: 1.2; word-break: break-word; }
+.desktop .hero-title { font-size: 21px; }
+.hero-amt { margin-top: 8px; font-variant-numeric: tabular-nums; font-size: 38px; font-weight: 850; letter-spacing: -0.045em; line-height: 1; color: var(--tone); }
+.desktop .hero-amt { font-size: 46px; }
+.hero-amt .sym { font-size: 0.55em; font-weight: 800; opacity: 0.6; vertical-align: 0.16em; margin-right: 2px; }
+.hero-amt .dec { font-size: 0.5em; opacity: 0.8; }
+.hero-cur { margin-top: 4px; font-size: 12px; font-weight: 800; color: var(--text-muted); letter-spacing: 0.04em; }
+.hero-ctx { margin-top: 7px; font-size: 13px; font-weight: 700; color: var(--text-muted); }
+.hero-ctx b { color: var(--text); font-weight: 800; }
+
+/* ── Bloque compacto de 2 filas ─────────────────────────────────────────── */
+.block { margin-top: 12px; border: 1px solid var(--border); border-radius: 18px; background: var(--card); overflow: hidden; }
+.desktop .block { border-radius: 20px; }
+.brow { display: flex; align-items: center; gap: 12px; padding: 13px 16px; min-height: 56px; }
+.desktop .brow { padding: 14px 20px; }
+.brow + .brow { border-top: 1px solid var(--border-soft); }
+.badge { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; flex: 0 0 auto; color: var(--white); font-size: 15px; }
+.badge.cash { background: var(--emerald-deep); }
+.badge.bank { background: var(--slate); }
+.badge.credit { background: var(--navy); }
+.badge.soft { background: var(--border-soft); color: var(--slate); }
+.bmain { min-width: 0; flex: 1; }
+.bk { font-size: 12px; font-weight: 750; color: var(--text-muted); }
+.bv { font-size: 14.5px; font-weight: 800; letter-spacing: -0.01em; color: var(--text); }
+.bv.num { font-variant-numeric: tabular-nums; }
+.baside { flex: 0 0 auto; text-align: right; }
+.baside .bk { font-size: 11.5px; }
+.ok { display: inline-flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 800; color: var(--emerald-deep); }
+
+/* ── Alert contextual ───────────────────────────────────────────────────── */
+.alert { margin-top: 12px; border-radius: 14px; padding: 12px 14px; font-size: 13px; font-weight: 650; line-height: 1.5; }
+.alert.info { background: var(--slate-soft); color: var(--slate-deep); }
+.alert.warn { background: var(--warning-bg); color: var(--warning-deep); border: 1px solid var(--warning-soft); }
+.alert a { color: inherit; font-weight: 850; }
+
+/* ── Bloque específico por tipo ─────────────────────────────────────────── */
+.eyebrow { font-size: 11px; font-weight: 850; letter-spacing: 0.13em; text-transform: uppercase; color: var(--text-muted); }
+.bhead { display: flex; align-items: center; gap: 10px; padding: 14px 16px 0; }
+.desktop .bhead { padding: 15px 20px 0; }
+.bhead .aside { margin-left: auto; font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cuotas { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 16px 14px; }
+.cuota { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; border: 1px solid var(--border); font-size: 11.5px; font-weight: 850; color: var(--text-muted); }
+.cuota.paid { background: var(--emerald-soft); border-color: transparent; color: var(--emerald-deep); }
+.cuota.now { background: var(--tone-soft); border-color: transparent; color: var(--tone-deep); }
+.bar { height: 8px; border-radius: 999px; background: var(--border-soft); overflow: hidden; margin: 10px 16px 14px; }
+.bar > i { display: block; height: 100%; border-radius: 999px; background: var(--tone); }
+.split { display: flex; gap: 8px; padding: 12px 16px 14px; }
+.split > div { flex: 1; border-radius: 12px; background: var(--border-soft); padding: 10px 12px; }
+.split .bk { font-size: 11.5px; }
+.flow { display: flex; align-items: center; gap: 10px; padding: 12px 16px 14px; }
+.flow .arrow { color: var(--text-soft); font-weight: 850; }
+
+/* Barra inferior fija de "Editar" (solo N ≡ WM) */
+.bottombar { margin-top: 12px; border-top: 1px dashed var(--border); padding-top: 12px; }
+.cta { display: flex; align-items: center; justify-content: center; gap: 8px; height: 48px; border-radius: 14px; background: var(--navy); color: var(--white); font-size: 15px; font-weight: 850; }
+
+/* Anotaciones del canvas */
+.note { margin-top: 10px; border-left: 3px solid var(--emerald); background: var(--card); border-radius: 0 10px 10px 0; padding: 9px 12px; font-size: 12.5px; font-weight: 650; color: var(--text-muted); line-height: 1.5; }
+.note b { color: var(--text); font-weight: 850; }
+.kill { border-left-color: var(--terracotta); }

@@ -1,8 +1,8 @@
 # Relevamiento — Módulo Movimientos (Grana V3)
 
-Estado: **entrega 1 y 2** (inventario + oportunidades priorizadas) + **entrega 4**
-(decisiones a confirmar). Los handoffs cerrados (entrega 3) se producen **después**
-de alinear alcance, según el método acordado.
+Estado: **entrega 1, 2 y 4** (inventario, oportunidades priorizadas, decisiones).
+**Entrega 3 en curso:** primer handoff cerrado publicado en
+[`detalle-compacto/`](./detalle-compacto/) (oportunidad P1).
 
 Fecha del relevamiento: rama `claude/grana-movimientos-relevamiento-m8jn1v`, sobre
 `8ec5218` (post `#32/#33/#34`, alta de movimientos ya rediseñada).
@@ -338,8 +338,8 @@ instancias.
 
 | # | Decisión | Por qué se pregunta |
 |---|---|---|
-| **DC-1** | ¿La descripción del movimiento deja de tener tile propio cuando ya es el título del hero? | Es la mitad del ahorro de P1. Si el PO quiere la descripción siempre visible como bloque, P1 rinde menos. |
-| **DC-2** | ¿N recibe "En qué se fue" en el feed, o el feed nativo se queda sin resumen y el donut vive solo en el dashboard? | Define P9 y el techo de paridad del feed. Hoy el donut nativo existe pero solo en el dashboard (`components/dashboard/SpendingSection.tsx`). |
+| **DC-1** | ✅ **CERRADA** — la descripción deja de tener tile propio cuando ya es el título del hero (excepción: descripción larga ⇒ fila "Nota"). | Era la mitad del ahorro de P1. |
+| **DC-2** | ✅ **CERRADA, y asciende a principio del módulo** — **N ≡ WM**: la app nativa y la web en vista mobile deben ser idénticas. Aplica a todo el módulo, no solo al donut. | Consecuencia: el donut, la búsqueda y los filtros **van** al feed nativo (no se sacan de web-mobile); y toda divergencia N↔WM del inventario pasa de "oportunidad" a "deuda a cerrar". |
 | **DC-3** | ¿"Mostrar compartidos" pasa a ser un filtro contable dentro del sheet (y suma al badge)? | Cambia el conteo de "Filtros (N)" y el lugar donde el usuario lo busca. |
 | **DC-4** | ¿El back del detalle pasa a ícono solo, sin "Volver"? | Es lo que pide la spec, pero es una regresión de claridad en WD. Hay que elegir: corregir el código o corregir la spec. |
 | **DC-5** | ¿El presupuesto de 2 badges por fila, o se prefiere permitir 3 en WD? | P3 es la única oportunidad donde WD podría legítimamente divergir de N. |
@@ -348,22 +348,18 @@ instancias.
 
 ---
 
-## 5. Alcance propuesto para los handoffs (a alinear)
+## 5. Handoffs — plan y estado
 
-Propuesta de primer lote, elegido por frecuencia de uso y por ser lo que se ve más:
+| # | Handoff | Cubre | Estado |
+|---|---|---|---|
+| 1 | [`detalle-compacto/`](./detalle-compacto/) | P1 (+ P10 y la paridad de detalle que arrastra N ≡ WM) | ✅ **publicado** |
+| 2 | `fila-movimiento/` | P3 + P4 + P6 — matriz de badges, los 4 contextos donde vive la fila, los 3 anchos | pendiente — necesita **DC-5** |
+| 3 | `feed-toolbar/` | P2 + P5 + P9 — toolbar y filtros en las 3 superficies, incluida la versión nativa que hoy no existe | pendiente — necesita **DC-3** y **DC-7** |
 
-1. **Bloque "Detalle compacto" del movimiento** (P1) — mockup con los estados: gasto
-   simple, gasto con reintegro, cuota, compartido, transferencia, ingreso; con y sin
-   descripción; ARS y USD.
-2. **Bloque "Fila de movimiento"** (P3 + P4 + P6) — mockup con la matriz de badges,
-   los 4 contextos (feed global, cuenta, período de tarjeta, drill de categoría) y los
-   3 anchos.
-3. **Bloque "Toolbar del feed"** (P2 + P5 + P6) — mockup de los 3 estados (reposo,
-   búsqueda activa, con chips) en las 3 superficies, incluyendo la versión nativa que
-   hoy no existe.
+Cada uno con mockup HTML (canvas con todos los estados) + README de anatomía,
+comportamiento, specs (medidas + tokens), estados y "Qué NO hacer", igual que los
+handoffs de `docs/design/movement-form/`.
 
-Cada uno con README de anatomía, comportamiento, specs (medidas + tokens), estados y
-"Qué NO hacer", igual que los handoffs de `docs/design/movement-form/`.
-
-**Antes de arrancar:** hacen falta las respuestas de DC-1, DC-3 y DC-5 para el lote 1–2,
-y DC-2 + DC-7 para el lote 3.
+**El principio N ≡ WM reordena la prioridad.** Con las dos superficies obligadas a ser
+idénticas, las divergencias D1, D2, D4, D5, D6 y D8 dejan de ser "oportunidades" y pasan
+a ser deuda: el handoff 3 (toolbar + filtros + donut en nativo) sube a la par del 2.
