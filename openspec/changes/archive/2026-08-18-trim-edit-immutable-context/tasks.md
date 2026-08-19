@@ -19,10 +19,14 @@
 - [ ] 3.2 **Gasto cash/bank en edición** (web angosto, web ancho, nativa): héroe editable, y debajo una card con una sola fila — CUENTA. Sin filas de tipo ni moneda.
 - [ ] 3.3 **Transferencia / cambio**: dos filas, cuenta origen y cuenta destino.
 - [x] 3.4 **Consumo de tarjeta pagado**: héroe read-only con el monto grande y su caption; debajo, CUENTA y FECHA.
-- [ ] 3.5 **Madre de compra en cuotas con cuota paga**: héroe read-only; debajo CUENTA, CUOTAS y FECHA.
+- [x] 3.5a **Madre de compra en cuotas SIN cuota paga**: héroe editable (con el hint de recálculo); debajo CUENTA, CUOTAS y FECHA — la fecha de una madre nunca es editable. *Verificado en web escritorio.*
+- [ ] 3.5b **Madre CON cuota paga**: igual pero con el héroe read-only.
 - [ ] 3.6 **Alta**: sin cambios en ninguna superficie — el contexto inmutable es exclusivo de edición. **Web escritorio verificado**; pendientes web angosto y nativa (issue #38).
 
 > La verificación manual pendiente en la **app nativa** está consolidada en el issue #38 (`QA App Mobile — formulario de edición de movimiento`), asignado y con checklist propio.
+
+
+> **Nota de QA — build viejo.** Dos reportes de esta pasada ("no se ve la fecha", "la línea de contexto quedó fea") resultaron ser un dev server parado en un commit anterior de la misma branch. Señales de que se está mirando código viejo: el eyebrow **"EDITAR"** sobre el título (se sacó en `2491439`) y el contexto como **una línea separada por `·`** en vez de filas etiquetadas (se sacó en `d075467`). Ante cualquier síntoma raro, `git pull` y `rm -rf apps/web/.next` antes de reportar.
 
 ## 4. Cierre
 
