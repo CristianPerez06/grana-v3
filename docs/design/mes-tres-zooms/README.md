@@ -1,3 +1,25 @@
+> ## ⛔ DESCARTADO — no usar como dirección de diseño
+>
+> Estos mocks se descartaron el 2026-08-19 por tres razones, anotadas para que ninguna
+> sesión futura los retome:
+>
+> 1. **No usan el lenguaje visual de Grana.** Inventan una paleta y una tipografía propias
+>    en vez de partir de `docs/design_handoff_inicio_definitivo/` y `@grana/ui-tokens`.
+> 2. **No declaran a qué ruta corresponde cada pantalla** ni cómo se navega entre ellas.
+> 3. **Resuelven algo ya resuelto.** El handoff `Inicio Definitivo` ya cubre —mejor— la
+>    separación stock/flujo, la declaración de lente (toggle Libre real / Solo gastado) y la
+>    previsión mensual (card "Próximos compromisos", con entra vs. sale y neto a cubrir).
+>
+> Además, el mock 2 (previsión de septiembre) está **bloqueado por datos**: la cobertura de
+> gastos fijos cargados como recurrencia es del 11,9% (3,7% en caja), así que el número que
+> muestra estaría sobreestimado en ~$2.184.230.
+>
+> **Lo que sí sobrevive de este bundle** es conceptual, no visual, y se movió a
+> `docs/plans/ui-readability-simplification.md` §4bis y a
+> `docs/product/mapa-acceso-informacion.md`.
+
+---
+
 # Mes · tres zooms — handoff visual
 
 ## Contexto
