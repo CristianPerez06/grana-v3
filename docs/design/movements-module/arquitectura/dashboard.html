@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Inicio — hoy y con pendientes</title>
+<style>
+:root{--navy:#0B1A2B;--emerald:#10B981;--emerald-deep:#059669;--emerald-soft:rgba(16,185,129,.12);
+--terracotta:#B56A5A;--slate:#3A6B8A;--slate-soft:#EAF1F6;--warning:#C49A3C;--warning-deep:#B45309;
+--warning-bg:rgba(196,154,60,.10);--warning-soft:rgba(196,154,60,.28);--page:#F6F7F9;--card:#fff;
+--border:#E4E8EF;--border-soft:#EEF1F4;--text:#142033;--text-muted:#6B7683;--text-soft:#8A94A3;
+font-family:"Plus Jakarta Sans",Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+*{box-sizing:border-box} body{margin:0;background:var(--page);color:var(--text)}
+.canvas{padding:36px 28px 70px}
+.wrap{max-width:1560px;margin:0 auto}
+h1{margin:0;font-size:25px;font-weight:850;letter-spacing:-.02em}
+.lede{margin:8px 0 0;color:var(--text-muted);font-size:14px;font-weight:600;max-width:82ch;line-height:1.55}
+h3.sec{margin:34px 0 4px;font-size:16.5px;font-weight:850}
+h3.sec + p{margin:0 0 16px;color:var(--text-muted);font-size:13px;font-weight:650;max-width:80ch;line-height:1.5}
+.row{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
+.phone{width:352px;background:var(--page);border:1px solid var(--border);border-radius:20px;padding:12px;box-shadow:0 18px 40px -34px rgba(11,26,43,.5)}
+.desk{flex:1;min-width:640px;background:var(--page);border:1px solid var(--border);border-radius:16px;padding:16px}
+figcaption{font-size:11px;font-weight:850;letter-spacing:.09em;text-transform:uppercase;color:var(--text-soft);margin-bottom:8px}
+figure{margin:0}
+.hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.hd b{font-size:19px;font-weight:850;letter-spacing:-.025em}
+.desk .hd b{font-size:22px}
+.hd .r{display:flex;gap:5px;align-items:center}
+.mini{border:1px solid var(--border);background:var(--card);border-radius:9px;padding:4px 9px;font-size:11.5px;font-weight:800;color:var(--text-muted)}
+.cta{background:var(--emerald);color:#fff;border-radius:9px;padding:6px 11px;font-size:11.5px;font-weight:850}
+.mes{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--border);background:var(--card);border-radius:11px;padding:5px 8px;margin-bottom:10px;width:190px}
+.mes span{font-size:12.5px;font-weight:800} .mes i{color:var(--text-soft);font-style:normal;font-weight:850}
+.g{display:grid;gap:10px;margin-bottom:10px}
+.g2{grid-template-columns:1.15fr 1fr}
+.c{border:1px solid var(--border);background:var(--card);border-radius:15px;padding:14px}
+.c .eb{font-size:10px;font-weight:850;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+.c .q{font-size:11.5px;font-weight:650;color:var(--text-soft);margin-top:1px}
+.c .big{font-size:30px;font-weight:850;letter-spacing:-.035em;margin-top:7px;font-variant-numeric:tabular-nums}
+.navy{background:var(--navy);border-color:transparent;color:#fff}
+.navy .eb{color:rgba(255,255,255,.55)} .navy .q{color:rgba(255,255,255,.5)}
+.navy .cap{font-size:11.5px;font-weight:650;color:rgba(255,255,255,.5);margin-top:14px}
+.usd{display:inline-flex;align-items:center;gap:7px;margin-top:9px}
+.usd b{background:rgba(16,185,129,.2);color:var(--emerald);border-radius:999px;padding:2px 8px;font-size:10px;font-weight:850}
+.usd s{text-decoration:none;font-size:14px;font-weight:800;color:rgba(255,255,255,.9)}
+.acc{display:flex;align-items:center;gap:9px;padding:7px 0;font-size:12.5px;font-weight:750}
+.acc + .acc{border-top:1px solid var(--border-soft)}
+.av{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:850;flex:0 0 auto}
+.acc .nm{flex:1} .acc .vl{font-variant-numeric:tabular-nums;font-weight:850}
+.bars{display:flex;align-items:flex-end;gap:9px;height:74px;margin:12px 0 6px}
+.bar{flex:1;border-radius:6px 6px 0 0}
+.blab{display:flex;gap:9px;font-size:10.5px;font-weight:750;color:var(--text-muted)}
+.blab span{flex:1;text-align:center}
+.tile{border:1px solid var(--border-soft);background:var(--page);border-radius:11px;padding:9px 10px;margin-top:8px}
+.tile .k{font-size:11px;font-weight:800;color:var(--text-muted)}
+.tile .h{font-size:10.5px;font-weight:650;color:var(--text-soft)}
+.tile .v{font-size:15px;font-weight:850;font-variant-numeric:tabular-nums;margin-top:2px}
+.donut{width:112px;height:112px;border-radius:50%;flex:0 0 auto;
+background:conic-gradient(var(--terracotta) 0 34%,var(--slate) 34% 58%,var(--warning) 58% 76%,var(--emerald) 76% 90%,#9CA3AF 90% 100%);position:relative}
+.donut::after{content:"$ 486.300";position:absolute;inset:23px;border-radius:50%;background:var(--card);display:grid;place-items:center;font-size:11.5px;font-weight:850}
+.rk{display:flex;justify-content:space-between;font-size:11.5px;font-weight:750;padding:4px 0}
+.rk + .rk{border-top:1px solid var(--border-soft)}
+.rk i{font-style:normal;color:var(--text-muted)}
+.strip{display:flex;align-items:center;gap:9px;border:1px solid var(--border);background:var(--card);border-radius:13px;padding:10px 12px;margin-bottom:10px;font-size:12px;font-weight:750}
+.note{margin-top:12px;border-left:3px solid var(--emerald);background:var(--card);border-radius:0 9px 9px 0;padding:10px 12px;font-size:12.5px;font-weight:650;color:var(--text-muted);line-height:1.55;max-width:900px}
+.note.warn{border-left-color:var(--warning)}
+.note b{color:var(--text);font-weight:850}
+/* pendientes accionables */
+.pcard{border:1px solid var(--warning-soft);background:var(--card);border-radius:15px;padding:13px;margin-bottom:10px}
+.pcard .ph{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.pcard .ph .ic{width:26px;height:26px;border-radius:9px;background:var(--warning-bg);color:var(--warning-deep);display:grid;place-items:center;font-size:13px}
+.pcard .ph b{font-size:13px;font-weight:850;flex:1}
+.pcard .ph .n{background:var(--warning);color:#fff;border-radius:999px;font-size:10px;font-weight:850;padding:2px 7px}
+.pr{display:flex;align-items:center;gap:8px;padding:7px 0;font-size:12.5px}
+.pr + .pr{border-top:1px solid var(--border-soft)}
+.pr .t{flex:1;font-weight:800}
+.pr .d{font-size:10.5px;font-weight:750;color:var(--warning-deep)}
+.pr .amt{font-weight:850;font-variant-numeric:tabular-nums}
+.pr .go{background:var(--navy);color:#fff;border-radius:8px;padding:5px 10px;font-size:10.5px;font-weight:850}
+.neg{color:var(--terracotta)} .pos{color:var(--emerald-deep)}
+</style></head><body><div class="canvas"><div class="wrap">
+
+<h1>Inicio — cómo está hoy, y qué pasaría con los pendientes</h1>
+<p class="lede">Dibujado sobre lo que hay en el código, no sobre una idea: mismas tarjetas, mismo orden, mismos textos.
+La segunda parte muestra la <b>Opción D</b> del mockup anterior — los pendientes viviendo acá.</p>
+
+<h3 class="sec">1 · Inicio, hoy</h3>
+<p>Cinco bloques: <b>Para gastar · hoy</b> + <b>Dónde está</b> · <b>Balance del mes</b> + <b>Comprometido</b> · <b>Compartido</b> · <b>Gastaste este mes</b> · <b>¿En qué gasté?</b></p>
+
+<div class="row">
+  <figure><figcaption>Celular · 390px</figcaption>
+  <div class="phone">
+    <div class="hd"><b>Hola, Flor.</b><span class="r"><span class="mini">👁</span><span class="cta">+ Nuevo</span></span></div>
+    <div class="mes"><i>‹</i><span>Agosto 2026</span><i>›</i></div>
+
+    <div class="c navy" style="margin-bottom:10px">
+      <div class="eb">Para gastar · hoy</div><div class="q">¿Cuánto tengo?</div>
+      <div class="big">$ 1.284.500</div>
+      <div class="usd"><b>USD</b><s>2.480,00</s></div>
+      <div class="cap">Lo que tenés disponible hoy, en pesos y dólares.</div>
+    </div>
+
+    <div class="c" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><div class="eb">Dónde está</div><span style="font-size:11px;font-weight:800;color:var(--slate)">Ver todas ›</span></div>
+      <div style="margin-top:6px">
+        <div class="acc"><span class="av" style="background:#EA7600">G</span><span class="nm">Galicia</span><span class="vl">$ 940.300</span></div>
+        <div class="acc"><span class="av" style="background:var(--emerald-deep)">◆</span><span class="nm">Billetera</span><span class="vl">$ 344.200</span></div>
+        <div class="acc"><span class="av" style="background:var(--slate)">$</span><span class="nm">En dólares</span><span class="vl">USD 2.480</span></div>
+      </div>
+    </div>
+
+    <div class="c" style="margin-bottom:10px">
+      <div class="eb">Balance del mes</div><div class="q">¿Cómo se movió mi plata este mes?</div>
+      <div class="bars">
+        <div class="bar" style="height:100%;background:var(--emerald)"></div>
+        <div class="bar" style="height:52%;background:var(--terracotta)"></div>
+        <div class="bar" style="height:14%;background:var(--slate)"></div>
+      </div>
+      <div class="blab"><span>Ingresos</span><span>Gastos</span><span>Ajustes</span></div>
+      <div class="tile"><div class="k">Balance</div><div class="v pos">+ $ 693.700</div></div>
+    </div>
+
+    <div class="c" style="margin-bottom:10px">
+      <div class="eb">Comprometido</div><div class="q">Plata que ya está comprometida</div>
+      <div class="big" style="font-size:24px">$ 496.400</div>
+      <div class="tile"><div class="k">Resúmenes de tarjeta</div><div class="h">a pagar + en curso</div><div class="v">$ 412.500</div></div>
+      <div class="tile" style="border-color:var(--warning-soft)"><div class="k">Recurrencias</div><div class="h">pendientes de confirmar</div><div class="v">$ 83.900</div></div>
+    </div>
+
+    <div class="strip"><span class="av" style="background:var(--slate)">👥</span><span style="flex:1">Compartido · Flor te debe</span><span class="pos" style="font-weight:850">$ 128.400</span></div>
+
+    <div class="c">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><div class="eb">¿En qué gasté este mes?</div><span style="font-size:11px;font-weight:800;color:var(--slate)">Ver desglose ›</span></div>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:10px">
+        <div class="donut"></div>
+        <div style="flex:1">
+          <div class="rk"><span>🏠 Vivienda</span><i>34%</i></div>
+          <div class="rk"><span>🛒 Súper</span><i>24%</i></div>
+          <div class="rk"><span>🚕 Transporte</span><i>18%</i></div>
+          <div class="rk"><span>🍔 Comida</span><i>14%</i></div>
+          <div class="rk"><span>Otros</span><i>10%</i></div>
+        </div>
+      </div>
+    </div>
+  </div></figure>
+
+  <figure style="flex:1;min-width:640px"><figcaption>Desktop</figcaption>
+  <div class="desk">
+    <div class="hd"><b>Hola, Flor.</b><span class="r"><span class="mini">👁 Ocultar importes</span><span class="cta">+ Nuevo movimiento</span></span></div>
+    <div class="mes"><i>‹</i><span>Agosto 2026</span><i>›</i></div>
+    <div class="g g2">
+      <div class="c navy"><div class="eb">Para gastar · hoy</div><div class="q">¿Cuánto tengo?</div>
+        <div class="big">$ 1.284.500</div><div class="usd"><b>USD</b><s>2.480,00</s></div>
+        <div class="cap">Lo que tenés disponible hoy, en pesos y dólares.</div></div>
+      <div class="c"><div style="display:flex;justify-content:space-between;align-items:baseline"><div class="eb">Dónde está</div><span style="font-size:11px;font-weight:800;color:var(--slate)">Ver todas ›</span></div>
+        <div style="margin-top:6px">
+          <div class="acc"><span class="av" style="background:#EA7600">G</span><span class="nm">Galicia</span><span class="vl">$ 940.300</span></div>
+          <div class="acc"><span class="av" style="background:var(--emerald-deep)">◆</span><span class="nm">Billetera</span><span class="vl">$ 344.200</span></div>
+          <div class="acc"><span class="av" style="background:var(--slate)">$</span><span class="nm">En dólares</span><span class="vl">USD 2.480</span></div>
+        </div></div>
+    </div>
+    <div class="g g2">
+      <div class="c"><div class="eb">Balance del mes</div><div class="q">¿Cómo se movió mi plata este mes?</div>
+        <div class="bars"><div class="bar" style="height:100%;background:var(--emerald)"></div><div class="bar" style="height:52%;background:var(--terracotta)"></div><div class="bar" style="height:14%;background:var(--slate)"></div></div>
+        <div class="blab"><span>Ingresos</span><span>Gastos</span><span>Ajustes</span></div>
+        <div class="tile"><div class="k">Balance</div><div class="v pos">+ $ 693.700</div></div></div>
+      <div class="c"><div class="eb">Comprometido</div><div class="q">Plata que ya está comprometida</div>
+        <div class="big" style="font-size:24px">$ 496.400</div>
+        <div class="tile"><div class="k">Resúmenes de tarjeta</div><div class="h">a pagar + en curso</div><div class="v">$ 412.500</div></div>
+        <div class="tile" style="border-color:var(--warning-soft)"><div class="k">Recurrencias</div><div class="h">pendientes de confirmar</div><div class="v">$ 83.900</div></div></div>
+    </div>
+    <div class="strip"><span class="av" style="background:var(--slate)">👥</span><span style="flex:1">Compartido · Flor te debe</span><span class="pos" style="font-weight:850">$ 128.400</span></div>
+    <div class="c"><div style="display:flex;justify-content:space-between;align-items:baseline"><div class="eb">¿En qué gasté este mes?</div><span style="font-size:11px;font-weight:800;color:var(--slate)">Ver desglose ›</span></div>
+      <div style="display:flex;gap:18px;align-items:center;margin-top:10px">
+        <div class="donut"></div>
+        <div style="flex:1">
+          <div class="rk"><span>🏠 Vivienda</span><i>$ 165.400 · 34%</i></div>
+          <div class="rk"><span>🛒 Supermercado</span><i>$ 116.700 · 24%</i></div>
+          <div class="rk"><span>🚕 Transporte</span><i>$ 87.500 · 18%</i></div>
+          <div class="rk"><span>🍔 Comida</span><i>$ 68.000 · 14%</i></div>
+          <div class="rk"><span>Otros</span><i>$ 48.700 · 10%</i></div>
+        </div></div></div>
+  </div></figure>
+</div>
+
+<div class="note warn"><b>El hallazgo:</b> mirá la tarjeta <b>Comprometido</b>. Ya tiene un renglón que dice
+<b>"Recurrencias · pendientes de confirmar · $ 83.900"</b>, con un link a Recurrencias. O sea: <b>Inicio ya te avisa
+que hay pendientes y cuánto suman</b> — lo único que no te deja es resolverlos. Te manda a otra pantalla.
+La Opción D no sería "mudar" los pendientes: sería <b>dejarte actuar donde la app ya te está avisando</b>.</div>
+
+<h3 class="sec">2 · Inicio con los pendientes accionables (Opción D)</h3>
+<p>El renglón informativo de "Comprometido" se convierte en una tarjeta propia, arriba, con las acciones adentro. Movimientos queda como libro puro.</p>
+
+<div class="row">
+  <figure><figcaption>Celular · 390px</figcaption>
+  <div class="phone">
+    <div class="hd"><b>Hola, Flor.</b><span class="r"><span class="mini">👁</span><span class="cta">+ Nuevo</span></span></div>
+    <div class="mes"><i>‹</i><span>Agosto 2026</span><i>›</i></div>
+
+    <div class="pcard">
+      <div class="ph"><span class="ic">◕</span><b>Por confirmar</b><span class="n">3</span></div>
+      <div class="pr"><span class="t">Netflix<div class="d">Vence hoy</div></span><span class="amt neg">− $ 9.900</span><span class="go">Confirmar</span></div>
+      <div class="pr"><span class="t">Expensas<div class="d">Vencida hace 2 días</div></span><span class="amt neg">− $ 84.000</span><span class="go">Confirmar</span></div>
+      <div class="pr"><span class="t">Farmacia · OSDE<div class="d" style="color:var(--text-soft)">Reintegro esperado</div></span><span class="amt pos">+ $ 33.600</span><span class="go">Confirmar</span></div>
+    </div>
+
+    <div class="c navy" style="margin-bottom:10px">
+      <div class="eb">Para gastar · hoy</div><div class="q">¿Cuánto tengo?</div>
+      <div class="big">$ 1.284.500</div>
+      <div class="usd"><b>USD</b><s>2.480,00</s></div>
+      <div class="cap">Lo que tenés disponible hoy, en pesos y dólares.</div>
+    </div>
+
+    <div class="c" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><div class="eb">Dónde está</div><span style="font-size:11px;font-weight:800;color:var(--slate)">Ver todas ›</span></div>
+      <div style="margin-top:6px">
+        <div class="acc"><span class="av" style="background:#EA7600">G</span><span class="nm">Galicia</span><span class="vl">$ 940.300</span></div>
+        <div class="acc"><span class="av" style="background:var(--emerald-deep)">◆</span><span class="nm">Billetera</span><span class="vl">$ 344.200</span></div>
+      </div>
+    </div>
+
+    <div class="c">
+      <div class="eb">Comprometido</div><div class="q">Plata que ya está comprometida</div>
+      <div class="big" style="font-size:24px">$ 496.400</div>
+      <div class="tile"><div class="k">Resúmenes de tarjeta</div><div class="h">a pagar + en curso</div><div class="v">$ 412.500</div></div>
+      <div class="tile"><div class="k">Recurrencias</div><div class="h">del próximo mes</div><div class="v">$ 83.900</div></div>
+    </div>
+  </div></figure>
+
+  <figure style="flex:1;min-width:640px"><figcaption>Desktop</figcaption>
+  <div class="desk">
+    <div class="hd"><b>Hola, Flor.</b><span class="r"><span class="mini">👁 Ocultar importes</span><span class="cta">+ Nuevo movimiento</span></span></div>
+    <div class="mes"><i>‹</i><span>Agosto 2026</span><i>›</i></div>
+    <div class="pcard">
+      <div class="ph"><span class="ic">◕</span><b>Por confirmar</b><span class="n">3</span></div>
+      <div class="pr"><span class="t">Netflix<div class="d">Vence hoy · Visa Galicia</div></span><span class="amt neg">− $ 9.900</span><span class="go">Confirmar</span></div>
+      <div class="pr"><span class="t">Expensas<div class="d">Vencida hace 2 días · Galicia</div></span><span class="amt neg">− $ 84.000</span><span class="go">Confirmar</span></div>
+      <div class="pr"><span class="t">Farmacia · OSDE<div class="d" style="color:var(--text-soft)">Reintegro esperado · Galicia</div></span><span class="amt pos">+ $ 33.600</span><span class="go">Confirmar</span></div>
+    </div>
+    <div class="g g2">
+      <div class="c navy"><div class="eb">Para gastar · hoy</div><div class="q">¿Cuánto tengo?</div>
+        <div class="big">$ 1.284.500</div><div class="usd"><b>USD</b><s>2.480,00</s></div>
+        <div class="cap">Lo que tenés disponible hoy, en pesos y dólares.</div></div>
+      <div class="c"><div style="display:flex;justify-content:space-between;align-items:baseline"><div class="eb">Dónde está</div><span style="font-size:11px;font-weight:800;color:var(--slate)">Ver todas ›</span></div>
+        <div style="margin-top:6px">
+          <div class="acc"><span class="av" style="background:#EA7600">G</span><span class="nm">Galicia</span><span class="vl">$ 940.300</span></div>
+          <div class="acc"><span class="av" style="background:var(--emerald-deep)">◆</span><span class="nm">Billetera</span><span class="vl">$ 344.200</span></div>
+          <div class="acc"><span class="av" style="background:var(--slate)">$</span><span class="nm">En dólares</span><span class="vl">USD 2.480</span></div>
+        </div></div>
+    </div>
+    <div class="g g2">
+      <div class="c"><div class="eb">Balance del mes</div><div class="q">¿Cómo se movió mi plata este mes?</div>
+        <div class="bars"><div class="bar" style="height:100%;background:var(--emerald)"></div><div class="bar" style="height:52%;background:var(--terracotta)"></div><div class="bar" style="height:14%;background:var(--slate)"></div></div>
+        <div class="blab"><span>Ingresos</span><span>Gastos</span><span>Ajustes</span></div>
+        <div class="tile"><div class="k">Balance</div><div class="v pos">+ $ 693.700</div></div></div>
+      <div class="c"><div class="eb">Comprometido</div><div class="q">Plata que ya está comprometida</div>
+        <div class="big" style="font-size:24px">$ 496.400</div>
+        <div class="tile"><div class="k">Resúmenes de tarjeta</div><div class="h">a pagar + en curso</div><div class="v">$ 412.500</div></div>
+        <div class="tile"><div class="k">Recurrencias</div><div class="h">del próximo mes</div><div class="v">$ 83.900</div></div></div>
+    </div>
+  </div></figure>
+</div>
+
+<div class="note"><b>Lo que cambia:</b> "Por confirmar" pasa a ser lo primero de Inicio, porque es lo único
+accionable de la pantalla. Y el renglón de Comprometido deja de decir "pendientes de confirmar" —
+ahora dice <b>"del próximo mes"</b>, que es lo que realmente informa, sin duplicar la tarea.</div>
+
+<div class="note warn"><b>Lo que sigue sin resolverse, y hay que decidirlo:</b> si los pendientes se van a Inicio,
+confirmás acá y el movimiento nace en Movimientos. Se pierde el "confirmé y lo veo aparecer".
+La Opción C lo conserva; la D lo cambia por otra cosa: que la tarea esté donde arrancás el día.</div>
+
+</div></div></body></html>
