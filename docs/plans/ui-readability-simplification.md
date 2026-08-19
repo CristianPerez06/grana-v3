@@ -463,6 +463,90 @@ La app de referencia lo pone de entrada: `Activos Netos · Activos · Deudas`. G
 
 ---
 
+## 6bis. Trabajo previo recuperado — leer ANTES de actuar sobre este brief
+
+_Agregado 2026-08-19. Durante esta revisión aparecieron dos cuerpos de trabajo que existían
+solo como archivos sueltos en el disco de la PO, sin estar en ninguna rama. Se rescataron._
+
+### `chore/simplify-home-diagnosis`
+
+- **`PROPUESTA-INICIO-2026-07-31.md`** — diagnóstico del Inicio con datos reales de producción
+  (cuenta `cristian.ap84`, julio 2026). **Es más profundo que este brief en tres puntos** y
+  manda sobre él donde se solapen.
+- **`apps/web/prototypes/`** — prototipos de `comprometido-redesign`, `dashboard-forecast-*`
+  (3 variantes), `dashboard-lenses-*`, `dashboard-planned-flows`, `spending-*`,
+  `transaction-detail-*` + screenshots.
+- **`docs/design_handoff_inicio_definitivo/`** — handoff "Inicio Definitivo" web + mobile con
+  5 cards (Saldo disponible · Resumen del mes · Distribución del ingreso · Próximos
+  compromisos · Economía compartida).
+- **`docs/design/movement-detail/`** — handoff de detalle de movimiento, 7 variantes por tipo.
+- **`docs/product/inventario-funcional.md`**.
+
+### `recover/clarify-dashboard-lenses`
+
+Change OpenSpec completo (1.112 líneas: `proposal.md`, `design.md`, `exploration.md` de 452
+líneas, spec delta de `dashboard`, `tasks.md` de 40 tareas). El commit `210270d7` se había
+quedado sin rama y se recuperó del object store antes del GC. **Nada implementado.**
+
+**Bloqueante único (`tasks.md` 0.1): aprobar los strings de `design.md §1`.**
+
+### Las tres correcciones que ese material impone a este brief
+
+1. **La tesis correcta es "ambigua", no "compleja".** *"Ningún número del Inicio está mal
+   calculado. Casi todos están mal rotulados."* Probado con datos: cinco montos correctos en
+   la misma pantalla, dos de ellos con la palabra "gasto" y **$574.580,63 (+21%)** de brecha
+   sin explicación visible. El §2.B de este brief es un subconjunto de esa auditoría.
+
+2. **Falta la lente MODO CHEQUEO, y es el hallazgo más grande.** ~90% de las aperturas duran
+   4 segundos y traen una sola pregunta ("¿puedo?"); ~10% son revisión. El Inicio está
+   diseñado 100% para revisión. **Bajar de 7 cards a 3 (R3) mejora la densidad pero no crea
+   la superficie de chequeo que falta.** Son dos problemas distintos.
+
+3. **F1 está BLOQUEADO por datos, no por diseño — y esto invalida el mock 2 de
+   `mes-tres-zooms`.** La cobertura de gastos fijos cargados como recurrencia es del **11,9%**
+   (y **3,7%** del lado caja). Proyectar el mes que viene hoy daría un número **sobreestimado
+   en ~$2.184.230**: alquiler y expensas son invisibles para el motor. Sería *"una mentira
+   nueva, más cara que la que estamos arreglando"*.
+
+   La causa está diagnosticada: el detector de recurrencias tiene **tres gates** que lo
+   impiden — descarta movimientos sin categoría, exige 3 ocurrencias, y agrupa por
+   `tipo|cuenta|categoría|moneda` sin descripción ni monto. El gate 3 tiene un efecto
+   perverso: **cuantos más gastos fijos tenés en la misma categoría, peor detecta.** El
+   detector optimiza confianza en el patrón cuando el producto necesita que optimice impacto
+   financiero.
+
+### El plan de 4 pasos que reemplaza el orden de §7
+
+```
+PASO 1 — Rótulos honestos          ← YA ESPECIFICADO (recover/clarify-dashboard-lenses)
+         cero features, cero migraciones, cero queries nuevas
+         bloqueado solo por: aprobar strings
+
+PASO 2 — Recalibrar el detector de recurrencias
+         no es módulo nuevo: un detector que ya existe, mal calibrado
+         es lo que hace que la app PIDA cargar el alquiler
+
+PASO 3 — El hero pasa a "te queda libre" / la previsión del mes
+         ← acá vive F1 y el mock 2. BLOQUEADO por el paso 2
+
+PASO 4 — Sobres y presupuestos
+```
+
+Los pasos 1 y 2 son independientes y pueden ir en paralelo. **El paso 1 hace visible el
+hueco; el paso 2 hace que la app ayude a taparlo.**
+
+### Qué de este brief sobrevive
+
+Sigue en pie y es complementario (el material recuperado no cubre ruteo ni arquitectura de
+información): **§4bis.4 "un mes, tres zooms"**, sacar el gráfico de Movimientos (§4bis.5),
+el selector de mes global y liberar la navegación al futuro, stock ≠ flujo con Cuentas
+mostrando Neto/Activos/Deudas (§4bis.2), Top 10 movimientos, y el mecanismo
+`amount_is_estimated` + override editable (§4bis.3) — este último **para el paso 3**, no antes.
+
+Queda **retirado** el orden de fases de §7 y **bloqueado** el mock 2 de `mes-tres-zooms`.
+
+---
+
 ## 7. Orden sugerido
 
 | Fase | Qué | Por qué primero |
