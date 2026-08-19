@@ -44,5 +44,5 @@
 - [x] 7.2 `pnpm typecheck` y `pnpm lint` en verde (web consume el paquete desde server components)
 - [x] 7.3 `pnpm typecheck:mobile` y `pnpm lint:mobile` en verde — `apps/mobile/lib/shared/queries.ts` es wrapper fino y **no** debería requerir edición; si la requiere, es señal de que una firma pública cambió y hay que revisarlo
 - [x] 7.4 Confirmar que ningún `.select()` del camino de deuda/devengado quedó sin `.range()`: `grep -n "\.from(" packages/shared/src/queries.ts` y revisar cada uno contra el spec delta
-- [ ] 7.5 QA manual en `/shared/cuenta-corriente`: el saldo, la ecuación y el extracto muestran exactamente lo mismo que antes del change (los volúmenes actuales no cruzan ningún techo, así que cualquier diferencia es un bug introducido)
-- [ ] 7.6 Archivar el change: mover a `openspec/changes/archive/YYYY-MM-DD-fix-shared-debt-read-completeness/`, sincronizar `openspec/specs/shared-data-access/spec.md` y correr `pnpm openspec:check`
+- [x] 7.5 QA manual en `/shared/cuenta-corriente`: el saldo, la ecuación y el extracto muestran exactamente lo mismo que antes del change (los volúmenes actuales no cruzan ningún techo, así que cualquier diferencia es un bug introducido)
+- [x] 7.6 Archivar el change: mover a `openspec/changes/archive/YYYY-MM-DD-fix-shared-debt-read-completeness/`, sincronizar `openspec/specs/shared-data-access/spec.md` y correr `pnpm openspec:check`
