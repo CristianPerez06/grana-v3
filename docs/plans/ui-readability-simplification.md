@@ -216,6 +216,114 @@ BLOQUE 4 — Entradas adicionales
 
 ---
 
+## 4bis. El modelo que ordena todo: **un mes, tres zooms**
+
+_Sección agregada tras la discusión de producto sobre el horizonte de `Comprometido`. Es el marco conceptual del que cuelgan R1–R8 y F1–F6._
+
+### 4bis.1 — El horizonte se ancla al mes, no a "desde hoy"
+
+La propuesta inicial de la PO fue: *"que la card muestre siempre el mes que viene, cerrado por mes calendario — hasta el 31/7 mostrás todo agosto; el 1/8 pasás a septiembre"*. La intuición es **correcta en lo esencial** (anclar a un mes calendario en vez de a una ventana rodante sin nombre) y **cara en la mecánica**:
+
+- **El 1/8 mostraría septiembre (vacío)** cuando la pregunta viva es agosto, el mes que se está transitando con 30 días por delante. Justo cuando la previsión más sirve, la card muestra lo menos útil.
+- **La información se teletransporta en un borde de fecha.** El 31/7 la card afirma "$2,3M de agosto"; el 1/8 ese número desaparece de ahí y reaparece en otra superficie. Se lee como pérdida de datos y obliga a reaprender dónde están las cosas.
+
+**Regla adoptada — el mes es el contenedor, `hoy` es una línea adentro:**
+
+```
+AGOSTO
+  1 ──────────── 18 ──[hoy]── 31
+  └─── ya pasó ───┘   └─ falta ─┘
+        HECHO            PREVISIÓN
+```
+
+Una sola superficie, cuya composición cambia sola con el calendario:
+
+| Mes que se mira | Composición | Pregunta que responde |
+|---|---|---|
+| Anterior | 100% hecho | "¿cómo me fue?" |
+| Corriente | hecho + previsión | "¿me alcanza para lo que queda?" |
+| Siguiente | 100% previsión | "¿qué se me viene?" ← el pedido de Cristian |
+
+Una regla, cero casos especiales, cero teletransporte. Y cubre la pregunta de mitad de mes, que "siempre el mes que viene" no puede responder.
+
+**Invariante:** la porción PREVISIÓN se rotula siempre como tal y **nunca** entra en `disponible` ni en ningún número que responda "qué tengo" / "qué gasté". El principio "el futuro no es un hecho" se mantiene intacto: cambia el envase, no la regla.
+
+### 4bis.2 — Deuda es un STOCK; el pago es un FLUJO
+
+La pregunta "¿y lo comprometido de agosto, a dónde pasa cuando llega agosto?" destapa una **conflación en el modelo actual**: `Comprometido` mezcla un stock con un flujo, y por eso no tiene respuesta limpia.
+
+| Concepto | Naturaleza | Dónde debe vivir |
+|---|---|---|
+| **Deuda de tarjeta** | **Stock.** "Debo $980.000." Existe ahora, no pertenece a ningún mes | **Cuentas**, junto a Activos y Patrimonio Neto |
+| **Pago de resumen** | **Flujo.** "En agosto pago $340.000" | Una línea del mes correspondiente |
+
+Separados, nada se teletransporta: la deuda vive permanente en Cuentas, y cada mes muestra únicamente el pago que cae en él.
+
+**Consecuencia:** F6 (patrimonio neto) deja de ser un "nice to have". Es **la pieza que hace coherente el modelo de meses** y debe subir de prioridad — pasa a ser prerequisito conceptual de F1.
+
+### 4bis.3 — "Gastos fijos" vs "recurrencias": un campo, no una entidad
+
+Referencia externa (Mobills expone ambos conceptos por separado; su implementación interna **no está verificada** y no se asume). La distinción conceptual sí es real:
+
+- **Recurrencia** = regla que **genera un movimiento** a confirmar. Automatismo de carga. *(Lo que Grana tiene.)*
+- **Gasto fijo** = **expectativa de monto mensual** para un concepto. No genera nada. Sirve para proyectar y para comparar esperado vs. real.
+
+El caso concreto está en la planilla de Cristian: **Expensas, EPE, Litoral Gas, Aguas varían todos los meses**. Modelados como recurrencia generan un monto equivocado que hay que corregir cada mes (fricción + dato sucio). Modelados como estimación proyectan bien y nunca afirman ser un hecho.
+
+**Decisión: NO se crea una segunda entidad.** Agregar un concepto para resolver un problema de simplicidad sale al revés — obliga a elegir entre dos cosas que se solapan ("¿esto es recurrencia o gasto fijo?"), que es más complejidad, no menos.
+
+**En su lugar: un campo en `recurrences`.** Hoy la tabla (migración `0011_recurring_movements.sql`) tiene `amount NUMERIC(18,2) NOT NULL CHECK (amount > 0)` a secas, sin noción de exactitud. Agregar `amount_is_estimated BOOLEAN NOT NULL DEFAULT false` es una migración de una columna y habilita:
+
+- **Monto exacto** (Netflix, alquiler) → genera la instancia con el monto, como hoy.
+- **Monto estimado** (expensas, luz) → proyecta con el estimado y, al llegar la fecha, **pide el monto real** en vez de asumirlo.
+
+Un concepto, dos comportamientos derivados de un dato. Coherente con "sin modos de usuario: la profundidad sigue a los datos, no a un flag".
+
+### 4bis.4 — La arquitectura de información: **un mes, tres zooms**
+
+El agujero de fondo no es "falta una pantalla". Es que **no hay una regla que diga dónde vive cada cosa**, y por eso el análisis se filtra a Movimientos, la previsión se filtra a Comprometido, y la deuda no tiene casa.
+
+```
+   [ ◀   agosto 2026   ▶ ]        ← UN selector, global (F3)
+
+   Inicio       → el mes RESUMIDO       3 números + qué falta + tareas
+   Informes     → el mes ANALIZADO      categorías, ranking, top 10
+   Movimientos  → el mes en DETALLE     línea por línea
+```
+
+Regla mental para el usuario, en una frase: **"Grana siempre te muestra un mes. Elegís cuál arriba, y el nivel de detalle abajo."**
+
+Esto elimina la pregunta "¿dónde veo X?" — la respuesta es siempre "en el mes que estás mirando, al zoom que necesites". Es el cambio conceptual de mayor impacto de todo el brief y **no requiere ninguna feature nueva**: es ruteo, un contexto compartido y mover componentes que ya existen.
+
+Fuera del eje mes viven solo dos cosas, y por buena razón:
+
+- **Cuentas / Tarjetas** — stocks (qué tengo, qué debo). No pertenecen a un mes.
+- **Configuración** — no es información financiera.
+
+### 4bis.5 — Movimientos es una lista. El gráfico se muda.
+
+**Decisión: `/transactions` pierde el desglose por categoría.** Razones:
+
+1. La pestaña se llama por la cosa; debe entregar la cosa.
+2. Hoy `transactions-content.tsx` apila 3 avisos + dona + filtros **antes** de la lista: lo que se fue a buscar arranca abajo del fold.
+3. La dona **duplica** el teaser del dashboard — dos puertas al mismo gráfico, ninguna autoritativa.
+4. El gráfico está ahí **por ausencia de Informes**, no por diseño.
+
+**Lo que sí hay que conservar: el drill-down.** La dona de `/transactions` es hoy el disparador del filtro por categoría (`useTransactionsFilters`). Se muda el **gráfico**, se conserva el **vínculo**: Informes es donde se explora; Movimientos es donde se aterriza filtrada, con un chip de filtro activo visible (`Súper · agosto ✕`).
+
+**Los 3 avisos "por confirmar" no son análisis, son tareas.** No van en Movimientos ni en Informes: van a Inicio, colapsados en una línea (`3 cosas por confirmar ▸`).
+
+### 4bis.6 — Lo que falta robar de las apps de referencia
+
+Además del chip ⇄, el ranking y la grilla plana (§3):
+
+- **Top 10 movimientos del mes** (su *"Clasificación de la cantidad de la factura TOP 10"*). Grana no lo tiene, es barato, y responde *"¿por qué gasté tanto?"* **más rápido que cualquier desglose por categoría** — la respuesta real casi siempre son 2 o 3 movimientos grandes, no una categoría. Candidato fuerte para Informes.
+- **La card de Cuentas con tres números** (Neto / Activos / Deudas) → el hogar del stock de deuda (§4bis.2).
+
+**Lo que NO se roba:** el gating premium con blur, la densidad decorativa, y sobre todo su **"Activos Netos" fusionando monedas** — viola el principio Bimoneda de forma directa.
+
+---
+
 ## 5. Propuesta — rápido (sin tocar contabilidad)
 
 Ordenado por (impacto de lectura ÷ esfuerzo). Todo es composición, copy y ruteo.
@@ -299,9 +407,11 @@ Los 3 avisos ("por confirmar") colapsados por defecto a **una sola línea sumari
 
 ## 6. Propuesta — a futuro (módulos)
 
-### F1 · "El mes que viene" — la 4ª lente (PLAN / PROYECCIÓN) ★ la respuesta a Cristian
+### F1 · El mes como contenedor (HECHO + PREVISIÓN) ★ la respuesta a Cristian
 
-Superficie nueva que responde **"¿con cuánto me quedo el mes que viene?"**:
+_Reformulado según §4bis: no es "una card del mes que viene", es **el mes seleccionado mostrando su parte hecha y su parte por venir**. Mirar septiembre en agosto da 100% previsión — el pedido original — pero sin caso especial._
+
+Con el selector en un mes futuro, responde **"¿con cuánto me quedo?"**:
 
 ```
 SEPTIEMBRE — proyección
@@ -363,7 +473,9 @@ La app de referencia lo pone de entrada: `Activos Netos · Activos · Deudas`. G
 | **4** | R6 + R7 | Consolidan el sistema visual (habilitan F2) |
 | **5** | **F1** | Después de `fix-recurrence-projection-and-orphans`. **Es el mayor salto de valor percibido** |
 | **6** | F2 + F3 | La superficie de análisis y el eje temporal único |
-| **7** | F4, F5, F6 | Producto nuevo, con calma |
+| **7** | F4, F5 | Producto nuevo, con calma |
+
+**Cambio de prioridad tras §4bis:** **F6 (patrimonio neto / Cuentas con Neto·Activos·Deudas) sube a la fase 4**. Deja de ser cosmético: es donde vive el *stock* de deuda, y sin esa casa el modelo de meses de F1 no cierra (§4bis.2).
 
 ---
 
