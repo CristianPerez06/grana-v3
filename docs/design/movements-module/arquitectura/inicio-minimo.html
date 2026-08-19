@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Inicio mínimo</title>
+<style>
+:root{--navy:#0B1A2B;--emerald:#10B981;--emerald-deep:#059669;--emerald-soft:rgba(16,185,129,.12);
+--terracotta:#B56A5A;--slate:#3A6B8A;--warning:#C49A3C;--warning-deep:#B45309;
+--warning-bg:rgba(196,154,60,.10);--warning-soft:rgba(196,154,60,.30);
+--page:#F6F7F9;--border:#E4E8EF;--border-soft:#EEF1F4;--text:#142033;--text-muted:#6B7683;--text-soft:#8A94A3;
+font-family:"Plus Jakarta Sans",Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+*{box-sizing:border-box} body{margin:0;background:#EDEFF3;color:var(--text)}
+.canvas{padding:38px 30px 60px} .wrap{max-width:1180px;margin:0 auto}
+h1{margin:0;font-size:23px;font-weight:850;letter-spacing:-.02em}
+.lede{margin:8px 0 28px;color:var(--text-muted);font-size:13.5px;font-weight:600;max-width:76ch;line-height:1.55}
+.row{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
+figure{margin:0;width:340px}
+figcaption{font-size:11px;font-weight:850;letter-spacing:.09em;text-transform:uppercase;color:var(--text-soft);margin-bottom:9px}
+.screen{background:var(--page);border-radius:22px;padding:22px 18px 26px;min-height:520px;box-shadow:0 18px 44px -34px rgba(11,26,43,.55)}
+.hola{font-size:13px;font-weight:800;color:var(--text-muted);margin-bottom:26px}
+.cap{font-size:10px;font-weight:850;letter-spacing:.13em;text-transform:uppercase;color:var(--text-soft)}
+.mega{font-size:43px;font-weight:850;letter-spacing:-.045em;line-height:1;margin-top:7px;font-variant-numeric:tabular-nums}
+.usd{margin-top:10px;font-size:14.5px;font-weight:800;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.usd b{background:var(--emerald-soft);color:var(--emerald-deep);border-radius:999px;padding:1px 8px;font-size:10px;font-weight:850;margin-right:6px}
+.conc{margin-top:9px;font-size:12.5px;font-weight:700;color:var(--text-soft)}
+.act{border:1px solid var(--warning-soft);background:var(--warning-bg);border-radius:14px;padding:12px;margin-top:26px}
+.act .h{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.act .h b{flex:1;font-size:13px;font-weight:850;color:var(--warning-deep)}
+.act .h .n{background:var(--warning);color:#fff;border-radius:999px;padding:1px 7px;font-size:10px;font-weight:850}
+.act .r{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12.5px}
+.act .r + .r{border-top:1px solid rgba(196,154,60,.25)}
+.act .r .t{flex:1;font-weight:800}
+.act .r .d{font-size:10px;font-weight:750;color:var(--warning-deep)}
+.act .r .go{background:var(--navy);color:#fff;border-radius:8px;padding:5px 10px;font-size:10.5px;font-weight:850}
+.links{margin-top:30px;border-top:1px solid var(--border);}
+.lk{display:flex;align-items:center;gap:10px;padding:13px 0;border-bottom:1px solid var(--border)}
+.lk .nm{flex:1;font-size:13.5px;font-weight:750;color:var(--text-muted)}
+.lk .vl{font-size:15px;font-weight:850;font-variant-numeric:tabular-nums}
+.lk .ch{color:var(--text-soft);font-weight:850}
+.neg{color:var(--terracotta)} .pos{color:var(--emerald-deep)}
+.note{margin-top:13px;border-left:3px solid var(--emerald);background:#fff;border-radius:0 9px 9px 0;padding:10px 12px;font-size:12px;font-weight:650;color:var(--text-muted);line-height:1.55}
+.note b{color:var(--text);font-weight:850}
+.gone{margin-top:26px;background:#fff;border-radius:12px;padding:16px 18px;max-width:620px}
+.gone h4{margin:0 0 10px;font-size:13px;font-weight:850}
+.gone .g{display:flex;gap:10px;font-size:12.5px;font-weight:700;padding:6px 0;color:var(--text-muted)}
+.gone .g + .g{border-top:1px solid var(--border-soft)}
+.gone .g s{text-decoration:line-through;color:var(--text-soft);width:180px;flex:0 0 auto}
+.gone .g b{color:var(--text);font-weight:850}
+</style></head><body><div class="canvas"><div class="wrap">
+
+<h1>Inicio mínimo</h1>
+<p class="lede">Dos preguntas, nada más: <b>¿cuánto tengo?</b> y <b>¿tengo algo que hacer?</b>
+Todo lo demás queda a un tap, en la sección que ya es su casa.</p>
+
+<div class="row">
+  <figure>
+    <figcaption>Día con pendientes</figcaption>
+    <div class="screen">
+      <div class="hola">Hola, Flor.</div>
+      <div class="cap">Para gastar · hoy</div>
+      <div class="mega">$ 1.284.500</div>
+      <div class="usd"><b>USD</b>2.480,00</div>
+      <div class="conc">El 73% está en Galicia.</div>
+
+      <div class="act">
+        <div class="h"><b>Por confirmar</b><span class="n">3</span></div>
+        <div class="r"><span class="t">Netflix<div class="d">Vence hoy</div></span><span class="neg" style="font-weight:850">− $ 9.900</span><span class="go">Confirmar</span></div>
+        <div class="r"><span class="t">Expensas<div class="d">Vencida hace 2 días</div></span><span class="neg" style="font-weight:850">− $ 84.000</span><span class="go">Confirmar</span></div>
+        <div class="r"><span class="t">Farmacia · OSDE<div class="d" style="color:var(--text-soft)">Reintegro esperado</div></span><span class="pos" style="font-weight:850">+ $ 33.600</span><span class="go">Confirmar</span></div>
+      </div>
+
+      <div class="links">
+        <div class="lk"><span class="nm">Este mes</span><span class="vl pos">+ $ 693.700</span><span class="ch">›</span></div>
+        <div class="lk"><span class="nm">Comprometido</span><span class="vl">$ 496.400</span><span class="ch">›</span></div>
+      </div>
+    </div>
+  </figure>
+
+  <figure>
+    <figcaption>Día normal — sin nada que hacer</figcaption>
+    <div class="screen">
+      <div class="hola">Hola, Flor.</div>
+      <div class="cap">Para gastar · hoy</div>
+      <div class="mega">$ 1.284.500</div>
+      <div class="usd"><b>USD</b>2.480,00</div>
+      <div class="conc">El 73% está en Galicia.</div>
+
+      <div class="links">
+        <div class="lk"><span class="nm">Este mes</span><span class="vl pos">+ $ 693.700</span><span class="ch">›</span></div>
+        <div class="lk"><span class="nm">Comprometido</span><span class="vl">$ 496.400</span><span class="ch">›</span></div>
+      </div>
+    </div>
+  </figure>
+
+  <div style="flex:1;min-width:300px">
+    <div class="note"><b>Un número grande, dos renglones y nada más.</b> Sin selector de mes: Inicio
+    es <b>hoy</b>. La navegación por mes vive en Movimientos, donde se analiza.</div>
+
+    <div class="gone">
+      <h4>Qué se fue, y a dónde</h4>
+      <div class="g"><s>Dónde está</s><span>→ a <b>Cuentas</b>. Queda una línea de concentración, que sí dice algo nuevo.</span></div>
+      <div class="g"><s>Balance del mes</s><span>→ colapsa a <b>un renglón con su número</b>. El detalle, a un tap.</span></div>
+      <div class="g"><s>Comprometido</s><span>→ ídem. Las tarjetas y las recurrencias tienen su sección.</span></div>
+      <div class="g"><s>Compartido</s><span>→ a <b>Compartido</b>, que es una pestaña propia.</span></div>
+      <div class="g"><s>Gastaste este mes</s><span>→ al detalle de <b>Este mes</b>.</span></div>
+      <div class="g"><s>¿En qué gasté?</s><span>→ a <b>Movimientos</b>, solapa Gráfico. Ahí ya tiene casa.</span></div>
+    </div>
+  </div>
+</div>
+
+</div></div></body></html>
