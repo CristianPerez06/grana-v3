@@ -351,7 +351,7 @@ export async function updateTransaction(
 
   const { data: existing } = await supabase
     .from('transactions')
-    .select('id, status, account_id, card_period_id, parent_id, currency_code')
+    .select('id, status, account_id, card_period_id, parent_id, currency_code, date')
     .eq('id', id)
     .eq('user_id', userId)
     .single()
@@ -482,6 +482,27 @@ export async function updateTransaction(
     .eq('user_id', userId)
 
   if (error) return { ok: false, errorCode: error.code }
+
+  // Date cascade to the linked reimbursement(s). A reimbursement's accounting
+  // date defaults to its origin expense's; when the expense's date moves, a
+  // reimbursement that was still following it (its date == the expense's OLD
+  // date) moves too. One that was deliberately given a different accreditation
+  // date is left untouched. Without this, re-dating an expense stranded its
+  // reimbursement on the data-entry day (it kept "hoy" instead of the expense's
+  // real date). Balances/debt are derived, so nothing else needs recomputing.
+  if (
+    validation.data.date !== undefined &&
+    existing.date != null &&
+    validation.data.date !== existing.date
+  ) {
+    await supabase
+      .from('transactions')
+      .update({ date: validation.data.date })
+      .eq('linked_transaction_id', id)
+      .eq('type', 'reimbursement')
+      .eq('user_id', userId)
+      .eq('date', existing.date)
+  }
 
   // Share toggle reconciliation (only when the form sent it — simple expenses).
   // Clear existing splits on the expense AND any linked reimbursement (which

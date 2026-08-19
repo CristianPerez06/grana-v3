@@ -385,6 +385,7 @@ export const GlobalTransactionDetail = ({
       <TileDetail
         key="detail"
         rows={[
+          dateRow,
           {
             key: 'status',
             icon: <Check size={16} strokeWidth={2} aria-hidden />,

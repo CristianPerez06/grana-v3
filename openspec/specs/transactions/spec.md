@@ -2062,6 +2062,8 @@ Para el subtipo "a cuenta", la cuenta de acreditación SHALL prerellenarse con u
 
 El bloque "Tiene reintegro" SHALL estar disponible tanto en una compra de un solo pago como en una compra **en cuotas**. En una compra en cuotas, el reintegro SHALL vincularse a la **madre** de la compra (`linked_transaction_id = id de la madre`, un `expense` off-ledger con `is_parent = true`), no a una cuota hija; la atomicidad SHALL abarcar madre, cuotas y reintegro (si el reintegro falla, no se crea nada). Para el subtipo "en resumen" sobre una compra en cuotas, el reintegro SHALL imputarse al período de la **primera cuota** (el período de la fecha de compra), sin ofrecer un selector de período; el usuario reconcilia el período real al confirmarlo. Cuando la compra en cuotas es **compartida**, el reintegro SHALL heredar el mismo split del hogar en una única fila, de modo que la deuda derivada lo netee correctamente.
 
+**Fecha contable del reintegro.** La fecha del reintegro declarado SHALL tomar por default la **fecha del gasto que le dio origen**, nunca el día de carga. Un reintegro pendiente reconcilia su fecha real al confirmarlo; uno recibido queda con la fecha del gasto salvo que el usuario indique otra. Si más tarde se edita la fecha del gasto, el sistema SHALL propagar la nueva fecha a los reintegros vinculados **cuya fecha todavía coincidía con la fecha anterior del gasto** (los que la venían siguiendo por default), dejando intactos los que tienen una fecha de acreditación distinta puesta a mano. No propagar esto dejaba al reintegro varado en el día de carga, desalineado del gasto.
+
 #### Scenario: Declarar un reintegro pendiente a cuenta
 
 - **WHEN** el usuario registra un gasto y activa "Tiene reintegro" con un monto, subtipo "a cuenta", sin marcarlo como recibido
@@ -2083,6 +2085,12 @@ El bloque "Tiene reintegro" SHALL estar disponible tanto en una compra de un sol
 
 - **WHEN** el usuario registra el gasto y marca "Ya me lo acreditaron"
 - **THEN** el reintegro se crea con `received_at` seteado y entra en los cálculos como un hecho real, sin pasar por el estado pendiente
+
+#### Scenario: Editar la fecha del gasto arrastra la del reintegro que la seguía
+
+- **WHEN** el usuario cambia la fecha de un gasto de `2026-08-03` a `2026-07-15`, y el gasto tiene un reintegro vinculado cuya fecha era `2026-08-03` (la que venía siguiendo del gasto)
+- **THEN** el reintegro pasa a fecha `2026-07-15`
+- **AND** un reintegro del mismo gasto con una fecha de acreditación distinta puesta a mano NO se modifica
 
 #### Scenario: Declarar un reintegro a cuenta en una compra en cuotas
 
