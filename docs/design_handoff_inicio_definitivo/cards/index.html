@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>grana · Inicio · cards para implementar</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="cards.css" />
+<style>
+.idx{display:flex;flex-direction:column;gap:10px;margin-top:20px;}
+.idx a{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px 17px;}
+.idx a .n{width:28px;height:28px;border-radius:9px;background:var(--emerald-soft);color:var(--emerald-deep);display:grid;place-items:center;font-size:12.5px;font-weight:800;flex:none;}
+.idx a .t{display:block;font-size:14px;font-weight:800;letter-spacing:-0.015em;}
+.idx a .c{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-top:3px;}
+.idx a .go{margin-left:auto;color:var(--faint);font-size:18px;font-weight:800;}
+</style>
+</head>
+<body>
+<div class="demo">
+  <h1>grana · Inicio — cards para implementar de a una</h1>
+  <p class="note">Cada archivo trae una sola card, aislada, con la nota de comportamiento. Todos comparten <code>cards.css</code> (tokens + estilos por card + breakpoint ≤680px). El orden es el de la pantalla. La spec completa está en <code>../README.md</code>.</p>
+  <div class="idx">
+    <a href="01 - Saldo disponible.html"><span class="n">1</span><span><span class="t">Saldo disponible total</span><span class="c">Hero oscuro · ARS + USD</span></span><span class="go">›</span></a>
+    <a href="02 - Resumen del mes.html"><span class="n">2</span><span><span class="t">Resumen del mes</span><span class="c">Ingresos / Pagado / En tarjeta + ritmo de gasto</span></span><span class="go">›</span></a>
+    <a href="03 - Distribucion del ingreso.html"><span class="n">3</span><span><span class="t">Distribución del ingreso</span><span class="c">Dona + toggle Libre real / Solo gastado (persistido)</span></span><span class="go">›</span></a>
+    <a href="04 - Proximos compromisos.html"><span class="n">4</span><span><span class="t">Próximos compromisos del mes</span><span class="c">Entra vs. sale + neto a cubrir</span></span><span class="go">›</span></a>
+    <a href="05 - Economia compartida.html"><span class="n">5</span><span><span class="t">Economía compartida</span><span class="c">Card condicional · solo si hay actividad</span></span><span class="go">›</span></a>
+  </div>
+  <p class="note" style="margin-top:22px;">El armado final (sidebar, topbar, grillas <code>.r-top</code> / <code>.r-two</code>, bottom nav mobile) está en <code>../Inicio Definitivo (Web).html</code> y <code>../Inicio Definitivo (Mobile).html</code>.</p>
+</div>
+</body>
+</html>

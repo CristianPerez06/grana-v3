@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>grana · Card 2 · Resumen del mes</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="cards.css" />
+</head>
+<body>
+<div class="demo">
+  <h1>Card 2 · Resumen del mes</h1>
+  <p class="note">Clases: <code>.card</code> + <code>.tri</code> (3 tiles) + <code>.ritmo</code>. Ritmo de gasto = pagado / ingresos (64%). Si supera 100%, la barra pasa a <code>--terracota</code> y cambia el copy. Depende del mes seleccionado.</p>
+  <div class="slot">
+    <section class="card">
+      <div class="card-h"><div><h2>Resumen del mes</h2><div class="sub">Agosto 2026</div></div><a href="#" class="link">Ver detalle</a></div>
+      <div class="tri">
+        <div class="t"><div class="k"><span class="d" style="background:var(--emerald)"></span>Ingresos</div><div class="v tnum" style="color:var(--emerald-deep)">$ 2.100k</div><div class="u tnum">USD 1.615</div></div>
+        <div class="t"><div class="k"><span class="d" style="background:var(--terracota)"></span>Pagado</div><div class="v tnum" style="color:var(--terracota)">$ 1.350k</div><div class="u tnum">USD 1.038</div></div>
+        <div class="t"><div class="k"><span class="d" style="background:var(--amber)"></span>En tarjeta</div><div class="v tnum" style="color:var(--amber-deep)">$ 480k</div><div class="u tnum">USD 369</div></div>
+      </div>
+      <div class="ritmo">
+        <div class="rt"><span class="k">Ritmo de gasto</span><span class="v tnum">64%</span></div>
+        <div class="bar"><div class="f" style="width:64%"></div></div>
+        <p class="cap"><b>Llevás ejecutado el 64% de tus ingresos.</b> Vas en ritmo para cerrar el mes con margen.</p>
+      </div>
+    </section>
+  </div>
+</div>
+</body>
+</html>

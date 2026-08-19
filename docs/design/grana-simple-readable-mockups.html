@@ -1,0 +1,912 @@
+<div id="grana-simple-mockups" class="grana-simple-mockups">
+  <style>
+    #grana-simple-mockups {
+      --grana-bg: light-dark(#f5f7f4, #0d1110);
+      --grana-phone: light-dark(#eef3ee, #101817);
+      --grana-surface: light-dark(#ffffff, #18201f);
+      --grana-surface-2: light-dark(#edf5f0, #20302d);
+      --grana-text: light-dark(#13211d, #eff7f2);
+      --grana-muted: light-dark(#62716b, #9aaaa3);
+      --grana-soft: light-dark(#dfe9e4, #2a3835);
+      --grana-navy: light-dark(#102b35, #0f2730);
+      --grana-green: #18c779;
+      --grana-green-soft: light-dark(#dff8ec, #18382a);
+      --grana-red: #c85b4a;
+      --grana-amber: #f1bf50;
+      --grana-blue: #4c8bd9;
+      --grana-purple: #8066d9;
+      color: var(--grana-text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    #grana-simple-mockups * {
+      box-sizing: border-box;
+    }
+
+    #grana-simple-mockups .mockup-wrap {
+      display: grid;
+      gap: 18px;
+    }
+
+    #grana-simple-mockups .mockup-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    #grana-simple-mockups .mockup-controls button {
+      border: 1px solid var(--grana-soft);
+      background: var(--grana-surface);
+      color: var(--grana-text);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    #grana-simple-mockups .mockup-controls button[aria-pressed="true"] {
+      background: var(--grana-navy);
+      border-color: var(--grana-navy);
+      color: #ffffff;
+    }
+
+    #grana-simple-mockups .phones {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+      gap: 16px;
+      align-items: start;
+    }
+
+    #grana-simple-mockups .phone {
+      min-height: 620px;
+      border: 1px solid var(--grana-soft);
+      border-radius: 30px;
+      background: var(--grana-phone);
+      overflow: hidden;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.13);
+    }
+
+    #grana-simple-mockups .screen {
+      display: none;
+      min-height: 620px;
+      padding: 18px;
+      position: relative;
+    }
+
+    #grana-simple-mockups[data-view="chequeo"] .screen-chequeo,
+    #grana-simple-mockups[data-view="planilla"] .screen-planilla,
+    #grana-simple-mockups[data-view="alta"] .screen-alta {
+      display: block;
+    }
+
+    #grana-simple-mockups .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    #grana-simple-mockups .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+    }
+
+    #grana-simple-mockups .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 99px;
+      background: var(--grana-green);
+    }
+
+    #grana-simple-mockups .icon-btn,
+    #grana-simple-mockups .fab {
+      border: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: inherit;
+    }
+
+    #grana-simple-mockups .icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      background: var(--grana-surface);
+    }
+
+    #grana-simple-mockups .month {
+      font-size: 13px;
+      color: var(--grana-muted);
+      font-weight: 600;
+    }
+
+    #grana-simple-mockups .hero {
+      background: var(--grana-navy);
+      color: #ffffff;
+      border-radius: 20px;
+      padding: 18px;
+      margin-bottom: 12px;
+    }
+
+    #grana-simple-mockups .eyebrow {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.58);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    #grana-simple-mockups .hero-value {
+      font-size: 36px;
+      line-height: 1.05;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    #grana-simple-mockups .usd-line {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+      margin-top: 10px;
+      color: rgba(255,255,255,0.84);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    #grana-simple-mockups .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border-radius: 999px;
+      background: var(--grana-green-soft);
+      color: var(--grana-green);
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    #grana-simple-mockups .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    #grana-simple-mockups .mini {
+      background: var(--grana-surface);
+      border: 1px solid var(--grana-soft);
+      border-radius: 16px;
+      padding: 12px;
+      min-height: 82px;
+    }
+
+    #grana-simple-mockups .label {
+      color: var(--grana-muted);
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    #grana-simple-mockups .value {
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    #grana-simple-mockups .hint {
+      margin-top: 5px;
+      color: var(--grana-muted);
+      font-size: 11px;
+      line-height: 1.25;
+    }
+
+    #grana-simple-mockups .section {
+      background: var(--grana-surface);
+      border: 1px solid var(--grana-soft);
+      border-radius: 18px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    #grana-simple-mockups .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    #grana-simple-mockups .section-title {
+      font-weight: 800;
+      font-size: 15px;
+    }
+
+    #grana-simple-mockups .small-action {
+      color: var(--grana-green);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    #grana-simple-mockups .row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 0;
+      border-top: 1px solid var(--grana-soft);
+    }
+
+    #grana-simple-mockups .row:first-of-type {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    #grana-simple-mockups .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      background: var(--grana-surface-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--grana-muted);
+    }
+
+    #grana-simple-mockups .row-title {
+      font-size: 13px;
+      font-weight: 800;
+      min-width: 0;
+    }
+
+    #grana-simple-mockups .row-sub {
+      color: var(--grana-muted);
+      font-size: 11px;
+      margin-top: 2px;
+      min-width: 0;
+    }
+
+    #grana-simple-mockups .amount {
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    #grana-simple-mockups .out { color: var(--grana-red); }
+    #grana-simple-mockups .in { color: var(--grana-green); }
+    #grana-simple-mockups .amber { color: var(--grana-amber); }
+
+    #grana-simple-mockups .fab {
+      position: absolute;
+      right: 20px;
+      bottom: 20px;
+      width: 62px;
+      height: 62px;
+      border-radius: 22px;
+      background: var(--grana-green);
+      color: #ffffff;
+      box-shadow: 0 12px 30px rgba(24, 199, 121, 0.38);
+    }
+
+    #grana-simple-mockups .sheet {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
+      background: var(--grana-surface);
+      border: 1px solid var(--grana-soft);
+      border-radius: 24px;
+      padding: 14px;
+      box-shadow: 0 -10px 35px rgba(0, 0, 0, 0.18);
+    }
+
+    #grana-simple-mockups .sheet-title {
+      font-size: 16px;
+      font-weight: 800;
+      margin: 2px 0 12px;
+    }
+
+    #grana-simple-mockups .actions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    #grana-simple-mockups .action-tile {
+      border: 1px solid var(--grana-soft);
+      background: var(--grana-surface-2);
+      color: var(--grana-text);
+      border-radius: 16px;
+      padding: 12px;
+      min-height: 74px;
+      text-align: left;
+      font: inherit;
+      display: grid;
+      gap: 6px;
+      align-content: start;
+    }
+
+    #grana-simple-mockups .action-tile strong {
+      font-size: 13px;
+    }
+
+    #grana-simple-mockups .action-tile span {
+      font-size: 11px;
+      color: var(--grana-muted);
+      line-height: 1.25;
+    }
+
+    #grana-simple-mockups .plan-hero {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    #grana-simple-mockups .plan-line {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: baseline;
+      background: var(--grana-surface);
+      border: 1px solid var(--grana-soft);
+      border-radius: 15px;
+      padding: 10px 12px;
+    }
+
+    #grana-simple-mockups .plan-line strong {
+      font-size: 13px;
+    }
+
+    #grana-simple-mockups .plan-line b {
+      font-size: 16px;
+      white-space: nowrap;
+    }
+
+    #grana-simple-mockups .dense-table {
+      display: grid;
+      gap: 8px;
+    }
+
+    #grana-simple-mockups .dense-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 0;
+      border-top: 1px solid var(--grana-soft);
+      font-size: 13px;
+    }
+
+    #grana-simple-mockups .dense-row:first-child {
+      border-top: 0;
+    }
+
+    #grana-simple-mockups .bar {
+      height: 8px;
+      background: var(--grana-soft);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    #grana-simple-mockups .bar span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--grana-blue);
+    }
+
+    #grana-simple-mockups .bar.orange span { background: var(--grana-amber); }
+    #grana-simple-mockups .bar.purple span { background: var(--grana-purple); }
+
+    #grana-simple-mockups .quick-form {
+      display: grid;
+      gap: 12px;
+    }
+
+    #grana-simple-mockups .amount-box {
+      background: var(--grana-surface);
+      border: 1px solid var(--grana-soft);
+      border-radius: 20px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    #grana-simple-mockups .amount-big {
+      font-size: 40px;
+      font-weight: 800;
+      line-height: 1.05;
+    }
+
+    #grana-simple-mockups .category-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    #grana-simple-mockups .cat {
+      border: 1px solid var(--grana-soft);
+      background: var(--grana-surface);
+      color: var(--grana-text);
+      border-radius: 15px;
+      min-height: 72px;
+      display: grid;
+      justify-items: center;
+      align-content: center;
+      gap: 6px;
+      font: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    #grana-simple-mockups .cat[aria-pressed="true"] {
+      border-color: var(--grana-green);
+      background: var(--grana-green-soft);
+    }
+
+    #grana-simple-mockups .cat-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 11px;
+      background: var(--grana-surface-2);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--grana-muted);
+    }
+
+    #grana-simple-mockups .form-row {
+      background: var(--grana-surface);
+      border: 1px solid var(--grana-soft);
+      border-radius: 15px;
+      padding: 11px 12px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    #grana-simple-mockups .save {
+      border: 0;
+      background: var(--grana-green);
+      color: #ffffff;
+      border-radius: 16px;
+      padding: 14px;
+      font: inherit;
+      font-weight: 800;
+    }
+
+    #grana-simple-mockups .phone-caption {
+      font-size: 12px;
+      color: var(--grana-muted);
+      margin: 4px 4px 0;
+      font-weight: 600;
+    }
+
+    @media (max-width: 760px) {
+      #grana-simple-mockups .phones {
+        grid-template-columns: 1fr;
+      }
+
+      #grana-simple-mockups .phone {
+        max-width: 390px;
+        width: 100%;
+        margin-inline: auto;
+      }
+    }
+  </style>
+
+  <div class="mockup-wrap">
+    <div class="mockup-controls" aria-label="Elegir pantalla">
+      <button type="button" data-view="chequeo" aria-pressed="true">Inicio simple</button>
+      <button type="button" data-view="planilla" aria-pressed="false">Resumen planilla</button>
+      <button type="button" data-view="alta" aria-pressed="false">Alta rápida</button>
+    </div>
+
+    <div class="phones">
+      <section class="phone" aria-label="Mockup principal">
+        <div class="screen screen-chequeo">
+          <div class="topbar">
+            <div>
+              <div class="brand"><span class="dot"></span> grana</div>
+              <div class="month">Miércoles 19 de agosto</div>
+            </div>
+            <button class="icon-btn" type="button" aria-label="Ocultar montos"><i data-lucide="eye"></i></button>
+          </div>
+
+          <div class="hero">
+            <div class="eyebrow">En tus cuentas hoy</div>
+            <div class="hero-value">$ 473.883</div>
+            <div class="usd-line"><span class="pill">USD</span> 3.200 disponibles</div>
+          </div>
+
+          <div class="grid-2">
+            <div class="mini">
+              <div class="label">Este mes</div>
+              <div class="value out">-$ 2.321.276</div>
+              <div class="hint">Gastos cargados</div>
+            </div>
+            <div class="mini">
+              <div class="label">Entró</div>
+              <div class="value in">$ 2.795.160</div>
+              <div class="hint">Sueldo + adicionales</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <div class="section-title">Para mirar ahora</div>
+              <div class="small-action">Ver mes</div>
+            </div>
+            <div class="row">
+              <div class="avatar"><i data-lucide="credit-card"></i></div>
+              <div>
+                <div class="row-title">Santander Visa</div>
+                <div class="row-sub">Resumen a pagar</div>
+              </div>
+              <div class="amount out">$ 697.188</div>
+            </div>
+            <div class="row">
+              <div class="avatar"><i data-lucide="calendar-clock"></i></div>
+              <div>
+                <div class="row-title">Alquiler</div>
+                <div class="row-sub">Vence esta semana</div>
+              </div>
+              <div class="amount amber">$ 737.826</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <div class="section-title">Últimos movimientos</div>
+              <div class="small-action">Todos</div>
+            </div>
+            <div class="row">
+              <div class="avatar"><i data-lucide="shopping-basket"></i></div>
+              <div>
+                <div class="row-title">Verdulería</div>
+                <div class="row-sub">BBVA · hoy</div>
+              </div>
+              <div class="amount out">-$ 5.000</div>
+            </div>
+            <div class="row">
+              <div class="avatar"><i data-lucide="wallet"></i></div>
+              <div>
+                <div class="row-title">Sueldo</div>
+                <div class="row-sub">Galicia · hoy</div>
+              </div>
+              <div class="amount in">+$ 100.000</div>
+            </div>
+          </div>
+
+          <button class="fab" type="button" aria-label="Agregar"><i data-lucide="plus"></i></button>
+        </div>
+
+        <div class="screen screen-planilla">
+          <div class="topbar">
+            <button class="icon-btn" type="button" aria-label="Volver"><i data-lucide="chevron-left"></i></button>
+            <div>
+              <div class="brand">Resumen del mes</div>
+              <div class="month">Agosto 2026</div>
+            </div>
+            <button class="icon-btn" type="button" aria-label="Cambiar mes"><i data-lucide="calendar"></i></button>
+          </div>
+
+          <div class="plan-hero">
+            <div class="plan-line"><strong>Sueldo + adicionales</strong><b class="in">$ 2.795.160</b></div>
+            <div class="plan-line"><strong>Gastos cargados</strong><b class="out">-$ 2.321.276</b></div>
+            <div class="plan-line"><strong>Resultado del mes</strong><b>$ 473.883</b></div>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <div class="section-title">Tarjetas</div>
+              <div class="small-action">Pagar</div>
+            </div>
+            <div class="dense-table">
+              <div class="dense-row"><span>Santander Visa</span><strong class="out">$ 697.188</strong></div>
+              <div class="dense-row"><span>Galicia Visa</span><strong class="out">$ 128.370</strong></div>
+              <div class="dense-row"><span>Galicia Mastercard</span><strong class="out">$ 27.323</strong></div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <div class="section-title">Fijos y compromisos</div>
+              <div class="small-action">Editar</div>
+            </div>
+            <div class="dense-table">
+              <div class="dense-row"><span>Alquiler</span><strong>$ 737.826</strong></div>
+              <div class="dense-row"><span>Expensas</span><strong>$ 229.232</strong></div>
+              <div class="dense-row"><span>Spotify + HBO + servicios</span><strong>$ 15.525</strong></div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <div class="section-title">USD</div>
+              <div class="pill">Separado</div>
+            </div>
+            <div class="dense-table">
+              <div class="dense-row"><span>Sueldo USD</span><strong>3.800</strong></div>
+              <div class="dense-row"><span>Venta USD</span><strong>600 × $ 1.180</strong></div>
+              <div class="dense-row"><span>Sobrante USD</span><strong>3.200</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="screen screen-alta">
+          <div class="topbar">
+            <button class="icon-btn" type="button" aria-label="Cerrar"><i data-lucide="x"></i></button>
+            <div>
+              <div class="brand">Nuevo gasto</div>
+              <div class="month">BBVA · ARS · hoy</div>
+            </div>
+            <button class="icon-btn" type="button" aria-label="Más"><i data-lucide="more-horizontal"></i></button>
+          </div>
+
+          <div class="quick-form">
+            <div class="amount-box">
+              <div class="label">Monto</div>
+              <div class="amount-big">-$ 5.000</div>
+            </div>
+
+            <div class="category-grid" aria-label="Categorías frecuentes">
+              <button class="cat" type="button" aria-pressed="true"><span class="cat-icon"><i data-lucide="shopping-basket"></i></span>Verdulería</button>
+              <button class="cat" type="button" aria-pressed="false"><span class="cat-icon"><i data-lucide="utensils"></i></span>Comida</button>
+              <button class="cat" type="button" aria-pressed="false"><span class="cat-icon"><i data-lucide="car"></i></span>Transporte</button>
+              <button class="cat" type="button" aria-pressed="false"><span class="cat-icon"><i data-lucide="credit-card"></i></span>Tarjeta</button>
+              <button class="cat" type="button" aria-pressed="false"><span class="cat-icon"><i data-lucide="repeat"></i></span>Repetir</button>
+              <button class="cat" type="button" aria-pressed="false"><span class="cat-icon"><i data-lucide="grid-2x2"></i></span>Otra</button>
+            </div>
+
+            <div class="form-row"><span>Cuenta</span><strong>BBVA</strong></div>
+            <div class="form-row"><span>Nota</span><strong>verdulería</strong></div>
+            <div class="form-row"><span>Fecha</span><strong>Hoy</strong></div>
+            <button class="save" type="button">Guardar gasto</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="phone" aria-label="Mockup secundario">
+        <div class="screen screen-chequeo">
+          <div class="topbar">
+            <div>
+              <div class="brand">Gastos simples</div>
+              <div class="month">Agosto · ARS</div>
+            </div>
+            <button class="icon-btn" type="button" aria-label="Filtrar"><i data-lucide="sliders-horizontal"></i></button>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <div>
+                <div class="section-title">Ranking del mes</div>
+                <div class="hint">Monto, peso y cantidad</div>
+              </div>
+              <div class="pill">Gastos</div>
+            </div>
+            <div class="row">
+              <div class="avatar"><i data-lucide="home"></i></div>
+              <div>
+                <div class="row-title">Vivienda</div>
+                <div class="row-sub">42% · 6 movimientos</div>
+                <div class="bar"><span style="width: 42%"></span></div>
+              </div>
+              <div class="amount out">$ 978.126</div>
+            </div>
+            <div class="row">
+              <div class="avatar"><i data-lucide="credit-card"></i></div>
+              <div>
+                <div class="row-title">Tarjetas</div>
+                <div class="row-sub">31% · 3 resúmenes</div>
+                <div class="bar orange"><span style="width: 31%"></span></div>
+              </div>
+              <div class="amount out">$ 852.882</div>
+            </div>
+            <div class="row">
+              <div class="avatar"><i data-lucide="shopping-basket"></i></div>
+              <div>
+                <div class="row-title">Comida</div>
+                <div class="row-sub">11% · 18 movimientos</div>
+                <div class="bar purple"><span style="width: 11%"></span></div>
+              </div>
+              <div class="amount out">$ 254.430</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <div class="section-title">Presupuestos blandos</div>
+              <div class="small-action">Crear</div>
+            </div>
+            <div class="dense-table">
+              <div>
+                <div class="dense-row"><span>Comida</span><strong>72%</strong></div>
+                <div class="bar"><span style="width: 72%"></span></div>
+              </div>
+              <div>
+                <div class="dense-row"><span>Transporte</span><strong>38%</strong></div>
+                <div class="bar orange"><span style="width: 38%"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="screen screen-planilla">
+          <div class="topbar">
+            <div>
+              <div class="brand">Por tarjeta</div>
+              <div class="month">Lo de la planilla, ordenado</div>
+            </div>
+            <button class="icon-btn" type="button" aria-label="Más"><i data-lucide="more-horizontal"></i></button>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <div>
+                <div class="section-title">Santander Visa</div>
+                <div class="hint">Resumen actual</div>
+              </div>
+              <div class="amount out">$ 697.188</div>
+            </div>
+            <div class="dense-row"><span>Seguro Cruze</span><strong>$ 74.854</strong></div>
+            <div class="dense-row"><span>Seguro Flip5</span><strong>$ 43.740</strong></div>
+            <div class="dense-row"><span>UCEMA</span><strong>$ 290.000</strong></div>
+            <div class="dense-row"><span>Uber</span><strong>$ 11.002</strong></div>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <div>
+                <div class="section-title">Galicia Visa</div>
+                <div class="hint">Consumos cargados</div>
+              </div>
+              <div class="amount out">$ 78.801</div>
+            </div>
+            <div class="dense-row"><span>Spotify</span><strong>$ 3.300</strong></div>
+            <div class="dense-row"><span>Smiles</span><strong>$ 6.500</strong></div>
+            <div class="dense-row"><span>Herencia</span><strong>$ 69.001</strong></div>
+          </div>
+        </div>
+
+        <div class="screen screen-alta">
+          <div class="topbar">
+            <div>
+              <div class="brand">Elegí intención</div>
+              <div class="month">El + no abre un form genérico</div>
+            </div>
+          </div>
+          <div class="sheet" style="position: static; margin-top: 120px;">
+            <div class="sheet-title">¿Qué querés registrar?</div>
+            <div class="actions-grid">
+              <button class="action-tile" type="button"><i data-lucide="arrow-up-right"></i><strong>Gasto</strong><span>Compra común o débito</span></button>
+              <button class="action-tile" type="button"><i data-lucide="credit-card"></i><strong>Compra tarjeta</strong><span>Cuotas, resumen y cierre</span></button>
+              <button class="action-tile" type="button"><i data-lucide="arrow-down-left"></i><strong>Ingreso</strong><span>Sueldo o adicional</span></button>
+              <button class="action-tile" type="button"><i data-lucide="repeat-2"></i><strong>Transferencia</strong><span>Entre cuentas propias</span></button>
+              <button class="action-tile" type="button"><i data-lucide="scale"></i><strong>Ajuste</strong><span>Corregir saldo real</span></button>
+              <button class="action-tile" type="button"><i data-lucide="rotate-cw"></i><strong>Similar</strong><span>Repetir un movimiento</span></button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="phone" aria-label="Mockup detalle">
+        <div class="screen screen-chequeo">
+          <div class="topbar">
+            <button class="icon-btn" type="button" aria-label="Volver"><i data-lucide="chevron-left"></i></button>
+            <div>
+              <div class="brand">Movimiento</div>
+              <div class="month">Ficha simple primero</div>
+            </div>
+            <button class="icon-btn" type="button" aria-label="Editar"><i data-lucide="pencil"></i></button>
+          </div>
+
+          <div class="section">
+            <div class="row" style="border-top: 0; padding-top: 0;">
+              <div class="avatar"><i data-lucide="shopping-basket"></i></div>
+              <div>
+                <div class="row-title" style="font-size: 18px;">Verdulería</div>
+                <div class="row-sub">Comida · BBVA</div>
+              </div>
+              <div class="amount out" style="font-size: 18px;">-$ 5.000</div>
+            </div>
+            <div class="dense-row"><span>Fecha</span><strong>Hoy</strong></div>
+            <div class="dense-row"><span>Presupuesto</span><strong>Incluido</strong></div>
+            <div class="dense-row"><span>Nota</span><strong>verdulería</strong></div>
+          </div>
+
+          <div class="grid-2">
+            <button class="action-tile" type="button"><i data-lucide="copy"></i><strong>Registrar similar</strong><span>Mismo gasto, editable</span></button>
+            <button class="action-tile" type="button"><i data-lucide="trash-2"></i><strong>Eliminar</strong><span>Con confirmación</span></button>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <div class="section-title">Más contexto</div>
+              <div class="small-action">Abrir</div>
+            </div>
+            <div class="hint">Cuotas, reintegros, compartido, recurrencia y peso en el mes viven acá cuando aplican.</div>
+          </div>
+        </div>
+
+        <div class="screen screen-planilla">
+          <div class="topbar">
+            <div>
+              <div class="brand">Entradas adicionales</div>
+              <div class="month">Separadas del sueldo</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <div class="section-title">Agosto</div>
+              <div class="amount in">$ 1.728.000</div>
+            </div>
+            <div class="dense-row"><span>Sobrante mes anterior</span><strong>$ 1.500.000</strong></div>
+            <div class="dense-row"><span>Alquiler Laprida</span><strong>$ 228.000</strong></div>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <div class="section-title">Julio</div>
+              <div class="amount in">$ 359.160</div>
+            </div>
+            <div class="dense-row"><span>Cochera</span><strong>$ 30.000</strong></div>
+            <div class="dense-row"><span>Devolución Galicia</span><strong>$ 39.160</strong></div>
+            <div class="dense-row"><span>Extracción plazo fijo</span><strong>$ 290.000</strong></div>
+          </div>
+        </div>
+
+        <div class="screen screen-alta">
+          <div class="topbar">
+            <button class="icon-btn" type="button" aria-label="Volver"><i data-lucide="chevron-left"></i></button>
+            <div>
+              <div class="brand">Compra con tarjeta</div>
+              <div class="month">Entrada directa desde el +</div>
+            </div>
+          </div>
+
+          <div class="quick-form">
+            <div class="amount-box">
+              <div class="label">Total</div>
+              <div class="amount-big">-$ 128.370</div>
+            </div>
+            <div class="form-row"><span>Tarjeta</span><strong>Galicia Visa</strong></div>
+            <div class="form-row"><span>Cuotas</span><strong>1 pago</strong></div>
+            <div class="form-row"><span>Categoría</span><strong>Comida</strong></div>
+            <div class="form-row"><span>Fecha</span><strong>Hoy</strong></div>
+            <button class="save" type="button">Guardar compra</button>
+            <div class="hint">FX, reintegro, compartido y recurrencia aparecen solo cuando el usuario los activa.</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const root = document.getElementById('grana-simple-mockups');
+      if (!root) return;
+      const buttons = Array.from(root.querySelectorAll('[data-view]'));
+      function setView(view) {
+        root.setAttribute('data-view', view);
+        buttons.forEach((button) => {
+          button.setAttribute('aria-pressed', button.getAttribute('data-view') === view ? 'true' : 'false');
+        });
+      }
+      buttons.forEach((button) => {
+        button.addEventListener('click', () => setView(button.getAttribute('data-view')));
+      });
+      setView('chequeo');
+    })();
+  </script>
+</div>

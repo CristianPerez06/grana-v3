@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>grana · Card 4 · Próximos compromisos del mes</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="cards.css" />
+</head>
+<body>
+<div class="demo">
+  <h1>Card 4 · Próximos compromisos del mes</h1>
+  <p class="note">Clases: <code>.card</code> + <code>.scalebox</code> (columnas <code>.col.in</code> / <code>.col.out</code>) + <code>.netbar</code> + <code>.hint.warn</code>. Neto = entra − sale; si es positivo mostrar <code>+</code> y el monto en <code>#4FD6A4</code> sobre navy. El pie compara el neto contra el libre real: si lo cubre, mensaje positivo en <code>--emerald-deep</code> (usar <code>.hint</code> sin <code>.warn</code>). En mobile las columnas pasan a una sola.</p>
+  <div class="slot">
+    <section class="card">
+      <div class="card-h"><div><h2>Próximos compromisos del mes</h2><div class="sub">Lo que entra y lo que sale</div></div><a href="#" class="link">Ver todos</a></div>
+      <div class="scalebox">
+        <div class="col in">
+          <div class="k">Entra</div>
+          <div class="v tnum" style="color:var(--emerald-deep)">$ 468.960</div>
+          <div class="u tnum">USD 360,73</div>
+          <div class="ls"><div class="li"><span>Honorarios</span><span class="tnum">$ 350k</span></div><div class="li"><span>Hogar J|CP</span><span class="tnum">$ 118,9k</span></div></div>
+        </div>
+        <div class="col out">
+          <div class="k">Sale</div>
+          <div class="v tnum" style="color:var(--terracota)">$ 788.891</div>
+          <div class="u tnum">USD 606,83</div>
+          <div class="ls"><div class="li"><span>Visa 10/08</span><span class="tnum">$ 743,7k</span></div><div class="li"><span>Recurrencias</span><span class="tnum">$ 45,2k</span></div></div>
+        </div>
+      </div>
+      <div class="netbar"><span class="k">Neto a cubrir</span><span class="v tnum">−$ 319.931<small>USD 246,10</small></span></div>
+      <p class="hint warn">Con <b>$ 270k libres</b> no alcanza: faltan <b>$ 49.931</b> antes del 10/08.</p>
+    </section>
+  </div>
+</div>
+</body>
+</html>

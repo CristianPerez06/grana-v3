@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>grana · Card 3 · Distribución del ingreso</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="cards.css" />
+</head>
+<body>
+<div class="demo">
+  <h1>Card 3 · Distribución del ingreso (con toggle)</h1>
+  <p class="note">Clases: <code>.card</code> + <code>.dist-tog</code> (tablist) + dos paneles <code>.dist[data-view]</code> + dos pies <code>.hint[data-view]</code>. Vista <code>real</code>: dona de 3 tramos (64 / 87 / 100). Vista <code>simple</code>: 2 tramos (64 / 100). La elección se persiste en <code>localStorage['grana.inicio.distView']</code>, default <code>real</code>. Los paneles se muestran/ocultan (no se reemplaza el DOM).</p>
+  <div class="slot">
+    <section class="card">
+      <div class="card-h"><div><h2>Distribución del ingreso</h2><div class="sub">Sobre $ 2.100k de agosto</div></div><div class="seg"><button class="on">ARS</button><button>USD</button></div></div>
+      <div class="dist-tog" role="tablist">
+        <button class="on" data-view="real" role="tab" aria-selected="true">Libre real<small>descuenta comprometido</small></button>
+        <button data-view="simple" role="tab" aria-selected="false">Solo gastado<small>sin comprometido</small></button>
+      </div>
+      <div class="dist on" data-view="real">
+        <div class="donut" style="background:conic-gradient(var(--terracota) 0 64%,var(--amber) 64% 87%,var(--emerald) 87% 100%)">
+          <div class="ctr"><div><div class="vv tnum">13%</div><div class="tt">Libre real</div></div></div>
+        </div>
+        <div class="dleg">
+          <div class="r"><div class="nm"><span class="d" style="background:var(--terracota)"></span>Gastado · 64%</div><div class="am tnum">$ 1.350k</div><div class="u tnum">USD 1.038</div></div>
+          <div class="r"><div class="nm"><span class="d" style="background:var(--amber)"></span>Comprometido · 23%</div><div class="am tnum" style="color:var(--amber-deep)">$ 480k</div><div class="u tnum">USD 369</div></div>
+          <div class="r hi"><div class="nm"><span class="d" style="background:var(--emerald)"></span>Libre real · 13%</div><div class="am tnum" style="color:var(--emerald-deep)">$ 270k</div><div class="u tnum">USD 207</div></div>
+        </div>
+      </div>
+      <div class="dist" data-view="simple">
+        <div class="donut" style="background:conic-gradient(var(--terracota) 0 64%,var(--line) 64% 100%)">
+          <div class="ctr"><div><div class="vv tnum">36%</div><div class="tt">Libre</div></div></div>
+        </div>
+        <div class="dleg">
+          <div class="r"><div class="nm"><span class="d" style="background:var(--terracota)"></span>Gastado · 64%</div><div class="am tnum">$ 1.350k</div><div class="u tnum">USD 1.038</div></div>
+          <div class="r hi"><div class="nm"><span class="d" style="background:var(--faint)"></span>Libre · 36%</div><div class="am tnum" style="color:var(--emerald-deep)">$ 750k</div><div class="u tnum">USD 576</div></div>
+        </div>
+      </div>
+      <p class="hint" data-view="real">Del 36% que parecía libre, <b>23% ya está comprometido</b> en tarjeta. Te queda <b>$ 270k</b> sin asignar.</p>
+      <p class="hint" data-view="simple" style="display:none">Solo lo que ya salió de tu caja. Los <b>$ 480k en tarjeta</b> todavía no se pagaron.</p>
+    </section>
+  </div>
+</div>
+<script>
+(function(){
+  var tog=document.querySelector('.dist-tog');
+  var KEY='grana.inicio.distView';
+  function apply(v){
+    tog.querySelectorAll('button').forEach(function(b){var on=b.dataset.view===v;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);});
+    document.querySelectorAll('.dist').forEach(function(d){d.classList.toggle('on',d.dataset.view===v);});
+    document.querySelectorAll('.hint[data-view]').forEach(function(h){h.style.display=h.dataset.view===v?'':'none';});
+    try{localStorage.setItem(KEY,v);}catch(e){}
+  }
+  tog.addEventListener('click',function(e){var b=e.target.closest('button');if(b)apply(b.dataset.view);});
+  var saved=null;try{saved=localStorage.getItem(KEY);}catch(e){}
+  apply(saved==='simple'?'simple':'real');
+})();
+</script>
+</body>
+</html>
