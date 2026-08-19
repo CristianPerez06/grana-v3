@@ -77,6 +77,26 @@ Estado real de cada ítem: **[nuevo]** a construir · **[parcial]** ya empezado 
 - **Home customizable: no-go por ahora.** Conviene una home *curada*; customizar cards esconde info crítica y suma configuración.
 - **Llenar Settings para parecer maduro:** lo que falta son features (arriba), no densidad de menú.
 
+## Anexo — Cómo Mobills proyecta (Realizado/Pendiente) y por qué Grana no lo copia
+
+_Relevante para el futuro módulo `cashflow`. Verificado con las capturas (números reales)._
+
+**Mobills sí proyecta, y el motor es un flag por transacción, no "Gasto fijo".**
+
+- El dashboard muestra dos números por cuenta: **Saldo actual** vs **Saldo previsto**. Prueba con números reales: Billetera con saldo actual **$5.000.000,36** y saldo previsto **$4.910.000,36** — diferencia **exactamente $90.000**, que es un gasto de tarjeta fechado a futuro y todavía **pendiente**. Es decir: **previsto = actual − pendientes**.
+- Cada transacción tiene un flag **Realizado / Pendiente** (toggle "Realizado" en el alta, viene prendido). **Realizado** (✓ verde en la lista) cuenta en el saldo actual; **Pendiente** (pin 📌 en la lista) cuenta solo en el previsto. La preferencia **"Efectivar automáticamente"** da vuelta el pendiente a realizado al vencer.
+- **"Gasto fijo" y "Repetir" no son la proyección**: son los mecanismos que *generan* los items futuros pendientes que después alimentan el previsto. "Gasto fijo" ≠ una feature separada de recurrencia — es la cara de "esto se repite/es fijo".
+
+**Grana llega al mismo lugar por otro camino, más limpio — y es el foso:**
+
+- Grana **no** pone un flag pendiente/realizado en cada movimiento (eso mezclaría lo que pasó con lo que va a pasar dentro del mismo libro). Lo esperado vive **fuera del ledger** como **instancias de recurrencia pendientes** (que se confirman) y se muestra como **"Compromisos futuros"** en el dashboard (deuda de tarjeta + recurrentes).
+- Mobills funde presente y futuro en un solo número ("saldo previsto"). Grana los mantiene **separados** (corte temporal): "lo que tengo hoy" nunca se contamina con "lo que se viene".
+
+**Implicación para `cashflow`:**
+
+- **No** traer el flag Realizado/Pendiente por transacción — rompe el corte temporal.
+- **Sí** puede tener valor un "previsto" **derivado** (`saldo actual − compromisos del mes`) mostrado **aparte** del saldo actual, nunca fundido con él. Grana ya calcula los compromisos; falta —si se decide— exponerlos como un glance de proyección. Esa es la versión Grana-correcta del "saldo previsto" de Mobills.
+
 ## Método y confiabilidad
 
 Grana mapeado del código en `main` —no de memoria—, verificado archivo por archivo separando WM de N (la confusión web↔nativo fue el único error detectado y corregido en el proceso). Mobills, de una tanda única de 55 capturas reales. Cruzado con el análisis de Codex (listings públicos + repo local). Referencias al survey activo `docs/design/movements-module/` para no reabrir decisiones ya cerradas.
