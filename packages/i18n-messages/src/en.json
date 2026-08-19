@@ -1148,14 +1148,19 @@
       "percent_hint": "Optional: compute the amount as a percentage of the expense.",
       "percent_label": "% of the expense",
       "cap_label": "Cap (optional)",
+      "cap_short": "cap",
       "target_label": "How is it credited?",
       "target": {
         "account": "To an account — the bank deposits the money",
-        "statement": "On the statement — discounted from the card"
+        "statement": "On the statement — discounted from the card",
+        "account_short": "Account",
+        "statement_short": "Statement"
       },
       "credit_to": "Credit to",
       "credit_to_placeholder": "Choose an account",
+      "same_bank": "same bank",
       "received_now": "Already credited to me",
+      "received_short": "Credited",
       "received_now_hint": "Recorded as a received reimbursement.",
       "pending_hint": "It stays as an expected reimbursement. Confirm it when it actually arrives.",
       "readonly_hint_received": "It was already credited. Managed from the reimbursement.",
@@ -1376,6 +1381,11 @@
       "installments_breakdown": "{count} installments of ${amount}",
       "repeat_note": "For what you pay regularly: rent, subscriptions, your salary.",
       "repeat_hint": "When it's due, Grana gets it ready and you log it with one tap. It never goes through without your OK.",
+      "repeat_reassure": "Grana gets it ready and you log it with one tap. It never posts on its own.",
+      "repeat_until_placeholder": "Repeat until — optional",
+      "repeat_no_end": "No end date",
+      "repeat_summary_prefix": "Repeats every",
+      "repeat_summary_no_end": ", no end date",
       "repeat_question": "How often?",
       "cta": {
         "expense": "Register expense",
@@ -1554,6 +1564,11 @@
         "week": "{count, plural, one {week} other {weeks}}",
         "month": "{count, plural, one {month} other {months}}",
         "year": "{count, plural, one {year} other {years}}"
+      },
+      "units_short": {
+        "day": "days",
+        "week": "wk.",
+        "month": "mo."
       },
       "end_after_occurrences": "{count, plural, one {Ends after # occurrence} other {Ends after # occurrences}}",
       "end_label": "Occurrence limit (optional)"
@@ -1907,7 +1922,13 @@
       "sum_error": "Percentages must add up to 100.",
       "shared_label": "Shared expense",
       "fully_other_label": "It's 100% {name}'s",
-      "fully_other_hint": "You pay it and {name} owes you the whole amount"
+      "fully_other_hint": "You pay it and {name} owes you the whole amount",
+      "half": "Half",
+      "all_other": "All theirs",
+      "you": "You",
+      "other_short": "Other",
+      "owes": "owes you",
+      "write_your_share": "Enter your share"
     },
     "invite": {
       "title": "Invite a member",
