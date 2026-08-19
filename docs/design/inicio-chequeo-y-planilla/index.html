@@ -1,0 +1,446 @@
+<meta charset="utf-8">
+<title>Inicio — chequeo y planilla, 3 opciones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<body class="opt">
+
+<div class="ow">
+<h1>Inicio — cómo conviven el chequeo y la planilla</h1>
+<p class="lede">
+  Tres formas de que <b>todo esté en el Inicio</b> sin castigar al que entra 4 segundos.
+  Tokens de <code>design_handoff_inicio_definitivo</code>. <b>Datos reales del 19/08/2026</b>,
+  tomados de la pantalla de producción — por eso agosto muestra tan poco ingreso: es lo que hay
+  cargado.
+</p>
+
+<div class="rule">
+  <h3>La regla que las une, en las tres opciones</h3>
+  <p>Las dos zonas no compiten porque responden a <b>tiempos distintos</b>. El chequeo es
+    <b>hoy</b> y no cambia si mirás agosto o julio. La planilla es <b>de un mes</b> y cambia con
+    el selector.</p>
+  <pre>ZONA A · CHEQUEO     siempre hoy      →  "¿puedo?"        4 segundos
+ZONA B · PLANILLA    el mes elegido   →  "¿cómo vengo?"   3 minutos
+
+El selector de mes gobierna B.  A es siempre hoy.
+Al moverte a otro mes, A se colapsa a una línea — tu disponible
+no cambia por mirar julio — y la planilla ocupa la pantalla.</pre>
+</div>
+
+<!-- ══════════ OPCIÓN A ══════════ -->
+<div class="opt">
+  <div class="oh">
+    <span class="lab">Opción A</span>
+    <h2>Scroll progresivo — una sola página, dos zonas</h2>
+    <p>Arriba el chequeo, abajo la planilla. Cero controles nuevos, cero estados que recordar.
+      El que abre 20 veces por mes nunca scrollea; el que se sienta a revisar, scrollea.</p>
+  </div>
+  <div class="row">
+    <div class="ph">
+      <div class="hd"><div class="t">Hola, Julieta.<small>Miércoles, 19 de agosto</small></div>
+  <div class="r"><span class="ib2">👁</span><span class="ib2">+</span></div></div>
+      <div class="bd">
+        <div class="msel2"><span class="nv">‹</span><span class="lb">Agosto 2026</span><span class="nv">›</span></div>
+        <div class="zh"><span class="n">Zona A · Chequeo — siempre hoy</span><span class="ln"></span></div>
+        <div class="hero" style="padding:16px;border-radius:15px">
+  <span class="pl" style="font-size:9.5px">En tus cuentas · hoy</span>
+  <div class="pv tnum" style="font-size:29px;margin-top:9px"><span class="cur">$</span>&nbsp;8.073.533<span class="dec">,16</span></div>
+  <div class="usd" style="margin-top:9px"><span class="chip" style="font-size:9px">USD</span><span class="uv tnum" style="font-size:13px">600,00</span></div>
+  <p style="font-size:9.5px;font-weight:600;color:rgba(255,255,255,.45);margin-top:13px">Caja y banco. No descuenta lo comprometido. 81% está en Mercado Pago.</p>
+</div>
+        <div class="k2">
+  <div class="kh"><h4>Lo que pide atención</h4><span class="s" style="background:var(--terracota-soft);color:var(--terracota);padding:2px 8px;border-radius:999px;font-size:9.5px">2</span></div>
+  <div style="margin-top:9px">
+    <div class="lrow"><span class="ic2">💳</span><span class="m"><span class="n2">Resumen vencido</span><span class="s2">Sin pagar · Santander</span></span><span class="a2" style="color:var(--terracota)">$ 265.540</span></div>
+    <div class="lrow"><span class="ic2">↻</span><span class="m"><span class="n2">Epe</span><span class="s2">Recurrencia · vencía 23/07</span></span><span class="a2" style="color:var(--terracota)">$ 40.184</span></div>
+  </div>
+</div>
+        <div class="zh b"><span class="n">Zona B · La planilla — mes elegido</span><span class="ln"></span></div>
+        <div class="k2">
+  <div class="kh"><h4>El mes</h4><span class="s">Ver detalle ›</span></div>
+  <p class="ks">Agosto 2026 · lo que se movió de verdad</p>
+  <div class="tri3">
+    <div class="c"><div class="k">Entró</div><div class="v tnum" style="color:var(--emerald-deep)">$ 20.000</div><div class="u">ingresos</div></div>
+    <div class="c"><div class="k">Salió</div><div class="v tnum" style="color:var(--terracota)">$ 786.801</div><div class="u">caja + resúmenes</div></div>
+    <div class="c"><div class="k">Diferencia</div><div class="v tnum" style="color:var(--terracota)">−$ 766.801</div><div class="u">del mes</div></div>
+  </div>
+</div>
+        <div class="k2">
+  <div class="kh"><h4>Salidas por bloque</h4></div>
+  <p class="ks">Dónde se fue, agrupado por naturaleza</p>
+  <div style="margin-top:10px">
+    <div class="lrow"><span class="m"><span class="n2">Pago de resúmenes</span>
+      <div class="bar2"><i style="width:100%;background:var(--ink)"></i></div>
+      <span class="s2" style="margin-top:4px;display:block">Consumos de meses anteriores</span></span>
+      <span class="a2">$ 698.999</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Gastos de caja</span>
+      <div class="bar2"><i style="width:13%;background:var(--terracota)"></i></div>
+      <span class="s2" style="margin-top:4px;display:block">Efectivo y débito</span></span>
+      <span class="a2">$ 87.803</span></div>
+  </div>
+</div>
+        <div class="k2">
+  <div class="kh"><h4>Gastaste este mes</h4><span class="s">Desglose ›</span></div>
+  <p class="ks">Consumo real, tarjeta incluida</p>
+  <div style="display:flex;align-items:baseline;gap:9px;margin-top:9px">
+    <span class="tnum" style="font-size:22px;font-weight:800;letter-spacing:-0.04em">$ 476.675</span>
+  </div>
+  <div style="margin-top:10px;display:flex;height:26px;border-radius:8px;overflow:hidden">
+    <div style="width:18%;background:var(--slate);display:grid;place-items:center;color:#fff;font-size:8.5px;font-weight:800">18%</div>
+    <div style="flex:1;background:var(--amber);display:grid;place-items:center;color:#fff;font-size:9px;font-weight:800">EN TARJETA · 82%</div>
+  </div>
+  <div style="margin-top:7px;display:flex;justify-content:space-between;font-size:10px;font-weight:700">
+    <span style="color:var(--slate)">De la caja $ 87.803</span>
+    <span style="color:var(--amber-deep)">Financiado $ 388.873</span>
+  </div>
+  <p class="hint" style="margin-top:11px;padding-top:10px;font-size:10.5px">
+    Los <b>$ 388.873</b> en tarjeta todavía no salieron de tus cuentas — se pagan en los próximos resúmenes.</p>
+</div>
+        <div class="k2">
+  <div class="kh"><h4>En qué se fue</h4><span class="s">ARS / USD</span></div>
+  <div style="margin-top:10px">
+    <div class="lrow"><span class="m"><span class="n2">Sin categoría <span style="color:var(--faint);font-weight:700">41%</span></span>
+      <div class="bar2"><i style="width:100%;background:var(--emerald)"></i></div></span><span class="a2">$ 196.134</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Transporte <span style="color:var(--faint);font-weight:700">19%</span></span>
+      <div class="bar2"><i style="width:46%;background:var(--blue)"></i></div></span><span class="a2">$ 90.498</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Financiero <span style="color:var(--faint);font-weight:700">10%</span></span>
+      <div class="bar2"><i style="width:25%;background:var(--violet)"></i></div></span><span class="a2">$ 48.740</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Hogar <span style="color:var(--faint);font-weight:700">9%</span></span>
+      <div class="bar2"><i style="width:21%;background:var(--cyan)"></i></div></span><span class="a2">$ 41.500</span></div>
+  </div>
+</div>
+        <div class="k2">
+  <div class="kh"><h4>Tarjetas</h4><span class="s">Ver ›</span></div>
+  <p class="ks">A pagar + en curso</p>
+  <div style="margin-top:9px">
+    <div class="lrow"><span class="m"><span class="n2">Santander Visa</span><span class="s2">Resumen cerrado · vence pronto</span></span><span class="a2" style="color:var(--terracota)">$ 697.188</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Galicia Visa</span><span class="s2">En curso · cierra 28/08</span></span><span class="a2">$ 128.370</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Galicia Mastercard</span><span class="s2">En curso · cierra 28/08</span></span><span class="a2">$ 27.324</span></div>
+  </div>
+</div>
+        <div class="k2">
+  <div class="kh"><h4>Dólares</h4><span class="s" style="background:var(--emerald-soft);color:var(--emerald-deep);padding:2px 8px;border-radius:999px;font-size:9.5px">Aparte</span></div>
+  <p class="ks">Nunca se convierte ni se suma a los pesos</p>
+  <div style="margin-top:9px">
+    <div class="lrow"><span class="m"><span class="n2">Saldo en cuentas</span></span><span class="a2">US$ 600,00</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Ingresos del mes</span></span><span class="a2" style="color:var(--faint)">US$ 0,00</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Gastos del mes</span></span><span class="a2" style="color:var(--faint)">US$ 0,00</span></div>
+  </div>
+</div>
+      </div>
+      <div class="cap" style="top:432px"><span>fin de la 1ª pantalla</span></div>
+    </div>
+    <div style="flex:1;min-width:300px">
+      <div class="note2" style="margin-top:0">
+        <div class="c g">
+          <h5>A favor</h5>
+          <ul>
+            <li><b>Cero navegación.</b> No hay tabs, toggles ni estados.</li>
+            <li>El pliegue hace el trabajo: lo urgente arriba, la lectura abajo.</li>
+            <li>Es la más barata de implementar — es reordenar cards existentes.</li>
+            <li>Funciona igual en mobile y en desktop angosto.</li>
+          </ul>
+        </div>
+        <div class="c r">
+          <h5>En contra</h5>
+          <ul>
+            <li>La planilla <b>siempre</b> está a un scroll. Si la mirás seguido, cansa.</li>
+            <li>La página se hace larga: 7–8 bloques apilados.</li>
+            <li>En desktop <b>desaprovecha el ancho</b> — una columna en una pantalla de 1400px.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ OPCIÓN B ══════════ -->
+<div class="opt">
+  <div class="oh">
+    <span class="lab">Opción B</span>
+    <h2>La planilla se abre — el Inicio queda corto</h2>
+    <p>El chequeo ocupa la pantalla. La planilla vive detrás de una card que se expande
+      in-place, sin navegar. Izquierda: cerrada. Derecha: abierta.</p>
+  </div>
+  <div class="row">
+    <div class="ph">
+      <div class="hd"><div class="t">Hola, Julieta.<small>Miércoles, 19 de agosto</small></div>
+  <div class="r"><span class="ib2">👁</span><span class="ib2">+</span></div></div>
+      <div class="bd">
+        <div class="msel2"><span class="nv">‹</span><span class="lb">Agosto 2026</span><span class="nv">›</span></div>
+        <div class="zh"><span class="n">Zona A · Chequeo — siempre hoy</span><span class="ln"></span></div>
+        <div class="hero" style="padding:16px;border-radius:15px">
+  <span class="pl" style="font-size:9.5px">En tus cuentas · hoy</span>
+  <div class="pv tnum" style="font-size:29px;margin-top:9px"><span class="cur">$</span>&nbsp;8.073.533<span class="dec">,16</span></div>
+  <div class="usd" style="margin-top:9px"><span class="chip" style="font-size:9px">USD</span><span class="uv tnum" style="font-size:13px">600,00</span></div>
+  <p style="font-size:9.5px;font-weight:600;color:rgba(255,255,255,.45);margin-top:13px">Caja y banco. No descuenta lo comprometido. 81% está en Mercado Pago.</p>
+</div>
+        <div class="k2">
+  <div class="kh"><h4>Lo que pide atención</h4><span class="s" style="background:var(--terracota-soft);color:var(--terracota);padding:2px 8px;border-radius:999px;font-size:9.5px">2</span></div>
+  <div style="margin-top:9px">
+    <div class="lrow"><span class="ic2">💳</span><span class="m"><span class="n2">Resumen vencido</span><span class="s2">Sin pagar · Santander</span></span><span class="a2" style="color:var(--terracota)">$ 265.540</span></div>
+    <div class="lrow"><span class="ic2">↻</span><span class="m"><span class="n2">Epe</span><span class="s2">Recurrencia · vencía 23/07</span></span><span class="a2" style="color:var(--terracota)">$ 40.184</span></div>
+  </div>
+</div>
+        <div class="k2">
+  <div class="kh"><h4>Últimos movimientos</h4><span class="s">Ver todos ›</span></div>
+  <div style="margin-top:9px">
+    <div class="lrow"><span class="ic2">🛒</span><span class="m"><span class="n2">Verdulería</span><span class="s2">BBVA · hoy · <b style="color:var(--emerald-deep)">registrar similar</b></span></span><span class="a2" style="color:var(--terracota)">−$ 5.000</span></div>
+    <div class="lrow"><span class="ic2">💼</span><span class="m"><span class="n2">Sueldo</span><span class="s2">Galicia · hoy</span></span><span class="a2" style="color:var(--emerald-deep)">+$ 100.000</span></div>
+  </div>
+</div>
+        <div class="expander">
+          <span class="t2">El mes en detalle<small>Entró $ 20.000 · Salió $ 786.801 · Diferencia −$ 766.801</small></span>
+          <span class="ch">▾</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ph">
+      <div class="hd"><div class="t">Hola, Julieta.<small>Miércoles, 19 de agosto</small></div>
+  <div class="r"><span class="ib2">👁</span><span class="ib2">+</span></div></div>
+      <div class="bd">
+        <div class="msel2"><span class="nv">‹</span><span class="lb">Agosto 2026</span><span class="nv">›</span></div>
+        <div class="expander" style="border-style:solid;background:var(--emerald-soft);border-color:#CFEEE0">
+          <span class="t2">El mes en detalle<small>Agosto 2026 · abierto</small></span>
+          <span class="ch">▴</span>
+        </div>
+        <div class="k2">
+  <div class="kh"><h4>El mes</h4><span class="s">Ver detalle ›</span></div>
+  <p class="ks">Agosto 2026 · lo que se movió de verdad</p>
+  <div class="tri3">
+    <div class="c"><div class="k">Entró</div><div class="v tnum" style="color:var(--emerald-deep)">$ 20.000</div><div class="u">ingresos</div></div>
+    <div class="c"><div class="k">Salió</div><div class="v tnum" style="color:var(--terracota)">$ 786.801</div><div class="u">caja + resúmenes</div></div>
+    <div class="c"><div class="k">Diferencia</div><div class="v tnum" style="color:var(--terracota)">−$ 766.801</div><div class="u">del mes</div></div>
+  </div>
+</div>
+        <div class="k2">
+  <div class="kh"><h4>Salidas por bloque</h4></div>
+  <p class="ks">Dónde se fue, agrupado por naturaleza</p>
+  <div style="margin-top:10px">
+    <div class="lrow"><span class="m"><span class="n2">Pago de resúmenes</span>
+      <div class="bar2"><i style="width:100%;background:var(--ink)"></i></div>
+      <span class="s2" style="margin-top:4px;display:block">Consumos de meses anteriores</span></span>
+      <span class="a2">$ 698.999</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Gastos de caja</span>
+      <div class="bar2"><i style="width:13%;background:var(--terracota)"></i></div>
+      <span class="s2" style="margin-top:4px;display:block">Efectivo y débito</span></span>
+      <span class="a2">$ 87.803</span></div>
+  </div>
+</div>
+        <div class="k2">
+  <div class="kh"><h4>Gastaste este mes</h4><span class="s">Desglose ›</span></div>
+  <p class="ks">Consumo real, tarjeta incluida</p>
+  <div style="display:flex;align-items:baseline;gap:9px;margin-top:9px">
+    <span class="tnum" style="font-size:22px;font-weight:800;letter-spacing:-0.04em">$ 476.675</span>
+  </div>
+  <div style="margin-top:10px;display:flex;height:26px;border-radius:8px;overflow:hidden">
+    <div style="width:18%;background:var(--slate);display:grid;place-items:center;color:#fff;font-size:8.5px;font-weight:800">18%</div>
+    <div style="flex:1;background:var(--amber);display:grid;place-items:center;color:#fff;font-size:9px;font-weight:800">EN TARJETA · 82%</div>
+  </div>
+  <div style="margin-top:7px;display:flex;justify-content:space-between;font-size:10px;font-weight:700">
+    <span style="color:var(--slate)">De la caja $ 87.803</span>
+    <span style="color:var(--amber-deep)">Financiado $ 388.873</span>
+  </div>
+  <p class="hint" style="margin-top:11px;padding-top:10px;font-size:10.5px">
+    Los <b>$ 388.873</b> en tarjeta todavía no salieron de tus cuentas — se pagan en los próximos resúmenes.</p>
+</div>
+        <div class="k2">
+  <div class="kh"><h4>En qué se fue</h4><span class="s">ARS / USD</span></div>
+  <div style="margin-top:10px">
+    <div class="lrow"><span class="m"><span class="n2">Sin categoría <span style="color:var(--faint);font-weight:700">41%</span></span>
+      <div class="bar2"><i style="width:100%;background:var(--emerald)"></i></div></span><span class="a2">$ 196.134</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Transporte <span style="color:var(--faint);font-weight:700">19%</span></span>
+      <div class="bar2"><i style="width:46%;background:var(--blue)"></i></div></span><span class="a2">$ 90.498</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Financiero <span style="color:var(--faint);font-weight:700">10%</span></span>
+      <div class="bar2"><i style="width:25%;background:var(--violet)"></i></div></span><span class="a2">$ 48.740</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Hogar <span style="color:var(--faint);font-weight:700">9%</span></span>
+      <div class="bar2"><i style="width:21%;background:var(--cyan)"></i></div></span><span class="a2">$ 41.500</span></div>
+  </div>
+</div>
+        <div class="k2">
+  <div class="kh"><h4>Tarjetas</h4><span class="s">Ver ›</span></div>
+  <p class="ks">A pagar + en curso</p>
+  <div style="margin-top:9px">
+    <div class="lrow"><span class="m"><span class="n2">Santander Visa</span><span class="s2">Resumen cerrado · vence pronto</span></span><span class="a2" style="color:var(--terracota)">$ 697.188</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Galicia Visa</span><span class="s2">En curso · cierra 28/08</span></span><span class="a2">$ 128.370</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Galicia Mastercard</span><span class="s2">En curso · cierra 28/08</span></span><span class="a2">$ 27.324</span></div>
+  </div>
+</div>
+      </div>
+    </div>
+
+    <div style="flex:1;min-width:280px">
+      <div class="note2" style="margin-top:0">
+        <div class="c g">
+          <h5>A favor</h5>
+          <ul>
+            <li>El Inicio queda <b>realmente corto</b>: el 90% de las aperturas ven solo lo que necesitan.</li>
+            <li>El resumen de tres números <b>vive en el propio expander</b>, así que la planilla ya "asoma" cerrada.</li>
+            <li>Un tap, sin navegar ni perder contexto.</li>
+          </ul>
+        </div>
+        <div class="c r">
+          <h5>En contra</h5>
+          <ul>
+            <li>Suma un <b>estado</b> (abierto/cerrado) que hay que decidir si se recuerda.</li>
+            <li>Lo que está plegado <b>se descubre menos</b>. Cristian podría no encontrar nunca la planilla.</li>
+            <li>En desktop sigue desaprovechando el ancho.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ OPCIÓN C ══════════ -->
+<div class="opt">
+  <div class="oh">
+    <span class="lab">Opción C · recomendada</span>
+    <h2>Dos columnas en desktop — todo a la vista, de verdad</h2>
+    <p>Chequeo fijo a la izquierda (no se mueve al scrollear), planilla scrolleable a la derecha.
+      Es la única que cumple literal "que esté todo en el Inicio". En mobile cae a la opción A.</p>
+  </div>
+
+  <div class="dsk">
+    <div class="dh">
+      <div><h2>Hola, Julieta.</h2><p class="d">Miércoles, 19 de agosto</p></div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div class="msel2" style="width:190px">‹ <span class="lb">Agosto 2026</span> ›</div>
+        <span class="ib2">👁</span>
+        <button class="btn" style="padding:10px 15px;font-size:13px">+ Nuevo movimiento</button>
+      </div>
+    </div>
+    <div class="db">
+      <div class="sticky">
+        <div class="zh"><span class="n">Chequeo — siempre hoy</span><span class="ln"></span></div>
+        <div class="hero" style="padding:16px;border-radius:15px">
+  <span class="pl" style="font-size:9.5px">En tus cuentas · hoy</span>
+  <div class="pv tnum" style="font-size:29px;margin-top:9px"><span class="cur">$</span>&nbsp;8.073.533<span class="dec">,16</span></div>
+  <div class="usd" style="margin-top:9px"><span class="chip" style="font-size:9px">USD</span><span class="uv tnum" style="font-size:13px">600,00</span></div>
+  <p style="font-size:9.5px;font-weight:600;color:rgba(255,255,255,.45);margin-top:13px">Caja y banco. No descuenta lo comprometido. 81% está en Mercado Pago.</p>
+</div>
+        <div class="k2">
+  <div class="kh"><h4>Lo que pide atención</h4><span class="s" style="background:var(--terracota-soft);color:var(--terracota);padding:2px 8px;border-radius:999px;font-size:9.5px">2</span></div>
+  <div style="margin-top:9px">
+    <div class="lrow"><span class="ic2">💳</span><span class="m"><span class="n2">Resumen vencido</span><span class="s2">Sin pagar · Santander</span></span><span class="a2" style="color:var(--terracota)">$ 265.540</span></div>
+    <div class="lrow"><span class="ic2">↻</span><span class="m"><span class="n2">Epe</span><span class="s2">Recurrencia · vencía 23/07</span></span><span class="a2" style="color:var(--terracota)">$ 40.184</span></div>
+  </div>
+</div>
+        <div class="k2">
+  <div class="kh"><h4>Últimos movimientos</h4><span class="s">Ver todos ›</span></div>
+  <div style="margin-top:9px">
+    <div class="lrow"><span class="ic2">🛒</span><span class="m"><span class="n2">Verdulería</span><span class="s2">BBVA · hoy · <b style="color:var(--emerald-deep)">registrar similar</b></span></span><span class="a2" style="color:var(--terracota)">−$ 5.000</span></div>
+    <div class="lrow"><span class="ic2">💼</span><span class="m"><span class="n2">Sueldo</span><span class="s2">Galicia · hoy</span></span><span class="a2" style="color:var(--emerald-deep)">+$ 100.000</span></div>
+  </div>
+</div>
+      </div>
+      <div class="flow">
+        <div class="zh b"><span class="n">La planilla — agosto 2026</span><span class="ln"></span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
+          <div style="display:flex;flex-direction:column;gap:12px"><div class="k2">
+  <div class="kh"><h4>El mes</h4><span class="s">Ver detalle ›</span></div>
+  <p class="ks">Agosto 2026 · lo que se movió de verdad</p>
+  <div class="tri3">
+    <div class="c"><div class="k">Entró</div><div class="v tnum" style="color:var(--emerald-deep)">$ 20.000</div><div class="u">ingresos</div></div>
+    <div class="c"><div class="k">Salió</div><div class="v tnum" style="color:var(--terracota)">$ 786.801</div><div class="u">caja + resúmenes</div></div>
+    <div class="c"><div class="k">Diferencia</div><div class="v tnum" style="color:var(--terracota)">−$ 766.801</div><div class="u">del mes</div></div>
+  </div>
+</div><div class="k2">
+  <div class="kh"><h4>Salidas por bloque</h4></div>
+  <p class="ks">Dónde se fue, agrupado por naturaleza</p>
+  <div style="margin-top:10px">
+    <div class="lrow"><span class="m"><span class="n2">Pago de resúmenes</span>
+      <div class="bar2"><i style="width:100%;background:var(--ink)"></i></div>
+      <span class="s2" style="margin-top:4px;display:block">Consumos de meses anteriores</span></span>
+      <span class="a2">$ 698.999</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Gastos de caja</span>
+      <div class="bar2"><i style="width:13%;background:var(--terracota)"></i></div>
+      <span class="s2" style="margin-top:4px;display:block">Efectivo y débito</span></span>
+      <span class="a2">$ 87.803</span></div>
+  </div>
+</div><div class="k2">
+  <div class="kh"><h4>Tarjetas</h4><span class="s">Ver ›</span></div>
+  <p class="ks">A pagar + en curso</p>
+  <div style="margin-top:9px">
+    <div class="lrow"><span class="m"><span class="n2">Santander Visa</span><span class="s2">Resumen cerrado · vence pronto</span></span><span class="a2" style="color:var(--terracota)">$ 697.188</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Galicia Visa</span><span class="s2">En curso · cierra 28/08</span></span><span class="a2">$ 128.370</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Galicia Mastercard</span><span class="s2">En curso · cierra 28/08</span></span><span class="a2">$ 27.324</span></div>
+  </div>
+</div></div>
+          <div style="display:flex;flex-direction:column;gap:12px"><div class="k2">
+  <div class="kh"><h4>Gastaste este mes</h4><span class="s">Desglose ›</span></div>
+  <p class="ks">Consumo real, tarjeta incluida</p>
+  <div style="display:flex;align-items:baseline;gap:9px;margin-top:9px">
+    <span class="tnum" style="font-size:22px;font-weight:800;letter-spacing:-0.04em">$ 476.675</span>
+  </div>
+  <div style="margin-top:10px;display:flex;height:26px;border-radius:8px;overflow:hidden">
+    <div style="width:18%;background:var(--slate);display:grid;place-items:center;color:#fff;font-size:8.5px;font-weight:800">18%</div>
+    <div style="flex:1;background:var(--amber);display:grid;place-items:center;color:#fff;font-size:9px;font-weight:800">EN TARJETA · 82%</div>
+  </div>
+  <div style="margin-top:7px;display:flex;justify-content:space-between;font-size:10px;font-weight:700">
+    <span style="color:var(--slate)">De la caja $ 87.803</span>
+    <span style="color:var(--amber-deep)">Financiado $ 388.873</span>
+  </div>
+  <p class="hint" style="margin-top:11px;padding-top:10px;font-size:10.5px">
+    Los <b>$ 388.873</b> en tarjeta todavía no salieron de tus cuentas — se pagan en los próximos resúmenes.</p>
+</div><div class="k2">
+  <div class="kh"><h4>En qué se fue</h4><span class="s">ARS / USD</span></div>
+  <div style="margin-top:10px">
+    <div class="lrow"><span class="m"><span class="n2">Sin categoría <span style="color:var(--faint);font-weight:700">41%</span></span>
+      <div class="bar2"><i style="width:100%;background:var(--emerald)"></i></div></span><span class="a2">$ 196.134</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Transporte <span style="color:var(--faint);font-weight:700">19%</span></span>
+      <div class="bar2"><i style="width:46%;background:var(--blue)"></i></div></span><span class="a2">$ 90.498</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Financiero <span style="color:var(--faint);font-weight:700">10%</span></span>
+      <div class="bar2"><i style="width:25%;background:var(--violet)"></i></div></span><span class="a2">$ 48.740</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Hogar <span style="color:var(--faint);font-weight:700">9%</span></span>
+      <div class="bar2"><i style="width:21%;background:var(--cyan)"></i></div></span><span class="a2">$ 41.500</span></div>
+  </div>
+</div><div class="k2">
+  <div class="kh"><h4>Dólares</h4><span class="s" style="background:var(--emerald-soft);color:var(--emerald-deep);padding:2px 8px;border-radius:999px;font-size:9.5px">Aparte</span></div>
+  <p class="ks">Nunca se convierte ni se suma a los pesos</p>
+  <div style="margin-top:9px">
+    <div class="lrow"><span class="m"><span class="n2">Saldo en cuentas</span></span><span class="a2">US$ 600,00</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Ingresos del mes</span></span><span class="a2" style="color:var(--faint)">US$ 0,00</span></div>
+    <div class="lrow"><span class="m"><span class="n2">Gastos del mes</span></span><span class="a2" style="color:var(--faint)">US$ 0,00</span></div>
+  </div>
+</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note2">
+    <div class="c g">
+      <h5>A favor</h5>
+      <ul>
+        <li><b>Todo visible sin scrollear</b> en desktop. Es tu pedido, literal.</li>
+        <li>La columna izquierda es <b>sticky</b>: el disponible y lo urgente te acompañan mientras leés el mes.</li>
+        <li>No inventa ningún patrón: usa el grid de dos columnas de tu <code>Inicio Definitivo</code>.</li>
+        <li>Enseña la separación <b>sin explicarla</b>: lo de la izquierda no se mueve con el mes, lo de la derecha sí.</li>
+      </ul>
+    </div>
+    <div class="c r">
+      <h5>En contra</h5>
+      <ul>
+        <li>Dos layouts que mantener (desktop y mobile), aunque la convención ya lo permite.</li>
+        <li>En desktop chico (~1000px) hay que decidir si cae a una columna o achica.</li>
+        <li>Es la más cara de las tres.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="rule" style="margin-top:44px;max-width:100%">
+  <h3>Lo que las tres tienen en común</h3>
+  <p>
+    <b>El hero muestra el disponible real</b> ($ 8.073.533), no la diferencia del mes — es la
+    corrección al mock de Codex. <b>Salidas por bloque</b> separa pago de resúmenes de gastos de
+    caja, que es lo que hoy se mezcla en una sola barra. <b>Gastaste este mes</b> declara su
+    lente y muestra qué parte todavía no salió de tus cuentas. <b>USD va aparte</b>, sin
+    convertir. Y ninguna agrega una query: todos estos números ya se consultan hoy.
+  </p>
+</div>
+
+</div>
