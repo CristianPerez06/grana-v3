@@ -1,0 +1,32 @@
+## Why
+
+La deuda del hogar (`/shared/cuenta-corriente`, el widget de deuda de `/shared`, y sus equivalentes nativos) se deriva de reads que **no tienen ninguna cota explícita**. `collectDebtInputs` (`packages/shared/src/queries.ts:113`) trae `shared_expense_split` filtrando solo por `household_id` — sin `.range()`, sin `.limit()`, sin `.order()` — y lo mismo hacen las dos lecturas de `transactions` que la acompañan y las dos de `settlement`. En todo `packages/shared/src/queries.ts` no existe **un solo `.range()`**.
+
+Eso es exactamente lo que el spec `web-data-access` ya prohíbe desde el requirement *"Los reads que alimentan un saldo o un agregado monetario son completos por construcción"*: PostgREST aplica un `max-rows` server-side (1000 por defecto en Supabase) y **trunca en silencio** — `error === null`, menos filas de las que matchean, ninguna señal para el caller. Y sin `ORDER BY` es **no determinístico** qué filas se pierden: el mismo hogar puede dar dos saldos distintos en dos requests. El síntoma es un número de dinero plausible y equivocado, que aparece de golpe al cruzar un umbral invisible.
+
+No es una regla nueva ni una mejora opcional: es **incumplimiento de un requirement vigente** en el camino que produce el dato contable más sensible del módulo. Se arregla ahora porque todavía no corrompió nada — el hogar más grande en producción tiene 186 splits contra un techo de 1000 —, no porque ya haya fallado. Es el mismo movimiento preventivo que el change `fix-shared-unshare-integrity` hizo con los splits huérfanos.
+
+## What Changes
+
+- **Paginación exhaustiva en el camino de la deuda.** Los cinco reads sin cota de `packages/shared/src/queries.ts` pasan a la forma 2 que habilita `web-data-access`: iterar con `.range()` hasta agotar el conjunto, con `.order()` determinístico que hace estable el paginado. Se adopta el patrón ya establecido en `getAccountMovementsAscending` (`packages/transactions/src/queries.ts:117`) y `getMonthBalanceSeries` (`packages/dashboard/src/queries.ts:191`), incluida la constante local de tamaño de página independiente del `max-rows` del servidor.
+- **Se eliminan los `.in('id', …)` del camino de la deuda.** Las dos lecturas de `transactions` de `collectDebtInputs` hoy arman la lista de ids en el cliente y la mandan por query string. Paginar no arregla su **segundo** modo de falla: con miles de uuids la URL cruza el límite de largo de PostgREST y el request falla. Se reemplaza por el mismo conjunto expresado como predicado server-side (`household_id` + `is_shared`), que pagina limpio y no depende del largo de la URL.
+- **El agregado mensual devengado deja de depender de un `.limit(500)`.** `getSharedAccruedMovements` alimenta "Gastaron juntos", el desglose por categoría y el NETO — todos números de dinero — y hoy corta en 500 gastos + 500 reintegros, más un read de splits que puede llegar a exactamente 1000 filas. Angostar la ventana al mes es compatible con "completo por construcción"; **truncarla dentro de la ventana no lo es**. Pasa a `.range()` exhaustivo sobre la misma ventana mensual.
+- **La regla queda escrita donde vive el módulo.** `shared-data-access` gana el requirement de completitud, espejando el de `web-data-access` pero enunciado sobre las lecturas del hogar (deuda, extracto, proyección y devengado del mes), para que no haya que inferirlo desde el spec de la capa web.
+- **Test de no-regresión sobre el paginado**, con un cliente Supabase fake que respeta `.range()` y aplica un techo artificial bajo: verifica que el conjunto se agota, que el saldo es idéntico al que da el mismo dataset por debajo del techo, y que el orden es determinístico. Es el mismo tipo de ancla que `packages/dashboard/__tests__/balance-read-path.test.ts`.
+
+No hay cambio de comportamiento visible: con los volúmenes actuales los números que muestra la app son los mismos antes y después. Lo que cambia es que dejan de ser correctos **por accidente de tamaño** y pasan a serlo por construcción.
+
+## Capabilities
+
+### Modified Capabilities
+
+- `shared-data-access`: se agrega el requirement de que las lecturas del paquete `@grana/shared` que alimentan un agregado monetario del hogar (deuda, saldo de cuenta corriente, extracto, proyección y devengado del mes) son completas por construcción — paginación exhaustiva con orden determinístico —, y que su corrección no depende de que el hogar quede por debajo del `max-rows` de PostgREST.
+
+## Impact
+
+- **Código**: `packages/shared/src/queries.ts` — `collectDebtInputs` (los cuatro reads: splits, las dos de `transactions`, `settlement`), el read de `settlement` de `getCurrentAccount`, y los tres reads de `getSharedAccruedMovements`. Se agrega un helper de paginación exhaustiva local al paquete (o compartido, según lo que resuelva `design.md`).
+- **Consumidores, sin cambios de firma**: `getHouseholdDebt`, `getHouseholdOutlook`, `getCurrentAccount` y `getSharedAccruedMovements` conservan su contrato. Las funciones puras de `@grana/money-logic` (`deriveCurrentAccount`, `computeHouseholdBalances`, `householdDebtAt`) **no se tocan** — siguen siendo la fuente de verdad de la fórmula; este change solo garantiza que reciban el dataset completo.
+- **Web y mobile de una**: `apps/mobile/lib/shared/queries.ts` es un wrapper fino que inyecta el cliente nativo sobre `@grana/shared`, así que el arreglo cubre las dos plataformas sin tocar la app nativa. Igual para `apps/web`, que consume el paquete directo desde los server components.
+- **Base de datos**: ninguna migración. No se toca el schema, ni RLS, ni se agregan RPCs — la forma elegida es la paginación, no la agregación en SQL (ver `design.md` para por qué la RPC no aplica acá).
+- **Riesgo**: bajo. Es un cambio de *cómo se traen* las filas, no de qué se hace con ellas; el dataset resultante es un superconjunto del actual (idéntico mientras no se cruce el techo) y las reglas de signo quedan intactas.
+- **Fuera de alcance**: `getSharedExpenses` — su `.limit()` es una cota de **presentación**, intencional y visible para el usuario, que el requirement de `web-data-access:348` excluye explícitamente. `getMovementSharedInfo` — acotado a un movimiento y sus cuotas (decenas de filas por construcción). La agregación en Postgres para la deuda (una RPC `get_household_debt_sums`) queda como opción futura si el volumen algún día lo justifica; hoy no resolvería el extracto ni la proyección, que necesitan las filas.
