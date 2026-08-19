@@ -1,0 +1,451 @@
+<meta charset="utf-8">
+<title>Mes · tres zooms — mobile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+
+<div class="sheet">
+<h1>Un mes, tres zooms — mocks mobile</h1>
+<p class="lede">
+  Cinco pantallas que bajan a tierra el modelo de <code>docs/plans/ui-readability-simplification.md</code> §4bis.
+  El selector de mes es <b>uno solo y global</b>: las cinco lo obedecen. Datos de ejemplo tomados de la planilla real
+  de referencia. Mocks <b>no autoritativos</b> — al implementar, los colores salen de <code>@grana/ui-tokens</code>.
+</p>
+
+<div class="rail">
+
+<!-- ══════════════ 1 · INICIO · MES CORRIENTE ══════════════ -->
+<div class="slot">
+  <div class="cap">
+    <span class="n">1 · Inicio</span>
+    <h2>Agosto — el mes corriente</h2>
+    <p>Parte hecha + parte por venir. Tres bloques, no siete. El corte punteado es <i>hoy</i>.</p>
+  </div>
+  <div class="phone">
+    <div class="top">
+      <div class="row1">
+        <div class="hi">Hola, Juli.</div>
+        <div class="icons"><div class="ic">👁</div></div>
+      </div>
+      <div class="msel">
+        <button class="nv">‹</button>
+        <div class="lbl">agosto 2026<small>mes corriente</small></div>
+        <button class="nv">›</button>
+      </div>
+    </div>
+    <div class="scroll"><div class="stack">
+
+      <div class="todo">
+        <span class="dot"></span>
+        <span class="t">3 cosas por confirmar</span>
+        <span class="ch">›</span>
+      </div>
+
+      <div class="c navy">
+        <div class="c-h"><h3>Tengo hoy</h3><span class="lnk" style="color:var(--emerald)">Cuentas →</span></div>
+        <div class="big tnum">$95.000</div>
+        <div class="usdrow"><span class="usdtag">USD</span><span class="usdval tnum">3.200</span></div>
+        <div class="netline"><span>Deudas <b class="tnum">$8.000</b></span><span>Neto <b class="tnum">$87.000</b></span></div>
+      </div>
+
+      <div class="c">
+        <div class="c-h"><h3>Agosto</h3><span class="chip">Caja <span class="sw">⇄</span> Consumo</span></div>
+        <div class="kv"><span class="k">Entró</span><span class="v pos tnum">$2.795.160</span></div>
+        <div class="kv"><span class="k">Salió</span><span class="v neg tnum">$1.981.276</span></div>
+
+        <div class="cut"><span class="tg">hoy · 18 ago</span><span class="ln"></span></div>
+
+        <div class="fore">
+          <div class="kv" style="padding:2px 0"><span class="k">Falta que salga</span><span class="v tnum">$340.000</span></div>
+        </div>
+
+        <div class="kv tot"><span class="k">Cierra en</span><span class="v pos tnum">+$473.884</span></div>
+
+        <div class="daybar">
+          <div class="tr"><i class="done" style="width:58%"></i><i class="left" style="width:42%"></i></div>
+          <div class="cap"><span>18 de 31 días</span><span>quedan 13</span></div>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c-h"><h3>En qué se fue</h3><span class="lnk">Ver informe →</span></div>
+        <div class="rk">
+          <div class="em">🏠</div>
+          <div class="mid"><div class="nm"><i>1</i> Alquiler</div>
+            <div class="bar"><i style="width:88%;background:var(--terracotta)"></i></div></div>
+          <div class="rt"><div class="amt tnum">$737.826</div><div class="meta">37% · 1 mov</div></div>
+        </div>
+        <div class="rk">
+          <div class="em">💳</div>
+          <div class="mid"><div class="nm"><i>2</i> Tarjetas</div>
+            <div class="bar"><i style="width:56%;background:var(--slate)"></i></div></div>
+          <div class="rt"><div class="amt tnum">$470.000</div><div class="meta">24% · 8 mov</div></div>
+        </div>
+        <div class="rk">
+          <div class="em">🛒</div>
+          <div class="mid"><div class="nm"><i>3</i> Súper</div>
+            <div class="bar"><i style="width:30%;background:var(--plum)"></i></div></div>
+          <div class="rt"><div class="amt tnum">$255.000</div><div class="meta">13% · 12 mov</div></div>
+        </div>
+      </div>
+
+    </div></div>
+    <div class="tabs">
+      <div class="tab on"><span class="g">⌂</span><span class="l">Inicio</span></div>
+      <div class="tab"><span class="g">◫</span><span class="l">Informes</span></div>
+      <div class="fabslot"><div class="fab">+</div></div>
+      <div class="tab"><span class="g">▤</span><span class="l">Cuentas</span></div>
+      <div class="tab"><span class="g">⋯</span><span class="l">Más</span></div>
+    </div>
+  </div>
+  <div class="ann">
+    <p><b>Lo que cambia vs. hoy:</b> desaparecen las preguntas retóricas y las cards duplicadas. "Balance del mes" y "Gasté este mes" son ahora <b>una sola card con el chip Caja ⇄ Consumo</b> — vocabulario ya fijado en <code>movements-module/decisiones.md</code> D-002.</p>
+    <p>"Tengo hoy" suma <b>Deudas y Neto</b>: el stock de deuda de tarjeta encuentra su casa y deja de mezclarse con el flujo del mes.</p>
+  </div>
+</div>
+
+<!-- ══════════════ 2 · INICIO · MES SIGUIENTE ══════════════ -->
+<div class="slot">
+  <div class="cap">
+    <span class="n">2 · Inicio</span>
+    <h2>Septiembre — 100% previsión</h2>
+    <p>La misma pantalla, otro mes. Sin caso especial: como no pasó nada todavía, todo es previsión.</p>
+  </div>
+  <div class="phone">
+    <div class="top">
+      <div class="row1">
+        <div class="hi">Hola, Juli.</div>
+        <div class="icons"><div class="ic">👁</div></div>
+      </div>
+      <div class="msel fut">
+        <button class="nv">‹</button>
+        <div class="lbl">septiembre 2026<small>previsión</small></div>
+        <button class="nv">›</button>
+      </div>
+    </div>
+    <div class="scroll"><div class="stack">
+
+      <div class="tengo-min">
+        <span class="k">Tengo hoy</span>
+        <span class="v tnum">$95.000 <i>USD 3.200</i></span>
+      </div>
+
+      <div class="c">
+        <div class="c-h"><h3>Septiembre</h3><span class="chip warn">◷ Previsión</span></div>
+        <div class="kv"><span class="k">Ya entra</span><span class="v pos tnum">$2.795.160</span></div>
+        <div class="kv"><span class="k">Ya sale</span><span class="v neg tnum">$2.321.276</span></div>
+        <div class="kv sub"><span class="k">Fijos</span><span class="v tnum">$1.100.000</span></div>
+        <div class="kv sub"><span class="k">Resúmenes de tarjeta</span><span class="v tnum">$980.000</span></div>
+        <div class="kv sub"><span class="k">Cuotas en curso</span><span class="v tnum">$241.276</span></div>
+
+        <div class="kv tot"><span class="k">Te queda</span><span class="v pos tnum">$473.884</span></div>
+
+        <div class="note">
+          <span class="i">◷</span>
+          <p><b>Previsión, no un hecho.</b> Solo cuenta lo fijo y lo ya comprometido — todavía no incluye el gasto del día a día.</p>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c-h"><h3>Los fijos de septiembre</h3><span class="lnk">Ver todos →</span></div>
+        <div class="fx">
+          <div class="nm">Alquiler</div>
+          <span class="tag ex">Exacto</span>
+          <div class="amt tnum">$737.826</div>
+        </div>
+        <div class="fx edit">
+          <div class="nm">Expensas<small>ajustás solo este mes</small></div>
+          <span class="tag es">Estimado</span>
+          <input class="inp tnum" value="245.000">
+        </div>
+        <div class="fx">
+          <div class="nm">EPE (luz)</div>
+          <span class="tag es">Estimado</span>
+          <div class="amt tnum">$35.310</div>
+          <div class="pen">✎</div>
+        </div>
+        <div class="fx">
+          <div class="nm">Gym</div>
+          <span class="tag ex">Exacto</span>
+          <div class="amt tnum">$33.000</div>
+        </div>
+        <div class="fx">
+          <div class="nm">Monotributo</div>
+          <span class="tag ex">Exacto</span>
+          <div class="amt tnum">$30.280</div>
+        </div>
+      </div>
+
+    </div></div>
+    <div class="tabs">
+      <div class="tab on"><span class="g">⌂</span><span class="l">Inicio</span></div>
+      <div class="tab"><span class="g">◫</span><span class="l">Informes</span></div>
+      <div class="fabslot"><div class="fab">+</div></div>
+      <div class="tab"><span class="g">▤</span><span class="l">Cuentas</span></div>
+      <div class="tab"><span class="g">⋯</span><span class="l">Más</span></div>
+    </div>
+  </div>
+  <div class="ann">
+    <p><b>Ésta es la planilla de Cristian, generada sola.</b> Tres números arriba (entra / sale / queda) y abajo las líneas que los componen.</p>
+    <p><b>"Tengo hoy" se colapsa a una línea</b> al salir del mes corriente: es un stock, no cambia con el mes que mirás. Refuerza la separación stock ≠ flujo sin explicarla.</p>
+    <p><b>Exacto vs. Estimado</b> es el campo <code>amount_is_estimated</code> en <code>recurrences</code> — una columna, no una entidad nueva. Solo lo estimado se edita.</p>
+  </div>
+</div>
+
+<!-- ══════════════ 3 · INFORMES ══════════════ -->
+<div class="slot">
+  <div class="cap">
+    <span class="n">3 · Informes</span>
+    <h2>Agosto — el mes analizado</h2>
+    <p>Acá vive TODO el análisis. Es lo que hoy está disperso entre el dashboard y Movimientos.</p>
+  </div>
+  <div class="phone">
+    <div class="top">
+      <div class="row1">
+        <div class="hi">Informes</div>
+        <div class="icons"><div class="ic">👁</div></div>
+      </div>
+      <div class="msel">
+        <button class="nv">‹</button>
+        <div class="lbl">agosto 2026<small>mes corriente</small></div>
+        <button class="nv">›</button>
+      </div>
+    </div>
+    <div class="scroll"><div class="stack">
+
+      <div class="c">
+        <div class="c-h"><h3>Gastos</h3><span class="chip">Consumo <span class="sw">⇄</span> Caja</span></div>
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <span class="big tnum" style="font-size:27px">$1.981.276</span>
+        </div>
+        <div style="margin-top:4px;font-size:11.5px;font-weight:700;color:var(--muted)">
+          Promedio diario <span class="tnum">$110.071</span>
+        </div>
+        <div class="chart">
+          <i style="height:12%"></i><i style="height:8%"></i><i class="hi" style="height:74%"></i>
+          <i style="height:18%"></i><i style="height:6%"></i><i style="height:26%"></i>
+          <i style="height:14%"></i><i class="hi" style="height:52%"></i><i style="height:10%"></i>
+          <i style="height:30%"></i><i style="height:16%"></i><i style="height:9%"></i>
+          <i style="height:44%"></i><i style="height:12%"></i><i style="height:20%"></i>
+          <i style="height:7%"></i><i style="height:34%"></i><i style="height:15%"></i>
+          <i class="fu" style="height:10%"></i><i class="fu" style="height:10%"></i><i class="fu" style="height:10%"></i>
+        </div>
+        <div class="xax"><span>1</span><span>hoy · 18</span><span>31</span></div>
+      </div>
+
+      <div class="c">
+        <div class="c-h"><h3>Por categoría</h3><span class="chip">Categoría <span class="sw">⇄</span> Subcat.</span></div>
+        <div class="rk">
+          <div class="em">🏠</div>
+          <div class="mid"><div class="nm"><i>1</i> Alquiler</div>
+            <div class="bar"><i style="width:88%;background:var(--terracotta)"></i></div></div>
+          <div class="rt"><div class="amt tnum">$737.826</div><div class="meta">37% · 1 mov</div></div>
+        </div>
+        <div class="rk">
+          <div class="em">💳</div>
+          <div class="mid"><div class="nm"><i>2</i> Tarjetas</div>
+            <div class="bar"><i style="width:56%;background:var(--slate)"></i></div></div>
+          <div class="rt"><div class="amt tnum">$470.000</div><div class="meta">24% · 8 mov</div></div>
+        </div>
+        <div class="rk">
+          <div class="em">🛒</div>
+          <div class="mid"><div class="nm"><i>3</i> Súper</div>
+            <div class="bar"><i style="width:30%;background:var(--plum)"></i></div></div>
+          <div class="rt"><div class="amt tnum">$255.000</div><div class="meta">13% · 12 mov</div></div>
+        </div>
+        <div class="rk">
+          <div class="em">🎓</div>
+          <div class="mid"><div class="nm"><i>4</i> Educación</div>
+            <div class="bar"><i style="width:22%;background:var(--emerald)"></i></div></div>
+          <div class="rt"><div class="amt tnum">$183.500</div><div class="meta">9% · 2 mov</div></div>
+        </div>
+        <div style="padding-top:9px;border-top:1px solid var(--line);margin-top:3px">
+          <span class="lnk">+ 7 categorías más</span>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c-h"><h3>Los 10 más grandes</h3></div>
+        <div class="rk">
+          <div class="em">🏠</div>
+          <div class="mid"><div class="nm"><i>1</i> Alquiler Rivadavia</div>
+            <div class="meta" style="margin-top:3px;font-size:10px;font-weight:700;color:var(--faint)">Galicia · 1 ago</div></div>
+          <div class="rt"><div class="amt tnum">$737.826</div></div>
+        </div>
+        <div class="rk">
+          <div class="em">🎓</div>
+          <div class="mid"><div class="nm"><i>2</i> UCEMA</div>
+            <div class="meta" style="margin-top:3px;font-size:10px;font-weight:700;color:var(--faint)">Santander VISA · 5 ago</div></div>
+          <div class="rt"><div class="amt tnum">$290.000</div></div>
+        </div>
+        <div class="rk">
+          <div class="em">🏢</div>
+          <div class="mid"><div class="nm"><i>3</i> Expensas</div>
+            <div class="meta" style="margin-top:3px;font-size:10px;font-weight:700;color:var(--faint)">Galicia · 3 ago</div></div>
+          <div class="rt"><div class="amt tnum">$229.232</div></div>
+        </div>
+      </div>
+
+    </div></div>
+    <div class="tabs">
+      <div class="tab"><span class="g">⌂</span><span class="l">Inicio</span></div>
+      <div class="tab on"><span class="g">◫</span><span class="l">Informes</span></div>
+      <div class="fabslot"><div class="fab">+</div></div>
+      <div class="tab"><span class="g">▤</span><span class="l">Cuentas</span></div>
+      <div class="tab"><span class="g">⋯</span><span class="l">Más</span></div>
+    </div>
+  </div>
+  <div class="ann">
+    <p><b>"Los 10 más grandes" es nuevo y es barato.</b> Responde "¿por qué gasté tanto?" más rápido que cualquier desglose: la respuesta casi siempre son 2 o 3 movimientos, no una categoría.</p>
+    <p>El chip <b>Consumo ⇄ Caja</b> respeta D-002: el gráfico es devengado por defecto y ahora <b>lo dice</b>, en vez de que la base se adivine.</p>
+  </div>
+</div>
+
+<!-- ══════════════ 4 · MOVIMIENTOS ══════════════ -->
+<div class="slot">
+  <div class="cap">
+    <span class="n">4 · Movimientos</span>
+    <h2>Agosto — el detalle</h2>
+    <p>Solo lista. Sin dona, sin avisos apilados. Lo que fuiste a buscar arranca en el primer scroll.</p>
+  </div>
+  <div class="phone">
+    <div class="top">
+      <div class="row1">
+        <div class="hi">Movimientos</div>
+        <div class="icons"><div class="ic">🔍</div><div class="ic">⚙</div></div>
+      </div>
+      <div class="msel">
+        <button class="nv">‹</button>
+        <div class="lbl">agosto 2026<small>mes corriente</small></div>
+        <button class="nv">›</button>
+      </div>
+    </div>
+    <div class="scroll"><div class="stack">
+      <div class="mvcard">
+        <div class="dhdr">Hoy · martes 18</div>
+        <div class="mv">
+          <div class="em">🛒</div>
+          <div class="mid"><div class="t">Súper</div><div class="s">Alimentos › Súper · Galicia</div></div>
+          <div class="a neg tnum">−$45.000</div>
+        </div>
+        <div class="mv">
+          <div class="em">☕</div>
+          <div class="mid"><div class="t">Café</div><div class="s">Salidas › Bares · Billetera</div></div>
+          <div class="a neg tnum">−$6.500</div>
+        </div>
+
+        <div class="dhdr">Ayer · lunes 17</div>
+        <div class="mv">
+          <div class="em">📺</div>
+          <div class="mid"><div class="t">Netflix <span class="bdg">↻</span></div><div class="s">Ocio › Streaming · Santander VISA</div></div>
+          <div class="a neg tnum">−$12.000</div>
+        </div>
+        <div class="mv">
+          <div class="em">🚗</div>
+          <div class="mid"><div class="t">Uber <span class="bdg">👥</span></div><div class="s">Transporte › Apps · Santander VISA</div></div>
+          <div class="a neg tnum">−$3.762</div>
+        </div>
+        <div class="mv">
+          <div class="em">🧊</div>
+          <div class="mid"><div class="t">Heladera <span class="bdg">Cuota 2 de 12</span></div><div class="s">Hogar › Electro · Galicia VISA</div></div>
+          <div class="a neg tnum">−$145.000</div>
+        </div>
+
+        <div class="dhdr">domingo 16</div>
+        <div class="mv">
+          <div class="em">💼</div>
+          <div class="mid"><div class="t">Sueldo</div><div class="s">Ingresos › Sueldo · Galicia</div></div>
+          <div class="a pos tnum">+$2.795.160</div>
+        </div>
+      </div>
+    </div></div>
+    <div class="tabs">
+      <div class="tab"><span class="g">⌂</span><span class="l">Inicio</span></div>
+      <div class="tab"><span class="g">◫</span><span class="l">Informes</span></div>
+      <div class="fabslot"><div class="fab">+</div></div>
+      <div class="tab"><span class="g">▤</span><span class="l">Cuentas</span></div>
+      <div class="tab"><span class="g">⋯</span><span class="l">Más</span></div>
+    </div>
+  </div>
+  <div class="ann">
+    <p><b>Se fue la dona.</b> El gráfico vive en Informes. Movimientos entrega lo que su nombre promete.</p>
+    <p><b>Las insignias siguen D-003</b> (ya cerrada): bandera → ícono en mobile (↻ 👥), valor → texto siempre ("Cuota 2 de 12").</p>
+    <p>Los 3 avisos "por confirmar" se mudaron a Inicio, en una línea. Son <b>tareas</b>, no análisis.</p>
+  </div>
+</div>
+
+<!-- ══════════════ 5 · DRILL ══════════════ -->
+<div class="slot">
+  <div class="cap">
+    <span class="n">5 · Movimientos</span>
+    <h2>Aterrizaje desde Informes</h2>
+    <p>El drill de D-002, ahora entre pantallas. La lente viaja visible en el chip.</p>
+  </div>
+  <div class="phone">
+    <div class="top">
+      <div class="row1">
+        <div class="hi">Movimientos</div>
+        <div class="icons"><div class="ic">🔍</div><div class="ic">⚙</div></div>
+      </div>
+      <div class="msel">
+        <button class="nv">‹</button>
+        <div class="lbl">agosto 2026<small>mes corriente</small></div>
+        <button class="nv">›</button>
+      </div>
+    </div>
+    <div class="scroll"><div class="stack">
+
+      <div class="actf">
+        <div class="l">Hogar · agosto — composición<small>Lente Consumo · suma $470.000, igual que la torta</small></div>
+        <span class="x">✕</span>
+      </div>
+
+      <div class="mvcard">
+        <div class="dhdr">Compone el peso de la categoría</div>
+        <div class="mv">
+          <div class="em">🧊</div>
+          <div class="mid"><div class="t">Heladera <span class="bdg">Cuota 2 de 12</span></div><div class="s">Hogar › Electro · Galicia VISA · 17 ago</div></div>
+          <div class="a neg tnum">−$145.000</div>
+        </div>
+        <div class="mv">
+          <div class="em">🛋</div>
+          <div class="mid"><div class="t">Sillón <span class="bdg">👥</span></div><div class="s">Hogar › Muebles · tu parte · 12 ago</div></div>
+          <div class="a neg tnum">−$310.000</div>
+        </div>
+        <div class="mv">
+          <div class="em">🔧</div>
+          <div class="mid"><div class="t">Plomero</div><div class="s">Hogar › Mantenimiento · Billetera · 9 ago</div></div>
+          <div class="a neg tnum">−$28.000</div>
+        </div>
+        <div class="mv">
+          <div class="em">↩️</div>
+          <div class="mid"><div class="t">Reintegro sillón</div><div class="s">Hogar › Muebles · recibido · 14 ago</div></div>
+          <div class="a pos tnum">+$13.000</div>
+        </div>
+      </div>
+
+      <div class="c" style="background:var(--slate-soft);border-color:transparent">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <span style="font-size:12.5px;font-weight:800;color:var(--slate)">Total de la composición</span>
+          <span class="tnum" style="font-size:16px;font-weight:800;color:var(--slate)">$470.000</span>
+        </div>
+      </div>
+
+    </div></div>
+    <div class="tabs">
+      <div class="tab"><span class="g">⌂</span><span class="l">Inicio</span></div>
+      <div class="tab"><span class="g">◫</span><span class="l">Informes</span></div>
+      <div class="fabslot"><div class="fab">+</div></div>
+      <div class="tab"><span class="g">▤</span><span class="l">Cuentas</span></div>
+      <div class="tab"><span class="g">⋯</span><span class="l">Más</span></div>
+    </div>
+  </div>
+  <div class="ann">
+    <p><b>Esto refina D-002, no lo contradice.</b> La decisión pedía que la composición tuviera encabezado propio y declarara su lente. Acá además <b>separa las lentes por pantalla</b>: Informes = Consumo, Movimientos = Caja, y el chip navy avisa cuando estás en la excepción.</p>
+    <p>Agregar cualquier otro filtro cierra el chip y avisa — tal cual pide D-002.</p>
+  </div>
+</div>
+
+</div>
+</div>
