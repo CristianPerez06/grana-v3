@@ -1,263 +1,37 @@
 <meta charset="utf-8">
-<title>Gastos fijos y Tarjetas — grana</title>
+<title>Gastos fijos y Tarjetas — índice</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared.css">
-
 <div class="demo">
-  <h1>Gastos fijos y Tarjetas — las dos superficies que la planilla tiene y Grana no</h1>
-  <p class="note">
-    Tokens y componentes tomados de <code>design_handoff_inicio_definitivo/cards/cards.css</code>.
-    Cada pantalla dice su ruta. Datos de ejemplo de la planilla de referencia.
-    Achicá la ventana a ≤680px para ver el layout mobile.
-  </p>
+  <h1>Gastos fijos y Tarjetas — índice del bundle</h1>
+  <p class="note">Estructura segun <code>docs/design/route-ui-system.md</code>: las tres vistas
+  (web desktop, web-mobile responsive, app nativa) antes de specear. El razonamiento y la
+  comparación contra lo que Grana muestra hoy están en <code>README.md</code>.</p>
 
-  <!-- ══════════════════ 1 · GASTOS FIJOS ══════════════════ -->
-  <div class="slot">
-    <span class="route">Gastos fijos <span class="m">/fijos</span></span>
-    <p class="xls">Reemplaza <b>la columna izquierda de la planilla</b>: la lista de lo que pagás
-      todos los meses, con su total. Hoy en Grana esto vive en <code>/transactions/recurring</code>,
-      a dos taps dentro de un módulo que no lo nombra.</p>
-  </div>
-
-  <div class="slot">
-    <div class="card">
-      <div class="card-h">
-        <div>
-          <h2>Gastos fijos</h2>
-          <p class="sub">Lo que pagás todos los meses · 20 reglas activas</p>
-        </div>
-        <a href="#" class="link">Agregar ›</a>
-      </div>
-
-      <div class="netbar total">
-        <span class="k">Total mensual</span>
-        <span class="v tnum">$&nbsp;2.480.436<small class="usd">US$ 120,00</small></span>
-      </div>
-
-      <div class="scalebox">
-        <div class="col out">
-          <div class="k">Sale de tu caja</div>
-          <div class="v tnum">$&nbsp;2.269.181</div>
-          <div class="u">14 reglas · débito y efectivo</div>
-        </div>
-        <div class="col">
-          <div class="k">Va a tarjeta</div>
-          <div class="v tnum">$&nbsp;211.254</div>
-          <div class="u">6 reglas · llegan por resumen</div>
-        </div>
-      </div>
-
-      <div class="lines">
-        <div class="ghead">Sale de tu caja</div>
-        <div class="ln">
-          <span class="ico">🏠</span>
-          <span class="mid">
-            <span class="nm">Alquiler Rivadavia</span>
-            <span class="mt">Día 1 · Galicia · Vivienda › Alquiler</span>
-          </span>
-          <span class="pill ex">Exacto</span>
-          <span class="rt"><span class="am tnum">$&nbsp;737.826</span></span>
-        </div>
-        <div class="ln">
-          <span class="ico">🏢</span>
-          <span class="mid">
-            <span class="nm">Expensas Rivadavia</span>
-            <span class="mt">Día 5 · Galicia · Vivienda › Expensas</span>
-          </span>
-          <span class="pill es">Estimado</span>
-          <span class="rt"><span class="am tnum">$&nbsp;229.233</span></span>
-        </div>
-        <div class="ln">
-          <span class="ico">💡</span>
-          <span class="mid">
-            <span class="nm">EPE — luz</span>
-            <span class="mt">Día 12 · Galicia · Servicios › Luz</span>
-          </span>
-          <span class="pill es">Estimado</span>
-          <span class="rt"><span class="am tnum">$&nbsp;35.310</span></span>
-        </div>
-        <div class="ln">
-          <span class="ico">📋</span>
-          <span class="mid">
-            <span class="nm">Monotributo</span>
-            <span class="mt">Día 20 · Galicia · Impuestos</span>
-          </span>
-          <span class="pill ex">Exacto</span>
-          <span class="rt"><span class="am tnum">$&nbsp;30.280</span></span>
-        </div>
-
-        <div class="ghead">Va a tarjeta</div>
-        <div class="ln">
-          <span class="ico">🎬</span>
-          <span class="mid">
-            <span class="nm">Spotify</span>
-            <span class="mt">Día 3 · Galicia VISA · Ocio › Streaming</span>
-          </span>
-          <span class="pill ex">Exacto</span>
-          <span class="rt"><span class="am tnum">$&nbsp;3.300</span></span>
-        </div>
-        <div class="ln">
-          <span class="ico">🎓</span>
-          <span class="mid">
-            <span class="nm">UCEMA</span>
-            <span class="mt">Día 5 · Santander VISA · Educación</span>
-          </span>
-          <span class="pill ex">Exacto</span>
-          <span class="rt"><span class="am tnum">$&nbsp;290.000</span></span>
-        </div>
-      </div>
-
-      <p class="hint warn">
-        Tus gastos fijos son el <b>89% de tus ingresos</b>. Te quedan
-        <b>$&nbsp;314.724</b> por mes para todo lo demás.
-      </p>
+  <div class="slot"><div class="card">
+    <div class="card-h"><div><h2>Web</h2><p class="sub">Desktop + responsive mobile (achicá a ≤980px)</p></div></div>
+    <div class="lines">
+      <div class="ln"><span class="ico">🖥</span><span class="mid"><span class="nm"><a href="web/fijos.html">web/fijos.html</a></span><span class="mt">Ruta /fijos</span></span></div>
+      <div class="ln"><span class="ico">🖥</span><span class="mid"><span class="nm"><a href="web/tarjetas.html">web/tarjetas.html</a></span><span class="mt">Ruta /cards</span></span></div>
     </div>
-  </div>
+  </div></div>
 
-  <!-- ══════════════════ 2 · TARJETAS ══════════════════ -->
-  <div class="slot" style="margin-top:44px">
-    <span class="route">Tarjetas <span class="m">/cards</span></span>
-    <p class="xls">Reemplaza <b>las columnas del medio de la planilla</b> (una por tarjeta con su
-      total). El hero "A pagar / En curso" <b>ya existe y está bien</b>; lo nuevo es el bloque de
-      cuotas global y ver todas las tarjetas con su resumen del mes de un vistazo.</p>
-  </div>
-
-  <div class="slot">
-    <div class="hero">
-      <span class="pl">A pagar</span>
-      <div class="pv tnum"><span class="cur">$</span>&nbsp;743.691<span class="dec">,43</span></div>
-      <div class="usd"><span class="chip">USD</span><span class="uv tnum">606,83</span></div>
-      <p class="pcap">Resúmenes cerrados sin pagar. El más próximo vence el 10/08.</p>
+  <div class="slot"><div class="card">
+    <div class="card-h"><div><h2>Mobile nativo</h2><p class="sub">Header + tab bar con FAB, 430px</p></div></div>
+    <div class="lines">
+      <div class="ln"><span class="ico">📱</span><span class="mid"><span class="nm"><a href="mobile/fijos.html">mobile/fijos.html</a></span><span class="mt">Ruta /fijos</span></span></div>
+      <div class="ln"><span class="ico">📱</span><span class="mid"><span class="nm"><a href="mobile/tarjetas.html">mobile/tarjetas.html</a></span><span class="mt">Ruta /cards</span></span></div>
     </div>
-  </div>
+  </div></div>
 
-  <div class="slot">
-    <div class="card">
-      <div class="card-h">
-        <div>
-          <h2>Cuotas en curso</h2>
-          <p class="sub">Todas tus tarjetas · 7 compras activas</p>
-        </div>
-        <a href="#" class="link">Ver todas ›</a>
-      </div>
-
-      <div class="netbar total">
-        <span class="k">Te queda por pagar</span>
-        <span class="v tnum">$&nbsp;1.240.318<small class="usd">termina en nov 2026</small></span>
-      </div>
-
-      <div class="lines">
-        <div class="ln">
-          <span class="ico">🧊</span>
-          <span class="mid">
-            <span class="nm">Heladera</span>
-            <span class="mt">Galicia VISA · cuota 2 de 12</span>
-            <span class="qbar"><span class="f" style="width:16%"></span></span>
-          </span>
-          <span class="rt">
-            <span class="am tnum">$&nbsp;1.450.000</span>
-            <span class="sub">$ 145.000 por mes</span>
-          </span>
-        </div>
-        <div class="ln">
-          <span class="ico">💻</span>
-          <span class="mid">
-            <span class="nm">Notebook</span>
-            <span class="mt">Santander VISA · cuota 5 de 6</span>
-            <span class="qbar"><span class="f" style="width:83%"></span></span>
-          </span>
-          <span class="rt">
-            <span class="am tnum">$&nbsp;180.000</span>
-            <span class="sub">$ 90.000 por mes</span>
-          </span>
-        </div>
-        <div class="ln">
-          <span class="ico">✈️</span>
-          <span class="mid">
-            <span class="nm">Pasajes Smiles</span>
-            <span class="mt">Galicia VISA · cuota 1 de 3</span>
-            <span class="qbar"><span class="f" style="width:33%"></span></span>
-          </span>
-          <span class="rt">
-            <span class="am tnum">$&nbsp;19.500</span>
-            <span class="sub">$ 6.500 por mes</span>
-          </span>
-        </div>
-      </div>
-
-      <p class="hint">
-        De acá a noviembre ya tenés comprometidos <b>$&nbsp;241.500 por mes</b> solo en cuotas.
-      </p>
+  <div class="slot"><div class="card">
+    <div class="card-h"><div><h2>Componentes</h2><p class="sub">Uno por archivo, con su nota de implementación</p></div></div>
+    <div class="lines">
+      <div class="ln"><span class="ico">🧩</span><span class="mid"><span class="nm"><a href="components/total-mensual.html">total-mensual.html</a></span><span class="mt">NUEVO — no existe hoy</span></span></div>
+      <div class="ln"><span class="ico">🧩</span><span class="mid"><span class="nm"><a href="components/lista-fijos.html">lista-fijos.html</a></span><span class="mt">Existe sin total, sin corte caja/tarjeta, sin exacto/estimado</span></span></div>
+      <div class="ln"><span class="ico">🧩</span><span class="mid"><span class="nm"><a href="components/cuotas-global.html">cuotas-global.html</a></span><span class="mt">NUEVO — hoy solo por tarjeta</span></span></div>
+      <div class="ln"><span class="ico">🧩</span><span class="mid"><span class="nm"><a href="components/lista-tarjetas.html">lista-tarjetas.html</a></span><span class="mt">YA EXISTE (CardsCompactView) — contexto, no propuesta</span></span></div>
     </div>
-  </div>
-
-  <div class="slot">
-    <div class="card">
-      <div class="card-h">
-        <div>
-          <h2>Mis tarjetas</h2>
-          <p class="sub">Resúmenes de agosto 2026</p>
-        </div>
-        <div class="seg">
-          <button class="on">Este mes</button>
-          <button>Anteriores</button>
-        </div>
-      </div>
-
-      <div style="margin-top:16px">
-        <div class="crow">
-          <span class="br" style="background:var(--blue)">VISA</span>
-          <span class="mid">
-            <span class="nm">Galicia VISA</span>
-            <span class="mt">Cierra 28/08 · vence 10/09 · 3 compras en cuotas</span>
-          </span>
-          <span class="rt">
-            <span class="am tnum">$&nbsp;78.801</span>
-            <span class="sub">en curso</span>
-          </span>
-        </div>
-        <div class="crow">
-          <span class="br" style="background:var(--terracota)">VISA</span>
-          <span class="mid">
-            <span class="nm">Santander Río VISA</span>
-            <span class="mt">Cierra 03/09 · vence 15/09 · 2 compras en cuotas</span>
-          </span>
-          <span class="rt">
-            <span class="am tnum">$&nbsp;74.668</span>
-            <span class="sub">en curso</span>
-          </span>
-        </div>
-        <div class="crow">
-          <span class="br" style="background:var(--slate)">VISA</span>
-          <span class="mid">
-            <span class="nm">BBVA VISA</span>
-            <span class="mt">Cierra 15/09 · vence 25/09</span>
-          </span>
-          <span class="rt">
-            <span class="am tnum">$&nbsp;34.700</span>
-            <span class="sub">en curso</span>
-          </span>
-        </div>
-        <div class="crow zero">
-          <span class="br" style="background:var(--faint)">ICBC</span>
-          <span class="mid">
-            <span class="nm">ICBC Mastercard</span>
-            <span class="mt">Cierra 20/09 · vence 02/10</span>
-          </span>
-          <span class="rt">
-            <span class="am tnum">$&nbsp;0</span>
-            <span class="sub">sin consumos</span>
-          </span>
-        </div>
-      </div>
-
-      <p class="hint">
-        Total en curso de las 4 tarjetas: <b>$&nbsp;188.169</b>. Todavía se sigue sumando hasta
-        cada cierre.
-      </p>
-    </div>
-  </div>
-
+  </div></div>
 </div>

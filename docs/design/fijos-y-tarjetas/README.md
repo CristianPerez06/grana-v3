@@ -61,6 +61,64 @@ Lo nuevo son dos bloques:
 `getCreditCards` + `computePeriodAmounts` (`@grana/cards`) ya calculan todo por tarjeta.
 Falta agregarlos, no calcularlos.
 
+## Comparación con lo que Grana muestra HOY
+
+_Leído del código, ruta por ruta (`route-ui-system.md` lo exige antes de diseñar). Esta
+sección corrige la propuesta original, que sobrevendía la novedad de `/cards`._
+
+### `/cards` — hoy
+
+`cards/page.tsx` compone tres secciones: `CardsMonthHeroContainer` → `WalletContainer` →
+`ArchivedCardsContainer`.
+
+| Bloque | ¿Existe hoy? | Dónde |
+|---|---|---|
+| Hero "A pagar" + "En curso", bimoneda | ✅ **Sí** | `cards-month-hero.tsx` |
+| "Próximos cierres" (capado en 3) | ✅ **Sí** | mismo hero, columna derecha |
+| **Lista de tarjetas con total del mes, cierre, vence y % de uso** | ✅ **Sí — y mejor que mi mock** | `cards-compact-view.tsx`: agrupa por banco, con subtotal "A pagar" por grupo y pill de vencimiento |
+| Tarjetas archivadas | ✅ Sí | `archived-cards-container.tsx` |
+| **Cuotas en curso, total global** | ❌ **No** | solo `CuotasEnCursoPane`, **dentro** del detalle de cada tarjeta |
+
+**Corrección:** la card "Mis tarjetas" de mi mockup **ya existe**. Lo que hoy hace
+`CardsCompactView` cubre el bloque 2 de la planilla mejor de lo que yo lo dibujé — agrupa por
+banco y muestra el uso del límite, cosas que mi mock ni tenía.
+
+**El único hueco real en `/cards` es el bloque de cuotas global.** Todo lo demás está.
+En el mock, la card "Mis tarjetas" queda como **contexto**, no como propuesta.
+
+### `/transactions/recurring` — hoy
+
+`recurring/page.tsx` compone: `PendingRecurrencesBlock` → `UpcomingRecurrences` →
+`RecurringTabs`.
+
+| Bloque | ¿Existe hoy? | Dónde |
+|---|---|---|
+| Pendientes de confirmar, con edición inline | ✅ Sí | `pending-recurrences-block.tsx` |
+| "Próximos 7 días" / "Más adelante este mes" | ✅ Sí | `upcoming-recurrences.tsx` |
+| Tabs Activas / Pausadas / Finalizadas con contador | ✅ Sí | `recurring-tabs.tsx` |
+| Monto por regla | ✅ Sí | dentro de las tabs |
+| **Total mensual de los fijos** | ❌ **No** | — |
+| **Corte "sale de tu caja" vs. "va a tarjeta"** | ❌ **No** | el dato está en `accounts.type`, no se usa |
+| **Exacto vs. Estimado** | ❌ **No** | requiere `amount_is_estimated` |
+| **Comparación contra los ingresos** | ❌ **No** | — |
+| **Nombre que el usuario reconozca** | ❌ No | se llama "Recurrencias", no "Gastos fijos" |
+
+**El hub existe y está bien construido — pero lista reglas sin sumarlas.** Esa es la
+diferencia con la planilla: Excel te da el total abajo de la columna. Grana te da 20 filas.
+
+### El delta real de este bundle
+
+Sacando lo que ya está, lo que estas pantallas realmente proponen es:
+
+| # | Propuesta | Costo |
+|---|---|---|
+| 1 | **Total mensual de fijos** + corte caja/tarjeta + comparación contra ingresos | Bajo — suma sobre `getRecurrences` + join a `accounts.type` |
+| 2 | **Cuotas en curso global** (total, cantidad, hasta cuándo) | Bajo — `CuotasEnCursoPane` ya suma por tarjeta; falta la vuelta global |
+| 3 | **Pill Exacto / Estimado** | Una columna: `amount_is_estimated` |
+| 4 | **Renombrar y sacar de Movimientos** ("Gastos fijos", ruta propia) | Ruteo y copy |
+
+Cuatro cosas, ninguna con query nueva. **El resto del mockup es Grana como ya es.**
+
 ## Lo que estas pantallas NO hacen
 
 - **No proyectan el mes que viene.** Muestran lo que ya está cargado y comprometido. La
