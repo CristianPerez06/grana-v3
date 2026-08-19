@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>En qué se fue · opciones de layout</title>
+<style>
+  :root{
+    --navy:#0B1A2B; --emerald:#10B981; --emerald-deep:#059669;
+    --page:#F6F7F9; --card:#FFFFFF; --border:#E6EAEF; --border-soft:#EEF1F4;
+    --text:#0B1A2B; --text-muted:#6B7683; --text-soft:#8A94A3; --slate:#3A6B8A;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--page); color:var(--text);
+    font-family:"Plus Jakarta Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    padding:28px; display:flex; flex-direction:column; gap:28px; align-items:center;
+  }
+  .intro{max-width:780px; width:100%}
+  .intro h1{font-size:18px; margin:0 0 6px}
+  .intro p{font-size:13px; color:var(--text-muted); margin:0; line-height:1.5}
+  .card{
+    width:100%; max-width:780px; background:var(--card);
+    border:1px solid var(--border); border-radius:18px; padding:24px 28px;
+    box-shadow:0 2px 8px rgba(26,23,20,.05);
+  }
+  .opt-tag{font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:#fff;
+    background:var(--navy); border-radius:999px; padding:3px 10px; display:inline-block}
+  .opt-desc{font-size:12.5px; color:var(--text-muted); margin:8px 0 18px; line-height:1.5}
+  .eyebrow{font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--navy)}
+  .month{font-size:18px; font-weight:800; letter-spacing:-.01em; margin-top:4px}
+  .subtitle{font-size:13px; color:var(--text-soft); font-weight:600; margin-top:2px; margin-bottom:18px}
+
+  svg.donut{display:block}
+  .center{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center}
+  .c-eyebrow{font-size:10px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--emerald-deep)}
+  .c-amount{font-size:23px; font-weight:800; letter-spacing:-.03em}
+  .c-caption{font-size:10.5px; color:var(--text-soft); margin-top:2px}
+
+  /* lista base */
+  .dot{width:10px; height:10px; border-radius:3px; flex:0 0 auto}
+  .row-name{font-size:13.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .row-pct{font-size:11px; color:var(--text-soft); font-variant-numeric:tabular-nums}
+  .row-amt{font-size:13.5px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap}
+
+  /* A: dona arriba + grilla 2 col */
+  .a-top{display:flex; justify-content:center; position:relative; margin-bottom:18px}
+  .a-grid{display:grid; grid-template-columns:1fr 1fr; gap:2px 28px}
+  @media(max-width:560px){.a-grid{grid-template-columns:1fr}}
+  .a-cell{display:flex; align-items:center; gap:10px; padding:8px 6px; border-radius:8px}
+  .a-cell:hover{background:#F4F6F9}
+  .a-cell .row-name{flex:1}
+
+  /* B: dona izq + ranking con barras */
+  .b-wrap{display:flex; gap:26px; align-items:flex-start}
+  @media(max-width:560px){.b-wrap{flex-direction:column; align-items:center}}
+  .b-list{flex:1; min-width:0; display:flex; flex-direction:column; gap:11px; width:100%}
+  .b-row{display:flex; flex-direction:column; gap:5px; padding:2px 4px; border-radius:8px}
+  .b-row:hover{background:#F4F6F9}
+  .b-head{display:flex; align-items:center; gap:9px}
+  .b-head .row-name{flex:1}
+  .b-track{height:5px; border-radius:99px; background:var(--border-soft); overflow:hidden}
+  .b-fill{height:100%; border-radius:99px}
+
+  /* C: barra apilada + grilla */
+  .c-bar{display:flex; height:30px; border-radius:9px; overflow:hidden; margin-bottom:6px}
+  .c-seg{height:100%}
+  .c-legend{font-size:11px; color:var(--text-soft); margin-bottom:18px}
+  .c-grid{display:grid; grid-template-columns:1fr 1fr; gap:2px 28px}
+  @media(max-width:560px){.c-grid{grid-template-columns:1fr}}
+  .c-cell{display:flex; align-items:center; gap:10px; padding:8px 6px; border-radius:8px}
+  .c-cell:hover{background:#F4F6F9}
+  .c-cell .row-name{flex:1}
+
+  .pros{font-size:11.5px; color:var(--text-muted); margin-top:16px; border-top:1px solid var(--border-soft); padding-top:12px; line-height:1.6}
+  .pros b{color:var(--text)}
+</style>
+</head>
+<body>
+  <div class="intro">
+    <h1>"En qué se fue" — 3 layouts limpios (sin líneas guía)</h1>
+    <p>La dona queda como resumen (top 6 + “Otros”), pero <strong>todas</strong> las categorías se listan aparte,
+       de forma ordenada y que escala. Mismo dataset de 12 categorías en las tres. Decime cuál te late.</p>
+  </div>
+
+  <!-- A -->
+  <div class="card">
+    <span class="opt-tag">Opción A · Dona + grilla 2 columnas</span>
+    <p class="opt-desc">La dona arriba como hero; debajo, todas las categorías en una grilla de dos columnas. Se ve todo de una, sin desplegar.</p>
+    <div class="eyebrow">En qué se fue</div>
+    <div class="month">Junio 2026</div>
+    <div class="subtitle">Gastos del mes</div>
+    <div class="a-top" id="a-donut"></div>
+    <div class="a-grid" id="a-grid"></div>
+    <div class="pros"><b>+</b> Escala a cualquier cantidad · ordenado · responsive a 1 col. <b>–</b> La dona y la lista compiten un poco por protagonismo.</div>
+  </div>
+
+  <!-- B -->
+  <div class="card">
+    <span class="opt-tag">Opción B · Dona + ranking con barras</span>
+    <p class="opt-desc">Dona a un lado; al lado, cada categoría es una fila con una barrita de su peso. Muy escaneable: la barra deja comparar de un vistazo.</p>
+    <div class="eyebrow">En qué se fue</div>
+    <div class="month">Junio 2026</div>
+    <div class="subtitle">Gastos del mes</div>
+    <div class="b-wrap">
+      <div style="position:relative" id="b-donut"></div>
+      <div class="b-list" id="b-list"></div>
+    </div>
+    <div class="pros"><b>+</b> La barra da jerarquía visual sin ensuciar · escala vertical infinito. <b>–</b> Con muchas categorías la columna se hace larga (scroll natural de la card).</div>
+  </div>
+
+  <!-- C -->
+  <div class="card">
+    <span class="opt-tag">Opción C · Barra apilada + grilla</span>
+    <p class="opt-desc">En vez de dona, una barra horizontal apilada (cada color = una categoría). Debajo, la grilla con el detalle. Más moderno y compacto en alto.</p>
+    <div class="eyebrow">En qué se fue</div>
+    <div class="month">Junio 2026</div>
+    <div class="subtitle">Gastos del mes</div>
+    <div class="c-bar" id="c-bar"></div>
+    <div class="c-legend" id="c-legend"></div>
+    <div class="c-grid" id="c-grid"></div>
+    <div class="pros"><b>+</b> Ocupa poco alto · muy moderno · todo visible. <b>–</b> Pierde el ícono central de “dona” que ya es parte de la identidad del módulo.</div>
+  </div>
+
+<script>
+const PALETTE = ['#10B981','#0D9488','#3A6B8A','#B56A5A','#8A6E98','#D9952F','#C05C84','#4C56C0'];
+const OTHERS = '#9CA3AF';
+const fmtARS = n => '$ ' + n.toLocaleString('es-AR');
+
+const DATA = [
+  {label:'Comida',     value:182400, color:PALETTE[0], icon:'🍔'},
+  {label:'Hogar',      value:98300,  color:PALETTE[1], icon:'🏠'},
+  {label:'Transporte', value:64100,  color:PALETTE[2], icon:'🚗'},
+  {label:'Servicios',  value:51800,  color:PALETTE[3], icon:'💡'},
+  {label:'Ocio',       value:38900,  color:PALETTE[4], icon:'🎮'},
+  {label:'Salud',      value:22500,  color:PALETTE[5], icon:'⚕️'},
+  {label:'Ropa',       value:15200,  color:PALETTE[6], icon:'👕'},
+  {label:'Mascotas',   value:12800,  color:PALETTE[7], icon:'🐶'},
+  {label:'Regalos',    value:9400,   color:PALETTE[0], icon:'🎁'},
+  {label:'Educación',  value:7600,   color:PALETTE[1], icon:'📚'},
+  {label:'Café',       value:5100,   color:PALETTE[2], icon:'☕'},
+  {label:'Varios',     value:3200,   color:PALETTE[3], icon:'🔧'},
+];
+const TOTAL = DATA.reduce((a,c)=>a+c.value,0);
+const withPct = DATA.map(c=>({...c, pct: c.value/TOTAL*100})).sort((a,b)=>b.value-a.value);
+
+// Dona agrupada para el visual (top 6 + Otros), tamaño configurable.
+function donutSVG(size){
+  const top = withPct.slice(0,6);
+  const rest = withPct.slice(6);
+  const slices = [...top];
+  if(rest.length) slices.push({label:'Otros', color:OTHERS, value:rest.reduce((a,c)=>a+c.value,0), pct:rest.reduce((a,c)=>a+c.pct,0)});
+  const r=15.915, C=100; let off=25; // empieza arriba
+  let arcs='';
+  slices.forEach(s=>{
+    arcs+=`<circle cx="18" cy="18" r="${r}" fill="none" stroke="${s.color}" stroke-width="4"
+      stroke-dasharray="${s.pct} ${100-s.pct}" stroke-dashoffset="${off}"/>`;
+    off -= s.pct;
+  });
+  return `<svg class="donut" viewBox="0 0 36 36" width="${size}" height="${size}">
+    <circle cx="18" cy="18" r="${r}" fill="none" stroke="var(--border-soft)" stroke-width="4"/>${arcs}</svg>`;
+}
+function centerHTML(){
+  return `<div class="center">
+    <span class="c-eyebrow">Gastado</span>
+    <span class="c-amount">${fmtARS(TOTAL)}</span>
+    <span class="c-caption">en ${DATA.length} categorías</span></div>`;
+}
+
+// ── A ──
+document.getElementById('a-donut').innerHTML = donutSVG(190) + centerHTML();
+document.getElementById('a-grid').innerHTML = withPct.map(s=>`
+  <div class="a-cell">
+    <span class="dot" style="background:${s.color}"></span>
+    <span class="row-name">${s.icon} ${s.label}</span>
+    <span class="row-pct">${Math.round(s.pct)}%</span>
+    <span class="row-amt">${fmtARS(s.value)}</span>
+  </div>`).join('');
+
+// ── B ──
+document.getElementById('b-donut').innerHTML = donutSVG(180) + centerHTML();
+const maxPct = withPct[0].pct;
+document.getElementById('b-list').innerHTML = withPct.map(s=>`
+  <div class="b-row">
+    <div class="b-head">
+      <span class="dot" style="background:${s.color}"></span>
+      <span class="row-name">${s.icon} ${s.label}</span>
+      <span class="row-pct">${Math.round(s.pct)}%</span>
+      <span class="row-amt">${fmtARS(s.value)}</span>
+    </div>
+    <div class="b-track"><div class="b-fill" style="width:${(s.pct/maxPct*100).toFixed(1)}%; background:${s.color}"></div></div>
+  </div>`).join('');
+
+// ── C ──
+document.getElementById('c-bar').innerHTML = withPct.map(s=>
+  `<div class="c-seg" style="width:${s.pct}%; background:${s.color}" title="${s.label} ${Math.round(s.pct)}%"></div>`).join('');
+document.getElementById('c-legend').textContent = `${fmtARS(TOTAL)} gastados en ${DATA.length} categorías`;
+document.getElementById('c-grid').innerHTML = withPct.map(s=>`
+  <div class="c-cell">
+    <span class="dot" style="background:${s.color}"></span>
+    <span class="row-name">${s.icon} ${s.label}</span>
+    <span class="row-pct">${Math.round(s.pct)}%</span>
+    <span class="row-amt">${fmtARS(s.value)}</span>
+  </div>`).join('');
+</script>
+</body>
+</html>

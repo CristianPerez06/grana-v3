@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Grana - detalle de movimiento enfocado</title>
+  <style>
+    :root {
+      --navy: #0b1a2b;
+      --emerald: #10b981;
+      --emerald-deep: #059669;
+      --emerald-soft: rgba(16, 185, 129, 0.12);
+      --plum: #8a6e98;
+      --plum-soft: rgba(138, 110, 152, 0.12);
+      --terracotta: #b56a5a;
+      --terracotta-soft: rgba(181, 106, 90, 0.12);
+      --slate: #3a6b8a;
+      --slate-soft: #eaf1f6;
+      --page: #f6f7f9;
+      --card: #ffffff;
+      --border: #e6eaef;
+      --border-soft: #eef1f4;
+      --text: #0b1a2b;
+      --text-muted: #6b7683;
+      --text-soft: #8a94a3;
+      --warning: #c49a3c;
+      --warning-deep: #b45309;
+      --warning-soft: rgba(196, 154, 60, 0.12);
+      --danger: #c54b3c;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--text);
+      font-family: "Plus Jakarta Sans", Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .canvas {
+      width: min(1280px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 28px 0 56px;
+    }
+
+    .intro {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 28px;
+      margin-bottom: 22px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--text-soft);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+
+    .intro p:last-child {
+      max-width: 520px;
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 650;
+      line-height: 1.55;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(360px, 620px) minmax(320px, 1fr);
+      gap: 22px;
+      align-items: start;
+    }
+
+    .phone-wrap {
+      display: flex;
+      justify-content: center;
+    }
+
+    .screen {
+      width: min(100%, 560px);
+      min-height: 920px;
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      background: var(--page);
+      box-shadow: 0 24px 70px rgba(11, 26, 43, 0.10);
+      padding: 30px 28px 34px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 40px;
+      margin-bottom: 22px;
+    }
+
+    .back {
+      color: var(--slate);
+      font-size: 15px;
+      font-weight: 750;
+    }
+
+    .actions {
+      display: inline-flex;
+      gap: 8px;
+    }
+
+    .icon-button {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      color: var(--text-muted);
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .icon-button:hover,
+    .icon-button.active {
+      border-color: var(--border);
+      background: var(--card);
+    }
+
+    .icon-button.delete { color: var(--danger); }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 26px;
+      background: var(--card);
+      padding: 26px 24px 24px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(11, 26, 43, 0.04);
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.08), transparent 34%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
+      pointer-events: none;
+    }
+
+    .hero > * { position: relative; }
+
+    .avatar {
+      display: grid;
+      width: 72px;
+      height: 72px;
+      margin: 0 auto;
+      place-items: center;
+      border-radius: 24px;
+      background: #f59e0b;
+      color: white;
+      font-size: 33px;
+      box-shadow: 0 14px 30px rgba(11, 26, 43, 0.12);
+    }
+
+    .avatar.slate { background: #6b7280; }
+    .avatar.emerald { background: var(--emerald); }
+    .avatar.card { background: var(--slate); }
+
+    .amount {
+      margin-top: 22px;
+      color: var(--terracotta);
+      font-size: clamp(36px, 7vw, 48px);
+      font-weight: 950;
+      line-height: 0.96;
+      letter-spacing: 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .amount.income { color: var(--emerald-deep); }
+    .amount.neutral { color: var(--text); }
+    .amount .symbol { opacity: 0.62; font-size: 0.62em; font-weight: 800; }
+    .amount .dec { opacity: 0.82; font-size: 0.46em; vertical-align: 0.68em; }
+
+    .title {
+      margin: 14px 0 0;
+      font-size: 22px;
+      font-weight: 950;
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+
+    .meta {
+      margin-top: 8px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .context {
+      max-width: 390px;
+      margin: 18px auto 0;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 650;
+      line-height: 1.6;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .status {
+      min-width: 0;
+      border-radius: 18px;
+      border: 1px solid var(--border-soft);
+      background: var(--page);
+      padding: 12px;
+      text-align: left;
+    }
+
+    .label {
+      display: block;
+      color: var(--text-soft);
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .value {
+      display: block;
+      margin-top: 5px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.3;
+    }
+
+    .module {
+      margin-top: 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--card);
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(11, 26, 43, 0.03);
+    }
+
+    .callout {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      border-radius: 20px;
+      border: 1px solid rgba(16, 185, 129, 0.22);
+      background: var(--emerald-soft);
+      padding: 14px 16px;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .callout + .callout { margin-top: 10px; }
+    .callout.plum { border-color: rgba(138, 110, 152, 0.24); background: var(--plum-soft); }
+    .callout.warn { border-color: rgba(196, 154, 60, 0.24); background: var(--warning-soft); }
+    .callout-icon {
+      display: grid;
+      width: 32px;
+      height: 32px;
+      flex: 0 0 32px;
+      place-items: center;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.62);
+      color: var(--emerald-deep);
+      font-weight: 950;
+    }
+    .callout.plum .callout-icon { color: var(--plum); }
+    .callout.warn .callout-icon { color: var(--warning-deep); }
+    .callout strong { display: block; margin-bottom: 2px; color: var(--text); font-size: 14px; }
+
+    .section-title {
+      margin: 22px 4px 9px;
+      color: var(--text-soft);
+      font-size: 11px;
+      font-weight: 950;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      min-height: 72px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .row:last-child { border-bottom: 0; }
+
+    .row-icon {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      flex: 0 0 38px;
+      place-items: center;
+      border-radius: 13px;
+      background: var(--border-soft);
+      color: var(--text-soft);
+      font-size: 17px;
+      font-weight: 900;
+    }
+
+    .row-main { min-width: 0; flex: 1; }
+    .row-label {
+      color: var(--text-soft);
+      font-size: 11px;
+      font-weight: 950;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .row-value {
+      margin-top: 5px;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 850;
+      line-height: 1.35;
+    }
+    .row-sub {
+      display: block;
+      margin-top: 2px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+    .row-side {
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 900;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 25px;
+      border-radius: 999px;
+      padding: 4px 9px;
+      background: var(--border-soft);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .pill.good { background: var(--emerald-soft); color: var(--emerald-deep); }
+    .pill.warn { background: var(--warning-soft); color: var(--warning-deep); }
+    .pill.plum { background: var(--plum-soft); color: var(--plum); }
+    .pill.bad { background: var(--terracotta-soft); color: var(--terracotta); }
+    .link-row { cursor: default; }
+
+    .side {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: var(--card);
+      padding: 18px;
+      box-shadow: 0 12px 34px rgba(11, 26, 43, 0.06);
+    }
+
+    .panel h2 {
+      margin: 0 0 6px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .panel > p {
+      margin: 0 0 14px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 650;
+      line-height: 1.5;
+    }
+
+    .state-card {
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--page);
+      padding: 14px;
+    }
+    .state-card + .state-card { margin-top: 10px; }
+    .state-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .state-head h3 {
+      margin: 0;
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+    .state-head p {
+      margin: 4px 0 0;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .mini-detail {
+      display: grid;
+      grid-template-columns: 96px minmax(0, 1fr);
+      gap: 8px;
+      border-top: 1px solid var(--border-soft);
+      padding: 8px 0;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .mini-detail span:first-child {
+      color: var(--text-soft);
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .mini-detail span:last-child {
+      color: var(--text);
+      font-weight: 850;
+    }
+
+    .installments {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .installment {
+      display: grid;
+      grid-template-columns: 32px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid var(--border-soft);
+      border-radius: 14px;
+      background: var(--card);
+      padding: 10px;
+    }
+    .dot {
+      display: grid;
+      width: 28px;
+      height: 28px;
+      place-items: center;
+      border-radius: 999px;
+      background: var(--border-soft);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 950;
+    }
+    .dot.good { background: var(--emerald-soft); color: var(--emerald-deep); }
+    .dot.warn { background: var(--warning-soft); color: var(--warning-deep); }
+
+    .installment strong { display: block; font-size: 13px; }
+    .installment small { color: var(--text-muted); font-size: 11px; font-weight: 700; }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .intro { align-items: flex-start; flex-direction: column; }
+      .side { order: -1; }
+    }
+
+    @media (max-width: 620px) {
+      .canvas { width: min(100% - 18px, 430px); padding-top: 16px; }
+      .screen { min-height: auto; border-radius: 24px; padding: 20px 12px 22px; }
+      .hero { padding: 22px 16px; }
+      .status-grid { grid-template-columns: 1fr; }
+      .row { padding: 13px 14px; }
+      .row-side { font-size: 13px; }
+      .mini-detail { grid-template-columns: 88px minmax(0, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <main class="canvas">
+    <header class="intro">
+      <div>
+        <p class="eyebrow">Pantalla real a rediseñar</p>
+        <h1>Detalle de movimiento</h1>
+      </div>
+      <p>
+        La pantalla principal es la propuesta. La columna derecha muestra variaciones
+        que aparecen como bloques condicionales dentro de esta misma pantalla.
+      </p>
+    </header>
+
+    <div class="layout">
+      <div class="phone-wrap">
+        <article class="screen" id="focused-screen">
+          <div class="toolbar">
+            <div class="back">← Movimientos</div>
+            <div class="actions" aria-label="Acciones">
+              <div class="icon-button active" title="Editar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 20h4.3L19.1 9.2a2 2 0 0 0 0-2.8l-1.5-1.5a2 2 0 0 0-2.8 0L4 15.7V20Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+                  <path d="m13.5 6.2 4.3 4.3" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="icon-button delete" title="Eliminar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 7h16" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+                  <path d="M9 7V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8V7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+                  <path d="M7 7l.8 12A2.2 2.2 0 0 0 10 21h4a2.2 2.2 0 0 0 2.2-2L17 7" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+                  <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <section class="hero">
+            <div class="avatar">🍔</div>
+            <div class="amount">− <span class="symbol">$</span>18.352<span class="dec">,00</span></div>
+            <h2 class="title">PY</h2>
+            <div class="meta">jueves, 18 de junio de 2026 · Visa Galicia</div>
+            <p class="context">
+              Este consumo no afecta tu disponible hasta que pagues el resumen.
+            </p>
+            <div class="status-grid">
+              <div class="status">
+                <span class="label">Impacto</span>
+                <span class="value">Tarjeta de credito · fuera del disponible</span>
+              </div>
+              <div class="status">
+                <span class="label">Resumen</span>
+                <span class="value">En curso · vence al cerrar periodo</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="callout plum" style="margin-top: 14px;">
+            <span class="callout-icon">👥</span>
+            <div>
+              <strong>Gasto compartido</strong>
+              Tu parte: $9.176,00 · Cristian Perez: $9.176,00
+            </div>
+          </section>
+
+          <div class="section-title">Detalles</div>
+          <section class="module">
+            <div class="row">
+              <span class="row-icon">▣</span>
+              <div class="row-main">
+                <div class="row-label">Fecha</div>
+                <div class="row-value">jueves, 18 de junio de 2026</div>
+              </div>
+            </div>
+            <div class="row">
+              <span class="row-icon">▤</span>
+              <div class="row-main">
+                <div class="row-label">Cuenta</div>
+                <div class="row-value">Galicia <span class="row-sub">Visa Galicia</span></div>
+              </div>
+            </div>
+            <div class="row">
+              <span class="row-icon">◇</span>
+              <div class="row-main">
+                <div class="row-label">Categoria</div>
+                <div class="row-value">Comida</div>
+              </div>
+            </div>
+            <div class="row">
+              <span class="row-icon">◇</span>
+              <div class="row-main">
+                <div class="row-label">Subcategoria</div>
+                <div class="row-value">PedidosYa</div>
+              </div>
+            </div>
+            <div class="row">
+              <span class="row-icon">☷</span>
+              <div class="row-main">
+                <div class="row-label">Descripcion</div>
+                <div class="row-value">PY</div>
+              </div>
+            </div>
+          </section>
+        </article>
+      </div>
+
+      <aside class="side" id="states">
+        <section class="panel">
+          <h2>Variaciones de la misma pantalla</h2>
+          <p>
+            Estos bloques no son pantallas separadas: entran debajo del hero y antes/despues
+            de detalles segun el tipo de movimiento.
+          </p>
+
+          <article class="state-card">
+            <div class="state-head">
+              <div>
+                <h3>Reintegro asociado</h3>
+                <p>Como en tu segundo ejemplo: aparece debajo de detalles.</p>
+              </div>
+              <span class="pill good">Recibido</span>
+            </div>
+            <div class="row" style="min-height: 54px; padding: 10px; border: 0; border-radius: 14px; background: var(--card);">
+              <span class="pill good">Reintegro recibido</span>
+              <div class="row-main"><div class="row-value" style="font-size: 13px;">A una cuenta — el banco te deposito</div></div>
+              <span class="row-side" style="color: var(--emerald-deep);">+$2.000,00</span>
+            </div>
+            <div class="mini-detail"><span>Origen</span><span>Desayuno cumple gordito · −$45.000,00</span></div>
+            <div class="mini-detail"><span>Estimado</span><span>Solo se muestra si difiere del monto recibido.</span></div>
+          </article>
+
+          <article class="state-card">
+            <div class="state-head">
+              <div>
+                <h3>Compra en cuotas</h3>
+                <p>Para madre o hija: progreso y cuotas hermanas navegables.</p>
+              </div>
+              <span class="pill warn">2 de 6</span>
+            </div>
+            <div class="mini-detail"><span>Tarjeta</span><span>Visa Santander</span></div>
+            <div class="mini-detail"><span>Total</span><span>$120.000,00 · 6 cuotas de $20.000,00</span></div>
+            <div class="installments">
+              <div class="installment">
+                <span class="dot good">1</span>
+                <div><strong>Cuota 1 de 6</strong><small>Pagada · vencio 10 de junio</small></div>
+                <span class="row-side">$20.000</span>
+              </div>
+              <div class="installment">
+                <span class="dot warn">2</span>
+                <div><strong>Cuota 2 de 6</strong><small>Pendiente · vence 10 de julio</small></div>
+                <span class="row-side">$20.000</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="state-card">
+            <div class="state-head">
+              <div>
+                <h3>Pago de resumen</h3>
+                <p>Explica composicion ARS/USD y la tarjeta pagada.</p>
+              </div>
+              <span class="pill">Bimoneda</span>
+            </div>
+            <div class="mini-detail"><span>Cuenta</span><span>Galicia caja de ahorro</span></div>
+            <div class="mini-detail"><span>Tarjeta</span><span>Galicia Visa · resumen mayo 2026</span></div>
+            <div class="mini-detail"><span>ARS</span><span>$182.500,00</span></div>
+            <div class="mini-detail"><span>USD</span><span>USD 25,00 · TC 1 USD = $1.200,00</span></div>
+          </article>
+
+          <article class="state-card">
+            <div class="state-head">
+              <div>
+                <h3>Transferencia, cambio o ajuste</h3>
+                <p>Mismo shell, cambia la mini sintesis y las filas.</p>
+              </div>
+              <span class="pill">Neutral</span>
+            </div>
+            <div class="mini-detail"><span>Origen</span><span>Billetera</span></div>
+            <div class="mini-detail"><span>Destino</span><span>Mercado Pago</span></div>
+            <div class="mini-detail"><span>Cambio</span><span>Sale $300.000,00 ARS · entran USD 250,00</span></div>
+            <div class="mini-detail"><span>Ajuste</span><span>Aumento o disminucion de saldo, si corresponde.</span></div>
+          </article>
+        </section>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>

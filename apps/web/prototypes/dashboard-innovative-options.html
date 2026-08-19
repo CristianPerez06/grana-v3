@@ -1,0 +1,1153 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grana dashboard - exploraciones innovadoras</title>
+    <style>
+      :root {
+        --page: #f5f7f3;
+        --card: #fff;
+        --ink: #142019;
+        --muted: #69736c;
+        --soft: #97a29b;
+        --line: #dde4dd;
+        --line-soft: #edf1ed;
+        --navy: #10283a;
+        --navy-2: #17364d;
+        --green: #0e9f6e;
+        --green-deep: #08724f;
+        --green-soft: #e6f7ef;
+        --red: #d96a4a;
+        --red-soft: #fae8e1;
+        --gold: #c58b19;
+        --gold-soft: #fff3d6;
+        --blue: #3576a8;
+        --violet: #6f5cc2;
+        --shadow: 0 14px 40px -30px rgba(16, 33, 24, 0.35);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      .page {
+        width: min(1260px, 100%);
+        margin: 0 auto;
+        padding: 28px 22px 56px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      .intro {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      h1 {
+        font-size: 30px;
+        line-height: 1.05;
+        font-weight: 820;
+      }
+
+      .intro p {
+        max-width: 760px;
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.45;
+        font-weight: 560;
+      }
+
+      .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .tabs a {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--card);
+        color: var(--ink);
+        padding: 9px 13px;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 840;
+        box-shadow: var(--shadow);
+      }
+
+      .option {
+        margin-top: 20px;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: #fbfcfa;
+        padding: 18px;
+      }
+
+      .option-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 16px;
+      }
+
+      .kicker {
+        color: var(--green-deep);
+        font-size: 12px;
+        font-weight: 920;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .option-title {
+        margin-top: 5px;
+        font-size: 23px;
+        line-height: 1.14;
+        font-weight: 800;
+      }
+
+      .option-copy {
+        max-width: 780px;
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.45;
+        font-weight: 560;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        border-radius: 999px;
+        background: var(--green-soft);
+        color: var(--green-deep);
+        padding: 0 11px;
+        white-space: nowrap;
+        font-size: 12px;
+        font-weight: 860;
+      }
+
+      .dashboard {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--page);
+        padding: 20px;
+      }
+
+      .dash-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .dash-head h2 {
+        font-size: 24px;
+        line-height: 1.1;
+        font-weight: 730;
+      }
+
+      .date {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 560;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .pill,
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 39px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--card);
+        color: var(--ink);
+        padding: 0 12px;
+        font-size: 13px;
+        font-weight: 830;
+        box-shadow: var(--shadow);
+      }
+
+      .button {
+        border-color: var(--green);
+        background: var(--green);
+        color: white;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: var(--card);
+        box-shadow: var(--shadow);
+      }
+
+      .dark {
+        border-color: transparent;
+        background: var(--navy);
+        color: white;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 18px 19px 8px;
+      }
+
+      .panel-title {
+        font-size: 17px;
+        line-height: 1.2;
+        font-weight: 780;
+      }
+
+      .panel-note {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 12.5px;
+        line-height: 1.35;
+        font-weight: 570;
+      }
+
+      .panel-body {
+        padding: 16px 19px 19px;
+      }
+
+      .link {
+        color: var(--green-deep);
+        font-size: 12.5px;
+        font-weight: 850;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .map-grid {
+        grid-template-columns: minmax(0, 1fr) 340px;
+      }
+
+      .hero-map {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 230px;
+        gap: 18px;
+        min-height: 300px;
+        padding: 28px;
+      }
+
+      .eyebrow {
+        color: rgba(255, 255, 255, 0.58);
+        font-size: 11px;
+        font-weight: 920;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .big-money {
+        margin-top: 12px;
+        font-size: clamp(44px, 6vw, 68px);
+        line-height: 0.92;
+        font-weight: 940;
+      }
+
+      .usd-line {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 16px;
+        font-size: 16px;
+        font-weight: 850;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 23px;
+        border-radius: 999px;
+        padding: 0 9px;
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .chip.green {
+        background: rgba(14, 159, 110, 0.2);
+        color: #61dfa6;
+      }
+
+      .hero-caption {
+        margin-top: 20px;
+        max-width: 560px;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 13px;
+        line-height: 1.45;
+        font-weight: 600;
+      }
+
+      .signal-ring {
+        align-self: center;
+        justify-self: center;
+        position: relative;
+        width: 210px;
+        height: 210px;
+        border-radius: 999px;
+        background:
+          radial-gradient(circle at center, var(--navy) 0 55%, transparent 56%),
+          conic-gradient(var(--green) 0 55%, var(--gold) 55% 78%, var(--red) 78% 100%);
+      }
+
+      .signal-ring::after {
+        content: "";
+        position: absolute;
+        inset: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: inherit;
+      }
+
+      .ring-copy {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        text-align: center;
+      }
+
+      .ring-copy strong {
+        display: block;
+        font-size: 22px;
+        line-height: 1;
+        font-weight: 920;
+      }
+
+      .ring-copy span {
+        display: block;
+        margin-top: 6px;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .lens-stack {
+        display: grid;
+        gap: 12px;
+      }
+
+      .lens-card {
+        min-height: 92px;
+        border-radius: 17px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        padding: 15px;
+      }
+
+      .lens-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 880;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .lens-value {
+        margin-top: 7px;
+        font-size: 24px;
+        line-height: 1;
+        font-weight: 930;
+      }
+
+      .lens-note {
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+        font-weight: 560;
+      }
+
+      .money-map {
+        grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+        margin-top: 14px;
+      }
+
+      .river {
+        display: grid;
+        gap: 12px;
+      }
+
+      .river-row {
+        display: grid;
+        grid-template-columns: 112px minmax(0, 1fr) 88px;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .river-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .river-track {
+        height: 28px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: var(--line-soft);
+      }
+
+      .river-track span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+      }
+
+      .river-amount {
+        text-align: right;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .heatmap {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 7px;
+      }
+
+      .heat-day {
+        min-height: 72px;
+        border-radius: 13px;
+        background: #f8faf7;
+        padding: 9px;
+      }
+
+      .heat-day.hot {
+        background: var(--red-soft);
+      }
+
+      .heat-day.warm {
+        background: var(--gold-soft);
+      }
+
+      .heat-day.good {
+        background: var(--green-soft);
+      }
+
+      .heat-date {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 850;
+      }
+
+      .heat-copy {
+        margin-top: 9px;
+        font-size: 12px;
+        line-height: 1.25;
+        font-weight: 820;
+      }
+
+      .cockpit {
+        grid-template-columns: 320px minmax(0, 1fr) 300px;
+        align-items: stretch;
+      }
+
+      .cash-tower {
+        display: flex;
+        min-height: 470px;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 24px;
+      }
+
+      .cash-tower .big-money {
+        font-size: clamp(42px, 5vw, 58px);
+      }
+
+      .tower-list {
+        display: grid;
+        gap: 9px;
+        margin-top: 20px;
+      }
+
+      .tower-pill {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 11px 12px;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 12px;
+        font-weight: 740;
+      }
+
+      .tower-pill strong {
+        color: white;
+      }
+
+      .center-feed {
+        display: grid;
+        gap: 14px;
+      }
+
+      .timeline {
+        display: grid;
+        gap: 10px;
+      }
+
+      .event {
+        display: grid;
+        grid-template-columns: 74px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: #f9fbf8;
+        padding: 12px;
+      }
+
+      .event-date {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 860;
+      }
+
+      .event-title {
+        font-size: 13.5px;
+        font-weight: 830;
+      }
+
+      .event-note {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 560;
+      }
+
+      .event-amount {
+        font-size: 13.5px;
+        font-weight: 920;
+      }
+
+      .category-stack {
+        display: grid;
+        gap: 9px;
+      }
+
+      .cat-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 76px;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .cat-name {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .swatch {
+        width: 10px;
+        height: 10px;
+        border-radius: 4px;
+        flex: 0 0 auto;
+      }
+
+      .cat-bar {
+        grid-column: 1 / -1;
+        height: 9px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: var(--line-soft);
+      }
+
+      .cat-bar span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+      }
+
+      .wallet-wall {
+        display: grid;
+        gap: 10px;
+      }
+
+      .wallet {
+        border-radius: 15px;
+        background: #f8faf7;
+        padding: 13px;
+      }
+
+      .wallet-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 13px;
+        font-weight: 830;
+      }
+
+      .wallet-bar {
+        margin-top: 10px;
+        height: 8px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: var(--line-soft);
+      }
+
+      .wallet-bar span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--green);
+      }
+
+      .board {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 14px;
+      }
+
+      .board-hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 280px;
+        gap: 18px;
+        min-height: 330px;
+        padding: 28px;
+      }
+
+      .treemap {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        grid-template-rows: 1fr 0.78fr;
+        gap: 10px;
+        min-height: 250px;
+      }
+
+      .tile {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        border-radius: 18px;
+        padding: 15px;
+        color: white;
+      }
+
+      .tile strong {
+        font-size: 21px;
+        line-height: 1;
+        font-weight: 930;
+      }
+
+      .tile span {
+        margin-top: 8px;
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 12px;
+        font-weight: 760;
+      }
+
+      .tile.big {
+        grid-row: 1 / -1;
+        background: var(--green);
+      }
+
+      .tile.food {
+        background: var(--red);
+      }
+
+      .tile.trans {
+        background: var(--blue);
+      }
+
+      .tile.other {
+        background: var(--violet);
+      }
+
+      .mini-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .mini-card {
+        min-height: 94px;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        padding: 14px;
+      }
+
+      .mini-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .mini-value {
+        margin-top: 8px;
+        font-size: 21px;
+        line-height: 1;
+        font-weight: 920;
+      }
+
+      .pros {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .note {
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: var(--card);
+        padding: 13px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.42;
+      }
+
+      .note strong {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--ink);
+      }
+
+      @media (max-width: 980px) {
+        .intro,
+        .option-head,
+        .dash-head {
+          display: grid;
+        }
+
+        .map-grid,
+        .hero-map,
+        .money-map,
+        .cockpit,
+        .board,
+        .board-hero,
+        .mini-grid,
+        .pros {
+          grid-template-columns: 1fr;
+        }
+
+        .heatmap,
+        .treemap {
+          grid-template-columns: 1fr;
+        }
+
+        .treemap {
+          grid-template-rows: none;
+        }
+
+        .tile.big {
+          grid-row: auto;
+        }
+
+        .toolbar {
+          flex-wrap: wrap;
+        }
+
+        .button {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="intro">
+        <div>
+          <h1>Exploraciones nuevas para el dashboard</h1>
+          <p>
+            Estas propuestas se alejan de la grilla clásica. Todas mantienen "Para gastar · hoy"
+            primero, pero intentan transmitir más información visual de un vistazo.
+          </p>
+        </div>
+        <nav class="tabs" aria-label="Opciones">
+          <a href="#mapa-vivo">G · Mapa vivo</a>
+          <a href="#cabina">H · Cabina diaria</a>
+          <a href="#tablero">I · Tablero compacto</a>
+        </nav>
+      </section>
+
+      <section class="option" id="mapa-vivo">
+        <div class="option-head">
+          <div>
+            <p class="kicker">Opción G</p>
+            <h2 class="option-title">Mapa vivo: una lectura visual de la salud financiera</h2>
+            <p class="option-copy">
+              La pantalla abre con un gran estado de caja y un anillo de tensión: verde es caja,
+              dorado es compromiso cercano, rojo es salidas próximas. Abajo, el dinero se ve como flujo.
+            </p>
+          </div>
+          <span class="badge">Visual y explicativa</span>
+        </div>
+
+        <div class="dashboard">
+          <div class="dash-head">
+            <div>
+              <h2>Hola, Juli</h2>
+              <p class="date">Jueves 18 de junio</p>
+            </div>
+            <div class="toolbar">
+              <span class="pill">‹ Junio 2026 ›</span>
+              <span class="pill">○</span>
+              <span class="button">+ Nuevo movimiento</span>
+            </div>
+          </div>
+
+          <div class="grid map-grid">
+            <article class="panel dark hero-map">
+              <div>
+                <p class="eyebrow">Para gastar · hoy</p>
+                <p class="big-money">$ 312.500</p>
+                <p class="usd-line"><span class="chip green">USD</span> US$ 420,00</p>
+                <p class="hero-caption">
+                  Caja real en cuentas. La tensión del anillo muestra cuánto de tu vida financiera
+                  ya tiene destino, sin depender de una ventana arbitraria de días.
+                </p>
+              </div>
+              <div class="signal-ring">
+                <div class="ring-copy">
+                  <div>
+                    <strong>Atento</strong>
+                    <span>24/06 cae Visa</span>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <aside class="lens-stack">
+              <article class="lens-card">
+                <p class="lens-label">Comprometido cercano</p>
+                <p class="lens-value" style="color: var(--red)">-$ 128.300</p>
+                <p class="lens-note">Tarjeta y recurrencias antes de fin de mes.</p>
+              </article>
+              <article class="lens-card">
+                <p class="lens-label">Consumo devengado</p>
+                <p class="lens-value">$ 412.800</p>
+                <p class="lens-note">Incluye tarjeta, cuotas y reintegros.</p>
+              </article>
+              <article class="lens-card">
+                <p class="lens-label">Balance caja</p>
+                <p class="lens-value" style="color: var(--green-deep)">+$ 458.000</p>
+                <p class="lens-note">Ingresos menos salidas pagadas.</p>
+              </article>
+            </aside>
+          </div>
+
+          <div class="grid money-map">
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 class="panel-title">Cómo se está moviendo junio</h3>
+                  <p class="panel-note">Tres carriles: entra, se consume, queda comprometido.</p>
+                </div>
+              </div>
+              <div class="panel-body river">
+                <div class="river-row">
+                  <span class="river-label">Ingresó</span>
+                  <div class="river-track"><span style="width: 100%; background: var(--green)"></span></div>
+                  <strong class="river-amount">$ 1.2M</strong>
+                </div>
+                <div class="river-row">
+                  <span class="river-label">Pagado</span>
+                  <div class="river-track"><span style="width: 62%; background: var(--red)"></span></div>
+                  <strong class="river-amount">$ 742K</strong>
+                </div>
+                <div class="river-row">
+                  <span class="river-label">Consumido</span>
+                  <div class="river-track"><span style="width: 34%; background: var(--blue)"></span></div>
+                  <strong class="river-amount">$ 413K</strong>
+                </div>
+                <div class="river-row">
+                  <span class="river-label">Comprometido</span>
+                  <div class="river-track"><span style="width: 22%; background: var(--gold)"></span></div>
+                  <strong class="river-amount">$ 128K</strong>
+                </div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 class="panel-title">Compromiso por tipo</h3>
+                  <p class="panel-note">Qué parte de tu plata ya tiene destino.</p>
+                </div>
+              </div>
+              <div class="panel-body river">
+                <div class="river-row">
+                  <span class="river-label">Resumen</span>
+                  <div class="river-track"><span style="width: 88%; background: var(--red)"></span></div>
+                  <strong class="river-amount">$ 86K</strong>
+                </div>
+                <div class="river-row">
+                  <span class="river-label">Recurrencias</span>
+                  <div class="river-track"><span style="width: 43%; background: var(--gold)"></span></div>
+                  <strong class="river-amount">$ 42K</strong>
+                </div>
+                <div class="river-row">
+                  <span class="river-label">Cuotas futuras</span>
+                  <div class="river-track"><span style="width: 100%; background: var(--blue)"></span></div>
+                  <strong class="river-amount">$ 312K</strong>
+                </div>
+                <div class="river-row">
+                  <span class="river-label">Servicios</span>
+                  <div class="river-track"><span style="width: 24%; background: var(--violet)"></span></div>
+                  <strong class="river-amount">$ 23K</strong>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="pros">
+          <p class="note"><strong>Por qué puede funcionar</strong>Da mucha información sin convertirla en tablas. El anillo comunica tensión financiera antes que detalle.</p>
+          <p class="note"><strong>Riesgo</strong>Hay que calibrar muy bien el estado "Atento" para que no parezca juicio ni alarma permanente.</p>
+        </div>
+      </section>
+
+      <section class="option" id="cabina">
+        <div class="option-head">
+          <div>
+            <p class="kicker">Opción H</p>
+            <h2 class="option-title">Cabina diaria: disponible fijo y el resto como instrumentos</h2>
+            <p class="option-copy">
+              Es más densa y operativa. A la izquierda queda el disponible como columna fija; al centro,
+              una línea temporal de golpes; a la derecha, consumo por categoría y dónde está la plata.
+            </p>
+          </div>
+          <span class="badge">Muy informativa</span>
+        </div>
+
+        <div class="dashboard">
+          <div class="dash-head">
+            <div>
+              <h2>Hola, Juli</h2>
+              <p class="date">Jueves 18 de junio</p>
+            </div>
+            <div class="toolbar">
+              <span class="pill">‹ Junio 2026 ›</span>
+              <span class="pill">○</span>
+              <span class="button">+ Nuevo movimiento</span>
+            </div>
+          </div>
+
+          <section class="grid cockpit">
+            <article class="panel dark cash-tower">
+              <div>
+                <p class="eyebrow">Para gastar · hoy</p>
+                <p class="big-money">$ 312.500</p>
+                <p class="usd-line"><span class="chip green">USD</span> US$ 420</p>
+                <div class="tower-list">
+                  <div class="tower-pill"><span>Galicia</span><strong>$ 221.500</strong></div>
+                  <div class="tower-pill"><span>Mercado Pago</span><strong>$ 49.000</strong></div>
+                  <div class="tower-pill"><span>Billetera</span><strong>$ 42.000</strong></div>
+                </div>
+              </div>
+              <p class="hero-caption">Disponible primero. Siempre.</p>
+            </article>
+
+            <div class="center-feed">
+              <article class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h3 class="panel-title">Comprometido</h3>
+                    <p class="panel-note">Agrupado por naturaleza, con fechas como detalle.</p>
+                  </div>
+                  <a class="link" href="#">Ver todo</a>
+                </div>
+                <div class="panel-body timeline">
+                  <div class="event">
+                    <span class="event-date">Tarjeta</span>
+                    <div><p class="event-title">Resumen Visa Galicia</p><p class="event-note">Vence el 24/06</p></div>
+                    <strong class="event-amount" style="color: var(--red)">$ 86.400</strong>
+                  </div>
+                  <div class="event">
+                    <span class="event-date">Fijos</span>
+                    <div><p class="event-title">Recurrencias del mes</p><p class="event-note">Internet, gimnasio y servicios</p></div>
+                    <strong class="event-amount">$ 41.900</strong>
+                  </div>
+                  <div class="event">
+                    <span class="event-date">Cuotas</span>
+                    <div><p class="event-title">Cuotas futuras</p><p class="event-note">Compromiso fuera del mes</p></div>
+                    <strong class="event-amount">$ 312.000</strong>
+                  </div>
+                </div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h3 class="panel-title">Mes en una línea</h3>
+                    <p class="panel-note">Caja, consumo y compromiso sin mezclarlos.</p>
+                  </div>
+                </div>
+                <div class="panel-body river">
+                  <div class="river-row"><span class="river-label">Caja neta</span><div class="river-track"><span style="width: 78%; background: var(--green)"></span></div><strong class="river-amount">+$ 458K</strong></div>
+                  <div class="river-row"><span class="river-label">Consumo</span><div class="river-track"><span style="width: 68%; background: var(--blue)"></span></div><strong class="river-amount">$ 413K</strong></div>
+                  <div class="river-row"><span class="river-label">Próximo</span><div class="river-track"><span style="width: 35%; background: var(--gold)"></span></div><strong class="river-amount">$ 128K</strong></div>
+                </div>
+              </article>
+            </div>
+
+            <aside class="center-feed">
+              <article class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h3 class="panel-title">En qué se fue</h3>
+                    <p class="panel-note">Devengado</p>
+                  </div>
+                </div>
+                <div class="panel-body category-stack">
+                  <div class="cat-row"><div class="cat-name"><span class="swatch" style="background: var(--green)"></span>Supermercado</div><strong>$ 92K</strong><div class="cat-bar"><span style="width: 82%; background: var(--green)"></span></div></div>
+                  <div class="cat-row"><div class="cat-name"><span class="swatch" style="background: var(--red)"></span>Comidas afuera</div><strong>$ 48K</strong><div class="cat-bar"><span style="width: 44%; background: var(--red)"></span></div></div>
+                  <div class="cat-row"><div class="cat-name"><span class="swatch" style="background: var(--blue)"></span>Transporte</div><strong>$ 32K</strong><div class="cat-bar"><span style="width: 31%; background: var(--blue)"></span></div></div>
+                  <div class="cat-row"><div class="cat-name"><span class="swatch" style="background: var(--green-deep)"></span>Te devolvieron</div><strong style="color: var(--green-deep)">-$ 9K</strong><div class="cat-bar"><span style="width: 18%; background: var(--green-deep)"></span></div></div>
+                </div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h3 class="panel-title">Dónde está</h3>
+                    <p class="panel-note">Cuentas principales</p>
+                  </div>
+                </div>
+                <div class="panel-body wallet-wall">
+                  <div class="wallet"><div class="wallet-top"><span>Galicia</span><strong>$ 221.500</strong></div><div class="wallet-bar"><span style="width: 100%"></span></div></div>
+                  <div class="wallet"><div class="wallet-top"><span>Mercado Pago</span><strong>$ 49.000</strong></div><div class="wallet-bar"><span style="width: 35%"></span></div></div>
+                  <div class="wallet"><div class="wallet-top"><span>Billetera</span><strong>$ 42.000</strong></div><div class="wallet-bar"><span style="width: 29%"></span></div></div>
+                </div>
+              </article>
+            </aside>
+          </section>
+        </div>
+
+        <div class="pros">
+          <p class="note"><strong>Por qué puede funcionar</strong>Es muy escaneable: izquierda caja, centro futuro, derecha explicación. Mucha info, poca ambigüedad.</p>
+          <p class="note"><strong>Riesgo</strong>En mobile hay que convertirlo en una secuencia vertical muy cuidada para que no se vuelva largo.</p>
+        </div>
+      </section>
+
+      <section class="option" id="tablero">
+        <div class="option-head">
+          <div>
+            <p class="kicker">Opción I</p>
+            <h2 class="option-title">Tablero compacto: mucha información, menos cards</h2>
+            <p class="option-copy">
+              Usa una pieza central de disponible y un mosaico de consumo. Es más editorial y menos SaaS:
+              el usuario ve caja, presión, consumo y categorías sin sentir una lista de módulos.
+            </p>
+          </div>
+          <span class="badge">Más distintiva</span>
+        </div>
+
+        <div class="dashboard">
+          <div class="dash-head">
+            <div>
+              <h2>Hola, Juli</h2>
+              <p class="date">Jueves 18 de junio</p>
+            </div>
+            <div class="toolbar">
+              <span class="pill">‹ Junio 2026 ›</span>
+              <span class="pill">○</span>
+              <span class="button">+ Nuevo movimiento</span>
+            </div>
+          </div>
+
+          <section class="board">
+            <article class="panel dark board-hero">
+              <div>
+                <p class="eyebrow">Para gastar · hoy</p>
+                <p class="big-money">$ 312.500</p>
+                <p class="usd-line"><span class="chip green">USD</span> US$ 420</p>
+                <p class="hero-caption">
+                  Hay caja, pero el 24/06 cae el resumen. Junio se explica sobre todo por supermercado y comidas afuera.
+                </p>
+              </div>
+              <div class="lens-stack">
+                <div class="tower-pill"><span>Comprometido cercano</span><strong>$ 128K</strong></div>
+                <div class="tower-pill"><span>Consumo del mes</span><strong>$ 413K</strong></div>
+                <div class="tower-pill"><span>Caja del mes</span><strong>+$ 458K</strong></div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 class="panel-title">Consumo por peso visual</h3>
+                  <p class="panel-note">El tamaño también cuenta la historia.</p>
+                </div>
+              </div>
+              <div class="panel-body treemap">
+                <div class="tile big"><div><strong>Supermercado</strong><span>$ 92.300</span></div><span>22%</span></div>
+                <div class="tile food"><div><strong>Comidas</strong><span>$ 48.100</span></div><span>12%</span></div>
+                <div class="tile trans"><div><strong>Transporte</strong><span>$ 31.700</span></div><span>8%</span></div>
+                <div class="tile other"><div><strong>Otros</strong><span>$ 218.300</span></div><span>53%</span></div>
+              </div>
+            </article>
+          </section>
+
+          <div class="mini-grid">
+            <article class="mini-card">
+              <p class="mini-label">Próximo golpe</p>
+              <p class="mini-value" style="color: var(--red)">Visa · $ 86K</p>
+              <p class="panel-note">24/06</p>
+            </article>
+            <article class="mini-card">
+              <p class="mini-label">Reintegros</p>
+              <p class="mini-value" style="color: var(--green-deep)">-$ 8.9K</p>
+              <p class="panel-note">Netean consumo</p>
+            </article>
+            <article class="mini-card">
+              <p class="mini-label">Dónde está más</p>
+              <p class="mini-value">Galicia</p>
+              <p class="panel-note">$ 221.500</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="pros">
+          <p class="note"><strong>Por qué puede funcionar</strong>Es el más propio: menos dashboard genérico, más lectura financiera con personalidad.</p>
+          <p class="note"><strong>Riesgo</strong>El mosaico de categorías requiere buena accesibilidad y buen comportamiento con muchas categorías.</p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,1251 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grana dashboard - previsto neto</title>
+    <style>
+      :root {
+        --page: #f5f6f8;
+        --card: #fff;
+        --ink: #001126;
+        --muted: #647184;
+        --soft: #8d99aa;
+        --line: #dfe4eb;
+        --line-soft: #edf1f5;
+        --navy: #071827;
+        --green: #12b981;
+        --green-deep: #008b63;
+        --green-soft: #dcf8ed;
+        --red: #bd6b5b;
+        --red-soft: #fae8e3;
+        --gold: #c99a2e;
+        --gold-soft: #fff3d7;
+        --blue: #3b82f6;
+        --orange: #f59e0b;
+        --teal: #14b8a6;
+        --violet: #8b5cf6;
+        --gray: #9aa3b1;
+        --shadow: 0 1px 2px rgba(0, 17, 38, 0.04);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      .page {
+        width: min(1120px, 100%);
+        margin: 0 auto;
+        padding: 28px 20px 56px;
+      }
+
+      .intro {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .intro h1 {
+        font-size: 30px;
+        line-height: 1.05;
+        font-weight: 820;
+      }
+
+      .intro p {
+        max-width: 760px;
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.45;
+        font-weight: 560;
+      }
+
+      .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .tabs a {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--card);
+        color: var(--ink);
+        padding: 9px 13px;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 850;
+        box-shadow: var(--shadow);
+      }
+
+      .option {
+        margin-top: 20px;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: #fbfcfd;
+        padding: 18px;
+      }
+
+      .option-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 16px;
+      }
+
+      .kicker {
+        color: var(--green-deep);
+        font-size: 12px;
+        font-weight: 920;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .option-title {
+        margin-top: 5px;
+        font-size: 23px;
+        line-height: 1.14;
+        font-weight: 810;
+      }
+
+      .option-copy {
+        max-width: 760px;
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.45;
+        font-weight: 560;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        border-radius: 999px;
+        background: var(--green-soft);
+        color: var(--green-deep);
+        padding: 0 11px;
+        white-space: nowrap;
+        font-size: 12px;
+        font-weight: 870;
+      }
+
+      .dashboard {
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--page);
+        padding: 22px;
+      }
+
+      .dash-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      .dash-head h2 {
+        font-size: 28px;
+        line-height: 1.1;
+        font-weight: 720;
+      }
+
+      .date {
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 16px;
+        font-weight: 520;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .month,
+      .icon,
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: var(--card);
+        color: var(--ink);
+        box-shadow: var(--shadow);
+        font-size: 16px;
+        font-weight: 820;
+      }
+
+      .month {
+        gap: 30px;
+        min-width: 200px;
+        padding: 0 16px;
+      }
+
+      .icon {
+        width: 40px;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        box-shadow: none;
+      }
+
+      .button {
+        gap: 10px;
+        border-color: var(--green);
+        background: var(--green);
+        color: white;
+        padding: 0 18px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 18px;
+      }
+
+      .top-grid {
+        grid-template-columns: 1.05fr 0.95fr;
+      }
+
+      .hero-net-grid {
+        grid-template-columns: 0.9fr 1.1fr;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: var(--card);
+        box-shadow: var(--shadow);
+      }
+
+      .dark {
+        border-color: transparent;
+        background: var(--navy);
+        color: white;
+      }
+
+      .hero {
+        min-height: 500px;
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .hero.compact {
+        min-height: 310px;
+      }
+
+      .eyebrow {
+        color: rgba(255, 255, 255, 0.56);
+        font-size: 13px;
+        font-weight: 920;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .hero-money {
+        margin-top: 14px;
+        font-size: clamp(48px, 6vw, 60px);
+        line-height: 0.95;
+        font-weight: 940;
+      }
+
+      .cents {
+        color: rgba(255, 255, 255, 0.54);
+        font-size: 0.45em;
+      }
+
+      .usd-line {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 16px;
+        font-size: 17px;
+        font-weight: 850;
+      }
+
+      .usd-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        border-radius: 999px;
+        background: rgba(18, 185, 129, 0.14);
+        color: #35d99d;
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 920;
+      }
+
+      .hero-caption {
+        margin-top: 168px;
+        color: rgba(255, 255, 255, 0.55);
+        font-size: 14px;
+        line-height: 1.35;
+        font-weight: 650;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 28px 28px 10px;
+      }
+
+      .panel-title {
+        font-size: 22px;
+        line-height: 1.2;
+        font-weight: 760;
+      }
+
+      .panel-note {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.35;
+        font-weight: 560;
+      }
+
+      .panel-body {
+        padding: 22px 28px 28px;
+      }
+
+      .link {
+        color: var(--green-deep);
+        font-size: 15px;
+        font-weight: 850;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .accounts-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .account-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        border-top: 1px solid var(--line-soft);
+        padding: 13px 0;
+      }
+
+      .account-row:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .account-icon {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 10px;
+        background: var(--blue);
+        color: white;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .account-icon.orange { background: #ff7a1a; }
+      .account-icon.steel { background: #477491; }
+      .account-icon.green { background: #07783f; }
+      .account-icon.red { background: #ef1741; }
+      .account-icon.navy { background: #00457d; }
+
+      .row-main {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .row-title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 16px;
+        font-weight: 820;
+      }
+
+      .row-note {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 560;
+      }
+
+      .amount {
+        flex: 0 0 auto;
+        font-size: 16px;
+        font-weight: 900;
+        text-align: right;
+      }
+
+      .forecast-row {
+        display: grid;
+        grid-template-columns: 1fr 1.15fr 1fr;
+        gap: 12px;
+      }
+
+      .forecast-card {
+        position: relative;
+        min-height: 164px;
+        border-radius: 20px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        padding: 20px;
+        box-shadow: var(--shadow);
+      }
+
+      .forecast-card.net {
+        border-color: rgba(18, 185, 129, 0.28);
+        background: linear-gradient(180deg, #effbf6 0%, #ffffff 100%);
+        transform: translateY(-10px);
+      }
+
+      .forecast-label {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 890;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .forecast-value {
+        margin-top: 12px;
+        font-size: 30px;
+        line-height: 1;
+        font-weight: 940;
+      }
+
+      .forecast-card.net .forecast-value {
+        font-size: 38px;
+        color: var(--green-deep);
+      }
+
+      .forecast-note {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.35;
+        font-weight: 570;
+      }
+
+      .forecast-bar {
+        display: grid;
+        grid-template-columns: 1fr 1.2fr 1fr;
+        gap: 10px;
+        margin-top: 14px;
+        align-items: center;
+      }
+
+      .flow-line {
+        height: 12px;
+        border-radius: 999px;
+        background: var(--line-soft);
+        overflow: hidden;
+      }
+
+      .flow-line span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+      }
+
+      .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 18px;
+      }
+
+      .detail {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--card);
+        padding: 18px;
+      }
+
+      .detail-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding-bottom: 11px;
+        border-bottom: 1px solid var(--line-soft);
+        font-size: 14px;
+        font-weight: 900;
+      }
+
+      .item {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        border-top: 1px solid var(--line-soft);
+        padding: 12px 0;
+      }
+
+      .item:first-of-type {
+        border-top: 0;
+      }
+
+      .mark {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 11px;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .mark.in {
+        background: var(--green-soft);
+        color: var(--green-deep);
+      }
+
+      .mark.out {
+        background: var(--red-soft);
+        color: var(--red);
+      }
+
+      .readout {
+        border: 1px solid rgba(18, 185, 129, 0.25);
+        border-radius: 22px;
+        background: #f0fbf6;
+        padding: 22px;
+      }
+
+      .readout-grid {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .read-side {
+        border-radius: 18px;
+        background: white;
+        padding: 18px;
+      }
+
+      .read-net {
+        min-width: 260px;
+        border-radius: 24px;
+        background: var(--navy);
+        color: white;
+        padding: 24px;
+        text-align: center;
+      }
+
+      .read-net .forecast-label {
+        color: rgba(255, 255, 255, 0.56);
+      }
+
+      .read-net .forecast-value {
+        color: white;
+        font-size: 40px;
+      }
+
+      .balance-card,
+      .spending-card {
+        margin-top: 18px;
+      }
+
+      .balance-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 30px 28px 6px;
+      }
+
+      .balance-title {
+        font-size: 22px;
+        font-weight: 760;
+      }
+
+      .balance-current {
+        color: var(--muted);
+        font-size: 15px;
+        font-weight: 560;
+      }
+
+      .balance-current strong {
+        color: var(--green);
+      }
+
+      .balance-body {
+        padding: 26px 28px 28px;
+      }
+
+      .balance-label {
+        color: var(--soft);
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .balance-money {
+        margin-top: 8px;
+        color: var(--green);
+        font-size: 48px;
+        line-height: 1;
+        font-weight: 940;
+      }
+
+      .flow-list {
+        display: grid;
+        gap: 18px;
+        margin-top: 28px;
+      }
+
+      .flow-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 16px;
+        font-weight: 650;
+      }
+
+      .flow-head strong {
+        color: var(--ink);
+        font-weight: 900;
+      }
+
+      .dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        margin-right: 9px;
+      }
+
+      .bar {
+        height: 13px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: var(--line-soft);
+      }
+
+      .bar span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+      }
+
+      .adjustment-note {
+        margin-top: 10px;
+        color: #d86a1d;
+        font-size: 13px;
+        line-height: 1.35;
+      }
+
+      .usd-strip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        border-top: 1px solid var(--line-soft);
+        margin-top: 26px;
+        padding-top: 20px;
+      }
+
+      .usd-strip strong {
+        color: var(--green);
+        font-size: 20px;
+        font-weight: 920;
+      }
+
+      .spending-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 28px 28px 8px;
+      }
+
+      .segmented {
+        display: inline-flex;
+        gap: 4px;
+        border-radius: 14px;
+        background: #e8edf3;
+        padding: 4px;
+      }
+
+      .segmented span {
+        min-width: 62px;
+        border-radius: 11px;
+        padding: 8px 12px;
+        color: var(--muted);
+        font-size: 15px;
+        font-weight: 850;
+        text-align: center;
+      }
+
+      .segmented .active {
+        background: white;
+        color: var(--ink);
+        box-shadow: 0 1px 3px rgba(0, 17, 38, 0.12);
+      }
+
+      .spending-body {
+        display: grid;
+        grid-template-columns: 180px minmax(0, 1fr);
+        align-items: center;
+        gap: 46px;
+        padding: 28px 28px 34px;
+      }
+
+      .donut {
+        position: relative;
+        width: 168px;
+        height: 168px;
+        border-radius: 999px;
+        background:
+          radial-gradient(circle at center, white 0 49%, transparent 50%),
+          conic-gradient(
+            var(--orange) 0 23%,
+            var(--blue) 23% 46%,
+            #6b7280 46% 59%,
+            var(--teal) 59% 71%,
+            var(--violet) 71% 79%,
+            var(--gray) 79% 100%
+          );
+      }
+
+      .donut-copy {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        text-align: center;
+      }
+
+      .donut-copy span {
+        display: block;
+        color: var(--soft);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .donut-copy strong {
+        display: block;
+        margin-top: 7px;
+        font-size: 20px;
+        font-weight: 930;
+      }
+
+      .spending-list {
+        display: grid;
+        gap: 18px;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .spending-row {
+        display: grid;
+        grid-template-columns: 12px minmax(0, 1fr) 140px 46px;
+        align-items: center;
+        gap: 12px;
+        font-size: 16px;
+      }
+
+      .swatch {
+        width: 11px;
+        height: 11px;
+        border-radius: 4px;
+      }
+
+      .spending-name {
+        font-weight: 820;
+      }
+
+      .spending-amount {
+        text-align: right;
+        font-weight: 920;
+      }
+
+      .pct {
+        color: var(--soft);
+        font-size: 14px;
+        font-weight: 850;
+        text-align: right;
+      }
+
+      .compact-strip {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .mini-account {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--card);
+        padding: 16px;
+      }
+
+      .mini-account span {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 850;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .mini-account strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 20px;
+        font-weight: 930;
+      }
+
+      @media (max-width: 900px) {
+        .intro,
+        .option-head,
+        .dash-head,
+        .top-grid,
+        .hero-net-grid,
+        .forecast-row,
+        .detail-grid,
+        .readout-grid,
+        .spending-body,
+        .compact-strip {
+          display: grid;
+          grid-template-columns: 1fr;
+        }
+
+        .toolbar {
+          flex-wrap: wrap;
+        }
+
+        .button {
+          display: none;
+        }
+
+        .hero {
+          min-height: 340px;
+        }
+
+        .hero-caption {
+          margin-top: 56px;
+        }
+
+        .forecast-card.net {
+          transform: none;
+        }
+
+        .read-net {
+          min-width: 0;
+        }
+
+        .spending-row {
+          grid-template-columns: 12px minmax(0, 1fr) auto;
+        }
+
+        .pct {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="intro">
+        <div>
+          <h1>Dashboard con previsto neto</h1>
+          <p>
+            En estas opciones dejo casi intactos “Balance del mes” y “En qué se fue”.
+            La exploración se concentra arriba: disponible real, dónde está y previsto neto.
+          </p>
+        </div>
+        <nav class="tabs" aria-label="Opciones">
+          <a href="#m">M · Neto al lado</a>
+          <a href="#n">N · Neto protagonista</a>
+          <a href="#o">O · Tira central</a>
+        </nav>
+      </section>
+
+      <section class="option" id="m">
+        <div class="option-head">
+          <div>
+            <p class="kicker">Opción M</p>
+            <h2 class="option-title">Disponible + previsto neto al lado</h2>
+            <p class="option-copy">
+              La zona superior reemplaza “Dónde está” por una lectura de planificación.
+              Dónde está baja a una tira compacta; Balance y En qué se fue quedan casi iguales.
+            </p>
+          </div>
+          <span class="badge">Más directa</span>
+        </div>
+
+        <div class="dashboard">
+          <header class="dash-head">
+            <div>
+              <h2>Hola, Julieta.</h2>
+              <p class="date">Jueves, 18 de junio</p>
+            </div>
+            <div class="toolbar">
+              <span class="month">‹ Junio 2026 ›</span>
+              <span class="icon">○</span>
+              <span class="button">+ Nuevo movimiento</span>
+            </div>
+          </header>
+
+          <section class="grid top-grid">
+            <article class="panel dark hero">
+              <div>
+                <p class="eyebrow">Para gastar · hoy</p>
+                <p class="hero-money">$ 7.506.296<span class="cents">,65</span></p>
+                <p class="usd-line"><span class="usd-chip">USD</span> US$ 600,00</p>
+              </div>
+              <p class="hero-caption">Lo que tenés disponible hoy, en pesos y dólares.</p>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 class="panel-title">Lo previsto</h3>
+                  <p class="panel-note">No modifica tu disponible hasta que ocurra.</p>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div class="forecast-row">
+                  <div class="forecast-card">
+                    <p class="forecast-label">Por entrar</p>
+                    <p class="forecast-value" style="color: var(--green-deep)">+$ 900K</p>
+                    <p class="forecast-note">Sueldo y honorarios esperados.</p>
+                  </div>
+                  <div class="forecast-card net">
+                    <p class="forecast-label">Previsto neto</p>
+                    <p class="forecast-value">+$ 491K</p>
+                    <p class="forecast-note">Si todo ocurre como está cargado.</p>
+                  </div>
+                  <div class="forecast-card">
+                    <p class="forecast-label">Por salir</p>
+                    <p class="forecast-value" style="color: var(--red)">-$ 408K</p>
+                    <p class="forecast-note">Resumen, alquiler y servicios.</p>
+                  </div>
+                </div>
+
+                <div class="detail-grid">
+                  <div class="detail">
+                    <div class="detail-title"><span>Entra</span><strong style="color: var(--green-deep)">+$ 900K</strong></div>
+                    <div class="item"><span class="mark in">S</span><div class="row-main"><p class="row-title">Sueldo</p><p class="row-note">Ingreso recurrente</p></div><strong class="amount">+$ 760K</strong></div>
+                    <div class="item"><span class="mark in">H</span><div class="row-main"><p class="row-title">Honorarios</p><p class="row-note">Esperado</p></div><strong class="amount">+$ 140K</strong></div>
+                  </div>
+                  <div class="detail">
+                    <div class="detail-title"><span>Sale</span><strong style="color: var(--red)">-$ 408K</strong></div>
+                    <div class="item"><span class="mark out">T</span><div class="row-main"><p class="row-title">Visa Galicia</p><p class="row-note">Resumen actual</p></div><strong class="amount">-$ 86K</strong></div>
+                    <div class="item"><span class="mark out">A</span><div class="row-main"><p class="row-title">Alquiler</p><p class="row-note">Fijo mensual</p></div><strong class="amount">-$ 280K</strong></div>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section class="compact-strip" aria-label="Dónde está compacto">
+            <article class="mini-account"><span>Dónde está más</span><strong>Cta remunerada · $ 7.293.207,83</strong></article>
+            <article class="mini-account"><span>Disponible banco</span><strong>CA · $ 120.964,17</strong></article>
+            <article class="mini-account"><span>En dólares</span><strong style="color: var(--green-deep)">US$ 600,00</strong></article>
+          </section>
+
+          <section class="panel balance-card">
+            <div class="balance-top">
+              <h3 class="balance-title">Balance del mes</h3>
+              <p class="balance-current">vas <strong>+$ 4.641.786,09</strong> este mes</p>
+            </div>
+            <div class="balance-body">
+              <p class="balance-label">Balance</p>
+              <p class="balance-money">+$ 4.641.786<span style="font-size: 0.42em">,09</span></p>
+              <div class="flow-list">
+                <div>
+                  <div class="flow-head"><span><span class="dot" style="background: var(--green)"></span>Ingresos</span><strong>$ 7.349.361,79</strong></div>
+                  <div class="bar"><span style="width: 100%; background: var(--green)"></span></div>
+                </div>
+                <div>
+                  <div class="flow-head"><span><span class="dot" style="background: var(--red)"></span>Gastos</span><strong>$ 254.461,25</strong></div>
+                  <div class="bar"><span style="width: 3%; background: var(--red)"></span></div>
+                </div>
+                <div>
+                  <div class="flow-head"><span><span class="dot" style="background: var(--gold)"></span>Ajustes</span><strong>-$ 2.453.114,45</strong></div>
+                  <div class="bar"><span style="width: 33%; background: var(--gold)"></span></div>
+                  <p class="adjustment-note">🔍 ¿En qué se fue esta grana? Los ajustes son plata que se movió sin registrar — registrá esos movimientos y hacelos desaparecer.</p>
+                </div>
+              </div>
+              <div class="usd-strip">
+                <strong><span class="usd-chip" style="background: var(--green-soft); color: var(--green-deep)">USD</span> US$ 0,00</strong>
+                <span style="color: var(--muted); font-weight: 650">Ingresos US$ 0,00 · Gastos US$ 0,00</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel spending-card">
+            <div class="spending-head">
+              <h3 class="balance-title">En qué se fue</h3>
+              <div style="display: flex; align-items: center; gap: 14px">
+                <a class="link" href="#">Ver desglose</a>
+                <div class="segmented"><span class="active">ARS</span><span>USD</span></div>
+              </div>
+            </div>
+            <div class="spending-body">
+              <div class="donut">
+                <div class="donut-copy"><div><span>GASTOS</span><strong>$ 715.353,63</strong></div></div>
+              </div>
+              <ul class="spending-list">
+                <li class="spending-row"><span class="swatch" style="background: var(--orange)"></span><span class="spending-name">Comida</span><strong class="spending-amount">$ 165.937,58</strong><span class="pct">23%</span></li>
+                <li class="spending-row"><span class="swatch" style="background: var(--blue)"></span><span class="spending-name">Transporte</span><strong class="spending-amount">$ 165.000,51</strong><span class="pct">23%</span></li>
+                <li class="spending-row"><span class="swatch" style="background: #6b7280"></span><span class="spending-name">Otros gastos</span><strong class="spending-amount">$ 94.866,66</strong><span class="pct">13%</span></li>
+                <li class="spending-row"><span class="swatch" style="background: var(--teal)"></span><span class="spending-name">Hogar</span><strong class="spending-amount">$ 87.146,28</strong><span class="pct">12%</span></li>
+                <li class="spending-row"><span class="swatch" style="background: var(--violet)"></span><span class="spending-name">Entretenimiento</span><strong class="spending-amount">$ 55.240,00</strong><span class="pct">8%</span></li>
+                <li class="spending-row"><span class="swatch" style="background: var(--gray)"></span><span class="spending-name">Otros</span><strong class="spending-amount">$ 147.162,60</strong><span class="pct">21%</span></li>
+              </ul>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="option" id="n">
+        <div class="option-head">
+          <div>
+            <p class="kicker">Opción N</p>
+            <h2 class="option-title">Previsto neto como centro de control</h2>
+            <p class="option-copy">
+              El hero sigue siendo disponible real, pero la segunda pieza se vuelve una lectura central:
+              por entrar y por salir orbitan el neto previsto.
+            </p>
+          </div>
+          <span class="badge">Más visual</span>
+        </div>
+
+        <div class="dashboard">
+          <header class="dash-head">
+            <div>
+              <h2>Hola, Julieta.</h2>
+              <p class="date">Jueves, 18 de junio</p>
+            </div>
+            <div class="toolbar">
+              <span class="month">‹ Junio 2026 ›</span>
+              <span class="icon">○</span>
+              <span class="button">+ Nuevo movimiento</span>
+            </div>
+          </header>
+
+          <section class="grid hero-net-grid">
+            <article class="panel dark hero compact">
+              <div>
+                <p class="eyebrow">Para gastar · hoy</p>
+                <p class="hero-money">$ 7.506.296<span class="cents">,65</span></p>
+                <p class="usd-line"><span class="usd-chip">USD</span> US$ 600,00</p>
+              </div>
+              <p class="hero-caption" style="margin-top: 60px">Caja real. Lo previsto vive aparte.</p>
+            </article>
+
+            <article class="readout">
+              <div class="readout-grid">
+                <div class="read-side">
+                  <p class="forecast-label">Por entrar</p>
+                  <p class="forecast-value" style="color: var(--green-deep)">+$ 900K</p>
+                  <p class="forecast-note">Sueldo + honorarios.</p>
+                </div>
+                <div class="read-net">
+                  <p class="forecast-label">Previsto neto</p>
+                  <p class="forecast-value">+$ 491K</p>
+                  <p class="forecast-note" style="color: rgba(255,255,255,.62)">Si todo ocurre.</p>
+                </div>
+                <div class="read-side">
+                  <p class="forecast-label">Por salir</p>
+                  <p class="forecast-value" style="color: var(--red)">-$ 408K</p>
+                  <p class="forecast-note">Resumen + fijos.</p>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section class="compact-strip">
+            <article class="mini-account"><span>Dónde está más</span><strong>Cta remunerada · $ 7.293.207,83</strong></article>
+            <article class="mini-account"><span>Balance caja</span><strong style="color: var(--green)">+$ 4.641.786,09</strong></article>
+            <article class="mini-account"><span>En dólares</span><strong style="color: var(--green-deep)">US$ 600,00</strong></article>
+          </section>
+
+          <section class="panel balance-card">
+            <div class="balance-top">
+              <h3 class="balance-title">Balance del mes</h3>
+              <p class="balance-current">vas <strong>+$ 4.641.786,09</strong> este mes</p>
+            </div>
+            <div class="balance-body">
+              <p class="balance-label">Balance</p>
+              <p class="balance-money">+$ 4.641.786<span style="font-size: 0.42em">,09</span></p>
+              <div class="flow-list">
+                <div><div class="flow-head"><span><span class="dot" style="background: var(--green)"></span>Ingresos</span><strong>$ 7.349.361,79</strong></div><div class="bar"><span style="width: 100%; background: var(--green)"></span></div></div>
+                <div><div class="flow-head"><span><span class="dot" style="background: var(--red)"></span>Gastos</span><strong>$ 254.461,25</strong></div><div class="bar"><span style="width: 3%; background: var(--red)"></span></div></div>
+                <div><div class="flow-head"><span><span class="dot" style="background: var(--gold)"></span>Ajustes</span><strong>-$ 2.453.114,45</strong></div><div class="bar"><span style="width: 33%; background: var(--gold)"></span></div><p class="adjustment-note">🔍 ¿En qué se fue esta grana? Los ajustes son plata que se movió sin registrar — registrá esos movimientos y hacelos desaparecer.</p></div>
+              </div>
+              <div class="usd-strip"><strong><span class="usd-chip" style="background: var(--green-soft); color: var(--green-deep)">USD</span> US$ 0,00</strong><span style="color: var(--muted); font-weight: 650">Ingresos US$ 0,00 · Gastos US$ 0,00</span></div>
+            </div>
+          </section>
+
+          <section class="panel spending-card">
+            <div class="spending-head">
+              <h3 class="balance-title">En qué se fue</h3>
+              <div style="display: flex; align-items: center; gap: 14px"><a class="link" href="#">Ver desglose</a><div class="segmented"><span class="active">ARS</span><span>USD</span></div></div>
+            </div>
+            <div class="spending-body">
+              <div class="donut"><div class="donut-copy"><div><span>GASTOS</span><strong>$ 715.353,63</strong></div></div></div>
+              <ul class="spending-list">
+                <li class="spending-row"><span class="swatch" style="background: var(--orange)"></span><span class="spending-name">Comida</span><strong class="spending-amount">$ 165.937,58</strong><span class="pct">23%</span></li>
+                <li class="spending-row"><span class="swatch" style="background: var(--blue)"></span><span class="spending-name">Transporte</span><strong class="spending-amount">$ 165.000,51</strong><span class="pct">23%</span></li>
+                <li class="spending-row"><span class="swatch" style="background: #6b7280"></span><span class="spending-name">Otros gastos</span><strong class="spending-amount">$ 94.866,66</strong><span class="pct">13%</span></li>
+                <li class="spending-row"><span class="swatch" style="background: var(--teal)"></span><span class="spending-name">Hogar</span><strong class="spending-amount">$ 87.146,28</strong><span class="pct">12%</span></li>
+                <li class="spending-row"><span class="swatch" style="background: var(--violet)"></span><span class="spending-name">Entretenimiento</span><strong class="spending-amount">$ 55.240,00</strong><span class="pct">8%</span></li>
+                <li class="spending-row"><span class="swatch" style="background: var(--gray)"></span><span class="spending-name">Otros</span><strong class="spending-amount">$ 147.162,60</strong><span class="pct">21%</span></li>
+              </ul>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="option" id="o">
+        <div class="option-head">
+          <div>
+            <p class="kicker">Opción O</p>
+            <h2 class="option-title">Tira central de previsto neto</h2>
+            <p class="option-copy">
+              Conserva la top row actual con disponible + dónde está, y agrega una tira clara de previsto neto
+              antes de Balance. Es la opción menos disruptiva.
+            </p>
+          </div>
+          <span class="badge">Menor riesgo</span>
+        </div>
+
+        <div class="dashboard">
+          <header class="dash-head">
+            <div>
+              <h2>Hola, Julieta.</h2>
+              <p class="date">Jueves, 18 de junio</p>
+            </div>
+            <div class="toolbar">
+              <span class="month">‹ Junio 2026 ›</span>
+              <span class="icon">○</span>
+              <span class="button">+ Nuevo movimiento</span>
+            </div>
+          </header>
+
+          <section class="grid top-grid">
+            <article class="panel dark hero compact">
+              <div>
+                <p class="eyebrow">Para gastar · hoy</p>
+                <p class="hero-money">$ 7.506.296<span class="cents">,65</span></p>
+                <p class="usd-line"><span class="usd-chip">USD</span> US$ 600,00</p>
+              </div>
+              <p class="hero-caption" style="margin-top: 80px">Lo que tenés disponible hoy, en pesos y dólares.</p>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <h3 class="panel-title">Dónde está</h3>
+                <a class="link" href="#">Ver todas</a>
+              </div>
+              <div class="panel-body">
+                <ul class="accounts-list">
+                  <li class="account-row"><span class="account-icon">▣</span><div class="row-main"><p class="row-title">Cta remunerada</p></div><strong class="amount">$ 7.293.207,83</strong></li>
+                  <li class="account-row"><span class="account-icon orange">▥</span><div class="row-main"><p class="row-title">CA</p></div><strong class="amount">$ 120.964,17</strong></li>
+                  <li class="account-row"><span class="account-icon steel">▣</span><div class="row-main"><p class="row-title">Billetera</p></div><strong class="amount">$ 108.200,00</strong></li>
+                  <li class="account-row"><span class="account-icon green">▥</span><div class="row-main"><p class="row-title">Cta DNI</p></div><strong class="amount">$ 6.004,44</strong></li>
+                  <li class="account-row"><span class="account-icon red">▥</span><div class="row-main"><p class="row-title">CU</p></div><strong class="amount">$ 0,21</strong></li>
+                </ul>
+              </div>
+            </article>
+          </section>
+
+          <section class="readout" style="margin-top: 18px">
+            <div class="readout-grid">
+              <div class="read-side">
+                <p class="forecast-label">Por entrar</p>
+                <p class="forecast-value" style="color: var(--green-deep)">+$ 900K</p>
+                <p class="forecast-note">Ingresos previstos.</p>
+              </div>
+              <div class="read-net">
+                <p class="forecast-label">Previsto neto</p>
+                <p class="forecast-value">+$ 491K</p>
+                <p class="forecast-note" style="color: rgba(255,255,255,.62)">Planificación, no disponible.</p>
+              </div>
+              <div class="read-side">
+                <p class="forecast-label">Por salir</p>
+                <p class="forecast-value" style="color: var(--red)">-$ 408K</p>
+                <p class="forecast-note">Pagos ya comprometidos.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel balance-card">
+            <div class="balance-top">
+              <h3 class="balance-title">Balance del mes</h3>
+              <p class="balance-current">vas <strong>+$ 4.641.786,09</strong> este mes</p>
+            </div>
+            <div class="balance-body">
+              <p class="balance-label">Balance</p>
+              <p class="balance-money">+$ 4.641.786<span style="font-size: 0.42em">,09</span></p>
+              <div class="flow-list">
+                <div><div class="flow-head"><span><span class="dot" style="background: var(--green)"></span>Ingresos</span><strong>$ 7.349.361,79</strong></div><div class="bar"><span style="width: 100%; background: var(--green)"></span></div></div>
+                <div><div class="flow-head"><span><span class="dot" style="background: var(--red)"></span>Gastos</span><strong>$ 254.461,25</strong></div><div class="bar"><span style="width: 3%; background: var(--red)"></span></div></div>
+                <div><div class="flow-head"><span><span class="dot" style="background: var(--gold)"></span>Ajustes</span><strong>-$ 2.453.114,45</strong></div><div class="bar"><span style="width: 33%; background: var(--gold)"></span></div><p class="adjustment-note">🔍 ¿En qué se fue esta grana? Los ajustes son plata que se movió sin registrar — registrá esos movimientos y hacelos desaparecer.</p></div>
+              </div>
+              <div class="usd-strip"><strong><span class="usd-chip" style="background: var(--green-soft); color: var(--green-deep)">USD</span> US$ 0,00</strong><span style="color: var(--muted); font-weight: 650">Ingresos US$ 0,00 · Gastos US$ 0,00</span></div>
+            </div>
+          </section>
+
+          <section class="panel spending-card">
+            <div class="spending-head">
+              <h3 class="balance-title">En qué se fue</h3>
+              <div style="display: flex; align-items: center; gap: 14px"><a class="link" href="#">Ver desglose</a><div class="segmented"><span class="active">ARS</span><span>USD</span></div></div>
+            </div>
+            <div class="spending-body">
+              <div class="donut"><div class="donut-copy"><div><span>GASTOS</span><strong>$ 715.353,63</strong></div></div></div>
+              <ul class="spending-list">
+                <li class="spending-row"><span class="swatch" style="background: var(--orange)"></span><span class="spending-name">Comida</span><strong class="spending-amount">$ 165.937,58</strong><span class="pct">23%</span></li>
+                <li class="spending-row"><span class="swatch" style="background: var(--blue)"></span><span class="spending-name">Transporte</span><strong class="spending-amount">$ 165.000,51</strong><span class="pct">23%</span></li>
+                <li class="spending-row"><span class="swatch" style="background: #6b7280"></span><span class="spending-name">Otros gastos</span><strong class="spending-amount">$ 94.866,66</strong><span class="pct">13%</span></li>
+                <li class="spending-row"><span class="swatch" style="background: var(--teal)"></span><span class="spending-name">Hogar</span><strong class="spending-amount">$ 87.146,28</strong><span class="pct">12%</span></li>
+                <li class="spending-row"><span class="swatch" style="background: var(--violet)"></span><span class="spending-name">Entretenimiento</span><strong class="spending-amount">$ 55.240,00</strong><span class="pct">8%</span></li>
+                <li class="spending-row"><span class="swatch" style="background: var(--gray)"></span><span class="spending-name">Otros</span><strong class="spending-amount">$ 147.162,60</strong><span class="pct">21%</span></li>
+              </ul>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

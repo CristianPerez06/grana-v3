@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Grana - Movimiento detalle, mockups</title>
+  <style>
+    :root {
+      --navy: #0b1a2b;
+      --emerald: #10b981;
+      --emerald-deep: #059669;
+      --emerald-soft: rgba(16, 185, 129, 0.12);
+      --plum: #8a6e98;
+      --plum-soft: rgba(138, 110, 152, 0.12);
+      --terracotta: #b56a5a;
+      --terracotta-soft: rgba(181, 106, 90, 0.12);
+      --slate: #3a6b8a;
+      --slate-soft: #eaf1f6;
+      --page: #f6f7f9;
+      --card: #ffffff;
+      --border: #e6eaef;
+      --border-soft: #eef1f4;
+      --text: #0b1a2b;
+      --text-muted: #6b7683;
+      --text-soft: #8a94a3;
+      --warning: #c49a3c;
+      --warning-deep: #b45309;
+      --warning-soft: rgba(196, 154, 60, 0.12);
+      --shadow: 0 16px 48px rgba(11, 26, 43, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--text);
+      font-family: "Plus Jakarta Sans", Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    .page { width: min(1380px, calc(100vw - 32px)); margin: 0 auto; padding: 28px 0 64px; }
+    .topbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+    .eyebrow { margin: 0 0 8px; color: var(--text-soft); font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(28px, 4vw, 44px); line-height: 1.02; letter-spacing: 0; }
+    .intro { max-width: 660px; color: var(--text-muted); font-size: 15px; line-height: 1.6; }
+    .nav { display: flex; flex-wrap: wrap; gap: 8px; }
+    .nav a, .chip, .button {
+      display: inline-flex;
+      min-height: 36px;
+      align-items: center;
+      gap: 8px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      padding: 8px 12px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .button.primary { border-color: var(--emerald); background: var(--emerald); color: white; }
+    .button.icon { width: 40px; justify-content: center; padding: 0; border-radius: 999px; }
+    .section { margin-top: 28px; }
+    .section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+    .section-title h2 { margin: 0; font-size: 21px; letter-spacing: 0; }
+    .section-title p { margin: 0; color: var(--text-muted); font-size: 13px; font-weight: 700; }
+
+    .options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; align-items: start; }
+    .option {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+    .option-head { padding: 18px 18px 0; }
+    .option-head h3 { margin: 0 0 6px; font-size: 18px; letter-spacing: 0; }
+    .option-head p { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.45; }
+
+    .phone {
+      width: min(100%, 420px);
+      margin: 14px auto 0;
+      background: var(--page);
+      border-top: 1px solid var(--border-soft);
+      min-height: 680px;
+      padding: 14px 14px 20px;
+    }
+    .desktop { background: var(--page); border-top: 1px solid var(--border-soft); padding: 16px; }
+
+    .chrome { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .back { display: inline-flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 13px; font-weight: 800; }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: var(--card);
+      padding: 18px;
+    }
+    .hero.compact { padding: 16px; }
+    .hero.navy {
+      border-color: transparent;
+      background:
+        radial-gradient(circle at 90% 5%, rgba(16, 185, 129, 0.18), transparent 55%),
+        var(--navy);
+      color: white;
+    }
+    .hero.navy .muted, .hero.navy .meta-line, .hero.navy .label { color: rgba(255, 255, 255, 0.62); }
+    .hero.navy .mini-card { border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.07); }
+    .hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .icon {
+      display: grid;
+      width: 54px;
+      height: 54px;
+      flex: 0 0 54px;
+      place-items: center;
+      border-radius: 18px;
+      background: var(--slate);
+      color: white;
+      font-size: 24px;
+      font-weight: 900;
+      box-shadow: 0 8px 22px rgba(11, 26, 43, 0.12);
+    }
+    .icon.round { border-radius: 999px; }
+    .icon.food { background: #d9952f; }
+    .icon.card { background: var(--slate); }
+    .icon.shared { background: var(--plum); }
+    .icon.income { background: var(--emerald); }
+    .kicker { color: var(--text-soft); font-size: 11px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+    .amount { margin-top: 12px; color: var(--terracotta); font-size: 36px; font-weight: 950; line-height: 1; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+    .amount.income { color: var(--emerald-deep); }
+    .amount.neutral { color: var(--text); }
+    .amount .symbol { opacity: 0.6; font-size: 0.62em; font-weight: 800; }
+    .amount .dec { opacity: 0.82; font-size: 0.5em; vertical-align: 0.7em; }
+    .title { margin: 10px 0 0; font-size: 18px; font-weight: 900; letter-spacing: 0; }
+    .meta-line { margin-top: 4px; color: var(--text-muted); font-size: 12px; font-weight: 700; line-height: 1.4; }
+    .muted { color: var(--text-muted); }
+    .mini-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+    .mini-card { min-width: 0; border: 1px solid var(--border-soft); border-radius: 14px; background: var(--page); padding: 10px; }
+    .label { display: block; color: var(--text-soft); font-size: 10px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; }
+    .value { display: block; margin-top: 4px; color: var(--text); font-size: 13px; font-weight: 900; line-height: 1.25; }
+    .hero.navy .value { color: white; }
+
+    .notice {
+      margin: 10px 0 0;
+      border: 1px solid rgba(16, 185, 129, 0.22);
+      border-radius: 16px;
+      background: var(--emerald-soft);
+      padding: 11px 12px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+    .notice.warning { border-color: rgba(196,154,60,0.24); background: var(--warning-soft); color: #8a5a12; }
+    .notice.plum { border-color: rgba(138,110,152,0.22); background: var(--plum-soft); }
+    .notice strong { color: var(--text); }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--card);
+      box-shadow: 0 1px 2px rgba(11, 26, 43, 0.03);
+    }
+    .card + .card, .group + .group { margin-top: 12px; }
+    .group-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 16px 4px 8px;
+      color: var(--text-soft);
+      font-size: 11px;
+      font-weight: 950;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 58px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .row:last-child { border-bottom: 0; }
+    .row-icon {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      flex: 0 0 34px;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--border-soft);
+      color: var(--text-soft);
+      font-size: 15px;
+      font-weight: 900;
+    }
+    .row-main { flex: 1; min-width: 0; }
+    .row-label { color: var(--text-soft); font-size: 10.5px; font-weight: 950; letter-spacing: 0.05em; text-transform: uppercase; }
+    .row-value { margin-top: 3px; color: var(--text); font-size: 13.5px; font-weight: 850; line-height: 1.35; }
+    .row-side { color: var(--text); font-size: 13px; font-weight: 900; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .split { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 24px;
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: var(--border-soft);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .pill.good { background: var(--emerald-soft); color: var(--emerald-deep); }
+    .pill.warn { background: var(--warning-soft); color: var(--warning-deep); }
+    .pill.bad { background: var(--terracotta-soft); color: var(--terracotta); }
+    .pill.plum { background: var(--plum-soft); color: var(--plum); }
+    .pill.slate { background: var(--slate-soft); color: var(--slate); }
+
+    .receipt {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--card);
+      padding: 15px;
+    }
+    .receipt-head { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 13px; border-bottom: 1px dashed var(--border); }
+    .receipt-total { text-align: right; }
+    .receipt-list { margin: 0; padding: 4px 0 0; list-style: none; }
+    .receipt-list li { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; color: var(--text-muted); font-size: 13px; font-weight: 750; border-bottom: 1px solid var(--border-soft); }
+    .receipt-list li:last-child { border-bottom: 0; }
+    .receipt-list strong { color: var(--text); font-weight: 900; text-align: right; }
+
+    .timeline { position: relative; display: flex; flex-direction: column; gap: 0; }
+    .timeline::before { content: ""; position: absolute; left: 31px; top: 16px; bottom: 16px; width: 2px; background: var(--border); }
+    .event { position: relative; display: grid; grid-template-columns: 62px 1fr; gap: 0; padding: 12px 0; }
+    .dot { z-index: 1; justify-self: center; display: grid; width: 28px; height: 28px; place-items: center; border-radius: 999px; background: var(--card); border: 2px solid var(--border); color: var(--text-soft); font-size: 11px; font-weight: 950; }
+    .dot.good { border-color: var(--emerald); background: var(--emerald-soft); color: var(--emerald-deep); }
+    .dot.warn { border-color: var(--warning); background: var(--warning-soft); color: var(--warning-deep); }
+    .event-card { border: 1px solid var(--border-soft); border-radius: 16px; background: var(--card); padding: 12px; }
+    .event-card h4 { margin: 0; font-size: 14px; letter-spacing: 0; }
+    .event-card p { margin: 4px 0 0; color: var(--text-muted); font-size: 12px; font-weight: 700; line-height: 1.45; }
+    .progress { display: flex; gap: 5px; margin-top: 12px; }
+    .progress span { height: 9px; flex: 1; border-radius: 999px; background: var(--border-soft); }
+    .progress .paid { background: var(--emerald); }
+    .progress .now { background: var(--warning); }
+
+    .two-col { display: grid; grid-template-columns: minmax(0, 1.16fr) minmax(300px, 0.84fr); gap: 14px; align-items: start; }
+    .wide-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .case-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .case { overflow: hidden; border: 1px solid var(--border); border-radius: 20px; background: var(--card); }
+    .case-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 14px; border-bottom: 1px solid var(--border-soft); }
+    .case-head h3 { margin: 0; font-size: 15px; letter-spacing: 0; }
+    .case-head p { margin: 4px 0 0; color: var(--text-muted); font-size: 12px; line-height: 1.4; font-weight: 700; }
+    .case-body { padding: 12px; }
+    .mini-amount { font-size: 20px; font-weight: 950; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+    .mini-amount.expense { color: var(--terracotta); }
+    .mini-amount.income { color: var(--emerald-deep); }
+    .mini-amount.neutral { color: var(--text); }
+    .coverage { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .dense-row { display: grid; grid-template-columns: minmax(88px, 0.5fr) minmax(0, 1fr); gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border-soft); font-size: 12px; }
+    .dense-row:last-child { border-bottom: 0; }
+    .dense-row span:first-child { color: var(--text-soft); font-weight: 900; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }
+    .dense-row span:last-child { color: var(--text); font-weight: 850; line-height: 1.35; }
+
+    @media (max-width: 1080px) {
+      .options, .case-grid { grid-template-columns: 1fr; }
+      .two-col, .wide-grid { grid-template-columns: 1fr; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+    }
+
+    @media (max-width: 620px) {
+      .page { width: min(100% - 20px, 460px); padding-top: 18px; }
+      .section-title { align-items: flex-start; flex-direction: column; gap: 4px; }
+      .mini-grid { grid-template-columns: 1fr; }
+      .phone { padding-left: 10px; padding-right: 10px; }
+      .amount { font-size: 32px; }
+      .case-body { padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Movimiento detalle</p>
+        <h1>Tres caminos para rediseñar sin perder contabilidad</h1>
+        <p class="intro">
+          Mockups estaticos para comparar direccion visual. Usan la paleta y los patrones actuales:
+          cards, strips, amount tones, chips de estado, acciones con icono y jerarquia compacta.
+        </p>
+      </div>
+      <nav class="nav" aria-label="Secciones">
+        <a href="#opciones">Opciones</a>
+        <a href="#coverage">Cobertura de casos</a>
+        <a href="#decision">Lectura rapida</a>
+      </nav>
+    </header>
+
+    <section id="opciones" class="section">
+      <div class="section-title">
+        <h2>Opciones visuales</h2>
+        <p>Las tres muestran un caso complejo: gasto compartido con reintegro asociado.</p>
+      </div>
+
+      <div class="options">
+        <article class="option" id="option-a">
+          <div class="option-head">
+            <h3>A. Resumen + bloques</h3>
+            <p>La mas cercana al dashboard: hero fuerte, datos clave arriba y secciones compactas debajo.</p>
+          </div>
+          <div class="phone">
+            <div class="chrome">
+              <span class="back">‹ Movimientos</span>
+              <span class="button icon">⋯</span>
+            </div>
+            <section class="hero navy">
+              <div class="hero-top">
+                <div>
+                  <span class="kicker">Gasto compartido</span>
+                  <div class="amount">-<span class="symbol">$</span>48.320<span class="dec">00</span></div>
+                  <p class="title">Cena en Anafe</p>
+                  <p class="meta-line">lunes 15 de junio de 2026 · Galicia Visa</p>
+                </div>
+                <div class="icon round food">🍽</div>
+              </div>
+              <div class="mini-grid">
+                <div class="mini-card"><span class="label">Tu parte</span><span class="value">$24.160,00</span></div>
+                <div class="mini-card"><span class="label">Categoria</span><span class="value">Comidas</span></div>
+                <div class="mini-card"><span class="label">Estado</span><span class="value">Impacta al pagar resumen</span></div>
+              </div>
+            </section>
+
+            <div class="notice plum"><strong>Compartido.</strong> Julia $24.160,00 · Martín $24.160,00. La deuda se deriva, no se guarda.</div>
+            <div class="notice"><strong>Reintegro esperado.</strong> $7.500,00 a Billetera cuando se confirme.</div>
+
+            <div class="group-title">Detalles</div>
+            <section class="card">
+              <div class="row"><span class="row-icon">📅</span><div class="row-main"><div class="row-label">Fecha</div><div class="row-value">lunes 15 de junio de 2026</div></div></div>
+              <div class="row"><span class="row-icon">💳</span><div class="row-main"><div class="row-label">Tarjeta</div><div class="row-value">Galicia Visa · cierre 25/06</div></div></div>
+              <div class="row"><span class="row-icon">🏷</span><div class="row-main"><div class="row-label">Categoria</div><div class="row-value">Comidas · Salidas</div></div></div>
+              <div class="row"><span class="row-icon">📝</span><div class="row-main"><div class="row-label">Descripcion</div><div class="row-value">Cumple de Juli</div></div></div>
+            </section>
+
+            <div class="group-title">Reintegros asociados <span class="pill warn">Pendiente</span></div>
+            <section class="card">
+              <div class="row">
+                <span class="row-icon">↩</span>
+                <div class="row-main"><div class="row-label">Destino</div><div class="row-value">Cuenta · Billetera</div></div>
+                <span class="row-side" style="color: var(--emerald-deep)">+$7.500</span>
+              </div>
+            </section>
+          </div>
+        </article>
+
+        <article class="option" id="option-b">
+          <div class="option-head">
+            <h3>B. Recibo contable</h3>
+            <p>Mas denso y ordenado: ideal cuando queremos que el detalle se lea como comprobante auditado.</p>
+          </div>
+          <div class="phone">
+            <div class="chrome">
+              <span class="back">‹ Movimientos</span>
+              <span class="button icon">⋯</span>
+            </div>
+            <section class="receipt">
+              <div class="receipt-head">
+                <div>
+                  <div class="icon food">🍽</div>
+                  <p class="title">Cena en Anafe</p>
+                  <p class="meta-line">Gasto · lunes 15 de junio</p>
+                </div>
+                <div class="receipt-total">
+                  <span class="kicker">Total</span>
+                  <div class="mini-amount expense">-$48.320</div>
+                  <span class="pill plum">Compartido</span>
+                </div>
+              </div>
+              <ul class="receipt-list">
+                <li><span>Cuenta / tarjeta</span><strong>Galicia Visa</strong></li>
+                <li><span>Categoria</span><strong>Comidas · Salidas</strong></li>
+                <li><span>Tu parte</span><strong>$24.160,00</strong></li>
+                <li><span>Otra parte</span><strong>Martín $24.160,00</strong></li>
+                <li><span>Descripcion</span><strong>Cumple de Juli</strong></li>
+              </ul>
+            </section>
+
+            <div class="group-title">Contexto</div>
+            <section class="card">
+              <div class="row"><span class="row-icon">i</span><div class="row-main"><div class="row-value">Este consumo de tarjeta no baja tu disponible hasta pagar el resumen.</div></div></div>
+              <div class="row"><span class="row-icon">↩</span><div class="row-main"><div class="row-label">Reintegro esperado</div><div class="row-value">Billetera · pendiente</div></div><span class="row-side" style="color:var(--emerald-deep)">+$7.500</span></div>
+            </section>
+
+            <div class="group-title">Acciones</div>
+            <div class="split">
+              <span class="button primary">Editar</span>
+              <span class="button">Eliminar</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="option" id="option-c">
+          <div class="option-head">
+            <h3>C. Timeline de impacto</h3>
+            <p>Cuenta la historia financiera: registro, resumen, deuda compartida y reintegro como eventos.</p>
+          </div>
+          <div class="phone">
+            <div class="chrome">
+              <span class="back">‹ Movimientos</span>
+              <span class="button icon">⋯</span>
+            </div>
+            <section class="hero compact">
+              <div class="hero-top">
+                <div>
+                  <span class="kicker">Movimiento</span>
+                  <div class="amount">-<span class="symbol">$</span>48.320</div>
+                  <p class="title">Cena en Anafe</p>
+                  <p class="meta-line">Comidas · Salidas · Galicia Visa</p>
+                </div>
+                <span class="pill plum">50/50</span>
+              </div>
+            </section>
+
+            <div class="timeline" aria-label="Linea de tiempo del movimiento">
+              <div class="event">
+                <span class="dot good">1</span>
+                <div class="event-card">
+                  <h4>Registrado el 15 de junio</h4>
+                  <p>Gasto en tarjeta de credito. No afecta disponible hasta el pago del resumen.</p>
+                </div>
+              </div>
+              <div class="event">
+                <span class="dot warn">2</span>
+                <div class="event-card">
+                  <h4>Compartido con Martín</h4>
+                  <p>Tu parte $24.160,00. La deuda queda derivada por ARS.</p>
+                </div>
+              </div>
+              <div class="event">
+                <span class="dot">3</span>
+                <div class="event-card">
+                  <h4>Reintegro pendiente</h4>
+                  <p>Esperado $7.500,00 a Billetera. Cuando llegue, entra al balance.</p>
+                </div>
+              </div>
+            </div>
+
+            <section class="card">
+              <div class="row"><span class="row-icon">🏷</span><div class="row-main"><div class="row-label">Categoria</div><div class="row-value">Comidas · Salidas</div></div></div>
+              <div class="row"><span class="row-icon">📝</span><div class="row-main"><div class="row-label">Descripcion</div><div class="row-value">Cumple de Juli</div></div></div>
+            </section>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="coverage" class="section">
+      <div class="section-title">
+        <h2>Cobertura de informacion por caso</h2>
+        <p>Checklist visual de todo lo que hoy muestra el detalle.</p>
+      </div>
+
+      <div class="case-grid">
+        <article class="case">
+          <div class="case-head">
+            <div>
+              <h3>Gasto simple, compartido y con reintegro</h3>
+              <p>El caso mas cargado: categoria, split, reintegros, alerta y recurrencia.</p>
+            </div>
+            <span class="mini-amount expense">-$48.320</span>
+          </div>
+          <div class="case-body">
+            <div class="dense-row"><span>Fecha</span><span>lunes 15 de junio de 2026</span></div>
+            <div class="dense-row"><span>Cuenta</span><span>Banco Galicia · Visa credito</span></div>
+            <div class="dense-row"><span>Categoria</span><span>Comidas · Salidas</span></div>
+            <div class="dense-row"><span>Descripcion</span><span>Cumple de Juli</span></div>
+            <div class="dense-row"><span>Compartido</span><span>Tu parte $24.160,00 · Martín $24.160,00</span></div>
+            <div class="dense-row"><span>Reintegros</span><span>Pendiente a cuenta +$7.500,00</span></div>
+            <div class="dense-row"><span>Regla</span><span>Generado por regla mensual</span></div>
+            <div class="dense-row"><span>Revision</span><span>Falta categoria cuando aplica</span></div>
+            <div class="coverage"><span class="pill plum">Compartido</span><span class="pill warn">Pendiente</span><span class="pill slate">Recurrente</span></div>
+          </div>
+        </article>
+
+        <article class="case">
+          <div class="case-head">
+            <div>
+              <h3>Compra en cuotas</h3>
+              <p>Madre + hijas, cuota actual, estados y vencimientos.</p>
+            </div>
+            <span class="mini-amount expense">-$120.000</span>
+          </div>
+          <div class="case-body">
+            <div class="dense-row"><span>Fecha</span><span>3 de mayo de 2026</span></div>
+            <div class="dense-row"><span>Tarjeta</span><span>BBVA Mastercard</span></div>
+            <div class="dense-row"><span>Categoria</span><span>Hogar · Electro</span></div>
+            <div class="dense-row"><span>Cuotas</span><span>6 cuotas de $20.000,00</span></div>
+            <div class="timeline">
+              <div class="event"><span class="dot good">1</span><div class="event-card"><h4>Cuota 1 de 6</h4><p>Pagada · vencio 10 de junio · $20.000</p></div></div>
+              <div class="event"><span class="dot warn">2</span><div class="event-card"><h4>Cuota 2 de 6</h4><p>Pendiente · vence 10 de julio · $20.000</p><div class="progress"><span class="paid"></span><span class="now"></span><span></span><span></span><span></span><span></span></div></div></div>
+            </div>
+            <div class="coverage"><span class="pill warn">Cuota actual</span><span class="pill good">Pagadas</span><span class="pill">Futuras</span></div>
+          </div>
+        </article>
+
+        <article class="case">
+          <div class="case-head">
+            <div>
+              <h3>Reintegro</h3>
+              <p>Destino, estado, categoria derivada y gasto origen.</p>
+            </div>
+            <span class="mini-amount income">+$7.500</span>
+          </div>
+          <div class="case-body">
+            <div class="dense-row"><span>Estado</span><span>Recibido · antes pudo estar pendiente o cancelado</span></div>
+            <div class="dense-row"><span>Destino</span><span>Cuenta · Billetera</span></div>
+            <div class="dense-row"><span>Categoria</span><span>Derivada del gasto: Comidas · Salidas</span></div>
+            <div class="dense-row"><span>Estimado</span><span>$8.000,00 esperado · $7.500,00 recibido</span></div>
+            <div class="dense-row"><span>Origen</span><span>Cena en Anafe · -$48.320,00</span></div>
+            <div class="coverage"><span class="pill good">Recibido</span><span class="pill warn">Pendiente</span><span class="pill bad">Cancelado</span></div>
+          </div>
+        </article>
+
+        <article class="case">
+          <div class="case-head">
+            <div>
+              <h3>Pago de resumen</h3>
+              <p>No repite el periodo: muestra composicion ARS/USD y tipo de cambio.</p>
+            </div>
+            <span class="mini-amount expense">-$212.500</span>
+          </div>
+          <div class="case-body">
+            <div class="dense-row"><span>Cuenta</span><span>Galicia caja de ahorro</span></div>
+            <div class="dense-row"><span>Tarjeta</span><span>Galicia Visa</span></div>
+            <div class="dense-row"><span>Periodo</span><span>Resumen mayo 2026</span></div>
+            <div class="dense-row"><span>ARS</span><span>$182.500,00 del resumen</span></div>
+            <div class="dense-row"><span>USD</span><span>USD 25,00 pagados en ARS</span></div>
+            <div class="dense-row"><span>TC</span><span>1 USD = $1.200,00</span></div>
+            <div class="coverage"><span class="pill slate">Off-ledger hasta pago</span><span class="pill">Bimoneda</span></div>
+          </div>
+        </article>
+
+        <article class="case">
+          <div class="case-head">
+            <div>
+              <h3>Transferencia y cambio</h3>
+              <p>Origen, destino, monto recibido y relacion de cambio.</p>
+            </div>
+            <span class="mini-amount neutral">$300.000</span>
+          </div>
+          <div class="case-body">
+            <div class="dense-row"><span>Tipo</span><span>Transferencia entre cuentas</span></div>
+            <div class="dense-row"><span>Origen</span><span>Billetera</span></div>
+            <div class="dense-row"><span>Destino</span><span>Mercado Pago</span></div>
+            <div class="dense-row"><span>Cambio</span><span>Sale $300.000,00 ARS · entran USD 250,00</span></div>
+            <div class="dense-row"><span>TC</span><span>1 USD = $1.200,00</span></div>
+            <div class="coverage"><span class="pill slate">Origen</span><span class="pill good">Destino</span><span class="pill">FX</span></div>
+          </div>
+        </article>
+
+        <article class="case">
+          <div class="case-head">
+            <div>
+              <h3>Ingreso y ajuste</h3>
+              <p>Movimiento positivo/neutral, cuenta y tipo de ajuste.</p>
+            </div>
+            <span class="mini-amount income">+$850.000</span>
+          </div>
+          <div class="case-body">
+            <div class="dense-row"><span>Ingreso</span><span>Sueldo · Banco Nacion · Trabajo</span></div>
+            <div class="dense-row"><span>Ajuste</span><span>Aumento de saldo o disminucion de saldo</span></div>
+            <div class="dense-row"><span>Cuenta</span><span>Billetera</span></div>
+            <div class="dense-row"><span>Fecha</span><span>Fecha contable, no created_at</span></div>
+            <div class="dense-row"><span>Descripcion</span><span>Texto libre del movimiento</span></div>
+            <div class="coverage"><span class="pill good">Ingreso</span><span class="pill slate">Ajuste</span><span class="pill">Cuenta</span></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="decision" class="section">
+      <div class="section-title">
+        <h2>Lectura rapida</h2>
+        <p>Para decidir cual llevar a React.</p>
+      </div>
+      <div class="wide-grid">
+        <section class="card">
+          <div class="row"><span class="row-icon">A</span><div class="row-main"><div class="row-label">Recomendacion</div><div class="row-value">Opcion A como base. Mantiene la personalidad visual ya presente en dashboard/cards y escala bien a mobile.</div></div></div>
+          <div class="row"><span class="row-icon">B</span><div class="row-main"><div class="row-label">Cuando usar B</div><div class="row-value">Si la prioridad absoluta es auditoria y comparacion de campos, aunque se siente menos Grana.</div></div></div>
+          <div class="row"><span class="row-icon">C</span><div class="row-main"><div class="row-label">Cuando usar C</div><div class="row-value">Como subcomponente para cuotas, reintegros y pagos, no necesariamente para toda la pagina.</div></div></div>
+        </section>
+        <section class="card">
+          <div class="row"><span class="row-icon">✓</span><div class="row-main"><div class="row-label">No negociable</div><div class="row-value">La matriz de casos de arriba debe seguir completa en la implementacion real.</div></div></div>
+          <div class="row"><span class="row-icon">↔</span><div class="row-main"><div class="row-label">Bimoneda</div><div class="row-value">ARS y USD siempre separados. En pagos de resumen se muestra composicion, no total convertido mezclado.</div></div></div>
+          <div class="row"><span class="row-icon">i</span><div class="row-main"><div class="row-label">Pedagogia</div><div class="row-value">Las notas contextuales explican off-ledger, pendiente y deuda derivada sin bloquear acciones.</div></div></div>
+        </section>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,1008 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Grana - detalle visual</title>
+  <style>
+    :root {
+      --navy: #0b1a2b;
+      --emerald: #10b981;
+      --emerald-deep: #059669;
+      --emerald-soft: rgba(16, 185, 129, 0.12);
+      --plum: #8a6e98;
+      --plum-soft: rgba(138, 110, 152, 0.13);
+      --terracotta: #b56a5a;
+      --terracotta-soft: rgba(181, 106, 90, 0.12);
+      --slate: #3a6b8a;
+      --slate-soft: #eaf1f6;
+      --page: #f6f7f9;
+      --card: #ffffff;
+      --border: #e6eaef;
+      --border-soft: #eef1f4;
+      --text: #0b1a2b;
+      --muted: #6b7683;
+      --soft: #8a94a3;
+      --warning: #c49a3c;
+      --warning-soft: rgba(196, 154, 60, 0.13);
+      --danger: #c54b3c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(58, 107, 138, 0.08), transparent 28%),
+        radial-gradient(circle at 90% 4%, rgba(16, 185, 129, 0.12), transparent 30%),
+        var(--page);
+      color: var(--text);
+      font-family: "Plus Jakarta Sans", Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .wrap {
+      width: min(1200px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 28px 0 64px;
+    }
+
+    .intro {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 28px;
+      margin-bottom: 20px;
+    }
+
+    .intro h1 {
+      max-width: 640px;
+      margin: 0;
+      font-size: clamp(30px, 4vw, 44px);
+      font-weight: 760;
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+
+    .intro p {
+      max-width: 420px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .stage {
+      display: grid;
+      grid-template-columns: minmax(360px, 520px) minmax(320px, 1fr);
+      gap: 26px;
+      align-items: start;
+    }
+
+    .phone {
+      width: min(100%, 520px);
+      margin: 0 auto;
+      border: 1px solid rgba(230, 234, 239, 0.9);
+      border-radius: 32px;
+      background: var(--page);
+      box-shadow: 0 28px 78px rgba(11, 26, 43, 0.12);
+      padding: 24px;
+    }
+
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .back {
+      color: var(--slate);
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .actions { display: flex; gap: 8px; }
+
+    .round-btn {
+      display: grid;
+      width: 39px;
+      height: 39px;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--card);
+      color: var(--muted);
+      box-shadow: 0 2px 10px rgba(11, 26, 43, 0.04);
+    }
+
+    .round-btn.delete { color: var(--danger); }
+
+    .recurrence-banner {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      min-height: 54px;
+      margin-bottom: 14px;
+      border: 1px solid var(--border);
+      border-radius: 17px;
+      background: rgba(255,255,255,0.58);
+      padding: 9px 11px;
+      color: var(--muted);
+    }
+
+    .recurrence-icon {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border-radius: 13px;
+      background: var(--slate-soft);
+      color: var(--slate);
+    }
+
+    .recurrence-banner span {
+      display: block;
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .recurrence-banner strong {
+      color: var(--text);
+      font-weight: 520;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      background:
+        radial-gradient(circle at 85% 0%, rgba(16, 185, 129, 0.13), transparent 42%),
+        var(--card);
+      box-shadow: 0 18px 48px rgba(11, 26, 43, 0.07);
+    }
+
+    .hero-main {
+      display: grid;
+      grid-template-columns: 72px minmax(0, 1fr);
+      gap: 16px;
+      align-items: center;
+      padding: 20px 20px 14px;
+    }
+
+    .food {
+      display: grid;
+      width: 70px;
+      height: 70px;
+      place-items: center;
+      border-radius: 24px;
+      background: linear-gradient(145deg, #f59e0b, #f6b23c);
+      font-size: 34px;
+      box-shadow: 0 18px 30px rgba(245, 158, 11, 0.24);
+    }
+
+    .type {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      align-items: center;
+      color: var(--soft);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .chip {
+      display: inline-flex;
+      min-height: 23px;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: var(--slate-soft);
+      color: var(--slate);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .chip.plum { background: var(--plum-soft); color: var(--plum); }
+
+    .amount {
+      margin-top: 9px;
+      color: var(--terracotta);
+      font-size: 48px;
+      font-weight: 680;
+      line-height: 0.95;
+      letter-spacing: 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .amount .symbol { opacity: 0.58; font-size: 0.58em; font-weight: 540; }
+    .amount .dec { opacity: 0.8; font-size: 0.44em; vertical-align: 0.68em; }
+
+    .name {
+      margin: 11px 0 0;
+      font-size: 23px;
+      font-weight: 620;
+      line-height: 1.12;
+    }
+
+    .date {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .payment-map {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) 34px minmax(0, 0.95fr);
+      align-items: center;
+      gap: 6px;
+      padding: 0 20px 16px;
+    }
+
+    .pay-object {
+      display: grid;
+      grid-template-columns: 52px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      min-height: 68px;
+      border-radius: 18px;
+      background: var(--navy);
+      color: white;
+      padding: 10px 12px;
+      box-shadow: 0 12px 28px rgba(11, 26, 43, 0.13);
+    }
+
+    .card-art {
+      position: relative;
+      width: 50px;
+      height: 34px;
+      border-radius: 11px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.18), transparent 45%),
+        #132942;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+    }
+
+    .card-art::before {
+      content: "";
+      position: absolute;
+      left: 8px;
+      top: 10px;
+      width: 13px;
+      height: 9px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.64);
+    }
+
+    .card-art::after {
+      content: "";
+      position: absolute;
+      right: 8px;
+      bottom: 8px;
+      width: 22px;
+      height: 5px;
+      border-radius: 999px;
+      background: var(--emerald);
+    }
+
+    .pay-object span,
+    .impact-object span {
+      display: block;
+      margin-top: 0;
+      color: rgba(255,255,255,0.62);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .pay-object strong,
+    .impact-object strong {
+      display: block;
+      margin-top: 3px;
+      font-size: 15px;
+      font-weight: 560;
+      line-height: 1.2;
+    }
+
+    .arrow {
+      display: grid;
+      place-items: center;
+      color: var(--soft);
+    }
+
+    .impact-object {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      min-height: 68px;
+      border: 1px solid var(--border-soft);
+      border-radius: 18px;
+      background: var(--page);
+      padding: 10px 12px;
+    }
+
+    .impact-object .zero {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border-radius: 15px;
+      background: var(--slate-soft);
+      color: var(--slate);
+      font-size: 20px;
+      font-weight: 560;
+    }
+
+    .impact-object span { color: var(--soft); }
+    .impact-object strong { color: var(--text); }
+
+    .rail {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid var(--border-soft);
+      background: rgba(234, 241, 246, 0.42);
+    }
+
+    .rail-item {
+      min-height: 80px;
+      padding: 13px;
+      border-right: 1px solid var(--border-soft);
+    }
+
+    .rail-item:last-child { border-right: 0; }
+
+    .rail-icon {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--card);
+      color: var(--muted);
+      font-size: 15px;
+      margin-bottom: 8px;
+    }
+
+    .rail-item small {
+      display: block;
+      color: var(--soft);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .rail-item b {
+      display: block;
+      margin-top: 4px;
+      color: var(--text);
+      font-size: 12.5px;
+      font-weight: 520;
+      line-height: 1.25;
+    }
+
+    .section-label {
+      margin: 20px 4px 9px;
+      color: var(--soft);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .reimbursement-card {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr) auto;
+      gap: 11px;
+      align-items: center;
+      border: 1px solid rgba(16, 185, 129, 0.22);
+      border-radius: 22px;
+      background: var(--emerald-soft);
+      padding: 12px;
+    }
+
+    .reimbursement-icon {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      border-radius: 15px;
+      background: rgba(255,255,255,0.68);
+      color: var(--emerald-deep);
+    }
+
+    .reimbursement-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .reimbursement-card strong {
+      display: block;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 520;
+      line-height: 1.25;
+    }
+
+    .reimbursement-amount {
+      color: var(--emerald-deep);
+      font-size: 16px;
+      font-weight: 560;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .split-card {
+      border: 1px solid rgba(16, 185, 129, 0.20);
+      border-radius: 26px;
+      background:
+        radial-gradient(circle at 100% 0%, rgba(16, 185, 129, 0.12), transparent 48%),
+        linear-gradient(135deg, rgba(16,185,129,0.08), rgba(138,110,152,0.08)),
+        var(--card);
+      padding: 16px;
+    }
+
+    .split-top {
+      display: grid;
+      grid-template-columns: 46px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .people-icon {
+      display: grid;
+      width: 46px;
+      height: 46px;
+      place-items: center;
+      border-radius: 17px;
+      background: rgba(255,255,255,0.72);
+      color: var(--plum);
+      font-size: 20px;
+    }
+
+    .split-title {
+      min-width: 0;
+      font-size: 15px;
+      font-weight: 560;
+      line-height: 1.25;
+    }
+
+    .split-title span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 450;
+    }
+
+    .split-total {
+      font-size: 19px;
+      font-weight: 620;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .split-visual {
+      position: relative;
+      height: 78px;
+      margin-top: 15px;
+    }
+
+    .split-bar {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 31px;
+      display: flex;
+      overflow: hidden;
+      height: 16px;
+      border-radius: 999px;
+      background: var(--border-soft);
+    }
+
+    .split-bar span:first-child { width: 50%; background: var(--emerald); }
+    .split-bar span:last-child { width: 50%; background: var(--plum); }
+
+    .bubble {
+      position: absolute;
+      top: 0;
+      display: grid;
+      width: 76px;
+      height: 76px;
+      place-items: center;
+      border: 5px solid rgba(255,255,255,0.9);
+      border-radius: 999px;
+      background: var(--card);
+      color: var(--emerald-deep);
+      text-align: center;
+      box-shadow: 0 12px 26px rgba(11, 26, 43, 0.08);
+    }
+
+    .bubble.right {
+      right: 0;
+      background: var(--card);
+      color: var(--plum);
+    }
+
+    .bubble.left { left: 0; }
+
+    .bubble strong {
+      display: block;
+      font-size: 12px;
+      font-weight: 620;
+    }
+
+    .bubble span {
+      display: block;
+      margin-top: 2px;
+      color: var(--text);
+      font-size: 10.5px;
+      font-weight: 520;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .facts {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .fact {
+      min-height: 94px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--card);
+      padding: 13px;
+      box-shadow: 0 1px 2px rgba(11, 26, 43, 0.03);
+    }
+
+    .fact.wide { grid-column: span 2; }
+
+    .fact-icon {
+      display: grid;
+      width: 31px;
+      height: 31px;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--border-soft);
+      color: var(--soft);
+      margin-bottom: 9px;
+    }
+
+    .fact small {
+      display: block;
+      color: var(--soft);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .fact strong {
+      display: block;
+      margin-top: 5px;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 520;
+      line-height: 1.25;
+    }
+
+    .fact span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .category-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 30px;
+      border-radius: 999px;
+      padding: 5px 10px 5px 7px;
+      background: rgba(217, 149, 47, 0.14);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 520;
+      white-space: nowrap;
+    }
+
+    .category-chip::before {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: #d9952f;
+    }
+
+    .category-chip.sub {
+      background: var(--slate-soft);
+    }
+
+    .category-chip.sub::before {
+      background: var(--slate);
+    }
+
+    .notes {
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      background: rgba(255,255,255,0.78);
+      padding: 18px;
+      box-shadow: 0 18px 54px rgba(11, 26, 43, 0.08);
+    }
+
+    .notes h2 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      font-weight: 620;
+      letter-spacing: 0;
+    }
+
+    .notes p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .mini {
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: var(--card);
+      padding: 14px;
+    }
+
+    .mini h3 {
+      margin: 0 0 10px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .mini-picture {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+
+    .mini-box {
+      min-height: 58px;
+      border-radius: 15px;
+      background: var(--page);
+      padding: 8px;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.25;
+    }
+
+    .mini-box b {
+      display: block;
+      color: var(--text);
+      font-weight: 650;
+    }
+
+    .tiny-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 7px 0;
+      border-top: 1px solid var(--border-soft);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .tiny-row b {
+      color: var(--text);
+      font-weight: 650;
+      text-align: right;
+    }
+
+    .coverage {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 16px;
+      border-top: 1px solid var(--border-soft);
+      padding-top: 14px;
+    }
+
+    .coverage span {
+      display: inline-flex;
+      min-height: 30px;
+      align-items: center;
+      border-radius: 999px;
+      background: var(--page);
+      padding: 5px 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1;
+    }
+
+    .bars {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 5px;
+      margin: 8px 0 12px;
+    }
+
+    .bars span {
+      height: 9px;
+      border-radius: 999px;
+      background: var(--border-soft);
+    }
+
+    .bars .paid { background: var(--emerald); }
+    .bars .now { background: var(--warning); }
+
+    @media (max-width: 1040px) {
+      .stage { grid-template-columns: 1fr; }
+      .intro { align-items: flex-start; flex-direction: column; }
+    }
+
+    @media (max-width: 620px) {
+      .wrap { width: min(100% - 18px, 430px); padding-top: 16px; }
+      .phone { border-radius: 26px; padding: 14px 12px 18px; }
+      .hero-main { grid-template-columns: 1fr; text-align: center; }
+      .food { margin: 0 auto; }
+      .type { justify-content: center; }
+      .amount { font-size: 42px; }
+      .payment-map { grid-template-columns: 1fr; padding: 0 14px 16px; }
+      .arrow { transform: rotate(90deg); }
+      .recurrence-banner { grid-template-columns: 34px minmax(0,1fr); }
+      .recurrence-banner .chip { grid-column: 2; justify-self: start; }
+      .reimbursement-card { grid-template-columns: 42px minmax(0,1fr); }
+      .reimbursement-amount { grid-column: 2; }
+      .rail { grid-template-columns: 1fr; }
+      .rail-item { display: grid; grid-template-columns: 40px 1fr; gap: 10px; align-items: center; border-right: 0; border-bottom: 1px solid var(--border-soft); }
+      .rail-item:last-child { border-bottom: 0; }
+      .rail-icon { margin-bottom: 0; }
+      .split-top { grid-template-columns: 46px minmax(0,1fr); }
+      .split-total { grid-column: 2; }
+      .facts { grid-template-columns: repeat(2, 1fr); }
+      .fact.wide { grid-column: span 2; }
+      .mini-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="intro">
+      <h1>Menos texto: el detalle como mapa visual del movimiento</h1>
+      <p>La pantalla muestra objetos: comida, tarjeta, impacto, split y datos de respaldo. La lectura larga queda al final, no al centro.</p>
+    </header>
+
+    <div class="stage">
+      <article class="phone" id="visual-screen">
+        <div class="top">
+          <div class="back">← Movimientos</div>
+          <div class="actions">
+            <div class="round-btn" title="Editar">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 20h4.3L19.1 9.2a2 2 0 0 0 0-2.8l-1.5-1.5a2 2 0 0 0-2.8 0L4 15.7V20Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+                <path d="m13.5 6.2 4.3 4.3" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="round-btn delete" title="Eliminar">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 7h16M9 7V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8V7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+                <path d="M7 7l.8 12A2.2 2.2 0 0 0 10 21h4a2.2 2.2 0 0 0 2.2-2L17 7" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+                <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <section class="recurrence-banner" aria-label="Movimiento recurrente">
+          <div class="recurrence-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M17 2l4 4-4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M3 11V9a3 3 0 0 1 3-3h15" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+              <path d="M7 22l-4-4 4-4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M21 13v2a3 3 0 0 1-3 3H3" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <span>Generado por regla recurrente <strong>semanal</strong></span>
+          <span class="chip">Ver regla</span>
+        </section>
+
+        <section class="hero">
+          <div class="hero-main">
+            <div class="food">🍔</div>
+            <div>
+              <div class="type">Gasto de tarjeta <span class="chip">ARS</span><span class="chip plum">Compartido</span></div>
+              <div class="amount">− <span class="symbol">$</span>18.352<span class="dec">,00</span></div>
+              <h2 class="name">PY</h2>
+              <div class="date">jueves, 18 de junio de 2026</div>
+            </div>
+          </div>
+
+          <div class="payment-map">
+            <div class="pay-object">
+              <div class="card-art"></div>
+              <span>Pagaste con</span>
+              <strong>Visa Galicia</strong>
+            </div>
+            <div class="arrow" aria-hidden="true">
+              <svg width="34" height="20" viewBox="0 0 34 20" fill="none">
+                <path d="M2 10h28m0 0-7-7m7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="impact-object">
+              <div class="zero">0</div>
+              <span>Disponible hoy</span>
+              <strong>No cambia</strong>
+            </div>
+          </div>
+
+          <div class="rail" aria-label="Resumen visual de impacto">
+            <div class="rail-item">
+              <div class="rail-icon">✓</div>
+              <div><small>Registro</small><b>El consumo ya existe</b></div>
+            </div>
+            <div class="rail-item">
+              <div class="rail-icon">↗</div>
+              <div><small>Impacto</small><b>Al pagar resumen</b></div>
+            </div>
+            <div class="rail-item">
+              <div class="rail-icon">$</div>
+              <div><small>Tu parte</small><b>$9.176</b></div>
+            </div>
+          </div>
+        </section>
+
+        <div class="section-label">Compartido</div>
+        <section class="split-card">
+          <div class="split-top">
+            <div class="people-icon">👥</div>
+            <div class="split-title">
+              Dividido en partes iguales
+              <span>La deuda sale del split, no de una nota manual</span>
+            </div>
+            <div class="split-total">$18.352</div>
+          </div>
+          <div class="split-visual">
+            <div class="split-bar" aria-hidden="true"><span></span><span></span></div>
+            <div class="bubble left"><div><strong>Vos</strong><span>$9.176</span></div></div>
+            <div class="bubble right"><div><strong>CP</strong><span>$9.176</span></div></div>
+          </div>
+        </section>
+
+        <div class="section-label">Reintegro asociado</div>
+        <section class="reimbursement-card">
+          <div class="reimbursement-icon" aria-hidden="true">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+              <path d="M9 14 5 10l4-4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M5 10h9a5 5 0 0 1 0 10h-1" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <strong>Reintegro esperado</strong>
+            <span>A una cuenta cuando el banco lo deposite</span>
+          </div>
+          <div class="reimbursement-amount">+$2.000</div>
+        </section>
+
+        <div class="section-label">Datos</div>
+        <section class="facts">
+          <div class="fact wide">
+            <div class="fact-icon">▤</div>
+            <small>Tarjeta</small>
+            <strong>Visa Galicia</strong>
+            <span>Galicia · credito</span>
+          </div>
+          <div class="fact wide">
+            <div class="fact-icon" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M7 3v3M17 3v3M4.5 9h15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <rect x="4.5" y="5.5" width="15" height="15" rx="3" stroke="currentColor" stroke-width="1.8"/>
+              </svg>
+            </div>
+            <small>Fecha</small>
+            <strong>18 jun 2026</strong>
+            <span>jueves</span>
+          </div>
+          <div class="fact">
+            <div class="fact-icon">◇</div>
+            <small>Categoria</small>
+            <strong><span class="category-chip">Comida</span></strong>
+          </div>
+          <div class="fact">
+            <div class="fact-icon">◇</div>
+            <small>Subcat.</small>
+            <strong><span class="category-chip sub">PedidosYa</span></strong>
+          </div>
+          <div class="fact wide">
+            <div class="fact-icon">☷</div>
+            <small>Descripcion</small>
+            <strong>PY</strong>
+          </div>
+        </section>
+      </article>
+
+      <aside class="notes" id="visual-variants">
+        <h2>Variantes resueltas como dibujos</h2>
+        <p>La pantalla no necesita explicar todo con párrafos: cada tipo cambia el diagrama central.</p>
+
+        <div class="mini-grid">
+          <article class="mini">
+            <h3>Reintegro</h3>
+            <div class="mini-picture">
+              <div class="mini-box"><b>Gasto</b>−$45.000</div>
+              <div class="mini-box"><b>Banco</b>devuelve</div>
+              <div class="mini-box"><b>Cuenta</b>+$2.000</div>
+            </div>
+            <div class="tiny-row"><span>Estado</span><b>Recibido</b></div>
+            <div class="tiny-row"><span>Origen</span><b>Desayuno</b></div>
+          </article>
+
+          <article class="mini">
+            <h3>Cuotas</h3>
+            <div class="mini-picture">
+              <div class="mini-box"><b>Total</b>$120.000</div>
+              <div class="mini-box"><b>Actual</b>2 de 6</div>
+              <div class="mini-box"><b>Próxima</b>10 jul</div>
+            </div>
+            <div class="bars"><span class="paid"></span><span class="now"></span><span></span><span></span><span></span><span></span></div>
+            <div class="tiny-row"><span>Cuota</span><b>$20.000</b></div>
+          </article>
+
+          <article class="mini">
+            <h3>Pago de resumen</h3>
+            <div class="mini-picture">
+              <div class="mini-box"><b>Cuenta</b>sale</div>
+              <div class="mini-box"><b>Tarjeta</b>se paga</div>
+              <div class="mini-box"><b>USD</b>separado</div>
+            </div>
+            <div class="tiny-row"><span>ARS</span><b>$182.500</b></div>
+            <div class="tiny-row"><span>USD</span><b>USD 25</b></div>
+          </article>
+
+          <article class="mini">
+            <h3>Cambio</h3>
+            <div class="mini-picture">
+              <div class="mini-box"><b>Origen</b>ARS</div>
+              <div class="mini-box"><b>TC</b>1.200</div>
+              <div class="mini-box"><b>Destino</b>USD</div>
+            </div>
+            <div class="tiny-row"><span>Sale</span><b>$300.000</b></div>
+            <div class="tiny-row"><span>Entra</span><b>USD 250</b></div>
+          </article>
+        </div>
+
+        <div class="coverage" aria-label="Casos contemplados">
+          <span>Gasto</span>
+          <span>Ingreso</span>
+          <span>Tarjeta</span>
+          <span>Compartido</span>
+          <span>Reintegro</span>
+          <span>Recurrencia</span>
+          <span>Cuotas</span>
+          <span>Pago resumen</span>
+          <span>Transferencia</span>
+          <span>Cambio</span>
+          <span>Ajuste</span>
+          <span>Falta categoria</span>
+        </div>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>

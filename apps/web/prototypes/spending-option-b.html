@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>En qué se fue · Opción B con colapso</title>
+<style>
+  :root{
+    --navy:#0B1A2B; --emerald:#10B981; --emerald-deep:#059669;
+    --page:#F6F7F9; --card:#FFFFFF; --border:#E6EAEF; --border-soft:#EEF1F4;
+    --text:#0B1A2B; --text-muted:#6B7683; --text-soft:#8A94A3; --slate:#3A6B8A;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--page); color:var(--text);
+    font-family:"Plus Jakarta Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    padding:28px; display:flex; flex-direction:column; gap:24px; align-items:center;
+  }
+  .intro{max-width:780px; width:100%}
+  .intro h1{font-size:18px; margin:0 0 6px}
+  .intro p{font-size:13px; color:var(--text-muted); margin:0; line-height:1.5}
+  .controls{max-width:780px; width:100%; font-size:13px; color:var(--text-muted); display:flex; gap:10px; align-items:center}
+  .controls select{font:inherit; padding:4px 8px; border:1px solid var(--border); border-radius:8px}
+  .card{
+    width:100%; max-width:780px; background:var(--card);
+    border:1px solid var(--border); border-radius:18px; padding:24px 28px;
+    box-shadow:0 2px 8px rgba(26,23,20,.05);
+  }
+  .eyebrow{font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--navy)}
+  .month{font-size:18px; font-weight:800; letter-spacing:-.01em; margin-top:4px}
+  .subtitle{font-size:13px; color:var(--text-soft); font-weight:600; margin-top:2px; margin-bottom:18px}
+
+  .wrap{display:flex; gap:26px; align-items:flex-start}
+  @media(max-width:560px){.wrap{flex-direction:column; align-items:center}}
+  svg.donut{display:block}
+  .donutbox{position:relative; flex:0 0 auto}
+  .center{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center}
+  .c-eyebrow{font-size:10px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--emerald-deep)}
+  .c-amount{font-size:23px; font-weight:800; letter-spacing:-.03em}
+  .c-caption{font-size:10.5px; color:var(--text-soft); margin-top:2px}
+
+  .list{flex:1; min-width:0; display:flex; flex-direction:column; gap:11px; width:100%}
+  .dot{width:10px; height:10px; border-radius:3px; flex:0 0 auto}
+  .row{display:flex; flex-direction:column; gap:5px; padding:3px 6px; border-radius:8px; cursor:pointer}
+  .row:hover{background:#F4F6F9}
+  .head{display:flex; align-items:center; gap:9px}
+  .name{font-size:13.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1}
+  .pct{font-size:11px; color:var(--text-soft); font-variant-numeric:tabular-nums}
+  .amt{font-size:13.5px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap}
+  .track{height:5px; border-radius:99px; background:var(--border-soft); overflow:hidden}
+  .fill{height:100%; border-radius:99px}
+
+  .toggle{display:flex; align-items:center; gap:6px; padding:8px 6px; border:0; background:none;
+    font:inherit; color:var(--slate); font-weight:700; font-size:13px; cursor:pointer; border-radius:8px; width:100%; text-align:left}
+  .toggle:hover{background:#EAF1F6}
+  .chev{transition:transform .18s ease}
+  .toggle.open .chev{transform:rotate(180deg)}
+  .tail{display:flex; flex-direction:column; gap:11px; overflow:hidden}
+</style>
+</head>
+<body>
+  <div class="intro">
+    <h1>Opción B — ranking con barras + colapso "+N más"</h1>
+    <p>Muestra hasta <strong id="capLabel">10</strong> categorías; si hay más, aparece <strong>“+N más”</strong> con una
+       flechita para desplegar el resto. Cada fila es clickeable (filtraría por esa categoría).</p>
+  </div>
+  <div class="controls">
+    <label>Probar con:
+      <select id="count">
+        <option value="7">7 categorías</option>
+        <option value="10">10 categorías</option>
+        <option value="16" selected>16 categorías</option>
+      </select>
+    </label>
+    <label>Tope visible:
+      <select id="cap">
+        <option value="10" selected>10</option>
+        <option value="12">12</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">En qué se fue</div>
+    <div class="month">Junio 2026</div>
+    <div class="subtitle">Gastos del mes</div>
+    <div class="wrap">
+      <div class="donutbox" id="donut"></div>
+      <div class="list" id="list"></div>
+    </div>
+  </div>
+
+<script>
+const PALETTE = ['#10B981','#0D9488','#3A6B8A','#B56A5A','#8A6E98','#D9952F','#C05C84','#4C56C0'];
+const OTHERS = '#9CA3AF';
+const fmtARS = n => '$ ' + n.toLocaleString('es-AR');
+
+const ALL = [
+  {label:'Comida',     value:182400, color:PALETTE[0], icon:'🍔'},
+  {label:'Hogar',      value:98300,  color:PALETTE[1], icon:'🏠'},
+  {label:'Transporte', value:64100,  color:PALETTE[2], icon:'🚗'},
+  {label:'Servicios',  value:51800,  color:PALETTE[3], icon:'💡'},
+  {label:'Ocio',       value:38900,  color:PALETTE[4], icon:'🎮'},
+  {label:'Salud',      value:22500,  color:PALETTE[5], icon:'⚕️'},
+  {label:'Ropa',       value:15200,  color:PALETTE[6], icon:'👕'},
+  {label:'Mascotas',   value:12800,  color:PALETTE[7], icon:'🐶'},
+  {label:'Regalos',    value:9400,   color:PALETTE[0], icon:'🎁'},
+  {label:'Educación',  value:7600,   color:PALETTE[1], icon:'📚'},
+  {label:'Café',       value:5100,   color:PALETTE[2], icon:'☕'},
+  {label:'Varios',     value:3200,   color:PALETTE[3], icon:'🔧'},
+  {label:'Suscrip.',   value:2900,   color:PALETTE[4], icon:'📺'},
+  {label:'Viajes',     value:2400,   color:PALETTE[5], icon:'✈️'},
+  {label:'Belleza',    value:1900,   color:PALETTE[6], icon:'💄'},
+  {label:'Deporte',    value:1500,   color:PALETTE[7], icon:'🏋️'},
+];
+
+let expanded = false;
+
+function donutSVG(slices, size){
+  const top = slices.slice(0,6);
+  const rest = slices.slice(6);
+  const arcsData = [...top];
+  if(rest.length) arcsData.push({color:OTHERS, pct:rest.reduce((a,c)=>a+c.pct,0)});
+  let off=25, arcs='';
+  arcsData.forEach(s=>{
+    arcs+=`<circle cx="18" cy="18" r="15.915" fill="none" stroke="${s.color}" stroke-width="4"
+      stroke-dasharray="${s.pct} ${100-s.pct}" stroke-dashoffset="${off}"/>`;
+    off -= s.pct;
+  });
+  return `<svg class="donut" viewBox="0 0 36 36" width="${size}" height="${size}">
+    <circle cx="18" cy="18" r="15.915" fill="none" stroke="var(--border-soft)" stroke-width="4"/>${arcs}</svg>`;
+}
+
+function rowHTML(s, maxPct){
+  return `<div class="row">
+    <div class="head">
+      <span class="dot" style="background:${s.color}"></span>
+      <span class="name">${s.icon} ${s.label}</span>
+      <span class="pct">${Math.round(s.pct)}%</span>
+      <span class="amt">${fmtARS(s.value)}</span>
+    </div>
+    <div class="track"><div class="fill" style="width:${(s.pct/maxPct*100).toFixed(1)}%; background:${s.color}"></div></div>
+  </div>`;
+}
+
+function render(){
+  const count = +document.getElementById('count').value;
+  const cap = +document.getElementById('cap').value;
+  document.getElementById('capLabel').textContent = cap;
+
+  const data = ALL.slice(0,count);
+  const total = data.reduce((a,c)=>a+c.value,0);
+  const slices = data.map(c=>({...c, pct:c.value/total*100})).sort((a,b)=>b.value-a.value);
+  const maxPct = slices[0].pct;
+
+  document.getElementById('donut').innerHTML = donutSVG(slices,180) +
+    `<div class="center"><span class="c-eyebrow">Gastado</span>
+      <span class="c-amount">${fmtARS(total)}</span>
+      <span class="c-caption">en ${data.length} categorías</span></div>`;
+
+  const visible = slices.slice(0, cap);
+  const tail = slices.slice(cap);
+
+  let html = visible.map(s=>rowHTML(s,maxPct)).join('');
+
+  if(tail.length){
+    html += `<div class="tail" id="tail" style="${expanded?'':'display:none'}">${tail.map(s=>rowHTML(s,maxPct)).join('')}</div>`;
+    html += `<button class="toggle ${expanded?'open':''}" id="toggle">
+      <span>${expanded ? 'Ver menos' : '+ '+tail.length+' categorías más'}</span>
+      <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>`;
+  }
+
+  const list = document.getElementById('list');
+  list.innerHTML = html;
+  const t = document.getElementById('toggle');
+  if(t) t.onclick = ()=>{ expanded=!expanded; render(); };
+}
+
+document.getElementById('count').onchange = ()=>{ expanded=false; render(); };
+document.getElementById('cap').onchange = ()=>{ expanded=false; render(); };
+render();
+</script>
+</body>
+</html>

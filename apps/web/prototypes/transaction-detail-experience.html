@@ -1,0 +1,1045 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Grana - experiencia detalle movimiento</title>
+  <style>
+    :root {
+      --navy: #0b1a2b;
+      --emerald: #10b981;
+      --emerald-deep: #059669;
+      --emerald-soft: rgba(16, 185, 129, 0.12);
+      --plum: #8a6e98;
+      --plum-soft: rgba(138, 110, 152, 0.12);
+      --terracotta: #b56a5a;
+      --terracotta-soft: rgba(181, 106, 90, 0.12);
+      --slate: #3a6b8a;
+      --slate-soft: #eaf1f6;
+      --page: #f6f7f9;
+      --card: #ffffff;
+      --border: #e6eaef;
+      --border-soft: #eef1f4;
+      --text: #0b1a2b;
+      --text-muted: #6b7683;
+      --text-soft: #8a94a3;
+      --warning: #c49a3c;
+      --warning-deep: #b45309;
+      --warning-soft: rgba(196, 154, 60, 0.12);
+      --danger: #c54b3c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 8% 0%, rgba(58, 107, 138, 0.08), transparent 28%),
+        radial-gradient(circle at 96% 10%, rgba(16, 185, 129, 0.10), transparent 28%),
+        var(--page);
+      color: var(--text);
+      font-family: "Plus Jakarta Sans", Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .canvas {
+      width: min(1360px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 26px 0 60px;
+    }
+
+    .intro {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 28px;
+      margin-bottom: 20px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--text-soft);
+      font-size: 12px;
+      font-weight: 950;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 760px;
+      font-size: clamp(30px, 4vw, 46px);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    .intro-note {
+      max-width: 470px;
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.55;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(420px, 610px) minmax(360px, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .screen {
+      width: min(100%, 560px);
+      margin: 0 auto;
+      border: 1px solid rgba(230, 234, 239, 0.9);
+      border-radius: 32px;
+      background: var(--page);
+      box-shadow: 0 26px 76px rgba(11, 26, 43, 0.12);
+      padding: 26px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .back {
+      color: var(--slate);
+      font-size: 15px;
+      font-weight: 850;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-button {
+      display: grid;
+      width: 40px;
+      height: 40px;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--card);
+      color: var(--text-muted);
+      box-shadow: 0 2px 10px rgba(11, 26, 43, 0.04);
+    }
+
+    .icon-button.delete { color: var(--danger); }
+
+    .movement-hero {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      background: var(--card);
+      box-shadow: 0 16px 44px rgba(11, 26, 43, 0.07);
+    }
+
+    .hero-main {
+      display: grid;
+      grid-template-columns: 82px minmax(0, 1fr);
+      gap: 16px;
+      align-items: center;
+      padding: 22px 22px 14px;
+    }
+
+    .category-orb {
+      display: grid;
+      width: 78px;
+      height: 78px;
+      place-items: center;
+      border-radius: 26px;
+      background:
+        radial-gradient(circle at 70% 20%, rgba(255, 255, 255, 0.28), transparent 32%),
+        #f59e0b;
+      color: white;
+      font-size: 35px;
+      box-shadow: 0 18px 34px rgba(245, 158, 11, 0.26);
+    }
+
+    .category-orb.slate {
+      background:
+        radial-gradient(circle at 70% 20%, rgba(255, 255, 255, 0.22), transparent 32%),
+        #6b7280;
+      box-shadow: 0 18px 34px rgba(58, 107, 138, 0.18);
+    }
+
+    .type-line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-soft);
+      font-size: 11px;
+      font-weight: 950;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: var(--border-soft);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 950;
+      letter-spacing: 0;
+      text-transform: none;
+      white-space: nowrap;
+    }
+
+    .pill.good { background: var(--emerald-soft); color: var(--emerald-deep); }
+    .pill.warn { background: var(--warning-soft); color: var(--warning-deep); }
+    .pill.plum { background: var(--plum-soft); color: var(--plum); }
+    .pill.bad { background: var(--terracotta-soft); color: var(--terracotta); }
+    .pill.slate { background: var(--slate-soft); color: var(--slate); }
+
+    .amount {
+      margin-top: 10px;
+      color: var(--terracotta);
+      font-size: clamp(38px, 7vw, 50px);
+      font-weight: 950;
+      line-height: 0.95;
+      letter-spacing: 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .amount.income { color: var(--emerald-deep); }
+    .amount.neutral { color: var(--text); }
+    .amount .symbol { opacity: 0.62; font-size: 0.58em; font-weight: 800; }
+    .amount .dec { opacity: 0.82; font-size: 0.44em; vertical-align: 0.68em; }
+
+    .movement-title {
+      margin: 12px 0 0;
+      color: var(--text);
+      font-size: 23px;
+      font-weight: 950;
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    .movement-meta {
+      margin-top: 6px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 750;
+      line-height: 1.4;
+    }
+
+    .payment-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      margin: 0 22px 18px;
+      border: 1px solid var(--border-soft);
+      border-radius: 20px;
+      background:
+        radial-gradient(circle at 100% 0%, rgba(16, 185, 129, 0.10), transparent 42%),
+        var(--page);
+      padding: 13px;
+    }
+
+    .payment-left {
+      display: grid;
+      grid-template-columns: 46px minmax(0, 1fr);
+      gap: 11px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .card-glyph {
+      position: relative;
+      width: 46px;
+      height: 32px;
+      border-radius: 10px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.18), transparent 42%),
+        var(--navy);
+      box-shadow: 0 10px 22px rgba(11, 26, 43, 0.16);
+    }
+
+    .card-glyph::before {
+      content: "";
+      position: absolute;
+      left: 8px;
+      top: 9px;
+      width: 12px;
+      height: 8px;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.72);
+    }
+
+    .card-glyph::after {
+      content: "";
+      position: absolute;
+      right: 8px;
+      bottom: 8px;
+      width: 17px;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--emerald);
+    }
+
+    .payment-kicker {
+      display: block;
+      color: var(--text-soft);
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .payment-name {
+      display: block;
+      overflow: hidden;
+      margin-top: 3px;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 950;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .payment-sub {
+      display: block;
+      margin-top: 1px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .payment-state {
+      text-align: right;
+      min-width: 112px;
+    }
+
+    .payment-state strong {
+      display: block;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 950;
+    }
+
+    .payment-state span {
+      display: block;
+      margin-top: 2px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 750;
+    }
+
+    .impact-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      border-top: 1px solid var(--border-soft);
+      background: linear-gradient(180deg, rgba(234, 241, 246, 0.5), rgba(255,255,255,0));
+    }
+
+    .impact-item {
+      position: relative;
+      min-width: 0;
+      padding: 14px 14px 16px;
+      border-right: 1px solid var(--border-soft);
+    }
+
+    .impact-item:last-child { border-right: 0; }
+
+    .impact-icon {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border-radius: 13px;
+      background: var(--border-soft);
+      color: var(--text-muted);
+      font-weight: 950;
+      margin-bottom: 9px;
+    }
+
+    .impact-icon.off { background: var(--slate-soft); color: var(--slate); }
+    .impact-icon.next { background: var(--warning-soft); color: var(--warning-deep); }
+
+    .impact-label {
+      display: block;
+      color: var(--text-soft);
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .impact-value {
+      display: block;
+      margin-top: 4px;
+      color: var(--text);
+      font-size: 12.5px;
+      font-weight: 900;
+      line-height: 1.28;
+    }
+
+    .block-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 20px 4px 9px;
+      color: var(--text-soft);
+      font-size: 11px;
+      font-weight: 950;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .visual-card {
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: var(--card);
+      box-shadow: 0 8px 26px rgba(11, 26, 43, 0.045);
+      overflow: hidden;
+    }
+
+    .share-card {
+      padding: 16px;
+      background:
+        linear-gradient(135deg, rgba(138,110,152,0.14), rgba(16,185,129,0.10)),
+        var(--card);
+    }
+
+    .share-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .share-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .share-icon {
+      display: grid;
+      width: 40px;
+      height: 40px;
+      flex: 0 0 40px;
+      place-items: center;
+      border-radius: 15px;
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--plum);
+      font-weight: 950;
+    }
+
+    .share-title strong {
+      display: block;
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    .share-title span {
+      display: block;
+      margin-top: 2px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .share-total {
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 950;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .split-bar {
+      display: flex;
+      overflow: hidden;
+      height: 13px;
+      border-radius: 999px;
+      background: var(--border-soft);
+      box-shadow: inset 0 0 0 1px rgba(11,26,43,0.04);
+    }
+
+    .split-bar span:first-child { width: 50%; background: var(--emerald); }
+    .split-bar span:last-child { width: 50%; background: var(--plum); }
+
+    .share-summary {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 12px 0 0;
+    }
+
+    .share-metric {
+      border-radius: 16px;
+      background: rgba(255,255,255,0.68);
+      padding: 11px;
+    }
+
+    .share-metric span {
+      display: block;
+      color: var(--text-soft);
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .share-metric strong {
+      display: block;
+      margin-top: 4px;
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .people {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .person {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr);
+      gap: 9px;
+      align-items: center;
+      min-width: 0;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.64);
+      padding: 10px;
+    }
+
+    .initials {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border-radius: 999px;
+      background: var(--emerald-soft);
+      color: var(--emerald-deep);
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .initials.plum { background: var(--plum-soft); color: var(--plum); }
+
+    .person-name {
+      display: block;
+      overflow: hidden;
+      color: var(--text-muted);
+      font-size: 11.5px;
+      font-weight: 800;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .person-amount {
+      display: block;
+      margin-top: 1px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .facts {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1px;
+      background: var(--border-soft);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      overflow: hidden;
+    }
+
+    .fact {
+      min-width: 0;
+      background: var(--card);
+      padding: 15px;
+    }
+
+    .fact.wide { grid-column: 1 / -1; }
+
+    .fact-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-soft);
+      font-size: 10.5px;
+      font-weight: 950;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .fact-icon {
+      display: grid;
+      width: 26px;
+      height: 26px;
+      place-items: center;
+      border-radius: 10px;
+      background: var(--border-soft);
+      color: var(--text-soft);
+      font-size: 13px;
+    }
+
+    .fact-value {
+      margin-top: 8px;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 900;
+      line-height: 1.3;
+    }
+
+    .fact-sub {
+      display: block;
+      margin-top: 2px;
+      color: var(--text-muted);
+      font-size: 12.5px;
+      font-weight: 700;
+    }
+
+    .side {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      background: rgba(255,255,255,0.78);
+      box-shadow: 0 18px 54px rgba(11, 26, 43, 0.08);
+      padding: 18px;
+    }
+
+    .panel h2 {
+      margin: 0 0 6px;
+      font-size: 19px;
+      letter-spacing: 0;
+    }
+
+    .panel > p {
+      margin: 0 0 14px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 750;
+      line-height: 1.5;
+    }
+
+    .variant-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .variant {
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: var(--card);
+      overflow: hidden;
+    }
+
+    .variant-top {
+      padding: 14px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .variant-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 9px;
+    }
+
+    .variant-title h3 {
+      margin: 0;
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+
+    .mini-amount {
+      color: var(--terracotta);
+      font-size: 19px;
+      font-weight: 950;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .mini-amount.good { color: var(--emerald-deep); }
+    .mini-amount.neutral { color: var(--text); }
+
+    .mini-flow {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .mini-step {
+      min-height: 52px;
+      border-radius: 14px;
+      background: var(--page);
+      padding: 8px;
+    }
+
+    .mini-step strong {
+      display: block;
+      color: var(--text);
+      font-size: 11px;
+      line-height: 1.15;
+    }
+
+    .mini-step span {
+      display: block;
+      margin-top: 3px;
+      color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 750;
+      line-height: 1.25;
+    }
+
+    .variant-body {
+      padding: 12px 14px 14px;
+    }
+
+    .mini-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-soft);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .mini-row:last-child { border-bottom: 0; }
+    .mini-row strong {
+      color: var(--text);
+      font-weight: 900;
+      text-align: right;
+    }
+
+    .installment-bars {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 5px;
+      margin-top: 10px;
+    }
+
+    .installment-bars span {
+      height: 9px;
+      border-radius: 999px;
+      background: var(--border-soft);
+    }
+
+    .installment-bars .paid { background: var(--emerald); }
+    .installment-bars .current { background: var(--warning); }
+
+    .reimbursement-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      border-radius: 16px;
+      background: var(--emerald-soft);
+      padding: 10px;
+      margin-top: 10px;
+    }
+
+    .reimbursement-card strong {
+      display: block;
+      color: var(--text);
+      font-size: 12.5px;
+    }
+
+    .reimbursement-card span {
+      display: block;
+      margin-top: 2px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 750;
+    }
+
+    .reimbursement-card b {
+      color: var(--emerald-deep);
+      font-size: 14px;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    @media (max-width: 1080px) {
+      .layout { grid-template-columns: 1fr; }
+      .intro { align-items: flex-start; flex-direction: column; }
+      .side { order: -1; }
+    }
+
+    @media (max-width: 650px) {
+      .canvas { width: min(100% - 18px, 430px); padding-top: 16px; }
+      .screen { border-radius: 26px; padding: 16px 12px 20px; }
+      .hero-main { grid-template-columns: 1fr; text-align: center; padding: 22px 18px 18px; }
+      .category-orb { margin: 0 auto; }
+      .type-line { justify-content: center; }
+      .payment-panel { grid-template-columns: 1fr; margin: 0 14px 14px; }
+      .payment-state { min-width: 0; text-align: left; padding-left: 57px; }
+      .impact-strip { grid-template-columns: 1fr; }
+      .impact-item { display: grid; grid-template-columns: 42px 1fr; gap: 10px; align-items: center; border-right: 0; border-bottom: 1px solid var(--border-soft); }
+      .impact-item:last-child { border-bottom: 0; }
+      .impact-icon { margin-bottom: 0; }
+      .people, .facts, .variant-grid, .share-summary { grid-template-columns: 1fr; }
+      .fact.wide { grid-column: auto; }
+      .intro-note { max-width: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="canvas">
+    <header class="intro">
+      <div>
+        <p class="eyebrow">Detalle de movimiento</p>
+        <h1>Que la pantalla cuente que paso, no que obligue a leerlo</h1>
+      </div>
+      <p class="intro-note">
+        Propuesta enfocada: monto y concepto primero; despues, un mapa visual de impacto,
+        vinculos del movimiento y una ficha compacta con toda la informacion.
+      </p>
+    </header>
+
+    <div class="layout">
+      <article class="screen" id="experience-screen">
+        <div class="toolbar">
+          <div class="back">← Movimientos</div>
+          <div class="actions">
+            <div class="icon-button" title="Editar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 20h4.3L19.1 9.2a2 2 0 0 0 0-2.8l-1.5-1.5a2 2 0 0 0-2.8 0L4 15.7V20Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+                <path d="m13.5 6.2 4.3 4.3" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="icon-button delete" title="Eliminar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 7h16M9 7V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8V7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+                <path d="M7 7l.8 12A2.2 2.2 0 0 0 10 21h4a2.2 2.2 0 0 0 2.2-2L17 7" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+                <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <section class="movement-hero">
+          <div class="hero-main">
+            <div class="category-orb">🍔</div>
+            <div>
+              <div class="type-line">
+                Gasto de tarjeta
+                <span class="pill slate">ARS</span>
+                <span class="pill plum">Compartido</span>
+              </div>
+              <div class="amount">− <span class="symbol">$</span>18.352<span class="dec">,00</span></div>
+              <h2 class="movement-title">PY</h2>
+              <div class="movement-meta">jueves, 18 de junio de 2026</div>
+            </div>
+          </div>
+
+          <div class="payment-panel" aria-label="Instrumento de pago">
+            <div class="payment-left">
+              <div class="card-glyph" aria-hidden="true"></div>
+              <div>
+                <span class="payment-kicker">Pagaste con</span>
+                <span class="payment-name">Visa Galicia</span>
+                <span class="payment-sub">Galicia · tarjeta de credito</span>
+              </div>
+            </div>
+            <div class="payment-state">
+              <strong>Resumen en curso</strong>
+              <span>No toca tu efectivo hoy</span>
+            </div>
+          </div>
+
+          <div class="impact-strip" aria-label="Impacto del movimiento">
+            <div class="impact-item">
+              <div class="impact-icon">✓</div>
+              <div>
+                <span class="impact-label">Registrado</span>
+                <span class="impact-value">Consumo real en la tarjeta</span>
+              </div>
+            </div>
+            <div class="impact-item">
+              <div class="impact-icon off">0</div>
+              <div>
+                <span class="impact-label">Disponible</span>
+                <span class="impact-value">No baja hasta el pago</span>
+              </div>
+            </div>
+            <div class="impact-item">
+              <div class="impact-icon next">↗</div>
+              <div>
+                <span class="impact-label">Impacta</span>
+                <span class="impact-value">Cuando pagues el resumen</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="block-title">Compartido</div>
+        <section class="visual-card share-card">
+          <div class="share-head">
+            <div class="share-title">
+              <div class="share-icon">👥</div>
+              <div>
+                <strong>Gasto dividido 50/50</strong>
+                <span>Deuda derivada en ARS</span>
+              </div>
+            </div>
+            <div class="share-total">$18.352</div>
+          </div>
+          <div class="split-bar" aria-hidden="true"><span></span><span></span></div>
+          <div class="share-summary">
+            <div class="share-metric">
+              <span>Tu parte real</span>
+              <strong>$9.176,00</strong>
+            </div>
+            <div class="share-metric">
+              <span>Parte de Cristian</span>
+              <strong>$9.176,00</strong>
+            </div>
+          </div>
+        </section>
+
+        <div class="block-title">Ficha</div>
+        <section class="facts">
+          <div class="fact">
+            <div class="fact-label"><span class="fact-icon">▣</span>Fecha</div>
+            <div class="fact-value">jueves, 18 de junio de 2026</div>
+          </div>
+          <div class="fact">
+            <div class="fact-label"><span class="fact-icon">▤</span>Cuenta</div>
+            <div class="fact-value">Galicia <span class="fact-sub">Visa Galicia · credito</span></div>
+          </div>
+          <div class="fact">
+            <div class="fact-label"><span class="fact-icon">◇</span>Categoria</div>
+            <div class="fact-value">Comida</div>
+          </div>
+          <div class="fact">
+            <div class="fact-label"><span class="fact-icon">◇</span>Subcategoria</div>
+            <div class="fact-value">PedidosYa</div>
+          </div>
+          <div class="fact wide">
+            <div class="fact-label"><span class="fact-icon">☷</span>Descripcion</div>
+            <div class="fact-value">PY</div>
+          </div>
+        </section>
+      </article>
+
+      <aside class="side" id="experience-variants">
+        <section class="panel">
+          <h2>Variaciones sin cambiar la pantalla</h2>
+          <p>
+            En vez de sumar texto, cada tipo agrega un bloque visual: progreso,
+            destino, composicion o flujo entre cuentas.
+          </p>
+
+          <div class="variant-grid">
+            <article class="variant">
+              <div class="variant-top">
+                <div class="variant-title">
+                  <h3>Con reintegro</h3>
+                  <span class="mini-amount good">+$2.000</span>
+                </div>
+                <div class="mini-flow">
+                  <div class="mini-step"><strong>Gasto</strong><span>−$45.000</span></div>
+                  <div class="mini-step"><strong>Banco</strong><span>deposita</span></div>
+                  <div class="mini-step"><strong>Cuenta</strong><span>+$2.000</span></div>
+                </div>
+                <div class="reimbursement-card">
+                  <span><strong>Reintegro recibido</strong><span>A una cuenta</span></span>
+                  <b>+$2.000,00</b>
+                </div>
+              </div>
+              <div class="variant-body">
+                <div class="mini-row"><span>Categoria</span><strong>Derivada del gasto</strong></div>
+                <div class="mini-row"><span>Origen</span><strong>Desayuno cumple gordito</strong></div>
+              </div>
+            </article>
+
+            <article class="variant">
+              <div class="variant-top">
+                <div class="variant-title">
+                  <h3>Compra en cuotas</h3>
+                  <span class="mini-amount">−$120.000</span>
+                </div>
+                <div class="mini-flow">
+                  <div class="mini-step"><strong>Madre</strong><span>compra total</span></div>
+                  <div class="mini-step"><strong>Actual</strong><span>2 de 6</span></div>
+                  <div class="mini-step"><strong>Resumen</strong><span>pendiente</span></div>
+                </div>
+                <div class="installment-bars" aria-hidden="true">
+                  <span class="paid"></span><span class="current"></span><span></span><span></span><span></span><span></span>
+                </div>
+              </div>
+              <div class="variant-body">
+                <div class="mini-row"><span>Cuota</span><strong>$20.000,00</strong></div>
+                <div class="mini-row"><span>Proxima</span><strong>Cuota 2 · vence 10 de julio</strong></div>
+              </div>
+            </article>
+
+            <article class="variant">
+              <div class="variant-top">
+                <div class="variant-title">
+                  <h3>Pago de resumen</h3>
+                  <span class="mini-amount">−$212.500</span>
+                </div>
+                <div class="mini-flow">
+                  <div class="mini-step"><strong>Cuenta</strong><span>sale dinero</span></div>
+                  <div class="mini-step"><strong>Tarjeta</strong><span>se cancela</span></div>
+                  <div class="mini-step"><strong>USD</strong><span>separado</span></div>
+                </div>
+              </div>
+              <div class="variant-body">
+                <div class="mini-row"><span>ARS</span><strong>$182.500,00</strong></div>
+                <div class="mini-row"><span>USD</span><strong>USD 25,00</strong></div>
+                <div class="mini-row"><span>TC</span><strong>1 USD = $1.200</strong></div>
+              </div>
+            </article>
+
+            <article class="variant">
+              <div class="variant-top">
+                <div class="variant-title">
+                  <h3>Cambio / transferencia</h3>
+                  <span class="mini-amount neutral">$300.000</span>
+                </div>
+                <div class="mini-flow">
+                  <div class="mini-step"><strong>Origen</strong><span>Billetera</span></div>
+                  <div class="mini-step"><strong>Destino</strong><span>Mercado Pago</span></div>
+                  <div class="mini-step"><strong>FX</strong><span>USD 250</span></div>
+                </div>
+              </div>
+              <div class="variant-body">
+                <div class="mini-row"><span>Sale</span><strong>$300.000 ARS</strong></div>
+                <div class="mini-row"><span>Entra</span><strong>USD 250,00</strong></div>
+                <div class="mini-row"><span>TC</span><strong>1 USD = $1.200</strong></div>
+              </div>
+            </article>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>

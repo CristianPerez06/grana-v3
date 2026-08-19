@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>En qué se fue · líneas guía</title>
+<style>
+  :root{
+    --navy:#0B1A2B; --emerald:#10B981; --emerald-deep:#059669;
+    --page:#F6F7F9; --card:#FFFFFF; --border:#E6EAEF; --border-soft:#EEF1F4;
+    --text:#0B1A2B; --text-muted:#6B7683; --text-soft:#8A94A3; --slate:#3A6B8A;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--page); color:var(--text);
+    font-family:"Plus Jakarta Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    padding:28px; display:flex; flex-direction:column; gap:24px; align-items:center;
+  }
+  .intro{max-width:760px; width:100%}
+  .intro h1{font-size:18px; margin:0 0 6px}
+  .intro p{font-size:13px; color:var(--text-muted); margin:0; line-height:1.5}
+  .card{
+    width:100%; max-width:760px; background:var(--card);
+    border:1px solid var(--border); border-radius:18px; padding:24px 28px;
+    box-shadow:0 2px 8px rgba(26,23,20,.05);
+  }
+  .eyebrow{font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--navy)}
+  .month{font-size:18px; font-weight:800; letter-spacing:-.01em; margin-top:4px}
+  .subtitle{font-size:13px; color:var(--text-soft); font-weight:600; margin-top:2px}
+  .chartwrap{margin-top:8px}
+  svg{width:100%; height:auto; display:block}
+  .seg-label-name{font-size:12.5px; font-weight:600; fill:var(--text)}
+  .seg-label-meta{font-size:11px; font-weight:700; fill:var(--text-muted)}
+  .center-eyebrow{font-size:10px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; fill:var(--emerald-deep)}
+  .center-amount{font-size:24px; font-weight:800; letter-spacing:-.03em; fill:var(--text)}
+  .center-caption{font-size:10.5px; fill:var(--text-soft)}
+  .leader{fill:none; stroke:var(--border); stroke-width:1.4}
+  .footnote{font-size:11px; color:var(--text-muted); margin-top:14px; border-top:1px solid var(--border-soft); padding-top:12px}
+  .badge{display:inline-block; font-size:11px; font-weight:700; color:var(--slate); background:#EAF1F6; border-radius:999px; padding:2px 9px; margin-left:6px}
+</style>
+</head>
+<body>
+  <div class="intro">
+    <h1>"En qué se fue" — dona central con líneas guía (balanceado)</h1>
+    <p>Cada categoría sale con su flechita desde el color. Ahora las etiquetas se reparten al
+       <strong>lado más vacío</strong> (se balancea izquierda/derecha por cantidad), así se aprovecha todo el alto y
+       entran muchas más. Solo se agrupa en <strong>“Otros”</strong> cuando ya no queda lugar vertical.
+       Ejemplos: 7, 12 y 18 categorías.</p>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">En qué se fue</div>
+    <div class="month">Junio 2026</div>
+    <div class="subtitle">Gastos del mes</div>
+    <div class="chartwrap"><svg id="svg-7" viewBox="0 0 700 360" role="img" aria-label="Desglose 7 categorías"></svg></div>
+    <div class="footnote">Incluye consumos y cuotas de tarjeta · 7 categorías</div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">En qué se fue</div>
+    <div class="month">Mayo 2026</div>
+    <div class="subtitle">Gastos del mes <span class="badge">12 categorías</span></div>
+    <div class="chartwrap"><svg id="svg-12" viewBox="0 0 700 400" role="img" aria-label="Desglose 12 categorías"></svg></div>
+    <div class="footnote" id="foot-12">Incluye consumos y cuotas de tarjeta</div>
+  </div>
+
+  <div class="card">
+    <div class="eyebrow">En qué se fue</div>
+    <div class="month">Abril 2026</div>
+    <div class="subtitle">Gastos del mes <span class="badge">caso extremo: 18 categorías</span></div>
+    <div class="chartwrap"><svg id="svg-18" viewBox="0 0 700 460" role="img" aria-label="Desglose 18 categorías"></svg></div>
+    <div class="footnote" id="foot-18">Incluye consumos y cuotas de tarjeta</div>
+  </div>
+
+<script>
+const PALETTE = ['#10B981','#0D9488','#3A6B8A','#B56A5A','#8A6E98','#D9952F','#C05C84','#4C56C0'];
+const OTHERS = '#9CA3AF';
+
+const fmtARS = n => '$ ' + n.toLocaleString('es-AR');
+
+// Agrupa la cola en "Otros" SOLO si supera la capacidad total (ambos lados).
+function group(cats, maxLabels){
+  const sorted = [...cats].sort((a,b)=>b.value-a.value);
+  if (sorted.length <= maxLabels) return sorted;
+  const named = sorted.slice(0, maxLabels-1);
+  const rest = sorted.slice(maxLabels-1);
+  const othersValue = rest.reduce((a,c)=>a+c.value,0);
+  return [...named, {label:'Otros', value:othersValue, color:OTHERS, icon:'', others:rest.length}];
+}
+
+// Reparte cada etiqueta a un lado, balanceando por cantidad: cuando un lado
+// tiene más, se mueve al otro la etiqueta más cercana al eje vertical (arriba/
+// abajo), que es la que mejor tolera cruzar porque su línea es casi vertical.
+function assignSides(slices){
+  const axisness = s => Math.abs(Math.cos(s.mid)); // 0 = arriba/abajo, 1 = costados
+  let right = slices.filter(s=>Math.cos(s.mid)>=0);
+  let left  = slices.filter(s=>Math.cos(s.mid)<0);
+  let guard=0;
+  while(Math.abs(right.length-left.length)>1 && guard++<100){
+    const from = right.length>left.length ? right : left;
+    const to   = from===right ? left : right;
+    from.sort((a,b)=>axisness(a)-axisness(b)); // la más "vertical" primero
+    to.push(from.shift());
+  }
+  right.forEach(s=>s.side='right');
+  left.forEach(s=>s.side='left');
+}
+
+// Resuelve solapamientos preservando el orden y centrando dentro del alto.
+function declutter(list, spacing, top, bot){
+  list.sort((a,b)=>a.y-b.y);
+  for(let k=1;k<list.length;k++){
+    if(list[k].y - list[k-1].y < spacing) list[k].y = list[k-1].y + spacing;
+  }
+  if(!list.length) return;
+  const overflow = list[list.length-1].y - bot;
+  if(overflow>0) list.forEach(l=>l.y-=overflow);
+  if(list[0].y<top){ const d=top-list[0].y; list.forEach(l=>l.y+=d); }
+}
+
+function render(svgId, cats, footId){
+  const svg = document.getElementById(svgId);
+  const vb = svg.viewBox.baseVal;
+  const W = vb.width, H = vb.height;
+  const cx = W/2, cy = H/2;
+  const rMid = 96, stroke = 30;
+  const rOuter = rMid + stroke/2;
+  const rElbow = rMid + 34;
+  const kneeRight = cx + 150, kneeLeft = cx - 150;
+  const spacing = 28;
+  const topPad = 22, botPad = 22;
+
+  // Capacidad: cuántas etiquetas entran por lado dado el alto disponible.
+  const perSide = Math.floor((H - topPad - botPad) / spacing);
+  const maxLabels = perSide * 2;
+
+  const data = group(cats, maxLabels);
+  const total = data.reduce((a,c)=>a+c.value,0);
+
+  let acc = -Math.PI/2;
+  const slices = data.map(c=>{
+    const frac = c.value/total;
+    const start = acc, end = acc + frac*Math.PI*2;
+    acc = end;
+    return {...c, frac, start, end, mid:(start+end)/2, pct: Math.round(frac*100)};
+  });
+
+  let out = '';
+  out += `<circle cx="${cx}" cy="${cy}" r="${rMid}" fill="none" stroke="var(--border-soft)" stroke-width="${stroke}"/>`;
+
+  const C = 2*Math.PI*rMid;
+  slices.forEach(s=>{
+    const dash = s.frac*C;
+    const offset = -((s.start+Math.PI/2)/(2*Math.PI))*C;
+    out += `<circle cx="${cx}" cy="${cy}" r="${rMid}" fill="none" stroke="${s.color}" stroke-width="${stroke}"
+      stroke-dasharray="${dash} ${C-dash}" stroke-dashoffset="${offset}" transform="rotate(-90 ${cx} ${cy})"/>`;
+  });
+
+  // lados balanceados + posición vertical natural
+  assignSides(slices);
+  const items = slices.map(s=>({s, y: cy + Math.sin(s.mid)*rElbow, side:s.side}));
+  declutter(items.filter(i=>i.side==='right'), spacing, topPad, H-botPad);
+  declutter(items.filter(i=>i.side==='left'),  spacing, topPad, H-botPad);
+
+  items.forEach(({s,y,side})=>{
+    const A = {x: cx + Math.cos(s.mid)*rOuter, y: cy + Math.sin(s.mid)*rOuter};
+    const kneeX = side==='right'?kneeRight:kneeLeft;
+    const labelX = side==='right'? kneeX+8 : kneeX-8;
+    const anchor = side==='right'?'start':'end';
+    out += `<polyline class="leader" points="${A.x},${A.y} ${kneeX},${y} ${labelX},${y}"/>`;
+    out += `<circle cx="${A.x}" cy="${A.y}" r="2.4" fill="${s.color}"/>`;
+    const name = (s.icon?s.icon+' ':'') + s.label + (s.others?` +${s.others}`:'');
+    out += `<text x="${labelX}" y="${y-3}" text-anchor="${anchor}" class="seg-label-name">${name}</text>`;
+    out += `<text x="${labelX}" y="${y+12}" text-anchor="${anchor}" class="seg-label-meta">${s.pct}% · ${fmtARS(s.value)}</text>`;
+  });
+
+  out += `<text x="${cx}" y="${cy-14}" text-anchor="middle" class="center-eyebrow">Gastado</text>`;
+  out += `<text x="${cx}" y="${cy+10}" text-anchor="middle" class="center-amount">${fmtARS(total)}</text>`;
+  out += `<text x="${cx}" y="${cy+28}" text-anchor="middle" class="center-caption">en ${cats.length} categorías</text>`;
+
+  svg.innerHTML = out;
+
+  if(footId){
+    const labelled = data.filter(d=>!d.others).length;
+    const grouped = data.find(d=>d.others);
+    document.getElementById(footId).textContent =
+      `Incluye consumos y cuotas de tarjeta · ${cats.length} categorías` +
+      (grouped ? ` (${labelled} con etiqueta + “Otros” agrupa ${grouped.others})`
+               : ` · todas etiquetadas (capacidad ${maxLabels})`);
+  }
+}
+
+const BASE = [
+  {label:'Comida',     value:182400, color:PALETTE[0], icon:'🍔'},
+  {label:'Hogar',      value:98300,  color:PALETTE[1], icon:'🏠'},
+  {label:'Transporte', value:64100,  color:PALETTE[2], icon:'🚗'},
+  {label:'Servicios',  value:51800,  color:PALETTE[3], icon:'💡'},
+  {label:'Ocio',       value:38900,  color:PALETTE[4], icon:'🎮'},
+  {label:'Salud',      value:22500,  color:PALETTE[5], icon:'⚕️'},
+  {label:'Ropa',       value:15200,  color:PALETTE[6], icon:'👕'},
+  {label:'Mascotas',   value:12800,  color:PALETTE[7], icon:'🐶'},
+  {label:'Regalos',    value:9400,   color:PALETTE[0], icon:'🎁'},
+  {label:'Educación',  value:7600,   color:PALETTE[1], icon:'📚'},
+  {label:'Café',       value:5100,   color:PALETTE[2], icon:'☕'},
+  {label:'Varios',     value:3200,   color:PALETTE[3], icon:'🔧'},
+  {label:'Suscrip.',   value:2900,   color:PALETTE[4], icon:'📺'},
+  {label:'Viajes',     value:2400,   color:PALETTE[5], icon:'✈️'},
+  {label:'Belleza',    value:1900,   color:PALETTE[6], icon:'💄'},
+  {label:'Deporte',    value:1500,   color:PALETTE[7], icon:'🏋️'},
+  {label:'Hobbies',    value:1100,   color:PALETTE[0], icon:'🎨'},
+  {label:'Donaciones', value:700,    color:PALETTE[1], icon:'🤝'},
+];
+
+render('svg-7',  BASE.slice(0,7));
+render('svg-12', BASE.slice(0,12), 'foot-12');
+render('svg-18', BASE.slice(0,18), 'foot-18');
+</script>
+</body>
+</html>

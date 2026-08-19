@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>En qué se fue · opciones de header</title>
+<style>
+  :root{
+    --navy:#0B1A2B; --emerald:#10B981; --emerald-deep:#059669;
+    --page:#F6F7F9; --card:#FFFFFF; --border:#E6EAEF; --border-soft:#EEF1F4;
+    --text:#0B1A2B; --text-muted:#6B7683; --text-soft:#8A94A3; --slate:#3A6B8A;
+    --pill:#EEF1F5;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--page); color:var(--text);
+    font-family:"Plus Jakarta Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    padding:28px; display:flex; flex-direction:column; gap:24px; align-items:center;
+  }
+  .intro{max-width:720px; width:100%}
+  .intro h1{font-size:18px; margin:0 0 6px}
+  .intro p{font-size:13px; color:var(--text-muted); margin:0; line-height:1.5}
+  .card{
+    width:100%; max-width:720px; background:var(--card);
+    border:1px solid var(--border); border-radius:18px; padding:22px 26px;
+    box-shadow:0 2px 8px rgba(26,23,20,.05);
+  }
+  .tag{font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:#fff;
+    background:var(--navy); border-radius:999px; padding:3px 10px; display:inline-block; margin-bottom:14px}
+
+  /* primitives */
+  .title{font-size:19px; font-weight:800; letter-spacing:-.02em; color:var(--navy); line-height:1.15}
+  .title-sm{font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--navy)}
+  .subtitle{font-size:12.5px; color:var(--text-soft); font-weight:600}
+  .monthnav{display:inline-flex; align-items:center; gap:8px}
+  .chev{width:28px;height:28px;border:1px solid var(--border);border-radius:8px;background:#fff;display:inline-flex;align-items:center;justify-content:center;color:var(--text-muted);cursor:pointer}
+  .month{font-size:15px;font-weight:700;letter-spacing:-.01em}
+  .month-lg{font-size:18px;font-weight:800;letter-spacing:-.01em}
+  .tabs{display:inline-flex;gap:4px;background:var(--pill);border-radius:12px;padding:4px}
+  .tab{border:0;background:none;font:inherit;font-size:13px;font-weight:700;padding:6px 16px;border-radius:9px;color:var(--text-muted);cursor:pointer}
+  .tab.active{background:var(--navy);color:#fff}
+  .pills{display:inline-flex;gap:4px}
+  .pill{border:1px solid var(--border);background:#fff;border-radius:999px;padding:4px 12px;font-size:11px;font-weight:700;color:var(--text-muted);cursor:pointer}
+  .pill.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+  .body{display:flex;gap:22px;align-items:center;margin-top:18px;opacity:.55}
+  .donut{width:120px;height:120px;border-radius:50%;flex:0 0 auto;
+    background:conic-gradient(var(--emerald) 0 38%, #0D9488 38% 60%, #3A6B8A 60% 76%, #B56A5A 76% 88%, #8A6E98 88% 96%, #9CA3AF 96% 100%);
+    -webkit-mask:radial-gradient(circle 38px at center, transparent 98%, #000 100%);
+            mask:radial-gradient(circle 38px at center, transparent 98%, #000 100%);}
+  .rows{flex:1;display:flex;flex-direction:column;gap:9px}
+  .r{height:9px;border-radius:5px;background:var(--border-soft)}
+  .r:nth-child(1){width:90%}.r:nth-child(2){width:75%}.r:nth-child(3){width:60%}.r:nth-child(4){width:45%}
+
+  .note{font-size:11.5px;color:var(--text-muted);margin-top:14px;border-top:1px solid var(--border-soft);padding-top:10px}
+  .note b{color:var(--text)}
+  .row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .col{display:flex;flex-direction:column}
+  .right{align-items:flex-end}
+</style>
+</head>
+<body>
+  <div class="intro">
+    <h1>"En qué se fue" — opciones de header</h1>
+    <p>El nudo: hoy el título es un eyebrow chiquito y el mes es lo más grande, así que el mes parece el título.
+       Estas variantes agrandan el título y reordenan mes / Egresos-Ingresos / ARS-USD. Mismo contenido en todas.</p>
+  </div>
+
+  <!-- A -->
+  <div class="card">
+    <span class="tag">A · Título grande izq · mes der · toggles en 2da fila</span>
+    <div class="row">
+      <div class="col">
+        <span class="title">En qué se fue</span>
+        <span class="subtitle" style="margin-top:3px">Gastos del mes</span>
+      </div>
+      <div class="monthnav">
+        <button class="chev">‹</button><span class="month">Junio 2026</span><button class="chev">›</button>
+      </div>
+    </div>
+    <div class="row" style="margin-top:14px;align-items:center">
+      <div class="tabs"><button class="tab active">Egresos</button><button class="tab">Ingresos</button></div>
+      <div class="pills"><span class="pill active">ARS</span><span class="pill">USD</span></div>
+    </div>
+    <div class="body"><div class="donut"></div><div class="rows"><div class="r"></div><div class="r"></div><div class="r"></div><div class="r"></div></div></div>
+    <div class="note"><b>+</b> Equilibrado y simétrico: título y mes arriba en esquinas opuestas, los dos toggles abajo. Es el patrón más usado en finanzas.</div>
+  </div>
+
+  <!-- B -->
+  <div class="card">
+    <span class="tag">B · Título grande izq · mes + ARS/USD apilados der · tabs full abajo</span>
+    <div class="row">
+      <div class="col">
+        <span class="title">En qué se fue</span>
+        <span class="subtitle" style="margin-top:3px">Gastos del mes</span>
+      </div>
+      <div class="col right" style="gap:8px">
+        <div class="monthnav">
+          <button class="chev">‹</button><span class="month">Junio 2026</span><button class="chev">›</button>
+        </div>
+        <div class="pills"><span class="pill active">ARS</span><span class="pill">USD</span></div>
+      </div>
+    </div>
+    <div class="tabs" style="margin-top:14px"><button class="tab active">Egresos</button><button class="tab">Ingresos</button></div>
+    <div class="body"><div class="donut"></div><div class="rows"><div class="r"></div><div class="r"></div><div class="r"></div><div class="r"></div></div></div>
+    <div class="note"><b>+</b> Mínimo cambio respecto a hoy, pero con el título grande arriba a la izquierda manda él, no el mes. <b>–</b> El mes y las pills apilados a la derecha cargan un poco esa esquina.</div>
+  </div>
+
+  <!-- C -->
+  <div class="card">
+    <span class="tag">C · Tu idea: mes a la izq (bajo el título) · Egresos/Ingresos a la der</span>
+    <div class="row">
+      <div class="col" style="gap:8px">
+        <span class="title">En qué se fue</span>
+        <div class="monthnav">
+          <button class="chev">‹</button><span class="month">Junio 2026</span><button class="chev">›</button>
+        </div>
+      </div>
+      <div class="col right" style="gap:8px">
+        <div class="tabs"><button class="tab active">Egresos</button><button class="tab">Ingresos</button></div>
+        <div class="pills"><span class="pill active">ARS</span><span class="pill">USD</span></div>
+      </div>
+    </div>
+    <div class="subtitle" style="margin-top:10px">Gastos del mes</div>
+    <div class="body"><div class="donut"></div><div class="rows"><div class="r"></div><div class="r"></div><div class="r"></div><div class="r"></div></div></div>
+    <div class="note"><b>+</b> Todo lo "de control" (Egresos/Ingresos + moneda) junto a la derecha; título + mes juntos a la izquierda. <b>–</b> Dos cosas apiladas de cada lado puede sentirse cargado en mobile.</div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,1117 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grana dashboard - previstos con entradas y salidas</title>
+    <style>
+      :root {
+        --page: #f5f7f3;
+        --card: #fff;
+        --ink: #142019;
+        --muted: #68736c;
+        --soft: #97a29b;
+        --line: #dde4dd;
+        --line-soft: #edf1ed;
+        --navy: #10283a;
+        --green: #0e9f6e;
+        --green-deep: #08724f;
+        --green-soft: #e6f7ef;
+        --red: #d96a4a;
+        --red-soft: #fae8e1;
+        --gold: #c58b19;
+        --gold-soft: #fff3d6;
+        --blue: #3576a8;
+        --blue-soft: #e6f0f7;
+        --violet: #6f5cc2;
+        --shadow: 0 14px 40px -30px rgba(16, 33, 24, 0.35);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      h1, h2, h3, p { margin: 0; }
+
+      .page {
+        width: min(1260px, 100%);
+        margin: 0 auto;
+        padding: 28px 22px 56px;
+      }
+
+      .intro {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      h1 {
+        font-size: 30px;
+        line-height: 1.05;
+        font-weight: 830;
+      }
+
+      .intro p {
+        max-width: 770px;
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.45;
+        font-weight: 560;
+      }
+
+      .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .tabs a {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--card);
+        color: var(--ink);
+        padding: 9px 13px;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 850;
+        box-shadow: var(--shadow);
+      }
+
+      .option {
+        margin-top: 20px;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: #fbfcfa;
+        padding: 18px;
+      }
+
+      .option-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 16px;
+      }
+
+      .kicker {
+        color: var(--green-deep);
+        font-size: 12px;
+        font-weight: 920;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .option-title {
+        margin-top: 5px;
+        font-size: 23px;
+        line-height: 1.14;
+        font-weight: 810;
+      }
+
+      .option-copy {
+        max-width: 790px;
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.45;
+        font-weight: 560;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        border-radius: 999px;
+        background: var(--green-soft);
+        color: var(--green-deep);
+        padding: 0 11px;
+        white-space: nowrap;
+        font-size: 12px;
+        font-weight: 870;
+      }
+
+      .dashboard {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--page);
+        padding: 20px;
+      }
+
+      .dash-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .dash-head h2 {
+        font-size: 24px;
+        line-height: 1.1;
+        font-weight: 730;
+      }
+
+      .date {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 560;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .pill, .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 39px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--card);
+        color: var(--ink);
+        padding: 0 12px;
+        font-size: 13px;
+        font-weight: 830;
+        box-shadow: var(--shadow);
+      }
+
+      .button {
+        border-color: var(--green);
+        background: var(--green);
+        color: white;
+      }
+
+      .grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: var(--card);
+        box-shadow: var(--shadow);
+      }
+
+      .dark {
+        border-color: transparent;
+        background: var(--navy);
+        color: white;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 18px 19px 8px;
+      }
+
+      .panel-title {
+        font-size: 17px;
+        line-height: 1.2;
+        font-weight: 780;
+      }
+
+      .panel-note {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 12.5px;
+        line-height: 1.35;
+        font-weight: 570;
+      }
+
+      .panel-body { padding: 16px 19px 19px; }
+
+      .link {
+        color: var(--green-deep);
+        font-size: 12.5px;
+        font-weight: 850;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .hero-grid {
+        grid-template-columns: minmax(0, 1fr) 390px;
+      }
+
+      .hero {
+        min-height: 305px;
+        padding: 28px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .eyebrow {
+        color: rgba(255, 255, 255, 0.58);
+        font-size: 11px;
+        font-weight: 920;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .big-money {
+        margin-top: 12px;
+        font-size: clamp(44px, 6vw, 68px);
+        line-height: 0.92;
+        font-weight: 940;
+      }
+
+      .usd-line {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 16px;
+        font-size: 16px;
+        font-weight: 850;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 23px;
+        border-radius: 999px;
+        padding: 0 9px;
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .chip.green {
+        background: rgba(14, 159, 110, 0.2);
+        color: #61dfa6;
+      }
+
+      .hero-caption {
+        margin-top: 20px;
+        max-width: 640px;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 13px;
+        line-height: 1.45;
+        font-weight: 600;
+      }
+
+      .forecast-card {
+        display: grid;
+        gap: 12px;
+      }
+
+      .force {
+        border-radius: 17px;
+        border: 1px solid var(--line);
+        background: #f8faf7;
+        padding: 15px;
+      }
+
+      .force.in {
+        border-color: rgba(14, 159, 110, 0.22);
+        background: var(--green-soft);
+      }
+
+      .force.out {
+        border-color: rgba(217, 106, 74, 0.22);
+        background: var(--red-soft);
+      }
+
+      .force-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 880;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .force-value {
+        margin-top: 7px;
+        font-size: 28px;
+        line-height: 1;
+        font-weight: 930;
+      }
+
+      .force-note {
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+        font-weight: 570;
+      }
+
+      .balance-scale {
+        position: relative;
+        min-height: 160px;
+        border-radius: 20px;
+        background: #f8faf7;
+        padding: 16px;
+        overflow: hidden;
+      }
+
+      .scale-line {
+        position: absolute;
+        left: 16px;
+        right: 16px;
+        top: 50%;
+        height: 2px;
+        background: var(--line);
+      }
+
+      .scale-bar {
+        position: absolute;
+        top: calc(50% - 25px);
+        height: 50px;
+        border-radius: 999px;
+      }
+
+      .scale-bar.in {
+        left: 50%;
+        width: 38%;
+        background: var(--green);
+      }
+
+      .scale-bar.out {
+        right: 50%;
+        width: 26%;
+        background: var(--red);
+      }
+
+      .scale-caption {
+        position: relative;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 820;
+      }
+
+      .map-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        margin-top: 14px;
+      }
+
+      .river {
+        display: grid;
+        gap: 12px;
+      }
+
+      .river-row {
+        display: grid;
+        grid-template-columns: 122px minmax(0, 1fr) 92px;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .river-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 820;
+      }
+
+      .river-track {
+        height: 28px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: var(--line-soft);
+      }
+
+      .river-track span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+      }
+
+      .river-amount {
+        text-align: right;
+        font-size: 13px;
+        font-weight: 920;
+      }
+
+      .matrix {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .matrix-col {
+        border-radius: 17px;
+        border: 1px solid var(--line);
+        background: #f8faf7;
+        padding: 14px;
+      }
+
+      .matrix-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--line-soft);
+        font-size: 13px;
+        font-weight: 880;
+      }
+
+      .list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-top: 1px solid var(--line-soft);
+        padding: 11px 0;
+      }
+
+      .item:first-child {
+        border-top: 0;
+      }
+
+      .mark {
+        display: grid;
+        width: 31px;
+        height: 31px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 12px;
+        background: var(--line-soft);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .mark.in {
+        background: var(--green-soft);
+        color: var(--green-deep);
+      }
+
+      .mark.out {
+        background: var(--red-soft);
+        color: var(--red);
+      }
+
+      .item-main {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .item-title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 13.5px;
+        font-weight: 820;
+      }
+
+      .item-note {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 560;
+      }
+
+      .amount {
+        flex: 0 0 auto;
+        font-size: 13.5px;
+        font-weight: 920;
+        text-align: right;
+      }
+
+      .cockpit {
+        grid-template-columns: 330px minmax(0, 1fr) 330px;
+      }
+
+      .cash-column {
+        min-height: 500px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .cash-column .big-money {
+        font-size: clamp(42px, 5vw, 58px);
+      }
+
+      .mini-pills {
+        display: grid;
+        gap: 9px;
+        margin-top: 20px;
+      }
+
+      .mini-pill {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 11px 12px;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 12px;
+        font-weight: 740;
+      }
+
+      .mini-pill strong {
+        color: white;
+      }
+
+      .story {
+        display: grid;
+        gap: 14px;
+      }
+
+      .story-card {
+        border-radius: 19px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        padding: 18px;
+        box-shadow: var(--shadow);
+      }
+
+      .story-title {
+        font-size: 16px;
+        font-weight: 830;
+      }
+
+      .story-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .story-metric {
+        border-radius: 14px;
+        background: #f8faf7;
+        padding: 13px;
+      }
+
+      .story-metric span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 820;
+      }
+
+      .story-metric strong {
+        display: block;
+        margin-top: 7px;
+        font-size: 20px;
+        line-height: 1;
+        font-weight: 930;
+      }
+
+      .category-stack {
+        display: grid;
+        gap: 9px;
+      }
+
+      .cat-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 76px;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .cat-name {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 820;
+      }
+
+      .swatch {
+        width: 10px;
+        height: 10px;
+        border-radius: 4px;
+        flex: 0 0 auto;
+      }
+
+      .cat-bar {
+        grid-column: 1 / -1;
+        height: 9px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: var(--line-soft);
+      }
+
+      .cat-bar span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+      }
+
+      .board {
+        grid-template-columns: 1.1fr 0.9fr;
+      }
+
+      .statement {
+        min-height: 330px;
+        padding: 28px;
+      }
+
+      .statement-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 22px;
+      }
+
+      .statement-tile {
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 13px;
+      }
+
+      .statement-tile span {
+        display: block;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 11px;
+        font-weight: 850;
+      }
+
+      .statement-tile strong {
+        display: block;
+        margin-top: 7px;
+        color: white;
+        font-size: 18px;
+        line-height: 1;
+        font-weight: 920;
+      }
+
+      .board-flow {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .tile {
+        min-height: 130px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        padding: 16px;
+        box-shadow: var(--shadow);
+      }
+
+      .tile-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 850;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .tile-value {
+        margin-top: 10px;
+        font-size: 28px;
+        line-height: 1;
+        font-weight: 940;
+      }
+
+      .tile-note {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+        font-weight: 560;
+      }
+
+      .pros {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .note {
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: var(--card);
+        padding: 13px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.42;
+      }
+
+      .note strong {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--ink);
+      }
+
+      @media (max-width: 980px) {
+        .intro, .option-head, .dash-head {
+          display: grid;
+        }
+
+        .hero-grid, .map-grid, .matrix, .cockpit, .story-grid, .board, .statement-grid, .board-flow, .pros {
+          grid-template-columns: 1fr;
+        }
+
+        .toolbar {
+          flex-wrap: wrap;
+        }
+
+        .button {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="intro">
+        <div>
+          <h1>Dashboard con previstos reales</h1>
+          <p>
+            Nuevas opciones considerando que las recurrencias pueden ser ingresos o gastos.
+            El disponible sigue siendo caja real; lo esperado se muestra como planificación, no como plata disponible.
+          </p>
+        </div>
+        <nav class="tabs" aria-label="Opciones">
+          <a href="#balanza">J · Balanza</a>
+          <a href="#cabina">K · Cabina de fuerzas</a>
+          <a href="#estado">L · Estado financiero</a>
+        </nav>
+      </section>
+
+      <section class="option" id="balanza">
+        <div class="option-head">
+          <div>
+            <p class="kicker">Opción J</p>
+            <h2 class="option-title">Balanza de previstos: entra esperado vs sale comprometido</h2>
+            <p class="option-copy">
+              El hero mantiene el disponible puro. A la derecha aparece una balanza visual:
+              ingresos esperados de un lado, pagos comprometidos del otro. No se mezclan con la caja.
+            </p>
+          </div>
+          <span class="badge">Clara y pedagógica</span>
+        </div>
+
+        <div class="dashboard">
+          <div class="dash-head">
+            <div>
+              <h2>Hola, Juli</h2>
+              <p class="date">Jueves 18 de junio</p>
+            </div>
+            <div class="toolbar">
+              <span class="pill">‹ Junio 2026 ›</span>
+              <span class="pill">○</span>
+              <span class="button">+ Nuevo movimiento</span>
+            </div>
+          </div>
+
+          <div class="grid hero-grid">
+            <article class="panel dark hero">
+              <div>
+                <p class="eyebrow">Para gastar · hoy</p>
+                <p class="big-money">$ 312.500</p>
+                <p class="usd-line"><span class="chip green">USD</span> US$ 420,00</p>
+                <p class="hero-caption">
+                  Esto es caja real. Los ingresos esperados ayudan a planificar, pero no se vuelven disponibles hasta cobrarse.
+                </p>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 class="panel-title">Previsto del mes</h3>
+                  <p class="panel-note">Lo esperado no modifica el disponible.</p>
+                </div>
+              </div>
+              <div class="panel-body forecast-card">
+                <div class="force in">
+                  <p class="force-label">Por entrar</p>
+                  <p class="force-value" style="color: var(--green-deep)">+$ 900.000</p>
+                  <p class="force-note">Sueldo y honorarios recurrentes.</p>
+                </div>
+                <div class="force out">
+                  <p class="force-label">Por salir</p>
+                  <p class="force-value" style="color: var(--red)">-$ 408.300</p>
+                  <p class="force-note">Resumen, alquiler, servicios y recurrencias.</p>
+                </div>
+                <div class="balance-scale">
+                  <div class="scale-line"></div>
+                  <div class="scale-bar out"></div>
+                  <div class="scale-bar in"></div>
+                  <div class="scale-caption">
+                    <span>sale</span>
+                    <span>entra</span>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div class="grid map-grid">
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 class="panel-title">Movimientos previstos</h3>
+                  <p class="panel-note">Separados por dirección, no mezclados en un total.</p>
+                </div>
+              </div>
+              <div class="panel-body matrix">
+                <div class="matrix-col">
+                  <div class="matrix-title"><span>Entra</span><strong style="color: var(--green-deep)">+$ 900K</strong></div>
+                  <ul class="list">
+                    <li class="item"><span class="mark in">S</span><div class="item-main"><p class="item-title">Sueldo</p><p class="item-note">Ingreso recurrente</p></div><strong class="amount">+$ 760K</strong></li>
+                    <li class="item"><span class="mark in">H</span><div class="item-main"><p class="item-title">Honorarios</p><p class="item-note">Cobro esperado</p></div><strong class="amount">+$ 140K</strong></li>
+                  </ul>
+                </div>
+                <div class="matrix-col">
+                  <div class="matrix-title"><span>Sale</span><strong style="color: var(--red)">-$ 408K</strong></div>
+                  <ul class="list">
+                    <li class="item"><span class="mark out">T</span><div class="item-main"><p class="item-title">Visa Galicia</p><p class="item-note">Resumen actual</p></div><strong class="amount">-$ 86K</strong></li>
+                    <li class="item"><span class="mark out">A</span><div class="item-main"><p class="item-title">Alquiler</p><p class="item-note">Fijo mensual</p></div><strong class="amount">-$ 280K</strong></li>
+                    <li class="item"><span class="mark out">R</span><div class="item-main"><p class="item-title">Servicios</p><p class="item-note">Recurrencias</p></div><strong class="amount">-$ 42K</strong></li>
+                  </ul>
+                </div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 class="panel-title">Consumo del mes</h3>
+                  <p class="panel-note">Devengado: tarjeta y cuotas incluidas.</p>
+                </div>
+                <a class="link" href="#">Ver desglose</a>
+              </div>
+              <div class="panel-body category-stack">
+                <div class="cat-row"><div class="cat-name"><span class="swatch" style="background: var(--green)"></span>Supermercado</div><strong>$ 92K</strong><div class="cat-bar"><span style="width: 82%; background: var(--green)"></span></div></div>
+                <div class="cat-row"><div class="cat-name"><span class="swatch" style="background: var(--red)"></span>Comidas afuera</div><strong>$ 48K</strong><div class="cat-bar"><span style="width: 44%; background: var(--red)"></span></div></div>
+                <div class="cat-row"><div class="cat-name"><span class="swatch" style="background: var(--blue)"></span>Transporte</div><strong>$ 32K</strong><div class="cat-bar"><span style="width: 31%; background: var(--blue)"></span></div></div>
+                <div class="cat-row"><div class="cat-name"><span class="swatch" style="background: var(--green-deep)"></span>Te devolvieron</div><strong style="color: var(--green-deep)">-$ 9K</strong><div class="cat-bar"><span style="width: 18%; background: var(--green-deep)"></span></div></div>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="pros">
+          <p class="note"><strong>Por qué puede funcionar</strong>Hace visible que las recurrencias tienen dos direcciones. Es potente y difícil de malinterpretar.</p>
+          <p class="note"><strong>Riesgo</strong>La balanza puede invitar a una cuenta mental de "me sobra futuro"; el copy debe insistir en caja real.</p>
+        </div>
+      </section>
+
+      <section class="option" id="cabina">
+        <div class="option-head">
+          <div>
+            <p class="kicker">Opción K</p>
+            <h2 class="option-title">Cabina de fuerzas: caja fija, entradas y salidas alrededor</h2>
+            <p class="option-copy">
+              Más operativa: disponible fijo a la izquierda; al centro la historia del mes; a la derecha
+              lo previsto separado en "entra" y "sale".
+            </p>
+          </div>
+          <span class="badge">Muy escaneable</span>
+        </div>
+
+        <div class="dashboard">
+          <div class="dash-head">
+            <div>
+              <h2>Hola, Juli</h2>
+              <p class="date">Jueves 18 de junio</p>
+            </div>
+            <div class="toolbar">
+              <span class="pill">‹ Junio 2026 ›</span>
+              <span class="pill">○</span>
+              <span class="button">+ Nuevo movimiento</span>
+            </div>
+          </div>
+
+          <section class="grid cockpit">
+            <article class="panel dark cash-column">
+              <div>
+                <p class="eyebrow">Para gastar · hoy</p>
+                <p class="big-money">$ 312.500</p>
+                <p class="usd-line"><span class="chip green">USD</span> US$ 420</p>
+                <div class="mini-pills">
+                  <div class="mini-pill"><span>Galicia</span><strong>$ 221.500</strong></div>
+                  <div class="mini-pill"><span>Mercado Pago</span><strong>$ 49.000</strong></div>
+                  <div class="mini-pill"><span>Billetera</span><strong>$ 42.000</strong></div>
+                </div>
+              </div>
+              <p class="hero-caption">Disponible primero. Lo previsto no se suma.</p>
+            </article>
+
+            <div class="story">
+              <article class="story-card">
+                <h3 class="story-title">Lectura del mes</h3>
+                <p class="panel-note">Tres lentes, juntos pero no mezclados.</p>
+                <div class="story-grid">
+                  <div class="story-metric"><span>Caja neta</span><strong style="color: var(--green-deep)">+$ 458K</strong></div>
+                  <div class="story-metric"><span>Consumo</span><strong>$ 413K</strong></div>
+                  <div class="story-metric"><span>Previsto neto</span><strong style="color: var(--green-deep)">+$ 492K</strong></div>
+                </div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h3 class="panel-title">En qué se fue</h3>
+                    <p class="panel-note">Devengado: tarjeta, cuotas y reintegros.</p>
+                  </div>
+                </div>
+                <div class="panel-body category-stack">
+                  <div class="cat-row"><div class="cat-name"><span class="swatch" style="background: var(--green)"></span>Supermercado</div><strong>$ 92K</strong><div class="cat-bar"><span style="width: 82%; background: var(--green)"></span></div></div>
+                  <div class="cat-row"><div class="cat-name"><span class="swatch" style="background: var(--red)"></span>Comidas afuera</div><strong>$ 48K</strong><div class="cat-bar"><span style="width: 44%; background: var(--red)"></span></div></div>
+                  <div class="cat-row"><div class="cat-name"><span class="swatch" style="background: var(--blue)"></span>Transporte</div><strong>$ 32K</strong><div class="cat-bar"><span style="width: 31%; background: var(--blue)"></span></div></div>
+                  <div class="cat-row"><div class="cat-name"><span class="swatch" style="background: var(--green-deep)"></span>Te devolvieron</div><strong style="color: var(--green-deep)">-$ 9K</strong><div class="cat-bar"><span style="width: 18%; background: var(--green-deep)"></span></div></div>
+                </div>
+              </article>
+            </div>
+
+            <aside class="story">
+              <article class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h3 class="panel-title">Por entrar</h3>
+                    <p class="panel-note">Esperado, no disponible.</p>
+                  </div>
+                  <strong style="color: var(--green-deep)">+$ 900K</strong>
+                </div>
+                <div class="panel-body">
+                  <ul class="list">
+                    <li class="item"><span class="mark in">S</span><div class="item-main"><p class="item-title">Sueldo</p><p class="item-note">Recurrente</p></div><strong class="amount">+$ 760K</strong></li>
+                    <li class="item"><span class="mark in">H</span><div class="item-main"><p class="item-title">Honorarios</p><p class="item-note">Esperado</p></div><strong class="amount">+$ 140K</strong></li>
+                  </ul>
+                </div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h3 class="panel-title">Por salir</h3>
+                    <p class="panel-note">Comprometido a pagar.</p>
+                  </div>
+                  <strong style="color: var(--red)">-$ 408K</strong>
+                </div>
+                <div class="panel-body">
+                  <ul class="list">
+                    <li class="item"><span class="mark out">T</span><div class="item-main"><p class="item-title">Resumen</p><p class="item-note">Tarjeta</p></div><strong class="amount">-$ 86K</strong></li>
+                    <li class="item"><span class="mark out">A</span><div class="item-main"><p class="item-title">Alquiler</p><p class="item-note">Fijo</p></div><strong class="amount">-$ 280K</strong></li>
+                    <li class="item"><span class="mark out">R</span><div class="item-main"><p class="item-title">Servicios</p><p class="item-note">Recurrencias</p></div><strong class="amount">-$ 42K</strong></li>
+                  </ul>
+                </div>
+              </article>
+            </aside>
+          </section>
+        </div>
+
+        <div class="pros">
+          <p class="note"><strong>Por qué puede funcionar</strong>Es densa pero ordenada: izquierda caja, centro explicación, derecha previsión.</p>
+          <p class="note"><strong>Riesgo</strong>Es más tablero de control; en mobile requiere una jerarquía vertical muy cuidada.</p>
+        </div>
+      </section>
+
+      <section class="option" id="estado">
+        <div class="option-head">
+          <div>
+            <p class="kicker">Opción L</p>
+            <h2 class="option-title">Estado financiero: una frase visual con todos los lentes</h2>
+            <p class="option-copy">
+              Menos módulos y más síntesis: arriba una frase cuantificada; abajo tiles visuales.
+              Es amigable porque cuenta una historia, no solo muestra componentes.
+            </p>
+          </div>
+          <span class="badge">Más producto</span>
+        </div>
+
+        <div class="dashboard">
+          <div class="dash-head">
+            <div>
+              <h2>Hola, Juli</h2>
+              <p class="date">Jueves 18 de junio</p>
+            </div>
+            <div class="toolbar">
+              <span class="pill">‹ Junio 2026 ›</span>
+              <span class="pill">○</span>
+              <span class="button">+ Nuevo movimiento</span>
+            </div>
+          </div>
+
+          <section class="grid board">
+            <article class="panel dark statement">
+              <p class="eyebrow">Para gastar · hoy</p>
+              <p class="big-money">$ 312.500</p>
+              <p class="usd-line"><span class="chip green">USD</span> US$ 420</p>
+              <p class="hero-caption">
+                Tenés caja real. Este mes esperás cobrar $900K y ya tenés $408K con destino.
+                El consumo acumulado va en $413K.
+              </p>
+              <div class="statement-grid">
+                <div class="statement-tile"><span>Por entrar</span><strong>+$ 900K</strong></div>
+                <div class="statement-tile"><span>Por salir</span><strong>-$ 408K</strong></div>
+                <div class="statement-tile"><span>Consumido</span><strong>$ 413K</strong></div>
+                <div class="statement-tile"><span>Caja mes</span><strong>+$ 458K</strong></div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 class="panel-title">Mapa de fuerzas</h3>
+                  <p class="panel-note">Lo esperado entra y sale por carriles distintos.</p>
+                </div>
+              </div>
+              <div class="panel-body river">
+                <div class="river-row"><span class="river-label">Entra esperado</span><div class="river-track"><span style="width: 100%; background: var(--green)"></span></div><strong class="river-amount">$ 900K</strong></div>
+                <div class="river-row"><span class="river-label">Sale previsto</span><div class="river-track"><span style="width: 45%; background: var(--red)"></span></div><strong class="river-amount">$ 408K</strong></div>
+                <div class="river-row"><span class="river-label">Consumo</span><div class="river-track"><span style="width: 46%; background: var(--blue)"></span></div><strong class="river-amount">$ 413K</strong></div>
+                <div class="river-row"><span class="river-label">Reintegros</span><div class="river-track"><span style="width: 10%; background: var(--green-deep)"></span></div><strong class="river-amount">$ 9K</strong></div>
+              </div>
+            </article>
+          </section>
+
+          <div class="board-flow">
+            <article class="tile">
+              <p class="tile-label">Ingresos esperados</p>
+              <p class="tile-value" style="color: var(--green-deep)">+$ 900.000</p>
+              <p class="tile-note">Sueldo y honorarios. No se suman al disponible.</p>
+            </article>
+            <article class="tile">
+              <p class="tile-label">Pagos comprometidos</p>
+              <p class="tile-value" style="color: var(--red)">-$ 408.300</p>
+              <p class="tile-note">Resumen, alquiler y servicios recurrentes.</p>
+            </article>
+            <article class="tile">
+              <p class="tile-label">En qué se fue</p>
+              <p class="tile-value">$ 412.800</p>
+              <p class="tile-note">Consumo devengado por categoría.</p>
+            </article>
+            <article class="tile">
+              <p class="tile-label">Dónde está</p>
+              <p class="tile-value">Galicia</p>
+              <p class="tile-note">$221.500 es tu cuenta principal hoy.</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="pros">
+          <p class="note"><strong>Por qué puede funcionar</strong>Es amigable y muy Grana: convierte números en una lectura sin esconder las bases.</p>
+          <p class="note"><strong>Riesgo</strong>La frase debe ser generada con cuidado para no sonar como consejo financiero automático.</p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
