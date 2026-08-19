@@ -92,7 +92,40 @@ En `packages/dashboard/src/queries.ts`, dentro de `getCommittedOutlook`:
 
 > `We do NOT project next-month fixed expenses: an occurrence becomes "pending to confirm" when its time comes […] so a future projection is not a present obligation.`
 
-La decisión es **contablemente correcta** para la lente COMPROMISO ("qué debo y no pagué"). Pero deja sin responder una pregunta que el usuario sí tiene, y la app queda asimétrica: proyecta el **ingreso** recurrente del mes que viene (`recurringIncome`, banda "Ya entra") pero **no el gasto**. Le dice cuánto entra y no cuánto sale.
+La decisión es **contablemente correcta** para la lente COMPROMISO ("qué debo y no pagué"). Pero deja sin responder una pregunta que el usuario sí tiene — y, peor, deja la card `Comprometido` **mezclando dos relojes sin decirlo**.
+
+#### Qué suma `Comprometido` exactamente
+
+`total = debt + recurringExpense`, y cada componente toma solo su porción **presente**:
+
+| Componente | Qué entra | Qué queda afuera |
+|---|---|---|
+| Resúmenes de tarjeta (`debt`) | Solo resúmenes **ya empezados** (`start_date <= hoy`) y no pagados = "A pagar" + "En curso" | Resúmenes futuros y **cuotas 2..N** — excluidos a propósito (era el bug de inflar el número) |
+| Recurrencias (`recurringExpense`) | Solo instancias **ya generadas** con `status='pending'` (`recurrence_instances`) | Todo lo no generado todavía: el alquiler del 5 del mes que viene **no existe como fila** |
+
+Hasta acá, coherente: es un **stock de deuda presente**, no un pronóstico.
+
+#### El defecto: el tercer componente sí proyecta, y se resta contra los otros dos
+
+`recurringIncome` se calcula con `aggregateRecurrenceProjection(rules, windowStart, windowEnd)` donde la ventana es **el primer y último día del mes siguiente**. Y `committed-section.tsx` los resta:
+
+```ts
+const net = ars.recurringIncome - totalArs   // futuro − presente
+```
+
+para renderizar (`es.json → dashboard.committed.net_surplus`):
+
+> *"Con tu ingreso, el próximo mes arrancás con $X a favor."*
+
+Esa frase **compara el ingreso proyectado del mes que viene contra la deuda de hoy**, y la presenta como pronóstico del mes que viene. Le faltan los gastos fijos de ese mes (alquiler, expensas, monotributo, gym…), que son precisamente lo que no se proyecta. **El "a favor" está inflado de forma sistemática** — para un perfil como el de Cristian (~$1,1M de fijos mensuales), inflado por casi todo eso.
+
+No es un error de cálculo: cada número es correcto por separado. Es que **la resta de los dos no significa lo que la etiqueta afirma**. Es el mismo defecto de fondo que el punto B (dos relojes sin rótulo), pero dentro de una sola card y con una conclusión numérica encima.
+
+**Corolario para el diseño:** la proyección de gasto **no** puede meterse dentro de `Comprometido` — dejaría de ser "lo que debo" para ser "lo que va a pasar". La salida limpia es separar: `Comprometido` se queda como stock presente honesto y **pierde la banda "Ya entra"** (que es la que introduce el segundo reloj); la proyección de los **dos** lados se va a F1, donde la resta sí significa algo.
+
+#### La asimetría, en una línea
+
+La app proyecta el **ingreso** del mes que viene y **no** el gasto. Te dice cuánto entra y no cuánto sale.
 
 **La maquinaria ya existe:**
 
@@ -212,6 +245,8 @@ Dos opciones, hay que elegir una:
 - **(b)** `Comprometido` sale del dashboard y se va a la superficie "Se viene" (ver R3).
 
 Recomendado: **(b)**. `Comprometido` es la lente COMPROMISO y mezclarla con las lentes de mes es justamente la fuente de confusión. Sacarla resuelve el contrato roto sin discutir el modelo.
+
+**En el mismo movimiento: sacarle la banda "Ya entra".** Es el único pedazo de `Comprometido` que mira al futuro, y su frase de cierre resta futuro contra presente (ver §2.D). Mientras F1 no exista, la opción honesta es mostrar el ingreso proyectado **sin la resta** (dato de contexto, no conclusión). Cuando F1 exista, la banda se muda entera ahí.
 
 Además: liberar `canGoForward` para poder ir a meses futuros (prerequisito de F1).
 
