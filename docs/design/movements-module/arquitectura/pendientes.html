@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>¿Dónde viven los pendientes?</title>
+<style>
+:root{
+  --navy:#0B1A2B; --emerald:#10B981; --emerald-deep:#059669; --emerald-soft:rgba(16,185,129,.12);
+  --terracotta:#B56A5A; --terracotta-soft:rgba(181,106,90,.12);
+  --slate:#3A6B8A; --slate-soft:#EAF1F6;
+  --warning:#C49A3C; --warning-deep:#B45309; --warning-bg:rgba(196,154,60,.10); --warning-soft:rgba(196,154,60,.28);
+  --page:#F6F7F9; --card:#fff; --border:#E4E8EF; --border-soft:#EEF1F4;
+  --text:#142033; --text-muted:#6B7683; --text-soft:#8A94A3;
+  font-family:"Plus Jakarta Sans",Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text)}
+.canvas{padding:36px 28px 70px}
+.canvas>header{max-width:1500px;margin:0 auto 30px}
+h1{margin:0;font-size:25px;font-weight:850;letter-spacing:-.02em}
+header p{margin:8px 0 0;color:var(--text-muted);font-size:14px;font-weight:600;max-width:78ch;line-height:1.55}
+.row{max-width:1500px;margin:0 auto;display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+.opt{width:352px}
+.opt>h2{margin:0 0 3px;font-size:14.5px;font-weight:850;letter-spacing:-.01em}
+.opt>.sub{margin:0 0 12px;font-size:12.5px;font-weight:650;color:var(--text-muted);line-height:1.45;min-height:34px}
+.phone{background:var(--page);border:1px solid var(--border);border-radius:20px;padding:12px;box-shadow:0 18px 40px -34px rgba(11,26,43,.5)}
+.desk{width:100%;max-width:1000px;background:var(--page);border:1px solid var(--border);border-radius:16px;padding:16px}
+
+/* chrome */
+.tt{font-size:19px;font-weight:850;letter-spacing:-.025em;margin-bottom:10px}
+.mes{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--border);background:var(--card);border-radius:11px;padding:5px 8px;margin-bottom:9px}
+.mes span{font-size:13px;font-weight:800}
+.mes i{color:var(--text-soft);font-style:normal;font-weight:850;font-size:14px}
+.seg{display:flex;gap:3px;background:var(--border-soft);border-radius:11px;padding:3px;margin-bottom:10px}
+.seg > b{flex:1;text-align:center;font-size:12.5px;font-weight:800;padding:7px 4px;border-radius:8px;color:var(--text-muted);position:relative}
+.seg > b.on{background:var(--card);color:var(--navy);box-shadow:0 1px 3px rgba(11,26,43,.1)}
+.cnt{display:inline-grid;place-items:center;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--warning);color:#fff;font-size:10px;font-weight:850;margin-left:4px;vertical-align:1px}
+
+/* toolbar iconos */
+.tools{display:flex;justify-content:flex-end;gap:5px;margin-bottom:9px}
+.ic{width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--border);background:var(--card);border-radius:9px;font-size:12px;color:var(--text-muted)}
+
+/* pendientes */
+.pend-bar{display:flex;align-items:center;gap:9px;border:1px solid var(--warning-soft);background:var(--warning-bg);border-radius:13px;padding:9px 11px;margin-bottom:10px}
+.pend-bar .dot{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;background:var(--warning-bg);color:var(--warning-deep);font-size:13px;flex:0 0 auto}
+.pend-bar .tx{flex:1;font-size:12.5px;font-weight:800;color:var(--warning-deep)}
+.pend-bar .ch{color:var(--warning-deep);font-weight:850}
+.pend-card{border:1px solid var(--warning-soft);background:var(--card);border-radius:14px;padding:11px 12px;margin-bottom:8px}
+.pend-card .h{font-size:12px;font-weight:850;color:var(--warning-deep);margin-bottom:7px}
+.pend-card .l{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:700;padding:5px 0}
+.pend-card .l + .l{border-top:1px solid var(--border-soft)}
+.pend-card .btns{display:flex;gap:6px;margin-top:8px}
+.pend-card .btns > span{flex:1;text-align:center;font-size:11.5px;font-weight:850;padding:7px;border-radius:9px}
+.b1{background:var(--navy);color:#fff}
+.b2{border:1px solid var(--border);color:var(--text-muted)}
+
+/* lista */
+.list{border:1px solid var(--border);background:var(--card);border-radius:14px;overflow:hidden}
+.day{font-size:11px;font-weight:850;color:var(--text-muted);padding:9px 12px 5px;text-transform:capitalize}
+.mv{display:flex;align-items:center;gap:9px;padding:9px 12px}
+.mv + .mv{border-top:1px solid var(--border-soft)}
+.em{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:14px;flex:0 0 auto}
+.mv .n{flex:1;min-width:0}
+.mv .n b{display:block;font-size:12.5px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mv .n s{display:block;font-size:11px;color:var(--text-muted);text-decoration:none;margin-top:1px}
+.mv .a{font-size:12.5px;font-weight:850;font-variant-numeric:tabular-nums;white-space:nowrap}
+.neg{color:var(--terracotta)} .pos{color:var(--emerald-deep)}
+.pill{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:999px;background:var(--border-soft);color:var(--text-muted);font-size:9px;margin-left:4px;vertical-align:1px}
+
+/* grafico */
+.chart{border:1px solid var(--border);background:var(--card);border-radius:14px;padding:14px;text-align:center}
+.donut{width:130px;height:130px;margin:4px auto 10px;border-radius:50%;
+  background:conic-gradient(var(--terracotta) 0 34%, var(--slate) 34% 58%, var(--warning) 58% 76%, var(--emerald) 76% 90%, #9CA3AF 90% 100%);
+  position:relative}
+.donut::after{content:"$ 486.300";position:absolute;inset:26px;border-radius:50%;background:var(--card);display:grid;place-items:center;font-size:13px;font-weight:850}
+.rk{display:flex;justify-content:space-between;font-size:12px;font-weight:750;padding:5px 2px}
+.rk + .rk{border-top:1px solid var(--border-soft)}
+.rk i{font-style:normal;color:var(--text-muted)}
+.modes{display:flex;gap:5px;margin-bottom:10px}
+.modes > span{flex:1;text-align:center;font-size:11.5px;font-weight:800;padding:6px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--text-muted)}
+.modes > span.on{background:var(--emerald-soft);border-color:transparent;color:var(--emerald-deep)}
+
+.note{margin-top:11px;border-left:3px solid var(--emerald);background:var(--card);border-radius:0 9px 9px 0;padding:9px 11px;font-size:12px;font-weight:650;color:var(--text-muted);line-height:1.5}
+.note.bad{border-left-color:var(--terracotta)}
+.note b{color:var(--text);font-weight:850}
+.tag{display:inline-block;font-size:10px;font-weight:850;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:999px;margin-bottom:7px}
+.tag.rec{background:var(--emerald-soft);color:var(--emerald-deep)}
+.tag.alt{background:var(--slate-soft);color:var(--slate)}
+.hr{max-width:1500px;margin:44px auto 26px;border-top:1px solid var(--border)}
+h3.sec{max-width:1500px;margin:0 auto 16px;font-size:16px;font-weight:850}
+</style>
+</head>
+<body>
+<div class="canvas">
+
+<header>
+  <h1>¿Dónde viven los pendientes?</h1>
+  <p>Cuatro opciones para los tres bloques de "por confirmar" (sugerencia de recurrencia,
+  recurrentes, reintegros), sobre la estructura nueva: <b>mes afuera</b> + <b>toggle Lista/Gráfico</b>.
+  Todas las pantallas son el celular a 390px, que es donde el espacio duele.</p>
+</header>
+
+<div class="row">
+
+  <!-- ══ A ══ -->
+  <section class="opt">
+    <span class="tag alt">Opción A</span>
+    <h2>Una barra fina arriba de todo</h2>
+    <p class="sub">Los tres bloques se colapsan en una sola línea que se expande al tocarla. Está siempre, en las dos vistas.</p>
+    <div class="phone">
+      <div class="tt">Movimientos</div>
+      <div class="mes"><i>‹</i><span>Agosto 2026</span><i>›</i></div>
+      <div class="pend-bar"><span class="dot">◕</span><span class="tx">3 cosas por confirmar</span><span class="ch">›</span></div>
+      <div class="seg"><b class="on">Lista</b><b>Gráfico</b></div>
+      <div class="tools"><span class="ic">⌕</span><span class="ic">⇅</span><span class="ic">▤</span></div>
+      <div class="list">
+        <div class="day">Hoy</div>
+        <div class="mv"><span class="em" style="background:#FEF0E7">🍔</span><span class="n"><b>Milanesas con Flor</b><s>Comida · Billetera</s></span><span class="a neg">− $ 12.480</span></div>
+        <div class="mv"><span class="em" style="background:#E7F2FA">🚕</span><span class="n"><b>Transporte</b><s>Taxi · Galicia</s></span><span class="a neg">− $ 3.200</span></div>
+        <div class="day">Ayer</div>
+        <div class="mv"><span class="em" style="background:#E9F7F0">💼</span><span class="n"><b>Sueldo agosto</b><s>Sueldo · Galicia</s></span><span class="a pos">+ $ 1.480.000</span></div>
+        <div class="mv"><span class="em" style="background:#F3EEFB">🏠</span><span class="n"><b>Alquiler<span class="pill">👥</span></b><s>Vivienda · Galicia</s></span><span class="a neg">− $ 620.000</span></div>
+      </div>
+    </div>
+    <div class="note">Lo más conservador. Pasás de <b>tres tarjetas a una línea</b>, pero seguís pasando por ella siempre, incluso los días que no tenés nada que confirmar.</div>
+  </section>
+
+  <!-- ══ B ══ -->
+  <section class="opt">
+    <span class="tag alt">Opción B</span>
+    <h2>Adentro de la Lista, arriba de las filas</h2>
+    <p class="sub">La barra baja del toggle: pertenece a la Lista. El Gráfico queda limpio del todo.</p>
+    <div class="phone">
+      <div class="tt">Movimientos</div>
+      <div class="mes"><i>‹</i><span>Agosto 2026</span><i>›</i></div>
+      <div class="seg"><b class="on">Lista</b><b>Gráfico</b></div>
+      <div class="tools"><span class="ic">⌕</span><span class="ic">⇅</span><span class="ic">▤</span></div>
+      <div class="pend-bar"><span class="dot">◕</span><span class="tx">3 cosas por confirmar</span><span class="ch">›</span></div>
+      <div class="list">
+        <div class="day">Hoy</div>
+        <div class="mv"><span class="em" style="background:#FEF0E7">🍔</span><span class="n"><b>Milanesas con Flor</b><s>Comida · Billetera</s></span><span class="a neg">− $ 12.480</span></div>
+        <div class="mv"><span class="em" style="background:#E7F2FA">🚕</span><span class="n"><b>Transporte</b><s>Taxi · Galicia</s></span><span class="a neg">− $ 3.200</span></div>
+        <div class="day">Ayer</div>
+        <div class="mv"><span class="em" style="background:#E9F7F0">💼</span><span class="n"><b>Sueldo agosto</b><s>Sueldo · Galicia</s></span><span class="a pos">+ $ 1.480.000</span></div>
+        <div class="mv"><span class="em" style="background:#F3EEFB">🏠</span><span class="n"><b>Alquiler<span class="pill">👥</span></b><s>Vivienda · Galicia</s></span><span class="a neg">− $ 620.000</span></div>
+      </div>
+    </div>
+    <div class="note">Coherente: lo que se confirma <b>se convierte en una fila de abajo</b>. Pero sigue empujando la lista hacia abajo, que es el problema original.</div>
+  </section>
+
+  <!-- ══ C ══ -->
+  <section class="opt">
+    <span class="tag rec">Opción C · recomendada</span>
+    <h2>Una tercera solapa, con el número</h2>
+    <p class="sub">Los pendientes son un lugar, no un cartel. El número en la solapa te avisa sin ocupar ni una fila.</p>
+    <div class="phone">
+      <div class="tt">Movimientos</div>
+      <div class="mes"><i>‹</i><span>Agosto 2026</span><i>›</i></div>
+      <div class="seg"><b class="on">Lista</b><b>Gráfico</b><b>Pendientes<span class="cnt">3</span></b></div>
+      <div class="tools"><span class="ic">⌕</span><span class="ic">⇅</span><span class="ic">▤</span></div>
+      <div class="list">
+        <div class="day">Hoy</div>
+        <div class="mv"><span class="em" style="background:#FEF0E7">🍔</span><span class="n"><b>Milanesas con Flor</b><s>Comida · Billetera</s></span><span class="a neg">− $ 12.480</span></div>
+        <div class="mv"><span class="em" style="background:#E7F2FA">🚕</span><span class="n"><b>Transporte</b><s>Taxi · Galicia</s></span><span class="a neg">− $ 3.200</span></div>
+        <div class="day">Ayer</div>
+        <div class="mv"><span class="em" style="background:#E9F7F0">💼</span><span class="n"><b>Sueldo agosto</b><s>Sueldo · Galicia</s></span><span class="a pos">+ $ 1.480.000</span></div>
+        <div class="mv"><span class="em" style="background:#F3EEFB">🏠</span><span class="n"><b>Alquiler<span class="pill">👥</span></b><s>Vivienda · Galicia</s></span><span class="a neg">− $ 620.000</span></div>
+        <div class="mv"><span class="em" style="background:#FEF0E7">🛒</span><span class="n"><b>Compra del súper</b><s>Supermercado · Visa</s></span><span class="a neg">− $ 96.300</span></div>
+      </div>
+    </div>
+    <div class="note"><b>Cero filas gastadas</b> cuando no hay nada que hacer: sin pendientes, la solapa se esconde y quedan Lista y Gráfico. Y ganás una fila más de movimientos que en A y B.</div>
+  </section>
+
+  <!-- ══ D ══ -->
+  <section class="opt">
+    <span class="tag alt">Opción D</span>
+    <h2>Se van a Inicio</h2>
+    <p class="sub">Los pendientes son "qué tengo que hacer", que es el trabajo del dashboard. Movimientos queda como libro puro.</p>
+    <div class="phone">
+      <div class="tt">Movimientos</div>
+      <div class="mes"><i>‹</i><span>Agosto 2026</span><i>›</i></div>
+      <div class="seg"><b class="on">Lista</b><b>Gráfico</b></div>
+      <div class="tools"><span class="ic">⌕</span><span class="ic">⇅</span><span class="ic">▤</span></div>
+      <div class="list">
+        <div class="day">Hoy</div>
+        <div class="mv"><span class="em" style="background:#FEF0E7">🍔</span><span class="n"><b>Milanesas con Flor</b><s>Comida · Billetera</s></span><span class="a neg">− $ 12.480</span></div>
+        <div class="mv"><span class="em" style="background:#E7F2FA">🚕</span><span class="n"><b>Transporte</b><s>Taxi · Galicia</s></span><span class="a neg">− $ 3.200</span></div>
+        <div class="day">Ayer</div>
+        <div class="mv"><span class="em" style="background:#E9F7F0">💼</span><span class="n"><b>Sueldo agosto</b><s>Sueldo · Galicia</s></span><span class="a pos">+ $ 1.480.000</span></div>
+        <div class="mv"><span class="em" style="background:#F3EEFB">🏠</span><span class="n"><b>Alquiler<span class="pill">👥</span></b><s>Vivienda · Galicia</s></span><span class="a neg">− $ 620.000</span></div>
+        <div class="mv"><span class="em" style="background:#FEF0E7">🛒</span><span class="n"><b>Compra del súper</b><s>Supermercado · Visa</s></span><span class="a neg">− $ 96.300</span></div>
+      </div>
+    </div>
+    <div class="note bad">La más limpia, y la más riesgosa: confirmás en una pantalla y el movimiento <b>nace en otra</b>. Se pierde el "confirmé y lo veo aparecer".</div>
+  </section>
+
+</div>
+
+<div class="hr"></div>
+<h3 class="sec">La Opción C por dentro — las tres solapas</h3>
+
+<div class="row">
+  <section class="opt">
+    <p class="sub" style="min-height:0">Solapa <b>Pendientes</b> — todo lo que hay que confirmar, junto y sin apuro.</p>
+    <div class="phone">
+      <div class="tt">Movimientos</div>
+      <div class="mes"><i>‹</i><span>Agosto 2026</span><i>›</i></div>
+      <div class="seg"><b>Lista</b><b>Gráfico</b><b class="on">Pendientes<span class="cnt">3</span></b></div>
+      <div class="pend-card">
+        <div class="h">Recurrentes por confirmar</div>
+        <div class="l"><span>Netflix · vence hoy</span><span class="neg">− $ 9.900</span></div>
+        <div class="l"><span>Expensas · vencida hace 2 días</span><span class="neg">− $ 84.000</span></div>
+        <div class="btns"><span class="b1">Confirmar</span><span class="b2">Saltar</span></div>
+      </div>
+      <div class="pend-card">
+        <div class="h">Reintegros por confirmar</div>
+        <div class="l"><span>Farmacia · OSDE</span><span class="pos">+ $ 33.600</span></div>
+        <div class="btns"><span class="b1">Confirmar</span><span class="b2">Cancelar</span></div>
+      </div>
+      <div class="pend-card" style="border-color:var(--border)">
+        <div class="h" style="color:var(--slate)">¿Es un gasto que se repite?</div>
+        <div class="l"><span>Cargaste "Spotify" 3 meses seguidos</span></div>
+        <div class="btns"><span class="b1">Crear regla</span><span class="b2">No, gracias</span></div>
+      </div>
+    </div>
+    <div class="note">Los tres bloques dejan de competir con la lista y pasan a ser <b>una bandeja</b>. Se puede trabajar de arriba a abajo hasta vaciarla.</div>
+  </section>
+
+  <section class="opt">
+    <p class="sub" style="min-height:0">Solapa <b>Gráfico</b> — el mes entero, sin filtros. Tocás una categoría y pasás a la Lista con su composición.</p>
+    <div class="phone">
+      <div class="tt">Movimientos</div>
+      <div class="mes"><i>‹</i><span>Agosto 2026</span><i>›</i></div>
+      <div class="seg"><b>Lista</b><b class="on">Gráfico</b><b>Pendientes<span class="cnt">3</span></b></div>
+      <div class="modes"><span class="on">Egresos</span><span>Ingresos</span><span>ARS</span><span>USD</span></div>
+      <div class="chart">
+        <div class="donut"></div>
+        <div class="rk"><span>🏠 Vivienda</span><i>$ 165.400 · 34%</i></div>
+        <div class="rk"><span>🛒 Supermercado</span><i>$ 116.700 · 24%</i></div>
+        <div class="rk"><span>🚕 Transporte</span><i>$ 87.500 · 18%</i></div>
+        <div class="rk"><span>🍔 Comida</span><i>$ 68.000 · 14%</i></div>
+        <div class="rk"><span>Otros</span><i>$ 48.700 · 10%</i></div>
+      </div>
+    </div>
+    <div class="note">El mes vive <b>arriba del toggle</b>, así que sirve a las tres solapas por igual. Hoy está enterrado adentro de esta tarjeta en web y suelto arriba en el celular — se unifica solo.</div>
+  </section>
+
+  <section class="opt" style="width:auto;flex:1;min-width:420px">
+    <p class="sub" style="min-height:0">Desktop — <b>la misma estructura</b>. El ancho se usa adentro de cada solapa, no para inventar un modo nuevo.</p>
+    <div class="desk">
+      <div class="tt" style="font-size:22px">Movimientos</div>
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+        <div class="mes" style="margin:0;width:190px"><i>‹</i><span>Agosto 2026</span><i>›</i></div>
+        <div class="seg" style="margin:0;width:330px"><b class="on">Lista</b><b>Gráfico</b><b>Pendientes<span class="cnt">3</span></b></div>
+        <div class="tools" style="margin:0;flex:1"><span class="ic">⌕</span><span class="ic">⇅</span><span class="ic">▤</span></div>
+      </div>
+      <div class="list">
+        <div class="day">Hoy</div>
+        <div class="mv"><span class="em" style="background:#FEF0E7">🍔</span><span class="n"><b>Milanesas con Flor</b><s>Comida › Restaurantes · Billetera</s></span><span class="a neg">− $ 12.480</span></div>
+        <div class="mv"><span class="em" style="background:#E7F2FA">🚕</span><span class="n"><b>Transporte</b><s>Taxi / App · Galicia</s></span><span class="a neg">− $ 3.200</span></div>
+        <div class="day">Ayer</div>
+        <div class="mv"><span class="em" style="background:#E9F7F0">💼</span><span class="n"><b>Sueldo agosto</b><s>Sueldo · Galicia</s></span><span class="a pos">+ $ 1.480.000</span></div>
+        <div class="mv"><span class="em" style="background:#F3EEFB">🏠</span><span class="n"><b>Alquiler <span style="font-size:10px;font-weight:800;background:var(--border-soft);color:var(--text-muted);padding:2px 6px;border-radius:999px">👥 Compartido</span></b><s>Vivienda · Galicia</s></span><span class="a neg">− $ 620.000</span></div>
+      </div>
+    </div>
+    <div class="note">Única diferencia con el celular: mes, solapas y herramientas entran <b>en una sola fila</b>, y la insignia lleva su palabra (D-003). Mismas solapas, mismo orden, mismos roles.</div>
+  </section>
+</div>
+
+</div>
+</body>
+</html>
