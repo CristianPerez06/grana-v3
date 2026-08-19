@@ -1,0 +1,319 @@
+<meta charset="utf-8">
+<title>Hoy vs. propuesta — grana</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<body class="cmp">
+<div class="cmp-wrap">
+
+<h1>Hoy vs. propuesta — misma información, otra lectura</h1>
+<p class="lede">
+  Ninguna de estas pantallas agrega funcionalidad, datos ni queries. <b>Los dos lados muestran
+  exactamente lo mismo</b> — cambia el orden, la jerarquía y qué se suma. La línea punteada
+  marca dónde termina la primera pantalla: todo lo que queda debajo exige scroll para
+  aparecer. Tokens de <code>design_handoff_inicio_definitivo</code>.
+</p>
+
+<!-- ═══════════════ CASO 1 · MOVIMIENTOS ═══════════════ -->
+<div class="case">
+  <div class="ch">
+    <span class="rt">Movimientos <span class="m">/transactions</span></span>
+    <h2>La lista empieza abajo del scroll</h2>
+    <p>Hoy hay tres avisos apilados y un gráfico antes de lo que la pestaña promete. Los avisos
+      son <b>tareas</b> (confirmá esto) y el gráfico es <b>análisis</b>; ninguno de los dos es
+      "mis movimientos". La propuesta los comprime en una línea y sube la lista.</p>
+  </div>
+
+  <div class="pair">
+    <div class="pane now">
+      <div class="tag"><span class="b"></span>Hoy</div>
+      <div class="scr">
+        <div class="sbar">
+          <span class="t">Movimientos</span>
+          <span class="r"><span class="ib">🔍</span><span class="ib">↻</span><span class="ib">👥</span><span class="ib">⚙</span></span>
+        </div>
+        <div class="sc">
+          <div class="banner">💡 Detectamos un gasto que se repite. ¿Querés crear una recurrencia?</div>
+
+          <div class="mini">
+            <div class="mh"><h3>Movimientos recurrentes pendientes</h3><span class="s">3 ›</span></div>
+            <p class="msub">Confirmá o postergá los que ya vencieron.</p>
+          </div>
+
+          <div class="mini">
+            <div class="mh"><h3>Reintegros a confirmar</h3><span class="s">1 ›</span></div>
+            <p class="msub">Marcá cuáles ya te devolvieron.</p>
+          </div>
+
+          <div class="mini">
+            <div class="mh"><h3>En qué se fue</h3><span class="s">Ver ›</span></div>
+            <div class="msel2" style="margin-top:11px"><span class="nv">‹</span><span class="lb">agosto 2026</span><span class="nv">›</span></div>
+            <div class="donut2" style="margin-top:14px;background:conic-gradient(var(--terracota) 0 37%, var(--slate) 37% 61%, var(--violet) 61% 74%, var(--line) 74% 100%)"></div>
+            <div style="margin-top:12px;display:flex;flex-direction:column;gap:7px">
+              <div class="rrow" style="padding:0;border:none"><span class="md"><span class="t">Alquiler</span></span><span class="a tnum">$ 737.826</span></div>
+              <div class="rrow" style="padding:0;border:none"><span class="md"><span class="t">Tarjetas</span></span><span class="a tnum">$ 470.000</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="cut" style="bottom:66px"><span>fin de la 1ª pantalla</span></div>
+      </div>
+    </div>
+
+    <div class="pane new">
+      <div class="tag"><span class="b"></span>Propuesta</div>
+      <div class="scr">
+        <div class="sbar">
+          <span class="t">Movimientos</span>
+          <span class="r"><span class="ib">🔍</span><span class="ib">⚙</span></span>
+        </div>
+        <div class="sc">
+          <div class="msel2"><span class="nv">‹</span><span class="lb">agosto 2026</span><span class="nv">›</span></div>
+
+          <div class="mini" style="padding:11px 14px">
+            <div class="mh"><h3 style="font-size:12.5px">4 cosas por confirmar</h3><span class="s">›</span></div>
+          </div>
+
+          <div class="mini" style="padding:4px 15px 8px">
+            <div class="dayh">Hoy · martes 18</div>
+            <div class="mv2"><span class="ic">🛒</span><span class="md"><span class="t">Súper</span><span class="s">Alimentos › Súper · Galicia</span></span><span class="a neg tnum">−$ 45.000</span></div>
+            <div class="mv2"><span class="ic">☕</span><span class="md"><span class="t">Café</span><span class="s">Salidas › Bares · Billetera</span></span><span class="a neg tnum">−$ 6.500</span></div>
+            <div class="dayh">Ayer · lunes 17</div>
+            <div class="mv2"><span class="ic">📺</span><span class="md"><span class="t">Netflix <span class="bd">↻</span></span><span class="s">Ocio › Streaming · Santander VISA</span></span><span class="a neg tnum">−$ 12.000</span></div>
+            <div class="mv2"><span class="ic">🚗</span><span class="md"><span class="t">Uber <span class="bd">👥</span></span><span class="s">Transporte › Apps · Santander VISA</span></span><span class="a neg tnum">−$ 3.762</span></div>
+            <div class="mv2"><span class="ic">🧊</span><span class="md"><span class="t">Heladera <span class="bd">Cuota 2 de 12</span></span><span class="s">Hogar › Electro · Galicia VISA</span></span><span class="a neg tnum">−$ 145.000</span></div>
+            <div class="dayh">domingo 16</div>
+            <div class="mv2"><span class="ic">💼</span><span class="md"><span class="t">Sueldo</span><span class="s">Ingresos › Sueldo · Galicia</span></span><span class="a pos tnum">+$ 2.795.160</span></div>
+            <div class="mv2"><span class="ic">🏠</span><span class="md"><span class="t">Alquiler</span><span class="s">Vivienda › Alquiler · Galicia</span></span><span class="a neg tnum">−$ 737.826</span></div>
+          </div>
+        </div>
+        <div class="cut" style="bottom:66px"><span>fin de la 1ª pantalla</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <div class="v">
+      <h4>Hoy — qué ves sin scrollear</h4>
+      <ul>
+        <li><b>Cero movimientos.</b> La primera pantalla es un banner, dos avisos y media dona.</li>
+        <li>El selector de mes vive <b>dentro</b> de una card, no arriba.</li>
+        <li>Cuatro íconos sin etiqueta; uno de ellos (↻) duplica un link del header.</li>
+      </ul>
+    </div>
+    <div class="v g">
+      <h4>Propuesta — qué cambia</h4>
+      <ul>
+        <li><b>7 movimientos</b> visibles sin scrollear, con día, categoría, cuenta y monto.</li>
+        <li>El mes sube al tope y gobierna la pantalla entera.</li>
+        <li>Los tres avisos se funden en <b>una línea</b>; el detalle sigue a un tap.</li>
+        <li>El gráfico se muda a Informes — donde el análisis tiene casa.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ CASO 2 · GASTOS FIJOS ═══════════════ -->
+<div class="case">
+  <div class="ch">
+    <span class="rt">Recurrencias <span class="m">/transactions/recurring</span></span>
+    <h2>Veinte filas sin un total</h2>
+    <p>El hub existe y está bien construido: pendientes, próximas ocurrencias, tabs por estado,
+      monto por regla. Pero <b>lista y no suma</b> — y eso es exactamente lo que la planilla de
+      Excel sí hace. La propuesta no agrega datos: suma los que ya están y los agrupa por lo
+      único que cambia tu disponible (si sale de la caja o llega por resumen).</p>
+  </div>
+
+  <div class="pair">
+    <div class="pane now">
+      <div class="tag"><span class="b"></span>Hoy</div>
+      <div class="scr">
+        <div class="sbar"><span class="t">Recurrencias</span><span class="r"><span class="ib">+</span></span></div>
+        <div class="sc">
+          <p style="font-size:12px;font-weight:600;color:var(--muted);line-height:1.5">
+            Reglas que generan movimientos pendientes para que confirmes u omitas.</p>
+
+          <div class="mini">
+            <div class="mh"><h3>Movimientos recurrentes pendientes</h3><span class="s">3 ›</span></div>
+          </div>
+
+          <div class="mini">
+            <div class="mh"><h3>Próximos 7 días</h3></div>
+            <div style="margin-top:9px">
+              <div class="rrow"><span class="md"><span class="t">Spotify</span><span class="s">21 ago · Galicia VISA</span></span><span class="a tnum">$ 3.300</span></div>
+              <div class="rrow"><span class="md"><span class="t">Monotributo</span><span class="s">20 ago · Galicia</span></span><span class="a tnum">$ 30.280</span></div>
+            </div>
+          </div>
+
+          <div class="mini">
+            <div class="mh"><h3>Más adelante este mes</h3></div>
+            <div style="margin-top:9px">
+              <div class="rrow"><span class="md"><span class="t">Gym</span><span class="s">28 ago · Galicia</span></span><span class="a tnum">$ 33.000</span></div>
+            </div>
+          </div>
+
+          <div class="tabs2"><button class="on">Activas 20</button><button>Pausadas 2</button><button>Finalizadas</button></div>
+
+          <div class="mini" style="padding:4px 15px 8px">
+            <div class="rrow"><span class="md"><span class="t">Alquiler Rivadavia</span><span class="s">Mensual · día 1</span></span><span class="a tnum">$ 737.826</span></div>
+            <div class="rrow"><span class="md"><span class="t">Expensas Rivadavia</span><span class="s">Mensual · día 5</span></span><span class="a tnum">$ 229.233</span></div>
+          </div>
+        </div>
+        <div class="cut" style="bottom:66px"><span>fin de la 1ª pantalla</span></div>
+      </div>
+    </div>
+
+    <div class="pane new">
+      <div class="tag"><span class="b"></span>Propuesta</div>
+      <div class="scr">
+        <div class="sbar"><span class="t">Gastos fijos</span><span class="r"><span class="ib">+</span></span></div>
+        <div class="sc">
+          <div class="netbar" style="margin:0">
+            <span class="k">Sale todos los meses</span>
+            <span class="v tnum">$&nbsp;2.480.436<small class="usd">US$ 120,00</small></span>
+          </div>
+
+          <div class="scalebox" style="margin:0">
+            <div class="col out">
+              <div class="k">De tu caja</div>
+              <div class="v tnum">$&nbsp;2.269.181</div>
+              <div class="u">14 reglas</div>
+            </div>
+            <div class="col">
+              <div class="k">Por tarjeta</div>
+              <div class="v tnum">$&nbsp;211.254</div>
+              <div class="u">6 reglas</div>
+            </div>
+          </div>
+
+          <div class="mini" style="padding:11px 14px">
+            <div class="mh"><h3 style="font-size:12.5px">3 por confirmar · vence el 20</h3><span class="s">›</span></div>
+          </div>
+
+          <div class="mini" style="padding:4px 15px 8px">
+            <div class="dayh">De tu caja</div>
+            <div class="rrow"><span class="md"><span class="t">Alquiler Rivadavia</span><span class="s">Día 1 · Galicia · exacto</span></span><span class="a tnum">$ 737.826</span></div>
+            <div class="rrow"><span class="md"><span class="t">Expensas Rivadavia</span><span class="s">Día 5 · Galicia · estimado</span></span><span class="a tnum">$ 229.233</span></div>
+            <div class="rrow"><span class="md"><span class="t">EPE — luz</span><span class="s">Día 12 · Galicia · estimado</span></span><span class="a tnum">$ 35.310</span></div>
+            <div class="rrow"><span class="md"><span class="t">Monotributo</span><span class="s">Día 20 · Galicia · exacto</span></span><span class="a tnum">$ 30.280</span></div>
+            <div class="dayh">Por tarjeta</div>
+            <div class="rrow"><span class="md"><span class="t">UCEMA</span><span class="s">Día 5 · Santander VISA</span></span><span class="a tnum">$ 290.000</span></div>
+          </div>
+        </div>
+        <div class="cut" style="bottom:66px"><span>fin de la 1ª pantalla</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <div class="v">
+      <h4>Hoy — qué ves sin scrollear</h4>
+      <ul>
+        <li>Una descripción de dos renglones que explica <b>qué es una recurrencia</b>.</li>
+        <li>Tres cards antes de la lista: pendientes, próximos 7 días, más adelante.</li>
+        <li><b>Ningún total.</b> Para saber cuánto pagás por mes hay que sumar 20 filas a mano.</li>
+        <li>Se llama "Recurrencias" — nadie piensa "voy a ver mis recurrencias".</li>
+      </ul>
+    </div>
+    <div class="v g">
+      <h4>Propuesta — qué cambia</h4>
+      <ul>
+        <li><b>El total arriba de todo.</b> Es el número por el que entrás.</li>
+        <li>Corte <b>caja vs. tarjeta</b>: lo único que cambia si te pega en el disponible o te llega por resumen. El dato ya está en <code>accounts.type</code>.</li>
+        <li>Las tres cards de pendientes y próximos se funden en una línea con la fecha más urgente.</li>
+        <li>Se llama <b>Gastos fijos</b>, que es lo que el usuario cree que es.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ CASO 3 · TARJETAS ═══════════════ -->
+<div class="case">
+  <div class="ch">
+    <span class="rt">Tarjetas <span class="m">/cards</span></span>
+    <h2>El dato de cuotas existe, pero repartido en siete pantallas</h2>
+    <p>Esta ruta <b>ya está bien</b>: el hero "A pagar / En curso" y la lista agrupada por banco
+      con cierre, vencimiento y uso del límite son correctos y se conservan. El único hueco es
+      que <code>CuotasEnCursoPane</code> suma las cuotas <b>por tarjeta</b>, dentro del detalle
+      de cada una. Con 4 tarjetas, saber cuánto debés en cuotas cuesta 16 taps y una calculadora.</p>
+  </div>
+
+  <div class="pair">
+    <div class="pane now">
+      <div class="tag"><span class="b"></span>Hoy</div>
+      <div class="scr">
+        <div class="sbar"><span class="t">Tarjetas</span><span class="r"><span class="ib">+</span></span></div>
+        <div class="sc">
+          <div class="hero" style="padding:20px;border-radius:16px">
+            <span class="pl">A pagar</span>
+            <div class="pv tnum" style="font-size:34px;margin-top:10px"><span class="cur">$</span>&nbsp;743.691</div>
+            <div class="usd" style="margin-top:11px"><span class="chip">USD</span><span class="uv tnum">606,83</span></div>
+          </div>
+          <div class="mini" style="padding:4px 15px 8px">
+            <div class="dayh">Mis tarjetas</div>
+            <div class="rrow"><span class="md"><span class="t">Galicia VISA</span><span class="s">Cierra 28/08 · vence 10/09 · uso 42%</span></span><span class="a tnum">$ 78.801</span></div>
+            <div class="rrow"><span class="md"><span class="t">Santander Río VISA</span><span class="s">Cierra 03/09 · vence 15/09 · uso 18%</span></span><span class="a tnum">$ 74.668</span></div>
+            <div class="rrow"><span class="md"><span class="t">BBVA VISA</span><span class="s">Cierra 15/09 · vence 25/09 · uso 9%</span></span><span class="a tnum">$ 34.700</span></div>
+            <div class="rrow"><span class="md"><span class="t">ICBC Mastercard</span><span class="s">Cierra 20/09 · vence 02/10</span></span><span class="a tnum" style="color:var(--faint)">$ 0</span></div>
+          </div>
+          <p style="font-size:11.5px;font-weight:600;color:var(--faint);text-align:center">
+            ¿Cuánto debo en cuotas? → entrar a cada tarjeta</p>
+        </div>
+        <div class="cut" style="bottom:66px"><span>fin de la 1ª pantalla</span></div>
+      </div>
+    </div>
+
+    <div class="pane new">
+      <div class="tag"><span class="b"></span>Propuesta</div>
+      <div class="scr">
+        <div class="sbar"><span class="t">Tarjetas</span><span class="r"><span class="ib">+</span></span></div>
+        <div class="sc">
+          <div class="hero" style="padding:20px;border-radius:16px">
+            <span class="pl">A pagar</span>
+            <div class="pv tnum" style="font-size:34px;margin-top:10px"><span class="cur">$</span>&nbsp;743.691</div>
+            <div class="usd" style="margin-top:11px"><span class="chip">USD</span><span class="uv tnum">606,83</span></div>
+          </div>
+
+          <div class="mini">
+            <div class="mh"><h3>Cuotas en curso</h3><span class="s">Ver ›</span></div>
+            <div class="netbar" style="margin-top:11px;padding:13px 15px">
+              <span class="k">Te queda por pagar</span>
+              <span class="v tnum" style="font-size:21px">$&nbsp;1.240.318<small class="usd">7 compras · hasta nov 2026</small></span>
+            </div>
+            <p class="hint" style="margin-top:12px;padding-top:11px">
+              Ya tenés comprometidos <b>$&nbsp;241.500 por mes</b> solo en cuotas.</p>
+          </div>
+
+          <div class="mini" style="padding:4px 15px 8px">
+            <div class="dayh">Mis tarjetas</div>
+            <div class="rrow"><span class="md"><span class="t">Galicia VISA</span><span class="s">Cierra 28/08 · vence 10/09 · uso 42%</span></span><span class="a tnum">$ 78.801</span></div>
+            <div class="rrow"><span class="md"><span class="t">Santander Río VISA</span><span class="s">Cierra 03/09 · vence 15/09 · uso 18%</span></span><span class="a tnum">$ 74.668</span></div>
+            <div class="rrow"><span class="md"><span class="t">BBVA VISA</span><span class="s">Cierra 15/09 · vence 25/09 · uso 9%</span></span><span class="a tnum">$ 34.700</span></div>
+          </div>
+        </div>
+        <div class="cut" style="bottom:66px"><span>fin de la 1ª pantalla</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <div class="v">
+      <h4>Lo que NO se toca</h4>
+      <ul>
+        <li>El hero "A pagar / En curso" en bimoneda: <b>queda igual</b>.</li>
+        <li>La lista agrupada por banco con cierre, vencimiento y uso del límite: <b>queda igual</b>.</li>
+        <li>Tarjetas archivadas, próximos cierres: igual.</li>
+      </ul>
+    </div>
+    <div class="v g">
+      <h4>Lo único que cambia</h4>
+      <ul>
+        <li>Un bloque de <b>cuotas en curso global</b>: total, cantidad de compras y hasta cuándo.</li>
+        <li>Y el dato que ninguna pantalla dice hoy: <b>cuánto de tu mes ya está comprometido en cuotas</b>.</li>
+        <li>La suma ya existe en <code>CuotasEnCursoPane</code> — falta la vuelta global, no el cálculo.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+</div>
