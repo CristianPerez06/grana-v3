@@ -101,6 +101,22 @@ El paginado con `.range()` es estable solo con `ORDER BY` total. Se elige el má
 
 `getSharedAccruedMovements` conserva su ventana `[start, end)` —angostar por mes es un predicado del dominio, compatible con el requirement— y reemplaza los `.limit(500)` por el loop de D2. El read de splits que lo acompaña (L494) sigue el mismo camino.
 
+### D9 — Una página con error corta el proceso, no el recorrido
+
+*(Decidido durante la implementación.)*
+
+El resto del archivo desestructura solo `data` y trata la ausencia de filas como conjunto vacío. Eso no se puede sostener dentro del loop: en un error PostgREST devuelve `data: null`, que es **indistinguible de "no hay más filas"**. Tratarlo como fin del recorrido reintroduciría exactamente el truncado silencioso que el helper existe para evitar, solo que a mitad del conjunto en vez de en el techo.
+
+`fetchAllRows` entonces **lanza** ante un error de página. Es un cambio de comportamiento respecto del código anterior —donde un error de red en la lectura de splits dejaba la deuda en "saldado"— y es deliberado: fallar ruidosamente es la única alternativa correcta a un número de dinero inventado. Lo cubre el test "does not end the walk on an errored page".
+
+### D10 — La doble recolección de inputs queda como está
+
+*(Observado durante la implementación.)*
+
+`getCurrentAccount` llama a `collectDebtInputs` para el extracto y después a `getHouseholdOutlook`, que **vuelve a llamarla** para la proyección: todo el conjunto de entrada se trae dos veces por carga de página. Con la paginación eso ahora cuesta el doble de round-trips.
+
+Es preexistente y **no se toca**: deduplicarlo es una optimización, y "no se optimiza performance" es un non-goal explícito de este change. Se deja documentado con un assert que fija el número real (4 round-trips a `settlement`, no 2) en vez de esconderlo, y la garantía que este change sí da —una sola lectura por recolección— se ancla por separado sobre `getHouseholdDebt`. Candidato claro para un change de eficiencia posterior.
+
 ### D8 — Test de read-path con techo artificial
 
 `packages/shared` no tiene infra de tests: se le agrega `vitest` como devDependency y los scripts `test` / `test:watch`, espejando `packages/dashboard`.

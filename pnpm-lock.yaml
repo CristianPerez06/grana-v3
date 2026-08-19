@@ -461,6 +461,10 @@ importers:
       '@grana/validation':
         specifier: workspace:*
         version: link:../validation
+    devDependencies:
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@20.19.41)(happy-dom@15.11.7)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.47.1)(yaml@2.9.0)
 
   packages/supabase:
     dependencies:

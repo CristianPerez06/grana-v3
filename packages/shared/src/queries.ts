@@ -24,6 +24,41 @@ import type {
 const CURRENCIES: BalanceCurrency[] = ['ARS', 'USD']
 const isBalanceCurrency = (c: string): c is BalanceCurrency => c === 'ARS' || c === 'USD'
 
+// ── Exhaustive paging ─────────────────────────────────────────────────────────
+
+/** Rows per round-trip. Independent of the server's `max-rows`: the loop
+ *  advances by what actually came back and stops on an empty page, so a smaller
+ *  server cap costs extra round-trips but never truncates. */
+const PAGE_SIZE = 1000
+
+/**
+ * Walk `.range()` until the set is exhausted. Every read of this module whose
+ * product is a money number goes through here (spec `shared-data-access`): a
+ * plain `.select()` is silently capped by PostgREST's server-side `max-rows` —
+ * `error === null`, fewer rows than match, no signal for the caller — and a debt
+ * derived from that is a plausible, wrong number. The `.order()` the caller
+ * fixes is what makes the paging stable; without it pages can overlap or skip.
+ *
+ * An errored page THROWS instead of ending the walk. On error PostgREST returns
+ * `data: null`, which is indistinguishable from "no more rows": treating it as
+ * the end would reintroduce the exact silent truncation this helper exists to
+ * prevent, only mid-set instead of at the ceiling.
+ */
+async function fetchAllRows<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+): Promise<T[]> {
+  const rows: T[] = []
+  for (let offset = 0; ; ) {
+    const { data, error } = await page(offset, offset + PAGE_SIZE - 1)
+    if (error) throw error
+    const batch = data ?? []
+    if (batch.length === 0) break
+    rows.push(...batch)
+    offset += batch.length
+  }
+  return rows
+}
+
 async function currentUserId(supabase: GranaSupabaseClient): Promise<string | null> {
   // Locally-verified claims (no network getUser): the id is only used to
   // filter own rows, which RLS already enforces.
@@ -113,40 +148,68 @@ export async function getHousehold(supabase: GranaSupabaseClient): Promise<House
 async function collectDebtInputs(
   supabase: GranaSupabaseClient,
   householdId: string,
-): Promise<{ projectable: ProjectableSplit[]; settlements: DebtSettlement[] }> {
-  const { data: splitRows } = await supabase
-    .from('shared_expense_split')
-    .select('transaction_id, user_id, amount_assigned')
-    .eq('household_id', householdId)
+): Promise<{ projectable: ProjectableSplit[]; settlements: SettlementRow[] }> {
+  // Deterministic order: `unique (transaction_id, user_id)` (mig. 0023) makes
+  // the pair a total order, so the pages can neither overlap nor skip.
+  const splitRows = await fetchAllRows<{
+    transaction_id: string
+    user_id: string
+    amount_assigned: number
+  }>((from, to) =>
+    supabase
+      .from('shared_expense_split')
+      .select('transaction_id, user_id, amount_assigned')
+      .eq('household_id', householdId)
+      .order('transaction_id', { ascending: true })
+      .order('user_id', { ascending: true })
+      .range(from, to),
+  )
 
-  // Second query for the linked movements (avoids fragile PostgREST embeds —
-  // same approach as attachLinkedExpenses in transactions/queries).
-  const txIds = [...new Set((splitRows ?? []).map((r) => r.transaction_id))]
-  const txById = new Map<
-    string,
-    {
-      user_id: string
-      type: string
-      is_shared: boolean
-      currency_code: string
-      date: string
-      due_date: string | null
-      received_at: string | null
-      cancelled_at: string | null
-      description: string | null
-      category: { name: string } | null
-      linked_transaction_id: string | null
-    }
-  >()
-  if (txIds.length) {
-    const { data: txs } = await supabase
+  // The movements are fetched by PREDICATE, not by a client-built id list. The
+  // symmetric invariant of mig. 0048 (`is_shared = false` ⇒ no splits) makes the
+  // two sets equivalent: every transaction carrying a split of this household
+  // falls inside the predicate. It also brings rows with no splits of their own
+  // (the installment PARENT), which is inert — `projectable` is built by walking
+  // the SPLITS and looking the movement up, so a spare map entry contributes
+  // nothing.
+  //
+  // Why not `.in('id', txIds)`: paging does not fix its second failure mode. A
+  // long id list is serialised into the query string, and past a few thousand
+  // uuids the URL crosses PostgREST's length limit and the request fails
+  // outright — a ceiling independent of `max-rows`.
+  const txRows = await fetchAllRows<{
+    id: string
+    user_id: string
+    type: string
+    is_shared: boolean
+    currency_code: string
+    date: string
+    due_date: string | null
+    received_at: string | null
+    cancelled_at: string | null
+    description: string | null
+    linked_transaction_id: string | null
+    category: { name: string } | null
+  }>((from, to) =>
+    supabase
       .from('transactions')
       .select(
         'id, user_id, type, is_shared, currency_code, date, due_date, received_at, cancelled_at, description, linked_transaction_id, category:categories(name)',
       )
-      .in('id', txIds)
-    for (const t of txs ?? [])
-      txById.set(t.id, {
+      .eq('household_id', householdId)
+      .eq('is_shared', true)
+      // The PK is a total order and the cheapest stable one. Unlike
+      // `getAccountMovementsAscending`, this consumer does not want chronological
+      // rows — `deriveCurrentAccount` sorts by impact date itself; the order here
+      // only has to be stable.
+      .order('id', { ascending: true })
+      .range(from, to),
+  )
+
+  const txById = new Map(
+    txRows.map((t) => [
+      t.id,
+      {
         user_id: t.user_id,
         type: t.type,
         is_shared: t.is_shared,
@@ -158,27 +221,49 @@ async function collectDebtInputs(
         description: t.description,
         category: (t.category as unknown as { name: string } | null) ?? null,
         linked_transaction_id: t.linked_transaction_id,
-      })
-  }
+      },
+    ]),
+  )
 
   // Reimbursements carry no description/category of their own — resolve a label
   // from the expense they offset (linked_transaction_id), like getSharedExpenses.
-  const linkedIds = [
-    ...new Set(
-      [...txById.values()]
-        .filter((t) => t.type === 'reimbursement' && t.linked_transaction_id)
-        .map((t) => t.linked_transaction_id as string),
-    ),
-  ]
+  // The offset expense is itself a shared movement of this household, so it is
+  // already in `txById`; the residual read below covers only ids that are not,
+  // and is expected to stay empty (it costs no round-trip when it is).
   const linkedLabelById = new Map<string, string>()
-  if (linkedIds.length) {
-    const { data: linked } = await supabase
-      .from('transactions')
-      .select('id, description, category:categories(name)')
-      .in('id', linkedIds)
-    for (const e of linked ?? []) {
-      const cat = (e.category as unknown as { name: string } | null) ?? null
-      const label = e.description ?? cat?.name ?? null
+  const labelOf = (t: { description: string | null; category: { name: string } | null }) =>
+    t.description ?? t.category?.name ?? null
+
+  const missingLinkedIds: string[] = []
+  for (const t of txById.values()) {
+    if (t.type !== 'reimbursement' || !t.linked_transaction_id) continue
+    const target = txById.get(t.linked_transaction_id)
+    if (target) {
+      const label = labelOf(target)
+      if (label) linkedLabelById.set(t.linked_transaction_id, label)
+    } else {
+      missingLinkedIds.push(t.linked_transaction_id)
+    }
+  }
+
+  if (missingLinkedIds.length) {
+    const linked = await fetchAllRows<{
+      id: string
+      description: string | null
+      category: { name: string } | null
+    }>((from, to) =>
+      supabase
+        .from('transactions')
+        .select('id, description, category:categories(name)')
+        .in('id', [...new Set(missingLinkedIds)])
+        .order('id', { ascending: true })
+        .range(from, to),
+    )
+    for (const e of linked) {
+      const label = labelOf({
+        description: e.description,
+        category: (e.category as unknown as { name: string } | null) ?? null,
+      })
       if (label) linkedLabelById.set(e.id, label)
     }
   }
@@ -217,12 +302,37 @@ async function collectDebtInputs(
     ]
   })
 
-  const { data: settleRows } = await supabase
-    .from('settlement')
-    .select('payer_id, receiver_id, amount, currency_code')
-    .eq('household_id', householdId)
+  // Fetched ONCE, with the rich columns, and projected per consumer below.
+  // `getCurrentAccount` used to read this table a second time for `id`/`status`/
+  // dates: besides the extra round-trip, two unordered reads of the same table
+  // could disagree about which rows they saw.
+  const settlements = await fetchAllRows<SettlementRow>((from, to) =>
+    supabase
+      .from('settlement')
+      .select('id, payer_id, receiver_id, amount, currency_code, status, created_at, resolved_at')
+      .eq('household_id', householdId)
+      .order('id', { ascending: true })
+      .range(from, to),
+  )
 
-  const settlements: DebtSettlement[] = (settleRows ?? []).flatMap((s) =>
+  return { projectable, settlements }
+}
+
+/** A settlement as stored, before either consumer's projection. */
+type SettlementRow = {
+  id: string
+  payer_id: string
+  receiver_id: string
+  amount: number
+  currency_code: string
+  status: string
+  created_at: string
+  resolved_at: string | null
+}
+
+/** Projection for the debt math: amount + direction, always counting. */
+function toDebtSettlements(rows: SettlementRow[]): DebtSettlement[] {
+  return rows.flatMap((s) =>
     isBalanceCurrency(s.currency_code)
       ? [
           {
@@ -235,8 +345,33 @@ async function collectDebtInputs(
         ]
       : [],
   )
+}
 
-  return { projectable, settlements }
+/** Projection for the ledger: carries id, date and status so the extracto can
+ *  render each entry and offer the revert action. */
+function toLedgerSettlements(rows: SettlementRow[]): LedgerSettlement[] {
+  return rows.flatMap((s) => {
+    if (!isBalanceCurrency(s.currency_code)) return []
+    const status: LedgerSettlement['status'] =
+      s.status === 'pending_receipt'
+        ? 'pending'
+        : s.status === 'completed'
+          ? 'completed'
+          : (s.status as LedgerSettlement['status']) // 'reversed' | 'contra' (Fase B)
+    return [
+      {
+        currencyCode: s.currency_code,
+        id: s.id,
+        // Full timestamp (not sliced) so a settlement sorts AFTER same-day
+        // expenses (which carry date-only) → the latest one shows on top.
+        date: s.resolved_at ?? s.created_at,
+        payerId: s.payer_id,
+        receiverId: s.receiver_id,
+        amount: s.amount,
+        status,
+      },
+    ]
+  })
 }
 
 /** Next `count` months after `fromYm` ('YYYY-MM'), as 'YYYY-MM' strings. */
@@ -267,11 +402,12 @@ export async function getHouseholdDebt(
 
   const ref = asOf ?? formatDateISO(getTodayAR())
   const { projectable, settlements } = await collectDebtInputs(supabase, household.id)
+  const debtSettlements = toDebtSettlements(settlements)
   const [a, b] = household.members.map((m) => m.userId)
 
   const result = {} as DebtByCurrency
   for (const currency of CURRENCIES) {
-    result[currency] = householdDebtAt(projectable, settlements, currency, ref, a, b)
+    result[currency] = householdDebtAt(projectable, debtSettlements, currency, ref, a, b)
   }
   return result
 }
@@ -289,6 +425,7 @@ export async function getHouseholdOutlook(
 
   const today = formatDateISO(getTodayAR())
   const { projectable, settlements } = await collectDebtInputs(supabase, household.id)
+  const debtSettlements = toDebtSettlements(settlements)
   const userId = await currentUserId(supabase)
   // Member A is the current user when known, else creation order.
   const ids = household.members.map((m) => m.userId)
@@ -306,10 +443,17 @@ export async function getHouseholdOutlook(
     const baseline =
       computeHouseholdBalances(
         projectable.map((s) => gateSplit(s, today)),
-        settlements,
+        debtSettlements,
         currency,
       )[a] ?? 0
-    result[currency] = householdOutlook(projectable, settlements, currency, asOfByMonth, a, baseline)
+    result[currency] = householdOutlook(
+      projectable,
+      debtSettlements,
+      currency,
+      asOfByMonth,
+      a,
+      baseline,
+    )
   }
   return result
 }
@@ -343,35 +487,11 @@ export async function getCurrentAccount(supabase: GranaSupabaseClient): Promise<
   const partnerName = nameById[b] ?? ''
 
   const today = formatDateISO(getTodayAR())
-  const { projectable } = await collectDebtInputs(supabase, household.id)
+  const { projectable, settlements } = await collectDebtInputs(supabase, household.id)
 
-  // Ledger settlements carry id/date/status (richer than the debt's DebtSettlement).
-  const { data: settleRows } = await supabase
-    .from('settlement')
-    .select('id, payer_id, receiver_id, amount, currency_code, status, created_at, resolved_at')
-    .eq('household_id', household.id)
-  const ledgerSettlements: LedgerSettlement[] = (settleRows ?? []).flatMap((s) => {
-    if (!isBalanceCurrency(s.currency_code)) return []
-    const status: LedgerSettlement['status'] =
-      s.status === 'pending_receipt'
-        ? 'pending'
-        : s.status === 'completed'
-          ? 'completed'
-          : (s.status as LedgerSettlement['status']) // 'reversed' | 'contra' (Fase B)
-    return [
-      {
-        currencyCode: s.currency_code,
-        id: s.id,
-        // Full timestamp (not sliced) so a settlement sorts AFTER same-day
-        // expenses (which carry date-only) → the latest one shows on top.
-        date: s.resolved_at ?? s.created_at,
-        payerId: s.payer_id,
-        receiverId: s.receiver_id,
-        amount: s.amount,
-        status,
-      },
-    ]
-  })
+  // Ledger settlements carry id/date/status (richer than the debt's
+  // DebtSettlement) — same rows `collectDebtInputs` already fetched, projected.
+  const ledgerSettlements = toLedgerSettlements(settlements)
 
   const byCurrency = {} as Record<BalanceCurrency, CurrentAccount>
   for (const currency of CURRENCIES) {
@@ -429,6 +549,32 @@ type CategoryHandle =
   | null
 type TaxonomyHandle = { name: string; canonical_name: string; user_id: string | null } | null
 
+/** Accrual-scoped expense row, as selected by `getSharedAccruedMovements`. */
+type ExpRow = {
+  id: string
+  type: string
+  description: string | null
+  date: string
+  due_date: string | null
+  amount: number
+  currency_code: string
+  user_id: string
+  installments_total: number | null
+  category: CategoryHandle
+  subcategory: TaxonomyHandle
+}
+
+/** Received shared reimbursement row (feeds the NET). */
+type ReimbRow = {
+  id: string
+  description: string | null
+  date: string
+  due_date: string | null
+  amount: number
+  currency_code: string
+  user_id: string
+}
+
 /**
  * Shared movements of the household scoped by **DEVENGADO** (accrual): EXPENSES
  * counted by purchase `date` (each installment CHILD in its month; the PARENT
@@ -455,47 +601,62 @@ export async function getSharedAccruedMovements(
   const start = `${month}-01`
   const end = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
 
-  const [expRes, reimbRes] = await Promise.all([
+  // Both reads keep their `[start, end)` month window — narrowing by a domain
+  // predicate is compatible with "complete by construction". What is not is
+  // TRUNCATING inside that window, which the previous `.limit(500)` did: past
+  // 500 movements in a month "Gastaron juntos" and the NET silently undercounted.
+  const [expTxs, reimbTxs] = await Promise.all([
     // Expenses: `is_parent = false` → singles, card consumos and each cuota by its date.
-    supabase
-      .from('transactions')
-      .select(
-        'id, type, description, date, due_date, amount, currency_code, user_id, installments_total, category:categories(id, name, canonical_name, user_id, icon, color), subcategory:subcategories(name, canonical_name, user_id)',
-      )
-      .eq('household_id', household.id)
-      .eq('is_shared', true)
-      .eq('type', 'expense')
-      .eq('is_parent', false)
-      .gte('date', start)
-      .lt('date', end)
-      .limit(500),
+    fetchAllRows<ExpRow>((from, to) =>
+      supabase
+        .from('transactions')
+        .select(
+          'id, type, description, date, due_date, amount, currency_code, user_id, installments_total, category:categories(id, name, canonical_name, user_id, icon, color), subcategory:subcategories(name, canonical_name, user_id)',
+        )
+        .eq('household_id', household.id)
+        .eq('is_shared', true)
+        .eq('type', 'expense')
+        .eq('is_parent', false)
+        .gte('date', start)
+        .lt('date', end)
+        .order('id', { ascending: true })
+        .range(from, to),
+    ),
     // Received, non-cancelled shared reimbursements by their date (for the NET).
-    supabase
-      .from('transactions')
-      .select('id, description, date, due_date, amount, currency_code, user_id')
-      .eq('household_id', household.id)
-      .eq('is_shared', true)
-      .eq('type', 'reimbursement')
-      .not('received_at', 'is', null)
-      .is('cancelled_at', null)
-      .gte('date', start)
-      .lt('date', end)
-      .limit(500),
+    fetchAllRows<ReimbRow>((from, to) =>
+      supabase
+        .from('transactions')
+        .select('id, description, date, due_date, amount, currency_code, user_id')
+        .eq('household_id', household.id)
+        .eq('is_shared', true)
+        .eq('type', 'reimbursement')
+        .not('received_at', 'is', null)
+        .is('cancelled_at', null)
+        .gte('date', start)
+        .lt('date', end)
+        .order('id', { ascending: true })
+        .range(from, to),
+    ),
   ])
-  const expTxs = expRes.data ?? []
-  const reimbTxs = reimbRes.data ?? []
   if (!expTxs.length && !reimbTxs.length) return []
 
   // The current user's share (for "tu parte"); each row carries its own split.
+  // One split row per movement, so this set is as large as the month's movements
+  // — it used to be able to land on exactly `max-rows` and truncate "tu parte".
   const ids = [...expTxs, ...reimbTxs].map((t) => t.id)
   const shareByTx = new Map<string, number>()
   if (ids.length) {
-    const { data: rows } = await supabase
-      .from('shared_expense_split')
-      .select('transaction_id, amount_assigned')
-      .in('transaction_id', ids)
-      .eq('user_id', userId)
-    for (const r of rows ?? []) shareByTx.set(r.transaction_id, Number(r.amount_assigned))
+    const rows = await fetchAllRows<{ transaction_id: string; amount_assigned: number }>(
+      (from, to) =>
+        supabase
+          .from('shared_expense_split')
+          .select('transaction_id, amount_assigned')
+          .in('transaction_id', ids)
+          .eq('user_id', userId)
+          .order('transaction_id', { ascending: true })
+          .range(from, to),
+    )
+    for (const r of rows) shareByTx.set(r.transaction_id, Number(r.amount_assigned))
   }
 
   const nameById = new Map(household.members.map((mm) => [mm.userId, mm.fullName]))
