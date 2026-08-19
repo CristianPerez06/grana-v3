@@ -526,23 +526,24 @@ A diferencia del hero anterior, el nuevo hero **SÍ** lleva chips de contexto (f
 - **THEN** la fila de chips incluye la fecha, el medio de pago, la categoría y la subcategoría
 - **AND** el chip del medio de pago NO muestra ningún número de tarjeta, solo el nombre del medio
 
-### Requirement: Las acciones del detalle viven en un kebab menu
+### Requirement: Las acciones del detalle viven en la topbar
 
-El sistema SHALL exponer las acciones del detalle en la **topbar** de la pantalla, no en un kebab ni como botones planos al pie. En **desktop**, **Editar** SHALL ser un botón sólido navy a la derecha de la topbar y **Eliminar** un icon button (con hover en tono peligro). En **mobile**, la topbar es sticky: las acciones secundarias (incluida Eliminar) colapsan en un menú **"···"**, y **Editar** SHALL renderearse como un **botón fijo full-width en una barra inferior** (thumb-reach, respetando `safe-area-inset-bottom`).
+El sistema SHALL exponer las acciones del detalle en la **topbar** de la pantalla, no en un kebab, no en un menú "···" y no como botones al pie. **Eliminar** y **Editar** SHALL ser dos icon buttons contiguos a la derecha de la topbar —Eliminar con hover en tono peligro, Editar en sólido navy—, **con la misma disposición en todos los viewports y en las tres superficies** (web escritorio, web en viewport angosto y app nativa). En viewport angosto la topbar es sticky, de modo que las dos acciones quedan a la vista durante todo el scroll. Cada plataforma SHALL adaptar el tratamiento visual a su propio header (la app nativa dibuja los iconos en blanco sobre el `PageHeader` navy); lo que NO SHALL divergir es la disposición: dos iconos, juntos, en la topbar.
 
 Las acciones disponibles dependen de los permisos del usuario y del editable-state del movimiento (igual que hoy): **Editar** abre el drawer de edición en contexto cuando está disponible, o navega a `[txId]/edit`; **Eliminar** abre el `AlertDialog` con copy contextual (parent / card payment / default). Cuando el movimiento no permite ninguna acción, la topbar deja el slot de acciones vacío.
 
-#### Scenario: En desktop, Editar y Eliminar están en la topbar
+#### Scenario: Editar y Eliminar están en la topbar, en cualquier viewport
 
-- **WHEN** el sistema renderiza en viewport ancho el detalle de un gasto editable y eliminable
-- **THEN** la topbar muestra a la derecha el botón sólido "Editar" y un icon button de "Eliminar"
-- **AND** no se renderea ningún menú kebab `⋯`
+- **WHEN** el sistema renderiza el detalle de un gasto editable y eliminable, en viewport ancho o angosto
+- **THEN** la topbar muestra a la derecha dos icon buttons contiguos: "Eliminar" y "Editar"
+- **AND** no se renderea ningún menú kebab `⋯` ni menú "···"
+- **AND** no se renderea ninguna barra inferior fija con la acción de editar
 
-#### Scenario: En mobile, Editar pasa a una barra inferior fija
+#### Scenario: En viewport angosto la topbar acompaña el scroll
 
-- **WHEN** el sistema renderiza en viewport angosto (≤600px) el detalle de un gasto editable
-- **THEN** la topbar es sticky y las acciones secundarias viven en un menú "···"
-- **AND** "Editar" se muestra como un botón fijo full-width en una barra inferior
+- **WHEN** el usuario baja por el detalle en viewport angosto (≤600px)
+- **THEN** la topbar queda sticky y las dos acciones siguen accesibles sin volver al principio
+- **AND** el final de la página no queda tapado por ninguna barra fija
 
 #### Scenario: Editar abre el drawer de edición en contexto
 
@@ -693,7 +694,7 @@ El sistema SHALL permitir editar los campos mutables de una transacción según 
 - **Ingresos y gastos en cash/bank**: monto, fecha, descripción, categoría y subcategoría. Los campos `type`, `account_id` y `currency_code` son inmutables.
 - **Transferencias**: ver requirement específico.
 - **Ajustes**: ver requirement específico.
-- **Consumos en tarjeta (1 cuota, `status='pending'`)**: monto, fecha, descripción, categoría, subcategoría. NO editable: cuenta, moneda, cuotas. Si `status='paid'`, sólo editables descripción y categoría.
+- **Consumos en tarjeta (1 cuota, `status='pending'`)**: monto, fecha, descripción, categoría, subcategoría. NO editable: cuenta, moneda, cuotas. Si `status='paid'`, sólo editables descripción y categoría — el consumo **sigue siendo editable, no se congela**: el detalle SHALL ofrecer la acción Editar y el formulario SHALL mostrar monto y fecha como contexto read-only. Recategorizar un gasto ya pagado es una corrección corriente. **Borrarlo** sí SHALL quedar bloqueado: deshacer un resumen liquidado se hace desde el período, y `period_payments` lo impide con una FK `RESTRICT`.
 - **Compras en cuotas (madre)**: ver requirement específico "Editar una compra en cuotas".
 
 Los campos `type`, `account_id`, `currency_code`, `is_parent` y `parent_id` SHALL ser siempre inmutables post-creación.
@@ -724,6 +725,13 @@ Los campos `type`, `account_id`, `currency_code`, `is_parent` y `parent_id` SHAL
 - **WHEN** el usuario intenta editar el monto de un consumo con `status='paid'`
 - **THEN** el sistema rechaza el cambio de monto (campo inmutable post-pago)
 - **AND** acepta cambios de descripción o categoría
+
+#### Scenario: Un consumo pagado se puede recategorizar
+
+- **WHEN** el dueño abre el detalle de un consumo de tarjeta cuyo resumen ya se pagó (`status='paid'`)
+- **THEN** el detalle ofrece la acción Editar
+- **AND** NO ofrece la acción Borrar
+- **AND** el formulario de edición muestra monto y fecha como contexto read-only, y permite cambiar categoría, subcategoría y descripción
 
 ### Requirement: El usuario puede eliminar una transacción
 
@@ -1584,9 +1592,23 @@ El módulo global de Movimientos (`/transactions`) SHALL ofrecer el **punto de e
 
 El sistema SHALL usar **un único formulario** para crear y editar todo tipo de movimiento (ingreso, gasto, transferencia, ajuste, cambio de moneda, consumo de tarjeta y compra en cuotas). En **modo creación** el usuario elige el tipo y la cuenta dentro del formulario; en **modo edición** el tipo, la moneda y la(s) cuenta(s) se muestran como contexto inmutable y sólo se ofrecen los campos editables.
 
+Un campo bloqueado NO SHALL desaparecer de la pantalla: cuando `getEditableFields` bloquea el **monto** o la **fecha** —un consumo de tarjeta ya pagado, una compra en cuotas madre con alguna cuota paga—, el formulario SHALL mostrar ese valor como contexto read-only. Bloquear un campo significa impedir su edición, nunca ocultar el dato: sin el monto y la fecha a la vista, el usuario estaría editando un movimiento cuyos dos hechos identificatorios no aparecen en ninguna parte.
+
+**El contexto inmutable enuncia sólo lo que no está a la vista en otro lado.** En edición, el formulario SHALL mostrar como filas read-only —etiqueta, valor y caption de "no editable"— únicamente: la **cuenta** (o las dos puntas de una transferencia o cambio), la **cantidad de cuotas** de una compra en cuotas madre, y la **fecha** cuando `getEditableFields` la bloquea. NO SHALL enunciar el **tipo** ni la **moneda**: el tipo se lee del signo y el color del monto, y la moneda es el indicador del propio bloque del monto. Restar esas dos filas importa: son datos sobre los que el usuario no puede actuar y empujaban hacia abajo los campos que vino a editar.
+
+**El monto conserva siempre su bloque de héroe.** Es el número que identifica al movimiento, así que NO SHALL degradarse a una fila ni omitirse. Cuando `getEditableFields` lo bloquea, el héroe SHALL renderizarse **read-only** —mismo bloque y mismo cuerpo tipográfico, sin campo de entrada, sin calculadora, con la moneda como indicador estático y el caption de "no editable"—.
+
+Ambas reglas valen para las tres superficies (web escritorio, web en viewport angosto y app nativa).
+
 Qué campos son editables y cuáles visibles según el tipo y el estado del movimiento SHALL derivarse de una **función pura** (`getEditableFields`) en `@grana/money-logic`, única fuente de verdad de esas reglas, reutilizable por web y mobile. Esta función NO cambia las reglas de editabilidad ya especificadas (ingreso/gasto, transferencia, ajuste, consumo `pending`/`paid`, madre de cuotas con o sin cuota pagada, pago de resumen sin categoría); las centraliza.
 
 En **modo creación**, el selector de cuenta SHALL mostrar el **saldo disponible actual de cada cuenta por moneda** (bimoneda). Las tarjetas de crédito NO muestran saldo (son off-ledger).
+
+**Cambios sin guardar.** El formulario SHALL exponer si algún campo que el usuario puede cambiar difiere de lo que el formulario abrió (estado *dirty*), derivado en el hook compartido y no en cada plataforma. Sobre eso:
+
+- En **modo edición**, el CTA de guardar SHALL estar deshabilitado mientras no haya ningún cambio. Guardar sin cambios dispararía igual la mutation, invalidaría el cache y cerraría como si hubiera pasado algo.
+- Cuando el formulario vive en un **overlay** (el drawer de alta y el de edición en web), cerrarlo con cambios sin guardar SHALL pedir confirmación antes de descartarlos, y SHALL hacerlo por **todos** los caminos de cierre —la ✕ del propio formulario, `Esc` y el click en el scrim—, no sólo por el botón. La confirmación ofrece descartar o seguir editando; descartar cierra y pierde los cambios, seguir editando deja el formulario intacto.
+- Un submit exitoso NO SHALL pedir confirmación: ya no hay nada que perder.
 
 #### Scenario: El mismo formulario crea y edita
 
@@ -1599,6 +1621,39 @@ En **modo creación**, el selector de cuenta SHALL mostrar el **saldo disponible
 - **WHEN** el formulario renderiza un movimiento en modo edición
 - **THEN** los campos editables y visibles se determinan por `getEditableFields` según el tipo y estado del movimiento
 - **AND** un consumo de tarjeta `paid` o una compra en cuotas con alguna cuota `paid` sólo permite editar categoría/descripción (monto y fecha bloqueados)
+
+#### Scenario: Un monto bloqueado se muestra igual, como contexto
+
+- **WHEN** el usuario abre en edición un consumo de tarjeta ya pagado, o la madre de una compra en cuotas con alguna cuota paga
+- **THEN** el formulario NO ofrece el campo de monto ni el de fecha para editarlos
+- **AND** muestra el monto en el héroe read-only, con su signo y su símbolo de moneda, de modo que se lee igual que en el detalle
+- **AND** muestra la fecha como fila read-only, con caption de "no editable"
+
+#### Scenario: El contexto inmutable no repite lo que ya está a la vista
+
+- **WHEN** el usuario abre en edición un gasto con todos sus campos editables
+- **THEN** el contexto read-only muestra la cuenta y nada más
+- **AND** NO muestra una fila de tipo ni una de moneda: el tipo se lee del signo y el color del monto, y la moneda es el indicador del bloque del monto
+- **AND** el monto conserva su bloque de héroe, read-only si está bloqueado
+
+#### Scenario: Guardar está deshabilitado mientras no haya cambios
+
+- **WHEN** el usuario abre un movimiento en modo edición y no toca ningún campo
+- **THEN** el CTA de guardar está deshabilitado
+- **AND** en cuanto cambia un campo, se habilita
+- **AND** si deshace el cambio y vuelve al valor original, se deshabilita de nuevo
+
+#### Scenario: Cerrar el overlay con cambios pide confirmación
+
+- **WHEN** el usuario editó algún campo en el drawer y lo cierra —con la ✕, con `Esc` o clickeando el scrim—
+- **THEN** el sistema pide confirmación antes de descartar
+- **AND** "seguir editando" deja el formulario como estaba, con los cambios intactos
+- **AND** "descartar" cierra el drawer y pierde los cambios
+
+#### Scenario: Cerrar sin cambios no molesta
+
+- **WHEN** el usuario abre el drawer, no cambia nada y lo cierra
+- **THEN** el drawer se cierra directamente, sin confirmación
 
 #### Scenario: El selector de cuenta muestra el saldo por moneda
 
@@ -2821,12 +2876,13 @@ El sistema SHALL soportar, con el drawer abierto, `Esc` para cerrar el popover a
 
 ### Requirement: El drawer en modo edición ajusta chrome y CTA
 
-El sistema SHALL precargar el movimiento real al abrir el drawer en modo edición y SHALL deshabilitar el cambio de tipo. El conjunto de campos editables SHALL derivarse de `getEditableFields` (regla ya especificada para el formulario único). En modo edición el CTA SHALL decir "Guardar cambios". El borrado SHALL respetar las reglas existentes (no borrar hijas de cuotas aisladas, no borrar consumos pagados).
+El sistema SHALL precargar el movimiento real al abrir el drawer en modo edición y NO SHALL renderizar el selector de tipo: el tipo es inmutable y se enuncia como fila de contexto read-only. El conjunto de campos editables SHALL derivarse de `getEditableFields` (regla ya especificada para el formulario único). En modo edición el encabezado SHALL mostrar **solo el título** "Editar movimiento", sin eyebrow: un "EDITAR" en versalitas sobre un título que ya empieza con esa palabra la dice dos veces. El CTA SHALL decir "Guardar cambios". El borrado SHALL respetar las reglas existentes (no borrar hijas de cuotas aisladas, no borrar consumos pagados).
 
-#### Scenario: Tipo no editable en edición
+#### Scenario: El tipo no se ofrece como control en edición
 
 - **WHEN** el usuario abre un movimiento existente en el drawer de edición
-- **THEN** el selector de tipo está deshabilitado
+- **THEN** el drawer no muestra selector de tipo, en ningún viewport
+- **AND** el tipo aparece como fila de contexto read-only con caption de "no editable"
 
 #### Scenario: CTA en edición
 
@@ -2837,6 +2893,12 @@ El sistema SHALL precargar el movimiento real al abrir el drawer en modo edició
 
 - **WHEN** el usuario intenta eliminar una cuota hija desde la edición
 - **THEN** el sistema aplica las reglas de borrado existentes y no permite borrarla aislada
+
+#### Scenario: El encabezado de edición no repite la palabra
+
+- **WHEN** el usuario abre un movimiento en modo edición, en cualquier superficie
+- **THEN** el encabezado muestra únicamente "Editar movimiento"
+- **AND** NO muestra un eyebrow "EDITAR" encima
 
 ### Requirement: La lógica del formulario vive en `@grana/movement-form` y los orquestadores en `@grana/transactions-mutations`
 
@@ -3432,7 +3494,7 @@ El **hero** SHALL mostrar: banda tintada por el **tono del tipo** (gasto → ter
 
 Los **tiles core por tipo** SHALL incluir: **medio de pago** (nombre + tipo de cuenta, NUNCA número de tarjeta), **progreso de cuotas** (barra pagadas/restantes + próxima/fin) para compras en cuotas, **flujo de transferencia/cambio** (origen → destino) con el callout "no cuenta como gasto ni ingreso", **reintegro-neto** (pagaste + reintegro = costo neto, con el gasto vinculado **tappable** a su detalle), **reparto compartido** ("Te toca pagar" + "Dividido entre", sin badge de liquidación) y **descripción**. El detalle SHALL mostrar un estado sólo cuando informa algo real (*Reintegrado* / *Completada* / *Acreditado*).
 
-El detalle SHALL exponer las afordancias de **editar** y **borrar** el movimiento, gateadas por permiso: SHALL calcular `canManage` (= el usuario actual es el dueño/pagador), `canEdit` (`canManage` && cuenta resoluble && `status !== 'paid'` && no es cuota hija) y `canDelete` (`canManage` && cuenta resoluble && sin `parent_id` && `status !== 'paid'`), con las mismas reglas que el detalle web. Un movimiento compartido pagado por el **otro** miembro SHALL ser legible pero NO editable ni borrable (las acciones se ocultan). La acción **Editar** SHALL navegar a `/transactions/[txId]/edit`; la acción **Borrar** SHALL confirmar de forma destructiva antes de ejecutar (ver el requirement de edición/borrado).
+El detalle SHALL exponer las afordancias de **editar** y **borrar** el movimiento, gateadas por permiso: SHALL calcular `canManage` (= el usuario actual es el dueño/pagador), `canEdit` (`canManage` && cuenta resoluble && no es cuota hija — un consumo con `status='paid'` **SÍ** es editable: conserva categoría y descripción, ver el requirement "El usuario puede editar una transacción") y `canDelete` (`canManage` && cuenta resoluble && sin `parent_id` && `status !== 'paid'`), con las mismas reglas que el detalle web. Un movimiento compartido pagado por el **otro** miembro SHALL ser legible pero NO editable ni borrable (las acciones se ocultan). La acción **Editar** SHALL navegar a `/transactions/[txId]/edit`; la acción **Borrar** SHALL confirmar de forma destructiva antes de ejecutar (ver el requirement de edición/borrado).
 
 Los tiles de **contexto** que requieren reads adicionales — **"Peso en el mes"** (breakdown del mes), **recurrencia** (tile + historial + banner) y **composición de pago de resumen** — quedan **fuera de este alcance**; la pantalla SHALL omitirlos sin romper para esos kinds.
 
@@ -3810,6 +3872,8 @@ La descripción de un movimiento SHALL seguir siendo opcional: nunca bloquea el 
 
 ### Requirement: El selector de tipo ofrece dos primarias y "Otros"
 
+Este requirement gobierna el **alta**. En **edición** no hay selector de tipo en ninguna superficie (ver el requirement del formulario único y el del drawer en modo edición): el tipo es inmutable, así que se enuncia como fila de contexto read-only y no como control.
+
 El formulario de alta SHALL presentar `gasto` e `ingreso` como las únicas opciones primarias fijas. Los demás tipos —`transferencia`, `ajuste` y `cambio de moneda`— SHALL quedar tras una affordance explícita ("Otros") que los ofrece gateados por su elegibilidad (`transferencia` requiere dos o más cuentas propias; `cambio de moneda` requiere capacidad bimoneda; `ajuste` está siempre disponible). La affordance "Otros" SHALL mostrarse siempre que exista al menos un tipo secundario elegible. La partición es fija y no altera ninguna regla contable ni la disponibilidad de los tipos.
 
 #### Scenario: Solo gasto e ingreso son primarios
@@ -3824,11 +3888,11 @@ El formulario de alta SHALL presentar `gasto` e `ingreso` como las únicas opcio
 - **THEN** puede elegir `transferencia` (si tiene dos o más cuentas), `ajuste` o `cambio de moneda` (si tiene capacidad bimoneda)
 - **AND** el flujo de ese tipo funciona igual que antes de este cambio
 
-#### Scenario: En edición el tipo no cambia
+#### Scenario: En edición no hay selector de tipo
 
-- **WHEN** el formulario se abre en modo edición de un movimiento existente
-- **THEN** el tipo del movimiento se muestra como contexto inmutable
-- **AND** la partición primario/"Otros" no ofrece cambiarlo
+- **WHEN** el formulario se abre en modo edición de un movimiento existente, en cualquier superficie (web escritorio, web en viewport angosto o app nativa)
+- **THEN** el formulario NO dibuja el selector de tipo — ni la partición primario/"Otros", ni el selector completo en estado deshabilitado
+- **AND** el tipo del movimiento se enuncia como fila de contexto read-only, junto a la moneda y la(s) cuenta(s), con el mismo caption de "no editable"
 
 ---
 

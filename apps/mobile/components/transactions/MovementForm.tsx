@@ -26,7 +26,8 @@ import { AccountSelectField, AccountFamilySelect, CategorySelectField } from './
 import { SelectSheet } from '../ui/SelectSheet'
 import { SheetRow } from '../ui/SelectField'
 import { colors } from '../../lib/colors'
-import { useT } from '../../lib/locale-context'
+import { useT, useLocale } from '../../lib/locale-context'
+import { formatShortDate } from './detail/format'
 import { createMovementMutators } from '../../lib/transactions/mutators'
 import { invalidateAfterMovementMutation } from '../../lib/transactions/invalidate'
 import { useQueryClient } from '@tanstack/react-query'
@@ -102,6 +103,7 @@ export function MovementForm({
   onDone,
 }: Props) {
   const t = useT()
+  const locale = useLocale()
   const queryClient = useQueryClient()
   const mutators = useMemo(() => createMovementMutators(t), [t])
 
@@ -159,6 +161,8 @@ export function MovementForm({
   // Amount hero: always in create; in edit only when the amount is editable (a
   // paid consumption / locked madre shows no amount field — web does the same).
   const showAmount = isEdit ? !!editable?.amount : true
+  // Nothing to save yet: in edit the CTA waits for a real change.
+  const submitDisabled = form.isSubmitting || (isEdit && !form.isDirty)
   // Source account: immutable context in edit, EXCEPT a statement payment whose
   // debit account can move (`editable.account`). In create, hide the selector
   // when there is a single eligible account (D2) — but transfer/exchange always
@@ -281,26 +285,16 @@ export function MovementForm({
     )
   }
 
-  // Read-only context rows shown in edit mode: the immutable fields (type,
-  // currency, account(s)). Mirror of web's `contextRows`.
+  // Immutable context in edit mode: labelled rows, but ONLY for what is not
+  // visible anywhere else on the screen. The type reads off the amount's sign and
+  // colour, the currency is the hero's chip, and the amount is the hero itself —
+  // restating them cost half a screen of rows the user cannot act on, above the
+  // fields they came to change. What survives is genuinely only here: the account
+  // (or the two ends of a transfer), the installment count of a parent purchase,
+  // and the date when `getEditableFields` locks it. Mirror of web's `contextRows`.
   const contextRows: { label: string; value: string }[] =
     isEdit && edit
       ? [
-          {
-            label: t('transactions.labels.type'),
-            value: edit.isParent
-              ? t('transactions.installment_purchase_label')
-              : t(`transactions.types.${edit.type}`),
-          },
-          { label: t('transactions.labels.currency'), value: edit.currencyCode },
-          ...(edit.isParent && edit.installmentsTotal
-            ? [
-                {
-                  label: t('transactions.labels.installments'),
-                  value: t('transactions.installments_count', { count: edit.installmentsTotal }),
-                },
-              ]
-            : []),
           ...(edit.type === 'transfer' || edit.type === 'exchange'
             ? [
                 {
@@ -315,6 +309,17 @@ export function MovementForm({
             : edit.sourceAccountName && !editable?.account
               ? [{ label: t('transactions.labels.account'), value: edit.sourceAccountName }]
               : []),
+          ...(edit.isParent && edit.installmentsTotal
+            ? [
+                {
+                  label: t('transactions.labels.installments'),
+                  value: t('transactions.installments_count', { count: edit.installmentsTotal }),
+                },
+              ]
+            : []),
+          ...(showDate
+            ? []
+            : [{ label: t('transactions.labels.date'), value: formatShortDate(form.date, locale) }]),
         ]
       : []
 
@@ -412,26 +417,33 @@ export function MovementForm({
         />
       )}
 
-      {/* Read-only context rows (edit): immutable fields as label/value with a
-          "no editable" caption. */}
-      {contextRows.length > 0 && (
-        <View className="overflow-hidden rounded-xl border border-border bg-card">
-          {contextRows.map((row, i) => (
-            <View
-              key={row.label}
-              className={`flex-row items-center justify-between gap-3 px-4 py-3 ${
-                i > 0 ? 'border-t border-border-soft' : ''
-              }`}
-            >
-              <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
-                {row.label}
-              </Text>
-              <Text className="flex-1 text-right text-[15px] font-semibold text-text" numberOfLines={1}>
-                {row.value}
-                <Text className="text-xs font-normal text-text-muted"> {t('common.not_editable')}</Text>
-              </Text>
+      {/* Locked amount (a paid card consumption, an installment parent with a paid
+          cuota): the same card, read-only — no input, no calculator, currency as a
+          static chip. Mirror of web's locked hero. */}
+      {isEdit && !showAmount && (
+        <View className="rounded-2xl border border-border bg-card px-4 pb-4 pt-3.5">
+          <View className="flex-row items-start justify-between">
+            <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
+              {t('transactions.form.amount_label')}
+            </Text>
+            <View className="rounded-lg border border-border bg-border-soft px-2.5 py-1">
+              <Text className="text-xs font-bold text-text">{form.currencyCode}</Text>
             </View>
-          ))}
+          </View>
+          <View className="mt-2 flex-row items-center justify-center">
+            {signChar !== '' && (
+              <Text className={`text-[34px] font-bold ${amountColorClass}`}>{signChar}</Text>
+            )}
+            <Text className={`pl-1 text-[34px] font-bold ${amountColorClass}`}>
+              {CURRENCY_SYMBOL[form.currencyCode]}
+            </Text>
+            <Text className={`ml-1 text-[34px] font-bold ${amountColorClass}`}>
+              {formatForDisplay(form.amount)}
+            </Text>
+          </View>
+          <Text className="mt-2 text-center text-[12px] text-text-soft">
+            {t('common.not_editable')}
+          </Text>
         </View>
       )}
 
@@ -496,6 +508,29 @@ export function MovementForm({
               {t('transactions.drawer.helper_adjustment')}
             </Text>
           )}
+        </View>
+      )}
+
+      {/* Immutable context (edit): the few facts that live nowhere else, as
+          label/value rows with a "no editable" caption. Mirror of web's card. */}
+      {contextRows.length > 0 && (
+        <View className="overflow-hidden rounded-xl border border-border bg-card">
+          {contextRows.map((row, i) => (
+            <View
+              key={row.label}
+              className={`flex-row items-center justify-between gap-3 px-4 py-3 ${
+                i > 0 ? 'border-t border-border-soft' : ''
+              }`}
+            >
+              <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
+                {row.label}
+              </Text>
+              <Text className="flex-1 text-right text-[15px] font-semibold text-text" numberOfLines={1}>
+                {row.value}
+                <Text className="text-xs font-normal text-text-muted"> {t('common.not_editable')}</Text>
+              </Text>
+            </View>
+          ))}
         </View>
       )}
 
@@ -1330,14 +1365,16 @@ export function MovementForm({
 
       {form.formError && <FormError message={form.formError} />}
 
-      {/* Submit */}
+      {/* Submit. In edit the CTA stays disabled until something actually changed:
+          "Guardar cambios" with nothing to save is a no-op that still fires the
+          mutation, invalidates the cache and closes as if it had done something. */}
       <Pressable
         onPress={form.onSubmit}
-        disabled={form.isSubmitting}
+        disabled={submitDisabled}
         accessibilityRole="button"
-        accessibilityState={{ disabled: form.isSubmitting }}
+        accessibilityState={{ disabled: submitDisabled }}
         className={`mt-1 h-14 flex-row items-center justify-center rounded-2xl bg-emerald ${
-          form.isSubmitting ? 'opacity-60' : ''
+          submitDisabled ? 'opacity-60' : ''
         }`}
       >
         {form.isSubmitting ? (

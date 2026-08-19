@@ -58,7 +58,6 @@ import { Money, parseMoneyInput } from '@grana/validation'
 import {
   formatDateISO,
   getTodayAR,
-  type MovementType,
 } from '@grana/money-logic'
 import {
   graftArchivedTaxonomy,
@@ -123,6 +122,12 @@ type Props = {
   variant?: 'page' | 'drawer'
   /** Drawer chrome: close handler for the header ✕ and footer cancel paths. */
   onClose?: () => void
+  /**
+   * Reports whether the form has unsaved changes. The host wires its own close
+   * handler (which Radix also calls for Esc and scrim clicks) through a confirm
+   * when this is true — see `useDiscardGuard`.
+   */
+  onDirtyChange?: (dirty: boolean) => void
   /** The user's household when it has two members — enables the "Compartir" toggle. */
   household?: Household | null
   /**
@@ -268,6 +273,7 @@ export const MovementForm = ({
   onSuccess,
   variant = 'page',
   onClose,
+  onDirtyChange,
   household,
   appStartDate = null,
   showFirstMovementGuidance = false,
@@ -289,13 +295,6 @@ export const MovementForm = ({
     transfer: t('tabs.transfer'),
     adjustment: t('tabs.adjustment'),
     exchange: t('tabs.exchange'),
-  }
-  const TYPE_LABELS: Record<MovementType, string> = {
-    income: t('types.income'),
-    expense: t('types.expense'),
-    transfer: t('types.transfer'),
-    adjustment: t('types.adjustment'),
-    exchange: t('types.exchange'),
   }
   // UI-only state owned by the form (popover open, drill, refs, autofocus).
   // All form domain state + cascades + submit dispatcher live in the hook.
@@ -451,6 +450,7 @@ export const MovementForm = ({
     frequentChips,
     negativeWarning,
     isSubmitting: isPending,
+    isDirty,
     formError,
     onSubmit: hookSubmit,
     swapAccounts,
@@ -460,6 +460,14 @@ export const MovementForm = ({
     fetchSuggestionForDescription,
   } = form
   const cashBank = cashBankAccounts
+
+  // The host owns every close path — the X calls its `onClose`, and Radix routes
+  // Esc and scrim clicks to the same handler — so it is the host that guards the
+  // close. It only needs to know whether there is anything to lose.
+  useEffect(() => {
+    onDirtyChange?.(isDirty)
+  }, [isDirty, onDirtyChange])
+
   // Categories are projected locally to keep the rich web type (icon, color,
   // canonical_name, is_system) — the hook only narrows to id+type. The graft
   // has to be repeated here for the same reason: the hook's copy of the tree
@@ -539,17 +547,31 @@ export const MovementForm = ({
   }
 
 
-  // Read-only context rows shown in edit mode (immutable fields).
+  const formatDateValue = (d: string) => {
+    const [y, m, day] = d.split('-').map(Number)
+    const label = new Date(y, m - 1, day).toLocaleDateString('es-AR', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    })
+    return d === todayStr() ? `${t('drawer.today')} · ${label}` : label
+  }
+
+  // Immutable context in edit mode: labelled rows, but ONLY for what is not
+  // visible anywhere else on the screen.
+  //
+  // It used to list type, currency and account(s) — and grew to six rows once a
+  // locked amount and date joined. Most of that was already on screen: the type
+  // reads off the amount's sign and colour, the currency is the hero's chip, and
+  // the amount is the hero itself. Restating them cost half a phone screen of
+  // rows the user cannot act on, above the fields they came to change.
+  //
+  // What survives is genuinely only here: the account (or the two ends of a
+  // transfer), how many installments a parent purchase has, and the date when
+  // `getEditableFields` locks it. A collapsed one-line version of this was tried
+  // in between and read as stray text floating between cards.
   const contextRows: Array<{ label: string; value: string }> = isEdit && edit
     ? [
-        {
-          label: t('labels.type'),
-          value: edit.isParent ? t('installment_purchase_label') : TYPE_LABELS[edit.type],
-        },
-        { label: t('labels.currency'), value: edit.currencyCode },
-        ...(edit.isParent && edit.installmentsTotal
-          ? [{ label: t('labels.installments'), value: t('installments_count', { count: edit.installmentsTotal }) }]
-          : []),
         ...(edit.type === 'transfer' || edit.type === 'exchange'
           ? [
               { label: t('labels.source_account'), value: edit.sourceAccountName ?? edit.accountId },
@@ -558,8 +580,25 @@ export const MovementForm = ({
           : edit.sourceAccountName && !edit.editableFields?.account
             ? [{ label: t('labels.account'), value: edit.sourceAccountName }]
             : []),
+        ...(edit.isParent && edit.installmentsTotal
+          ? [{ label: t('labels.installments'), value: t('installments_count', { count: edit.installmentsTotal }) }]
+          : []),
+        ...(editable?.date ? [] : [{ label: t('labels.date'), value: formatDateValue(date) }]),
       ]
     : []
+  const contextCard = contextRows.length > 0 ? (
+    <div className="overflow-hidden rounded-[15px] border border-border bg-card [&>*+*]:border-t [&>*+*]:border-[#F1F3F6]">
+      {contextRows.map((row) => (
+        <div key={row.label} className="flex items-center justify-between gap-3 px-4 py-3">
+          <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">{row.label}</span>
+          <span className="truncate text-right text-[15px] font-semibold text-text">
+            {row.value}
+            <span className="ml-1.5 text-xs font-normal text-text-muted">{tCommon('not_editable')}</span>
+          </span>
+        </div>
+      ))}
+    </div>
+  ) : null
 
   const formatBalance = (account: MovementFormAccount): string =>
     account.activeCurrencies
@@ -582,7 +621,9 @@ export const MovementForm = ({
   const title = isEdit ? t('edit_title') : t('actions.register_movement')
   // Mobile create: drop the "NUEVO" eyebrow and use a single-line "Nuevo
   // movimiento" title (matches the native screen title). Desktop/edit unchanged.
-  const showEyebrow = !(isMobile && !isEdit)
+  // No eyebrow in edit: "EDITAR" over "Editar movimiento" says the same word
+  // twice. Mobile create dropped it earlier for the same reason.
+  const showEyebrow = !isEdit && !isMobile
   const headerTitle = isMobile && !isEdit ? t('new.title') : title
 
   // Amount tint + leading sign by type.
@@ -642,16 +683,6 @@ export const MovementForm = ({
       e.preventDefault()
       formRef.current?.requestSubmit()
     }
-  }
-
-  const formatDateValue = (d: string) => {
-    const [y, m, day] = d.split('-').map(Number)
-    const label = new Date(y, m - 1, day).toLocaleDateString('es-AR', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    })
-    return d === todayStr() ? `${t('drawer.today')} · ${label}` : label
   }
 
   // Adjustment balance preview (create only — edit lacks the live balance set).
@@ -877,9 +908,14 @@ export const MovementForm = ({
     <span className="text-text-soft">{t('placeholders.category')}</span>
   )
 
-  // ── Type selector (Segmented). Disabled in edit: type is immutable. ─────────
-  const typeSelector =
-    isMobile && !isEdit ? (
+  // ── Type selector — create only ─────────────────────────────────────────────
+  // In edit the type is immutable, so there is no selector at all: neither the
+  // mobile strip nor the desktop Segmented in a disabled state. A control that
+  // can't be operated is chrome that looks interactive and isn't — and "Otros"
+  // is the worst of it, since the word promises a list it never opens. The type
+  // is stated in the read-only context rows instead, next to currency and
+  // account, where the other immutable fields already live.
+  const typeSelector = isEdit ? null : isMobile ? (
       // Mobile-web: two primaries + "Otros" (secondary types behind a popover).
       <div
         className="flex gap-1 rounded-[11px] border border-border p-1"
@@ -945,7 +981,6 @@ export const MovementForm = ({
           options={(['expense', 'income', 'transfer', 'adjustment', 'exchange'] as Tab[]).map((k) => ({
             value: k,
             label: TAB_LABELS[k],
-            disabled: isEdit,
           }))}
         />
       </div>
@@ -1060,6 +1095,51 @@ export const MovementForm = ({
           <NegativeBalanceNotice projected={negativeWarning.projected} currency={negativeWarning.currency} />
         </div>
       )}
+    </div>
+  ) : isEdit ? (
+    // Locked amount (a paid card consumption, an installment parent with a paid
+    // cuota): the same card, read-only. No input, no calculator, and the currency
+    // as a static chip — nothing here can be operated. Rendering it as part of the
+    // muted context line instead was the first attempt and read as stray text: the
+    // number that identifies the movement was the smallest thing on the panel.
+    <div
+      className={`rounded-[18px] border border-border bg-card ${
+        isMobile ? 'px-4 pb-4 pt-3.5' : 'px-[22px] pb-[22px] pt-5'
+      }`}
+    >
+      <div className="flex items-start justify-between">
+        <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+          {t('labels.amount')}
+        </span>
+        <span
+          className="inline-flex items-center rounded-[9px] border border-border px-2.5 py-1 text-xs font-bold text-text"
+          style={{ backgroundColor: FIELD_BG }}
+        >
+          {effectiveCurrency}
+        </span>
+      </div>
+      <div
+        className={`flex items-baseline gap-1.5 ${isMobile ? 'mt-2 justify-center' : 'mt-2'}`}
+      >
+        {signChar && (
+          <span className={`font-bold leading-none ${isMobile ? 'text-[34px]' : 'text-[46px]'} ${amountColor}`}>
+            {signChar}
+          </span>
+        )}
+        <span
+          className={`font-semibold leading-none opacity-50 ${isMobile ? 'text-[24px]' : 'text-[27px]'} ${amountColor}`}
+        >
+          {CURRENCY_SYMBOL[effectiveCurrency]}
+        </span>
+        <span
+          className={`font-bold leading-none tracking-[-0.045em] tabular-nums ${
+            isMobile ? 'text-[34px]' : 'text-[46px]'
+          } ${amountColor}`}
+        >
+          {formatForDisplay(amount)}
+        </span>
+      </div>
+      <p className="mt-2 text-[12px] text-text-soft">{tCommon('not_editable')}</p>
     </div>
   ) : null
 
@@ -1561,19 +1641,13 @@ export const MovementForm = ({
   const cuotasRow =
     cuotasContent && isMobile ? <div className="px-4 py-3">{cuotasContent}</div> : null
 
-  const fieldGroup = (
+  // In edit the group holds only the editable rows; when none of them apply
+  // (everything is locked) there is no card to draw.
+  const hasEditRows = !!(editable?.account || editable?.category || editable?.date)
+  const fieldGroup = isEdit && !hasEditRows ? null : (
     <div className="overflow-hidden rounded-[15px] border border-border bg-card [&>*+*]:border-t [&>*+*]:border-[#F1F3F6]">
       {isEdit ? (
         <>
-          {contextRows.map((row) => (
-            <div key={row.label} className="flex items-center justify-between gap-3 px-4 py-3">
-              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">{row.label}</span>
-              <span className="truncate text-right text-[15px] font-semibold text-text">
-                {row.value}
-                <span className="ml-1.5 text-xs font-normal text-text-muted">{tCommon('not_editable')}</span>
-              </span>
-            </div>
-          ))}
           {/* Editable debit account — statement payment only (getEditableFields
               gates it). The account is a pure debit pointer here, so it can move
               to any cash/bank account with the payment currency active. */}
@@ -2739,6 +2813,7 @@ export const MovementForm = ({
   const body = (
     <>
       {hero}
+      {contextCard}
       {adjustmentSign}
       {adjustmentBanner}
       {exchangeNoCurrencyHint}
@@ -2760,6 +2835,9 @@ export const MovementForm = ({
       type="submit"
       variant="primary"
       loading={isPending}
+      // Edit only: "Guardar cambios" with nothing changed is a no-op that still
+      // fires the mutation, invalidates the cache and closes as if it had saved.
+      disabled={isEdit && !isDirty}
       data-tour={isEdit ? undefined : 'submit'}
       className="h-[52px] flex-1 rounded-[14px] text-[15.5px] font-bold tracking-[-0.01em]"
     >
@@ -2825,7 +2903,7 @@ export const MovementForm = ({
               <X className="size-4" aria-hidden />
             </button>
           </div>
-          <div className="mt-4">{typeSelector}</div>
+          {typeSelector && <div className="mt-4">{typeSelector}</div>}
         </header>
 
         <div className={`min-h-0 flex-1 overflow-y-auto px-5 sm:px-7 ${isMobile ? 'py-3' : 'py-5'}`}>

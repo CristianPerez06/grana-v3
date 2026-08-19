@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import {
   AlertTriangle,
@@ -39,6 +39,9 @@ import {
   type MovementFormAccount,
 } from '@/lib/transactions/components/movement-form'
 import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
+
+import { useDiscardGuard } from '../../_components/use-discard-guard'
+import { DiscardChangesDialog } from '../../_components/discard-changes-dialog'
 
 import { DetailTopbar } from './detail/detail-topbar'
 import { DetailActions } from './detail/detail-actions'
@@ -137,6 +140,8 @@ export const GlobalTransactionDetail = ({
   const tDetail = useTranslations('transactions.detail')
   const tRoot = useTranslations()
   const [editOpen, setEditOpen] = useState(false)
+  // Closing the edit drawer with unsaved edits (✕, Esc or scrim) asks first.
+  const editGuard = useDiscardGuard(useCallback(() => setEditOpen(false), []))
   const canUseEditDrawer = edit != null && editCategories != null
 
   const isPendingReimbursement =
@@ -162,11 +167,13 @@ export const GlobalTransactionDetail = ({
     transaction.parent_id != null ? `/transactions/${transaction.parent_id}` : null
   // Only the owner (payer) can edit/delete. A shared movement paid by the other
   // member is read-only here even though it's visible via the household RLS.
-  const canEdit =
-    canManage &&
-    actionAccountId != null &&
-    transaction.status !== 'paid' &&
-    installmentParentHref == null
+  // A `paid` card consumption stays EDITABLE: its statement is settled, so the
+  // amount and the date are frozen (`getEditableFields` locks them and the
+  // server action rejects them), but the category and the description are not —
+  // re-categorizing an expense you already paid is an ordinary correction.
+  // Deleting it is a different matter and stays blocked: undoing a settled
+  // statement belongs to the period, and `period_payments` has an FK RESTRICT.
+  const canEdit = canManage && actionAccountId != null && installmentParentHref == null
   const canDelete =
     canManage && actionAccountId != null && !transaction.parent_id && transaction.status !== 'paid'
 
@@ -497,7 +504,7 @@ export const GlobalTransactionDetail = ({
   if (monthWeightTile) tiles.push(monthWeightTile)
 
   return (
-    <div style={toneVars(detailTone)} className="mx-auto w-full max-w-[760px] pb-24 sm:pb-2">
+    <div style={toneVars(detailTone)} className="mx-auto w-full max-w-[760px] pb-6 sm:pb-2">
       <DetailTopbar
         backHref={backFor(from)}
         backLabel={t('back_label')}
@@ -516,15 +523,21 @@ export const GlobalTransactionDetail = ({
       />
 
       {canUseEditDrawer && (
-        <Drawer open={editOpen} onClose={() => setEditOpen(false)} ariaLabel={t('edit_title')}>
+        <Drawer open={editOpen} onClose={editGuard.requestClose} ariaLabel={t('edit_title')}>
           <MovementForm
             variant="drawer"
             accounts={editAccounts ?? []}
             categories={editCategories!}
             edit={edit!}
             household={editHouseholdResolved}
-            onClose={() => setEditOpen(false)}
+            onClose={editGuard.requestClose}
+            onDirtyChange={editGuard.setDirty}
             onSuccess={() => setEditOpen(false)}
+          />
+          <DiscardChangesDialog
+            open={editGuard.asking}
+            onDiscard={editGuard.discard}
+            onKeepEditing={editGuard.keepEditing}
           />
         </Drawer>
       )}

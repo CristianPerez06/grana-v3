@@ -975,7 +975,6 @@
     "card_payment_label": "Pago de tarjeta",
     "detail": {
       "actions": {
-        "menu_label": "Opciones",
         "edit": "Editar",
         "delete": "Eliminar",
         "delete_confirm": "Sí, eliminar",
@@ -984,9 +983,7 @@
         "delete_warning_parent": "Se van a eliminar la compra y todas sus cuotas. Esta acción no se puede deshacer.",
         "delete_warning_card_payment": "Al eliminar este pago, las cuotas del período volverán a pendientes. ¿Continuar?",
         "delete_blocked_card_payment": "Este movimiento es el pago de un resumen de tarjeta. Para deshacerlo —y que los movimientos del resumen vuelvan a pendientes— andá al detalle del período, en Tarjetas.",
-        "got_it": "Entendido",
-        "more": "Más",
-        "edit_movement": "Editar movimiento"
+        "got_it": "Entendido"
       },
       "installment_child_note": "Esta es una cuota. El monto se edita desde la compra original, no desde cada cuota.",
       "installment_child_link": "Ir a la compra original",
@@ -1519,6 +1516,12 @@
       "unlink": "Conservar la regla",
       "unlink_hint": "La regla sigue activa y se desvincula de este movimiento.",
       "cancel": "Cancelar"
+    },
+    "discard_changes": {
+      "title": "¿Descartar los cambios?",
+      "body": "Editaste el movimiento y todavía no guardaste. Si cerrás ahora, los cambios se pierden.",
+      "discard": "Descartar",
+      "keep_editing": "Seguir editando"
     }
   },
   "recurrences": {

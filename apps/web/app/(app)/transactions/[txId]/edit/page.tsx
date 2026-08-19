@@ -1,9 +1,7 @@
-import { Suspense } from 'react'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { buildMovementEditContext } from '@/lib/transactions/edit-context'
 import { MovementForm } from '@/lib/transactions/components/movement-form'
-import { TxBackLink } from '../_components/tx-back-link'
 
 type Props = {
   params: Promise<{ txId: string }>
@@ -25,11 +23,12 @@ const EditMovementPage = async ({ params, searchParams }: Props) => {
   if (!data) notFound()
   const { edit, categories, household, accounts } = data
 
+  // No back-link here: the segment's layout already mounts `EditChrome`, whose
+  // `PageHeader` carries the title and the "← Detalle" affordance. This page used
+  // to add a second one pointing at /transactions — two stacked arrows going to
+  // different places, a leftover from before the detail grew its own topbar.
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-4">
-      <Suspense fallback={<div className="px-3.5 pb-1.5 pt-3.5" aria-hidden />}>
-        <TxBackLink />
-      </Suspense>
       <MovementForm accounts={accounts} categories={categories} edit={edit} household={household} />
     </div>
   )

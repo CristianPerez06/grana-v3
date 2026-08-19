@@ -9,6 +9,8 @@ import type { CategoryWithSubcategories } from '@/lib/categories/types'
 import type { Household } from '@grana/shared'
 import type { FrequentClassification } from '@grana/movement-form'
 import { MovementForm, type MovementFormAccount } from '@/lib/transactions/components/movement-form'
+import { useDiscardGuard } from './use-discard-guard'
+import { DiscardChangesDialog } from './discard-changes-dialog'
 
 type Props = {
   accounts: MovementFormAccount[]
@@ -45,6 +47,10 @@ export function MovementDrawerProvider({
   // Bump on each open so the form remounts to a clean create state.
   const [formInstance, setFormInstance] = useState(0)
 
+  // Closing with a half-filled form (✕, Esc or a click on the scrim — Radix
+  // routes all three here) asks before throwing the input away.
+  const guard = useDiscardGuard(useCallback(() => setOpen(false), []))
+
   const openCreate = useCallback((accountId?: string) => {
     setPreselectAccountId(accountId)
     setFormInstance((n) => n + 1)
@@ -76,7 +82,7 @@ export function MovementDrawerProvider({
       {children}
       <Drawer
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={guard.requestClose}
         ariaLabel={t('actions.register_movement')}
       >
         <MovementForm
@@ -89,8 +95,14 @@ export function MovementDrawerProvider({
           appStartDate={appStartDate}
           showFirstMovementGuidance={showFirstMovementGuidance}
           preselectAccountId={preselectAccountId}
-          onClose={() => setOpen(false)}
+          onClose={guard.requestClose}
+          onDirtyChange={guard.setDirty}
           onSuccess={() => setOpen(false)}
+        />
+        <DiscardChangesDialog
+          open={guard.asking}
+          onDiscard={guard.discard}
+          onKeepEditing={guard.keepEditing}
         />
       </Drawer>
     </MovementDrawerContext.Provider>

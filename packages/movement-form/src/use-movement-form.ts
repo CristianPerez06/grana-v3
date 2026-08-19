@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   checkNegativeBalance,
   formatDateISO,
@@ -203,6 +203,53 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // ── Dirty tracking ─────────────────────────────────────────────────────────
+  // Serialized snapshot of everything the user can change and the submit path
+  // reads. Compared against the snapshot of the FIRST render — which is the
+  // pristine state, since every `useState` above seeds from `edit` (or from the
+  // create defaults) and no cascade runs before paint.
+  //
+  // The reimbursement block only enters the snapshot while it is enabled: the
+  // mount effect above defaults `reimbursementAccountId` once accounts are
+  // known, and that write must not read as a user edit. When the section is off
+  // its account is not part of the payload either, so ignoring it is exact —
+  // and turning it on flips `reimbursementEnabled`, which IS tracked.
+  const dirtySnapshot = JSON.stringify([
+    tab,
+    accountId,
+    currencyCode,
+    amount,
+    date,
+    description,
+    categoryId,
+    subcategoryId,
+    destinationAccountId,
+    destinationAmount,
+    adjustmentDirection,
+    installments,
+    isRecurrent,
+    frequency,
+    intervalCount,
+    intervalUnit,
+    recurrenceEndDate,
+    sharedEnabled,
+    sharedEnabled ? splitFirstPct : null,
+    reimbursementEnabled,
+    reimbursementEnabled
+      ? [
+          reimbursementTarget,
+          reimbursementAmount,
+          reimbursementReceivedNow,
+          reimbursementPercent,
+          reimbursementCap,
+          reimbursementAccountId,
+        ]
+      : null,
+  ])
+  const pristineSnapshot = useRef(dirtySnapshot)
+  /** True once any tracked field differs from what the form opened with. */
+  const isDirty = dirtySnapshot !== pristineSnapshot.current
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const eligibleAccounts = eligibleFor(accounts, tab)
@@ -898,6 +945,7 @@ export function useMovementForm(args: UseMovementFormArgs): MovementFormState {
 
     // Derived
     isEdit,
+    isDirty,
     isCredit,
     isInstallments,
     eligibleAccounts,

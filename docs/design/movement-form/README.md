@@ -26,6 +26,15 @@ Decisiones visuales del rediseño del alta, cerradas con el PO. Acompaña al cha
 ### Tabs
 Tres: **Gasto · Ingreso · Otros**. Gasto/Ingreso primarios fijos; "Otros" abre una hoja con Transferencia, Ajuste y Cambio (gateados por elegibilidad). Reemplaza el selector de 5 y descarta el "tercer slot dinámico" (más simple y predecible). Header compacto: sin eyebrow "Nuevo" ni título gordo — las tabs + el CTA dan el contexto.
 
+**Son del alta y sólo del alta** (change `drop-edit-type-selector`). En edición no hay selector de tipo en ninguna superficie: el tipo es inmutable, así que se enuncia en la línea de contexto read-only junto a la moneda y la cuenta (ver abajo). Un control que no se puede operar —la tira simplificada tanto como el `Segmented` de 5 deshabilitado— es chrome con forma de acción, y "Otros" es el caso peor: la palabra promete una lista que nunca se abre.
+
+### Edición — el contexto inmutable
+En edición, el contexto read-only enuncia **sólo lo que no está a la vista en otro lado** (change `trim-edit-immutable-context`): la cuenta —o las dos puntas de una transferencia—, la cantidad de cuotas de una madre, y la fecha cuando está bloqueada. Fuera el tipo (lo dicen el signo y el color del monto) y fuera la moneda (es el chip del bloque del monto). Formato: filas etiquetadas con caption "no editable", en su propia card entre el monto y los campos editables.
+
+**El monto nunca deja de ser el héroe.** Si `getEditableFields` lo bloquea (consumo pagado, madre con cuota paga), el héroe se dibuja read-only: misma card, mismo cuerpo, sin input ni calculadora, moneda como chip estático.
+
+Se probaron y descartaron dos formatos intermedios —colapsar todo a una línea atenuada, y que el monto bloqueado encabezara esa línea— porque comprimían el contenedor en vez de sacar lo que sobraba adentro; la línea quedaba huérfana entre cards. Está en el design de la change. Esta parte **sí** aplica también al escritorio: la card era la misma en los dos viewports.
+
 ### Monto
 **Centrado**, con el **chip de moneda (ARS ▾) y la calculadora a la derecha** (la calculadora es la que ya existe). Tamaño contenido (~32px), autofocus al abrir.
 

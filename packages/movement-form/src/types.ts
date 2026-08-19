@@ -419,6 +419,11 @@ export type MovementFormState = {
 
   // ── Derived (computed each render) ──
   isEdit: boolean
+  /**
+   * True once any field the user can change differs from what the form opened
+   * with. Drives the "unsaved changes" guard and the disabled save CTA.
+   */
+  isDirty: boolean
   isCredit: boolean
   isInstallments: boolean
   eligibleAccounts: MovementFormAccount[]

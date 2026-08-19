@@ -514,3 +514,80 @@ describe('useMovementForm — frequent-classification chips (surface, #31 item 1
     expect(result.current.frequentChips).toHaveLength(FREQUENT_CHIPS_MAX)
   })
 })
+
+describe('useMovementForm — dirty tracking', () => {
+  const editArgs = (overrides: Partial<UseMovementFormArgs> = {}) =>
+    baseArgs({
+      ...overrides,
+      edit: {
+        id: 'tx-old',
+        type: 'expense',
+        status: null,
+        accountId: 'acc-cash',
+        destinationAccountId: null,
+        isParent: false,
+        parentId: null,
+        amount: 5_000,
+        signedAmount: -5_000,
+        date: '2026-05-10',
+        currencyCode: 'ARS',
+        destinationCurrency: null,
+        destinationAmount: null,
+        categoryId: 'cat-groceries',
+        subcategoryId: '',
+        archivedTaxonomy: null,
+        description: 'Pedido',
+        installmentsTotal: null,
+        sourceAccountName: 'Efectivo',
+        destinationAccountName: null,
+        editableFields: {
+          amount: true,
+          date: true,
+          category: true,
+          subcategory: true,
+          description: true,
+          adjustmentDirection: false,
+          destinationAmount: false,
+        },
+        availableBalance: 10_000,
+      },
+    })
+
+  it('opens pristine in edit mode', () => {
+    const { result } = renderHook(() => useMovementForm(editArgs()))
+    expect(result.current.isDirty).toBe(false)
+  })
+
+  it('opens pristine in create mode', () => {
+    const { result } = renderHook(() => useMovementForm(baseArgs()))
+    expect(result.current.isDirty).toBe(false)
+  })
+
+  it('turns dirty when a tracked field changes', () => {
+    const { result } = renderHook(() => useMovementForm(editArgs()))
+    act(() => result.current.setAmount('7000'))
+    expect(result.current.isDirty).toBe(true)
+  })
+
+  it('goes back to pristine when the change is undone', () => {
+    const { result } = renderHook(() => useMovementForm(editArgs()))
+    act(() => result.current.setDescription('Otra cosa'))
+    expect(result.current.isDirty).toBe(true)
+    act(() => result.current.setDescription('Pedido'))
+    expect(result.current.isDirty).toBe(false)
+  })
+
+  it('stays pristine through the mount-time reimbursement account default', () => {
+    // The hook defaults `reimbursementAccountId` in an effect once accounts are
+    // known. That write is not a user edit and must not dirty the form.
+    const { result } = renderHook(() => useMovementForm(editArgs()))
+    expect(result.current.reimbursementAccountId).not.toBe('')
+    expect(result.current.isDirty).toBe(false)
+  })
+
+  it('turns dirty when the reimbursement section is enabled', () => {
+    const { result } = renderHook(() => useMovementForm(editArgs()))
+    act(() => result.current.setReimbursementEnabled(true))
+    expect(result.current.isDirty).toBe(true)
+  })
+})
