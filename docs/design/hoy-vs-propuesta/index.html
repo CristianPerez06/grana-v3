@@ -15,6 +15,133 @@
   aparecer. Tokens de <code>design_handoff_inicio_definitivo</code>.
 </p>
 
+
+<!-- ═══════════════ CASO 0 · INICIO ═══════════════ -->
+<div class="case">
+  <div class="ch">
+    <span class="rt">Inicio <span class="m">/dashboard</span></span>
+    <h2>Cinco montos, dos dicen "gasto", ninguno explica al otro</h2>
+    <p>La columna derecha <b>no es un diseño mío</b>: es tu propio
+      <code>design_handoff_inicio_definitivo</code>, que está terminado y sin implementar. La
+      comparación existe para ver qué se gana al implementarlo — y si algo todavía falta.
+      Mismo dataset en las dos columnas.</p>
+  </div>
+
+  <div class="pair">
+    <div class="pane now">
+      <div class="tag"><span class="b"></span>Hoy — en producción</div>
+      <div class="scr">
+        <div class="sbar">
+          <span class="t">Hola, Julieta.</span>
+          <span class="r"><span class="ib">‹</span><span class="ib">👁</span></span>
+        </div>
+        <div class="sc">
+          <div class="hero" style="padding:18px;border-radius:15px">
+            <span class="pl">Para gastar · hoy</span>
+            <p style="font-size:11.5px;font-weight:600;color:rgba(255,255,255,.5);margin-top:3px">¿Cuánto tengo?</p>
+            <div class="pv tnum" style="font-size:30px;margin-top:8px"><span class="cur">$</span>&nbsp;850.420</div>
+            <div class="usd" style="margin-top:9px"><span class="chip">USD</span><span class="uv tnum">654,17</span></div>
+            <p style="font-size:11px;font-weight:600;color:rgba(255,255,255,.5);margin-top:12px">Lo que tenés disponible hoy, en pesos y dólares.</p>
+          </div>
+
+          <div class="mini">
+            <div class="mh"><h3>Balance del mes</h3></div>
+            <p class="msub">¿Cómo se movió mi plata este mes?</p>
+            <div style="margin-top:10px">
+              <span style="font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--soft)">Balance</span>
+              <div class="tnum" style="font-size:23px;font-weight:800;letter-spacing:-0.04em;color:var(--emerald-deep)">+$&nbsp;750.000</div>
+            </div>
+            <div style="margin-top:11px;display:flex;flex-direction:column;gap:7px">
+              <div class="rrow" style="padding:0;border:none"><span class="md"><span class="t">Ingresos</span></span><span class="a tnum">$ 2.100.000</span></div>
+              <div class="rrow" style="padding:0;border:none"><span class="md"><span class="t" style="color:var(--terracota)">Gastos</span></span><span class="a tnum">$ 1.350.000</span></div>
+            </div>
+          </div>
+
+          <div class="mini">
+            <div class="mh"><h3>Gasté este mes</h3></div>
+            <div class="tnum" style="margin-top:8px;font-size:21px;font-weight:800;letter-spacing:-0.04em">$&nbsp;1.830.000</div>
+            <p class="msub" style="margin-top:6px">De la caja $ 1.350.000 · Financiado en tarjeta $ 480.000</p>
+          </div>
+        </div>
+        <div class="cut" style="bottom:66px"><span>fin de la 1ª pantalla</span></div>
+      </div>
+      <p style="margin-top:11px;font-size:11.5px;font-weight:600;color:var(--muted);line-height:1.5">
+        Debajo del corte siguen <b>Dónde está</b>, <b>Comprometido</b>, <b>Compartido</b> y
+        <b>¿En qué gasté?</b> — siete cards en total.</p>
+    </div>
+
+    <div class="pane new">
+      <div class="tag"><span class="b"></span>Tu Inicio Definitivo</div>
+      <div class="scr">
+        <div class="sbar">
+          <span class="t">Hola, Julieta.</span>
+          <span class="r"><span class="ib">👁</span><span class="ib">JL</span></span>
+        </div>
+        <div class="sc">
+          <div class="msel2"><span class="nv">‹</span><span class="lb">agosto 2026</span><span class="nv">›</span></div>
+
+          <div class="hero" style="padding:18px;border-radius:15px">
+            <span class="pl">Saldo disponible total</span>
+            <div class="pv tnum" style="font-size:32px;margin-top:10px"><span class="cur">$</span>&nbsp;850.420<span class="dec">,00</span></div>
+            <div class="usd" style="margin-top:11px"><span class="chip">USD</span><span class="uv tnum">654,17</span></div>
+          </div>
+
+          <div class="mini">
+            <div class="mh"><h3>Resumen del mes</h3><span class="s">Ver detalle ›</span></div>
+            <div class="tri" style="margin-top:12px;gap:8px">
+              <div class="t" style="padding:11px 10px">
+                <div class="k" style="font-size:10.5px"><span class="d" style="background:var(--emerald)"></span>Ingresos</div>
+                <div class="v tnum" style="font-size:15px;color:var(--emerald-deep)">$ 2.100k</div>
+                <div class="u tnum">USD 1.615</div>
+              </div>
+              <div class="t" style="padding:11px 10px">
+                <div class="k" style="font-size:10.5px"><span class="d" style="background:var(--terracota)"></span>Pagado</div>
+                <div class="v tnum" style="font-size:15px;color:var(--terracota)">$ 1.350k</div>
+                <div class="u tnum">USD 1.038</div>
+              </div>
+              <div class="t" style="padding:11px 10px">
+                <div class="k" style="font-size:10.5px"><span class="d" style="background:var(--amber)"></span>En tarjeta</div>
+                <div class="v tnum" style="font-size:15px;color:var(--amber-deep)">$ 480k</div>
+                <div class="u tnum">USD 369</div>
+              </div>
+            </div>
+            <div class="ritmo" style="margin-top:14px;padding-top:13px">
+              <div class="rt"><span class="k" style="font-size:12px">Ritmo de gasto</span><span class="v tnum" style="font-size:18px">64%</span></div>
+              <div class="bar" style="height:8px"><div class="f" style="width:64%"></div></div>
+              <p class="cap" style="font-size:11.5px"><b>Llevás ejecutado el 64% de tus ingresos.</b> Vas en ritmo para cerrar el mes con margen.</p>
+            </div>
+          </div>
+        </div>
+        <div class="cut" style="bottom:66px"><span>fin de la 1ª pantalla</span></div>
+      </div>
+      <p style="margin-top:11px;font-size:11.5px;font-weight:600;color:var(--muted);line-height:1.5">
+        Debajo siguen <b>Distribución del ingreso</b> (con el toggle Libre real) y
+        <b>Próximos compromisos</b> (entra vs. sale + neto) — cinco cards en total.</p>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <div class="v">
+      <h4>Hoy — la ambigüedad, con números</h4>
+      <ul>
+        <li><b>"Gastos" $ 1.350.000</b> (caja, sin tarjeta) y <b>"Gasté este mes" $ 1.830.000</b> (con tarjeta) conviven en la misma pantalla. Los dos son correctos. <b>Nadie explica los $ 480.000 de diferencia.</b></li>
+        <li>Cada card trae título + pregunta + caption: tres renglones de texto por número.</li>
+        <li>El hero promete "para gastar" un número que <b>no descuenta nada de lo comprometido</b>.</li>
+        <li>Siete cards; el selector de mes gobierna solo dos.</li>
+      </ul>
+    </div>
+    <div class="v g">
+      <h4>Tu handoff — cómo lo resuelve</h4>
+      <ul>
+        <li><b>Pagado</b> y <b>En tarjeta</b> son dos tiles de la <b>misma</b> card. La diferencia deja de ser un misterio y pasa a ser la lectura: no hay dos cards que compitan.</li>
+        <li>El hero se llama <b>Saldo disponible total</b> — describe, no promete.</li>
+        <li><b>Ritmo de gasto</b> contesta "¿voy bien?" en una barra y una frase. Hoy no existe.</li>
+        <li>De 7 cards a 5, y el selector de mes arriba gobernando todo.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════ CASO 1 · MOVIMIENTOS ═══════════════ -->
 <div class="case">
   <div class="ch">
