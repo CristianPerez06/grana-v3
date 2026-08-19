@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Inicio — variantes sin tarjetas</title>
+<style>
+:root{--navy:#0B1A2B;--emerald:#10B981;--emerald-deep:#059669;--emerald-soft:rgba(16,185,129,.12);
+--terracotta:#B56A5A;--terracotta-soft:rgba(181,106,90,.12);--slate:#3A6B8A;--slate-soft:#EAF1F6;
+--warning:#C49A3C;--warning-deep:#B45309;--warning-bg:rgba(196,154,60,.10);--warning-soft:rgba(196,154,60,.30);
+--page:#F6F7F9;--card:#fff;--border:#E4E8EF;--border-soft:#EEF1F4;
+--text:#142033;--text-muted:#6B7683;--text-soft:#8A94A3;
+font-family:"Plus Jakarta Sans",Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+*{box-sizing:border-box} body{margin:0;background:#EDEFF3;color:var(--text)}
+.canvas{padding:36px 28px 70px} .wrap{max-width:1560px;margin:0 auto}
+h1{margin:0;font-size:25px;font-weight:850;letter-spacing:-.02em}
+.lede{margin:8px 0 26px;color:var(--text-muted);font-size:14px;font-weight:600;max-width:84ch;line-height:1.55}
+.row{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
+.col{width:360px}
+.col>h2{margin:0 0 3px;font-size:14.5px;font-weight:850}
+.col>.sub{margin:0 0 12px;font-size:12.5px;font-weight:650;color:var(--text-muted);line-height:1.45;min-height:50px}
+.tag{display:inline-block;font-size:10px;font-weight:850;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:999px;margin-bottom:7px}
+.rec{background:var(--emerald-soft);color:var(--emerald-deep)} .alt{background:var(--slate-soft);color:var(--slate)}
+.screen{background:var(--page);border-radius:22px;padding:18px 16px 22px;box-shadow:0 18px 44px -34px rgba(11,26,43,.55)}
+.note{margin-top:12px;border-left:3px solid var(--emerald);background:#fff;border-radius:0 9px 9px 0;padding:10px 12px;font-size:12px;font-weight:650;color:var(--text-muted);line-height:1.55}
+.note.bad{border-left-color:var(--terracotta)} .note b{color:var(--text);font-weight:850}
+
+/* comunes */
+.hola{font-size:13px;font-weight:800;color:var(--text-muted)}
+.mesline{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:850;color:var(--text-soft);margin:2px 0 16px}
+.mesline b{color:var(--text);font-weight:850}
+.cap{font-size:10px;font-weight:850;letter-spacing:.13em;text-transform:uppercase;color:var(--text-soft)}
+.hr{height:1px;background:var(--border);margin:16px 0}
+.hr.soft{background:var(--border-soft);margin:12px 0}
+.amt{font-variant-numeric:tabular-nums}
+.neg{color:var(--terracotta)} .pos{color:var(--emerald-deep)}
+
+/* A — editorial */
+.mega{font-size:42px;font-weight:850;letter-spacing:-.045em;line-height:1;margin-top:6px}
+.usdline{display:flex;align-items:center;gap:7px;margin-top:9px;font-size:14px;font-weight:800;color:var(--text-muted)}
+.usdline b{background:var(--emerald-soft);color:var(--emerald-deep);border-radius:999px;padding:1px 8px;font-size:10px;font-weight:850}
+.lrow{display:flex;align-items:center;gap:9px;padding:7px 0;font-size:13px;font-weight:750}
+.lrow .nm{flex:1} .lrow .vl{font-weight:850}
+.av{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;color:#fff;font-size:10px;font-weight:850;flex:0 0 auto}
+.mini{display:flex;gap:8px;align-items:flex-end;height:44px;margin:10px 0 5px}
+.mini > i{flex:1;border-radius:5px 5px 0 0;display:block}
+.minilab{display:flex;gap:8px;font-size:10px;font-weight:750;color:var(--text-soft)}
+.minilab span{flex:1;text-align:center}
+.act{border:1px solid var(--warning-soft);background:var(--warning-bg);border-radius:14px;padding:12px;margin-bottom:18px}
+.act .h{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.act .h b{flex:1;font-size:13px;font-weight:850;color:var(--warning-deep)}
+.act .h .n{background:var(--warning);color:#fff;border-radius:999px;padding:1px 7px;font-size:10px;font-weight:850}
+.act .r{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12.5px}
+.act .r + .r{border-top:1px solid rgba(196,154,60,.25)}
+.act .r .t{flex:1;font-weight:800}
+.act .r .d{font-size:10px;font-weight:750;color:var(--warning-deep)}
+.act .r .go{background:var(--navy);color:#fff;border-radius:8px;padding:5px 10px;font-size:10.5px;font-weight:850}
+
+/* B — renglones */
+.stat{display:flex;align-items:center;gap:10px;padding:11px 0;font-size:13.5px;font-weight:800}
+.stat + .stat{border-top:1px solid var(--border)}
+.stat .nm{flex:1;font-weight:750;color:var(--text-muted)}
+.stat .vl{font-weight:850;font-variant-numeric:tabular-nums}
+.stat.big .nm{color:var(--text);font-weight:850} .stat.big .vl{font-size:19px}
+.stat .ch{color:var(--text-soft);font-weight:850}
+.grp{font-size:10px;font-weight:850;letter-spacing:.13em;text-transform:uppercase;color:var(--text-soft);padding-top:16px;padding-bottom:2px}
+.stat.pend{background:var(--warning-bg);margin:0 -16px;padding-left:16px;padding-right:16px;border-top:1px solid var(--warning-soft);border-bottom:1px solid var(--warning-soft)}
+.stat.pend .nm{color:var(--warning-deep);font-weight:850}
+
+/* C — narrativa */
+.story{font-size:19px;font-weight:750;line-height:1.55;letter-spacing:-.015em}
+.story b{font-weight:850}
+.story .k{font-size:26px;font-weight:850;letter-spacing:-.03em}
+.story .sm{font-size:14.5px;font-weight:700;color:var(--text-muted);line-height:1.55;display:block;margin-top:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--navy);color:#fff;border-radius:10px;padding:7px 12px;font-size:12.5px;font-weight:850;margin-top:12px}
+.donut{width:104px;height:104px;border-radius:50%;flex:0 0 auto;
+background:conic-gradient(var(--terracotta) 0 34%,var(--slate) 34% 58%,var(--warning) 58% 76%,var(--emerald) 76% 90%,#9CA3AF 90% 100%);position:relative}
+.donut::after{content:"";position:absolute;inset:22px;border-radius:50%;background:var(--page)}
+.rk{display:flex;justify-content:space-between;font-size:12px;font-weight:750;padding:3px 0}
+.rk i{font-style:normal;color:var(--text-muted)}
+h3.sec{margin:40px 0 4px;font-size:16.5px;font-weight:850}
+h3.sec + p{margin:0 0 16px;color:var(--text-muted);font-size:13px;font-weight:650;max-width:82ch;line-height:1.5}
+.desk{flex:1;min-width:700px;background:var(--page);border-radius:18px;padding:24px 26px}
+.cols2{display:grid;grid-template-columns:1.25fr 1fr;gap:34px}
+</style></head><body><div class="canvas"><div class="wrap">
+
+<h1>Inicio — tres variantes sin tarjetas</h1>
+<p class="lede">Mismo sistema visual (navy, emerald, tipografía y tokens de Grana), pero sin apoyarse en un apilado de
+recuadros. Las tres incluyen los pendientes, así seguimos evaluando esa decisión al mismo tiempo. Celular a 390px.</p>
+
+<div class="row">
+
+<!-- ═══ A ═══ -->
+<section class="col">
+  <span class="tag rec">Variante A · recomendada</span>
+  <h2>Editorial — el recuadro es solo para lo accionable</h2>
+  <p class="sub">Nada tiene borde, salvo lo que hay que hacer. La jerarquía la dan el tamaño y el aire, no las cajas.</p>
+  <div class="screen">
+    <div class="hola">Hola, Flor.</div>
+    <div class="mesline">‹ <b>Agosto 2026</b> ›</div>
+
+    <div class="act">
+      <div class="h"><b>Por confirmar</b><span class="n">3</span></div>
+      <div class="r"><span class="t">Netflix<div class="d">Vence hoy</div></span><span class="amt neg" style="font-weight:850">− $ 9.900</span><span class="go">Confirmar</span></div>
+      <div class="r"><span class="t">Expensas<div class="d">Vencida hace 2 días</div></span><span class="amt neg" style="font-weight:850">− $ 84.000</span><span class="go">Confirmar</span></div>
+      <div class="r"><span class="t">Farmacia · OSDE<div class="d" style="color:var(--text-soft)">Reintegro esperado</div></span><span class="amt pos" style="font-weight:850">+ $ 33.600</span><span class="go">Confirmar</span></div>
+    </div>
+
+    <div class="cap">Para gastar · hoy</div>
+    <div class="mega amt">$ 1.284.500</div>
+    <div class="usdline"><b>USD</b> 2.480,00</div>
+
+    <div class="hr"></div>
+    <div class="cap">Dónde está</div>
+    <div class="lrow"><span class="av" style="background:#EA7600">G</span><span class="nm">Galicia</span><span class="vl amt">$ 940.300</span></div>
+    <div class="lrow"><span class="av" style="background:var(--emerald-deep)">◆</span><span class="nm">Billetera</span><span class="vl amt">$ 344.200</span></div>
+    <div class="lrow"><span class="av" style="background:var(--slate)">$</span><span class="nm">En dólares</span><span class="vl amt">USD 2.480</span></div>
+
+    <div class="hr"></div>
+    <div class="cap">Este mes</div>
+    <div class="mini"><i style="height:100%;background:var(--emerald)"></i><i style="height:52%;background:var(--terracotta)"></i><i style="height:14%;background:var(--slate)"></i></div>
+    <div class="minilab"><span>Ingresos</span><span>Gastos</span><span>Ajustes</span></div>
+    <div class="lrow" style="margin-top:6px"><span class="nm" style="font-weight:850">Balance</span><span class="vl amt pos" style="font-size:17px">+ $ 693.700</span></div>
+
+    <div class="hr"></div>
+    <div class="cap">Comprometido</div>
+    <div class="lrow"><span class="nm">Resúmenes de tarjeta</span><span class="vl amt">$ 412.500</span></div>
+    <div class="lrow"><span class="nm">Recurrencias del próximo mes</span><span class="vl amt">$ 83.900</span></div>
+  </div>
+  <div class="note"><b>La regla:</b> si tiene recuadro, hay algo que hacer. Todo lo demás es lectura y no compite.
+  Sin pendientes, la pantalla queda <b>completamente plana</b> — pura tipografía.</div>
+</section>
+
+<!-- ═══ B ═══ -->
+<section class="col">
+  <span class="tag alt">Variante B</span>
+  <h2>Renglones — estilo estado de cuenta</h2>
+  <p class="sub">Todo es una fila con su número a la derecha. Máxima densidad: Inicio entero sin scroll.</p>
+  <div class="screen">
+    <div class="hola">Hola, Flor.</div>
+    <div class="mesline">‹ <b>Agosto 2026</b> ›</div>
+
+    <div class="stat big"><span class="nm">Para gastar hoy</span><span class="vl amt">$ 1.284.500</span><span class="ch">›</span></div>
+    <div class="stat"><span class="nm">En dólares</span><span class="vl amt">USD 2.480,00</span><span class="ch">›</span></div>
+
+    <div class="stat pend"><span class="nm">Por confirmar · 3</span><span class="vl amt neg">− $ 60.300</span><span class="ch">›</span></div>
+
+    <div class="grp">Dónde está</div>
+    <div class="stat"><span class="nm">Galicia</span><span class="vl amt">$ 940.300</span><span class="ch">›</span></div>
+    <div class="stat"><span class="nm">Billetera</span><span class="vl amt">$ 344.200</span><span class="ch">›</span></div>
+
+    <div class="grp">Este mes</div>
+    <div class="stat"><span class="nm">Ingresos</span><span class="vl amt pos">+ $ 2.104.000</span></div>
+    <div class="stat"><span class="nm">Gastos</span><span class="vl amt neg">− $ 1.410.300</span></div>
+    <div class="stat big"><span class="nm">Balance</span><span class="vl amt pos">+ $ 693.700</span><span class="ch">›</span></div>
+
+    <div class="grp">Comprometido</div>
+    <div class="stat"><span class="nm">Resúmenes de tarjeta</span><span class="vl amt">$ 412.500</span><span class="ch">›</span></div>
+    <div class="stat"><span class="nm">Recurrencias próx. mes</span><span class="vl amt">$ 83.900</span><span class="ch">›</span></div>
+
+    <div class="grp">En qué gasté</div>
+    <div class="stat"><span class="nm">🏠 Vivienda</span><span class="vl amt">$ 165.400</span></div>
+    <div class="stat"><span class="nm">🛒 Supermercado</span><span class="vl amt">$ 116.700</span></div>
+    <div class="stat"><span class="nm">🚕 Transporte</span><span class="vl amt">$ 87.500</span><span class="ch">›</span></div>
+  </div>
+  <div class="note bad">Muy densa y muy contable — pero <b>todo pesa lo mismo</b>. El disponible, que es la pregunta
+  principal, compite con Transporte. Y se pierde el gráfico, que es lo que Grana tiene de propio.</div>
+</section>
+
+<!-- ═══ C ═══ -->
+<section class="col">
+  <span class="tag alt">Variante C</span>
+  <h2>Narrativa — la app te cuenta cómo venís</h2>
+  <p class="sub">Los números viven dentro de frases. Es la lectura más "Grana": enseña sin explicar de más.</p>
+  <div class="screen">
+    <div class="hola">Hola, Flor.</div>
+    <div class="mesline">‹ <b>Agosto 2026</b> ›</div>
+
+    <div class="story">
+      Tenés <span class="k amt">$ 1.284.500</span><br>para gastar hoy,<br>
+      más <b class="amt">USD 2.480</b>.
+      <span class="sm">Este mes entraron <b class="pos amt">$ 2.104.000</b> y salieron
+      <b class="neg amt">$ 1.410.300</b>. Vas <b class="pos amt">+ $ 693.700</b>.</span>
+      <span class="sm">Ya tenés comprometidos <b class="amt">$ 496.400</b> entre resúmenes de tarjeta y recurrencias del mes que viene.</span>
+    </div>
+
+    <div class="chip">◕ Tenés 3 cosas por confirmar →</div>
+
+    <div class="hr"></div>
+    <div class="cap">En qué se fue</div>
+    <div style="display:flex;gap:14px;align-items:center;margin-top:10px">
+      <div class="donut"></div>
+      <div style="flex:1">
+        <div class="rk"><span>🏠 Vivienda</span><i>34%</i></div>
+        <div class="rk"><span>🛒 Súper</span><i>24%</i></div>
+        <div class="rk"><span>🚕 Transporte</span><i>18%</i></div>
+        <div class="rk"><span>🍔 Comida</span><i>14%</i></div>
+      </div>
+    </div>
+  </div>
+  <div class="note bad">Encantadora de leer una vez, cansadora la número treinta. Y los números <b>se comparan peor</b>
+  cuando están metidos en prosa: no podés barrer una columna con la vista.</div>
+</section>
+
+</div>
+
+<h3 class="sec">La Variante A en desktop</h3>
+<p>El ancho se usa para poner las secciones en dos columnas, no para agregar recuadros. La franja de pendientes cruza a lo ancho porque es lo único accionable.</p>
+
+<div class="row">
+  <div class="desk">
+    <div class="hola" style="font-size:15px">Hola, Flor.</div>
+    <div class="mesline" style="font-size:13px">‹ <b>Agosto 2026</b> ›</div>
+
+    <div class="act" style="margin-bottom:26px">
+      <div class="h"><b>Por confirmar</b><span class="n">3</span></div>
+      <div class="r"><span class="t">Netflix<div class="d">Vence hoy · Visa Galicia</div></span><span class="amt neg" style="font-weight:850">− $ 9.900</span><span class="go">Confirmar</span></div>
+      <div class="r"><span class="t">Expensas<div class="d">Vencida hace 2 días · Galicia</div></span><span class="amt neg" style="font-weight:850">− $ 84.000</span><span class="go">Confirmar</span></div>
+      <div class="r"><span class="t">Farmacia · OSDE<div class="d" style="color:var(--text-soft)">Reintegro esperado · Galicia</div></span><span class="amt pos" style="font-weight:850">+ $ 33.600</span><span class="go">Confirmar</span></div>
+    </div>
+
+    <div class="cols2">
+      <div>
+        <div class="cap">Para gastar · hoy</div>
+        <div class="mega amt" style="font-size:52px">$ 1.284.500</div>
+        <div class="usdline"><b>USD</b> 2.480,00</div>
+        <div class="hr"></div>
+        <div class="cap">Este mes</div>
+        <div class="mini" style="height:58px"><i style="height:100%;background:var(--emerald)"></i><i style="height:52%;background:var(--terracotta)"></i><i style="height:14%;background:var(--slate)"></i></div>
+        <div class="minilab"><span>Ingresos</span><span>Gastos</span><span>Ajustes</span></div>
+        <div class="lrow" style="margin-top:6px"><span class="nm" style="font-weight:850">Balance</span><span class="vl amt pos" style="font-size:19px">+ $ 693.700</span></div>
+      </div>
+      <div>
+        <div class="cap">Dónde está</div>
+        <div class="lrow"><span class="av" style="background:#EA7600">G</span><span class="nm">Galicia</span><span class="vl amt">$ 940.300</span></div>
+        <div class="lrow"><span class="av" style="background:var(--emerald-deep)">◆</span><span class="nm">Billetera</span><span class="vl amt">$ 344.200</span></div>
+        <div class="lrow"><span class="av" style="background:var(--slate)">$</span><span class="nm">En dólares</span><span class="vl amt">USD 2.480</span></div>
+        <div class="hr"></div>
+        <div class="cap">Comprometido</div>
+        <div class="lrow"><span class="nm">Resúmenes de tarjeta</span><span class="vl amt">$ 412.500</span></div>
+        <div class="lrow"><span class="nm">Recurrencias del próximo mes</span><span class="vl amt">$ 83.900</span></div>
+        <div class="hr"></div>
+        <div class="cap">En qué se fue</div>
+        <div style="display:flex;gap:16px;align-items:center;margin-top:10px">
+          <div class="donut"></div>
+          <div style="flex:1">
+            <div class="rk"><span>🏠 Vivienda</span><i>$ 165.400 · 34%</i></div>
+            <div class="rk"><span>🛒 Supermercado</span><i>$ 116.700 · 24%</i></div>
+            <div class="rk"><span>🚕 Transporte</span><i>$ 87.500 · 18%</i></div>
+            <div class="rk"><span>🍔 Comida</span><i>$ 68.000 · 14%</i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div></div></body></html>
