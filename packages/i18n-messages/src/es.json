@@ -163,7 +163,7 @@
       "title_next_month": "Compromisos del próximo mes",
       "committed_label": "Ya comprometido",
       "overdue_prefix": "Además,",
-      "overdue_suffix": "vencido sin pagar (no entra en el total).",
+      "overdue_suffix": "vencido sin pagar",
       "detail_region": "Detalle de compromisos",
       "back": "Volver",
       "view_all": "Ver todos",

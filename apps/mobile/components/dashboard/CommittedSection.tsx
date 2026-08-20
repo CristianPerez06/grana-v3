@@ -5,14 +5,13 @@ import { deriveCommittedSplit } from '@grana/dashboard'
 import { useT } from '../../lib/locale-context'
 import { colors } from '../../lib/colors'
 import { useCommittedOutlook } from '../../lib/dashboard/queries'
-import { CommittedDetail, type CommittedDetailGroup } from './CommittedDetail'
+import { CommittedBody, type CommittedDetailGroup } from './CommittedBody'
 import { CommittedSkeleton } from './CommittedSkeleton'
 import { MaskedAmount } from './MaskedAmount'
 
 // Native mirror of the web `committed-section.tsx`: the committed total with its
-// Tarjetas / Gastos fijos split and the two details in a zone that REPLACES
-// rather than unfolds (see `CommittedDetail`). Cards are grouped BY CARD, not by
-// consumo.
+// Tarjetas / Gastos fijos split and the two details behind a body that swaps in
+// place (see `CommittedBody`). Cards are grouped BY CARD, not by consumo.
 //
 // Overdue money is a ONE-LINE footnote under the bar: it belongs next to the
 // total it explicitly is not part of, and three lines for a one-line fact push
@@ -91,6 +90,96 @@ export const CommittedSection = () => {
     },
   ]
 
+  // Total + stacked bar + the overdue footnote. Lives on the body's front face.
+  const summary = (
+<View className="rounded-2xl border border-border bg-page p-3.5">
+        <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
+          {t('dashboard.committed.committed_label')}
+        </Text>
+        <MaskedAmount
+          amount={split.total}
+          currency="ARS"
+          className="mt-1 text-[28px] font-extrabold text-text"
+        />
+        {usdSplit.total !== 0 && (
+          <MaskedAmount
+            amount={usdSplit.total}
+            currency="USD"
+            showCentsOverride
+            className="mt-1 text-[11.5px] font-semibold text-text-soft"
+          />
+        )}
+
+        {split.hasBar && (
+          <>
+            <View className="mt-3 h-2 flex-row overflow-hidden rounded-full bg-border-soft">
+              <View
+                style={{ width: `${split.cardsPct}%`, backgroundColor: colors.slate }}
+                className="h-full"
+              />
+              <View
+                style={{ width: `${split.recurringPct}%`, backgroundColor: colors.plum }}
+                className="h-full"
+              />
+            </View>
+            <View className="mt-2 flex-row flex-wrap gap-x-4 gap-y-1">
+              <View className="flex-row items-center gap-1.5">
+                <View
+                  className="size-2 rounded-[2px]"
+                  style={{ backgroundColor: colors.slate }}
+                />
+                <Text className="text-[11px] font-bold text-text-muted">
+                  {t('dashboard.committed.cards_group')} {Math.round(split.cardsPct)}%
+                </Text>
+              </View>
+              <View className="flex-row items-center gap-1.5">
+                <View
+                  className="size-2 rounded-[2px]"
+                  style={{ backgroundColor: colors.plum }}
+                />
+                <Text className="text-[11px] font-bold text-text-muted">
+                  {t('dashboard.committed.recurring_group')} {Math.round(split.recurringPct)}%
+                </Text>
+              </View>
+            </View>
+          </>
+        )}
+
+        {hasOverdue && (
+          /* ONE line, guaranteed: no wrapping, and the trailing words
+             shrink instead of pushing the card taller. */
+          <View className="mt-2.5 flex-row items-center gap-x-1.5">
+            <AlertTriangle size={13} color={colors.terracotta} />
+            <Text className="text-[11.5px] font-bold" style={{ color: colors.terracotta }}>
+              {t('dashboard.committed.overdue_prefix')}
+            </Text>
+            <MaskedAmount
+              amount={data.ARS.overdue}
+              currency="ARS"
+              className="text-[11.5px] font-extrabold"
+              style={{ color: colors.terracotta }}
+            />
+            {data.USD.overdue !== 0 && (
+              <MaskedAmount
+                amount={data.USD.overdue}
+                currency="USD"
+                showCentsOverride
+                className="text-[11.5px] font-extrabold"
+                style={{ color: colors.terracotta }}
+              />
+            )}
+            <Text
+              numberOfLines={1}
+              className="min-w-0 flex-1 text-[11.5px] font-bold"
+              style={{ color: colors.terracotta }}
+            >
+              {t('dashboard.committed.overdue_suffix')}
+            </Text>
+          </View>
+        )}
+      </View>
+  )
+
   return (
     <View className="rounded-2xl border border-border bg-card p-4">
       <View className="flex-row items-start justify-between">
@@ -113,97 +202,7 @@ export const CommittedSection = () => {
         </Text>
       ) : (
         <>
-          {/* Total + stacked bar */}
-          <View className="mt-3 rounded-2xl border border-border bg-page p-3.5">
-            <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
-              {t('dashboard.committed.committed_label')}
-            </Text>
-            <MaskedAmount
-              amount={split.total}
-              currency="ARS"
-              className="mt-1 text-[28px] font-extrabold text-text"
-            />
-            {usdSplit.total !== 0 && (
-              <MaskedAmount
-                amount={usdSplit.total}
-                currency="USD"
-                showCentsOverride
-                className="mt-1 text-[11.5px] font-semibold text-text-soft"
-              />
-            )}
-
-            {split.hasBar && (
-              <>
-                <View className="mt-3 h-2 flex-row overflow-hidden rounded-full bg-border-soft">
-                  <View
-                    style={{ width: `${split.cardsPct}%`, backgroundColor: colors.slate }}
-                    className="h-full"
-                  />
-                  <View
-                    style={{ width: `${split.recurringPct}%`, backgroundColor: colors.plum }}
-                    className="h-full"
-                  />
-                </View>
-                <View className="mt-2 flex-row flex-wrap gap-x-4 gap-y-1">
-                  <View className="flex-row items-center gap-1.5">
-                    <View
-                      className="size-2 rounded-[2px]"
-                      style={{ backgroundColor: colors.slate }}
-                    />
-                    <Text className="text-[11px] font-bold text-text-muted">
-                      {t('dashboard.committed.cards_group')} {Math.round(split.cardsPct)}%
-                    </Text>
-                  </View>
-                  <View className="flex-row items-center gap-1.5">
-                    <View
-                      className="size-2 rounded-[2px]"
-                      style={{ backgroundColor: colors.plum }}
-                    />
-                    <Text className="text-[11px] font-bold text-text-muted">
-                      {t('dashboard.committed.recurring_group')} {Math.round(split.recurringPct)}%
-                    </Text>
-                  </View>
-                </View>
-              </>
-            )}
-
-            {hasOverdue && (
-              <View className="mt-2.5 flex-row flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                <AlertTriangle size={13} color={colors.terracotta} />
-                <Text
-                  className="text-[11.5px] font-bold"
-                  style={{ color: colors.terracotta }}
-                >
-                  {t('dashboard.committed.overdue_prefix')}
-                </Text>
-                <MaskedAmount
-                  amount={data.ARS.overdue}
-                  currency="ARS"
-                  className="text-[11.5px] font-extrabold"
-                  style={{ color: colors.terracotta }}
-                />
-                {data.USD.overdue !== 0 && (
-                  <MaskedAmount
-                    amount={data.USD.overdue}
-                    currency="USD"
-                    showCentsOverride
-                    className="text-[11.5px] font-extrabold"
-                    style={{ color: colors.terracotta }}
-                  />
-                )}
-                <Text
-                  className="text-[11.5px] font-bold"
-                  style={{ color: colors.terracotta }}
-                >
-                  {t('dashboard.committed.overdue_suffix')}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <View className="mt-3">
-            <CommittedDetail groups={groups} />
-          </View>
+          <CommittedBody summary={summary} groups={groups} />
         </>
       )}
     </View>
