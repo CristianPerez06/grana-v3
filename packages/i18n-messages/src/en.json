@@ -209,8 +209,8 @@
       "caption": "{household} · you and {other}",
       "they_owe_you": "They owe you",
       "you_owe": "You owe",
-      "sub_credit": "Balance in your favor in the household",
-      "sub_debit": "Balance against you in the household"
+      "sub_credit": "Balance in your favor",
+      "sub_debit": "Balance against you"
     },
     "net_this_month": "you're at <amount>{net}</amount> this month"
   },

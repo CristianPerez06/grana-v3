@@ -21,15 +21,20 @@ export const TILE_TONE: Record<TileTone, { icon: string; amount: string; rule: s
 export type BreakdownRow = { label: string; amount: number }
 
 /**
- * Headline size per density step. The tile is a third of a card wide and has to
- * hold up to ten digits plus cents; clipping a money amount is the worst failure
- * this card could have, because a cut "$ 1.020.283,17" reads as another number.
+ * Headline size per density step, on TWO scales.
+ *
+ * The tile is a third of a card wide and has to hold up to ten digits plus
+ * cents; clipping a money amount is the worst failure this card could have,
+ * because a cut "$ 1.020.283,17" reads as another number. A third of a
+ * phone-width card is ~90px of usable room — less than half the desktop tile —
+ * so the desktop ramp cut the amounts clean off. Everything else in the tile
+ * steps down with it, or the amount ends up smaller than its own caption.
  */
 const AMOUNT_SIZE: Record<AmountDensity, string> = {
-  normal: 'text-[19px]',
-  tight: 'text-[17px]',
-  tighter: 'text-[15px]',
-  tightest: 'text-[13px]',
+  normal: 'text-[14px] sm:text-[19px]',
+  tight: 'text-[13px] sm:text-[17px]',
+  tighter: 'text-[12px] sm:text-[15px]',
+  tightest: 'text-[11px] sm:text-[13px]',
 }
 
 type Props = {
@@ -119,14 +124,17 @@ export const SpentTile = ({
 
   const front = (
     <>
-      <div className="flex flex-1 flex-col items-center justify-center px-3 py-3.5 text-center">
+      <div className="flex flex-1 flex-col items-center justify-center px-1.5 py-3.5 text-center sm:px-3">
         <span
           aria-hidden
-          className={cn('flex size-9 items-center justify-center rounded-xl', TILE_TONE[tone].icon)}
+          className={cn(
+            'flex size-8 items-center justify-center rounded-xl sm:size-9',
+            TILE_TONE[tone].icon,
+          )}
         >
           {icon}
         </span>
-        <span className="mt-2.5 text-[12.5px] font-extrabold leading-tight text-text-muted">
+        <span className="mt-2.5 text-[11px] font-extrabold leading-tight text-text-muted sm:text-[12.5px]">
           {label}
         </span>
         <span
@@ -139,7 +147,7 @@ export const SpentTile = ({
           <MaskedAmount amount={ars} currency="ARS" />
         </span>
         {showUsd && (
-          <span className="mt-[3px] text-[10.5px] font-semibold text-text-soft">
+          <span className="mt-[3px] text-[9.5px] font-semibold text-text-soft sm:text-[10.5px]">
             <MaskedAmount amount={usd} currency="USD" showCentsOverride />
           </span>
         )}
@@ -149,18 +157,20 @@ export const SpentTile = ({
             vertically centred, letting the slot size itself dropped the flipping
             tiles ~8px below their neighbour and the row stopped reading as a
             row. `justify-start` so both variants hang from the same line. */}
-        <span className="mt-3 flex min-h-[32px] flex-col items-center justify-start">
+        <span className="mt-3 flex min-h-[30px] flex-col items-center justify-start sm:min-h-[32px]">
           {flippable ? (
-            <span className="inline-flex items-center gap-1 text-[10.5px] font-extrabold text-text-soft">
+            <span className="inline-flex items-center gap-1 text-[9.5px] font-extrabold text-text-soft sm:text-[10.5px]">
               {breakdown.openLabel}
               <ChevronRight size={11} strokeWidth={2.6} aria-hidden />
             </span>
           ) : (
             caption && (
-              <span className="text-[11px] font-bold leading-snug text-text-soft">
+              <span className="text-[10px] font-bold leading-snug text-text-soft sm:text-[11px]">
                 {caption.lead}
                 <br />
-                <span className="text-[11.5px] font-extrabold text-text">{caption.emphasis}</span>
+                <span className="text-[10.5px] font-extrabold text-text sm:text-[11.5px]">
+                  {caption.emphasis}
+                </span>
               </span>
             )
           )}

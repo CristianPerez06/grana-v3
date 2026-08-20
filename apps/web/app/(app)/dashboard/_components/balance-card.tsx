@@ -110,15 +110,17 @@ const ALIGN = {
 
 /**
  * Two scales, not one. Side by side, each amount is the headline of its own
- * column and carries the full size. Stacked into a row next to a 14px label, the
- * same 27px number dwarfs it and the row stops reading as a pair — so the
- * stacked scale is the one native uses, which is the same composition.
+ * column and carries the full size. Stacked into a row next to a 14px label it
+ * is not a headline any more, it is the VALUE of that label — so it sits just
+ * above it (16px against 14px) instead of towering over it. Extrabold weight and
+ * tight tracking already make the number the thing the eye lands on; size on top
+ * of that is what made the row stop reading as a pair.
  */
 const SUMMARY_SIZE: Record<AmountDensity, string> = {
-  normal: 'text-[19px] sm:text-[27px]',
-  tight: 'text-[17px] sm:text-[24px]',
-  tighter: 'text-[15px] sm:text-[21px]',
-  tightest: 'text-[13px] sm:text-[18px]',
+  normal: 'text-[16px] sm:text-[27px]',
+  tight: 'text-[15px] sm:text-[24px]',
+  tighter: 'text-[14px] sm:text-[21px]',
+  tightest: 'text-[12.5px] sm:text-[18px]',
 }
 
 /**

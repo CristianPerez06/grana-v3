@@ -209,8 +209,8 @@
       "caption": "{household} · vos y {other}",
       "they_owe_you": "Te deben",
       "you_owe": "Debés",
-      "sub_credit": "Saldo a tu favor en el Hogar",
-      "sub_debit": "Saldo en contra en el Hogar"
+      "sub_credit": "Saldo a tu favor",
+      "sub_debit": "Saldo en contra"
     },
     "net_this_month": "vas <amount>{net}</amount> este mes"
   },

@@ -185,7 +185,7 @@ export const SpentCard = ({ otherName }: Props) => {
           </p>
         ) : (
           <>
-            <div className="grid flex-1 grid-cols-3 gap-[11px]">
+            <div className="grid flex-1 grid-cols-3 gap-2 sm:gap-[11px]">
               <SpentTile
                 tone="spent"
                 icon={<ShoppingBag size={18} strokeWidth={2} aria-hidden />}
