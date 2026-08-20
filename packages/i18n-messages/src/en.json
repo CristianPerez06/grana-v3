@@ -128,7 +128,7 @@
       "summary_title": "Month summary",
       "came_in": "Came in",
       "went_out": "Went out",
-      "venia": "Carried in"
+      "carried_in": "You had"
     },
     "hero_loading": "Loading your available balance…",
     "hero_error": "We couldn't load your available balance.",

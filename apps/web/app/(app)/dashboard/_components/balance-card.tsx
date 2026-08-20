@@ -63,18 +63,28 @@ const PlacementColumn = ({ placement }: { placement: CurrencyPlacement }) => (
   </div>
 )
 
+/**
+ * One amount of "Resumen del mes".
+ *
+ * `signPrefix` goes on the two FLOWS ("+" for what came in, "−" for what went
+ * out) and not on the carried-in balance: that one shows its own sign only when
+ * it is actually negative. Otherwise the same "−" would mean two different
+ * things side by side — a balance in the red, and money leaving.
+ */
 const Flow = ({
   label,
   dotClassName,
   amountClassName,
   ars,
   usd,
+  signPrefix,
 }: {
   label: string
   dotClassName: string
   amountClassName: string
   ars: number
   usd: number
+  signPrefix?: string
 }) => (
   <div className="flex flex-col items-center text-center">
     <span className="flex items-center gap-[9px] text-[14px] font-bold text-text-muted">
@@ -87,12 +97,12 @@ const Flow = ({
         amountClassName,
       )}
     >
-      <MaskedAmount amount={ars} currency="ARS" />
+      <MaskedAmount amount={ars} currency="ARS" signPrefix={signPrefix} />
     </span>
     {/* Bimoneda: the USD line only shows when there is money in dollars. */}
     {usd !== 0 && (
       <span className="mt-[5px] text-[12.5px] font-semibold text-text-soft">
-        <MaskedAmount amount={usd} currency="USD" showCentsOverride />
+        <MaskedAmount amount={usd} currency="USD" showCentsOverride signPrefix={signPrefix} />
       </span>
     )}
   </div>
@@ -193,7 +203,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
         </h3>
         <div className="mx-auto mt-[15px] grid max-w-[660px] grid-cols-3 gap-[18px]">
           <Flow
-            label={t('month.venia')}
+            label={t('month.carried_in')}
             dotClassName="bg-text-soft"
             amountClassName="text-text"
             ars={venia?.ARS ?? 0}
@@ -205,6 +215,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             amountClassName="text-emerald-deep"
             ars={summary?.ARS.entro ?? 0}
             usd={summary?.USD.entro ?? 0}
+            signPrefix="+"
           />
           <Flow
             label={t('month.went_out')}
@@ -212,6 +223,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             amountClassName="text-slate"
             ars={summary?.ARS.seFue ?? 0}
             usd={summary?.USD.seFue ?? 0}
+            signPrefix="−"
           />
         </div>
       </div>

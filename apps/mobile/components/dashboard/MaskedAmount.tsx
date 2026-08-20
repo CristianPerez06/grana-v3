@@ -12,6 +12,8 @@ type Props = {
   style?: StyleProp<TextStyle>
   showCentsOverride?: boolean
   maskChar?: string
+  /** Rendered before the number when not masked (e.g. "+" / "−"). */
+  signPrefix?: string
 }
 
 export const MaskedAmount = ({
@@ -21,6 +23,7 @@ export const MaskedAmount = ({
   style,
   showCentsOverride,
   maskChar = '••••••',
+  signPrefix,
 }: Props) => {
   const { masked } = useEyeMask()
   const showCents = useShowCents()
@@ -41,6 +44,7 @@ export const MaskedAmount = ({
 
   return (
     <Text className={`tabular-nums ${className ?? ''}`} style={style}>
+      {signPrefix}
       {formatted}
     </Text>
   )

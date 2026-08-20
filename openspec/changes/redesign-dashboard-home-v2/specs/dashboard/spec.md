@@ -28,17 +28,19 @@ Los porcentajes derivados —el reparto de cuentas de "Dónde está", la barra a
 
 ---
 
-### Requirement: La zona clara de la card de saldo muestra el "Resumen del mes" con Venía, Entró y Se fué
+### Requirement: La zona clara de la card de saldo muestra el "Resumen del mes" con Tenías, Entró y Se fué
 
-La card de saldo SHALL cerrar con una zona clara titulada "Resumen del mes", separada de la zona oscura por un borde superior, con **tres bloques centrados en tres columnas iguales**: "Venía", "Entró" y "Se fué". Cada bloque SHALL mostrar un punto de color, su monto ARS y —según la regla bimoneda— su monto USD debajo.
+La card de saldo SHALL cerrar con una zona clara titulada "Resumen del mes", separada de la zona oscura por un borde superior, con **tres bloques centrados en tres columnas iguales**: "Tenías", "Entró" y "Se fué". Cada bloque SHALL mostrar un punto de color, su monto ARS y —según la regla bimoneda— su monto USD debajo.
 
-"Venía" es el saldo con el que el usuario **entró al mes**. SHALL derivarse —no leerse— como `saldo del mes − (Entró − Se fué)`, de modo que los tres montos cierren contra el saldo de la zona oscura **por construcción** y no por que dos lecturas coincidan:
+"Tenías" es el saldo con el que el usuario **entró al mes**. SHALL derivarse —no leerse— como `saldo del mes − (Entró − Se fué)`, de modo que los tres montos cierren contra el saldo de la zona oscura **por construcción** y no por que dos lecturas coincidan:
 
 ```
-Venía + Entró − Se fué  ===  el saldo que muestra la card arriba
+Tenías + Entró − Se fué  ===  el saldo que muestra la card arriba
 ```
 
 Ese es el punto de los tres montos juntos: la card queda auditable en pantalla, sin salir a buscar nada.
+
+Los dos **flujos** SHALL llevar su signo como prefijo (`+` en "Entró", `−` en "Se fué"), de modo que la identidad se lea literal de izquierda a derecha. "Tenías" NO SHALL llevar prefijo: muestra su propio signo solo cuando el saldo arrastrado es negativo. Ponerle `−` a los dos haría que el mismo símbolo signifique dos cosas distintas en la misma fila —un saldo en rojo y plata saliendo—, que es exactamente la confusión que los signos vienen a evitar. El prefijo NO SHALL renderizarse con los montos enmascarados: un signo suelto al lado de los puntos filtra la dirección que la máscara oculta.
 
 La zona SHALL leerse como **liquidez**: cómo se movió el dinero dentro y fuera de las cuentas en el mes. Por lo tanto, **todo movimiento que haya tocado el saldo de una cuenta SHALL caer de exactamente uno de los dos lados**, según su signo: "Entró" suma los ingresos, los reintegros recibidos y el lado positivo de los buckets con signo (liquidaciones a favor, la pata de destino de un cambio de moneda, un ajuste positivo); "Se fué" suma los gastos pagados desde una cuenta, los pagos de resumen de tarjeta y el lado negativo de esos mismos buckets.
 
@@ -58,12 +60,12 @@ Los dos montos SHALL responder al selector de mes. La zona NO SHALL renderizar l
 
 - **WHEN** el mes tiene ajustes, liquidaciones o cambios de moneda además de ingresos y gastos
 - **THEN** cada uno de esos movimientos aparece sumado en "Entró" o en "Se fué" según su signo
-- **AND** `Venía + Entró − Se fué` es igual al saldo que muestra la zona oscura de la card
+- **AND** `Tenías + Entró − Se fué` es igual al saldo que muestra la zona oscura de la card
 
 #### Scenario: Un mes arrastrado de meses anteriores
 
 - **WHEN** el usuario venía de meses con más egresos que ingresos
-- **THEN** "Venía" muestra ese saldo arrastrado, en negativo si corresponde
+- **THEN** "Tenías" muestra ese saldo arrastrado, en negativo si corresponde
 - **AND** el usuario puede leer en la misma card de dónde sale el saldo del mes
 
 #### Scenario: Una compra con tarjeta de crédito no baja el mes

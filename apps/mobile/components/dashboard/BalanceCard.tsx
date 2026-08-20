@@ -69,12 +69,15 @@ const Flow = ({
   amountClassName,
   ars,
   usd,
+  signPrefix,
 }: {
   label: string
   dotColor: string
   amountClassName: string
   ars: number
   usd: number
+  /** "+" / "−" on the two FLOWS; the carried-in balance shows only its own. */
+  signPrefix?: string
 }) => (
   <View className="flex-1 items-center">
     <View className="flex-row items-center gap-2">
@@ -84,6 +87,7 @@ const Flow = ({
     <MaskedAmount
       amount={ars}
       currency="ARS"
+      signPrefix={signPrefix}
       className={`mt-2 text-[15px] font-extrabold ${amountClassName}`}
     />
     {usd !== 0 && (
@@ -91,6 +95,7 @@ const Flow = ({
         amount={usd}
         currency="USD"
         showCentsOverride
+        signPrefix={signPrefix}
         className="mt-1 text-[11px] font-semibold text-text-soft"
       />
     )}
@@ -202,7 +207,7 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
         </Text>
         <View className="mt-3 flex-row gap-3">
           <Flow
-            label={t('dashboard.month.venia')}
+            label={t('dashboard.month.carried_in')}
             dotColor={colors.textSoft}
             amountClassName="text-text"
             ars={venia?.ARS ?? 0}
@@ -214,6 +219,7 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
             amountClassName="text-positive"
             ars={summary?.ARS.entro ?? 0}
             usd={summary?.USD.entro ?? 0}
+            signPrefix="+"
           />
           <Flow
             label={t('dashboard.month.went_out')}
@@ -221,6 +227,7 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
             amountClassName="text-slate"
             ars={summary?.ARS.seFue ?? 0}
             usd={summary?.USD.seFue ?? 0}
+            signPrefix="−"
           />
         </View>
       </View>
