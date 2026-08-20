@@ -6,7 +6,7 @@ import { CommittedSectionContainer } from './committed-section-container'
 import { CommittedSkeleton } from './committed-skeleton'
 import { DashboardErrorBoundary } from './dashboard-error-boundary'
 import { SharedStripContainer } from './shared-strip-container'
-import { SpentCard } from './spent-card'
+import { SpentCardContainer } from './spent-card-container'
 
 // Dashboard composition (design handoff `docs/design/dashboard-home/`), four
 // blocks in fixed order: "Saldo disponible total" (full width) → "Cuánto
@@ -39,7 +39,7 @@ export const DashboardContent = async () => {
             segunda algo más ancha. Las dos cards terminan a la misma altura
             (`items-stretch` + la tira de ritmo anclada al pie). */}
         <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[1fr_1.12fr]">
-          <SpentCard />
+          <SpentCardContainer />
 
           <Suspense fallback={<CommittedSkeleton />}>
             <CommittedSectionContainer />

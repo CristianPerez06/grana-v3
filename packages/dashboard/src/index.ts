@@ -3,6 +3,7 @@ export {
   getDashboardHero,
   getMonthBalanceSeries,
   getMonthCategoryBreakdown,
+  getMonthSpending,
   resolveMonthRange,
   UNCATEGORIZED_ID,
   type MonthCategoryBreakdown,
@@ -30,6 +31,13 @@ export {
 } from './spending'
 
 export { deriveMonthOpening } from './month-opening'
+
+export {
+  aggregateMonthSpending,
+  type MonthSpendingByCurrency,
+  type MonthSpendingRow,
+  type MonthSpendingSplit,
+} from './month-spending'
 
 export {
   deriveMonthSummary,

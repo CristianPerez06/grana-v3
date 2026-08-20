@@ -1,21 +1,29 @@
+import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import { deriveMonthSpending, deriveSpendingPace, type SpendingPace } from '@grana/dashboard'
+import { useQuery } from '@tanstack/react-query'
+import { ChevronDown } from 'lucide-react-native'
+import {
+  deriveSpendingPace,
+  type MonthSpendingSplit,
+  type SpendingPace,
+} from '@grana/dashboard'
 import { formatARS } from '@grana/i18n-messages'
 import { useT } from '../../lib/locale-context'
 import { colors } from '../../lib/colors'
-import { useMonthBalanceSeries, useMonthCategoryBreakdown } from '../../lib/dashboard/queries'
+import { useMonthBalanceSeries, useMonthSpending } from '../../lib/dashboard/queries'
+import { getHousehold } from '../../lib/shared/queries'
 import { useDashboardMonth } from './DashboardMonthContext'
 import { useEyeMask } from './EyeMaskContext'
 import { MaskedAmount } from './MaskedAmount'
 import { SpendingSkeleton } from './SpendingSkeleton'
 
-// Native mirror of the web `spent-card.tsx`: the month's expense as three named
-// amounts (Gastaste = Pagaste + Te queda por pagar) plus the pace strip.
+// Native mirror of the web `spent-card.tsx`: the month's OWN spending split by
+// where it stands (`Gastaste = Ya se pagó + Por pagar`), with the shared
+// breakdown behind one toggle for the whole card.
 //
-// RN has no conic-gradient, so the ring is a plain progress bar plus the big
-// percentage — the number is what carries the meaning, and faking an arc with
-// SVG for this one strip would not earn its weight.
+// RN has no conic-gradient, so the pace ring is a bordered circle plus the
+// percentage — the number is what carries the meaning.
 
 type TileTone = 'spent' | 'paid' | 'pending'
 
@@ -31,17 +39,16 @@ const Tile = ({
   ars,
   usd,
   showUsd,
-  subLead,
-  subEmphasis,
+  breakdown,
+  expanded,
 }: {
   tone: TileTone
   label: string
   ars: number
   usd: number
-  /** Decided once for the three tiles, so they stay the same height. */
   showUsd: boolean
-  subLead: string
-  subEmphasis: string
+  breakdown: { label: string; amount: number }[] | null
+  expanded: boolean
 }) => (
   <View className="flex-1 overflow-hidden rounded-2xl border border-border">
     <View className="flex-1 items-center px-2 pb-2 pt-2.5">
@@ -62,10 +69,24 @@ const Tile = ({
         />
       )}
     </View>
-    <View className="border-t border-border-soft px-2 pb-2.5 pt-2">
-      <Text className="text-center text-[10px] font-bold text-text-soft">{subLead}</Text>
-      <Text className="text-center text-[10.5px] font-extrabold text-text">{subEmphasis}</Text>
-    </View>
+
+    {breakdown && expanded && (
+      <View className="gap-1 border-t border-border-soft px-2 pb-2 pt-2">
+        {breakdown.map((row) => (
+          <View key={row.label}>
+            <Text numberOfLines={1} className="text-[9.5px] font-semibold text-text-soft">
+              {row.label}
+            </Text>
+            <MaskedAmount
+              amount={row.amount}
+              currency="ARS"
+              className="text-[10.5px] font-extrabold text-text"
+            />
+          </View>
+        ))}
+      </View>
+    )}
+
     <View className="h-1 w-full" style={{ backgroundColor: TONE[tone].rule }} />
   </View>
 )
@@ -75,8 +96,6 @@ const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
   const { masked } = useEyeMask()
   const fmt = (n: number) => (masked ? '••••••' : formatARS(n, false))
 
-  // No income yet → the ratio has no denominator. "0%" would read as "you spent
-  // nothing", which is the opposite of the truth.
   if (pace.status === 'indeterminate') {
     return (
       <View className="mt-3 rounded-2xl border border-border bg-page p-3.5">
@@ -143,22 +162,42 @@ const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
   )
 }
 
+const EMPTY: MonthSpendingSplit = {
+  gastaste: 0,
+  yaSePago: { total: 0, pusisteVos: 0, pusoElOtro: 0 },
+  porPagar: { total: 0, enTusTarjetas: 0, leDebesAlOtro: 0 },
+}
+
 export const SpentCard = () => {
   const t = useT()
   const router = useRouter()
   const { selected } = useDashboardMonth()
+  const [expanded, setExpanded] = useState(false)
 
+  const spendingQuery = useMonthSpending(selected.year, selected.month)
   const balanceQuery = useMonthBalanceSeries(selected.year, selected.month)
-  const breakdownQuery = useMonthCategoryBreakdown(selected.year, selected.month)
 
-  const accruedOf = (currency: 'ARS' | 'USD') =>
-    (breakdownQuery.data?.[currency] ?? []).reduce((sum, slice) => sum + slice.value, 0)
+  // Partner's first name for the breakdown copy. Tolerant: without it the card
+  // simply renders no breakdown.
+  const householdQuery = useQuery({
+    queryKey: ['dashboard', 'household-other-name'] as const,
+    queryFn: async () => {
+      const household = await getHousehold()
+      if (!household || household.members.length < 2) return null
+      return household.members[1]!.fullName.trim().split(/\s+/)[0] ?? null
+    },
+    retry: false,
+  })
+  const otherName = householdQuery.data ?? null
 
-  const isLoading = balanceQuery.isPending || breakdownQuery.isPending
-  const ars = deriveMonthSpending(accruedOf('ARS'), balanceQuery.data?.ARS.totalExpense ?? 0)
-  const usd = deriveMonthSpending(accruedOf('USD'), balanceQuery.data?.USD.totalExpense ?? 0)
+  const ars = spendingQuery.data?.ARS ?? EMPTY
+  const usd = spendingQuery.data?.USD ?? EMPTY
   const pace = deriveSpendingPace(ars.gastaste, balanceQuery.data?.ARS.totalIncome ?? 0)
-  const tilesHaveUsd = usd.gastaste !== 0 || usd.pagaste !== 0 || usd.teQuedaPorPagar !== 0
+
+  const isLoading = spendingQuery.isPending || balanceQuery.isPending
+  const tilesHaveUsd = usd.gastaste !== 0
+  const hasShared =
+    otherName != null && (ars.yaSePago.pusoElOtro !== 0 || ars.porPagar.leDebesAlOtro !== 0)
 
   return (
     <View className="rounded-2xl border border-border bg-card p-4">
@@ -190,28 +229,70 @@ export const SpentCard = () => {
               ars={ars.gastaste}
               usd={usd.gastaste}
               showUsd={tilesHaveUsd}
-              subLead={t('dashboard.spent.gastaste_sub_1')}
-              subEmphasis={t('dashboard.spent.gastaste_sub_2')}
+              breakdown={null}
+              expanded={expanded}
             />
             <Tile
               tone="paid"
-              label={t('dashboard.spent.pagaste')}
-              ars={ars.pagaste}
-              usd={usd.pagaste}
+              label={t('dashboard.spent.paid')}
+              ars={ars.yaSePago.total}
+              usd={usd.yaSePago.total}
               showUsd={tilesHaveUsd}
-              subLead={t('dashboard.spent.pagaste_sub_1')}
-              subEmphasis={t('dashboard.spent.pagaste_sub_2')}
+              breakdown={
+                hasShared
+                  ? [
+                      { label: t('dashboard.spent.paid_by_you'), amount: ars.yaSePago.pusisteVos },
+                      {
+                        label: t('dashboard.spent.paid_by_other', { name: otherName }),
+                        amount: ars.yaSePago.pusoElOtro,
+                      },
+                    ]
+                  : null
+              }
+              expanded={expanded}
             />
             <Tile
               tone="pending"
               label={t('dashboard.spent.pending')}
-              ars={ars.teQuedaPorPagar}
-              usd={usd.teQuedaPorPagar}
+              ars={ars.porPagar.total}
+              usd={usd.porPagar.total}
               showUsd={tilesHaveUsd}
-              subLead={t('dashboard.spent.pending_sub_1')}
-              subEmphasis={t('dashboard.spent.pending_sub_2')}
+              breakdown={
+                hasShared
+                  ? [
+                      {
+                        label: t('dashboard.spent.pending_on_cards'),
+                        amount: ars.porPagar.enTusTarjetas,
+                      },
+                      {
+                        label: t('dashboard.spent.pending_owed_other', { name: otherName }),
+                        amount: ars.porPagar.leDebesAlOtro,
+                      },
+                    ]
+                  : null
+              }
+              expanded={expanded}
             />
           </View>
+
+          {hasShared && (
+            <Pressable
+              onPress={() => setExpanded((v) => !v)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded }}
+              style={{ minHeight: 44 }}
+              className="mt-2 flex-row items-center justify-center gap-1.5"
+            >
+              <Text className="text-[12px] font-bold text-text-muted">
+                {expanded
+                  ? t('dashboard.spent.breakdown_hide')
+                  : t('dashboard.spent.breakdown_show')}
+              </Text>
+              <View style={{ transform: [{ rotate: expanded ? '180deg' : '0deg' }] }}>
+                <ChevronDown size={14} color={colors.textMuted} />
+              </View>
+            </Pressable>
+          )}
 
           <PaceStrip pace={pace} />
         </>

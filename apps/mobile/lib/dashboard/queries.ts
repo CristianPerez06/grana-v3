@@ -4,6 +4,7 @@ import {
   getDashboardHero,
   getMonthBalanceSeries,
   getMonthCategoryBreakdown,
+  getMonthSpending,
 } from '@grana/dashboard'
 import { supabase } from '../supabase'
 
@@ -61,5 +62,14 @@ export function useMonthCategoryBreakdown(year: number, month: number) {
   return useQuery({
     queryKey: ['dashboard', 'category-breakdown', key] as const,
     queryFn: () => getMonthCategoryBreakdown(supabase, key),
+  })
+}
+
+// "Cuánto gastaste" — own spending of the month split by settlement state.
+export function useMonthSpending(year: number, month: number) {
+  const key = monthKey(year, month)
+  return useQuery({
+    queryKey: ['dashboard', 'month-spending', key] as const,
+    queryFn: () => getMonthSpending(supabase, key),
   })
 }

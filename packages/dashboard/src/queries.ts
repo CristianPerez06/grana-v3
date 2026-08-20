@@ -26,6 +26,11 @@ import {
   type HeroAccountRow,
   type MonthBalanceTxInput,
 } from './aggregations'
+import {
+  aggregateMonthSpending,
+  type MonthSpendingByCurrency,
+  type MonthSpendingRow,
+} from './month-spending'
 import type {
   CommittedCurrency,
   CommittedOutlook,
@@ -675,4 +680,140 @@ export async function getCommittedOutlook(
   result.USD.recurringIncome = projection.income.USD
 
   return result
+}
+
+// ── getMonthSpending ("Cuánto gastaste") ──────────────────────────────────────
+// The month's OWN spending split by settlement state, per currency.
+//
+// Same DEVENGADO lens as `getMonthCategoryBreakdown` — same temporal cut, same
+// `countsAsCategorySpend` exclusions, same `categoryOwnPortion` share resolution
+// — so the two agree on WHAT counts as your spending; they only group it
+// differently (by payment state here, by category there). Reusing the shared
+// helpers is what keeps them from drifting.
+//
+// This read exists instead of deriving the card from `accrued − totalExpense`:
+// that subtraction mixed lenses (`totalExpense` is the FULL amount of a shared
+// expense, the accrual is YOUR share) and understated the card debt by the
+// partner's share of everything you fronted.
+export async function getMonthSpending(
+  supabase: SupabaseClient,
+  month: string,
+  todayISO: string = financialTodayISO(),
+): Promise<MonthSpendingByCurrency> {
+  const { from, to } = resolveMonthRange(month)
+  const cut = cajaCutOrFilter(todayISO)
+
+  const [accountsResult, expensesResult, reimbursementsResult] = await Promise.all([
+    // Every account of MINE, credit cards included: whose account paid is what
+    // separates "lo pusiste vos" from "lo puso el otro". RLS scopes this to me.
+    supabase.from('accounts').select('id'),
+    supabase
+      .from('transactions')
+      .select(
+        'id, amount, currency_code, account_id, card_period_id, is_parent, is_shared, period_payments!period_payments_transaction_id_fkey(id)',
+      )
+      .eq('type', 'expense')
+      .gte('date', from)
+      .lte('date', to)
+      .or(cut),
+    supabase
+      .from('transactions')
+      .select(
+        'id, amount, currency_code, account_id, card_period_id, reimbursement_target, is_shared',
+      )
+      .eq('type', 'reimbursement')
+      .not('received_at', 'is', null)
+      .is('cancelled_at', null)
+      .gte('date', from)
+      .lte('date', to)
+      .or(cut),
+  ])
+  if (accountsResult.error) throw accountsResult.error
+  if (expensesResult.error) throw expensesResult.error
+  if (reimbursementsResult.error) throw reimbursementsResult.error
+
+  type ExpenseRow = {
+    id: string
+    amount: number
+    currency_code: string
+    account_id: string | null
+    card_period_id: string | null
+    is_parent: boolean
+    is_shared: boolean
+    period_payments: { id: string }[] | null
+  }
+  type ReimbRow = {
+    id: string
+    amount: number
+    currency_code: string
+    account_id: string | null
+    card_period_id: string | null
+    reimbursement_target: string | null
+    is_shared: boolean
+  }
+
+  const myAccountIds = ((accountsResult.data ?? []) as Array<{ id: string }>).map((a) => a.id)
+  const expenseRows = (expensesResult.data ?? []) as unknown as ExpenseRow[]
+  const reimbRows = (reimbursementsResult.data ?? []) as unknown as ReimbRow[]
+
+  // Shared movements contribute only the user's assigned portion. The split RLS
+  // exposes BOTH members' rows, so filter by her uid explicitly.
+  const sharedIds = [
+    ...new Set([
+      ...expenseRows.filter((e) => e.is_shared).map((e) => e.id),
+      ...reimbRows.filter((r) => r.is_shared).map((r) => r.id),
+    ]),
+  ]
+  const mySplitByTx = new Map<string, number>()
+  if (sharedIds.length > 0) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (user) {
+      const { data: splits } = await supabase
+        .from('shared_expense_split')
+        .select('transaction_id, amount_assigned')
+        .eq('user_id', user.id)
+        .in('transaction_id', sharedIds)
+      for (const s of splits ?? [])
+        mySplitByTx.set(s.transaction_id as string, Number(s.amount_assigned))
+    }
+  }
+
+  const rows: MonthSpendingRow[] = []
+  for (const e of expenseRows) {
+    // Installment parent (off-ledger) and statement payment (cancels debt, not
+    // new spending) — the same exclusions the category lens applies.
+    if (
+      !countsAsCategorySpend({
+        is_parent: e.is_parent,
+        hasStatementPayment: (e.period_payments?.length ?? 0) > 0,
+      })
+    ) {
+      continue
+    }
+    const amount = categoryOwnPortion(e, mySplitByTx)
+    if (amount === null) continue // shared with no own split → not ours
+    rows.push({
+      kind: 'expense',
+      amount,
+      currency_code: e.currency_code,
+      account_id: e.account_id,
+      card_period_id: e.card_period_id,
+    })
+  }
+  for (const r of reimbRows) {
+    const amount = categoryOwnPortion(r, mySplitByTx)
+    if (amount === null) continue
+    rows.push({
+      kind: 'reimbursement',
+      amount,
+      currency_code: r.currency_code,
+      account_id: r.account_id,
+      card_period_id: r.card_period_id,
+      reimbursement_target: r.reimbursement_target,
+    })
+  }
+
+  return aggregateMonthSpending(rows, myAccountIds)
 }

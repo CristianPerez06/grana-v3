@@ -1,17 +1,18 @@
 'use client'
 
+import { useId, useState } from 'react'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
-import { Clock, CreditCard, ShoppingBag } from 'lucide-react'
+import { ChevronDown, Clock, CreditCard, ShoppingBag } from 'lucide-react'
 import { formatARS } from '@grana/i18n-messages'
 import {
-  deriveMonthSpending,
   deriveSpendingPace,
   getMonthBalanceSeries,
+  getMonthSpending,
+  type MonthSpendingSplit,
   type SpendingPace,
 } from '@grana/dashboard'
-import { getMonthCategoryBreakdown } from '@/lib/transactions/queries'
 import { createClient } from '@/lib/supabase/client'
 import { useShowCents } from '@/lib/preferences-context'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -19,6 +20,11 @@ import { cn } from '@/lib/utils'
 import { useDashboardMonth } from './dashboard-month-context'
 import { useEyeMask } from './eye-mask-context'
 import { MaskedAmount } from './masked-amount'
+
+type Props = {
+  /** Household partner's first name, or null when there is no Compartido. */
+  otherName: string | null
+}
 
 const monthKey = (year: number, month: number) => `${year}-${String(month).padStart(2, '0')}`
 
@@ -30,6 +36,16 @@ const TILE_TONE: Record<TileTone, { icon: string; amount: string; rule: string }
   pending: { icon: 'bg-warning-soft text-warning-deep', amount: 'text-warning-deep', rule: 'bg-warning-deep' },
 }
 
+/** One line of a tile's breakdown: what part of the amount, and whose it is. */
+const BreakdownRow = ({ label, amount }: { label: string; amount: number }) => (
+  <div className="flex items-baseline justify-between gap-1.5 text-[11px] leading-tight">
+    <span className="min-w-0 truncate font-semibold text-text-soft">{label}</span>
+    <span className="shrink-0 font-extrabold tabular-nums text-text">
+      <MaskedAmount amount={amount} currency="ARS" />
+    </span>
+  </div>
+)
+
 const Tile = ({
   tone,
   icon,
@@ -37,18 +53,20 @@ const Tile = ({
   ars,
   usd,
   showUsd,
-  subLead,
-  subEmphasis,
+  breakdown,
+  panelId,
+  expanded,
 }: {
   tone: TileTone
   icon: React.ReactNode
   label: string
   ars: number
   usd: number
-  /** Decided once for the three tiles, so they stay the same height. */
   showUsd: boolean
-  subLead: string
-  subEmphasis: string
+  /** Null when this tile has nothing to break down (no Compartido, or "Gastaste"). */
+  breakdown: Array<{ label: string; amount: number }> | null
+  panelId: string
+  expanded: boolean
 }) => (
   <div className="flex flex-col overflow-hidden rounded-2xl border border-border text-center">
     <div className="flex flex-1 flex-col items-center px-3 pt-3.5">
@@ -60,10 +78,7 @@ const Tile = ({
       </span>
       <span className="mt-2 text-[12.5px] font-extrabold text-text-muted">{label}</span>
       <span
-        className={cn(
-          'mt-1 text-[20px] font-extrabold tracking-[-0.04em]',
-          TILE_TONE[tone].amount,
-        )}
+        className={cn('mt-1 text-[20px] font-extrabold tracking-[-0.04em]', TILE_TONE[tone].amount)}
       >
         <MaskedAmount amount={ars} currency="ARS" />
       </span>
@@ -73,13 +88,20 @@ const Tile = ({
         </span>
       )}
     </div>
-    {/* Sub-block: the three amounts are all "spend", so each says what it measures. */}
-    <div className="mt-3 border-t border-border-soft px-3 pb-3 pt-2.5 text-[11px] font-bold leading-tight text-text-soft">
-      {subLead}
-      <br />
-      <span className="text-[11.5px] font-extrabold text-text">{subEmphasis}</span>
-    </div>
-    <span aria-hidden className={cn('h-1 w-full', TILE_TONE[tone].rule)} />
+
+    {breakdown && (
+      <div
+        id={panelId}
+        hidden={!expanded}
+        className="mt-3 flex flex-col gap-1 border-t border-border-soft px-3 pb-3 pt-2.5 text-left"
+      >
+        {breakdown.map((row) => (
+          <BreakdownRow key={row.label} label={row.label} amount={row.amount} />
+        ))}
+      </div>
+    )}
+
+    <span aria-hidden className={cn('mt-auto h-1 w-full', TILE_TONE[tone].rule)} />
   </div>
 )
 
@@ -102,8 +124,7 @@ const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
 
   // The ratio ran off the scale (a month whose income was cents). There IS a
   // denominator, so this is not "indeterminate" — but neither the raw number nor
-  // a capped "+999%" tells the user anything. Drop the ring and say it plainly,
-  // with the two amounts that produced it.
+  // a capped one tells the user anything. Drop the ring and say it plainly.
   if (pace.status === 'overflow') {
     return (
       <div className="mt-auto rounded-2xl border border-terracotta/30 bg-terracotta-soft p-4">
@@ -132,10 +153,6 @@ const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
         </span>
       </div>
       <div className="min-w-0 flex-1">
-        {/* Plain interpolation, not `t.rich`: `{pct}` is a value in the message,
-            not a tag, and the same key is read by the native app, whose
-            translator has no tag support. The ring already carries the number
-            in colour, so emphasising it again in the sentence adds nothing. */}
         <p className="text-[13.5px] font-bold text-text-muted">
           {t(over ? 'pace_over' : 'pace', { pct: `${pace.pct}%` })}
         </p>
@@ -154,44 +171,52 @@ const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
 }
 
 /**
- * "Cuánto gastaste" — the month's expense broken into three named amounts plus
- * the pace strip.
+ * "Cuánto gastaste" — the month's OWN spending, split by where it stands.
  *
- * Gastaste (everything accrued) = Pagaste (already left the accounts) + Te queda
- * por pagar (financed on a credit card). The card renders whenever the month has
- * spending, INCLUDING when nothing is left to pay: a zero there is the good news,
- * and a card that vanishes depending on the month you are looking at is worse
- * than a card showing zero.
+ *     Gastaste  =  Ya se pagó  +  Por pagar
  *
- * Reuses the same query keys as the balance card so the month costs no extra
- * fetch.
+ * Every amount is the user's SHARE of a shared movement, never the full ticket:
+ * the card reads on one lens and one unit. The cash lens — pesos moving through
+ * the accounts, full amounts — belongs to the balance card above ("Se fue").
+ *
+ * "Ya se pagó" is impersonal on purpose: a shared expense the partner paid IS
+ * settled with the merchant, just not by you. The breakdown says who, so the
+ * label does not have to lie.
  */
-export const SpentCard = () => {
+export const SpentCard = ({ otherName }: Props) => {
   const t = useTranslations('dashboard.spent')
   const { selected } = useDashboardMonth()
+  const [expanded, setExpanded] = useState(false)
+  const panelBase = useId()
 
+  const spendingQuery = useQuery({
+    queryKey: ['dashboard', 'month-spending', selected.year, selected.month],
+    queryFn: () => getMonthSpending(createClient(), monthKey(selected.year, selected.month)),
+    staleTime: 60_000,
+  })
   const balanceQuery = useQuery({
     queryKey: ['dashboard', 'balance-series', selected.year, selected.month],
     queryFn: () => getMonthBalanceSeries(createClient(), selected.year, selected.month),
     staleTime: 60_000,
   })
-  const breakdownQuery = useQuery({
-    queryKey: ['dashboard', 'category-breakdown', selected.year, selected.month],
-    queryFn: () =>
-      getMonthCategoryBreakdown(createClient(), monthKey(selected.year, selected.month)),
-    staleTime: 60_000,
-  })
 
-  const accruedOf = (currency: 'ARS' | 'USD') =>
-    (breakdownQuery.data?.[currency] ?? []).reduce((sum, slice) => sum + slice.value, 0)
-
-  const ars = deriveMonthSpending(accruedOf('ARS'), balanceQuery.data?.ARS.totalExpense ?? 0)
-  const usd = deriveMonthSpending(accruedOf('USD'), balanceQuery.data?.USD.totalExpense ?? 0)
+  const empty: MonthSpendingSplit = {
+    gastaste: 0,
+    yaSePago: { total: 0, pusisteVos: 0, pusoElOtro: 0 },
+    porPagar: { total: 0, enTusTarjetas: 0, leDebesAlOtro: 0 },
+  }
+  const ars = spendingQuery.data?.ARS ?? empty
+  const usd = spendingQuery.data?.USD ?? empty
   const pace = deriveSpendingPace(ars.gastaste, balanceQuery.data?.ARS.totalIncome ?? 0)
 
   const isEmpty = ars.gastaste === 0 && usd.gastaste === 0
-  // One decision for the three tiles (see `Tile`).
-  const tilesHaveUsd = usd.gastaste !== 0 || usd.pagaste !== 0 || usd.teQuedaPorPagar !== 0
+  // One decision for the three tiles (the USD line), so they stay level.
+  const tilesHaveUsd = usd.gastaste !== 0
+
+  // The breakdown only exists when the month actually has a shared side: with no
+  // partner involved every peso is yours and the two rows would say so twice.
+  const hasShared =
+    otherName != null && (ars.yaSePago.pusoElOtro !== 0 || ars.porPagar.leDebesAlOtro !== 0)
 
   return (
     <Card className="flex flex-col">
@@ -212,7 +237,7 @@ export const SpentCard = () => {
           </p>
         ) : (
           <>
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-3 items-stretch gap-2.5">
               <Tile
                 tone="spent"
                 icon={<ShoppingBag size={18} strokeWidth={2} aria-hidden />}
@@ -220,30 +245,73 @@ export const SpentCard = () => {
                 ars={ars.gastaste}
                 usd={usd.gastaste}
                 showUsd={tilesHaveUsd}
-                subLead={t('gastaste_sub_1')}
-                subEmphasis={t('gastaste_sub_2')}
+                breakdown={null}
+                panelId={`${panelBase}-spent`}
+                expanded={expanded}
               />
               <Tile
                 tone="paid"
                 icon={<CreditCard size={18} strokeWidth={2} aria-hidden />}
-                label={t('pagaste')}
-                ars={ars.pagaste}
-                usd={usd.pagaste}
+                label={t('paid')}
+                ars={ars.yaSePago.total}
+                usd={usd.yaSePago.total}
                 showUsd={tilesHaveUsd}
-                subLead={t('pagaste_sub_1')}
-                subEmphasis={t('pagaste_sub_2')}
+                breakdown={
+                  hasShared
+                    ? [
+                        { label: t('paid_by_you'), amount: ars.yaSePago.pusisteVos },
+                        {
+                          label: t('paid_by_other', { name: otherName }),
+                          amount: ars.yaSePago.pusoElOtro,
+                        },
+                      ]
+                    : null
+                }
+                panelId={`${panelBase}-paid`}
+                expanded={expanded}
               />
               <Tile
                 tone="pending"
                 icon={<Clock size={18} strokeWidth={2} aria-hidden />}
                 label={t('pending')}
-                ars={ars.teQuedaPorPagar}
-                usd={usd.teQuedaPorPagar}
+                ars={ars.porPagar.total}
+                usd={usd.porPagar.total}
                 showUsd={tilesHaveUsd}
-                subLead={t('pending_sub_1')}
-                subEmphasis={t('pending_sub_2')}
+                breakdown={
+                  hasShared
+                    ? [
+                        { label: t('pending_on_cards'), amount: ars.porPagar.enTusTarjetas },
+                        {
+                          label: t('pending_owed_other', { name: otherName }),
+                          amount: ars.porPagar.leDebesAlOtro,
+                        },
+                      ]
+                    : null
+                }
+                panelId={`${panelBase}-pending`}
+                expanded={expanded}
               />
             </div>
+
+            {/* One toggle for the card, not one per tile: the three amounts are
+                read together, and three independent chevrons would let the user
+                open a partial view of a single split. */}
+            {hasShared && (
+              <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                aria-expanded={expanded}
+                aria-controls={`${panelBase}-paid ${panelBase}-pending`}
+                className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl text-[12.5px] font-bold text-text-muted transition-colors hover:bg-border-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {expanded ? t('breakdown_hide') : t('breakdown_show')}
+                <ChevronDown
+                  aria-hidden
+                  size={15}
+                  className={cn('transition-transform duration-[180ms] ease-out', expanded && 'rotate-180')}
+                />
+              </button>
+            )}
 
             <PaceStrip pace={pace} />
           </>

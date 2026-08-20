@@ -90,29 +90,61 @@ Los dos montos SHALL responder al selector de mes. La zona NO SHALL renderizar l
 
 ---
 
-### Requirement: La card "Cuánto gastaste" descompone el gasto del mes en Gastaste, Pagaste y Te queda por pagar
+### Requirement: La card "Cuánto gastaste" descompone el gasto propio del mes en Gastaste, Ya se pagó y Por pagar
 
-El dashboard SHALL renderizar una card "Cuánto gastaste" con **tres tiles** de igual ancho, cada uno con ícono tintado, rótulo, monto en el color del bloque, línea USD según la regla bimoneda, un sub-bloque de contexto y un filete de color al pie:
+El dashboard SHALL renderizar una card "Cuánto gastaste" con **tres tiles** de igual ancho, cada uno con ícono tintado, rótulo, monto en el color del bloque, línea USD según la regla bimoneda y un filete de color al pie:
 
 - **Gastaste** = total de gastos devengados del mes.
-- **Pagaste** = la parte de esos gastos que ya salió de las cuentas.
-- **Te queda por pagar** = `Gastaste − Pagaste`, es decir los gastos del mes hechos con tarjeta de crédito.
+- **Ya se pagó** = los que ya están saldados: la plata salió de alguna cuenta.
+- **Por pagar** = los que siguen montados en una tarjeta de crédito.
 
-Los tres montos SHALL reconciliar por construcción: `Pagaste + Te queda por pagar` SHALL ser igual a `Gastaste` dentro de cada moneda. El sub-bloque de "Te queda por pagar" SHALL mostrar la **cantidad de compras** con tarjeta que componen ese monto.
+`Ya se pagó + Por pagar` SHALL ser igual a `Gastaste` dentro de cada moneda.
 
-La card SHALL renderizarse siempre que haya gasto en el mes, **incluso cuando "Te queda por pagar" es cero**: un cero es información. La card NO SHALL desmontarse por ausencia de consumo de tarjeta.
+**La card entera SHALL leerse en una sola unidad: los gastos PROPIOS del usuario.** De un movimiento compartido SHALL tomar únicamente la parte asignada al usuario, en los tres montos por igual. La lente de caja —pesos moviéndose por las cuentas, montos completos— es la de la card de saldo ("Se fué"); mezclarlas es lo que producía el defecto que este requirement reemplaza: `Te queda por pagar` restaba un monto completo (`totalExpense`) de un monto "tu parte" (el devengado), subestimando la deuda de tarjeta en la parte del otro miembro de cada gasto compartido que el usuario había adelantado.
+
+El rótulo "Ya se pagó" SHALL ser **impersonal**. Un gasto compartido que pagó el otro miembro está saldado con el comercio pero no con el usuario: decir "Pagaste" sería falso. Los otros dos rótulos hablan del estado de esa plata; solo "Gastaste" habla del usuario, y esa asimetría gramatical es deliberada.
+
+La card SHALL renderizarse siempre que haya gasto en el mes, **incluso cuando "Por pagar" es cero**: un cero es información. La card NO SHALL desmontarse por ausencia de consumo de tarjeta.
+
+**Desglose compartido.** Cuando el mes tiene gastos compartidos, "Ya se pagó" y "Por pagar" SHALL poder desplegar su composición, cada uno según la pregunta que le corresponde —que no es la misma:
+
+- "Ya se pagó" se abre por **quién puso la plata**: lo pusiste vos / lo puso el otro miembro (saldado con el comercio, pendiente con él).
+- "Por pagar" se abre por **a quién le debés**: en tus tarjetas (viene en tu resumen) / se lo debés al otro miembro (está en la tarjeta de él, no viene en ningún resumen tuyo).
+
+El despliegue SHALL gobernarse con **un solo control para la card**, no uno por tile: los tres montos se leen juntos y tres controles independientes permitirían abrir media composición. El control SHALL ser un `<button>` con `aria-expanded` y `aria-controls` apuntando a los paneles, con área táctil ≥44px en mobile.
+
+El desglose NO SHALL renderizarse cuando el mes no tiene parte compartida: sin otro miembro involucrado, cada peso es del usuario y las dos filas lo dirían dos veces.
+
+Lo que el usuario **adelantó por el otro miembro** NO SHALL aparecer en esta card. No es un gasto propio —es un préstamo—, su unidad es la de caja y no la de esta card, ya está reflejado en "Se fué" de la card de saldo, y el neto del hogar vive en la tira "Compartido". Mostrarlo acá agregaría un monto bruto del mes que competiría con el neto histórico de esa tira sin nada que explique la diferencia.
 
 #### Scenario: Mes con gasto de caja y de tarjeta
 
 - **WHEN** el usuario gastó en el mes tanto desde sus cuentas como con tarjeta de crédito
-- **THEN** los tres tiles muestran sus montos y `Pagaste + Te queda por pagar` es igual a `Gastaste`
-- **AND** el sub-bloque de "Te queda por pagar" indica cuántas compras con tarjeta lo componen
+- **THEN** los tres tiles muestran sus montos y `Ya se pagó + Por pagar` es igual a `Gastaste`
 
 #### Scenario: Mes sin consumo de tarjeta
 
 - **WHEN** todo el gasto del mes salió de las cuentas
-- **THEN** la card se renderiza igual, con "Te queda por pagar" en cero
-- **AND** "Pagaste" coincide con "Gastaste"
+- **THEN** la card se renderiza igual, con "Por pagar" en cero
+- **AND** "Ya se pagó" coincide con "Gastaste"
+
+#### Scenario: Un gasto compartido que pagó el otro miembro
+
+- **WHEN** el otro miembro paga desde su cuenta un gasto compartido
+- **THEN** la parte del usuario suma en "Gastaste" y en "Ya se pagó"
+- **AND** el desglose la ubica en "lo puso" el otro miembro, no en "lo pusiste vos"
+
+#### Scenario: Un consumo en la tarjeta del otro miembro
+
+- **WHEN** el otro miembro carga en SU tarjeta un consumo compartido
+- **THEN** la parte del usuario suma en "Por pagar"
+- **AND** el desglose la ubica como deuda con el otro miembro y NO como algo que venga en el resumen del usuario
+
+#### Scenario: Usuario sin gastos compartidos en el mes
+
+- **WHEN** el mes no tiene ningún movimiento compartido
+- **THEN** la card no ofrece desglose
+- **AND** los tres montos se leen sin controles adicionales
 
 #### Scenario: Mes sin ningún gasto
 
