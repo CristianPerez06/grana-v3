@@ -24,7 +24,9 @@ const AMOUNT_SIZE: Record<AmountDensity, string> = {
   normal: 'text-[14.5px]',
   tight: 'text-[13px]',
   tighter: 'text-[11.5px]',
-  tightest: 'text-[10px]',
+  // 9.5 and not 10: the worst case ($ 1.234.567.890,00) measures ~92px at 10px
+  // against the ~89px a native tile leaves for text.
+  tightest: 'text-[9.5px]',
 }
 
 type Props = {
@@ -112,6 +114,7 @@ export const SpentTile = ({
       <MaskedAmount
         amount={ars}
         currency="ARS"
+        fitOneLine
         className={`mt-1.5 font-extrabold ${AMOUNT_SIZE[amountDensity(ars, showCents)]} ${tint.amount}`}
       />
       {showUsd && (

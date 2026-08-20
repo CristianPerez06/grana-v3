@@ -14,6 +14,11 @@ type Props = {
   maskChar?: string
   /** Rendered before the number when not masked (e.g. "+" / "−"). */
   signPrefix?: string
+  /**
+   * Shrink to fit one line instead of wrapping or clipping. RN measures the real
+   * text, so it catches what a size step chosen from a character count cannot.
+   */
+  fitOneLine?: boolean
 }
 
 export const MaskedAmount = ({
@@ -24,6 +29,7 @@ export const MaskedAmount = ({
   showCentsOverride,
   maskChar = '••••••',
   signPrefix,
+  fitOneLine,
 }: Props) => {
   const { masked } = useEyeMask()
   const showCents = useShowCents()
@@ -42,8 +48,12 @@ export const MaskedAmount = ({
       ? formatARS(amount, effectiveShowCents)
       : formatUSD(amount, effectiveShowCents)
 
+  const fit = fitOneLine
+    ? { numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: 0.7 }
+    : undefined
+
   return (
-    <Text className={`tabular-nums ${className ?? ''}`} style={style}>
+    <Text className={`tabular-nums ${className ?? ''}`} style={style} {...fit}>
       {signPrefix}
       {formatted}
     </Text>
