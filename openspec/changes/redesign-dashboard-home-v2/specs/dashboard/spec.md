@@ -126,7 +126,7 @@ La card SHALL renderizarse siempre que haya gasto en el mes, **incluso cuando "T
 
 La card "Cuánto gastaste" SHALL cerrar con una tira de ritmo que muestre un anillo con el porcentaje, el copy con el porcentaje destacado, una barra de progreso y el pie con los dos montos que forman el cociente.
 
-El ritmo SHALL calcularse como `Gastaste / ingresos acreditados` **dentro de la misma moneda y el mismo mes**. El denominador SHALL ser el ingreso del mes (`totalIncome`), NO el "Entró" de "Resumen del mes": ese último es una lectura de liquidez que incluye reintegros, liquidaciones y patas de cambio de moneda, y meterlas en el denominador infla el ritmo con plata que no es ingreso. El sistema NO SHALL requerir un ingreso mensual esperado configurado por el usuario.
+El ritmo SHALL calcularse como `Gastaste / ingresos acreditados` **dentro de la misma moneda y el mismo mes**. El ritmo evalúa **el mes**: el saldo arrastrado de meses anteriores ("Tenías") NO SHALL participar de ninguno de los dos términos. La pregunta es cómo fue este mes, no cómo viene el usuario en general. El denominador SHALL ser el ingreso del mes (`totalIncome`), NO el "Entró" de "Resumen del mes": ese último es una lectura de liquidez que incluye reintegros, liquidaciones y patas de cambio de moneda, y meterlas en el denominador infla el ritmo con plata que no es ingreso. El sistema NO SHALL requerir un ingreso mensual esperado configurado por el usuario.
 
 Se SHALL renderizar **un solo anillo, el de ARS**. El ritmo en USD NO SHALL renderizarse como segundo anillo.
 
@@ -134,6 +134,7 @@ Dos estados SHALL tratarse como estados de primera clase, no como bordes excepci
 
 - **Ritmo indeterminado** (ingresos del mes en cero, típico a comienzo de mes): el sistema SHALL mostrar un mensaje explicativo **en lugar del anillo**, y NO SHALL mostrar 0% ni dividir por cero.
 - **Ritmo mayor a 100%**: el anillo y la barra SHALL pasar al color de alerta (terracota) y el copy SHALL ajustarse para reflejar que el gasto superó los ingresos del mes.
+- **Ritmo desbordado**: cuando el cociente supera un umbral de escala, el sistema NO SHALL mostrar el anillo ni el porcentaje, y SHALL mostrar en su lugar un mensaje con un ícono, en el tono de la app, acompañado de **los dos montos que lo produjeron**. Con un denominador cercano a cero —un mes cuyo único ingreso fueron centavos— el cociente se va a los millones: es aritméticamente correcto y no es una lectura, y un número capeado tampoco lo sería. Este estado NO SHALL confundirse con el indeterminado: acá **sí entró plata**, solo que poca, y decir "todavía no entró plata este mes" sería falso. El umbral SHALL ubicarse donde el número deja de informar, no donde se pone grande: un mes en que se gastó diez veces el ingreso es extraordinario pero perfectamente legible y SHALL conservar su porcentaje.
 
 #### Scenario: Mes con ingresos y gasto por debajo
 
@@ -152,6 +153,13 @@ Dos estados SHALL tratarse como estados de primera clase, no como bordes excepci
 - **WHEN** `Gastaste` es mayor que los ingresos acreditados del mes
 - **THEN** el anillo y la barra se pintan en el color de alerta
 - **AND** el copy refleja que el gasto superó los ingresos, en vez de mostrar una barra llena sin señal
+
+#### Scenario: Un mes con ingresos de centavos
+
+- **WHEN** el usuario gastó cientos de miles en un mes cuyo único ingreso fueron unos centavos
+- **THEN** la tira muestra un mensaje con ícono en lugar del anillo y del porcentaje
+- **AND** acompaña los dos montos que lo produjeron
+- **AND** NO dice que todavía no entró plata, porque sí entró
 
 ---
 

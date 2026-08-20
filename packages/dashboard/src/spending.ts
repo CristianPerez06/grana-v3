@@ -42,6 +42,17 @@ export function deriveMonthSpending(accrued: number, cash: number): MonthSpendin
   }
 }
 
+/**
+ * Past this ratio the percentage stops being a reading and becomes noise:
+ * "124.036.138%" tells you nothing you can act on. Reachable with real data —
+ * a month whose only income was a few cents, against ordinary spending.
+ *
+ * Set at 100× rather than something tighter so that a genuinely extreme but
+ * still legible month (spending ten times your income) keeps showing its number.
+ * The line is where the ratio stops being informative, not where it gets big.
+ */
+export const PACE_OVERFLOW_PCT = 10_000
+
 export type SpendingPace =
   | {
       /**
@@ -53,6 +64,18 @@ export type SpendingPace =
       status: 'indeterminate'
       spent: number
       income: 0
+    }
+  | {
+      /**
+       * The ratio ran past `PACE_OVERFLOW_PCT`. There IS income — so this is not
+       * `indeterminate` — but the percentage no longer says anything, and a
+       * capped number like "+999%" would not say much more. The UI drops the
+       * ring and speaks plainly instead, with the two amounts that produced it.
+       */
+      status: 'overflow'
+      pct: number
+      spent: number
+      income: number
     }
   | {
       status: 'ok' | 'over'
@@ -75,12 +98,23 @@ export type SpendingPace =
  * month the denominator is zero (`indeterminate`), and a month where you spend
  * more than you earned reads over 100% (`over`). Both are ordinary states here,
  * not rare alarms.
+ *
+ * A denominator close to zero — a month whose only income is a few cents — sends
+ * the ratio into the millions. That gets its own `overflow` status: income DID
+ * arrive, so calling it `indeterminate` would be a lie, but the percentage is no
+ * longer a reading. The UI drops the ring there and says so in words.
+ *
+ * The ratio only ever looks at THE MONTH: what came in and what was spent inside
+ * it. A balance carried from previous months never participates — the pace asks
+ * "how did this month go", not "how are you doing overall".
  */
 export function deriveSpendingPace(spent: number, income: number): SpendingPace {
   const safeSpent = Math.max(spent, 0)
   if (income <= 0) return { status: 'indeterminate', spent: safeSpent, income: 0 }
 
   const pct = Math.round((safeSpent / income) * 100)
+  if (pct > PACE_OVERFLOW_PCT) return { status: 'overflow', pct, spent: safeSpent, income }
+
   return {
     status: pct > 100 ? 'over' : 'ok',
     pct,

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { deriveCommittedSplit, deriveMonthSpending, deriveSpendingPace } from '../src/spending'
+import {
+  deriveCommittedSplit,
+  deriveMonthSpending,
+  deriveSpendingPace,
+  PACE_OVERFLOW_PCT,
+} from '../src/spending'
 import { aggregateCardDebtByCard } from '../src/aggregations'
 
 describe('deriveMonthSpending', () => {
@@ -41,7 +46,13 @@ describe('deriveSpendingPace', () => {
   it('computes the ratio when income came in', () => {
     const pace = deriveSpendingPace(440_000, 4_000_000)
 
-    expect(pace).toEqual({ status: 'ok', pct: 11, fillPct: 11, spent: 440_000, income: 4_000_000 })
+    expect(pace).toEqual({
+      status: 'ok',
+      pct: 11,
+      fillPct: 11,
+      spent: 440_000,
+      income: 4_000_000,
+    })
   })
 
   it('is indeterminate before any income lands, not zero percent', () => {
@@ -205,5 +216,37 @@ describe('aggregateCardDebtByCard', () => {
     )
 
     expect(rows.ARS.map((r) => r.id)).toEqual(['amex', 'visa'])
+  })
+})
+
+describe('deriveSpendingPace — desborde', () => {
+  it('marca overflow cuando el ingreso del mes es casi cero', () => {
+    // Caso real: un mes cuyo unico ingreso fueron 39 centavos.
+    const pace = deriveSpendingPace(483_740.94, 0.39)
+
+    expect(pace).toEqual({
+      status: 'overflow',
+      pct: 124_036_138,
+      spent: 483_740.94,
+      income: 0.39,
+    })
+  })
+
+  it('NO es indeterminado: entro plata, solo que poca', () => {
+    // La diferencia importa: 'indeterminate' dice que no hay denominador.
+    expect(deriveSpendingPace(483_740.94, 0.39).status).not.toBe('indeterminate')
+  })
+
+  it('un exceso extremo pero legible conserva su numero', () => {
+    // Gastar diez veces lo que entro es extraordinario y perfectamente legible.
+    const pace = deriveSpendingPace(1_020_283.17, 100_000)
+
+    expect(pace).toMatchObject({ status: 'over', pct: 1_020, fillPct: 100 })
+  })
+
+  it('el borde del umbral todavia muestra su numero', () => {
+    const pace = deriveSpendingPace(PACE_OVERFLOW_PCT, 100)
+
+    expect(pace).toMatchObject({ status: 'over', pct: PACE_OVERFLOW_PCT })
   })
 })

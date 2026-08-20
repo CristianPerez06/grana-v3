@@ -90,6 +90,24 @@ const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
     )
   }
 
+  // Ratio off the scale: there IS income, just cents of it, so this is not
+  // "indeterminate" — but the number stopped being a reading.
+  if (pace.status === 'overflow') {
+    return (
+      <View className="mt-3 rounded-2xl border border-border bg-page p-3.5">
+        <Text className="text-[12.5px] font-bold text-terracotta">
+          {t('dashboard.spent.pace_overflow')}
+        </Text>
+        <Text className="mt-1 text-[11px] font-semibold text-text-muted">
+          {t('dashboard.spent.pace_overflow_note', {
+            spent: fmt(pace.spent),
+            income: fmt(pace.income),
+          })}
+        </Text>
+      </View>
+    )
+  }
+
   const over = pace.status === 'over'
   const fill = over ? colors.terracotta : colors.positive
 
@@ -107,7 +125,9 @@ const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
       </View>
       <View className="flex-1">
         <Text className="text-[12.5px] font-bold text-text-muted">
-          {t(over ? 'dashboard.spent.pace_over' : 'dashboard.spent.pace', { pct: `${pace.pct}%` })}
+          {t(over ? 'dashboard.spent.pace_over' : 'dashboard.spent.pace', {
+            pct: `${pace.pct}%`,
+          })}
         </Text>
         <View className="mt-2 h-1.5 overflow-hidden rounded-full bg-border-soft">
           <View

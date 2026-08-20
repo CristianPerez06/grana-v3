@@ -193,7 +193,9 @@
       "pace_unknown_note": "Cuando entre, vas a ver tu ritmo de gasto acá.",
       "pace_foot": "{spent} de {income}",
       "empty": "Sin gastos este mes.",
-      "loading": "Cargando tus gastos del mes…"
+      "loading": "Cargando tus gastos del mes…",
+      "pace_overflow": "Acá el porcentaje ya no ayuda 👀",
+      "pace_overflow_note": "Gastaste {spent} y este mes entraron {income}."
     },
     "shared_strip": {
       "title": "Compartido",

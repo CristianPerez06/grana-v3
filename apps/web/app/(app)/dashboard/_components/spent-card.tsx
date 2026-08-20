@@ -100,6 +100,21 @@ const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
     )
   }
 
+  // The ratio ran off the scale (a month whose income was cents). There IS a
+  // denominator, so this is not "indeterminate" — but neither the raw number nor
+  // a capped "+999%" tells the user anything. Drop the ring and say it plainly,
+  // with the two amounts that produced it.
+  if (pace.status === 'overflow') {
+    return (
+      <div className="mt-auto rounded-2xl border border-terracotta/30 bg-terracotta-soft p-4">
+        <p className="text-[13.5px] font-bold text-expense">{t('pace_overflow')}</p>
+        <p className="mt-1 text-[11.5px] font-semibold text-text-muted">
+          {t('pace_overflow_note', { spent: fmt(pace.spent), income: fmt(pace.income) })}
+        </p>
+      </div>
+    )
+  }
+
   const over = pace.status === 'over'
   const ringColor = over ? 'var(--terracotta)' : 'var(--emerald)'
 

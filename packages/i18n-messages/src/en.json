@@ -193,7 +193,9 @@
       "pace_unknown_note": "Once it does, your spending pace shows up here.",
       "pace_foot": "{spent} of {income}",
       "empty": "No expenses this month.",
-      "loading": "Loading this month’s spending…"
+      "loading": "Loading this month’s spending…",
+      "pace_overflow": "A percentage stops helping here 👀",
+      "pace_overflow_note": "You spent {spent} and {income} came in this month."
     },
     "shared_strip": {
       "title": "Shared",

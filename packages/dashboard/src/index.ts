@@ -23,6 +23,7 @@ export {
   deriveCommittedSplit,
   deriveMonthSpending,
   deriveSpendingPace,
+  PACE_OVERFLOW_PCT,
   type CommittedSplit,
   type MonthSpending,
   type SpendingPace,
