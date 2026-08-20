@@ -239,7 +239,9 @@ export async function createRecurrence(
 // Confirma una instancia pendiente. Crea la transacción real delegando en los
 // thin creates de @grana/transactions-mutations según el tipo de movimiento.
 // Aplica D6: si el usuario cambia el monto al confirmar, propaga ese monto a la
-// regla recurrente.
+// regla recurrente. La cuenta, en cambio, es un override SOLO de la instancia:
+// la familia de la cuenta efectiva (cash/bank vs credit) decide qué movimiento
+// se crea, pero la regla conserva la suya.
 
 export async function confirmRecurrenceInstance(
   supabase: GranaSupabaseClient,
@@ -288,26 +290,64 @@ export async function confirmRecurrenceInstance(
     return { ok: false, formError: 'La regla recurrente fue eliminada.' }
   }
 
+  // Cuenta efectiva: la de la instancia, o la que el usuario eligió al confirmar
+  // ("este mes lo pagué con otra tarjeta"). El override es de la instancia y NO
+  // se propaga a la regla — a diferencia del monto (D6): usar otro medio de pago
+  // una vez no redefine el medio por defecto de la regla.
+  const overrodeAccount =
+    payload.account_id != null && payload.account_id !== instance.account_id
+  const effectiveAccountId = payload.account_id ?? instance.account_id
+
+  if (
+    overrodeAccount &&
+    instance.transfer_destination_account_id === effectiveAccountId
+  ) {
+    return { ok: false, formError: 'La cuenta origen y destino no pueden ser iguales.' }
+  }
+
   const { data: account, error: accountError } = await supabase
     .from('accounts')
     .select('type, is_active')
-    .eq('id', instance.account_id)
+    .eq('id', effectiveAccountId)
     .eq('user_id', userId)
     .single()
 
   if (accountError || !account) {
-    return { ok: false, formError: 'La cuenta de la regla no existe.' }
+    return {
+      ok: false,
+      formError: overrodeAccount
+        ? 'La cuenta elegida no existe.'
+        : 'La cuenta de la regla no existe.',
+    }
   }
   if (!account.is_active) {
     return {
       ok: false,
-      formError:
-        'La cuenta de la regla está archivada. Editá la regla antes de confirmar.',
+      formError: overrodeAccount
+        ? 'La cuenta elegida está archivada. Elegí otra para confirmar.'
+        : 'La cuenta de la regla está archivada. Elegí otra cuenta para confirmar esta instancia.',
+    }
+  }
+
+  // Bimoneda: la cuenta tiene que tener activa la moneda de la instancia. Solo
+  // se verifica en el camino del override — la cuenta de la regla ya se validó
+  // al crearla, y cobrarle un roundtrip extra a cada confirmación normal no se
+  // paga con nada.
+  if (overrodeAccount) {
+    const { data: currency } = await supabase
+      .from('account_currencies')
+      .select('id')
+      .eq('account_id', effectiveAccountId)
+      .eq('currency_code', instance.currency_code)
+      .eq('is_active', true)
+      .single()
+    if (!currency) {
+      return { ok: false, formError: 'La cuenta elegida no tiene esa moneda activa.' }
     }
   }
 
   const effective: InstanceSnapshot = {
-    account_id: instance.account_id,
+    account_id: effectiveAccountId,
     transfer_destination_account_id: instance.transfer_destination_account_id,
     currency_code: instance.currency_code as RecurrenceCurrencyCode,
     amount: payload.amount ?? Number(instance.amount),
@@ -375,6 +415,9 @@ export async function confirmRecurrenceInstance(
       resolved_at: new Date().toISOString(),
       amount: effective.amount,
       scheduled_date: effective.scheduled_date,
+      // La cuenta con la que REALMENTE se confirmó, no la de la regla: el
+      // historial de instancias tiene que coincidir con el movimiento creado.
+      account_id: effective.account_id,
       category_id: effective.category_id,
       subcategory_id: effective.subcategory_id,
       description: effective.description,
