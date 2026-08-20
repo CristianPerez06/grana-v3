@@ -119,7 +119,9 @@ La card de compromisos SHALL exponer sus dos detalles —Tarjetas y Gastos fijos
 
 En mobile, el área táctil de cada cabecera SHALL ser de al menos 44px. El chevron SHALL rotar 180° al abrir, y esa SHALL ser la única transición de la card.
 
-El grupo **Tarjetas** SHALL listar una fila **por tarjeta** con su total comprometido —no consumos individuales— mostrando hasta 3 con el grupo cerrado y el resto al desplegar, calculado sobre la lista ordenada por monto descendente. El grupo **Gastos fijos** SHALL listar hasta 10 filas con scroll interno propio y un link al listado completo. El scroll interno SHALL limitarse a esa lista: la card completa NO SHALL scrollear.
+El grupo **Tarjetas** SHALL listar una fila **por tarjeta** con su total comprometido —no consumos individuales—, ordenadas por monto descendente. El grupo **Gastos fijos** SHALL listar hasta 10 filas con scroll interno propio y un link al listado completo. El scroll interno SHALL limitarse a esa lista: la card completa NO SHALL scrollear.
+
+Con el grupo cerrado, su cabecera SHALL seguir informando el total comprometido de ese grupo y **cuántos ítems lo componen**, de modo que el estado cerrado responda la pregunta por sí solo y desplegar sirva para el desglose. Un panel oculto por defecto no puede mostrar las primeras filas, así que la información que sobrevive al colapso vive en la cabecera.
 
 #### Scenario: Usuario despliega el grupo de tarjetas
 
@@ -127,10 +129,10 @@ El grupo **Tarjetas** SHALL listar una fila **por tarjeta** con su total comprom
 - **THEN** `aria-expanded` pasa a `true` y el panel asociado se muestra
 - **AND** el estado del grupo Gastos fijos no cambia
 
-#### Scenario: Usuario con más de tres tarjetas
+#### Scenario: Usuario con varias tarjetas
 
 - **WHEN** el usuario tiene cinco tarjetas con compromiso en el próximo mes
-- **THEN** el grupo cerrado muestra las tres de mayor monto
+- **THEN** la cabecera cerrada informa el total y que son cinco tarjetas
 - **AND** al desplegar aparecen las cinco, ordenadas por monto descendente
 
 #### Scenario: Lista larga de gastos fijos

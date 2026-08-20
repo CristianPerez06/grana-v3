@@ -9,13 +9,24 @@ export {
 } from './queries'
 
 export {
+  aggregateCardDebtByCard,
   aggregateHero,
   buildMonthBalanceSeries,
   calculateTransactionSums,
+  type CommittedCardMeta,
   type HeroAccountRow,
   type MonthBalanceTxInput,
   type BalanceTransactionRow,
 } from './aggregations'
+
+export {
+  deriveCommittedSplit,
+  deriveMonthSpending,
+  deriveSpendingPace,
+  type CommittedSplit,
+  type MonthSpending,
+  type SpendingPace,
+} from './spending'
 
 export {
   deriveMonthSummary,
@@ -40,6 +51,7 @@ export {
 } from './concentration'
 
 export type {
+  CommittedCardRow,
   CommittedCurrency,
   CommittedItem,
   CommittedOutlook,

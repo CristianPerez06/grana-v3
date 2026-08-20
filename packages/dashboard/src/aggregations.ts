@@ -2,6 +2,7 @@ import { Money, type MoneyType } from '@grana/validation'
 import { projectUpcomingOccurrences, type RuleForProjection } from '@grana/money-logic'
 import { resolveAccountAvatar } from '@grana/ui-contracts'
 import type {
+  CommittedCardRow,
   DashboardHero,
   HeroAccountBalance,
   MonthBalanceDay,
@@ -407,6 +408,80 @@ export function aggregateCardDebt(rows: CardDebtRow[]): Record<OutlookCurrency, 
     }
   }
   return { ARS: Money.toNumber(debt.ARS), USD: Money.toNumber(debt.USD) }
+}
+
+/** Minimal card identity the by-card aggregation needs to label its rows. */
+export type CommittedCardMeta = {
+  id: string
+  label: string
+  /** ISO date of the next statement close, or null when none is upcoming. */
+  nextClose: string | null
+}
+
+/**
+ * The same debt as `aggregateCardDebt`, grouped BY CARD instead of collapsed
+ * into one number per currency.
+ *
+ * `periodToCard` maps each statement to the card that owns it — a transaction
+ * only carries its `card_period_id`, so the caller supplies the link. Rows whose
+ * period is unknown are skipped rather than lumped into a phantom card: a
+ * mislabelled amount is worse than a missing row, and the currency total keeps
+ * coming from `aggregateCardDebt`, which does not depend on this map.
+ *
+ * Cards that end up at zero or below (fully reimbursed) are dropped: the list
+ * answers "what do I owe on each card", and a card owing nothing is not an item.
+ */
+export function aggregateCardDebtByCard(
+  rows: Array<CardDebtRow & { card_period_id?: string | null }>,
+  periodToCard: Map<string, string>,
+  cards: CommittedCardMeta[],
+): Record<OutlookCurrency, CommittedCardRow[]> {
+  const byCard = new Map<string, Record<OutlookCurrency, MoneyType>>()
+  const ensure = (id: string) => {
+    let entry = byCard.get(id)
+    if (!entry) {
+      entry = { ARS: Money.from(0), USD: Money.from(0) }
+      byCard.set(id, entry)
+    }
+    return entry
+  }
+
+  for (const row of rows) {
+    if (!isOutlookCurrency(row.currency_code)) continue
+    if (row.card_period_id == null) continue
+    const cardId = periodToCard.get(row.card_period_id)
+    if (cardId === undefined) continue
+
+    const cur = row.currency_code
+    const entry = ensure(cardId)
+    if (row.type === 'reimbursement') {
+      if (row.received_at != null && row.cancelled_at == null) {
+        entry[cur] = Money.subtract(entry[cur], Money.from(row.amount))
+      }
+    } else if (row.status === 'pending') {
+      entry[cur] = Money.add(entry[cur], Money.from(row.amount))
+    }
+  }
+
+  const metaById = new Map(cards.map((card) => [card.id, card]))
+  const build = (currency: OutlookCurrency): CommittedCardRow[] =>
+    [...byCard.entries()]
+      .map(([id, totals]) => ({ id, amount: Money.toNumber(totals[currency]) }))
+      .filter((row) => row.amount > 0)
+      .map((row) => {
+        const meta = metaById.get(row.id)
+        return {
+          id: row.id,
+          label: meta?.label ?? '',
+          amount: row.amount,
+          nextClose: meta?.nextClose ?? null,
+        }
+      })
+      // Amount desc, then id, so two cards owing the same rank identically on
+      // web and native.
+      .sort((a, b) => (b.amount - a.amount) || a.id.localeCompare(b.id))
+
+  return { ARS: build('ARS'), USD: build('USD') }
 }
 
 /** A pending item that can be listed in a committed section (card or recurrence). */

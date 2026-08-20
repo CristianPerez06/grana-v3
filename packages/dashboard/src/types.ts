@@ -124,8 +124,32 @@ export type CommittedCurrency = {
   recurringIncome: number
   /** Top card consumos of the "A pagar" set, by amount desc (section detail). */
   topCard: CommittedItem[]
+  /**
+   * The same debt grouped BY CARD, by amount desc — what the redesigned card
+   * lists. Coexists with `topCard` until the native app stops using it.
+   */
+  cards: CommittedCardRow[]
   /** Top pending recurrences, by amount desc (section detail). */
   topRecurring: CommittedItem[]
+}
+
+/**
+ * One CARD's committed total for the outlook, with its next statement close.
+ *
+ * Different from `CommittedItem`, which is a single consumo: the redesigned
+ * "Compromisos" card groups the debt BY CARD ("cuánto me viene de Visa"), which
+ * is the question the user actually asks, so a card with twenty consumos is one
+ * row, not twenty.
+ */
+export type CommittedCardRow = {
+  /** Credit account id. */
+  id: string
+  /** Display name: the institution when the card has one, else the account name. */
+  label: string
+  /** Committed amount for this card in the section's currency. */
+  amount: number
+  /** ISO date of the next statement close, or null when none is upcoming. */
+  nextClose: string | null
 }
 
 export type CommittedOutlook = {

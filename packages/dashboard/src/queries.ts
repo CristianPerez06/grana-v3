@@ -14,6 +14,7 @@ import {
 } from '@grana/money-logic'
 import {
   aggregateCardDebt,
+  aggregateCardDebtByCard,
   aggregateHero,
   aggregateRecurrenceProjection,
   buildMonthBalanceSeries,
@@ -478,6 +479,9 @@ export async function getMonthCategoryBreakdown(
 // product is a money number. Out of scope of `fix-balance-read-path-defects`
 // (2026-07-30); same fix applies.
 
+/** Rows the "Gastos fijos" group lists; the panel scrolls internally past that. */
+const COMMITTED_RECURRING_ROWS = 10
+
 function emptyCommittedCurrency(): CommittedCurrency {
   return {
     debt: 0,
@@ -485,6 +489,7 @@ function emptyCommittedCurrency(): CommittedCurrency {
     recurringExpense: 0,
     recurringIncome: 0,
     topCard: [],
+    cards: [],
     topRecurring: [],
   }
 }
@@ -515,16 +520,18 @@ export async function getCommittedOutlook(
   //    the subset whose due_date already passed (drives the "incluye $X vencido" flag).
   const { data: cards, error: cardsErr } = await supabase
     .from('accounts')
-    .select('id')
+    .select('id, name, institution:institutions(name)')
     .eq('type', 'credit')
     .eq('is_active', true)
   if (cardsErr) throw cardsErr
-  const cardIds = (cards ?? []).map((c) => c.id)
+  type CardAccountRow = { id: string; name: string; institution: NameEmbed }
+  const cardRows = (cards ?? []) as unknown as CardAccountRow[]
+  const cardIds = cardRows.map((c) => c.id)
 
   if (cardIds.length > 0) {
     const { data: periods, error: periodsErr } = await supabase
       .from('card_periods')
-      .select('id, due_date')
+      .select('id, due_date, end_date, account_id')
       .in('account_id', cardIds)
       .lte('start_date', todayISO)
     if (periodsErr) throw periodsErr
@@ -583,6 +590,30 @@ export async function getCommittedOutlook(
         result.USD.overdue = overdue.USD
         result.ARS.topCard = topCommittedItems(consumos, 'ARS')
         result.USD.topCard = topCommittedItems(consumos, 'USD')
+
+        // Same debt, grouped BY CARD for the redesigned "Compromisos" list.
+        // The next close is the earliest statement end still ahead of today —
+        // the open statement's; null once every started statement has closed.
+        const periodToCard = new Map(startedPeriods.map((p) => [p.id, p.account_id]))
+        const nextCloseByCard = new Map<string, string>()
+        for (const period of startedPeriods) {
+          if (period.end_date < todayISO) continue
+          const current = nextCloseByCard.get(period.account_id)
+          if (current === undefined || period.end_date < current) {
+            nextCloseByCard.set(period.account_id, period.end_date)
+          }
+        }
+        const byCard = aggregateCardDebtByCard(
+          txs,
+          periodToCard,
+          cardRows.map((card) => ({
+            id: card.id,
+            label: embedName(card.institution) || card.name,
+            nextClose: nextCloseByCard.get(card.id) ?? null,
+          })),
+        )
+        result.ARS.cards = byCard.ARS
+        result.USD.cards = byCard.USD
       }
     }
   }
@@ -626,8 +657,8 @@ export async function getCommittedOutlook(
   const pending = sumByCurrency(pendingExpenses)
   result.ARS.recurringExpense = pending.ARS
   result.USD.recurringExpense = pending.USD
-  result.ARS.topRecurring = topCommittedItems(pendingExpenses, 'ARS')
-  result.USD.topRecurring = topCommittedItems(pendingExpenses, 'USD')
+  result.ARS.topRecurring = topCommittedItems(pendingExpenses, 'ARS', COMMITTED_RECURRING_ROWS)
+  result.USD.topRecurring = topCommittedItems(pendingExpenses, 'USD', COMMITTED_RECURRING_ROWS)
 
   // ── Recurring INCOME projected into the next calendar month → "Ya entra"
   //    context band. Income is never summed into the committed total.

@@ -6,17 +6,16 @@ import { CommittedSectionContainer } from './committed-section-container'
 import { CommittedSkeleton } from './committed-skeleton'
 import { DashboardErrorBoundary } from './dashboard-error-boundary'
 import { SharedStripContainer } from './shared-strip-container'
-import { SpendingSectionContainer } from './spending-section-container'
-import { SpendingSkeleton } from './spending-skeleton'
-import { SpentThisMonthSection } from './spent-this-month-section'
+import { SpentCard } from './spent-card'
 
-// Dashboard composition (design handoff `docs/design/dashboard-home/`): row 1
-// "Saldo disponible total" (full width) → row ("Balance del mes" +
-// "Comprometido") → "Compartido" (only with activity) → "Gastaste este mes"
-// (only with card spend) → "¿En qué gasté?".
-// Each section streams behind its own Suspense with a shape-matched skeleton.
-// NOTE: rows 2+ still hold the pre-redesign sections; they are replaced card by
-// card by the `redesign-dashboard-home-v2` change.
+// Dashboard composition (design handoff `docs/design/dashboard-home/`), four
+// blocks in fixed order: "Saldo disponible total" (full width) → "Cuánto
+// gastaste" + "Compromisos del próximo mes" → "Compartido" (only with activity).
+// Each block streams behind its own Suspense with a shape-matched skeleton.
+//
+// "En qué se fue" is deliberately NOT here: the same per-category breakdown is
+// the front page of the Movimientos module, and mirroring it made the dashboard
+// longer without answering anything new.
 export const DashboardContent = async () => {
   const today = getTodayAR()
   const currentYear = today.getFullYear()
@@ -31,23 +30,20 @@ export const DashboardContent = async () => {
           <BalanceCardContainer currentYear={currentYear} currentMonth={currentMonth} />
         </Suspense>
 
-        {/* Comprometido (COMPROMISO). Fila 2 del rediseño: acá va a convivir con
-            "Cuánto gastaste" cuando esa card exista. */}
-        <Suspense fallback={<CommittedSkeleton />}>
-          <CommittedSectionContainer />
-        </Suspense>
+        {/* Fila 2 — "Cuánto gastaste" + "Compromisos del próximo mes", con la
+            segunda algo más ancha. Las dos cards terminan a la misma altura
+            (`items-stretch` + la tira de ritmo anclada al pie). */}
+        <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[1fr_1.12fr]">
+          <SpentCard />
+
+          <Suspense fallback={<CommittedSkeleton />}>
+            <CommittedSectionContainer />
+          </Suspense>
+        </div>
 
         {/* Compartido — tira condicional con el neto del Hogar (solo con actividad). */}
         <Suspense fallback={null}>
           <SharedStripContainer />
-        </Suspense>
-
-        {/* Gastaste este mes — barra caja vs tarjeta (solo si hubo consumo de
-            tarjeta en el mes). Cliente: lee el cache de las otras secciones. */}
-        <SpentThisMonthSection />
-
-        <Suspense fallback={<SpendingSkeleton />}>
-          <SpendingSectionContainer today={today} />
         </Suspense>
       </div>
     </DashboardErrorBoundary>
