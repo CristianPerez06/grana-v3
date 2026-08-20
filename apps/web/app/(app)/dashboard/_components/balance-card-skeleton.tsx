@@ -19,9 +19,12 @@ export const BalanceCardSkeleton = async () => {
           <div className="h-4 w-24 animate-pulse rounded bg-white/15" />
         </div>
 
-        <div className="mx-auto mt-[18px] grid max-w-[660px] grid-cols-2 gap-4 border-t border-white/10 pt-[15px]">
-          <div className="h-3 w-24 animate-pulse rounded bg-white/10" />
-          <div className="ml-auto h-3 w-20 animate-pulse rounded bg-white/10" />
+        <div className="relative mt-[18px]">
+          <div className="mx-auto grid max-w-[660px] grid-cols-2 gap-4 border-t border-white/10 pt-[15px]">
+            <div className="h-3.5 w-24 animate-pulse rounded bg-white/10" />
+            <div className="h-3.5 w-10 animate-pulse rounded bg-white/10" />
+          </div>
+          <div className="absolute bottom-0 right-0 h-3.5 w-24 animate-pulse rounded bg-white/10" />
         </div>
 
         <div className="mx-auto mt-3 grid max-w-[660px] grid-cols-2 gap-4">
@@ -29,10 +32,10 @@ export const BalanceCardSkeleton = async () => {
             <div key={column} className={column === 1 ? 'border-l border-white/10 pl-[15px]' : ''}>
               <div className="flex flex-col gap-2">
                 {Array.from({ length: PLACEMENT_ROWS }).map((_, row) => (
-                  <div key={row} className="flex items-center gap-[7px]">
-                    <span className="size-[9px] shrink-0 animate-pulse rounded-[2px] bg-white/15" />
-                    <span className="h-3 w-20 animate-pulse rounded bg-white/15" />
-                    <span className="ml-auto h-3 w-8 shrink-0 animate-pulse rounded bg-white/10" />
+                  <div key={row} className="flex items-center gap-2">
+                    <span className="size-[10px] shrink-0 animate-pulse rounded-[2px] bg-white/15" />
+                    <span className="h-3.5 w-20 animate-pulse rounded bg-white/15" />
+                    <span className="ml-auto h-3.5 w-9 shrink-0 animate-pulse rounded bg-white/10" />
                   </div>
                 ))}
               </div>

@@ -23,14 +23,14 @@ const avatarColor = (avatar: ResolvedAccountAvatar): string =>
 const PlacementColumn = ({ placement }: { placement: CurrencyPlacement }) => (
   <div className="flex flex-col gap-2">
     {placement.rows.map((row: PlacementRow) => (
-      <div key={row.id} className="flex items-center gap-[7px] text-[12px] font-semibold text-white/60">
+      <div key={row.id} className="flex items-center gap-2 text-[13.5px] font-semibold text-white/65">
         <span
           aria-hidden
-          className="size-[9px] shrink-0 rounded-[2px]"
+          className="size-[10px] shrink-0 rounded-[2px]"
           style={{ backgroundColor: avatarColor(row.avatar) }}
         />
         <span className="min-w-0 truncate">{row.label}</span>
-        <span className="ml-auto shrink-0 text-[12.5px] font-extrabold tabular-nums text-white">
+        <span className="ml-auto shrink-0 text-[14px] font-extrabold tabular-nums text-white">
           {row.pct}%
         </span>
       </div>
@@ -80,26 +80,30 @@ export const BalanceCard = async ({ data }: Props) => {
           </p>
         )}
 
-        {/* "Dónde está" — capped and centered so the data does not spread out on
-            a wide desktop, and aligned with the divider of the columns below. */}
-        <div className="mx-auto mt-[18px] grid max-w-[660px] grid-cols-2 items-baseline gap-4 border-t border-white/10 pt-[15px]">
-          <span className="flex items-baseline justify-between gap-2">
-            <span className="text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-white/45">
-              {t('accounts.title')}
+        {/* "Dónde está" — the labels and the columns below are capped and centered
+            so the data does not spread out on a wide desktop. The action escapes
+            that cap and anchors to the card's right edge: inside the cap it read
+            as floating in the middle of the header. */}
+        <div className="relative mt-[18px]">
+          <div className="mx-auto grid max-w-[660px] grid-cols-2 items-end gap-4 border-t border-white/10 pt-[15px]">
+            <span className="flex items-baseline justify-between gap-2">
+              <span className="text-[11.5px] font-extrabold uppercase tracking-[0.12em] text-white/50">
+                {t('accounts.title')}
+              </span>
+              <span className="text-[11.5px] font-extrabold tracking-[0.12em] text-white/65">
+                ARS
+              </span>
             </span>
-            <span className="text-[10.5px] font-extrabold tracking-[0.12em] text-white/60">ARS</span>
-          </span>
-          <span className="flex items-baseline justify-between gap-2 pl-[15px]">
-            <span className="text-[10.5px] font-extrabold tracking-[0.12em] text-white/60">
+            <span className="pl-[15px] text-[11.5px] font-extrabold tracking-[0.12em] text-white/65">
               {hasUsd ? 'USD' : ''}
             </span>
-            <Link
-              href="/accounts"
-              className="whitespace-nowrap rounded text-[12.5px] font-bold text-mint transition-colors hover:text-mint-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {t('accounts.view_accounts')} ›
-            </Link>
-          </span>
+          </div>
+          <Link
+            href="/accounts"
+            className="absolute bottom-0 right-0 whitespace-nowrap rounded text-[13.5px] font-bold text-mint transition-colors hover:text-mint-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {t('accounts.view_accounts')} ›
+          </Link>
         </div>
 
         <div className="mx-auto mt-3 grid max-w-[660px] grid-cols-2 gap-4 text-left">
