@@ -37,7 +37,7 @@ const avatarColor = (avatar: ResolvedAccountAvatar): string =>
  * room for a name. The native card keeps them stacked.
  */
 const PlacementColumn = ({ placement }: { placement: CurrencyPlacement }) => (
-  <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+  <div className="grid grid-cols-2 gap-x-5 gap-y-2">
     {placement.rows.map((row: PlacementRow) => (
       <div key={row.id} className="flex items-center gap-2 text-[13.5px] font-semibold text-white/65">
         <span
@@ -45,8 +45,12 @@ const PlacementColumn = ({ placement }: { placement: CurrencyPlacement }) => (
           className="size-[10px] shrink-0 rounded-[2px]"
           style={{ backgroundColor: avatarColor(row.avatar) }}
         />
+        {/* The percentage sits right after its name, NOT pushed to the cell edge:
+            with `ml-auto` the slack landed between a name and its own number, so
+            "81%" read as belonging to the account listed next to it. Tight pair,
+            slack after it. */}
         <span className="min-w-0 truncate">{row.label}</span>
-        <span className="ml-auto shrink-0 text-[14px] font-extrabold tabular-nums text-white">
+        <span className="shrink-0 text-[14px] font-extrabold tabular-nums text-white">
           {row.pct}%
         </span>
       </div>
