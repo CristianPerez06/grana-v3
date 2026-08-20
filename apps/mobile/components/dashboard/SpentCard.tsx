@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
+import { Clock, CreditCard, ShoppingBag } from 'lucide-react-native'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronDown } from 'lucide-react-native'
 import {
   deriveSpendingPace,
   type MonthSpendingSplit,
@@ -15,7 +15,7 @@ import { useMonthBalanceSeries, useMonthSpending } from '../../lib/dashboard/que
 import { getHousehold } from '../../lib/shared/queries'
 import { useDashboardMonth } from './DashboardMonthContext'
 import { useEyeMask } from './EyeMaskContext'
-import { MaskedAmount } from './MaskedAmount'
+import { SpentTile } from './SpentTile'
 import { SpendingSkeleton } from './SpendingSkeleton'
 
 // Native mirror of the web `spent-card.tsx`: the month's OWN spending split by
@@ -24,72 +24,6 @@ import { SpendingSkeleton } from './SpendingSkeleton'
 //
 // RN has no conic-gradient, so the pace ring is a bordered circle plus the
 // percentage — the number is what carries the meaning.
-
-type TileTone = 'spent' | 'paid' | 'pending'
-
-const TONE: Record<TileTone, { amount: string; rule: string }> = {
-  spent: { amount: 'text-positive', rule: colors.positive },
-  paid: { amount: 'text-slate', rule: colors.slate },
-  pending: { amount: 'text-warning-deep', rule: colors.warningDeep },
-}
-
-const Tile = ({
-  tone,
-  label,
-  ars,
-  usd,
-  showUsd,
-  breakdown,
-  expanded,
-}: {
-  tone: TileTone
-  label: string
-  ars: number
-  usd: number
-  showUsd: boolean
-  breakdown: { label: string; amount: number }[] | null
-  expanded: boolean
-}) => (
-  <View className="flex-1 overflow-hidden rounded-2xl border border-border">
-    <View className="flex-1 items-center px-2 pb-2 pt-2.5">
-      <Text numberOfLines={2} className="text-center text-[11px] font-extrabold text-text-muted">
-        {label}
-      </Text>
-      <MaskedAmount
-        amount={ars}
-        currency="ARS"
-        className={`mt-1 text-[16px] font-extrabold ${TONE[tone].amount}`}
-      />
-      {showUsd && (
-        <MaskedAmount
-          amount={usd}
-          currency="USD"
-          showCentsOverride
-          className="mt-0.5 text-[10px] font-semibold text-text-soft"
-        />
-      )}
-    </View>
-
-    {breakdown && expanded && (
-      <View className="gap-1 border-t border-border-soft px-2 pb-2 pt-2">
-        {breakdown.map((row) => (
-          <View key={row.label}>
-            <Text numberOfLines={1} className="text-[9.5px] font-semibold text-text-soft">
-              {row.label}
-            </Text>
-            <MaskedAmount
-              amount={row.amount}
-              currency="ARS"
-              className="text-[10.5px] font-extrabold text-text"
-            />
-          </View>
-        ))}
-      </View>
-    )}
-
-    <View className="h-1 w-full" style={{ backgroundColor: TONE[tone].rule }} />
-  </View>
-)
 
 const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
   const t = useT()
@@ -172,7 +106,8 @@ export const SpentCard = () => {
   const t = useT()
   const router = useRouter()
   const { selected } = useDashboardMonth()
-  const [expanded, setExpanded] = useState(false)
+  // Only one tile turned at a time.
+  const [flipped, setFlipped] = useState<'paid' | 'pending' | null>(null)
 
   const spendingQuery = useMonthSpending(selected.year, selected.month)
   const balanceQuery = useMonthBalanceSeries(selected.year, selected.month)
@@ -223,76 +158,87 @@ export const SpentCard = () => {
       ) : (
         <>
           <View className="mt-3 flex-row gap-2">
-            <Tile
+            <SpentTile
               tone="spent"
+              icon={<ShoppingBag size={16} color={colors.emeraldDeep} strokeWidth={2} />}
               label={t('dashboard.spent.gastaste')}
               ars={ars.gastaste}
               usd={usd.gastaste}
               showUsd={tilesHaveUsd}
-              breakdown={null}
-              expanded={expanded}
+              caption={{
+                lead: t('dashboard.spent.gastaste_sub_1'),
+                emphasis: t('dashboard.spent.gastaste_sub_2'),
+              }}
+              flipped={false}
+              onToggle={() => {}}
             />
-            <Tile
+            <SpentTile
               tone="paid"
+              icon={<CreditCard size={16} color={colors.slate} strokeWidth={2} />}
               label={t('dashboard.spent.paid')}
               ars={ars.yaSePago.total}
               usd={usd.yaSePago.total}
               showUsd={tilesHaveUsd}
+              caption={{
+                lead: t('dashboard.spent.paid_sub_1'),
+                emphasis: t('dashboard.spent.paid_sub_2'),
+              }}
               breakdown={
                 hasShared
-                  ? [
-                      { label: t('dashboard.spent.paid_by_you'), amount: ars.yaSePago.pusisteVos },
-                      {
-                        label: t('dashboard.spent.paid_by_other', { name: otherName }),
-                        amount: ars.yaSePago.pusoElOtro,
-                      },
-                    ]
-                  : null
+                  ? {
+                      title: t('dashboard.spent.paid'),
+                      openLabel: t('dashboard.spent.open_breakdown'),
+                      backLabel: t('dashboard.spent.back'),
+                      rows: [
+                        {
+                          label: t('dashboard.spent.paid_by_you'),
+                          amount: ars.yaSePago.pusisteVos,
+                        },
+                        {
+                          label: t('dashboard.spent.paid_by_other', { name: otherName }),
+                          amount: ars.yaSePago.pusoElOtro,
+                        },
+                      ],
+                    }
+                  : undefined
               }
-              expanded={expanded}
+              flipped={flipped === 'paid'}
+              onToggle={() => setFlipped((f) => (f === 'paid' ? null : 'paid'))}
             />
-            <Tile
+            <SpentTile
               tone="pending"
+              icon={<Clock size={16} color={colors.warningDeep} strokeWidth={2} />}
               label={t('dashboard.spent.pending')}
               ars={ars.porPagar.total}
               usd={usd.porPagar.total}
               showUsd={tilesHaveUsd}
+              caption={{
+                lead: t('dashboard.spent.pending_sub_1'),
+                emphasis: t('dashboard.spent.pending_sub_2'),
+              }}
               breakdown={
                 hasShared
-                  ? [
-                      {
-                        label: t('dashboard.spent.pending_on_cards'),
-                        amount: ars.porPagar.enTusTarjetas,
-                      },
-                      {
-                        label: t('dashboard.spent.pending_owed_other', { name: otherName }),
-                        amount: ars.porPagar.leDebesAlOtro,
-                      },
-                    ]
-                  : null
+                  ? {
+                      title: t('dashboard.spent.pending'),
+                      openLabel: t('dashboard.spent.open_breakdown'),
+                      backLabel: t('dashboard.spent.back'),
+                      rows: [
+                        {
+                          label: t('dashboard.spent.pending_on_cards'),
+                          amount: ars.porPagar.enTusTarjetas,
+                        },
+                        {
+                          label: t('dashboard.spent.pending_owed_other', { name: otherName }),
+                          amount: ars.porPagar.leDebesAlOtro,
+                        },
+                      ],
+                    }
+                  : undefined
               }
-              expanded={expanded}
+              flipped={flipped === 'pending'}
+              onToggle={() => setFlipped((f) => (f === 'pending' ? null : 'pending'))}
             />
           </View>
-
-          {hasShared && (
-            <Pressable
-              onPress={() => setExpanded((v) => !v)}
-              accessibilityRole="button"
-              accessibilityState={{ expanded }}
-              style={{ minHeight: 44 }}
-              className="mt-2 flex-row items-center justify-center gap-1.5"
-            >
-              <Text className="text-[12px] font-bold text-text-muted">
-                {expanded
-                  ? t('dashboard.spent.breakdown_hide')
-                  : t('dashboard.spent.breakdown_show')}
-              </Text>
-              <View style={{ transform: [{ rotate: expanded ? '180deg' : '0deg' }] }}>
-                <ChevronDown size={14} color={colors.textMuted} />
-              </View>
-            </Pressable>
-          )}
 
           <PaceStrip pace={pace} />
         </>

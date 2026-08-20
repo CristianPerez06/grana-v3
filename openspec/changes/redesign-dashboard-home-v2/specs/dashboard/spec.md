@@ -106,14 +106,25 @@ El rótulo "Ya se pagó" SHALL ser **impersonal**. Un gasto compartido que pagó
 
 La card SHALL renderizarse siempre que haya gasto en el mes, **incluso cuando "Por pagar" es cero**: un cero es información. La card NO SHALL desmontarse por ausencia de consumo de tarjeta.
 
-**Desglose compartido.** Cuando el mes tiene gastos compartidos, "Ya se pagó" y "Por pagar" SHALL poder desplegar su composición, cada uno según la pregunta que le corresponde —que no es la misma:
+**Los tiles tienen dos variantes**, con la misma caja y la misma altura fija, y solo cambia su franja inferior:
+
+- **Sin actividad compartida** — el tile NO se abre y muestra una **leyenda de contexto** de dos líneas.
+- **Con actividad compartida** — "Ya se pagó" y "Por pagar" pasan a **abrirse**, y la apertura reemplaza a la leyenda en esa misma franja.
+
+Esa división NO es decorativa. Las leyendas "Ya salió de tus cuentas" y "Se paga en los próximos resúmenes" son **verdaderas exactamente cuando no hay actividad compartida**, que es la variante que las muestra; con otro miembro involucrado la plata pudo salir de la cuenta de él, o la deuda ser con él, y esa es justamente la variante que se abre. Cada variante lleva el copy que es cierto en ella.
+
+"Gastaste" NO SHALL abrirse en ninguna variante y SHALL conservar su leyenda en las dos: su copy es verdadero siempre.
+
+Cada apertura SHALL responder la pregunta que le corresponde, que no es la misma para los dos:
 
 - "Ya se pagó" se abre por **quién puso la plata**: lo pusiste vos / lo puso el otro miembro (saldado con el comercio, pendiente con él).
 - "Por pagar" se abre por **a quién le debés**: en tus tarjetas (viene en tu resumen) / se lo debés al otro miembro (está en la tarjeta de él, no viene en ningún resumen tuyo).
 
-El despliegue SHALL gobernarse con **un solo control para la card**, no uno por tile: los tres montos se leen juntos y tres controles independientes permitirían abrir media composición. El control SHALL ser un `<button>` con `aria-expanded` y `aria-controls` apuntando a los paneles, con área táctil ≥44px en mobile.
+SHALL haber **un solo tile abierto a la vez**: dos aperturas simultáneas compiten por la misma lectura.
 
-El desglose NO SHALL renderizarse cuando el mes no tiene parte compartida: sin otro miembro involucrado, cada peso es del usuario y las dos filas lo dirían dos veces.
+**Accesibilidad de la apertura.** El control SHALL exponer su estado (`aria-expanded` en web, `accessibilityState.expanded` en nativo) y la cara oculta NO SHALL quedar en el árbol de accesibilidad. Ocultarla solo visualmente —por ejemplo con `backface-visibility`— deja que un lector de pantalla lea las dos caras a la vez; hace falta `aria-hidden` o no montarla. En mobile el área táctil SHALL ser de al menos 44px.
+
+El texto que invita a abrir NO SHALL repetir el del link del header de la card: son dos acciones distintas y el mismo rótulo para ambas hace que una de las dos mienta.
 
 Lo que el usuario **adelantó por el otro miembro** NO SHALL aparecer en esta card. No es un gasto propio —es un préstamo—, su unidad es la de caja y no la de esta card, ya está reflejado en "Se fué" de la card de saldo, y el neto del hogar vive en la tira "Compartido". Mostrarlo acá agregaría un monto bruto del mes que competiría con el neto histórico de esa tira sin nada que explique la diferencia.
 

@@ -1,10 +1,10 @@
 'use client'
 
-import { useId, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
-import { ChevronDown, Clock, CreditCard, ShoppingBag } from 'lucide-react'
+import { Clock, CreditCard, ShoppingBag } from 'lucide-react'
 import { formatARS } from '@grana/i18n-messages'
 import {
   deriveSpendingPace,
@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { useDashboardMonth } from './dashboard-month-context'
 import { useEyeMask } from './eye-mask-context'
-import { MaskedAmount } from './masked-amount'
+import { SpentTile } from './spent-tile'
 
 type Props = {
   /** Household partner's first name, or null when there is no Compartido. */
@@ -27,83 +27,6 @@ type Props = {
 }
 
 const monthKey = (year: number, month: number) => `${year}-${String(month).padStart(2, '0')}`
-
-type TileTone = 'spent' | 'paid' | 'pending'
-
-const TILE_TONE: Record<TileTone, { icon: string; amount: string; rule: string }> = {
-  spent: { icon: 'bg-emerald-bg text-emerald-deep', amount: 'text-emerald-deep', rule: 'bg-emerald-deep' },
-  paid: { icon: 'bg-slate-soft text-slate', amount: 'text-slate', rule: 'bg-slate' },
-  pending: { icon: 'bg-warning-soft text-warning-deep', amount: 'text-warning-deep', rule: 'bg-warning-deep' },
-}
-
-/** One line of a tile's breakdown: what part of the amount, and whose it is. */
-const BreakdownRow = ({ label, amount }: { label: string; amount: number }) => (
-  <div className="flex items-baseline justify-between gap-1.5 text-[11px] leading-tight">
-    <span className="min-w-0 truncate font-semibold text-text-soft">{label}</span>
-    <span className="shrink-0 font-extrabold tabular-nums text-text">
-      <MaskedAmount amount={amount} currency="ARS" />
-    </span>
-  </div>
-)
-
-const Tile = ({
-  tone,
-  icon,
-  label,
-  ars,
-  usd,
-  showUsd,
-  breakdown,
-  panelId,
-  expanded,
-}: {
-  tone: TileTone
-  icon: React.ReactNode
-  label: string
-  ars: number
-  usd: number
-  showUsd: boolean
-  /** Null when this tile has nothing to break down (no Compartido, or "Gastaste"). */
-  breakdown: Array<{ label: string; amount: number }> | null
-  panelId: string
-  expanded: boolean
-}) => (
-  <div className="flex flex-col overflow-hidden rounded-2xl border border-border text-center">
-    <div className="flex flex-1 flex-col items-center px-3 pt-3.5">
-      <span
-        aria-hidden
-        className={cn('flex size-9 items-center justify-center rounded-xl', TILE_TONE[tone].icon)}
-      >
-        {icon}
-      </span>
-      <span className="mt-2 text-[12.5px] font-extrabold text-text-muted">{label}</span>
-      <span
-        className={cn('mt-1 text-[20px] font-extrabold tracking-[-0.04em]', TILE_TONE[tone].amount)}
-      >
-        <MaskedAmount amount={ars} currency="ARS" />
-      </span>
-      {showUsd && (
-        <span className="mt-0.5 text-[11px] font-semibold text-text-soft">
-          <MaskedAmount amount={usd} currency="USD" showCentsOverride />
-        </span>
-      )}
-    </div>
-
-    {breakdown && (
-      <div
-        id={panelId}
-        hidden={!expanded}
-        className="mt-3 flex flex-col gap-1 border-t border-border-soft px-3 pb-3 pt-2.5 text-left"
-      >
-        {breakdown.map((row) => (
-          <BreakdownRow key={row.label} label={row.label} amount={row.amount} />
-        ))}
-      </div>
-    )}
-
-    <span aria-hidden className={cn('mt-auto h-1 w-full', TILE_TONE[tone].rule)} />
-  </div>
-)
 
 const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
   const t = useTranslations('dashboard.spent')
@@ -186,8 +109,9 @@ const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
 export const SpentCard = ({ otherName }: Props) => {
   const t = useTranslations('dashboard.spent')
   const { selected } = useDashboardMonth()
-  const [expanded, setExpanded] = useState(false)
-  const panelBase = useId()
+  // Only one tile turned at a time: two open backs would compete for the same
+  // reading and the card would stop looking like one object.
+  const [flipped, setFlipped] = useState<'paid' | 'pending' | null>(null)
 
   const spendingQuery = useQuery({
     queryKey: ['dashboard', 'month-spending', selected.year, selected.month],
@@ -237,81 +161,73 @@ export const SpentCard = ({ otherName }: Props) => {
           </p>
         ) : (
           <>
-            <div className="grid grid-cols-3 items-stretch gap-2.5">
-              <Tile
+            <div className="grid grid-cols-3 gap-[11px]">
+              <SpentTile
                 tone="spent"
                 icon={<ShoppingBag size={18} strokeWidth={2} aria-hidden />}
                 label={t('gastaste')}
                 ars={ars.gastaste}
                 usd={usd.gastaste}
                 showUsd={tilesHaveUsd}
-                breakdown={null}
-                panelId={`${panelBase}-spent`}
-                expanded={expanded}
+                caption={{ lead: t('gastaste_sub_1'), emphasis: t('gastaste_sub_2') }}
+                flipped={false}
+                onToggle={() => {}}
               />
-              <Tile
+              <SpentTile
                 tone="paid"
                 icon={<CreditCard size={18} strokeWidth={2} aria-hidden />}
                 label={t('paid')}
                 ars={ars.yaSePago.total}
                 usd={usd.yaSePago.total}
                 showUsd={tilesHaveUsd}
+                caption={{ lead: t('paid_sub_1'), emphasis: t('paid_sub_2') }}
                 breakdown={
                   hasShared
-                    ? [
-                        { label: t('paid_by_you'), amount: ars.yaSePago.pusisteVos },
-                        {
-                          label: t('paid_by_other', { name: otherName }),
-                          amount: ars.yaSePago.pusoElOtro,
-                        },
-                      ]
-                    : null
+                    ? {
+                        title: t('paid'),
+                        openLabel: t('open_breakdown'),
+                        backLabel: t('back'),
+                        rows: [
+                          { label: t('paid_by_you'), amount: ars.yaSePago.pusisteVos },
+                          {
+                            label: t('paid_by_other', { name: otherName }),
+                            amount: ars.yaSePago.pusoElOtro,
+                          },
+                        ],
+                      }
+                    : undefined
                 }
-                panelId={`${panelBase}-paid`}
-                expanded={expanded}
+                flipped={flipped === 'paid'}
+                onToggle={() => setFlipped((f) => (f === 'paid' ? null : 'paid'))}
               />
-              <Tile
+              <SpentTile
                 tone="pending"
                 icon={<Clock size={18} strokeWidth={2} aria-hidden />}
                 label={t('pending')}
                 ars={ars.porPagar.total}
                 usd={usd.porPagar.total}
                 showUsd={tilesHaveUsd}
+                caption={{ lead: t('pending_sub_1'), emphasis: t('pending_sub_2') }}
                 breakdown={
                   hasShared
-                    ? [
-                        { label: t('pending_on_cards'), amount: ars.porPagar.enTusTarjetas },
-                        {
-                          label: t('pending_owed_other', { name: otherName }),
-                          amount: ars.porPagar.leDebesAlOtro,
-                        },
-                      ]
-                    : null
+                    ? {
+                        title: t('pending'),
+                        openLabel: t('open_breakdown'),
+                        backLabel: t('back'),
+                        rows: [
+                          { label: t('pending_on_cards'), amount: ars.porPagar.enTusTarjetas },
+                          {
+                            label: t('pending_owed_other', { name: otherName }),
+                            amount: ars.porPagar.leDebesAlOtro,
+                          },
+                        ],
+                      }
+                    : undefined
                 }
-                panelId={`${panelBase}-pending`}
-                expanded={expanded}
+                flipped={flipped === 'pending'}
+                onToggle={() => setFlipped((f) => (f === 'pending' ? null : 'pending'))}
               />
             </div>
-
-            {/* One toggle for the card, not one per tile: the three amounts are
-                read together, and three independent chevrons would let the user
-                open a partial view of a single split. */}
-            {hasShared && (
-              <button
-                type="button"
-                onClick={() => setExpanded((v) => !v)}
-                aria-expanded={expanded}
-                aria-controls={`${panelBase}-paid ${panelBase}-pending`}
-                className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl text-[12.5px] font-bold text-text-muted transition-colors hover:bg-border-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {expanded ? t('breakdown_hide') : t('breakdown_show')}
-                <ChevronDown
-                  aria-hidden
-                  size={15}
-                  className={cn('transition-transform duration-[180ms] ease-out', expanded && 'rotate-180')}
-                />
-              </button>
-            )}
 
             <PaceStrip pace={pace} />
           </>

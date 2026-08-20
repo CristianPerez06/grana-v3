@@ -186,8 +186,6 @@
       "paid_by_other": "lo puso {name}",
       "pending_on_cards": "en tus tarjetas",
       "pending_owed_other": "se lo debés a {name}",
-      "breakdown_show": "Ver desglose",
-      "breakdown_hide": "Ocultar desglose",
       "pace": "Gastaste el {pct} de tus ingresos",
       "pace_over": "Gastaste el {pct} de lo que entró este mes",
       "pace_unknown": "Todavía no entró plata este mes",
@@ -196,7 +194,13 @@
       "pace_overflow_note": "Gastaste {spent} y este mes entraron {income}.",
       "pace_foot": "{spent} de {income}",
       "empty": "Sin gastos este mes.",
-      "loading": "Cargando tus gastos del mes…"
+      "loading": "Cargando tus gastos del mes…",
+      "paid_sub_1": "Ya salió de",
+      "paid_sub_2": "tus cuentas",
+      "pending_sub_1": "Se paga en los",
+      "pending_sub_2": "próximos resúmenes",
+      "open_breakdown": "Ver apertura",
+      "back": "Volver"
     },
     "shared_strip": {
       "title": "Compartido",
