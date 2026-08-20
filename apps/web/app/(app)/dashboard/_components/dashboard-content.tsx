@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { getTodayAR } from '@/lib/date'
+import { formatDateISO, getTodayAR } from '@/lib/date'
 import { BalanceCardContainer } from './balance-card-container'
 import { BalanceCardSkeleton } from './balance-card-skeleton'
 import { CommittedSectionContainer } from './committed-section-container'
@@ -20,6 +20,7 @@ export const DashboardContent = async () => {
   const today = getTodayAR()
   const currentYear = today.getFullYear()
   const currentMonth = today.getMonth() + 1
+  const todayISO = formatDateISO(today)
 
   return (
     <DashboardErrorBoundary>
@@ -27,7 +28,11 @@ export const DashboardContent = async () => {
         {/* Fila 1 — "Saldo disponible total" a ancho completo: el total, la
             fila USD y "Dónde está" plegado adentro del hero oscuro. */}
         <Suspense fallback={<BalanceCardSkeleton />}>
-          <BalanceCardContainer currentYear={currentYear} currentMonth={currentMonth} />
+          <BalanceCardContainer
+            currentYear={currentYear}
+            currentMonth={currentMonth}
+            todayISO={todayISO}
+          />
         </Suspense>
 
         {/* Fila 2 — "Cuánto gastaste" + "Compromisos del próximo mes", con la

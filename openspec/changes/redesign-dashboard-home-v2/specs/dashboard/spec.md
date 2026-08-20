@@ -28,9 +28,17 @@ Los porcentajes derivados —el reparto de cuentas de "Dónde está", la barra a
 
 ---
 
-### Requirement: La zona clara de la card de saldo muestra el "Resumen del mes" con Entró y Se fué
+### Requirement: La zona clara de la card de saldo muestra el "Resumen del mes" con Venía, Entró y Se fué
 
-La card de saldo SHALL cerrar con una zona clara titulada "Resumen del mes", separada de la zona oscura por un borde superior, con **dos bloques centrados en dos columnas iguales**: "Entró" y "Se fué". Cada bloque SHALL mostrar un punto de color, su monto ARS y —según la regla bimoneda— su monto USD debajo.
+La card de saldo SHALL cerrar con una zona clara titulada "Resumen del mes", separada de la zona oscura por un borde superior, con **tres bloques centrados en tres columnas iguales**: "Venía", "Entró" y "Se fué". Cada bloque SHALL mostrar un punto de color, su monto ARS y —según la regla bimoneda— su monto USD debajo.
+
+"Venía" es el saldo con el que el usuario **entró al mes**. SHALL derivarse —no leerse— como `saldo del mes − (Entró − Se fué)`, de modo que los tres montos cierren contra el saldo de la zona oscura **por construcción** y no por que dos lecturas coincidan:
+
+```
+Venía + Entró − Se fué  ===  el saldo que muestra la card arriba
+```
+
+Ese es el punto de los tres montos juntos: la card queda auditable en pantalla, sin salir a buscar nada.
 
 La zona SHALL leerse como **liquidez**: cómo se movió el dinero dentro y fuera de las cuentas en el mes. Por lo tanto, **todo movimiento que haya tocado el saldo de una cuenta SHALL caer de exactamente uno de los dos lados**, según su signo: "Entró" suma los ingresos, los reintegros recibidos y el lado positivo de los buckets con signo (liquidaciones a favor, la pata de destino de un cambio de moneda, un ajuste positivo); "Se fué" suma los gastos pagados desde una cuenta, los pagos de resumen de tarjeta y el lado negativo de esos mismos buckets.
 
@@ -46,11 +54,17 @@ Los dos montos SHALL responder al selector de mes. La zona NO SHALL renderizar l
 - **THEN** "Entró" muestra todo lo que aumentó el saldo de sus cuentas ese mes y "Se fué" todo lo que lo bajó
 - **AND** los dos bloques quedan centrados en columnas de igual ancho
 
-#### Scenario: Los dos montos cierran contra el saldo
+#### Scenario: Los tres montos cierran contra el saldo
 
 - **WHEN** el mes tiene ajustes, liquidaciones o cambios de moneda además de ingresos y gastos
 - **THEN** cada uno de esos movimientos aparece sumado en "Entró" o en "Se fué" según su signo
-- **AND** `Entró − Se fué` es igual al cambio del saldo disponible en ese mes
+- **AND** `Venía + Entró − Se fué` es igual al saldo que muestra la zona oscura de la card
+
+#### Scenario: Un mes arrastrado de meses anteriores
+
+- **WHEN** el usuario venía de meses con más egresos que ingresos
+- **THEN** "Venía" muestra ese saldo arrastrado, en negativo si corresponde
+- **AND** el usuario puede leer en la misma card de dónde sale el saldo del mes
 
 #### Scenario: Una compra con tarjeta de crédito no baja el mes
 
@@ -239,17 +253,26 @@ Por debajo del ancho máximo de contenido, el layout SHALL colapsar a **una sola
 
 ### Requirement: El Hero muestra el disponible total bimoneda
 
-La zona oscura de la card de saldo SHALL mostrar, centrados: el rótulo "Saldo disponible total" en mayúsculas, el **saldo disponible total en ARS** como monto grande —con el signo y los centavos tipográficamente subordinados—, y la **fila USD** con su chip y el saldo real en dólares.
+La zona oscura de la card de saldo SHALL mostrar, centrados: el rótulo, el **saldo total en ARS** como monto grande —con el signo y los centavos tipográficamente subordinados—, y la **fila USD** con su chip y el saldo real en dólares.
 
-El saldo disponible SHALL ser el de **hoy** y NO SHALL depender del selector de mes: navegar de mes cambia el resumen mensual, "Cuánto gastaste" y los compromisos, pero nunca el saldo.
+El saldo SHALL seguir al selector de mes, cortado al **último día del mes seleccionado** (o a hoy cuando el mes seleccionado es el corriente). Toda la card se mueve junta: dejar el saldo de hoy encima de los flujos de otro mes hace que los montos de la zona clara no cierren contra él, que es justamente lo que la card tiene que dejar verificar.
+
+Cuando el mes seleccionado NO es el corriente, el rótulo SHALL decirlo (por ejemplo "Saldo al cierre de mayo de 2026"): lo que el usuario tenía al cierre de un mes pasado no es lo que tiene disponible hoy, y un rótulo que dijera "disponible" estaría mintiendo.
+
+El saldo inicial de una cuenta SHALL contar únicamente cuando su fecha de declaración (`account_currencies.initial_balance_date`) es anterior o igual a la fecha de corte. Una cuenta creada en julio NO SHALL aportar su saldo inicial al saldo del 31 de mayo: no era plata que el usuario tuviera en mayo.
 
 La fila USD SHALL regirse por la regla bimoneda: se renderiza solo si el saldo en dólares es distinto de cero.
 
-#### Scenario: El saldo no responde al selector de mes
+#### Scenario: El saldo sigue al selector de mes
 
 - **WHEN** el usuario navega a un mes anterior
-- **THEN** el saldo disponible sigue mostrando el disponible de hoy
-- **AND** las secciones mensuales sí se recalculan
+- **THEN** el saldo muestra el saldo al cierre de ese mes
+- **AND** el rótulo indica que es el saldo al cierre de ese mes, no el disponible de hoy
+
+#### Scenario: Una cuenta creada después no infla los meses anteriores
+
+- **WHEN** el usuario mira un mes anterior a la creación de una de sus cuentas
+- **THEN** el saldo inicial de esa cuenta no participa del saldo de ese mes
 
 #### Scenario: Usuario sin saldo en dólares
 

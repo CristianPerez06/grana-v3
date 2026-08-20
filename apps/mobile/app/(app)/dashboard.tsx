@@ -75,7 +75,7 @@ export default function DashboardScreen() {
             {/* Same four blocks as web, in the same order, single column:
                 saldo → cuánto gastaste → compromisos → compartido. */}
             <View className="flex-col gap-3">
-              <BalanceCard />
+              <BalanceCard todayISO={formatDateISO(today)} />
               <SpentCard />
               <CommittedSection />
               <SharedStrip />

@@ -10,10 +10,15 @@ import { supabase } from '../supabase'
 const monthKey = (year: number, month: number): string =>
   `${year}-${String(month).padStart(2, '0')}`
 
-export function useDashboardHero() {
+/**
+ * Available balance AS OF a cut date. The dashboard passes the last day of the
+ * month being viewed (today for the current one), so the balance moves with the
+ * rest of the card instead of leaving today's number over another month's flows.
+ */
+export function useDashboardHero(asOfISO: string) {
   return useQuery({
-    queryKey: ['dashboard', 'hero'] as const,
-    queryFn: () => getDashboardHero(supabase),
+    queryKey: ['dashboard', 'hero', asOfISO] as const,
+    queryFn: () => getDashboardHero(supabase, asOfISO),
   })
 }
 

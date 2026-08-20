@@ -1,7 +1,7 @@
+'use client'
+
 import Link from 'next/link'
-import { getTranslations } from 'next-intl/server'
-import { Card } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
+import { useFormatter, useTranslations } from 'next-intl'
 import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
 import {
   derivePlacement,
@@ -10,14 +10,16 @@ import {
   type MonthBalanceByCurrency,
   type PlacementRow,
 } from '@grana/dashboard'
+import { Card } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 import { MaskedAmount } from './masked-amount'
 import { MaskedAmountDisplay } from './masked-amount-display'
-import { MonthSummary } from './month-summary'
+import { useBalanceMonth } from './use-balance-month'
 
 type Props = {
-  data: DashboardHero
-  /** Current-month series for the light zone. Null when that read failed. */
-  monthInitialData: MonthBalanceByCurrency | null
+  todayISO: string
+  heroInitial: DashboardHero | null
+  monthInitial: MonthBalanceByCurrency | null
 }
 
 // Account identity color for the row swatch — same source as the AccountAvatar
@@ -36,9 +38,6 @@ const avatarColor = (avatar: ResolvedAccountAvatar): string =>
  * percentage read as belonging to the account listed next to it.
  *
  * With a single account it stays on the left and the column simply reads short.
- *
- * Web only: at 390px a native column is ~170px, and halving that would leave no
- * room for a name. The native card keeps them stacked.
  */
 const PlacementColumn = ({ placement }: { placement: CurrencyPlacement }) => (
   <div className="grid grid-cols-2 gap-x-5 gap-y-2">
@@ -64,37 +63,80 @@ const PlacementColumn = ({ placement }: { placement: CurrencyPlacement }) => (
   </div>
 )
 
+const Flow = ({
+  label,
+  dotClassName,
+  amountClassName,
+  ars,
+  usd,
+}: {
+  label: string
+  dotClassName: string
+  amountClassName: string
+  ars: number
+  usd: number
+}) => (
+  <div className="flex flex-col items-center text-center">
+    <span className="flex items-center gap-[9px] text-[14px] font-bold text-text-muted">
+      <span aria-hidden className={cn('size-[9px] rounded-full', dotClassName)} />
+      {label}
+    </span>
+    <span
+      className={cn(
+        'mt-2.5 text-[22px] font-extrabold leading-none tracking-[-0.04em]',
+        amountClassName,
+      )}
+    >
+      <MaskedAmount amount={ars} currency="ARS" />
+    </span>
+    {/* Bimoneda: the USD line only shows when there is money in dollars. */}
+    {usd !== 0 && (
+      <span className="mt-[5px] text-[12.5px] font-semibold text-text-soft">
+        <MaskedAmount amount={usd} currency="USD" showCentsOverride />
+      </span>
+    )}
+  </div>
+)
+
 /**
- * "Saldo disponible total" — one card with two zones: a dark one with today's
- * total, the USD line and the "Dónde está" breakdown folded in, and a light one
- * with "Resumen del mes".
+ * "Saldo disponible total" — one card with two zones: a dark one with the
+ * balance, the USD line and the "Dónde está" breakdown folded in, and a light
+ * one with "Resumen del mes".
  *
- * The breakdown lives INSIDE the hero (it used to be a sibling card) because it
- * answers the same question the total does: how much I have, and where. Each
- * currency is ranked on its own and shows its top accounts with their share of
- * that currency — the two are never summed nor converted (see `derivePlacement`).
+ * The whole card follows the month selector. The balance is cut at the selected
+ * month's last day, so the three amounts below it close against it:
  *
- * Both the USD line and each currency column are skipped when that currency
- * holds nothing, so a peso-only user reads the card as monocurrency instead of
- * scanning past zeros.
+ *     Venía + Entró − Se fue === el saldo de arriba
  *
- * The available balance is TODAY's and does not follow the month selector; the
- * summary zone below does.
+ * which makes the card auditable on screen. Standing on a past month the label
+ * says so: what you had at that month's close is not what you have available
+ * today.
  */
-export const BalanceCard = async ({ data, monthInitialData }: Props) => {
-  const t = await getTranslations('dashboard')
-  const placement = derivePlacement(data.accounts)
-  const hasUsd = placement.USD.rows.length > 0 || data.usd !== 0
+export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
+  const t = useTranslations('dashboard')
+  const format = useFormatter()
+  const { hero, summary, venia, isCurrent, selected } = useBalanceMonth({
+    todayISO,
+    heroInitial,
+    monthInitial,
+  })
+
+  const placement = derivePlacement(hero?.accounts ?? [])
+  const hasUsd = placement.USD.rows.length > 0 || (hero?.usd ?? 0) !== 0
+  const monthLabel = format.dateTime(new Date(selected.year, selected.month - 1, 1), {
+    month: 'long',
+    year: 'numeric',
+  })
 
   return (
     <Card className="overflow-hidden p-0">
       <div className="bg-surface-dark px-[22px] pb-5 pt-6 text-center text-white">
         <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-white/50">
-          {t('hero.total_label')}
+          {isCurrent ? t('hero.total_label') : t('hero.balance_as_of', { month: monthLabel })}
         </p>
 
         <p className="mt-[11px] text-[clamp(2.125rem,3.4vw,2.625rem)] font-extrabold leading-[0.95] tracking-[-0.05em]">
-          <MaskedAmountDisplay amount={data.ars} currency="ARS" dimSymbol />
+          <MaskedAmountDisplay amount={hero?.ars ?? 0} currency="ARS" dimSymbol />
         </p>
 
         {hasUsd && (
@@ -103,7 +145,7 @@ export const BalanceCard = async ({ data, monthInitialData }: Props) => {
               USD
             </span>
             <span className="text-[16px] font-bold text-white/90">
-              <MaskedAmount amount={data.usd} currency="USD" showCentsOverride />
+              <MaskedAmount amount={hero?.usd ?? 0} currency="USD" showCentsOverride />
             </span>
           </p>
         )}
@@ -144,7 +186,35 @@ export const BalanceCard = async ({ data, monthInitialData }: Props) => {
         </div>
       </div>
 
-      <MonthSummary initialData={monthInitialData} />
+      {/* Resumen del mes — the three amounts add up to the balance above. */}
+      <div className="border-t border-border px-[26px] pb-5 pt-5">
+        <h3 className="text-[18px] font-extrabold tracking-[-0.025em] text-text">
+          {t('month.summary_title')}
+        </h3>
+        <div className="mx-auto mt-[15px] grid max-w-[660px] grid-cols-3 gap-[18px]">
+          <Flow
+            label={t('month.venia')}
+            dotClassName="bg-text-soft"
+            amountClassName="text-text"
+            ars={venia?.ARS ?? 0}
+            usd={venia?.USD ?? 0}
+          />
+          <Flow
+            label={t('month.came_in')}
+            dotClassName="bg-emerald"
+            amountClassName="text-emerald-deep"
+            ars={summary?.ARS.entro ?? 0}
+            usd={summary?.USD.entro ?? 0}
+          />
+          <Flow
+            label={t('month.went_out')}
+            dotClassName="bg-slate"
+            amountClassName="text-slate"
+            ars={summary?.ARS.seFue ?? 0}
+            usd={summary?.USD.seFue ?? 0}
+          />
+        </div>
+      </div>
     </Card>
   )
 }

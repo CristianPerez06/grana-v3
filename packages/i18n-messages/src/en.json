@@ -121,12 +121,14 @@
     "mask_show": "Show amounts",
     "mask_hide": "Hide amounts",
     "hero": {
-      "total_label": "Total available balance"
+      "total_label": "Total available balance",
+      "balance_as_of": "Balance at the end of {month}"
     },
     "month": {
       "summary_title": "Month summary",
       "came_in": "Came in",
-      "went_out": "Went out"
+      "went_out": "Went out",
+      "venia": "Carried in"
     },
     "hero_loading": "Loading your available balance…",
     "hero_error": "We couldn't load your available balance.",

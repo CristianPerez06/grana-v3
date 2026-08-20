@@ -11,6 +11,8 @@ import { BalanceCard } from './balance-card'
 type Props = {
   currentYear: number
   currentMonth: number
+  /** Financial today, ISO. The balance cut for the current month. */
+  todayISO: string
 }
 
 // Row 1 of the dashboard: the balance card, full width.
@@ -22,12 +24,12 @@ type Props = {
 //
 // The month read failing does not take the card down: the balance and "Dónde
 // está" still render, and the summary zone shows its own empty state.
-export const BalanceCardContainer = async ({ currentYear, currentMonth }: Props) => {
+export const BalanceCardContainer = async ({ currentYear, currentMonth, todayISO }: Props) => {
   const supabase = await createClient()
 
-  let hero: DashboardHero
+  let hero: DashboardHero | null = null
   try {
-    hero = await getDashboardHero(supabase)
+    hero = await getDashboardHero(supabase, todayISO)
   } catch {
     const t = await getTranslations('dashboard')
     return (
@@ -44,5 +46,5 @@ export const BalanceCardContainer = async ({ currentYear, currentMonth }: Props)
     month = null
   }
 
-  return <BalanceCard data={hero} monthInitialData={month} />
+  return <BalanceCard todayISO={todayISO} heroInitial={hero} monthInitial={month} />
 }

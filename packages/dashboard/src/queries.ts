@@ -56,8 +56,17 @@ export function resolveMonthRange(month: string): { from: string; to: string } {
   }
 }
 
+/**
+ * Available balance and its per-account breakdown, AS OF a date.
+ *
+ * `asOfISO` defaults to the financial today. The dashboard passes the last day
+ * of the month being viewed (clamped at today), so navigating months moves the
+ * balance with the rest of the card instead of leaving today's number sitting
+ * on top of another month's flows.
+ */
 export async function getDashboardHero(
   supabase: SupabaseClient,
+  asOfISO: string = formatDateISO(getTodayAR()),
 ): Promise<DashboardHero> {
   // Which accounts are "propias" is resolved by the normative SQL definition
   // (`get_owned_account_ids`, migration 0051), not by rebuilding the predicate
@@ -68,21 +77,21 @@ export async function getDashboardHero(
   if (ownedErr) throw ownedErr
 
   const accountIds = (ownedIds ?? []) as string[]
-  if (accountIds.length === 0) return aggregateHero([], new Map())
+  if (accountIds.length === 0) return aggregateHero([], new Map(), asOfISO)
 
   const [{ data: accounts, error }, txSums] = await Promise.all([
     supabase
       .from('accounts')
       .select(
-        'id, name, type, color_key, icon_key, institution:institutions(name, brand_color, icon_type), currencies:account_currencies(currency_code, initial_balance)',
+        'id, name, type, color_key, icon_key, institution:institutions(name, brand_color, icon_type), currencies:account_currencies(currency_code, initial_balance, initial_balance_date)',
       )
       .in('id', accountIds),
-    getTransactionSums(supabase, accountIds),
+    getTransactionSums(supabase, accountIds, asOfISO),
   ])
 
   if (error) throw error
 
-  return aggregateHero((accounts ?? []) as unknown as HeroAccountRow[], txSums)
+  return aggregateHero((accounts ?? []) as unknown as HeroAccountRow[], txSums, asOfISO)
 }
 
 // Net per account and currency, aggregated in Postgres by the
@@ -97,13 +106,16 @@ export async function getDashboardHero(
 async function getTransactionSums(
   supabase: SupabaseClient,
   accountIds: string[],
+  asOfISO: string,
 ): Promise<Map<string, { ARS: number; USD: number }>> {
   if (accountIds.length === 0) return new Map()
 
-  // `p_today` pins the temporal cut (migration 0052) to the UI's financial "hoy".
+  // `p_today` is the temporal cut (migration 0052). Passing the month's closing
+  // date instead of today is what makes the balance historical: the RPC already
+  // took the parameter, so no SQL changed for this.
   const { data, error } = await supabase.rpc('get_account_balance_sums', {
     p_account_ids: accountIds,
-    p_today: formatDateISO(getTodayAR()),
+    p_today: asOfISO,
   })
 
   if (error) throw error

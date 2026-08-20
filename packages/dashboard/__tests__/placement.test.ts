@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { aggregateHero } from '../src/aggregations'
 import {
   derivePlacement,
   PLACEMENT_ROWS_PER_CURRENCY,
@@ -146,5 +147,63 @@ describe('derivePlacement', () => {
     ]
 
     expect(derivePlacement(accounts, 3).ARS.rows.map((r) => r.pct)).toEqual([40, 30, 30])
+  })
+})
+
+describe('aggregateHero — saldo histórico', () => {
+  const currencies = (initial: number, date?: string) => [
+    { currency_code: 'ARS', initial_balance: initial, initial_balance_date: date ?? null },
+  ]
+  const row = (id: string, name: string, cur: ReturnType<typeof currencies>) => ({
+    id,
+    name,
+    type: 'cash' as const,
+    color_key: null,
+    icon_key: null,
+    institution: null,
+    currencies: cur,
+  })
+
+  it('excludes the opening balance of an account declared after the date asked for', () => {
+    // Una cuenta creada en julio no aporta su saldo inicial al saldo del 31/5:
+    // no era plata que el usuario tuviera en mayo.
+    const hero = aggregateHero(
+      [row('nueva', 'Nueva', currencies(500_000, '2026-07-10'))],
+      new Map(),
+      '2026-05-31',
+    )
+
+    expect(hero.ars).toBe(0)
+  })
+
+  it('includes it once the date asked for reaches its declaration day', () => {
+    const hero = aggregateHero(
+      [row('nueva', 'Nueva', currencies(500_000, '2026-07-10'))],
+      new Map(),
+      '2026-07-10',
+    )
+
+    expect(hero.ars).toBe(500_000)
+  })
+
+  it('counts every opening balance when no date is asked for', () => {
+    const hero = aggregateHero(
+      [row('nueva', 'Nueva', currencies(500_000, '2026-07-10'))],
+      new Map(),
+    )
+
+    expect(hero.ars).toBe(500_000)
+  })
+
+  it('keeps the transaction net even when the opening balance is out of range', () => {
+    // El corte del saldo inicial no toca los movimientos: de esos se encarga el
+    // `p_today` de la RPC, que ya viene aplicado en `txSums`.
+    const hero = aggregateHero(
+      [row('nueva', 'Nueva', currencies(500_000, '2026-07-10'))],
+      new Map([['nueva', { ARS: -12_000, USD: 0 }]]),
+      '2026-05-31',
+    )
+
+    expect(hero.ars).toBe(-12_000)
   })
 })

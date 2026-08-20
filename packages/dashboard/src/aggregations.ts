@@ -19,12 +19,24 @@ export type HeroAccountRow = {
   currencies: Array<{
     currency_code: string
     initial_balance: number | string | null
+    /**
+     * Day the opening balance was declared. Optional so existing callers keep
+     * working; when absent the opening balance always counts.
+     */
+    initial_balance_date?: string | null
   }>
 }
 
+/**
+ * @param asOfISO Balance date the caller is asking for. An opening balance
+ * declared AFTER it does not count: money the user says they had on the day
+ * they created the account is not money they had a month earlier. Absent means
+ * "today", where every opening balance is already in the past.
+ */
 export function aggregateHero(
   accounts: HeroAccountRow[],
   txSums: Map<string, { ARS: number; USD: number }>,
+  asOfISO?: string,
 ): DashboardHero {
   let totalArs = Money.from(0)
   let totalUsd = Money.from(0)
@@ -35,15 +47,19 @@ export function aggregateHero(
     let accArs = Money.from(0)
     let accUsd = Money.from(0)
     for (const c of acc.currencies) {
+      // ISO dates compare lexicographically, so no Date construction is needed.
+      const opened =
+        asOfISO === undefined || c.initial_balance_date == null || c.initial_balance_date <= asOfISO
+      const initial = opened ? (c.initial_balance ?? 0) : 0
       if (c.currency_code === 'ARS') {
         accArs = Money.add(
           accArs,
-          Money.add(Money.from(c.initial_balance ?? 0), Money.from(sums.ARS)),
+          Money.add(Money.from(initial), Money.from(sums.ARS)),
         )
       } else if (c.currency_code === 'USD') {
         accUsd = Money.add(
           accUsd,
-          Money.add(Money.from(c.initial_balance ?? 0), Money.from(sums.USD)),
+          Money.add(Money.from(initial), Money.from(sums.USD)),
         )
       }
     }

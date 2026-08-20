@@ -121,12 +121,14 @@
     "mask_show": "Mostrar importes",
     "mask_hide": "Ocultar importes",
     "hero": {
-      "total_label": "Saldo disponible total"
+      "total_label": "Saldo disponible total",
+      "balance_as_of": "Saldo al cierre de {month}"
     },
     "month": {
       "summary_title": "Resumen del mes",
       "came_in": "Entró",
-      "went_out": "Se fué"
+      "went_out": "Se fué",
+      "venia": "Venía"
     },
     "hero_loading": "Cargando tu disponible…",
     "hero_error": "No pudimos cargar tu disponible.",

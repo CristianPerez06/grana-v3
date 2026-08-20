@@ -28,6 +28,8 @@ export {
   type SpendingPace,
 } from './spending'
 
+export { deriveMonthOpening } from './month-opening'
+
 export {
   deriveMonthSummary,
   type MonthSummary,
