@@ -4,7 +4,9 @@
 
 Toda métrica monetaria del dashboard SHALL exponer su valor en ARS y su valor en USD como **cantidades independientes**, cada una derivada de los movimientos de su propia moneda. El dashboard SHALL NOT sumar ARS con USD ni convertir entre monedas, y NO SHALL depender de ningún tipo de cambio global: el FX del sistema vive por transacción (`transactions.fx_rate_to_ars`) y no existe una cotización de cuenta.
 
-El valor ARS SHALL renderizarse siempre como titular de la métrica. El valor USD SHALL renderizarse como línea subordinada **únicamente cuando es distinto de cero**; cuando es cero, la línea USD NO SHALL ocupar espacio. Un usuario sin actividad en dólares SHALL ver la pantalla como monomoneda, sin líneas vacías ni ceros decorativos.
+El valor ARS SHALL renderizarse siempre como titular de la métrica. El valor USD SHALL renderizarse como línea subordinada **únicamente cuando hay actividad en dólares**; si no la hay, la línea USD NO SHALL ocupar espacio. Un usuario sin actividad en dólares SHALL ver la pantalla como monomoneda, sin líneas vacías ni ceros decorativos.
+
+Esa decisión SHALL tomarse **por bloque de montos pares**, no monto por monto. En un bloque de montos que el usuario compara entre sí —los tres del "Resumen del mes", los tres tiles de "Cuánto gastaste"— basta con que **uno** tenga valor en dólares para que **todos** rendericen su línea USD, aunque a alguno le toque cero. Ocultarla solo donde el valor es cero deja una columna más alta que sus vecinas y rompe la comparación, que es justamente para lo que están puestas una al lado de la otra.
 
 Los porcentajes derivados —el reparto de cuentas de "Dónde está", la barra apilada de Compromisos y el ritmo— SHALL calcularse **dentro de una misma moneda**, nunca sobre un total mezclado.
 
@@ -19,6 +21,12 @@ Los porcentajes derivados —el reparto de cuentas de "Dónde está", la barra a
 - **WHEN** un usuario tiene saldo en ARS y saldo en USD
 - **THEN** el saldo disponible muestra el total ARS como titular y el total USD como línea subordinada
 - **AND** los dos montos son saldos reales de su moneda, no uno la conversión del otro
+
+#### Scenario: Un bloque con dólares en un solo monto
+
+- **WHEN** en el "Resumen del mes" solo "Tenías" tiene valor en dólares y los dos flujos están en cero
+- **THEN** las tres columnas renderizan su línea USD, las dos en cero incluidas
+- **AND** las tres quedan a la misma altura y se pueden comparar de un vistazo
 
 #### Scenario: Los porcentajes no cruzan monedas
 

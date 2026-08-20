@@ -36,6 +36,7 @@ const Tile = ({
   label,
   ars,
   usd,
+  showUsd,
   subLead,
   subEmphasis,
 }: {
@@ -44,6 +45,8 @@ const Tile = ({
   label: string
   ars: number
   usd: number
+  /** Decided once for the three tiles, so they stay the same height. */
+  showUsd: boolean
   subLead: string
   subEmphasis: string
 }) => (
@@ -64,8 +67,7 @@ const Tile = ({
       >
         <MaskedAmount amount={ars} currency="ARS" />
       </span>
-      {/* Bimoneda: only when there is money in dollars. */}
-      {usd !== 0 && (
+      {showUsd && (
         <span className="mt-0.5 text-[11px] font-semibold text-text-soft">
           <MaskedAmount amount={usd} currency="USD" showCentsOverride />
         </span>
@@ -173,6 +175,8 @@ export const SpentCard = () => {
   const pace = deriveSpendingPace(ars.gastaste, balanceQuery.data?.ARS.totalIncome ?? 0)
 
   const isEmpty = ars.gastaste === 0 && usd.gastaste === 0
+  // One decision for the three tiles (see `Tile`).
+  const tilesHaveUsd = usd.gastaste !== 0 || usd.pagaste !== 0 || usd.teQuedaPorPagar !== 0
 
   return (
     <Card className="flex flex-col">
@@ -200,6 +204,7 @@ export const SpentCard = () => {
                 label={t('gastaste')}
                 ars={ars.gastaste}
                 usd={usd.gastaste}
+                showUsd={tilesHaveUsd}
                 subLead={t('gastaste_sub_1')}
                 subEmphasis={t('gastaste_sub_2')}
               />
@@ -209,6 +214,7 @@ export const SpentCard = () => {
                 label={t('pagaste')}
                 ars={ars.pagaste}
                 usd={usd.pagaste}
+                showUsd={tilesHaveUsd}
                 subLead={t('pagaste_sub_1')}
                 subEmphasis={t('pagaste_sub_2')}
               />
@@ -218,6 +224,7 @@ export const SpentCard = () => {
                 label={t('pending')}
                 ars={ars.teQuedaPorPagar}
                 usd={usd.teQuedaPorPagar}
+                showUsd={tilesHaveUsd}
                 subLead={t('pending_sub_1')}
                 subEmphasis={t('pending_sub_2')}
               />

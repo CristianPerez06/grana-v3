@@ -77,6 +77,7 @@ const Flow = ({
   amountClassName,
   ars,
   usd,
+  showUsd,
   signPrefix,
 }: {
   label: string
@@ -84,6 +85,13 @@ const Flow = ({
   amountClassName: string
   ars: number
   usd: number
+  /**
+   * Decided ONCE for the whole block, not per amount: three peer amounts have
+   * to line up, and hiding the USD line only where it is zero left one column
+   * taller than its neighbours and the three no longer comparable at a glance.
+   * A month with no dollars at all still shows no USD line anywhere.
+   */
+  showUsd: boolean
   signPrefix?: string
 }) => (
   <div className="flex flex-col items-center text-center">
@@ -99,8 +107,7 @@ const Flow = ({
     >
       <MaskedAmount amount={ars} currency="ARS" signPrefix={signPrefix} />
     </span>
-    {/* Bimoneda: the USD line only shows when there is money in dollars. */}
-    {usd !== 0 && (
+    {showUsd && (
       <span className="mt-[5px] text-[12.5px] font-semibold text-text-soft">
         <MaskedAmount amount={usd} currency="USD" showCentsOverride signPrefix={signPrefix} />
       </span>
@@ -132,6 +139,11 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
   })
 
   const placement = derivePlacement(hero?.accounts ?? [])
+  // One decision for the whole summary block (see `Flow`).
+  const summaryHasUsd =
+    (venia?.USD ?? 0) !== 0 ||
+    (summary?.USD.entro ?? 0) !== 0 ||
+    (summary?.USD.seFue ?? 0) !== 0
   const hasUsd = placement.USD.rows.length > 0 || (hero?.usd ?? 0) !== 0
   const monthLabel = format.dateTime(new Date(selected.year, selected.month - 1, 1), {
     month: 'long',
@@ -208,6 +220,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             amountClassName="text-text"
             ars={venia?.ARS ?? 0}
             usd={venia?.USD ?? 0}
+            showUsd={summaryHasUsd}
           />
           <Flow
             label={t('month.came_in')}
@@ -215,6 +228,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             amountClassName="text-emerald-deep"
             ars={summary?.ARS.entro ?? 0}
             usd={summary?.USD.entro ?? 0}
+            showUsd={summaryHasUsd}
             signPrefix="+"
           />
           <Flow
@@ -223,6 +237,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             amountClassName="text-slate"
             ars={summary?.ARS.seFue ?? 0}
             usd={summary?.USD.seFue ?? 0}
+            showUsd={summaryHasUsd}
             signPrefix="−"
           />
         </div>

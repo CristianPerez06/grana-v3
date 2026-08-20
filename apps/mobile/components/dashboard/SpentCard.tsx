@@ -30,6 +30,7 @@ const Tile = ({
   label,
   ars,
   usd,
+  showUsd,
   subLead,
   subEmphasis,
 }: {
@@ -37,6 +38,8 @@ const Tile = ({
   label: string
   ars: number
   usd: number
+  /** Decided once for the three tiles, so they stay the same height. */
+  showUsd: boolean
   subLead: string
   subEmphasis: string
 }) => (
@@ -50,7 +53,7 @@ const Tile = ({
         currency="ARS"
         className={`mt-1 text-[16px] font-extrabold ${TONE[tone].amount}`}
       />
-      {usd !== 0 && (
+      {showUsd && (
         <MaskedAmount
           amount={usd}
           currency="USD"
@@ -135,6 +138,7 @@ export const SpentCard = () => {
   const ars = deriveMonthSpending(accruedOf('ARS'), balanceQuery.data?.ARS.totalExpense ?? 0)
   const usd = deriveMonthSpending(accruedOf('USD'), balanceQuery.data?.USD.totalExpense ?? 0)
   const pace = deriveSpendingPace(ars.gastaste, balanceQuery.data?.ARS.totalIncome ?? 0)
+  const tilesHaveUsd = usd.gastaste !== 0 || usd.pagaste !== 0 || usd.teQuedaPorPagar !== 0
 
   return (
     <View className="rounded-2xl border border-border bg-card p-4">
@@ -165,6 +169,7 @@ export const SpentCard = () => {
               label={t('dashboard.spent.gastaste')}
               ars={ars.gastaste}
               usd={usd.gastaste}
+              showUsd={tilesHaveUsd}
               subLead={t('dashboard.spent.gastaste_sub_1')}
               subEmphasis={t('dashboard.spent.gastaste_sub_2')}
             />
@@ -173,6 +178,7 @@ export const SpentCard = () => {
               label={t('dashboard.spent.pagaste')}
               ars={ars.pagaste}
               usd={usd.pagaste}
+              showUsd={tilesHaveUsd}
               subLead={t('dashboard.spent.pagaste_sub_1')}
               subEmphasis={t('dashboard.spent.pagaste_sub_2')}
             />
@@ -181,6 +187,7 @@ export const SpentCard = () => {
               label={t('dashboard.spent.pending')}
               ars={ars.teQuedaPorPagar}
               usd={usd.teQuedaPorPagar}
+              showUsd={tilesHaveUsd}
               subLead={t('dashboard.spent.pending_sub_1')}
               subEmphasis={t('dashboard.spent.pending_sub_2')}
             />

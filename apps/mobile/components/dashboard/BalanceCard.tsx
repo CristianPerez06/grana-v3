@@ -69,6 +69,7 @@ const Flow = ({
   amountClassName,
   ars,
   usd,
+  showUsd,
   signPrefix,
 }: {
   label: string
@@ -76,6 +77,12 @@ const Flow = ({
   amountClassName: string
   ars: number
   usd: number
+  /**
+   * Decided ONCE for the whole block, not per amount: three peer amounts have
+   * to line up, and hiding the USD line only where it is zero left one column
+   * taller than its neighbours.
+   */
+  showUsd: boolean
   /** "+" / "−" on the two FLOWS; the carried-in balance shows only its own. */
   signPrefix?: string
 }) => (
@@ -90,7 +97,7 @@ const Flow = ({
       signPrefix={signPrefix}
       className={`mt-2 text-[15px] font-extrabold ${amountClassName}`}
     />
-    {usd !== 0 && (
+    {showUsd && (
       <MaskedAmount
         amount={usd}
         currency="USD"
@@ -123,6 +130,10 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
           USD: deriveMonthOpening(hero.usd, summary.USD),
         }
       : null
+  const summaryHasUsd =
+    (venia?.USD ?? 0) !== 0 ||
+    (summary?.USD.entro ?? 0) !== 0 ||
+    (summary?.USD.seFue ?? 0) !== 0
   const monthLabel = new Date(selected.year, selected.month - 1, 1)
     .toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
 
@@ -212,6 +223,7 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
             amountClassName="text-text"
             ars={venia?.ARS ?? 0}
             usd={venia?.USD ?? 0}
+            showUsd={summaryHasUsd}
           />
           <Flow
             label={t('dashboard.month.came_in')}
@@ -219,6 +231,7 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
             amountClassName="text-positive"
             ars={summary?.ARS.entro ?? 0}
             usd={summary?.USD.entro ?? 0}
+            showUsd={summaryHasUsd}
             signPrefix="+"
           />
           <Flow
@@ -227,6 +240,7 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
             amountClassName="text-slate"
             ars={summary?.ARS.seFue ?? 0}
             usd={summary?.USD.seFue ?? 0}
+            showUsd={summaryHasUsd}
             signPrefix="−"
           />
         </View>
