@@ -18,6 +18,15 @@ export {
 } from './aggregations'
 
 export {
+  derivePlacement,
+  PLACEMENT_ROWS_PER_CURRENCY,
+  type BalancePlacement,
+  type CurrencyPlacement,
+  type PlacementAccount,
+  type PlacementRow,
+} from './placement'
+
+export {
   computeConcentration,
   type Concentration,
   type ConcentrationAccount,
