@@ -44,7 +44,13 @@ La grilla SHALL ocupar el ancho de la card en **tres columnas iguales**, y cada 
 
 Los tres estuvieron alineados a la izquierda, con el argumento de que una sola regla de alineación se lee como una pieza. Con datos reales no se lee así: el contenido es más angosto que su tercio, así que los tres quedaban amontonados a la izquierda y sobraba una franja muerta contra el borde derecho de la card, con el bloque visiblemente descentrado.
 
-Las columnas SHALL seguir siendo **tercios iguales**: la posición de cada monto NO SHALL depender de su contenido, o los tres saltarían de lugar al navegar de un mes a otro, que es justo lo que hay que poder comparar. Es la alineación de cada columna la que empuja el contenido hacia los bordes, no el ancho de la columna. Un monto muy largo SHALL seguir quedando adentro de su tercio: la regla de densidad achica la tipografía antes de que llegue a su vecino.
+Las columnas SHALL seguir siendo **tercios iguales**: la posición de cada monto NO SHALL depender de su contenido, o los tres saltarían de lugar al navegar de un mes a otro, que es justo lo que hay que poder comparar. Es la alineación de cada columna la que empuja el contenido hacia los bordes, no el ancho de la columna.
+
+**En pantallas angostas los tres SHALL apilarse**, una fila cada uno con el rótulo a la izquierda y el monto a la derecha. Tres tercios de una card de ancho de teléfono son ~105px, y un monto de ocho cifras necesita más del doble: en tres columnas los montos se imprimían **encima** unos de otros. Achicar la tipografía hasta que entren tampoco sirve —deja de leerse—, así que cada monto se lleva una fila entera. Es la misma composición en las dos plataformas: nativo apila siempre.
+
+**El paso tipográfico SHALL decidirse una sola vez para los tres**, igual que en los tiles y por la misma razón: tres montos que achican en puntos distintos dejan de compararse, y el arrastrado puede terminar más chico que los flujos.
+
+Un monto muy largo SHALL seguir quedando adentro de su tercio: la regla de densidad achica la tipografía antes de que llegue a su vecino.
 
 Los montos SHALL achicarse por pasos con la misma regla compartida que los tiles de "Cuánto gastaste", sobre la escala propia de esta zona.
 
@@ -452,6 +458,8 @@ La fila USD SHALL regirse por la regla bimoneda: se renderiza solo si el saldo e
 El desglose "Dónde está" SHALL vivir **dentro de la zona oscura** de la card de saldo, no como card separada, en dos columnas separadas por un divisor: **ARS a la izquierda y USD a la derecha**, con su encabezado propio y un link a Cuentas.
 
 Cada columna SHALL listar las **dos cuentas con más saldo** de esa moneda, cada fila con un cuadradito del color de la cuenta, el nombre y su **porcentaje sobre el total de esa moneda**. El desglose NO SHALL renderizar barras de proporción: el porcentaje es la única expresión de la magnitud.
+
+En pantallas angostas las dos monedas SHALL apilarse y cada cuenta SHALL ocupar su propia fila. Dos columnas de moneda en el ancho de un teléfono dejan ~145px cada una y dos cuentas adentro de eso truncaban los nombres a una letra ("M", "L…"), que no identifican nada. Apilado, cada cuenta tiene el ancho de la card. El separador SHALL girar con la composición: vertical entre columnas, horizontal entre bloques apilados. Cada bloque apilado SHALL llevar su propio rótulo de moneda, porque el encabezado de dos columnas solo se alinea con ellas cuando están lado a lado.
 
 Una columna cuya moneda no tiene saldo NO SHALL renderizar filas vacías. Un usuario con una sola cuenta en una moneda SHALL ver una sola fila en esa columna.
 

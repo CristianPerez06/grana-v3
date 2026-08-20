@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useFormatter, useTranslations } from 'next-intl'
 import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
 import {
-  amountDensity,
+  densestAmountDensity,
   derivePlacement,
   type CurrencyPlacement,
   type DashboardHero,
@@ -42,14 +42,27 @@ const avatarColor = (avatar: ResolvedAccountAvatar): string =>
  *
  * With a single account it stays on the left and the column simply reads short.
  */
-const PlacementColumn = ({ placement }: { placement: CurrencyPlacement }) => (
-  <div className="grid grid-cols-2 gap-x-5 gap-y-2">
+const PlacementColumn = ({
+  placement,
+  currency,
+}: {
+  placement: CurrencyPlacement
+  currency: string
+}) => (
+  // One account per row when narrow — at phone width two of them share ~135px
+  // and the names came out as "M" and "L…". Side by side once there is room.
+  <div className="grid grid-cols-1 gap-x-5 gap-y-2 sm:grid-cols-2">
+    {/* Stacked, each block carries its own currency label: the header row's
+        ARS/USD only line up with the columns when they sit side by side. */}
+    <span className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-white/50 sm:col-span-2 sm:hidden">
+      {currency}
+    </span>
     {placement.rows.map((row: PlacementRow, index: number) => (
       <div
         key={row.id}
         className={cn(
           'flex items-center gap-2 text-[13.5px] font-semibold text-white/65',
-          index === 1 && 'justify-end',
+          index === 1 && 'justify-between sm:justify-end',
         )}
       >
         <span
@@ -83,9 +96,9 @@ const PlacementColumn = ({ placement }: { placement: CurrencyPlacement }) => (
  * before it can reach its neighbour.
  */
 const ALIGN = {
-  start: 'items-start text-left',
-  center: 'items-center text-center',
-  end: 'items-end text-right',
+  start: 'sm:items-start sm:text-left',
+  center: 'sm:items-center sm:text-center',
+  end: 'sm:items-end sm:text-right',
 } as const
 
 const SUMMARY_SIZE: Record<AmountDensity, string> = {
@@ -112,6 +125,7 @@ const Flow = ({
   showUsd,
   signPrefix,
   align,
+  density,
 }: {
   label: string
   dotClassName: string
@@ -128,19 +142,28 @@ const Flow = ({
   signPrefix?: string
   /** Where the block sits inside its column — see ALIGN below. */
   align: keyof typeof ALIGN
-}) => {
-  const showCents = useShowCents()
-
-  return (
-    <div className={cn('flex flex-col', ALIGN[align])}>
-      <span className="flex items-center gap-[9px] text-[14px] font-bold text-text-muted">
-        <span aria-hidden className={cn('size-[9px] rounded-full', dotClassName)} />
-        {label}
-      </span>
+  /** Type step, decided once for the three (see the card). */
+  density: AmountDensity
+}) => (
+  // A ROW when narrow — label left, amount right — and a column once the three
+  // fit side by side. Three thirds of a phone-width card is ~105px, and the
+  // amounts carry `whitespace-nowrap`, so they overflowed their column and
+  // printed on top of each other instead of wrapping.
+  <div
+    className={cn(
+      'flex items-center justify-between gap-3 sm:flex-col sm:justify-start',
+      ALIGN[align],
+    )}
+  >
+    <span className="flex shrink-0 items-center gap-[9px] text-[14px] font-bold text-text-muted">
+      <span aria-hidden className={cn('size-[9px] rounded-full', dotClassName)} />
+      {label}
+    </span>
+    <span className={cn('flex min-w-0 flex-col items-end sm:mt-2.5 sm:w-full', ALIGN[align])}>
       <span
         className={cn(
-          'mt-2.5 whitespace-nowrap font-extrabold leading-none tracking-[-0.04em]',
-          SUMMARY_SIZE[amountDensity(ars, showCents)],
+          'whitespace-nowrap font-extrabold leading-none tracking-[-0.04em]',
+          SUMMARY_SIZE[density],
           amountClassName,
         )}
       >
@@ -152,9 +175,9 @@ const Flow = ({
           <MaskedAmount amount={usd} currency="USD" showCentsOverride signPrefix={signPrefix} />
         </span>
       )}
-    </div>
-  )
-}
+    </span>
+  </div>
+)
 
 /**
  * "Saldo disponible total" — one card with two zones: a dark one with the
@@ -173,6 +196,7 @@ const Flow = ({
 export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
   const t = useTranslations('dashboard')
   const format = useFormatter()
+  const showCents = useShowCents()
   const { hero, summary, venia, isCurrent, selected } = useBalanceMonth({
     todayISO,
     heroInitial,
@@ -180,6 +204,12 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
   })
 
   const placement = derivePlacement(hero?.accounts ?? [])
+  // One type step for the three amounts, so they never shrink at different
+  // points — same rule as the tiles of "Cuánto gastaste".
+  const summaryDensity = densestAmountDensity(
+    [venia?.ARS ?? 0, summary?.ARS.entro ?? 0, summary?.ARS.seFue ?? 0],
+    showCents,
+  )
   // One decision for the whole summary block (see `Flow`).
   const summaryHasUsd =
     (venia?.USD ?? 0) !== 0 ||
@@ -218,18 +248,19 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             that cap and anchors to the card's right edge: inside the cap it read
             as floating in the middle of the header. */}
         <div className="relative mt-[18px]">
-          <div className="mx-auto grid max-w-[660px] grid-cols-2 items-end gap-4 border-t border-white/10 pt-[15px]">
+          <div className="mx-auto grid max-w-[660px] grid-cols-1 items-end gap-4 border-t border-white/10 pt-[15px] sm:grid-cols-2">
             <span className="flex items-baseline justify-between gap-2">
               <span className="text-[11.5px] font-extrabold uppercase tracking-[0.12em] text-white/50">
                 {t('accounts.title')}
               </span>
-              <span className="text-[11.5px] font-extrabold tracking-[0.12em] text-white/65">
+              <span className="hidden text-[11.5px] font-extrabold tracking-[0.12em] text-white/65 sm:inline">
                 ARS
               </span>
             </span>
             {/* text-left against the dark zone's `text-center`, so the label sits
-                over its column instead of centering in the cell. */}
-            <span className="pl-[15px] text-left text-[11.5px] font-extrabold tracking-[0.12em] text-white/65">
+                over its column instead of centering in the cell. Hidden while the
+                columns are stacked: it would sit over nothing. */}
+            <span className="hidden pl-[15px] text-left text-[11.5px] font-extrabold tracking-[0.12em] text-white/65 sm:inline">
               {hasUsd ? 'USD' : ''}
             </span>
           </div>
@@ -241,11 +272,18 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
           </Link>
         </div>
 
-        <div className="mx-auto mt-3 grid max-w-[660px] grid-cols-2 gap-4 text-left">
-          <PlacementColumn placement={placement.ARS} />
-          <div className="border-l border-white/10 pl-[15px]">
-            <PlacementColumn placement={placement.USD} />
-          </div>
+        {/* Side by side on desktop, STACKED when narrow: two currency columns in
+            ~145px each truncated the account names down to "M" and "L…". Stacked,
+            each block gets the full width and the names survive. The divider
+            turns with the layout — vertical between columns, horizontal between
+            stacked blocks. */}
+        <div className="mx-auto mt-3 grid max-w-[660px] grid-cols-1 gap-3 text-left sm:grid-cols-2 sm:gap-4">
+          <PlacementColumn placement={placement.ARS} currency="ARS" />
+          {hasUsd && (
+            <div className="border-t border-white/10 pt-3 sm:border-l sm:border-t-0 sm:pl-[15px] sm:pt-0">
+              <PlacementColumn placement={placement.USD} currency="USD" />
+            </div>
+          )}
         </div>
       </div>
 
@@ -254,7 +292,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
         <h3 className="text-[18px] font-extrabold tracking-[-0.025em] text-text">
           {t('month.summary_title')}
         </h3>
-        <div className="mt-3 grid grid-cols-3 gap-[18px]">
+        <div className="mt-3 flex flex-col gap-3 sm:grid sm:grid-cols-3 sm:gap-[18px]">
           <Flow
             label={t('month.carried_in')}
             dotClassName="bg-text-soft"
@@ -263,6 +301,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             usd={venia?.USD ?? 0}
             showUsd={summaryHasUsd}
             align="start"
+            density={summaryDensity}
           />
           <Flow
             label={t('month.came_in')}
@@ -273,6 +312,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             showUsd={summaryHasUsd}
             signPrefix="+"
             align="center"
+            density={summaryDensity}
           />
           <Flow
             label={t('month.went_out')}
@@ -283,6 +323,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             showUsd={summaryHasUsd}
             signPrefix="−"
             align="end"
+            density={summaryDensity}
           />
         </div>
       </div>
