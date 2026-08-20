@@ -323,6 +323,13 @@ export const PendingRecurrencesBlock = ({
           const warning = computeWarning(instance)
           const eligibleAccounts = isEditing ? eligibleAccountsFor(instance) : []
           const editAccount = eligibleAccounts.find((a) => a.id === editAccountId) ?? null
+          // While the accounts read is in flight the eligible list is empty, but
+          // the instance's own account is still the selected one — show its name
+          // from the embed instead of falling back to the placeholder.
+          const editAccountFallbackName =
+            !editAccount && editAccountId && editAccountId === instance.account_id
+              ? instance.account?.name ?? null
+              : null
           const accountUnavailable = isAccountUnavailable(instance)
 
           const urgency = urgencyOf(instance.scheduled_date)
@@ -477,6 +484,10 @@ export const PendingRecurrencesBlock = ({
                                 </span>
                               )}
                             </>
+                          ) : editAccountFallbackName ? (
+                            <span className="min-w-0 flex-1 truncate font-semibold text-text">
+                              {editAccountFallbackName}
+                            </span>
                           ) : (
                             <span className="min-w-0 flex-1 truncate text-text-muted">
                               {t('pending.account_placeholder')}
