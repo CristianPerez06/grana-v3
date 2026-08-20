@@ -187,7 +187,7 @@
       "pending_on_cards": "on your cards",
       "pending_owed_other": "you owe {name}",
       "pace": "You spent {pct} of your income",
-      "pace_over": "You spent {pct} of what came in this month",
+      "pace_over": "You spent {times}× what came in this month",
       "pace_unknown": "No income has come in yet this month",
       "pace_unknown_note": "Once it does, your spending pace shows up here.",
       "pace_overflow": "A percentage stops helping here 👀",

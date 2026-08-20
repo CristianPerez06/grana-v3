@@ -35,10 +35,13 @@ export const DashboardContent = async () => {
           />
         </Suspense>
 
-        {/* Fila 2 — "Cuánto gastaste" + "Compromisos del próximo mes", con la
-            segunda algo más ancha. Las dos cards terminan a la misma altura
-            (`items-stretch` + la tira de ritmo anclada al pie). */}
-        <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[1fr_1.12fr]">
+        {/* Fila 2 — "Cuánto gastaste" + "Compromisos del próximo mes". La
+            PRIMERA es la ancha: sus tres tiles se reparten un tercio del ancho
+            cada uno y tienen que sostener montos de hasta diez dígitos con
+            centavos, mientras que Compromisos apila filas de ancho completo. Las
+            dos terminan a la misma altura (`items-stretch` + la tira de ritmo
+            anclada al pie). */}
+        <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[1.12fr_1fr]">
           <SpentCardContainer />
 
           <Suspense fallback={<CommittedSkeleton />}>

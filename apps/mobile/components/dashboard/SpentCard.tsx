@@ -25,6 +25,10 @@ import { SpendingSkeleton } from './SpendingSkeleton'
 // RN has no conic-gradient, so the pace ring is a bordered circle plus the
 // percentage — the number is what carries the meaning.
 
+/** One decimal only when it says something: "1,5" but "10", not "10,0". */
+const fmtTimes = (times: number) =>
+  times.toLocaleString('es-AR', { maximumFractionDigits: 1 })
+
 const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
   const t = useT()
   const { masked } = useEyeMask()
@@ -73,14 +77,14 @@ const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
         <Text
           className={`text-[11.5px] font-extrabold ${over ? 'text-terracotta' : 'text-positive'}`}
         >
-          {pace.pct}%
+          {over ? `${fmtTimes(pace.times)}×` : `${pace.pct}%`}
         </Text>
       </View>
       <View className="flex-1">
         <Text className="text-[12.5px] font-bold text-text-muted">
-          {t(over ? 'dashboard.spent.pace_over' : 'dashboard.spent.pace', {
-            pct: `${pace.pct}%`,
-          })}
+          {over
+            ? t('dashboard.spent.pace_over', { times: fmtTimes(pace.times) })
+            : t('dashboard.spent.pace', { pct: `${pace.pct}%` })}
         </Text>
         <View className="mt-2 h-1.5 overflow-hidden rounded-full bg-border-soft">
           <View

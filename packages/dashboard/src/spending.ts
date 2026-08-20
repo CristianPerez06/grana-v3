@@ -81,6 +81,12 @@ export type SpendingPace =
       status: 'ok' | 'over'
       /** Spent over income, as a percentage. `over` means it exceeded 100. */
       pct: number
+      /**
+       * The same ratio as a MULTIPLE. Past 100% a percentage stops being the
+       * right unit — "1020%" has to be decoded, "10 veces" does not — so the
+       * `over` state reads in multiples. Unused while `ok`.
+       */
+      times: number
       /** Ring/bar fill, capped at 100 so the arc cannot wrap around itself. */
       fillPct: number
       spent: number
@@ -118,6 +124,8 @@ export function deriveSpendingPace(spent: number, income: number): SpendingPace 
   return {
     status: pct > 100 ? 'over' : 'ok',
     pct,
+    // One decimal below 10× (1,5 veces reads better than 2), whole above it.
+    times: pct >= 1_000 ? Math.round(pct / 100) : Math.round(pct / 10) / 10,
     fillPct: Math.min(pct, 100),
     spent: safeSpent,
     income,
@@ -159,4 +167,32 @@ export function deriveCommittedSplit(cards: number, recurring: number): Committe
     recurringPct: (safeRecurring / total) * 100,
     hasBar: true,
   }
+}
+
+/**
+ * How much room a formatted amount needs, so both platforms shrink their type at
+ * the SAME point instead of each guessing.
+ *
+ * The tiles of "Cuánto gastaste" are a third of a card wide and have to hold up
+ * to ten digits plus cents (`$ 1.234.567.890,00`, eighteen characters). At the
+ * headline size that overflows, and clipping a money amount is the worst
+ * possible failure — a truncated "$ 1.020.283,17" reads as a different number.
+ *
+ * The step is derived from the character count of the formatted string, which is
+ * what actually consumes width: digits, thousand separators, the symbol and the
+ * optional cents.
+ */
+export type AmountDensity = 'normal' | 'tight' | 'tighter' | 'tightest'
+
+export function amountDensity(value: number, withCents: boolean): AmountDensity {
+  const digits = Math.floor(Math.abs(value)).toString().length
+  const separators = Math.floor((digits - 1) / 3)
+  const sign = value < 0 ? 1 : 0
+  // "$ " + digits + separators + optional ",00" + optional "-"
+  const chars = 2 + digits + separators + (withCents ? 3 : 0) + sign
+
+  if (chars <= 13) return 'normal'
+  if (chars <= 15) return 'tight'
+  if (chars <= 17) return 'tighter'
+  return 'tightest'
 }

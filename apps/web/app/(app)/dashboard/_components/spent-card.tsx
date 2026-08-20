@@ -28,6 +28,10 @@ type Props = {
 
 const monthKey = (year: number, month: number) => `${year}-${String(month).padStart(2, '0')}`
 
+/** One decimal only when it says something: "1,5" but "10", not "10,0". */
+const fmtTimes = (times: number) =>
+  times.toLocaleString('es-AR', { maximumFractionDigits: 1 })
+
 const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
   const t = useTranslations('dashboard.spent')
   const { masked } = useEyeMask()
@@ -72,12 +76,18 @@ const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
         }}
       >
         <span className="absolute inset-[8px] flex items-center justify-center rounded-full bg-surface-sunken text-[13px] font-extrabold">
-          <span className={over ? 'text-expense' : 'text-emerald-deep'}>{pace.pct}%</span>
+          {/* Past 100% the ring shows the MULTIPLE: "1020%" does not fit the
+              hole and does not read either. */}
+          <span className={over ? 'text-expense' : 'text-emerald-deep'}>
+            {over ? `${fmtTimes(pace.times)}×` : `${pace.pct}%`}
+          </span>
         </span>
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[13.5px] font-bold text-text-muted">
-          {t(over ? 'pace_over' : 'pace', { pct: `${pace.pct}%` })}
+          {over
+            ? t('pace_over', { times: fmtTimes(pace.times) })
+            : t('pace', { pct: `${pace.pct}%` })}
         </p>
         <div className="mt-2 h-[7px] overflow-hidden rounded-[5px] bg-border-soft">
           <div

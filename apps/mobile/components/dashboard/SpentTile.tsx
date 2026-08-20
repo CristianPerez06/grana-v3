@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { ChevronLeft, ChevronRight } from 'lucide-react-native'
+import { amountDensity, type AmountDensity } from '@grana/dashboard'
 import { colors } from '../../lib/colors'
+import { useShowCents } from '../../lib/preferences-context'
 import { MaskedAmount } from './MaskedAmount'
 
 export type TileTone = 'spent' | 'paid' | 'pending'
@@ -13,6 +15,17 @@ export const TILE_TONE: Record<TileTone, { iconBg: string; stroke: string; amoun
 }
 
 export type BreakdownRow = { label: string; amount: number }
+
+/**
+ * Headline size per density step. Same thresholds as web (they come from the
+ * shared `amountDensity`), different sizes: a native tile is narrower.
+ */
+const AMOUNT_SIZE: Record<AmountDensity, string> = {
+  normal: 'text-[14.5px]',
+  tight: 'text-[13px]',
+  tighter: 'text-[11.5px]',
+  tightest: 'text-[10px]',
+}
 
 type Props = {
   tone: TileTone
@@ -55,6 +68,7 @@ export const SpentTile = ({
   onToggle,
 }: Props) => {
   const tint = TILE_TONE[tone]
+  const showCents = useShowCents()
   const flippable = breakdown != null
 
   const body = flippable && flipped ? (
@@ -98,7 +112,7 @@ export const SpentTile = ({
       <MaskedAmount
         amount={ars}
         currency="ARS"
-        className={`mt-1.5 text-[14.5px] font-extrabold ${tint.amount}`}
+        className={`mt-1.5 font-extrabold ${AMOUNT_SIZE[amountDensity(ars, showCents)]} ${tint.amount}`}
       />
       {showUsd && (
         <MaskedAmount

@@ -106,6 +106,10 @@ El rótulo "Ya se pagó" SHALL ser **impersonal**. Un gasto compartido que pagó
 
 La card SHALL renderizarse siempre que haya gasto en el mes, **incluso cuando "Por pagar" es cero**: un cero es información. La card NO SHALL desmontarse por ausencia de consumo de tarjeta.
 
+**Los montos NO SHALL recortarse nunca.** Los tiles SHALL sostener montos de hasta diez dígitos con centavos (`$ 1.234.567.890,00`) dentro de un tercio del ancho de la card, achicando el cuerpo del monto por pasos a medida que crece. Un monto de dinero cortado no se lee como incompleto: se lee como **otro número**, y es la peor falla que esta card puede tener. Los pasos SHALL derivarse de una regla compartida entre plataformas —del largo del texto formateado, que es lo que consume ancho— para que las dos achiquen en el mismo punto aunque sus tamaños difieran.
+
+En desktop, de las dos cards de la fila 2 la de "Cuánto gastaste" SHALL ser la más ancha: sus tres tiles se reparten el ancho en tercios, mientras que "Compromisos" apila filas de ancho completo y tolera mejor un ancho menor.
+
 **Los tiles tienen dos variantes**, con la misma caja y la misma altura fija, y solo cambia su franja inferior:
 
 - **Sin actividad compartida** — el tile NO se abre y muestra una **leyenda de contexto** de dos líneas.
@@ -176,7 +180,7 @@ Se SHALL renderizar **un solo anillo, el de ARS**. El ritmo en USD NO SHALL rend
 Dos estados SHALL tratarse como estados de primera clase, no como bordes excepcionales, porque con este denominador son habituales:
 
 - **Ritmo indeterminado** (ingresos del mes en cero, típico a comienzo de mes): el sistema SHALL mostrar un mensaje explicativo **en lugar del anillo**, y NO SHALL mostrar 0% ni dividir por cero.
-- **Ritmo mayor a 100%**: el anillo y la barra SHALL pasar al color de alerta (terracota) y el copy SHALL ajustarse para reflejar que el gasto superó los ingresos del mes.
+- **Ritmo mayor a 100%**: el anillo y la barra SHALL pasar al color de alerta (terracota), y tanto el anillo como el copy SHALL expresar la relación como **múltiplo**, no como porcentaje. Pasado el 100% el porcentaje deja de ser la unidad adecuada: "el 1020%" hay que decodificarlo, "10 veces" no. Además un porcentaje de cuatro cifras no entra en el agujero del anillo y se recorta, que en un número de dinero es la peor falla posible.
 - **Ritmo desbordado**: cuando el cociente supera un umbral de escala, el sistema NO SHALL mostrar el anillo ni el porcentaje, y SHALL mostrar en su lugar un mensaje con un ícono, en el tono de la app, acompañado de **los dos montos que lo produjeron**. Con un denominador cercano a cero —un mes cuyo único ingreso fueron centavos— el cociente se va a los millones: es aritméticamente correcto y no es una lectura, y un número capeado tampoco lo sería. Este estado NO SHALL confundirse con el indeterminado: acá **sí entró plata**, solo que poca, y decir "todavía no entró plata este mes" sería falso. El umbral SHALL ubicarse donde el número deja de informar, no donde se pone grande: un mes en que se gastó diez veces el ingreso es extraordinario pero perfectamente legible y SHALL conservar su porcentaje.
 
 #### Scenario: Mes con ingresos y gasto por debajo
@@ -195,7 +199,13 @@ Dos estados SHALL tratarse como estados de primera clase, no como bordes excepci
 
 - **WHEN** `Gastaste` es mayor que los ingresos acreditados del mes
 - **THEN** el anillo y la barra se pintan en el color de alerta
-- **AND** el copy refleja que el gasto superó los ingresos, en vez de mostrar una barra llena sin señal
+- **AND** el anillo y el copy expresan la relación como múltiplo ("10 veces"), no como porcentaje
+
+#### Scenario: Un monto largo no se recorta
+
+- **WHEN** un tile tiene que mostrar un monto de diez dígitos con centavos
+- **THEN** el monto se renderiza completo, con el cuerpo achicado
+- **AND** las dos plataformas achican en el mismo punto
 
 #### Scenario: Un mes con ingresos de centavos
 

@@ -2,6 +2,8 @@
 
 import { useId } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { amountDensity, type AmountDensity } from '@grana/dashboard'
+import { useShowCents } from '@/lib/preferences-context'
 import { cn } from '@/lib/utils'
 import { MaskedAmount } from './masked-amount'
 
@@ -18,6 +20,18 @@ export const TILE_TONE: Record<TileTone, { icon: string; amount: string; rule: s
 }
 
 export type BreakdownRow = { label: string; amount: number }
+
+/**
+ * Headline size per density step. The tile is a third of a card wide and has to
+ * hold up to ten digits plus cents; clipping a money amount is the worst failure
+ * this card could have, because a cut "$ 1.020.283,17" reads as another number.
+ */
+const AMOUNT_SIZE: Record<AmountDensity, string> = {
+  normal: 'text-[19px]',
+  tight: 'text-[17px]',
+  tighter: 'text-[15px]',
+  tightest: 'text-[13px]',
+}
 
 type Props = {
   tone: TileTone
@@ -95,6 +109,7 @@ export const SpentTile = ({
   onToggle,
 }: Props) => {
   const panelId = useId()
+  const showCents = useShowCents()
   const flippable = breakdown != null
 
   const front = (
@@ -110,7 +125,11 @@ export const SpentTile = ({
           {label}
         </span>
         <span
-          className={cn('mt-2 text-[19px] font-extrabold tracking-[-0.04em]', TILE_TONE[tone].amount)}
+          className={cn(
+            'mt-2 whitespace-nowrap font-extrabold tracking-[-0.04em]',
+            AMOUNT_SIZE[amountDensity(ars, showCents)],
+            TILE_TONE[tone].amount,
+          )}
         >
           <MaskedAmount amount={ars} currency="ARS" />
         </span>

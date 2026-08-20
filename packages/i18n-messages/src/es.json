@@ -187,7 +187,7 @@
       "pending_on_cards": "en tus tarjetas",
       "pending_owed_other": "se lo debés a {name}",
       "pace": "Gastaste el {pct} de tus ingresos",
-      "pace_over": "Gastaste el {pct} de lo que entró este mes",
+      "pace_over": "Gastaste {times} veces lo que entró este mes",
       "pace_unknown": "Todavía no entró plata este mes",
       "pace_unknown_note": "Cuando entre, vas a ver tu ritmo de gasto acá.",
       "pace_overflow": "Acá el porcentaje ya no ayuda 👀",

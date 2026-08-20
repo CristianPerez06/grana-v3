@@ -3,6 +3,7 @@ import {
   deriveCommittedSplit,
   deriveMonthSpending,
   deriveSpendingPace,
+  amountDensity,
   PACE_OVERFLOW_PCT,
 } from '../src/spending'
 import { aggregateCardDebtByCard } from '../src/aggregations'
@@ -49,6 +50,7 @@ describe('deriveSpendingPace', () => {
     expect(pace).toEqual({
       status: 'ok',
       pct: 11,
+      times: 0.1,
       fillPct: 11,
       spent: 440_000,
       income: 4_000_000,
@@ -70,6 +72,7 @@ describe('deriveSpendingPace', () => {
     expect(pace).toEqual({
       status: 'over',
       pct: 300,
+      times: 3,
       fillPct: 100,
       spent: 300_000,
       income: 100_000,
@@ -248,5 +251,52 @@ describe('deriveSpendingPace — desborde', () => {
     const pace = deriveSpendingPace(PACE_OVERFLOW_PCT, 100)
 
     expect(pace).toMatchObject({ status: 'over', pct: PACE_OVERFLOW_PCT })
+  })
+})
+
+describe('deriveSpendingPace — multiplo', () => {
+  it('expresa el exceso como multiplo ademas de porcentaje', () => {
+    const pace = deriveSpendingPace(1_020_283.17, 100_000)
+
+    expect(pace).toMatchObject({ status: 'over', pct: 1_020, times: 10 })
+  })
+
+  it('usa un decimal por debajo de 10 veces', () => {
+    expect(deriveSpendingPace(150_000, 100_000)).toMatchObject({ pct: 150, times: 1.5 })
+  })
+
+  it('redondea a entero de 10 veces para arriba', () => {
+    expect(deriveSpendingPace(2_500_000, 100_000)).toMatchObject({ pct: 2_500, times: 25 })
+  })
+})
+
+describe('amountDensity', () => {
+  it('deja el tamano normal para un monto corriente', () => {
+    expect(amountDensity(212_494.67, true)).toBe('normal')
+  })
+
+  it('achica cuando el monto pasa el millon con centavos', () => {
+    // "$ 1.020.283,17" son 14 caracteres: al tamano titular no entra en un tile.
+    expect(amountDensity(1_020_283.17, true)).toBe('tight')
+  })
+
+  it('llega al paso mas chico con diez digitos y centavos', () => {
+    // El techo que la card tiene que soportar: "$ 1.234.567.890,00".
+    expect(amountDensity(1_234_567_890, true)).toBe('tightest')
+  })
+
+  it('sin centavos el mismo monto necesita un paso menos', () => {
+    // "$ 1.234.567.890" son 15 caracteres contra los 18 con centavos.
+    expect(amountDensity(1_234_567_890, false)).toBe('tight')
+  })
+
+  it('cuenta el signo del negativo', () => {
+    // "$ 12.345.678,90" entra en 15; con el signo pasa a 16 y baja un paso.
+    expect(amountDensity(12_345_678.9, true)).toBe('tight')
+    expect(amountDensity(-12_345_678.9, true)).toBe('tighter')
+  })
+
+  it('trata el cero como normal', () => {
+    expect(amountDensity(0, true)).toBe('normal')
   })
 })
