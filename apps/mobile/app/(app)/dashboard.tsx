@@ -4,15 +4,13 @@ import { useFocusEffect } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { colors } from '../../lib/colors'
 import { formatDateISO, getTodayAR } from '../../lib/date'
-import { AccountsCard } from '../../components/dashboard/AccountsCard'
+import { BalanceCard } from '../../components/dashboard/BalanceCard'
 import { CommittedSection } from '../../components/dashboard/CommittedSection'
 import { DashboardHeader } from '../../components/dashboard/DashboardHeader'
 import { DashboardMonthProvider } from '../../components/dashboard/DashboardMonthContext'
 import { EyeMaskProvider } from '../../components/dashboard/EyeMaskContext'
-import { HeroSection } from '../../components/dashboard/HeroSection'
-import { MonthBalanceSection } from '../../components/dashboard/MonthBalanceSection'
-import { SpendingSection } from '../../components/dashboard/SpendingSection'
-import { SpentThisMonthSection } from '../../components/dashboard/SpentThisMonthSection'
+import { SharedStrip } from '../../components/dashboard/SharedStrip'
+import { SpentCard } from '../../components/dashboard/SpentCard'
 import { QuickAddFab } from '../../components/transactions/QuickAddFab'
 
 export default function DashboardScreen() {
@@ -74,15 +72,13 @@ export default function DashboardScreen() {
             {/* Each section owns its query and its in-card loading/error state;
                 the shell only places them. A slow or failing section never
                 blocks the others. */}
-            <View className="flex-col gap-4">
-              <HeroSection />
-              <AccountsCard />
-              <MonthBalanceSection />
+            {/* Same four blocks as web, in the same order, single column:
+                saldo → cuánto gastaste → compromisos → compartido. */}
+            <View className="flex-col gap-3">
+              <BalanceCard />
+              <SpentCard />
               <CommittedSection />
-              {/* Compartido strip is web-only for now (mobile shared data layer
-                  deferred with the rest of the shared module). */}
-              <SpentThisMonthSection />
-              <SpendingSection />
+              <SharedStrip />
             </View>
           </ScrollView>
           <QuickAddFab />

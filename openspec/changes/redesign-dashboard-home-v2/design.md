@@ -108,6 +108,7 @@ No hay migración de datos ni de schema. La secuencia es incremental y cada paso
 
 ## Open Questions
 
-- **Próximo cierre por tarjeta**: hay que confirmar que el dato sale del módulo Tarjetas sin una lectura extra pesada; si la sale cara, la bajada del grupo puede mostrar solo el conteo de tarjetas en la primera iteración.
-- **Copy exacto de los dos estados del ritmo** (indeterminado y >100%): se propone texto en la implementación para revisión del usuario, no se decide acá.
-- **Conteo de compras pendientes** del tile "Te queda por pagar": el handoff pide "5 compras con tarjeta de crédito". Hay que definir si cuenta consumos o cuotas cuando hay compras en cuotas — se propone contar **consumos** (una compra en 6 cuotas es una compra), a confirmar contra lo que muestra `/cards`.
+- ~~**Próximo cierre por tarjeta**~~ — **resuelto sin lectura extra.** `card_periods` ya trae `end_date`; la query de compromisos solo suma esa columna (y `account_id`) al `select` que ya hacía. El próximo cierre es el `end_date` más chico que todavía no pasó, y es `null` cuando todos los resúmenes iniciados ya cerraron.
+- ~~**Conteo de compras pendientes**~~ — **descartado.** El monto de "Te queda por pagar" sale de `devengado − caja`, dos agregados; no existe un conjunto de filas del que contar "compras" que case con ese monto sin inventar un criterio (una compra en 6 cuotas, ¿cuenta como una compra o como la cuota del mes?). El sub-bloque dice "Se paga en los próximos resúmenes": exacto y sin número inventado. Reabrir si el conteo se considera necesario.
+- **Copy de los dos estados del ritmo** — implementado y **pendiente de revisión**: indeterminado dice "Todavía no entró plata este mes" + "Cuando entre, vas a ver tu ritmo de gasto acá."; por encima del 100% dice "Gastaste el {pct} de lo que entró este mes" en terracota.
+- **El anillo del ritmo en nativo es una barra + porcentaje**, no un arco: React Native no tiene `conic-gradient` y dibujarlo con SVG por una sola tira no se pagaba. El número es el que carga el significado. A revisar si la paridad visual del anillo se considera necesaria.

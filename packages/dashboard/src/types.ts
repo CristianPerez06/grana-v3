@@ -122,11 +122,10 @@ export type CommittedCurrency = {
   recurringExpense: number
   /** Active `income` recurrences projected into the next calendar month (context for "Ya entra", never summed). */
   recurringIncome: number
-  /** Top card consumos of the "A pagar" set, by amount desc (section detail). */
-  topCard: CommittedItem[]
   /**
-   * The same debt grouped BY CARD, by amount desc — what the redesigned card
-   * lists. Coexists with `topCard` until the native app stops using it.
+   * The debt grouped BY CARD, by amount desc — one row per card, which is the
+   * question the user asks ("cuánto me viene de Visa"). Replaced the per-consumo
+   * list the pre-redesign card showed.
    */
   cards: CommittedCardRow[]
   /** Top pending recurrences, by amount desc (section detail). */

@@ -43,13 +43,6 @@ export {
   type PlacementRow,
 } from './placement'
 
-export {
-  computeConcentration,
-  type Concentration,
-  type ConcentrationAccount,
-  type ConcentrationSegment,
-} from './concentration'
-
 export type {
   CommittedCardRow,
   CommittedCurrency,

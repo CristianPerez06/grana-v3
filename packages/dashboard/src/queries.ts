@@ -488,7 +488,6 @@ function emptyCommittedCurrency(): CommittedCurrency {
     overdue: 0,
     recurringExpense: 0,
     recurringIncome: 0,
-    topCard: [],
     cards: [],
     topRecurring: [],
   }
@@ -572,26 +571,11 @@ export async function getCommittedOutlook(
         const overdue = aggregateCardDebt(
           txs.filter((t) => t.card_period_id != null && overdueIds.has(t.card_period_id)),
         )
-        // Top consumos for the section detail: pending charges only (a received
-        // reimbursement reduces the total but is not a "consumo to pay"). The label
-        // falls back to subcategory/category when the consumo has no description.
-        const consumos: CommittedItemRow[] = txs
-          .filter((t) => t.status === 'pending' && t.type !== 'reimbursement')
-          .map((t) => ({
-            amount: t.amount,
-            currency_code: t.currency_code,
-            date: t.date,
-            description: t.description || embedName(t.subcategory) || embedName(t.category),
-          }))
-
         result.ARS.debt = toPay.ARS
         result.USD.debt = toPay.USD
         result.ARS.overdue = overdue.ARS
         result.USD.overdue = overdue.USD
-        result.ARS.topCard = topCommittedItems(consumos, 'ARS')
-        result.USD.topCard = topCommittedItems(consumos, 'USD')
-
-        // Same debt, grouped BY CARD for the redesigned "Compromisos" list.
+        // Debt grouped BY CARD for the redesigned "Compromisos" list.
         // The next close is the earliest statement end still ahead of today —
         // the open statement's; null once every started statement has closed.
         const periodToCard = new Map(startedPeriods.map((p) => [p.id, p.account_id]))

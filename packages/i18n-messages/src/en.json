@@ -121,32 +121,9 @@
     "mask_show": "Show amounts",
     "mask_hide": "Hide amounts",
     "hero": {
-      "label": "To spend",
-      "view_all_accounts": "View all accounts",
-      "eyebrow": "To spend · today",
-      "question": "How much do I have?",
-      "caption": "What you have available today, in pesos and dollars.",
       "total_label": "Total available balance"
     },
     "month": {
-      "title": "Month balance",
-      "question": "How did my money move this month?",
-      "income": "Income",
-      "expense": "Expenses",
-      "adjustment": "Adjustments",
-      "card_payment": "Card payment",
-      "reimbursement": "Reimbursements received",
-      "settlement": "Settlements",
-      "exchange": "Currency exchange",
-      "adjustment_note": "🔍 Where did this money go? Adjustments are money that moved without being recorded — log those transactions and make them disappear.",
-      "adjustment_unregistered": "Unrecorded",
-      "financed_on_card": "💳 You spent {total} this month: {cash} from your cash + {financed} financed on your card → paid in upcoming statements.",
-      "final_balance": "Balance",
-      "legend_ars": "ARS (left)",
-      "legend_usd": "USD (right)",
-      "empty": "No transactions this month.",
-      "loading": "Loading this month's balance…",
-      "error": "We couldn't load this month's balance.",
       "summary_title": "Month summary",
       "came_in": "Came in",
       "went_out": "Went out"
@@ -154,19 +131,10 @@
     "hero_loading": "Loading your available balance…",
     "hero_error": "We couldn't load your available balance.",
     "spending": {
-      "title": "What did I spend this month?",
-      "view_all": "View breakdown",
-      "loading": "Loading the breakdown…",
-      "error": "We couldn't load this month's breakdown.",
-      "center_label": "Spent",
-      "empty": "No spending this month in this currency.",
-      "credits_label": "Refunded to you"
+      "loading": "Loading the breakdown…"
     },
     "accounts": {
       "title": "Where it is",
-      "view_all": "View all",
-      "usd_row": "In dollars",
-      "concentration_lead": "of your money is in",
       "view_accounts": "View accounts"
     },
     "committed": {

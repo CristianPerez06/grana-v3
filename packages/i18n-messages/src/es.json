@@ -121,32 +121,9 @@
     "mask_show": "Mostrar importes",
     "mask_hide": "Ocultar importes",
     "hero": {
-      "label": "Para gastar",
-      "view_all_accounts": "Ver todas las cuentas",
-      "eyebrow": "Para gastar · hoy",
-      "question": "¿Cuánto tengo?",
-      "caption": "Lo que tenés disponible hoy, en pesos y dólares.",
       "total_label": "Saldo disponible total"
     },
     "month": {
-      "title": "Balance del mes",
-      "question": "¿Cómo se movió mi plata este mes?",
-      "income": "Ingresos",
-      "expense": "Gastos",
-      "adjustment": "Ajustes",
-      "card_payment": "Pago de tarjeta",
-      "reimbursement": "Reintegros recibidos",
-      "settlement": "Liquidaciones",
-      "exchange": "Cambio de moneda",
-      "adjustment_note": "🔍 ¿En qué se fue esta grana? Los ajustes son plata que se movió sin registrar — registrá esos movimientos y hacelos desaparecer.",
-      "adjustment_unregistered": "Sin registrar",
-      "financed_on_card": "💳 Gastaste {total} este mes: {cash} de tu caja + {financed} financiado en tarjeta → se paga en los próximos resúmenes.",
-      "final_balance": "Balance",
-      "legend_ars": "ARS (izq.)",
-      "legend_usd": "USD (der.)",
-      "empty": "Sin movimientos este mes.",
-      "loading": "Cargando el balance del mes…",
-      "error": "No pudimos cargar el balance del mes.",
       "summary_title": "Resumen del mes",
       "came_in": "Entró",
       "went_out": "Se fué"
@@ -154,19 +131,10 @@
     "hero_loading": "Cargando tu disponible…",
     "hero_error": "No pudimos cargar tu disponible.",
     "spending": {
-      "title": "¿En qué gasté este mes?",
-      "view_all": "Ver desglose",
-      "loading": "Cargando el desglose…",
-      "error": "No pudimos cargar el desglose del mes.",
-      "center_label": "Gastos",
-      "empty": "Sin gastos este mes en esta moneda.",
-      "credits_label": "Te devolvieron"
+      "loading": "Cargando el desglose…"
     },
     "accounts": {
       "title": "Dónde está",
-      "view_all": "Ver todas",
-      "usd_row": "En dólares",
-      "concentration_lead": "de tu plata está en",
       "view_accounts": "Ver cuentas"
     },
     "committed": {
