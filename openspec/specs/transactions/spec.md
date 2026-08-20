@@ -746,6 +746,13 @@ El sistema NO SHALL permitir eliminar desde el detalle del movimiento aquellas t
 
 El pago de un resumen NO SHALL eliminarse desde el detalle del movimiento: es la contrapartida de una operación que también dejó movimientos del resumen en `paid`, un registro en el pago del período y, eventualmente, un impuesto de sellos. Deshacerlo es la operación de la capability `cards`.
 
+Un movimiento que **sembró una regla recurrente** (existe una regla con `created_from_transaction_id` apuntándolo) NO SHALL borrarse en silencio dejando la regla huérfana. La garantía SHALL vivir en la base: `recurrences.created_from_transaction_id` es `ON DELETE RESTRICT`, de modo que el bloqueo aplica a todos los clientes (web, mobile, SQL manual) y no depende de que cada frontend lo recuerde. Antes de intentar el borrado, el sistema SHALL detectar la regla sembrada y ofrecer al usuario dos salidas explícitas:
+
+- **eliminar también la regla** — se elimina la regla (con sus instancias pendientes) y luego el movimiento;
+- **conservar la regla, desvincularla** — se pone `created_from_transaction_id = NULL` deliberadamente y luego se borra el movimiento.
+
+Al desvincular, si la regla queda con `last_generated_date` igual a su `start_date` y esa fecha es **futura**, el sistema SHALL además poner `last_generated_date = NULL`: la ocurrencia que ese cursor decía cubrir es justamente el movimiento que se está borrando, y sin la corrección la regla perdería ese período. Sin una de las dos confirmaciones, ni el movimiento ni la regla SHALL modificarse.
+
 #### Scenario: Eliminar transacción actualiza el saldo
 
 - **WHEN** el usuario confirma la eliminación de un gasto de $200 ARS
@@ -766,6 +773,37 @@ El pago de un resumen NO SHALL eliminarse desde el detalle del movimiento: es la
 
 - **WHEN** el usuario abre el diálogo de eliminación de un pago de resumen
 - **THEN** el sistema NO afirma que las cuotas del período volverán a pendientes
+
+#### Scenario: Borrar un movimiento semilla pide resolver la regla primero
+
+- **WHEN** el usuario elimina un movimiento que tiene una regla recurrente apuntándolo por `created_from_transaction_id`
+- **THEN** el sistema informa que ese movimiento creó una recurrencia, nombrándola
+- **AND** ofrece eliminar también la regla o conservarla desvinculándola
+- **AND** no borra nada hasta que el usuario elija
+
+#### Scenario: Eliminar también la regla
+
+- **WHEN** el usuario elige "eliminar también la regla"
+- **THEN** el sistema elimina la regla y sus instancias pendientes, y luego borra el movimiento
+- **AND** las transacciones reales ya confirmadas por esa regla se conservan
+
+#### Scenario: Conservar la regla desvinculándola
+
+- **WHEN** el usuario elige "conservar la regla" sobre una regla con `start_date = 2026-05-10` y `last_generated_date = 2026-06-10`
+- **THEN** el sistema pone `created_from_transaction_id = NULL`, deja `last_generated_date` intacto y borra el movimiento
+- **AND** la regla sigue generando en su próxima fecha normal
+
+#### Scenario: Desvincular una semilla futura repara el cursor
+
+- **WHEN** hoy es `2026-08-04` y el usuario elige "conservar la regla" sobre una regla con `start_date = 2026-08-07` y `last_generated_date = 2026-08-07`
+- **THEN** el sistema pone `created_from_transaction_id = NULL` **y** `last_generated_date = NULL`, y borra el movimiento
+- **AND** el generador produce una instancia pendiente el `2026-08-07` que pasa por el gate de confirmación
+
+#### Scenario: La base rechaza el borrado aunque el cliente no lo verifique
+
+- **WHEN** un cliente cualquiera (mobile, SQL manual) intenta borrar directamente un movimiento apuntado por `created_from_transaction_id` de una regla existente
+- **THEN** la base rechaza el DELETE por violación de la foreign key
+- **AND** la regla no queda huérfana
 
 ---
 
@@ -1296,6 +1334,8 @@ El cálculo SHALL aplicar clamping de fin de mes: avanzar por `month` o `year` d
 
 La generación SHALL cortar por la primera condición de fin que se cumpla (`end_date` o `max_occurrences`). Una sola instancia pendiente SHALL existir por regla a la vez; un `start_date` pasado en una regla directa NO SHALL generar instancias retroactivas por cada período vencido, sino una única instancia pendiente fechada en `start_date`.
 
+`interval_count` + `interval_unit` son la **fuente de verdad** del cronograma; `frequency` es solo la etiqueta de presentación. Para los cuatro presets, la etiqueta y el intervalo SHALL ser coherentes (`weekly` ⇒ 1 `week`, `biweekly` ⇒ 2 `week`, `monthly` ⇒ 1 `month`, `annual` ⇒ 1 `year`); `custom` admite cualquier intervalo válido. Esa coherencia SHALL estar enforced por un `CHECK` en la base, de modo que ninguna escritura —de cualquier cliente— pueda dejar una regla cuya etiqueta contradiga su cronograma real.
+
 #### Scenario: Primera instancia de una regla con semilla (last_generated_date no nulo)
 
 - **WHEN** una regla tiene `start_date = 2026-01-15`, `last_generated_date = 2026-01-15` (creada desde un movimiento) y aún no generó instancias nuevas
@@ -1326,6 +1366,16 @@ La generación SHALL cortar por la primera condición de fin que se cumpla (`end
 
 - **WHEN** una regla con `max_occurrences = 3` ya tiene 3 instancias materializadas
 - **THEN** no se generan más instancias
+
+#### Scenario: La base rechaza un preset incoherente con su intervalo
+
+- **WHEN** cualquier cliente intenta insertar o actualizar una regla con `frequency = 'weekly'` e `interval_count = 1`, `interval_unit = 'month'`
+- **THEN** la base rechaza la escritura por violación del `CHECK`
+
+#### Scenario: Una frecuencia custom admite cualquier intervalo
+
+- **WHEN** un cliente crea una regla con `frequency = 'custom'`, `interval_count = 3` e `interval_unit = 'day'`
+- **THEN** la base acepta la escritura y el generador programa cada 3 días
 
 ---
 
@@ -1504,6 +1554,8 @@ El sistema SHALL mostrar las instancias recurrentes pendientes en `/transactions
 
 El sistema SHALL exponer una pantalla `/transactions/recurring` para ver y gestionar reglas recurrentes. La pantalla SHALL listar reglas activas y pausadas con tipo, descripcion, monto, cuenta o tarjeta, frecuencia, proxima fecha e indicador de instancia pendiente cuando exista. El sistema SHALL permitir pausar, reactivar y eliminar/desactivar reglas.
 
+La **próxima fecha** mostrada SHALL derivarse del mismo caminante de calendario que la proyección de próximas ocurrencias y que el generador, honrando `last_generated_date`: nunca SHALL anunciarse como próxima una ocurrencia ya cubierta por un movimiento real.
+
 #### Scenario: Acceso desde Movimientos
 
 - **WHEN** el usuario abre `/transactions`
@@ -1513,7 +1565,7 @@ El sistema SHALL exponer una pantalla `/transactions/recurring` para ver y gesti
 
 - **WHEN** el usuario desactiva o elimina una regla recurrente
 - **THEN** las transacciones reales ya confirmadas se conservan
-- **AND** dejan trazabilidad hacia la regla si la FK sigue disponible
+- **AND** conservan su trazabilidad hacia la regla
 
 #### Scenario: Regla pausada no genera instancias
 
@@ -1525,6 +1577,86 @@ El sistema SHALL exponer una pantalla `/transactions/recurring` para ver y gesti
 
 - **WHEN** el usuario reactiva una regla pausada
 - **THEN** el sistema vuelve a considerarla para generar la proxima instancia pendiente segun su frecuencia
+
+#### Scenario: La próxima fecha no repite una ocurrencia ya cubierta
+
+- **WHEN** una regla mensual tiene `start_date = 2026-08-07` y `last_generated_date = 2026-08-07`, y hoy es `2026-08-04`
+- **THEN** el hub muestra `2026-09-07` como próxima fecha, no `2026-08-07`
+
+---
+
+### Requirement: El hub de recurrencias proyecta las próximas ocurrencias sin repetir lo ya materializado
+
+El hub de recurrencias **web** (`/transactions/recurring`) SHALL mostrar una proyección informativa de las próximas ocurrencias de las reglas **activas**, en dos ventanas disjuntas: **"Próximos 7 días"** (`[hoy, hoy+7]`) y **"Más adelante este mes"** (`[hoy+8, fin de mes]`), ambas computadas con la fecha financiera AR (`getTodayAR()`). La proyección SHALL ser pura: NO SHALL leer ni escribir instancias, NO SHALL generar nada y NO SHALL sumar montos entre monedas (invariante bimoneda — cada ocurrencia muestra el suyo).
+
+Toda proyección de ocurrencias futuras —esta y cualquier otra superficie que anuncie "lo que viene", en web o en mobile— SHALL descartar las ocurrencias **en o antes de `last_generated_date`**, con el mismo criterio que el cálculo de la próxima fecha esperada: una ocurrencia ya cubierta por un movimiento real (la semilla de la regla) o por una instancia ya confirmada NO SHALL dibujarse como próxima. La proyección y el generador SHALL derivar de un único caminante de calendario, de modo que no puedan divergir: toda fila proyectada corresponde a una ocurrencia que el generador todavía puede producir.
+
+Una instancia **pendiente** NO SHALL avanzar el cursor: su fecha sigue proyectándose, coherente con que vive en las superficies de "por confirmar" hasta que el usuario la resuelva.
+
+#### Scenario: Una regla creada desde un movimiento no proyecta su propia semilla
+
+- **WHEN** hoy es `2026-08-04` y existe una regla mensual con `start_date = 2026-08-04` y `last_generated_date = 2026-08-04` (creada desde un movimiento registrado hoy)
+- **THEN** "Próximos 7 días" NO muestra una ocurrencia el `2026-08-04`
+- **AND** la próxima ocurrencia proyectada de esa regla es el `2026-09-04`
+
+#### Scenario: Una regla directa sin ocurrencias proyecta su start_date
+
+- **WHEN** hoy es `2026-08-04` y existe una regla mensual con `start_date = 2026-08-07` y `last_generated_date = NULL`
+- **THEN** "Próximos 7 días" muestra una ocurrencia el `2026-08-07`
+
+#### Scenario: Una regla cuyo cursor quedó en el futuro no proyecta esa ocurrencia
+
+- **WHEN** hoy es `2026-08-04` y existe una regla mensual con `start_date = 2026-08-07` y `last_generated_date = 2026-08-07`
+- **THEN** ninguna de las dos cards muestra una ocurrencia el `2026-08-07`
+- **AND** la próxima ocurrencia proyectada es el `2026-09-07`
+
+#### Scenario: Las dos ventanas son disjuntas
+
+- **WHEN** hoy es `2026-08-04` y una regla proyecta ocurrencias el `2026-08-07` y el `2026-08-21`
+- **THEN** la del `2026-08-07` aparece solo en "Próximos 7 días" y la del `2026-08-21` solo en "Más adelante este mes"
+
+#### Scenario: Una instancia pendiente sigue proyectándose
+
+- **WHEN** una regla tiene una instancia pendiente sin confirmar fechada dentro de la ventana proyectada
+- **THEN** esa ocurrencia sigue apareciendo en la card correspondiente
+- **AND** el bloque de pendientes por confirmar la sigue mostrando con sus acciones
+
+#### Scenario: La proyección no suma montos entre monedas
+
+- **WHEN** las ocurrencias proyectadas incluyen reglas en ARS y en USD
+- **THEN** cada fila muestra su propio monto en su moneda y el sistema no muestra ningún total combinado
+
+---
+
+### Requirement: El sistema avisa cuando una regla recurrente duplica una existente
+
+Al crear una regla recurrente —desde cero o desde un movimiento— el sistema SHALL detectar si el usuario ya tiene una regla **activa** con la misma `(account_id, currency_code, movement_type, amount)` y SHALL avisarlo antes de confirmar, identificando la regla existente por su título visible y su próxima fecha.
+
+El aviso SHALL ser **no bloqueante**: dos reglas con esos mismos campos pueden ser legítimamente distintas (dos suscripciones del mismo precio en la misma tarjeta), y la clave de detección deliberadamente ignora categoría y descripción porque en los duplicados reales esos campos difieren. El usuario SHALL poder confirmar la creación de todos modos.
+
+El hub de recurrencias SHALL además señalar las reglas activas que colisionan con otra bajo esa misma clave, para que el usuario pueda resolverlas. La señalización SHALL ser informativa: el sistema NO SHALL eliminar, pausar ni fusionar reglas automáticamente.
+
+#### Scenario: Aviso al crear una regla que colisiona
+
+- **WHEN** el usuario crea una regla de gasto de `$450.000 ARS` en la cuenta "MP" y ya tiene una regla activa de gasto de `$450.000 ARS` en esa misma cuenta
+- **THEN** el sistema avisa que ya existe una regla equivalente, mostrando su título y su próxima fecha
+- **AND** permite confirmar la creación de todos modos
+
+#### Scenario: El aviso no bloquea un duplicado legítimo
+
+- **WHEN** el usuario ya tiene una regla "chat gpt" de `USD 20` en la tarjeta "Visa BBVA" y crea otra de `USD 20` en la misma tarjeta para "claude"
+- **THEN** el sistema avisa, el usuario confirma y ambas reglas quedan activas
+
+#### Scenario: Monto o cuenta distintos no disparan el aviso
+
+- **WHEN** el usuario crea una regla de `$450.000 ARS` en una cuenta donde no tiene ninguna regla activa por ese monto
+- **THEN** el sistema no muestra ningún aviso de duplicado
+
+#### Scenario: El hub señala las reglas que colisionan
+
+- **WHEN** el usuario tiene dos reglas activas con la misma cuenta, moneda, tipo y monto
+- **THEN** el hub las señala como posibles duplicadas
+- **AND** no las elimina, pausa ni fusiona por su cuenta
 
 ---
 
@@ -1561,7 +1693,7 @@ El sistema SHALL NOT ofrecer recurrencias para ajustes ni compras en cuotas en e
 
 ### Requirement: El usuario puede editar y eliminar un movimiento desde el módulo global
 
-El detalle global de un movimiento (`/transactions/<id>`) SHALL ofrecer las acciones de Editar y Eliminar, sin obligar al usuario a navegar primero al detalle en contexto de cuenta. La edición SHALL abrir la ruta canónica `/transactions/<id>/edit`, renderizada por el **formulario único** en modo edición. Estas acciones SHALL respetar exactamente las mismas reglas de edición y eliminación ya definidas (campos mutables por tipo, propagación en compras en cuotas, bloqueos por estado `paid`), ahora gobernadas por la función pura `getEditableFields`. Ningún movimiento accesible desde el listado global SHALL quedar sin camino para editarse o eliminarse.
+El detalle global de un movimiento (`/transactions/<id>`) SHALL ofrecer las acciones de Editar y Eliminar, sin obligar al usuario a navegar primero al detalle en contexto de cuenta. La edición SHALL abrir la ruta canónica `/transactions/<id>/edit`, renderizada por el **formulario único** en modo edición. Estas acciones SHALL respetar exactamente las mismas reglas de edición y eliminación ya definidas (campos mutables por tipo, propagación en compras en cuotas, bloqueos por estado `paid`, y el guard de movimiento semilla de una regla recurrente), ahora gobernadas por la función pura `getEditableFields`. Ningún movimiento accesible desde el listado global SHALL quedar sin camino para editarse o eliminarse.
 
 #### Scenario: Editar desde el detalle global
 
@@ -1593,6 +1725,12 @@ El detalle global de un movimiento (`/transactions/<id>`) SHALL ofrecer las acci
 - **WHEN** el usuario intenta editar un campo bloqueado o eliminar un movimiento no eliminable (p. ej. un consumo de tarjeta `paid` o una cuota individual)
 - **THEN** el sistema rechaza la operación con el mismo criterio de siempre
 - **AND** no se produce ningún cambio de estado ni de saldo
+
+#### Scenario: Borrar un movimiento semilla desde el listado global pide resolver la regla
+
+- **WHEN** el usuario elimina desde `/transactions/<id>` un movimiento que sembró una regla recurrente
+- **THEN** el sistema aplica el mismo guard que en el detalle en contexto de cuenta, ofreciendo eliminar la regla o desvincularla
+- **AND** no borra nada hasta que el usuario elija
 
 ### Requirement: El usuario puede registrar un movimiento desde el módulo global
 
