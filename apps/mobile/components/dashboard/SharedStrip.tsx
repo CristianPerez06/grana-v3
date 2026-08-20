@@ -26,8 +26,11 @@ const initialsOf = (fullName: string): string => {
     .join('')
 }
 
-const Avatar = ({ initials }: { initials: string }) => (
-  <View className="size-5 items-center justify-center rounded-full border-2 border-card bg-positive">
+const Avatar = ({ initials, overlap }: { initials: string; overlap?: boolean }) => (
+  <View
+    style={overlap ? { marginLeft: -6 } : undefined}
+    className="size-5 items-center justify-center rounded-full border-2 border-card bg-positive"
+  >
     <Text className="text-[8.5px] font-extrabold text-white">{initials}</Text>
   </View>
 )
@@ -89,9 +92,9 @@ export const SharedStrip = () => {
         <Text className="text-[13px] font-extrabold text-text">
           {t('dashboard.shared_strip.title')}
         </Text>
-        <View className="flex-row" style={{ gap: -6 }}>
+        <View className="flex-row">
           <Avatar initials={data.selfInitials} />
-          <Avatar initials={data.otherInitials} />
+          <Avatar initials={data.otherInitials} overlap />
         </View>
       </View>
       <View className="ml-auto flex-row items-center gap-1.5">

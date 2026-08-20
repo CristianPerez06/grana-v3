@@ -115,14 +115,12 @@ const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
         </span>
       </div>
       <div className="min-w-0 flex-1">
+        {/* Plain interpolation, not `t.rich`: `{pct}` is a value in the message,
+            not a tag, and the same key is read by the native app, whose
+            translator has no tag support. The ring already carries the number
+            in colour, so emphasising it again in the sentence adds nothing. */}
         <p className="text-[13.5px] font-bold text-text-muted">
-          {t.rich(over ? 'pace_over' : 'pace', {
-            pct: () => (
-              <span className={cn('font-extrabold', over ? 'text-expense' : 'text-emerald-deep')}>
-                {pace.pct}%
-              </span>
-            ),
-          })}
+          {t(over ? 'pace_over' : 'pace', { pct: `${pace.pct}%` })}
         </p>
         <div className="mt-2 h-[7px] overflow-hidden rounded-[5px] bg-border-soft">
           <div
