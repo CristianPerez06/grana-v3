@@ -158,6 +158,11 @@ export const confirmRecurrenceInstanceSchema = yup
   .object({
     amount: yup.number().label('amount').positive().optional(),
     date: yup.string().label('date').optional(),
+    // Per-instance account override ("this month I paid it with another card").
+    // Absent = confirm on the instance's own account. Unlike `amount`, it is NOT
+    // propagated to the rule: using another payment method once must not
+    // redefine the rule's default.
+    account_id: yup.string().label('account_id').uuid().optional(),
     description: yup.string().label('description').nullable().optional(),
     category_id: yup
       .string()

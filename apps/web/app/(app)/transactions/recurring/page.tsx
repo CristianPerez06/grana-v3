@@ -10,6 +10,7 @@ import {
   getPendingRecurrenceInstances,
 } from '@/lib/recurrences/queries'
 import { getAccounts } from '@/lib/accounts/queries'
+import { toFormAccounts } from '@/lib/accounts/form-accounts'
 import type { RecurrenceSummary } from '@/lib/recurrences/types'
 
 const isFinished = (rule: RecurrenceSummary) => {
@@ -22,12 +23,14 @@ const RecurringPage = async () => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [allRules, pendingRecurrences, { cash, bank }] =
+  const [allRules, pendingRecurrences, groupedAccounts] =
     await Promise.all([
       getRecurrences(supabase, { statuses: ['active', 'paused'] }),
       getPendingRecurrenceInstances(supabase),
       getAccounts(supabase),
     ])
+
+  const { cash, bank } = groupedAccounts
 
   const today = formatDateISO(getTodayAR())
 
@@ -47,6 +50,7 @@ const RecurringPage = async () => {
 
       <PendingRecurrencesBlock
         pending={pendingRecurrences}
+        accounts={toFormAccounts(groupedAccounts)}
         availableByAccount={availableByAccount}
       />
 

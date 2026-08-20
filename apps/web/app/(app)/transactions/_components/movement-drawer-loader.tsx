@@ -2,9 +2,9 @@
 
 import { useMemo, type ReactNode } from 'react'
 import { useQueries } from '@tanstack/react-query'
-import { resolveAccountAvatar } from '@grana/ui-contracts'
 import { createClient } from '@/lib/supabase/client'
 import { getAccounts } from '@/lib/accounts/queries'
+import { toFormAccounts } from '@/lib/accounts/form-accounts'
 import { getAllCategories } from '@/lib/categories/queries'
 import { getFrequentClassifications } from '@/app/_actions/frequent-classifications'
 import { getHousehold } from '@grana/shared'
@@ -17,13 +17,6 @@ import { MovementDrawerProvider } from './movement-drawer'
 type Props = {
   children: ReactNode
 }
-
-type AccountCurrency = { currency_code: string; is_active: boolean }
-
-const activeCodes = (currencies: AccountCurrency[]): ('ARS' | 'USD')[] =>
-  currencies
-    .filter((c) => c.is_active && (c.currency_code === 'ARS' || c.currency_code === 'USD'))
-    .map((c) => c.currency_code as 'ARS' | 'USD')
 
 /**
  * Loader that resolves the data the create-movement drawer needs (`accounts`,
@@ -58,36 +51,10 @@ export function MovementDrawerLoader({ children }: Props) {
   const hasAnyTxData = hasAnyTxQ.data
   const appStartDate = (appStartDateQ.data as string | null | undefined) ?? null
 
-  const drawerAccounts = useMemo<MovementFormAccount[] | null>(() => {
-    if (!accountsData) return null
-    return [
-      ...[...accountsData.cash, ...accountsData.bank].map((a) => ({
-        id: a.id,
-        name: a.name,
-        type: a.type as 'cash' | 'bank',
-        activeCurrencies: activeCodes(a.currencies),
-        balances: a.balances,
-        institutionId: a.institution_id ?? null,
-        institutionName: a.institution?.name ?? null,
-        avatar: a.avatar,
-      })),
-      ...accountsData.credit.map((c) => ({
-        id: c.id,
-        name: c.name,
-        type: 'credit' as const,
-        activeCurrencies: activeCodes(c.currencies),
-        balances: { ARS: 0, USD: 0 },
-        institutionId: c.institution_id ?? null,
-        institutionName: c.institution?.name ?? null,
-        // Resolve the avatar like cash/bank do, so each card inherits its
-        // institution's brand color instead of the default fallback.
-        avatar: resolveAccountAvatar(
-          { id: c.id, name: c.name, type: 'credit', color_key: c.color_key, icon_key: c.icon_key },
-          c.institution,
-        ),
-      })),
-    ]
-  }, [accountsData])
+  const drawerAccounts = useMemo<MovementFormAccount[] | null>(
+    () => (accountsData ? toFormAccounts(accountsData) : null),
+    [accountsData],
+  )
 
   // Drawer only mounts when all queries are ready; otherwise children render
   // without context (and the button stays disabled via TransactionsHeader's

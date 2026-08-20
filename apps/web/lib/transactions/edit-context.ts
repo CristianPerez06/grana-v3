@@ -7,7 +7,7 @@ import { getEditableFields } from '@grana/money-logic'
 // the root entry re-exports `useMovementForm` (a `useState` consumer), which
 // Next refuses to pull into an RSC graph.
 import { archivedTaxonomyFrom } from '@grana/movement-form/archived-taxonomy'
-import { resolveAccountAvatar } from '@grana/ui-contracts'
+import { toFormAccounts } from '@/lib/accounts/form-accounts'
 import type { CategoryWithSubcategories } from '@/lib/categories/types'
 import type { Household } from '@grana/shared'
 import type {
@@ -28,43 +28,11 @@ export type MovementEditData = {
   accounts: MovementFormAccount[]
 }
 
-type AccountCurrency = { currency_code: string; is_active: boolean }
-
-const activeCodes = (currencies: AccountCurrency[]): ('ARS' | 'USD')[] =>
-  currencies
-    .filter((c) => c.is_active && (c.currency_code === 'ARS' || c.currency_code === 'USD'))
-    .map((c) => c.currency_code as 'ARS' | 'USD')
-
-/** Project `getAccounts()` onto the form's account shape (mirrors the create loader). */
+/** Project `getAccounts()` onto the form's account shape (same one the drawer uses). */
 async function buildFormAccounts(
   supabase: Awaited<ReturnType<typeof createClient>>,
 ): Promise<MovementFormAccount[]> {
-  const data = await getAccounts(supabase)
-  return [
-    ...[...data.cash, ...data.bank].map((a) => ({
-      id: a.id,
-      name: a.name,
-      type: a.type as 'cash' | 'bank',
-      activeCurrencies: activeCodes(a.currencies),
-      balances: a.balances,
-      institutionId: a.institution_id ?? null,
-      institutionName: a.institution?.name ?? null,
-      avatar: a.avatar,
-    })),
-    ...data.credit.map((c) => ({
-      id: c.id,
-      name: c.name,
-      type: 'credit' as const,
-      activeCurrencies: activeCodes(c.currencies),
-      balances: { ARS: 0, USD: 0 },
-      institutionId: c.institution_id ?? null,
-      institutionName: c.institution?.name ?? null,
-      avatar: resolveAccountAvatar(
-        { id: c.id, name: c.name, type: 'credit', color_key: c.color_key, icon_key: c.icon_key },
-        c.institution,
-      ),
-    })),
-  ]
+  return toFormAccounts(await getAccounts(supabase))
 }
 
 /**
