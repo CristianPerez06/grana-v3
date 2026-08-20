@@ -439,33 +439,57 @@ Una columna cuya moneda no tiene saldo NO SHALL renderizar filas vacías. Un usu
 
 ### Requirement: La card "Comprometido" muestra los resúmenes de tarjeta y los gastos fijos del mes próximo (lente COMPROMISO)
 
-La card "Compromisos del próximo mes" SHALL encabezar con el mes al que refiere y un link al listado completo, y SHALL mostrar un bloque de total con: el rótulo "Ya comprometido", el monto total en ARS, su línea USD según la regla bimoneda, una **barra apilada** de dos segmentos (Tarjetas y Gastos fijos) y una leyenda con el cuadradito y el porcentaje de cada uno.
+La card SHALL responder una sola pregunta: **cuánta plata ya se sabe que hay que pagar el mes que viene.** La ventana SHALL ser el **próximo mes calendario completo** —del día 1 al último día—, no "desde hoy" ni "los próximos 30 días", y el subtítulo SHALL nombrar ese mes.
+
+La card SHALL encabezar con el mes al que refiere y un link al listado completo, y SHALL mostrar un bloque de total con: el rótulo "Ya comprometido", el monto total en ARS, su línea USD según la regla bimoneda, una **barra apilada** de dos segmentos (Tarjetas y Gastos fijos) y una leyenda con el cuadradito y el porcentaje de cada uno.
 
 El total SHALL ser `Tarjetas + Gastos fijos` dentro de cada moneda, y los porcentajes de la barra SHALL derivarse de ese total — NO SHALL hardcodearse. Cuando el total es cero, la barra NO SHALL renderizarse con proporciones arbitrarias.
 
-El detalle de Tarjetas SHALL agregarse **por tarjeta** —una fila por tarjeta con su total comprometido y su próximo cierre en la bajada del grupo—, reemplazando el listado de consumos individuales.
+**Tarjetas** SHALL contar los **resúmenes cuyo vencimiento cae dentro de la ventana** y que todavía no fueron pagados. El criterio es la fecha de **vencimiento**, no la de cierre: un resumen que cierra el 28/09 pero vence el 10/10 se paga en octubre y NO es un compromiso de septiembre.
+
+Un resumen que todavía no cerró aporta lo acumulado hasta hoy y ese monto **puede crecer** hasta el cierre. La card NO SHALL presentarlo como definitivo.
+
+**Gastos fijos** SHALL contar las recurrencias que caen dentro de la ventana y que **NO se pagan con tarjeta de crédito**. Una recurrencia debitada de una tarjeta no saca plata de la cuenta ese mes: entra al resumen de esa tarjeta y se paga cuando ese resumen vence, que es otra ventana. Contarla acá y otra vez dentro de su resumen sería contarla dos veces.
+
+El conjunto SHALL componerse de las instancias **ya generadas** con fecha dentro de la ventana y todavía sin resolver, más las ocurrencias **proyectadas** de las reglas activas sobre esa misma ventana. Las dos fuentes NO SHALL superponerse: la proyección avanza desde `last_generated_date`, de modo que nunca devuelve una ocurrencia ya generada.
+
+**Lo ya vencido SHALL mostrarse, marcado aparte.** Un resumen cuyo vencimiento ya pasó y sigue impago es plata que se debe, y desaparecería de la pantalla si la card se limitara a su ventana. SHALL sumarse a la card con su **propia etiqueta explícita** —nombrando que está vencido— y NO SHALL confundirse dentro del monto del próximo mes: son dos cosas distintas, una que recién viene y otra que ya debería estar pagada.
+
+Lo que **NO** entra: los consumos de tarjeta cuyo resumen vence fuera de la ventana, las recurrencias fuera de la ventana, y cualquier gasto que todavía no exista como compromiso.
+
+El detalle de Tarjetas SHALL agregarse **por tarjeta** —una fila por tarjeta con su total comprometido y su próximo cierre en la bajada del grupo—, no por consumo individual: la pregunta del usuario es cuánto le viene de cada tarjeta.
 
 Los estados vacíos SHALL cubrirse por separado: sin tarjetas con compromiso, el grupo Tarjetas muestra su vacío; sin gastos fijos, el grupo Gastos fijos muestra el suyo; sin ninguno de los dos, la card muestra un vacío único en lugar de dos vacíos apilados.
 
-#### Scenario: Usuario con tarjetas y gastos fijos
+#### Scenario: Un resumen que cierra dentro de la ventana pero vence después
 
-- **WHEN** el próximo mes tiene compromisos de ambos tipos
-- **THEN** el total es la suma de los dos y la barra apilada refleja su proporción real
-- **AND** la leyenda muestra el porcentaje de cada segmento
+- **WHEN** una tarjeta cierra el 28 de septiembre y vence el 10 de octubre
+- **THEN** ese resumen NO suma en los compromisos de septiembre
+- **AND** sí sumará cuando la ventana sea octubre
 
-#### Scenario: Usuario sin tarjetas
+#### Scenario: Una recurrencia que se paga con tarjeta
 
-- **WHEN** el usuario no tiene ninguna tarjeta con compromiso el próximo mes
-- **THEN** el grupo Tarjetas muestra su estado vacío
-- **AND** el total y la barra reflejan solo los gastos fijos
+- **WHEN** una recurrencia del próximo mes se debita de una tarjeta de crédito
+- **THEN** NO suma en "Gastos fijos"
+- **AND** llegará como parte del resumen de esa tarjeta, en la ventana en que ese resumen venza
+
+#### Scenario: Una recurrencia ya generada y una todavía proyectada
+
+- **WHEN** el generador ya creó la instancia de octubre de una regla mensual y la de noviembre todavía no
+- **THEN** la ventana de octubre cuenta esa instancia una sola vez
+- **AND** la proyección no la vuelve a agregar
+
+#### Scenario: Un resumen vencido e impago
+
+- **WHEN** un resumen venció el mes pasado y sigue sin pagarse
+- **THEN** la card lo muestra con su etiqueta de vencido
+- **AND** ese monto no se confunde con el del próximo mes
 
 #### Scenario: Usuario sin compromisos de ningún tipo
 
 - **WHEN** no hay ni tarjetas ni gastos fijos comprometidos
 - **THEN** la card muestra un único estado vacío
 - **AND** no renderiza la barra apilada con proporciones inventadas
-
----
 
 ### Requirement: Cada sección del dashboard rotula la pregunta que ayuda a responder
 
