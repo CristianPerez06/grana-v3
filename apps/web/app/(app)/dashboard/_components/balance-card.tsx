@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { Card } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
 import {
   derivePlacement,
@@ -27,28 +28,33 @@ const avatarColor = (avatar: ResolvedAccountAvatar): string =>
 /**
  * The accounts of ONE currency, laid out in two implicit sub-columns.
  *
- * Stacked vertically, each row spanned the full ~320px of its currency column
- * and `ml-auto` pushed the percentage to the far edge, leaving a wide gap
- * between the name and its number. Side by side, each account gets ~155px and
- * reads as a tight pair; with a single account it occupies the first cell, so
- * the gap lands after the pair instead of inside it.
+ * Each account is a TIGHT pair (name immediately followed by its percentage),
+ * and the two pairs are pushed apart: the first anchors to the left edge of the
+ * currency column, the second to the right edge — which lands its percentage
+ * directly under the column's header label. All the slack sits between the two
+ * pairs, where it separates them, instead of inside a pair, where it made a
+ * percentage read as belonging to the account listed next to it.
+ *
+ * With a single account it stays on the left and the column simply reads short.
  *
  * Web only: at 390px a native column is ~170px, and halving that would leave no
  * room for a name. The native card keeps them stacked.
  */
 const PlacementColumn = ({ placement }: { placement: CurrencyPlacement }) => (
   <div className="grid grid-cols-2 gap-x-5 gap-y-2">
-    {placement.rows.map((row: PlacementRow) => (
-      <div key={row.id} className="flex items-center gap-2 text-[13.5px] font-semibold text-white/65">
+    {placement.rows.map((row: PlacementRow, index: number) => (
+      <div
+        key={row.id}
+        className={cn(
+          'flex items-center gap-2 text-[13.5px] font-semibold text-white/65',
+          index === 1 && 'justify-end',
+        )}
+      >
         <span
           aria-hidden
           className="size-[10px] shrink-0 rounded-[2px]"
           style={{ backgroundColor: avatarColor(row.avatar) }}
         />
-        {/* The percentage sits right after its name, NOT pushed to the cell edge:
-            with `ml-auto` the slack landed between a name and its own number, so
-            "81%" read as belonging to the account listed next to it. Tight pair,
-            slack after it. */}
         <span className="min-w-0 truncate">{row.label}</span>
         <span className="shrink-0 text-[14px] font-extrabold tabular-nums text-white">
           {row.pct}%
