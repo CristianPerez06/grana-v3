@@ -164,11 +164,15 @@ export const SpentCard = ({ otherName }: Props) => {
 
   return (
     <Card className="flex flex-col">
-      <CardHeader className="flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-        <h2 className="text-lg font-semibold tracking-tight text-text">{t('title')}</h2>
+      {/* One row at every width: the link belongs beside the title, not stacked
+          under it. The title shrinks; the link never wraps. */}
+      <CardHeader className="flex-row items-center justify-between gap-3">
+        <h2 className="min-w-0 truncate text-lg font-semibold tracking-tight text-text">
+          {t('title')}
+        </h2>
         <Link
           href="/transactions"
-          className="rounded text-[13px] font-bold text-emerald-deep transition-colors hover:text-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="shrink-0 whitespace-nowrap rounded text-[13px] font-bold text-emerald-deep transition-colors hover:text-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {t('view_detail')} ›
         </Link>

@@ -108,11 +108,17 @@ const ALIGN = {
   end: 'sm:items-end sm:text-right',
 } as const
 
+/**
+ * Two scales, not one. Side by side, each amount is the headline of its own
+ * column and carries the full size. Stacked into a row next to a 14px label, the
+ * same 27px number dwarfs it and the row stops reading as a pair — so the
+ * stacked scale is the one native uses, which is the same composition.
+ */
 const SUMMARY_SIZE: Record<AmountDensity, string> = {
-  normal: 'text-[27px]',
-  tight: 'text-[24px]',
-  tighter: 'text-[21px]',
-  tightest: 'text-[18px]',
+  normal: 'text-[19px] sm:text-[27px]',
+  tight: 'text-[17px] sm:text-[24px]',
+  tighter: 'text-[15px] sm:text-[21px]',
+  tightest: 'text-[13px] sm:text-[18px]',
 }
 
 /**

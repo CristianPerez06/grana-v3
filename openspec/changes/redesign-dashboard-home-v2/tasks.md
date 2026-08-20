@@ -34,6 +34,7 @@
 - [x] 3.5 Zona clara "Resumen del mes": **tres** columnas iguales (Tenías, Entró, Se fué), con punto de color, monto ARS con signo en los dos flujos y línea USD condicional
 - [x] 3.8 Alinear cada bloque de modo que los tres **lleguen a los dos bordes**: el primero a la izquierda, el último a la derecha, el del medio centrado. Alinear los tres a la izquierda —como estaba— dejaba una franja muerta contra el borde derecho y el bloque descentrado. Las columnas siguen siendo tercios iguales: la posición no puede depender del dato o los montos saltan al navegar de mes
 - [x] 3.10 **Composición angosta**: apilar los tres montos del "Resumen del mes" (una fila cada uno, rótulo izquierda / monto derecha) y apilar las dos monedas de "Dónde está" con una cuenta por fila. En tres tercios de una card de teléfono los montos se imprimían encima unos de otros y los nombres de cuenta se truncaban a una letra
+- [x] 3.13 Escala tipográfica propia para la composición apilada: el monto a 27px al lado de un rótulo de 14px lo aplasta y la fila deja de leerse como par. La escala apilada es la misma que usa nativo, que es la misma composición
 - [x] 3.12 En la composición apilada de "Dónde está", el rótulo de moneda va como **columna izquierda** y el porcentaje al borde derecho: una fila entera para la palabra "ARS" es una fila no gastada en datos, y con los porcentajes alineados en columna se comparan de un vistazo
 - [x] 3.11 Aplicar `densestAmountDensity` también a los tres montos del resumen, por la misma razón que en los tiles
 - [x] 3.9 Achicar el aire de la zona clara: menos padding arriba del título y menos separación entre el título y la grilla
@@ -73,6 +74,8 @@
 - [x] 6.5 Tira Compartido en **una sola fila a cualquier ancho**: en angosto se sueltan los avatares de iniciales y la mitad "vos y {otro}" de la bajada, y el bloque de identidad es el que se achica para que el monto no ceda. Espejado en nativo, que además no mostraba el nombre del Hogar
 - [x] 6.2 Reescribir `dashboard-content.tsx` con la grilla nueva: fila 1 a ancho completo, fila 2 `1fr / 1.12fr` con `align-items: stretch`, pie Compartido
 - [x] 6.3 Colapso a una columna por debajo del ancho de contenido, con el sidebar oculto y el padding del main reducido
+- [x] 6.6 Header del dashboard en **una sola fila a cualquier ancho**, con el mes abreviado a tres letras por debajo de `sm` (`responsive` en `MonthNavigator`): apilado, el selector se llevaba una píldora a ancho completo y ~44px de alto en el viewport donde el alto es lo más escaso
+- [x] 6.7 Cabecera de card en **una sola fila a cualquier ancho**: el link ("Ver detalle" / "Ver todos") va al lado del título y alineado a la derecha, no apilado debajo. El título es el que se achica; el link no envuelve
 - [ ] 6.4 Verificar **a ojo** que las dos cards de la fila 2 terminan alineadas en los anchos de corte, y que el alto de Compromisos no se mueve al abrir y cerrar un detalle
 
 ## 7. Mobile — espejo de las cuatro cards
