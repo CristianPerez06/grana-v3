@@ -4,13 +4,16 @@ import Link from 'next/link'
 import { useFormatter, useTranslations } from 'next-intl'
 import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
 import {
+  amountDensity,
   derivePlacement,
   type CurrencyPlacement,
   type DashboardHero,
   type MonthBalanceByCurrency,
+  type AmountDensity,
   type PlacementRow,
 } from '@grana/dashboard'
 import { Card } from '@/components/ui/card'
+import { useShowCents } from '@/lib/preferences-context'
 import { cn } from '@/lib/utils'
 import { MaskedAmount } from './masked-amount'
 import { MaskedAmountDisplay } from './masked-amount-display'
@@ -63,6 +66,14 @@ const PlacementColumn = ({ placement }: { placement: CurrencyPlacement }) => (
   </div>
 )
 
+/** Same shrink rule as the spending tiles, on this zone's own scale. */
+const SUMMARY_SIZE: Record<AmountDensity, string> = {
+  normal: 'text-[27px]',
+  tight: 'text-[24px]',
+  tighter: 'text-[21px]',
+  tightest: 'text-[18px]',
+}
+
 /**
  * One amount of "Resumen del mes".
  *
@@ -93,27 +104,37 @@ const Flow = ({
    */
   showUsd: boolean
   signPrefix?: string
-}) => (
-  <div className="flex flex-col items-center text-center">
-    <span className="flex items-center gap-[9px] text-[14px] font-bold text-text-muted">
-      <span aria-hidden className={cn('size-[9px] rounded-full', dotClassName)} />
-      {label}
-    </span>
-    <span
-      className={cn(
-        'mt-2.5 text-[22px] font-extrabold leading-none tracking-[-0.04em]',
-        amountClassName,
-      )}
-    >
-      <MaskedAmount amount={ars} currency="ARS" signPrefix={signPrefix} />
-    </span>
-    {showUsd && (
-      <span className="mt-[5px] text-[12.5px] font-semibold text-text-soft">
-        <MaskedAmount amount={usd} currency="USD" showCentsOverride signPrefix={signPrefix} />
+}) => {
+  const showCents = useShowCents()
+
+  return (
+    // Left-aligned inside its column, not centered: the first column then starts
+    // on the same axis as the card's title, so the block reads as one piece, the
+    // three items share one alignment rule, and a growing amount extends into
+    // free space instead of toward its neighbour.
+    <div className="flex flex-col items-start text-left">
+      <span className="flex items-center gap-[9px] text-[14px] font-bold text-text-muted">
+        <span aria-hidden className={cn('size-[9px] rounded-full', dotClassName)} />
+        {label}
       </span>
-    )}
-  </div>
-)
+      <span
+        className={cn(
+          'mt-2.5 whitespace-nowrap font-extrabold leading-none tracking-[-0.04em]',
+          SUMMARY_SIZE[amountDensity(ars, showCents)],
+          amountClassName,
+        )}
+      >
+        <MaskedAmount amount={ars} currency="ARS" signPrefix={signPrefix} />
+      </span>
+      {/* Bimoneda: the USD line only shows when there is money in dollars. */}
+      {showUsd && (
+        <span className="mt-[5px] text-[12.5px] font-semibold text-text-soft">
+          <MaskedAmount amount={usd} currency="USD" showCentsOverride signPrefix={signPrefix} />
+        </span>
+      )}
+    </div>
+  )
+}
 
 /**
  * "Saldo disponible total" — one card with two zones: a dark one with the
@@ -213,7 +234,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
         <h3 className="text-[18px] font-extrabold tracking-[-0.025em] text-text">
           {t('month.summary_title')}
         </h3>
-        <div className="mx-auto mt-[15px] grid max-w-[660px] grid-cols-3 gap-[18px]">
+        <div className="mt-[15px] grid grid-cols-3 gap-[18px]">
           <Flow
             label={t('month.carried_in')}
             dotClassName="bg-text-soft"

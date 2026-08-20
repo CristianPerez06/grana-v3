@@ -50,9 +50,9 @@ export const BalanceCardSkeleton = async () => {
       {/* Resumen del mes */}
       <div className="border-t border-border px-[26px] pb-5 pt-5">
         <div className="h-[18px] w-40 animate-pulse rounded bg-muted" />
-        <div className="mx-auto mt-[15px] grid max-w-[660px] grid-cols-3 gap-[18px]">
+        <div className="mt-[15px] grid grid-cols-3 gap-[18px]">
           {[0, 1, 2].map((column) => (
-            <div key={column} className="flex flex-col items-center gap-2.5">
+            <div key={column} className="flex flex-col items-start gap-2.5">
               <div className="h-4 w-16 animate-pulse rounded bg-muted/70" />
               <div className="h-6 w-28 max-w-full animate-pulse rounded bg-muted" />
             </div>

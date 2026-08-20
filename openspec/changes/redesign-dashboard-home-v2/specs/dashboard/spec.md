@@ -38,7 +38,11 @@ Los porcentajes derivados —el reparto de cuentas de "Dónde está", la barra a
 
 ### Requirement: La zona clara de la card de saldo muestra el "Resumen del mes" con Tenías, Entró y Se fué
 
-La card de saldo SHALL cerrar con una zona clara titulada "Resumen del mes", separada de la zona oscura por un borde superior, con **tres bloques centrados en tres columnas iguales**: "Tenías", "Entró" y "Se fué". Cada bloque SHALL mostrar un punto de color, su monto ARS y —según la regla bimoneda— su monto USD debajo.
+La card de saldo SHALL cerrar con una zona clara titulada "Resumen del mes", separada de la zona oscura por un borde superior, con **tres bloques en tres columnas iguales**: "Tenías", "Entró" y "Se fué". Cada bloque SHALL mostrar un punto de color, su monto ARS y —según la regla bimoneda— su monto USD debajo.
+
+Los tres bloques SHALL alinearse **a la izquierda de su columna**, y la grilla SHALL ocupar el ancho de la card, de modo que la primera columna arranque en el mismo eje que el título. Los tres comparten así una sola regla de alineación —ninguno queda con un tratamiento distinto al de sus vecinos— y un monto que crece se extiende sobre espacio libre en lugar de avanzar hacia la columna de al lado, que es lo que pasa cuando el bloque del medio se centra y el de la derecha se alinea a la derecha.
+
+Los montos SHALL achicarse por pasos con la misma regla compartida que los tiles de "Cuánto gastaste", sobre la escala propia de esta zona.
 
 "Tenías" es el saldo con el que el usuario **entró al mes**. SHALL derivarse —no leerse— como `saldo del mes − (Entró − Se fué)`, de modo que los tres montos cierren contra el saldo de la zona oscura **por construcción** y no por que dos lecturas coincidan:
 

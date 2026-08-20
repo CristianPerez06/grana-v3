@@ -1,14 +1,17 @@
 import { Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import {
+  amountDensity,
   derivePlacement,
   deriveMonthOpening,
   deriveMonthSummary,
+  type AmountDensity,
   type CurrencyPlacement,
 } from '@grana/dashboard'
 import { useT } from '../../lib/locale-context'
 import { accountColors, colors } from '../../lib/colors'
 import { useDashboardHero, useMonthBalanceSeries } from '../../lib/dashboard/queries'
+import { useShowCents } from '../../lib/preferences-context'
 import { useDashboardMonth } from './DashboardMonthContext'
 import { HeroSkeleton } from './HeroSkeleton'
 import { MaskedAmount } from './MaskedAmount'
@@ -63,6 +66,14 @@ const PlacementColumn = ({ placement }: { placement: CurrencyPlacement }) => (
   </View>
 )
 
+/** Same shrink rule as web (shared thresholds), on the native scale. */
+const SUMMARY_SIZE: Record<AmountDensity, string> = {
+  normal: 'text-[15px]',
+  tight: 'text-[13.5px]',
+  tighter: 'text-[12px]',
+  tightest: 'text-[10.5px]',
+}
+
 const Flow = ({
   label,
   dotColor,
@@ -85,29 +96,38 @@ const Flow = ({
   showUsd: boolean
   /** "+" / "−" on the two FLOWS; the carried-in balance shows only its own. */
   signPrefix?: string
-}) => (
-  <View className="flex-1 items-center">
-    <View className="flex-row items-center gap-2">
-      <View className="size-[9px] rounded-full" style={{ backgroundColor: dotColor }} />
-      <Text className="text-[11.5px] font-bold text-text-muted">{label}</Text>
-    </View>
-    <MaskedAmount
-      amount={ars}
-      currency="ARS"
-      signPrefix={signPrefix}
-      className={`mt-2 text-[15px] font-extrabold ${amountClassName}`}
-    />
-    {showUsd && (
+}) => {
+  const showCents = useShowCents()
+
+  return (
+    // Left-aligned inside its column (mirrors web): the first column starts on
+    // the card's title axis and a growing amount extends into free space instead
+    // of toward its neighbour.
+    <View className="flex-1 items-start">
+      <View className="flex-row items-center gap-1.5">
+        <View className="size-[7px] rounded-full" style={{ backgroundColor: dotColor }} />
+        <Text className="text-[10.5px] font-bold text-text-muted">{label}</Text>
+      </View>
       <MaskedAmount
-        amount={usd}
-        currency="USD"
-        showCentsOverride
+        amount={ars}
+        currency="ARS"
         signPrefix={signPrefix}
-        className="mt-1 text-[11px] font-semibold text-text-soft"
+        fitOneLine
+        className={`mt-1.5 font-extrabold ${SUMMARY_SIZE[amountDensity(ars, showCents)]} ${amountClassName}`}
       />
-    )}
-  </View>
-)
+      {showUsd && (
+        <MaskedAmount
+          amount={usd}
+          currency="USD"
+          showCentsOverride
+          signPrefix={signPrefix}
+          fitOneLine
+          className="mt-0.5 text-[9.5px] font-semibold text-text-soft"
+        />
+      )}
+    </View>
+  )
+}
 
 export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
   const t = useT()
@@ -192,7 +212,7 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
         </View>
 
         {placement && (
-          <View className="mt-3 flex-row gap-3">
+          <View className="mt-3 flex-row gap-2">
             <View className="flex-1">
               <Text className="mb-2 text-[11px] font-extrabold tracking-widest text-white/60">
                 ARS
