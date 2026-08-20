@@ -67,6 +67,27 @@ const PlacementColumn = ({ placement }: { placement: CurrencyPlacement }) => (
 )
 
 /** Same shrink rule as the spending tiles, on this zone's own scale. */
+/**
+ * Where each of the three blocks sits inside its column: first hard left, last
+ * hard right, middle centred — so the three span the card edge to edge.
+ *
+ * They used to be left-aligned all three, on the argument that one shared rule
+ * reads as one piece. On real data it does not: the columns are equal thirds and
+ * the content is narrower than a third, so everything hugged the left and left a
+ * dead strip against the card's right edge, with the block visibly off-centre.
+ *
+ * The columns stay equal thirds — the positions must NOT depend on the data, or
+ * the three amounts would jump around as you page through months — and it is
+ * each column's own alignment that pushes the content out to the edges. A very
+ * long amount still stays inside its third: `amountDensity` steps the type down
+ * before it can reach its neighbour.
+ */
+const ALIGN = {
+  start: 'items-start text-left',
+  center: 'items-center text-center',
+  end: 'items-end text-right',
+} as const
+
 const SUMMARY_SIZE: Record<AmountDensity, string> = {
   normal: 'text-[27px]',
   tight: 'text-[24px]',
@@ -90,6 +111,7 @@ const Flow = ({
   usd,
   showUsd,
   signPrefix,
+  align,
 }: {
   label: string
   dotClassName: string
@@ -104,15 +126,13 @@ const Flow = ({
    */
   showUsd: boolean
   signPrefix?: string
+  /** Where the block sits inside its column — see ALIGN below. */
+  align: keyof typeof ALIGN
 }) => {
   const showCents = useShowCents()
 
   return (
-    // Left-aligned inside its column, not centered: the first column then starts
-    // on the same axis as the card's title, so the block reads as one piece, the
-    // three items share one alignment rule, and a growing amount extends into
-    // free space instead of toward its neighbour.
-    <div className="flex flex-col items-start text-left">
+    <div className={cn('flex flex-col', ALIGN[align])}>
       <span className="flex items-center gap-[9px] text-[14px] font-bold text-text-muted">
         <span aria-hidden className={cn('size-[9px] rounded-full', dotClassName)} />
         {label}
@@ -230,11 +250,11 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
       </div>
 
       {/* Resumen del mes — the three amounts add up to the balance above. */}
-      <div className="border-t border-border px-[26px] pb-5 pt-5">
+      <div className="border-t border-border px-[26px] pb-[18px] pt-4">
         <h3 className="text-[18px] font-extrabold tracking-[-0.025em] text-text">
           {t('month.summary_title')}
         </h3>
-        <div className="mt-[15px] grid grid-cols-3 gap-[18px]">
+        <div className="mt-3 grid grid-cols-3 gap-[18px]">
           <Flow
             label={t('month.carried_in')}
             dotClassName="bg-text-soft"
@@ -242,6 +262,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             ars={venia?.ARS ?? 0}
             usd={venia?.USD ?? 0}
             showUsd={summaryHasUsd}
+            align="start"
           />
           <Flow
             label={t('month.came_in')}
@@ -251,6 +272,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             usd={summary?.USD.entro ?? 0}
             showUsd={summaryHasUsd}
             signPrefix="+"
+            align="center"
           />
           <Flow
             label={t('month.went_out')}
@@ -260,6 +282,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             usd={summary?.USD.seFue ?? 0}
             showUsd={summaryHasUsd}
             signPrefix="−"
+            align="end"
           />
         </div>
       </div>

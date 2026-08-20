@@ -40,7 +40,11 @@ Los porcentajes derivados —el reparto de cuentas de "Dónde está", la barra a
 
 La card de saldo SHALL cerrar con una zona clara titulada "Resumen del mes", separada de la zona oscura por un borde superior, con **tres bloques en tres columnas iguales**: "Tenías", "Entró" y "Se fué". Cada bloque SHALL mostrar un punto de color, su monto ARS y —según la regla bimoneda— su monto USD debajo.
 
-Los tres bloques SHALL alinearse **a la izquierda de su columna**, y la grilla SHALL ocupar el ancho de la card, de modo que la primera columna arranque en el mismo eje que el título. Los tres comparten así una sola regla de alineación —ninguno queda con un tratamiento distinto al de sus vecinos— y un monto que crece se extiende sobre espacio libre en lugar de avanzar hacia la columna de al lado, que es lo que pasa cuando el bloque del medio se centra y el de la derecha se alinea a la derecha.
+La grilla SHALL ocupar el ancho de la card en **tres columnas iguales**, y cada bloque SHALL alinearse dentro de la suya de modo que los tres **lleguen a los dos bordes**: el primero pegado a la izquierda —en el mismo eje que el título—, el último pegado a la derecha, el del medio centrado.
+
+Los tres estuvieron alineados a la izquierda, con el argumento de que una sola regla de alineación se lee como una pieza. Con datos reales no se lee así: el contenido es más angosto que su tercio, así que los tres quedaban amontonados a la izquierda y sobraba una franja muerta contra el borde derecho de la card, con el bloque visiblemente descentrado.
+
+Las columnas SHALL seguir siendo **tercios iguales**: la posición de cada monto NO SHALL depender de su contenido, o los tres saltarían de lugar al navegar de un mes a otro, que es justo lo que hay que poder comparar. Es la alineación de cada columna la que empuja el contenido hacia los bordes, no el ancho de la columna. Un monto muy largo SHALL seguir quedando adentro de su tercio: la regla de densidad achica la tipografía antes de que llegue a su vecino.
 
 Los montos SHALL achicarse por pasos con la misma regla compartida que los tiles de "Cuánto gastaste", sobre la escala propia de esta zona.
 

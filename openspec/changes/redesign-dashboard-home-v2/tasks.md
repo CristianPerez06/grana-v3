@@ -31,7 +31,9 @@
 - [x] 3.2 Zona oscura: rótulo, monto grande con signo y centavos subordinados, y fila USD condicionada por la regla bimoneda (D1)
 - [x] 3.3 Bloque "Dónde está" dentro de la zona oscura: encabezado de dos columnas (ARS / USD + link "Ver cuentas"), divisor central, dos filas por moneda con cuadradito de color, nombre y porcentaje. **Sin barras de proporción**
 - [x] 3.4 Limitar los bloques internos de la zona oscura a `max-width: 660px` centrados, para que en desktop los datos no se dispersen
-- [x] 3.5 Zona clara "Resumen del mes": dos columnas iguales, Entró y Se fué centrados, con punto de color, monto ARS y línea USD condicional
+- [x] 3.5 Zona clara "Resumen del mes": **tres** columnas iguales (Tenías, Entró, Se fué), con punto de color, monto ARS con signo en los dos flujos y línea USD condicional
+- [x] 3.8 Alinear cada bloque de modo que los tres **lleguen a los dos bordes**: el primero a la izquierda, el último a la derecha, el del medio centrado. Alinear los tres a la izquierda —como estaba— dejaba una franja muerta contra el borde derecho y el bloque descentrado. Las columnas siguen siendo tercios iguales: la posición no puede depender del dato o los montos saltan al navegar de mes
+- [x] 3.9 Achicar el aire de la zona clara: menos padding arriba del título y menos separación entre el título y la grilla
 - [x] 3.6 Reemplazar los tres `Suspense` (hero, cuentas, balance) por **uno solo** que envuelva la card, con un skeleton shape-matched único (D7)
 - [x] 3.7 Dar de baja `hero-section.tsx`, `accounts-card.tsx`, `month-balance-section.tsx` y sus contenedores/skeletons una vez que la card nueva los cubre
 

@@ -74,6 +74,19 @@ const SUMMARY_SIZE: Record<AmountDensity, string> = {
   tightest: 'text-[10.5px]',
 }
 
+/**
+ * Where each of the three blocks sits inside its column: first hard left, last
+ * hard right, middle centred — so the three span the card edge to edge. Mirrors
+ * web. They used to be left-aligned all three, which on real data left a dead
+ * strip against the card's right edge and read visibly off-centre. The columns
+ * stay equal (`flex-1`) so the positions do not depend on the data.
+ */
+const ALIGN = {
+  start: 'items-start',
+  center: 'items-center',
+  end: 'items-end',
+} as const
+
 const Flow = ({
   label,
   dotColor,
@@ -82,6 +95,7 @@ const Flow = ({
   usd,
   showUsd,
   signPrefix,
+  align,
 }: {
   label: string
   dotColor: string
@@ -96,14 +110,13 @@ const Flow = ({
   showUsd: boolean
   /** "+" / "−" on the two FLOWS; the carried-in balance shows only its own. */
   signPrefix?: string
+  /** Where the block sits inside its column — see ALIGN below. */
+  align: keyof typeof ALIGN
 }) => {
   const showCents = useShowCents()
 
   return (
-    // Left-aligned inside its column (mirrors web): the first column starts on
-    // the card's title axis and a growing amount extends into free space instead
-    // of toward its neighbour.
-    <View className="flex-1 items-start">
+    <View className={`flex-1 ${ALIGN[align]}`}>
       <View className="flex-row items-center gap-1.5">
         <View className="size-[7px] rounded-full" style={{ backgroundColor: dotColor }} />
         <Text className="text-[10.5px] font-bold text-text-muted">{label}</Text>
@@ -232,7 +245,7 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
       </View>
 
       {/* Light zone — "Resumen del mes"; follows the month selector. */}
-      <View className="px-4 pb-4 pt-[15px]">
+      <View className="px-4 pb-4 pt-3">
         <Text className="text-[15px] font-extrabold text-text">
           {t('dashboard.month.summary_title')}
         </Text>
@@ -244,6 +257,7 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
             ars={venia?.ARS ?? 0}
             usd={venia?.USD ?? 0}
             showUsd={summaryHasUsd}
+            align="start"
           />
           <Flow
             label={t('dashboard.month.came_in')}
@@ -253,6 +267,7 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
             usd={summary?.USD.entro ?? 0}
             showUsd={summaryHasUsd}
             signPrefix="+"
+            align="center"
           />
           <Flow
             label={t('dashboard.month.went_out')}
@@ -262,6 +277,7 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
             usd={summary?.USD.seFue ?? 0}
             showUsd={summaryHasUsd}
             signPrefix="−"
+            align="end"
           />
         </View>
       </View>
