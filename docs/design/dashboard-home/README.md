@@ -1,5 +1,31 @@
 # Handoff: Dashboard (Inicio) de grana — web + mobile
 
+> **Alcance de este documento: lo VISUAL.** Colores, tipografía, espaciados, radios,
+> layout y animación se toman de acá.
+>
+> **La semántica y el comportamiento NO se gobiernan desde este archivo.** Los define
+> el spec del change `redesign-dashboard-home-v2`
+> (`openspec/changes/redesign-dashboard-home-v2/specs/dashboard/spec.md`, y una vez
+> archivado, `openspec/specs/dashboard/spec.md`). Este handoff se escribió sin el
+> contexto de las decisiones de producto que se tomaron después, así que en varios
+> puntos dice lo contrario de lo vigente. Donde difieran, **manda el spec**.
+>
+> Divergencias conocidas al momento de incorporarlo:
+>
+> | Dice el handoff | Rige el spec |
+> |---|---|
+> | "El saldo disponible es de hoy y no cambia" | El saldo sigue al selector de mes, cortado al cierre del mes seleccionado |
+> | `ritmo = gastaste / ingresoMensualEsperado` | El denominador son los ingresos acreditados del mes; no existe un ingreso esperado configurable |
+> | "todos los montos en ARS y USD con el mismo tipo de cambio" | ARS y USD son saldos reales independientes; no hay conversión ni tipo de cambio global |
+> | La apertura de los tiles se muestra siempre, con filas en cero | Sin actividad compartida no hay apertura: el tile no gira y no muestra la pista |
+> | `Por pagar = Gastaste − Ya se pagó` como resta entre lentes | Los tres montos se derivan de una sola lente (gastos propios) y cierran por construcción |
+> | "Regla de corte entre 1 y 2 a definir con producto" | Definida: el ritmo desborda por encima de 100× (10.000%) |
+>
+> Lo que el handoff sí aporta y no está en el spec: el giro 3D de los tiles con su
+> altura fija, la escala tipográfica, el formato `US$`, el botón primario en verde y
+> el hero sin centavos.
+
+
 ## Overview
 Pantalla de inicio de **grana**, app de finanzas personales bimonetaria (ARS + USD). Cuatro bloques:
 
