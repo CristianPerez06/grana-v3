@@ -253,6 +253,49 @@ Por debajo del ancho máximo de contenido, el layout SHALL colapsar a **una sola
 
 ---
 
+### Requirement: El selector de mes del dashboard gobierna las secciones mensuales
+
+El dashboard SHALL exponer un navegador mensual `‹ Mes Año ›` (`MonthNavigator`) cuyo estado vive en un context client-side compartido (`DashboardMonthProvider` en web; su espejo nativo en mobile), inicializado en el mes actual derivado de `getTodayAR()`. Su ubicación es específica de cada plataforma: en **web** vive en el header de la página (junto al eye toggle y "Nuevo movimiento"); en **nativo** vive dentro del header navy de la pantalla, debajo del saludo, ocupando el ancho (pill blanca sobre navy).
+
+Cambiar el mes seleccionado SHALL actualizar **en simultáneo la card de saldo completa** —el saldo, el desglose "Dónde está" y "Resumen del mes"— **y la card "Cuánto gastaste"**. El saldo deja de ser "de hoy": se corta al último día del mes seleccionado. Es lo que permite que los tres montos del resumen cierren contra él; dejar el saldo de hoy encima de los flujos de otro mes rompía la única verificación que la card ofrece al usuario.
+
+El selector NO SHALL afectar a la card **"Compromisos del próximo mes"**, que es estática "desde hoy": es deuda de tarjeta presente más recurrencias pendientes, y darle versión histórica es redefinir qué significa la card, no re-consultarla con otra fecha. Tampoco SHALL afectar a la tira "Compartido", que muestra el neto vigente del hogar.
+
+La navegación de mes NO SHALL modificar la URL/ruta ni provocar una navegación; el mes seleccionado NO se persiste (al re-montar, abre en el mes actual; en nativo, salir del tab y volver resetea al mes actual, mismo mecanismo de remount que el eye-mask). Las flechas SHALL permitir navegar hasta 12 meses hacia atrás; la flecha derecha SHALL deshabilitarse en el mes actual (no se navega al futuro). Cada sección mensual SHALL obtener los datos del mes no-actual client-side (web: TanStack sobre el cliente del browser; nativo: su hook TanStack existente) mostrando su propio estado de carga in-card; en web el mes actual llega server-rendered como initial data.
+
+#### Scenario: Cambiar el mes mueve la card de saldo entera
+
+- **WHEN** el usuario en agosto 2026 toca la flecha izquierda del navegador
+- **THEN** el saldo, "Dónde está", "Resumen del mes" y "Cuánto gastaste" muestran julio 2026
+- **AND** el saldo es el del cierre de julio, no el de hoy
+- **AND** no hay navegación de ruta ni recarga de pantalla
+
+#### Scenario: Compromisos no sigue al selector
+
+- **WHEN** el usuario navega a un mes anterior
+- **THEN** "Compromisos del próximo mes" sigue mostrando lo que se debe desde hoy
+- **AND** la tira "Compartido" tampoco cambia
+
+#### Scenario: Límites de navegación
+
+- **WHEN** el usuario está en el mes actual
+- **THEN** la flecha derecha está deshabilitada
+- **AND** tras navegar 12 meses hacia atrás, la flecha izquierda se deshabilita
+
+#### Scenario: Mes no-actual se fetchea client-side con loading in-card
+
+- **WHEN** el usuario navega a un mes cuyos datos no están cargados
+- **THEN** cada sección mensual muestra su skeleton in-card (título y chrome visibles) mientras su fetch resuelve
+- **AND** una falla en el fetch de una sección muestra error compacto en esa sección sin romper las otras
+
+#### Scenario: El navegador vive en el header navy (mobile)
+
+- **WHEN** el usuario abre el dashboard en la app nativa
+- **THEN** el `MonthNavigator` se renderiza dentro del header navy, debajo del saludo, ocupando el ancho
+- **AND** salir del tab y volver resetea la selección al mes actual
+
+---
+
 ### Requirement: El Hero muestra el disponible total bimoneda
 
 La zona oscura de la card de saldo SHALL mostrar, centrados: el rótulo, el **saldo total en ARS** como monto grande —con el signo y los centavos tipográficamente subordinados—, y la **fila USD** con su chip y el saldo real en dólares.

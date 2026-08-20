@@ -14,15 +14,25 @@ El dashboard actual reparte la respuesta en **seis superficies**, dos de ellas c
 
 ## What Changes
 
-- **Card 1 — "Saldo disponible total".** Se fusionan Hero + "Dónde está" + el resumen mensual en **una sola card** de dos zonas: zona oscura (`#142231`) con el total, la fila USD, el bloque "Dónde está" con las dos cuentas principales por moneda y sus porcentajes; y zona clara con "Resumen del mes" (Entró / Se fué centrados en dos columnas). Baja la barra apilada de ingresos/gastos y la fila "Ajustes" de la actual "Balance del mes": el resumen queda en dos montos.
+- **Card 1 — "Saldo disponible total".** Se fusionan Hero + "Dónde está" + el resumen mensual en **una sola card** de dos zonas: zona oscura (`#142231`) con el saldo, la fila USD y el bloque "Dónde está" con las dos cuentas principales por moneda y sus porcentajes; y zona clara con "Resumen del mes" en **tres columnas**: Tenías (el saldo con el que se entró al mes), Entró y Se fué. Baja la barra apilada de ingresos/gastos y la fila "Ajustes" de la actual "Balance del mes".
 
-- **Card 2 — "Cuánto gastaste".** `SpentThisMonthSection` deja de ser condicional y de ser una barra: pasa a tres tiles con ícono, filete de color y sub-bloque de contexto. Los tres montos **ya se calculan hoy** con esa misma semántica (`accrued` → Gastaste, `cash` → Pagaste, `accrued − cash` → Te queda por pagar) y reconcilian por construcción; lo nuevo es el lado USD, el conteo de compras pendientes y el ritmo. Debajo, la **tira de ritmo con anillo**: `gastaste / entró` del mes.
+  La card entera **sigue al selector de mes**: el saldo se corta al último día del mes seleccionado, y cuando no es el mes corriente el rótulo lo dice. Eso es lo que hace que los tres montos cierren contra el saldo de arriba y que la card se pueda auditar en pantalla:
+
+  ```
+  Tenías + Entró − Se fué  ===  el saldo que muestra la card
+  ```
+
+  "Entró" y "Se fué" son una lectura de **liquidez**: todo movimiento que tocó el saldo cae de un lado o del otro según su signo, ajustes, liquidaciones y cambio de moneda incluidos.
+
+- **Card 2 — "Cuánto gastaste".** `SpentThisMonthSection` deja de ser condicional y de ser una barra: pasa a tres tiles con ícono, filete de color y sub-bloque de contexto. Los tres montos **ya se calculan hoy** con esa misma semántica (`accrued` → Gastaste, `cash` → Pagaste, `accrued − cash` → Te queda por pagar) y reconcilian por construcción; lo nuevo es el lado USD y el ritmo. Debajo, la **tira de ritmo con anillo**: `Gastaste / ingresos acreditados del mes` — no contra el "Entró" de liquidez, que incluye reintegros y patas de cambio de moneda y inflaría el denominador.
 
 - **Card 3 — "Compromisos del próximo mes".** El total gana una **barra apilada** Tarjetas / Gastos fijos con leyenda y porcentajes derivados, y los dos detalles pasan a **grupos desplegables**: Tarjetas agrupadas **por tarjeta** (no por consumo) mostrando hasta 3 con el resto detrás del toggle, y Gastos fijos con hasta 10 filas, scroll interno y link al listado completo.
 
 - **Card 4 — "Compartido".** La tira se mantiene y **se extiende a mobile**, donde hoy no existe (`apps/mobile/components/dashboard/` no tiene ningún `SharedStrip`). Sigue renderizando solo con actividad.
 
 - **Baja del dashboard la sección "En qué se fue"** (dona + leyenda + créditos por categoría + toggle ARS/USD), en las dos plataformas. La capability `spending-by-category` **no se elimina**: conserva su superficie principal en Movimientos. El dashboard sigue consumiendo `getMonthCategoryBreakdown` porque de ahí sale el devengado que alimenta "Gastaste".
+
+- **El saldo pasa a ser histórico.** `getDashboardHero` recibe una fecha de corte (la RPC `get_account_balance_sums` ya la tomaba como parámetro, así que no cambia SQL), y `aggregateHero` empieza a respetar `initial_balance_date`: una cuenta creada en julio no aporta su saldo inicial al saldo del 31 de mayo. Sin eso, los meses viejos mostraban plata que el usuario todavía no tenía.
 
 - **Regla bimoneda explícita.** ARS y USD siguen **sin sumarse ni convertirse** — se respeta la invariante vigente (`packages/dashboard/src/types.ts:137`: *"ARS and USD are never summed"*). Cada métrica muestra su valor ARS como titular y su valor USD debajo, y **la línea USD se renderiza solo cuando ese valor es distinto de cero**. No se introduce tipo de cambio global.
 
