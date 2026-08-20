@@ -5,8 +5,6 @@ import { BalanceCardSkeleton } from './balance-card-skeleton'
 import { CommittedSectionContainer } from './committed-section-container'
 import { CommittedSkeleton } from './committed-skeleton'
 import { DashboardErrorBoundary } from './dashboard-error-boundary'
-import { MonthBalanceSectionContainer } from './month-balance-section-container'
-import { MonthBalanceSkeleton } from './month-balance-skeleton'
 import { SharedStripContainer } from './shared-strip-container'
 import { SpendingSectionContainer } from './spending-section-container'
 import { SpendingSkeleton } from './spending-skeleton'
@@ -30,23 +28,14 @@ export const DashboardContent = async () => {
         {/* Fila 1 — "Saldo disponible total" a ancho completo: el total, la
             fila USD y "Dónde está" plegado adentro del hero oscuro. */}
         <Suspense fallback={<BalanceCardSkeleton />}>
-          <BalanceCardContainer />
+          <BalanceCardContainer currentYear={currentYear} currentMonth={currentMonth} />
         </Suspense>
 
-        {/* Balance del mes (CAJA, lo que pasó) + Comprometido (COMPROMISO),
-            dos columnas en desktop como la fila del Hero; apiladas en mobile. */}
-        <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[1.15fr_1fr]">
-          <Suspense fallback={<MonthBalanceSkeleton />}>
-            <MonthBalanceSectionContainer
-              currentYear={currentYear}
-              currentMonth={currentMonth}
-            />
-          </Suspense>
-
-          <Suspense fallback={<CommittedSkeleton />}>
-            <CommittedSectionContainer />
-          </Suspense>
-        </div>
+        {/* Comprometido (COMPROMISO). Fila 2 del rediseño: acá va a convivir con
+            "Cuánto gastaste" cuando esa card exista. */}
+        <Suspense fallback={<CommittedSkeleton />}>
+          <CommittedSectionContainer />
+        </Suspense>
 
         {/* Compartido — tira condicional con el neto del Hogar (solo con actividad). */}
         <Suspense fallback={null}>

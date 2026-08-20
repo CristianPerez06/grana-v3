@@ -6,13 +6,17 @@ import {
   derivePlacement,
   type CurrencyPlacement,
   type DashboardHero,
+  type MonthBalanceByCurrency,
   type PlacementRow,
 } from '@grana/dashboard'
 import { MaskedAmount } from './masked-amount'
 import { MaskedAmountDisplay } from './masked-amount-display'
+import { MonthSummary } from './month-summary'
 
 type Props = {
   data: DashboardHero
+  /** Current-month series for the light zone. Null when that read failed. */
+  monthInitialData: MonthBalanceByCurrency | null
 }
 
 // Account identity color for the row swatch — same source as the AccountAvatar
@@ -39,8 +43,9 @@ const PlacementColumn = ({ placement }: { placement: CurrencyPlacement }) => (
 )
 
 /**
- * "Saldo disponible total" — the dark zone of the balance card: today's total,
- * the USD line, and the "Dónde está" breakdown folded in.
+ * "Saldo disponible total" — one card with two zones: a dark one with today's
+ * total, the USD line and the "Dónde está" breakdown folded in, and a light one
+ * with "Resumen del mes".
  *
  * The breakdown lives INSIDE the hero (it used to be a sibling card) because it
  * answers the same question the total does: how much I have, and where. Each
@@ -51,9 +56,10 @@ const PlacementColumn = ({ placement }: { placement: CurrencyPlacement }) => (
  * holds nothing, so a peso-only user reads the card as monocurrency instead of
  * scanning past zeros.
  *
- * The available balance is TODAY's and does not follow the month selector.
+ * The available balance is TODAY's and does not follow the month selector; the
+ * summary zone below does.
  */
-export const BalanceCard = async ({ data }: Props) => {
+export const BalanceCard = async ({ data, monthInitialData }: Props) => {
   const t = await getTranslations('dashboard')
   const placement = derivePlacement(data.accounts)
   const hasUsd = placement.USD.rows.length > 0 || data.usd !== 0
@@ -94,7 +100,9 @@ export const BalanceCard = async ({ data }: Props) => {
                 ARS
               </span>
             </span>
-            <span className="pl-[15px] text-[11.5px] font-extrabold tracking-[0.12em] text-white/65">
+            {/* text-left against the dark zone's `text-center`, so the label sits
+                over its column instead of centering in the cell. */}
+            <span className="pl-[15px] text-left text-[11.5px] font-extrabold tracking-[0.12em] text-white/65">
               {hasUsd ? 'USD' : ''}
             </span>
           </div>
@@ -113,6 +121,8 @@ export const BalanceCard = async ({ data }: Props) => {
           </div>
         </div>
       </div>
+
+      <MonthSummary initialData={monthInitialData} />
     </Card>
   )
 }

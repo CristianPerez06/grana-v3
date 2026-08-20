@@ -146,7 +146,10 @@
       "legend_usd": "USD (right)",
       "empty": "No transactions this month.",
       "loading": "Loading this month's balance…",
-      "error": "We couldn't load this month's balance."
+      "error": "We couldn't load this month's balance.",
+      "summary_title": "Month summary",
+      "came_in": "Came in",
+      "went_out": "Went out"
     },
     "hero_loading": "Loading your available balance…",
     "hero_error": "We couldn't load your available balance.",

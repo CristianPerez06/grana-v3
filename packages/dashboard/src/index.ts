@@ -18,6 +18,12 @@ export {
 } from './aggregations'
 
 export {
+  deriveMonthSummary,
+  type MonthSummary,
+  type MonthSummaryByCurrency,
+} from './month-summary'
+
+export {
   derivePlacement,
   PLACEMENT_ROWS_PER_CURRENCY,
   type BalancePlacement,
