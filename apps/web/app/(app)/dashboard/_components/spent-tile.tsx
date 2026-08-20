@@ -82,8 +82,8 @@ const Face = ({
 /**
  * One tile of "Cuánto gastaste".
  *
- * Two variants share the same box and the same height, and only the bottom slot
- * differs: a **caption** when the amount needs no opening, or a **flip** to a
+ * The two variants share the same box and the same height as each other — the
+ * tile never resizes when it turns — and only the bottom slot differs: a **caption** when the amount needs no opening, or a **flip** to a
  * back face when it does. That slot is the same one in both, so the card keeps
  * its shape whether or not the user has Compartido.
  *
@@ -114,7 +114,7 @@ export const SpentTile = ({
 
   const front = (
     <>
-      <div className="flex flex-col items-center px-3 pt-3.5 text-center">
+      <div className="flex flex-1 flex-col items-center justify-center px-3 py-3.5 text-center">
         <span
           aria-hidden
           className={cn('flex size-9 items-center justify-center rounded-xl', TILE_TONE[tone].icon)}
@@ -154,12 +154,18 @@ export const SpentTile = ({
           )
         )}
       </div>
-      <span aria-hidden className={cn('mt-auto h-1 w-full', TILE_TONE[tone].rule)} />
+      <span aria-hidden className={cn('h-1 w-full', TILE_TONE[tone].rule)} />
     </>
   )
 
   return (
-    <div className="relative h-[172px] [perspective:1000px]">
+    // `h-full` + `min-h`, not a fixed height: the tiles are what absorbs the
+    // card's leftover height. Row 2's two cards share a height, and this card
+    // used to be rigid (fixed tiles + a pace strip pinned with `mt-auto`), so any
+    // height the row gave it beyond its content pooled into a hole in the middle.
+    // Elastic tiles turn that leftover into breathing room inside the tile. The
+    // growth is bounded because the neighbouring card no longer changes size.
+    <div className="relative h-full min-h-[184px] [perspective:1000px]">
       <div
         role={flippable ? 'button' : undefined}
         tabIndex={flippable ? 0 : undefined}
@@ -187,22 +193,26 @@ export const SpentTile = ({
 
         {flippable && (
           <Face back hidden={!flipped} className="items-stretch text-left">
-            <div id={panelId} className="flex flex-1 flex-col px-3.5 pt-3">
-              <span className="flex items-center gap-[7px] text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-text-soft">
-                <span aria-hidden className={cn('size-2 rounded-[2px]', TILE_TONE[tone].rule)} />
-                {breakdown.title}
-              </span>
-              <span className="mt-2.5 flex flex-col gap-2.5">
-                {breakdown.rows.map((row) => (
-                  <span key={row.label} className="block text-[10.5px] font-bold leading-snug text-text-soft">
-                    {row.label}
-                    <span className="mt-[3px] block text-[13px] font-extrabold tracking-[-0.02em] text-text">
-                      <MaskedAmount amount={row.amount} currency="ARS" />
+            <div id={panelId} className="flex flex-1 flex-col px-3.5 py-3">
+              {/* Centered like the front face, so a taller tile grows evenly on
+                  both faces instead of pooling above the back link. */}
+              <span className="flex flex-1 flex-col justify-center">
+                <span className="flex items-center gap-[7px] text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-text-soft">
+                  <span aria-hidden className={cn('size-2 rounded-[2px]', TILE_TONE[tone].rule)} />
+                  {breakdown.title}
+                </span>
+                <span className="mt-2.5 flex flex-col gap-2.5">
+                  {breakdown.rows.map((row) => (
+                    <span key={row.label} className="block text-[10.5px] font-bold leading-snug text-text-soft">
+                      {row.label}
+                      <span className="mt-[3px] block text-[13px] font-extrabold tracking-[-0.02em] text-text">
+                        <MaskedAmount amount={row.amount} currency="ARS" />
+                      </span>
                     </span>
-                  </span>
-                ))}
+                  ))}
+                </span>
               </span>
-              <span className="mb-2.5 mt-auto inline-flex items-center gap-1 text-[10.5px] font-extrabold text-text-soft">
+              <span className="mt-2.5 inline-flex items-center gap-1 text-[10.5px] font-extrabold text-text-soft">
                 <ChevronLeft size={11} strokeWidth={2.6} aria-hidden />
                 {breakdown.backLabel}
               </span>

@@ -129,7 +129,11 @@ La card SHALL renderizarse siempre que haya gasto en el mes, **incluso cuando "P
 
 En desktop, de las dos cards de la fila 2 la de "Cuánto gastaste" SHALL ser la más ancha: sus tres tiles se reparten el ancho en tercios, mientras que "Compromisos" apila filas de ancho completo y tolera mejor un ancho menor.
 
-**Los tiles tienen dos variantes**, con la misma caja y la misma altura fija, y solo cambia su franja inferior:
+Los tres tiles SHALL **absorber el alto sobrante de la card**: crecen para llenarlo, con un alto mínimo propio y el contenido centrado. La card comparte fila con "Compromisos" y esa fila mide lo que mide la card más alta, así que esta card recibe alto que su contenido no pide. Con los tiles rígidos y la tira de ritmo clavada al pie, ese sobrante se acumulaba **entre los tiles y la tira**, que es el peor lugar posible: un agujero en el medio de la card. Elásticos, el sobrante se convierte en aire adentro del tile. La tira de ritmo NO SHALL anclarse al pie: con los tiles absorbiendo, anclarla vuelve a abrir el hueco que se acaba de cerrar.
+
+Los tres SHALL crecer **por igual** —son una comparación de tres montos y un tile más alto que sus vecinos la rompe— y las dos caras de un tile SHALL crecer igual entre sí.
+
+**Los tiles tienen dos variantes**, con la misma caja y el mismo alto **entre sí** —dar vuelta un tile nunca lo cambia de tamaño—, y solo cambia su franja inferior:
 
 - **Sin actividad compartida** — el tile NO se abre y muestra una **leyenda de contexto** de dos líneas.
 - **Con actividad compartida** — "Ya se pagó" y "Por pagar" pasan a **abrirse**, y la apertura reemplaza a la leyenda en esa misma franja.

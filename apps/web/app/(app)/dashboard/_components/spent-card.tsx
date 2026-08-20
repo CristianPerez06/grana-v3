@@ -42,7 +42,7 @@ const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
   // "you spent nothing", so the strip explains itself instead of drawing a ring.
   if (pace.status === 'indeterminate') {
     return (
-      <div className="mt-auto rounded-2xl border border-border bg-surface-sunken p-4">
+      <div className="rounded-2xl border border-border bg-surface-sunken p-4">
         <p className="text-[13.5px] font-bold text-text-muted">{t('pace_unknown')}</p>
         <p className="mt-1 text-[11.5px] font-semibold text-text-soft">{t('pace_unknown_note')}</p>
       </div>
@@ -54,7 +54,7 @@ const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
   // a capped one tells the user anything. Drop the ring and say it plainly.
   if (pace.status === 'overflow') {
     return (
-      <div className="mt-auto rounded-2xl border border-terracotta/30 bg-terracotta-soft p-4">
+      <div className="rounded-2xl border border-terracotta/30 bg-terracotta-soft p-4">
         <p className="text-[13.5px] font-bold text-expense">{t('pace_overflow')}</p>
         <p className="mt-1 text-[11.5px] font-semibold text-text-muted">
           {t('pace_overflow_note', { spent: fmt(pace.spent), income: fmt(pace.income) })}
@@ -67,7 +67,7 @@ const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
   const ringColor = over ? 'var(--terracotta)' : 'var(--emerald)'
 
   return (
-    <div className="mt-auto flex items-center gap-4 rounded-2xl border border-border bg-surface-sunken p-4">
+    <div className="flex items-center gap-4 rounded-2xl border border-border bg-surface-sunken p-4">
       <div
         aria-hidden
         className="relative size-[54px] shrink-0 rounded-full"
@@ -171,7 +171,7 @@ export const SpentCard = ({ otherName }: Props) => {
           </p>
         ) : (
           <>
-            <div className="grid grid-cols-3 gap-[11px]">
+            <div className="grid flex-1 grid-cols-3 gap-[11px]">
               <SpentTile
                 tone="spent"
                 icon={<ShoppingBag size={18} strokeWidth={2} aria-hidden />}

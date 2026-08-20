@@ -44,7 +44,8 @@
 - [x] 4.5 Estado **ritmo indeterminado**: mensaje explicativo en lugar del anillo. Proponer el copy exacto para revisión del usuario
 - [x] 4.6 Estado **ritmo > 100%**: anillo y barra en terracota y copy ajustado. Proponer el copy exacto para revisión del usuario
 - [x] 4.7 Estado **sin gasto en el mes**: estado vacío de la card, sin desmontarla
-- [x] 4.8 Anclar la tira de ritmo al pie con `margin-top: auto` para que la card alinee su altura con la de Compromisos
+- [x] ~~4.8 Anclar la tira de ritmo al pie con `margin-top: auto`~~ — **revertido en 4.9.** Anclarla es lo que convertía el alto sobrante en un agujero en el medio de la card
+- [x] 4.9 Hacer que los **tiles absorban el alto sobrante** (`flex-1` en la grilla, `h-full` + `min-h` en el tile, contenido centrado en las dos caras) y desanclar la tira de ritmo. La card deja de tener hueco pase lo que pase del otro lado de la fila
 
 ## 5. Web — Card 3 "Compromisos del próximo mes" (D5, D6)
 
