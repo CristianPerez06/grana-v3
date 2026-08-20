@@ -319,7 +319,7 @@ export function CategorySpendingOverviewContainer() {
         overviewMode === 'ingresos'
           ? t('spending.income_subtitle')
           : t('spending.subtitle_egresos'),
-      creditsLabel: tRoot('dashboard.spending.credits_label'),
+      creditsLabel: t('spending.credits_label'),
     }),
     [overviewMode, activeCategory, t, tRoot],
   )
