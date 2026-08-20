@@ -3,9 +3,9 @@ import { getCommittedOutlook, type CommittedOutlook } from '@grana/dashboard'
 import { createClient } from '@/lib/supabase/server'
 import { CommittedSection } from './committed-section'
 
-// "Compromisos del próximo mes" — static (from today), so it is fully
-// server-rendered once and does NOT follow the month navigator. Sits next to
-// "Cuánto gastaste".
+// "Compromisos del próximo mes" — the window is the NEXT CALENDAR MONTH, fixed
+// relative to today, so it is fully server-rendered once and does NOT follow the
+// month navigator. Sits next to "Cuánto gastaste".
 export const CommittedSectionContainer = async () => {
   const supabase = await createClient()
   let data: CommittedOutlook

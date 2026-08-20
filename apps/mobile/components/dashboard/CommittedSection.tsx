@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import { CreditCard, Receipt } from 'lucide-react-native'
+import { AlertTriangle, CreditCard, Receipt } from 'lucide-react-native'
 import { deriveCommittedSplit } from '@grana/dashboard'
 import { useT } from '../../lib/locale-context'
 import { colors } from '../../lib/colors'
@@ -13,6 +13,9 @@ import { MaskedAmount } from './MaskedAmount'
 // Native mirror of the web `committed-section.tsx`: the committed total with its
 // Tarjetas / Gastos fijos split and the two details as collapsible groups.
 // Cards are grouped BY CARD, not by consumo.
+//
+// Overdue statements get their OWN line and stay out of the total: what is late
+// and what is merely coming are two different facts.
 
 /** Max height of the fixed-expenses list before it scrolls inside its panel. */
 const RECURRING_MAX_HEIGHT = 160
@@ -46,7 +49,10 @@ export const CommittedSection = () => {
   const usdSplit = deriveCommittedSplit(data.USD.debt, data.USD.recurringExpense)
   const cards = data.ARS.cards
   const recurring = data.ARS.topRecurring
-  const isEmpty = !split.hasBar && !usdSplit.hasBar
+  const hasOverdue = data.ARS.overdue !== 0 || data.USD.overdue !== 0
+  // Overdue money alone is enough to have something to say: the empty state
+  // means "nothing to pay", and a late statement is very much something to pay.
+  const isEmpty = !split.hasBar && !usdSplit.hasBar && !hasOverdue
 
   const nextClose = cards.find((card) => card.nextClose != null)?.nextClose ?? null
   const cardsSub =
@@ -133,6 +139,47 @@ export const CommittedSection = () => {
               </>
             )}
           </View>
+
+          {/* Vencido — apart from the total, never inside it */}
+          {hasOverdue && (
+            <View
+              className="mt-2.5 flex-row items-start gap-2.5 rounded-2xl px-3.5 py-3"
+              style={{ backgroundColor: 'rgba(181,106,90,0.14)' }}
+            >
+              <AlertTriangle size={16} color={colors.terracotta} style={{ marginTop: 1 }} />
+              <View className="min-w-0 flex-1">
+                <View className="flex-row items-baseline justify-between gap-3">
+                  <Text
+                    className="text-[12.5px] font-extrabold"
+                    style={{ color: colors.terracotta }}
+                  >
+                    {t('dashboard.committed.overdue')}
+                  </Text>
+                  <MaskedAmount
+                    amount={data.ARS.overdue}
+                    currency="ARS"
+                    className="text-[13.5px] font-extrabold"
+                    style={{ color: colors.terracotta }}
+                  />
+                </View>
+                {data.USD.overdue !== 0 && (
+                  <MaskedAmount
+                    amount={data.USD.overdue}
+                    currency="USD"
+                    showCentsOverride
+                    className="mt-0.5 text-right text-[11.5px] font-bold"
+                    style={{ color: colors.terracotta }}
+                  />
+                )}
+                <Text
+                  className="mt-0.5 text-[11px] font-semibold"
+                  style={{ color: colors.terracotta, opacity: 0.85 }}
+                >
+                  {t('dashboard.committed.overdue_sub')}
+                </Text>
+              </View>
+            </View>
+          )}
 
           <View className="mt-3 gap-2.5">
             <CommittedGroup

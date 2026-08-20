@@ -95,40 +95,49 @@ export type CommittedItem = {
 }
 
 /**
- * COMPROMISO lens ("obligaciones pendientes": ¿qué tengo que pagar y no pagué?),
- * per currency. `debt` is the card "A pagar" (same definition as the Tarjetas
- * module header); `recurringExpense` is recurrences pending confirmation. The
- * committed total = debt + recurringExpense; recurringIncome is context for the
- * "Ya entra" band, never summed. ARS and USD are never combined.
+ * COMPROMISO lens ("¿cuánta plata ya se sabe que hay que pagar el mes que
+ * viene?"), per currency. The window is the NEXT CALENDAR MONTH, day 1 to last
+ * day — the card is titled by that month and the numbers are that month's.
  *
- * NOTE: field names `debt`/`recurringExpense` are kept for back-compat with the
- * current card UI, but their MEANING changed with the redesign (see below). The
- * UI redesign relabels them to "Tarjeta · a pagar" / "Recurrencias · pendientes".
+ * The committed total = `debt + recurringExpense` within a currency.
+ * `recurringIncome` is context for the "Ya entra" band, never summed, and
+ * `overdue` is money already late — carried apart, never inside the total.
+ * ARS and USD are never combined.
  */
 export type CommittedCurrency = {
   /**
-   * Card debt: pending consumos − received reimbursements across unpaid statements
-   * already STARTED (start_date <= today) = "A pagar" (closed/overdue) + "En curso"
-   * (open statement) from the Tarjetas module. Excludes FUTURE statements
-   * (installments 2..N, projected periods) — that was the inflation bug.
+   * Cards: pending consumos − received reimbursements across the unpaid
+   * statements whose DUE DATE falls inside the window. The criterion is the due
+   * date, not the close date — a statement closing 28/09 but due 10/10 is paid
+   * in October. A statement that has not closed yet contributes what it has
+   * accrued so far and can still grow before it closes.
    */
   debt: number
   /**
-   * Of `debt`, the portion that comes from OVERDUE statements (due_date < today).
-   * Drives the "incluye $X vencido" flag. 0 when nothing is overdue.
+   * Unpaid statements whose due date ALREADY PASSED (`due_date < today`).
+   * DISJOINT from `debt`: what is late and what is merely coming are two
+   * different facts, and the UI labels this one as overdue instead of blurring
+   * it into the next month's amount. 0 when nothing is overdue.
    */
   overdue: number
-  /** Recurrences pending confirmation: sum of pending `expense` recurrence instances. */
+  /**
+   * Gastos fijos: recurrence occurrences falling inside the window that are NOT
+   * paid by a credit card — those land in that card's statement and are paid
+   * when it comes due, so counting them here too would count them twice. Both
+   * sources feed it: instances the generator already created for the window and
+   * still unresolved, plus the projected occurrences of the active rules (the
+   * projection advances from `last_generated_date`, so the two never overlap).
+   */
   recurringExpense: number
-  /** Active `income` recurrences projected into the next calendar month (context for "Ya entra", never summed). */
+  /** Active `income` recurrences projected into the window (context for "Ya entra", never summed). */
   recurringIncome: number
   /**
-   * The debt grouped BY CARD, by amount desc — one row per card, which is the
-   * question the user asks ("cuánto me viene de Visa"). Replaced the per-consumo
-   * list the pre-redesign card showed.
+   * `debt` grouped BY CARD, by amount desc — one row per card, which is the
+   * question the user asks ("cuánto me viene de Visa"). The rows add up to
+   * `debt`: overdue money is NOT in here, it has its own line.
    */
   cards: CommittedCardRow[]
-  /** Top pending recurrences, by amount desc (section detail). */
+  /** The window's fixed expenses, by amount desc (section detail). */
   topRecurring: CommittedItem[]
 }
 

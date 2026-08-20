@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { CreditCard, Receipt } from 'lucide-react'
+import { AlertTriangle, CreditCard, Receipt } from 'lucide-react'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import { deriveCommittedSplit, type CommittedOutlook } from '@grana/dashboard'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -26,6 +26,11 @@ type Props = {
  * Both groups collapse fully: with the group closed the header still carries the
  * total and how many items make it up, so the closed state answers the question
  * on its own and opening is for the breakdown.
+ *
+ * Overdue statements get their OWN line and stay out of the total: what is late
+ * and what is merely coming are two different facts, and folding them together
+ * would make the month's number unreadable. Hiding the late money instead was
+ * not an option either — it is the most urgent thing on the card.
  */
 export const CommittedSection = async ({ data, monthLabel }: Props) => {
   const t = await getTranslations('dashboard.committed')
@@ -36,7 +41,10 @@ export const CommittedSection = async ({ data, monthLabel }: Props) => {
 
   const cards = data.ARS.cards
   const recurring = data.ARS.topRecurring
-  const isEmpty = !split.hasBar && !usdSplit.hasBar
+  const hasOverdue = data.ARS.overdue !== 0 || data.USD.overdue !== 0
+  // Overdue money alone is enough to have something to say: the empty state
+  // means "nothing to pay", and a late statement is very much something to pay.
+  const isEmpty = !split.hasBar && !usdSplit.hasBar && !hasOverdue
 
   const nextClose = cards.find((card) => card.nextClose != null)?.nextClose ?? null
   const cardsSub =
@@ -107,6 +115,29 @@ export const CommittedSection = async ({ data, monthLabel }: Props) => {
                 </>
               )}
             </div>
+
+            {/* Vencido — apart from the total, never inside it */}
+            {hasOverdue && (
+              <div className="flex items-start gap-2.5 rounded-2xl bg-terracotta-soft px-3.5 py-3 text-terracotta">
+                <AlertTriangle size={16} strokeWidth={2.5} aria-hidden className="mt-px shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="text-[13px] font-extrabold">{t('overdue')}</p>
+                    <p className="shrink-0 text-[14px] font-extrabold tabular-nums">
+                      <MaskedAmountDisplay amount={data.ARS.overdue} currency="ARS" dimSymbol />
+                    </p>
+                  </div>
+                  {data.USD.overdue !== 0 && (
+                    <p className="mt-0.5 text-right text-[12px] font-bold">
+                      <MaskedAmount amount={data.USD.overdue} currency="USD" showCentsOverride />
+                    </p>
+                  )}
+                  <p className="mt-0.5 text-[11.5px] font-semibold opacity-80">
+                    {t('overdue_sub')}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Tarjetas — up to CARDS_COLLAPSED visible, the rest behind the toggle */}
             <CommittedGroup

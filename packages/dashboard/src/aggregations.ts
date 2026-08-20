@@ -551,6 +551,60 @@ export type CommittedRecurrenceRule = RuleForProjection & {
   amount: number | string
   currency_code: string
   movement_type: 'income' | 'expense' | 'transfer'
+  /** Row label for the listed occurrences; falls back to '' when absent. */
+  description?: string | null
+}
+
+/** A projected occurrence, already shaped as a listable committed item. */
+export type ProjectedRecurrenceItem = CommittedItemRow & {
+  movement_type: 'income' | 'expense' | 'transfer'
+}
+
+/**
+ * Project active recurrence rules into [windowStart, windowEnd] and return ONE
+ * ROW PER OCCURRENCE, not a total.
+ *
+ * The committed card needs both the subtotal and the list of what makes it up,
+ * and those two must not be derived from different sets — that is exactly how a
+ * header and its own detail drift apart. So the projection produces rows, and
+ * the caller sums them (`sumByCurrency`) and lists them (`topCommittedItems`)
+ * from the same array.
+ *
+ * A rule that fires twice in the window yields two rows: they are two payments.
+ */
+export function projectRecurrenceItems(
+  rules: CommittedRecurrenceRule[],
+  windowStart: string,
+  windowEnd: string,
+): ProjectedRecurrenceItem[] {
+  const ruleById = new Map(rules.map((r) => [r.id, r]))
+  const occurrences = projectUpcomingOccurrences(
+    rules.map((r) => ({
+      id: r.id,
+      start_date: r.start_date,
+      end_date: r.end_date,
+      interval_count: r.interval_count,
+      interval_unit: r.interval_unit,
+      max_occurrences: r.max_occurrences,
+      last_generated_date: r.last_generated_date,
+    })),
+    windowStart,
+    windowEnd,
+  )
+
+  const items: ProjectedRecurrenceItem[] = []
+  for (const occ of occurrences) {
+    const rule = ruleById.get(occ.rule_id)
+    if (!rule) continue
+    items.push({
+      amount: rule.amount,
+      currency_code: rule.currency_code,
+      description: rule.description ?? '',
+      date: occ.scheduled_date,
+      movement_type: rule.movement_type,
+    })
+  }
+  return items
 }
 
 export type RecurrenceProjectionTotals = {
@@ -568,36 +622,10 @@ export function aggregateRecurrenceProjection(
   windowStart: string,
   windowEnd: string,
 ): RecurrenceProjectionTotals {
-  const ruleById = new Map(rules.map((r) => [r.id, r]))
-  const occurrences = projectUpcomingOccurrences(
-    rules.map((r) => ({
-      id: r.id,
-      start_date: r.start_date,
-      end_date: r.end_date,
-      interval_count: r.interval_count,
-      interval_unit: r.interval_unit,
-      max_occurrences: r.max_occurrences,
-      last_generated_date: r.last_generated_date,
-    })),
-    windowStart,
-    windowEnd,
-  )
-
-  const expense: Record<OutlookCurrency, MoneyType> = { ARS: Money.from(0), USD: Money.from(0) }
-  const income: Record<OutlookCurrency, MoneyType> = { ARS: Money.from(0), USD: Money.from(0) }
-  for (const occ of occurrences) {
-    const rule = ruleById.get(occ.rule_id)
-    if (!rule || !isOutlookCurrency(rule.currency_code)) continue
-    const cur = rule.currency_code
-    if (rule.movement_type === 'expense') {
-      expense[cur] = Money.add(expense[cur], Money.from(rule.amount))
-    } else if (rule.movement_type === 'income') {
-      income[cur] = Money.add(income[cur], Money.from(rule.amount))
-    }
-  }
+  const items = projectRecurrenceItems(rules, windowStart, windowEnd)
   return {
-    expense: { ARS: Money.toNumber(expense.ARS), USD: Money.toNumber(expense.USD) },
-    income: { ARS: Money.toNumber(income.ARS), USD: Money.toNumber(income.USD) },
+    expense: sumByCurrency(items.filter((i) => i.movement_type === 'expense')),
+    income: sumByCurrency(items.filter((i) => i.movement_type === 'income')),
   }
 }
 

@@ -16,8 +16,8 @@ import {
   aggregateCardDebt,
   aggregateCardDebtByCard,
   aggregateHero,
-  aggregateRecurrenceProjection,
   buildMonthBalanceSeries,
+  projectRecurrenceItems,
   sumByCurrency,
   topCommittedItems,
   type CardDebtRow,
@@ -485,16 +485,44 @@ export async function getMonthCategoryBreakdown(
 }
 
 // ── getCommittedOutlook (COMPROMISO lens) ──────────────────────────────────────
-// Static "from today": card debt (a present stock) + next-calendar-month
-// recurrence projection. ARS and USD are never combined. The committed total
-// (computed by the UI) is debt + recurringExpense; recurringIncome is context.
+// "Cuánta plata ya se sabe que hay que pagar el mes que viene."
 //
-// KNOWN GAP: same as getMonthCategoryBreakdown — the reads below (card_periods,
-// period_payments, the consumos of unpaid statements, recurrence_instances) have
-// no `.range()`. They are bounded by "statements already started and unpaid",
-// which is an observation about the data, not a property of the code, and their
-// product is a money number. Out of scope of `fix-balance-read-path-defects`
-// (2026-07-30); same fix applies.
+// The window is the NEXT CALENDAR MONTH, day 1 to last day — not "from today",
+// not "the next 30 days". The card is titled by that month, so the number has to
+// be that month's. It used to read "from today" (statements already STARTED,
+// recurrence instances already PENDING, i.e. ones whose date had already passed)
+// while the title promised the next month: the title said one thing and the
+// amount showed another.
+//
+// Two sources, per currency, never combined across currencies:
+//
+//  · Tarjetas — statements whose DUE DATE falls in the window and are unpaid.
+//    The criterion is the due date, not the close date: a statement that closes
+//    28/09 but is due 10/10 is paid in October and is not a September
+//    commitment. A statement that has not closed yet contributes what it has
+//    accrued so far and can still grow — the UI must not sell it as final.
+//
+//  · Gastos fijos — recurrences falling in the window that are NOT paid by a
+//    credit card. One debited from a card does not take money out of the
+//    account that month: it lands in that card's statement and is paid when the
+//    statement comes due, which is another window. Counting it here AND inside
+//    its statement would count it twice.
+//
+// Overdue statements (due date already past, still unpaid) are money that is
+// owed and would fall off the screen if the card only ever showed its window,
+// so they are carried with their OWN label. `overdue` is DISJOINT from `debt`:
+// what is late and what is merely coming are two different facts and the
+// headline total must not blur them.
+//
+// KNOWN GAP (accepted, follows from the window): a statement due LATER THIS
+// MONTH — after today, before the window opens — is in neither set. It is a
+// commitment the card does not name. The window is the next calendar month by
+// decision; a "this month, still ahead" band is a separate change.
+//
+// KNOWN GAP: same as getMonthCategoryBreakdown — the reads below have no
+// `.range()`. They are bounded by the window, which is an observation about the
+// data, not a property of the code, and their product is a money number. Out of
+// scope of `fix-balance-read-path-defects` (2026-07-30); same fix applies.
 
 /** Rows the "Gastos fijos" group lists; the panel scrolls internally past that. */
 const COMMITTED_RECURRING_ROWS = 10
@@ -510,71 +538,88 @@ function emptyCommittedCurrency(): CommittedCurrency {
   }
 }
 
+/** Next calendar month as [first day, last day], ISO, derived from a date string. */
+function nextMonthWindow(todayISO: string): { start: string; end: string } {
+  const [year, month] = todayISO.split('-').map(Number)
+  // `month` is 1-based, so `month` as a 0-based index is already the NEXT month.
+  return {
+    start: formatDateISO(new Date(year, month, 1)),
+    end: formatDateISO(new Date(year, month + 1, 0)),
+  }
+}
+
 export async function getCommittedOutlook(
   supabase: SupabaseClient,
+  todayISO: string = formatDateISO(getTodayAR()),
 ): Promise<CommittedOutlook> {
   const result: CommittedOutlook = {
     ARS: emptyCommittedCurrency(),
     USD: emptyCommittedCurrency(),
   }
 
-  const today = getTodayAR()
-  const y = today.getFullYear()
-  const m = today.getMonth() // 0-indexed
-  const todayISO = formatDateISO(today)
-  // Next calendar month window [first day, last day] — only the recurring INCOME
-  // projection (the "Ya entra" context band) uses it now.
-  const windowStart = formatDateISO(new Date(y, m + 1, 1))
-  const windowEnd = formatDateISO(new Date(y, m + 2, 0))
+  const { start: windowStart, end: windowEnd } = nextMonthWindow(todayISO)
 
-  // ── Card debt: pending consumos − received reimbursements across the unpaid
-  //    statements that have ALREADY STARTED (start_date <= today) of active credit
-  //    cards. That is "A pagar" (closed/overdue) + "En curso" (the open statement
-  //    still accruing) from the Tarjetas module — everything you actually owe on
-  //    the card. FUTURE statements (start_date > today: installments 2..N,
-  //    projected periods) are excluded — that was the inflation bug. `overdue` is
-  //    the subset whose due_date already passed (drives the "incluye $X vencido" flag).
-  const { data: cards, error: cardsErr } = await supabase
+  // Every credit account, archived ones included. The ACTIVE ones are the cards
+  // the outlook lists; the full set is what the "paid by card" exclusion below
+  // tests against — a recurrence pointing at a card that was archived is still
+  // not money leaving an account this month.
+  const { data: creditAccounts, error: cardsErr } = await supabase
     .from('accounts')
-    .select('id, name, institution:institutions(name)')
+    .select('id, name, is_active, institution:institutions(name)')
     .eq('type', 'credit')
-    .eq('is_active', true)
   if (cardsErr) throw cardsErr
-  type CardAccountRow = { id: string; name: string; institution: NameEmbed }
-  const cardRows = (cards ?? []) as unknown as CardAccountRow[]
+  type CardAccountRow = {
+    id: string
+    name: string
+    is_active: boolean
+    institution: NameEmbed
+  }
+  const creditRows = (creditAccounts ?? []) as unknown as CardAccountRow[]
+  const creditAccountIds = new Set(creditRows.map((c) => c.id))
+  const cardRows = creditRows.filter((c) => c.is_active)
   const cardIds = cardRows.map((c) => c.id)
 
   if (cardIds.length > 0) {
+    // Everything due on or before the window's end: that is the window's own
+    // statements plus anything already overdue. Statements due after the window
+    // are somebody else's month.
     const { data: periods, error: periodsErr } = await supabase
       .from('card_periods')
       .select('id, due_date, end_date, account_id')
       .in('account_id', cardIds)
-      .lte('start_date', todayISO)
+      .lte('due_date', windowEnd)
     if (periodsErr) throw periodsErr
-    const startedPeriods = periods ?? []
-    const periodIds = startedPeriods.map((p) => p.id)
+    const candidates = periods ?? []
+    const candidateIds = candidates.map((p) => p.id)
 
-    if (periodIds.length > 0) {
+    if (candidateIds.length > 0) {
       const { data: payments, error: payErr } = await supabase
         .from('period_payments')
         .select('period_id')
-        .in('period_id', periodIds)
+        .in('period_id', candidateIds)
       if (payErr) throw payErr
       const paidPeriodIds = new Set((payments ?? []).map((p) => p.period_id))
-      const unpaidIds = startedPeriods.filter((p) => !paidPeriodIds.has(p.id)).map((p) => p.id)
-      const overdueIds = new Set(
-        startedPeriods
-          .filter((p) => !paidPeriodIds.has(p.id) && p.due_date < todayISO)
-          .map((p) => p.id),
-      )
+      const unpaid = candidates.filter((p) => !paidPeriodIds.has(p.id))
 
-      if (unpaidIds.length > 0) {
+      // Disjoint by construction: the window opens on the 1st of NEXT month, so
+      // nothing due before today can also be due inside it. A statement due
+      // between today and the window is in neither (see KNOWN GAP above).
+      const windowPeriods = unpaid.filter(
+        (p) => p.due_date >= windowStart && p.due_date <= windowEnd,
+      )
+      const overduePeriodIds = new Set(
+        unpaid.filter((p) => p.due_date < todayISO).map((p) => p.id),
+      )
+      const windowPeriodIds = new Set(windowPeriods.map((p) => p.id))
+      const readIds = [...windowPeriodIds, ...overduePeriodIds]
+
+      if (readIds.length > 0) {
         const { data: txData, error: txErr } = await supabase
           .from('transactions')
           .select(
             'type, amount, currency_code, status, received_at, cancelled_at, card_period_id, description, date, category:categories(name), subcategory:subcategories(name)',
           )
-          .in('card_period_id', unpaidIds)
+          .in('card_period_id', readIds)
           .eq('is_parent', false)
         if (txErr) throw txErr
         type CardTxRow = CardDebtRow & {
@@ -583,21 +628,25 @@ export async function getCommittedOutlook(
           subcategory: NameEmbed
         }
         const txs = (txData ?? []) as unknown as CardTxRow[]
+        const inSet = (set: Set<string>) => (t: CardTxRow) =>
+          t.card_period_id != null && set.has(t.card_period_id)
 
-        const toPay = aggregateCardDebt(txs)
-        const overdue = aggregateCardDebt(
-          txs.filter((t) => t.card_period_id != null && overdueIds.has(t.card_period_id)),
-        )
+        const toPay = aggregateCardDebt(txs.filter(inSet(windowPeriodIds)))
+        const overdue = aggregateCardDebt(txs.filter(inSet(overduePeriodIds)))
         result.ARS.debt = toPay.ARS
         result.USD.debt = toPay.USD
         result.ARS.overdue = overdue.ARS
         result.USD.overdue = overdue.USD
-        // Debt grouped BY CARD for the redesigned "Compromisos" list.
-        // The next close is the earliest statement end still ahead of today —
-        // the open statement's; null once every started statement has closed.
-        const periodToCard = new Map(startedPeriods.map((p) => [p.id, p.account_id]))
+
+        // Debt grouped BY CARD for the "Compromisos" list — the window's
+        // statements only, so the rows add up to the headline. Overdue money
+        // has its own line and does not hide inside a card's row.
+        //
+        // The next close is the earliest end_date still ahead of today among the
+        // statements we read; null once every one of them has closed.
+        const periodToCard = new Map(windowPeriods.map((p) => [p.id, p.account_id]))
         const nextCloseByCard = new Map<string, string>()
-        for (const period of startedPeriods) {
+        for (const period of unpaid) {
           if (period.end_date < todayISO) continue
           const current = nextCloseByCard.get(period.account_id)
           if (current === undefined || period.end_date < current) {
@@ -619,24 +668,43 @@ export async function getCommittedOutlook(
     }
   }
 
-  // ── Recurrences pending confirmation: generated `expense` instances awaiting
-  //    the user's OK (recurrence_instances.status='pending'). We do NOT project
-  //    next-month fixed expenses: an occurrence becomes "pending to confirm" when
-  //    its time comes (and if paid by card, its debt is already in the card
-  //    section), so a future projection is not a present obligation.
-  const { data: instData, error: instErr } = await supabase
-    .from('recurrence_instances')
-    .select(
-      'amount, currency_code, description, scheduled_date, recurrence:recurrences(movement_type), category:categories(name), subcategory:subcategories(name)',
-    )
-    .eq('status', 'pending')
-  if (instErr) throw instErr
+  // ── Gastos fijos: the window's recurrence occurrences, from BOTH sources.
+  //
+  //  · Instances the generator has ALREADY created for the window and nobody
+  //    has resolved yet (`status = 'pending'`).
+  //  · Occurrences of the active rules PROJECTED over the window.
+  //
+  // They cannot overlap: the projection advances from `last_generated_date`, so
+  // it never returns an occurrence that has already been generated. Without both
+  // the card would be wrong in opposite directions — projection alone would
+  // double-count what exists, instances alone would miss everything the
+  // generator has not reached yet, which for a next-month window is most of it.
+  const [instancesResult, rulesResult] = await Promise.all([
+    supabase
+      .from('recurrence_instances')
+      .select(
+        'amount, currency_code, description, scheduled_date, account_id, recurrence:recurrences(movement_type), category:categories(name), subcategory:subcategories(name)',
+      )
+      .eq('status', 'pending')
+      .gte('scheduled_date', windowStart)
+      .lte('scheduled_date', windowEnd),
+    supabase
+      .from('recurrences')
+      .select(
+        'id, start_date, end_date, interval_count, interval_unit, max_occurrences, last_generated_date, amount, currency_code, movement_type, description, account_id, category:categories(name), subcategory:subcategories(name)',
+      )
+      .eq('status', 'active'),
+  ])
+  if (instancesResult.error) throw instancesResult.error
+  if (rulesResult.error) throw rulesResult.error
+
   type MovementTypeEmbed = { movement_type: string }
   type PendingInstanceRow = {
     amount: number | string
     currency_code: string
     description: string | null
     scheduled_date: string | null
+    account_id: string | null
     // PostgREST returns the to-one embeds as objects, but the generated types
     // widen them to arrays — tolerate both.
     recurrence: MovementTypeEmbed | MovementTypeEmbed[] | null
@@ -646,8 +714,15 @@ export async function getCommittedOutlook(
   const movementTypeOf = (r: PendingInstanceRow['recurrence']): string | undefined =>
     Array.isArray(r) ? r[0]?.movement_type : (r?.movement_type ?? undefined)
 
-  const pendingExpenses: CommittedItemRow[] = ((instData ?? []) as unknown as PendingInstanceRow[])
-    .filter((i) => movementTypeOf(i.recurrence) === 'expense')
+  // Paid by credit card → excluded from "Gastos fijos": it is already inside
+  // that card's statement and will be paid when the statement comes due.
+  const paidByCard = (accountId: string | null): boolean =>
+    accountId != null && creditAccountIds.has(accountId)
+
+  const generatedExpenses: CommittedItemRow[] = (
+    (instancesResult.data ?? []) as unknown as PendingInstanceRow[]
+  )
+    .filter((i) => movementTypeOf(i.recurrence) === 'expense' && !paidByCard(i.account_id))
     .map((i) => ({
       amount: i.amount,
       currency_code: i.currency_code,
@@ -655,29 +730,45 @@ export async function getCommittedOutlook(
       date: i.scheduled_date,
     }))
 
-  const pending = sumByCurrency(pendingExpenses)
-  result.ARS.recurringExpense = pending.ARS
-  result.USD.recurringExpense = pending.USD
-  result.ARS.topRecurring = topCommittedItems(pendingExpenses, 'ARS', COMMITTED_RECURRING_ROWS)
-  result.USD.topRecurring = topCommittedItems(pendingExpenses, 'USD', COMMITTED_RECURRING_ROWS)
+  type RecurrenceRuleRow = CommittedRecurrenceRule & {
+    account_id: string | null
+    category: NameEmbed
+    subcategory: NameEmbed
+  }
+  const ruleRows = (rulesResult.data ?? []) as unknown as RecurrenceRuleRow[]
+  const labelled = (r: RecurrenceRuleRow): CommittedRecurrenceRule => ({
+    ...r,
+    description: r.description || embedName(r.subcategory) || embedName(r.category),
+  })
 
-  // ── Recurring INCOME projected into the next calendar month → "Ya entra"
-  //    context band. Income is never summed into the committed total.
-  const { data: rules, error: rulesErr } = await supabase
-    .from('recurrences')
-    .select(
-      'id, start_date, end_date, interval_count, interval_unit, max_occurrences, last_generated_date, amount, currency_code, movement_type',
-    )
-    .eq('status', 'active')
-  if (rulesErr) throw rulesErr
-
-  const projection = aggregateRecurrenceProjection(
-    (rules ?? []) as CommittedRecurrenceRule[],
+  const projectedExpenses = projectRecurrenceItems(
+    ruleRows
+      .filter((r) => r.movement_type === 'expense' && !paidByCard(r.account_id))
+      .map(labelled),
     windowStart,
     windowEnd,
   )
-  result.ARS.recurringIncome = projection.income.ARS
-  result.USD.recurringIncome = projection.income.USD
+
+  const fixedExpenses: CommittedItemRow[] = [...generatedExpenses, ...projectedExpenses]
+  const fixedTotals = sumByCurrency(fixedExpenses)
+  result.ARS.recurringExpense = fixedTotals.ARS
+  result.USD.recurringExpense = fixedTotals.USD
+  result.ARS.topRecurring = topCommittedItems(fixedExpenses, 'ARS', COMMITTED_RECURRING_ROWS)
+  result.USD.topRecurring = topCommittedItems(fixedExpenses, 'USD', COMMITTED_RECURRING_ROWS)
+
+  // ── Recurring INCOME projected into the same window → "Ya entra" context
+  //    band. Income is never summed into the committed total. Card-paid rules
+  //    are NOT excluded here: the exclusion is about double-counting an outflow,
+  //    and an income does not land in a statement.
+  const income = sumByCurrency(
+    projectRecurrenceItems(
+      ruleRows.filter((r) => r.movement_type === 'income').map(labelled),
+      windowStart,
+      windowEnd,
+    ),
+  )
+  result.ARS.recurringIncome = income.ARS
+  result.USD.recurringIncome = income.USD
 
   return result
 }

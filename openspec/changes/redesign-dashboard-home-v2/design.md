@@ -103,12 +103,30 @@ Hoy la sección desaparece si no hubo consumo de tarjeta. Pasa a renderizarse si
 
 Se retiran del dashboard los componentes de la dona y su leyenda en ambas plataformas, pero `getMonthCategoryBreakdown` **sigue consumiéndose** desde el dashboard: es la fuente del devengado que alimenta "Gastaste". La capability `spending-by-category` conserva su superficie en Movimientos, así que la baja es de una duplicación, no de una funcionalidad.
 
+### D10 — "Compromisos" se define sobre la ventana del próximo mes calendario
+
+La card se titula "Compromisos del próximo mes" pero la query era explícitamente **"desde hoy"**: Tarjetas eran los resúmenes ya **iniciados** e impagos (incluido el que está abierto ahora, que se paga este mes) y Gastos fijos eran las instancias con `status = 'pending'`, o sea las ocurrencias **que ya vencieron y esperan confirmación**. El título prometía el mes que viene y el número mostraba el presente.
+
+Queda definido sobre la **ventana del próximo mes calendario** —del día 1 al último día— con dos fuentes:
+
+- **Tarjetas** = resúmenes cuyo **vencimiento** cae en la ventana, impagos. El criterio es el vencimiento y no el cierre: un resumen que cierra el 28/09 y vence el 10/10 se paga en octubre. Un resumen que todavía no cerró aporta lo acumulado y **puede crecer**; la card no lo presenta como definitivo.
+- **Gastos fijos** = ocurrencias de recurrencias que caen en la ventana y **no se pagan con tarjeta de crédito**. Una recurrencia debitada de una tarjeta no saca plata de la cuenta ese mes: entra al resumen de esa tarjeta y se paga cuando ese resumen vence, que es **otra** ventana. Contarla acá y otra vez dentro de su resumen sería contarla dos veces.
+
+Las ocurrencias salen de **dos** fuentes que no se superponen: las instancias que el generador ya creó para la ventana y nadie resolvió, más la proyección de las reglas activas. La proyección avanza desde `last_generated_date`, así que nunca devuelve una ocurrencia ya generada. Hace falta juntar las dos: sola, la proyección duplicaría lo que ya existe; solas, las instancias perderían casi todo, porque para una ventana del mes que viene el generador todavía no llegó.
+
+**Lo vencido va aparte, no adentro.** Un resumen cuyo vencimiento ya pasó y sigue impago es plata que se debe, y desaparecería de la pantalla si la card se limitara a su ventana. Se muestra con **etiqueta propia**, y `overdue` es **disjunto** de `debt`: lo que está atrasado y lo que recién viene son dos hechos distintos, y sumarlos haría ilegible el número del mes.
+
+**Consecuencia aceptada:** un resumen que vence **más adelante este mismo mes** —después de hoy, antes de que abra la ventana— no está en ninguno de los dos conjuntos. Es un compromiso que la card no nombra. La ventana es el próximo mes calendario por decisión; una banda "este mes, todavía por venir" es un change aparte.
+
+Para que el subtotal del grupo y su lista no puedan divergir, la proyección devuelve **una fila por ocurrencia** (`projectRecurrenceItems`) y el caller suma y lista el mismo array; `aggregateRecurrenceProjection` queda construido encima.
+
 ## Risks / Trade-offs
 
 - **Superficie grande, semántica estable.** El change toca casi todos los componentes del dashboard en dos plataformas, pero no redefine ningún número: los tres montos de "Cuánto gastaste" ya se calculan así y ya reconcilian. El riesgo está en la maqueta y en la paridad web/mobile, no en la contabilidad.
 - **La agregación por tarjeta (D5) es el punto blando.** Es la única forma de dato nueva y depende de resolver el próximo cierre de cada tarjeta. Se mitiga con tests sobre la agregación antes de montar la UI.
 - **El ritmo va a incomodar al principio.** Con `entró` como denominador, un usuario que mira el dashboard el día 2 del mes ve "sin datos" y el día 5 ve 300%. Es fiel a la realidad y es la decisión tomada, pero conviene que el copy de ambos estados lo explique en vez de limitarse a pintar de rojo.
 - **Menos streaming granular en la card 1** (D7): si la lectura del mes se demora, el saldo —que ya está listo— espera. Se acepta a cambio de que la card no se arme a saltos.
+- **Compromisos no sigue al selector de mes.** Su ventana es el próximo mes calendario respecto de **hoy**, fija, mientras que el resto de la fila 2 se mueve con el navegador. Es deliberado —la pregunta "¿qué se viene?" no tiene sentido parada en un mes pasado— pero es una asimetría dentro de la misma pantalla. La vista histórica de compromisos (la "foto" de un mes ya cerrado) quedó como pregunta abierta.
 - **Cards de igual altura en la fila 2** con contenido de alto variable (la lista de gastos fijos tiene scroll interno, la de tarjetas no): se resuelve con el `margin-top:auto` de la tira de ritmo, como indica el handoff, pero es frágil ante cambios de contenido y necesita verificación en los anchos de corte.
 
 ## Migration Plan
@@ -127,4 +145,5 @@ No hay migración de datos ni de schema. La secuencia es incremental y cada paso
 - ~~**Próximo cierre por tarjeta**~~ — **resuelto sin lectura extra.** `card_periods` ya trae `end_date`; la query de compromisos solo suma esa columna (y `account_id`) al `select` que ya hacía. El próximo cierre es el `end_date` más chico que todavía no pasó, y es `null` cuando todos los resúmenes iniciados ya cerraron.
 - ~~**Conteo de compras pendientes**~~ — **descartado.** El monto de "Te queda por pagar" sale de `devengado − caja`, dos agregados; no existe un conjunto de filas del que contar "compras" que case con ese monto sin inventar un criterio (una compra en 6 cuotas, ¿cuenta como una compra o como la cuota del mes?). El sub-bloque dice "Se paga en los próximos resúmenes": exacto y sin número inventado. Reabrir si el conteo se considera necesario.
 - **Copy de los dos estados del ritmo** — implementado y **pendiente de revisión**: indeterminado dice "Todavía no entró plata este mes" + "Cuando entre, vas a ver tu ritmo de gasto acá."; por encima del 100% dice "Gastaste el {pct} de lo que entró este mes" en terracota.
+- **Compromisos de un mes pasado** — hoy la card ignora el selector de mes. Mostrar "la foto" de un mes ya cerrado exige decidir qué se muestra: lo que en ese momento estaba comprometido (una foto reconstruida) o si terminó pagándose (un "¿cumpliste?", que es otra pregunta y otra card). Queda para un change aparte.
 - **El anillo del ritmo en nativo es una barra + porcentaje**, no un arco: React Native no tiene `conic-gradient` y dibujarlo con SVG por una sola tira no se pagaba. El número es el que carga el significado. A revisar si la paridad visual del anillo se considera necesaria.

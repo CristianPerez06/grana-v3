@@ -9,13 +9,21 @@
 - [x] 1.7 Implementar la derivación de los porcentajes de la **barra apilada** de compromisos (Tarjetas / Gastos fijos sobre el total), con el caso total cero devolviendo ausencia de barra en vez de proporciones arbitrarias
 - [x] 1.8 Exportar las nuevas derivaciones y tipos desde `packages/dashboard/src/index.ts`
 
-## 2. Compromisos agregados por tarjeta (D5)
+## 2. Compromisos: ventana del próximo mes y agregación por tarjeta (D5)
 
 - [x] 2.1 Agregar a `packages/dashboard/src/types.ts` el tipo de fila por tarjeta (nombre, total comprometido, fecha de próximo cierre) con el comentario que explica en qué se diferencia de `CommittedItem`
 - [x] 2.2 Extender `getCommittedOutlook` para agrupar el conjunto "A pagar" **por tarjeta** y devolver las filas ordenadas por monto desc, junto al `topCard` actual (conviven; `topCard` se retira en 8.4 cuando ningún consumidor lo use)
 - [x] 2.3 Resolver el **próximo cierre** de cada tarjeta desde el módulo Tarjetas; si el dato exige una lectura extra costosa, dejar la bajada del grupo con el conteo de tarjetas y anotarlo en `design.md` como resuelto
 - [x] 2.4 Test de la agregación: varias tarjetas con varios consumos cada una, tarjeta sin consumos (no aparece), y verificación de que la suma por tarjeta iguala el `debt` total de la moneda
 - [ ] 2.5 ~~Conteo de compras pendientes~~ — **descartado en la implementación.** El monto sale de `devengado − caja` (dos lecturas agregadas); no hay un conjunto de filas del que contar "compras" que case con ese monto sin inventar un criterio (una compra en 6 cuotas: ¿es una compra o es la cuota del mes?). El sub-bloque dice "Se paga en los próximos resúmenes", que es exacto y no necesita el número. Reabrir si el conteo se considera necesario
+
+- [x] 2.6 Redefinir `getCommittedOutlook` sobre la **ventana del próximo mes calendario** (día 1 al último día), inyectable por parámetro para que los tests no dependan de la fecha real
+- [x] 2.7 Tarjetas: seleccionar los resúmenes por **`due_date` dentro de la ventana** e impagos, en vez de los `start_date <= hoy`. Los vencidos (`due_date < hoy`, impagos) quedan en `overdue`, **disjunto** de `debt`
+- [x] 2.8 Gastos fijos: instancias generadas con `scheduled_date` en la ventana y sin resolver **más** las ocurrencias proyectadas de las reglas activas, excluyendo las recurrencias cuya `account_id` es una tarjeta de crédito (ya viajan dentro del resumen de esa tarjeta)
+- [x] 2.9 Extraer `projectRecurrenceItems` en `aggregations.ts` — la proyección devuelve **una fila por ocurrencia**, para que el subtotal y la lista del grupo salgan del mismo array. `aggregateRecurrenceProjection` queda construido encima
+- [x] 2.10 Actualizar los comentarios de `CommittedCurrency` en `types.ts`: la semántica de `debt`, `overdue` y `recurringExpense` cambió y los comentarios viejos describían la anterior
+- [x] 2.11 Tests de la ventana: resumen que cierra dentro pero vence después (excluido), resumen vencido (en `overdue`, fuera de `debt`), recurrencia pagada con tarjeta (excluida), instancia generada + proyección contadas una sola vez, y ARS/USD separados
+- [x] 2.12 Renderizar el vencido con **etiqueta propia** en web y mobile, fuera del total, y que su sola presencia impida el estado vacío de la card
 
 ## 3. Web — Card 1 "Saldo disponible total" (D7)
 
@@ -76,9 +84,9 @@
 
 - [x] 9.1 Correr los tests de `@grana/dashboard` y los del resto de los packages tocados
 - [x] 9.2 Lint y typecheck del monorepo
-- [ ] 9.3 Recorrer a mano los estados: usuario nuevo sin datos, mes sin ingresos (ritmo indeterminado), ritmo > 100%, sin tarjetas, sin gastos fijos, sin actividad compartida, y usuario sin nada en USD
+- [ ] 9.3 Recorrer a mano los estados: usuario nuevo sin datos, mes sin ingresos (ritmo indeterminado), ritmo > 100%, sin tarjetas, sin gastos fijos, sin actividad compartida, usuario sin nada en USD, y compromisos con un resumen vencido
 - [ ] 9.4 Verificar el eye toggle sobre **todos** los montos nuevos, incluidos los de los grupos desplegables y el pie de la tira de ritmo
-- [ ] 9.5 Verificar que el selector de mes recalcula Resumen del mes, Cuánto gastaste y Compromisos, y que **no** toca el saldo disponible
+- [ ] 9.5 Verificar que el selector de mes recalcula Resumen del mes y Cuánto gastaste, que **sí** mueve el saldo disponible (corte mensual) y que **no** toca Compromisos: su ventana es el próximo mes calendario respecto de hoy, fija
 - [ ] 9.6 Revisión de accesibilidad: `aria-expanded`/`aria-controls` de los desplegables, contraste sobre la zona oscura y áreas táctiles en mobile
 
 ## 10. Archivo (pre-merge, obligatorio)
