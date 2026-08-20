@@ -30,11 +30,11 @@ export const BalanceCardSkeleton = async () => {
         <div className="mx-auto mt-3 grid max-w-[660px] grid-cols-2 gap-4">
           {[0, 1].map((column) => (
             <div key={column} className={column === 1 ? 'border-l border-white/10 pl-[15px]' : ''}>
-              <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                 {Array.from({ length: PLACEMENT_ROWS }).map((_, row) => (
                   <div key={row} className="flex items-center gap-2">
                     <span className="size-[10px] shrink-0 animate-pulse rounded-[2px] bg-white/15" />
-                    <span className="h-3.5 w-20 animate-pulse rounded bg-white/15" />
+                    <span className="h-3.5 w-14 animate-pulse rounded bg-white/15" />
                     <span className="ml-auto h-3.5 w-9 shrink-0 animate-pulse rounded bg-white/10" />
                   </div>
                 ))}

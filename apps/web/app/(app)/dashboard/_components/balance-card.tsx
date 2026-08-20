@@ -24,8 +24,20 @@ type Props = {
 const avatarColor = (avatar: ResolvedAccountAvatar): string =>
   avatar.colorKey ? `var(--account-${avatar.colorKey})` : (avatar.colorOverride ?? 'var(--account-slate)')
 
+/**
+ * The accounts of ONE currency, laid out in two implicit sub-columns.
+ *
+ * Stacked vertically, each row spanned the full ~320px of its currency column
+ * and `ml-auto` pushed the percentage to the far edge, leaving a wide gap
+ * between the name and its number. Side by side, each account gets ~155px and
+ * reads as a tight pair; with a single account it occupies the first cell, so
+ * the gap lands after the pair instead of inside it.
+ *
+ * Web only: at 390px a native column is ~170px, and halving that would leave no
+ * room for a name. The native card keeps them stacked.
+ */
 const PlacementColumn = ({ placement }: { placement: CurrencyPlacement }) => (
-  <div className="flex flex-col gap-2">
+  <div className="grid grid-cols-2 gap-x-3 gap-y-2">
     {placement.rows.map((row: PlacementRow) => (
       <div key={row.id} className="flex items-center gap-2 text-[13.5px] font-semibold text-white/65">
         <span
