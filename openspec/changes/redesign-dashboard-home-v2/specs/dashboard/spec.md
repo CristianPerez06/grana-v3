@@ -30,15 +30,33 @@ Los porcentajes derivados —el reparto de cuentas de "Dónde está", la barra a
 
 ### Requirement: La zona clara de la card de saldo muestra el "Resumen del mes" con Entró y Se fué
 
-La card de saldo SHALL cerrar con una zona clara titulada "Resumen del mes", separada de la zona oscura por un borde superior, con **dos bloques centrados en dos columnas iguales**: "Entró" (ingresos acreditados del mes) y "Se fué" (total que salió de las cuentas en el mes). Cada bloque SHALL mostrar un punto de color, su monto ARS y —según la regla bimoneda— su monto USD debajo.
+La card de saldo SHALL cerrar con una zona clara titulada "Resumen del mes", separada de la zona oscura por un borde superior, con **dos bloques centrados en dos columnas iguales**: "Entró" y "Se fué". Cada bloque SHALL mostrar un punto de color, su monto ARS y —según la regla bimoneda— su monto USD debajo.
+
+La zona SHALL leerse como **liquidez**: cómo se movió el dinero dentro y fuera de las cuentas en el mes. Por lo tanto, **todo movimiento que haya tocado el saldo de una cuenta SHALL caer de exactamente uno de los dos lados**, según su signo: "Entró" suma los ingresos, los reintegros recibidos y el lado positivo de los buckets con signo (liquidaciones a favor, la pata de destino de un cambio de moneda, un ajuste positivo); "Se fué" suma los gastos pagados desde una cuenta, los pagos de resumen de tarjeta y el lado negativo de esos mismos buckets.
+
+De ahí se sigue el invariante que gobierna la zona: dentro de cada moneda, `Entró − Se fué` SHALL ser igual al cambio del saldo disponible en el mes, al centavo. La derivación SHALL usar aritmética de dinero exacta —no punto flotante crudo— para que la igualdad se sostenga y pueda testearse sin tolerancia.
+
+Los **consumos con tarjeta de crédito** NO SHALL restar de "Se fué". No es una exclusión que haya que aplicar: son filas off-ledger que nunca tocan el saldo de una cuenta. Lo que sí SHALL restar es el **pago del resumen**, que es plata saliendo de la cuenta.
 
 Los dos montos SHALL responder al selector de mes. La zona NO SHALL renderizar la barra apilada de ingresos/gastos, la fila "Ajustes" ni el link "Ver detalle" de la sección que reemplaza: el resumen se agota en dos montos.
 
 #### Scenario: Mes con ingresos y egresos
 
 - **WHEN** el usuario mira un mes con movimientos
-- **THEN** "Entró" muestra los ingresos acreditados de ese mes y "Se fué" lo que salió de las cuentas
+- **THEN** "Entró" muestra todo lo que aumentó el saldo de sus cuentas ese mes y "Se fué" todo lo que lo bajó
 - **AND** los dos bloques quedan centrados en columnas de igual ancho
+
+#### Scenario: Los dos montos cierran contra el saldo
+
+- **WHEN** el mes tiene ajustes, liquidaciones o cambios de moneda además de ingresos y gastos
+- **THEN** cada uno de esos movimientos aparece sumado en "Entró" o en "Se fué" según su signo
+- **AND** `Entró − Se fué` es igual al cambio del saldo disponible en ese mes
+
+#### Scenario: Una compra con tarjeta de crédito no baja el mes
+
+- **WHEN** el usuario paga una compra con tarjeta de crédito
+- **THEN** ese consumo NO aparece en "Se fué"
+- **AND** cuando pague el resumen de esa tarjeta, ese pago sí aparece en "Se fué" del mes en que lo pague
 
 #### Scenario: Mes sin movimientos
 
@@ -84,19 +102,19 @@ La card SHALL renderizarse siempre que haya gasto en el mes, **incluso cuando "T
 
 La card "Cuánto gastaste" SHALL cerrar con una tira de ritmo que muestre un anillo con el porcentaje, el copy con el porcentaje destacado, una barra de progreso y el pie con los dos montos que forman el cociente.
 
-El ritmo SHALL calcularse como `Gastaste / Entró` **dentro de la misma moneda y el mismo mes**, con los ingresos reales acreditados como denominador. El sistema NO SHALL requerir un ingreso mensual esperado configurado por el usuario.
+El ritmo SHALL calcularse como `Gastaste / ingresos acreditados` **dentro de la misma moneda y el mismo mes**. El denominador SHALL ser el ingreso del mes (`totalIncome`), NO el "Entró" de "Resumen del mes": ese último es una lectura de liquidez que incluye reintegros, liquidaciones y patas de cambio de moneda, y meterlas en el denominador infla el ritmo con plata que no es ingreso. El sistema NO SHALL requerir un ingreso mensual esperado configurado por el usuario.
 
 Se SHALL renderizar **un solo anillo, el de ARS**. El ritmo en USD NO SHALL renderizarse como segundo anillo.
 
 Dos estados SHALL tratarse como estados de primera clase, no como bordes excepcionales, porque con este denominador son habituales:
 
-- **Ritmo indeterminado** (`Entró = 0`, típico a comienzo de mes): el sistema SHALL mostrar un mensaje explicativo **en lugar del anillo**, y NO SHALL mostrar 0% ni dividir por cero.
+- **Ritmo indeterminado** (ingresos del mes en cero, típico a comienzo de mes): el sistema SHALL mostrar un mensaje explicativo **en lugar del anillo**, y NO SHALL mostrar 0% ni dividir por cero.
 - **Ritmo mayor a 100%**: el anillo y la barra SHALL pasar al color de alerta (terracota) y el copy SHALL ajustarse para reflejar que el gasto superó los ingresos del mes.
 
 #### Scenario: Mes con ingresos y gasto por debajo
 
 - **WHEN** en el mes entraron ingresos y el gasto es menor
-- **THEN** el anillo muestra el porcentaje `Gastaste / Entró` y la barra se llena en esa proporción
+- **THEN** el anillo muestra el porcentaje `Gastaste / ingresos del mes` y la barra se llena en esa proporción
 - **AND** el pie muestra los dos montos ARS que forman el cociente
 
 #### Scenario: Comienzo de mes sin ingresos acreditados
@@ -107,7 +125,7 @@ Dos estados SHALL tratarse como estados de primera clase, no como bordes excepci
 
 #### Scenario: El gasto supera los ingresos del mes
 
-- **WHEN** `Gastaste` es mayor que `Entró`
+- **WHEN** `Gastaste` es mayor que los ingresos acreditados del mes
 - **THEN** el anillo y la barra se pintan en el color de alerta
 - **AND** el copy refleja que el gasto superó los ingresos, en vez de mostrar una barra llena sin señal
 

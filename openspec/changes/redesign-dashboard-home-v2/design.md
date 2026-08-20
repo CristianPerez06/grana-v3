@@ -51,6 +51,22 @@ El costo hay que asumirlo de frente: con este denominador, **dos estados que el 
 
 El ritmo se computa **por moneda**, coherente con D1.
 
+### D2b — "Resumen del mes" es una lectura de liquidez y cierra contra el saldo
+
+La primera versión trataba "Entró" y "Se fué" como dos titulares sueltos —ingresos y pagos—, dejando afuera ajustes, liquidaciones, cambio de moneda y el residual de transferencias, con el argumento de que el resumen no era una reconciliación. **Se revirtió**: la zona se lee como *liquidez*, o sea cómo se movió el dinero, y eso ES el cambio del saldo.
+
+Cada movimiento que tocó el saldo cae de un lado o del otro según su signo, y de ahí sale el invariante:
+
+```
+Entró − Se fué  ===  cambio del saldo disponible en el mes
+```
+
+Por qué importa más allá de la semántica: convierte dos números que nadie podía verificar en dos números **testeables contra el saldo**. Es exactamente el tipo de ancla que caza sola una discrepancia como el disponible negativo que apareció mirando datos reales. La derivación usa `Money` en lugar de sumas con punto flotante para que la igualdad se sostenga al centavo y el test pueda afirmar igualdad sin tolerancia.
+
+El costo aceptado: un ajuste positivo aparece como "Entró", que es raro de leer —los ajustes son correcciones de stock, no plata que entró—. Se acepta porque la alternativa es que el ajuste no aparezca en ningún lado y los dos montos dejen de cerrar.
+
+Ojo con la consecuencia sobre D2: el **denominador del ritmo NO es este "Entró"**. El ritmo compara contra los ingresos acreditados (`totalIncome`); meter reintegros, liquidaciones y patas de cambio de moneda en el denominador inflaría el ritmo con plata que no es ingreso.
+
 ### D3 — Un solo anillo, el de ARS; el ritmo USD no se renderiza
 
 D1 y D2 combinados producirían dos ritmos (uno por moneda) y el handoff tiene lugar para un anillo. Se renderiza **solo el de ARS**.
