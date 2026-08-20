@@ -17,24 +17,6 @@ import { MaskedAmount } from './MaskedAmount'
 
 type Net = { currency: 'ARS' | 'USD'; amount: number; direction: 'they_owe_you' | 'you_owe' }
 
-const initialsOf = (fullName: string): string => {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return '?'
-  return parts
-    .slice(0, 2)
-    .map((p) => p[0]!.toUpperCase())
-    .join('')
-}
-
-const Avatar = ({ initials, overlap }: { initials: string; overlap?: boolean }) => (
-  <View
-    style={overlap ? { marginLeft: -6 } : undefined}
-    className="size-5 items-center justify-center rounded-full border-2 border-card bg-positive"
-  >
-    <Text className="text-[8.5px] font-extrabold text-white">{initials}</Text>
-  </View>
-)
-
 export const SharedStrip = () => {
   const t = useT()
   const router = useRouter()
@@ -49,7 +31,6 @@ export const SharedStrip = () => {
 
       // getHousehold orders the current user first.
       const self = household.members[0]!
-      const other = household.members[1]!
       const nets: Net[] = (['ARS', 'USD'] as const).flatMap((currency) => {
         const d = debt[currency]
         if (d.kind === 'settled') return []
@@ -63,11 +44,7 @@ export const SharedStrip = () => {
       })
       if (nets.length === 0) return null
 
-      return {
-        selfInitials: initialsOf(self.fullName),
-        otherInitials: initialsOf(other.fullName),
-        nets,
-      }
+      return { householdName: household.name, nets }
     },
     retry: false,
   })
@@ -88,16 +65,18 @@ export const SharedStrip = () => {
       <View className="size-[30px] items-center justify-center rounded-xl bg-emerald-soft">
         <Users size={16} color={colors.emeraldDeep} />
       </View>
-      <View className="flex-row items-center gap-2">
+      {/* The household's own name says whose money this is; the two member
+          initials said it a third time, in the width where there is least room
+          for any of them. This block shrinks first so the amount never does. */}
+      <View className="min-w-0 flex-1">
         <Text className="text-[13px] font-extrabold text-text">
           {t('dashboard.shared_strip.title')}
         </Text>
-        <View className="flex-row">
-          <Avatar initials={data.selfInitials} />
-          <Avatar initials={data.otherInitials} overlap />
-        </View>
+        <Text numberOfLines={1} className="text-[11px] font-medium text-text-soft">
+          {data.householdName}
+        </Text>
       </View>
-      <View className="ml-auto flex-row items-center gap-1.5">
+      <View className="shrink-0 flex-row items-center gap-1.5">
         <Text
           className={`text-[13.5px] font-extrabold ${credit ? 'text-positive' : 'text-terracotta'}`}
         >

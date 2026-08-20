@@ -38,26 +38,31 @@ export const DashboardHeader = ({ todayISO }: Props) => {
 
   return (
     <SafeAreaView edges={['top']} className="bg-navy">
-      <View className="flex-col gap-3 px-6 pb-4 pt-3">
+      <View className="px-6 pb-4 pt-3">
         <View className="h-5" />
-        <View className="flex-row items-start justify-between">
-          <View className="flex-1">
+        {/* Selector and eye toggle sit on the greeting's row, as on web: a
+            full-width month pill of its own was ~44px of a screen where vertical
+            room is the scarce resource, spent on a control that fits beside the
+            title. The month goes to three letters to make that room, and the
+            greeting is the block that wraps — the controls do not shrink. */}
+        <View className="flex-row items-start justify-between gap-3">
+          <View className="min-w-0 flex-1">
             <Text className="text-2xl font-semibold text-white">{greeting}</Text>
             <Text className="mt-1 text-sm text-navy-muted">
               {formatToday(todayISO, localeCode)}
             </Text>
           </View>
-          <EyeMaskToggle />
+          <View className="shrink-0 flex-row items-center gap-1.5">
+            <MonthNavigator
+              compact
+              year={selected.year}
+              month={selected.month}
+              onPrev={goPrev}
+              onNext={goNext}
+            />
+            <EyeMaskToggle />
+          </View>
         </View>
-        {/* Shared month selector: drives "Balance del mes" + "En qué se fue";
-            never "Para gastar" (today-based). White pill over navy, full width
-            (the mobile layout of the design handoff). */}
-        <MonthNavigator
-          year={selected.year}
-          month={selected.month}
-          onPrev={goPrev}
-          onNext={goNext}
-        />
       </View>
     </SafeAreaView>
   )

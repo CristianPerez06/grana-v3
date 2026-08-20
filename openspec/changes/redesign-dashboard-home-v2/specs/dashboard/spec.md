@@ -305,7 +305,9 @@ El grupo **Tarjetas** SHALL listar una fila **por tarjeta** con su total comprom
 
 ### Requirement: La tira "Compartido" muestra el neto del Hogar en web y en mobile cuando hay actividad
 
-El dashboard SHALL renderizar al pie una tira "Compartido" —una sola línea clickeable que navega al módulo Compartido— **en ambas plataformas**. La tira SHALL mostrar el ícono, el nombre, los avatares apilados del grupo y el saldo neto en una sola dirección: "Te deben" en verde cuando el saldo favorece al usuario, "Debés" en terracota cuando va en contra.
+El dashboard SHALL renderizar al pie una tira "Compartido" —una sola línea clickeable que navega al módulo Compartido— **en ambas plataformas**. La tira SHALL mostrar el ícono, el nombre del Hogar y el saldo neto en una sola dirección: "Te deben" en verde cuando el saldo favorece al usuario, "Debés" en terracota cuando va en contra. Con lugar de sobra SHALL agregar los avatares apilados del grupo y nombrar al otro miembro en la bajada.
+
+En pantallas angostas la tira SHALL mantenerse en **una sola fila**, y SHALL ganarse ese lugar soltando justamente esos dos agregados. El nombre del propio Hogar ya dice de quién es esa plata, y las iniciales lo dicen por tercera vez justo donde menos lugar hay para decirlo una. El bloque de identidad SHALL ser el que se achica; el monto NO SHALL ser nunca el que cede.
 
 La tira SHALL renderizarse **únicamente cuando hay actividad compartida**. Sin actividad, NO SHALL renderizarse ni dejar espacio reservado.
 
@@ -459,7 +461,7 @@ El desglose "Dónde está" SHALL vivir **dentro de la zona oscura** de la card d
 
 Cada columna SHALL listar las **dos cuentas con más saldo** de esa moneda, cada fila con un cuadradito del color de la cuenta, el nombre y su **porcentaje sobre el total de esa moneda**. El desglose NO SHALL renderizar barras de proporción: el porcentaje es la única expresión de la magnitud.
 
-En pantallas angostas las dos monedas SHALL apilarse y cada cuenta SHALL ocupar su propia fila. Dos columnas de moneda en el ancho de un teléfono dejan ~145px cada una y dos cuentas adentro de eso truncaban los nombres a una letra ("M", "L…"), que no identifican nada. Apilado, cada cuenta tiene el ancho de la card. El separador SHALL girar con la composición: vertical entre columnas, horizontal entre bloques apilados. Cada bloque apilado SHALL llevar su propio rótulo de moneda, porque el encabezado de dos columnas solo se alinea con ellas cuando están lado a lado.
+En pantallas angostas las dos monedas SHALL apilarse y cada cuenta SHALL ocupar su propia fila, con **el rótulo de moneda como columna izquierda** —no como fila propia: una línea entera para la palabra "ARS" es una línea no gastada en datos— y el porcentaje empujado al borde derecho, de modo que los porcentajes queden alineados en columna, que es lo que se compara. Dos columnas de moneda en el ancho de un teléfono dejan ~145px cada una y dos cuentas adentro de eso truncaban los nombres a una letra ("M", "L…"), que no identifican nada. Apilado, cada cuenta tiene el ancho de la card. El separador SHALL girar con la composición: vertical entre columnas, horizontal entre bloques apilados. Cada bloque apilado SHALL llevar su propio rótulo de moneda, porque el encabezado de dos columnas solo se alinea con ellas cuando están lado a lado.
 
 Una columna cuya moneda no tiene saldo NO SHALL renderizar filas vacías. Un usuario con una sola cuenta en una moneda SHALL ver una sola fila en esa columna.
 

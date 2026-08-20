@@ -34,6 +34,7 @@
 - [x] 3.5 Zona clara "Resumen del mes": **tres** columnas iguales (Tenías, Entró, Se fué), con punto de color, monto ARS con signo en los dos flujos y línea USD condicional
 - [x] 3.8 Alinear cada bloque de modo que los tres **lleguen a los dos bordes**: el primero a la izquierda, el último a la derecha, el del medio centrado. Alinear los tres a la izquierda —como estaba— dejaba una franja muerta contra el borde derecho y el bloque descentrado. Las columnas siguen siendo tercios iguales: la posición no puede depender del dato o los montos saltan al navegar de mes
 - [x] 3.10 **Composición angosta**: apilar los tres montos del "Resumen del mes" (una fila cada uno, rótulo izquierda / monto derecha) y apilar las dos monedas de "Dónde está" con una cuenta por fila. En tres tercios de una card de teléfono los montos se imprimían encima unos de otros y los nombres de cuenta se truncaban a una letra
+- [x] 3.12 En la composición apilada de "Dónde está", el rótulo de moneda va como **columna izquierda** y el porcentaje al borde derecho: una fila entera para la palabra "ARS" es una fila no gastada en datos, y con los porcentajes alineados en columna se comparan de un vistazo
 - [x] 3.11 Aplicar `densestAmountDensity` también a los tres montos del resumen, por la misma razón que en los tiles
 - [x] 3.9 Achicar el aire de la zona clara: menos padding arriba del título y menos separación entre el título y la grilla
 - [x] 3.6 Reemplazar los tres `Suspense` (hero, cuentas, balance) por **uno solo** que envuelva la card, con un skeleton shape-matched único (D7)
@@ -69,6 +70,7 @@
 ## 6. Web — Tira Compartido y layout general
 
 - [x] 6.1 `shared-strip.tsx` ya cumplía el diseño del handoff (ícono, nombre, avatares apilados, monto direccional y chevron como único link) — se deja como está
+- [x] 6.5 Tira Compartido en **una sola fila a cualquier ancho**: en angosto se sueltan los avatares de iniciales y la mitad "vos y {otro}" de la bajada, y el bloque de identidad es el que se achica para que el monto no ceda. Espejado en nativo, que además no mostraba el nombre del Hogar
 - [x] 6.2 Reescribir `dashboard-content.tsx` con la grilla nueva: fila 1 a ancho completo, fila 2 `1fr / 1.12fr` con `align-items: stretch`, pie Compartido
 - [x] 6.3 Colapso a una columna por debajo del ancho de contenido, con el sidebar oculto y el padding del main reducido
 - [ ] 6.4 Verificar **a ojo** que las dos cards de la fila 2 terminan alineadas en los anchos de corte, y que el alto de Compromisos no se mueve al abrir y cerrar un detalle
@@ -76,6 +78,7 @@
 ## 7. Mobile — espejo de las cuatro cards
 
 - [x] 7.1 `HeroSection` / card de saldo unificada con sus dos zonas, en PascalCase espejando el naming de web
+- [x] 7.8 Subir el selector de mes a la fila del saludo en el header nativo, con el mes abreviado a tres letras (`compact` en `MonthNavigator`): la píldora a ancho completo se comía ~44px de alto en la pantalla donde el alto es lo escaso
 - [x] 7.7 Espejar en nativo la composición angosta de 3.10: el nativo tenía las dos monedas lado a lado y los tres montos del resumen en tres columnas, con `fitOneLine` achicando montos de ocho cifras hasta lo ilegible
 - [x] 7.2 `SpentThisMonthSection` con los tres tiles y la tira de ritmo, con la escala tipográfica mobile
 - [x] 7.3 `CommittedSection` con la barra apilada y la zona de detalle que reemplaza (`CommittedDetail`), con área táctil ≥44px. En nativo la pila tolera el crecimiento, pero el gesto es el mismo a propósito: la misma card no se opera de dos maneras según el dispositivo

@@ -49,20 +49,35 @@ const rowColor = (colorKey: string | null, override: string | null): string =>
     ? accountColors[colorKey as keyof typeof accountColors]
     : (override ?? colors.slate)
 
-const PlacementColumn = ({ placement }: { placement: CurrencyPlacement }) => (
-  <View className="flex-1 gap-2">
-    {placement.rows.map((row) => (
-      <View key={row.id} className="flex-row items-center gap-2">
-        <View
-          className="size-[9px] rounded-[2px]"
-          style={{ backgroundColor: rowColor(row.avatar.colorKey, row.avatar.colorOverride) }}
-        />
-        <Text numberOfLines={1} className="flex-1 text-[12.5px] font-semibold text-white/65">
-          {row.label}
-        </Text>
-        <Text className="text-[13px] font-extrabold text-white">{row.pct}%</Text>
-      </View>
-    ))}
+// The currency is a LEFT GUTTER, not a row of its own — a whole line for the
+// word "ARS" is a line not spent on data — and the accounts stack to its right,
+// each with its percentage pushed hard right so the percentages line up in a
+// column, which is what gets compared. Mirrors web's stacked composition.
+const PlacementColumn = ({
+  placement,
+  currency,
+}: {
+  placement: CurrencyPlacement
+  currency: string
+}) => (
+  <View className="flex-row gap-3">
+    <Text className="w-8 text-[10.5px] font-extrabold uppercase tracking-widest text-white/50">
+      {currency}
+    </Text>
+    <View className="min-w-0 flex-1 gap-2">
+      {placement.rows.map((row) => (
+        <View key={row.id} className="flex-row items-center gap-2">
+          <View
+            className="size-[9px] rounded-[2px]"
+            style={{ backgroundColor: rowColor(row.avatar.colorKey, row.avatar.colorOverride) }}
+          />
+          <Text numberOfLines={1} className="flex-1 text-[12.5px] font-semibold text-white/65">
+            {row.label}
+          </Text>
+          <Text className="text-[13px] font-extrabold text-white">{row.pct}%</Text>
+        </View>
+      ))}
+    </View>
   </View>
 )
 
@@ -228,18 +243,10 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
           // Currencies STACKED, not side by side: at phone width two columns
           // left ~145px each and the account names truncated to a letter or two.
           <View className="mt-3 gap-3">
-            <View>
-              <Text className="mb-2 text-[11px] font-extrabold tracking-widest text-white/60">
-                ARS
-              </Text>
-              <PlacementColumn placement={placement.ARS} />
-            </View>
+            <PlacementColumn placement={placement.ARS} currency="ARS" />
             {hasUsd && (
               <View className="border-t border-white/10 pt-3">
-                <Text className="mb-2 text-[11px] font-extrabold tracking-widest text-white/60">
-                  USD
-                </Text>
-                <PlacementColumn placement={placement.USD} />
+                <PlacementColumn placement={placement.USD} currency="USD" />
               </View>
             )}
           </View>

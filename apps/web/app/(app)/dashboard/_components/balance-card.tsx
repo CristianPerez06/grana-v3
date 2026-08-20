@@ -49,33 +49,40 @@ const PlacementColumn = ({
   placement: CurrencyPlacement
   currency: string
 }) => (
-  // One account per row when narrow — at phone width two of them share ~135px
-  // and the names came out as "M" and "L…". Side by side once there is room.
-  <div className="grid grid-cols-1 gap-x-5 gap-y-2 sm:grid-cols-2">
-    {/* Stacked, each block carries its own currency label: the header row's
-        ARS/USD only line up with the columns when they sit side by side. */}
-    <span className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-white/50 sm:col-span-2 sm:hidden">
+  // Stacked (narrow): the currency is a LEFT GUTTER, not a row of its own — a
+  // whole line for the word "ARS" is a line not spent on data — and the accounts
+  // stack to its right, each with its percentage pushed hard right so the
+  // percentages line up in a column, which is what gets compared.
+  // Side by side (sm+): the gutter disappears into the shared header and the two
+  // accounts go back to being tight pairs across two sub-columns.
+  <div className="flex gap-3 sm:block">
+    <span className="w-8 shrink-0 text-[11px] font-extrabold uppercase tracking-[0.1em] text-white/50 sm:hidden">
       {currency}
     </span>
-    {placement.rows.map((row: PlacementRow, index: number) => (
-      <div
-        key={row.id}
-        className={cn(
-          'flex items-center gap-2 text-[13.5px] font-semibold text-white/65',
-          index === 1 && 'justify-between sm:justify-end',
-        )}
-      >
-        <span
-          aria-hidden
-          className="size-[10px] shrink-0 rounded-[2px]"
-          style={{ backgroundColor: avatarColor(row.avatar) }}
-        />
-        <span className="min-w-0 truncate">{row.label}</span>
-        <span className="shrink-0 text-[14px] font-extrabold tabular-nums text-white">
-          {row.pct}%
-        </span>
-      </div>
-    ))}
+    <div className="grid min-w-0 flex-1 grid-cols-1 gap-y-2 sm:grid-cols-2 sm:gap-x-5">
+      {placement.rows.map((row: PlacementRow, index: number) => (
+        <div
+          key={row.id}
+          className={cn(
+            'flex items-center gap-2 text-[13.5px] font-semibold text-white/65',
+            index === 1 && 'sm:justify-end',
+          )}
+        >
+          <span
+            aria-hidden
+            className="size-[10px] shrink-0 rounded-[2px]"
+            style={{ backgroundColor: avatarColor(row.avatar) }}
+          />
+          {/* `flex-1` only while stacked: it is what pushes the percentage to the
+              right edge. Side by side the pair stays tight, so a percentage never
+              reads as belonging to the account listed next to it. */}
+          <span className="min-w-0 flex-1 truncate sm:flex-none">{row.label}</span>
+          <span className="shrink-0 text-[14px] font-extrabold tabular-nums text-white">
+            {row.pct}%
+          </span>
+        </div>
+      ))}
+    </div>
   </div>
 )
 
