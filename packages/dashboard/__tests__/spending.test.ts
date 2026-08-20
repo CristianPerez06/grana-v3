@@ -4,6 +4,7 @@ import {
   deriveMonthSpending,
   deriveSpendingPace,
   amountDensity,
+  densestAmountDensity,
   PACE_OVERFLOW_PCT,
 } from '../src/spending'
 import { aggregateCardDebtByCard } from '../src/aggregations'
@@ -298,5 +299,41 @@ describe('amountDensity', () => {
 
   it('trata el cero como normal', () => {
     expect(amountDensity(0, true)).toBe('normal')
+  })
+})
+
+// ── densestAmountDensity ─────────────────────────────────────────────────────
+// A row of peer amounts is ONE type decision. Sizing each on its own amount made
+// the type jump from tile to tile, pushed the centred tiles out of line with
+// each other, and inverted the hierarchy — the headline "Gastaste" rendered
+// smaller than the "Por pagar" derived from it.
+
+describe('densestAmountDensity', () => {
+  it('returns the tightest step any one amount needs', () => {
+    // 1.020.283,17 → 'tight'; 79.894,67 → 'normal'. The row takes 'tight'.
+    expect(densestAmountDensity([1_020_283.17, 940_388.5, 79_894.67], true)).toBe('tight')
+  })
+
+  it('leaves a row of small amounts at the roomiest step', () => {
+    expect(densestAmountDensity([1_000, 600, 400], true)).toBe('normal')
+  })
+
+  it('agrees with amountDensity for a single amount', () => {
+    for (const value of [0, 1_000, 1_020_283.17, 1_234_567_890]) {
+      for (const withCents of [true, false]) {
+        expect(densestAmountDensity([value], withCents)).toBe(amountDensity(value, withCents))
+      }
+    }
+  })
+
+  it('is order-independent', () => {
+    const values = [1_234_567_890, 1_000, 50_000]
+    expect(densestAmountDensity(values, true)).toBe(
+      densestAmountDensity([...values].reverse(), true),
+    )
+  })
+
+  it('falls back to the roomiest step for an empty row', () => {
+    expect(densestAmountDensity([], true)).toBe('normal')
   })
 })

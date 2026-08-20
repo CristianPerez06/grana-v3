@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl'
 import { Clock, CreditCard, ShoppingBag } from 'lucide-react'
 import { formatARS } from '@grana/i18n-messages'
 import {
+  densestAmountDensity,
   deriveSpendingPace,
   getMonthBalanceSeries,
   getMonthSpending,
@@ -118,6 +119,7 @@ const PaceStrip = ({ pace }: { pace: SpendingPace }) => {
  */
 export const SpentCard = ({ otherName }: Props) => {
   const t = useTranslations('dashboard.spent')
+  const showCents = useShowCents()
   const { selected } = useDashboardMonth()
   // Only one tile turned at a time: two open backs would compete for the same
   // reading and the card would stop looking like one object.
@@ -146,6 +148,14 @@ export const SpentCard = ({ otherName }: Props) => {
   const isEmpty = ars.gastaste === 0 && usd.gastaste === 0
   // One decision for the three tiles (the USD line), so they stay level.
   const tilesHaveUsd = usd.gastaste !== 0
+  // Same rule for the type step: the three amounts share the tightest one any of
+  // them needs. Sized per tile, they shrank at different points, which knocked
+  // the vertically centred tiles out of line and made "Gastaste" render smaller
+  // than the "Por pagar" derived from it.
+  const tilesDensity = densestAmountDensity(
+    [ars.gastaste, ars.yaSePago.total, ars.porPagar.total],
+    showCents,
+  )
 
   // The breakdown only exists when the month actually has a shared side: with no
   // partner involved every peso is yours and the two rows would say so twice.
@@ -182,6 +192,7 @@ export const SpentCard = ({ otherName }: Props) => {
                 caption={{ lead: t('gastaste_sub_1'), emphasis: t('gastaste_sub_2') }}
                 flipped={false}
                 onToggle={() => {}}
+                density={tilesDensity}
               />
               <SpentTile
                 tone="paid"
@@ -207,6 +218,7 @@ export const SpentCard = ({ otherName }: Props) => {
                       }
                     : undefined
                 }
+                density={tilesDensity}
                 flipped={flipped === 'paid'}
                 onToggle={() => setFlipped((f) => (f === 'paid' ? null : 'paid'))}
               />
@@ -234,6 +246,7 @@ export const SpentCard = ({ otherName }: Props) => {
                       }
                     : undefined
                 }
+                density={tilesDensity}
                 flipped={flipped === 'pending'}
                 onToggle={() => setFlipped((f) => (f === 'pending' ? null : 'pending'))}
               />

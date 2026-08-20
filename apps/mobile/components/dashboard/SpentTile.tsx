@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { ChevronLeft, ChevronRight } from 'lucide-react-native'
-import { amountDensity, type AmountDensity } from '@grana/dashboard'
+import { type AmountDensity } from '@grana/dashboard'
 import { colors } from '../../lib/colors'
-import { useShowCents } from '../../lib/preferences-context'
 import { MaskedAmount } from './MaskedAmount'
 
 export type TileTone = 'spent' | 'paid' | 'pending'
@@ -40,6 +39,12 @@ type Props = {
   breakdown?: { title: string; rows: BreakdownRow[]; openLabel: string; backLabel: string }
   flipped: boolean
   onToggle: () => void
+  /**
+   * Type step for the amount, decided ONCE for the three tiles by the card, not
+   * per tile: three peer amounts that shrink at different points stop lining up,
+   * and the headline ends up rendering smaller than the figure derived from it.
+   */
+  density: AmountDensity
 }
 
 /** Fixed height, so turning a tile never changes the card's shape. */
@@ -68,9 +73,9 @@ export const SpentTile = ({
   breakdown,
   flipped,
   onToggle,
+  density,
 }: Props) => {
   const tint = TILE_TONE[tone]
-  const showCents = useShowCents()
   const flippable = breakdown != null
 
   const body = flippable && flipped ? (
@@ -115,7 +120,7 @@ export const SpentTile = ({
         amount={ars}
         currency="ARS"
         fitOneLine
-        className={`mt-1.5 font-extrabold ${AMOUNT_SIZE[amountDensity(ars, showCents)]} ${tint.amount}`}
+        className={`mt-1.5 font-extrabold ${AMOUNT_SIZE[density]} ${tint.amount}`}
       />
       {showUsd && (
         <MaskedAmount
@@ -125,21 +130,26 @@ export const SpentTile = ({
           className="mt-0.5 text-[9.5px] font-semibold text-text-soft"
         />
       )}
-      {flippable ? (
-        <View className="mt-2 flex-row items-center gap-1">
-          <Text className="text-[9px] font-extrabold text-text-soft">{breakdown.openLabel}</Text>
-          <ChevronRight size={10} color={colors.textSoft} strokeWidth={2.6} />
-        </View>
-      ) : (
-        caption && (
-          <View className="mt-2">
-            <Text className="text-center text-[9px] font-bold text-text-soft">{caption.lead}</Text>
-            <Text className="text-center text-[9.5px] font-extrabold text-text">
-              {caption.emphasis}
-            </Text>
+      {/* ONE slot with ONE height, whatever goes in it: the caption is two lines
+          and the flip invitation is one, and a slot that sizes itself drops the
+          flipping tiles below their neighbour so the row stops reading as a row. */}
+      <View className="mt-2 items-center" style={{ minHeight: 26 }}>
+        {flippable ? (
+          <View className="flex-row items-center gap-1">
+            <Text className="text-[9px] font-extrabold text-text-soft">{breakdown.openLabel}</Text>
+            <ChevronRight size={10} color={colors.textSoft} strokeWidth={2.6} />
           </View>
-        )
-      )}
+        ) : (
+          caption && (
+            <>
+              <Text className="text-center text-[9px] font-bold text-text-soft">{caption.lead}</Text>
+              <Text className="text-center text-[9.5px] font-extrabold text-text">
+                {caption.emphasis}
+              </Text>
+            </>
+          )
+        )}
+      </View>
     </View>
   )
 

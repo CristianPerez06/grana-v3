@@ -25,6 +25,7 @@ export {
   deriveMonthSpending,
   deriveSpendingPace,
   amountDensity,
+  densestAmountDensity,
   PACE_OVERFLOW_PCT,
   type AmountDensity,
   type CommittedSplit,

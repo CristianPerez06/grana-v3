@@ -196,3 +196,26 @@ export function amountDensity(value: number, withCents: boolean): AmountDensity 
   if (chars <= 17) return 'tighter'
   return 'tightest'
 }
+
+/** Steps from roomiest to tightest — the order `densestAmountDensity` folds on. */
+const DENSITY_ORDER: AmountDensity[] = ['normal', 'tight', 'tighter', 'tightest']
+
+/**
+ * The step that fits ALL of `values` — the tightest any one of them needs.
+ *
+ * A row of peer amounts is one decision, not N. Sizing each tile on its own
+ * amount makes the type jump from tile to tile, and because the content is
+ * vertically centred, a taller amount also pushes its whole tile out of line
+ * with its neighbours. Worse, it inverts the hierarchy: "Gastaste
+ * $ 1.020.283,17" rendered SMALLER than "Por pagar $ 79.894,67", so the headline
+ * number looked subordinate to the one derived from it.
+ *
+ * Same rule the USD line already follows: decided once for the block.
+ */
+export function densestAmountDensity(values: number[], withCents: boolean): AmountDensity {
+  let index = 0
+  for (const value of values) {
+    index = Math.max(index, DENSITY_ORDER.indexOf(amountDensity(value, withCents)))
+  }
+  return DENSITY_ORDER[index]
+}

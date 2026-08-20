@@ -137,6 +137,11 @@ Los tres tiles SHALL **absorber el alto sobrante de la card**: crecen para llena
 
 Los tres SHALL crecer **por igual** —son una comparación de tres montos y un tile más alto que sus vecinos la rompe— y las dos caras de un tile SHALL crecer igual entre sí.
 
+Como el contenido va **centrado en vertical**, cualquier diferencia de alto entre los tres los desalinea. De ahí dos reglas que valen para todo el bloque, no tile por tile:
+
+- **El paso tipográfico del monto SHALL decidirse una sola vez para los tres**, tomando el más ajustado que necesite cualquiera de ellos. Calculado por tile, el tipo saltaba de un tile a otro y —peor— invertía la jerarquía: "Gastaste $ 1.020.283,17" se renderizaba **más chico** que "Por pagar $ 79.894,67", con el titular quedando subordinado al monto que se deriva de él. Es la misma regla que ya sigue la línea USD.
+- **La franja inferior SHALL tener un alto único**, sea cual sea su variante. La leyenda ocupa dos líneas y la invitación a abrir una sola; dejar que la franja se dimensione sola bajaba los tiles que se abren respecto de su vecino y la fila dejaba de leerse como fila.
+
 **Los tiles tienen dos variantes**, con la misma caja y el mismo alto **entre sí** —dar vuelta un tile nunca lo cambia de tamaño—, y solo cambia su franja inferior:
 
 - **Sin actividad compartida** — el tile NO se abre y muestra una **leyenda de contexto** de dos líneas.

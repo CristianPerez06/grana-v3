@@ -4,12 +4,14 @@ import { useRouter } from 'expo-router'
 import { Clock, CreditCard, ShoppingBag } from 'lucide-react-native'
 import { useQuery } from '@tanstack/react-query'
 import {
+  densestAmountDensity,
   deriveSpendingPace,
   type MonthSpendingSplit,
   type SpendingPace,
 } from '@grana/dashboard'
 import { formatARS } from '@grana/i18n-messages'
 import { useT } from '../../lib/locale-context'
+import { useShowCents } from '../../lib/preferences-context'
 import { colors } from '../../lib/colors'
 import { useMonthBalanceSeries, useMonthSpending } from '../../lib/dashboard/queries'
 import { getHousehold } from '../../lib/shared/queries'
@@ -108,6 +110,7 @@ const EMPTY: MonthSpendingSplit = {
 
 export const SpentCard = () => {
   const t = useT()
+  const showCents = useShowCents()
   const router = useRouter()
   const { selected } = useDashboardMonth()
   // Only one tile turned at a time.
@@ -135,6 +138,13 @@ export const SpentCard = () => {
 
   const isLoading = spendingQuery.isPending || balanceQuery.isPending
   const tilesHaveUsd = usd.gastaste !== 0
+  // Same rule as the USD line: the three amounts share the tightest type step
+  // any of them needs, so they line up and the headline never renders smaller
+  // than the figure derived from it.
+  const tilesDensity = densestAmountDensity(
+    [ars.gastaste, ars.yaSePago.total, ars.porPagar.total],
+    showCents,
+  )
   const hasShared =
     otherName != null && (ars.yaSePago.pusoElOtro !== 0 || ars.porPagar.leDebesAlOtro !== 0)
 
@@ -173,6 +183,7 @@ export const SpentCard = () => {
                 lead: t('dashboard.spent.gastaste_sub_1'),
                 emphasis: t('dashboard.spent.gastaste_sub_2'),
               }}
+              density={tilesDensity}
               flipped={false}
               onToggle={() => {}}
             />
@@ -206,6 +217,7 @@ export const SpentCard = () => {
                     }
                   : undefined
               }
+              density={tilesDensity}
               flipped={flipped === 'paid'}
               onToggle={() => setFlipped((f) => (f === 'paid' ? null : 'paid'))}
             />
@@ -239,6 +251,7 @@ export const SpentCard = () => {
                     }
                   : undefined
               }
+              density={tilesDensity}
               flipped={flipped === 'pending'}
               onToggle={() => setFlipped((f) => (f === 'pending' ? null : 'pending'))}
             />

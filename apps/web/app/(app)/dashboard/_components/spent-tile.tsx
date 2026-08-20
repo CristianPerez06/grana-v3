@@ -2,8 +2,7 @@
 
 import { useId } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { amountDensity, type AmountDensity } from '@grana/dashboard'
-import { useShowCents } from '@/lib/preferences-context'
+import { type AmountDensity } from '@grana/dashboard'
 import { cn } from '@/lib/utils'
 import { MaskedAmount } from './masked-amount'
 
@@ -46,6 +45,12 @@ type Props = {
   breakdown?: { title: string; rows: BreakdownRow[]; openLabel: string; backLabel: string }
   flipped: boolean
   onToggle: () => void
+  /**
+   * Type step for the amount, decided ONCE for the three tiles by the card, not
+   * per tile: three peer amounts that shrink at different points stop lining up,
+   * and the headline ends up rendering smaller than the figure derived from it.
+   */
+  density: AmountDensity
 }
 
 const Face = ({
@@ -107,9 +112,9 @@ export const SpentTile = ({
   breakdown,
   flipped,
   onToggle,
+  density,
 }: Props) => {
   const panelId = useId()
-  const showCents = useShowCents()
   const flippable = breakdown != null
 
   const front = (
@@ -127,7 +132,7 @@ export const SpentTile = ({
         <span
           className={cn(
             'mt-2 whitespace-nowrap font-extrabold tracking-[-0.04em]',
-            AMOUNT_SIZE[amountDensity(ars, showCents)],
+            AMOUNT_SIZE[density],
             TILE_TONE[tone].amount,
           )}
         >
@@ -139,20 +144,27 @@ export const SpentTile = ({
           </span>
         )}
 
-        {flippable ? (
-          <span className="mt-2.5 inline-flex items-center gap-1 text-[10.5px] font-extrabold text-text-soft">
-            {breakdown.openLabel}
-            <ChevronRight size={11} strokeWidth={2.6} aria-hidden />
-          </span>
-        ) : (
-          caption && (
-            <span className="mt-3 text-[11px] font-bold leading-snug text-text-soft">
-              {caption.lead}
-              <br />
-              <span className="text-[11.5px] font-extrabold text-text">{caption.emphasis}</span>
+        {/* ONE slot with ONE height, whatever goes in it. The caption is two
+            lines and the flip invitation is one, and since the content is
+            vertically centred, letting the slot size itself dropped the flipping
+            tiles ~8px below their neighbour and the row stopped reading as a
+            row. `justify-start` so both variants hang from the same line. */}
+        <span className="mt-3 flex min-h-[32px] flex-col items-center justify-start">
+          {flippable ? (
+            <span className="inline-flex items-center gap-1 text-[10.5px] font-extrabold text-text-soft">
+              {breakdown.openLabel}
+              <ChevronRight size={11} strokeWidth={2.6} aria-hidden />
             </span>
-          )
-        )}
+          ) : (
+            caption && (
+              <span className="text-[11px] font-bold leading-snug text-text-soft">
+                {caption.lead}
+                <br />
+                <span className="text-[11.5px] font-extrabold text-text">{caption.emphasis}</span>
+              </span>
+            )
+          )}
+        </span>
       </div>
       <span aria-hidden className={cn('h-1 w-full', TILE_TONE[tone].rule)} />
     </>
