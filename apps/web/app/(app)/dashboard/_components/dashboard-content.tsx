@@ -1,10 +1,10 @@
 import { Suspense } from 'react'
 import { getTodayAR } from '@/lib/date'
+import { BalanceCardContainer } from './balance-card-container'
+import { BalanceCardSkeleton } from './balance-card-skeleton'
 import { CommittedSectionContainer } from './committed-section-container'
 import { CommittedSkeleton } from './committed-skeleton'
 import { DashboardErrorBoundary } from './dashboard-error-boundary'
-import { HeroSectionContainer } from './hero-section-container'
-import { HeroSkeleton } from './hero-skeleton'
 import { MonthBalanceSectionContainer } from './month-balance-section-container'
 import { MonthBalanceSkeleton } from './month-balance-skeleton'
 import { SharedStripContainer } from './shared-strip-container'
@@ -12,10 +12,13 @@ import { SpendingSectionContainer } from './spending-section-container'
 import { SpendingSkeleton } from './spending-skeleton'
 import { SpentThisMonthSection } from './spent-this-month-section'
 
-// Dashboard composition (design handoff order): top row ("Para gastar · hoy" +
-// "Dónde está") → row ("Balance del mes" + "Comprometido") → "Compartido" (only
-// with activity) → "Gastaste este mes" (only with card spend) → "¿En qué gasté?".
+// Dashboard composition (design handoff `docs/design/dashboard-home/`): row 1
+// "Saldo disponible total" (full width) → row ("Balance del mes" +
+// "Comprometido") → "Compartido" (only with activity) → "Gastaste este mes"
+// (only with card spend) → "¿En qué gasté?".
 // Each section streams behind its own Suspense with a shape-matched skeleton.
+// NOTE: rows 2+ still hold the pre-redesign sections; they are replaced card by
+// card by the `redesign-dashboard-home-v2` change.
 export const DashboardContent = async () => {
   const today = getTodayAR()
   const currentYear = today.getFullYear()
@@ -24,8 +27,10 @@ export const DashboardContent = async () => {
   return (
     <DashboardErrorBoundary>
       <div className="flex flex-col gap-4">
-        <Suspense fallback={<HeroSkeleton />}>
-          <HeroSectionContainer />
+        {/* Fila 1 — "Saldo disponible total" a ancho completo: el total, la
+            fila USD y "Dónde está" plegado adentro del hero oscuro. */}
+        <Suspense fallback={<BalanceCardSkeleton />}>
+          <BalanceCardContainer />
         </Suspense>
 
         {/* Balance del mes (CAJA, lo que pasó) + Comprometido (COMPROMISO),

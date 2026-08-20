@@ -1,4 +1,4 @@
-import { HeroSkeleton } from './_components/hero-skeleton'
+import { BalanceCardSkeleton } from './_components/balance-card-skeleton'
 import { MonthBalanceSkeleton } from './_components/month-balance-skeleton'
 import { SpendingSkeleton } from './_components/spending-skeleton'
 
@@ -7,7 +7,7 @@ import { SpendingSkeleton } from './_components/spending-skeleton'
 // DashboardContent uses as Suspense fallbacks.
 const DashboardLoading = () => (
   <div className="flex flex-col gap-4">
-    <HeroSkeleton />
+    <BalanceCardSkeleton />
     <MonthBalanceSkeleton />
     <SpendingSkeleton />
   </div>

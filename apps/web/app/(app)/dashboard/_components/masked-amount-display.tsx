@@ -11,6 +11,12 @@ type Props = {
   className?: string
   /** Rendered before the number when not masked (e.g. "+"). */
   signPrefix?: string
+  /**
+   * De-emphasize the currency symbol the formatter puts before the digits, so
+   * the number reads first. Used by the dark balance hero, where "$" sits at a
+   * lower opacity than the amount.
+   */
+  dimSymbol?: boolean
 }
 
 /**
@@ -19,7 +25,13 @@ type Props = {
  * the dashboard design handoff. Respects the show-cents preference (no cents →
  * nothing to de-emphasize) and the eye-mask like its sibling.
  */
-export const MaskedAmountDisplay = ({ amount, currency, className, signPrefix }: Props) => {
+export const MaskedAmountDisplay = ({
+  amount,
+  currency,
+  className,
+  signPrefix,
+  dimSymbol,
+}: Props) => {
   const { masked } = useEyeMask()
   const showCents = useShowCents()
 
@@ -36,10 +48,17 @@ export const MaskedAmountDisplay = ({ amount, currency, className, signPrefix }:
   const integerPart = commaIndex === -1 ? formatted : formatted.slice(0, commaIndex)
   const decimalPart = commaIndex === -1 ? null : formatted.slice(commaIndex)
 
+  // Everything the formatter puts before the first digit is the currency symbol
+  // (and its separating space) — split so it can render dimmed on its own.
+  const firstDigit = integerPart.search(/\d/)
+  const symbol = dimSymbol && firstDigit > 0 ? integerPart.slice(0, firstDigit) : null
+  const digits = symbol === null ? integerPart : integerPart.slice(firstDigit)
+
   return (
     <span className={cn('tabular-nums', className)}>
       {signPrefix}
-      {integerPart}
+      {symbol && <span className="font-bold opacity-40">{symbol}</span>}
+      {digits}
       {decimalPart && <span className="text-[0.5em] opacity-55">{decimalPart}</span>}
     </span>
   )

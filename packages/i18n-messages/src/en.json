@@ -125,7 +125,8 @@
       "view_all_accounts": "View all accounts",
       "eyebrow": "To spend · today",
       "question": "How much do I have?",
-      "caption": "What you have available today, in pesos and dollars."
+      "caption": "What you have available today, in pesos and dollars.",
+      "total_label": "Total available balance"
     },
     "month": {
       "title": "Month balance",
@@ -162,7 +163,8 @@
       "title": "Where it is",
       "view_all": "View all",
       "usd_row": "In dollars",
-      "concentration_lead": "of your money is in"
+      "concentration_lead": "of your money is in",
+      "view_accounts": "View accounts"
     },
     "committed": {
       "title": "Committed",

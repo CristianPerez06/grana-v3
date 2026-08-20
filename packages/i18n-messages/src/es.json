@@ -125,7 +125,8 @@
       "view_all_accounts": "Ver todas las cuentas",
       "eyebrow": "Para gastar · hoy",
       "question": "¿Cuánto tengo?",
-      "caption": "Lo que tenés disponible hoy, en pesos y dólares."
+      "caption": "Lo que tenés disponible hoy, en pesos y dólares.",
+      "total_label": "Saldo disponible total"
     },
     "month": {
       "title": "Balance del mes",
@@ -162,7 +163,8 @@
       "title": "Dónde está",
       "view_all": "Ver todas",
       "usd_row": "En dólares",
-      "concentration_lead": "de tu plata está en"
+      "concentration_lead": "de tu plata está en",
+      "view_accounts": "Ver cuentas"
     },
     "committed": {
       "title": "Comprometido",
