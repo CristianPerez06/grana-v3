@@ -149,8 +149,6 @@
       "recurring_hint": "pendientes de confirmar",
       "view_cards": "Ver tarjetas",
       "view_recurring": "Ver recurrencias",
-      "overdue": "Vencido sin pagar",
-      "overdue_sub": "De resúmenes que ya vencieron. No entra en el total de arriba.",
       "debt": "Resúmenes tarjeta",
       "recurring_expense": "Gastos recurrentes",
       "next_month": "(próx. mes)",
@@ -164,6 +162,10 @@
       "error": "No pudimos cargar lo que se viene.",
       "title_next_month": "Compromisos del próximo mes",
       "committed_label": "Ya comprometido",
+      "overdue_prefix": "Además,",
+      "overdue_suffix": "vencido sin pagar (no entra en el total).",
+      "detail_region": "Detalle de compromisos",
+      "back": "Volver",
       "view_all": "Ver todos",
       "cards_group": "Tarjetas",
       "cards_group_sub": "{count, plural, =0 {sin tarjetas} one {# tarjeta} other {# tarjetas}}",
@@ -172,8 +174,7 @@
       "recurring_group": "Gastos fijos",
       "recurring_group_sub": "{count, plural, =0 {sin gastos fijos} one {# pendiente} other {# pendientes}}",
       "recurring_empty": "No tenés gastos fijos pendientes.",
-      "view_fixed": "Ver mis gastos fijos",
-      "expand": "Ver todo"
+      "view_fixed": "Ver mis gastos fijos"
     },
     "spent": {
       "title": "Cuánto gastaste",

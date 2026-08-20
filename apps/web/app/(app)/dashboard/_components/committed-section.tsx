@@ -3,8 +3,7 @@ import { AlertTriangle, CreditCard, Receipt } from 'lucide-react'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import { deriveCommittedSplit, type CommittedOutlook } from '@grana/dashboard'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { CommittedGroup } from './committed-group'
-import { CommittedRow } from './committed-row'
+import { CommittedDetail, type CommittedDetailGroup } from './committed-detail'
 import { MaskedAmount } from './masked-amount'
 import { MaskedAmountDisplay } from './masked-amount-display'
 
@@ -16,21 +15,19 @@ type Props = {
 
 /**
  * "Compromisos del próximo mes" — the committed total with its Tarjetas /
- * Gastos fijos split, and the two details as collapsible groups.
+ * Gastos fijos split, and the two details in a fixed-height zone.
  *
  * The split percentages are derived from the total (`deriveCommittedSplit`), and
  * an empty month renders no bar at all rather than one built from invented
  * proportions. Cards are grouped BY CARD, not by consumo: the user asks "how
  * much is coming from Visa", not "which twenty charges are pending".
  *
- * Both groups collapse fully: with the group closed the header still carries the
- * total and how many items make it up, so the closed state answers the question
- * on its own and opening is for the breakdown.
- *
- * Overdue statements get their OWN line and stay out of the total: what is late
- * and what is merely coming are two different facts, and folding them together
- * would make the month's number unreadable. Hiding the late money instead was
- * not an option either — it is the most urgent thing on the card.
+ * NOTHING in this card changes its height. Row 2's two cards share a height and
+ * "Cuánto gastaste" has no content to fill extra space with, so every pixel this
+ * card grows shows up as a hole in its neighbour. Hence the detail zone that
+ * replaces instead of unfolding (`committed-detail.tsx`), and hence the overdue
+ * notice being ONE line inside the total block: it is a footnote to that total —
+ * it says outright that it is not part of it — not a block competing with it.
  */
 export const CommittedSection = async ({ data, monthLabel }: Props) => {
   const t = await getTranslations('dashboard.committed')
@@ -54,6 +51,36 @@ export const CommittedSection = async ({ data, monthLabel }: Props) => {
           date: format.dateTime(new Date(`${nextClose}T00:00:00`), { day: '2-digit', month: '2-digit' }),
         })
       : t('cards_group_sub', { count: cards.length })
+
+  const groups: CommittedDetailGroup[] = [
+    {
+      key: 'cards',
+      icon: <CreditCard size={18} strokeWidth={2} aria-hidden />,
+      iconClassName: 'bg-slate-soft text-slate',
+      label: t('cards_group'),
+      sub: cardsSub,
+      ars: data.ARS.debt,
+      usd: data.USD.debt,
+      rows: cards.map((card) => ({ id: card.id, label: card.label, amount: card.amount })),
+      emptyMessage: t('cards_empty'),
+    },
+    {
+      key: 'recurring',
+      icon: <Receipt size={18} strokeWidth={2} aria-hidden />,
+      iconClassName: 'bg-plum-soft text-plum-deep',
+      label: t('recurring_group'),
+      sub: t('recurring_group_sub', { count: recurring.length }),
+      ars: data.ARS.recurringExpense,
+      usd: data.USD.recurringExpense,
+      rows: recurring.map((item, index) => ({
+        id: `${item.description}-${index}`,
+        label: item.description,
+        amount: item.amount,
+      })),
+      emptyMessage: t('recurring_empty'),
+      link: { href: '/transactions/recurring', label: t('view_fixed') },
+    },
+  ]
 
   return (
     <Card className="flex flex-col">
@@ -79,7 +106,7 @@ export const CommittedSection = async ({ data, monthLabel }: Props) => {
           </p>
         ) : (
           <>
-            {/* Total + stacked bar */}
+            {/* Total + stacked bar + the overdue footnote */}
             <div className="rounded-2xl border border-border bg-surface-sunken p-4">
               <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
                 {t('committed_label')}
@@ -114,90 +141,25 @@ export const CommittedSection = async ({ data, monthLabel }: Props) => {
                   </div>
                 </>
               )}
+
+              {hasOverdue && (
+                <p className="mt-2.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] font-bold text-terracotta">
+                  <AlertTriangle size={13} strokeWidth={2.5} aria-hidden className="shrink-0" />
+                  {t('overdue_prefix')}
+                  <span className="font-extrabold">
+                    <MaskedAmount amount={data.ARS.overdue} currency="ARS" />
+                  </span>
+                  {data.USD.overdue !== 0 && (
+                    <span className="font-extrabold">
+                      + <MaskedAmount amount={data.USD.overdue} currency="USD" showCentsOverride />
+                    </span>
+                  )}
+                  {t('overdue_suffix')}
+                </p>
+              )}
             </div>
 
-            {/* Vencido — apart from the total, never inside it */}
-            {hasOverdue && (
-              <div className="flex items-start gap-2.5 rounded-2xl bg-terracotta-soft px-3.5 py-3 text-terracotta">
-                <AlertTriangle size={16} strokeWidth={2.5} aria-hidden className="mt-px shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="text-[13px] font-extrabold">{t('overdue')}</p>
-                    <p className="shrink-0 text-[14px] font-extrabold tabular-nums">
-                      <MaskedAmountDisplay amount={data.ARS.overdue} currency="ARS" dimSymbol />
-                    </p>
-                  </div>
-                  {data.USD.overdue !== 0 && (
-                    <p className="mt-0.5 text-right text-[12px] font-bold">
-                      <MaskedAmount amount={data.USD.overdue} currency="USD" showCentsOverride />
-                    </p>
-                  )}
-                  <p className="mt-0.5 text-[11.5px] font-semibold opacity-80">
-                    {t('overdue_sub')}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Tarjetas — up to CARDS_COLLAPSED visible, the rest behind the toggle */}
-            <CommittedGroup
-              icon={<CreditCard size={18} strokeWidth={2} aria-hidden />}
-              iconClassName="bg-slate-soft text-slate"
-              label={t('cards_group')}
-              sub={cardsSub}
-              ars={data.ARS.debt}
-              usd={data.USD.debt}
-            >
-              {cards.length === 0 ? (
-                <p className="border-t border-border-soft py-3 text-[12.5px] font-semibold text-text-soft">
-                  {t('cards_empty')}
-                </p>
-              ) : (
-                cards.map((card) => (
-                  <CommittedRow
-                    key={card.id}
-                    label={card.label}
-                    amount={card.amount}
-                    currency="ARS"
-                  />
-                ))
-              )}
-            </CommittedGroup>
-
-            {/* Gastos fijos — the list scrolls inside its own panel, never the card */}
-            <CommittedGroup
-              icon={<Receipt size={18} strokeWidth={2} aria-hidden />}
-              iconClassName="bg-plum-soft text-plum-deep"
-              label={t('recurring_group')}
-              sub={t('recurring_group_sub', { count: recurring.length })}
-              ars={data.ARS.recurringExpense}
-              usd={data.USD.recurringExpense}
-            >
-              {recurring.length === 0 ? (
-                <p className="border-t border-border-soft py-3 text-[12.5px] font-semibold text-text-soft">
-                  {t('recurring_empty')}
-                </p>
-              ) : (
-                <>
-                  <div className="max-h-[196px] overflow-y-auto">
-                    {recurring.map((item, index) => (
-                      <CommittedRow
-                        key={`${item.description}-${index}`}
-                        label={item.description}
-                        amount={item.amount}
-                        currency="ARS"
-                      />
-                    ))}
-                  </div>
-                  <Link
-                    href="/transactions/recurring"
-                    className="mt-2 inline-block rounded text-[12.5px] font-bold text-emerald-deep transition-colors hover:text-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    {t('view_fixed')} ›
-                  </Link>
-                </>
-              )}
-            </CommittedGroup>
+            <CommittedDetail groups={groups} />
           </>
         )}
       </CardContent>

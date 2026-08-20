@@ -149,8 +149,6 @@
       "recurring_hint": "pending confirmation",
       "view_cards": "View cards",
       "view_recurring": "View recurring",
-      "overdue": "Overdue",
-      "overdue_sub": "From statements already past due. Not part of the total above.",
       "debt": "Card statements",
       "recurring_expense": "Recurring expenses",
       "next_month": "(next month)",
@@ -164,6 +162,10 @@
       "error": "We couldn't load what's coming.",
       "title_next_month": "Next month commitments",
       "committed_label": "Already committed",
+      "overdue_prefix": "Plus",
+      "overdue_suffix": "overdue (not part of the total).",
+      "detail_region": "Commitments breakdown",
+      "back": "Back",
       "view_all": "View all",
       "cards_group": "Cards",
       "cards_group_sub": "{count, plural, =0 {no cards} one {# card} other {# cards}}",
@@ -172,8 +174,7 @@
       "recurring_group": "Fixed expenses",
       "recurring_group_sub": "{count, plural, =0 {no fixed expenses} one {# pending} other {# pending}}",
       "recurring_empty": "No pending fixed expenses.",
-      "view_fixed": "View my fixed expenses",
-      "expand": "View all"
+      "view_fixed": "View my fixed expenses"
     },
     "spent": {
       "title": "How much you spent",

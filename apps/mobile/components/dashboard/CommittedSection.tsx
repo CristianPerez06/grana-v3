@@ -1,24 +1,22 @@
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { AlertTriangle, CreditCard, Receipt } from 'lucide-react-native'
 import { deriveCommittedSplit } from '@grana/dashboard'
 import { useT } from '../../lib/locale-context'
 import { colors } from '../../lib/colors'
 import { useCommittedOutlook } from '../../lib/dashboard/queries'
-import { CommittedGroup } from './CommittedGroup'
-import { CommittedRow } from './CommittedRow'
+import { CommittedDetail, type CommittedDetailGroup } from './CommittedDetail'
 import { CommittedSkeleton } from './CommittedSkeleton'
 import { MaskedAmount } from './MaskedAmount'
 
 // Native mirror of the web `committed-section.tsx`: the committed total with its
-// Tarjetas / Gastos fijos split and the two details as collapsible groups.
-// Cards are grouped BY CARD, not by consumo.
+// Tarjetas / Gastos fijos split and the two details in a zone that REPLACES
+// rather than unfolds (see `CommittedDetail`). Cards are grouped BY CARD, not by
+// consumo.
 //
-// Overdue statements get their OWN line and stay out of the total: what is late
-// and what is merely coming are two different facts.
-
-/** Max height of the fixed-expenses list before it scrolls inside its panel. */
-const RECURRING_MAX_HEIGHT = 160
+// Overdue money is a ONE-LINE footnote under the bar: it belongs next to the
+// total it explicitly is not part of, and three lines for a one-line fact push
+// the whole card down.
 
 const monthLabel = (locale: string): string => {
   const today = new Date()
@@ -62,6 +60,36 @@ export const CommittedSection = () => {
           date: nextClose.slice(8, 10) + '/' + nextClose.slice(5, 7),
         })
       : t('dashboard.committed.cards_group_sub', { count: cards.length })
+
+  const groups: CommittedDetailGroup[] = [
+    {
+      key: 'cards',
+      icon: <CreditCard size={17} color={colors.slate} />,
+      iconBackground: 'rgba(58,107,138,0.14)',
+      label: t('dashboard.committed.cards_group'),
+      sub: cardsSub,
+      ars: data.ARS.debt,
+      usd: data.USD.debt,
+      rows: cards.map((card) => ({ id: card.id, label: card.label, amount: card.amount })),
+      emptyMessage: t('dashboard.committed.cards_empty'),
+    },
+    {
+      key: 'recurring',
+      icon: <Receipt size={17} color={colors.plum} />,
+      iconBackground: 'rgba(138,110,152,0.14)',
+      label: t('dashboard.committed.recurring_group'),
+      sub: t('dashboard.committed.recurring_group_sub', { count: recurring.length }),
+      ars: data.ARS.recurringExpense,
+      usd: data.USD.recurringExpense,
+      rows: recurring.map((item, index) => ({
+        id: `${item.description}-${index}`,
+        label: item.description,
+        amount: item.amount,
+      })),
+      emptyMessage: t('dashboard.committed.recurring_empty'),
+      link: { href: '/transactions/recurring', label: t('dashboard.committed.view_fixed') },
+    },
+  ]
 
   return (
     <View className="rounded-2xl border border-border bg-card p-4">
@@ -138,113 +166,43 @@ export const CommittedSection = () => {
                 </View>
               </>
             )}
-          </View>
 
-          {/* Vencido — apart from the total, never inside it */}
-          {hasOverdue && (
-            <View
-              className="mt-2.5 flex-row items-start gap-2.5 rounded-2xl px-3.5 py-3"
-              style={{ backgroundColor: 'rgba(181,106,90,0.14)' }}
-            >
-              <AlertTriangle size={16} color={colors.terracotta} style={{ marginTop: 1 }} />
-              <View className="min-w-0 flex-1">
-                <View className="flex-row items-baseline justify-between gap-3">
-                  <Text
-                    className="text-[12.5px] font-extrabold"
-                    style={{ color: colors.terracotta }}
-                  >
-                    {t('dashboard.committed.overdue')}
-                  </Text>
-                  <MaskedAmount
-                    amount={data.ARS.overdue}
-                    currency="ARS"
-                    className="text-[13.5px] font-extrabold"
-                    style={{ color: colors.terracotta }}
-                  />
-                </View>
+            {hasOverdue && (
+              <View className="mt-2.5 flex-row flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                <AlertTriangle size={13} color={colors.terracotta} />
+                <Text
+                  className="text-[11.5px] font-bold"
+                  style={{ color: colors.terracotta }}
+                >
+                  {t('dashboard.committed.overdue_prefix')}
+                </Text>
+                <MaskedAmount
+                  amount={data.ARS.overdue}
+                  currency="ARS"
+                  className="text-[11.5px] font-extrabold"
+                  style={{ color: colors.terracotta }}
+                />
                 {data.USD.overdue !== 0 && (
                   <MaskedAmount
                     amount={data.USD.overdue}
                     currency="USD"
                     showCentsOverride
-                    className="mt-0.5 text-right text-[11.5px] font-bold"
+                    className="text-[11.5px] font-extrabold"
                     style={{ color: colors.terracotta }}
                   />
                 )}
                 <Text
-                  className="mt-0.5 text-[11px] font-semibold"
-                  style={{ color: colors.terracotta, opacity: 0.85 }}
+                  className="text-[11.5px] font-bold"
+                  style={{ color: colors.terracotta }}
                 >
-                  {t('dashboard.committed.overdue_sub')}
+                  {t('dashboard.committed.overdue_suffix')}
                 </Text>
               </View>
-            </View>
-          )}
+            )}
+          </View>
 
-          <View className="mt-3 gap-2.5">
-            <CommittedGroup
-              icon={<CreditCard size={17} color={colors.slate} />}
-              iconBackground="rgba(58,107,138,0.14)"
-              label={t('dashboard.committed.cards_group')}
-              sub={cardsSub}
-              ars={data.ARS.debt}
-              usd={data.USD.debt}
-            >
-              {cards.length === 0 ? (
-                <Text className="border-t border-border-soft py-2.5 text-[12px] font-semibold text-text-soft">
-                  {t('dashboard.committed.cards_empty')}
-                </Text>
-              ) : (
-                cards.map((card) => (
-                  <CommittedRow
-                    key={card.id}
-                    label={card.label}
-                    amount={card.amount}
-                    currency="ARS"
-                  />
-                ))
-              )}
-            </CommittedGroup>
-
-            <CommittedGroup
-              icon={<Receipt size={17} color={colors.plum} />}
-              iconBackground="rgba(138,110,152,0.14)"
-              label={t('dashboard.committed.recurring_group')}
-              sub={t('dashboard.committed.recurring_group_sub', { count: recurring.length })}
-              ars={data.ARS.recurringExpense}
-              usd={data.USD.recurringExpense}
-            >
-              {recurring.length === 0 ? (
-                <Text className="border-t border-border-soft py-2.5 text-[12px] font-semibold text-text-soft">
-                  {t('dashboard.committed.recurring_empty')}
-                </Text>
-              ) : (
-                <>
-                  {/* Only this list scrolls — never the whole card. */}
-                  <ScrollView style={{ maxHeight: RECURRING_MAX_HEIGHT }} nestedScrollEnabled>
-                    {recurring.map((item, index) => (
-                      <CommittedRow
-                        key={`${item.description}-${index}`}
-                        label={item.description}
-                        amount={item.amount}
-                        currency="ARS"
-                      />
-                    ))}
-                  </ScrollView>
-                  <Pressable
-                    onPress={() => router.push('/transactions/recurring')}
-                    accessibilityRole="button"
-                    hitSlop={8}
-                    style={{ minHeight: 44 }}
-                    className="justify-center"
-                  >
-                    <Text className="text-[12px] font-bold text-positive">
-                      {t('dashboard.committed.view_fixed')} ›
-                    </Text>
-                  </Pressable>
-                </>
-              )}
-            </CommittedGroup>
+          <View className="mt-3">
+            <CommittedDetail groups={groups} />
           </View>
         </>
       )}

@@ -235,33 +235,52 @@ Dos estados SHALL tratarse como estados de primera clase, no como bordes excepci
 
 ---
 
-### Requirement: Los grupos de "Compromisos del próximo mes" son desplegables accesibles
+### Requirement: El detalle de "Compromisos del próximo mes" reemplaza en una zona de alto fijo
 
-La card de compromisos SHALL exponer sus dos detalles —Tarjetas y Gastos fijos— como grupos desplegables **independientes entre sí**. La cabecera de cada grupo SHALL ser un `<button>` con `aria-expanded` que refleje su estado y `aria-controls` apuntando al `id` del panel que despliega. El estado de expansión SHALL vivir en el estado de la vista, no en una mutación de clases sobre el DOM.
+La card de compromisos NO SHALL cambiar de alto al mostrar un detalle. Las dos cards de la fila 2 comparten alto —la fila mide lo que mide la más alta— y "Cuánto gastaste" no tiene contenido con qué llenar el alto extra, así que **todo lo que crece en Compromisos aparece como un hueco blanco en la card de al lado**. Un desplegable hacia abajo sumaba ~280px de un golpe y el hueco quedaba en el medio de la card vecina, que es donde peor se lee.
 
-En mobile, el área táctil de cada cabecera SHALL ser de al menos 44px. El chevron SHALL rotar 180° al abrir, y esa SHALL ser la única transición de la card.
+El detalle SHALL vivir en una **zona de alto fijo** al pie de la card, que ocupa el alto sobrante y NO SHALL crecer con su contenido. La zona SHALL tener dos estados que ocupan exactamente el mismo espacio:
 
-El grupo **Tarjetas** SHALL listar una fila **por tarjeta** con su total comprometido —no consumos individuales—, ordenadas por monto descendente. El grupo **Gastos fijos** SHALL listar hasta 10 filas con scroll interno propio y un link al listado completo. El scroll interno SHALL limitarse a esa lista: la card completa NO SHALL scrollear.
+- **Resumen** — una fila por grupo (Tarjetas y Gastos fijos), cada una con su total comprometido y **cuántos ítems lo componen**, de modo que el estado por defecto responda la pregunta sin tocar nada. Las filas SHALL estirarse para llenar la zona.
+- **Detalle** — la lista de UN grupo, con una cabecera que lo nombra, repite su total y ofrece **volver** al resumen. La lista SHALL scrollear dentro de la zona cuando no entre; la card completa NO SHALL scrollear.
 
-Con el grupo cerrado, su cabecera SHALL seguir informando el total comprometido de ese grupo y **cuántos ítems lo componen**, de modo que el estado cerrado responda la pregunta por sí solo y desplegar sirva para el desglose. Un panel oculto por defecto no puede mostrar las primeras filas, así que la información que sobrevive al colapso vive en la cabecera.
+El detalle **reemplaza** al resumen, no se agrega debajo: por eso hay uno solo a la vez y no hay estado en el que se vean los dos totales y una lista al mismo tiempo. Es el mismo gesto que ya usan los tiles de "Cuánto gastaste", que se dan vuelta sin cambiar de tamaño; las dos cards de la fila SHALL comportarse igual entre sí.
 
-#### Scenario: Usuario despliega el grupo de tarjetas
+**Accesibilidad del reemplazo.** No es un desplegable, así que NO SHALL usar `aria-expanded`: el control no revela un panel adjunto, cambia el contenido de una región. La zona SHALL ser una región rotulada, y al abrir un detalle el foco SHALL moverse al control de volver; al volver, SHALL regresar al control del grupo que se había abierto. Sin ese movimiento, quien navega por teclado activa un botón que desaparece y pierde el foco al `<body>`. En mobile, el área táctil de cada control SHALL ser de al menos 44px.
 
-- **WHEN** el usuario activa la cabecera del grupo Tarjetas
-- **THEN** `aria-expanded` pasa a `true` y el panel asociado se muestra
-- **AND** el estado del grupo Gastos fijos no cambia
+El grupo **Tarjetas** SHALL listar una fila **por tarjeta** con su total comprometido —no consumos individuales—, ordenadas por monto descendente. El grupo **Gastos fijos** SHALL listar hasta 10 filas y un link al listado completo.
+
+**El aviso de vencido SHALL ocupar una sola línea**, dentro del bloque del total y debajo de la barra apilada. Es una nota al pie de ese total —dice explícitamente que no forma parte de él—, no un bloque que compita con él, y tres renglones para un dato de una línea empujan el alto de toda la fila.
+
+#### Scenario: Usuario abre el detalle de tarjetas
+
+- **WHEN** el usuario activa la fila del grupo Tarjetas
+- **THEN** la zona pasa a mostrar la lista de tarjetas con su control de volver
+- **AND** la card mide exactamente lo mismo que antes de abrirla
+
+#### Scenario: Usuario vuelve al resumen
+
+- **WHEN** el usuario activa el control de volver
+- **THEN** la zona muestra otra vez las dos filas con sus totales
+- **AND** el foco vuelve a la fila del grupo que estaba abierto
 
 #### Scenario: Usuario con varias tarjetas
 
 - **WHEN** el usuario tiene cinco tarjetas con compromiso en el próximo mes
-- **THEN** la cabecera cerrada informa el total y que son cinco tarjetas
-- **AND** al desplegar aparecen las cinco, ordenadas por monto descendente
+- **THEN** la fila del grupo informa el total y que son cinco tarjetas
+- **AND** al abrir el detalle aparecen las cinco, ordenadas por monto descendente
 
-#### Scenario: Lista larga de gastos fijos
+#### Scenario: Lista más larga que la zona
 
-- **WHEN** el usuario tiene más gastos fijos de los que entran en el panel
-- **THEN** la lista scrollea dentro de su propio contenedor
-- **AND** la card de compromisos no scrollea como bloque
+- **WHEN** el usuario tiene más gastos fijos de los que entran en la zona
+- **THEN** la lista scrollea dentro de la zona
+- **AND** ni la card de compromisos ni la fila cambian de alto
+
+#### Scenario: Mes con un resumen vencido
+
+- **WHEN** hay un resumen vencido e impago
+- **THEN** el aviso ocupa una sola línea debajo de la barra del total
+- **AND** el alto de la card no se despega del de "Cuánto gastaste"
 
 ---
 

@@ -50,24 +50,27 @@
 
 - [x] 5.1 Header con el mes al que refiere y el link al listado completo
 - [x] 5.2 Bloque de total: rótulo, monto ARS, línea USD condicional, barra apilada con los porcentajes de 1.7 y leyenda con cuadraditos y porcentajes
-- [x] 5.3 Implementar el grupo desplegable como componente reusable: cabecera `<button>` con `aria-expanded` y `aria-controls`, panel con `id`, estado en React, chevron con `transform .18s ease` (D6)
+- [x] ~~5.3 Implementar el grupo desplegable~~ — **reemplazado por 5.8.** El desplegable hacia abajo sumaba ~280px al alto de la card y, como las dos cards de la fila comparten alto, el sobrante salía como un hueco en el medio de "Cuánto gastaste"
 - [x] 5.4 Grupo **Tarjetas**: filas por tarjeta (2.2), hasta 3 con el grupo cerrado y el resto al desplegar, con el corte calculado sobre la lista ordenada — no un `slice` en el markup
 - [x] 5.5 Grupo **Gastos fijos**: hasta 10 filas con `overflow: auto` en su propio contenedor y link "Ver mis gastos fijos". Verificar que la card completa **no** scrollea
 - [x] 5.6 Estados vacíos por grupo y el vacío único de la card cuando no hay compromisos de ningún tipo
 - [x] 5.7 Verificar el área táctil ≥44px de las cabeceras en el breakpoint mobile
+- [x] 5.8 Reemplazar los dos desplegables por una **zona de detalle de alto fijo** (`committed-detail.tsx`): `flex-1` + `min-h` del tamaño del resumen, así mide igual en los dos estados y abrir un detalle cuesta cero píxeles. El detalle reemplaza al resumen y la lista scrollea adentro de la zona
+- [x] 5.9 Accesibilidad del reemplazo: sin `aria-expanded` (no es un disclosure), región rotulada, y **movimiento de foco** al control de volver al abrir y de vuelta al control del grupo al cerrar
+- [x] 5.10 Bajar el aviso de vencido a **una sola línea** dentro del bloque del total, debajo de la barra: de ~75px a ~24px
 
 ## 6. Web — Tira Compartido y layout general
 
 - [x] 6.1 `shared-strip.tsx` ya cumplía el diseño del handoff (ícono, nombre, avatares apilados, monto direccional y chevron como único link) — se deja como está
 - [x] 6.2 Reescribir `dashboard-content.tsx` con la grilla nueva: fila 1 a ancho completo, fila 2 `1fr / 1.12fr` con `align-items: stretch`, pie Compartido
 - [x] 6.3 Colapso a una columna por debajo del ancho de contenido, con el sidebar oculto y el padding del main reducido
-- [ ] 6.4 Verificar **a ojo** que las dos cards de la fila 2 terminan alineadas en los anchos de corte (la grilla es `items-stretch` y la tira de ritmo lleva `mt-auto`, pero hay que mirarlo con datos reales)
+- [ ] 6.4 Verificar **a ojo** que las dos cards de la fila 2 terminan alineadas en los anchos de corte, y que el alto de Compromisos no se mueve al abrir y cerrar un detalle
 
 ## 7. Mobile — espejo de las cuatro cards
 
 - [x] 7.1 `HeroSection` / card de saldo unificada con sus dos zonas, en PascalCase espejando el naming de web
 - [x] 7.2 `SpentThisMonthSection` con los tres tiles y la tira de ritmo, con la escala tipográfica mobile
-- [x] 7.3 `CommittedSection` con la barra apilada y los dos grupos desplegables, con área táctil ≥44px
+- [x] 7.3 `CommittedSection` con la barra apilada y la zona de detalle que reemplaza (`CommittedDetail`), con área táctil ≥44px. En nativo la pila tolera el crecimiento, pero el gesto es el mismo a propósito: la misma card no se opera de dos maneras según el dispositivo
 - [x] 7.4 Crear `SharedStrip` en `apps/mobile/components/dashboard/` — **no existe hoy** — con el mismo condicional de actividad que web
 - [x] 7.5 Recomponer `apps/mobile/app/(app)/dashboard.tsx` con los cuatro bloques en orden y su tolerancia a fallas parciales
 - [x] 7.6 Verificar la paridad de números entre plataformas: las dos consumen las mismas derivaciones de `@grana/dashboard`
@@ -79,6 +82,8 @@
 - [x] 8.3 **Verificar que `getMonthCategoryBreakdown` sigue consumido** por el dashboard: es la fuente del devengado que alimenta "Gastaste" (1.3). No removerlo
 - [x] 8.4 Confirmar que el donut sigue funcionando en Movimientos (`category-spending-overview-container.tsx`) y retirar `topCard` de `CommittedCurrency` si ya no tiene consumidores
 - [x] 8.5 Limpiar las claves i18n que quedan huérfanas y agregar las nuevas de los cuatro bloques
+- [x] 8.6 **Fix:** la limpieza de 8.5 se llevó `dashboard.spending.credits_label`, que la dona de Movimientos seguía consumiendo. Vuelve bajo `transactions.spending`, que es donde vive su único consumidor
+- [x] 8.7 Test que escanea los fuentes y verifica que cada clave literal exista en `es` y en `en`, más la paridad entre los dos locales. El bug de 8.6 pasó tsc, ESLint y `next build`: solo aparecía al abrir la página
 
 ## 9. Verificación
 
@@ -87,7 +92,7 @@
 - [ ] 9.3 Recorrer a mano los estados: usuario nuevo sin datos, mes sin ingresos (ritmo indeterminado), ritmo > 100%, sin tarjetas, sin gastos fijos, sin actividad compartida, usuario sin nada en USD, y compromisos con un resumen vencido
 - [ ] 9.4 Verificar el eye toggle sobre **todos** los montos nuevos, incluidos los de los grupos desplegables y el pie de la tira de ritmo
 - [ ] 9.5 Verificar que el selector de mes recalcula Resumen del mes y Cuánto gastaste, que **sí** mueve el saldo disponible (corte mensual) y que **no** toca Compromisos: su ventana es el próximo mes calendario respecto de hoy, fija
-- [ ] 9.6 Revisión de accesibilidad: `aria-expanded`/`aria-controls` de los desplegables, contraste sobre la zona oscura y áreas táctiles en mobile
+- [ ] 9.6 Revisión de accesibilidad: el foco de la zona de detalle de Compromisos (ida y vuelta), contraste sobre la zona oscura y áreas táctiles en mobile
 
 ## 10. Archivo (pre-merge, obligatorio)
 
