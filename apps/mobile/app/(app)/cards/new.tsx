@@ -1,8 +1,8 @@
-import { Text, View } from 'react-native'
+import { Text } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { FormScreen } from '../../../components/layout/FormScreen'
-import { Spinner } from '../../../components/ui/Spinner'
 import { CreateCardForm } from '../../../components/cards/CreateCardForm'
+import { CreateCardFormSkeleton } from '../../../components/cards/CreateCardFormSkeleton'
 import { useInstitutions } from '../../../lib/accounts/queries'
 import { getCardNetworks } from '../../../lib/cards/queries'
 import { useT } from '../../../lib/locale-context'
@@ -25,9 +25,7 @@ export default function NewCardScreen() {
       contentClassName="px-6 py-6"
     >
       {pending ? (
-        <View className="items-center py-12">
-          <Spinner size="md" />
-        </View>
+        <CreateCardFormSkeleton />
       ) : failed ? (
         <Text className="text-center text-sm text-text-muted">{t('cards.route.wallet_error')}</Text>
       ) : (

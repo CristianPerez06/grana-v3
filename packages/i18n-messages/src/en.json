@@ -295,6 +295,11 @@
           "name_placeholder": "E.g. Pharmaceuticals",
           "submit": "Save subcategory"
         }
+      },
+      "route": {
+        "list_loading": "Loading the categories…",
+        "subcategories_loading": "Loading the subcategories…",
+        "form_loading": "Loading the category…"
       }
     }
   },
@@ -555,7 +560,9 @@
       "active_loading": "Loading your accounts…",
       "active_error": "We couldn't load your accounts.",
       "archived_loading": "Loading archived…",
-      "archived_error": "We couldn't load archived accounts."
+      "archived_error": "We couldn't load archived accounts.",
+      "detail_loading": "Loading the account…",
+      "form_loading": "Loading the form…"
     }
   },
   "cards": {
@@ -829,7 +836,12 @@
       "wallet_loading": "Loading your cards…",
       "wallet_error": "We couldn't load your cards.",
       "archived_loading": "Loading archived…",
-      "archived_error": "We couldn't load archived cards."
+      "archived_error": "We couldn't load archived cards.",
+      "detail_loading": "Loading the card…",
+      "periods_loading": "Loading the statements…",
+      "period_loading": "Loading the statement…",
+      "pay_loading": "Loading the payment…",
+      "form_loading": "Loading the form…"
     },
     "month_hero": {
       "eyebrow": "To pay this month",
@@ -1719,7 +1731,10 @@
     "duplicate_hint": "You already have another active rule with the same account, currency, type and amount. If they are different expenses, ignore this.",
     "duplicate_warning_title": "You already have a rule like this",
     "duplicate_warning_body": "“{rule}” has the same account, currency, type and amount. You can create it anyway if they are different expenses.",
-    "duplicate_warning_body_untitled": "You already have an active rule with the same account, currency, type and amount. You can create it anyway if they are different expenses."
+    "duplicate_warning_body_untitled": "You already have an active rule with the same account, currency, type and amount. You can create it anyway if they are different expenses.",
+    "route": {
+      "form_loading": "Loading the form…"
+    }
   },
   "subcategories": {
     "supermercado": "Supermarket",

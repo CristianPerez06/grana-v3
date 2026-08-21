@@ -3,8 +3,8 @@ import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Pencil, Plus } from 'lucide-react-native'
 import { PageHeader } from '../../../../components/ui/PageHeader'
-import { Spinner } from '../../../../components/ui/Spinner'
 import { AccountDetailHero } from '../../../../components/accounts/AccountDetailHero'
+import { AccountDetailSkeleton } from '../../../../components/accounts/AccountDetailSkeleton'
 import { PendingReimbursementsCard } from '../../../../components/accounts/PendingReimbursementsCard'
 import { MovementsSection } from '../../../../components/accounts/MovementsSection'
 import {
@@ -80,9 +80,7 @@ export default function AccountDetailScreen() {
         }
       >
         {accountQ.isPending ? (
-          <View className="items-center py-12">
-            <Spinner size="md" />
-          </View>
+          <AccountDetailSkeleton />
         ) : accountQ.isError || !account ? (
           <Text className="text-center text-sm text-text-muted">
             {t('accounts.errors.account_not_found')}

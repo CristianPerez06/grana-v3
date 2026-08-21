@@ -3,9 +3,9 @@ import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { PageHeader } from '../../../components/ui/PageHeader'
-import { Spinner } from '../../../components/ui/Spinner'
 import { Button } from '../../../components/ui/Button'
 import { AccountSection } from '../../../components/accounts/AccountSection'
+import { AccountsListSkeleton } from '../../../components/accounts/AccountsListSkeleton'
 import { AccountsEmptyState } from '../../../components/accounts/AccountsEmptyState'
 import { AccountsHint } from '../../../components/accounts/AccountsHint'
 import {
@@ -73,9 +73,7 @@ export default function AccountsScreen() {
         }
       >
         {listQ.isPending ? (
-          <View className="items-center py-12">
-            <Spinner size="md" />
-          </View>
+          <AccountsListSkeleton />
         ) : listQ.isError ? (
           <View className="items-center gap-3 py-12">
             <Text className="text-center text-sm text-text-muted">

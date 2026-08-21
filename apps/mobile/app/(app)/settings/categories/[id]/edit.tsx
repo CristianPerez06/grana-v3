@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Text, View } from 'react-native'
+import { Text } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 import { FormScreen } from '../../../../../components/layout/FormScreen'
-import { Spinner } from '../../../../../components/ui/Spinner'
 import { EditCategoryForm } from '../../../../../components/categories/EditCategoryForm'
+import { EditCategoryFormSkeleton } from '../../../../../components/categories/EditCategoryFormSkeleton'
 import { getCategoryById, type Category } from '../../../../../lib/categories'
 import { useT } from '../../../../../lib/locale-context'
 
@@ -37,9 +37,7 @@ export default function EditCategoryScreen() {
       contentClassName="px-6 py-6"
     >
       {category === undefined ? (
-        <View className="items-center py-12">
-          <Spinner size="md" />
-        </View>
+        <EditCategoryFormSkeleton />
       ) : category === null ? (
         <Text className="text-sm text-error">
           {t('settings.categories.errors.not_found')}

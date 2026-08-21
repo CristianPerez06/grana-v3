@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { PageHeader } from '../../../../../../components/ui/PageHeader'
-import { Spinner } from '../../../../../../components/ui/Spinner'
+import { SubcategoryListSkeleton } from '../../../../../../components/categories/SubcategoryListSkeleton'
 import {
   SubcategoryList,
   type SubcategoryWithName,
@@ -76,9 +76,7 @@ export default function SubcategoriesScreen() {
       />
       <ScrollView contentContainerClassName="px-6 py-6">
         {category === undefined || subcategories === null ? (
-          <View className="items-center py-12">
-            <Spinner size="md" />
-          </View>
+          <SubcategoryListSkeleton />
         ) : category === null ? (
           <Text className="text-sm text-error">
             {t('settings.categories.errors.not_found')}

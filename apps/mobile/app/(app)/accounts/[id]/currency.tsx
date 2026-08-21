@@ -4,10 +4,10 @@ import { useLocalSearchParams } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { parseMoneyInput } from '@grana/validation'
 import { FormScreen } from '../../../../components/layout/FormScreen'
-import { Spinner } from '../../../../components/ui/Spinner'
 import { Button } from '../../../../components/ui/Button'
 import { Label } from '../../../../components/ui/Label'
 import { MoneyAmountInput } from '../../../../components/ui/MoneyAmountInput'
+import { AccountCurrenciesSkeleton } from '../../../../components/accounts/AccountCurrenciesSkeleton'
 import { useAccountDetail } from '../../../../lib/accounts/queries'
 import {
   addCurrencyToAccount,
@@ -83,9 +83,7 @@ export default function AccountCurrencyScreen() {
       contentClassName="gap-6 px-6 py-6"
     >
         {accountQ.isPending ? (
-          <View className="items-center py-12">
-            <Spinner size="md" />
-          </View>
+          <AccountCurrenciesSkeleton />
         ) : accountQ.isError || !account ? (
           <Text className="text-center text-sm text-text-muted">
             {t('accounts.errors.account_not_found')}

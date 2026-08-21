@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Text, View } from 'react-native'
+import { Text } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { getAccounts } from '@grana/accounts'
@@ -7,8 +7,8 @@ import { getTodayAR } from '@grana/money-logic'
 import { resolveAccountAvatar } from '@grana/ui-contracts'
 import type { MovementFormAccount } from '@grana/movement-form'
 import { FormScreen } from '../../../../components/layout/FormScreen'
-import { Spinner } from '../../../../components/ui/Spinner'
 import { RecurrenceForm } from '../../../../components/recurrences/RecurrenceForm'
+import { RecurrenceFormSkeleton } from '../../../../components/recurrences/RecurrenceFormSkeleton'
 import { getAllCategories } from '../../../../lib/categories'
 import { getHousehold } from '../../../../lib/shared/queries'
 import { supabase } from '../../../../lib/supabase'
@@ -94,9 +94,7 @@ export default function NewRecurrenceScreen() {
           {t('transactions.new.load_error')}
         </Text>
       ) : !ready ? (
-        <View className="items-center py-12">
-          <Spinner size="md" />
-        </View>
+        <RecurrenceFormSkeleton />
       ) : (
         <RecurrenceForm
           accounts={accounts}
