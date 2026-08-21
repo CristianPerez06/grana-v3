@@ -246,7 +246,8 @@ footer{border-top:1px solid var(--border);padding-top:20px;color:var(--soft);fon
     <ul>
       <li class="n">La tira contextual. <b>Un tap</b> — registrar el ingreso y ahorrar sale en dos.</li>
       <li class="r">Se sirve desde <span class="mono">guidance</span>, que <b>ya est&aacute; construido</b>: registra visto, descartado y completado por usuario. Si la descart&aacute;s varias veces, se apaga sola.</li>
-      <li class="n">El monto <b>no se configura, se aprende</b>: la primera vez 10% del ingreso, despu&eacute;s lo que guardaste la vez anterior. Cero pantalla de ajustes.</li>
+      <li class="n">El monto <b>no se configura, se aprende</b> &mdash; y lo que se recuerda es <b>el porcentaje, no el importe</b>. Si en agosto guardaste 10% de $2.000.000, en septiembre con $2.500.000 sugiere $250.000, no $200.000. Cero pantalla de ajustes.</li>
+      <li class="n">El porcentaje solo aplica <b>guardando desde un ingreso</b>. Suelto a fin de mes no hay ingreso del cual sacar un porcentaje: ah&iacute; la sugerencia es el &uacute;ltimo monto, o ninguna.</li>
     </ul>
   </div>
 </section>
@@ -255,15 +256,15 @@ footer{border-top:1px solid var(--border);padding-top:20px;color:var(--soft);fon
 <section class="step">
   <div>
     <div class="screen">
-      <div class="sbar"><span class="t">Guardar del sueldo</span><span class="a">&#10005;</span></div>
+      <div class="sbar"><span class="t">Guardar del sueldo</span><span class="a mono">5 ago</span></div>
       <div class="sbody">
-        <p style="font-size:11.5px;color:var(--soft)">Del ingreso de <span class="num">$2.000.000</span> en pesos</p>
+        <p style="font-size:11.5px;color:var(--soft)">Reci&eacute;n entr&oacute; <span class="num">$2.000.000</span> en pesos</p>
         <div class="amt num">$&nbsp;200.000</div>
         <div class="chips"><span class="chip on">10%</span><span class="chip">20%</span><span class="chip">Otro monto</span></div>
         <div class="calc">
-          <div class="r"><span style="color:var(--muted)">Ten&eacute;s en pesos</span><span class="num">$1.800.000</span></div>
+          <div class="r"><span style="color:var(--muted)">Ten&eacute;s hoy en pesos</span><span class="num">$4.000.000</span></div>
           <div class="r"><span style="color:var(--muted)">Vas a guardar</span><span class="num pos">&minus;$200.000</span></div>
-          <div class="r tot"><span>Te queda para gastar</span><span class="num">$1.600.000</span></div>
+          <div class="r tot"><span>Te queda para gastar</span><span class="num">$3.800.000</span></div>
         </div>
         <div class="btns"><button class="btn">Guardar</button></div>
         <p style="font-size:11px;color:var(--soft);text-align:center">No se mueve plata de tu cuenta.</p>
@@ -276,6 +277,8 @@ footer{border-top:1px solid var(--border);padding-top:20px;color:var(--soft);fon
       <li class="n"><b>Viniendo de un ingreso no pregunta la moneda</b>: la hereda. Si el sueldo fue en pesos, se guarda en pesos. Y el monto viene prellenado.</li>
       <li class="n">Queda <b>un solo campo</b>, y ya viene resuelto. Por eso el circuito completo son dos taps.</li>
       <li class="n">Abierto <b>suelto</b> (desde el dashboard o a fin de mes) s&iacute; muestra moneda &mdash; y solo si ten&eacute;s saldo en las dos.</li>
+      <li class="n"><b>El c&aacute;lculo es del momento, no del cierre del mes.</b> Ac&aacute; es 5 de agosto: ten&iacute;as $2.000.000 y acaba de entrar el sueldo. Por eso son $4.000.000 y no el $1.600.000 que muestra el dashboard a fin de mes.</li>
+      <li class="n"><b>No se calcula contra el sueldo</b> (&laquo;de $2.000.000 te quedan $1.800.000&raquo;), aunque ser&iacute;a m&aacute;s f&aacute;cil de leer. Eso implicar&iacute;a que esos $200.000 <i>salen de ese ingreso</i>, y el guardado es <b>por moneda y fungible</b>: no pertenece a ning&uacute;n movimiento.</li>
       <li class="r">Se monta sobre el primitivo <span class="mono">Drawer</span>, con los montos r&aacute;pidos del drawer de liquidaci&oacute;n.</li>
       <li class="n"><b>No pide prop&oacute;sito.</b> Un &laquo;&iquest;para qu&eacute;?&raquo; sin metas que elegir es un campo muerto. Fase 2.</li>
       <li class="n">El tope es lo que ten&eacute;s: guardar de m&aacute;s no es un estado inc&oacute;modo, es un input inv&aacute;lido. <b>Es la diferencia con el ledger</b>, donde un saldo negativo s&iacute; es un hecho v&aacute;lido.</li>
@@ -338,6 +341,7 @@ footer{border-top:1px solid var(--border);padding-top:20px;color:var(--soft);fon
       <li class="r">La zona oscura, el bloque <b>D&oacute;nde est&aacute;</b> y la tira de tres <b>no se tocan</b>: son el redise&ntilde;o que acaba de mergear. Los porcentajes van sobre el total de tus cuentas en esa moneda ($1.800.000), por eso el encabezado lo dice.</li>
       <li class="m">Las dos l&iacute;neas explican <b>por qu&eacute; el disponible es menor que tus cuentas</b>. Est&aacute;n bajo una regla porque son otra naturaleza: una es un movimiento, la otra una decisi&oacute;n.</li>
       <li class="m"><b>&laquo;Pasaste a otras cuentas&raquo; solo aparece si ten&eacute;s cuentas fuera del disponible.</b> Quien tiene caja de ahorro y billetera nom&aacute;s no la ve nunca.</li>
+      <li class="m">Al tocarla, el detalle <b>nombra el destino</b> &mdash; &laquo;Plazo fijo Naci&oacute;n &middot; $700.000&raquo; &mdash; no una pantalla gen&eacute;rica de transferencias. Es lo que evita que se lea como plata que se perdi&oacute;.</li>
       <li class="m">El menos dice <b>&laquo;sali&oacute; de lo que pod&eacute;s gastar&raquo;</b>, cierto en las dos. El color y el verbo dicen si eso es bueno o malo.</li>
       <li class="r">La card cierra en pantalla, con estos n&uacute;meros:<br><span class="mono" style="font-size:11.5px;color:var(--text)">2.000.000 + 2.000.000 &minus; 1.500.000 &minus; 700.000 &minus; 200.000 = 1.600.000</span></li>
     </ul>

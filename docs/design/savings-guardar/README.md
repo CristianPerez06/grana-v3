@@ -43,6 +43,12 @@ secundarias que el usuario recorre solo cuando las necesita.
   Lo que la distingue es la **cuenta destino**, clasificada una sola vez al crearla.
 - El segundo bloque se llama **"Fuera de disponible"**, no "guardado o invertido": ese nombre volvería
   a mezclar una decisión (guardar) con una característica del vehículo (rendir).
+- **El disparador de la sugerencia es un ingreso, como máximo una vez por mes.** Sin umbrales ni
+  "ingreso típico": esa inteligencia es una evolución posterior, no fase 1.
+- **Se memoriza el porcentaje, no el importe.** 10% de $2.000.000 en agosto sugiere $250.000 sobre
+  $2.500.000 en septiembre. El porcentaje solo aplica guardando desde un ingreso.
+- **El drawer muestra el saldo del momento, no el del cierre de mes**, y NO calcula contra el ingreso:
+  enmarcarlo así implicaría que el guardado pertenece a ese movimiento, y es por moneda y fungible.
 - El guardado se muestra como **línea del grupo** en Cuentas, nunca pegado a una cuenta.
 
 ## Abierto
