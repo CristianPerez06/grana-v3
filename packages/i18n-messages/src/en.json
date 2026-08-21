@@ -132,9 +132,6 @@
     },
     "hero_loading": "Loading your available balance…",
     "hero_error": "We couldn't load your available balance.",
-    "spending": {
-      "loading": "Loading the breakdown…"
-    },
     "accounts": {
       "title": "Where it is",
       "view_accounts": "View accounts"

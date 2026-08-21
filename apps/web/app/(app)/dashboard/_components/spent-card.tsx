@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { useDashboardMonth } from './dashboard-month-context'
 import { useEyeMask } from './eye-mask-context'
+import { SpentCardBodySkeleton } from './spent-card-body-skeleton'
 import { SpentTile } from './spent-tile'
 
 type Props = {
@@ -145,7 +146,12 @@ export const SpentCard = ({ otherName }: Props) => {
   const usd = spendingQuery.data?.USD ?? empty
   const pace = deriveSpendingPace(ars.gastaste, balanceQuery.data?.ARS.totalIncome ?? 0)
 
-  const isEmpty = ars.gastaste === 0 && usd.gastaste === 0
+  // Loading is NOT empty: while the read has not resolved the amounts are 0
+  // because there is no data, and `isEmpty` used to claim "Sin gastos este mes."
+  // off the back of that. The empty state is decided only once the read resolved
+  // and came back zero. It hit on every month change too: the query re-keys.
+  const isLoading = spendingQuery.isPending || balanceQuery.isPending
+  const isEmpty = !isLoading && ars.gastaste === 0 && usd.gastaste === 0
   // One decision for the three tiles (the USD line), so they stay level.
   const tilesHaveUsd = usd.gastaste !== 0
   // Same rule for the type step: the three amounts share the tightest one any of
@@ -165,8 +171,14 @@ export const SpentCard = ({ otherName }: Props) => {
   return (
     <Card className="flex flex-col">
       {/* One row at every width: the link belongs beside the title, not stacked
-          under it. The title shrinks; the link never wraps. */}
-      <CardHeader className="flex-row items-center justify-between gap-3">
+          under it. The title shrinks; the link never wraps.
+
+          Horizontal padding drops to 16px below `sm`: `p-6` is 24px a side, and
+          on a 390px screen that plus the page gutter left each tile ~85px for an
+          amount that can need ~92px — the card was spending its scarcest
+          resource on air. Header and content step down together so the title
+          stays flush with the tiles. */}
+      <CardHeader className="flex-row items-center justify-between gap-3 px-4 sm:px-6">
         <h2 className="min-w-0 truncate text-lg font-semibold tracking-tight text-text">
           {t('title')}
         </h2>
@@ -178,8 +190,10 @@ export const SpentCard = ({ otherName }: Props) => {
         </Link>
       </CardHeader>
 
-      <CardContent className="flex flex-1 flex-col gap-3">
-        {isEmpty ? (
+      <CardContent className="flex flex-1 flex-col gap-3 px-4 sm:px-6">
+        {isLoading ? (
+          <SpentCardBodySkeleton />
+        ) : isEmpty ? (
           <p className="py-6 text-center text-[13.5px] font-semibold text-text-soft">
             {t('empty')}
           </p>

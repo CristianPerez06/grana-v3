@@ -132,9 +132,6 @@
     },
     "hero_loading": "Cargando tu disponible…",
     "hero_error": "No pudimos cargar tu disponible.",
-    "spending": {
-      "loading": "Cargando el desglose…"
-    },
     "accounts": {
       "title": "Dónde está",
       "view_accounts": "Ver cuentas"

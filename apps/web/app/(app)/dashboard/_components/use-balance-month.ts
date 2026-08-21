@@ -71,6 +71,13 @@ export const useBalanceMonth = ({ todayISO, heroInitial, monthInitial }: Args) =
     summary,
     isCurrent,
     selected,
+    /**
+     * True while either read for the selected month has not resolved. The current
+     * month arrives server-rendered as `initialData`, so this only turns on when
+     * navigating to an uncached month — where the card used to fall to `?? 0` and
+     * show zeros that were nobody's balance.
+     */
+    isLoading: heroQuery.isPending || monthQuery.isPending,
     venia:
       hero && summary
         ? {
