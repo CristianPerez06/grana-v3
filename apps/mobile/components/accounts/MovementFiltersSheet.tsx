@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Modal, Pressable, Text, View } from 'react-native'
+import { KeyboardProvider } from 'react-native-keyboard-controller'
 import { parseMoneyInput } from '@grana/validation'
 import type { TransactionType } from '@grana/transactions'
 import { useT } from '../../lib/locale-context'
@@ -90,152 +91,159 @@ export function MovementFiltersSheet({ visible, onClose, filters, onApply, categ
   }
 
   return (
+    // The translucent flags are left off on purpose: the panel pads with plain
+    // classes and has no bottom inset, so an edge-to-edge window would put the
+    // Aplicar/Limpiar row under the navigation bar.
     <Modal visible={visible} onRequestClose={onClose} transparent animationType="slide">
-      <Pressable
-        onPress={onClose}
-        style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(11,26,43,0.30)' }}
-      >
-        <Pressable onPress={() => {}} className="rounded-t-2xl bg-page" style={{ maxHeight: '85%' }}>
-          <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
-            <Text className="text-lg font-semibold text-text">
-              {t('transactions.filters.filters_button')}
-            </Text>
-            <Pressable onPress={onClose} accessibilityRole="button">
-              <Text className="text-sm font-medium text-emerald">
-                {t('transactions.filters.close')}
+      {/* The provider goes at the root of the window, not inside the panel: its
+          view is `flex: 1` and would measure 0 in this content-sized sheet. */}
+      <KeyboardProvider>
+        <Pressable
+          onPress={onClose}
+          style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(11,26,43,0.30)' }}
+        >
+          <Pressable onPress={() => {}} className="rounded-t-2xl bg-page" style={{ maxHeight: '85%' }}>
+            <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
+              <Text className="text-lg font-semibold text-text">
+                {t('transactions.filters.filters_button')}
               </Text>
-            </Pressable>
-          </View>
-
-          <FormSheetBody contentClassName="gap-5 px-5 py-5">
-            {/* Type */}
-            <View className="gap-2">
-              <Label>{t('transactions.filters.type')}</Label>
-              <View className="flex-row flex-wrap gap-2">
-                <Chip
-                  label={t('transactions.filters.all_masc')}
-                  active={type === null}
-                  onPress={() => setType(null)}
-                />
-                {TYPE_OPTIONS.map((option) => (
-                  <Chip
-                    key={option}
-                    label={t(`transactions.types.${option}`)}
-                    active={type === option}
-                    onPress={() => setType(option)}
-                  />
-                ))}
-              </View>
+              <Pressable onPress={onClose} accessibilityRole="button">
+                <Text className="text-sm font-medium text-emerald">
+                  {t('transactions.filters.close')}
+                </Text>
+              </Pressable>
             </View>
 
-            {/* Category */}
-            {categoryOptions.length > 0 && (
+            <FormSheetBody contentClassName="gap-5 px-5 py-5">
+              {/* Type */}
               <View className="gap-2">
-                <Label>{t('transactions.filters.category')}</Label>
+                <Label>{t('transactions.filters.type')}</Label>
                 <View className="flex-row flex-wrap gap-2">
                   <Chip
-                    label={t('transactions.filters.all_fem')}
-                    active={categoryId === null}
-                    onPress={() => {
-                      setCategoryId(null)
-                      setSubcategoryId(null)
-                    }}
+                    label={t('transactions.filters.all_masc')}
+                    active={type === null}
+                    onPress={() => setType(null)}
                   />
-                  {categoryOptions.map((option) => (
+                  {TYPE_OPTIONS.map((option) => (
                     <Chip
-                      key={option.id}
-                      label={option.label}
-                      active={categoryId === option.id}
+                      key={option}
+                      label={t(`transactions.types.${option}`)}
+                      active={type === option}
+                      onPress={() => setType(option)}
+                    />
+                  ))}
+                </View>
+              </View>
+
+              {/* Category */}
+              {categoryOptions.length > 0 && (
+                <View className="gap-2">
+                  <Label>{t('transactions.filters.category')}</Label>
+                  <View className="flex-row flex-wrap gap-2">
+                    <Chip
+                      label={t('transactions.filters.all_fem')}
+                      active={categoryId === null}
                       onPress={() => {
-                        setCategoryId(option.id)
+                        setCategoryId(null)
                         setSubcategoryId(null)
                       }}
                     />
-                  ))}
+                    {categoryOptions.map((option) => (
+                      <Chip
+                        key={option.id}
+                        label={option.label}
+                        active={categoryId === option.id}
+                        onPress={() => {
+                          setCategoryId(option.id)
+                          setSubcategoryId(null)
+                        }}
+                      />
+                    ))}
+                  </View>
                 </View>
-              </View>
-            )}
+              )}
 
-            {/* Subcategory (only when a category with subcategories is selected) */}
-            {selectedCategory && selectedCategory.subcategories.length > 0 && (
+              {/* Subcategory (only when a category with subcategories is selected) */}
+              {selectedCategory && selectedCategory.subcategories.length > 0 && (
+                <View className="gap-2">
+                  <Label>{t('transactions.filters.subcategory')}</Label>
+                  <View className="flex-row flex-wrap gap-2">
+                    <Chip
+                      label={t('transactions.filters.all_fem')}
+                      active={subcategoryId === null}
+                      onPress={() => setSubcategoryId(null)}
+                    />
+                    {selectedCategory.subcategories.map((sub) => (
+                      <Chip
+                        key={sub.id}
+                        label={sub.label}
+                        active={subcategoryId === sub.id}
+                        onPress={() => setSubcategoryId(sub.id)}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Currency */}
               <View className="gap-2">
-                <Label>{t('transactions.filters.subcategory')}</Label>
+                <Label>{t('transactions.filters.currency')}</Label>
                 <View className="flex-row flex-wrap gap-2">
                   <Chip
                     label={t('transactions.filters.all_fem')}
-                    active={subcategoryId === null}
-                    onPress={() => setSubcategoryId(null)}
+                    active={currency === null}
+                    onPress={() => setCurrency(null)}
                   />
-                  {selectedCategory.subcategories.map((sub) => (
+                  {CURRENCY_OPTIONS.map((code) => (
                     <Chip
-                      key={sub.id}
-                      label={sub.label}
-                      active={subcategoryId === sub.id}
-                      onPress={() => setSubcategoryId(sub.id)}
+                      key={code}
+                      label={code}
+                      active={currency === code}
+                      onPress={() => setCurrency(code)}
                     />
                   ))}
                 </View>
               </View>
-            )}
 
-            {/* Currency */}
-            <View className="gap-2">
-              <Label>{t('transactions.filters.currency')}</Label>
-              <View className="flex-row flex-wrap gap-2">
-                <Chip
-                  label={t('transactions.filters.all_fem')}
-                  active={currency === null}
-                  onPress={() => setCurrency(null)}
-                />
-                {CURRENCY_OPTIONS.map((code) => (
-                  <Chip
-                    key={code}
-                    label={code}
-                    active={currency === code}
-                    onPress={() => setCurrency(code)}
-                  />
-                ))}
-              </View>
-            </View>
-
-            {/* Amount range */}
-            <View className="gap-2">
-              <View className="flex-row gap-3">
-                <View className="flex-1 gap-1.5">
-                  <Label>{t('transactions.filters.amount_min')}</Label>
-                  <MoneyAmountInput value={amountMin} onChangeText={setAmountMin} placeholder="0" />
-                </View>
-                <View className="flex-1 gap-1.5">
-                  <Label>{t('transactions.filters.amount_max')}</Label>
-                  <MoneyAmountInput value={amountMax} onChangeText={setAmountMax} placeholder="0" />
+              {/* Amount range */}
+              <View className="gap-2">
+                <View className="flex-row gap-3">
+                  <View className="flex-1 gap-1.5">
+                    <Label>{t('transactions.filters.amount_min')}</Label>
+                    <MoneyAmountInput value={amountMin} onChangeText={setAmountMin} placeholder="0" />
+                  </View>
+                  <View className="flex-1 gap-1.5">
+                    <Label>{t('transactions.filters.amount_max')}</Label>
+                    <MoneyAmountInput value={amountMax} onChangeText={setAmountMax} placeholder="0" />
+                  </View>
                 </View>
               </View>
-            </View>
 
-            {/* Footer */}
-            <View className="flex-row items-center gap-3 pt-1">
-              <Pressable
-                onPress={clear}
-                accessibilityRole="button"
-                className="rounded-xl bg-border-soft px-4 py-3"
-              >
-                <Text className="text-sm font-semibold text-text">
-                  {t('transactions.filters.clear')}
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={apply}
-                accessibilityRole="button"
-                className="flex-1 items-center rounded-xl bg-emerald px-4 py-3"
-              >
-                <Text className="text-sm font-semibold text-white">
-                  {t('transactions.filters.apply')}
-                </Text>
-              </Pressable>
-            </View>
-          </FormSheetBody>
+              {/* Footer */}
+              <View className="flex-row items-center gap-3 pt-1">
+                <Pressable
+                  onPress={clear}
+                  accessibilityRole="button"
+                  className="rounded-xl bg-border-soft px-4 py-3"
+                >
+                  <Text className="text-sm font-semibold text-text">
+                    {t('transactions.filters.clear')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={apply}
+                  accessibilityRole="button"
+                  className="flex-1 items-center rounded-xl bg-emerald px-4 py-3"
+                >
+                  <Text className="text-sm font-semibold text-white">
+                    {t('transactions.filters.apply')}
+                  </Text>
+                </Pressable>
+              </View>
+            </FormSheetBody>
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardProvider>
     </Modal>
   )
 }
