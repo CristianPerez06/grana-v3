@@ -10,9 +10,9 @@ import { getTodayAR, formatDateISO } from '../../../../../../lib/date'
 import { useShowCents } from '../../../../../../lib/preferences-context'
 import { useT } from '../../../../../../lib/locale-context'
 import { PageHeader } from '../../../../../../components/ui/PageHeader'
-import { Spinner } from '../../../../../../components/ui/Spinner'
 import { MovementList } from '../../../../../../components/movements/MovementList'
 import { PeriodStatusPill } from '../../../../../../components/cards/PeriodStatusPill'
+import { PeriodDetailSkeleton } from '../../../../../../components/cards/PeriodDetailSkeleton'
 import { EditDatesSheet } from '../../../../../../components/cards/EditDatesSheet'
 
 const fmt = (iso: string): string => {
@@ -87,9 +87,7 @@ export default function StatementDetailScreen() {
       />
       <ScrollView contentContainerClassName="gap-5 px-6 py-6">
         {query.isPending ? (
-          <View className="items-center py-12">
-            <Spinner size="md" />
-          </View>
+          <PeriodDetailSkeleton />
         ) : !period ? (
           <View className="rounded-2xl border border-border-soft bg-card p-8">
             <Text className="text-center text-base font-bold text-text">

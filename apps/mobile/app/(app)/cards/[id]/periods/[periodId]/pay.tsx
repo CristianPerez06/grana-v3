@@ -8,7 +8,7 @@ import { getTodayAR } from '../../../../../../lib/date'
 import { supabase } from '../../../../../../lib/supabase'
 import { useT } from '../../../../../../lib/locale-context'
 import { FormScreen } from '../../../../../../components/layout/FormScreen'
-import { Spinner } from '../../../../../../components/ui/Spinner'
+import { PayCardPeriodSkeleton } from '../../../../../../components/cards/PayCardPeriodSkeleton'
 import {
   PayCardPeriodForm,
   type PaymentAccount,
@@ -100,9 +100,7 @@ export default function PayStatementScreen() {
       onBackPress={() => router.back()}
     >
       {query.isPending ? (
-        <View className="items-center py-12">
-          <Spinner size="md" />
-        </View>
+        <PayCardPeriodSkeleton />
       ) : !props ? (
         <View className="rounded-2xl border border-border-soft bg-card p-8">
           <Text className="text-center text-sm text-text-muted">

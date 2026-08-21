@@ -12,10 +12,10 @@ import {
 } from '../../../../lib/cards/queries'
 import { reactivateCard } from '../../../../lib/cards/mutations'
 import { useT } from '../../../../lib/locale-context'
-import { Spinner } from '../../../../components/ui/Spinner'
 import { Button } from '../../../../components/ui/Button'
 import { CardDetailHeader } from '../../../../components/cards/detail/CardDetailHeader'
 import { CardDetailView } from '../../../../components/cards/detail/CardDetailView'
+import { CardDetailSkeleton } from '../../../../components/cards/detail/CardDetailSkeleton'
 
 /**
  * Native card detail — the write hub. Fetches the three shared reads and derives
@@ -96,9 +96,7 @@ export default function CardDetailScreen() {
       />
       <ScrollView contentContainerClassName="gap-5 px-6 py-6">
         {query.isPending ? (
-          <View className="items-center py-12">
-            <Spinner size="md" />
-          </View>
+          <CardDetailSkeleton />
         ) : notFound || !state || state.kind === 'not-found' ? (
           <EmptyInfo title={t('notFound.cards.title')} body={t('notFound.cards.description')} />
         ) : state.kind === 'new-card' ? (

@@ -295,6 +295,11 @@
           "name_placeholder": "Ej: Farmacéuticos",
           "submit": "Guardar subcategoría"
         }
+      },
+      "route": {
+        "list_loading": "Cargando las categorías…",
+        "subcategories_loading": "Cargando las subcategorías…",
+        "form_loading": "Cargando la categoría…"
       }
     }
   },
@@ -555,7 +560,9 @@
       "active_loading": "Cargando tus cuentas…",
       "active_error": "No pudimos cargar tus cuentas.",
       "archived_loading": "Cargando archivadas…",
-      "archived_error": "No pudimos cargar las archivadas."
+      "archived_error": "No pudimos cargar las archivadas.",
+      "detail_loading": "Cargando la cuenta…",
+      "form_loading": "Cargando el formulario…"
     }
   },
   "cards": {
@@ -829,7 +836,12 @@
       "wallet_loading": "Cargando tus tarjetas…",
       "wallet_error": "No pudimos cargar tus tarjetas.",
       "archived_loading": "Cargando archivadas…",
-      "archived_error": "No pudimos cargar las archivadas."
+      "archived_error": "No pudimos cargar las archivadas.",
+      "detail_loading": "Cargando la tarjeta…",
+      "periods_loading": "Cargando los resúmenes…",
+      "period_loading": "Cargando el resumen…",
+      "pay_loading": "Cargando el pago…",
+      "form_loading": "Cargando el formulario…"
     },
     "month_hero": {
       "eyebrow": "A pagar este mes",
@@ -1719,7 +1731,10 @@
     "duplicate_hint": "Ya tenés otra regla activa con la misma cuenta, moneda, tipo y monto. Si son gastos distintos, ignorá el aviso.",
     "duplicate_warning_title": "Ya tenés una regla así",
     "duplicate_warning_body": "«{rule}» tiene la misma cuenta, moneda, tipo y monto. Podés crearla igual si son gastos distintos.",
-    "duplicate_warning_body_untitled": "Ya tenés una regla activa con la misma cuenta, moneda, tipo y monto. Podés crearla igual si son gastos distintos."
+    "duplicate_warning_body_untitled": "Ya tenés una regla activa con la misma cuenta, moneda, tipo y monto. Podés crearla igual si son gastos distintos.",
+    "route": {
+      "form_loading": "Cargando el formulario…"
+    }
   },
   "subcategories": {
     "supermercado": "Supermercado",
