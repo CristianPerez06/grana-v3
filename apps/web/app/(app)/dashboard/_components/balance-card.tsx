@@ -15,6 +15,12 @@ import {
 import { Card } from '@/components/ui/card'
 import { useShowCents } from '@/lib/preferences-context'
 import { cn } from '@/lib/utils'
+import {
+  HeroAmountSkeleton,
+  HeroUsdSkeleton,
+  PlacementGridSkeleton,
+  SummaryAmountSkeleton,
+} from './balance-card-body-skeleton'
 import { MaskedAmount } from './masked-amount'
 import { MaskedAmountDisplay } from './masked-amount-display'
 import { useBalanceMonth } from './use-balance-month'
@@ -141,6 +147,7 @@ const Flow = ({
   signPrefix,
   align,
   density,
+  loading,
 }: {
   label: string
   dotClassName: string
@@ -159,6 +166,8 @@ const Flow = ({
   align: keyof typeof ALIGN
   /** Type step, decided once for the three (see the card). */
   density: AmountDensity
+  /** Mientras el mes nuevo carga: el rótulo queda, el importe va a skeleton. */
+  loading?: boolean
 }) => (
   // A ROW when narrow — label left, amount right — and a column once the three
   // fit side by side. Three thirds of a phone-width card is ~105px, and the
@@ -175,20 +184,26 @@ const Flow = ({
       {label}
     </span>
     <span className={cn('flex min-w-0 flex-col items-end sm:mt-2.5 sm:w-full', ALIGN[align])}>
-      <span
-        className={cn(
-          'whitespace-nowrap font-extrabold leading-none tracking-[-0.04em]',
-          SUMMARY_SIZE[density],
-          amountClassName,
-        )}
-      >
-        <MaskedAmount amount={ars} currency="ARS" signPrefix={signPrefix} />
-      </span>
-      {/* Bimoneda: the USD line only shows when there is money in dollars. */}
-      {showUsd && (
-        <span className="mt-[5px] text-[12.5px] font-semibold text-text-soft">
-          <MaskedAmount amount={usd} currency="USD" showCentsOverride signPrefix={signPrefix} />
-        </span>
+      {loading ? (
+        <SummaryAmountSkeleton />
+      ) : (
+        <>
+          <span
+            className={cn(
+              'whitespace-nowrap font-extrabold leading-none tracking-[-0.04em]',
+              SUMMARY_SIZE[density],
+              amountClassName,
+            )}
+          >
+            <MaskedAmount amount={ars} currency="ARS" signPrefix={signPrefix} />
+          </span>
+          {/* Bimoneda: the USD line only shows when there is money in dollars. */}
+          {showUsd && (
+            <span className="mt-[5px] text-[12.5px] font-semibold text-text-soft">
+              <MaskedAmount amount={usd} currency="USD" showCentsOverride signPrefix={signPrefix} />
+            </span>
+          )}
+        </>
       )}
     </span>
   </div>
@@ -212,7 +227,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
   const t = useTranslations('dashboard')
   const format = useFormatter()
   const showCents = useShowCents()
-  const { hero, summary, venia, isCurrent, selected } = useBalanceMonth({
+  const { hero, summary, venia, isCurrent, selected, isLoading } = useBalanceMonth({
     todayISO,
     heroInitial,
     monthInitial,
@@ -243,6 +258,17 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
           {isCurrent ? t('hero.total_label') : t('hero.balance_as_of', { month: monthLabel })}
         </p>
 
+        {/* Al navegar a un mes sin cachear los importes van a skeleton, no a
+            `?? 0`: un cero es una afirmación sobre el saldo, y no es la que
+            corresponde. Los rótulos y el link se quedan: no dependen de la
+            lectura, y son los que dicen a qué mes estás mirando. */}
+        {isLoading ? (
+          <>
+            <HeroAmountSkeleton />
+            <HeroUsdSkeleton />
+          </>
+        ) : (
+          <>
         <p className="mt-[11px] text-[clamp(2.125rem,3.4vw,2.625rem)] font-extrabold leading-[0.95] tracking-[-0.05em]">
           <MaskedAmountDisplay amount={hero?.ars ?? 0} currency="ARS" dimSymbol />
         </p>
@@ -256,6 +282,8 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
               <MaskedAmount amount={hero?.usd ?? 0} currency="USD" showCentsOverride />
             </span>
           </p>
+        )}
+          </>
         )}
 
         {/* "Dónde está" — the labels and the columns below are capped and centered
@@ -293,11 +321,17 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             turns with the layout — vertical between columns, horizontal between
             stacked blocks. */}
         <div className="mx-auto mt-3 grid max-w-[660px] grid-cols-1 gap-3 text-left sm:grid-cols-2 sm:gap-4">
-          <PlacementColumn placement={placement.ARS} currency="ARS" />
-          {hasUsd && (
-            <div className="border-t border-white/10 pt-3 sm:border-l sm:border-t-0 sm:pl-[15px] sm:pt-0">
-              <PlacementColumn placement={placement.USD} currency="USD" />
-            </div>
+          {isLoading ? (
+            <PlacementGridSkeleton />
+          ) : (
+            <>
+              <PlacementColumn placement={placement.ARS} currency="ARS" />
+              {hasUsd && (
+                <div className="border-t border-white/10 pt-3 sm:border-l sm:border-t-0 sm:pl-[15px] sm:pt-0">
+                  <PlacementColumn placement={placement.USD} currency="USD" />
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -317,6 +351,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             showUsd={summaryHasUsd}
             align="start"
             density={summaryDensity}
+            loading={isLoading}
           />
           <Flow
             label={t('month.came_in')}
@@ -328,6 +363,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             signPrefix="+"
             align="center"
             density={summaryDensity}
+            loading={isLoading}
           />
           <Flow
             label={t('month.went_out')}
@@ -339,6 +375,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             signPrefix="−"
             align="end"
             density={summaryDensity}
+            loading={isLoading}
           />
         </div>
       </div>

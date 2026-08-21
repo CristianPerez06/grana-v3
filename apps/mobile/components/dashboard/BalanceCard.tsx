@@ -13,7 +13,12 @@ import { accountColors, colors } from '../../lib/colors'
 import { useDashboardHero, useMonthBalanceSeries } from '../../lib/dashboard/queries'
 import { useShowCents } from '../../lib/preferences-context'
 import { useDashboardMonth } from './DashboardMonthContext'
-import { HeroSkeleton } from './HeroSkeleton'
+import {
+  BalanceCardSkeleton,
+  HeroAmountSkeleton,
+  PlacementStackSkeleton,
+  SummaryAmountSkeleton,
+} from './BalanceCardSkeleton'
 import { MaskedAmount } from './MaskedAmount'
 import { MaskedAmountDisplay } from './MaskedAmountDisplay'
 
@@ -102,6 +107,7 @@ const Flow = ({
   showUsd,
   signPrefix,
   density,
+  loading,
 }: {
   label: string
   dotColor: string
@@ -118,6 +124,8 @@ const Flow = ({
   signPrefix?: string
   /** Type step, decided once for the three (see the card). */
   density: AmountDensity
+  /** Mientras el mes nuevo carga: el rótulo queda, el importe va a skeleton. */
+  loading?: boolean
 }) => (
   // ONE ROW per amount — label left, amount right — not three columns. Three
   // amounts across a phone-width card leave ~100px each, and `fitOneLine` was
@@ -128,25 +136,29 @@ const Flow = ({
       <View className="size-[7px] rounded-full" style={{ backgroundColor: dotColor }} />
       <Text className="text-[10.5px] font-bold text-text-muted">{label}</Text>
     </View>
-    <View className="min-w-0 flex-1 items-end">
-      <MaskedAmount
-        amount={ars}
-        currency="ARS"
-        signPrefix={signPrefix}
-        fitOneLine
-        className={`font-extrabold ${SUMMARY_SIZE[density]} ${amountClassName}`}
-      />
-      {showUsd && (
+    {loading ? (
+      <SummaryAmountSkeleton />
+    ) : (
+      <View className="min-w-0 flex-1 items-end">
         <MaskedAmount
-          amount={usd}
-          currency="USD"
-          showCentsOverride
+          amount={ars}
+          currency="ARS"
           signPrefix={signPrefix}
           fitOneLine
-          className="mt-0.5 text-[9.5px] font-semibold text-text-soft"
+          className={`font-extrabold ${SUMMARY_SIZE[density]} ${amountClassName}`}
         />
-      )}
-    </View>
+        {showUsd && (
+          <MaskedAmount
+            amount={usd}
+            currency="USD"
+            showCentsOverride
+            signPrefix={signPrefix}
+            fitOneLine
+            className="mt-0.5 text-[9.5px] font-semibold text-text-soft"
+          />
+        )}
+      </View>
+    )}
   </View>
 )
 
@@ -158,6 +170,18 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
 
   const heroQuery = useDashboardHero(balanceCutISO(selected, current, todayISO))
   const monthQuery = useMonthBalanceSeries(selected.year, selected.month)
+
+  // Un solo skeleton para la card completa mientras cualquiera de las dos
+  // lecturas está pendiente: comparten card, y llenar una zona antes que la otra
+  // la hace armarse a saltos. Antes solo el importe del hero tenía skeleton y el
+  // resto de la card se dibujaba en ceros.
+  const isLoading = heroQuery.isPending || monthQuery.isPending
+  // Primera carga vs. cambio de mes. La pantalla SIEMPRE abre en el mes actual
+  // (salir del tab remonta los providers), así que un mes no-actual pendiente es
+  // navegación y no arranque. En el arranque no hay nada en pantalla y la card
+  // entera va a skeleton; navegando, el marco ya está y solo pulsan los importes
+  // — el rótulo dice a qué mes vas mientras carga, y taparlo convertiría cada
+  // flecha en un parpadeo de la card. Espeja lo que hace web.
 
   const hero = heroQuery.data
   const placement = hero ? derivePlacement(hero.accounts) : null
@@ -185,6 +209,8 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
   const monthLabel = new Date(selected.year, selected.month - 1, 1)
     .toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
 
+  if (isLoading && isCurrent) return <BalanceCardSkeleton />
+
   return (
     <View className="overflow-hidden rounded-2xl border border-border bg-card">
       {/* Dark zone — today's balance; does NOT follow the month selector. */}
@@ -196,7 +222,8 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
         </Text>
 
         <View style={{ minHeight: SWAP_MIN_HEIGHT }} className="justify-center">
-          {hero ? (
+          {isLoading && <HeroAmountSkeleton />}
+          {hero && (
             <>
               <MaskedAmountDisplay
                 amount={hero.ars}
@@ -218,8 +245,6 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
                 </View>
               )}
             </>
-          ) : (
-            <HeroSkeleton />
           )}
         </View>
 
@@ -238,6 +263,8 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
             </Text>
           </Pressable>
         </View>
+
+        {isLoading && <PlacementStackSkeleton />}
 
         {placement && (
           // Currencies STACKED, not side by side: at phone width two columns
@@ -267,6 +294,7 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
             usd={venia?.USD ?? 0}
             showUsd={summaryHasUsd}
             density={summaryDensity}
+            loading={isLoading}
           />
           <Flow
             label={t('dashboard.month.came_in')}
@@ -277,6 +305,7 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
             showUsd={summaryHasUsd}
             signPrefix="+"
             density={summaryDensity}
+            loading={isLoading}
           />
           <Flow
             label={t('dashboard.month.went_out')}
@@ -287,6 +316,7 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
             showUsd={summaryHasUsd}
             signPrefix="−"
             density={summaryDensity}
+            loading={isLoading}
           />
         </View>
       </View>

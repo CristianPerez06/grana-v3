@@ -71,6 +71,13 @@ export const useBalanceMonth = ({ todayISO, heroInitial, monthInitial }: Args) =
     summary,
     isCurrent,
     selected,
+    /**
+     * Verdadero mientras alguna de las dos lecturas del mes seleccionado no
+     * resolvió. El mes actual llega server-rendered como `initialData`, así que
+     * esto sólo se enciende al navegar a un mes sin cachear — donde la card
+     * caía a `?? 0` y mostraba ceros que no eran el saldo de nadie.
+     */
+    isLoading: heroQuery.isPending || monthQuery.isPending,
     venia:
       hero && summary
         ? {
