@@ -1,0 +1,149 @@
+## Context
+
+El paquete de handoff vive en `docs/design/dashboard-home/`: un `README.md` con tokens, semántica y derivaciones, y dos HTML hi-fi (`Dashboard Web.html`, `Dashboard Mobile.html`) que son **referencia de diseño, no código a copiar**. Los números que traen son mock.
+
+El dashboard existente ya resuelve buena parte de la infraestructura que este rediseño necesita, y conviene enunciarlo porque acota el riesgo:
+
+- **La aritmética de "Cuánto gastaste" ya existe.** `SpentThisMonthSection` calcula `accrued` (devengado del mes, vía `getMonthCategoryBreakdown`), `cash` (`MonthBalanceSeries.totalExpense`) y `financed = accrued − cash`, con el comentario que documenta que los tres reconcilian. Son exactamente Gastaste / Pagaste / Te queda por pagar.
+- **El patrón de render ya está fijado**: server components con `Suspense` por sección, un `container` + un `skeleton` shape-matched por sección, y un `DashboardErrorBoundary` que tolera fallas parciales. El rediseño se acomoda a ese patrón, no lo cambia.
+- **La bimoneda ya tiene doctrina.** `MonthBalanceByCurrency` documenta: *"ARS and USD are never summed (bimoneda): the dashboard shows the ARS totals as the headline and the USD totals in a subordinate strip"*. La decisión de producto de este change confirma esa doctrina en vez de romperla.
+- **Naming espejo web/mobile** es un requirement vigente del spec `dashboard`: `spent-this-month-section.tsx` ↔ `SpentThisMonthSection.tsx`.
+
+Tres preguntas que el README dejaba abiertas se resolvieron con el usuario antes de escribir esto, y son el eje de las decisiones que siguen.
+
+## Goals / Non-Goals
+
+**Goals**
+
+- Recrear los cuatro bloques del handoff con los componentes, tokens y patrones del codebase, en web y en mobile.
+- Que todo dato derivado se calcule (nada hardcodeado), con las derivaciones en funciones puras testeables del package compartido.
+- Cubrir los estados vacíos, de carga y de error, incluidos los dos que la decisión sobre el ritmo vuelve frecuentes.
+- Mantener el dashboard read-only: toda interacción navega.
+
+**Non-Goals**
+
+- No se introduce tipo de cambio global ni conversión entre monedas.
+- No se agrega configuración de usuario nueva (ingreso mensual esperado, TC).
+- No se toca el módulo Movimientos ni su desglose por categoría.
+- No se rediseñan el selector de mes, el eye toggle ni el sidebar; se reusan tal cual.
+- No se persigue paridad pixel con los HTML: son referencia, y el sistema de estilos del repo manda donde haya conflicto.
+
+## Decisions
+
+### D1 — ARS y USD se muestran separados; la línea USD aparece solo si el valor es ≠ 0
+
+El handoff pide "todos los montos en ARS y en USD con el mismo tipo de cambio", y los mocks lo confirman: cada par da el mismo cociente (≈13.456 ARS/USD), o sea **un valor mostrado dos veces**. Eso exige consolidar monedas y un TC global, y choca de frente con la invariante vigente del modelo (`packages/dashboard/src/types.ts`: *"ARS and USD are never summed"*), que además está enunciada en el master spec.
+
+**Se resuelve a favor de la invariante.** Cada métrica tiene su valor ARS **real** y su valor USD **real**, sin conversión. La línea USD se renderiza únicamente cuando ese valor es distinto de cero.
+
+Por qué: consolidar habría hecho que un saldo en dólares se mueva solo porque cambió una cotización, en una app cuyo modelo de datos guarda el FX **por transacción** (`transactions.fx_rate_to_ars`) precisamente para no tener un rate global. La alternativa —inventar un TC de cuenta— era una migración, una pantalla de configuración y una decisión de producto ("¿qué dólar?") a cambio de una coherencia visual con un mock.
+
+Consecuencia de diseño: los pares de montos del handoff dejan de ser el mismo valor. Un usuario sin actividad en dólares no ve ninguna línea USD, y la pantalla se lee como monomoneda — que es el caso mayoritario y una mejora, no una pérdida.
+
+### D2 — El ritmo es `gastaste / entró` del mes, y sus bordes son la regla, no la excepción
+
+El handoff define ritmo = `Gastaste / ingreso mensual esperado`, con `4.000.000` de mock. Ese dato **no existe** en el schema y no hay nada de dónde derivarlo. Se resuelve usando los **ingresos reales acreditados del mes** (`MonthBalanceSeries.totalIncome`), que ya se lee para "Resumen del mes" — cero infraestructura, cero configuración.
+
+El costo hay que asumirlo de frente: con este denominador, **dos estados que el README trataba como borde pasan a ser habituales**.
+
+- **Denominador 0** (día 1 del mes, antes de que entre el sueldo): el ritmo es *indeterminado*, no 0%. Se muestra el mensaje en lugar del anillo, como ya pedía el README.
+- **Ritmo > 100%**: normal a principio de mes, o en cualquier mes donde se gastó más de lo que entró. Anillo y barra pasan a terracota (`#C2705C`) y el copy se ajusta. Deja de ser una alarma rara y pasa a ser un estado de primera clase, con su propio test.
+
+El ritmo se computa **por moneda**, coherente con D1.
+
+### D2b — "Resumen del mes" es una lectura de liquidez y cierra contra el saldo
+
+La primera versión trataba "Entró" y "Se fué" como dos titulares sueltos —ingresos y pagos—, dejando afuera ajustes, liquidaciones, cambio de moneda y el residual de transferencias, con el argumento de que el resumen no era una reconciliación. **Se revirtió**: la zona se lee como *liquidez*, o sea cómo se movió el dinero, y eso ES el cambio del saldo.
+
+Cada movimiento que tocó el saldo cae de un lado o del otro según su signo, y de ahí sale el invariante:
+
+```
+Entró − Se fué  ===  cambio del saldo disponible en el mes
+```
+
+Por qué importa más allá de la semántica: convierte dos números que nadie podía verificar en dos números **testeables contra el saldo**. Es exactamente el tipo de ancla que caza sola una discrepancia como el disponible negativo que apareció mirando datos reales. La derivación usa `Money` en lugar de sumas con punto flotante para que la igualdad se sostenga al centavo y el test pueda afirmar igualdad sin tolerancia.
+
+El costo aceptado: un ajuste positivo aparece como "Entró", que es raro de leer —los ajustes son correcciones de stock, no plata que entró—. Se acepta porque la alternativa es que el ajuste no aparezca en ningún lado y los dos montos dejen de cerrar.
+
+Ojo con la consecuencia sobre D2: el **denominador del ritmo NO es este "Entró"**. El ritmo compara contra los ingresos acreditados (`totalIncome`); meter reintegros, liquidaciones y patas de cambio de moneda en el denominador inflaría el ritmo con plata que no es ingreso.
+
+### D3 — Un solo anillo, el de ARS; el ritmo USD no se renderiza
+
+D1 y D2 combinados producirían dos ritmos (uno por moneda) y el handoff tiene lugar para un anillo. Se renderiza **solo el de ARS**.
+
+Por qué no dos anillos: el ritmo USD sería casi siempre indeterminado (pocos usuarios acreditan ingresos en dólares todos los meses) y un segundo anillo mostrando "sin datos" al lado del real es ruido, no información. Por qué no un anillo consolidado: requeriría sumar monedas, prohibido por D1. El pie de la tira sí muestra los montos ARS que forman el cociente (`$ gastaste de $ entró`), de modo que el número es auditable de un vistazo.
+
+### D4 — Las derivaciones viven en `@grana/dashboard` como funciones puras
+
+Ritmo, porcentajes de la barra apilada de Compromisos, porcentajes de cuenta sobre el total de su moneda, `teQuedaPorPagar` y el conteo de compras pendientes se implementan como **funciones puras** en el package compartido, no en los componentes. Es el requirement vigente *"Las queries y agregaciones del dashboard viven en un package compartido"* y es lo que permite que web y mobile den el mismo número y que los estados borde (denominador 0, >100%, sin cuentas) se testeen sin montar UI.
+
+### D5 — "Compromisos · Tarjetas" se agrega por tarjeta, no por consumo
+
+Es el único cambio de **forma de dato** del change. `CommittedCurrency.topCard` es hoy una lista de consumos individuales (`CommittedItem`: description / date / amount). El handoff necesita una fila **por tarjeta** con su total y su próximo cierre.
+
+Se agrega un tipo nuevo al package (una fila por tarjeta: nombre, total, fecha de próximo cierre) y `getCommittedOutlook` lo produce agrupando el conjunto "A pagar" por tarjeta. `topCard` se retira una vez que ningún consumidor lo use; mientras tanto conviven, para que el cambio de forma no obligue a reescribir la card de tarjetas en el mismo paso.
+
+El listado muestra hasta 3 tarjetas cerrado y el resto al desplegar, con el corte calculado sobre la lista ordenada por monto desc — no un `slice` en el markup, para que el "resto" sea siempre el complemento exacto.
+
+### D6 — Los desplegables son `<button>` + panel con `id`, con el estado en React
+
+El prototipo hace `classList.toggle('open')` sobre un `div`. Se implementa como `<button aria-expanded aria-controls>` con el panel identificado por `id` y el estado en React (`expandedGroups: { tarjetas, gastosFijos }`), independientes entre sí. La rotación del chevron es la única transición (`transform .18s ease`), coherente con el handoff. Área táctil ≥44px en mobile.
+
+### D7 — La card 1 es una card, no tres apiladas
+
+Hero, "Dónde está" y "Resumen del mes" se fusionan en **un componente contenedor** con dos zonas (oscura y clara) y un solo borde exterior de radio 20px. No se conservan `HeroSection` + `AccountsCard` + `MonthBalanceSection` como cards independientes maquetadas para parecer una: el separador interno es un `border-top`, y los sub-bloques de la zona oscura van limitados a `max-width:660px` centrados para que en desktop los datos no se dispersen.
+
+Consecuencia de streaming: las tres zonas se alimentan de **dos** lecturas distintas (saldo/cuentas, que no dependen del mes; y el balance del mes, que sí). Como ahora comparten card, el `Suspense` envuelve la card entera con un único skeleton shape-matched, en lugar de tres. Se pierde algo de streaming granular a cambio de que la card no se arme a saltos delante del usuario.
+
+### D8 — "Cuánto gastaste" deja de ser condicional
+
+Hoy la sección desaparece si no hubo consumo de tarjeta. Pasa a renderizarse siempre que haya gasto en el mes, con "Te queda por pagar" en cero cuando no hay tarjeta — que es información, no vacío. Sin ningún gasto en el mes, la card muestra su estado vacío en lugar de desmontarse: una card que aparece y desaparece según el mes que estás mirando es peor que una card en cero.
+
+### D9 — La baja de "En qué se fue" es del dashboard, no de la capability
+
+Se retiran del dashboard los componentes de la dona y su leyenda en ambas plataformas, pero `getMonthCategoryBreakdown` **sigue consumiéndose** desde el dashboard: es la fuente del devengado que alimenta "Gastaste". La capability `spending-by-category` conserva su superficie en Movimientos, así que la baja es de una duplicación, no de una funcionalidad.
+
+### D10 — "Compromisos" se define sobre la ventana del próximo mes calendario
+
+La card se titula "Compromisos del próximo mes" pero la query era explícitamente **"desde hoy"**: Tarjetas eran los resúmenes ya **iniciados** e impagos (incluido el que está abierto ahora, que se paga este mes) y Gastos fijos eran las instancias con `status = 'pending'`, o sea las ocurrencias **que ya vencieron y esperan confirmación**. El título prometía el mes que viene y el número mostraba el presente.
+
+Queda definido sobre la **ventana del próximo mes calendario** —del día 1 al último día— con dos fuentes:
+
+- **Tarjetas** = resúmenes cuyo **vencimiento** cae en la ventana, impagos. El criterio es el vencimiento y no el cierre: un resumen que cierra el 28/09 y vence el 10/10 se paga en octubre. Un resumen que todavía no cerró aporta lo acumulado y **puede crecer**; la card no lo presenta como definitivo.
+- **Gastos fijos** = ocurrencias de recurrencias que caen en la ventana y **no se pagan con tarjeta de crédito**. Una recurrencia debitada de una tarjeta no saca plata de la cuenta ese mes: entra al resumen de esa tarjeta y se paga cuando ese resumen vence, que es **otra** ventana. Contarla acá y otra vez dentro de su resumen sería contarla dos veces.
+
+Las ocurrencias salen de **dos** fuentes que no se superponen: las instancias que el generador ya creó para la ventana y nadie resolvió, más la proyección de las reglas activas. La proyección avanza desde `last_generated_date`, así que nunca devuelve una ocurrencia ya generada. Hace falta juntar las dos: sola, la proyección duplicaría lo que ya existe; solas, las instancias perderían casi todo, porque para una ventana del mes que viene el generador todavía no llegó.
+
+**Lo vencido va aparte, no adentro.** Un resumen cuyo vencimiento ya pasó y sigue impago es plata que se debe, y desaparecería de la pantalla si la card se limitara a su ventana. Se muestra con **etiqueta propia**, y `overdue` es **disjunto** de `debt`: lo que está atrasado y lo que recién viene son dos hechos distintos, y sumarlos haría ilegible el número del mes.
+
+**Consecuencia aceptada:** un resumen que vence **más adelante este mismo mes** —después de hoy, antes de que abra la ventana— no está en ninguno de los dos conjuntos. Es un compromiso que la card no nombra. La ventana es el próximo mes calendario por decisión; una banda "este mes, todavía por venir" es un change aparte.
+
+Para que el subtotal del grupo y su lista no puedan divergir, la proyección devuelve **una fila por ocurrencia** (`projectRecurrenceItems`) y el caller suma y lista el mismo array; `aggregateRecurrenceProjection` queda construido encima.
+
+## Risks / Trade-offs
+
+- **Superficie grande, semántica estable.** El change toca casi todos los componentes del dashboard en dos plataformas, pero no redefine ningún número: los tres montos de "Cuánto gastaste" ya se calculan así y ya reconcilian. El riesgo está en la maqueta y en la paridad web/mobile, no en la contabilidad.
+- **La agregación por tarjeta (D5) es el punto blando.** Es la única forma de dato nueva y depende de resolver el próximo cierre de cada tarjeta. Se mitiga con tests sobre la agregación antes de montar la UI.
+- **El ritmo va a incomodar al principio.** Con `entró` como denominador, un usuario que mira el dashboard el día 2 del mes ve "sin datos" y el día 5 ve 300%. Es fiel a la realidad y es la decisión tomada, pero conviene que el copy de ambos estados lo explique en vez de limitarse a pintar de rojo.
+- **Menos streaming granular en la card 1** (D7): si la lectura del mes se demora, el saldo —que ya está listo— espera. Se acepta a cambio de que la card no se arme a saltos.
+- **Compromisos no sigue al selector de mes.** Su ventana es el próximo mes calendario respecto de **hoy**, fija, mientras que el resto de la fila 2 se mueve con el navegador. Es deliberado —la pregunta "¿qué se viene?" no tiene sentido parada en un mes pasado— pero es una asimetría dentro de la misma pantalla. La vista histórica de compromisos (la "foto" de un mes ya cerrado) quedó como pregunta abierta.
+- **Cards de igual altura en la fila 2** con contenido de alto variable (la lista de gastos fijos tiene scroll interno, la de tarjetas no): se resuelve con el `margin-top:auto` de la tira de ritmo, como indica el handoff, pero es frágil ante cambios de contenido y necesita verificación en los anchos de corte.
+
+## Migration Plan
+
+No hay migración de datos ni de schema. La secuencia es incremental y cada paso deja el dashboard funcionando:
+
+1. Derivaciones puras y sus tests en `@grana/dashboard` (sin tocar UI).
+2. Agregación por tarjeta en `getCommittedOutlook`, conviviendo con `topCard`.
+3. Card por card en web, empezando por la 1 (la de mayor fusión) y terminando por la tira Compartido.
+4. Espejo en mobile con el naming en PascalCase.
+5. Baja de los componentes de la dona en las dos plataformas y limpieza de claves i18n huérfanas.
+6. Archivo del change y sincronización de los master specs.
+
+## Open Questions
+
+- ~~**Próximo cierre por tarjeta**~~ — **resuelto sin lectura extra.** `card_periods` ya trae `end_date`; la query de compromisos solo suma esa columna (y `account_id`) al `select` que ya hacía. El próximo cierre es el `end_date` más chico que todavía no pasó, y es `null` cuando todos los resúmenes iniciados ya cerraron.
+- ~~**Conteo de compras pendientes**~~ — **descartado.** El monto de "Te queda por pagar" sale de `devengado − caja`, dos agregados; no existe un conjunto de filas del que contar "compras" que case con ese monto sin inventar un criterio (una compra en 6 cuotas, ¿cuenta como una compra o como la cuota del mes?). El sub-bloque dice "Se paga en los próximos resúmenes": exacto y sin número inventado. Reabrir si el conteo se considera necesario.
+- **Copy de los dos estados del ritmo** — implementado y **pendiente de revisión**: indeterminado dice "Todavía no entró plata este mes" + "Cuando entre, vas a ver tu ritmo de gasto acá."; por encima del 100% dice "Gastaste el {pct} de lo que entró este mes" en terracota.
+- **Compromisos de un mes pasado** — hoy la card ignora el selector de mes. Mostrar "la foto" de un mes ya cerrado exige decidir qué se muestra: lo que en ese momento estaba comprometido (una foto reconstruida) o si terminó pagándose (un "¿cumpliste?", que es otra pregunta y otra card). Queda para un change aparte.
+- **El anillo del ritmo en nativo es una barra + porcentaje**, no un arco: React Native no tiene `conic-gradient` y dibujarlo con SVG por una sola tira no se pagaba. El número es el que carga el significado. A revisar si la paridad visual del anillo se considera necesaria.

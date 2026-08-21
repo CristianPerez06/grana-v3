@@ -1,10 +1,11 @@
-import { getTranslations } from 'next-intl/server'
+import { getFormatter, getTranslations } from 'next-intl/server'
 import { getCommittedOutlook, type CommittedOutlook } from '@grana/dashboard'
 import { createClient } from '@/lib/supabase/server'
 import { CommittedSection } from './committed-section'
 
-// "Lo que se viene" — static (from today), so it is fully server-rendered once
-// and does NOT follow the month navigator. Sits next to "Balance del mes".
+// "Compromisos del próximo mes" — the window is the NEXT CALENDAR MONTH, fixed
+// relative to today, so it is fully server-rendered once and does NOT follow the
+// month navigator. Sits next to "Cuánto gastaste".
 export const CommittedSectionContainer = async () => {
   const supabase = await createClient()
   let data: CommittedOutlook
@@ -18,5 +19,11 @@ export const CommittedSectionContainer = async () => {
       </div>
     )
   }
-  return <CommittedSection data={data} />
+  // The commitments are next month's, so the subtitle names that month.
+  const format = await getFormatter()
+  const today = new Date()
+  const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1)
+  const monthLabel = format.dateTime(nextMonth, { month: 'long', year: 'numeric' })
+
+  return <CommittedSection data={data} monthLabel={monthLabel} />
 }

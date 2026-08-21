@@ -4,16 +4,22 @@ import {
   getDashboardHero,
   getMonthBalanceSeries,
   getMonthCategoryBreakdown,
+  getMonthSpending,
 } from '@grana/dashboard'
 import { supabase } from '../supabase'
 
 const monthKey = (year: number, month: number): string =>
   `${year}-${String(month).padStart(2, '0')}`
 
-export function useDashboardHero() {
+/**
+ * Available balance AS OF a cut date. The dashboard passes the last day of the
+ * month being viewed (today for the current one), so the balance moves with the
+ * rest of the card instead of leaving today's number over another month's flows.
+ */
+export function useDashboardHero(asOfISO: string) {
   return useQuery({
-    queryKey: ['dashboard', 'hero'] as const,
-    queryFn: () => getDashboardHero(supabase),
+    queryKey: ['dashboard', 'hero', asOfISO] as const,
+    queryFn: () => getDashboardHero(supabase, asOfISO),
   })
 }
 
@@ -56,5 +62,14 @@ export function useMonthCategoryBreakdown(year: number, month: number) {
   return useQuery({
     queryKey: ['dashboard', 'category-breakdown', key] as const,
     queryFn: () => getMonthCategoryBreakdown(supabase, key),
+  })
+}
+
+// "Cuánto gastaste" — own spending of the month split by settlement state.
+export function useMonthSpending(year: number, month: number) {
+  const key = monthKey(year, month)
+  return useQuery({
+    queryKey: ['dashboard', 'month-spending', key] as const,
+    queryFn: () => getMonthSpending(supabase, key),
   })
 }

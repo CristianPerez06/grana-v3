@@ -2,13 +2,31 @@
 
 ## Purpose
 
-Define la pantalla `/dashboard` como landing universal post-login y post-onboarding, con la misma composición en web y en la app nativa (rediseño `redesign-dashboard-home` + paridad `dashboard-mobile-parity`): Hero "Para gastar · hoy" (card navy bimoneda) + "Dónde está" (cuentas), "Balance del mes" (neto + barras + strip USD) y "En qué se fue" (dona por categoría con toggle ARS/USD), con las dos secciones mensuales gobernadas por un selector de mes compartido en el header. Es read-only: toda interacción navega al módulo correspondiente; el resumen de tarjetas NO vive en el dashboard sino en `/cards`. El eye toggle de privacidad enmascara los importes en ambas plataformas.
+Define la pantalla `/dashboard` como landing universal post-login y post-onboarding, con la misma composición en web y en la app nativa (rediseño `redesign-dashboard-home-v2`). Cuatro bloques, cada uno respondiendo una pregunta del usuario en su propio lenguaje:
+
+- **"Saldo disponible total"** — cuánto tengo y dónde. Una sola card con dos zonas: la oscura con el disponible bimoneda y el reparto por cuenta ("Dónde está"), y la clara con el "Resumen del mes" (Tenías · Entró · Se fué), cuyos tres montos cierran contra el saldo de arriba por construcción.
+- **"Cuánto gastaste"** — en qué se me fue y cuánto debo todavía. Tres tiles con el gasto propio del mes partido por estado de pago (`Ya se pagó + Por pagar = Gastaste`), con desglose por miembro cuando hay actividad compartida, y una tira de ritmo contra los ingresos del mes.
+- **"Compromisos del próximo mes"** — qué se viene. Resúmenes de tarjeta que vencen en el próximo mes calendario y gastos fijos que caen en él, con lo vencido marcado aparte.
+- **"Compartido"** — cómo estoy con el hogar. Una tira con el neto, en una sola dirección.
+
+El selector de mes del header gobierna las tres primeras (el saldo hace corte mensual); Compromisos no lo sigue, porque su ventana es el próximo mes respecto de hoy.
+
+Es read-only: toda interacción navega al módulo correspondiente. El desglose de gastos **por categoría** ya no vive acá — es superficie única de Movimientos (`spending-by-category`)— aunque el dashboard sigue consumiendo su lectura del devengado. El eye toggle de privacidad enmascara los importes en ambas plataformas.
+
 ## Requirements
+
 ### Requirement: La pantalla dashboard es la landing universal post-login y post-onboarding
 
 El sistema SHALL renderizar la pantalla principal de la app en la ruta `/dashboard` bajo el grupo `(app)`, tanto en web como en mobile. La pantalla SHALL ser la única landing tras tres flujos: login exitoso, signup confirmado con onboarding ya completado, y completar el onboarding.
 
-Ambas plataformas SHALL renderizar la misma composición de secciones en orden fijo: (1) Hero "Para gastar · hoy" y card "Dónde está" (fila superior en desktop web; apiladas en mobile-web y nativo), (2) "Balance del mes", (3) "En qué se fue". El dashboard NO SHALL renderizar la sección "Lo que viene" ni la card de bienvenida `WelcomeFirstMoveCard` en ninguna plataforma (eliminadas por el rediseño `redesign-dashboard-home` + `dashboard-mobile-parity`).
+Ambas plataformas SHALL renderizar la misma composición en **cuatro bloques**, en orden fijo:
+
+1. **"Saldo disponible total"** — una sola card de dos zonas: zona oscura con el saldo disponible, la fila USD y el bloque "Dónde está"; zona clara con "Resumen del mes".
+2. **"Cuánto gastaste"** — los tres tiles (Gastaste / Pagaste / Te queda por pagar) y la tira de ritmo.
+3. **"Compromisos del próximo mes"** — el total comprometido con su barra apilada y los dos grupos desplegables.
+4. **"Compartido"** — la tira con el neto del Hogar, condicional a que haya actividad.
+
+El dashboard NO SHALL renderizar la sección "En qué se fue" (dona por categoría, leyenda, créditos por categoría ni toggle ARS/USD) en ninguna plataforma: esa lectura vive en la portada del módulo Movimientos. Tampoco SHALL renderizar la sección "Lo que viene" ni la card de bienvenida `WelcomeFirstMoveCard`.
 
 La sección Tarjetas NO forma parte del dashboard en ninguna plataforma; el resumen de tarjetas vive en `/cards` (web) y se navega desde el `AppMenu` → `/cards` (nativo).
 
@@ -16,44 +34,42 @@ La sección Tarjetas NO forma parte del dashboard en ninguna plataforma; el resu
 
 - **WHEN** un usuario completa el flujo de onboarding
 - **THEN** el sistema lo redirige a `/dashboard`
-- **AND** la pantalla renderiza las tres secciones (fila superior "Para gastar"+"Dónde está", "Balance del mes", "En qué se fue") en orden fijo
-- **AND** NO renderiza "Lo que viene" ni la card de bienvenida
+- **AND** la pantalla renderiza los cuatro bloques en orden fijo
+- **AND** NO renderiza "En qué se fue", "Lo que viene" ni la card de bienvenida
 
-#### Scenario: Login exitoso aterriza en dashboard
+#### Scenario: El desglose por categoría no se duplica en el dashboard
 
-- **WHEN** un usuario con onboarding completado hace login
-- **THEN** el sistema redirige a `/dashboard`
+- **WHEN** el usuario quiere ver en qué categorías se fue el gasto del mes
+- **THEN** el dashboard no ofrece esa lectura
+- **AND** la encuentra en la portada del módulo Movimientos
 
-#### Scenario: Arranque con sesión activa aterriza en /dashboard renderizado (mobile)
-
-- **WHEN** un usuario mobile con sesión válida persistida abre la app
-- **THEN** la app aterriza en `(app)/dashboard` con las tres secciones del rediseño renderizadas
-- **AND** NO renderiza el placeholder "Dashboard" de texto plano
 
 ---
 
 ### Requirement: El dashboard usa un layout multi-columna en desktop (web)
 
-En viewports `lg` (≥1024px) y mayores, la pantalla `/dashboard` web SHALL organizar sus secciones así: una **fila superior** de dos columnas (grid asimétrico ~`1.15fr 1fr`, alturas igualadas con `align-items: stretch`) con el Hero "Para gastar · hoy" a la izquierda y la card "Dónde está" a la derecha; debajo, una **segunda fila** de dos columnas (mismo patrón de grid) con "Balance del mes" a la izquierda y "Comprometido" a la derecha; debajo, en orden y a ancho completo: la tira "Compartido" (solo si hay actividad compartida), la sección "Gastaste este mes" (solo si hubo consumo de tarjeta en el mes), y "¿En qué gasté este mes?". El contenido SHALL estar centrado con un max-width acotado (~1080px efectivos).
+En desktop, el contenido del dashboard SHALL limitarse a un ancho máximo de 1080px centrado, junto a un sidebar de navegación de 248px, con una separación uniforme entre cards.
 
-Por debajo de `lg`, el dashboard SHALL apilar todas las cards en una sola columna en el mismo orden (Para gastar → Dónde está → Balance del mes → Comprometido → Compartido → Gastaste este mes → ¿En qué gasté?). En "¿En qué gasté?", la dona y la leyenda SHALL apilarse en una columna centrada en viewports angostos.
+La grilla SHALL organizarse en tres franjas:
 
-#### Scenario: Desktop ancho muestra las dos filas en dos columnas
+- **Fila 1**: la card "Saldo disponible total" a **ancho completo**.
+- **Fila 2**: dos columnas —"Cuánto gastaste" y "Compromisos del próximo mes"— con la segunda algo más ancha que la primera. Las dos cards SHALL terminar **alineadas a la misma altura**, empujando la tira de ritmo al pie de su card cuando sobra espacio.
+- **Pie**: la tira "Compartido" a ancho completo, cuando corresponde renderizarla.
 
-- **WHEN** un usuario carga `/dashboard` en un viewport de 1440px
-- **THEN** "Para gastar · hoy" y "Dónde está" se muestran lado a lado con la misma altura
-- **AND** "Balance del mes" y "Comprometido" se muestran lado a lado debajo con la misma altura
-- **AND** las secciones full-width ("Compartido" si aplica, "Gastaste este mes" si aplica, "¿En qué gasté?") ocupan el ancho completo debajo, en ese orden
+Por debajo del ancho máximo de contenido, el layout SHALL colapsar a **una sola columna** y el sidebar SHALL ocultarse. El diseño mobile SHALL ser la referencia para los anchos chicos.
 
-#### Scenario: Bajo lg el dashboard apila en una columna
+#### Scenario: Desktop ancho
 
-- **WHEN** un usuario carga `/dashboard` en un viewport de 820px o de 375px
-- **THEN** las cards se apilan en una sola columna en el orden: Para gastar → Dónde está → Balance del mes → Comprometido → Compartido → Gastaste este mes → ¿En qué gasté?
+- **WHEN** el usuario abre el dashboard en una ventana más ancha que el contenido máximo
+- **THEN** la card de saldo ocupa el ancho completo y debajo quedan "Cuánto gastaste" y "Compromisos" en dos columnas
+- **AND** las dos cards de la segunda fila terminan a la misma altura
 
-#### Scenario: La dona se centra en mobile
+#### Scenario: Ventana angosta
 
-- **WHEN** un usuario carga `/dashboard` en un viewport de 375px
-- **THEN** "¿En qué gasté?" muestra la dona centrada con la leyenda ocupando el ancho debajo
+- **WHEN** el ancho de la ventana baja del ancho máximo de contenido
+- **THEN** las cards se apilan en una sola columna
+- **AND** el sidebar deja de renderizarse
+
 
 ---
 
@@ -133,27 +149,31 @@ La fecha del header NO SHALL depender de esa query: SHALL calcularse en el serve
 - **AND** el área del contenido muestra los skeletons shape-matched mientras las server queries del dashboard resuelven
 - **AND** el usuario NO ve un spinner full-screen entre el login y el dashboard
 
+
 ---
 
 ### Requirement: El selector de mes del dashboard gobierna las secciones mensuales
 
 El dashboard SHALL exponer un navegador mensual `‹ Mes Año ›` (`MonthNavigator`) cuyo estado vive en un context client-side compartido (`DashboardMonthProvider` en web; su espejo nativo en mobile), inicializado en el mes actual derivado de `getTodayAR()`. Su ubicación es específica de cada plataforma: en **web** vive en el header de la página (junto al eye toggle y "Nuevo movimiento"); en **nativo** vive dentro del header navy de la pantalla, debajo del saludo, ocupando el ancho (pill blanca sobre navy).
 
-Cambiar el mes seleccionado SHALL actualizar **en simultáneo** las secciones "Balance del mes" y "En qué gasté este mes" (y la tira "financiado en tarjeta", que refiere al mes seleccionado). El selector NO SHALL afectar al Hero "Para gastar · hoy" ni a la card "Dónde está" (son saldo de hoy) ni a la línea "vas {neto} este mes" del header de la card "Balance del mes" (que es siempre del mes en curso) ni a la card "Comprometido" (que es estática "desde hoy": resúmenes del presente + recurrentes del mes próximo).
+Cambiar el mes seleccionado SHALL actualizar **en simultáneo la card de saldo completa** —el saldo, el desglose "Dónde está" y "Resumen del mes"— **y la card "Cuánto gastaste"**. El saldo deja de ser "de hoy": se corta al último día del mes seleccionado. Es lo que permite que los tres montos del resumen cierren contra él; dejar el saldo de hoy encima de los flujos de otro mes rompía la única verificación que la card ofrece al usuario.
 
-La navegación de mes NO SHALL modificar la URL/ruta ni provocar una navegación; el mes seleccionado NO se persiste (al re-montar, abre en el mes actual; en nativo, salir del tab y volver resetea al mes actual, mismo mecanismo de remount que el eye-mask). Las flechas SHALL permitir navegar hasta 12 meses hacia atrás; la flecha derecha SHALL deshabilitarse en el mes actual (no se navega al futuro). Cada sección mensual SHALL obtener los datos del mes no-actual client-side (web: server action vía TanStack; nativo: su hook TanStack existente) mostrando su propio estado de carga in-card; en web el mes actual llega server-rendered como initial data.
+El selector NO SHALL afectar a la card **"Compromisos del próximo mes"**, que es estática "desde hoy": es deuda de tarjeta presente más recurrencias pendientes, y darle versión histórica es redefinir qué significa la card, no re-consultarla con otra fecha. Tampoco SHALL afectar a la tira "Compartido", que muestra el neto vigente del hogar.
 
-#### Scenario: Cambiar el mes actualiza las secciones mensuales
+La navegación de mes NO SHALL modificar la URL/ruta ni provocar una navegación; el mes seleccionado NO se persiste (al re-montar, abre en el mes actual; en nativo, salir del tab y volver resetea al mes actual, mismo mecanismo de remount que el eye-mask). Las flechas SHALL permitir navegar hasta 12 meses hacia atrás; la flecha derecha SHALL deshabilitarse en el mes actual (no se navega al futuro). Cada sección mensual SHALL obtener los datos del mes no-actual client-side (web: TanStack sobre el cliente del browser; nativo: su hook TanStack existente) mostrando su propio estado de carga in-card; en web el mes actual llega server-rendered como initial data.
 
-- **WHEN** el usuario en junio 2026 toca la flecha izquierda del navegador
-- **THEN** "Balance del mes" y "En qué gasté este mes" muestran los datos de mayo 2026
-- **AND** "Para gastar · hoy", "Dónde está" y "Comprometido" no cambian
+#### Scenario: Cambiar el mes mueve la card de saldo entera
+
+- **WHEN** el usuario en agosto 2026 toca la flecha izquierda del navegador
+- **THEN** el saldo, "Dónde está", "Resumen del mes" y "Cuánto gastaste" muestran julio 2026
+- **AND** el saldo es el del cierre de julio, no el de hoy
 - **AND** no hay navegación de ruta ni recarga de pantalla
 
-#### Scenario: El selector no afecta el ancla del mes en curso
+#### Scenario: Compromisos no sigue al selector
 
-- **WHEN** el usuario navega el selector a un mes anterior
-- **THEN** la línea "vas {neto} este mes" de la card "Balance del mes" sigue mostrando el neto del mes en curso
+- **WHEN** el usuario navega a un mes anterior
+- **THEN** "Compromisos del próximo mes" sigue mostrando lo que se debe desde hoy
+- **AND** la tira "Compartido" tampoco cambia
 
 #### Scenario: Límites de navegación
 
@@ -165,13 +185,16 @@ La navegación de mes NO SHALL modificar la URL/ruta ni provocar una navegación
 
 - **WHEN** el usuario navega a un mes cuyos datos no están cargados
 - **THEN** cada sección mensual muestra su skeleton in-card (título y chrome visibles) mientras su fetch resuelve
-- **AND** una falla en el fetch de una sección muestra error compacto con reintento en esa sección sin romper la otra
+- **AND** una falla en el fetch de una sección muestra error compacto en esa sección sin romper las otras
 
 #### Scenario: El navegador vive en el header navy (mobile)
 
 - **WHEN** el usuario abre el dashboard en la app nativa
 - **THEN** el `MonthNavigator` se renderiza dentro del header navy, debajo del saludo, ocupando el ancho
 - **AND** salir del tab y volver resetea la selección al mes actual
+
+
+---
 
 ### Requirement: El header del dashboard ofrece un acceso primario para registrar un movimiento (web)
 
@@ -210,6 +233,9 @@ Mientras el header esté en su estado de carga (ver requirement del saludo) **o 
 - **THEN** el header NO contiene el botón "Nuevo movimiento" en ningún estado (loading o habilitado)
 - **AND** el acceso primario para registrar un movimiento en ese viewport es el FAB definido en la spec de `transactions`
 
+
+---
+
 ### Requirement: La pantalla dashboard es read-only
 
 El dashboard SHALL NOT exponer formularios, botones de creación, edición, eliminación, archivado ni confirmación de movimientos pendientes. Toda interacción que requiera modificar datos SHALL ocurrir en el módulo correspondiente (Cuentas, Tarjetas, Movimientos). Los elementos visibles en el dashboard PUEDEN ser clickeables como atajos de navegación a esos módulos, pero NO ejecutan mutaciones en sí mismos.
@@ -243,107 +269,63 @@ El dashboard SHALL NOT exponer formularios, botones de creación, edición, elim
 - **THEN** la app navega con `useRouter().push('/transactions')` a Movimientos
 - **AND** NO dispara ninguna mutación
 
+
 ---
 
 ### Requirement: El Hero muestra el disponible total bimoneda
 
-El Hero SHALL mostrar dos importes: el saldo disponible total en ARS (primario, tipografía grande) y el saldo disponible total en USD (secundario, tipografía menor). Cada importe SHALL surgir de la suma de los saldos derivados de todas las cuentas activas del usuario con `type IN ('cash','bank')` para la moneda correspondiente; las cuentas `type='credit'` NO entran en el cálculo.
+La zona oscura de la card de saldo SHALL mostrar, centrados: el rótulo, el **saldo total en ARS** como monto grande —con el signo y los centavos tipográficamente subordinados—, y la **fila USD** con su chip y el saldo real en dólares.
 
-El cálculo SHALL respetar el invariante "Off-ledger credit cards": las transacciones `expense` sobre cuentas `type='credit'` NO reducen el disponible; solo la transacción de pago de resumen (un `expense` sobre cash/bank) lo hace.
+El saldo SHALL seguir al selector de mes, cortado al **último día del mes seleccionado** (o a hoy cuando el mes seleccionado es el corriente). Toda la card se mueve junta: dejar el saldo de hoy encima de los flujos de otro mes hace que los montos de la zona clara no cierren contra él, que es justamente lo que la card tiene que dejar verificar.
 
-Si el usuario tiene ARS habilitado pero no tiene cuentas con saldo USD inicializado, el Hero SHALL mostrar `u$s 0,00` (no oculta la línea, porque V3 provisiona ambas monedas por default).
+Cuando el mes seleccionado NO es el corriente, el rótulo SHALL decirlo (por ejemplo "Saldo al cierre de mayo de 2026"): lo que el usuario tenía al cierre de un mes pasado no es lo que tiene disponible hoy, y un rótulo que dijera "disponible" estaría mintiendo.
 
-En **ambas plataformas**, el Hero SHALL renderizarse como una card oscura (navy de marca vía token — web: `surface-dark`; nativo: clase NativeWind del mirror — sin hex inline) con: eyebrow "PARA GASTAR · HOY" en uppercase, el importe ARS como titular grande con los decimales en tipografía reducida (`MaskedAmountDisplay`), la línea USD como chip "USD" + importe, y una caption al pie ("Lo que tenés disponible hoy, en pesos y dólares" vía i18n). El bloque eyebrow+importes SHALL centrarse verticalmente en el espacio sobre la caption cuando la card estira su altura. El Hero NO SHALL contener el desglose de cuentas: ese desglose vive en la card "Dónde está". Tocar el Hero navega al módulo Cuentas. Se respeta bimoneda (ARS primario, USD subordinado, sin merge entre monedas).
+El saldo inicial de una cuenta SHALL contar únicamente cuando su fecha de declaración (`account_currencies.initial_balance_date`) es anterior o igual a la fecha de corte. Una cuenta creada en julio NO SHALL aportar su saldo inicial al saldo del 31 de mayo: no era plata que el usuario tuviera en mayo.
 
-#### Scenario: Usuario con saldos en ambas monedas
+La fila USD SHALL regirse por la regla bimoneda: se renderiza solo si el saldo en dólares es distinto de cero.
 
-- **WHEN** el usuario tiene una cuenta cash con $ 150.000 ARS + u$s 500 USD y una cuenta bank con $ 137.450 ARS + u$s 740,50 USD, sin pagos de resúmenes pendientes ya descontados
-- **THEN** el Hero muestra `$ 287.450,00` en línea primaria y `u$s 1.240,50` en línea secundaria
+#### Scenario: El saldo sigue al selector de mes
 
-#### Scenario: Consumo en tarjeta no reduce el disponible del Hero
+- **WHEN** el usuario navega a un mes anterior
+- **THEN** el saldo muestra el saldo al cierre de ese mes
+- **AND** el rótulo indica que es el saldo al cierre de ese mes, no el disponible de hoy
 
-- **WHEN** el usuario tiene $ 100.000 ARS disponibles y registra un consumo de $ 30.000 en su tarjeta Visa
-- **THEN** el Hero sigue mostrando `$ 100.000,00`
-- **AND** el consumo aparece en `/cards`
+#### Scenario: Una cuenta creada después no infla los meses anteriores
 
-#### Scenario: Pago de resumen reduce el disponible
+- **WHEN** el usuario mira un mes anterior a la creación de una de sus cuentas
+- **THEN** el saldo inicial de esa cuenta no participa del saldo de ese mes
 
-- **WHEN** el usuario paga el resumen de Visa por $ 145.200 desde una cuenta cash que tenía $ 287.450
-- **THEN** el Hero pasa a mostrar `$ 142.250,00`
+#### Scenario: Usuario sin saldo en dólares
 
-#### Scenario: El Hero es la card oscura sin desglose de cuentas
+- **WHEN** el usuario no tiene saldo en USD
+- **THEN** la fila USD no se renderiza
+- **AND** el monto en ARS queda como única lectura del saldo
 
-- **WHEN** el usuario carga el dashboard (web o nativo)
-- **THEN** el Hero se pinta como card navy con eyebrow "PARA GASTAR · HOY", el importe ARS grande y el chip USD
-- **AND** el desglose por cuenta NO está dentro del Hero (vive en la card "Dónde está")
-- **AND** el color navy proviene del token de tema, no de un hex inline
 
 ---
 
 ### Requirement: La card "Dónde está" desglosa las cuentas del usuario
 
-Junto al Hero "Para gastar · hoy", el dashboard SHALL renderizar una card "Dónde está" que desglosa dónde vive el disponible (a la derecha del Hero en desktop web; apilada debajo en mobile-web y en la app nativa). Los datos SHALL salir de la misma data de `getDashboardHero` que alimenta el Hero — en web vía un único container async para la fila superior; en nativo ambas cards consumen `useDashboardHero()` y TanStack dedupea por queryKey (un solo fetch). La card SHALL considerar las cuentas activas `type IN ('cash','bank')` ordenadas por saldo ARS descendente (el orden que ya devuelve `getDashboardHero`), truncadas a un máximo de 6; el resto se ve en el módulo Cuentas. El header de la card SHALL incluir un link "Ver todas" → módulo Cuentas (web: `/accounts`; nativo: `router.push('/accounts')`). Todos los importes de la card participan del eye-mask.
+El desglose "Dónde está" SHALL vivir **dentro de la zona oscura** de la card de saldo, no como card separada, en dos columnas separadas por un divisor: **ARS a la izquierda y USD a la derecha**, con su encabezado propio y un link a Cuentas.
 
-Al rotular cada cuenta (tanto en el callout de concentración como en la grilla compacta), la card SHALL mostrar el **nombre de la institución/banco** de la cuenta cuando exista (`HeroAccountBalance.institutionName`), cayendo al **nombre dado por el usuario** (`name`) cuando la cuenta no tiene institución (p. ej. efectivo). Esta regla SHALL aplicar idéntica en web y en nativo; el dato sale de `getDashboardHero`, no se deriva en la card.
+Cada columna SHALL listar las **dos cuentas con más saldo** de esa moneda, cada fila con un cuadradito del color de la cuenta, el nombre y su **porcentaje sobre el total de esa moneda**. El desglose NO SHALL renderizar barras de proporción: el porcentaje es la única expresión de la magnitud.
 
-**Presentación (web y mobile):** la card SHALL comunicar la **concentración** del saldo de un vistazo, sin lista larga, idéntica en ambas plataformas:
+En pantallas angostas las dos monedas SHALL apilarse y cada cuenta SHALL ocupar su propia fila, con **el rótulo de moneda como columna izquierda** —no como fila propia: una línea entera para la palabra "ARS" es una línea no gastada en datos— y el porcentaje empujado al borde derecho, de modo que los porcentajes queden alineados en columna, que es lo que se compara. Dos columnas de moneda en el ancho de un teléfono dejan ~145px cada una y dos cuentas adentro de eso truncaban los nombres a una letra ("M", "L…"), que no identifican nada. Apilado, cada cuenta tiene el ancho de la card. El separador SHALL girar con la composición: vertical entre columnas, horizontal entre bloques apilados. Cada bloque apilado SHALL llevar su propio rótulo de moneda, porque el encabezado de dos columnas solo se alinea con ellas cuando están lado a lado.
 
-- Un **callout de concentración**: el porcentaje de la cuenta de mayor saldo ARS sobre el total ARS (`pct = cuenta_dominante.ars / Σ cuentas.ars`, redondeado a entero) en tipografía grande, junto al nombre (institución con fallback al nombre del usuario) y saldo de esa cuenta. El porcentaje SHALL derivarse de los datos, NO hardcodearse. Con `Σ = 0` (sin saldo ARS), el callout NO SHALL mostrarse.
-- Una **barra de concentración** horizontal compuesta por un segmento por cuenta, cuyo ancho SHALL ser proporcional al saldo ARS de la cuenta sobre el total (`cuenta.ars / Σ`), nunca hardcodeado. Cada segmento usa el color de identidad de su cuenta (sin hex inline en web; mirror de tokens en nativo). Los segmentos sub-pixel PUEDEN recibir un ancho mínimo visible sin alterar el cálculo del dato.
-- Una **grilla compacta** (2 columnas) con las cuentas restantes (cada celda: cuadradito de color + nombre de institución/banco con fallback al nombre del usuario + saldo ARS) y, como celda final destacada en emerald, la tenencia "En dólares" con el total USD del usuario (el mismo `usd` del Hero), que representa el stock total en USD y NO un desglose por cuenta. Un saldo ARS de cero SHALL pintarse atenuado.
+Una columna cuya moneda no tiene saldo NO SHALL renderizar filas vacías. Un usuario con una sola cuenta en una moneda SHALL ver una sola fila en esa columna.
 
-El cálculo de concentración (porcentaje dominante + anchos de los segmentos) SHALL reusar la función pura `computeConcentration` de `@grana/dashboard` en ambas plataformas; no se duplica.
+#### Scenario: Usuario con varias cuentas en ambas monedas
 
-#### Scenario: Concentración calculada de los datos (web)
+- **WHEN** el usuario tiene tres cuentas con saldo en ARS y dos en USD
+- **THEN** la columna ARS lista las dos de mayor saldo y la columna USD lista sus dos cuentas
+- **AND** cada porcentaje está calculado sobre el total de su propia moneda
 
-- **WHEN** el usuario tiene Cta remunerada $9.575.790,25, CA $146.939,17, Billetera $108.200, Personal Pay $53.082,99 y un total USD de u$s 600 (web)
-- **THEN** el callout muestra `97%` con "Cta remunerada · $9.575.790,25"
-- **AND** la barra de concentración muestra un segmento por cuenta con ancho proporcional a su saldo ARS sobre el total
-- **AND** la grilla compacta lista las cuentas restantes y la fila "En dólares" muestra u$s 600 en emerald
+#### Scenario: Usuario sin saldo en dólares
 
-#### Scenario: Concentración calculada de los datos (mobile)
+- **WHEN** el usuario no tiene saldo en USD
+- **THEN** la columna USD no lista cuentas
+- **AND** la columna ARS conserva su lectura completa
 
-- **WHEN** el usuario abre el dashboard nativo con Cta remunerada $9.575.790,25 dominante y otras cuentas menores
-- **THEN** el callout muestra el `%` de la cuenta dominante con su nombre y saldo
-- **AND** la barra de concentración muestra un segmento por cuenta con ancho proporcional a su saldo ARS sobre el total
-- **AND** la grilla compacta lista las cuentas restantes y la fila "En dólares" en emerald
-
-#### Scenario: El nombre del banco se muestra cuando la cuenta tiene institución (web y mobile)
-
-- **WHEN** la cuenta dominante tiene `institutionName` "Banco Galicia" y `name` "Caja de ahorro sueldo"
-- **THEN** el callout y la grilla rotulan esa cuenta como "Banco Galicia"
-- **WHEN** una cuenta de efectivo tiene `institutionName` nulo y `name` "Billetera"
-- **THEN** esa celda se rotula con "Billetera" (fallback al nombre del usuario)
-
-#### Scenario: Una sola cuenta concentra el 100%
-
-- **WHEN** el usuario tiene una única cuenta con saldo ARS y total USD cero
-- **THEN** el callout muestra `100%` con esa cuenta
-- **AND** la barra de concentración muestra un único segmento a ancho completo
-
-#### Scenario: Sin saldo ARS no se muestra el callout
-
-- **WHEN** todas las cuentas del usuario tienen saldo ARS cero
-- **THEN** el callout de concentración NO se renderiza
-- **AND** la card sigue mostrando las cuentas (atenuadas) y la fila "En dólares"
-
-#### Scenario: Más de 6 cuentas se truncan
-
-- **WHEN** el usuario tiene 9 cuentas cash/bank activas
-- **THEN** la card considera las 6 de mayor saldo ARS + la fila "En dólares"
-- **AND** el link "Ver todas" navega al módulo Cuentas donde está el listado completo
-
-#### Scenario: Una sola llamada alimenta la fila superior (web)
-
-- **WHEN** se inspecciona el container de la fila superior del dashboard web
-- **THEN** un único container async llama a `getDashboardHero` y renderiza ambas cards (Hero + "Dónde está") con esa data
-- **AND** NO hay una segunda llamada a `getDashboardHero` para la card de cuentas
-
-#### Scenario: Un solo fetch alimenta ambas cards (mobile)
-
-- **WHEN** la pantalla dashboard nativa monta Hero y "Dónde está"
-- **THEN** ambos componentes consumen `useDashboardHero()` con la misma queryKey
-- **AND** TanStack ejecuta un único fetch para los dos
 
 ---
 
@@ -383,263 +365,29 @@ En **web**, el `eye toggle` SHALL permanecer montado y visible mientras el heade
 - **THEN** delega el render en el UI `Button` con `variant="ghost"` y `size="icon"`
 - **AND** NO es un `<button>` artesanal con clases tailwind ad-hoc
 
-### Requirement: La sección "Balance del mes" muestra el neto del mes con barras de ingresos y gastos
-
-La sección "Balance del mes" SHALL mostrar, para el mes seleccionado en el navegador compartido: un eyebrow "BALANCE" y debajo el neto ARS del mes en tipografía grande con signo y color (positivo → emerald, negativo → terracota/expense); debajo, las filas de flujo, cada una con dot de color + label + monto y una barra horizontal proporcional.
-
-**Corte temporal (la sección cuenta lo que YA pasó).** La ventana de lectura de la sección SHALL ser `[primer día del mes, min(último día del mes, hoy_AR)]`, donde `hoy_AR` es la fecha calendario en `America/Argentina/Buenos_Aires` — el mismo "hoy" que corta el saldo (spec `accounts`, migración 0052), nunca el reloj del browser ni el timezone del servidor de base de datos. Una transacción de caja con `date > hoy_AR` existe y es visible en listados, pero NO SHALL aportar a ningún balde ni al neto del mes hasta que su fecha llegue. En consecuencia:
-
-- un **mes pasado** se lee entero (todo en él ya ocurrió);
-- el **mes en curso** se lee hasta hoy inclusive, de modo que sus totales crecen a medida que las fechas llegan;
-- un **mes que todavía no empezó** SHALL dar una serie vacía (todos los baldes en cero), no un adelanto de lo cargado.
-
-Esta sección es **CAJA pura** (lee solo filas on-ledger, `status IS NULL`), así que el corte SHALL aplicarse a todas sus filas sin excepción por tipo.
-
-**Reconciliación con el Disponible (lente CAJA).** El neto del mes (`finalBalance`) SHALL reconciliar exactamente con el cambio del Disponible en ese mes: la sección SHALL contabilizar **todo** movimiento de caja del mes sobre cuentas propias aplicando los **mismos signos** que `calculateTransactionSums` (la fuente del Hero/Disponible), por moneda, sin combinar ARS con USD. El corte temporal SHALL ser el **mismo día** en ambos lados: el Disponible ya excluye las filas futuras, así que contarlas acá rompería la reconciliación en cualquier mes con movimientos fechados adelante.
-
-**"Cuenta propia" es un único criterio en toda la app: `type IN ('cash','bank') AND is_active = true`.** El universo de cuentas de esta sección SHALL ser idéntico al del Hero/Disponible, sin excepción. Una cuenta **archivada** (`is_active = false`) NO SHALL aportar sus movimientos al neto del mes, porque su saldo tampoco está en el Disponible: contarla de un lado y no del otro rompe la reconciliación. El criterio NO SHALL replicarse a mano en cada query — SHALL derivarse de una única definición normativa compartida (ver spec `web-data-access`), de modo que Hero, "Dónde está", listado/detalle de cuentas y "Balance del mes" no puedan divergir por olvido. En consecuencia `finalBalance = totalIncome − totalExpense − totalCardPayment + totalAdjustment + totalReimbursement + totalSettlement + totalExchange + totalTransfer`, donde `totalTransfer` es el residuo de las transferencias con una sola pata propia (cero en el caso normal, ver más abajo). Ningún tipo de movimiento de caja SHALL descartarse: los reintegros recibidos a cuenta, las liquidaciones de deuda compartida y los cambios de moneda — hoy ignorados — SHALL contabilizarse. Solo cuentan transacciones confirmadas (los consumos `pending` de tarjeta no entran, igual que siempre).
-
-**Transferencias: cada pata se evalúa por separado.** Una `transfer` SHALL restar cuando su cuenta origen es propia y sumar cuando su cuenta destino lo es, evaluando cada condición de forma independiente — exactamente como `calculateTransactionSums`. Cuando **ambas** patas son cuentas propias el resultado neto es cero y la transferencia no mueve el neto del mes (comportamiento visible sin cambios). Cuando **solo una** pata es propia (la otra es una cuenta archivada), la transferencia SHALL contabilizarse por esa pata. El sistema NO SHALL descartar las transferencias de plano asumiendo que ambas patas son propias: esa suposición es la que hace divergir la serie del mes del Disponible.
-
-Ese efecto vive en su propio balde `totalTransfer` (signado: la plata que sale del universo propio resta, la que entra suma). El balde NO SHALL renderizar una fila propia en la card: vale exactamente cero cuando las dos patas son propias — el caso normal —, así que una fila "Transferencias" mostraría siempre `$0` y ensuciaría la lectura. Existe para que la identidad de baldes siga cerrando contra `finalBalance` en vez de que el residuo aparezca como una diferencia sin explicación.
-
-Cada tipo de movimiento de caja vive en su **balde propio**, con estas reglas de signo (idénticas a `calculateTransactionSums`):
-
-- **Ingresos** (`income`): suma. Fila siempre visible.
-- **Gastos** (`expense` que NO es pago de resumen): suma. Fila siempre visible.
-- **Ajustes** (`adjustment`): signado (positivo sube el saldo, negativo lo baja). Corrección de stock, no flujo.
-- **Pago de tarjeta** (`expense` vinculado a un `period_payments`): suma. Cancela deuda ya devengada, no es consumo nuevo.
-- **Reintegros recibidos** (`reimbursement` con `reimbursement_target='account'`, `received_at` no nulo y `cancelled_at` nulo): es plata que vuelve a la cuenta, así que para la caja se cuenta como **ingreso** y se **pliega dentro de la fila "Ingresos"** (NO tiene barra propia). Suma al neto igual. Los reintegros pendientes, cancelados o "en resumen" NO entran (no tocan el Disponible).
-- **Liquidaciones** (`settlement`): signado — `settlement_direction='in'` suma, `'out'` resta.
-- **Cambio de moneda** (`exchange`): signado **por moneda** — en la serie ARS, la pata origen (la plata que sale de ARS) resta; en la serie USD, la pata destino (la que entra) suma. Reconcilia per-moneda porque es exactamente lo que hace `calculateTransactionSums`.
-
-Un ajuste de saldo es una corrección del stock, no un flujo: NO SHALL sumarse a "Ingresos" ni a "Gastos". El pago de resumen NO SHALL sumarse a "Gastos". La fila "Gastos" SHALL reflejar únicamente gasto **de caja** real (`type='expense'` sobre cuenta propia que NO es pago de resumen).
-
-**"Gastos" (CAJA) NO coincide con "En qué se fue" (CONSUMO).** Son lentes distintas a propósito: "En qué se fue" es **devengado** e incluye el consumo de tarjeta (consumos + cuotas, por fecha de compra), mientras "Gastos" de Balance del mes es **caja** y solo cuenta lo que salió de una cuenta propia (efectivo/débito). La diferencia entre ambos es, justamente, el consumo de tarjeta del mes que aún no se pagó. Las dos lentes comparten el corte a hoy para su parte de caja, pero difieren en tarjeta: la cuota del mes ya devenga aunque su fecha no haya llegado (ver spec `spending-by-category`). La reconciliación que SHALL cumplirse es otra: `finalBalance` ↔ el cambio del **Disponible** (ver más arriba). El rótulo de la pregunta de cada card comunica que miran cosas distintas.
-
-**Filas condicionales.** Las filas "Ingresos" y "Gastos" SHALL mostrarse siempre. Los reintegros recibidos se pliegan dentro de "Ingresos" (sin barra propia). Las filas "Ajustes", "Pago de tarjeta", "Liquidaciones" y "Cambio de moneda" SHALL mostrarse **solo cuando el mes tiene ese movimiento** (balde con monto ≠ 0), para no ensuciar la card de quien no los usa. Cada una con el mismo tratamiento visual (dot + label + monto + barra proporcional) y un tono propio que la distinga; los montos signados (Ajustes, Liquidaciones, Cambio de moneda) SHALL mostrarse con su signo.
-
-Debajo de la fila "Ajustes", y solo cuando esa fila se muestra, la sección SHALL renderizar un **aviso educativo** (voz Grana, texto atenuado) que comunique que los ajustes son grana que se movió sin registrar y que la meta es hacerlos desaparecer registrando esos movimientos. El texto SHALL salir del catálogo i18n (`dashboard.month.adjustment_note`), sin string hardcodeado.
-
-El header de la card SHALL mostrar a la derecha del título la línea "vas {neto} este mes" referida **siempre al mes en curso** (no sigue al selector: ancla el contexto de hoy mientras se navegan meses pasados), con el monto coloreado por signo y enmascarable por el eye-mask. El dato SHALL salir del mes actual ya disponible (web: server-rendered; nativo: el cache de TanStack del primer load) sin fetch adicional.
-
-Los anchos de las barras SHALL calcularse de los datos: la magnitud mayor entre todas las filas presentes ocupa el 100% del track y las otras escalan proporcionalmente (`magnitud / maxFlow`), usando el valor absoluto de los baldes signados; con todas en cero, las barras quedan vacías. Los anchos NO SHALL hardcodearse. Ingresos usa el color emerald; Gastos el terracota; Ajustes el `warning`/ámbar; las demás filas un tono propio que las distinga.
-
-Al pie, un strip USD SHALL mostrar el chip "USD", el neto USD del mes con signo y color, y el detalle "Ingresos US$X · Gastos US$Y". El strip SHALL mostrarse siempre (bimoneda por defecto: sin actividad USD muestra ceros). ARS y USD nunca se combinan ni convierten.
-
-Los datos SHALL salir de `getMonthBalanceSeries` (totales por moneda, incluyendo `totalAdjustment`, `totalCardPayment`, `totalReimbursement`, `totalSettlement`, `totalExchange` y `totalTransfer`). La serie diaria que ese read devuelve SHALL cubrir únicamente los días ya transcurridos del mes: un día que todavía no llegó NO SHALL emitirse como día de la serie, porque una línea plana en un día futuro se lee como "no gasté" en vez de "todavía no pasó". La sección NO SHALL renderizar el gráfico de línea acumulada en ninguna plataforma: `MonthBalanceChart` no existe ni en `apps/web` ni en `apps/mobile` (la serie diaria sigue disponible en el package para vistas futuras). Todos los importes participan del eye-mask.
-
-#### Scenario: El neto del mes reconcilia con el cambio del Disponible
-
-- **WHEN** el mes (ARS) tiene ingresos $500.000, gastos reales $300.000 y un reintegro recibido a cuenta de $50.000
-- **THEN** el neto del mes es `+$250.000` (= 500.000 − 300.000 + 50.000)
-- **AND** ese neto es idéntico al cambio del Disponible del mes (que también cuenta el reintegro)
-- **AND** el reintegro se cuenta dentro de la fila "Ingresos" (que muestra `$550.000`), sin barra propia
-
-#### Scenario: Una cuenta archivada no aporta al neto del mes
-
-- **WHEN** el usuario tiene una cuenta `type='bank'` con `is_active = false` que registró gastos en el mes seleccionado
-- **THEN** esos gastos NO se cuentan en ninguna fila de "Balance del mes" ni en `finalBalance`
-- **AND** el neto del mes sigue siendo idéntico al cambio del Disponible (que tampoco incluye esa cuenta)
-
-#### Scenario: Una transferencia hacia una cuenta archivada se trata igual en las dos lentes
-
-- **WHEN** el usuario transfiere ARS $100.000 desde una cuenta activa hacia una cuenta archivada
-- **THEN** el Disponible baja $100.000 (la plata salió del universo de cuentas propias)
-- **AND** "Balance del mes" refleja esa misma bajada de $100.000
-- **AND** NO ocurre que la serie del mes netee la transferencia a cero mientras el Disponible sí se mueve
-
-#### Scenario: El Disponible cuenta los reintegros recibidos y las liquidaciones
-
-- **WHEN** el usuario tiene un reintegro recibido a cuenta y una liquidación de deuda que acreditan cuentas propias
-- **THEN** el cálculo del Disponible (Hero) los incluye (de lo contrario `finalBalance` del mes no reconciliaría con el cambio del Disponible)
-- **AND** la query del Disponible SHALL traer los campos que gobiernan esos tipos (`reimbursement_target`, `received_at`, `cancelled_at`, `settlement_direction`); omitir cualquiera los descarta silenciosamente
-
-#### Scenario: Liquidaciones y cambios de moneda se contabilizan
-
-- **WHEN** en ARS el usuario recibe una liquidación (`settlement in`) de $40.000 y hace un cambio de moneda comprando dólares por $120.000 (pata origen ARS)
-- **THEN** la sección muestra una fila "Liquidaciones" en `+$40.000` y una fila "Cambio de moneda" en `−$120.000`
-- **AND** el neto del mes incluye ambos efectos y reconcilia con el Disponible ARS
-- **AND** en la serie USD, la pata destino del cambio aparece como "Cambio de moneda" en positivo
-
-#### Scenario: El pago de resumen se rotula aparte y no infla Gastos
-
-- **WHEN** el mes seleccionado tiene gasto real ARS $200.000 y un pago de resumen de tarjeta de ARS $150.000 (un `expense` sobre cash/bank vinculado a un `period_payments`)
-- **THEN** la fila "Gastos" muestra `$200.000` (sin el pago de resumen)
-- **AND** la sección muestra una fila aparte "Pago de tarjeta" en `$150.000`
-- **AND** el neto del mes sigue restando los $150.000 (la plata salió de caja): `finalBalance` es idéntico al que daba contando el pago dentro de Gastos
-
-#### Scenario: "Gastos" (CAJA) difiere de "En qué se fue" (CONSUMO) cuando hay tarjeta
-
-- **WHEN** el mes tiene gasto de caja (efectivo/débito) por $254.461,25 y además consumos de tarjeta del mes por $460.892,38 (devengados)
-- **THEN** "Gastos" de "Balance del mes" muestra `$254.461,25` (solo caja)
-- **AND** "En qué se fue" muestra `$715.353,63` (devengado: incluye la tarjeta)
-- **AND** los dos números difieren a propósito (lentes distintas) — NO es un error; la reconciliación que cuenta es `finalBalance` ↔ Disponible
-
-#### Scenario: Neto positivo con barras proporcionales
-
-- **WHEN** el mes seleccionado tiene ingresos ARS $800.000 y gastos ARS $295.500,25 y ningún otro movimiento de caja
-- **THEN** el neto muestra `+$504.499,75` en emerald
-- **AND** la barra de Ingresos ocupa el 100% del track y la de Gastos ~36,9%
-- **AND** solo se renderizan las filas "Ingresos" y "Gastos"
-- **AND** el strip USD muestra el neto USD del mes con su detalle de ingresos y gastos
-
-#### Scenario: Gastos mayores que ingresos invierten la proporción
-
-- **WHEN** el mes tiene ingresos ARS $100.000 y gastos ARS $250.000
-- **THEN** el neto muestra `−$150.000` en tono expense
-- **AND** la barra de Gastos ocupa el 100% y la de Ingresos el 40%
-
-#### Scenario: Los ajustes no inflan Ingresos ni Gastos y se muestran en su balde
-
-- **WHEN** el mes seleccionado tiene gasto real ARS $254.461,25, ingreso real ARS $7.349.361,79, ajustes que restan saldo por ARS $3.152.222,01 y ajustes que suman saldo por ARS $615.610,22
-- **THEN** la fila "Gastos" muestra `$254.461,25` (solo gasto real, sin los ajustes)
-- **AND** la fila "Ingresos" muestra `$7.349.361,79` (solo ingreso real)
-- **AND** la fila "Ajustes" se muestra con el neto `−$2.536.611,79` y una barra ámbar proporcional (su ancho contra `maxFlow`)
-- **AND** debajo de las barras aparece el aviso educativo (voz Grana) desde `dashboard.month.adjustment_note`
-- **AND** el neto del mes es `$4.558.288,75` (= ingresos − gastos + ajustes), idéntico al cambio del Disponible
-
-#### Scenario: Mes sin movimientos muestra ceros
-
-- **WHEN** el mes seleccionado no tiene movimientos confirmados
-- **THEN** el neto muestra `$0` y las barras quedan vacías
-- **AND** solo se renderizan las filas "Ingresos" y "Gastos" (en cero); ninguna fila condicional aparece
-- **AND** el strip USD muestra `US$0` con ingresos y gastos en cero
-
-#### Scenario: El header de la card ancla el neto del mes en curso
-
-- **WHEN** el usuario va `+$504.499,75` en el mes en curso y navega el selector a un mes anterior
-- **THEN** el header de la card sigue mostrando "vas +$504.499,75 este mes" (mes en curso) mientras el cuerpo muestra el mes navegado
-- **AND** activar el eye-mask enmascara ese monto
-
-#### Scenario: Consumo en tarjeta no impacta el balance
-
-- **WHEN** el usuario registra un consumo de $30.000 en su tarjeta en el mes
-- **THEN** los totales del mes NO reflejan ese consumo
-- **AND** cuando el usuario pague el resumen correspondiente, ese pago (sobre cash/bank) entra en la fila "Pago de tarjeta" en la fecha del pago, no en "Gastos"
-
-#### Scenario: El chart de línea no existe en ninguna app
-
-- **WHEN** se busca `MonthBalanceChart` en `apps/web` y `apps/mobile`
-- **THEN** el componente no existe en ninguna de las dos apps
-
-#### Scenario: Un gasto fechado adelante no mueve el mes hasta que llega su fecha
-
-- **WHEN** hoy es el 1 de agosto y el mes tiene únicamente gastos fechados del 8 al 31 (recurrencias sin confirmar, semillas futuras) por $1.992.743,78
-- **THEN** "Balance del mes" muestra neto $0, con Ingresos $0 y Gastos $0
-- **AND** esas transacciones siguen siendo visibles en el listado de movimientos
-- **AND** el 8 de agosto el gasto de ese día entra al mes automáticamente, sin acción del usuario
-
-#### Scenario: Un mes que todavía no empezó se muestra vacío
-
-- **WHEN** hoy es el 1 de agosto y el usuario navega a septiembre, que ya tiene $115.542,97 de gastos cargados con fecha futura
-- **THEN** todos los baldes muestran $0 y el neto es $0
-
-#### Scenario: Un mes pasado se sigue leyendo entero
-
-- **WHEN** hoy es el 1 de agosto y el usuario navega a julio
-- **THEN** el neto de julio contabiliza sus movimientos hasta el 31 de julio inclusive, sin recorte
-
-### Requirement: La sección "En qué se fue" muestra el desglose de gastos por categoría con dona y toggle de moneda
-
-El dashboard SHALL renderizar como tercera sección "En qué se fue": una dona SVG con los gastos del mes seleccionado por categoría + una leyenda, con un control `Segmented` ARS/USD (default ARS) en el header de la card. Aplica idéntico en web y en la app nativa.
-
-- Los datos SHALL salir de `getMonthCategoryBreakdown` procesados con `buildCategorySlices` de `@grana/money-logic` con `topN: 5` y bucket "Otros" — la matemática del neto por categoría no se duplica.
-- Los tramos de la dona SHALL derivarse de los porcentajes calculados; NO SHALL hardcodearse. La dona SHALL implementarse como SVG de strokes circulares (web: SVG del DOM; nativo: `react-native-svg`), con el centro mostrando el label "GASTOS" y el total del mes en la moneda activa.
-- Cada tramo/fila SHALL usar el color de la categoría en DB (`slice.color`), con fallback posicional a la paleta `cat-*` de `@grana/ui-tokens` (web: `var(--cat-*)`; nativo: valores del mirror `tokens.cjs`) — la misma categoría se ve del mismo color que en el desglose de Movimientos. Sin hex inline en componentes.
-- La leyenda SHALL mostrar por categoría: dot de color + nombre traducido (el sentinel uncategorized usa su label i18n) + monto + porcentaje. Cada fila SHALL linkear al desglose completo en Movimientos (web: `/transactions`; nativo: `router.push('/transactions')`). La preselección de categoría/mes/moneda vía URL NO existe: los filtros de Movimientos viven en estado React por diseño.
-- El toggle ARS/USD SHALL alternar el desglose entre monedas sin refetch (el breakdown ya trae ambas) y sin tocar las otras secciones.
-- El header de la card SHALL incluir un link "Ver desglose" al desglose completo en Movimientos.
-- Si el mes no tiene gastos en la moneda activa, la card SHALL mostrar un estado vacío neutral; la card NO SHALL desaparecer del layout.
-- Los montos (leyenda y centro de la dona) participan del eye-mask; los porcentajes no se enmascaran.
-
-#### Scenario: Dona calculada de los datos con colores de DB
-
-- **WHEN** el mes tiene gastos ARS en Comida 38%, Servicios 23%, Transporte 15%, Súper 14% y Salud 10%
-- **THEN** la dona renderiza 5 tramos cuyos ángulos corresponden a esos porcentajes
-- **AND** cada tramo usa el color de su categoría en DB
-- **AND** el centro muestra "GASTOS" + el total ARS del mes
-
-#### Scenario: Toggle a USD alterna el desglose
-
-- **WHEN** el usuario activa "USD" en el segmented y el mes tiene un único gasto USD en Entretenimiento de US$10
-- **THEN** la dona muestra un tramo único (100%) y la leyenda "Entretenimiento — US$10 — 100%"
-- **AND** no se dispara un nuevo fetch ni cambian las otras secciones
-
-#### Scenario: Más de 5 categorías se agrupan en Otros
-
-- **WHEN** el mes tiene gastos ARS en 8 categorías
-- **THEN** la dona y la leyenda muestran las 5 de mayor peso + un tramo "Otros" con el resto agregado
-
-#### Scenario: Sin gastos en la moneda activa
-
-- **WHEN** el mes seleccionado no tiene gastos en la moneda activa
-- **THEN** la card muestra un estado vacío neutral y permanece en el layout
-
-#### Scenario: Una fila navega al desglose de Movimientos
-
-- **WHEN** el usuario toca la fila "Comida" de la leyenda
-- **THEN** navega a Movimientos, que abre con el desglose completo del mes
-- **AND** NO se ejecuta ninguna mutación
-
-#### Scenario: "Ver desglose" navega al desglose completo
-
-- **WHEN** el usuario toca "Ver desglose" en el header de la card
-- **THEN** navega a Movimientos, que abre con el desglose completo del mes
-- **AND** NO se ejecuta ninguna mutación
-
-#### Scenario: La dona nativa usa react-native-svg sin hex inline (mobile)
-
-- **WHEN** se inspecciona el componente `SpendingDonut` nativo
-- **THEN** dibuja los tramos con `<Circle strokeDasharray strokeDashoffset>` de `react-native-svg`
-- **AND** los colores de fallback provienen del mirror de tokens (`@grana/ui-tokens/tokens`), sin literales hex en el componente
 
 ---
 
 ### Requirement: El dashboard tolera datos parciales sin romperse
 
-El dashboard SHALL renderizar todas sus secciones aunque alguna(s) de ellas no tengan datos o sus queries devuelvan vacío. Cada sección SHALL manejar su propio estado vacío con un mensaje neutral y nunca dejar la pantalla en blanco.
+El dashboard SHALL renderizar sin errores frente a cualquier combinación de datos faltantes: usuario sin cuentas, sin movimientos en el mes, sin ingresos acreditados, sin tarjetas, sin gastos fijos y sin actividad compartida.
 
-Cada sección SHALL renderizarse de forma **independiente tanto en loading como en errores**: una query lenta o fallida en una sección NO SHALL bloquear ni romper el renderizado de las demás. En web, esta independencia SHALL implementarse envolviendo cada sección en su propio `<Suspense>` con su **skeleton shape-matched** correspondiente como `fallback` (`HeroSkeleton` para la fila superior completa, `MonthBalanceSkeleton`, `SpendingSkeleton`), y haciendo que cada sección fetchee su data en un container async dedicado que degrade a un estado de error compacto si su query falla. NO SHALL existir un único `<Suspense>` que englobe a varias secciones bloqueando el streaming entre ellas. En nativo, cada sección posee su query TanStack y su swap region de alto estable (ver requirement del shell mobile).
+Cada bloque SHALL distinguir entre **cero** y **ausencia de dato**: un monto en cero se muestra como cero, mientras que una métrica que no se puede calcular —señaladamente el ritmo cuando no hubo ingresos en el mes— SHALL mostrar un mensaje explicativo y NO SHALL mostrarse como 0%.
 
-Cada sección SHALL declarar un `min-height` sobre el root del componente real y sobre su **skeleton** correspondiente, de forma que el alto del hueco no cambie entre el estado de carga, el estado con datos y el estado de error compacto. NO SHALL haber layout shift visible cuando una sección pasa de su skeleton al contenido real.
+Ninguna derivación SHALL dividir por cero ni producir `NaN`, `Infinity` o un porcentaje fuera de rango cuando su denominador es cero.
 
-Los skeletons SHALL anticipar visualmente la anatomía de la sección (ver requirement "Las secciones del dashboard renderizan su estado de carga como skeleton shape-matched") y SHALL declarar un label de accesibilidad localizado específico de la sección reusando las keys `dashboard.hero_loading`, `dashboard.month.loading`, `dashboard.spending.loading`. NO SHALL reusarse un mensaje genérico para todas las secciones.
+#### Scenario: Usuario recién onboardeado
 
-#### Scenario: Usuario nuevo sin transacciones ve dashboard funcional
+- **WHEN** un usuario sin ningún movimiento abre el dashboard
+- **THEN** cada bloque muestra su estado vacío correspondiente
+- **AND** ninguna sección rompe ni muestra `NaN`
 
-- **WHEN** un usuario recién creado por el onboarding carga el dashboard sin haber registrado ningún movimiento ni consumo
-- **THEN** el Hero muestra `$ 0,00` y `u$s 0,00`
-- **AND** "Dónde está" lista sus cuentas default con saldo cero atenuado
-- **AND** "Balance del mes" muestra ceros con barras vacías
-- **AND** "En qué se fue" muestra su estado vacío neutral
+#### Scenario: Cero y ausencia de dato no se confunden
 
-#### Scenario: Falla parcial en una query no rompe la pantalla
+- **WHEN** el usuario gastó en el mes pero no acreditó ningún ingreso
+- **THEN** "Cuánto gastaste" muestra sus montos reales
+- **AND** el ritmo muestra su mensaje de indeterminado en lugar de 0%
 
-- **WHEN** la query `getMonthCategoryBreakdown` falla (timeout, error de DB)
-- **THEN** la sección "En qué se fue" renderiza un estado de error compacto con reintento
-- **AND** las otras secciones renderizan normalmente
-
-#### Scenario: Cada sección stream-ea apenas resuelve su query (web)
-
-- **WHEN** un usuario carga `/dashboard` y la query de `getDashboardHero` resuelve antes que la de `getMonthBalanceSeries`
-- **THEN** la fila superior pinta sus cards en cuanto su query resuelve, sin esperar a "Balance del mes"
-- **AND** "Balance del mes" sigue mostrando su `MonthBalanceSkeleton` hasta que su propia query resuelva
-- **AND** ambas secciones están envueltas en `<Suspense>` independientes
-
-#### Scenario: El skeleton ocupa el mismo alto que el contenido
-
-- **WHEN** una sección del dashboard está mostrando su skeleton de loading y luego su query resuelve
-- **THEN** el hueco que ocupaba el skeleton es el mismo que ocupa el contenido real (min-height matcheado)
-- **AND** las secciones que ya estaban pintadas debajo no se desplazan verticalmente
-
-#### Scenario: Cada skeleton declara un aria-label específico de la sección (web)
-
-- **WHEN** un usuario con lector de pantalla carga `/dashboard` y todavía no resolvieron las queries
-- **THEN** el `HeroSkeleton` declara `aria-busy="true"` y un `aria-label` derivado de `dashboard.hero_loading`
-- **AND** el `MonthBalanceSkeleton` declara un `aria-label` derivado de `dashboard.month.loading`
-- **AND** el `SpendingSkeleton` declara un `aria-label` derivado de `dashboard.spending.loading`
-- **AND** NO se reusa un label genérico tipo "Cargando…" sin contexto
 
 ---
 
@@ -683,6 +431,7 @@ Ambas apps (web y mobile) SHALL consumir esas queries y tipos desde `@grana/dash
 - **THEN** obtiene los datos vía `getMonthCategoryBreakdown(supabase, month)` desde `@grana/dashboard`
 - **AND** ambas plataformas obtienen el mismo neto por categoría ante los mismos datos
 
+
 ---
 
 ### Requirement: Los componentes del dashboard mobile siguen la convención de naming espejo del web
@@ -722,6 +471,7 @@ Cada componente mobile SHALL usar las primitivas idiomáticas de RN/Expo (`View`
 - **WHEN** se busca `UpcomingFortnightSection`, `WelcomeFirstMoveCard`, `CategoryTeaser` o `MonthBalanceChart` en `apps/web` y `apps/mobile`
 - **THEN** ningún archivo los define ni los importa
 
+
 ---
 
 ### Requirement: El dashboard nativo pinta el header y la status bar con el navy de marca (mobile)
@@ -740,352 +490,449 @@ En la app nativa, el header del dashboard (que contiene el saludo y el `eye togg
 - **WHEN** un desarrollador inspecciona el componente del header nativo
 - **THEN** el color proviene del mirror de tokens, no de un literal hex
 
+
 ---
 
 ### Requirement: La pantalla `(app)/dashboard` mobile renderiza las secciones del dashboard con tolerancia a fallas parciales
 
-La pantalla `apps/mobile/app/(app)/dashboard.tsx` SHALL renderizar las secciones del rediseño en orden vertical (Hero "Para gastar · hoy" → "Dónde está" → "Balance del mes" → "Comprometido" → "Gastaste este mes" (solo si hubo consumo de tarjeta) → "¿En qué gasté?") envueltas en `EyeMaskProvider` y el provider de mes (`DashboardMonthProvider` nativo). La tira "Compartido" del dashboard web NO se renderiza en mobile (capa de datos de Hogar nativa diferida). La pantalla SHALL ser un **shell**: monta el header y coloca las secciones, pero NO SHALL orquestar las queries de las secciones ni decidir su render en función de `data`/`error` desde el padre. Cada sección SHALL poseer su propia query (vía TanStack Query) y manejar su propio loading/error in-card.
+La pantalla nativa SHALL renderizar los **mismos cuatro bloques** que la web, en el mismo orden, en una sola columna, tomando el diseño mobile del handoff como referencia. Cada bloque SHALL tolerar la falla de su propia lectura sin tumbar la pantalla.
 
-La pantalla NO SHALL renderizar una sección Tarjetas ni disparar `getCreditCards` como parte de la carga del dashboard. SHALL usar `getTodayAR()` (o su equivalente mobile) para todo cálculo de "hoy", calculado una vez en el shell.
+Los componentes nativos SHALL mantener la convención de naming espejo respecto de los de web. Los controles interactivos —las cabeceras de los grupos desplegables y la tira Compartido— SHALL tener un área táctil de al menos 44px.
 
-**Shell visible desde el primer paint.** La pantalla NO SHALL bloquear el render con un spinner a pantalla completa que espere a que resuelvan las queries. El header (saludo + fecha + navegador mensual + `eye toggle`) y el frame scrolleable SHALL renderizarse desde el primer paint, antes de que cualquier query resuelva. El saludo SHALL usar el fallback `dashboard.welcome_anon` ("Hola.") hasta que la query del nombre del perfil resuelva, momento en el que SHALL actualizarse al saludo personalizado; si esa query falla, el saludo SHALL permanecer en el fallback anon sin bloquear la pantalla. La fecha del header NO SHALL depender de ninguna query: SHALL derivarse de `getTodayAR()` y mantenerse estable.
+#### Scenario: La app nativa muestra la misma composición
 
-**Carga independiente por sección, sin layout shift.** Cada sección SHALL renderizar su chrome (título/label de card) de forma persistente, y SHALL delegar únicamente su región de datos a un intercambio entre tres estados: carga (**skeleton shape-matched**), error (mensaje localizado + acción de reintentar) y datos. Esa región SHALL declarar un alto mínimo estable de modo que el alto de la sección NO cambie entre los estados (sin layout shift). Una query lenta o fallida en una sección NO SHALL bloquear ni desplazar a las demás. El skeleton SHALL vivir **dentro** de la swap region, NO SHALL reemplazar el chrome de la card. La sección "Gastaste este mes" es la excepción: NO renderiza chrome propio cuando el mes no tuvo consumo de tarjeta (no se monta).
+- **WHEN** el usuario abre el dashboard en la app nativa
+- **THEN** ve los cuatro bloques en el mismo orden que en web, apilados
+- **AND** incluye la tira Compartido cuando hay actividad
 
-**Pull-to-refresh.** El `RefreshControl` de la pantalla SHALL ligar su estado `refreshing` al **gesto de pull**, no a objetos de query retenidos en el shell ni al conteo de queries en vuelo del prefijo `['dashboard']`. En particular, los fetches internos de una sección que comparten ese prefijo (p. ej. la query `balance-series` al navegar de mes) NO SHALL encender el `RefreshControl`. El gesto de pull SHALL invalidar las queries bajo el prefijo `['dashboard']`, y el indicador SHALL permanecer encendido mientras esos refetches del pull no terminen.
+#### Scenario: Área táctil de los desplegables en mobile
 
-La pantalla SHALL respetar el principio "Off-ledger credit cards" idéntico al spec web (las queries ya lo encapsulan).
+- **WHEN** el usuario toca la cabecera de un grupo de compromisos en la app nativa
+- **THEN** el área activa es de al menos 44px
+- **AND** el grupo alterna su estado sin afectar al otro
 
-#### Scenario: El shell renderiza las secciones del rediseño en orden (mobile)
 
-- **WHEN** un usuario abre el dashboard nativo
-- **THEN** las secciones aparecen en orden vertical: Hero → "Dónde está" → "Balance del mes" → "Comprometido" → "Gastaste este mes" (si hubo consumo de tarjeta) → "¿En qué gasté?"
-- **AND** NO se renderiza una tira "Compartido"
-
-#### Scenario: El shell y el header se ven desde el primer paint (mobile)
-
-- **WHEN** la pantalla `dashboard` mobile monta con un usuario logueado y onboarding completado, antes de que resuelva cualquier query
-- **THEN** el header (saludo, fecha, navegador mensual y `eye toggle`) y el frame del dashboard ya están visibles
-- **AND** NO se muestra un spinner a pantalla completa que oculte header y secciones
-- **AND** el saludo muestra el fallback anon ("Hola.") y la fecha de hoy correcta
-
-#### Scenario: Las secciones cargan independientemente sin layout shift (mobile)
-
-- **WHEN** la query de `getDashboardHero` resuelve antes que la de `getMonthBalanceSeries`
-- **THEN** el Hero y "Dónde está" pintan sus importes en cuanto su query resuelve, sin esperar a "Balance del mes"
-- **AND** "Balance del mes" sigue mostrando su `MonthBalanceSkeleton` in-card sobre su alto mínimo estable
-- **AND** cuando resuelve, su contenido aparece dentro del alto que ya ocupaba, sin empujar a las demás secciones
-
-#### Scenario: Falla en una query no rompe la pantalla mobile
-
-- **WHEN** la query `getMonthCategoryBreakdown` falla (timeout, error de DB) en mobile
-- **THEN** `SpendingSection` muestra in-card un mensaje de error localizado con acción de reintentar, dentro de su alto estable
-- **AND** el resto de las secciones renderiza normalmente
-- **AND** NO se dispara `getCreditCards` para el dashboard
-
-#### Scenario: Pull-to-refresh muestra el indicador solo durante el gesto (mobile)
-
-- **WHEN** el usuario hace pull-to-refresh en el dashboard
-- **THEN** se invalidan las queries bajo `['dashboard']` y vuelven a fetchearse
-- **AND** el `RefreshControl` muestra el indicador hasta que esos refetches terminan (ligado al gesto, no a objetos de query del shell)
-
-#### Scenario: Navegar de mes no enciende el refresh superior (mobile)
-
-- **WHEN** el usuario toca una flecha del navegador mensual del header y se disparan las queries del nuevo mes
-- **THEN** solo los skeletons in-card de "Balance del mes" y "¿En qué gasté?" se muestran mientras cargan
-- **AND** el `RefreshControl` superior NO se enciende
-- **AND** la posición de scroll no se desplaza
-
-#### Scenario: Salir del tab dashboard y volver resetea eye toggle y mes (mobile)
-
-- **WHEN** el usuario mobile activa el eye toggle, navega a un mes anterior, cambia al tab "movimientos" y luego vuelve a "dashboard"
-- **THEN** los importes están visibles nuevamente y el mes seleccionado es el actual (los providers se remontan)
+---
 
 ### Requirement: Las secciones del dashboard renderizan su estado de carga como skeleton shape-matched
 
-Cada sección del dashboard que tiene estado de carga propio SHALL renderizar durante ese estado un **skeleton shell shape-matched**: una composición de bloques rectangulares con animación pulse cuyo tamaño y disposición anticipan la anatomía del contenido real que va a aterrizar. NO SHALL renderizar un mensaje textual genérico ("Cargando…") ni un spinner centrado como visual de loading.
+Cada bloque del dashboard SHALL renderizar, mientras carga, un skeleton que respete su forma final: mismos radios, misma altura aproximada y misma cantidad de bloques, para que la pantalla no salte al resolverse.
 
-**Naming y archivos.** Cada sección con loading state SHALL tener un componente skeleton con el sufijo `Skeleton`:
+La card "Saldo disponible total" SHALL cargar con **un solo skeleton para la card completa**, aun cuando sus zonas se alimentan de dos lecturas distintas (el saldo, que no depende del mes; y el resumen mensual, que sí). Al compartir card, un skeleton por zona haría que la card se arme a saltos delante del usuario.
 
-- web: `HeroSkeleton` (anticipa la fila superior completa: card oscura + card de cuentas), `MonthBalanceSkeleton` (neto + dos filas con barra + strip USD), `SpendingSkeleton` (dona + filas de leyenda) en `apps/web/app/(app)/dashboard/_components/`
-- mobile: `HeroSkeleton` (card oscura), `AccountsCardSkeleton` (filas de cuentas), `MonthBalanceSkeleton`, `SpendingSkeleton` en `apps/mobile/components/dashboard/`
+Una sección que falla SHALL degradar sin arrastrar al resto de la pantalla: el error queda contenido en su bloque.
 
-**Tecnología por plataforma.**
+#### Scenario: Carga inicial del dashboard
 
-- **Web** SHALL implementar los bloques con `<div className="bg-muted animate-pulse rounded-…">` inline, siguiendo el patrón ya establecido. NO SHALL introducirse un componente `<Skeleton/>` wrapper.
-- **Mobile** SHALL componer el primitivo `SkeletonBlock` de `apps/mobile/components/ui/` (encapsula la animación pulse sobre `react-native-reanimated` y respeta `useReducedMotion()`: con `prefers-reduced-motion` el bloque mantiene una opacidad estática ~0.7 sin animación).
+- **WHEN** el usuario abre el dashboard y los datos todavía no resolvieron
+- **THEN** cada bloque muestra un skeleton con la forma de su contenido final
+- **AND** la card de saldo muestra un único skeleton, no uno por zona
 
-**Shape source.** Los tamaños y disposición de los bloques SHALL derivarse del render real de cada sección en su estado con datos (no de design refs externos). Cada elemento visible del contenido real SHALL tener un bloque skeleton correspondiente.
+#### Scenario: Falla la lectura de compromisos
 
-**Accesibilidad.** El nodo raíz de cada skeleton SHALL declarar:
+- **WHEN** la lectura que alimenta "Compromisos del próximo mes" falla
+- **THEN** esa card muestra su estado de error
+- **AND** el saldo, "Cuánto gastaste" y la tira Compartido siguen renderizando sus datos
 
-- web: `aria-busy="true"` y `aria-label={t('dashboard.<sección>_loading')}` o equivalente.
-- mobile: `accessibilityState={{ busy: true }}` y `accessibilityLabel={t('dashboard.<sección>_loading')}` o equivalente.
 
-Los bloques internos NO SHALL declarar atributos de accesibilidad (heredan al wrapper, son decorativos).
-
-**Reuso de i18n.** Las keys `dashboard.hero_loading`, `dashboard.month.loading`, `dashboard.spending.loading` SHALL reusarse como `aria-label`/`accessibilityLabel` de los skeletons en ambas plataformas.
-
-**Color del bloque.** Web SHALL usar el token `bg-muted`; sobre la card navy, bloques blancos translúcidos. Mobile SHALL usar el token semánticamente equivalente del theme mobile. NO SHALL introducirse un token de skeleton nuevo.
-
-#### Scenario: El skeleton de la fila superior anticipa las dos cards (web)
-
-- **WHEN** un usuario carga `/dashboard` web y la query del Hero aún no resuelve
-- **THEN** la fila superior muestra dos cards skeleton lado a lado (≥`lg`): la izquierda navy con bloques translúcidos (importe ARS headline + línea USD), la derecha con filas pulsantes (cuentas)
-- **AND** NO se muestra un mensaje "Cargando…" en texto, ni un spinner centrado
-
-#### Scenario: Los skeletons nativos anticipan la anatomía nueva (mobile)
-
-- **WHEN** un usuario abre el dashboard nativo y las queries aún no resuelven
-- **THEN** el Hero navy muestra bloques translúcidos (eyebrow + importe + chip USD), "Dónde está" filas avatar+nombre+monto, "Balance del mes" neto + 2 filas con barra + strip, y "En qué se fue" un anillo + ~5 filas de leyenda
-- **AND** todos componen `SkeletonBlock` dentro de su swap region de alto estable
-
-#### Scenario: El skeleton de "Balance del mes" anticipa el neto y las barras
-
-- **WHEN** la data del mes seleccionado aún no resuelve (primer load o navegación de mes)
-- **THEN** el cuerpo de la card muestra un bloque grande (neto) + dos filas con bloques de label/monto y un bloque tipo barra + un bloque para el strip USD
-- **AND** el título de la sección permanece visible (y el navegador mensual del header sigue interactivo)
-
-#### Scenario: Web usa el skeleton como Suspense fallback (web)
-
-- **WHEN** se inspecciona `apps/web/app/(app)/dashboard/_components/dashboard-content.tsx`
-- **THEN** cada `<Suspense>` de las secciones usa el skeleton respectivo como `fallback={...}`
-- **AND** NO se usa `<SectionFallback message=…/>` como fallback de esos `<Suspense>`
-
-#### Scenario: El skeleton respeta `prefers-reduced-motion` (mobile)
-
-- **WHEN** un usuario tiene activado "Reduce Motion" en el SO y carga el dashboard mobile
-- **THEN** los bloques `SkeletonBlock` se renderizan con una opacidad estática (~0.7) sin animación de pulse
-- **AND** el `accessibilityState.busy` sigue declarado
-
-#### Scenario: Cada skeleton es accesible para lectores de pantalla
-
-- **WHEN** un usuario con lector de pantalla aterriza en el dashboard mientras una sección está en loading
-- **THEN** el lector anuncia el label localizado de la sección
-- **AND** los bloques individuales del skeleton no son leídos uno por uno
-
-### Requirement: La sección "En qué se fue" muestra los créditos por categoría fuera de la dona
-
-Cuando, para el mes y la moneda activa, una o más categorías tengan **neto en crédito** (reintegros recibidos del mes superan el gasto del mes de esa categoría → neto negativo), la sección "En qué se fue" SHALL mostrar esos créditos como **fila(s) aparte, fuera de la dona** (una dona no puede representar una porción negativa). Cada fila de crédito SHALL mostrar el dot/color de la categoría + nombre + el monto devuelto, en tono positivo/verde, con un rótulo del tipo "te devolvieron" (vía i18n, sin string hardcodeado). La dona y su total central SHALL seguir derivándose solo de las categorías con neto positivo. Aplica idéntico en web y en la app nativa, reutilizando la anatomía existente de la card (sin card ni layout nuevos). Los montos de los créditos participan del eye-mask como el resto de los importes.
-
-Cuando ninguna categoría quede en crédito, la sección NO SHALL renderizar la zona de créditos (no ensucia la card del caso común).
-
-#### Scenario: Una categoría en crédito se muestra fuera de la dona
-
-- **WHEN** en el mes/moneda activa la categoría "Comida" recibió $10.000 de reintegros y no tuvo gasto ese mes (neto −$10.000)
-- **THEN** la dona NO incluye a "Comida"
-- **AND** debajo de la leyenda aparece una fila "te devolvieron · Comida $10.000" en tono verde
-- **AND** el monto del crédito se enmascara con el eye-mask
-
-#### Scenario: Sin créditos no se renderiza la zona
-
-- **WHEN** ninguna categoría del mes/moneda activa queda en crédito
-- **THEN** la sección no muestra ninguna fila de "te devolvieron"
-- **AND** la card se ve igual que hoy
-
-#### Scenario: La dona ignora los créditos en su total
-
-- **WHEN** hay categorías con gasto positivo y además una en crédito
-- **THEN** la dona y su total central se calculan solo con las categorías de neto positivo
-- **AND** los créditos quedan fuera del cálculo de la dona
+---
 
 ### Requirement: Cada sección del dashboard rotula la pregunta que ayuda a responder
 
-Para que quede claro que el dashboard mezcla **lentes distintas a propósito** (CAJA vs CONSUMO vs COMPROMISO) — y que dos números que miran cosas distintas no tienen por qué coincidir — cada sección del dashboard SHALL comunicar la pregunta que ayuda a responder, ya sea con un rótulo breve (voz Grana, atenuado, como subtítulo/caption) o usando la pregunta directamente como título de la card. Los textos SHALL salir del catálogo i18n (sin hardcodear) y participar del idioma activo. El rótulo NO SHALL alterar la jerarquía visual existente (no compite con el titular/importe principal).
+Cada bloque del dashboard SHALL llevar un título que nombre la pregunta que responde, en el lenguaje del usuario y no en el del dominio: "Saldo disponible total" y "Dónde está" para cuánto tengo y dónde, "Resumen del mes" para qué pasó este mes, "Cuánto gastaste" para en qué se me fue y cuánto debo todavía, "Compromisos del próximo mes" para qué se viene, y "Compartido" para cómo estoy con el hogar.
 
-Las preguntas por sección:
+Los rótulos de los tres tiles de "Cuánto gastaste" SHALL ser verbos en pasado dirigidos al usuario (Gastaste / Pagaste / Te queda por pagar), y cada uno SHALL ir acompañado de un sub-bloque que desambigüe qué mide, porque los tres son montos de gasto y sin esa aclaración se confunden entre sí.
 
-- **Disponible / "Para gastar · hoy"** → "¿Cuánto tengo?" (lente CAJA, stock de hoy), como caption.
-- **Balance del mes** → "¿Cómo se movió mi plata este mes?" (lente CAJA, flujo del mes; reconcilia con el Disponible), como subtítulo.
-- **"¿En qué gasté este mes?"** (lente CONSUMO, devengado) → la pregunta **es el título** de la card (antes "En qué se fue"); no lleva subtítulo aparte. El nombre evita el malentendido de "se fue": hay plata que se gastó (tarjeta) pero todavía no salió de la caja.
-- **Comprometido** → subtítulo "Lo que ya sabemos del próximo mes" (lente COMPROMISO).
+#### Scenario: Los tres tiles se distinguen entre sí
 
-#### Scenario: Cada card comunica su pregunta
+- **WHEN** el usuario lee la card "Cuánto gastaste"
+- **THEN** cada tile aclara en su sub-bloque qué mide su monto
+- **AND** queda explícito que "Te queda por pagar" es lo financiado con tarjeta
 
-- **WHEN** el usuario abre el dashboard
-- **THEN** el Hero rotula "¿Cuánto tengo?"
-- **AND** "Balance del mes" rotula "¿Cómo se movió mi plata este mes?"
-- **AND** la card de consumo se titula "¿En qué gasté este mes?" (sin subtítulo redundante)
-- **AND** "Comprometido" lleva el subtítulo "Lo que ya sabemos del próximo mes"
-- **AND** todos los textos salen del catálogo i18n en el idioma activo
 
-#### Scenario: El rótulo no compite con el titular
-
-- **WHEN** se renderiza el rótulo/subtítulo de una sección
-- **THEN** se muestra atenuado, sin alterar la jerarquía del importe principal de la card
+---
 
 ### Requirement: La card "Comprometido" muestra los resúmenes de tarjeta y los gastos fijos del mes próximo (lente COMPROMISO)
 
-El dashboard (web y mobile) SHALL renderizar una card **"Comprometido"** (lente COMPROMISO) que responde **"¿qué tengo que pagar y todavía no pagué?"**, con el subtítulo "Plata que ya está comprometida". En web se ubica **a la derecha de "Balance del mes"** en una fila de dos columnas; en mobile las cards se apilan (Comprometido debajo de "Balance del mes"). Esta card SHALL ser **estática "desde hoy"**: NO SHALL responder al navegador de mes. En mobile los datos llegan vía el hook `useCommittedOutlook` (TanStack) sobre `getCommittedOutlook`, con su propio loading/error in-card.
+La card SHALL responder una sola pregunta: **cuánta plata ya se sabe que hay que pagar el mes que viene.** La ventana SHALL ser el **próximo mes calendario completo** —del día 1 al último día—, no "desde hoy" ni "los próximos 30 días", y el subtítulo SHALL nombrar ese mes.
 
-La card SHALL presentar, **por moneda y sin combinar ARS con USD** (bimoneda por defecto; el USD SHALL mostrarse de forma **consistente** en el total y en cada sección, con ceros cuando no hay actividad USD):
+La card SHALL encabezar con el mes al que refiere y un link al listado completo, y SHALL mostrar un bloque de total con: el rótulo "Ya comprometido", el monto total en ARS, su línea USD según la regla bimoneda, una **barra apilada** de dos segmentos (Tarjetas y Gastos fijos) y una leyenda con el cuadradito y el porcentaje de cada uno.
 
-- Un **total a pagar** como titular = `tarjetaAPagar + recurrenciasPendientesDeConfirmar`. El total NO SHALL incluir proyecciones del mes próximo ni los ingresos recurrentes.
-- Una **sección "Resúmenes de tarjeta"**: su monto = "A pagar" (resúmenes cerrados/vencidos impagos) **+ "En curso"** (el resumen abierto que está acumulando) del módulo Tarjetas — todo lo que ya debés de la tarjeta. Es la suma de consumos `pending` menos los reintegros recibidos imputados, sobre los resúmenes **ya empezados** (`start_date <= hoy`). EXCLUYE los resúmenes **futuros** (`start_date > hoy`: cuotas 2..N, períodos proyectados) — esa era la inflación. La sección SHALL listar los **3-4 consumos de mayor monto** (fecha, descripción, monto) y un enlace "ver más" cuando hay más.
-- Una **sección "Recurrencias · pendientes de confirmar"** = suma de las instancias de recurrencia tipo `expense` con `status='pending'` (ya generadas, esperando confirmación del usuario). SHALL listar las **3-4 de mayor monto**. La card NO SHALL proyectar una línea de "fijos del próximo mes": una recurrencia, al llegar su momento, se vuelve "pendiente de confirmar" (y si se confirma con tarjeta de crédito, su deuda ya queda contemplada en la sección Tarjeta), por lo que una proyección futura no es una obligación presente.
-- **Aviso de vencido**: cuando parte del monto "tarjeta a pagar" corresponde a resúmenes **vencidos** (`due_date < hoy`), la card SHALL mostrar un aviso compacto "incluye $X vencido"; si no hay deuda vencida, NO SHALL mostrarlo.
-- **Estado con ingreso recurrente** (cuando la proyección de reglas tipo `income` del mes próximo es > 0 en la moneda): la card SHALL mostrar, **como contexto**, el ingreso recurrente "Ya entra" y una **banda de cierre neto** con `neto = ingresosRecurrentes − totalAPagar`, sin sumar el ingreso al total a pagar. Las recurrencias tipo `transfer` NO SHALL contabilizarse.
-- **Etiqueta de cada movimiento listado**: descripción del movimiento; si está vacía, SHALL caer a la **subcategoría** y luego a la **categoría** (nunca un guión/blanco si hay categoría).
-- **Prioridad del detalle de movimientos**: para no recargar la card, el listado de movimientos SHALL mostrarse para UNA sección priorizando **Recurrencias**: si hay recurrencias pendientes, se listan ésas; si no hay, se listan los consumos de tarjeta de mayor monto. Los subtotales de ambas secciones se muestran siempre.
+El total SHALL ser `Tarjetas + Gastos fijos` dentro de cada moneda, y los porcentajes de la barra SHALL derivarse de ese total — NO SHALL hardcodearse. Cuando el total es cero, la barra NO SHALL renderizarse con proporciones arbitrarias.
 
-Todos los importes SHALL participar del eye-mask. La proyección del ingreso recurrente del mes próximo ("Ya entra") SHALL reusar `projectUpcomingOccurrences` de `@grana/money-logic`; las pendientes de confirmar SHALL reusar `getPendingRecurrenceInstances`; el monto "a pagar" de tarjeta SHALL reusar la lógica de pendientes por resumen del módulo Tarjetas (`apps/web/lib/cards/month-summary.ts`) sin duplicar la matemática. La card SHALL tolerar datos parciales: si la query falla, SHALL mostrar un error compacto sin romper el resto del dashboard. Su estado de carga SHALL renderizarse como skeleton shape-matched (chrome/título visibles).
+**Tarjetas** SHALL contar los **resúmenes cuyo vencimiento cae dentro de la ventana** y que todavía no fueron pagados. El criterio es la fecha de **vencimiento**, no la de cierre: un resumen que cierra el 28/09 pero vence el 10/10 se paga en octubre y NO es un compromiso de septiembre.
 
-#### Scenario: El total a pagar suma tarjeta a pagar + recurrencias pendientes de confirmar
+Un resumen que todavía no cerró aporta lo acumulado hasta hoy y ese monto **puede crecer** hasta el cierre. La card NO SHALL presentarlo como definitivo.
 
-- **WHEN** el usuario tiene "tarjeta a pagar" por ARS $419.840 y recurrencias pendientes de confirmar por ARS $142.500
-- **THEN** la card muestra el total a pagar `$562.340`
-- **AND** muestra la sección "Tarjeta · a pagar" con subtotal `$419.840` y la sección "Recurrencias" con "Pendientes de confirmar" `$142.500`
+**Gastos fijos** SHALL contar las recurrencias que caen dentro de la ventana y que **NO se pagan con tarjeta de crédito**. Una recurrencia debitada de una tarjeta no saca plata de la cuenta ese mes: entra al resumen de esa tarjeta y se paga cuando ese resumen vence, que es otra ventana. Contarla acá y otra vez dentro de su resumen sería contarla dos veces.
 
-#### Scenario: El monto de tarjeta = "A pagar" + "En curso" y excluye los resúmenes futuros
+El conjunto SHALL componerse de las instancias **ya generadas** con fecha dentro de la ventana y todavía sin resolver, más las ocurrencias **proyectadas** de las reglas activas sobre esa misma ventana. Las dos fuentes NO SHALL superponerse: la proyección avanza desde `last_generated_date`, de modo que nunca devuelve una ocurrencia ya generada.
 
-- **WHEN** el usuario tiene resúmenes cerrados/vencidos impagos por ARS $300.000, un resumen en curso acumulando ARS $119.840 y cuotas en resúmenes que aún no empezaron (`start_date > hoy`)
-- **THEN** la sección "Resúmenes de tarjeta" muestra `$419.840` (= "A pagar" + "En curso" del módulo Tarjetas)
-- **AND** NO incluye los resúmenes futuros (cuotas 2..N / períodos proyectados)
+**Lo ya vencido SHALL mostrarse, marcado aparte.** Un resumen cuyo vencimiento ya pasó y sigue impago es plata que se debe, y desaparecería de la pantalla si la card se limitara a su ventana. SHALL sumarse a la card con su **propia etiqueta explícita** —nombrando que está vencido— y NO SHALL confundirse dentro del monto del próximo mes: son dos cosas distintas, una que recién viene y otra que ya debería estar pagada.
 
-#### Scenario: La card no proyecta los fijos del próximo mes
+Lo que **NO** entra: los consumos de tarjeta cuyo resumen vence fuera de la ventana, las recurrencias fuera de la ventana, y cualquier gasto que todavía no exista como compromiso.
 
-- **WHEN** el usuario tiene reglas de recurrencia activas que recién ocurrirán el mes próximo (aún sin instancia generada)
-- **THEN** la card NO muestra una línea de "fijos del próximo mes"
-- **AND** sólo cuenta las recurrencias con instancia `pending` (pendientes de confirmar)
+El detalle de Tarjetas SHALL agregarse **por tarjeta** —una fila por tarjeta con su total comprometido y su próximo cierre en la bajada del grupo—, no por consumo individual: la pregunta del usuario es cuánto le viene de cada tarjeta.
 
-#### Scenario: Con ingreso recurrente aparece "Ya entra" y el cierre neto como contexto
+Los estados vacíos SHALL cubrirse por separado: sin tarjetas con compromiso, el grupo Tarjetas muestra su vacío; sin gastos fijos, el grupo Gastos fijos muestra el suyo; sin ninguno de los dos, la card muestra un vacío único en lugar de dos vacíos apilados.
 
-- **WHEN** además del total a pagar de ARS $562.340, el usuario tiene un ingreso recurrente (sueldo) proyectado al mes próximo por ARS $1.450.000
-- **THEN** la card muestra el contexto "Ya entra" con `+$1.450.000` y una banda de cierre neto indicando que arranca con `+$887.660` a favor (= 1.450.000 − 562.340)
-- **AND** el total a pagar sigue siendo `$562.340` (el ingreso NO se sumó)
+#### Scenario: Un resumen que cierra dentro de la ventana pero vence después
 
-#### Scenario: El aviso de vencido aparece sólo cuando hay deuda vencida
+- **WHEN** una tarjeta cierra el 28 de septiembre y vence el 10 de octubre
+- **THEN** ese resumen NO suma en los compromisos de septiembre
+- **AND** sí sumará cuando la ventana sea octubre
 
-- **WHEN** del monto "tarjeta a pagar" hay ARS $12.000 en resúmenes con `due_date` anterior a hoy
-- **THEN** la card muestra el aviso "incluye $12.000 vencido"
-- **WHEN** no hay resúmenes vencidos
-- **THEN** la card NO muestra el aviso de vencido
+#### Scenario: Una recurrencia que se paga con tarjeta
 
-#### Scenario: Cada sección lista sus movimientos de mayor monto
+- **WHEN** una recurrencia del próximo mes se debita de una tarjeta de crédito
+- **THEN** NO suma en "Gastos fijos"
+- **AND** llegará como parte del resumen de esa tarjeta, en la ventana en que ese resumen venza
 
-- **WHEN** la sección "Tarjeta · a pagar" cubre 11 consumos
-- **THEN** la card lista los 3-4 de mayor monto (fecha, descripción, monto) y un enlace "ver más"
+#### Scenario: Una recurrencia ya generada y una todavía proyectada
 
-#### Scenario: USD consistente en total y secciones
+- **WHEN** el generador ya creó la instancia de octubre de una regla mensual y la de noviembre todavía no
+- **THEN** la ventana de octubre cuenta esa instancia una sola vez
+- **AND** la proyección no la vuelve a agregar
 
-- **WHEN** el usuario tiene actividad en ARS y consumos pendientes en USD
-- **THEN** el total a pagar y cada sección muestran su línea USD (con ceros donde no hay actividad USD), sin convertir ni sumar entre monedas
+#### Scenario: Un resumen vencido e impago
 
-#### Scenario: La card "Comprometido" se renderiza en mobile con el mismo modelo
+- **WHEN** un resumen venció el mes pasado y sigue sin pagarse
+- **THEN** la card lo muestra con su etiqueta de vencido
+- **AND** ese monto no se confunde con el del próximo mes
 
-- **WHEN** un usuario abre el dashboard nativo con deuda de tarjeta y/o recurrencias
-- **THEN** la pantalla nativa muestra la card "Comprometido" debajo de "Balance del mes" con el total a pagar + las secciones Tarjeta y Recurrencias
-- **AND** los datos provienen del hook `useCommittedOutlook` sobre `getCommittedOutlook`
-- **AND** la card NO responde al navegador de mes
+#### Scenario: Usuario sin compromisos de ningún tipo
 
-#### Scenario: La card es estática y no responde al navegador de mes
+- **WHEN** no hay ni tarjetas ni gastos fijos comprometidos
+- **THEN** la card muestra un único estado vacío
+- **AND** no renderiza la barra apilada con proporciones inventadas
 
-- **WHEN** el usuario navega el selector de mes a un mes anterior
-- **THEN** "Balance del mes" y "¿En qué gasté este mes?" cambian al mes navegado
-- **AND** la card "Comprometido" NO cambia
-
-#### Scenario: Sin deuda ni recurrencias muestra un estado vacío neutral
-
-- **WHEN** el usuario no tiene tarjeta a pagar, ni recurrencias pendientes, ni fijos del mes próximo
-- **THEN** la card muestra un estado vacío neutral y NO desaparece del layout
-
-#### Scenario: Los importes participan del eye-mask
-
-- **WHEN** el usuario activa el eye toggle
-- **THEN** el total a pagar, los subtotales de cada sección, los montos de los movimientos listados y el contexto de ingreso/neto quedan enmascarados
-
-### Requirement: El dashboard muestra cuánto del gasto del mes se financió en tarjeta
-
-Para explicar por qué "Gastos" (caja) es menor que el total gastado, el dashboard SHALL mostrar una sección **"Gastaste este mes"** full-width (no dentro de ninguna card), **solo cuando el mes tuvo consumo de tarjeta** (financiado > 0). En web se ubica debajo de la tira "Compartido"; en mobile (que no tiene tira "Compartido") se ubica debajo de "Comprometido" y encima de "¿En qué gasté?". La sección SHALL conectar los tres números: el **total gastado** del mes (devengado, el mismo total de "¿En qué gasté este mes?"), lo que **salió de caja** (la fila "Gastos" de "Balance del mes"), y lo **financiado en tarjeta**, donde `financiado = total_devengado − gasto_de_caja` (de modo que `total = caja + financiado` cierra por construcción).
-
-La sección SHALL presentar el **total del mes** como titular y una **barra de dos segmentos** cuyo ancho SHALL ser proporcional (`caja / total` y `financiado / total`), nunca hardcodeado: un segmento "De tu caja" (tono slate) y otro "Financiado en tarjeta" (tono terracota), cada uno con su label y su monto. En viewports angostos (y en mobile) la barra SHALL colapsar a una columna (cada segmento como fila completa). La sección SHALL aclarar que lo financiado **"se paga en los próximos resúmenes"** (no que ya se pagó), con texto del catálogo i18n. La sección SHALL seguir el navegador de mes (refiere al mes seleccionado); reusa las mismas query keys que "Balance del mes" y "¿En qué gasté?" (TanStack dedupea, sin fetch nuevo). Los importes participan del eye-mask. Cuando el mes NO tuvo consumo de tarjeta, la sección NO SHALL renderizarse.
-
-#### Scenario: La barra reparte el gasto entre caja y tarjeta
-
-- **WHEN** el mes tiene gasto de caja $498.379,65 y el total devengado ("¿En qué gasté este mes?") es $879.684,24
-- **THEN** la sección "Gastaste este mes" muestra el total `$879.684,24`
-- **AND** muestra dos segmentos: "De tu caja" con `$498.379,65` (~56,65%) y "Financiado en tarjeta" con `$381.304,59` (~43,35%)
-- **AND** aclara que lo financiado se paga en los próximos resúmenes
-- **AND** los tres montos cierran: `879.684,24 = 498.379,65 + 381.304,59`
-
-#### Scenario: Sin consumo de tarjeta la sección no aparece
-
-- **WHEN** el total devengado del mes es igual al gasto de caja (no hubo consumo de tarjeta)
-- **THEN** la sección "Gastaste este mes" NO se renderiza
-
-#### Scenario: La barra colapsa a columna en mobile
-
-- **WHEN** el usuario abre el dashboard nativo (o un viewport web de 375px) con consumo de tarjeta en el mes
-- **THEN** la sección "Gastaste este mes" muestra cada segmento (caja y tarjeta) como una fila completa apilada
 
 ---
 
-### Requirement: El dashboard muestra el neto del Hogar cuando hay actividad compartida (web)
+### Requirement: Los montos del dashboard se muestran por moneda y la línea USD aparece solo si el valor es distinto de cero
 
-El dashboard web SHALL renderizar una **tira "Compartido"** full-width que surfacea el neto del grupo Hogar del usuario, ubicada debajo de la fila "Balance del mes" + "Comprometido" y encima de "Gastaste este mes". La tira SHALL renderizarse **solo cuando hay actividad compartida**: el usuario pertenece a un Hogar de dos miembros y existe un neto/movimientos no vacíos. Sin Hogar o sin actividad, la tira NO SHALL montarse (no ensucia el dashboard de quien no usa Compartido).
+Toda métrica monetaria del dashboard SHALL exponer su valor en ARS y su valor en USD como **cantidades independientes**, cada una derivada de los movimientos de su propia moneda. El dashboard SHALL NOT sumar ARS con USD ni convertir entre monedas, y NO SHALL depender de ningún tipo de cambio global: el FX del sistema vive por transacción (`transactions.fx_rate_to_ars`) y no existe una cotización de cuenta.
 
-El neto SHALL derivarse reutilizando la lógica de deuda derivada por moneda ya existente en `apps/web/lib/shared/queries.ts`; la tira NO SHALL duplicar esa matemática. Como hoy existe **un solo Hogar**, el neto es **una sola dirección**: o "te deben" (tono emerald) o "debés" (tono expense/terracota), por moneda y sin combinar ARS con USD. La tira SHALL mostrar el ícono del Hogar, los avatares/iniciales de los dos miembros, el nombre del Hogar y los miembros, y el monto neto con su rótulo de dirección. La tira es **read-only** y navegacional: al activarse navega a `/shared`. Todos los importes participan del eye-mask.
+El valor ARS SHALL renderizarse siempre como titular de la métrica. El valor USD SHALL renderizarse como línea subordinada **únicamente cuando hay actividad en dólares**; si no la hay, la línea USD NO SHALL ocupar espacio. Un usuario sin actividad en dólares SHALL ver la pantalla como monomoneda, sin líneas vacías ni ceros decorativos.
 
-La tira SHALL montarse con su propia tolerancia a fallas (container/boundary propio): una query lenta o fallida de Compartido NO SHALL bloquear ni romper el resto del dashboard.
+Esa decisión SHALL tomarse **por bloque de montos pares**, no monto por monto. En un bloque de montos que el usuario compara entre sí —los tres del "Resumen del mes", los tres tiles de "Cuánto gastaste"— basta con que **uno** tenga valor en dólares para que **todos** rendericen su línea USD, aunque a alguno le toque cero. Ocultarla solo donde el valor es cero deja una columna más alta que sus vecinas y rompe la comparación, que es justamente para lo que están puestas una al lado de la otra.
 
-#### Scenario: Con actividad, la tira muestra el neto en una dirección
+Los porcentajes derivados —el reparto de cuentas de "Dónde está", la barra apilada de Compromisos y el ritmo— SHALL calcularse **dentro de una misma moneda**, nunca sobre un total mezclado.
 
-- **WHEN** el usuario pertenece al Hogar "Hogar" (vos y Martín) y el neto derivado es que le deben $34.500
-- **THEN** el dashboard muestra la tira "Compartido" con los dos avatares, "Hogar · vos y Martín" y el neto `Te deben $34.500` en emerald
-- **AND** activar la tira navega a `/shared`
+#### Scenario: Usuario sin movimientos en dólares
 
-#### Scenario: Deuda en contra muestra la dirección opuesta
+- **WHEN** un usuario cuyo saldo y movimientos del mes son íntegramente en ARS abre el dashboard
+- **THEN** cada métrica muestra únicamente su monto en ARS
+- **AND** ninguna sección renderiza una línea USD en cero
 
-- **WHEN** el neto derivado del Hogar es que el usuario debe $12.000
-- **THEN** la tira muestra el neto `Debés $12.000` en tono expense
+#### Scenario: Usuario con actividad en ambas monedas
 
-#### Scenario: Sin Hogar o sin actividad la tira no se renderiza
+- **WHEN** un usuario tiene saldo en ARS y saldo en USD
+- **THEN** el saldo disponible muestra el total ARS como titular y el total USD como línea subordinada
+- **AND** los dos montos son saldos reales de su moneda, no uno la conversión del otro
 
-- **WHEN** el usuario no pertenece a ningún Hogar, o pertenece pero no hay movimientos/neto compartido
-- **THEN** la tira "Compartido" NO se monta en el dashboard
+#### Scenario: Un bloque con dólares en un solo monto
 
-#### Scenario: El neto del Hogar reutiliza la derivación existente
+- **WHEN** en el "Resumen del mes" solo "Tenías" tiene valor en dólares y los dos flujos están en cero
+- **THEN** las tres columnas renderizan su línea USD, las dos en cero incluidas
+- **AND** las tres quedan a la misma altura y se pueden comparar de un vistazo
 
-- **WHEN** se inspecciona el origen de datos de la tira "Compartido"
-- **THEN** el neto proviene de la lógica de deuda derivada de `apps/web/lib/shared/queries.ts`
-- **AND** la tira NO recalcula ni duplica la matemática del neto
+#### Scenario: Los porcentajes no cruzan monedas
 
-#### Scenario: El monto de la tira participa del eye-mask
+- **WHEN** el bloque "Dónde está" calcula el porcentaje de una cuenta en USD
+- **THEN** el denominador es el total en USD del usuario
+- **AND** el total en ARS no participa del cálculo
 
-- **WHEN** el usuario activa el eye toggle con la tira "Compartido" visible
-- **THEN** el monto neto del Hogar queda enmascarado junto al resto de los importes
 
 ---
 
-### Requirement: La fila "Ajustes" de "Balance del mes" marca el monto como sin registrar
+### Requirement: La zona clara de la card de saldo muestra el "Resumen del mes" con Tenías, Entró y Se fué
 
-Cuando la fila "Ajustes" de "Balance del mes" se muestra (el mes tiene ajustes), la sección (web y mobile) SHALL acompañar el monto con un **chip "SIN REGISTRAR"** (tono ámbar/warning, uppercase) que refuerza que esa plata se movió sin registrar, además del aviso educativo (voz Grana) ya presente debajo de las barras. El texto del chip SHALL salir del catálogo i18n (`dashboard.month.adjustment_unregistered`), sin string hardcodeado. El chip NO SHALL alterar el cálculo del monto ni del neto del mes; es puramente presentacional. El monto de Ajustes sigue participando del eye-mask.
+La card de saldo SHALL cerrar con una zona clara titulada "Resumen del mes", separada de la zona oscura por un borde superior, con **tres bloques en tres columnas iguales**: "Tenías", "Entró" y "Se fué". Cada bloque SHALL mostrar un punto de color, su monto ARS y —según la regla bimoneda— su monto USD debajo.
 
-#### Scenario: La fila Ajustes muestra el chip "SIN REGISTRAR"
+La grilla SHALL ocupar el ancho de la card en **tres columnas iguales**, y cada bloque SHALL alinearse dentro de la suya de modo que los tres **lleguen a los dos bordes**: el primero pegado a la izquierda —en el mismo eje que el título—, el último pegado a la derecha, el del medio centrado.
 
-- **WHEN** el mes seleccionado tiene ajustes y la fila "Ajustes" está visible (web o mobile)
-- **THEN** junto al monto neto de Ajustes aparece un chip "SIN REGISTRAR" en tono ámbar
-- **AND** debajo de las barras sigue apareciendo el aviso educativo desde `dashboard.month.adjustment_note`
-- **AND** el texto del chip proviene del catálogo i18n
+Los tres estuvieron alineados a la izquierda, con el argumento de que una sola regla de alineación se lee como una pieza. Con datos reales no se lee así: el contenido es más angosto que su tercio, así que los tres quedaban amontonados a la izquierda y sobraba una franja muerta contra el borde derecho de la card, con el bloque visiblemente descentrado.
 
-#### Scenario: Sin ajustes no hay chip
+Las columnas SHALL seguir siendo **tercios iguales**: la posición de cada monto NO SHALL depender de su contenido, o los tres saltarían de lugar al navegar de un mes a otro, que es justo lo que hay que poder comparar. Es la alineación de cada columna la que empuja el contenido hacia los bordes, no el ancho de la columna.
 
-- **WHEN** el mes seleccionado no tiene ajustes (la fila "Ajustes" no se muestra)
-- **THEN** el chip "SIN REGISTRAR" no se renderiza
+**En pantallas angostas los tres SHALL apilarse**, una fila cada uno con el rótulo a la izquierda y el monto a la derecha. Tres tercios de una card de ancho de teléfono son ~105px, y un monto de ocho cifras necesita más del doble: en tres columnas los montos se imprimían **encima** unos de otros. Achicar la tipografía hasta que entren tampoco sirve —deja de leerse—, así que cada monto se lleva una fila entera. Es la misma composición en las dos plataformas: nativo apila siempre.
 
-### Requirement: La leyenda de "¿En qué gasté?" muestra una barra proporcional por categoría
+**El paso tipográfico SHALL decidirse una sola vez para los tres**, igual que en los tiles y por la misma razón: tres montos que achican en puntos distintos dejan de compararse, y el arrastrado puede terminar más chico que los flujos.
 
-En la sección "¿En qué gasté este mes?", cada fila de la leyenda (web y mobile) SHALL mostrar, debajo del row (dot + nombre + monto + porcentaje), una **barra proporcional** cuyo ancho SHALL ser `monto_categoría / monto_máximo` entre las categorías mostradas, con el color de la categoría (el mismo `sliceColor` de la dona). El ancho SHALL derivarse de los datos, NO hardcodearse. La barra NO SHALL aplicarse a las filas de crédito ("te devolvieron"), que viven fuera de la dona. La dona y su total central no cambian.
+Un monto muy largo SHALL seguir quedando adentro de su tercio: la regla de densidad achica la tipografía antes de que llegue a su vecino.
 
-#### Scenario: Cada fila de la leyenda lleva su barra proporcional
+Los montos SHALL achicarse por pasos con la misma regla compartida que los tiles de "Cuánto gastaste", sobre la escala propia de esta zona.
 
-- **WHEN** el mes tiene Comida $206.625 (máximo), Transporte $165.000, Entretenimiento $114.940 y Otros $188.662 en la moneda activa
-- **THEN** la leyenda muestra cada categoría con su barra: Comida al 100% del track, Transporte ~79,9%, Entretenimiento ~55,6% y Otros ~91,3%
-- **AND** cada barra usa el color de su categoría
-- **AND** los anchos se derivan de los montos, no están hardcodeados
+"Tenías" es el saldo con el que el usuario **entró al mes**. SHALL derivarse —no leerse— como `saldo del mes − (Entró − Se fué)`, de modo que los tres montos cierren contra el saldo de la zona oscura **por construcción** y no por que dos lecturas coincidan:
 
-#### Scenario: Las filas de crédito no llevan barra
+```
+Tenías + Entró − Se fué  ===  el saldo que muestra la card arriba
+```
 
-- **WHEN** una categoría queda en crédito ("te devolvieron") y se muestra fuera de la dona
-- **THEN** esa fila NO renderiza barra proporcional
+Ese es el punto de los tres montos juntos: la card queda auditable en pantalla, sin salir a buscar nada.
 
+Los dos **flujos** SHALL llevar su signo como prefijo (`+` en "Entró", `−` en "Se fué"), de modo que la identidad se lea literal de izquierda a derecha. "Tenías" NO SHALL llevar prefijo: muestra su propio signo solo cuando el saldo arrastrado es negativo. Ponerle `−` a los dos haría que el mismo símbolo signifique dos cosas distintas en la misma fila —un saldo en rojo y plata saliendo—, que es exactamente la confusión que los signos vienen a evitar. El prefijo NO SHALL renderizarse con los montos enmascarados: un signo suelto al lado de los puntos filtra la dirección que la máscara oculta.
+
+La zona SHALL leerse como **liquidez**: cómo se movió el dinero dentro y fuera de las cuentas en el mes. Por lo tanto, **todo movimiento que haya tocado el saldo de una cuenta SHALL caer de exactamente uno de los dos lados**, según su signo: "Entró" suma los ingresos, los reintegros recibidos y el lado positivo de los buckets con signo (liquidaciones a favor, la pata de destino de un cambio de moneda, un ajuste positivo); "Se fué" suma los gastos pagados desde una cuenta, los pagos de resumen de tarjeta y el lado negativo de esos mismos buckets.
+
+De ahí se sigue el invariante que gobierna la zona: dentro de cada moneda, `Entró − Se fué` SHALL ser igual al cambio del saldo disponible en el mes, al centavo. La derivación SHALL usar aritmética de dinero exacta —no punto flotante crudo— para que la igualdad se sostenga y pueda testearse sin tolerancia.
+
+Los **consumos con tarjeta de crédito** NO SHALL restar de "Se fué". No es una exclusión que haya que aplicar: son filas off-ledger que nunca tocan el saldo de una cuenta. Lo que sí SHALL restar es el **pago del resumen**, que es plata saliendo de la cuenta.
+
+Los dos montos SHALL responder al selector de mes. La zona NO SHALL renderizar la barra apilada de ingresos/gastos, la fila "Ajustes" ni el link "Ver detalle" de la sección que reemplaza: el resumen se agota en dos montos.
+
+#### Scenario: Mes con ingresos y egresos
+
+- **WHEN** el usuario mira un mes con movimientos
+- **THEN** "Entró" muestra todo lo que aumentó el saldo de sus cuentas ese mes y "Se fué" todo lo que lo bajó
+- **AND** los dos bloques quedan centrados en columnas de igual ancho
+
+#### Scenario: Los tres montos cierran contra el saldo
+
+- **WHEN** el mes tiene ajustes, liquidaciones o cambios de moneda además de ingresos y gastos
+- **THEN** cada uno de esos movimientos aparece sumado en "Entró" o en "Se fué" según su signo
+- **AND** `Tenías + Entró − Se fué` es igual al saldo que muestra la zona oscura de la card
+
+#### Scenario: Un mes arrastrado de meses anteriores
+
+- **WHEN** el usuario venía de meses con más egresos que ingresos
+- **THEN** "Tenías" muestra ese saldo arrastrado, en negativo si corresponde
+- **AND** el usuario puede leer en la misma card de dónde sale el saldo del mes
+
+#### Scenario: Una compra con tarjeta de crédito no baja el mes
+
+- **WHEN** el usuario paga una compra con tarjeta de crédito
+- **THEN** ese consumo NO aparece en "Se fué"
+- **AND** cuando pague el resumen de esa tarjeta, ese pago sí aparece en "Se fué" del mes en que lo pague
+
+#### Scenario: Mes sin movimientos
+
+- **WHEN** el usuario navega a un mes sin ningún movimiento
+- **THEN** ambos bloques muestran cero en ARS
+- **AND** la zona sigue renderizando, sin desmontarse
+
+
+---
+
+### Requirement: La card "Cuánto gastaste" descompone el gasto propio del mes en Gastaste, Ya se pagó y Por pagar
+
+El dashboard SHALL renderizar una card "Cuánto gastaste" con **tres tiles** de igual ancho, cada uno con ícono tintado, rótulo, monto en el color del bloque, línea USD según la regla bimoneda y un filete de color al pie:
+
+- **Gastaste** = total de gastos devengados del mes.
+- **Ya se pagó** = los que ya están saldados: la plata salió de alguna cuenta.
+- **Por pagar** = los que siguen montados en una tarjeta de crédito.
+
+`Ya se pagó + Por pagar` SHALL ser igual a `Gastaste` dentro de cada moneda.
+
+**Cómo se clasifica cada movimiento.** Los tres montos NO SHALL derivarse restando agregados entre sí, sino ubicando **cada movimiento del mes en exactamente uno de cuatro cajones**, según dos preguntas: si está montado en una tarjeta de crédito, y de quién es la cuenta o la tarjeta.
+
+| | Cuenta/tarjeta del usuario | Cuenta/tarjeta del otro miembro |
+|---|---|---|
+| **No es tarjeta** | Ya se pagó · lo pusiste vos | Ya se pagó · lo puso el otro |
+| **Es tarjeta** | Por pagar · en tus tarjetas | Por pagar · se lo debés al otro |
+
+De ahí salen los tres montos y las dos aperturas a la vez, y la identidad se sostiene por construcción en vez de por que dos lecturas coincidan.
+
+El conjunto de movimientos que entra SHALL ser el mismo que el del desglose por categoría de Movimientos —mismo corte temporal, mismas exclusiones (la fila madre de una compra en cuotas y el pago de resumen, que cancela deuda y no es gasto nuevo), misma resolución de la parte propia—, de modo que las dos superficies nunca discrepen sobre **qué** cuenta como gasto del usuario aunque lo agrupen distinto.
+
+**Reintegros recibidos.** Un reintegro SHALL restar del cajón donde efectivamente cayó: acreditado a una cuenta baja "Ya se pagó", acreditado a un resumen baja "Por pagar". Restarlo en otro lado rompería la identidad. Cada cajón SHALL tener **piso en cero**: un reintegro mayor que el gasto de su cajón es un crédito, no un gasto negativo, y un monto negativo bajo el rótulo "ya se pagó" no significa nada.
+
+**Movimiento sin cuenta identificable.** Un movimiento cuya cuenta no se puede resolver SHALL omitirse en lugar de asignarse a un cajón por defecto. Adivinar movería plata entre "ya está saldado" y "todavía lo debés", que es precisamente la distinción que esta card existe para sostener.
+
+**La card entera SHALL leerse en una sola unidad: los gastos PROPIOS del usuario.** De un movimiento compartido SHALL tomar únicamente la parte asignada al usuario, en los tres montos por igual. La lente de caja —pesos moviéndose por las cuentas, montos completos— es la de la card de saldo ("Se fué"); mezclarlas es lo que producía el defecto que este requirement reemplaza: `Te queda por pagar` restaba un monto completo (`totalExpense`) de un monto "tu parte" (el devengado), subestimando la deuda de tarjeta en la parte del otro miembro de cada gasto compartido que el usuario había adelantado.
+
+El rótulo "Ya se pagó" SHALL ser **impersonal**. Un gasto compartido que pagó el otro miembro está saldado con el comercio pero no con el usuario: decir "Pagaste" sería falso. Los otros dos rótulos hablan del estado de esa plata; solo "Gastaste" habla del usuario, y esa asimetría gramatical es deliberada.
+
+La card SHALL renderizarse siempre que haya gasto en el mes, **incluso cuando "Por pagar" es cero**: un cero es información. La card NO SHALL desmontarse por ausencia de consumo de tarjeta.
+
+**Los montos NO SHALL recortarse nunca.** Los tiles SHALL sostener montos de hasta diez dígitos con centavos (`$ 1.234.567.890,00`) dentro de un tercio del ancho de la card, achicando el cuerpo del monto por pasos a medida que crece. Un monto de dinero cortado no se lee como incompleto: se lee como **otro número**, y es la peor falla que esta card puede tener. Los pasos SHALL derivarse de una regla compartida entre plataformas —del largo del texto formateado, que es lo que consume ancho— para que las dos achiquen en el mismo punto aunque sus tamaños difieran.
+
+En desktop, de las dos cards de la fila 2 la de "Cuánto gastaste" SHALL ser la más ancha: sus tres tiles se reparten el ancho en tercios, mientras que "Compromisos" apila filas de ancho completo y tolera mejor un ancho menor.
+
+Los tres tiles SHALL **absorber el alto sobrante de la card**: crecen para llenarlo, con un alto mínimo propio y el contenido centrado. La card comparte fila con "Compromisos" y esa fila mide lo que mide la card más alta, así que esta card recibe alto que su contenido no pide. Con los tiles rígidos y la tira de ritmo clavada al pie, ese sobrante se acumulaba **entre los tiles y la tira**, que es el peor lugar posible: un agujero en el medio de la card. Elásticos, el sobrante se convierte en aire adentro del tile. La tira de ritmo NO SHALL anclarse al pie: con los tiles absorbiendo, anclarla vuelve a abrir el hueco que se acaba de cerrar.
+
+Los tres SHALL crecer **por igual** —son una comparación de tres montos y un tile más alto que sus vecinos la rompe— y las dos caras de un tile SHALL crecer igual entre sí.
+
+Como el contenido va **centrado en vertical**, cualquier diferencia de alto entre los tres los desalinea. De ahí dos reglas que valen para todo el bloque, no tile por tile:
+
+- **El paso tipográfico del monto SHALL decidirse una sola vez para los tres**, tomando el más ajustado que necesite cualquiera de ellos. Calculado por tile, el tipo saltaba de un tile a otro y —peor— invertía la jerarquía: "Gastaste $ 1.020.283,17" se renderizaba **más chico** que "Por pagar $ 79.894,67", con el titular quedando subordinado al monto que se deriva de él. Es la misma regla que ya sigue la línea USD.
+- **La franja inferior SHALL tener un alto único**, sea cual sea su variante. La leyenda ocupa dos líneas y la invitación a abrir una sola; dejar que la franja se dimensione sola bajaba los tiles que se abren respecto de su vecino y la fila dejaba de leerse como fila.
+
+**Los tiles tienen dos variantes**, con la misma caja y el mismo alto **entre sí** —dar vuelta un tile nunca lo cambia de tamaño—, y solo cambia su franja inferior:
+
+- **Sin actividad compartida** — el tile NO se abre y muestra una **leyenda de contexto** de dos líneas.
+- **Con actividad compartida** — "Ya se pagó" y "Por pagar" pasan a **abrirse**, y la apertura reemplaza a la leyenda en esa misma franja.
+
+Esa división NO es decorativa. Las leyendas "Ya salió de tus cuentas" y "Se paga en los próximos resúmenes" son **verdaderas exactamente cuando no hay actividad compartida**, que es la variante que las muestra; con otro miembro involucrado la plata pudo salir de la cuenta de él, o la deuda ser con él, y esa es justamente la variante que se abre. Cada variante lleva el copy que es cierto en ella.
+
+"Gastaste" NO SHALL abrirse en ninguna variante y SHALL conservar su leyenda en las dos: su copy es verdadero siempre.
+
+Cada apertura SHALL responder la pregunta que le corresponde, que no es la misma para los dos:
+
+- "Ya se pagó" se abre por **quién puso la plata**: lo pusiste vos / lo puso el otro miembro (saldado con el comercio, pendiente con él).
+- "Por pagar" se abre por **a quién le debés**: en tus tarjetas (viene en tu resumen) / se lo debés al otro miembro (está en la tarjeta de él, no viene en ningún resumen tuyo).
+
+SHALL haber **un solo tile abierto a la vez**: dos aperturas simultáneas compiten por la misma lectura.
+
+**Accesibilidad de la apertura.** El control SHALL exponer su estado (`aria-expanded` en web, `accessibilityState.expanded` en nativo) y la cara oculta NO SHALL quedar en el árbol de accesibilidad. Ocultarla solo visualmente —por ejemplo con `backface-visibility`— deja que un lector de pantalla lea las dos caras a la vez; hace falta `aria-hidden` o no montarla. En mobile el área táctil SHALL ser de al menos 44px.
+
+El texto que invita a abrir NO SHALL repetir el del link del header de la card: son dos acciones distintas y el mismo rótulo para ambas hace que una de las dos mienta.
+
+Lo que el usuario **adelantó por el otro miembro** NO SHALL aparecer en esta card. No es un gasto propio —es un préstamo—, su unidad es la de caja y no la de esta card, ya está reflejado en "Se fué" de la card de saldo, y el neto del hogar vive en la tira "Compartido". Mostrarlo acá agregaría un monto bruto del mes que competiría con el neto histórico de esa tira sin nada que explique la diferencia.
+
+#### Scenario: Mes con gasto de caja y de tarjeta
+
+- **WHEN** el usuario gastó en el mes tanto desde sus cuentas como con tarjeta de crédito
+- **THEN** los tres tiles muestran sus montos y `Ya se pagó + Por pagar` es igual a `Gastaste`
+
+#### Scenario: Mes sin consumo de tarjeta
+
+- **WHEN** todo el gasto del mes salió de las cuentas
+- **THEN** la card se renderiza igual, con "Por pagar" en cero
+- **AND** "Ya se pagó" coincide con "Gastaste"
+
+#### Scenario: Un gasto compartido que pagó el otro miembro
+
+- **WHEN** el otro miembro paga desde su cuenta un gasto compartido
+- **THEN** la parte del usuario suma en "Gastaste" y en "Ya se pagó"
+- **AND** el desglose la ubica en "lo puso" el otro miembro, no en "lo pusiste vos"
+
+#### Scenario: Un consumo en la tarjeta del otro miembro
+
+- **WHEN** el otro miembro carga en SU tarjeta un consumo compartido
+- **THEN** la parte del usuario suma en "Por pagar"
+- **AND** el desglose la ubica como deuda con el otro miembro y NO como algo que venga en el resumen del usuario
+
+#### Scenario: Usuario sin gastos compartidos en el mes
+
+- **WHEN** el mes no tiene ningún movimiento compartido
+- **THEN** la card no ofrece desglose
+- **AND** los tres montos se leen sin controles adicionales
+
+#### Scenario: Mes sin ningún gasto
+
+- **WHEN** el usuario navega a un mes sin gastos
+- **THEN** la card muestra su estado vacío
+- **AND** no se desmonta ni deja un hueco en la grilla
+
+
+---
+
+### Requirement: La tira de ritmo compara el gasto del mes contra los ingresos del mes
+
+La card "Cuánto gastaste" SHALL cerrar con una tira de ritmo que muestre un anillo con el porcentaje, el copy con el porcentaje destacado, una barra de progreso y el pie con los dos montos que forman el cociente.
+
+El ritmo SHALL calcularse como `Gastaste / ingresos acreditados` **dentro de la misma moneda y el mismo mes**. El ritmo evalúa **el mes**: el saldo arrastrado de meses anteriores ("Tenías") NO SHALL participar de ninguno de los dos términos. La pregunta es cómo fue este mes, no cómo viene el usuario en general. El denominador SHALL ser el ingreso del mes (`totalIncome`), NO el "Entró" de "Resumen del mes": ese último es una lectura de liquidez que incluye reintegros, liquidaciones y patas de cambio de moneda, y meterlas en el denominador infla el ritmo con plata que no es ingreso. El sistema NO SHALL requerir un ingreso mensual esperado configurado por el usuario.
+
+Se SHALL renderizar **un solo anillo, el de ARS**. El ritmo en USD NO SHALL renderizarse como segundo anillo.
+
+Dos estados SHALL tratarse como estados de primera clase, no como bordes excepcionales, porque con este denominador son habituales:
+
+- **Ritmo indeterminado** (ingresos del mes en cero, típico a comienzo de mes): el sistema SHALL mostrar un mensaje explicativo **en lugar del anillo**, y NO SHALL mostrar 0% ni dividir por cero.
+- **Ritmo mayor a 100%**: el anillo y la barra SHALL pasar al color de alerta (terracota), y tanto el anillo como el copy SHALL expresar la relación como **múltiplo**, no como porcentaje. Pasado el 100% el porcentaje deja de ser la unidad adecuada: "el 1020%" hay que decodificarlo, "10 veces" no. Además un porcentaje de cuatro cifras no entra en el agujero del anillo y se recorta, que en un número de dinero es la peor falla posible.
+- **Ritmo desbordado**: cuando el cociente supera un umbral de escala, el sistema NO SHALL mostrar el anillo ni el porcentaje, y SHALL mostrar en su lugar un mensaje con un ícono, en el tono de la app, acompañado de **los dos montos que lo produjeron**. Con un denominador cercano a cero —un mes cuyo único ingreso fueron centavos— el cociente se va a los millones: es aritméticamente correcto y no es una lectura, y un número capeado tampoco lo sería. Este estado NO SHALL confundirse con el indeterminado: acá **sí entró plata**, solo que poca, y decir "todavía no entró plata este mes" sería falso. El umbral SHALL ubicarse donde el número deja de informar, no donde se pone grande: un mes en que se gastó diez veces el ingreso es extraordinario pero perfectamente legible y SHALL conservar su porcentaje.
+
+#### Scenario: Mes con ingresos y gasto por debajo
+
+- **WHEN** en el mes entraron ingresos y el gasto es menor
+- **THEN** el anillo muestra el porcentaje `Gastaste / ingresos del mes` y la barra se llena en esa proporción
+- **AND** el pie muestra los dos montos ARS que forman el cociente
+
+#### Scenario: Comienzo de mes sin ingresos acreditados
+
+- **WHEN** el usuario abre el dashboard antes de que se acredite ningún ingreso del mes
+- **THEN** la tira muestra un mensaje explicativo en lugar del anillo
+- **AND** no se renderiza ningún porcentaje
+
+#### Scenario: El gasto supera los ingresos del mes
+
+- **WHEN** `Gastaste` es mayor que los ingresos acreditados del mes
+- **THEN** el anillo y la barra se pintan en el color de alerta
+- **AND** el anillo y el copy expresan la relación como múltiplo ("10 veces"), no como porcentaje
+
+#### Scenario: Un monto largo no se recorta
+
+- **WHEN** un tile tiene que mostrar un monto de diez dígitos con centavos
+- **THEN** el monto se renderiza completo, con el cuerpo achicado
+- **AND** las dos plataformas achican en el mismo punto
+
+#### Scenario: Un mes con ingresos de centavos
+
+- **WHEN** el usuario gastó cientos de miles en un mes cuyo único ingreso fueron unos centavos
+- **THEN** la tira muestra un mensaje con ícono en lugar del anillo y del porcentaje
+- **AND** acompaña los dos montos que lo produjeron
+- **AND** NO dice que todavía no entró plata, porque sí entró
+
+
+---
+
+### Requirement: El detalle de "Compromisos del próximo mes" reemplaza en una zona de alto fijo
+
+La card de compromisos NO SHALL cambiar de alto al mostrar un detalle. Las dos cards de la fila 2 comparten alto —la fila mide lo que mide la más alta— y "Cuánto gastaste" no tiene contenido con qué llenar el alto extra, así que **todo lo que crece en Compromisos aparece como un hueco blanco en la card de al lado**. Un desplegable hacia abajo sumaba ~280px de un golpe y el hueco quedaba en el medio de la card vecina, que es donde peor se lee.
+
+El detalle SHALL vivir en una **zona de alto fijo** al pie de la card, que ocupa el alto sobrante y NO SHALL crecer con su contenido. La zona SHALL tener dos estados que ocupan exactamente el mismo espacio:
+
+- **Resumen** — una fila por grupo (Tarjetas y Gastos fijos), cada una con su total comprometido y **cuántos ítems lo componen**, de modo que el estado por defecto responda la pregunta sin tocar nada. Las filas SHALL estirarse para llenar la zona.
+- **Detalle** — la lista de UN grupo, con una cabecera que lo nombra, repite su total y ofrece **volver** al resumen. La lista SHALL scrollear dentro de la zona cuando no entre; la card completa NO SHALL scrollear.
+
+El detalle **reemplaza** al resumen, no se agrega debajo: por eso hay uno solo a la vez y no hay estado en el que se vean los dos totales y una lista al mismo tiempo. Es el mismo gesto que ya usan los tiles de "Cuánto gastaste", que se dan vuelta sin cambiar de tamaño; las dos cards de la fila SHALL comportarse igual entre sí.
+
+**Accesibilidad del reemplazo.** No es un desplegable, así que NO SHALL usar `aria-expanded`: el control no revela un panel adjunto, cambia el contenido de una región. La zona SHALL ser una región rotulada, y al abrir un detalle el foco SHALL moverse al control de volver; al volver, SHALL regresar al control del grupo que se había abierto. Sin ese movimiento, quien navega por teclado activa un botón que desaparece y pierde el foco al `<body>`. En mobile, el área táctil de cada control SHALL ser de al menos 44px.
+
+El grupo **Tarjetas** SHALL listar una fila **por tarjeta** con su total comprometido —no consumos individuales—, ordenadas por monto descendente. El grupo **Gastos fijos** SHALL listar hasta 10 filas y un link al listado completo.
+
+**El aviso de vencido SHALL ocupar una sola línea**, dentro del bloque del total y debajo de la barra apilada. Es una nota al pie de ese total —dice explícitamente que no forma parte de él—, no un bloque que compita con él, y tres renglones para un dato de una línea empujan el alto de toda la fila.
+
+#### Scenario: Usuario abre el detalle de tarjetas
+
+- **WHEN** el usuario activa la fila del grupo Tarjetas
+- **THEN** la zona pasa a mostrar la lista de tarjetas con su control de volver
+- **AND** la card mide exactamente lo mismo que antes de abrirla
+
+#### Scenario: Usuario vuelve al resumen
+
+- **WHEN** el usuario activa el control de volver
+- **THEN** la zona muestra otra vez las dos filas con sus totales
+- **AND** el foco vuelve a la fila del grupo que estaba abierto
+
+#### Scenario: Usuario con varias tarjetas
+
+- **WHEN** el usuario tiene cinco tarjetas con compromiso en el próximo mes
+- **THEN** la fila del grupo informa el total y que son cinco tarjetas
+- **AND** al abrir el detalle aparecen las cinco, ordenadas por monto descendente
+
+#### Scenario: Lista más larga que la zona
+
+- **WHEN** el usuario tiene más gastos fijos de los que entran en la zona
+- **THEN** la lista scrollea dentro de la zona
+- **AND** ni la card de compromisos ni la fila cambian de alto
+
+#### Scenario: Mes con un resumen vencido
+
+- **WHEN** hay un resumen vencido e impago
+- **THEN** el aviso ocupa una sola línea debajo de la barra del total
+- **AND** el alto de la card no se despega del de "Cuánto gastaste"
+
+
+---
+
+### Requirement: La tira "Compartido" muestra el neto del Hogar en web y en mobile cuando hay actividad
+
+El dashboard SHALL renderizar al pie una tira "Compartido" —una sola línea clickeable que navega al módulo Compartido— **en ambas plataformas**. La tira SHALL mostrar el ícono, el nombre del Hogar y el saldo neto en una sola dirección: "Te deben" en verde cuando el saldo favorece al usuario, "Debés" en terracota cuando va en contra. Con lugar de sobra SHALL agregar los avatares apilados del grupo y nombrar al otro miembro en la bajada.
+
+En pantallas angostas la tira SHALL mantenerse en **una sola fila**, y SHALL ganarse ese lugar soltando justamente esos dos agregados. El nombre del propio Hogar ya dice de quién es esa plata, y las iniciales lo dicen por tercera vez justo donde menos lugar hay para decirlo una. El bloque de identidad SHALL ser el que se achica; el monto NO SHALL ser nunca el que cede.
+
+La tira SHALL renderizarse **únicamente cuando hay actividad compartida**. Sin actividad, NO SHALL renderizarse ni dejar espacio reservado.
+
+#### Scenario: Hogar con saldo a favor del usuario
+
+- **WHEN** el hogar tiene actividad y el neto favorece al usuario
+- **THEN** la tira muestra "Te deben" con el monto en verde
+- **AND** se renderiza tanto en web como en la app nativa
+
+#### Scenario: Usuario sin actividad compartida
+
+- **WHEN** el usuario no tiene ningún hogar con actividad
+- **THEN** la tira no se renderiza en ninguna plataforma
+- **AND** el dashboard no deja un hueco al pie

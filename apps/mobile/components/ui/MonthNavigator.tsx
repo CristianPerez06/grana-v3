@@ -22,14 +22,21 @@ type Props = {
   month: number
   onPrev?: () => void
   onNext?: () => void
+  /**
+   * Squeezed variant: the month drops to its first three letters and the pill
+   * stops stretching. For the dashboard header, where the selector shares a row
+   * with the greeting and there is no room for "Septiembre 2026".
+   */
+  compact?: boolean
 }
 
 // Shared month selector — mirror of the web "monthsel" pill: a white bordered
 // container with the two arrows and a bold capitalized label. Presentational and
 // prop-driven; used by the dashboard header and the Movimientos feed. Stretches
 // to the available width.
-export const MonthNavigator = ({ year, month, onPrev, onNext }: Props) => {
-  const label = `${MONTH_NAMES_ES[month - 1]} ${year}`
+export const MonthNavigator = ({ year, month, onPrev, onNext, compact = false }: Props) => {
+  const name = MONTH_NAMES_ES[month - 1]!
+  const label = `${compact ? name.slice(0, 3) : name} ${year}`
 
   return (
     <View className="flex-row items-center rounded-xl border border-border bg-card p-1">
@@ -46,7 +53,11 @@ export const MonthNavigator = ({ year, month, onPrev, onNext }: Props) => {
           <ChevronLeft size={16} color={colors.textSoft} />
         </View>
       )}
-      <Text className="min-w-[104px] flex-1 text-center text-sm font-bold text-text">
+      <Text
+        className={`text-center font-bold text-text ${
+          compact ? 'px-1 text-[13px]' : 'min-w-[104px] flex-1 text-sm'
+        }`}
+      >
         {label}
       </Text>
       {onNext ? (

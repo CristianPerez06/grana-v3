@@ -1,245 +1,169 @@
 import Link from 'next/link'
-import { AlertTriangle, ArrowUpRight, CreditCard, Repeat } from 'lucide-react'
-import { getTranslations } from 'next-intl/server'
+import { AlertTriangle, CreditCard, Receipt } from 'lucide-react'
+import { getFormatter, getTranslations } from 'next-intl/server'
+import { deriveCommittedSplit, type CommittedOutlook } from '@grana/dashboard'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
-import type { CommittedCurrency, CommittedItem, CommittedOutlook } from '@grana/dashboard'
+import { CommittedBody, type CommittedDetailGroup } from './committed-body'
 import { MaskedAmount } from './masked-amount'
 import { MaskedAmountDisplay } from './masked-amount-display'
 
 type Props = {
   data: CommittedOutlook
+  /** Label of the month the commitments belong to (e.g. "Septiembre 2026"). */
+  monthLabel: string
 }
 
-const committedTotal = (c: CommittedCurrency) => c.debt + c.recurringExpense
-
-const isEmpty = (data: CommittedOutlook) =>
-  committedTotal(data.ARS) === 0 &&
-  committedTotal(data.USD) === 0 &&
-  data.ARS.recurringIncome === 0 &&
-  data.USD.recurringIncome === 0
-
-/** ISO `YYYY-MM-DD` → `dd/mm` for the compact movement rows. */
-const ddmm = (iso: string) => (iso.length >= 10 ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : '')
-
-// One obligation section: icon + label (+ hint) + per-currency subtotal, then its
-// top movements by amount, and a link to the full module. USD shows whenever the
-// card has any USD activity (bimoneda por defecto), with ceros when the section
-// itself has none — consistent with the total.
-const Section = ({
-  icon,
-  iconClassName,
-  label,
-  hint,
-  ars,
-  usd,
-  showUsd,
-  items,
-  href,
-  linkLabel,
-}: {
-  icon: React.ReactNode
-  iconClassName: string
-  label: string
-  hint: string
-  ars: number
-  usd: number
-  showUsd: boolean
-  items: CommittedItem[]
-  href: string
-  linkLabel: string
-}) => (
-  <div className="mt-4">
-    <div className="flex items-start gap-2.5 border-b border-border-soft pb-2.5">
-      <span
-        className={cn('flex size-7 shrink-0 items-center justify-center rounded-lg text-white', iconClassName)}
-        aria-hidden
-      >
-        {icon}
-      </span>
-      <span className="min-w-0 flex-1 pt-0.5 text-[13px] font-bold leading-tight text-text">
-        {label}
-        <span className="font-medium text-text-soft"> · {hint}</span>
-      </span>
-      <span className="shrink-0 text-right">
-        <span className="block text-[15px] font-extrabold tracking-tight tabular-nums text-text">
-          <MaskedAmount amount={ars} currency="ARS" />
-        </span>
-        {showUsd && (
-          <span className="block text-[11px] font-extrabold tabular-nums text-emerald-deep">
-            <MaskedAmount amount={usd} currency="USD" showCentsOverride />
-          </span>
-        )}
-      </span>
-    </div>
-
-    {items.length > 0 && (
-      <ul className="mt-1">
-        {items.map((it, i) => (
-          <li key={`${it.description}-${it.date}-${i}`} className="flex items-center gap-2.5 py-1.5">
-            <span className="w-9 shrink-0 text-[11px] font-bold tabular-nums text-text-soft">
-              {ddmm(it.date)}
-            </span>
-            <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-text">
-              {it.description || '—'}
-            </span>
-            <span className="shrink-0 text-[13px] font-bold tabular-nums text-text">
-              <MaskedAmount amount={it.amount} currency="ARS" />
-            </span>
-          </li>
-        ))}
-      </ul>
-    )}
-
-    <Link
-      href={href}
-      className="mt-1 inline-block rounded text-[12px] font-bold text-emerald-deep transition-colors hover:text-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      {linkLabel} →
-    </Link>
-  </div>
-)
-
-// "Comprometido" — COMPROMISO lens ("obligaciones pendientes"): card debt
-// ("A pagar" + "En curso") + recurrences pending confirmation, each as a section
-// with its top movements. A "Ya entra" band closes the card when there is
-// recurring income (context, never summed). Static "from today": it does NOT
-// follow the month navigator. Server-rendered; amounts mask via client leaves.
-export const CommittedSection = async ({ data }: Props) => {
+/**
+ * "Compromisos del próximo mes" — the committed total with its Tarjetas /
+ * Gastos fijos split, and the two details behind a body that swaps in place.
+ *
+ * The split percentages are derived from the total (`deriveCommittedSplit`), and
+ * an empty month renders no bar at all rather than one built from invented
+ * proportions. Cards are grouped BY CARD, not by consumo: the user asks "how
+ * much is coming from Visa", not "which twenty charges are pending".
+ *
+ * NOTHING in this card changes its height. Row 2's two cards share a height and
+ * "Cuánto gastaste" has no content to fill extra space with, so every pixel this
+ * card grows shows up as a hole in its neighbour. Hence the two-faced body
+ * (`committed-body.tsx`), and hence the overdue notice being ONE line inside the
+ * total block: it is a footnote to that total — it says outright that it is not
+ * part of it — not a block competing with it.
+ */
+export const CommittedSection = async ({ data, monthLabel }: Props) => {
   const t = await getTranslations('dashboard.committed')
-  const ars = data.ARS
-  const usd = data.USD
-  const totalArs = committedTotal(ars)
-  const totalUsd = committedTotal(usd)
-  const showUsd = totalUsd > 0
-  const hasIncome = ars.recurringIncome > 0
-  const net = ars.recurringIncome - totalArs
-  const surplus = net >= 0
-  const hasOverdue = ars.overdue > 0
-  // Prioritize the recurrences detail: if there are pending recurrences, list
-  // those; only when there are none do we fall back to listing the card consumos.
-  const recurringHasItems = ars.topRecurring.length > 0
+  const format = await getFormatter()
 
-  if (isEmpty(data)) {
-    return (
-      <Card className="flex min-h-[15rem] flex-col">
-        <CardHeader className="gap-0.5">
-          <h2 className="text-lg font-semibold text-text">{t('title')}</h2>
-          <p className="truncate text-[12.5px] text-text-soft">{t('question')}</p>
-        </CardHeader>
-        <CardContent className="flex flex-1 items-center justify-center">
-          <p className="text-center text-sm text-text-muted">{t('empty')}</p>
-        </CardContent>
-      </Card>
-    )
-  }
+  const split = deriveCommittedSplit(data.ARS.debt, data.ARS.recurringExpense)
+  const usdSplit = deriveCommittedSplit(data.USD.debt, data.USD.recurringExpense)
+
+  const cards = data.ARS.cards
+  const recurring = data.ARS.topRecurring
+  const hasOverdue = data.ARS.overdue !== 0 || data.USD.overdue !== 0
+  // Overdue money alone is enough to have something to say: the empty state
+  // means "nothing to pay", and a late statement is very much something to pay.
+  const isEmpty = !split.hasBar && !usdSplit.hasBar && !hasOverdue
+
+  const nextClose = cards.find((card) => card.nextClose != null)?.nextClose ?? null
+  const cardsSub =
+    nextClose != null
+      ? t('cards_group_sub_close', {
+          count: cards.length,
+          date: format.dateTime(new Date(`${nextClose}T00:00:00`), {
+            day: '2-digit',
+            month: '2-digit',
+          }),
+        })
+      : t('cards_group_sub', { count: cards.length })
+
+  const groups: CommittedDetailGroup[] = [
+    {
+      key: 'cards',
+      icon: <CreditCard size={18} strokeWidth={2} aria-hidden />,
+      iconClassName: 'bg-slate-soft text-slate',
+      label: t('cards_group'),
+      sub: cardsSub,
+      ars: data.ARS.debt,
+      usd: data.USD.debt,
+      rows: cards.map((card) => ({ id: card.id, label: card.label, amount: card.amount })),
+      emptyMessage: t('cards_empty'),
+    },
+    {
+      key: 'recurring',
+      icon: <Receipt size={18} strokeWidth={2} aria-hidden />,
+      iconClassName: 'bg-plum-soft text-plum-deep',
+      label: t('recurring_group'),
+      sub: t('recurring_group_sub', { count: recurring.length }),
+      ars: data.ARS.recurringExpense,
+      usd: data.USD.recurringExpense,
+      rows: recurring.map((item, index) => ({
+        id: `${item.description}-${index}`,
+        label: item.description,
+        amount: item.amount,
+      })),
+      emptyMessage: t('recurring_empty'),
+      link: { href: '/transactions/recurring', label: t('view_fixed') },
+    },
+  ]
+
+  // Total + stacked bar + the overdue footnote. Lives on the body's front face.
+  const summary = (
+    <div className="rounded-2xl border border-border bg-surface-sunken p-4">
+      <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
+        {t('committed_label')}
+      </p>
+      <p className="mt-1 text-[31px] font-extrabold leading-none tracking-[-0.045em] text-text">
+        <MaskedAmountDisplay amount={split.total} currency="ARS" dimSymbol />
+      </p>
+      {usdSplit.total !== 0 && (
+        <p className="mt-1 text-[12px] font-semibold text-text-soft">
+          <MaskedAmount amount={usdSplit.total} currency="USD" showCentsOverride />
+        </p>
+      )}
+
+      {split.hasBar && (
+        <>
+          <div aria-hidden className="mt-3 flex h-[9px] overflow-hidden rounded-[5px] bg-border-soft">
+            <span className="h-full bg-slate" style={{ width: `${split.cardsPct}%` }} />
+            <span className="h-full bg-plum" style={{ width: `${split.recurringPct}%` }} />
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] font-bold text-text-muted">
+            <span className="flex items-center gap-1.5">
+              <span aria-hidden className="size-2 rounded-[2px] bg-slate" />
+              {t('cards_group')} {Math.round(split.cardsPct)}%
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span aria-hidden className="size-2 rounded-[2px] bg-plum" />
+              {t('recurring_group')} {Math.round(split.recurringPct)}%
+            </span>
+          </div>
+        </>
+      )}
+
+      {hasOverdue && (
+        // ONE line, guaranteed: no `flex-wrap`, every fixed part `shrink-0`, and
+        // the trailing words truncate. A second row here costs ~20px of card
+        // height, which comes straight out of the neighbouring card as a hole.
+        <p className="mt-2.5 flex items-center gap-x-1.5 text-[12px] font-bold text-terracotta">
+          <AlertTriangle size={13} strokeWidth={2.5} aria-hidden className="shrink-0" />
+          <span className="shrink-0">{t('overdue_prefix')}</span>
+          <span className="shrink-0 font-extrabold">
+            <MaskedAmount amount={data.ARS.overdue} currency="ARS" />
+          </span>
+          {data.USD.overdue !== 0 && (
+            <span className="shrink-0 font-extrabold">
+              + <MaskedAmount amount={data.USD.overdue} currency="USD" showCentsOverride />
+            </span>
+          )}
+          <span className="truncate">{t('overdue_suffix')}</span>
+        </p>
+      )}
+    </div>
+  )
 
   return (
-    <Card className="flex min-h-[15rem] flex-col">
-      <CardHeader className="gap-0.5">
-        <h2 className="text-lg font-semibold text-text">{t('title')}</h2>
-        <p className="truncate text-[12.5px] text-text-soft">{t('question')}</p>
+    <Card className="flex flex-col">
+      {/* One row at every width: the link belongs beside the title, not stacked
+          under it. The title block shrinks; the link never wraps. */}
+      <CardHeader className="flex-row items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="truncate text-lg font-semibold tracking-tight text-text">
+            {t('title_next_month')}
+          </h2>
+          <p className="text-[12.5px] font-semibold text-text-soft">{monthLabel}</p>
+        </div>
+        <Link
+          href="/cards"
+          className="shrink-0 whitespace-nowrap rounded text-[13px] font-bold text-emerald-deep transition-colors hover:text-emerald focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {t('view_all')} ›
+        </Link>
       </CardHeader>
 
       <CardContent className="flex flex-1 flex-col">
-        {/* Total a pagar — label a la izquierda, monto a la derecha (ARS grande y el
-            USD debajo, ambos alineados a la derecha) como en el mockup. */}
-        <div className="flex items-start justify-between gap-3">
-          <p className="pt-1.5 text-xs font-extrabold uppercase tracking-wide text-text-soft">
-            {t('total_label')}
-          </p>
-          <div className="text-right">
-            <span className="block text-[clamp(1.75rem,3.6vw,2.25rem)] font-extrabold leading-none tracking-tight text-text">
-              <MaskedAmountDisplay amount={totalArs} currency="ARS" />
-            </span>
-            {showUsd && (
-              <span className="mt-1.5 block text-[13px] font-extrabold tabular-nums text-emerald-deep">
-                <MaskedAmount amount={totalUsd} currency="USD" showCentsOverride />
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Aviso de vencido — sólo cuando hay deuda con vencimiento pasado. */}
-        {hasOverdue && (
-          <p className="mt-3 flex items-center gap-2 rounded-xl bg-terracotta-soft px-3 py-2 text-[12px] font-semibold text-terracotta-deep">
-            <AlertTriangle size={15} strokeWidth={2.25} className="shrink-0" aria-hidden />
-            {t.rich('overdue', {
-              amount: () => (
-                <strong className="font-extrabold">
-                  <MaskedAmount amount={ars.overdue} currency="ARS" />
-                </strong>
-              ),
-            })}
-          </p>
-        )}
-
-        <Section
-          icon={<CreditCard size={15} strokeWidth={2.25} aria-hidden />}
-          iconClassName="bg-navy"
-          label={t('card_label')}
-          hint={t('card_hint')}
-          ars={ars.debt}
-          usd={usd.debt}
-          showUsd={showUsd}
-          items={recurringHasItems ? [] : ars.topCard}
-          href="/cards"
-          linkLabel={t('view_cards')}
-        />
-
-        <Section
-          icon={<Repeat size={15} strokeWidth={2.25} aria-hidden />}
-          iconClassName="bg-terracotta"
-          label={t('recurring_label')}
-          hint={t('recurring_hint')}
-          ars={ars.recurringExpense}
-          usd={usd.recurringExpense}
-          showUsd={showUsd}
-          items={ars.topRecurring}
-          href="/transactions/recurring"
-          linkLabel={t('view_recurring')}
-        />
-
-        {/* "Ya entra" — ingreso recurrente del mes próximo + cierre neto (contexto). */}
-        {hasIncome && (
-          <>
-            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-emerald/40 bg-emerald-soft p-3.5">
-              <span
-                className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald text-white"
-                aria-hidden
-              >
-                <ArrowUpRight size={16} strokeWidth={2.5} aria-hidden />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[12px] font-bold text-emerald-deep">{t('income_tile_title')}</p>
-                <p className="truncate text-[11px] font-medium text-emerald-deep/80">
-                  {t('income_tile_sub')}
-                </p>
-              </div>
-              <span className="shrink-0 text-[16px] font-extrabold tracking-tight text-emerald-deep">
-                <MaskedAmountDisplay amount={ars.recurringIncome} currency="ARS" signPrefix="+" />
-              </span>
-            </div>
-
-            <p
-              className={cn(
-                'mt-3 rounded-2xl px-4 py-3 text-[12.5px] font-semibold leading-snug',
-                surplus ? 'bg-emerald-soft text-emerald-deep' : 'bg-page text-expense',
-              )}
-            >
-              {t.rich(surplus ? 'net_surplus' : 'net_deficit', {
-                amount: () => (
-                  <strong className="font-extrabold">
-                    <MaskedAmountDisplay
-                      amount={Math.abs(net)}
-                      currency="ARS"
-                      signPrefix={surplus ? '+' : undefined}
-                    />
-                  </strong>
-                ),
-              })}
-            </p>
-          </>
+        {isEmpty ? (
+          <p className="py-6 text-center text-[13.5px] font-semibold text-text-soft">{t('empty')}</p>
+        ) : (
+          <CommittedBody summary={summary} groups={groups} />
         )}
       </CardContent>
     </Card>
