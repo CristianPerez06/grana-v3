@@ -7,6 +7,11 @@ con cada pieza etiquetada según se construya de cero, se modifique o ya funcion
 - `circuito-guardar.html` — abrir en el navegador. Ocho pantallas, con los mismos números
   atravesando todas para que la aritmética se pueda seguir.
 
+Los mocks están redibujados sobre el **lenguaje visual real de la app** (segmented de tipos,
+card de monto con chip de moneda, filas con ícono cuadrado + label small-caps + chevron, botón
+emerald sticky, hero navy, encabezados de sección en la lista de cuentas), tomados de capturas de
+producción. El drawer de Guardar **no introduce ningún primitivo visual nuevo**.
+
 **No es diseño final.** Es una referencia de producto para validar el circuito antes de escribir
 las specs: qué pantalla responde qué pregunta, qué se reutiliza y qué hay que construir.
 Los estilos usan los tokens reales de `@grana/ui-tokens` (navy, emerald, Plus Jakarta Sans) para
@@ -41,6 +46,10 @@ secundarias que el usuario recorre solo cuando las necesita.
   Abierto suelto sí ofrece moneda, y solo si hay saldo en las dos.
 - Grana **no clasifica el movimiento**: la transferencia a un plazo fijo es idéntica a cualquier otra.
   Lo que la distingue es la **cuenta destino**, clasificada una sola vez al crearla.
+- El hero conserva su rótulo **"Saldo disponible total"**: al netear el guardado sigue siendo cierto.
+- **"Se fué" va en azul oscuro, no en terracota.** El terracota queda reservado para "Por pagar" y vencidos.
+- En Cuentas, el **título es la institución y el subtítulo el nombre de la cuenta** ("Mercado Pago" /
+  "Cta remunerada"), así que un plazo fijo se carga natural: institución Nación, nombre "Plazo fijo".
 - El segundo bloque se llama **"Fuera de disponible"**, no "guardado o invertido": ese nombre volvería
   a mezclar una decisión (guardar) con una característica del vehículo (rendir).
 - **El disparador de la sugerencia es un ingreso, como máximo una vez por mes.** Sin umbrales ni
