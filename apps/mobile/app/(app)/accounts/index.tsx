@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { Spinner } from '../../../components/ui/Spinner'
@@ -18,6 +19,7 @@ import { colors } from '../../../lib/colors'
 export default function AccountsScreen() {
   const t = useT()
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const listQ = useAccountsList()
   const archivedQ = useArchivedAccounts()
   // The "Crear" action depends on institutions being loaded (the create form
@@ -60,7 +62,8 @@ export default function AccountsScreen() {
       />
 
       <ScrollView
-        contentContainerClassName="px-6 py-6"
+        contentContainerClassName="px-6 pt-6"
+        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
         refreshControl={
           <RefreshControl
             refreshing={listQ.isRefetching || archivedQ.isRefetching}

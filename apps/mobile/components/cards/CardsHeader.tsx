@@ -38,6 +38,11 @@ export const CardsHeader = () => {
     <PageHeader
       title={t('cards.title')}
       description={description}
+      // Root screen of a chromeless section: without the tab bar, this link is
+      // the only visible way out. Fixed href over `router.back()` so the
+      // destination is the same coming from the menu, a deep link or the
+      // dashboard cards (see spec `page-header`).
+      backLink={{ href: '/(app)/dashboard', label: t('nav.dashboard') }}
       actions={<AddCardButton label={t('cards.actions.add_label')} />}
     />
   )

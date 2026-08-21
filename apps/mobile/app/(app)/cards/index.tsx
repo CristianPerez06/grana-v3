@@ -1,4 +1,5 @@
 import { ScrollView, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
 import { CardsHeader } from '../../../components/cards/CardsHeader'
 import { CardsMonthHero } from '../../../components/cards/CardsMonthHero'
@@ -9,10 +10,15 @@ import { getCardNetworks, getCardsMonthSummary, getCreditCards } from '../../../
 import { useT } from '../../../lib/locale-context'
 
 export default function TarjetasScreen() {
+  const insets = useSafeAreaInsets()
+
   return (
     <View className="flex-1 bg-page">
       <CardsHeader />
-      <ScrollView contentContainerClassName="gap-6 px-6 py-6">
+      <ScrollView
+        contentContainerClassName="gap-6 px-6 pt-6"
+        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+      >
         <MonthHeroSection />
         <WalletSection />
         <ArchivedSection />
