@@ -57,7 +57,10 @@ export const SharedStrip = () => {
 
   return (
     <Pressable
-      onPress={() => router.push('/shared')}
+      // `/home`, not `/shared`: the two apps mount the same module under
+      // different names — web serves Hogar at `/shared`, mobile at the `home`
+      // tab — and this strip was ported from web with the web path.
+      onPress={() => router.push('/home')}
       accessibilityRole="button"
       style={{ minHeight: 54 }}
       className="flex-row items-center gap-2.5 rounded-2xl border border-border bg-card px-3.5 py-2.5"
