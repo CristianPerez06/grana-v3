@@ -159,6 +159,9 @@ p{margin:0}
   border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:8px}
 .callout p{font-size:14px;color:var(--muted);line-height:1.55}
 .callout .big{font-size:15.5px;color:var(--text);font-weight:700}
+.divider{display:flex;align-items:center;gap:14px;margin:6px 0}
+.divider .ln{flex:1;height:1px;background:var(--border)}
+.divider .tx{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);white-space:nowrap}
 footer{border-top:1px solid var(--border);padding-top:20px;color:var(--soft);font-size:13px;
   display:flex;flex-direction:column;gap:4px}
 </style>
@@ -168,19 +171,21 @@ footer{border-top:1px solid var(--border);padding-top:20px;color:var(--soft);fon
 <header style="display:flex;flex-direction:column;gap:16px">
   <div class="brand"><span class="bdot">$</span><span class="bname">grana</span></div>
   <h1>El circuito de Guardar</h1>
-  <p class="lede">Un mes completo, pantalla por pantalla: cobrás, guardás, ponés plata a plazo fijo y mirás dónde quedó todo. Cada pieza marcada según se construya de cero, se modifique o ya funcione hoy.</p>
+  <p class="lede">Un mes completo, pantalla por pantalla. <b>El camino principal son cuatro pantallas y dos taps</b>; el resto son rutas que el usuario recorre solo cuando las necesita. Cada pieza marcada según se construya de cero, se modifique o ya funcione hoy.</p>
   <div class="legend">
     <span class="tag nuevo">Nuevo</span>
     <span class="tag mod">Modificado</span>
     <span class="tag ok">Ya existe</span>
   </div>
   <div class="stats">
-    <div class="stat"><b>8</b><span>pantallas del circuito</span></div>
+    <div class="stat"><b>2</b><span>taps para cobrar y guardar</span></div>
     <div class="stat"><b>2</b><span>nuevas</span></div>
     <div class="stat"><b>3</b><span>modificadas</span></div>
     <div class="stat"><b>3</b><span>sin tocar</span></div>
   </div>
 </header>
+
+<div class="divider"><span class="tx">El camino principal &middot; 2 taps</span><span class="ln"></span></div>
 
 <!-- 1 -->
 <section class="step">
@@ -188,25 +193,32 @@ footer{border-top:1px solid var(--border);padding-top:20px;color:var(--soft);fon
     <div class="screen">
       <div class="sbar"><span class="t">Movimientos</span><span class="a mono">agosto</span></div>
       <div class="sbody">
-        <p class="mono" style="font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--soft)">Pendientes de confirmar</p>
+        <p class="mono" style="font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--soft)">Camino A · era una recurrencia</p>
         <div class="card2">
           <div style="display:flex;justify-content:space-between;align-items:baseline">
             <span style="font-weight:700;font-size:14px">Sueldo</span>
             <span class="num pos" style="font-weight:800;font-size:16px">+$2.000.000</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted)">
-            <span>5 de agosto</span><span>Galicia · caja de ahorro</span>
+            <span>5 de agosto</span><span>Galicia</span>
           </div>
           <div class="btns"><button class="btn">Confirmar</button><button class="btn ghost">Omitir</button></div>
+        </div>
+        <p class="mono" style="font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--soft);margin-top:3px">Camino B · lo cargás a mano</p>
+        <div class="card2">
+          <div class="chips"><span class="chip">Gasto</span><span class="chip on">Ingreso</span><span class="chip">Transferencia</span></div>
+          <div class="amt num" style="font-size:22px">$&nbsp;2.000.000</div>
+          <div class="field"><div class="box"><span>Galicia · caja de ahorro</span><span style="color:var(--soft)">&#9662;</span></div></div>
+          <div class="btns"><button class="btn">Guardar movimiento</button></div>
         </div>
       </div>
     </div>
   </div>
   <div class="notes">
-    <div class="stephead"><span class="stepno">01</span><h2>Cobrás el sueldo</h2></div>
+    <div class="stephead"><span class="stepno">01</span><h2>Entra un ingreso</h2></div>
     <ul>
-      <li class="r">El bloque de recurrencias pendientes <b>ya existe y ya es un tap</b>. No se toca nada.</li>
-      <li class="r">Grana ya sabe que esto es el sueldo: es un <span class="mono">income</span>, es recurrente y es el mayor del mes. No hay que preguntarle nada al usuario.</li>
+      <li class="r">Los dos caminos <b>ya existen y no se tocan</b>. El sueldo puede ser una recurrencia o un movimiento cargado a mano — el circuito es el mismo.</li>
+      <li class="n">El disparador de lo que viene <b>no es la recurrencia</b>: es que se registró un ingreso <b>significativo</b>. Si es recurrente, o si supera un porcentaje de tu ingreso típico. Un reintegro de $5.000 no dispara nada, o la app se vuelve insoportable.</li>
     </ul>
   </div>
 </section>
@@ -217,12 +229,13 @@ footer{border-top:1px solid var(--border);padding-top:20px;color:var(--soft);fon
     <div class="screen">
       <div class="sbar"><span class="t">Movimientos</span><span class="a mono">agosto</span></div>
       <div class="sbody">
-        <div class="toast">✓ Sueldo registrado · +$2.000.000</div>
+        <div class="toast">&#10003; Ingreso registrado &middot; +$2.000.000</div>
         <div class="card2" style="border-color:var(--emerald)">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-            <span style="font-weight:700;font-size:13.5px;line-height:1.35">¿Guardás $200.000 antes de empezar a gastar?</span>
+            <span style="font-weight:700;font-size:13.5px;line-height:1.35">&iquest;Quer&eacute;s guardar una parte antes de empezar a gastar?</span>
             <span class="pill">10%</span>
           </div>
+          <p class="num" style="font-size:19px;font-weight:800;letter-spacing:-.03em">$200.000 <span style="font-size:11.5px;font-weight:500;color:var(--soft)">sugerido</span></p>
           <div class="btns"><button class="btn">Guardar</button><button class="btn ghost">Ahora no</button></div>
         </div>
       </div>
@@ -231,10 +244,9 @@ footer{border-top:1px solid var(--border);padding-top:20px;color:var(--soft);fon
   <div class="notes">
     <div class="stephead"><span class="stepno">02</span><h2>Grana te ofrece guardar</h2></div>
     <ul>
-      <li class="n">La tira contextual. <b>Un tap</b> — cobrar y ahorrar sale en dos.</li>
-      <li class="r">Se sirve desde <span class="mono">guidance</span>, el módulo de guías que <b>ya está construido</b> y hoy se usa poco: registra visto, descartado y completado por usuario. Si la descartás varias veces, se apaga sola.</li>
-      <li class="n">El monto sugerido <b>no se configura, se aprende</b>: la primera vez 10%, después lo que guardaste la última vez. Cero pantalla de ajustes.</li>
-      <li class="r">No dispara con cualquier ingreso. Solo si es recurrente o supera un porcentaje de tu ingreso típico — datos que Grana ya tiene.</li>
+      <li class="n">La tira contextual. <b>Un tap</b> — registrar el ingreso y ahorrar sale en dos.</li>
+      <li class="r">Se sirve desde <span class="mono">guidance</span>, que <b>ya est&aacute; construido</b>: registra visto, descartado y completado por usuario. Si la descart&aacute;s varias veces, se apaga sola.</li>
+      <li class="n">El monto <b>no se configura, se aprende</b>: la primera vez 10% del ingreso, despu&eacute;s lo que guardaste la vez anterior. Cero pantalla de ajustes.</li>
     </ul>
   </div>
 </section>
@@ -243,31 +255,30 @@ footer{border-top:1px solid var(--border);padding-top:20px;color:var(--soft);fon
 <section class="step">
   <div>
     <div class="screen">
-      <div class="sbar"><span class="t">Guardar</span><span class="a">✕</span></div>
+      <div class="sbar"><span class="t">Guardar del sueldo</span><span class="a">&#10005;</span></div>
       <div class="sbody">
+        <p style="font-size:11.5px;color:var(--soft)">Del ingreso de <span class="num">$2.000.000</span> en pesos</p>
         <div class="amt num">$&nbsp;200.000</div>
-        <div class="chips"><span class="chip on">10%</span><span class="chip">20%</span><span class="chip">Otro</span></div>
-        <div class="field"><span class="k">Moneda</span>
-          <div class="chips"><span class="chip on">ARS</span><span class="chip">USD</span></div>
-        </div>
-        <div class="field"><span class="k">Fecha</span><div class="box"><span>Hoy · 5 de agosto</span><span style="color:var(--soft)">▾</span></div></div>
+        <div class="chips"><span class="chip on">10%</span><span class="chip">20%</span><span class="chip">Otro monto</span></div>
         <div class="calc">
-          <div class="r"><span style="color:var(--muted)">Disponible hoy</span><span class="num">$1.800.000</span></div>
-          <div class="r"><span style="color:var(--muted)">Vas a guardar</span><span class="num pos">−$200.000</span></div>
-          <div class="r tot"><span>Te queda</span><span class="num">$1.600.000</span></div>
+          <div class="r"><span style="color:var(--muted)">Ten&eacute;s en pesos</span><span class="num">$1.800.000</span></div>
+          <div class="r"><span style="color:var(--muted)">Vas a guardar</span><span class="num pos">&minus;$200.000</span></div>
+          <div class="r tot"><span>Te queda para gastar</span><span class="num">$1.600.000</span></div>
         </div>
         <div class="btns"><button class="btn">Guardar</button></div>
+        <p style="font-size:11px;color:var(--soft);text-align:center">No se mueve plata de tu cuenta.</p>
       </div>
     </div>
   </div>
   <div class="notes">
-    <div class="stephead"><span class="stepno">03</span><h2>El drawer de Guardar</h2></div>
+    <div class="stephead"><span class="stepno">03</span><h2>El drawer &mdash; versi&oacute;n contextual</h2></div>
     <ul>
-      <li class="n">La única superficie de captura nueva de toda la fase. <b>Tres campos</b>, y dos vienen resueltos.</li>
-      <li class="r">Se monta sobre el primitivo <span class="mono">Drawer</span> de <span class="mono">overlay-primitives</span> — el mismo patrón del alta de movimiento y de la liquidación de hogar.</li>
-      <li class="r">Los montos rápidos son el patrón que ya usa el drawer de liquidación.</li>
-      <li class="n"><b>No pide propósito.</b> Un "¿para qué?" sin metas que elegir es un campo muerto. Llega en fase 2.</li>
-      <li class="n">El tope es el disponible: guardar de más no es un estado incómodo, es un input inválido. <b>Es la diferencia con el ledger</b>, donde un saldo negativo sí es un hecho válido.</li>
+      <li class="n"><b>Viniendo de un ingreso no pregunta la moneda</b>: la hereda. Si el sueldo fue en pesos, se guarda en pesos. Y el monto viene prellenado.</li>
+      <li class="n">Queda <b>un solo campo</b>, y ya viene resuelto. Por eso el circuito completo son dos taps.</li>
+      <li class="n">Abierto <b>suelto</b> (desde el dashboard o a fin de mes) s&iacute; muestra moneda &mdash; y solo si ten&eacute;s saldo en las dos.</li>
+      <li class="r">Se monta sobre el primitivo <span class="mono">Drawer</span>, con los montos r&aacute;pidos del drawer de liquidaci&oacute;n.</li>
+      <li class="n"><b>No pide prop&oacute;sito.</b> Un &laquo;&iquest;para qu&eacute;?&raquo; sin metas que elegir es un campo muerto. Fase 2.</li>
+      <li class="n">El tope es lo que ten&eacute;s: guardar de m&aacute;s no es un estado inc&oacute;modo, es un input inv&aacute;lido. <b>Es la diferencia con el ledger</b>, donde un saldo negativo s&iacute; es un hecho v&aacute;lido.</li>
     </ul>
   </div>
 </section>
@@ -276,44 +287,46 @@ footer{border-top:1px solid var(--border);padding-top:20px;color:var(--soft);fon
 <section class="step">
   <div>
     <div class="screen">
-      <div class="sbar"><span class="t">Inicio</span><span class="a mono">agosto ▾</span></div>
+      <div class="sbar"><span class="t">Inicio</span><span class="a mono">agosto &#9662;</span></div>
       <div class="sbody">
         <div class="hero">
           <div>
-            <p class="lbl">Para gastar · hoy</p>
+            <p class="lbl">Para gastar &middot; hoy</p>
             <p class="big num">$1.600.000</p>
             <p class="usd num">US$ 600</p>
           </div>
           <div class="div"></div>
           <div class="place">
             <div class="col">
-              <span class="h">ARS</span>
-              <span class="row"><span>Galicia</span><span class="num">69%</span></span>
-              <span class="row"><span>Mercado Pago</span><span class="num">26%</span></span>
+              <span class="h">ARS &middot; $1.800.000</span>
+              <span class="row"><span>Galicia</span><span class="num">67%</span></span>
+              <span class="row"><span>Mercado Pago</span><span class="num">28%</span></span>
             </div>
             <div class="vr"></div>
             <div class="col">
-              <span class="h">USD</span>
+              <span class="h">USD &middot; US$ 600</span>
               <span class="row"><span>Galicia USD</span><span class="num">100%</span></span>
             </div>
           </div>
         </div>
         <div class="summary">
-          <span class="h">Resumen del mes</span>
+          <span class="h">Resumen del mes &middot; pesos</span>
           <div class="trio">
-            <div><span class="k">Tenías</span><span class="v num">$2.100.000</span></div>
-            <div><span class="k">Entró</span><span class="v num pos">+$2.000.000</span></div>
-            <div><span class="k">Se fué</span><span class="v num neg">−$1.600.000</span></div>
+            <div><span class="k">Ten&iacute;as</span><span class="v num">$2.000.000</span></div>
+            <div><span class="k">Entr&oacute;</span><span class="v num pos">+$2.000.000</span></div>
+            <div><span class="k">Se fu&eacute;</span><span class="v num neg">&minus;$1.500.000</span></div>
           </div>
           <div class="rule"></div>
           <div class="xline">
-            <span class="k">Pasaste a otra cuenta</span>
-            <span class="v num" style="color:var(--slate)">−$700.000 &nbsp;›</span>
+            <span class="k">Pasaste a otras cuentas</span>
+            <span class="v num" style="color:var(--slate)">&minus;$700.000 &nbsp;&rsaquo;</span>
           </div>
           <div class="xline">
             <span class="k">Guardaste este mes</span>
-            <span class="v num" style="color:var(--emerald-deep)">−$200.000 &nbsp;›</span>
+            <span class="v num" style="color:var(--emerald-deep)">&minus;$200.000 &nbsp;&rsaquo;</span>
           </div>
+          <div class="rule"></div>
+          <div class="xline"><span class="k" style="font-weight:700;color:var(--text)">Para gastar hoy</span><span class="v num">$1.600.000</span></div>
         </div>
       </div>
     </div>
@@ -321,21 +334,23 @@ footer{border-top:1px solid var(--border);padding-top:20px;color:var(--soft);fon
   <div class="notes">
     <div class="stephead"><span class="stepno">04</span><h2>El dashboard</h2></div>
     <ul>
-      <li class="m">El monto grande pasa a ser el <b>disponible real</b>. Un solo número de plata: el usuario nunca se pregunta cuál es el suyo.</li>
-      <li class="r">La zona oscura, el bloque <b>Dónde está</b> y la tira de tres <b>no se tocan</b>. Son el rediseño que acaba de mergear.</li>
-      <li class="m">Dos líneas bajo la regla. No son un cuarto hermano de "Se fué": están separadas porque <b>son otra naturaleza</b> — una es un hecho, la otra una decisión.</li>
-      <li class="m">El signo menos dice <b>"salió de lo que podés gastar"</b>, que es literalmente cierto en las dos. El color y el verbo dicen si eso es bueno o malo: terracota para gasto, emerald para guardado.</li>
-      <li class="r">La card sigue cerrando en pantalla, que es lo mejor que tiene:<br><span class="mono" style="font-size:12px;color:var(--text)">Tenías + Entró − Se fué − Pasaste − Guardaste = $1.600.000</span></li>
-      <li class="m">Cada línea linkea a la superficie que la explica: <b>Guardado</b> y <b>Cuentas</b>. La segunda solo aparece si hubo movimiento, igual que la fila USD.</li>
+      <li class="m">El monto grande es el <b>disponible real</b>. Un solo n&uacute;mero de plata en toda la pantalla.</li>
+      <li class="r">La zona oscura, el bloque <b>D&oacute;nde est&aacute;</b> y la tira de tres <b>no se tocan</b>: son el redise&ntilde;o que acaba de mergear. Los porcentajes van sobre el total de tus cuentas en esa moneda ($1.800.000), por eso el encabezado lo dice.</li>
+      <li class="m">Las dos l&iacute;neas explican <b>por qu&eacute; el disponible es menor que tus cuentas</b>. Est&aacute;n bajo una regla porque son otra naturaleza: una es un movimiento, la otra una decisi&oacute;n.</li>
+      <li class="m"><b>&laquo;Pasaste a otras cuentas&raquo; solo aparece si ten&eacute;s cuentas fuera del disponible.</b> Quien tiene caja de ahorro y billetera nom&aacute;s no la ve nunca.</li>
+      <li class="m">El menos dice <b>&laquo;sali&oacute; de lo que pod&eacute;s gastar&raquo;</b>, cierto en las dos. El color y el verbo dicen si eso es bueno o malo.</li>
+      <li class="r">La card cierra en pantalla, con estos n&uacute;meros:<br><span class="mono" style="font-size:11.5px;color:var(--text)">2.000.000 + 2.000.000 &minus; 1.500.000 &minus; 700.000 &minus; 200.000 = 1.600.000</span></li>
     </ul>
   </div>
 </section>
+
+<div class="divider"><span class="tx">Rutas secundarias &middot; cuando las necesit&aacute;s</span><span class="ln"></span></div>
 
 <!-- 5 -->
 <section class="step">
   <div>
     <div class="screen">
-      <div class="sbar"><span class="t">‹ &nbsp;Guardado</span><span class="a">⋯</span></div>
+      <div class="sbar"><span class="t">&lsaquo; &nbsp;Guardado</span><span class="a">&#8943;</span></div>
       <div class="sbody">
         <div style="display:flex;flex-direction:column;gap:2px">
           <p style="font-size:11.5px;color:var(--soft)">Total guardado</p>
@@ -355,10 +370,10 @@ footer{border-top:1px solid var(--border);padding-top:20px;color:var(--soft);fon
   <div class="notes">
     <div class="stephead"><span class="stepno">05</span><h2>El detalle de Guardado</h2></div>
     <ul>
-      <li class="n">Pantalla nueva — pero <b>no entra en la navegación</b>. Se llega tocando el número, como el detalle de un resumen de tarjeta.</li>
-      <li class="n">Existe por una razón de fondo: guardar <b>no aparece en Movimientos</b>, porque no es un movimiento. Sin esta vista el usuario no podría auditar su propia decisión, y eso choca con el pilar de confianza contable.</li>
-      <li class="n">Separa los dos números que se confunden: <b>total guardado</b> (stock) y <b>este mes</b> (flujo).</li>
-      <li class="n">Es la pantalla que va a crecer: propósitos en fase 2, dónde está en fase 3, evolución en fase 4. <b>Qué hub la agrupa se decide entonces</b>, con uso real — hoy sería adivinar.</li>
+      <li class="n">Pantalla nueva &mdash; pero <b>no entra en la navegaci&oacute;n</b>. Se llega tocando el n&uacute;mero, como el detalle de un resumen de tarjeta.</li>
+      <li class="n">Existe por una raz&oacute;n de fondo: guardar <b>no aparece en Movimientos</b>, porque no es un movimiento. Sin esta vista el usuario no podr&iacute;a auditar su propia decisi&oacute;n.</li>
+      <li class="n">Separa los dos n&uacute;meros que se confunden: <b>total guardado</b> (stock) y <b>este mes</b> (flujo).</li>
+      <li class="n">Es la pantalla que crece: prop&oacute;sitos en fase 2, d&oacute;nde est&aacute; en fase 3. <b>Qu&eacute; hub la agrupa se decide entonces</b>, con uso real.</li>
     </ul>
   </div>
 </section>
@@ -367,31 +382,30 @@ footer{border-top:1px solid var(--border);padding-top:20px;color:var(--soft);fon
 <section class="step">
   <div>
     <div class="screen">
-      <div class="sbar"><span class="t">Nueva cuenta</span><span class="a">✕</span></div>
+      <div class="sbar"><span class="t">Nueva cuenta</span><span class="a">&#10005;</span></div>
       <div class="sbody">
-        <div class="field"><span class="k">Nombre</span><div class="box"><span>Plazo fijo Nación</span></div></div>
-        <div class="field"><span class="k">Institución</span><div class="box"><span>Banco Nación</span><span style="color:var(--soft)">▾</span></div></div>
-        <div class="field"><span class="k">Tipo de cuenta</span><div class="box hi"><span>Plazo fijo</span><span style="color:var(--plum)">▾</span></div></div>
+        <div class="field"><span class="k">Nombre</span><div class="box"><span>Plazo fijo Naci&oacute;n</span></div></div>
+        <div class="field"><span class="k">Instituci&oacute;n</span><div class="box"><span>Banco Naci&oacute;n</span><span style="color:var(--soft)">&#9662;</span></div></div>
+        <div class="field"><span class="k">Tipo de cuenta</span><div class="box hi"><span>Plazo fijo</span><span style="color:var(--plum)">&#9662;</span></div></div>
         <div class="card2" style="border-color:var(--plum);background:var(--plum-soft)">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
             <span style="font-size:12.5px;font-weight:600">Contar como dinero disponible</span>
-            <span style="font-size:11px;font-weight:700;color:var(--plum);border:1px solid var(--plum);
-                         padding:3px 9px;border-radius:20px">NO</span>
+            <span style="font-size:11px;font-weight:700;color:var(--plum);border:1px solid var(--plum);padding:3px 9px;border-radius:20px">NO</span>
           </div>
-          <p style="font-size:11.5px;color:var(--muted);line-height:1.45">Los plazos fijos no cuentan para gastar hoy. Podés cambiarlo.</p>
+          <p style="font-size:11.5px;color:var(--muted);line-height:1.45">Pod&eacute;s cambiarlo.</p>
         </div>
         <div class="btns"><button class="btn">Crear cuenta</button></div>
       </div>
     </div>
   </div>
   <div class="notes">
-    <div class="stephead"><span class="stepno">06</span><h2>Creás el plazo fijo</h2></div>
+    <div class="stephead"><span class="stepno">06</span><h2>Cre&aacute;s el plazo fijo</h2></div>
     <ul>
-      <li class="r">Es <b>crear una cuenta, como siempre</b>. No hay alta de inversión, ni módulo aparte, ni concepto nuevo que aprender.</li>
-      <li class="m">Un campo nuevo: <b>tipo de cuenta</b>. Es puramente descriptivo — no toca ningún cálculo. Sirve para agrupar y para el ícono.</li>
-      <li class="m">Y ese tipo <b>sugiere el switch</b>: elegís "Plazo fijo" y Grana ya lo deja fuera del disponible. El switch queda visible para el caso contrario — tu FCI de Mercado Pago, que rinde y gastás en el súper.</li>
-      <li class="m">Una cuenta por <b>banco</b>, no por cada plazo fijo. Su saldo responde "cuánto tengo a plazo fijo en Nación"; cada colocación nueva es una transferencia que entra.</li>
-      <li class="r">Cambiar el switch después <b>recalcula el pasado</b>, como cualquier saldo derivado en Grana. La identidad de la card sigue cerrando en cada mes.</li>
+      <li class="r">Es <b>crear una cuenta, como siempre</b>. No hay alta de inversi&oacute;n ni concepto nuevo que aprender.</li>
+      <li class="m">Un campo nuevo: <b>tipo de cuenta</b>. Puramente descriptivo &mdash; no toca ning&uacute;n c&aacute;lculo. Sirve para agrupar y para el &iacute;cono.</li>
+      <li class="m">Y ese tipo <b>sugiere el switch</b>. El switch queda visible para el caso contrario: tu FCI de Mercado Pago, que rinde y gast&aacute;s en el s&uacute;per.</li>
+      <li class="m"><b>Ac&aacute; es donde clasific&aacute;s, una sola vez.</b> Despu&eacute;s no vas a tener que decirle a Grana nunca m&aacute;s que un movimiento &laquo;es una inversi&oacute;n&raquo;.</li>
+      <li class="m">Una cuenta por <b>banco</b>, no por cada colocaci&oacute;n.</li>
     </ul>
   </div>
 </section>
@@ -400,23 +414,24 @@ footer{border-top:1px solid var(--border);padding-top:20px;color:var(--soft);fon
 <section class="step">
   <div>
     <div class="screen">
-      <div class="sbar"><span class="t">Nuevo movimiento</span><span class="a">✕</span></div>
+      <div class="sbar"><span class="t">Nuevo movimiento</span><span class="a">&#10005;</span></div>
       <div class="sbody">
         <div class="chips"><span class="chip">Gasto</span><span class="chip">Ingreso</span><span class="chip on">Transferencia</span></div>
         <div class="amt num">$&nbsp;700.000</div>
-        <div class="field"><span class="k">Desde</span><div class="box"><span>Galicia · caja de ahorro</span><span style="color:var(--soft)">▾</span></div></div>
-        <div class="field"><span class="k">Hacia</span><div class="box"><span>Plazo fijo Nación</span><span style="color:var(--soft)">▾</span></div></div>
+        <div class="field"><span class="k">Desde</span><div class="box"><span>Galicia &middot; caja de ahorro</span><span style="color:var(--soft)">&#9662;</span></div></div>
+        <div class="field"><span class="k">Hacia</span><div class="box"><span>Plazo fijo Naci&oacute;n</span><span style="color:var(--soft)">&#9662;</span></div></div>
         <div class="btns"><button class="btn">Guardar movimiento</button></div>
       </div>
     </div>
   </div>
   <div class="notes">
-    <div class="stephead"><span class="stepno">07</span><h2>Ponés la plata a plazo fijo</h2></div>
+    <div class="stephead"><span class="stepno">07</span><h2>Pon&eacute;s la plata a plazo fijo</h2></div>
     <ul>
-      <li class="r">Una <b>transferencia común</b>. Nada nuevo, ni una línea.</li>
-      <li class="r">Ya está excluida de la analítica de gastos, así que <b>no ensucia "En qué se fue"</b>. Ese pedazo del ahorro Grana lo tenía resuelto sin saberlo.</li>
-      <li class="m">Lo único que cambia: como el destino no participa del disponible, este movimiento aparece en <b>"Pasaste a otra cuenta"</b> del mes. No en "Se fué" — porque no gastaste nada.</li>
-      <li class="r">Comprar dólares es igual: un <span class="mono">exchange</span>, que ya existe con su cotización.</li>
+      <li class="r">Una <b>transferencia com&uacute;n</b>. Nada nuevo, ni una l&iacute;nea.</li>
+      <li class="m"><b>&iquest;C&oacute;mo sabe Grana que no es una transferencia cualquiera?</b> No lo sabe por el movimiento &mdash; lo sabe por la <b>cuenta destino</b>. Este movimiento es id&eacute;ntico a mover plata de Galicia a Mercado Pago; lo &uacute;nico distinto es que el destino no participa del disponible.</li>
+      <li class="m">Por eso <b>no hay que clasificar nada al cargar</b>: clasificaste una vez, en el paso 6, cuando creaste la cuenta. El movimiento no sabe ni necesita saber.</li>
+      <li class="r">Ya est&aacute; excluida de la anal&iacute;tica de gastos: <b>no ensucia &laquo;En qu&eacute; se fue&raquo;</b>. Ese pedazo Grana lo ten&iacute;a resuelto sin saberlo.</li>
+      <li class="r">Comprar d&oacute;lares es igual: un <span class="mono">exchange</span>, que ya existe con su cotizaci&oacute;n.</li>
     </ul>
   </div>
 </section>
@@ -428,42 +443,50 @@ footer{border-top:1px solid var(--border);padding-top:20px;color:var(--soft);fon
       <div class="sbar"><span class="t">Cuentas</span><span class="a">+</span></div>
       <div class="sbody">
         <div class="grp">
-          <div class="gh"><span>Para gastar</span><span class="num">$1.800.000</span></div>
-          <div class="acc"><span class="n"><span class="sq" style="background:#E79A2B"></span>Galicia · caja de ahorro</span><span class="num">$1.240.000</span></div>
-          <div class="acc"><span class="n"><span class="sq" style="background:#15A8C4"></span>Mercado Pago</span><span class="num">$460.000</span></div>
+          <div class="gh"><span>Cuentas para gastar</span><span></span></div>
+          <div class="acc"><span class="n"><span class="sq" style="background:#E79A2B"></span>Galicia &middot; caja de ahorro</span><span class="num">$1.200.000</span></div>
+          <div class="acc"><span class="n"><span class="sq" style="background:#15A8C4"></span>Mercado Pago</span><span class="num">$500.000</span></div>
           <div class="acc"><span class="n"><span class="sq" style="background:#3A6B8A"></span>Billetera</span><span class="num">$100.000</span></div>
-          <div class="acc"><span class="n"><span class="sq" style="background:#E79A2B"></span>Galicia USD</span><span class="num">US$ 600</span></div>
-          <div class="rule"></div>
-          <div class="acc" style="color:var(--emerald-deep);font-weight:600"><span class="n" style="color:var(--emerald-deep)">De esto, guardado</span><span class="num">$200.000</span></div>
+          <div class="calc" style="margin-top:6px">
+            <div class="r"><span style="color:var(--muted)">Total en pesos</span><span class="num">$1.800.000</span></div>
+            <div class="r"><span style="color:var(--muted)">Guardado</span><span class="num pos">&minus;$200.000</span></div>
+            <div class="r tot"><span>Para gastar</span><span class="num">$1.600.000</span></div>
+          </div>
+          <div class="acc" style="margin-top:8px"><span class="n"><span class="sq" style="background:#E79A2B"></span>Galicia USD</span><span class="num">US$ 600</span></div>
         </div>
 
-        <div class="grp" style="margin-top:4px">
-          <div class="gh"><span>Guardado o invertido</span><span class="num">$3.300.000</span></div>
+        <div class="grp" style="margin-top:8px">
+          <div class="gh"><span>Fuera de disponible</span><span></span></div>
 
           <div class="kindrow"><span>Plazo fijo</span><span class="num">$2.500.000</span></div>
           <div class="sub">
             <div class="acc"><span class="n">Galicia</span><span class="num">$1.000.000</span></div>
             <div class="acc"><span class="n">Santander</span><span class="num">$800.000</span></div>
-            <div class="acc"><span class="n">Nación</span><span class="num">$700.000</span></div>
+            <div class="acc"><span class="n">Naci&oacute;n</span><span class="num">$700.000</span></div>
           </div>
 
-          <div class="kindrow" style="margin-top:5px"><span>FCI</span><span class="num">$800.000</span></div>
-          <div class="sub"><div class="acc"><span class="n">Galicia FCI</span><span class="num">$800.000</span></div></div>
+          <div class="kindrow" style="margin-top:5px"><span>FCI</span><span class="num">$500.000</span></div>
+          <div class="sub"><div class="acc"><span class="n">Galicia FCI</span><span class="num">$500.000</span></div></div>
 
-          <div class="kindrow" style="margin-top:5px"><span>Efectivo en dólares</span><span class="num">US$ 5.000</span></div>
+          <div class="calc" style="margin-top:6px">
+            <div class="r tot"><span>Total en pesos</span><span class="num">$3.000.000</span></div>
+          </div>
+
+          <div class="kindrow" style="margin-top:8px"><span>Efectivo en d&oacute;lares</span><span class="num">US$ 5.000</span></div>
           <div class="sub"><div class="acc"><span class="n">Caja de seguridad</span><span class="num">US$ 5.000</span></div></div>
         </div>
       </div>
     </div>
   </div>
   <div class="notes">
-    <div class="stephead"><span class="stepno">08</span><h2>Cuentas — dónde quedó todo</h2></div>
+    <div class="stephead"><span class="stepno">08</span><h2>Cuentas &mdash; d&oacute;nde qued&oacute; todo</h2></div>
     <ul>
-      <li class="r">Esta pantalla <b>ya es "lo que tengo"</b>. No hace falta inventar una vista de patrimonio: existe y funciona.</li>
-      <li class="m">Pasa a agrupar en <b>dos bloques</b>. Con eso sola responde "¿cuánto tengo entre plazo fijo, FCI y dólares?" — el subtotal del segundo bloque.</li>
-      <li class="m">Dentro del segundo bloque, <b>agrupa por tipo</b>: ves "Plazo fijo $2.500.000" y abajo en qué bancos está. Es un <span class="mono">group by</span>, no una entidad nueva.</li>
-      <li class="m">El guardado aparece como <b>línea del grupo</b>, no pegado a una cuenta. Y es deliberado: esa plata no está en una cuenta, está repartida en todas. Ponerla en una fila sería afirmar algo que no sabemos.</li>
-      <li class="r">Ya agrupa hoy (por tipo de cuenta), así que el patrón existe.</li>
+      <li class="m">La derivaci&oacute;n en tres l&iacute;neas: <b>total de tus cuentas &minus; guardado = para gastar</b>. Ese &uacute;ltimo n&uacute;mero es <b>exactamente el del dashboard</b>, as&iacute; que las dos pantallas se pueden cruzar sin hacer cuentas de cabeza.</li>
+      <li class="m">El guardado va como <b>l&iacute;nea del total</b>, nunca pegado a una cuenta. Es deliberado: esa plata no est&aacute; en una cuenta, est&aacute; repartida en todas. Ponerla en una fila ser&iacute;a afirmar algo que no sabemos.</li>
+      <li class="m">Cada moneda con <b>su propio subtotal</b>, nunca sumadas. Los US$ 600 y los US$ 5.000 viven aparte de los pesos.</li>
+      <li class="m">El segundo bloque se llama <b>&laquo;Fuera de disponible&raquo;</b> a prop&oacute;sito, y no &laquo;guardado o invertido&raquo;: eso volver&iacute;a a mezclar una <b>decisi&oacute;n</b> (guardar) con una <b>caracter&iacute;stica del veh&iacute;culo</b> (rendir). El nombre neutro describe el &uacute;nico hecho com&uacute;n a todas: no cuentan para gastar hoy.</li>
+      <li class="m">Adentro <b>agrupa por tipo</b>: &laquo;Plazo fijo $2.500.000&raquo; y abajo en qu&eacute; bancos. Es un <span class="mono">group by</span>, no una entidad nueva.</li>
+      <li class="r">Esta pantalla <b>ya es &laquo;lo que tengo&raquo;</b>, y ya agrupa hoy. No hace falta inventar una vista de patrimonio.</li>
     </ul>
   </div>
 </section>

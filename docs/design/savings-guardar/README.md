@@ -25,6 +25,9 @@ que el mock se lea como Grana, pero el HTML **no es código de producción**.
 | 7 | Transferencia al plazo fijo | Sin cambios |
 | 8 | Cuentas en dos bloques, agrupadas por tipo | Modificada |
 
+Las cuatro primeras son **el camino principal** (dos taps de punta a punta). Las otras cuatro son rutas
+secundarias que el usuario recorre solo cuando las necesita.
+
 ## Decisiones que la simulación fija
 
 - El hero muestra **un solo monto**: el disponible real.
@@ -34,6 +37,12 @@ que el mock se lea como Grana, pero el HTML **no es código de producción**.
   `Tenías + Entró − Se fué − Pasaste − Guardaste = Disponible`.
 - Una cuenta **por banco**, no por cada plazo fijo. El agrupado por tipo es un `group by`,
   no una entidad nueva.
+- El drawer es **contextual**: viniendo de un ingreso hereda moneda y monto, y no pregunta fecha.
+  Abierto suelto sí ofrece moneda, y solo si hay saldo en las dos.
+- Grana **no clasifica el movimiento**: la transferencia a un plazo fijo es idéntica a cualquier otra.
+  Lo que la distingue es la **cuenta destino**, clasificada una sola vez al crearla.
+- El segundo bloque se llama **"Fuera de disponible"**, no "guardado o invertido": ese nombre volvería
+  a mezclar una decisión (guardar) con una característica del vehículo (rendir).
 - El guardado se muestra como **línea del grupo** en Cuentas, nunca pegado a una cuenta.
 
 ## Abierto
