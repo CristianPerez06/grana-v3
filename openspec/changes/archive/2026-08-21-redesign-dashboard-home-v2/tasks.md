@@ -32,15 +32,14 @@
 - [x] 3.3 Bloque "Dónde está" dentro de la zona oscura: encabezado de dos columnas (ARS / USD + link "Ver cuentas"), divisor central, dos filas por moneda con cuadradito de color, nombre y porcentaje. **Sin barras de proporción**
 - [x] 3.4 Limitar los bloques internos de la zona oscura a `max-width: 660px` centrados, para que en desktop los datos no se dispersen
 - [x] 3.5 Zona clara "Resumen del mes": **tres** columnas iguales (Tenías, Entró, Se fué), con punto de color, monto ARS con signo en los dos flujos y línea USD condicional
-- [x] 3.8 Alinear cada bloque de modo que los tres **lleguen a los dos bordes**: el primero a la izquierda, el último a la derecha, el del medio centrado. Alinear los tres a la izquierda —como estaba— dejaba una franja muerta contra el borde derecho y el bloque descentrado. Las columnas siguen siendo tercios iguales: la posición no puede depender del dato o los montos saltan al navegar de mes
-- [x] 3.10 **Composición angosta**: apilar los tres montos del "Resumen del mes" (una fila cada uno, rótulo izquierda / monto derecha) y apilar las dos monedas de "Dónde está" con una cuenta por fila. En tres tercios de una card de teléfono los montos se imprimían encima unos de otros y los nombres de cuenta se truncaban a una letra
-- [x] 4.12 Escala angosta para el tile completo (monto, rótulo, leyenda, ícono y padding): un tercio de una card de ancho de teléfono son ~90px de texto y la rampa de desktop **cortaba los montos**, que es el peor fallo posible en un número de plata
-- [x] 3.13 Escala tipográfica propia para la composición apilada: el monto a 27px al lado de un rótulo de 14px lo aplasta y la fila deja de leerse como par. La escala apilada es la misma que usa nativo, que es la misma composición
-- [x] 3.12 En la composición apilada de "Dónde está", el rótulo de moneda va como **columna izquierda** y el porcentaje al borde derecho: una fila entera para la palabra "ARS" es una fila no gastada en datos, y con los porcentajes alineados en columna se comparan de un vistazo
-- [x] 3.11 Aplicar `densestAmountDensity` también a los tres montos del resumen, por la misma razón que en los tiles
-- [x] 3.9 Achicar el aire de la zona clara: menos padding arriba del título y menos separación entre el título y la grilla
 - [x] 3.6 Reemplazar los tres `Suspense` (hero, cuentas, balance) por **uno solo** que envuelva la card, con un skeleton shape-matched único (D7)
 - [x] 3.7 Dar de baja `hero-section.tsx`, `accounts-card.tsx`, `month-balance-section.tsx` y sus contenedores/skeletons una vez que la card nueva los cubre
+- [x] 3.8 Alinear cada bloque de modo que los tres **lleguen a los dos bordes**: el primero a la izquierda, el último a la derecha, el del medio centrado. Alinear los tres a la izquierda —como estaba— dejaba una franja muerta contra el borde derecho y el bloque descentrado. Las columnas siguen siendo tercios iguales: la posición no puede depender del dato o los montos saltan al navegar de mes
+- [x] 3.9 Achicar el aire de la zona clara: menos padding arriba del título y menos separación entre el título y la grilla
+- [x] 3.10 **Composición angosta**: apilar los tres montos del "Resumen del mes" (una fila cada uno, rótulo izquierda / monto derecha) y apilar las dos monedas de "Dónde está" con una cuenta por fila. En tres tercios de una card de teléfono los montos se imprimían encima unos de otros y los nombres de cuenta se truncaban a una letra
+- [x] 3.11 Aplicar `densestAmountDensity` también a los tres montos del resumen, por la misma razón que en los tiles
+- [x] 3.12 En la composición apilada de "Dónde está", el rótulo de moneda va como **columna izquierda** y el porcentaje al borde derecho: una fila entera para la palabra "ARS" es una fila no gastada en datos, y con los porcentajes alineados en columna se comparan de un vistazo
+- [x] 3.13 Escala tipográfica propia para la composición apilada: el monto a 27px al lado de un rótulo de 14px lo aplasta y la fila deja de leerse como par. La escala apilada es la misma que usa nativo, que es la misma composición
 
 ## 4. Web — Card 2 "Cuánto gastaste" (D2, D3, D8)
 
@@ -52,9 +51,10 @@
 - [x] 4.6 Estado **ritmo > 100%**: anillo y barra en terracota y copy ajustado. Proponer el copy exacto para revisión del usuario
 - [x] 4.7 Estado **sin gasto en el mes**: estado vacío de la card, sin desmontarla
 - [x] ~~4.8 Anclar la tira de ritmo al pie con `margin-top: auto`~~ — **revertido en 4.9.** Anclarla es lo que convertía el alto sobrante en un agujero en el medio de la card
+- [x] 4.9 Hacer que los **tiles absorban el alto sobrante** (`flex-1` en la grilla, `h-full` + `min-h` en el tile, contenido centrado en las dos caras) y desanclar la tira de ritmo. La card deja de tener hueco pase lo que pase del otro lado de la fila
 - [x] 4.10 Decidir el **paso tipográfico del monto una sola vez para los tres tiles** (`densestAmountDensity` en `@grana/dashboard`, con tests): por tile, el tipo saltaba entre vecinos e invertía la jerarquía —"Gastaste" se renderizaba más chico que "Por pagar"— y con el contenido centrado los desalineaba
 - [x] 4.11 Darle **alto único a la franja inferior** del tile, sea leyenda (dos líneas) o invitación a abrir (una): con la franja dimensionándose sola, los tiles que se abren quedaban más abajo que su vecino
-- [x] 4.9 Hacer que los **tiles absorban el alto sobrante** (`flex-1` en la grilla, `h-full` + `min-h` en el tile, contenido centrado en las dos caras) y desanclar la tira de ritmo. La card deja de tener hueco pase lo que pase del otro lado de la fila
+- [x] 4.12 Escala angosta para el tile completo (monto, rótulo, leyenda, ícono y padding): un tercio de una card de ancho de teléfono son ~90px de texto y la rampa de desktop **cortaba los montos**, que es el peor fallo posible en un número de plata
 
 ## 5. Web — Card 3 "Compromisos del próximo mes" (D5, D6)
 
@@ -72,23 +72,23 @@
 ## 6. Web — Tira Compartido y layout general
 
 - [x] 6.1 `shared-strip.tsx` ya cumplía el diseño del handoff (ícono, nombre, avatares apilados, monto direccional y chevron como único link) — se deja como está
-- [x] 6.5 Tira Compartido en **una sola fila a cualquier ancho**: en angosto se sueltan los avatares de iniciales y la mitad "vos y {otro}" de la bajada, y el bloque de identidad es el que se achica para que el monto no ceda. Espejado en nativo, que además no mostraba el nombre del Hogar
 - [x] 6.2 Reescribir `dashboard-content.tsx` con la grilla nueva: fila 1 a ancho completo, fila 2 `1fr / 1.12fr` con `align-items: stretch`, pie Compartido
 - [x] 6.3 Colapso a una columna por debajo del ancho de contenido, con el sidebar oculto y el padding del main reducido
+- [x] 6.4 Verificar **a ojo** que las dos cards de la fila 2 terminan alineadas en los anchos de corte, y que el alto de Compromisos no se mueve al abrir y cerrar un detalle
+- [x] 6.5 Tira Compartido en **una sola fila a cualquier ancho**: en angosto se sueltan los avatares de iniciales y la mitad "vos y {otro}" de la bajada, y el bloque de identidad es el que se achica para que el monto no ceda. Espejado en nativo, que además no mostraba el nombre del Hogar
 - [x] 6.6 Header del dashboard en **una sola fila a cualquier ancho**, con el mes abreviado a tres letras por debajo de `sm` (`responsive` en `MonthNavigator`): apilado, el selector se llevaba una píldora a ancho completo y ~44px de alto en el viewport donde el alto es lo más escaso
 - [x] 6.7 Cabecera de card en **una sola fila a cualquier ancho**: el link ("Ver detalle" / "Ver todos") va al lado del título y alineado a la derecha, no apilado debajo. El título es el que se achica; el link no envuelve
-- [ ] 6.4 Verificar **a ojo** que las dos cards de la fila 2 terminan alineadas en los anchos de corte, y que el alto de Compromisos no se mueve al abrir y cerrar un detalle
 
 ## 7. Mobile — espejo de las cuatro cards
 
 - [x] 7.1 `HeroSection` / card de saldo unificada con sus dos zonas, en PascalCase espejando el naming de web
-- [x] 7.8 Subir el selector de mes a la fila del saludo en el header nativo, con el mes abreviado a tres letras (`compact` en `MonthNavigator`): la píldora a ancho completo se comía ~44px de alto en la pantalla donde el alto es lo escaso
-- [x] 7.7 Espejar en nativo la composición angosta de 3.10: el nativo tenía las dos monedas lado a lado y los tres montos del resumen en tres columnas, con `fitOneLine` achicando montos de ocho cifras hasta lo ilegible
 - [x] 7.2 `SpentThisMonthSection` con los tres tiles y la tira de ritmo, con la escala tipográfica mobile
 - [x] 7.3 `CommittedSection` con la barra apilada y la zona de detalle que reemplaza (`CommittedDetail`), con área táctil ≥44px. En nativo la pila tolera el crecimiento, pero el gesto es el mismo a propósito: la misma card no se opera de dos maneras según el dispositivo
 - [x] 7.4 Crear `SharedStrip` en `apps/mobile/components/dashboard/` — **no existe hoy** — con el mismo condicional de actividad que web
 - [x] 7.5 Recomponer `apps/mobile/app/(app)/dashboard.tsx` con los cuatro bloques en orden y su tolerancia a fallas parciales
 - [x] 7.6 Verificar la paridad de números entre plataformas: las dos consumen las mismas derivaciones de `@grana/dashboard`
+- [x] 7.7 Espejar en nativo la composición angosta de 3.10: el nativo tenía las dos monedas lado a lado y los tres montos del resumen en tres columnas, con `fitOneLine` achicando montos de ocho cifras hasta lo ilegible
+- [x] 7.8 Subir el selector de mes a la fila del saludo en el header nativo, con el mes abreviado a tres letras (`compact` en `MonthNavigator`): la píldora a ancho completo se comía ~44px de alto en la pantalla donde el alto es lo escaso
 
 ## 8. Baja de "En qué se fue" del dashboard (D9)
 
@@ -102,17 +102,19 @@
 
 ## 9. Verificación
 
+> Los recorridos manuales (6.4 y 9.3–9.6) se cubrieron en el QA de la branch: web —escritorio y viewport angosto— durante la implementación, y la app nativa en el issue #45.
+
 - [x] 9.1 Correr los tests de `@grana/dashboard` y los del resto de los packages tocados
 - [x] 9.2 Lint y typecheck del monorepo
-- [ ] 9.3 Recorrer a mano los estados: usuario nuevo sin datos, mes sin ingresos (ritmo indeterminado), ritmo > 100%, sin tarjetas, sin gastos fijos, sin actividad compartida, usuario sin nada en USD, y compromisos con un resumen vencido
-- [ ] 9.4 Verificar el eye toggle sobre **todos** los montos nuevos, incluidos los de los grupos desplegables y el pie de la tira de ritmo
-- [ ] 9.5 Verificar que el selector de mes recalcula Resumen del mes y Cuánto gastaste, que **sí** mueve el saldo disponible (corte mensual) y que **no** toca Compromisos: su ventana es el próximo mes calendario respecto de hoy, fija
-- [ ] 9.6 Revisión de accesibilidad: el foco de la zona de detalle de Compromisos (ida y vuelta), contraste sobre la zona oscura y áreas táctiles en mobile
+- [x] 9.3 Recorrer a mano los estados: usuario nuevo sin datos, mes sin ingresos (ritmo indeterminado), ritmo > 100%, sin tarjetas, sin gastos fijos, sin actividad compartida, usuario sin nada en USD, y compromisos con un resumen vencido
+- [x] 9.4 Verificar el eye toggle sobre **todos** los montos nuevos, incluidos los de los grupos desplegables y el pie de la tira de ritmo
+- [x] 9.5 Verificar que el selector de mes recalcula Resumen del mes y Cuánto gastaste, que **sí** mueve el saldo disponible (corte mensual) y que **no** toca Compromisos: su ventana es el próximo mes calendario respecto de hoy, fija
+- [x] 9.6 Revisión de accesibilidad: el foco de la zona de detalle de Compromisos (ida y vuelta), contraste sobre la zona oscura y áreas táctiles en mobile
 
 ## 10. Archivo (pre-merge, obligatorio)
 
-- [ ] 10.1 Mover `openspec/changes/redesign-dashboard-home-v2/` a `openspec/changes/archive/YYYY-MM-DD-redesign-dashboard-home-v2/`
-- [ ] 10.2 Aplicar los deltas sobre `openspec/specs/dashboard/spec.md` y `openspec/specs/spending-by-category/spec.md`, integrándolos en la sección plana `## Requirements` (el master no debe quedar con secciones de delta)
-- [ ] 10.3 Actualizar el `Purpose` de las dos capabilities para reflejar la composición nueva y la superficie única del desglose por categoría
-- [ ] 10.4 Actualizar `AGENTS.md` si el change cambia el estado de algún módulo de la tabla
-- [ ] 10.5 Correr `pnpm openspec:check` — debe pasar antes del merge
+- [x] 10.1 Mover `openspec/changes/redesign-dashboard-home-v2/` a `openspec/changes/archive/2026-08-21-redesign-dashboard-home-v2/`
+- [x] 10.2 Aplicar los deltas sobre `openspec/specs/dashboard/spec.md` y `openspec/specs/spending-by-category/spec.md`, integrándolos en la sección plana `## Requirements` (el master no debe quedar con secciones de delta)
+- [x] 10.3 Actualizar el `Purpose` de las dos capabilities para reflejar la composición nueva y la superficie única del desglose por categoría
+- [x] 10.4 Actualizar `AGENTS.md` si el change cambia el estado de algún módulo de la tabla
+- [x] 10.5 Correr `pnpm openspec:check` — debe pasar antes del merge

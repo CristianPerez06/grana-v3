@@ -2,8 +2,10 @@
 
 ## Purpose
 
-"En qué se fue": el desglose de los gastos del mes agrupados por categoría, pesado por **neto** (gastos − reintegros recibidos) y **por moneda**. Es la carta de presentación del módulo Movimientos —un donut + ranking, con navegación por mes y drill-down al listado filtrado— y se asoma en el dashboard de ambas plataformas como la sección "En qué se fue" (dona + leyenda con montos y toggle ARS/USD). Responde una de las tres preguntas centrales del usuario, complementando "cuánto tengo" y "qué viene".
+"En qué se fue": el desglose de los gastos del mes agrupados por categoría, pesado por **neto** (gastos − reintegros recibidos) y **por moneda**. Es la carta de presentación del módulo Movimientos —un donut + ranking, con navegación por mes y drill-down al listado filtrado— y esa es su **superficie única**: el rediseño del dashboard (`redesign-dashboard-home-v2`) retiró de ahí la dona y su teaser, para no sostener la misma lectura en dos lugares. El dashboard sigue consumiendo `getMonthCategoryBreakdown`, que es la fuente del devengado con que arma "Gastaste", pero no vuelve a presentar el desglose. Responde una de las tres preguntas centrales del usuario, complementando "cuánto tengo" y "qué viene".
+
 ## Requirements
+
 ### Requirement: El módulo Movimientos abre con un desglose de gastos por categoría del mes
 
 El módulo de movimientos (`/transactions`) SHALL presentar, como carta de presentación arriba del listado, un **desglose de los gastos del mes agrupados por categoría**, que responde "¿en qué se fue?". El listado de movimientos SHALL seguir accesible (el desglose lo antecede, no lo reemplaza). La navegación por mes de la página SHALL estar unificada en un único selector (el del desglose); el bar de filtros del listado no duplica el selector de mes.
@@ -18,6 +20,7 @@ El módulo de movimientos (`/transactions`) SHALL presentar, como carta de prese
 
 - **WHEN** el usuario está en `/transactions`
 - **THEN** hay un solo control de mes (en el desglose), que también determina el mes del listado
+
 
 ---
 
@@ -85,6 +88,9 @@ El neto de una categoría PUEDE quedar **negativo** (un **crédito**): cuando lo
 - **WHEN** hoy es el 1 de agosto y la categoría Hogar tiene una cuota de tarjeta de $50.000 fechada el 20 de agosto
 - **THEN** esa cuota SÍ cuenta en el desglose de agosto desde hoy (ya está incurrida: la compra ocurrió antes)
 
+
+---
+
 ### Requirement: El desglose se presenta como donut más ranking
 
 El desglose SHALL mostrarse como un **donut** que representa el peso relativo de cada categoría, acompañado de un **ranking** ordenado de mayor a menor (categoría, monto y porcentaje). Las categorías de menor peso SHALL poder agruparse en una entrada **"Otros"** para mantener el donut legible.
@@ -99,6 +105,7 @@ El desglose SHALL mostrarse como un **donut** que representa el peso relativo de
 
 - **WHEN** hay más categorías de las que el donut muestra legiblemente
 - **THEN** las de menor peso se agrupan en una entrada "Otros"
+
 
 ---
 
@@ -182,6 +189,9 @@ Cuando el desglose está en modo subcategoría (una categoría activa con sus su
 - **THEN** el listado usa la lente CAJA general que respeta todos los filtros combinados (no la lista devengada)
 - **AND** el sistema no promete que ese listado sume el peso del donut
 
+
+---
+
 ### Requirement: El desglose navega por mes
 
 El desglose SHALL permitir navegar entre meses, mostrando por defecto el mes actual (según la zona horaria financiera).
@@ -191,32 +201,8 @@ El desglose SHALL permitir navegar entre meses, mostrando por defecto el mes act
 - **WHEN** el usuario navega al mes anterior en el desglose
 - **THEN** el donut y el ranking se recalculan con los gastos de ese mes
 
+
 ---
-
-### Requirement: El dashboard muestra un teaser de las categorías que más pesan
-
-El dashboard SHALL mostrar en **ambas plataformas** (web y nativo) la sección "En qué se fue": una dona con los gastos del mes por categoría (`topN: 5` + bucket "Otros"), leyenda con **montos** y porcentajes, y toggle ARS/USD. Su contrato detallado vive en la spec de `dashboard` (requirement "La sección 'En qué se fue' muestra el desglose de gastos por categoría con dona y toggle de moneda"). La sección muestra importes y por lo tanto SÍ participa del eye-mask del dashboard; sus filas y el link "Ver desglose" llevan al desglose completo en Movimientos. El desglose **completo** (donut + ranking + drill) sigue viviendo en Movimientos; el dashboard nunca lo reemplaza.
-
-El teaser de proporciones de 3 categorías (el formato anterior del dashboard) dejó de existir en ambas plataformas (`redesign-dashboard-home` en web, `dashboard-mobile-parity` en nativo).
-
-El peso y el orden de las categorías SHALL derivarse del mismo cálculo neto-por-moneda del desglose completo (vía `buildCategorySlices` sobre `getMonthCategoryBreakdown`), de modo que dashboard y Movimientos muestren los mismos porcentajes ante los mismos datos.
-
-#### Scenario: La sección muestra montos y linkea al desglose
-
-- **WHEN** el usuario ve "En qué se fue" en el dashboard (web o nativo)
-- **THEN** ve la dona y la leyenda con monto y porcentaje por categoría
-- **AND** al tocar una fila o el link "Ver desglose" llega al desglose completo en Movimientos
-- **AND** el eye-mask del dashboard enmascara los montos (no los porcentajes)
-
-#### Scenario: Mismos porcentajes que el desglose completo
-
-- **WHEN** el dashboard y el desglose de Movimientos se calculan sobre los mismos datos del mes
-- **THEN** ambos muestran los mismos porcentajes por categoría (mismo cálculo neto por moneda)
-
-#### Scenario: El teaser de proporciones no existe en ninguna plataforma
-
-- **WHEN** se busca `CategoryTeaser` en `apps/web` y `apps/mobile`
-- **THEN** el componente no existe en ninguna de las dos apps
 
 ### Requirement: El desglose cuenta la parte del miembro en los movimientos compartidos
 
@@ -258,4 +244,3 @@ El desglose de **ingresos** NO SHALL verse afectado: el ingreso no se comparte (
 
 - **WHEN** tengo un gasto propio no compartido de $30.000
 - **THEN** el desglose lo cuenta completo ($30.000)
-
