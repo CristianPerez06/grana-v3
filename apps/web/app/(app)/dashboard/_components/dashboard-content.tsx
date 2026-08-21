@@ -1,42 +1,48 @@
 import { Suspense } from 'react'
-import { getTodayAR } from '@/lib/date'
+import { formatDateISO, getTodayAR } from '@/lib/date'
+import { BalanceCardContainer } from './balance-card-container'
+import { BalanceCardSkeleton } from './balance-card-skeleton'
 import { CommittedSectionContainer } from './committed-section-container'
 import { CommittedSkeleton } from './committed-skeleton'
 import { DashboardErrorBoundary } from './dashboard-error-boundary'
-import { HeroSectionContainer } from './hero-section-container'
-import { HeroSkeleton } from './hero-skeleton'
-import { MonthBalanceSectionContainer } from './month-balance-section-container'
-import { MonthBalanceSkeleton } from './month-balance-skeleton'
 import { SharedStripContainer } from './shared-strip-container'
-import { SpendingSectionContainer } from './spending-section-container'
-import { SpendingSkeleton } from './spending-skeleton'
-import { SpentThisMonthSection } from './spent-this-month-section'
+import { SpentCardContainer } from './spent-card-container'
 
-// Dashboard composition (design handoff order): top row ("Para gastar · hoy" +
-// "Dónde está") → row ("Balance del mes" + "Comprometido") → "Compartido" (only
-// with activity) → "Gastaste este mes" (only with card spend) → "¿En qué gasté?".
-// Each section streams behind its own Suspense with a shape-matched skeleton.
+// Dashboard composition (design handoff `docs/design/dashboard-home/`), four
+// blocks in fixed order: "Saldo disponible total" (full width) → "Cuánto
+// gastaste" + "Compromisos del próximo mes" → "Compartido" (only with activity).
+// Each block streams behind its own Suspense with a shape-matched skeleton.
+//
+// "En qué se fue" is deliberately NOT here: the same per-category breakdown is
+// the front page of the Movimientos module, and mirroring it made the dashboard
+// longer without answering anything new.
 export const DashboardContent = async () => {
   const today = getTodayAR()
   const currentYear = today.getFullYear()
   const currentMonth = today.getMonth() + 1
+  const todayISO = formatDateISO(today)
 
   return (
     <DashboardErrorBoundary>
       <div className="flex flex-col gap-4">
-        <Suspense fallback={<HeroSkeleton />}>
-          <HeroSectionContainer />
+        {/* Fila 1 — "Saldo disponible total" a ancho completo: el total, la
+            fila USD y "Dónde está" plegado adentro del hero oscuro. */}
+        <Suspense fallback={<BalanceCardSkeleton />}>
+          <BalanceCardContainer
+            currentYear={currentYear}
+            currentMonth={currentMonth}
+            todayISO={todayISO}
+          />
         </Suspense>
 
-        {/* Balance del mes (CAJA, lo que pasó) + Comprometido (COMPROMISO),
-            dos columnas en desktop como la fila del Hero; apiladas en mobile. */}
-        <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[1.15fr_1fr]">
-          <Suspense fallback={<MonthBalanceSkeleton />}>
-            <MonthBalanceSectionContainer
-              currentYear={currentYear}
-              currentMonth={currentMonth}
-            />
-          </Suspense>
+        {/* Fila 2 — "Cuánto gastaste" + "Compromisos del próximo mes". La
+            PRIMERA es la ancha: sus tres tiles se reparten un tercio del ancho
+            cada uno y tienen que sostener montos de hasta diez dígitos con
+            centavos, mientras que Compromisos apila filas de ancho completo. Las
+            dos terminan a la misma altura (`items-stretch` + la tira de ritmo
+            anclada al pie). */}
+        <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[1.12fr_1fr]">
+          <SpentCardContainer />
 
           <Suspense fallback={<CommittedSkeleton />}>
             <CommittedSectionContainer />
@@ -46,14 +52,6 @@ export const DashboardContent = async () => {
         {/* Compartido — tira condicional con el neto del Hogar (solo con actividad). */}
         <Suspense fallback={null}>
           <SharedStripContainer />
-        </Suspense>
-
-        {/* Gastaste este mes — barra caja vs tarjeta (solo si hubo consumo de
-            tarjeta en el mes). Cliente: lee el cache de las otras secciones. */}
-        <SpentThisMonthSection />
-
-        <Suspense fallback={<SpendingSkeleton />}>
-          <SpendingSectionContainer today={today} />
         </Suspense>
       </div>
     </DashboardErrorBoundary>

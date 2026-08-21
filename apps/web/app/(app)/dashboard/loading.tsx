@@ -1,15 +1,16 @@
-import { HeroSkeleton } from './_components/hero-skeleton'
-import { MonthBalanceSkeleton } from './_components/month-balance-skeleton'
-import { SpendingSkeleton } from './_components/spending-skeleton'
+import { BalanceCardSkeleton } from './_components/balance-card-skeleton'
+import { CommittedSkeleton } from './_components/committed-skeleton'
 
-// Route-level loading shell: mirrors the redesigned dashboard composition
-// (top row → Balance del mes → En qué se fue) with the same section skeletons
+// Route-level loading shell: mirrors the redesigned composition (balance card →
+// row of "Cuánto gastaste" + "Compromisos") with the same section skeletons
 // DashboardContent uses as Suspense fallbacks.
 const DashboardLoading = () => (
   <div className="flex flex-col gap-4">
-    <HeroSkeleton />
-    <MonthBalanceSkeleton />
-    <SpendingSkeleton />
+    <BalanceCardSkeleton />
+    <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[1.12fr_1fr]">
+      <CommittedSkeleton />
+      <CommittedSkeleton />
+    </div>
   </div>
 )
 

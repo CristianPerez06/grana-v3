@@ -11,6 +11,12 @@ type Props = {
   className?: string
   showCentsOverride?: boolean
   maskChar?: string
+  /**
+   * Rendered before the number when not masked (e.g. "+" / "−"). Hidden while
+   * masked, like the amount it qualifies: a lone sign next to dots would leak
+   * the direction the mask is there to hide.
+   */
+  signPrefix?: string
 }
 
 export const MaskedAmount = ({
@@ -19,6 +25,7 @@ export const MaskedAmount = ({
   className,
   showCentsOverride,
   maskChar = '••••••',
+  signPrefix,
 }: Props) => {
   const { masked } = useEyeMask()
   const showCents = useShowCents()
@@ -33,5 +40,10 @@ export const MaskedAmount = ({
       ? formatARS(amount, effectiveShowCents)
       : formatUSD(amount, effectiveShowCents)
 
-  return <span className={cn('tabular-nums', className)}>{formatted}</span>
+  return (
+    <span className={cn('tabular-nums', className)}>
+      {signPrefix}
+      {formatted}
+    </span>
+  )
 }

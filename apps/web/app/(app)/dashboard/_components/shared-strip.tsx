@@ -36,8 +36,13 @@ const Avatar = ({ initials, className }: { initials: string; className?: string 
 // household on the dashboard. Single household today, so the net is one
 // direction (te deben / debés), per currency. Read-only: the whole strip links
 // to /shared. Rendered only when the container resolves a non-settled net.
-// Mobile-first: identity + amount stack on narrow viewports (no horizontal
-// squeeze), and sit on one row from `sm` up.
+// ONE ROW at every width. On narrow it earns that room by dropping what is not
+// load-bearing: the stacked member avatars and the "vos y {other}" half of the
+// caption. The household's own name already says whose money this is, and the
+// two initials say it a third time — three ways to name the same two people, in
+// the width where there is least room for any of them. What survives the squeeze
+// is the identity on the left and the amount on the right, and the left block is
+// the one that truncates, so the number never does.
 export const SharedStrip = async ({
   householdName,
   otherName,
@@ -56,10 +61,10 @@ export const SharedStrip = async ({
     <Card asChild>
       <Link
         href="/shared"
-        className="flex flex-col gap-2.5 p-4 transition-colors hover:bg-border-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-row sm:items-center sm:gap-4"
+        className="flex flex-row items-center gap-3 p-4 transition-colors hover:bg-border-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:gap-4"
       >
-        {/* Identity — icon + household + members. Grows to push the amount right on sm+. */}
-        <div className="flex items-center gap-3 sm:min-w-0 sm:flex-1">
+        {/* Identity — icon + household (+ members from `sm`). Shrinks first. */}
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <span
             aria-hidden
             className="flex size-[38px] shrink-0 items-center justify-center rounded-xl bg-emerald-soft text-emerald-deep"
@@ -69,20 +74,24 @@ export const SharedStrip = async ({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="text-[14px] font-bold text-text">{t('title')}</span>
-              <span className="flex -space-x-1.5">
+              <span className="hidden -space-x-1.5 sm:flex">
                 <Avatar initials={selfInitials} />
                 <Avatar initials={otherInitials} />
               </span>
             </div>
             <p className="truncate text-[12px] font-medium text-text-soft">
-              {t('caption', { household: householdName, other: otherName })}
+              {/* Narrow: the household's name on its own. Wide: it plus who is in it. */}
+              <span className="sm:hidden">{householdName}</span>
+              <span className="hidden sm:inline">
+                {t('caption', { household: householdName, other: otherName })}
+              </span>
             </p>
           </div>
         </div>
 
-        {/* Amount — its own row on mobile (with a divider), right-aligned on sm+. */}
-        <div className="flex items-center justify-between gap-2 border-t border-border-soft pt-2.5 sm:shrink-0 sm:justify-end sm:border-0 sm:pt-0 sm:text-right">
-          <div className="min-w-0">
+        {/* Amount — right-aligned, and `shrink-0` so it is never what gives way. */}
+        <div className="flex shrink-0 items-center justify-end gap-2 text-right">
+          <div>
             <p
               className={cn(
                 'text-[15px] font-extrabold tracking-tight sm:text-[17px]',

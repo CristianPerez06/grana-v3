@@ -16,6 +16,7 @@ export const colors = {
   emeraldDeep: '#059669',
   error: '#C54B3C',
   slate: '#3A6B8A',
+  plum: '#8A6E98',
   terracotta: '#B56A5A',
   warningDeep: '#B45309',
   text: '#0B1A2B',

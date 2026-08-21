@@ -13,6 +13,12 @@
   --emerald-soft: rgba(16, 185, 129, 0.12);
   --emerald-bg: #ECFDF5;
 
+  /* Brand — mint: the emerald tuned for DARK surfaces. `--emerald` does not
+     clear AA against `--navy`, so links and accents sitting on the dark hero
+     use this lighter step instead of the light-surface accent. */
+  --mint: #4FD6A4;
+  --mint-hover: #7FE3BF;
+
   /* Hero gradient — navy surface with a soft emerald glow.
      Authored as three parts (from / to / origin) so a future mobile mirror
      codegen'd from this file can expose them as TS constants and compose
@@ -173,6 +179,9 @@
   --color-emerald-deep: var(--emerald-deep);
   --color-emerald-soft: var(--emerald-soft);
   --color-emerald-bg: var(--emerald-bg);
+
+  --color-mint: var(--mint);
+  --color-mint-hover: var(--mint-hover);
 
   --color-plum: var(--plum);
   --color-plum-deep: var(--plum-deep);

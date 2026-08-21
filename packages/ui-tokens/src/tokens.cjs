@@ -25,6 +25,12 @@ module.exports = {
       "DEFAULT": "#ECFDF5",
       "dark": "rgba(16, 185, 129, 0.14)"
     },
+    "mint": {
+      "DEFAULT": "#4FD6A4"
+    },
+    "mint-hover": {
+      "DEFAULT": "#7FE3BF"
+    },
     "hero-navy-from": {
       "DEFAULT": "rgba(16, 185, 129, 0.16)"
     },
