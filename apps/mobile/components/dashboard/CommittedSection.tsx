@@ -187,7 +187,13 @@ export const CommittedSection = () => {
           <Text className="text-[15px] font-extrabold text-text">
             {t('dashboard.committed.title_next_month')}
           </Text>
-          <Text className="text-[11.5px] font-semibold text-text-soft">{monthLabel('es-AR')}</Text>
+          {/* RN gives a `Text` a tight line box, so the month sat flush against
+              the title above it and the summary box below. Web gets the same
+              breathing room for free from the header's leading and `CardContent`
+              padding. */}
+          <Text className="mt-1 text-[11.5px] font-semibold text-text-soft">
+            {monthLabel('es-AR')}
+          </Text>
         </View>
         <Pressable onPress={() => router.push('/cards')} accessibilityRole="button" hitSlop={12}>
           <Text className="text-[12.5px] font-bold text-positive">
@@ -201,9 +207,11 @@ export const CommittedSection = () => {
           {t('dashboard.committed.empty')}
         </Text>
       ) : (
-        <>
+        // `mt-3` between header and body, the same step `SpentCard` and
+        // `BalanceCard` use — this card was the one missing it.
+        <View className="mt-3">
           <CommittedBody summary={summary} groups={groups} />
-        </>
+        </View>
       )}
     </View>
   )
