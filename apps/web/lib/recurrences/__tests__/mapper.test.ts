@@ -239,6 +239,31 @@ describe('mapInstanceToConfirmPlan', () => {
     expect(plan.input).not.toHaveProperty('shared')
   })
 
+  // Change edit-recurrence-instance-account: the confirmation runs on the
+  // EFFECTIVE account (the rule's, or the one the user picked on the pending
+  // instance), and its family decides which movement gets created.
+  it('registers the expense on the account the snapshot carries, not the rule default', () => {
+    const chosen = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+    const plan = mapInstanceToConfirmPlan(buildInstance({ account_id: chosen }), {
+      movementType: 'expense',
+      accountType: 'bank',
+    })
+    if (plan.kind !== 'expense') throw new Error('expected expense')
+    expect(plan.input.account_id).toBe(chosen)
+  })
+
+  it('turns the same expense instance into a card purchase when the chosen account is credit', () => {
+    const card = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+    const plan = mapInstanceToConfirmPlan(buildInstance({ account_id: card }), {
+      movementType: 'expense',
+      accountType: 'credit',
+    })
+    expect(plan.kind).toBe('card_purchase')
+    if (plan.kind !== 'card_purchase') throw new Error('expected card_purchase')
+    expect(plan.input.account_id).toBe(card)
+    expect(plan.input.date).toBe('2026-06-01')
+  })
+
   it('omits subcategory_id and description when null', () => {
     const plan = mapInstanceToConfirmPlan(
       buildInstance({ subcategory_id: null, description: null }),

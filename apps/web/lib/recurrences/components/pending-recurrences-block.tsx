@@ -15,22 +15,34 @@ import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useShowCents } from '@/lib/preferences-context'
 import { parseMoneyInput } from '@grana/validation'
 import { Button } from '@/components/ui/button'
+import { AccountAvatar } from '@/components/ui/account-avatar'
+import { Popover } from '@/components/ui/popover'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { DatePicker } from '@/components/ui/date-picker'
 import { checkNegativeBalance } from '@/lib/transactions/negative-balance-warning'
 import { NegativeBalanceNotice } from '@/lib/transactions/components/negative-balance-notice'
 import { invalidateAfterRecurrenceInstanceMutation } from '@/lib/transactions/invalidation'
+import type { MovementFormAccount } from '@grana/movement-form'
 import type { PendingRecurrenceInstance } from '@/lib/recurrences/types'
 
 type Props = {
   pending: PendingRecurrenceInstance[]
+  /**
+   * Accounts the user can confirm an instance with (active ones only). Omitted
+   * while the read is in flight — the account field then stays read-only.
+   */
+  accounts?: MovementFormAccount[]
   /** Current available balance per account+currency, for the soft warning. */
   availableByAccount?: Record<string, Record<'ARS' | 'USD', number>>
 }
 
 
-export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) => {
+export const PendingRecurrencesBlock = ({
+  pending,
+  accounts,
+  availableByAccount,
+}: Props) => {
   const router = useRouter()
   const queryClient = useQueryClient()
   const showCents = useShowCents()
@@ -67,18 +79,56 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
   const [editAmount, setEditAmount] = useState('')
   const [editDate, setEditDate] = useState('')
   const [editDescription, setEditDescription] = useState('')
+  const [editAccountId, setEditAccountId] = useState('')
+  const [accountPickerOpen, setAccountPickerOpen] = useState(false)
 
   if (pending.length === 0 && !successMessage) return null
+
+  // Accounts this instance can be confirmed with. The currency is fixed by the
+  // instance (bimoneda: never mixed), and the movement type rules out families:
+  // income and the source of a transfer can't be a credit card, and a transfer
+  // can't leave from its own destination. Mirrors what the server revalidates.
+  const eligibleAccountsFor = (
+    instance: PendingRecurrenceInstance,
+  ): MovementFormAccount[] => {
+    if (!accounts) return []
+    const currency = instance.currency_code as 'ARS' | 'USD'
+    const movementType = instance.recurrence.movement_type
+    return accounts.filter((account) => {
+      if (!account.activeCurrencies.includes(currency)) return false
+      if (movementType !== 'expense' && account.type === 'credit') return false
+      if (
+        movementType === 'transfer' &&
+        account.id === instance.transfer_destination_account_id
+      ) {
+        return false
+      }
+      return true
+    })
+  }
+
+  // The rule points at an account that is no longer selectable (archived). The
+  // embed still resolves its name, so the row reads fine — but confirming as-is
+  // fails, and the way out is picking another account, not editing the rule.
+  const isAccountUnavailable = (instance: PendingRecurrenceInstance) =>
+    Boolean(accounts && instance.account_id) &&
+    !accounts?.some((account) => account.id === instance.account_id)
 
   const startEditing = (instance: PendingRecurrenceInstance) => {
     setEditingId(instance.id)
     setEditAmount(String(instance.amount))
     setEditDate(instance.scheduled_date)
     setEditDescription(instance.description ?? '')
+    // An unavailable account starts empty so the user has to pick a valid one.
+    setEditAccountId(isAccountUnavailable(instance) ? '' : instance.account_id ?? '')
+    setAccountPickerOpen(false)
     setErrorByInstance((prev) => ({ ...prev, [instance.id]: '' }))
   }
 
-  const cancelEditing = () => setEditingId(null)
+  const cancelEditing = () => {
+    setEditingId(null)
+    setAccountPickerOpen(false)
+  }
 
   const handleConfirm = (instance: PendingRecurrenceInstance) => {
     setActiveId(instance.id)
@@ -109,6 +159,18 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
       const originalDescription = instance.description ?? ''
       if (trimmedDescription !== originalDescription) {
         overrides.description = trimmedDescription || null
+      }
+      // Account is an override of THIS instance only — the rule keeps its own.
+      if (!editAccountId) {
+        setErrorByInstance((prev) => ({
+          ...prev,
+          [instance.id]: t('pending.account_required'),
+        }))
+        setActiveId(null)
+        return
+      }
+      if (editAccountId !== instance.account_id) {
+        overrides.account_id = editAccountId
       }
     }
 
@@ -153,21 +215,28 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
   // Soft, non-blocking warning: confirming this instance would leave the source
   // account's available balance negative. Off-ledger credit consumptions and
   // incomes never warn. Compared per account + currency. Uses the edited amount
-  // when the instance is being edited.
+  // and the edited ACCOUNT when the instance is being edited — switching to a
+  // credit card drops the warning, switching to a thinner account can raise it.
   const computeWarning = (instance: PendingRecurrenceInstance) => {
     if (!availableByAccount) return null
     const movementType = instance.recurrence.movement_type
     if (movementType !== 'expense' && movementType !== 'transfer') return null
-    if (movementType === 'expense' && instance.account?.type === 'credit') return null
-    if (!instance.account_id) return null
+
+    const isEditing = editingId === instance.id
+    const accountId = isEditing ? editAccountId : instance.account_id
+    if (!accountId) return null
+    const accountType = isEditing
+      ? accounts?.find((a) => a.id === accountId)?.type
+      : instance.account?.type
+    if (movementType === 'expense' && accountType === 'credit') return null
 
     const currency = instance.currency_code as 'ARS' | 'USD'
     let amount = Number(instance.amount)
-    if (editingId === instance.id) {
+    if (isEditing) {
       const parsed = parseMoneyInput(editAmount)
       if (parsed !== null && parsed > 0) amount = parsed
     }
-    const available = availableByAccount[instance.account_id]?.[currency] ?? 0
+    const available = availableByAccount[accountId]?.[currency] ?? 0
     const check = checkNegativeBalance(available, amount)
     return check.negative ? { projected: check.projected, currency } : null
   }
@@ -252,6 +321,16 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
           const busy = isPending && activeId === instance.id
           const isEditing = editingId === instance.id
           const warning = computeWarning(instance)
+          const eligibleAccounts = isEditing ? eligibleAccountsFor(instance) : []
+          const editAccount = eligibleAccounts.find((a) => a.id === editAccountId) ?? null
+          // While the accounts read is in flight the eligible list is empty, but
+          // the instance's own account is still the selected one — show its name
+          // from the embed instead of falling back to the placeholder.
+          const editAccountFallbackName =
+            !editAccount && editAccountId && editAccountId === instance.account_id
+              ? instance.account?.name ?? null
+              : null
+          const accountUnavailable = isAccountUnavailable(instance)
 
           const urgency = urgencyOf(instance.scheduled_date)
           const amtClass =
@@ -376,6 +455,99 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
                   </div>
 
                   <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">
+                      {t('labels.account')}
+                    </span>
+                    <Popover
+                      open={accountPickerOpen}
+                      onOpenChange={setAccountPickerOpen}
+                      trigger={
+                        <button
+                          type="button"
+                          aria-label={t('labels.account')}
+                          className="flex w-full items-center gap-2.5 rounded-md border border-input bg-background px-2 py-1.5 text-left text-sm transition-colors hover:bg-page focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {editAccount ? (
+                            <>
+                              {editAccount.avatar && (
+                                <AccountAvatar {...editAccount.avatar} size="sm" />
+                              )}
+                              <span className="min-w-0 flex-1 truncate font-semibold text-text">
+                                {editAccount.name}
+                              </span>
+                              {editAccount.type === 'credit' && (
+                                <span
+                                  className="shrink-0 rounded px-1 py-0.5 text-[10px] font-bold uppercase tracking-wide text-terracotta"
+                                  style={{ backgroundColor: 'var(--terracotta-soft)' }}
+                                >
+                                  {tTx('drawer.credit_badge')}
+                                </span>
+                              )}
+                            </>
+                          ) : editAccountFallbackName ? (
+                            <span className="min-w-0 flex-1 truncate font-semibold text-text">
+                              {editAccountFallbackName}
+                            </span>
+                          ) : (
+                            <span className="min-w-0 flex-1 truncate text-text-muted">
+                              {t('pending.account_placeholder')}
+                            </span>
+                          )}
+                          <ChevronDown className="size-4 shrink-0 text-text-soft" aria-hidden />
+                        </button>
+                      }
+                    >
+                      {eligibleAccounts.length === 0 ? (
+                        <p className="px-2.5 py-2 text-sm text-text-muted">
+                          {t('pending.account_none_eligible')}
+                        </p>
+                      ) : (
+                        <div className="flex flex-col gap-0.5">
+                          {eligibleAccounts.map((account) => (
+                            <button
+                              key={account.id}
+                              type="button"
+                              onClick={() => {
+                                setEditAccountId(account.id)
+                                setAccountPickerOpen(false)
+                              }}
+                              className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-page"
+                            >
+                              {account.avatar && (
+                                <AccountAvatar {...account.avatar} size="sm" />
+                              )}
+                              <span className="flex min-w-0 flex-1 flex-col">
+                                <span className="flex items-center gap-1.5 truncate text-sm font-semibold text-text">
+                                  {account.name}
+                                  {account.type === 'credit' && (
+                                    <span
+                                      className="shrink-0 rounded px-1 py-0.5 text-[10px] font-bold uppercase tracking-wide text-terracotta"
+                                      style={{ backgroundColor: 'var(--terracotta-soft)' }}
+                                    >
+                                      {tTx('drawer.credit_badge')}
+                                    </span>
+                                  )}
+                                </span>
+                                {account.institutionName && (
+                                  <span className="truncate text-xs text-text-muted">
+                                    {account.institutionName}
+                                  </span>
+                                )}
+                              </span>
+                              {editAccountId === account.id && (
+                                <Check className="size-4 shrink-0 text-emerald" aria-hidden />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </Popover>
+                    <p className="text-[11px] text-muted-foreground">
+                      {t('pending.account_instance_only')}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
                     <label
                       htmlFor={`date-${instance.id}`}
                       className="text-xs text-muted-foreground"
@@ -407,6 +579,14 @@ export const PendingRecurrencesBlock = ({ pending, availableByAccount }: Props) 
                     />
                   </div>
                 </div>
+              )}
+
+              {/* The rule's account is archived: confirming as-is fails, and the
+                  way out is the account field, not editing the rule. */}
+              {accountUnavailable && !isEditing && (
+                <p className="text-xs font-semibold text-destructive">
+                  {t('pending.account_unavailable')}
+                </p>
               )}
 
               {error && (

@@ -6,6 +6,7 @@ import { PendingRecurrencesBlock } from '@/lib/recurrences/components/pending-re
 import { createClient } from '@/lib/supabase/client'
 import { getPendingRecurrenceInstances } from '@/lib/recurrences/queries'
 import { getAccounts } from '@/lib/accounts/queries'
+import { toFormAccounts } from '@/lib/accounts/form-accounts'
 import { QUERY_KEYS } from '@/lib/transactions/query-keys'
 
 /**
@@ -43,11 +44,19 @@ export function PendingRecurrencesBlockContainer() {
     return map
   }, [accountsQ.data])
 
+  // Same read, second consumer: the account picker the user gets when editing an
+  // instance before confirming it ("this month I paid it with another card").
+  const accounts = useMemo(
+    () => (accountsQ.data ? toFormAccounts(accountsQ.data) : undefined),
+    [accountsQ.data],
+  )
+
   if (pendingQ.isPending || pendingQ.error || !pendingQ.data) return null
 
   return (
     <PendingRecurrencesBlock
       pending={pendingQ.data}
+      accounts={accounts}
       availableByAccount={availableByAccount}
     />
   )
