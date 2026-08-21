@@ -30,15 +30,48 @@ export const CommittedSection = () => {
   const query = useCommittedOutlook()
   const data = query.data
 
-  if (!data) {
-    return query.isError ? (
-      <View className="rounded-2xl border border-border bg-card p-4">
-        <Text className="text-center text-[12.5px] font-semibold text-text-soft">
-          {t('dashboard.committed.error')}
+  // El encabezado no depende de la lectura —título, mes y link— así que se
+  // renderiza desde el primer paint en los tres estados: cargando, con error y
+  // con datos. Antes el skeleton reemplazaba la card entera y el chrome aparecía
+  // de golpe al resolver.
+  const header = (
+    <View className="flex-row items-start justify-between">
+      <View className="min-w-0 flex-1">
+        <Text className="text-[15px] font-extrabold text-text">
+          {t('dashboard.committed.title_next_month')}
+        </Text>
+        {/* RN gives a `Text` a tight line box, so the month sat flush against
+            the title above it and the summary box below. Web gets the same
+            breathing room for free from the header's leading and `CardContent`
+            padding. */}
+        <Text className="mt-1 text-[11.5px] font-semibold text-text-soft">
+          {monthLabel('es-AR')}
         </Text>
       </View>
-    ) : (
-      <CommittedSkeleton />
+      <Pressable onPress={() => router.push('/cards')} accessibilityRole="button" hitSlop={12}>
+        <Text className="text-[12.5px] font-bold text-positive">
+          {t('dashboard.committed.view_all')} ›
+        </Text>
+      </Pressable>
+    </View>
+  )
+
+  if (!data) {
+    return (
+      <View
+        accessibilityState={query.isError ? undefined : { busy: true }}
+        accessibilityLabel={query.isError ? undefined : t('dashboard.committed.loading')}
+        className="rounded-2xl border border-border bg-card p-4"
+      >
+        {header}
+        {query.isError ? (
+          <Text className="mt-3 text-center text-[12.5px] font-semibold text-text-soft">
+            {t('dashboard.committed.error')}
+          </Text>
+        ) : (
+          <CommittedSkeleton />
+        )}
+      </View>
     )
   }
 
@@ -182,25 +215,7 @@ export const CommittedSection = () => {
 
   return (
     <View className="rounded-2xl border border-border bg-card p-4">
-      <View className="flex-row items-start justify-between">
-        <View className="min-w-0 flex-1">
-          <Text className="text-[15px] font-extrabold text-text">
-            {t('dashboard.committed.title_next_month')}
-          </Text>
-          {/* RN gives a `Text` a tight line box, so the month sat flush against
-              the title above it and the summary box below. Web gets the same
-              breathing room for free from the header's leading and `CardContent`
-              padding. */}
-          <Text className="mt-1 text-[11.5px] font-semibold text-text-soft">
-            {monthLabel('es-AR')}
-          </Text>
-        </View>
-        <Pressable onPress={() => router.push('/cards')} accessibilityRole="button" hitSlop={12}>
-          <Text className="text-[12.5px] font-bold text-positive">
-            {t('dashboard.committed.view_all')} ›
-          </Text>
-        </Pressable>
-      </View>
+      {header}
 
       {isEmpty ? (
         <Text className="py-6 text-center text-[12.5px] font-semibold text-text-soft">
