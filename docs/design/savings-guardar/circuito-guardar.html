@@ -1,0 +1,488 @@
+<title>El circuito de Guardar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+
+<style>
+:root{
+  --navy:#0B1A2B; --navy-2:#132B42;
+  --emerald:#10B981; --emerald-deep:#059669; --emerald-soft:rgba(16,185,129,.12);
+  --terracotta:#B56A5A;
+  --slate:#3A6B8A; --slate-soft:rgba(58,107,138,.11);
+  --plum:#8A6E98; --plum-soft:rgba(138,110,152,.13);
+
+  --page:#F3F5F8; --card:#FFFFFF; --sunk:#FAFBFC;
+  --border:#E3E8EE; --border-soft:#EDF1F5;
+  --text:#0B1A2B; --muted:#61707F; --soft:#8A94A3;
+  --shadow:0 1px 2px rgba(11,26,43,.05),0 10px 28px -20px rgba(11,26,43,.35);
+  --r:14px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --page:#07121D; --card:#0E2032; --sunk:#0A1A29;
+  --border:rgba(255,255,255,.13); --border-soft:rgba(255,255,255,.07);
+  --text:#EEF3F7; --muted:rgba(238,243,247,.65); --soft:rgba(238,243,247,.42);
+  --emerald:#34D3A0; --emerald-deep:#6FE3BC; --emerald-soft:rgba(52,211,160,.16);
+  --slate:#7FB0CE; --slate-soft:rgba(127,176,206,.15);
+  --plum:#BFA3CC; --plum-soft:rgba(191,163,204,.16);
+  --terracotta:#D89383;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 32px -22px rgba(0,0,0,.85);
+}}
+:root[data-theme="dark"]{
+  --page:#07121D; --card:#0E2032; --sunk:#0A1A29;
+  --border:rgba(255,255,255,.13); --border-soft:rgba(255,255,255,.07);
+  --text:#EEF3F7; --muted:rgba(238,243,247,.65); --soft:rgba(238,243,247,.42);
+  --emerald:#34D3A0; --emerald-deep:#6FE3BC; --emerald-soft:rgba(52,211,160,.16);
+  --slate:#7FB0CE; --slate-soft:rgba(127,176,206,.15);
+  --plum:#BFA3CC; --plum-soft:rgba(191,163,204,.16);
+  --terracotta:#D89383;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 32px -22px rgba(0,0,0,.85);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);
+  font-family:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:52px 22px 90px;display:flex;flex-direction:column;gap:44px}
+h1{font-size:clamp(29px,4.3vw,43px);font-weight:800;letter-spacing:-.035em;line-height:1.08;margin:0;text-wrap:balance}
+h2{font-size:20px;font-weight:800;letter-spacing:-.02em;margin:0;text-wrap:balance}
+p{margin:0}
+.lede{font-size:clamp(15.5px,1.6vw,18px);color:var(--muted);max-width:62ch;line-height:1.55}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+.num{font-variant-numeric:tabular-nums}
+
+/* header */
+.brand{display:flex;align-items:center;gap:9px}
+.bdot{width:17px;height:17px;border-radius:50%;background:var(--emerald);display:grid;place-items:center;
+  color:#052B20;font-size:10px;font-weight:800;line-height:1}
+.bname{font-weight:800;font-size:17px;letter-spacing:-.04em}
+.legend{display:flex;flex-wrap:wrap;gap:9px;margin-top:4px}
+.tag{display:inline-flex;align-items:center;gap:6px;font-family:"JetBrains Mono",monospace;
+  font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  padding:4px 9px;border-radius:6px;border:1px solid}
+.tag.nuevo{background:var(--plum-soft);color:var(--plum);border-color:var(--plum)}
+.tag.mod{background:var(--slate-soft);color:var(--slate);border-color:var(--slate)}
+.tag.ok{background:transparent;color:var(--soft);border-color:var(--border)}
+
+/* step */
+.step{display:grid;grid-template-columns:340px 1fr;gap:30px;align-items:start}
+@media(max-width:820px){.step{grid-template-columns:1fr;gap:18px}}
+.stephead{display:flex;align-items:baseline;gap:11px;margin-bottom:12px}
+.stepno{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:600;color:var(--soft);
+  letter-spacing:.1em;padding-top:3px}
+.notes{display:flex;flex-direction:column;gap:11px;padding-top:2px}
+.notes ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
+.notes li{font-size:14px;color:var(--muted);line-height:1.5;padding-left:26px;position:relative}
+.notes li b{color:var(--text);font-weight:600}
+.notes li::before{position:absolute;left:0;top:0;font-family:"JetBrains Mono",monospace;
+  font-size:9.5px;font-weight:600;letter-spacing:.05em;padding:2px 4px;border-radius:4px;line-height:1.5}
+.notes li.n::before{content:"NEW";background:var(--plum-soft);color:var(--plum)}
+.notes li.m::before{content:"MOD";background:var(--slate-soft);color:var(--slate)}
+.notes li.r::before{content:"REU";background:transparent;color:var(--soft);border:1px solid var(--border)}
+
+/* mock */
+.screen{background:var(--card);border:1px solid var(--border);border-radius:20px;
+  box-shadow:var(--shadow);overflow:hidden}
+.sbar{padding:12px 16px;border-bottom:1px solid var(--border-soft);display:flex;
+  align-items:center;justify-content:space-between;background:var(--sunk)}
+.sbar .t{font-size:13.5px;font-weight:700;letter-spacing:-.01em}
+.sbar .a{font-size:12px;color:var(--soft)}
+.sbody{padding:16px;display:flex;flex-direction:column;gap:13px}
+
+.hero{background:var(--navy);border-radius:14px;padding:18px 16px;color:#fff;display:flex;
+  flex-direction:column;gap:13px}
+.hero .lbl{font-size:11.5px;color:rgba(255,255,255,.62);letter-spacing:.02em}
+.hero .big{font-size:31px;font-weight:800;letter-spacing:-.035em;line-height:1}
+.hero .usd{font-size:14px;color:rgba(255,255,255,.72);font-weight:600}
+.hero .div{height:1px;background:rgba(255,255,255,.14)}
+.place{display:grid;grid-template-columns:1fr 1px 1fr;gap:11px;font-size:11.5px}
+.place .col{display:flex;flex-direction:column;gap:5px}
+.place .h{font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:rgba(255,255,255,.5);font-family:"JetBrains Mono",monospace}
+.place .row{display:flex;justify-content:space-between;gap:8px;color:rgba(255,255,255,.85)}
+.place .vr{background:rgba(255,255,255,.14)}
+
+.summary{border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:11px}
+.summary .h{font-size:12px;font-weight:700;color:var(--muted)}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.trio div{display:flex;flex-direction:column;gap:2px}
+.trio .k{font-size:10.5px;color:var(--soft)}
+.trio .v{font-size:13px;font-weight:700;letter-spacing:-.02em}
+.trio div:nth-child(2){align-items:center}
+.trio div:nth-child(3){align-items:flex-end}
+.rule{height:1px;background:var(--border);margin:1px 0}
+.xline{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12.5px}
+.xline .k{color:var(--muted);display:flex;align-items:center;gap:6px}
+.xline .v{font-weight:700;letter-spacing:-.02em}
+
+.card2{border:1px solid var(--border);border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:10px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
+  padding:3px 8px;border-radius:20px;background:var(--emerald-soft);color:var(--emerald-deep)}
+.btn{display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;
+  padding:9px 14px;border-radius:10px;background:var(--emerald);color:#042A1E;border:none;flex:1}
+.btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btns{display:flex;gap:8px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field .k{font-size:11px;color:var(--soft);font-weight:600}
+.field .box{border:1px solid var(--border);border-radius:9px;padding:9px 11px;font-size:13.5px;
+  display:flex;justify-content:space-between;align-items:center;background:var(--sunk)}
+.field .box.hi{border-color:var(--plum);background:var(--plum-soft)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:8px;border:1px solid var(--border);color:var(--muted)}
+.chip.on{background:var(--emerald-soft);border-color:var(--emerald);color:var(--emerald-deep)}
+.amt{font-size:27px;font-weight:800;letter-spacing:-.035em}
+.calc{display:flex;flex-direction:column;gap:5px;font-size:12.5px}
+.calc .r{display:flex;justify-content:space-between}
+.calc .r.tot{border-top:1px solid var(--border);padding-top:6px;font-weight:700}
+.neg{color:var(--terracotta)}
+.pos{color:var(--emerald-deep)}
+
+.grp{display:flex;flex-direction:column;gap:7px}
+.grp .gh{display:flex;justify-content:space-between;font-family:"JetBrains Mono",monospace;
+  font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--soft)}
+.acc{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:1px 0}
+.acc .n{display:flex;align-items:center;gap:8px;color:var(--text)}
+.sq{width:9px;height:9px;border-radius:3px;flex:none}
+.sub{padding-left:17px;display:flex;flex-direction:column;gap:4px}
+.sub .acc{font-size:12.5px;color:var(--muted)}
+.kindrow{display:flex;justify-content:space-between;font-size:13px;font-weight:700}
+.toast{background:var(--emerald-soft);border:1px solid var(--emerald);border-radius:10px;
+  padding:9px 12px;font-size:12.5px;color:var(--emerald-deep);font-weight:600}
+.hist{display:flex;flex-direction:column;gap:8px}
+.hist .h{display:flex;justify-content:space-between;font-size:12.5px}
+.hist .h .d{color:var(--soft);font-family:"JetBrains Mono",monospace;font-size:11.5px}
+
+.stats{display:flex;flex-wrap:wrap;gap:9px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:10px 14px;
+  display:flex;align-items:baseline;gap:8px;box-shadow:var(--shadow)}
+.stat b{font-size:20px;font-weight:800;letter-spacing:-.03em}
+.stat span{font-size:12.5px;color:var(--muted)}
+.callout{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--emerald);
+  border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:8px}
+.callout p{font-size:14px;color:var(--muted);line-height:1.55}
+.callout .big{font-size:15.5px;color:var(--text);font-weight:700}
+footer{border-top:1px solid var(--border);padding-top:20px;color:var(--soft);font-size:13px;
+  display:flex;flex-direction:column;gap:4px}
+</style>
+
+<div class="wrap">
+
+<header style="display:flex;flex-direction:column;gap:16px">
+  <div class="brand"><span class="bdot">$</span><span class="bname">grana</span></div>
+  <h1>El circuito de Guardar</h1>
+  <p class="lede">Un mes completo, pantalla por pantalla: cobrás, guardás, ponés plata a plazo fijo y mirás dónde quedó todo. Cada pieza marcada según se construya de cero, se modifique o ya funcione hoy.</p>
+  <div class="legend">
+    <span class="tag nuevo">Nuevo</span>
+    <span class="tag mod">Modificado</span>
+    <span class="tag ok">Ya existe</span>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>8</b><span>pantallas del circuito</span></div>
+    <div class="stat"><b>2</b><span>nuevas</span></div>
+    <div class="stat"><b>3</b><span>modificadas</span></div>
+    <div class="stat"><b>3</b><span>sin tocar</span></div>
+  </div>
+</header>
+
+<!-- 1 -->
+<section class="step">
+  <div>
+    <div class="screen">
+      <div class="sbar"><span class="t">Movimientos</span><span class="a mono">agosto</span></div>
+      <div class="sbody">
+        <p class="mono" style="font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--soft)">Pendientes de confirmar</p>
+        <div class="card2">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <span style="font-weight:700;font-size:14px">Sueldo</span>
+            <span class="num pos" style="font-weight:800;font-size:16px">+$2.000.000</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted)">
+            <span>5 de agosto</span><span>Galicia · caja de ahorro</span>
+          </div>
+          <div class="btns"><button class="btn">Confirmar</button><button class="btn ghost">Omitir</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="stephead"><span class="stepno">01</span><h2>Cobrás el sueldo</h2></div>
+    <ul>
+      <li class="r">El bloque de recurrencias pendientes <b>ya existe y ya es un tap</b>. No se toca nada.</li>
+      <li class="r">Grana ya sabe que esto es el sueldo: es un <span class="mono">income</span>, es recurrente y es el mayor del mes. No hay que preguntarle nada al usuario.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="step">
+  <div>
+    <div class="screen">
+      <div class="sbar"><span class="t">Movimientos</span><span class="a mono">agosto</span></div>
+      <div class="sbody">
+        <div class="toast">✓ Sueldo registrado · +$2.000.000</div>
+        <div class="card2" style="border-color:var(--emerald)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+            <span style="font-weight:700;font-size:13.5px;line-height:1.35">¿Guardás $200.000 antes de empezar a gastar?</span>
+            <span class="pill">10%</span>
+          </div>
+          <div class="btns"><button class="btn">Guardar</button><button class="btn ghost">Ahora no</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="stephead"><span class="stepno">02</span><h2>Grana te ofrece guardar</h2></div>
+    <ul>
+      <li class="n">La tira contextual. <b>Un tap</b> — cobrar y ahorrar sale en dos.</li>
+      <li class="r">Se sirve desde <span class="mono">guidance</span>, el módulo de guías que <b>ya está construido</b> y hoy se usa poco: registra visto, descartado y completado por usuario. Si la descartás varias veces, se apaga sola.</li>
+      <li class="n">El monto sugerido <b>no se configura, se aprende</b>: la primera vez 10%, después lo que guardaste la última vez. Cero pantalla de ajustes.</li>
+      <li class="r">No dispara con cualquier ingreso. Solo si es recurrente o supera un porcentaje de tu ingreso típico — datos que Grana ya tiene.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="step">
+  <div>
+    <div class="screen">
+      <div class="sbar"><span class="t">Guardar</span><span class="a">✕</span></div>
+      <div class="sbody">
+        <div class="amt num">$&nbsp;200.000</div>
+        <div class="chips"><span class="chip on">10%</span><span class="chip">20%</span><span class="chip">Otro</span></div>
+        <div class="field"><span class="k">Moneda</span>
+          <div class="chips"><span class="chip on">ARS</span><span class="chip">USD</span></div>
+        </div>
+        <div class="field"><span class="k">Fecha</span><div class="box"><span>Hoy · 5 de agosto</span><span style="color:var(--soft)">▾</span></div></div>
+        <div class="calc">
+          <div class="r"><span style="color:var(--muted)">Disponible hoy</span><span class="num">$1.800.000</span></div>
+          <div class="r"><span style="color:var(--muted)">Vas a guardar</span><span class="num pos">−$200.000</span></div>
+          <div class="r tot"><span>Te queda</span><span class="num">$1.600.000</span></div>
+        </div>
+        <div class="btns"><button class="btn">Guardar</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="stephead"><span class="stepno">03</span><h2>El drawer de Guardar</h2></div>
+    <ul>
+      <li class="n">La única superficie de captura nueva de toda la fase. <b>Tres campos</b>, y dos vienen resueltos.</li>
+      <li class="r">Se monta sobre el primitivo <span class="mono">Drawer</span> de <span class="mono">overlay-primitives</span> — el mismo patrón del alta de movimiento y de la liquidación de hogar.</li>
+      <li class="r">Los montos rápidos son el patrón que ya usa el drawer de liquidación.</li>
+      <li class="n"><b>No pide propósito.</b> Un "¿para qué?" sin metas que elegir es un campo muerto. Llega en fase 2.</li>
+      <li class="n">El tope es el disponible: guardar de más no es un estado incómodo, es un input inválido. <b>Es la diferencia con el ledger</b>, donde un saldo negativo sí es un hecho válido.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="step">
+  <div>
+    <div class="screen">
+      <div class="sbar"><span class="t">Inicio</span><span class="a mono">agosto ▾</span></div>
+      <div class="sbody">
+        <div class="hero">
+          <div>
+            <p class="lbl">Para gastar · hoy</p>
+            <p class="big num">$1.600.000</p>
+            <p class="usd num">US$ 600</p>
+          </div>
+          <div class="div"></div>
+          <div class="place">
+            <div class="col">
+              <span class="h">ARS</span>
+              <span class="row"><span>Galicia</span><span class="num">69%</span></span>
+              <span class="row"><span>Mercado Pago</span><span class="num">26%</span></span>
+            </div>
+            <div class="vr"></div>
+            <div class="col">
+              <span class="h">USD</span>
+              <span class="row"><span>Galicia USD</span><span class="num">100%</span></span>
+            </div>
+          </div>
+        </div>
+        <div class="summary">
+          <span class="h">Resumen del mes</span>
+          <div class="trio">
+            <div><span class="k">Tenías</span><span class="v num">$2.100.000</span></div>
+            <div><span class="k">Entró</span><span class="v num pos">+$2.000.000</span></div>
+            <div><span class="k">Se fué</span><span class="v num neg">−$1.600.000</span></div>
+          </div>
+          <div class="rule"></div>
+          <div class="xline">
+            <span class="k">Pasaste a otra cuenta</span>
+            <span class="v num" style="color:var(--slate)">−$700.000 &nbsp;›</span>
+          </div>
+          <div class="xline">
+            <span class="k">Guardaste este mes</span>
+            <span class="v num" style="color:var(--emerald-deep)">−$200.000 &nbsp;›</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="stephead"><span class="stepno">04</span><h2>El dashboard</h2></div>
+    <ul>
+      <li class="m">El monto grande pasa a ser el <b>disponible real</b>. Un solo número de plata: el usuario nunca se pregunta cuál es el suyo.</li>
+      <li class="r">La zona oscura, el bloque <b>Dónde está</b> y la tira de tres <b>no se tocan</b>. Son el rediseño que acaba de mergear.</li>
+      <li class="m">Dos líneas bajo la regla. No son un cuarto hermano de "Se fué": están separadas porque <b>son otra naturaleza</b> — una es un hecho, la otra una decisión.</li>
+      <li class="m">El signo menos dice <b>"salió de lo que podés gastar"</b>, que es literalmente cierto en las dos. El color y el verbo dicen si eso es bueno o malo: terracota para gasto, emerald para guardado.</li>
+      <li class="r">La card sigue cerrando en pantalla, que es lo mejor que tiene:<br><span class="mono" style="font-size:12px;color:var(--text)">Tenías + Entró − Se fué − Pasaste − Guardaste = $1.600.000</span></li>
+      <li class="m">Cada línea linkea a la superficie que la explica: <b>Guardado</b> y <b>Cuentas</b>. La segunda solo aparece si hubo movimiento, igual que la fila USD.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="step">
+  <div>
+    <div class="screen">
+      <div class="sbar"><span class="t">‹ &nbsp;Guardado</span><span class="a">⋯</span></div>
+      <div class="sbody">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <p style="font-size:11.5px;color:var(--soft)">Total guardado</p>
+          <p class="amt num">$200.000</p>
+        </div>
+        <div class="xline" style="border:1px solid var(--border);border-radius:10px;padding:11px 13px">
+          <span class="k">Este mes</span><span class="v num pos">+$200.000</span>
+        </div>
+        <p class="mono" style="font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--soft)">Historial</p>
+        <div class="hist">
+          <div class="h"><span class="d">05/08</span><span>Guardaste</span><span class="num pos">+$200.000</span></div>
+        </div>
+        <div class="btns"><button class="btn">Guardar</button><button class="btn ghost">Liberar</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="stephead"><span class="stepno">05</span><h2>El detalle de Guardado</h2></div>
+    <ul>
+      <li class="n">Pantalla nueva — pero <b>no entra en la navegación</b>. Se llega tocando el número, como el detalle de un resumen de tarjeta.</li>
+      <li class="n">Existe por una razón de fondo: guardar <b>no aparece en Movimientos</b>, porque no es un movimiento. Sin esta vista el usuario no podría auditar su propia decisión, y eso choca con el pilar de confianza contable.</li>
+      <li class="n">Separa los dos números que se confunden: <b>total guardado</b> (stock) y <b>este mes</b> (flujo).</li>
+      <li class="n">Es la pantalla que va a crecer: propósitos en fase 2, dónde está en fase 3, evolución en fase 4. <b>Qué hub la agrupa se decide entonces</b>, con uso real — hoy sería adivinar.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="step">
+  <div>
+    <div class="screen">
+      <div class="sbar"><span class="t">Nueva cuenta</span><span class="a">✕</span></div>
+      <div class="sbody">
+        <div class="field"><span class="k">Nombre</span><div class="box"><span>Plazo fijo Nación</span></div></div>
+        <div class="field"><span class="k">Institución</span><div class="box"><span>Banco Nación</span><span style="color:var(--soft)">▾</span></div></div>
+        <div class="field"><span class="k">Tipo de cuenta</span><div class="box hi"><span>Plazo fijo</span><span style="color:var(--plum)">▾</span></div></div>
+        <div class="card2" style="border-color:var(--plum);background:var(--plum-soft)">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+            <span style="font-size:12.5px;font-weight:600">Contar como dinero disponible</span>
+            <span style="font-size:11px;font-weight:700;color:var(--plum);border:1px solid var(--plum);
+                         padding:3px 9px;border-radius:20px">NO</span>
+          </div>
+          <p style="font-size:11.5px;color:var(--muted);line-height:1.45">Los plazos fijos no cuentan para gastar hoy. Podés cambiarlo.</p>
+        </div>
+        <div class="btns"><button class="btn">Crear cuenta</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="stephead"><span class="stepno">06</span><h2>Creás el plazo fijo</h2></div>
+    <ul>
+      <li class="r">Es <b>crear una cuenta, como siempre</b>. No hay alta de inversión, ni módulo aparte, ni concepto nuevo que aprender.</li>
+      <li class="m">Un campo nuevo: <b>tipo de cuenta</b>. Es puramente descriptivo — no toca ningún cálculo. Sirve para agrupar y para el ícono.</li>
+      <li class="m">Y ese tipo <b>sugiere el switch</b>: elegís "Plazo fijo" y Grana ya lo deja fuera del disponible. El switch queda visible para el caso contrario — tu FCI de Mercado Pago, que rinde y gastás en el súper.</li>
+      <li class="m">Una cuenta por <b>banco</b>, no por cada plazo fijo. Su saldo responde "cuánto tengo a plazo fijo en Nación"; cada colocación nueva es una transferencia que entra.</li>
+      <li class="r">Cambiar el switch después <b>recalcula el pasado</b>, como cualquier saldo derivado en Grana. La identidad de la card sigue cerrando en cada mes.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="step">
+  <div>
+    <div class="screen">
+      <div class="sbar"><span class="t">Nuevo movimiento</span><span class="a">✕</span></div>
+      <div class="sbody">
+        <div class="chips"><span class="chip">Gasto</span><span class="chip">Ingreso</span><span class="chip on">Transferencia</span></div>
+        <div class="amt num">$&nbsp;700.000</div>
+        <div class="field"><span class="k">Desde</span><div class="box"><span>Galicia · caja de ahorro</span><span style="color:var(--soft)">▾</span></div></div>
+        <div class="field"><span class="k">Hacia</span><div class="box"><span>Plazo fijo Nación</span><span style="color:var(--soft)">▾</span></div></div>
+        <div class="btns"><button class="btn">Guardar movimiento</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="stephead"><span class="stepno">07</span><h2>Ponés la plata a plazo fijo</h2></div>
+    <ul>
+      <li class="r">Una <b>transferencia común</b>. Nada nuevo, ni una línea.</li>
+      <li class="r">Ya está excluida de la analítica de gastos, así que <b>no ensucia "En qué se fue"</b>. Ese pedazo del ahorro Grana lo tenía resuelto sin saberlo.</li>
+      <li class="m">Lo único que cambia: como el destino no participa del disponible, este movimiento aparece en <b>"Pasaste a otra cuenta"</b> del mes. No en "Se fué" — porque no gastaste nada.</li>
+      <li class="r">Comprar dólares es igual: un <span class="mono">exchange</span>, que ya existe con su cotización.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="step">
+  <div>
+    <div class="screen">
+      <div class="sbar"><span class="t">Cuentas</span><span class="a">+</span></div>
+      <div class="sbody">
+        <div class="grp">
+          <div class="gh"><span>Para gastar</span><span class="num">$1.800.000</span></div>
+          <div class="acc"><span class="n"><span class="sq" style="background:#E79A2B"></span>Galicia · caja de ahorro</span><span class="num">$1.240.000</span></div>
+          <div class="acc"><span class="n"><span class="sq" style="background:#15A8C4"></span>Mercado Pago</span><span class="num">$460.000</span></div>
+          <div class="acc"><span class="n"><span class="sq" style="background:#3A6B8A"></span>Billetera</span><span class="num">$100.000</span></div>
+          <div class="acc"><span class="n"><span class="sq" style="background:#E79A2B"></span>Galicia USD</span><span class="num">US$ 600</span></div>
+          <div class="rule"></div>
+          <div class="acc" style="color:var(--emerald-deep);font-weight:600"><span class="n" style="color:var(--emerald-deep)">De esto, guardado</span><span class="num">$200.000</span></div>
+        </div>
+
+        <div class="grp" style="margin-top:4px">
+          <div class="gh"><span>Guardado o invertido</span><span class="num">$3.300.000</span></div>
+
+          <div class="kindrow"><span>Plazo fijo</span><span class="num">$2.500.000</span></div>
+          <div class="sub">
+            <div class="acc"><span class="n">Galicia</span><span class="num">$1.000.000</span></div>
+            <div class="acc"><span class="n">Santander</span><span class="num">$800.000</span></div>
+            <div class="acc"><span class="n">Nación</span><span class="num">$700.000</span></div>
+          </div>
+
+          <div class="kindrow" style="margin-top:5px"><span>FCI</span><span class="num">$800.000</span></div>
+          <div class="sub"><div class="acc"><span class="n">Galicia FCI</span><span class="num">$800.000</span></div></div>
+
+          <div class="kindrow" style="margin-top:5px"><span>Efectivo en dólares</span><span class="num">US$ 5.000</span></div>
+          <div class="sub"><div class="acc"><span class="n">Caja de seguridad</span><span class="num">US$ 5.000</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="stephead"><span class="stepno">08</span><h2>Cuentas — dónde quedó todo</h2></div>
+    <ul>
+      <li class="r">Esta pantalla <b>ya es "lo que tengo"</b>. No hace falta inventar una vista de patrimonio: existe y funciona.</li>
+      <li class="m">Pasa a agrupar en <b>dos bloques</b>. Con eso sola responde "¿cuánto tengo entre plazo fijo, FCI y dólares?" — el subtotal del segundo bloque.</li>
+      <li class="m">Dentro del segundo bloque, <b>agrupa por tipo</b>: ves "Plazo fijo $2.500.000" y abajo en qué bancos está. Es un <span class="mono">group by</span>, no una entidad nueva.</li>
+      <li class="m">El guardado aparece como <b>línea del grupo</b>, no pegado a una cuenta. Y es deliberado: esa plata no está en una cuenta, está repartida en todas. Ponerla en una fila sería afirmar algo que no sabemos.</li>
+      <li class="r">Ya agrupa hoy (por tipo de cuenta), así que el patrón existe.</li>
+    </ul>
+  </div>
+</section>
+
+<div class="callout">
+  <p class="big">Lo que hay que construir, en total</p>
+  <p><b>Dos superficies nuevas</b> — el drawer de Guardar y el detalle de Guardado. <b>Tres modificadas</b> — la card de saldo, el form de cuenta y la lista de Cuentas. <b>Tres intactas</b> — recurrencias, alta de movimiento y el bloque "Dónde está".</p>
+  <p>Y del lado del dato: una columna en <span class="mono">accounts</span>, una tabla nueva fuera del ledger, y dos funciones de lectura derivadas de las que ya existen. <b>Ni las reglas de signo, ni la paridad SQL↔TS, ni la analítica del mes se tocan.</b></p>
+</div>
+
+<div class="callout" style="border-left-color:var(--slate)">
+  <p class="big">Lo que sigue abierto</p>
+  <p>El <b>vencimiento individual</b> de cada plazo fijo — con una cuenta por banco sabés cuánto y dónde, pero no cuándo vence cada colocación. Es la decisión "¿cuenta o movimiento con vencimiento?", y se resuelve en fase 3 junto con la valuación. Mientras tanto, quien lo necesite puede crear una cuenta por plazo fijo y archivarla al vencer.</p>
+  <p>Y el <b>catálogo de tipos</b>: efectivo · caja de ahorro / cuenta corriente · billetera virtual · plazo fijo · FCI o cuenta remunerada · acciones y CEDEARs · cripto · otro.</p>
+</div>
+
+<footer>
+  <p>Grana V3 · circuito de la fase 1 — Guardar</p>
+  <p>Basado en <span class="mono">docs/modelo-de-dinero.md</span> y el change <span class="mono">add-savings-set-aside</span>. Simulación de pantallas, no diseño final.</p>
+</footer>
+
+</div>
