@@ -6,9 +6,13 @@ import { Home, List, MoreHorizontal, Users } from 'lucide-react-native'
 import { colors } from '../../lib/colors'
 import { useT } from '../../lib/locale-context'
 
-// Non-tab stacks reached from Menú (never a highlighted tab): the whole section
-// renders chromeless — the tab bar would only show detached/unhighlighted.
-const CHROMELESS_SECTIONS: readonly string[] = ['accounts', 'cards']
+// Exactly the sections reached from the tab bar's … button (the AppMenu): none
+// of them is a tab, so the whole section renders chromeless — the tab bar would
+// only show detached/unhighlighted. Hiding it is half the contract: every
+// section listed here declares a `backLink` to the dashboard on its root screen,
+// otherwise the screen is left with no visible way out (see spec
+// `mobile-app-shell`).
+const CHROMELESS_SECTIONS: readonly string[] = ['accounts', 'cards', 'settings']
 
 // Pushed screens that render chromeless even though they live inside a primary
 // tab's stack. The movement alta form pushes over the Movimientos tab but should
@@ -64,9 +68,13 @@ export function TabBar({ state, navigation, onMenuPress, menuActive }: Props) {
   // does not re-render on every height frame while the keyboard animates.
   const keyboardVisible = useKeyboardState((s) => s.isVisible)
 
-  // Hide the tab bar on chromeless routes: whole non-tab sections (accounts,
-  // cards) and specific pushed screens inside a tab (e.g. `/transactions/new`),
-  // so each reads as a full-screen flow instead of a highlighted-tab sub-view.
+  // Hide the tab bar on chromeless routes: whole non-tab sections (the ones
+  // reached from the … button) and specific pushed screens inside a tab (e.g.
+  // `/transactions/new`), so each reads as a full-screen flow instead of a
+  // highlighted-tab sub-view. The two lists never overlap: sections match on
+  // `parts[0]`, screens on the [parent, screen] pair — so `['home', 'settings']`
+  // (the household's settings, pushed over the Hogar tab) is unrelated to the
+  // `settings` section.
   // Group segments like `(app)` are dropped so the section/screen check is
   // stable regardless of the route group.
   const parts = segments.filter((s) => !s.startsWith('('))

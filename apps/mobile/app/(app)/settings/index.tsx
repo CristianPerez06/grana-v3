@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { LanguageSwitcher } from '../../../components/settings/LanguageSwitcher'
@@ -11,6 +12,7 @@ import { locales, type Locale } from '../../../lib/locale'
 
 export default function SettingsScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const t = useT()
   const { showCents, setShowCents } = usePreferences()
   const locale = useLocale()
@@ -39,8 +41,14 @@ export default function SettingsScreen() {
 
   return (
     <View className="flex-1 bg-page">
-      <PageHeader title={t('settings.title')} />
-      <ScrollView contentContainerClassName="px-6 py-6">
+      <PageHeader
+        title={t('settings.title')}
+        backLink={{ href: '/(app)/dashboard', label: t('nav.dashboard') }}
+      />
+      <ScrollView
+        contentContainerClassName="px-6 pt-6"
+        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+      >
         <View className="flex-col gap-6">
         <SettingsSection title={t('settings.display.label')}>
           <ShowCentsToggle
