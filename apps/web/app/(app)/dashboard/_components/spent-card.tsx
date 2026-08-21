@@ -165,8 +165,14 @@ export const SpentCard = ({ otherName }: Props) => {
   return (
     <Card className="flex flex-col">
       {/* One row at every width: the link belongs beside the title, not stacked
-          under it. The title shrinks; the link never wraps. */}
-      <CardHeader className="flex-row items-center justify-between gap-3">
+          under it. The title shrinks; the link never wraps.
+
+          Horizontal padding drops to 16px below `sm`: `p-6` is 24px a side, and
+          on a 390px screen that plus the page gutter left each tile ~85px for an
+          amount that can need ~92px — the card was spending its scarcest
+          resource on air. Header and content step down together so the title
+          stays flush with the tiles. */}
+      <CardHeader className="flex-row items-center justify-between gap-3 px-4 sm:px-6">
         <h2 className="min-w-0 truncate text-lg font-semibold tracking-tight text-text">
           {t('title')}
         </h2>
@@ -178,7 +184,7 @@ export const SpentCard = ({ otherName }: Props) => {
         </Link>
       </CardHeader>
 
-      <CardContent className="flex flex-1 flex-col gap-3">
+      <CardContent className="flex flex-1 flex-col gap-3 px-4 sm:px-6">
         {isEmpty ? (
           <p className="py-6 text-center text-[13.5px] font-semibold text-text-soft">
             {t('empty')}
