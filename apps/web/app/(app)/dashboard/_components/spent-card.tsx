@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { useDashboardMonth } from './dashboard-month-context'
 import { useEyeMask } from './eye-mask-context'
+import { SpentCardBodySkeleton } from './spent-card-body-skeleton'
 import { SpentTile } from './spent-tile'
 
 type Props = {
@@ -145,7 +146,12 @@ export const SpentCard = ({ otherName }: Props) => {
   const usd = spendingQuery.data?.USD ?? empty
   const pace = deriveSpendingPace(ars.gastaste, balanceQuery.data?.ARS.totalIncome ?? 0)
 
-  const isEmpty = ars.gastaste === 0 && usd.gastaste === 0
+  // La carga NO es un vacío: mientras la lectura no resolvió, los montos valen 0
+  // porque no hay dato, y `isEmpty` afirmaba "Sin gastos este mes." con eso. El
+  // vacío se decide sólo cuando la lectura resolvió y devolvió cero. Vuelve a
+  // pasar en cada cambio de mes: la query se re-keyea por mes.
+  const isLoading = spendingQuery.isPending || balanceQuery.isPending
+  const isEmpty = !isLoading && ars.gastaste === 0 && usd.gastaste === 0
   // One decision for the three tiles (the USD line), so they stay level.
   const tilesHaveUsd = usd.gastaste !== 0
   // Same rule for the type step: the three amounts share the tightest one any of
@@ -185,7 +191,9 @@ export const SpentCard = ({ otherName }: Props) => {
       </CardHeader>
 
       <CardContent className="flex flex-1 flex-col gap-3 px-4 sm:px-6">
-        {isEmpty ? (
+        {isLoading ? (
+          <SpentCardBodySkeleton />
+        ) : isEmpty ? (
           <p className="py-6 text-center text-[13.5px] font-semibold text-text-soft">
             {t('empty')}
           </p>
