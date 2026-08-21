@@ -124,7 +124,7 @@ const Flow = ({
   signPrefix?: string
   /** Type step, decided once for the three (see the card). */
   density: AmountDensity
-  /** Mientras el mes nuevo carga: el rótulo queda, el importe va a skeleton. */
+  /** While the new month loads: the label stays, the amount goes to skeleton. */
   loading?: boolean
 }) => (
   // ONE ROW per amount — label left, amount right — not three columns. Three
@@ -171,17 +171,17 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
   const heroQuery = useDashboardHero(balanceCutISO(selected, current, todayISO))
   const monthQuery = useMonthBalanceSeries(selected.year, selected.month)
 
-  // Un solo skeleton para la card completa mientras cualquiera de las dos
-  // lecturas está pendiente: comparten card, y llenar una zona antes que la otra
-  // la hace armarse a saltos. Antes solo el importe del hero tenía skeleton y el
-  // resto de la card se dibujaba en ceros.
+  // ONE skeleton for the whole card while either read is pending: they share a
+  // card, and filling one zone before the other makes it assemble in jumps. Only
+  // the hero amount used to have a skeleton; the rest of the card rendered zeros.
   const isLoading = heroQuery.isPending || monthQuery.isPending
-  // Primera carga vs. cambio de mes. La pantalla SIEMPRE abre en el mes actual
-  // (salir del tab remonta los providers), así que un mes no-actual pendiente es
-  // navegación y no arranque. En el arranque no hay nada en pantalla y la card
-  // entera va a skeleton; navegando, el marco ya está y solo pulsan los importes
-  // — el rótulo dice a qué mes vas mientras carga, y taparlo convertiría cada
-  // flecha en un parpadeo de la card. Espeja lo que hace web.
+  // First load vs. month change. The screen ALWAYS opens on the current month
+  // (leaving the tab remounts the providers), so a pending non-current month is
+  // navigation, never startup. On startup there is nothing on screen yet and the
+  // whole card goes to skeleton; navigating, the frame is already there and only
+  // the amounts pulse — the label is what tells you which month you are loading,
+  // and hiding it would turn every arrow press into a blink of the whole card.
+  // Mirrors what web does.
 
   const hero = heroQuery.data
   const placement = hero ? derivePlacement(hero.accounts) : null

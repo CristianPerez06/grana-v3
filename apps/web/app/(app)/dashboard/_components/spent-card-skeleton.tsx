@@ -4,16 +4,16 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { SpentCardBodySkeleton } from './spent-card-body-skeleton'
 
 /**
- * Skeleton shape-matched de "Cuánto gastaste".
+ * Shape-matched skeleton for "Cuánto gastaste".
  *
- * El encabezado va REAL desde el primer paint —título y link a Movimientos— y
- * solo el cuerpo es skeleton: el encabezado no depende de la lectura, es texto
- * estático más un link, y esconderlo hace que la card aparezca de la nada en vez
- * de llenarse (spec `dashboard`).
+ * The header is REAL from the first paint — title and link to Movimientos — and
+ * only the body is skeleton: the header does not depend on the read, it is
+ * static text plus a link, and hiding it makes the card appear out of nowhere
+ * instead of filling in (spec `dashboard`).
  *
- * Antes de este componente la card no tenía estado de carga: con la query sin
- * resolver los tres montos caían a 0, `isEmpty` daba `true` y la card afirmaba
- * "Sin gastos este mes." mientras cargaba.
+ * Before this component the card had no loading state at all: with the query
+ * unresolved the three amounts fell to 0, `isEmpty` came out `true` and the card
+ * claimed "Sin gastos este mes." while it was still loading.
  */
 export const SpentCardSkeleton = async () => {
   const t = await getTranslations('dashboard.spent')

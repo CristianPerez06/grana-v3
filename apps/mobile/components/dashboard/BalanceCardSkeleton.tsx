@@ -2,13 +2,13 @@ import { View } from 'react-native'
 import { useT } from '../../lib/locale-context'
 import { SkeletonBlock } from '../ui/SkeletonBlock'
 
-/** Las dos cuentas top por moneda, que es lo que `derivePlacement` devuelve. */
+/** The two top accounts per currency, which is what `derivePlacement` returns. */
 const PLACEMENT_ROWS = 2
 
-/** Mismo alto de la swap region que la card real, para que no salte al resolver. */
+/** Same swap-region height as the real card, so nothing jumps when it resolves. */
 const SWAP_MIN_HEIGHT = 84
 
-/** Espejo de `PlacementColumn`: gutter de moneda + filas dot / nombre / %. */
+/** Mirror of `PlacementColumn`: currency gutter + dot / name / % rows. */
 export const PlacementSkeleton = () => (
   <View className="flex-row gap-3">
     <SkeletonBlock className="h-3 w-8 rounded" />
@@ -16,7 +16,7 @@ export const PlacementSkeleton = () => (
       {Array.from({ length: PLACEMENT_ROWS }).map((_, row) => (
         <View key={row} className="flex-row items-center gap-2">
           <SkeletonBlock className="size-[9px] rounded-[2px]" />
-          {/* El nombre es el que se estira: es lo que empuja el % al borde. */}
+          {/* The name is what stretches: it is what pushes the % to the edge. */}
           <View className="min-w-0 flex-1">
             <SkeletonBlock className="h-3.5 rounded" />
           </View>
@@ -28,8 +28,8 @@ export const PlacementSkeleton = () => (
 )
 
 /**
- * El importe de un `Flow` y su línea USD. El rótulo con su dot NO entra acá: no
- * depende de la lectura y se sigue renderizando real mientras el mes carga.
+ * A `Flow`'s amount and its USD line. The label with its dot is NOT in here: it
+ * does not depend on the read and keeps rendering for real while the month loads.
  */
 export const SummaryAmountSkeleton = () => (
   <View className="min-w-0 flex-1 items-end">
@@ -40,7 +40,7 @@ export const SummaryAmountSkeleton = () => (
   </View>
 )
 
-/** Importe del hero y su línea USD, centrados como en la card. */
+/** Hero amount and its USD line, centred as they are in the card. */
 export const HeroAmountSkeleton = () => (
   <View className="items-center">
     <SkeletonBlock className="h-[34px] w-56 rounded" />
@@ -51,7 +51,7 @@ export const HeroAmountSkeleton = () => (
   </View>
 )
 
-/** Las dos columnas de moneda con su divisor, tal como las apila la card. */
+/** The two currency columns with their divider, stacked as the card stacks them. */
 export const PlacementStackSkeleton = () => (
   <View className="mt-3 gap-3">
     <PlacementSkeleton />
@@ -61,7 +61,7 @@ export const PlacementStackSkeleton = () => (
   </View>
 )
 
-/** Espejo de `Flow`: label a la izquierda, monto (y su línea USD) a la derecha. */
+/** Mirror of `Flow`: label on the left, amount (and its USD line) on the right. */
 const FlowSkeleton = () => (
   <View className="flex-row items-center justify-between gap-3">
     <View className="flex-row items-center gap-1.5">
@@ -73,21 +73,21 @@ const FlowSkeleton = () => (
 )
 
 /**
- * Skeleton shape-matched de "Saldo disponible total" en nativo.
+ * Shape-matched skeleton for "Saldo disponible total" on native.
  *
- * Un solo skeleton para la card completa —zona navy, "Dónde está" y "Resumen
- * del mes"— aunque las zonas vengan de dos lecturas: comparten card, y llenarlas
- * por separado la hace armarse a saltos (spec `dashboard`). Reemplaza al
- * `HeroSkeleton`, que cubría solo el importe del hero y dejaba el resto de la
- * card en ceros mientras cargaba.
+ * ONE skeleton for the whole card — navy zone, "Dónde está" and "Resumen del
+ * mes" — even though the zones come from two reads: they share a card, and
+ * filling them in separately makes it assemble in jumps (spec `dashboard`).
+ * Replaces `HeroSkeleton`, which covered only the hero amount and left the rest
+ * of the card rendering zeros while it loaded.
  *
- * El eyebrow, el importe y la línea USD van **centrados**, como en la card: la
- * zona navy real es `text-center` de punta a punta y el skeleton anterior los
- * dibujaba pegados a la izquierda.
+ * The eyebrow, the amount and the USD line are CENTRED, as they are in the card:
+ * the real navy zone is `text-center` end to end, and the previous skeleton drew
+ * them flush left.
  *
- * Dibuja la línea USD y la segunda columna de moneda aunque la card las
- * condicione a que haya dólares: es el caso alto, y quedarse corto hace saltar
- * la pantalla hacia abajo al resolver.
+ * It draws the USD line and the second currency column even though the card
+ * makes both conditional on there being dollars: that is the tall case, and
+ * falling short makes the screen jump downwards when it resolves.
  */
 export const BalanceCardSkeleton = () => {
   const t = useT()
@@ -97,7 +97,7 @@ export const BalanceCardSkeleton = () => {
       accessibilityLabel={t('dashboard.hero_loading')}
       className="overflow-hidden rounded-2xl border border-border bg-card"
     >
-      {/* Zona navy */}
+      {/* Navy zone */}
       <View className="bg-navy px-[18px] pb-[17px] pt-5">
         <View className="items-center">
           <SkeletonBlock className="h-3 w-40 rounded" />
@@ -107,17 +107,17 @@ export const BalanceCardSkeleton = () => {
           <HeroAmountSkeleton />
         </View>
 
-        {/* "Dónde está" + el link a cuentas */}
+        {/* "Dónde está" + the accounts link */}
         <View className="mt-4 flex-row items-end justify-between border-t border-white/10 pt-3.5">
           <SkeletonBlock className="h-3 w-24 rounded" />
           <SkeletonBlock className="h-3.5 w-24 rounded" />
         </View>
 
-        {/* Columnas de cuentas, apiladas con divisor entre monedas. */}
+        {/* Account columns, stacked with a divider between currencies. */}
         <PlacementStackSkeleton />
       </View>
 
-      {/* Zona clara — "Resumen del mes" */}
+      {/* Light zone — "Resumen del mes" */}
       <View className="px-4 pb-4 pt-3">
         <SkeletonBlock className="h-4 w-40 rounded" />
         <View className="mt-3 gap-2.5">

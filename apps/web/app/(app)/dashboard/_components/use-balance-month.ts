@@ -72,10 +72,10 @@ export const useBalanceMonth = ({ todayISO, heroInitial, monthInitial }: Args) =
     isCurrent,
     selected,
     /**
-     * Verdadero mientras alguna de las dos lecturas del mes seleccionado no
-     * resolvió. El mes actual llega server-rendered como `initialData`, así que
-     * esto sólo se enciende al navegar a un mes sin cachear — donde la card
-     * caía a `?? 0` y mostraba ceros que no eran el saldo de nadie.
+     * True while either read for the selected month has not resolved. The current
+     * month arrives server-rendered as `initialData`, so this only turns on when
+     * navigating to an uncached month — where the card used to fall to `?? 0` and
+     * show zeros that were nobody's balance.
      */
     isLoading: heroQuery.isPending || monthQuery.isPending,
     venia:

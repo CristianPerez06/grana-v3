@@ -1,11 +1,11 @@
 import { cn } from '@/lib/utils'
 
-/** Las dos cuentas top por moneda, que es lo que `derivePlacement` devuelve. */
+/** The two top accounts per currency, which is what `derivePlacement` returns. */
 export const PLACEMENT_ROWS = 2
 
 /**
- * Espejo de `ALIGN` en `balance-card.tsx`: primero a la izquierda, último a la
- * derecha, el del medio centrado.
+ * Mirror of `ALIGN` in `balance-card.tsx`: first hard left, last hard right,
+ * middle centred.
  */
 export const SUMMARY_ALIGN = {
   start: 'sm:items-start sm:text-left',
@@ -14,12 +14,12 @@ export const SUMMARY_ALIGN = {
 } as const
 
 /**
- * Piezas del cuerpo de la card de saldo en estado de carga.
+ * The pieces of the balance card's body while it loads.
  *
- * Viven aparte de `balance-card-skeleton.tsx` porque las consumen dos lados con
- * requisitos opuestos: el fallback del `<Suspense>` (server component, que
- * importa `next-intl/server`) y la card client, que vuelve a cargar cuando el
- * usuario cambia de mes. Un módulo client no puede importar el otro.
+ * They live apart from `balance-card-skeleton.tsx` because two sides with
+ * opposite requirements consume them: the `<Suspense>` fallback (a server
+ * component, which imports `next-intl/server`) and the client card, which loads
+ * again when the user changes month. A client module cannot import the other.
  */
 export const HeroAmountSkeleton = () => (
   <div className="mx-auto mt-[11px] h-[38px] w-64 max-w-full animate-pulse rounded bg-white/20" />
@@ -32,7 +32,7 @@ export const HeroUsdSkeleton = () => (
   </div>
 )
 
-/** Espejo de `PlacementColumn`: gutter de moneda + filas dot / nombre / %. */
+/** Mirror of `PlacementColumn`: currency gutter + dot / name / % rows. */
 export const PlacementSkeleton = () => (
   <div className="flex gap-3 sm:block">
     <span className="h-3.5 w-8 shrink-0 animate-pulse rounded bg-white/15 sm:hidden" />
@@ -40,8 +40,8 @@ export const PlacementSkeleton = () => (
       {Array.from({ length: PLACEMENT_ROWS }).map((_, row) => (
         <div key={row} className={cn('flex items-center gap-2', row === 1 && 'sm:justify-end')}>
           <span className="size-[10px] shrink-0 animate-pulse rounded-[2px] bg-white/15" />
-          {/* `flex-1` mientras está apilado — igual que el nombre real, que es
-              el que empuja el porcentaje contra el borde derecho. */}
+          {/* `flex-1` only while stacked — like the real name, which is what
+              pushes the percentage against the right edge. */}
           <span className="h-3.5 min-w-0 flex-1 animate-pulse rounded bg-white/15 sm:w-14 sm:flex-none" />
           <span className="h-3.5 w-9 shrink-0 animate-pulse rounded bg-white/10" />
         </div>
@@ -50,7 +50,7 @@ export const PlacementSkeleton = () => (
   </div>
 )
 
-/** Las dos columnas de moneda con su divisor, tal como las apila la card. */
+/** The two currency columns with their divider, stacked as the card stacks them. */
 export const PlacementGridSkeleton = () => (
   <>
     <PlacementSkeleton />
@@ -61,8 +61,8 @@ export const PlacementGridSkeleton = () => (
 )
 
 /**
- * El monto de un `Flow` y su línea USD. El rótulo con su dot NO entra acá: no
- * depende de la lectura y se sigue renderizando real mientras carga.
+ * A `Flow`'s amount and its USD line. The label with its dot is NOT in here: it
+ * does not depend on the read and keeps rendering for real while it loads.
  */
 export const SummaryAmountSkeleton = () => (
   <>

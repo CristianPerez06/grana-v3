@@ -146,10 +146,10 @@ export const SpentCard = ({ otherName }: Props) => {
   const usd = spendingQuery.data?.USD ?? empty
   const pace = deriveSpendingPace(ars.gastaste, balanceQuery.data?.ARS.totalIncome ?? 0)
 
-  // La carga NO es un vacío: mientras la lectura no resolvió, los montos valen 0
-  // porque no hay dato, y `isEmpty` afirmaba "Sin gastos este mes." con eso. El
-  // vacío se decide sólo cuando la lectura resolvió y devolvió cero. Vuelve a
-  // pasar en cada cambio de mes: la query se re-keyea por mes.
+  // Loading is NOT empty: while the read has not resolved the amounts are 0
+  // because there is no data, and `isEmpty` used to claim "Sin gastos este mes."
+  // off the back of that. The empty state is decided only once the read resolved
+  // and came back zero. It hit on every month change too: the query re-keys.
   const isLoading = spendingQuery.isPending || balanceQuery.isPending
   const isEmpty = !isLoading && ars.gastaste === 0 && usd.gastaste === 0
   // One decision for the three tiles (the USD line), so they stay level.

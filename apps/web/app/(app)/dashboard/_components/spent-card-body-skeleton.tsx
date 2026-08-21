@@ -1,16 +1,16 @@
 import { cn } from '@/lib/utils'
 
 /**
- * Cuerpo de "Cuánto gastaste" mientras carga: los tres tiles y la tira de ritmo.
+ * The body of "Cuánto gastaste" while it loads: the three tiles and the pace strip.
  *
- * Vive aparte de `spent-card-skeleton.tsx` porque lo consumen dos lados con
- * requisitos opuestos: el fallback del `<Suspense>` (server component, que trae
- * el encabezado real) y la rama de carga de la card client cuando el usuario
- * cambia de mes. Ese archivo importa `next-intl/server`, así que no puede
- * entrar en un módulo client.
+ * It lives apart from `spent-card-skeleton.tsx` because two sides with opposite
+ * requirements consume it: the `<Suspense>` fallback (a server component, which
+ * brings the real header) and the client card's loading branch when the user
+ * changes month. That file imports `next-intl/server`, so it cannot be pulled
+ * into a client module.
  *
- * Espeja `SpentTile` y `PaceStrip`: alto mínimo del tile, franja de acento al
- * pie, y la tira con su anillo, su barra y su pie.
+ * Mirrors `SpentTile` and `PaceStrip`: the tile's min-height, the accent rule at
+ * its foot, and the strip with its ring, its bar and its foot.
  */
 export const SpentCardBodySkeleton = () => (
   <>
@@ -25,8 +25,8 @@ export const SpentCardBodySkeleton = () => (
             <div className="mt-2.5 h-3 w-14 animate-pulse rounded bg-muted/70" />
             <div className="mt-2 h-[19px] w-16 max-w-full animate-pulse rounded bg-muted" />
             <div className="mt-[3px] h-2.5 w-12 animate-pulse rounded bg-muted/70" />
-            {/* El mismo slot de alto fijo que llevan la bajada y la invitación a
-                girar, para que el tile mida igual con y sin datos. */}
+            {/* The same fixed-height slot the caption and the flip invitation
+                share, so the tile measures the same with and without data. */}
             <div className="mt-3 flex min-h-[30px] flex-col items-center gap-1 sm:min-h-[32px]">
               <div className="h-2.5 w-16 animate-pulse rounded bg-muted/70" />
               <div className="h-2.5 w-12 animate-pulse rounded bg-muted/70" />

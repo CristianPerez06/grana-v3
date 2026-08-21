@@ -166,7 +166,7 @@ const Flow = ({
   align: keyof typeof ALIGN
   /** Type step, decided once for the three (see the card). */
   density: AmountDensity
-  /** Mientras el mes nuevo carga: el rótulo queda, el importe va a skeleton. */
+  /** While the new month loads: the label stays, the amount goes to skeleton. */
   loading?: boolean
 }) => (
   // A ROW when narrow — label left, amount right — and a column once the three
@@ -258,10 +258,10 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
           {isCurrent ? t('hero.total_label') : t('hero.balance_as_of', { month: monthLabel })}
         </p>
 
-        {/* Al navegar a un mes sin cachear los importes van a skeleton, no a
-            `?? 0`: un cero es una afirmación sobre el saldo, y no es la que
-            corresponde. Los rótulos y el link se quedan: no dependen de la
-            lectura, y son los que dicen a qué mes estás mirando. */}
+        {/* Navigating to an uncached month sends the amounts to skeleton, not to
+            `?? 0`: a zero is a claim about the balance, and not the right one.
+            The labels and the link stay — they do not depend on the read, and
+            they are what tell you which month you are looking at. */}
         {isLoading ? (
           <>
             <HeroAmountSkeleton />

@@ -1,10 +1,10 @@
 import { View } from 'react-native'
 import { SkeletonBlock } from '../ui/SkeletonBlock'
 
-/** Mismo alto fijo que `SpentTile`, para que la fila no cambie al resolver. */
+/** Same fixed height as `SpentTile`, so the row does not change when it resolves. */
 const TILE_HEIGHT = 150
 
-/** Espejo del frente de `SpentTile`: ícono, rótulo, monto, línea USD y bajada. */
+/** Mirror of `SpentTile`'s front face: icon, label, amount, USD line and caption. */
 const TileSkeleton = () => (
   <View
     style={{ height: TILE_HEIGHT }}
@@ -21,28 +21,28 @@ const TileSkeleton = () => (
       <View className="mt-0.5">
         <SkeletonBlock className="h-2.5 w-12 rounded" />
       </View>
-      {/* El mismo slot de alto fijo que la bajada y la invitación a girar. */}
+      {/* The same fixed-height slot the caption and the flip invitation share. */}
       <View className="mt-2 items-center gap-1" style={{ minHeight: 26 }}>
         <SkeletonBlock className="h-2.5 w-16 rounded" />
         <SkeletonBlock className="h-2.5 w-12 rounded" />
       </View>
     </View>
-    {/* La franja de acento del pie, que en la card real lleva el tono del tile. */}
+    {/* The accent rule at the foot, which carries the tile's tone in the real card. */}
     <SkeletonBlock className="h-1 w-full" />
   </View>
 )
 
 /**
- * Skeleton shape-matched del cuerpo de "Cuánto gastaste": los tres tiles en
- * fila y la tira de ritmo debajo.
+ * Shape-matched skeleton for the BODY of "Cuánto gastaste": the three tiles in a
+ * row and the pace strip under them.
  *
- * Reemplaza a `SpendingSkeleton`, que era el sobrante de "En qué se fue" —un
- * anillo de 150px y cinco filas de leyenda— y quedó anticipando una sección dada
- * de baja mientras la card mostraba otra cosa.
+ * Replaces `SpendingSkeleton`, the leftover from the retired "En qué se fue" — a
+ * 150px ring and five legend rows — which kept anticipating a section that no
+ * longer exists while the card rendered something else entirely.
  *
- * Cubre solo el cuerpo: el encabezado de la card (título y link a Movimientos)
- * lo renderiza `SpentCard` desde el primer paint, porque no depende de la
- * lectura (spec `dashboard`).
+ * Body only: the card header (title and link to Movimientos) is rendered by
+ * `SpentCard` from the first paint, because it does not depend on the read
+ * (spec `dashboard`).
  */
 export const SpentCardSkeleton = () => (
   <>
@@ -52,7 +52,7 @@ export const SpentCardSkeleton = () => (
       <TileSkeleton />
     </View>
 
-    {/* Tira de ritmo: anillo, rótulo, barra y pie. */}
+    {/* Pace strip: ring, label, bar and foot. */}
     <View className="mt-3 flex-row items-center gap-3 rounded-2xl border border-border bg-page p-3.5">
       <SkeletonBlock className="size-[46px] rounded-full" />
       <View className="min-w-0 flex-1">

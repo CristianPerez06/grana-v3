@@ -30,10 +30,10 @@ export const CommittedSection = () => {
   const query = useCommittedOutlook()
   const data = query.data
 
-  // El encabezado no depende de la lectura —título, mes y link— así que se
-  // renderiza desde el primer paint en los tres estados: cargando, con error y
-  // con datos. Antes el skeleton reemplazaba la card entera y el chrome aparecía
-  // de golpe al resolver.
+  // The header does not depend on the read — title, month and link — so it
+  // renders from the first paint in all three states: loading, error and loaded.
+  // The skeleton used to replace the whole card, so the chrome appeared all at
+  // once when the read resolved.
   const header = (
     <View className="flex-row items-start justify-between">
       <View className="min-w-0 flex-1">

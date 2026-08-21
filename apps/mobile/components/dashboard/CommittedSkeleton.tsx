@@ -1,24 +1,25 @@
 import { View } from 'react-native'
 import { SkeletonBlock } from '../ui/SkeletonBlock'
 
-/** Tarjetas y Gastos fijos: los dos grupos que la card siempre ofrece. */
+/** Tarjetas and Gastos fijos: the two groups the card always offers. */
 const GROUP_ROWS = 2
 
 /**
- * Skeleton shape-matched del **cuerpo** de "Compromisos del próximo mes": el
- * resumen con su total y su barra apilada, y las dos filas de grupo.
+ * Shape-matched skeleton for the BODY of "Compromisos del próximo mes": the
+ * summary with its total and stacked bar, and the two group rows.
  *
- * Cubre solo el cuerpo: la card, el título, el mes y "Ver todos" los renderiza
- * `CommittedSection` desde el primer paint. Antes este componente reemplazaba a
- * la card entera —sin borde, sin fondo y sin encabezado— y el chrome aparecía de
- * golpe al resolver.
+ * Body only: the card, the title, the month and "Ver todos" are rendered by
+ * `CommittedSection` from the first paint. This component used to replace the
+ * WHOLE card — no border, no background, no header — so the chrome appeared all
+ * at once when the read resolved.
  *
- * Dibuja la línea USD y la leyenda de la barra aunque la card las condicione:
- * es el caso alto, y quedarse corto hace saltar la pantalla al resolver.
+ * It draws the USD line and the bar legend even though the card makes both
+ * conditional: that is the tall case, and falling short makes the screen jump
+ * when it resolves.
  */
 export const CommittedSkeleton = () => (
   <View className="mt-3">
-    {/* Resumen: rótulo, total, línea USD, barra apilada y leyenda. */}
+    {/* Summary: label, total, USD line, stacked bar and legend. */}
     <View className="rounded-2xl border border-border bg-page p-3.5">
       <SkeletonBlock className="h-2.5 w-24 rounded" />
       <View className="mt-1">
@@ -40,7 +41,7 @@ export const CommittedSkeleton = () => (
       </View>
     </View>
 
-    {/* Las dos filas de grupo, con su área táctil de 44px. */}
+    {/* The two group rows, with their 44px touch target. */}
     <View className="mt-3 gap-2.5">
       {Array.from({ length: GROUP_ROWS }).map((_, row) => (
         <View
