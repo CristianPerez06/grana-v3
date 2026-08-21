@@ -10,37 +10,57 @@
 
 ---
 
-## 1. La cadena
+## 1. Las dimensiones
+
+El dinero **no recorre pasos**. En todo momento está en un lugar, con ciertos atributos, y sobre él
+ocurren hechos o decisiones que los cambian. Modelarlo como una secuencia sugiere una dependencia
+que no existe: una meta puede existir sin valuación, una posición sin propósito, un propósito sin
+inversión.
 
 ```
-DINERO
-  │  ¿puedo gastarlo hoy?
-  ↓
-DISPONIBLE ──────────── derivado de la posición
-  │  ¿decido no gastarlo?
-  ↓
-GUARDAR ──────────────── decisión del usuario
-  │  ¿para qué?  (opcional)
-  ↓
-ASIGNAR ──────────────── decisión del usuario
-  │  ¿dónde está?
-  ↓
-POSICIÓN ─────────────── hecho
-  │  ¿cuánto vale?
-  ↓
-VALOR ────────────────── hecho
-  │  agrupado por propósito
-  ↓
-META ─────────────────── vista
+                                 DINERO
+                                   │
+        ┌───────────────┬──────────┴──────────┬───────────────┐
+        ↓               ↓                     ↓               ↓
+    POSICIÓN          VALOR            DISPONIBILIDAD      PROPÓSITO
+  ¿dónde está?    ¿cuánto vale?        ¿puedo gastarlo?     ¿para qué?
+      hecho           hecho                derivada          decisión
+     siempre         siempre               siempre           OPCIONAL
 ```
 
-Ningún usuario recorre la cadena entera. Cada escalón es opcional y aparece cuando hace falta.
-Grana ya tiene resueltos **Disponible** y **Posición**.
+**Lo que las cambia**
 
-**Ahorro** e **inversión** no son escalones: son **resultados**. Ahorrar es ejercer *Guardar*.
-Invertir es una propiedad de la *Posición* donde quedó esa plata. Por eso no son dos módulos.
+| | Cambia |
+|---|---|
+| **Hechos** — los movimientos del ledger | Posición y valor |
+| **Decisiones** — guardar/liberar, asignar/desasignar | Disponibilidad y propósito |
 
----
+**Lo que las interpreta, sin cambiarlas**
+
+La **vara** (pesos, dólares, poder de compra) · el **horizonte** (derivado de compromisos, metas y
+gasto histórico) · las **agrupaciones** (por vehículo, por propósito, por disponibilidad) · la **meta**,
+que agrupa asignaciones y no contiene plata.
+
+### La disponibilidad tiene dos fuentes independientes
+
+Es la dimensión sobre la que se apoya toda la fase 1, y no se deriva de una sola cosa:
+
+- **La posición** — esta cuenta no participa del disponible (un plazo fijo, la caja de seguridad).
+- **La decisión** — guardé este monto de una cuenta que sí participa.
+
+Ninguna implica la otra. **Guardar produce plata no disponible, pero no toda la plata no disponible
+fue guardada**: un FCI puede estar fuera del circuito diario sin que el usuario lo haya "guardado",
+y puede ser patrimonio de largo plazo sin ningún propósito declarado.
+
+### Ahorro e inversión no son dimensiones
+
+Son **resultados** de ejercer las otras:
+
+- **Ahorrar** = ejercer una decisión (*guardar*) sobre plata disponible.
+- **Invertir** = una propiedad de la **posición** donde esa plata quedó.
+
+Por eso nunca fueron dos módulos, y por eso mover plata de una caja de ahorro a un FCI no es
+"pasar de ahorro a inversión": es la misma plata cambiando de posición.
 
 ## 2. Las cuatro naturalezas
 
@@ -93,6 +113,7 @@ No agregan datos: reinterpretan los que ya hay.
 | | **Guardar** *(⇄ Liberar)* | **Asignar** *(⇄ Desasignar)* |
 |---|---|---|
 | Qué hace | Saca un monto del disponible | Le da un propósito a un monto |
+| Ojo | Es **una** de las dos fuentes de no-disponibilidad, no la única (ver §1) | No dice nada sobre la disponibilidad |
 | Opera sobre | Plata que **hoy está** en el disponible | **Cualquier** plata, esté dentro o fuera del disponible |
 | Tope | El disponible. No puede excederlo | El monto de esa posición |
 | Efecto en el disponible | **Lo reduce** | **Ninguno** |
@@ -122,7 +143,7 @@ separado solo para la plata que ya está afuera.
 5. **Todo por moneda.** Nunca existe un guardado ni una meta en un total mezclado ARS+USD.
 6. **Las decisiones tienen fecha** y se cortan a hoy como todo lo demás.
 7. **Una meta no contiene plata: agrupa asignaciones**, que pueden estar en distintas cuentas y monedas.
-8. **El propósito es opcional.** Única excepción prevista: el **fondo de emergencia**, que Grana necesita conocer explícitamente porque es indistinguible de "plata sin destino" y exige lo contrario (liquidez por encima de rendimiento).
+8. **El propósito es opcional, y cuando existe tiene un tipo.** No hace falta una primitiva aparte para el fondo de emergencia: es un **tipo de propósito** (`objetivo` con monto y fecha · `reserva` sin fecha pero con necesidad de liquidez · sin definir). Lo que sí es propio de la reserva de emergencia es que Grana **no la puede inferir**: sin que el usuario lo diga, es indistinguible de "plata sin destino", y exige exactamente lo contrario (liquidez por encima de rendimiento).
 9. **Grana describe hechos sobre la plata del usuario; no recomienda instrumentos.** "Tenés $2.000.000 sin rendir hace cuatro meses" es un hecho. "Poné eso en un FCI" es asesoramiento.
 10. **Lo que Grana no puede saber, lo declara.** Un diagnóstico sobre información parcial puede ser peor que ningún diagnóstico.
 
