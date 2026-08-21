@@ -405,6 +405,75 @@ end $$;
 
 
 -- =============================================================================
+-- 8.1I — INVARIANTE: el catálogo del sistema está activo
+-- =============================================================================
+-- 8.1D y 8.1E validan que las categorías y subcategorías del sistema EXISTAN,
+-- no que estén activas. Pero el catálogo que consume la app filtra
+-- `is_active = true` en los dos niveles (apps/web/lib/categories/queries.ts), así
+-- que una fila de sistema archivada existe en la base, pasa 8.1D/8.1E y aun así
+-- es invisible al clasificar un movimiento. Eso ya pasó: `verduleria` estuvo
+-- archivada mientras este script daba verde, hasta la migración 0056.
+--
+-- Ningún usuario puede archivar filas de sistema: `archiveSubcategory` filtra
+-- `user_id = auth.uid()` y la política RLS de update exige lo mismo (ver 8.2B).
+-- Por eso una fila de sistema archivada es siempre intervención manual, y solo
+-- se acepta la que una migración retiró a propósito.
+--
+-- Retiros deliberados (allowlist):
+--   • `reintegros-cashback` — categoría retirada por la 0018, cuando los
+--     reintegros pasaron a ser un tipo de movimiento en vez de una categoría.
+--     La 0018 tiene su propio self-check que falla si la encuentra ACTIVA; acá
+--     se valida la otra mitad, así las dos se sostienen entre sí.
+--
+-- Agregar una fila a la allowlist SHALL venir con la migración que la retira.
+
+do $$
+declare
+  v_offenders text;
+begin
+  select string_agg(canonical_name, ', ' order by canonical_name)
+    into v_offenders
+    from categories
+   where user_id is null
+     and is_active = false
+     and canonical_name <> all (array['reintegros-cashback']);
+
+  if v_offenders is not null then
+    raise exception 'Categoría(s) de sistema archivada(s) sin retiro deliberado: % — o se reactivan con una migración (ver 0056), o se suman a la allowlist de 8.1I junto con la migración que las retira', v_offenders;
+  end if;
+
+  -- Hoy ninguna subcategoría del sistema está retirada a propósito: la
+  -- allowlist es vacía a propósito. Si alguna migración retira una, se agrega
+  -- acá con su número, igual que `reintegros-cashback` arriba.
+  select string_agg(canonical_name, ', ' order by canonical_name)
+    into v_offenders
+    from subcategories
+   where user_id is null
+     and is_active = false;
+
+  if v_offenders is not null then
+    raise exception 'Subcategoría(s) de sistema archivada(s): % — ninguna está retirada a propósito; reactivar con una migración (ver 0056)', v_offenders;
+  end if;
+
+  -- La contracara del allowlist: `reintegros-cashback` tiene que SEGUIR
+  -- retirada. Reactivarla devolvería al selector una categoría que el modelo de
+  -- reintegros ya no usa, y volvería a habilitar el doble conteo que la 0018
+  -- cerró.
+  if exists (
+    select 1
+      from categories
+     where canonical_name = 'reintegros-cashback'
+       and user_id is null
+       and is_active
+  ) then
+    raise exception 'reintegros-cashback está activa: la 0018 la retiró a propósito (los reintegros son un tipo de movimiento, no una categoría)';
+  end if;
+
+  raise notice '✓ 8.1I — catálogo de sistema activo (sin archivadas fuera de la allowlist; reintegros-cashback sigue retirada)';
+end $$;
+
+
+-- =============================================================================
 -- 8.2 — RLS: políticas en todas las tablas
 -- =============================================================================
 
