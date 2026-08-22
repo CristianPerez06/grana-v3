@@ -52,6 +52,20 @@ Ninguna implica la otra. **Guardar produce plata no disponible, pero no toda la 
 fue guardada**: un FCI puede estar fuera del circuito diario sin que el usuario lo haya "guardado",
 y puede ser patrimonio de largo plazo sin ningún propósito declarado.
 
+### Proteger no es lo mismo que crecer
+
+En Argentina el escalón que importa no es hacer crecer la plata: es **que no pierda valor**. Comprar
+dólares o hacer un plazo fijo no se siente como invertir — se siente como cubrirse.
+
+| | Qué busca | Instrumentos típicos |
+|---|---|---|
+| **Proteger** | Que no pierda valor | Dólares · plazo fijo · cuenta remunerada |
+| **Crecer** | Que valga más, asumiendo riesgo | Acciones y CEDEARs · cripto |
+
+Consecuencia de producto: **una superficie llamada "Invertir" deja afuera al acto de protección más
+común del país**, que es comprar dólares. Y consecuencia de modelo: la etiqueta de un movimiento que
+saca plata del disponible sale del **instrumento** elegido, no de la mecánica de la transferencia.
+
 ### Ahorro e inversión no son dimensiones
 
 Son **resultados** de ejercer las otras:
@@ -143,27 +157,55 @@ separado solo para la plata que ya está afuera.
 5. **Todo por moneda.** Nunca existe un guardado ni una meta en un total mezclado ARS+USD.
 6. **Las decisiones tienen fecha** y se cortan a hoy como todo lo demás.
 7. **Una meta no contiene plata: agrupa asignaciones**, que pueden estar en distintas cuentas y monedas.
-8. **El propósito es opcional, y cuando existe tiene un tipo.** No hace falta una primitiva aparte para el fondo de emergencia: es un **tipo de propósito** (`objetivo` con monto y fecha · `reserva` sin fecha pero con necesidad de liquidez · sin definir). Lo que sí es propio de la reserva de emergencia es que Grana **no la puede inferir**: sin que el usuario lo diga, es indistinguible de "plata sin destino", y exige exactamente lo contrario (liquidez por encima de rendimiento).
-9. **Grana describe hechos sobre la plata del usuario; no recomienda instrumentos.** "Tenés $2.000.000 sin rendir hace cuatro meses" es un hecho. "Poné eso en un FCI" es asesoramiento.
-10. **Lo que Grana no puede saber, lo declara.** Un diagnóstico sobre información parcial puede ser peor que ningún diagnóstico.
+8. **El propósito es opcional, y una meta es un propósito que ganó un objetivo.** No son dos entidades: `propósito` = una etiqueta sobre lo guardado, sin cuantificar; `meta` = ese mismo propósito con `target_amount`, `target_date` y `target_currency`. El fondo de emergencia deja así de ser una excepción del modelo — es simplemente **un propósito que nunca se cuantifica**. Lo que sí es propio de él es que Grana **no lo puede inferir**: sin que el usuario lo diga, es indistinguible de "plata sin destino", y exige exactamente lo contrario (liquidez por encima de rendimiento).
+9. **Un propósito es bimoneda por construcción.** Como guardar es por moneda, un mismo propósito puede tener pesos y dólares a la vez ("Japón: $200.000 + US$ 500"). Nunca se suman.
+10. **Grana describe hechos sobre la plata del usuario; no recomienda instrumentos.** "Tenés $2.000.000 sin rendir hace cuatro meses" es un hecho. "Poné eso en un FCI" es asesoramiento.
+11. **Lo que Grana no puede saber, lo declara.** Un diagnóstico sobre información parcial puede ser peor que ningún diagnóstico.
 
 ---
 
 ## 5. Fases
 
-Cada fase se sostiene sola y prepara la siguiente. Ninguna obliga a deshacer la anterior.
+Cada fase se sostiene sola y prepara la siguiente. Ninguna obliga a deshacer la anterior: todas las
+columnas nuevas son nullable o tienen default.
 
-| Fase | Qué agrega | Qué habilita |
+| Fase | La pregunta | Qué agrega |
 |---|---|---|
-| **1 · Guardar** | El verbo, y que una cuenta pueda no participar del disponible | "De lo que tengo, esto no lo voy a gastar" · Cuentas pasa a responder cuánto hay fuera del circuito diario (plazo fijo, FCI, USD guardados) |
-| **2 · Propósito** | Asignar, y la meta como vista | "Esto es para Japón" · una meta respaldada por varias posiciones y monedas |
-| **3 · Valor** | Valuación fechada por posición | "Cuánto tengo hoy acá" y "cuánto rindió" |
-| **4 · Vara y patrimonio** | Total consolidado con cotización del usuario, poder de compra | "Cuánto tengo en total" y "cuánto gané de verdad" |
-| **Transversal** | Horizonte derivado + señal de adecuación | "Esta plata la necesitás el 5 y está inmovilizada hasta el 15" |
+| **1 · Guardar** | *¿Cuánto puedo gastar?* | Guardar y liberar, por moneda, fuera del ledger |
+| **2 · Propósito** | *¿Para qué lo conservo?* | Etiqueta opcional sobre lo guardado — **sin objetivo ni fecha** |
+| **3 · Posiciones** | *¿Dónde está y qué está haciendo?* | Cuentas fuera del disponible · tipos de cuenta · instrumentos con vencimiento · valuación |
+| **4 · Metas** | *¿Estoy llegando?* | El propósito gana objetivo, fecha y moneda. Progreso respaldado por posiciones |
+| **5 · Patrimonio** | *¿Estoy mejor que antes?* | La vara, el consolidado y el rendimiento real |
+| **Transversal** | *¿Está donde corresponde para cuándo la necesito?* | Horizonte y adecuación. Se puede empezar en la 3 |
 
-Las fases 1 y 2 no requieren ningún dato externo. La 4 sí (inflación, cotizaciones).
+**Las tres primeras no necesitan ningún dato externo.** Recién la 5 requiere inflación — y hasta eso
+arranca con datos propios: el `fx_rate` de los `exchange` del usuario ya permite decir "compraste a
+$1.100, hoy a $1.250".
 
----
+### Por qué Propósito va antes que Posiciones
+
+Porque son de precio muy distinto y el barato compra retención temprana. *"Guardaste $200.000"* es
+una abstracción; *"Guardaste $200.000 para Japón"* es una razón para volver — y no requiere saber
+dónde está esa plata ni cuánto rinde.
+
+Lo que **no** se adelanta es la meta completa (objetivo, fecha, progreso): esa sí gana muchísimo con
+las posiciones, porque la enseñanza argentina de verdad —*"tu objetivo está en dólares y tu ahorro en
+pesos"*— necesita saber en qué está parada cada parte.
+
+### Las ocho preguntas, y dónde se cierran
+
+El norte del producto es que Grana pueda contestar ocho preguntas. Hoy contesta dos completas.
+
+| | Pregunta | Hoy | Se cierra en |
+|---|---|:--:|---|
+| 1 | ¿Cuánto tengo? | 🟡 | Fase 3 |
+| 2 | ¿Dónde está? | 🟢 | — |
+| 3 | ¿Cuánto puedo gastar? | 🟡 | **Fase 1** |
+| 4 | ¿Qué pasó este mes? | 🟢 | — |
+| 5 | ¿Cuánto estoy acumulando? | 🔴 | Fase 3 |
+| 6 | ¿Para qué estoy guardando? | 🔴 | Fase 2 (parcial) · Fase 4 |
+| 7 | ¿Estoy protegiendo mi plata? | 🔴 | Fase 5 |
+| 8 | ¿Estoy avanzando? | 🔴 | Fase 5 |
 
 ## 6. Lo que la fase 1 aprovecha sin construir
 

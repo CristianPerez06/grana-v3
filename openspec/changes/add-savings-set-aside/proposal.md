@@ -2,68 +2,71 @@
 
 ## Why
 
-Hoy Grana no tiene forma de expresar la decisión más básica del ahorro: **"esto que tengo, decidí que no lo voy a gastar"**.
+Hoy Grana no tiene forma de expresar la decisión más básica del ahorro: **"esto que tengo, decidí que no lo voy a gastar"**. El usuario que aparta plata mentalmente sigue viendo ese dinero contado como disponible, y no hay ningún rodeo posible — a diferencia de casi todo lo demás, esto no se puede simular con las piezas que ya existen.
 
-El usuario que aparta plata mentalmente sigue viendo ese dinero contado como disponible. El que lo movió a un plazo fijo, a un FCI o a dólares en la caja de seguridad tiene dos salidas, y las dos están mal: **no cargarlo** (y entonces su patrimonio en Grana miente) o **cargarlo como una cuenta común** (y entonces su "para gastar hoy" se infla con plata que no puede gastar).
+Pero el valor de la fase no es "agregar ahorro". Es que **Grana pasa a contestar entera una de las preguntas más prácticas que tiene un usuario**: *¿cuánto puedo gastar sin meter la pata?*
 
-No falta un módulo de ahorro. Falta **un verbo**. El resto del modelo —propósito, metas, valuación, rendimiento, patrimonio— se construye después, encima de este dato, y no hace falta para que Grana empiece a enseñar el comportamiento que importa: **separar plata antes de gastarla**.
+El cálculo que resuelve es el que el argentino ya hace de cabeza y hoy le sale mal:
 
-El fundamento conceptual completo vive en `docs/modelo-de-dinero.md`. Este change implementa su **fase 1**.
+```
+saldo de mis cuentas  −  lo que ya tiene destino  =  lo que realmente puedo gastar
+```
+
+No estamos agregando un concepto nuevo: **estamos automatizando una resta que el usuario ya hace**.
+
+El fundamento conceptual completo vive en `docs/modelo-de-dinero.md`; el recorrido de pantallas, en `docs/design/savings-guardar/`. Este change implementa su **fase 1**.
 
 ## What Changes
 
 **Un comportamiento nuevo: Guardar.**
 
 - El usuario puede **guardar** un monto en una moneda, y **liberarlo**. Guardar **no mueve dinero ni genera un movimiento en el ledger**: cambia la función de plata que ya tiene.
-- El **disponible** pasa a ser `saldo de cuentas participantes − guardado`. Es la única definición de "para gastar hoy".
+- El **disponible** pasa a ser `saldo de cuentas propias − guardado`, por moneda.
 - **Guardar tiene tope en el disponible.** Es la diferencia con el ledger: un saldo negativo es un hecho válido, pero guardar más de lo que tenés no es un estado incómodo — es un input inválido.
 - **Gastar por encima de lo guardado deja el disponible negativo y NO reduce el guardado en silencio.** Grana avisa sin bloquear; borrarle la decisión al usuario para que el número cierre sería mentirle.
 
-**Un atributo nuevo en cuentas: participación en el disponible.**
+**Dónde se ve.**
 
-- Una cuenta cash/bank puede declararse **fuera del disponible** (plazo fijo, FCI, caja de seguridad, cuenta de inversión). Sigue siendo una cuenta normal con su saldo y su historial; simplemente no cuenta como plata para gastar hoy.
-- La lista de Cuentas agrupa en dos bloques, y con eso ya responde *"¿cuánto tengo entre FCI, plazo fijo y dólares guardados?"* sin construir ninguna pantalla nueva.
+- El Hero del dashboard muestra el **disponible real**. Un único monto de plata.
+- Bajo la tira de "Resumen del mes", separada por una regla, **una sola línea**: *Guardaste este mes*. La identidad de la card sigue cerrando en pantalla.
+- Una **vista de detalle** —total, este mes, historial— a la que se llega tocando el número.
 
-**Dashboard: un solo número y dos renglones.**
+**Cómo se llega al acto.**
 
-- El Hero muestra el **disponible real**. Un único monto de plata: el usuario nunca se pregunta cuál es el suyo.
-- Bajo la tira de "Resumen del mes", separadas por una regla, dos líneas que explican la diferencia entre el saldo y el disponible: **Guardaste este mes** y **Pasaste a otra cuenta**. La identidad sigue cerrando en pantalla, que es lo mejor que tiene la card.
-
-**Fuera de alcance, explícitamente:**
-
-- **No hay entrada nueva en la navegación.** "Guardado" no es un módulo: es un dato con vista de detalle, a la que se llega desde el dashboard. Qué hub agrupa ahorro/metas/posiciones se decide en fase 2, con uso real; hoy sería adivinar.
-- **No se pide propósito.** Un campo "¿para qué?" sin metas que elegir es un campo muerto. El propósito llega en fase 2 y el schema queda preparado para recibirlo sin migración destructiva.
-- **No hay valuación, rendimiento, patrimonio, horizonte ni datos externos de mercado.** Fases 3 y 4.
+- Un **drawer contextual**: viniendo de un ingreso hereda moneda y monto sugerido, y no pregunta fecha. Abierto suelto sí ofrece moneda, y solo si hay saldo en las dos.
+- Una **tira de sugerencia** después de registrar un ingreso, servida por `guidance`, como máximo una vez por mes.
+- La sugerencia **recuerda el porcentaje, no el importe**: 10% de $2.000.000 en agosto propone $250.000 sobre $2.500.000 en septiembre. Sin pantalla de ajustes.
 
 ## Non-goals
 
-- Sobres / zero-based budgeting. Apartar pesos que se licúan no es ahorrar; en Argentina el ahorro se expresa en el vehículo. El sistema de sobres queda descartado como modelo (a lo sumo, un modo opcional futuro).
-- Que "fuera del disponible" signifique "guardado". Son dos fuentes independientes de no-disponibilidad: una es un **atributo de la posición**, la otra es una **decisión** del usuario. Ninguna implica la otra.
-- Modificar el ledger, las reglas de signo, la analítica del mes o el corte temporal.
+Esta fase es deliberadamente angosta. **Nada de lo siguiente entra**, y cada exclusión tiene su motivo:
+
+- **Propósito y metas** (fase 2 y 4). Un campo "¿para qué?" sin propósitos que elegir es un campo muerto. La fase 1 **no anticipa nada**: en la fase 2, `savings_purpose` se crea y `savings_entry` gana `purpose_id` nullable en la misma migración. Aditivo, sin backfill.
+- **Cuentas fuera del disponible y tipos de cuenta** (fase 3). Es la exclusión que más simplifica: sin cuentas fuera del disponible, las transferencias entre cuentas propias siguen siendo **neutras** como hoy, y la card del mes necesita **una sola línea nueva** en vez de dos. Un plazo fijo se sigue cargando como hasta ahora.
+- **Instrumentos, vencimientos, valuación, rendimiento, patrimonio, horizonte, inflación** (fases 3 a 5).
+- **Una entrada nueva en la navegación.** "Guardado" no es un módulo: es un dato con vista de detalle. Qué hub agrupa ahorro, propósitos y posiciones se decide en fase 2, con uso real.
+- **Sobres / zero-based budgeting.** Descartado como modelo: apartar pesos que se licúan no es ahorrar; en Argentina el ahorro se expresa en el vehículo.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `savings`: guardar y liberar como decisión del usuario fuera del ledger, el disponible real derivado, el tope, la convivencia con el gasto y la vista de detalle.
+- `savings`: guardar y liberar como decisión del usuario fuera del ledger, el disponible real derivado, el tope, la convivencia con el gasto, la sugerencia al ingreso y la vista de detalle.
 
 ### Modified Capabilities
 
-- `accounts`:
-  1. "Una cuenta puede declararse fuera del disponible" (nueva) — el atributo, sus restricciones y el agrupado de la lista.
 - `dashboard`:
   1. "El Hero muestra el disponible total bimoneda" — el monto pasa a ser el disponible real.
-  2. "La zona clara de la card de saldo muestra el Resumen del mes" — suma las dos líneas bajo la regla y extiende la identidad auditable.
+  2. "La zona clara de la card de saldo muestra el Resumen del mes" — suma la línea *Guardaste este mes* bajo una regla y extiende la identidad auditable.
 
 ## Impact
 
-**Aditivo por construcción.** No se toca `get_owned_account_ids()`, ni `get_account_balance_sums`, ni `calculateTransactionSums`, ni las reglas de signo, ni la paridad SQL↔TS, ni la analítica del mes.
+**Aditivo por construcción.** No se toca `get_owned_account_ids()`, ni `get_account_balance_sums`, ni `calculateTransactionSums`, ni las reglas de signo, ni la paridad SQL↔TS, ni la analítica del mes, ni el módulo de cuentas.
 
-- **Migración** (`supabase/migrations/`): columna `accounts.counts_as_available`; tabla `savings_entry` con RLS; funciones `get_available_account_ids()` (derivada de `get_owned_account_ids()`) y `get_saved_sums()`.
-- `packages/dashboard/`: composición del disponible real y de los dos términos nuevos del mes. `Moviste` se deriva como la **variación del saldo de las cuentas no participantes** entre los dos extremos del mes, reusando `get_account_balance_sums` con su corte por fecha — no como un caso especial de transferencia.
-- `packages/accounts/`: el atributo en el view-model y el agrupado de la lista.
-- `packages/validation/`: schema de guardar/liberar (monto > 0, moneda, fecha, tope).
-- `apps/web` + `apps/mobile`: drawer de Guardar/Liberar (sobre `overlay-primitives`), las dos líneas del dashboard, la vista de detalle, el switch en el form de cuenta.
+- **Migración**: tabla `savings_entry` con RLS + función `get_saved_sums(p_today)`.
+- `packages/dashboard/`: composición del disponible real y del término del mes.
+- `packages/validation/`: schema de guardar/liberar (monto > 0, moneda activa, fecha, tope).
+- `apps/web` + `apps/mobile`: drawer sobre `overlay-primitives`, la línea del dashboard, la vista de detalle, la tira de sugerencia sobre `guidance`.
 - `packages/i18n-messages`: copy nuevo.
 
 ## Aritmética
@@ -71,9 +74,9 @@ El fundamento conceptual completo vive en `docs/modelo-de-dinero.md`. Este chang
 La identidad que la card deja verificar en pantalla:
 
 ```
-Tenías + Entró − Se fué − Pasaste a otra cuenta − Guardaste  =  Disponible
+Tenías + Entró − Se fué − Guardaste  =  Disponible
 ```
 
-Donde `Tenías` se **deriva** (no se lee) como `Disponible − (Entró − Se fué − Pasaste − Guardaste)`, igual que hoy, de modo que cierre por construcción y no porque dos lecturas coincidan.
+`Tenías` se **deriva** (no se lee) como `Disponible − (Entró − Se fué − Guardaste)`, igual que hoy, de modo que cierre por construcción y no porque dos lecturas coincidan.
 
-Los dos términos nuevos son **flujos del mes**, nunca el stock acumulado. Poner el acumulado rompe la identidad.
+`Guardaste` es el **flujo neto del mes** (guardado menos liberado), nunca el stock acumulado. Poner el acumulado rompe la identidad.
