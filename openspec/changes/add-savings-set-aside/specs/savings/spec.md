@@ -170,6 +170,14 @@ Se SHALL llegar a ella **tocando el monto guardado**, del mismo modo que se lleg
 
 La vista existe por una razón de fondo: como guardar no es un movimiento, **no aparece en Movimientos**, y sin este detalle el usuario no podría auditar su propia decisión — lo que contradiría el pilar de confianza contable.
 
+El historial SHALL incluir las operaciones de meses anteriores, pero la vista NO SHALL seguir el selector de mes del dashboard ni presentar ese historial como una reconciliación mensual. *"Guardaste $200.000 en mayo"* es un **dato histórico** y NO SHALL restarse del saldo al cierre de mayo en ninguna superficie: el saldo al cierre de un mes es un hecho del ledger, y una decisión tomada en mayo —que el usuario pudo haber revertido en junio— no puede deformarlo hacia atrás. La reconciliación del guardado vive en el mes corriente y en ningún otro.
+
+#### Scenario: El historial pasado no deforma un mes cerrado
+
+- **WHEN** el usuario guardó $200.000 en mayo y navega el dashboard a mayo
+- **THEN** el historial de la vista de detalle sigue mostrando esa operación con su fecha
+- **AND** el saldo al cierre de mayo que muestra la card es el mismo que sería si nunca hubiera guardado
+
 #### Scenario: El historial distingue stock de flujo
 
 - **WHEN** el usuario venía con $200.000 guardados y este mes guardó $150.000

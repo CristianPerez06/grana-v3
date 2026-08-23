@@ -12,6 +12,8 @@ El rótulo NO SHALL cambiar: sigue diciendo **"Saldo disponible total"**. Al net
 
 **Cuando el mes seleccionado NO es el corriente, el guardado NO SHALL netearse** y el monto SHALL seguir siendo el saldo al cierre de ese mes, con el rótulo diciéndolo (por ejemplo "Saldo al cierre de mayo de 2026"). Un "disponible" al cierre de un mes pasado no significa nada: la plata ya se gastó o no se gastó, y la decisión de guardar es una postura sobre el futuro, no un hecho del pasado. La regla es una sola y se lee del propio rótulo: **el guardado se netea exactamente donde la card dice "disponible"**.
 
+En un mes pasado la palabra **"disponible" NO SHALL aparecer** en la card, ni en el rótulo ni en la zona clara. No es solo que el número no se netee: la card no plantea esa pregunta. Decir "podías gastar X en mayo" sería reconstruir una decisión de hoy sobre un mes cerrado — y si el usuario guardó o liberó desde entonces, ese número cambiaría retroactivamente cada vez, sin que nada haya pasado en mayo.
+
 El monto del mes corriente SHALL leerse de la función normativa `get_available_sums(p_today)` —que devuelve por moneda el neto de cuentas, lo reservado y el disponible ya calculado— y el dashboard NO SHALL recomponer esa resta por su cuenta. El criterio de "cuenta propia" y el corte temporal siguen siendo los de `get_owned_account_ids()` y `get_account_balance_sums`: la función compone sobre ellas, no las reemplaza.
 
 El saldo inicial de una cuenta SHALL contar únicamente cuando su fecha de declaración (`account_currencies.initial_balance_date`) es anterior o igual a la fecha de corte. Una cuenta creada en julio NO SHALL aportar su saldo inicial al saldo del 31 de mayo: no era plata que el usuario tuviera en mayo.
