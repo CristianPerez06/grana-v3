@@ -148,6 +148,36 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
 .ov .sh{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 2px}
 .ov .sh h3{margin:0;font-size:19px;font-weight:800;letter-spacing:-.02em}
 
+/* wayfinding */
+.ways{margin-top:56px;background:#fff;border:1px solid var(--border);border-radius:20px;padding:28px 30px 30px}
+.ways h2{margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.ways .lede{margin:0 0 24px;font-size:15px;color:var(--muted);max-width:66ch}
+.ways .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:26px 34px}
+.way{border:1px solid var(--border-soft);border-radius:16px;padding:18px 20px 20px;background:var(--page)}
+.way .cap{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.way h4{margin:5px 0 4px;font-size:16px;font-weight:700;letter-spacing:-.01em}
+.way .taps{font-size:12px;font-weight:700;color:var(--emerald-deep);background:var(--emerald-bg);border-radius:999px;padding:3px 9px;display:inline-block;margin-bottom:14px}
+.way ol{margin:0;padding-left:0;list-style:none;counter-reset:s}
+.way li{counter-increment:s;position:relative;padding-left:30px;font-size:14px;color:var(--muted);margin-bottom:11px;line-height:1.45}
+.way li::before{content:counter(s);position:absolute;left:0;top:1px;width:21px;height:21px;border-radius:7px;background:#fff;border:1px solid var(--border);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--text)}
+.way li b{color:var(--text);font-weight:600}
+.way li:last-child{margin-bottom:0}
+
+/* three states of the row */
+.states{background:#fff;border:1px solid var(--border-soft);border-radius:16px;padding:4px 15px 12px}
+.states .st{padding-top:11px}
+.states .st + .st{border-top:1px solid var(--border-soft);margin-top:11px}
+.states .cap{font-size:9.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#B6BFCA;margin-bottom:7px}
+.states .line{display:flex;align-items:center;justify-content:space-between}
+.states .line .l{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted)}
+.states .line .l i{width:7px;height:7px;border-radius:50%;background:var(--emerald)}
+.states .line .l i.off{background:#D3DAE2}
+.states .line .a{font-size:15.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.states .line .a.em{color:var(--emerald-deep)}
+.states .line .a.nt{color:var(--text)}
+.states .line .g{color:#C4CBD4;font-size:13px;margin-left:5px;font-weight:600}
+.states .line.mute .l{color:var(--soft)}
+
 /* detail view */
 .dt-hero{background:radial-gradient(120% 140% at 92% 12%,rgba(16,185,129,.18),transparent 60%),var(--navy);color:#fff;border-radius:18px;padding:18px}
 .dt-hero .k{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6)}
@@ -340,11 +370,33 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
         </div>
       </div>
       <div class="overlay-empty"><b>1.000.000 + 2.000.000 − 1.200.000 − 200.000 = 1.600.000.</b> La card sigue cerrando en pantalla, sin salir a buscar nada.</div>
+      <div class="sec-t" style="margin-top:6px">La fila, en sus tres estados</div>
+      <div class="states">
+        <div class="st">
+          <div class="cap">Guardaste más de lo que liberaste</div>
+          <div class="line"><span class="l"><i></i>Guardaste este mes</span><span class="a em">−$ 200.000 <span class="g">›</span></span></div>
+        </div>
+        <div class="st">
+          <div class="cap">Liberaste más de lo que guardaste</div>
+          <div class="line"><span class="l"><i></i>Liberaste este mes</span><span class="a em">+$ 50.000 <span class="g">›</span></span></div>
+        </div>
+        <div class="st">
+          <div class="cap">Tenés guardado, pero este mes no tocaste nada</div>
+          <div class="line"><span class="l"><i></i>Guardado</span><span class="a nt">$ 350.000 <span class="g">›</span></span></div>
+        </div>
+        <div class="st">
+          <div class="cap">Nunca guardaste</div>
+          <div class="line mute"><span class="l"><i class="off"></i>Guardar algo</span><span class="a"><span class="g">›</span></span></div>
+        </div>
+      </div>
+      <div class="overlay-empty"><b>El verbo y el signo giran juntos.</b> Si liberaste más de lo que guardaste, la plata volvió a lo que podés gastar: el monto va en más y la fila lo dice. «Guardaste este mes +$ 50.000» no se entendería.<br><br>Los dos primeros estados abren el <b>detalle</b>; el último abre directo el drawer de <b>Guardar</b>, porque no hay nada que mirar todavía.<br><br><b>Los dos de abajo no participan de la cuenta</b> —no hay flujo que contabilizar— y ahí la identidad vuelve a cerrar con tres términos, como cierra hoy.</div>
     </div></div>
     <p class="note">El rótulo <b>no cambia</b>. Al netear el guardado, «Saldo disponible total» pasa a ser literalmente cierto.</p>
     <p class="note">La línea va <b>bajo una regla</b>, no como cuarta columna: la tira de tres es liquidez —plata entrando y saliendo— y guardar es una decisión sobre plata que se quedó donde estaba.</p>
     <p class="note">Va en <b>emerald y con signo menos</b>. El menos dice «salió de lo que podés gastar», que es cierto; el color dice que eso es bueno. El terracota queda reservado para lo que está por pagar o vencido.</p>
     <p class="note">Se renderiza <b>solo en el mes corriente</b>. En un mes pasado la card vuelve a ser exactamente la de hoy, y la palabra «disponible» no aparece.</p>
+    <p class="note"><b>La fila está siempre</b>, en uno de tres estados. Si solo apareciera cuando hay flujo, el que guardó en agosto y en septiembre no tocó nada se quedaría sin ver el guardado y sin puerta al detalle — y el que dijo «ahora no» a la tira no tendría por dónde volver.</p>
+    <p class="note">El costo es el tercer estado: <b>una línea muda para alguien que nunca va a guardar</b>. Por eso es una sola fila, en gris, sin número, sin ícono y sin color.</p>
   </section>
 
   <!-- 5 -->
@@ -419,6 +471,67 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     <p class="note">Por eso la pantalla 5 tiene que existir: es el único lugar donde esa decisión queda auditable.</p>
   </section>
 
+  <!-- 7 -->
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">7</span>
+      <div>
+        <h2>Liberar</h2>
+        <p class="sub">La pregunta que el drawer tiene que contestar solo: ¿a qué cuenta vuelve la plata?</p>
+        <span class="badge b-new">Nueva</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">Guardado en pesos</div><h3>Liberar</h3></div><span class="x">✕</span></div>
+      <div class="c amt">
+        <div class="lbl">Monto</div>
+        <div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">50.000</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Tenés guardado</span><span>$ 350.000</span></div>
+        <div class="minus"><span>Vas a liberar</span><span>− $ 50.000</span></div>
+        <div class="rule"><span>Queda guardado</span><span>$ 300.000</span></div>
+      </div>
+      <div class="c pad" style="display:flex;gap:11px;align-items:flex-start;background:#F7FAFC;border-color:#E3EAF0">
+        <span class="tile" style="background:#EAF1F6">ⓘ</span>
+        <div style="font-size:13px;color:var(--muted);line-height:1.45">Esos $ 50.000 <b style="color:var(--text)">vuelven a estar disponibles para gastar</b>. La plata no se mueve: sigue en las mismas cuentas donde está hoy.</div>
+      </div>
+      <div class="cta">Liberar</div>
+      <div class="overlay-empty"><b>No hay campo de cuenta de destino</b>, y no es un olvido: no hay destino. Guardar nunca sacó la plata de ninguna cuenta, así que liberar no la devuelve a ninguna.</div>
+    </div></div>
+    <p class="note">Es el punto donde el modelo se puede malentender: <b>«guardar» y «liberar» suenan a mover</b>. Un selector de cuenta acá enseñaría el modelo equivocado justo en el momento en que el usuario lo está aprendiendo.</p>
+    <p class="note">La moneda se hereda del detalle, que ya es por moneda. No se pregunta.</p>
+    <p class="note">El tope es simétrico al de guardar: <b>no podés liberar más de lo que tenés guardado</b>. El stock no puede quedar negativo — sería decir que podés gastar plata que no tenés.</p>
+  </section>
+
+</div>
+
+<div class="ways">
+  <h2>¿A dónde voy para guardar plata?</h2>
+  <p class="lede">Hay dos puertas y las dos terminan en el mismo drawer. La primera aparece sola en el momento oportuno; la segunda está siempre, en la pantalla en la que caés al abrir la app.</p>
+  <div class="cols">
+    <div class="way">
+      <div class="cap">Puerta 1 · aparece sola</div>
+      <h4>Justo después de cobrar</h4>
+      <span class="taps">2 taps</span>
+      <ol>
+        <li>Registrás un ingreso — a mano o confirmando un recurrente. <b>La tira aparece abajo.</b></li>
+        <li>Tocás <b>«Guardar $ 200.000»</b> y confirmás. El monto ya viene puesto.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Puerta 2 · está siempre</div>
+      <h4>Cualquier día del mes</h4>
+      <span class="taps">3 taps</span>
+      <ol>
+        <li>Abrís la app. Caés en el <b>dashboard</b>, y la card de saldo es lo primero.</li>
+        <li>Tocás la <b>fila de Guardado</b>, abajo de la regla. Está siempre, tengas guardado o no.</li>
+        <li>En el detalle, <b>«Guardar»</b>. Escribís el monto y confirmás.</li>
+      </ol>
+    </div>
+  </div>
+  <p class="lede" style="margin:22px 0 0">Si nunca guardaste, la fila dice <b>«Guardar algo»</b> y el paso 2 te lleva directo al drawer: dos taps, sin pasar por un detalle vacío. Y no hay una tercera puerta escondida — <b>fuera de esas dos, no se puede guardar</b>, que es lo que hace que la respuesta sea fácil de recordar.</p>
 </div>
 
 <div class="foot">

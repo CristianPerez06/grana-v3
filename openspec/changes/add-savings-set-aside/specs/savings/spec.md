@@ -118,6 +118,10 @@ El sistema SHALL ofrecer el alta de guardado en un **drawer**. Cuando el alta se
 
 El drawer SHALL mostrar el cálculo **al momento de la operación** —disponible actual, monto a guardar, remanente— y NO SHALL calcularlo contra el monto del ingreso: eso implicaría que la reserva sale de ese movimiento, y una reserva es fungible y no pertenece a ninguno.
 
+Abierto desde la vista de detalle —que es **por moneda**— el drawer SHALL heredar esa moneda y NO SHALL ofrecer elegirla. Abierto suelto NO SHALL prellenar ningún monto: sin un ingreso del cual sacar el porcentaje, un número prellenado sería una cifra recomendada por Grana, que es justamente lo que el producto no hace.
+
+**Liberar NO SHALL pedir una cuenta de destino, y el copy SHALL decir explícitamente que la plata no se mueve.** Es el punto donde el modelo se puede malentender: los verbos *guardar* y *liberar* suenan a mover, y el usuario puede esperar elegir adónde va. No va a ninguna parte — estuvo todo el tiempo en las mismas cuentas. Lo único que cambia es cuánto de eso Grana cuenta como gastable. Un selector de cuenta ahí enseñaría el modelo equivocado en el momento exacto en que el usuario lo está aprendiendo.
+
 El copy NO SHALL sugerir que hubo una transferencia. Grana **nunca inventa un movimiento financiero para representar una intención**.
 
 #### Scenario: Guardar desde un ingreso no pregunta moneda ni fecha
@@ -126,6 +130,19 @@ El copy NO SHALL sugerir que hubo una transferencia. Grana **nunca inventa un mo
 - **THEN** la moneda es pesos y no se ofrece elegirla
 - **AND** no se pide la fecha
 - **AND** el monto viene prellenado con el porcentaje sugerido
+
+#### Scenario: Liberar no pregunta adónde va la plata
+
+- **WHEN** el usuario libera $50.000 de su guardado en pesos
+- **THEN** el drawer no ofrece elegir una cuenta de destino
+- **AND** el copy dice que esa plata vuelve a estar disponible para gastar, sin moverse de donde está
+- **AND** ningún saldo de cuenta cambia
+
+#### Scenario: Abierto suelto, el monto viene vacío
+
+- **WHEN** el usuario abre el drawer de Guardar desde la vista de detalle, sin venir de un ingreso
+- **THEN** el monto viene vacío
+- **AND** la moneda es la de la vista de detalle y no se ofrece elegirla
 
 #### Scenario: El cálculo es del momento, no del cierre del mes
 
@@ -166,7 +183,9 @@ El copy SHALL formular una **propuesta de comportamiento**, no una recomendació
 
 El sistema SHALL exponer una vista de detalle del guardado con: el **total guardado por moneda** (stock), el **neto del mes en curso** (flujo) y el **historial** de reservas y liberaciones con su fecha. La vista SHALL ofrecer las acciones Guardar y Liberar.
 
-Se SHALL llegar a ella **tocando el monto guardado**, del mismo modo que se llega al detalle de un resumen de tarjeta. NO SHALL agregarse una entrada nueva a la navegación de la app.
+Se SHALL llegar a ella **tocando la fila de guardado del dashboard**, y esa fila SHALL estar presente en el mes corriente sin importar si el usuario guardó algo o no. NO SHALL agregarse una entrada nueva a la navegación de la app.
+
+La vista SHALL presentarse como **overlay sobre el dashboard** —`Drawer` lateral en web, `BottomSheet` en nativo— y NO SHALL tener ruta propia ni cambiar la URL. Es el mismo mecanismo con el que ya se edita una cuenta desde la lista. Que no entre a la navegación no es una postura de producto: no hay ninguna dirección a la que ir.
 
 La vista existe por una razón de fondo: como guardar no es un movimiento, **no aparece en Movimientos**, y sin este detalle el usuario no podría auditar su propia decisión — lo que contradiría el pilar de confianza contable.
 
