@@ -14,7 +14,7 @@ saldo de mis cuentas  −  lo que ya tiene destino  =  lo que realmente puedo ga
 
 No estamos agregando un concepto nuevo: **estamos automatizando una resta que el usuario ya hace**.
 
-El fundamento conceptual completo vive en `docs/modelo-de-dinero.md`; el recorrido de pantallas, en `docs/design/savings-guardar/`. Este change implementa su **fase 1**.
+El fundamento conceptual completo vive en `docs/modelo-de-dinero.md`; el recorrido de pantallas, en `docs/design/modelo-de-dinero/`. Este change implementa su **fase 1**.
 
 ## What Changes
 
