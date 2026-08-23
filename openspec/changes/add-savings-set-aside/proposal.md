@@ -61,7 +61,9 @@ Esta fase es deliberadamente angosta. **Nada de lo siguiente entra**, y cada exc
 
 ## Impact
 
-**Aditivo por construcción.** No se toca `get_owned_account_ids()`, ni `get_account_balance_sums`, ni `calculateTransactionSums`, ni las reglas de signo, ni la paridad SQL↔TS, ni la analítica del mes, ni el módulo de cuentas.
+**Aditivo por construcción.** No se toca `get_owned_account_ids()`, ni `get_account_balance_sums`, ni `calculateTransactionSums`, ni las reglas de signo, ni la paridad SQL↔TS, ni la analítica del mes, ni la lógica del módulo de cuentas.
+
+La única excepción es **una key de copy**: el hero del detalle de cuenta dice hoy "Saldo" (`accounts.labels.balance`) y el del dashboard dice "Saldo disponible total". Hasta esta fase eran dos versiones del mismo número; a partir de ella uno es un hecho de esa cuenta y el otro es una resta. El rótulo del detalle pasa a decir **"Saldo en esta cuenta"** para que no compitan. Es el problema que crea esta fase, así que lo arregla esta fase. Cero lógica, cero query.
 
 - **Migración**: tabla `availability_reserve` con RLS + funciones normativas `get_available_sums(p_today)` y `get_reserve_flow_sums(p_from, p_to)`.
 - **`packages/savings/`** (nuevo, con la forma de `packages/accounts/`: `queries.ts`, `mutations.ts`, `types.ts`, `index.ts`). El paquete se llama `savings` porque es el lenguaje del producto y porque las fases 2 y 4 —propósitos y metas— aterrizan adentro; la **tabla** se llama `availability_reserve` porque es lo que registra. Ninguna de las dos palabras llega a la UI, que dice **Guardar** y **Guardado**.

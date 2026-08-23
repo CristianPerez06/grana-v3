@@ -70,6 +70,7 @@
 
 - [ ] 8.1 `packages/i18n-messages`: Guardar, Liberar, Guardado, *Guardaste este mes*, el copy del drawer, el de la sugerencia, y los errores de tope y de piso
 - [ ] 8.2 Los errores dicen el número: *"Tenés $300.000 disponibles"*, no *"monto inválido"*
+- [ ] 8.3 Cambiar `accounts.labels.balance` de "Saldo" a **"Saldo en esta cuenta"** (y su par en inglés). Es el único cambio fuera de `savings` y `dashboard`, y es copy: después de esta fase el número del dashboard deja de significar lo mismo que el de la cuenta, y dos rótulos iguales para dos cosas distintas es la confusión que la fase viene a evitar. Verificar que entra en el hero del detalle de cuenta en ancho de teléfono sin cortarse
 
 ## 9. Cierre
 

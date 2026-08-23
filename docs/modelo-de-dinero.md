@@ -217,6 +217,31 @@ Lo que **no** se adelanta es la meta completa (objetivo, fecha, progreso): esa s
 las posiciones, porque la enseñanza argentina de verdad —*"tu objetivo está en dólares y tu ahorro en
 pesos"*— necesita saber en qué está parada cada parte.
 
+### La forma del hub de la fase 3: dos cortes del mismo número
+
+El hub que aparece en la fase 3 —"Mi plata" / "Dónde está"— existe para cruzar dos preguntas que hoy
+no se pueden cruzar sin mentir: **qué función cumple** la plata y **dónde está**. Su requisito duro
+es que los dos cortes sean **dos descomposiciones del mismo total**, por moneda:
+
+```
+Total en pesos                      $ 8.441.212
+├─ Por función
+│    Para gastar        $ 7.541.212
+│    Guardado           $   200.000
+│    Puesto a trabajar  $   700.000
+└─ Por ubicación
+     Mercado Pago       $ 6.741.212
+     Galicia            $ 1.000.000
+     Plazo fijo Galicia $   700.000
+```
+
+Si los dos cortes no suman lo mismo, el hub hace exactamente lo que el modelo viene evitando: mostrar
+dos totales que no reconcilian. Es fácil que no cierre —una cuenta olvidada en el corte por función
+alcanza— así que el hub SHALL derivar los dos del mismo conjunto y no de dos lecturas independientes.
+
+Y ahí se ve por qué el **detalle de una cuenta** no puede dar esta respuesta ni siquiera en fase 3:
+Mercado Pago aparece en un corte y no en el otro. La ubicación no puede contestar por la función.
+
 ### El orden de construcción no es el mapa del producto
 
 Las fases son un **orden de obra**: qué se puede construir sin deshacer lo anterior. Leerlas como la
