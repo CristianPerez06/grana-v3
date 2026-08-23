@@ -6,7 +6,7 @@ en el navegador.
 | Archivo | Fase | Estado |
 |---|---|---|
 | `fase-1-guardar.html` | 1 · Guardar | Completo — es la fase que implementa `add-savings-set-aside` |
-| — | 2 · Propósito | Pendiente (es un delta chico sobre el drawer de la fase 1) |
+| `fase-2-proposito.html` | 2 · Propósito | Completo — cuatro pantallas, dos de ellas son la fase 1 con un campo más |
 | — | 3 · Posiciones | Pendiente — tiene una decisión abierta que el mock existe para resolver |
 | — | 4 y 5 | No se mockean todavía: dibujar el detalle de una meta o la pantalla de patrimonio sería inventar decisiones que no están tomadas, y un mock convincente de algo no decidido termina implementándose tal cual |
 
