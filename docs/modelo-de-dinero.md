@@ -239,6 +239,13 @@ Si los dos cortes no suman lo mismo, el hub hace exactamente lo que el modelo vi
 dos totales que no reconcilian. Es fácil que no cierre —una cuenta olvidada en el corte por función
 alcanza— así que el hub SHALL derivar los dos del mismo conjunto y no de dos lecturas independientes.
 
+**El corte por función NO se desglosa por cuenta. El corte por ubicación sí.** "Para gastar" es un
+monto y nada más: colgarle las cuentas debajo cuenta el guardado dos veces —una adentro de cada saldo
+y otra en su propia línea— y además afirma una disponibilidad por cuenta que no existe. Una
+**posición** se puede desglosar en los dos cortes, porque tiene custodio; el **guardado**, solo en el
+de función. Esa asimetría no es un detalle de presentación: es la consecuencia directa de que una
+reserva sea una decisión y una posición sea un lugar.
+
 Y ahí se ve por qué el **detalle de una cuenta** no puede dar esta respuesta ni siquiera en fase 3:
 Mercado Pago aparece en un corte y no en el otro. La ubicación no puede contestar por la función.
 
