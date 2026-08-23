@@ -3,6 +3,20 @@
 Decisiones cerradas de la fase 1, con su porqué. El modelo conceptual completo está en
 `docs/modelo-de-dinero.md`; acá viven solo las decisiones que gobiernan **esta** implementación.
 
+## D0 — El concepto es una reserva de disponibilidad, no "ahorro"
+
+La tabla se llama **`availability_reserve`**, no `savings_entry`. Lo que registra es:
+
+> De la plata que hoy podría gastar, decidí no tocar este monto.
+
+No es patrimonio, no es inversión, no es plata movida de lugar. Nombrarla "savings" invitaría a que en
+fase 3 alguien se pregunte por qué el plazo fijo no está adentro — y la respuesta sería que nunca fue
+una tabla de ahorros.
+
+La **capability** sigue siendo `savings` (el módulo 16) y la **UI** sigue diciendo *Guardar*. El repo ya
+nombra en técnico preciso lo que el producto llama distinto: `card_periods` es el "resumen",
+`shared_expense_split` es "compartido".
+
 ## D1 — Guardar no es un movimiento
 
 Guardar **no crea ninguna fila en `transactions`**. Vive en su propia tabla, fuera del ledger.
@@ -24,6 +38,19 @@ una intención**. Guardar $200.000 no genera una transferencia ficticia — el b
 Si el usuario guarda $200.000 y después gasta hasta quedar con $150.000, el disponible queda en
 **−$50.000** y se muestra tal cual, con el aviso no bloqueante que ya existe. El sistema **NO** reduce
 el guardado en silencio para que el número cierre: sería borrar una decisión que el usuario no revocó.
+
+## D2bis — El disponible real nace como lectura única, en SQL
+
+**La resta no se compone en TypeScript.** Una función de Postgres devuelve, por moneda, el saldo de
+cuentas, lo reservado y el disponible ya calculado:
+
+```sql
+get_available_sums(p_today) → (currency_code, accounts_net, reserved, available)
+```
+
+Web, mobile y el dashboard **consumen**; ninguno recompone. Es la lección de la migración `0051`: el
+predicado de "cuenta propia" estaba replicado a mano en cada call site y **ya había divergido** en
+producción. Repetir la resta en tres lugares es el mismo bug esperando a pasar.
 
 ## D3 — El guardado es por moneda, sin anclar a una cuenta
 

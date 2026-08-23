@@ -41,7 +41,7 @@ El fundamento conceptual completo vive en `docs/modelo-de-dinero.md`; el recorri
 
 Esta fase es deliberadamente angosta. **Nada de lo siguiente entra**, y cada exclusión tiene su motivo:
 
-- **Propósito y metas** (fase 2 y 4). Un campo "¿para qué?" sin propósitos que elegir es un campo muerto. La fase 1 **no anticipa nada**: en la fase 2, `savings_purpose` se crea y `savings_entry` gana `purpose_id` nullable en la misma migración. Aditivo, sin backfill.
+- **Propósito y metas** (fase 2 y 4). Un campo "¿para qué?" sin propósitos que elegir es un campo muerto. La fase 1 **no anticipa nada**: en la fase 2, `savings_purpose` se crea y `availability_reserve` gana `purpose_id` nullable en la misma migración. Aditivo, sin backfill.
 - **Cuentas fuera del disponible y tipos de cuenta** (fase 3). Es la exclusión que más simplifica: sin cuentas fuera del disponible, las transferencias entre cuentas propias siguen siendo **neutras** como hoy, y la card del mes necesita **una sola línea nueva** en vez de dos. Un plazo fijo se sigue cargando como hasta ahora.
 - **Instrumentos, vencimientos, valuación, rendimiento, patrimonio, horizonte, inflación** (fases 3 a 5).
 - **Una entrada nueva en la navegación.** "Guardado" no es un módulo: es un dato con vista de detalle. Qué hub agrupa ahorro, propósitos y posiciones se decide en fase 2, con uso real.
@@ -63,11 +63,27 @@ Esta fase es deliberadamente angosta. **Nada de lo siguiente entra**, y cada exc
 
 **Aditivo por construcción.** No se toca `get_owned_account_ids()`, ni `get_account_balance_sums`, ni `calculateTransactionSums`, ni las reglas de signo, ni la paridad SQL↔TS, ni la analítica del mes, ni el módulo de cuentas.
 
-- **Migración**: tabla `savings_entry` con RLS + función `get_saved_sums(p_today)`.
-- `packages/dashboard/`: composición del disponible real y del término del mes.
+- **Migración**: tabla `availability_reserve` con RLS + función normativa `get_available_sums(p_today)`.
+- `packages/dashboard/`: consume la función; **no recompone la resta**.
 - `packages/validation/`: schema de guardar/liberar (monto > 0, moneda activa, fecha, tope).
 - `apps/web` + `apps/mobile`: drawer sobre `overlay-primitives`, la línea del dashboard, la vista de detalle, la tira de sugerencia sobre `guidance`.
 - `packages/i18n-messages`: copy nuevo.
+
+## El disponible real nace como lectura única
+
+**El disponible real NO se compone en TypeScript.** Nace como una función de Postgres que devuelve,
+por moneda, el saldo de cuentas, lo reservado y la resta ya hecha:
+
+```sql
+get_available_sums(p_today date default null)
+  → (currency_code, accounts_net, reserved, available)
+```
+
+Es la lección que el repo ya aprendió con `get_owned_account_ids()` (migración `0051`): el criterio de
+"cuenta propia" estaba replicado a mano en cada call site **y ya había divergido** — una lectura
+omitía `is_active` mientras el Hero lo aplicaba. Si la resta del guardado vive en tres composiciones
+de TS (web, mobile, dashboard), el próximo read que se olvide de restarla produce un segundo
+"disponible" en la misma pantalla. **Un concepto, una definición, en SQL.**
 
 ## Aritmética
 
