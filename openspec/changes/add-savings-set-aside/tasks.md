@@ -12,20 +12,20 @@
 
 ## 2. `packages/savings/` (nuevo)
 
-- [ ] 2.1 Crear el paquete con la forma de `packages/accounts/`: `queries.ts`, `mutations.ts`, `types.ts`, `index.ts`. Se llama `savings` porque es el lenguaje del producto y porque fases 2 y 4 aterrizan adentro; la tabla se llama `availability_reserve` porque es lo que registra
-- [ ] 2.2 `getAvailableSums(today?)` — wrapper de la RPC. **No** recompone la resta ni la re-expone en pedazos que inviten a recomponerla
-- [ ] 2.3 `getReserveFlowSums(from, to)` — wrapper de la RPC del flujo
-- [ ] 2.4 `getReserveHistory()` — filas con fecha, monto con signo y moneda, con orden determinístico (`date desc, created_at desc, id desc`) para la vista de detalle
-- [ ] 2.5 `reserveAvailability({ amount, currencyCode, date })` — valida contra `available` de la moneda **leído en el momento de la mutación**, no contra un valor que venga del cliente
-- [ ] 2.6 `releaseAvailability({ amount, currencyCode, date })` — valida contra `reserved` de la moneda. El stock no puede quedar negativo: sería afirmar que el usuario puede gastar plata que no tiene
-- [ ] 2.7 Los montos viajan y se comparan como `Money` (decimal.js), nunca como `number` crudo
-- [ ] 2.8 Tests de las dos mutaciones: tope exacto (guardar todo el disponible pasa; un centavo más no), piso exacto de liberar, moneda cruzada (guardado en ARS no habilita liberar en USD), monto cero y negativo rechazados
+- [x] 2.1 Crear el paquete con la forma de `packages/accounts/`: `queries.ts`, `mutations.ts`, `types.ts`, `index.ts`. Se llama `savings` porque es el lenguaje del producto y porque fases 2 y 4 aterrizan adentro; la tabla se llama `availability_reserve` porque es lo que registra
+- [x] 2.2 `getAvailableSums(today?)` — wrapper de la RPC. **No** recompone la resta ni la re-expone en pedazos que inviten a recomponerla
+- [x] 2.3 `getReserveFlowSums(from, to)` — wrapper de la RPC del flujo
+- [x] 2.4 `getReserveHistory()` — filas con fecha, monto con signo y moneda, con orden determinístico (`date desc, created_at desc, id desc`) para la vista de detalle
+- [x] 2.5 `reserveAvailability({ amount, currencyCode, date })` — valida contra `available` de la moneda **leído en el momento de la mutación**, no contra un valor que venga del cliente
+- [x] 2.6 `releaseAvailability({ amount, currencyCode, date })` — valida contra `reserved` de la moneda. El stock no puede quedar negativo: sería afirmar que el usuario puede gastar plata que no tiene
+- [x] 2.7 Los montos viajan y se comparan como `Money` (decimal.js), nunca como `number` crudo
+- [x] 2.8 Tests de las dos mutaciones: tope exacto (guardar todo el disponible pasa; un centavo más no), piso exacto de liberar, moneda cruzada (guardado en ARS no habilita liberar en USD), monto cero y negativo rechazados
 
 ## 3. `packages/validation/`
 
-- [ ] 3.1 `packages/validation/src/savings.ts` con `reserveAvailabilitySchema` y `releaseAvailabilitySchema`: monto > 0, moneda soportada, fecha válida
-- [ ] 3.2 El schema **no** valida el tope: el tope depende del estado del servidor y vive en la mutación. El schema valida la forma
-- [ ] 3.3 Exportar desde `packages/validation/src/index.ts` y agregar los mensajes de error traducidos
+- [x] 3.1 `packages/validation/src/savings.ts` con `reserveAvailabilitySchema` y `releaseAvailabilitySchema`: monto > 0, moneda soportada, fecha válida
+- [x] 3.2 El schema **no** valida el tope: el tope depende del estado del servidor y vive en la mutación. El schema valida la forma
+- [x] 3.3 Exportar desde `packages/validation/src/index.ts` y agregar los mensajes de error traducidos
 
 ## 4. `packages/dashboard/` — consume, no recompone (D2bis, D7, D8)
 
