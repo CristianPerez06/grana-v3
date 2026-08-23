@@ -263,7 +263,9 @@ El norte del producto es que Grana pueda contestar ocho preguntas. Hoy contesta 
 ## 7. Lo que queda abierto
 
 1. **El nombre del verbo.** El modelo lo llama *reserva*. En la UI, "Guardar" es lo que dice un argentino; "Apartar" es la alternativa; "Reservar" suena a reservar una mesa.
-2. **¿Un guardado se ancla a una cuenta o es por moneda a secas?** Por moneda es más simple y no cierra puertas; anclarlo permite decir "esos $200.000 están en tu Billetera sin rendir", pero reintroduce la imputación de retiros parciales.
+2. **¿Un guardado se ancla a una cuenta o es por moneda a secas?** Por moneda es más simple y no cierra puertas; anclarlo permite decir "esos $200.000 están en tu Billetera sin rendir", pero reintroduce la imputación de retiros parciales (¿esos $50.000 que sacaste salieron del guardado o del disponible?).
+
+   Lo que está en juego es concreto: **mientras la reserva sea por moneda, el detalle de una cuenta no puede contestar "cuánto puedo gastar de acá"**. Los compromisos sí se podrían repartir por cuenta —el pago de un resumen sale de una cuenta conocida—, pero el guardado no sale de ninguna. Ninguna fase resuelve eso hoy, y probablemente esté bien así: el detalle de cuenta es una pantalla de **ubicación** y la disponibilidad es otro lente. La pregunta *"dónde está mi plata y cuánta puedo tocar"* se contesta en el **hub de la fase 3**, que junta cuentas, guardado y posiciones en una sola lectura — no cuenta por cuenta.
 3. **Prorrateo entre asignaciones** cuando una posición compartida cambia de valor o sufre un retiro parcial. Es de fase 3, pero conviene no cerrar la puerta antes.
 4. **Tratamiento del fondo de emergencia** como propósito con reglas propias (tamaño derivable del gasto mensual; liquidez por encima de rendimiento).
 5. **Qué hace Grana con el drift** de las cuentas que rinden solas, hoy leído como "plata movida sin registrar" — una alarma que se enciende justo cuando al usuario le fue bien.
