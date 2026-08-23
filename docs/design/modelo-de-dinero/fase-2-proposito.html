@@ -230,7 +230,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
   <div class="in">
     <p class="eyebrow">Grana · modelo de dinero · mock de producto</p>
     <h1>Fase 2 · Para qué</h1>
-    <p>El guardado gana un nombre. Nada más: ni monto objetivo, ni fecha, ni progreso — eso es fase 4. Cuatro pantallas, dos de ellas son la fase 1 con un campo más.</p>
+    <p>El guardado gana un nombre. Nada más: ni monto objetivo, ni fecha, ni progreso — eso es fase 4. Cinco pantallas, y tres de ellas son la fase 1 con un campo más.</p>
     <div class="warn"><b>Por qué el "para qué" va antes que las posiciones.</b> «Guardaste $200.000» es una abstracción; «Guardaste $200.000 para Japón» es una razón para volver. Y no necesita saber dónde está esa plata ni cuánto rinde, así que es barato y compra retención temprana.</div>
   </div>
 </header>
@@ -310,15 +310,16 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
         <div class="flow"><span>Este mes</span><b>+$ 150.000</b></div>
       </div>
       <div class="c hist">
-        <div><span class="tile">🚑</span><div class="n"><b>Emergencia</b><span>2 movimientos</span></div><span class="a">$ 200.000</span></div>
-        <div><span class="tile">✈️</span><div class="n"><b>Vacaciones</b><span>1 movimiento</span></div><span class="a">$ 100.000</span></div>
-        <div><span class="tile">—</span><div class="n"><b>Sin destino</b><span>1 movimiento</span></div><span class="a">$ 50.000</span></div>
+        <div><span class="tile">🚑</span><div class="n"><b>Emergencia</b><span>2 movimientos</span></div><span class="a">$ 200.000</span><span class="chev">›</span></div>
+        <div><span class="tile">✈️</span><div class="n"><b>Vacaciones</b><span>1 movimiento</span></div><span class="a">$ 100.000</span><span class="chev">›</span></div>
+        <div><span class="tile">—</span><div class="n"><b>Sin destino</b><span>1 movimiento</span></div><span class="a">$ 50.000</span><span class="chev">›</span></div>
       </div>
       <div class="two"><div class="cta">Guardar</div><div class="cta ghost">Liberar</div></div>
       <div class="overlay-empty">Los <b>$ 50.000 sin destino</b> son de la fase 1, cuando el campo no existía. No hay backfill ni migración: lo viejo simplemente no tiene propósito, y está bien.</div>
     </div></div>
     <p class="note">Los tres subtotales suman el total del hero. El agrupado es un <b><code>group by</code>, no una entidad nueva</b>: cada reserva sigue siendo una fila con su fecha.</p>
     <p class="note">"Sin destino" no es un estado de error ni un pendiente. Es una categoría más, y no lleva badge ni color de aviso.</p>
+    <p class="note"><b>Cada grupo es tocable</b>, y eso es lo que resuelve la pregunta de la pantalla 5: entrás a un propósito y actuás ahí adentro.</p>
   </section>
 
   <section class="step">
@@ -346,6 +347,40 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     </div></div>
     <p class="note">Es el segundo par de verbos: <b>asignar ⇄ desasignar</b>. Igual que guardar y liberar, <b>no mueve plata</b> — pero a diferencia de ellos, tampoco cambia el disponible. Es la operación más inofensiva del modelo.</p>
     <p class="note">Por eso se puede hacer sobre reservas viejas sin ningún riesgo: el número de arriba no se entera.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">5</span>
+      <div>
+        <h2>Liberar, con propósitos en juego</h2>
+        <p class="sub">¿De qué propósito sale? No se pregunta: se hereda de dónde tocaste.</p>
+        <span class="badge b-mod">Modificada</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">🚑 Emergencia</div><h3>Liberar</h3></div><span class="x">✕</span></div>
+      <div class="c amt">
+        <div class="lbl">Monto</div>
+        <div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">50.000</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Guardado en Emergencia</span><span>$ 200.000</span></div>
+        <div class="minus"><span>Vas a liberar</span><span>− $ 50.000</span></div>
+        <div class="rule"><span>Queda en Emergencia</span><span>$ 150.000</span></div>
+      </div>
+      <div class="c pad" style="display:flex;gap:11px;align-items:flex-start;background:#F7FAFC;border-color:#E3EAF0">
+        <span class="tile" style="background:#EAF1F6">ⓘ</span>
+        <div style="font-size:13px;color:var(--muted);line-height:1.45">Vuelven a estar disponibles para gastar. <b style="color:var(--text)">La plata no se mueve de ninguna cuenta</b>, y tus otros propósitos no cambian.</div>
+      </div>
+      <div class="cta">Liberar</div>
+      <div class="overlay-empty"><b>Sin campo de propósito.</b> Llegaste tocando «Emergencia», así que Grana ya sabe de dónde sale — igual que el drawer de fase 1 hereda la moneda del ingreso del que viene.</div>
+    </div></div>
+    <p class="note"><b>El único caso en que sí pregunta</b> es si abrís Liberar desde el botón del total teniendo más de un propósito con saldo. Ahí la primera pantalla es elegir de cuál, con los montos a la vista. No hay una tercera opción: repartirlo solo sería inventar una imputación.</p>
+    <p class="note">Y aparece un <b>tope nuevo, por propósito</b>: no podés liberar $80.000 de Emergencia si Emergencia tiene $50.000, aunque el total guardado sea $350.000. Si no, un propósito podría quedar en negativo mientras el global cierra.</p>
+    <p class="note">Técnicamente la fila de liberar lleva el mismo <code>purpose_id</code> que las de guardar. El saldo de un propósito es <b>la suma de sus filas</b>, con signo — el mismo mecanismo que el total, un nivel más abajo. <b>Ninguna lectura de plata cambia.</b></p>
+    <p class="note">En <b>fase 1 esto no existe</b>: sin propósitos, liberar no tiene nada que preguntar.</p>
   </section>
 
 </div>
