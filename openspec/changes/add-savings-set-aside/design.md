@@ -151,12 +151,33 @@ En la UI: **Guardar** / **Liberar**, y el dato se llama **Guardado**.
 "Reservar" suena a reservar una mesa; "Ahorrar" interpreta antes de describir. *Guardar plata* es
 lenguaje cotidiano argentino. En el código y en las specs el módulo es `savings`.
 
+## D11 — El detalle de una cuenta no menciona el guardado
+
+`/accounts/[id]` sigue mostrando su saldo tal cual. No lleva ninguna línea sobre lo guardado.
+
+**No hay un número honesto que poner ahí.** La reserva es por moneda y fungible: no está en Mercado
+Pago más que en Galicia. Una línea *"de estos $6.741.212 hay $200.000 reservados"* sería falsa en
+cada pantalla por separado y, entre todas, sumaría varias veces el mismo guardado.
+
+**Y esa pantalla ya no contesta disponibilidad.** Tampoco descuenta las expensas por pagar, ni las
+cuotas de tarjeta, ni los gastos fijos que vienen. Su rótulo dice **SALDO**, no "disponible", y esa
+es la pregunta que contesta: *cuánto tengo acá*. Descontar el guardado pero no los compromisos sería
+peor que no descontar nada — parecería que ya entregó el número bueno.
+
+**El riesgo que se acepta:** alguien que vive en las pantallas de cuentas puede no cruzarse nunca con
+el guardado. Lo compensa que el dashboard sea la pantalla de aterrizaje y que la fila esté siempre
+ahí, pero es una compensación, no una garantía. Si con uso real resulta insuficiente, la salida no es
+una línea en el detalle de cuenta: es decidir que las pantallas de cuentas pasen a contestar
+disponibilidad, y entonces tienen que descontar **compromisos y guardado juntos**. Es una decisión
+más grande y no es de esta fase.
+
 ## Alternativas descartadas
 
 | Alternativa | Por qué no |
 |---|---|
 | El guardado como `transaction_type` propio | Rompe D1: obliga a reglas de signo, ensucia analítica y paridad |
 | Anclar el guardado a una cuenta | Simula un movimiento que no ocurrió (D3) |
+| Una línea de guardado en el detalle de cada cuenta | La reserva no vive en ninguna cuenta: la línea sería falsa por pantalla y, sumada, contaría el guardado tantas veces como cuentas haya. Ver D11 |
 | Incluir `counts_as_available` "porque es barato" | El booleano arrastra: transferencias que dejan de ser neutras → la card no cierra → una segunda línea que nadie entiende. Y no va a ninguna fase: la fase 3 modela el plazo fijo como **posición**, no como cuenta, y ahí el disponible sale bien sin flag (ver `docs/modelo-de-dinero.md`) |
 | Pedir propósito en el drawer | Sin propósitos que elegir es un campo muerto. Fase 2 |
 | Restar los compromisos del Hero | Mezcla presente con futuro. Comprometido sigue siendo su propia card |
