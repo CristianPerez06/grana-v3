@@ -1,14 +1,14 @@
 ## 1. Migración: la tabla y las dos lecturas normativas (D0, D1, D2bis)
 
-- [ ] 1.1 Nueva migración `availability_reserve`: `id`, `user_id`, `currency_code`, `amount numeric` **con signo** (guardar positivo, liberar negativo), `date`, `created_at`. Sin ninguna columna de total: el stock se deriva, como todo saldo en Grana
-- [ ] 1.2 RLS por `user_id` en las cuatro operaciones, con el patrón que ya usan las tablas del repo
-- [ ] 1.3 CHECK `amount <> 0` y `currency_code` contra las monedas soportadas. **No** poner CHECK de signo: la tabla acepta las dos direcciones y es el write path el que valida el tope y el piso
-- [ ] 1.4 Índice por `(user_id, currency_code, date)` — es el predicado exacto de las dos funciones
-- [ ] 1.5 `get_available_sums(p_today date default null)` → `(currency_code, accounts_net, reserved, available)`. **Compone sobre** `get_owned_account_ids()` y `get_account_balance_sums`, no los reemplaza ni los duplica. `p_today` default `null` = fecha financiera AR del usuario, nunca `now()` del servidor
-- [ ] 1.6 `get_reserve_flow_sums(p_from date, p_to date)` → `(currency_code, reserved_net)`, el neto del rango (guardado menos liberado)
-- [ ] 1.7 Las dos funciones filtran por `date <= p_today` / `date between p_from and p_to`: una reserva futura no participa (corte temporal, igual que el resto)
-- [ ] 1.8 Las dos devuelven **fila por moneda con valor cero** cuando el usuario no tiene reservas en esa moneda, en vez de omitirla — si no, cada consumidor tiene que inventar el default
-- [ ] 1.9 Comentario en la migración explicando por qué el disponible vive acá y no en TS, con el precedente de `0051` (el criterio de "cuenta propia" ya había divergido entre call sites)
+- [x] 1.1 Nueva migración `availability_reserve`: `id`, `user_id`, `currency_code`, `amount numeric` **con signo** (guardar positivo, liberar negativo), `date`, `created_at`. Sin ninguna columna de total: el stock se deriva, como todo saldo en Grana
+- [x] 1.2 RLS por `user_id` en las cuatro operaciones, con el patrón que ya usan las tablas del repo
+- [x] 1.3 CHECK `amount <> 0` y `currency_code` contra las monedas soportadas. **No** poner CHECK de signo: la tabla acepta las dos direcciones y es el write path el que valida el tope y el piso
+- [x] 1.4 Índice por `(user_id, currency_code, date)` — es el predicado exacto de las dos funciones
+- [x] 1.5 `get_available_sums(p_today date default null)` → `(currency_code, accounts_net, reserved, available)`. **Compone sobre** `get_owned_account_ids()` y `get_account_balance_sums`, no los reemplaza ni los duplica. `p_today` default `null` = fecha financiera AR del usuario, nunca `now()` del servidor
+- [x] 1.6 `get_reserve_flow_sums(p_from date, p_to date)` → `(currency_code, reserved_net)`, el neto del rango (guardado menos liberado)
+- [x] 1.7 Las dos funciones filtran por `date <= p_today` / `date between p_from and p_to`: una reserva futura no participa (corte temporal, igual que el resto)
+- [x] 1.8 Las dos devuelven **fila por moneda con valor cero** cuando el usuario no tiene reservas en esa moneda, en vez de omitirla — si no, cada consumidor tiene que inventar el default
+- [x] 1.9 Comentario en la migración explicando por qué el disponible vive acá y no en TS, con el precedente de `0051` (el criterio de "cuenta propia" ya había divergido entre call sites)
 
 ## 2. `packages/savings/` (nuevo)
 
