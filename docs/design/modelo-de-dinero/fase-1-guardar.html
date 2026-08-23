@@ -139,6 +139,15 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
 .saved .a{font-size:15.5px;font-weight:700;color:var(--emerald-deep);font-variant-numeric:tabular-nums}
 .saved .a .g{color:#C4CBD4;font-size:13px;margin-left:5px;font-weight:600}
 
+/* overlay presentation (drawer web / bottom sheet mobile) */
+.ov{position:relative;background:var(--page)}
+.ov .behind{filter:saturate(.7);opacity:.55;padding:16px 16px 0;pointer-events:none}
+.ov .scrim{position:absolute;inset:0;background:rgba(11,26,43,.42)}
+.ov .sheet{position:relative;margin-top:-14px;background:var(--page);border-radius:20px 20px 0 0;box-shadow:0 -8px 28px rgba(11,26,43,.18);padding:10px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.ov .grab{width:38px;height:4px;border-radius:999px;background:#D3DAE2;margin:0 auto 4px}
+.ov .sh{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 2px}
+.ov .sh h3{margin:0;font-size:19px;font-weight:800;letter-spacing:-.02em}
+
 /* detail view */
 .dt-hero{background:radial-gradient(120% 140% at 92% 12%,rgba(16,185,129,.18),transparent 60%),var(--navy);color:#fff;border-radius:18px;padding:18px}
 .dt-hero .k{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6)}
@@ -344,12 +353,27 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
       <span class="step-num">5</span>
       <div>
         <h2>El detalle del Guardado</h2>
-        <p class="sub">Se llega tocando el número, como al detalle de un resumen de tarjeta.</p>
+        <p class="sub">No es una página: es un overlay sobre el dashboard. Drawer lateral en web, bottom sheet en nativo.</p>
         <span class="badge b-new">Nueva</span>
       </div>
     </div>
-    <div class="phone"><div class="scr">
-      <div style="font-size:13px;color:var(--muted);padding:2px 4px">← Volver</div>
+    <div class="phone ov">
+      <div class="behind">
+        <div class="dash">
+          <div class="dark" style="padding:16px 18px 12px">
+            <div class="lbl">Saldo disponible total</div>
+            <div class="big" style="font-size:30px"><s>$</s> 1.600.000<s>,00</s></div>
+          </div>
+          <div class="light" style="padding:12px 18px">
+            <div class="tri"><div class="row"><span class="l"><i style="background:#8A94A3"></i>Tenías</span><span class="a">$ 1.000.000</span></div></div>
+            <div class="saved"><span class="l"><i></i>Guardaste este mes</span><span class="a">−$ 200.000</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet">
+      <div class="grab"></div>
+      <div class="sh"><h3>Guardado</h3><span class="x">✕</span></div>
       <div class="dt-hero">
         <div class="k">Guardado en pesos</div>
         <div class="n">$ 350.000,00</div>
@@ -367,7 +391,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     </div></div>
     <p class="note">Existe por una razón de fondo: como guardar <b>no es un movimiento</b>, no aparece en Movimientos — y sin esta vista no podrías auditar tu propia decisión.</p>
     <p class="note">El historial muestra julio, pero <b>no se resta del saldo al cierre de julio</b> en ninguna pantalla. La reconciliación del guardado vive solo en el mes corriente.</p>
-    <p class="note"><b>No entra a la navegación.</b> Guardado no es un módulo: es un dato con vista de detalle.</p>
+    <p class="note"><b>No entra a la navegación, y no por postura:</b> la URL no cambia, así que no hay ninguna dirección a la que ir. Cerrás y estás donde estabas, con el número que tocaste ahí mismo. Es el mismo mecanismo que editar una cuenta desde la lista (<code>accounts-edit-drawer.tsx</code>).</p>
   </section>
 
   <!-- 6 -->
