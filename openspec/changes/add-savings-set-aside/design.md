@@ -45,10 +45,16 @@ el guardado en silencio para que el número cierre: sería borrar una decisión 
 cuentas, lo reservado y el disponible ya calculado:
 
 ```sql
-get_available_sums(p_today) → (currency_code, accounts_net, reserved, available)
+get_available_sums(p_today)      → (currency_code, accounts_net, reserved, available)
+get_reserve_flow_sums(p_from, p_to)  → (currency_code, reserved_net)
 ```
 
-Web, mobile y el dashboard **consumen**; ninguno recompone. Es la lección de la migración `0051`: el
+**Stock y flujo, los dos.** La línea *Guardaste este mes* es un flujo: si se calcula a mano en TS,
+vuelve el mismo problema por la otra puerta.
+
+Web, mobile y el dashboard **consumen**; ninguno recompone. `get_available_sums` tiene tres
+consumidores —el Hero, el tope del drawer y la validación del write path—, así que derivar la resta
+por separado en cada uno es garantía de divergencia. Es la lección de la migración `0051`: el
 predicado de "cuenta propia" estaba replicado a mano en cada call site y **ya había divergido** en
 producción. Repetir la resta en tres lugares es el mismo bug esperando a pasar.
 
@@ -114,10 +120,19 @@ vencido. *Guardaste* es progreso.
 
 **Se renderiza solo en el mes corriente.** "Para gastar" al cierre de un mes pasado no significa nada.
 
-## D8 — El rótulo del Hero no cambia
+## D8 — El rótulo del Hero no cambia, y el guardado se netea donde el rótulo dice "disponible"
 
 Sigue diciendo **"Saldo disponible total"**. Al netear el guardado sigue siendo literalmente cierto, y
 evita renombrar una card recién rediseñada.
+
+**El neteo solo aplica al mes corriente.** En un mes pasado el rótulo ya dice otra cosa ("Saldo al
+cierre de mayo de 2026") y el número sigue siendo el saldo al cierre, sin descontar nada: un
+"disponible" de un mes cerrado no significa nada — la plata ya se gastó o no se gastó, y guardar es
+una postura sobre el futuro, no un hecho del pasado.
+
+Eso deja **una sola regla**, que además se lee del propio rótulo: *el guardado se netea exactamente
+donde la card dice "disponible"*. Y hace que la línea `Guardaste este mes` y el neteo del Hero
+aparezcan y desaparezcan **juntos**, que es lo que mantiene la card cerrando en los dos casos.
 
 ## D9 — El detalle existe, pero no entra en la navegación
 
@@ -142,7 +157,7 @@ lenguaje cotidiano argentino. En el código y en las specs el módulo es `saving
 |---|---|
 | El guardado como `transaction_type` propio | Rompe D1: obliga a reglas de signo, ensucia analítica y paridad |
 | Anclar el guardado a una cuenta | Simula un movimiento que no ocurrió (D3) |
-| Incluir `counts_as_available` "porque es barato" | El booleano arrastra: transferencias que dejan de ser neutras → la card no cierra → una segunda línea que nadie entiende. Va a fase 3 |
+| Incluir `counts_as_available` "porque es barato" | El booleano arrastra: transferencias que dejan de ser neutras → la card no cierra → una segunda línea que nadie entiende. Y no va a ninguna fase: la fase 3 modela el plazo fijo como **posición**, no como cuenta, y ahí el disponible sale bien sin flag (ver `docs/modelo-de-dinero.md`) |
 | Pedir propósito en el drawer | Sin propósitos que elegir es un campo muerto. Fase 2 |
 | Restar los compromisos del Hero | Mezcla presente con futuro. Comprometido sigue siendo su propia card |
 | Un cuarto término en la tira de tres | Mezcla un hecho con una decisión en la misma grilla |

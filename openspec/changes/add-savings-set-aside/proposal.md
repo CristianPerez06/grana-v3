@@ -42,7 +42,7 @@ El fundamento conceptual completo vive en `docs/modelo-de-dinero.md`; el recorri
 Esta fase es deliberadamente angosta. **Nada de lo siguiente entra**, y cada exclusión tiene su motivo:
 
 - **Propósito y metas** (fase 2 y 4). Un campo "¿para qué?" sin propósitos que elegir es un campo muerto. La fase 1 **no anticipa nada**: en la fase 2, `savings_purpose` se crea y `availability_reserve` gana `purpose_id` nullable en la misma migración. Aditivo, sin backfill.
-- **Cuentas fuera del disponible y tipos de cuenta** (fase 3). Es la exclusión que más simplifica: sin cuentas fuera del disponible, las transferencias entre cuentas propias siguen siendo **neutras** como hoy, y la card del mes necesita **una sola línea nueva** en vez de dos. Un plazo fijo se sigue cargando como hasta ahora.
+- **Vehículos: plazo fijo, FCI, dólares como tenencia** (fase 3, como `positions`). Es la exclusión que más simplifica: mientras no exista plata parqueada fuera de las cuentas, las transferencias entre cuentas propias siguen siendo **neutras** como hoy y la card del mes necesita **una sola línea nueva** en vez de dos. Un plazo fijo se sigue cargando como hasta ahora.
 - **Instrumentos, vencimientos, valuación, rendimiento, patrimonio, horizonte, inflación** (fases 3 a 5).
 - **Una entrada nueva en la navegación.** "Guardado" no es un módulo: es un dato con vista de detalle. Qué hub agrupa ahorro, propósitos y posiciones se decide en fase 2, con uso real.
 - **Sobres / zero-based budgeting.** Descartado como modelo: apartar pesos que se licúan no es ahorrar; en Argentina el ahorro se expresa en el vehículo.
@@ -63,8 +63,9 @@ Esta fase es deliberadamente angosta. **Nada de lo siguiente entra**, y cada exc
 
 **Aditivo por construcción.** No se toca `get_owned_account_ids()`, ni `get_account_balance_sums`, ni `calculateTransactionSums`, ni las reglas de signo, ni la paridad SQL↔TS, ni la analítica del mes, ni el módulo de cuentas.
 
-- **Migración**: tabla `availability_reserve` con RLS + función normativa `get_available_sums(p_today)`.
-- `packages/dashboard/`: consume la función; **no recompone la resta**.
+- **Migración**: tabla `availability_reserve` con RLS + funciones normativas `get_available_sums(p_today)` y `get_reserve_flow_sums(p_from, p_to)`.
+- **`packages/savings/`** (nuevo, con la forma de `packages/accounts/`: `queries.ts`, `mutations.ts`, `types.ts`, `index.ts`). El paquete se llama `savings` porque es el lenguaje del producto y porque las fases 2 y 4 —propósitos y metas— aterrizan adentro; la **tabla** se llama `availability_reserve` porque es lo que registra. Ninguna de las dos palabras llega a la UI, que dice **Guardar** y **Guardado**.
+- `packages/dashboard/`: consume las funciones; **no recompone la resta ni el neto**.
 - `packages/validation/`: schema de guardar/liberar (monto > 0, moneda activa, fecha, tope).
 - `apps/web` + `apps/mobile`: drawer sobre `overlay-primitives`, la línea del dashboard, la vista de detalle, la tira de sugerencia sobre `guidance`.
 - `packages/i18n-messages`: copy nuevo.
@@ -75,9 +76,21 @@ Esta fase es deliberadamente angosta. **Nada de lo siguiente entra**, y cada exc
 por moneda, el saldo de cuentas, lo reservado y la resta ya hecha:
 
 ```sql
+-- stock: cuánto hay y cuánto se puede gastar, a una fecha
 get_available_sums(p_today date default null)
   → (currency_code, accounts_net, reserved, available)
+
+-- flujo: cuánto se reservó neto en un rango (para "Guardaste este mes")
+get_reserve_flow_sums(p_from date, p_to date)
+  → (currency_code, reserved_net)
 ```
+
+**Las dos**, no solo la primera: la línea *Guardaste este mes* es un **flujo**, y calcularlo a mano en
+TS reintroduce exactamente el mismo riesgo que evita la lectura del stock. Nadie recompone ni el stock
+ni el flujo.
+
+`get_available_sums` tiene además **tres consumidores** —el Hero, el tope del drawer y la validación
+del write path—, lo que hace todavía más caro que cada uno derive la resta por su cuenta.
 
 Es la lección que el repo ya aprendió con `get_owned_account_ids()` (migración `0051`): el criterio de
 "cuenta propia" estaba replicado a mano en cada call site **y ya había divergido** — una lectura

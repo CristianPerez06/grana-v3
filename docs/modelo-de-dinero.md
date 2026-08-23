@@ -173,7 +173,7 @@ columnas nuevas son nullable o tienen default.
 |---|---|---|
 | **1 · Guardar** | *¿Cuánto puedo gastar?* | Guardar y liberar, por moneda, fuera del ledger |
 | **2 · Propósito** | *¿Para qué lo conservo?* | Etiqueta opcional sobre lo guardado — **sin objetivo ni fecha** |
-| **3 · Posiciones** | *¿Dónde está y qué está haciendo?* | Cuentas fuera del disponible · tipos de cuenta · instrumentos con vencimiento · valuación |
+| **3 · Posiciones** | *¿Dónde está y qué está haciendo?* | `positions`: plazo fijo, FCI, tenencia en dólares — con custodio, vencimiento y valuación |
 | **4 · Metas** | *¿Estoy llegando?* | El propósito gana objetivo, fecha y moneda. Progreso respaldado por posiciones |
 | **5 · Patrimonio** | *¿Estoy mejor que antes?* | La vara, el consolidado y el rendimiento real |
 | **Transversal** | *¿Está donde corresponde para cuándo la necesito?* | Horizonte y adecuación. Se puede empezar en la 3 |
@@ -181,6 +181,31 @@ columnas nuevas son nullable o tienen default.
 **Las tres primeras no necesitan ningún dato externo.** Recién la 5 requiere inflación — y hasta eso
 arranca con datos propios: el `fx_rate` de los `exchange` del usuario ya permite decir "compraste a
 $1.100, hoy a $1.250".
+
+### La fase 3 no pasa por "cuentas que no cuentan"
+
+Hubo una versión intermedia de la fase 3: marcar ciertas cuentas como fuera del disponible con un
+`counts_as_available`, y recién después construir posiciones. **Esa escala se elimina**, y no por
+ahorrar trabajo: porque el problema que resolvía es un problema que ella misma crea.
+
+Un plazo fijo **no es una cuenta**. Tiene capital, tasa, fecha de inicio y vencimiento, y un mismo
+banco puede tener cinco a la vez — como cuentas serían cinco cuentas nuevas cada mes, con nombres que
+el usuario tiene que inventar. Es el mismo agujero que ya estaba anotado como *el problema del
+comitente*: un broker tiene **una** cuenta y **muchas** tenencias adentro.
+
+Y el flag existía solo porque el vehículo era una cuenta. Si el vehículo es una **posición**, la plata
+sale de la cuenta con un movimiento real, el saldo de la cuenta ya baja, y **el disponible sale bien
+sin ningún flag**: no hay nada que descontar porque no hay nada de más. El booleano no era una
+simplificación, era el parche de haber elegido mal la entidad.
+
+Eliminarlo además borra la consecuencia que ya nos había complicado el dashboard: con cuentas fuera
+del disponible, una transferencia entre cuentas propias deja de ser neutra y la card del mes necesita
+una segunda línea —*"pasaste a otras cuentas"*— que no significa nada para el usuario. Sin el flag,
+las transferencias siguen siendo neutras y la card sigue cerrando con una sola línea nueva.
+
+Lo que la fase 3 **sí** tiene que resolver es la contrapartida del movimiento: hoy la plata que sale
+de una cuenta va a otra cuenta, y ahí tendrá que poder ir a una posición. Es trabajo real y es de esa
+fase; lo que no hay que hacer es pagarlo dos veces, primero con un flag y después de nuevo.
 
 ### Por qué Propósito va antes que Posiciones
 
@@ -191,6 +216,25 @@ dónde está esa plata ni cuánto rinde.
 Lo que **no** se adelanta es la meta completa (objetivo, fecha, progreso): esa sí gana muchísimo con
 las posiciones, porque la enseñanza argentina de verdad —*"tu objetivo está en dólares y tu ahorro en
 pesos"*— necesita saber en qué está parada cada parte.
+
+### El orden de construcción no es el mapa del producto
+
+Las fases son un **orden de obra**: qué se puede construir sin deshacer lo anterior. Leerlas como la
+estructura que ve el usuario sería repetir el error que ya cometimos una vez en este documento —
+dibujar el dinero como una cadena cuando es un conjunto de dimensiones simultáneas.
+
+El usuario no recorre `Ahorro → Propósito → Posición → Meta → Patrimonio`. Lo que va a ver, a medida
+que las fases lo habilitan, son **tres capas**:
+
+| Capa | Lo que contesta | Piezas |
+|---|---|---|
+| **Qué puedo usar** | *¿Cuánto puedo tocar hoy?* | Disponible · Guardado · Comprometido |
+| **Dónde está y qué hace** | *¿En qué está parada mi plata?* | Cuentas · Plazos fijos · Dólares · Fondos |
+| **Para qué y cómo voy** | *¿Estoy llegando y estoy mejor?* | Propósitos · Metas · Evolución |
+
+Cada fase le agrega piezas a una de las tres, no una etapa nueva a un camino. Y ninguna palabra
+interna cruza a la interfaz: nunca se lee *"reserva de disponibilidad"*, *"posición"* ni *"valuación"*.
+La UI dice **Para gastar**, **Guardado**, **Dónde está**, **Para qué**.
 
 ### Las ocho preguntas, y dónde se cierran
 
@@ -210,8 +254,7 @@ El norte del producto es que Grana pueda contestar ocho preguntas. Hoy contesta 
 ## 6. Lo que la fase 1 aprovecha sin construir
 
 - `transfer` y `exchange` ya existen y ya están fuera de la analítica de gastos.
-- **Cuentas** ya es, en la práctica, la vista de "lo que tengo": solo le falta agrupar por si la
-  cuenta participa del disponible.
+- **Cuentas** ya es, en la práctica, la vista de "lo que tengo".
 - El corte temporal, la bimoneda, el aviso no bloqueante y los primitivos de overlay ya están hechos.
 - El ledger, las reglas de signo y la analítica del mes **no se tocan**.
 
