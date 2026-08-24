@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -43,7 +43,6 @@ const GUIDANCE_ID = GUIDANCE_IDS.SAVINGS_SUGGEST_AFTER_INCOME
 export const SaveSuggestionStrip = ({ year, month }: { year: number; month: number }) => {
   const t = useTranslations('savings.suggestion')
   const queryClient = useQueryClient()
-  const [hidden, setHidden] = useState(false)
   const [pending, startTransition] = useTransition()
 
   const monthKey = `${year}-${String(month).padStart(2, '0')}`
@@ -125,17 +124,35 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   // while the user browses May would be asking them to save in the past.
   const isCurrentMonth = monthKey === currentMonth
 
-  if (hidden || !isCurrentMonth || !offerable || !suggestion) return null
+  if (!isCurrentMonth || !offerable || !suggestion) return null
 
-  const close = (permanent: boolean) => {
-    setHidden(true)
+  // Hiding is a DATA write, not component state. A `hidden` flag would live for
+  // as long as the dashboard stays mounted, so after "Ahora no" the strip would
+  // never come back for the next income of the same session — the per-income rule
+  // would be correct in the database and unreachable on screen. Writing the
+  // optimistic value into the guidance cache hides it just as fast AND keeps the
+  // rule in charge of when it returns.
+  const hideNow = (patch: { seen_at?: string; dismissed_at?: string }) => {
+    const now = new Date().toISOString()
+    queryClient.setQueryData(['savings', 'guidance', GUIDANCE_ID], {
+      seen_at: guidance?.seen_at ?? null,
+      dismissed_at: guidance?.dismissed_at ?? null,
+      completed_at: guidance?.completed_at ?? null,
+      ...(patch.seen_at ? { seen_at: now } : {}),
+      ...(patch.dismissed_at ? { dismissed_at: now } : {}),
+    })
+  }
+
+  const close = (untilNextMonth: boolean) => {
+    hideNow(untilNextMonth ? { dismissed_at: 'x' } : { seen_at: 'x' })
     startTransition(async () => {
-      await markGuidance(GUIDANCE_ID, permanent ? 'dismissed' : 'seen')
+      await markGuidance(GUIDANCE_ID, untilNextMonth ? 'dismissed' : 'seen')
       void queryClient.invalidateQueries({ queryKey: ['savings', 'guidance', GUIDANCE_ID] })
     })
   }
 
   const save = () => {
+    hideNow({ seen_at: 'x' })
     startTransition(async () => {
       const result = await reserveAvailability({
         amount: suggestion.amount,
@@ -143,9 +160,8 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
         date: getTodayAR(),
       })
       // `seen`, never `completed`: completing would kill a recurring suggestion
-      // for good, and next month it should come back.
+      // for good, and with the next income it should come back.
       await markGuidance(GUIDANCE_ID, 'seen')
-      setHidden(true)
       if (result.ok) {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['savings'] }),
@@ -155,32 +171,50 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
     })
   }
 
+  const amount = formatARS(suggestion.amount)
+
   return (
-    <section className="flex flex-col gap-3 rounded-2xl border border-emerald/25 bg-emerald-bg p-4 sm:flex-row sm:items-center sm:gap-4">
+    // Two rows at most, and one on a wide screen: the copy on the left, every
+    // action on a single line to its right. The strip is a suggestion sitting
+    // above the card the user came to read — the taller it gets, the more it
+    // behaves like something that has to be dealt with first.
+    <section className="flex flex-col gap-3 rounded-2xl border border-emerald/25 bg-emerald-bg px-4 py-3.5 sm:flex-row sm:items-center sm:gap-6">
       <div className="min-w-0 flex-1">
         <h3 className="text-[15px] font-extrabold tracking-[-0.01em] text-text">{t('title')}</h3>
         {/* "Podés apartar", not "te conviene guardar": a proposal about behavior,
             not a piece of financial advice. The amount is SUGGESTED, never the
             figure Grana says you should set aside. */}
         <p className="mt-0.5 text-[13px] leading-snug text-text-muted">
-          {t('body', { amount: formatARS(suggestion.amount) })}
+          {t('body', { amount })}
         </p>
       </div>
       {/* Three ways out, and none of them is permanent. "Ahora no" defers to the
-          next income; "No este mes" drops the strip to a monthly cadence — which
-          is the slowest it can go, so there is nothing left to kill for good. A
-          one-tap permanent off would get pressed by accident and the feature
-          would silently disappear for that user forever. */}
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
-        <Button onClick={save} disabled={pending}>
-          {t('cta', { amount: formatARS(suggestion.amount) })}
+          next income; "Suficiente por este mes" drops the strip to a monthly
+          cadence — the slowest it can go, so there is nothing left to kill for
+          good. A one-tap permanent off would get pressed by accident and the
+          feature would silently disappear for that user forever.
+          The two of them are links, not buttons: three buttons in a row read as
+          three equally weighted choices, and only one of them is the point. */}
+      <div className="flex shrink-0 items-center gap-4">
+        <Button onClick={save} disabled={pending} className="whitespace-nowrap">
+          {t('cta', { amount })}
         </Button>
-        <Button variant="ghost" onClick={() => close(false)} disabled={pending}>
+        <button
+          type="button"
+          onClick={() => close(false)}
+          disabled={pending}
+          className="whitespace-nowrap rounded text-[13.5px] font-semibold text-text-muted transition-colors hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           {t('later')}
-        </Button>
-        <Button variant="ghost" onClick={() => close(true)} disabled={pending}>
+        </button>
+        <button
+          type="button"
+          onClick={() => close(true)}
+          disabled={pending}
+          className="whitespace-nowrap rounded text-[13.5px] font-semibold text-text-soft transition-colors hover:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           {t('enough_this_month')}
-        </Button>
+        </button>
       </div>
     </section>
   )

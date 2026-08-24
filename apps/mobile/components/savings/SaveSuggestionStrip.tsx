@@ -39,7 +39,6 @@ const GUIDANCE_ID = MOBILE_GUIDANCE_IDS.SAVINGS_SUGGEST_AFTER_INCOME
 export const SaveSuggestionStrip = ({ year, month }: { year: number; month: number }) => {
   const t = useT()
   const queryClient = useQueryClient()
-  const [hidden, setHidden] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const monthKey = `${year}-${String(month).padStart(2, '0')}`
@@ -112,16 +111,31 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
 
   // A suggestion to act is about now: offering it while the user browses May
   // would be asking them to save in the past.
-  if (hidden || monthKey !== currentMonth || !offerable || !suggestion) return null
+  if (monthKey !== currentMonth || !offerable || !suggestion) return null
 
-  const close = async (permanent: boolean) => {
-    setHidden(true)
-    await markGuidance(GUIDANCE_ID, permanent ? 'dismissed' : 'seen')
+  // Hiding is a DATA write, not component state. A `hidden` flag would live for
+  // as long as the dashboard stays mounted, so after "Ahora no" the strip would
+  // never come back for the next income of the same session — the per-income rule
+  // would be right in the database and unreachable on screen.
+  const hideNow = (field: 'seen_at' | 'dismissed_at') => {
+    const now = new Date().toISOString()
+    queryClient.setQueryData(['savings', 'guidance', GUIDANCE_ID], {
+      seen_at: guidance?.seen_at ?? null,
+      dismissed_at: guidance?.dismissed_at ?? null,
+      completed_at: guidance?.completed_at ?? null,
+      [field]: now,
+    })
+  }
+
+  const close = async (untilNextMonth: boolean) => {
+    hideNow(untilNextMonth ? 'dismissed_at' : 'seen_at')
+    await markGuidance(GUIDANCE_ID, untilNextMonth ? 'dismissed' : 'seen')
     void queryClient.invalidateQueries({ queryKey: ['savings', 'guidance', GUIDANCE_ID] })
   }
 
   const save = async () => {
     setBusy(true)
+    hideNow('seen_at')
     try {
       const result = await reserveAvailability({
         amount: suggestion.amount,
@@ -129,9 +143,8 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
         date: getTodayAR(),
       })
       // `seen`, never `completed`: completing would kill a recurring suggestion
-      // for good, and next month it should come back.
+      // for good, and with the next income it should come back.
       await markGuidance(GUIDANCE_ID, 'seen')
-      setHidden(true)
       if (result.ok) {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['savings'] }),
@@ -146,7 +159,9 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   const amount = formatARS(suggestion.amount)
 
   return (
-    <View className="rounded-2xl border border-emerald-soft bg-emerald-bg p-4">
+    // Two rows: the copy, then every action on one line. A taller strip on a
+    // phone pushes the card the user actually came for below the fold.
+    <View className="rounded-2xl border border-emerald-soft bg-emerald-bg px-4 py-3.5">
       <Text className="text-[15px] font-extrabold text-text">
         {t('savings.suggestion.title')}
       </Text>
@@ -155,29 +170,36 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
       <Text className="mt-0.5 text-[13px] leading-snug text-text-muted">
         {t('savings.suggestion.body', { amount })}
       </Text>
-      <View className="mt-3">
-        <Button
-          title={t('savings.suggestion.cta', { amount })}
-          onPress={save}
-          loading={busy}
-          disabled={busy}
-        />
-      </View>
       {/* Three ways out, none permanent: "Ahora no" defers to the next income and
-          "No este mes" drops to a monthly cadence — the slowest the strip can go,
-          which is why nothing needs to kill it for good. */}
-      <View className="mt-2 flex-row justify-center gap-5">
+          "Suficiente por este mes" drops to a monthly cadence — the slowest the
+          strip can go, which is why nothing needs to kill it for good. The two
+          are plain text, not buttons: three buttons read as three equally
+          weighted choices and only one of them is the point. */}
+      <View className="mt-3 flex-row items-center gap-3">
+        <View className="flex-1">
+          <Button
+            title={t('savings.suggestion.cta', { amount })}
+            onPress={save}
+            loading={busy}
+            disabled={busy}
+          />
+        </View>
         <Pressable onPress={() => close(false)} disabled={busy} accessibilityRole="button">
-          <Text className="py-2 text-[14px] font-bold text-text-muted">
+          <Text className="py-2 text-[13.5px] font-bold text-text-muted">
             {t('savings.suggestion.later')}
           </Text>
         </Pressable>
-        <Pressable onPress={() => close(true)} disabled={busy} accessibilityRole="button">
-          <Text className="py-2 text-[14px] font-bold text-text-muted">
-            {t('savings.suggestion.enough_this_month')}
-          </Text>
-        </Pressable>
       </View>
+      <Pressable
+        onPress={() => close(true)}
+        disabled={busy}
+        accessibilityRole="button"
+        className="items-center"
+      >
+        <Text className="pt-2 text-[13px] font-semibold text-text-soft">
+          {t('savings.suggestion.enough_this_month')}
+        </Text>
+      </Pressable>
     </View>
   )
 }
