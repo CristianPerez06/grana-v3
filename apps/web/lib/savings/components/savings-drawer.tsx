@@ -300,6 +300,15 @@ const SavingsForm = ({
   const limit = mode === 'save' ? row.available : row.reserved
   const remainder = limit - value
   const overLimit = value > limit
+  // El mismo mensaje que devolvería el servidor, con el mismo número. Un botón
+  // deshabilitado sin explicación es lo peor de los dos mundos: no podés avanzar
+  // y no sabés por qué. Y decirlo acá no reemplaza la validación del write path
+  // — la repite en el momento en que sirve.
+  const limitError = overLimit
+    ? t(mode === 'save' ? 'errors.exceeds_available' : 'errors.exceeds_reserved', {
+        limit: money(limit, currency),
+      })
+    : null
 
   const submit = () => {
     setError(null)
@@ -320,11 +329,11 @@ const SavingsForm = ({
 
   return (
     <div className="flex flex-col">
-      <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
+      {/* Un solo título: el verbo. La eyebrow decía "Guardar" y el título
+          "Guardado" — dos formas de la misma palabra, una arriba de la otra, sin
+          agregar nada. La moneda ya la dice el chip del monto. */}
+      <h2 className="text-[21px] font-extrabold tracking-[-0.025em] text-text">
         {mode === 'save' ? t('save') : t('release')}
-      </p>
-      <h2 className="mt-1 text-[21px] font-extrabold tracking-[-0.025em] text-text">
-        {t('title')}
       </h2>
 
       {/* Same amount hero as "Registrar movimiento" — same radius, same type
@@ -391,7 +400,12 @@ const SavingsForm = ({
         </p>
         <p className="mt-1.5 flex justify-between border-t border-border-soft pt-2.5 text-text-muted">
           <span>{mode === 'save' ? t('left_to_spend') : t('stays_saved')}</span>
-          <span className="text-[16px] font-extrabold tabular-nums text-text">
+          <span
+            className={cn(
+              'text-[16px] font-extrabold tabular-nums',
+              overLimit ? 'text-negative' : 'text-text',
+            )}
+          >
             {money(remainder, currency)}
           </span>
         </p>
@@ -403,9 +417,9 @@ const SavingsForm = ({
         {mode === 'save' ? t('save_note') : t('release_note')}
       </p>
 
-      {error && (
+      {(limitError ?? error) && (
         <p role="alert" className="mt-3 px-1 text-[13px] font-semibold text-negative">
-          {error}
+          {limitError ?? error}
         </p>
       )}
 

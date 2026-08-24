@@ -258,6 +258,17 @@ const SavingsForm = ({
   const value = parseMoneyInput(amount) ?? 0
   const limit = mode === 'save' ? sums.available : sums.reserved
   const remainder = limit - value
+  const overLimit = value > limit
+  // El mismo mensaje que devolvería el servidor, con el mismo número: un botón
+  // deshabilitado sin explicación no deja avanzar y tampoco dice por qué.
+  const limitError = overLimit
+    ? t(
+        mode === 'save'
+          ? 'savings.errors.exceeds_available'
+          : 'savings.errors.exceeds_reserved',
+        { limit: money(limit, currency) },
+      )
+    : null
   const amountInputWidth = Math.max(1, formatForDisplay(amount).length) * 20 + 2
 
   const submit = async () => {
@@ -287,10 +298,11 @@ const SavingsForm = ({
 
   return (
     <View>
-      <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
+      {/* Un solo título: el verbo. La eyebrow decía "Guardar" y el título
+          "Guardado" — dos formas de la misma palabra sin agregar nada. */}
+      <Text className="text-[19px] font-extrabold text-text">
         {mode === 'save' ? t('savings.save') : t('savings.release')}
       </Text>
-      <Text className="mt-0.5 text-[19px] font-extrabold text-text">{t('savings.title')}</Text>
 
       {/* Same amount hero as the native "Registrar movimiento": eyebrow top-left,
           currency chip and calculator pinned top-right (both absolute, so they
@@ -359,7 +371,9 @@ const SavingsForm = ({
           <Text className="text-[14px] text-text-muted">
             {mode === 'save' ? t('savings.left_to_spend') : t('savings.stays_saved')}
           </Text>
-          <Text className="text-[16px] font-extrabold text-text">
+          <Text
+            className={`text-[16px] font-extrabold ${overLimit ? 'text-negative' : 'text-text'}`}
+          >
             {money(remainder, currency)}
           </Text>
         </View>
@@ -370,8 +384,10 @@ const SavingsForm = ({
         {mode === 'save' ? t('savings.save_note') : t('savings.release_note')}
       </Text>
 
-      {error != null && (
-        <Text className="mt-3 px-1 text-[13px] font-semibold text-negative">{error}</Text>
+      {(limitError ?? error) != null && (
+        <Text className="mt-3 px-1 text-[13px] font-semibold text-negative">
+          {limitError ?? error}
+        </Text>
       )}
 
       <View className="mt-4 flex-row gap-2">
@@ -387,7 +403,7 @@ const SavingsForm = ({
             title={mode === 'save' ? t('savings.save') : t('savings.release')}
             onPress={submit}
             loading={busy}
-            disabled={busy || value <= 0 || value > limit}
+            disabled={busy || value <= 0 || overLimit}
           />
         </View>
       </View>
