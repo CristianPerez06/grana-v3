@@ -128,6 +128,80 @@ async function getTransactionSums(
   return balanceSumsFromRows((data ?? []) as AccountBalanceSumRow[])
 }
 
+// ── El disponible real y el flujo reservado ───────────────────────────────────
+//
+// Both come from the NORMATIVE reads of migration 0057 and neither is recomposed
+// here. The Hero could subtract `reserved` from the account total it already
+// holds and save a round-trip — and that is exactly the shortcut that must not be
+// taken. `get_available_sums` has three consumers (this Hero, the drawer's cap
+// and the write path's validation); the day one of them subtracts on its own is
+// the day the screen shows two different "disponibles". Migration 0051 shipped
+// that lesson the hard way: the "owned account" predicate had been copied into
+// every call site until two of them disagreed in production.
+//
+// Same shape as `getTransactionSums` above, and for the same reason: the wrapper
+// only reshapes rows, the arithmetic lives in SQL.
+
+export type CurrencyTotals = { ARS: number; USD: number }
+
+const emptyTotals = (): CurrencyTotals => ({ ARS: 0, USD: 0 })
+
+const foldByCurrency = (
+  rows: { currency_code: string }[],
+  pick: (row: never) => number | string | null,
+): CurrencyTotals => {
+  const totals = emptyTotals()
+  for (const row of rows) {
+    if (row.currency_code !== 'ARS' && row.currency_code !== 'USD') continue
+    const value = pick(row as never)
+    totals[row.currency_code] = value == null ? 0 : Number(value)
+  }
+  return totals
+}
+
+/**
+ * The disponible real per currency — accounts net MINUS what is set aside — plus
+ * the reserved stock that produced it.
+ *
+ * `reserved` travels alongside so the UI can EXPLAIN the subtraction (the row
+ * shows the stock when the month had no activity), never so a consumer can redo
+ * it: `available` is already the answer.
+ */
+export async function getAvailableTotals(
+  supabase: SupabaseClient,
+  asOfISO: string = financialTodayISO(),
+): Promise<{ available: CurrencyTotals; reserved: CurrencyTotals }> {
+  const { data, error } = await supabase.rpc('get_available_sums', { p_today: asOfISO })
+  if (error) throw error
+
+  const rows = (data ?? []) as { currency_code: string; available: number; reserved: number }[]
+  return {
+    available: foldByCurrency(rows, (r: { available: number }) => r.available),
+    reserved: foldByCurrency(rows, (r: { reserved: number }) => r.reserved),
+  }
+}
+
+/**
+ * The net reserved in a range, per currency — the FLOW that feeds the savings
+ * row and the card's identity. Negative when more was released than saved.
+ */
+export async function getReservedFlow(
+  supabase: SupabaseClient,
+  fromISO: string,
+  toISO: string,
+  todayISO: string = financialTodayISO(),
+): Promise<CurrencyTotals> {
+  const { data, error } = await supabase.rpc('get_reserve_flow_sums', {
+    p_from: fromISO,
+    p_to: toISO,
+    p_today: todayISO,
+  })
+  if (error) throw error
+
+  const rows = (data ?? []) as { currency_code: string; reserved_net: number }[]
+  return foldByCurrency(rows, (r: { reserved_net: number }) => r.reserved_net)
+}
+
 /** Rows per round-trip of the month fetch. Independent of the server's
  *  `max-rows`: the loop advances by what came back and stops on an empty page. */
 const MONTH_ROWS_PAGE_SIZE = 1000

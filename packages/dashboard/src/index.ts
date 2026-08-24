@@ -1,11 +1,14 @@
 export {
+  getAvailableTotals,
   getCommittedOutlook,
   getDashboardHero,
+  getReservedFlow,
   getMonthBalanceSeries,
   getMonthCategoryBreakdown,
   getMonthSpending,
   resolveMonthRange,
   UNCATEGORIZED_ID,
+  type CurrencyTotals,
   type MonthCategoryBreakdown,
 } from './queries'
 
@@ -34,6 +37,13 @@ export {
 } from './spending'
 
 export { deriveMonthOpening } from './month-opening'
+
+export {
+  deriveSavingsRow,
+  savingsIdentityTerm,
+  type SavingsRow,
+  type SavingsRowState,
+} from './savings-row'
 
 export {
   aggregateMonthSpending,

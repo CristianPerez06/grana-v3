@@ -29,13 +29,13 @@
 
 ## 4. `packages/dashboard/` — consume, no recompone (D2bis, D7, D8)
 
-- [ ] 4.1 El hero del dashboard toma `available` de `get_available_sums` **solo cuando el mes seleccionado es el corriente**; en un mes pasado sigue leyendo el saldo al cierre como hoy
-- [ ] 4.2 Agregar el neto reservado del mes leyendo `get_reserve_flow_sums(inicio, fin)`. **Ningún resto ni suma en TS**
-- [ ] 4.3 `month-opening.ts`: cuando la card muestra el disponible, `Tenías` se deriva como `Disponible − (Entró − Se fué − Guardaste)`. Es la misma pieza cumpliendo la misma función — cerrar contra el número de arriba — con un término más
-- [ ] 4.4 **No tocar** `calculateTransactionSums` ni la derivación de `Entró`/`Se fué`: guardar no es un movimiento y el invariante de liquidez (`Entró − Se fué === cambio del saldo de cuentas`) tiene que seguir valiendo intacto
-- [ ] 4.5 Extender los tipos de `types.ts` con el neto reservado por moneda, marcándolo como opcional/ausente para los meses pasados
-- [ ] 4.6 Test de reconciliación: `Tenías + Entró − Se fué − Guardaste === Disponible` al centavo, con aritmética exacta y sin tolerancia. Casos: guardado positivo, neto negativo (liberó más de lo que guardó), neto cero, y las dos monedas
-- [ ] 4.7 Test de que el invariante viejo sigue valiendo en meses pasados: `Tenías + Entró − Se fué === saldo al cierre`
+- [x] 4.1 El hero del dashboard toma `available` de `get_available_sums` **solo cuando el mes seleccionado es el corriente**; en un mes pasado sigue leyendo el saldo al cierre como hoy
+- [x] 4.2 Agregar el neto reservado del mes leyendo `get_reserve_flow_sums(inicio, fin)`. **Ningún resto ni suma en TS**
+- [x] 4.3 `month-opening.ts`: cuando la card muestra el disponible, `Tenías` se deriva como `Disponible − (Entró − Se fué − Guardaste)`. Es la misma pieza cumpliendo la misma función — cerrar contra el número de arriba — con un término más
+- [x] 4.4 **No tocar** `calculateTransactionSums` ni la derivación de `Entró`/`Se fué`: guardar no es un movimiento y el invariante de liquidez (`Entró − Se fué === cambio del saldo de cuentas`) tiene que seguir valiendo intacto
+- [x] 4.5 Extender los tipos de `types.ts` con el neto reservado por moneda, marcándolo como opcional/ausente para los meses pasados
+- [x] 4.6 Test de reconciliación: `Tenías + Entró − Se fué − Guardaste === Disponible` al centavo, con aritmética exacta y sin tolerancia. Casos: guardado positivo, neto negativo (liberó más de lo que guardó), neto cero, y las dos monedas
+- [x] 4.7 Test de que el invariante viejo sigue valiendo en meses pasados: `Tenías + Entró − Se fué === saldo al cierre`
 
 ## 5. Web — drawer, línea del dashboard y detalle (D4, D7, D9, D10)
 
