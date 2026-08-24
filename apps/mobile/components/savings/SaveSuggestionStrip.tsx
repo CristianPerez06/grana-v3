@@ -142,15 +142,21 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
         currency_code: 'ARS',
         date: getTodayAR(),
       })
+      if (!result.ok) {
+        // El guardado puede fallar: entre que la tira se dibujó y el usuario
+        // tocó, un gasto pudo bajar el disponible. Sin esto la tira desaparecía,
+        // no guardaba nada y no decía nada. Traer el estado del servidor deshace
+        // el ocultado optimista y la tira vuelve para reintentar.
+        void queryClient.invalidateQueries({ queryKey: ['savings'] })
+        return
+      }
       // `seen`, never `completed`: completing would kill a recurring suggestion
       // for good, and with the next income it should come back.
       await markGuidance(GUIDANCE_ID, 'seen')
-      if (result.ok) {
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['savings'] }),
-          queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
-        ])
-      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['savings'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+      ])
     } finally {
       setBusy(false)
     }

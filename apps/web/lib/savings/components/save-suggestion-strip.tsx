@@ -132,19 +132,17 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   // would be correct in the database and unreachable on screen. Writing the
   // optimistic value into the guidance cache hides it just as fast AND keeps the
   // rule in charge of when it returns.
-  const hideNow = (patch: { seen_at?: string; dismissed_at?: string }) => {
-    const now = new Date().toISOString()
+  const hideNow = (field: 'seen_at' | 'dismissed_at') => {
     queryClient.setQueryData(['savings', 'guidance', GUIDANCE_ID], {
       seen_at: guidance?.seen_at ?? null,
       dismissed_at: guidance?.dismissed_at ?? null,
       completed_at: guidance?.completed_at ?? null,
-      ...(patch.seen_at ? { seen_at: now } : {}),
-      ...(patch.dismissed_at ? { dismissed_at: now } : {}),
+      [field]: new Date().toISOString(),
     })
   }
 
   const close = (untilNextMonth: boolean) => {
-    hideNow(untilNextMonth ? { dismissed_at: 'x' } : { seen_at: 'x' })
+    hideNow(untilNextMonth ? 'dismissed_at' : 'seen_at')
     startTransition(async () => {
       await markGuidance(GUIDANCE_ID, untilNextMonth ? 'dismissed' : 'seen')
       void queryClient.invalidateQueries({ queryKey: ['savings', 'guidance', GUIDANCE_ID] })
@@ -152,22 +150,29 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   }
 
   const save = () => {
-    hideNow({ seen_at: 'x' })
+    hideNow('seen_at')
     startTransition(async () => {
       const result = await reserveAvailability({
         amount: suggestion.amount,
         currency_code: 'ARS',
         date: getTodayAR(),
       })
+      if (!result.ok) {
+        // El guardado puede fallar: entre que la tira se dibujó y el usuario
+        // tocó, un gasto pudo bajar el disponible por debajo del monto sugerido.
+        // Sin esto la tira desaparecía, no guardaba nada y no decía nada — la
+        // peor de las tres cosas juntas. Devolver el estado del servidor deshace
+        // el ocultado optimista y la tira vuelve para reintentar.
+        void queryClient.invalidateQueries({ queryKey: ['savings'] })
+        return
+      }
       // `seen`, never `completed`: completing would kill a recurring suggestion
       // for good, and with the next income it should come back.
       await markGuidance(GUIDANCE_ID, 'seen')
-      if (result.ok) {
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['savings'] }),
-          queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
-        ])
-      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['savings'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+      ])
     })
   }
 
