@@ -11,6 +11,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, '.'),
       '@grana/dashboard': path.resolve(__dirname, '../../packages/dashboard/src/index.ts'),
       '@grana/savings': path.resolve(__dirname, '../../packages/savings/src/index.ts'),
+      '@grana/i18n-messages': path.resolve(__dirname, '../../packages/i18n-messages/src/index.ts'),
       '@grana/validation': path.resolve(__dirname, '../../packages/validation/src/index.ts'),
       '@grana/money-logic': path.resolve(__dirname, '../../packages/money-logic/src/index.ts'),
       '@grana/ui-contracts': path.resolve(__dirname, '../../packages/ui-contracts/src/index.ts'),

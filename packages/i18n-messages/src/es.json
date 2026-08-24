@@ -2069,6 +2069,13 @@
       "exceeds_reserved": "No podés liberar más de lo que tenés guardado: {limit}.",
       "generic": "No pudimos registrar el cambio. Probá de nuevo.",
       "duplicate": "Esa operación ya estaba registrada."
+    },
+    "suggestion": {
+      "title": "¿Guardás una parte?",
+      "body": "Podés apartar {amount} de lo que entró este mes para no gastarlos. La plata se queda donde está.",
+      "cta": "Guardar {amount}",
+      "later": "Ahora no",
+      "never": "No volver a sugerir"
     }
   }
 }

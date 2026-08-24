@@ -42,8 +42,8 @@
 - [x] 5.1 `apps/web/app/_actions/savings.ts`: server actions sobre `@grana/savings`, con `validate-action-input` y el manejo de error del repo
 - [x] 5.2 `apps/web/lib/savings/components/save-money-drawer.tsx` sobre `overlay-primitives`. Monto con `MoneyAmountInput` (nunca `<input type="number">`)
 - [x] 5.3 El drawer muestra el cálculo **del momento**: disponible actual → monto a guardar → remanente. **No** lo calcula contra el ingreso que lo abrió: la reserva es fungible y no pertenece a ningún movimiento
-- [ ] 5.4 Contexto de origen: viniendo de un ingreso hereda la moneda, prellena con el porcentaje y **no** pide fecha. Suelto, ofrece moneda solo si el usuario tiene saldo en más de una, y fecha con hoy por defecto
-- [ ] 5.5 El copy no sugiere en ningún lado que hubo una transferencia
+- [x] 5.4 Contexto de origen: viniendo de un ingreso hereda la moneda, prellena con el porcentaje y **no** pide fecha. Suelto, ofrece moneda solo si el usuario tiene saldo en más de una, y fecha con hoy por defecto
+- [x] 5.5 El copy no sugiere en ningún lado que hubo una transferencia
 - [x] 5.6 Línea *Guardaste este mes* en la zona clara de la card de saldo: **debajo de una regla**, a lo ancho, rótulo izquierda / monto derecha, con signo menos y en **emerald** (el terracota está reservado para por pagar y vencido)
 - [x] 5.7 La línea se renderiza solo si el mes seleccionado es el corriente **y** el neto es distinto de cero. En cualquier otro caso la zona queda exactamente como estaba, sin regla
 - [ ] 5.8 La línea respeta el eye toggle, incluido el signo: un menos suelto al lado de los puntos filtra la dirección que la máscara oculta
@@ -60,11 +60,11 @@
 
 ## 7. La sugerencia al ingreso, sobre `guidance` (D5, D6)
 
-- [ ] 7.1 Registrar el evento en el catálogo de `guidance`, de modo que visto / descartado / completado queden por usuario y la tira deje de aparecer si el usuario la descarta
-- [ ] 7.2 La tira se ofrece después de registrar un `income` **por cualquier camino** —alta manual o confirmación de una instancia recurrente— y como máximo **una vez por mes calendario**. Un `reimbursement` no la dispara
-- [ ] 7.3 El monto sugerido sale del **porcentaje** de la vez anterior, derivado del historial; la primera vez es 10%. Sin pantalla de configuración
-- [ ] 7.4 El copy formula una propuesta de comportamiento, no una recomendación financiera: el monto es *sugerido*, no la cifra que Grana aconseja
-- [ ] 7.5 Test de la regla de frecuencia: dos ingresos en el mismo mes ofrecen la tira una sola vez
+- [x] 7.1 Registrar el evento en el catálogo de `guidance`, de modo que visto / descartado / completado queden por usuario y la tira deje de aparecer si el usuario la descarta
+- [x] 7.2 La tira se ofrece después de registrar un `income` **por cualquier camino** —alta manual o confirmación de una instancia recurrente— y como máximo **una vez por mes calendario**. Un `reimbursement` no la dispara
+- [x] 7.3 El monto sugerido sale del **porcentaje** de la vez anterior, derivado del historial; la primera vez es 10%. Sin pantalla de configuración
+- [x] 7.4 El copy formula una propuesta de comportamiento, no una recomendación financiera: el monto es *sugerido*, no la cifra que Grana aconseja
+- [x] 7.5 Test de la regla de frecuencia: dos ingresos en el mismo mes ofrecen la tira una sola vez
 
 ## 8. Copy e i18n
 
