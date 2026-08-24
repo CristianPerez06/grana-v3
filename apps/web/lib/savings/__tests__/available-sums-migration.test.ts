@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import type { PGlite } from '@electric-sql/pglite'
 import { createAvailableDb } from './support/available-sums-db'
 
@@ -57,9 +57,20 @@ const income = (amount: number, currency = 'ARS') =>
     values ('${UID}', '${BANK}', '${currency}', ${amount}, 'income', '${TODAY}');
   `)
 
-beforeEach(async () => {
+// ONE Postgres for the file, not one per test. Booting PGlite is ~2s of WASM
+// startup, so a `beforeEach` instance meant 15 boots and a suite that timed out
+// under load — flaky in exactly the way that trains people to re-run CI instead
+// of reading it. The schema is immutable across these tests; only the rows
+// change, so truncating between them gives the same isolation for a fraction of
+// the cost.
+beforeAll(async () => {
   db = await createAvailableDb()
+})
+
+beforeEach(async () => {
   await db.exec(`
+    truncate public.availability_reserve, public.transactions, public.accounts cascade;
+    truncate auth.users cascade;
     insert into auth.users (id) values ('${UID}'), ('${OTHER_UID}');
     insert into public.accounts (id, user_id, type, is_active) values
       ('${BANK}', '${UID}', 'bank',   true),
