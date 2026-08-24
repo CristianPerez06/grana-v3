@@ -4,11 +4,11 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   deriveSuggestion,
   getAvailableSums,
+  getLatestIncomeAmount,
   getReserveHistory,
   lastSaveOf,
   shouldOfferSuggestion,
 } from '@grana/savings'
-import { getMonthBalanceSeries } from '@grana/dashboard'
 import { formatARS } from '@grana/i18n-messages'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import { useT } from '../../lib/locale-context'
@@ -44,8 +44,10 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
 
   const monthKey = `${year}-${String(month).padStart(2, '0')}`
   const currentMonth = formatDateISO(getTodayAR()).slice(0, 7)
+  const todayISO = formatDateISO(getTodayAR())
+  const monthStart = `${monthKey}-01`
 
-  const [guidanceQuery, sumsQuery, historyQuery, seriesQuery] = useQueries({
+  const [guidanceQuery, sumsQuery, historyQuery, incomeQuery] = useQueries({
     queries: [
       {
         queryKey: ['savings', 'guidance', GUIDANCE_ID] as const,
@@ -60,10 +62,12 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
         queryFn: () => getReserveHistory(supabase, 'ARS'),
       },
       {
-        // Same key the balance card uses, so this shares its cache instead of
-        // fetching the month a second time.
-        queryKey: ['dashboard', 'balance-series', { year, month }] as const,
-        queryFn: () => getMonthBalanceSeries(supabase, year, month),
+        // The amount the user JUST got paid, not the month's total: the strip
+        // appears right after registering an income, so "the last one of the
+        // period" is in practice "the one you just loaded" — without needing an
+        // event to tell it, which is what would make it fragile.
+        queryKey: ['savings', 'latest-income', monthKey] as const,
+        queryFn: () => getLatestIncomeAmount(supabase, 'ARS', monthStart, todayISO),
       },
     ],
   })
@@ -83,21 +87,22 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   // is the whole point. That month's series is its own read, fetched only when
   // it is a different month; without it the derivation falls back to 10%.
   const lastSaveMonth = lastSave?.date.slice(0, 7) ?? null
-  const [lastYear, lastMonth] = (lastSaveMonth ?? '0-0').split('-').map(Number)
-  const needsPastSeries = lastSaveMonth != null && lastSaveMonth !== monthKey
 
-  const pastSeriesQuery = useQuery({
-    queryKey: ['dashboard', 'balance-series', { year: lastYear, month: lastMonth }] as const,
-    queryFn: () => getMonthBalanceSeries(supabase, lastYear, lastMonth),
-    enabled: needsPastSeries,
+  const priorIncomeQuery = useQuery({
+    queryKey: ['savings', 'latest-income', lastSaveMonth ?? 'none'] as const,
+    queryFn: () =>
+      getLatestIncomeAmount(supabase, 'ARS', `${lastSaveMonth}-01`, lastSave!.date),
+    enabled: lastSaveMonth != null,
+    
   })
 
-  const incomeAtLastSave = needsPastSeries
-    ? (pastSeriesQuery.data?.ARS.totalIncome ?? null)
-    : (seriesQuery.data?.ARS.totalIncome ?? null)
+  // El porcentaje sale de la MISMA relación que la propuesta: lo guardado sobre
+  // el ingreso del que salió. Derivarlo contra el total del mes daría un número
+  // distinto del que el usuario aceptó.
+  const incomeAtLastSave = priorIncomeQuery.data ?? null
 
   const suggestion = deriveSuggestion({
-    monthIncome: seriesQuery.data?.ARS.totalIncome ?? 0,
+    latestIncome: incomeQuery.data ?? 0,
     lastSave,
     incomeAtLastSave,
     available,

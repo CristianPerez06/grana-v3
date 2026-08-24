@@ -53,7 +53,7 @@ describe('deriveSuggestion — the amount', () => {
   it('remembers the percentage, not the amount', () => {
     // 10% of $2.000.000 in August suggests $250.000 over $2.500.000 in September.
     const suggestion = deriveSuggestion({
-      monthIncome: 2_500_000,
+      latestIncome: 2_500_000,
       lastSave: entry(200_000, '2026-08-05'),
       incomeAtLastSave: 2_000_000,
       available: 3_000_000,
@@ -63,7 +63,7 @@ describe('deriveSuggestion — the amount', () => {
 
   it('suggests 10% for someone who never saved', () => {
     const suggestion = deriveSuggestion({
-      monthIncome: 2_000_000,
+      latestIncome: 2_000_000,
       lastSave: null,
       incomeAtLastSave: null,
       available: 2_000_000,
@@ -75,7 +75,7 @@ describe('deriveSuggestion — the amount', () => {
     // The strip must not propose something the write path will reject: that is
     // the worst possible moment for Grana to lose credibility.
     const suggestion = deriveSuggestion({
-      monthIncome: 2_000_000,
+      latestIncome: 2_000_000,
       lastSave: null,
       incomeAtLastSave: null,
       available: 80_000,
@@ -86,10 +86,10 @@ describe('deriveSuggestion — the amount', () => {
   it('stays quiet when there is nothing to propose', () => {
     const base = { lastSave: null, incomeAtLastSave: null }
     // No income this month: there is no moment to attach to.
-    expect(deriveSuggestion({ ...base, monthIncome: 0, available: 500_000 })).toBeNull()
+    expect(deriveSuggestion({ ...base, latestIncome: 0, available: 500_000 })).toBeNull()
     // Nothing available: proposing to set aside money that is not there.
-    expect(deriveSuggestion({ ...base, monthIncome: 2_000_000, available: 0 })).toBeNull()
-    expect(deriveSuggestion({ ...base, monthIncome: 2_000_000, available: -50_000 })).toBeNull()
+    expect(deriveSuggestion({ ...base, latestIncome: 2_000_000, available: 0 })).toBeNull()
+    expect(deriveSuggestion({ ...base, latestIncome: 2_000_000, available: -50_000 })).toBeNull()
   })
 })
 

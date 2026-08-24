@@ -2072,7 +2072,7 @@
     },
     "suggestion": {
       "title": "¿Guardás una parte?",
-      "body": "Podés apartar {amount} de lo que entró este mes para no gastarlos. La plata se queda donde está.",
+      "body": "Podés apartar {amount} de este ingreso para no gastarlos. La plata se queda donde está.",
       "cta": "Guardar {amount}",
       "later": "Ahora no",
       "never": "No volver a sugerir"

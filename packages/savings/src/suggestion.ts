@@ -27,11 +27,15 @@ const MIN_PCT = 0.01
 const MAX_PCT = 0.9
 
 export type SuggestionInput = {
-  /** Ingresos del mes en curso, en la moneda de la sugerencia. */
-  monthIncome: number
+  /**
+   * El ÚLTIMO ingreso del mes, en la moneda de la sugerencia — no el total del
+   * mes. La tira aparece después de cobrar, y lo que el usuario está dispuesto a
+   * apartar es una parte de eso; el total del mes incluye plata ya gastada.
+   */
+  latestIncome: number
   /** La última reserva POSITIVA del usuario, si existe. */
   lastSave: ReserveEntry | null
-  /** Ingresos del mes en que ocurrió esa reserva. */
+  /** El ingreso del que salió esa reserva (el último anterior a su fecha). */
   incomeAtLastSave: number | null
   /** Disponible de esa moneda ahora mismo. */
   available: number
@@ -45,7 +49,7 @@ export type Suggestion = {
 
 /**
  * El porcentaje que el usuario viene usando, derivado de su propia conducta:
- * lo que guardó la última vez sobre lo que entró ese mes.
+ * lo que guardó la última vez sobre el ingreso del que lo sacó.
  *
  * Se deriva en vez de guardarse porque una columna de "porcentaje preferido"
  * sería un dato que el usuario nunca declaró y que habría que mantener
@@ -75,10 +79,10 @@ export function deriveSuggestedPct(
  * path va a rechazar.
  */
 export function deriveSuggestion(input: SuggestionInput): Suggestion | null {
-  if (input.monthIncome <= 0 || input.available <= 0) return null
+  if (input.latestIncome <= 0 || input.available <= 0) return null
 
   const pct = deriveSuggestedPct(input.lastSave, input.incomeAtLastSave)
-  const raw = Money.multiply(Money.from(input.monthIncome), pct)
+  const raw = Money.multiply(Money.from(input.latestIncome), pct)
   const capped = Money.toNumber(raw) > input.available ? Money.from(input.available) : raw
   const amount = Money.toNumber(capped)
 

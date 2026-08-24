@@ -124,3 +124,43 @@ export async function getReserveHistory(
     createdAt: row.created_at,
   }))
 }
+
+// ── getLatestIncomeAmount ─────────────────────────────────────────────────────
+// El monto del ÚLTIMO ingreso de un período, en una moneda.
+//
+// Es la base sobre la que la tira propone guardar, y tiene que ser ese y no el
+// total del mes: lo que el usuario acaba de cobrar es la plata sobre la que está
+// dispuesto a decidir, mientras que el total del mes incluye plata que ya gastó.
+// Proponer el 10% de todo lo que entró en agosto, un 24 de agosto, da un número
+// que no se corresponde con ningún acto.
+//
+// La tira aparece justo después de registrar un ingreso, así que "el último del
+// período" es en la práctica "el que acabás de cargar" — sin necesitar que un
+// evento se lo diga, que es lo que la haría frágil.
+//
+// Orden determinístico hasta el desempate, para que dos ingresos del mismo día
+// no devuelvan uno u otro según el humor del planner.
+export async function getLatestIncomeAmount(
+  supabase: GranaSupabaseClient,
+  currencyCode: BalanceCurrency,
+  fromISO: string,
+  toISO: string,
+): Promise<number | null> {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('amount')
+    .eq('type', 'income')
+    .eq('currency_code', currencyCode)
+    .is('status', null)
+    .gte('date', fromISO)
+    .lte('date', toISO)
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(1)
+
+  if (error) throw error
+
+  const row = (data ?? [])[0]
+  return row ? toNumber(row.amount) : null
+}

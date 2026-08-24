@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
+import { ChevronDown } from 'lucide-react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { parseMoneyInput } from '@grana/validation'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
+import { formatForDisplay } from '@grana/validation'
 import type { AvailableSums, ReserveEntry } from '@grana/savings'
 import { useT } from '../../lib/locale-context'
 import { useSavingsDetail } from '../../lib/savings/queries'
@@ -12,13 +14,17 @@ import { BottomSheet } from '../ui/BottomSheet'
 import { Button } from '../ui/Button'
 import { DateField } from '../ui/DateField'
 import { MoneyAmountInput } from '../ui/MoneyAmountInput'
+import { MoneyCalculator } from '../ui/MoneyCalculator'
 import { FormSheetBody } from '../layout/FormSheetBody'
+import { colors } from '../../lib/colors'
 
 type Currency = 'ARS' | 'USD'
 type Mode = 'save' | 'release'
 
 const money = (amount: number, currency: Currency) =>
   currency === 'USD' ? formatUSD(amount) : formatARS(amount, true)
+
+const CURRENCY_SYMBOL: Record<Currency, string> = { ARS: '$', USD: 'U$D' }
 
 /**
  * Native mirror of the web `SavingsDrawer` — same export name per the mirror
@@ -90,8 +96,8 @@ export const SavingsDrawer = ({
         {form ? (
           <SavingsForm
             mode={form.mode}
-            currency={form.currency}
-            sums={rowFor(form.currency)}
+            initialCurrency={form.currency}
+            rowFor={rowFor}
             onCancel={() => setForm(null)}
             onDone={onDone}
           />
@@ -214,29 +220,46 @@ const CurrencyBlock = ({
  */
 const SavingsForm = ({
   mode,
-  currency,
-  sums,
+  initialCurrency,
+  rowFor,
   onCancel,
   onDone,
 }: {
   mode: Mode
-  currency: Currency
-  sums: AvailableSums
+  initialCurrency: Currency
+  rowFor: (currency: Currency) => AvailableSums
   onCancel: () => void
   onDone: () => Promise<void>
 }) => {
   const t = useT()
+  const [currency, setCurrency] = useState<Currency>(initialCurrency)
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(formatDateISO(getTodayAR()))
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
+  // The currency is offered ONLY when there is more than one to offer: coming
+  // from an income it is inherited, and a user who only holds pesos should not
+  // have to confirm that they hold pesos.
+  const currencyOptions = (['ARS', 'USD'] as const).filter((c) => {
+    const row = rowFor(c)
+    return c === initialCurrency || row.available !== 0 || row.reserved !== 0
+  })
+  const cycleCurrency = () => {
+    if (currencyOptions.length < 2) return
+    setCurrency(
+      currencyOptions[(currencyOptions.indexOf(currency) + 1) % currencyOptions.length],
+    )
+  }
+
+  const sums = rowFor(currency)
   // Opened loose there is no income to take a percentage of, so the field starts
   // EMPTY: a pre-filled number with no anchor would read as an amount Grana is
   // recommending, and Grana does not recommend amounts.
   const value = parseMoneyInput(amount) ?? 0
   const limit = mode === 'save' ? sums.available : sums.reserved
   const remainder = limit - value
+  const amountInputWidth = Math.max(1, formatForDisplay(amount).length) * 20 + 2
 
   const submit = async () => {
     setError(null)
@@ -266,17 +289,49 @@ const SavingsForm = ({
   return (
     <View>
       <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
-        {t('savings.total_label', { currency })}
-      </Text>
-      <Text className="mt-0.5 text-[19px] font-extrabold text-text">
         {mode === 'save' ? t('savings.save') : t('savings.release')}
       </Text>
+      <Text className="mt-0.5 text-[19px] font-extrabold text-text">{t('savings.title')}</Text>
 
-      <View className="mt-3 rounded-2xl border border-border bg-card p-4">
-        <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
-          {t('savings.amount_label')}
-        </Text>
-        <MoneyAmountInput value={amount} onChangeText={setAmount} placeholder="0" autoFocus />
+      {/* Same amount hero as the native "Registrar movimiento": eyebrow top-left,
+          currency chip and calculator pinned top-right (both absolute, so they
+          don't drag the number down), and the big number centered inside a
+          min-height. Two surfaces that ask for an amount should not look like two
+          different apps — and the chip is what gives this one its currency
+          selector. */}
+      <View className="mt-3 rounded-2xl border border-border bg-card px-4 pb-4 pt-3.5">
+        <View className="relative">
+          <Text className="absolute left-0 top-0 text-[11px] font-bold uppercase tracking-wider text-text-soft">
+            {t('savings.amount_label')}
+          </Text>
+          <View className="absolute right-0 top-0 items-end gap-1.5">
+            <Pressable
+              onPress={cycleCurrency}
+              disabled={currencyOptions.length < 2}
+              accessibilityRole="button"
+              accessibilityLabel={t('savings.currency_label')}
+              className="flex-row items-center gap-1 rounded-lg border border-border bg-border-soft px-2.5 py-1"
+            >
+              <Text className="text-xs font-bold text-text">{currency}</Text>
+              {currencyOptions.length > 1 && <ChevronDown size={12} color={colors.text} />}
+            </Pressable>
+            <MoneyCalculator seed={amount} onResult={setAmount} />
+          </View>
+          <View className="min-h-[72px] flex-row items-center justify-center">
+            <Text className="pl-1 text-[34px] font-bold text-text">
+              {CURRENCY_SYMBOL[currency]}
+            </Text>
+            <MoneyAmountInput
+              bare
+              value={amount}
+              onChangeText={setAmount}
+              placeholder="0"
+              autoFocus
+              style={{ width: amountInputWidth, paddingVertical: 0 }}
+              className="ml-1 text-[34px] font-bold text-text"
+            />
+          </View>
+        </View>
       </View>
 
       <View className="mt-3 rounded-2xl border border-border bg-card p-4">
