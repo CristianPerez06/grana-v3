@@ -1,6 +1,15 @@
 @import "tailwindcss";
 @import "@grana/ui-tokens/theme.css";
 
+html {
+  /* Chrome en Android infla por su cuenta el texto de algunos bloques ("font
+     boosting") y descuadra layouts que entran perfecto en el ancho declarado.
+     Esto lo desactiva. NO afecta la escala de texto que el usuario elige en
+     Accesibilidad: esa es deliberada y el layout tiene que sobrevivirla. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

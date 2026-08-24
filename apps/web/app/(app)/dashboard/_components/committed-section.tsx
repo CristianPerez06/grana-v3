@@ -143,10 +143,12 @@ export const CommittedSection = async ({ data, monthLabel }: Props) => {
   return (
     <Card className="flex flex-col">
       {/* One row at every width: the link belongs beside the title, not stacked
-          under it. The title block shrinks; the link never wraps. */}
+          under it. The title block shrinks and WRAPS — truncating a title turns
+          it into "Compromisos del p…", which names nothing. The link never
+          wraps and never shrinks. */}
       <CardHeader className="flex-row items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="truncate text-lg font-semibold tracking-tight text-text">
+          <h2 className="text-lg font-semibold tracking-tight text-text">
             {t('title_next_month')}
           </h2>
           <p className="text-[12.5px] font-semibold text-text-soft">{monthLabel}</p>

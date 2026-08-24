@@ -72,7 +72,9 @@ export const SharedStrip = () => {
           initials said it a third time, in the width where there is least room
           for any of them. This block shrinks first so the amount never does. */}
       <View className="min-w-0 flex-1">
-        <Text className="text-[13px] font-extrabold text-text">
+        {/* `numberOfLines`: sin esto el título envuelve y empuja la fila, en vez
+            de cortarse y dejar el monto entero. Mismo criterio que web. */}
+        <Text numberOfLines={1} className="text-[13px] font-extrabold text-text">
           {t('dashboard.shared_strip.title')}
         </Text>
         <Text numberOfLines={1} className="text-[11px] font-medium text-text-soft">

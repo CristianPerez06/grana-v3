@@ -72,8 +72,15 @@ export const SharedStrip = async ({
             <Users size={18} strokeWidth={2.25} aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-[14px] font-bold text-text">{t('title')}</span>
+            {/* `min-w-0` + `truncate`: un flex item arranca con `min-width: auto`,
+                o sea que NO se achica por debajo de su contenido. Sin esto el
+                título conservaba su ancho intrínseco y se DESBORDABA sobre el
+                monto de la derecha —se veían encimados— mientras la bajada, que
+                sí truncaba, se cortaba prolija. Con texto más grande que el de
+                diseño, el desborde es inevitable; lo que se elige acá es que
+                degrade truncando en vez de pisar al vecino. */}
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-[14px] font-bold text-text">{t('title')}</span>
               <span className="hidden -space-x-1.5 sm:flex">
                 <Avatar initials={selfInitials} />
                 <Avatar initials={otherInitials} />

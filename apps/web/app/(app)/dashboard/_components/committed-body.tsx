@@ -109,7 +109,13 @@ export const CommittedBody = ({ summary, groups }: Props) => {
                 {group.icon}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[13.5px] font-extrabold text-text">{group.label}</span>
+                {/* Trunca igual que su bajada: sin esto el rótulo envolvía a dos
+                    líneas mientras la bajada se cortaba con puntos suspensivos,
+                    y la fila quedaba con dos reglas distintas para el mismo
+                    desborde. */}
+                <span className="block truncate text-[13.5px] font-extrabold text-text">
+                  {group.label}
+                </span>
                 <span className="block truncate text-[11.5px] font-semibold text-text-soft">
                   {group.sub}
                 </span>
