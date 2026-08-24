@@ -34,6 +34,11 @@ export function invalidateAfterMovementMutation(qc: QueryClient): void {
   // router.refresh() alone leaves them stale until a hard reload. Invalidate
   // the whole prefix so every dashboard card refetches after a movement.
   qc.invalidateQueries({ queryKey: ['dashboard'] })
+  // Un movimiento cambia el saldo de una cuenta, y por lo tanto el DISPONIBLE
+  // (`saldo − guardado`) y todo lo que cuelga de él: el tope del drawer y el
+  // monto que propone la tira. Sin esto, registrás un ingreso y la tira sigue
+  // mirando el disponible de antes de cobrarlo.
+  qc.invalidateQueries({ queryKey: ['savings'] })
   // Compartido home month-scoped widgets (Gasto del hogar, Últimos movimientos)
   // read from TanStack keyed by month; router.refresh() alone leaves them stale.
   // Debt/outlook there are today-anchored RSC and refresh via router.refresh().

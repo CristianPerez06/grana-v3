@@ -236,12 +236,15 @@ const SavingsLine = ({
     <button
       type="button"
       onClick={onOpen}
-      className="mt-3 flex w-full items-center justify-between gap-3 rounded-lg border-t border-border-soft pt-3 text-left transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      // Sin relleno al pasar el mouse: un bloque gris a todo el ancho debajo de
+      // los tres montos se lee como otra card metida adentro de la card. Lo que
+      // marca que es tocable es el chevron, que se oscurece con el resto.
+      className="group mt-3 flex w-full items-center justify-between gap-3 border-t border-border-soft pt-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <span
         className={cn(
-          'flex shrink-0 items-center gap-[9px] text-[14px] font-bold',
-          isEmpty ? 'text-text-soft' : 'text-text-muted',
+          'flex shrink-0 items-center gap-[9px] text-[14px] font-bold transition-colors',
+          isEmpty ? 'text-text-soft group-hover:text-text-muted' : 'text-text-muted',
         )}
       >
         {/* The empty state carries no colour either: it is an invitation, not a
@@ -273,7 +276,10 @@ const SavingsLine = ({
             )}
           </span>
         )}
-        <span aria-hidden className="text-[15px] font-bold text-text-soft">
+        <span
+          aria-hidden
+          className="text-[15px] font-bold text-text-soft transition-colors group-hover:text-text-muted"
+        >
           ›
         </span>
       </span>

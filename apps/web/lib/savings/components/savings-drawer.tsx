@@ -11,10 +11,12 @@ import {
 } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { parseMoneyInput } from '@grana/validation'
+import { ChevronDown } from 'lucide-react'
 import { Drawer } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { DatePicker } from '@/components/ui/date-picker'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { createClient } from '@/lib/supabase/client'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { cn } from '@/lib/utils'
@@ -130,8 +132,9 @@ export function SavingsDrawer({
         {form ? (
           <SavingsForm
             mode={form.mode}
-            currency={form.currency}
-            sums={rowFor(form.currency)}
+            initialCurrency={form.currency}
+            sums={sums}
+            rowFor={rowFor}
             onCancel={() => setForm(null)}
             onDone={onDone}
           />
@@ -259,29 +262,46 @@ const CurrencyBlock = ({
  */
 const SavingsForm = ({
   mode,
-  currency,
+  initialCurrency,
   sums,
+  rowFor,
   onCancel,
   onDone,
 }: {
   mode: Mode
-  currency: Currency
-  sums: AvailableSums
+  initialCurrency: Currency
+  sums: AvailableSums[] | null
+  rowFor: (currency: Currency) => AvailableSums
   onCancel: () => void
   onDone: () => Promise<void>
 }) => {
   const t = useTranslations('savings')
+  const [currency, setCurrency] = useState<Currency>(initialCurrency)
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(formatDateISO(getTodayAR()))
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
+  // The currency is offered ONLY when there is more than one to offer. Coming
+  // from an income it is inherited and never asked; opened loose, a user who
+  // only holds pesos should not have to confirm that they hold pesos.
+  const currencyOptions = (['ARS', 'USD'] as const).filter((c) => {
+    const row = rowFor(c)
+    return c === initialCurrency || row.available !== 0 || row.reserved !== 0
+  })
+  const cycleCurrency = () => {
+    if (currencyOptions.length < 2) return
+    const next = currencyOptions[(currencyOptions.indexOf(currency) + 1) % currencyOptions.length]
+    setCurrency(next)
+  }
+
+  const row = rowFor(currency)
   // Opened loose there is no income to take a percentage of, so the field starts
   // EMPTY. A pre-filled number with no anchor would read as an amount Grana is
   // recommending, and Grana does not recommend amounts.
   const value = parseMoneyInput(amount) ?? 0
-  const limit = mode === 'save' ? sums.available : sums.reserved
-  const remainder = mode === 'save' ? sums.available - value : sums.reserved - value
+  const limit = mode === 'save' ? row.available : row.reserved
+  const remainder = limit - value
   const overLimit = value > limit
 
   const submit = () => {
@@ -304,27 +324,52 @@ const SavingsForm = ({
   return (
     <div className="flex flex-col">
       <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
-        {t('total_label', { currency })}
+        {mode === 'save' ? t('save') : t('release')}
       </p>
       <h2 className="mt-1 text-[21px] font-extrabold tracking-[-0.025em] text-text">
-        {mode === 'save' ? t('save') : t('release')}
+        {t('title')}
       </h2>
 
-      <div className="mt-4 rounded-2xl border border-border-soft bg-card p-4">
-        <label
-          htmlFor="savings-amount"
-          className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft"
-        >
-          {t('amount_label')}
-        </label>
-        <MoneyAmountInput
-          id="savings-amount"
-          value={amount}
-          onChange={setAmount}
-          className="mt-2 w-full border-0 bg-transparent p-0 text-[30px] font-semibold tracking-[-0.03em] text-text outline-none placeholder:text-border"
-          placeholder="0"
-          autoFocus
-        />
+      {/* Same amount hero as "Registrar movimiento" — same radius, same type
+          scale, same currency chip, same calculator. Two surfaces that ask for
+          an amount should not look like two different apps, and the chip is what
+          gives this one its currency selector. */}
+      <div className="mt-4 rounded-[18px] border border-border bg-card px-[22px] pb-[22px] pt-5 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]">
+        <div className="flex items-start justify-between">
+          <label
+            htmlFor="savings-amount"
+            className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft"
+          >
+            {t('amount_label')}
+          </label>
+          <button
+            type="button"
+            onClick={cycleCurrency}
+            disabled={currencyOptions.length < 2}
+            className="inline-flex items-center gap-1 rounded-[9px] border border-border bg-[#FAFBFC] px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
+          >
+            {currency}
+            {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
+          </button>
+        </div>
+        <div className="mt-2 flex items-baseline gap-1.5">
+          <span className="text-[27px] font-semibold leading-none text-text opacity-50">
+            {currency === 'USD' ? 'U$D' : '$'}
+          </span>
+          <MoneyAmountInput
+            id="savings-amount"
+            value={amount}
+            onChange={setAmount}
+            placeholder="0"
+            autoFocus
+            className="w-full min-w-0 bg-transparent text-[46px] font-bold leading-none tracking-[-0.045em] tabular-nums text-text outline-none placeholder:text-text-soft/40"
+          />
+          <MoneyCalculatorPopover
+            seed={amount}
+            onResult={setAmount}
+            className="shrink-0 self-center"
+          />
+        </div>
       </div>
 
       <div className="mt-3 rounded-2xl border border-border-soft bg-card p-4">
