@@ -212,7 +212,13 @@
       "sub_credit": "Balance in your favor",
       "sub_debit": "Balance against you"
     },
-    "net_this_month": "you're at <amount>{net}</amount> this month"
+    "net_this_month": "you're at <amount>{net}</amount> this month",
+    "savings": {
+      "saved": "Saved this month",
+      "released": "Released this month",
+      "stock": "Set aside",
+      "empty": "Set some aside"
+    }
   },
   "settings": {
     "title": "Settings",
@@ -2035,6 +2041,34 @@
       "description_body": "Add a short reference, like \"groceries\" or \"school\". It's optional, but it's the key: next time you repeat it, Grana suggests the category on its own. 👀",
       "save_title": "All set!",
       "save_body": "When you're done filling it in, tap here to save your first movement. 🎉"
+    }
+  },
+  "savings": {
+    "title": "Set aside",
+    "save": "Set aside",
+    "release": "Release",
+    "total_label": "Set aside in {currency}",
+    "this_month": "This month",
+    "history": "History",
+    "entry_saved": "Set aside",
+    "entry_released": "Released",
+    "empty_history": "You haven't set anything aside yet.",
+    "amount_label": "Amount",
+    "date_label": "Date",
+    "currency_label": "Currency",
+    "available_now": "Available today",
+    "you_will_save": "You'll set aside",
+    "you_will_release": "You'll release",
+    "left_to_spend": "Left to spend",
+    "saved_total": "Currently set aside",
+    "stays_saved": "Stays set aside",
+    "save_note": "The money stays where it is. It just stops counting as available to spend.",
+    "release_note": "It's available to spend again. The money doesn't move out of any account.",
+    "errors": {
+      "exceeds_available": "You can't set aside more than you have available: {limit}.",
+      "exceeds_reserved": "You can't release more than you have set aside: {limit}.",
+      "generic": "We couldn't save the change. Please try again.",
+      "duplicate": "That change was already recorded."
     }
   }
 }

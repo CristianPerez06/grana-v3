@@ -212,7 +212,13 @@
       "sub_credit": "Saldo a tu favor",
       "sub_debit": "Saldo en contra"
     },
-    "net_this_month": "vas <amount>{net}</amount> este mes"
+    "net_this_month": "vas <amount>{net}</amount> este mes",
+    "savings": {
+      "saved": "Guardaste este mes",
+      "released": "Liberaste este mes",
+      "stock": "Guardado",
+      "empty": "Guardar algo"
+    }
   },
   "settings": {
     "title": "Configuración",
@@ -2035,6 +2041,34 @@
       "description_body": "Escribí una referencia corta, tipo \"super\" o \"cole\". Es opcional, pero es la clave: la próxima vez que la repitas, Grana te sugiere la categoría sola. 👀",
       "save_title": "¡Y listo!",
       "save_body": "Cuando termines de cargar, tocá acá para guardar tu primer movimiento. 🎉"
+    }
+  },
+  "savings": {
+    "title": "Guardado",
+    "save": "Guardar",
+    "release": "Liberar",
+    "total_label": "Guardado en {currency}",
+    "this_month": "Este mes",
+    "history": "Historial",
+    "entry_saved": "Guardaste",
+    "entry_released": "Liberaste",
+    "empty_history": "Todavía no guardaste nada.",
+    "amount_label": "Monto",
+    "date_label": "Fecha",
+    "currency_label": "Moneda",
+    "available_now": "Disponible hoy",
+    "you_will_save": "Vas a guardar",
+    "you_will_release": "Vas a liberar",
+    "left_to_spend": "Te queda para gastar",
+    "saved_total": "Tenés guardado",
+    "stays_saved": "Queda guardado",
+    "save_note": "La plata se queda donde está. Solo deja de contarse como disponible para gastar.",
+    "release_note": "Vuelve a estar disponible para gastar. La plata no se mueve de ninguna cuenta.",
+    "errors": {
+      "exceeds_available": "No podés guardar más de lo que tenés disponible: {limit}.",
+      "exceeds_reserved": "No podés liberar más de lo que tenés guardado: {limit}.",
+      "generic": "No pudimos registrar el cambio. Probá de nuevo.",
+      "duplicate": "Esa operación ya estaba registrada."
     }
   }
 }

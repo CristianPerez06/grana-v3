@@ -39,16 +39,16 @@
 
 ## 5. Web — drawer, línea del dashboard y detalle (D4, D7, D9, D10)
 
-- [ ] 5.1 `apps/web/app/_actions/savings.ts`: server actions sobre `@grana/savings`, con `validate-action-input` y el manejo de error del repo
-- [ ] 5.2 `apps/web/lib/savings/components/save-money-drawer.tsx` sobre `overlay-primitives`. Monto con `MoneyAmountInput` (nunca `<input type="number">`)
-- [ ] 5.3 El drawer muestra el cálculo **del momento**: disponible actual → monto a guardar → remanente. **No** lo calcula contra el ingreso que lo abrió: la reserva es fungible y no pertenece a ningún movimiento
+- [x] 5.1 `apps/web/app/_actions/savings.ts`: server actions sobre `@grana/savings`, con `validate-action-input` y el manejo de error del repo
+- [x] 5.2 `apps/web/lib/savings/components/save-money-drawer.tsx` sobre `overlay-primitives`. Monto con `MoneyAmountInput` (nunca `<input type="number">`)
+- [x] 5.3 El drawer muestra el cálculo **del momento**: disponible actual → monto a guardar → remanente. **No** lo calcula contra el ingreso que lo abrió: la reserva es fungible y no pertenece a ningún movimiento
 - [ ] 5.4 Contexto de origen: viniendo de un ingreso hereda la moneda, prellena con el porcentaje y **no** pide fecha. Suelto, ofrece moneda solo si el usuario tiene saldo en más de una, y fecha con hoy por defecto
 - [ ] 5.5 El copy no sugiere en ningún lado que hubo una transferencia
-- [ ] 5.6 Línea *Guardaste este mes* en la zona clara de la card de saldo: **debajo de una regla**, a lo ancho, rótulo izquierda / monto derecha, con signo menos y en **emerald** (el terracota está reservado para por pagar y vencido)
-- [ ] 5.7 La línea se renderiza solo si el mes seleccionado es el corriente **y** el neto es distinto de cero. En cualquier otro caso la zona queda exactamente como estaba, sin regla
+- [x] 5.6 Línea *Guardaste este mes* en la zona clara de la card de saldo: **debajo de una regla**, a lo ancho, rótulo izquierda / monto derecha, con signo menos y en **emerald** (el terracota está reservado para por pagar y vencido)
+- [x] 5.7 La línea se renderiza solo si el mes seleccionado es el corriente **y** el neto es distinto de cero. En cualquier otro caso la zona queda exactamente como estaba, sin regla
 - [ ] 5.8 La línea respeta el eye toggle, incluido el signo: un menos suelto al lado de los puntos filtra la dirección que la máscara oculta
-- [ ] 5.9 `savings-detail-drawer.tsx`: total guardado por moneda (stock), neto del mes (flujo) e historial con fecha, más las acciones Guardar y Liberar. Se llega **tocando el monto**, como al detalle de un resumen de tarjeta
-- [ ] 5.10 **No** agregar entrada de navegación
+- [x] 5.9 `savings-detail-drawer.tsx`: total guardado por moneda (stock), neto del mes (flujo) e historial con fecha, más las acciones Guardar y Liberar. Se llega **tocando el monto**, como al detalle de un resumen de tarjeta
+- [x] 5.10 **No** agregar entrada de navegación
 
 ## 6. Mobile — paridad
 
@@ -68,9 +68,9 @@
 
 ## 8. Copy e i18n
 
-- [ ] 8.1 `packages/i18n-messages`: Guardar, Liberar, Guardado, *Guardaste este mes*, el copy del drawer, el de la sugerencia, y los errores de tope y de piso
-- [ ] 8.2 Los errores dicen el número: *"Tenés $300.000 disponibles"*, no *"monto inválido"*
-- [ ] 8.3 Cambiar `accounts.labels.balance` de "Saldo" a **"Saldo en esta cuenta"** (y su par en inglés). Es el único cambio fuera de `savings` y `dashboard`, y es copy: después de esta fase el número del dashboard deja de significar lo mismo que el de la cuenta, y dos rótulos iguales para dos cosas distintas es la confusión que la fase viene a evitar. Verificar que entra en el hero del detalle de cuenta en ancho de teléfono sin cortarse
+- [x] 8.1 `packages/i18n-messages`: Guardar, Liberar, Guardado, *Guardaste este mes*, el copy del drawer, el de la sugerencia, y los errores de tope y de piso
+- [x] 8.2 Los errores dicen el número: *"Tenés $300.000 disponibles"*, no *"monto inválido"*
+- [x] 8.3 Cambiar `accounts.labels.balance` de "Saldo" a **"Saldo en esta cuenta"** (y su par en inglés). Es el único cambio fuera de `savings` y `dashboard`, y es copy: después de esta fase el número del dashboard deja de significar lo mismo que el de la cuenta, y dos rótulos iguales para dos cosas distintas es la confusión que la fase viene a evitar. Verificar que entra en el hero del detalle de cuenta en ancho de teléfono sin cortarse
 
 ## 9. Cierre
 

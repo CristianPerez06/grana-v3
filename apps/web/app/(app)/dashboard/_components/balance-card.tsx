@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { useFormatter, useTranslations } from 'next-intl'
 import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
@@ -11,8 +12,10 @@ import {
   type MonthBalanceByCurrency,
   type AmountDensity,
   type PlacementRow,
+  type SavingsRow,
 } from '@grana/dashboard'
 import { Card } from '@/components/ui/card'
+import { SavingsDrawer } from '@/lib/savings/components/savings-drawer'
 import { useShowCents } from '@/lib/preferences-context'
 import { cn } from '@/lib/utils'
 import { MaskedAmount } from './masked-amount'
@@ -195,6 +198,90 @@ const Flow = ({
 )
 
 /**
+ * The savings row — BELOW A RULE, never a fourth column of the strip.
+ *
+ * The strip of three is liquidity: money entering and leaving the accounts.
+ * Saving is neither — it is a decision about money that stayed exactly where it
+ * was — so making it a fourth sibling would claim it is the same kind of thing
+ * as an income or an expense.
+ *
+ * It renders in ALL FOUR states, and that is deliberate. A row that appeared
+ * only when there was activity would leave the hero subtracting money the screen
+ * never names, in any month the user did not touch their savings, with no way to
+ * reach the detail — and no way back for whoever dismissed the suggestion and
+ * changed their mind.
+ *
+ * The sign comes from the STATE, never from the number: a raw signed net would
+ * eventually print "Guardaste este mes +$50.000", which says the opposite of what
+ * happened. Emerald, not terracotta — terracotta is reserved in Grana for what is
+ * due or overdue, and this is progress.
+ */
+const SavingsLine = ({
+  row,
+  usdRow,
+  showUsd,
+  onOpen,
+}: {
+  row: SavingsRow
+  usdRow: SavingsRow | null
+  showUsd: boolean
+  onOpen: () => void
+}) => {
+  const t = useTranslations('dashboard')
+  const label = t(`savings.${row.state}`)
+  const signPrefix = row.state === 'saved' ? '−' : row.state === 'released' ? '+' : undefined
+  const isEmpty = row.state === 'empty'
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="mt-3 flex w-full items-center justify-between gap-3 rounded-lg border-t border-border-soft pt-3 text-left transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <span
+        className={cn(
+          'flex shrink-0 items-center gap-[9px] text-[14px] font-bold',
+          isEmpty ? 'text-text-soft' : 'text-text-muted',
+        )}
+      >
+        {/* The empty state carries no colour either: it is an invitation, not a
+            reading. One muted line is the whole price of the permanent door for
+            someone who is never going to save. */}
+        <span
+          aria-hidden
+          className={cn('size-[9px] rounded-full', isEmpty ? 'bg-border' : 'bg-emerald')}
+        />
+        {label}
+      </span>
+      <span className="flex min-w-0 items-baseline gap-1.5">
+        {!isEmpty && (
+          <span className="flex flex-col items-end">
+            <span className="whitespace-nowrap text-[17px] font-extrabold leading-none tracking-[-0.04em] text-emerald-deep">
+              <MaskedAmount amount={row.amount} currency="ARS" signPrefix={signPrefix} />
+            </span>
+            {showUsd && usdRow && usdRow.state !== 'empty' && (
+              <span className="mt-[5px] text-[12.5px] font-semibold text-text-soft">
+                <MaskedAmount
+                  amount={usdRow.amount}
+                  currency="USD"
+                  showCentsOverride
+                  signPrefix={
+                    usdRow.state === 'saved' ? '−' : usdRow.state === 'released' ? '+' : undefined
+                  }
+                />
+              </span>
+            )}
+          </span>
+        )}
+        <span aria-hidden className="text-[15px] font-bold text-text-soft">
+          ›
+        </span>
+      </span>
+    </button>
+  )
+}
+
+/**
  * "Saldo disponible total" — one card with two zones: a dark one with the
  * balance, the USD line and the "Dónde está" breakdown folded in, and a light
  * one with "Resumen del mes".
@@ -212,7 +299,8 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
   const t = useTranslations('dashboard')
   const format = useFormatter()
   const showCents = useShowCents()
-  const { hero, summary, venia, isCurrent, selected } = useBalanceMonth({
+  const [savingsOpen, setSavingsOpen] = useState(false)
+  const { hero, summary, venia, savings, displayed, isCurrent, selected } = useBalanceMonth({
     todayISO,
     heroInitial,
     monthInitial,
@@ -230,7 +318,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
     (venia?.USD ?? 0) !== 0 ||
     (summary?.USD.entro ?? 0) !== 0 ||
     (summary?.USD.seFue ?? 0) !== 0
-  const hasUsd = placement.USD.rows.length > 0 || (hero?.usd ?? 0) !== 0
+  const hasUsd = placement.USD.rows.length > 0 || displayed.USD !== 0
   const monthLabel = format.dateTime(new Date(selected.year, selected.month - 1, 1), {
     month: 'long',
     year: 'numeric',
@@ -244,7 +332,10 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
         </p>
 
         <p className="mt-[11px] text-[clamp(2.125rem,3.4vw,2.625rem)] font-extrabold leading-[0.95] tracking-[-0.05em]">
-          <MaskedAmountDisplay amount={hero?.ars ?? 0} currency="ARS" dimSymbol />
+          {/* The disponible real in the current month; the closing balance in a
+              past one. The label above already tells them apart, and the reserve
+              is netted exactly where it says "disponible". */}
+          <MaskedAmountDisplay amount={displayed.ARS} currency="ARS" dimSymbol />
         </p>
 
         {hasUsd && (
@@ -253,7 +344,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
               USD
             </span>
             <span className="text-[16px] font-bold text-white/90">
-              <MaskedAmount amount={hero?.usd ?? 0} currency="USD" showCentsOverride />
+              <MaskedAmount amount={displayed.USD} currency="USD" showCentsOverride />
             </span>
           </p>
         )}
@@ -341,7 +432,27 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             density={summaryDensity}
           />
         </div>
+
+        {savings.ARS && (
+          <SavingsLine
+            row={savings.ARS}
+            usdRow={savings.USD}
+            showUsd={summaryHasUsd}
+            onOpen={() => setSavingsOpen(true)}
+          />
+        )}
       </div>
+
+      {/* With nothing set aside there is no detail worth reading, so the row goes
+          straight to the act — two taps instead of three, through an empty
+          screen nobody needs to see. */}
+      <SavingsDrawer
+        open={savingsOpen}
+        onClose={() => setSavingsOpen(false)}
+        initialMode={
+          savings.ARS?.state === 'empty' ? { mode: 'save', currency: 'ARS' } : undefined
+        }
+      />
     </Card>
   )
 }
