@@ -46,7 +46,7 @@
 - [x] 5.5 El copy no sugiere en ningún lado que hubo una transferencia
 - [x] 5.6 Línea *Guardaste este mes* en la zona clara de la card de saldo: **debajo de una regla**, a lo ancho, rótulo izquierda / monto derecha, con signo menos y en **emerald** (el terracota está reservado para por pagar y vencido)
 - [x] 5.7 La línea se renderiza solo si el mes seleccionado es el corriente **y** el neto es distinto de cero. En cualquier otro caso la zona queda exactamente como estaba, sin regla
-- [ ] 5.8 La línea respeta el eye toggle, incluido el signo: un menos suelto al lado de los puntos filtra la dirección que la máscara oculta
+- [x] 5.8 La línea respeta el eye toggle, incluido el signo — resuelto por construcción: `MaskedAmount` ya oculta el `signPrefix` junto con el monto, y la fila lo usa en las dos plataformas
 - [x] 5.9 `savings-detail-drawer.tsx`: total guardado por moneda (stock), neto del mes (flujo) e historial con fecha, más las acciones Guardar y Liberar. Se llega **tocando el monto**, como al detalle de un resumen de tarjeta
 - [x] 5.10 **No** agregar entrada de navegación
 
@@ -74,7 +74,12 @@
 
 ## 9. Cierre
 
-- [ ] 9.1 Aviso no bloqueante cuando un gasto lleva el disponible por debajo de cero, con el patrón que ya existe. **No** reducir el guardado para que el número cierre
+- [ ] 9.1 ~~Aviso no bloqueante cuando un gasto lleva el disponible por debajo de cero~~ — **diferido, y el requirement necesita corregirse antes de implementarlo.** Dos motivos:
+
+  1. **Cruza un límite que el proposal dibujó.** El aviso que ya existe (`NegativeBalanceNotice`) se proyecta sobre el saldo de UNA cuenta, y su cálculo vive en `use-movement-form.ts` a partir de datos que el hook recibe. Un aviso sobre el disponible necesita que `@grana/movement-form` reciba la reserva, y que los dos callers la traigan — o sea, tocar el form de movimientos, que esta fase declara fuera de alcance.
+  2. **Como está escrito, sería ruido.** El disponible negativo es un estado en el que el usuario puede quedarse a propósito, así que la condición sigue siendo verdadera en CADA gasto posterior hasta que cobre o libere. Un aviso que se repite en cada alta deja de leerse. La regla correcta es avisar en el **cruce** —el gasto que lo lleva de positivo a negativo—, no mientras dure el estado.
+
+  Además son **dos lentes distintos** (una cuenta en rojo vs. el disponible en rojo) y meterlos en el mismo aviso mezclaría lo que el modelo separa. Serían dos avisos con copy distinto. Reabrir como change propio.
 - [x] 9.2 Verificar que Movimientos no muestra nada nuevo y que ningún saldo de cuenta cambió: guardar no es un hecho del ledger
-- [ ] 9.3 Actualizar la tabla de módulos de `AGENTS.md`: módulo 16 `savings` pasa de 🔲 Planned a ✅ Done con el alcance real de la fase 1 (guardar/liberar y disponible real; propósitos y posiciones siguen pendientes)
-- [ ] 9.4 `pnpm openspec:check`, lint, typecheck y tests en verde
+- [x] 9.3 Actualizar la tabla de módulos de `AGENTS.md`: módulo 16 `savings` pasa de 🔲 Planned a ✅ Done con el alcance real de la fase 1 (guardar/liberar y disponible real; propósitos y posiciones siguen pendientes)
+- [x] 9.4 `pnpm openspec:check`, lint, typecheck y tests en verde
