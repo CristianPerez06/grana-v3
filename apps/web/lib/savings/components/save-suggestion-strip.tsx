@@ -179,7 +179,7 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
           {t('later')}
         </Button>
         <Button variant="ghost" onClick={() => close(true)} disabled={pending}>
-          {t('not_this_month')}
+          {t('enough_this_month')}
         </Button>
       </div>
     </section>

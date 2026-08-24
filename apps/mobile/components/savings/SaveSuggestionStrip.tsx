@@ -174,7 +174,7 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
         </Pressable>
         <Pressable onPress={() => close(true)} disabled={busy} accessibilityRole="button">
           <Text className="py-2 text-[14px] font-bold text-text-muted">
-            {t('savings.suggestion.not_this_month')}
+            {t('savings.suggestion.enough_this_month')}
           </Text>
         </Pressable>
       </View>

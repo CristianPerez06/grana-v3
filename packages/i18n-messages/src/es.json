@@ -2075,7 +2075,7 @@
       "body": "Podés apartar {amount} de este ingreso para no gastarlos. La plata se queda donde está.",
       "cta": "Guardar {amount}",
       "later": "Ahora no",
-      "not_this_month": "No este mes"
+      "enough_this_month": "Suficiente por este mes"
     }
   }
 }

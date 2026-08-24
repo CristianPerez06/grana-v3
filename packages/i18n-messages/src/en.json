@@ -2075,7 +2075,7 @@
       "body": "You can set aside {amount} of this income. The money stays where it is.",
       "cta": "Set aside {amount}",
       "later": "Not now",
-      "not_this_month": "Not this month"
+      "enough_this_month": "Enough for this month"
     }
   }
 }

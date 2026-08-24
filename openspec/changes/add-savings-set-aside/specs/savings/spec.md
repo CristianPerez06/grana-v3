@@ -163,11 +163,11 @@ La tira SHALL ofrecer **tres salidas, y ninguna permanente**:
 |---|---|
 | Guardar | guarda el monto y vuelve con el próximo ingreso |
 | *Ahora no* | se va y vuelve con el próximo ingreso |
-| *No este mes* | se va hasta el mes siguiente |
+| *Suficiente por este mes* | se va hasta el mes siguiente |
 
 NO SHALL existir un apagado permanente, y no hace falta: la cadencia más lenta que la tira puede tener es **una vez por mes**, que no es nagging. Un apagado definitivo a un toque se presiona sin querer y la función desaparece para siempre sin que el usuario lo haya decidido.
 
-La tira SHALL servirse desde el módulo `guidance`, con dos cortes que significan cosas distintas: `seen_at` es **cuándo se mostró por última vez** y se compara contra el `created_at` del ingreso, de modo que un ingreso posterior la vuelve a habilitar y el mismo ingreso no la repite; `dismissed_at` es *"no este mes"* y silencia **solo ese mes** — deliberadamente NO es el "para siempre" que la columna significa en el resto de `guidance`. `completed_at` NO SHALL usarse nunca acá: mataría una sugerencia recurrente.
+La tira SHALL servirse desde el módulo `guidance`, con dos cortes que significan cosas distintas: `seen_at` es **cuándo se mostró por última vez** y se compara contra el `created_at` del ingreso, de modo que un ingreso posterior la vuelve a habilitar y el mismo ingreso no la repite; `dismissed_at` es *"suficiente por este mes"* y silencia **solo ese mes** — deliberadamente NO es el "para siempre" que la columna significa en el resto de `guidance`. `completed_at` NO SHALL usarse nunca acá: mataría una sugerencia recurrente.
 
 El monto sugerido SHALL calcularse sobre **el ingreso que la disparó** —el último cargado del mes—, nunca sobre el total del mes: el total incluye plata que el usuario ya gastó, y proponer una parte de eso da un número que no se corresponde con ningún acto. "El último cargado" SHALL resolverse por `created_at` y no por fecha contable, para que un ingreso cargado hoy con fecha de anteayer dispare igual.
 
@@ -181,9 +181,9 @@ El copy SHALL formular una **propuesta de comportamiento**, no una recomendació
 - **THEN** la tira se ofrece con cada una
 - **AND** no se repite con el mismo ingreso
 
-#### Scenario: "No este mes" baja la cadencia sin apagar la función
+#### Scenario: "Suficiente por este mes" baja la cadencia sin apagar la función
 
-- **WHEN** el usuario toca "No este mes" el 5 de agosto y cobra de nuevo el 20
+- **WHEN** el usuario toca "Suficiente por este mes" el 5 de agosto y cobra de nuevo el 20
 - **THEN** la tira no aparece en agosto
 - **AND** vuelve a aparecer con el primer ingreso de septiembre
 
