@@ -2,15 +2,13 @@
 
 import { useQuery } from '@tanstack/react-query'
 import {
-  deriveMonthOpening,
+  deriveBalanceCardView,
   deriveMonthSummary,
-  deriveSavingsRow,
   getAvailableTotals,
   getDashboardHero,
   getMonthBalanceSeries,
   getReservedFlow,
   resolveMonthRange,
-  savingsIdentityTerm,
   type DashboardHero,
   type MonthBalanceByCurrency,
 } from '@grana/dashboard'
@@ -99,53 +97,18 @@ export const useBalanceMonth = ({ todayISO, heroInitial, monthInitial }: Args) =
 
   const hero = heroQuery.data ?? null
   const summary = monthQuery.data ? deriveMonthSummary(monthQuery.data) : null
-  const available = isCurrent ? (availableQuery.data ?? null) : null
-  const reservedNet = flowQuery.data ?? { ARS: 0, USD: 0 }
 
-  // What the dark zone shows. The accounts total stays on `hero` untouched:
-  // "Dónde está" is the LOCATION cut and its percentages are shares of the money
-  // held in each account, which the reserve does not belong to.
-  const displayed = {
-    ARS: available?.available.ARS ?? hero?.ars ?? 0,
-    USD: available?.available.USD ?? hero?.usd ?? 0,
-  }
-
-  const savings = {
-    ARS: deriveSavingsRow({
-      isCurrentMonth: isCurrent,
-      reservedNet: reservedNet.ARS,
-      reserved: available?.reserved.ARS ?? 0,
-    }),
-    USD: deriveSavingsRow({
-      isCurrentMonth: isCurrent,
-      reservedNet: reservedNet.USD,
-      reserved: available?.reserved.USD ?? 0,
-    }),
-  }
-
-  return {
-    hero,
-    summary,
+  // What the card shows is decided ONCE, in `@grana/dashboard`, and native
+  // consumes the same function: which number the dark zone renders, which state
+  // the savings row is in, and what "Tenías" derives from are three rules that
+  // have to agree across platforms.
+  const { displayed, savings, venia } = deriveBalanceCardView({
     isCurrent,
-    selected,
-    displayed,
-    savings,
-    // Only a FLOW enters the identity: a stock readout is already inside "Venía",
-    // which in the current month is the disponible the month opened with.
-    venia:
-      hero && summary
-        ? {
-            ARS: deriveMonthOpening(
-              displayed.ARS,
-              summary.ARS,
-              savingsIdentityTerm(savings.ARS, reservedNet.ARS),
-            ),
-            USD: deriveMonthOpening(
-              displayed.USD,
-              summary.USD,
-              savingsIdentityTerm(savings.USD, reservedNet.USD),
-            ),
-          }
-        : null,
-  }
+    accounts: hero ? { ARS: hero.ars, USD: hero.usd } : null,
+    available: isCurrent ? (availableQuery.data ?? null) : null,
+    reservedNet: flowQuery.data ?? { ARS: 0, USD: 0 },
+    summary,
+  })
+
+  return { hero, summary, isCurrent, selected, displayed, savings, venia }
 }

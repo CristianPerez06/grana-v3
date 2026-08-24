@@ -38,6 +38,8 @@ export {
 
 export { deriveMonthOpening } from './month-opening'
 
+export { deriveBalanceCardView, type BalanceCardView } from './balance-card-view'
+
 export {
   deriveSavingsRow,
   savingsIdentityTerm,
