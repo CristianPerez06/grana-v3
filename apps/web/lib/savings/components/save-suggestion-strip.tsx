@@ -6,7 +6,7 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   deriveSuggestion,
   getAvailableSums,
-  getLatestIncomeAmount,
+  getLatestIncome,
   getReserveHistory,
   lastSaveOf,
   shouldOfferSuggestion,
@@ -74,17 +74,19 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
         // period" is in practice "the one you just loaded" — without needing an
         // event to tell it, which is what would make it fragile.
         queryKey: ['savings', 'latest-income', monthKey],
-        queryFn: () => getLatestIncomeAmount(createClient(), 'ARS', monthStart, todayISO),
+        queryFn: () => getLatestIncome(createClient(), 'ARS', monthStart, todayISO),
         staleTime: 60_000,
       },
     ],
   })
 
   const guidance = guidanceQuery.data
+  const latestIncome = incomeQuery.data ?? null
   const offerable = shouldOfferSuggestion({
     seenAt: guidance?.seen_at ?? null,
     dismissedAt: guidance?.dismissed_at ?? null,
     currentMonth,
+    latestIncomeAt: latestIncome?.createdAt ?? null,
   })
 
   const available = sumsQuery.data?.find((s) => s.currencyCode === 'ARS')?.available ?? 0
@@ -102,7 +104,7 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   const priorIncomeQuery = useQuery({
     queryKey: ['savings', 'latest-income', lastSaveMonth ?? 'none'] ,
     queryFn: () =>
-      getLatestIncomeAmount(createClient(), 'ARS', `${lastSaveMonth}-01`, lastSave!.date),
+      getLatestIncome(createClient(), 'ARS', `${lastSaveMonth}-01`, lastSave!.date),
     enabled: lastSaveMonth != null,
     staleTime: 60_000,
   })
@@ -110,10 +112,10 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   // El porcentaje sale de la MISMA relación que la propuesta: lo guardado sobre
   // el ingreso del que salió. Derivarlo contra el total del mes daría un número
   // distinto del que el usuario aceptó.
-  const incomeAtLastSave = priorIncomeQuery.data ?? null
+  const incomeAtLastSave = priorIncomeQuery.data?.amount ?? null
 
   const suggestion = deriveSuggestion({
-    latestIncome: incomeQuery.data ?? 0,
+    latestIncome: latestIncome?.amount ?? 0,
     lastSave,
     incomeAtLastSave,
     available,
@@ -154,8 +156,8 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   }
 
   return (
-    <section className="relative flex flex-col gap-3 rounded-2xl border border-emerald/25 bg-emerald-bg p-4 sm:flex-row sm:items-center sm:gap-4">
-      <div className="min-w-0 flex-1 pr-7 sm:pr-0">
+    <section className="flex flex-col gap-3 rounded-2xl border border-emerald/25 bg-emerald-bg p-4 sm:flex-row sm:items-center sm:gap-4">
+      <div className="min-w-0 flex-1">
         <h3 className="text-[15px] font-extrabold tracking-[-0.01em] text-text">{t('title')}</h3>
         {/* "Podés apartar", not "te conviene guardar": a proposal about behavior,
             not a piece of financial advice. The amount is SUGGESTED, never the
@@ -164,24 +166,22 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
           {t('body', { amount: formatARS(suggestion.amount) })}
         </p>
       </div>
-      <div className="flex shrink-0 gap-2">
+      {/* Three ways out, and none of them is permanent. "Ahora no" defers to the
+          next income; "No este mes" drops the strip to a monthly cadence — which
+          is the slowest it can go, so there is nothing left to kill for good. A
+          one-tap permanent off would get pressed by accident and the feature
+          would silently disappear for that user forever. */}
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
         <Button onClick={save} disabled={pending}>
           {t('cta', { amount: formatARS(suggestion.amount) })}
         </Button>
         <Button variant="ghost" onClick={() => close(false)} disabled={pending}>
           {t('later')}
         </Button>
+        <Button variant="ghost" onClick={() => close(true)} disabled={pending}>
+          {t('not_this_month')}
+        </Button>
       </div>
-      <button
-        type="button"
-        onClick={() => close(true)}
-        disabled={pending}
-        aria-label={t('never')}
-        title={t('never')}
-        className="absolute right-3 top-3 rounded p-1 text-[13px] font-bold leading-none text-text-soft transition-colors hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:static sm:ml-1 sm:self-start"
-      >
-        ✕
-      </button>
     </section>
   )
 }

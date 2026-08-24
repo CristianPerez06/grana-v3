@@ -151,26 +151,52 @@ El copy NO SHALL sugerir que hubo una transferencia. Grana **nunca inventa un mo
 
 ---
 
-### Requirement: Grana sugiere guardar después de un ingreso, como máximo una vez por mes
+### Requirement: Grana sugiere guardar después de un ingreso, una vez por ingreso
 
-El sistema SHALL ofrecer guardar mediante una tira contextual después de que el usuario registre un `income`, **por cualquier camino** —confirmando una instancia recurrente o cargándolo a mano—, y **como máximo una vez por mes calendario**. Un `reimbursement` NO SHALL disparar la sugerencia.
+El sistema SHALL ofrecer guardar mediante una tira contextual después de que el usuario registre un `income`, **por cualquier camino** —confirmando una instancia recurrente o cargándolo a mano—, y **una vez por cada ingreso**. Un `reimbursement` NO SHALL disparar la sugerencia: plata que vuelve no es plata que llega.
 
-La tira SHALL servirse desde el módulo `guidance`, de modo que su ciclo de vida por usuario (visto, descartado, completado) quede registrado y la sugerencia deje de aparecer si el usuario la descarta.
+La cadencia es por ingreso y no por mes calendario porque el anti-nagging protege contra que a alguien le pregunten **cuando no pasó nada**, y acá sí pasó algo. Dos sueldos —una quincena, un freelance que factura varias veces— son **dos decisiones distintas**, y ofrecer solo la primera se pierde la mitad de los momentos en que la persona está dispuesta a decidir.
 
-El monto sugerido SHALL derivarse del **porcentaje** usado la vez anterior —no del importe— y la primera vez SHALL ser el 10% del ingreso. NO SHALL existir una pantalla de configuración para esto.
+La tira SHALL ofrecer **tres salidas, y ninguna permanente**:
+
+| Acción | Efecto |
+|---|---|
+| Guardar | guarda el monto y vuelve con el próximo ingreso |
+| *Ahora no* | se va y vuelve con el próximo ingreso |
+| *No este mes* | se va hasta el mes siguiente |
+
+NO SHALL existir un apagado permanente, y no hace falta: la cadencia más lenta que la tira puede tener es **una vez por mes**, que no es nagging. Un apagado definitivo a un toque se presiona sin querer y la función desaparece para siempre sin que el usuario lo haya decidido.
+
+La tira SHALL servirse desde el módulo `guidance`, con dos cortes que significan cosas distintas: `seen_at` es **cuándo se mostró por última vez** y se compara contra el `created_at` del ingreso, de modo que un ingreso posterior la vuelve a habilitar y el mismo ingreso no la repite; `dismissed_at` es *"no este mes"* y silencia **solo ese mes** — deliberadamente NO es el "para siempre" que la columna significa en el resto de `guidance`. `completed_at` NO SHALL usarse nunca acá: mataría una sugerencia recurrente.
+
+El monto sugerido SHALL calcularse sobre **el ingreso que la disparó** —el último cargado del mes—, nunca sobre el total del mes: el total incluye plata que el usuario ya gastó, y proponer una parte de eso da un número que no se corresponde con ningún acto. "El último cargado" SHALL resolverse por `created_at` y no por fecha contable, para que un ingreso cargado hoy con fecha de anteayer dispare igual.
+
+El monto SHALL derivarse del **porcentaje** usado la vez anterior —no del importe— y la primera vez SHALL ser el 10%. NO SHALL existir una pantalla de configuración para esto.
 
 El copy SHALL formular una **propuesta de comportamiento**, no una recomendación financiera: el monto se presenta como *sugerido*, no como la cifra que Grana aconseja guardar.
 
-#### Scenario: La sugerencia aparece una sola vez por mes
+#### Scenario: Dos ingresos en el mismo mes, dos sugerencias
 
-- **WHEN** el usuario registra dos ingresos en el mismo mes
-- **THEN** la tira se ofrece solo con el primero
+- **WHEN** el usuario cobra una quincena el 5 y otra el 20
+- **THEN** la tira se ofrece con cada una
+- **AND** no se repite con el mismo ingreso
+
+#### Scenario: "No este mes" baja la cadencia sin apagar la función
+
+- **WHEN** el usuario toca "No este mes" el 5 de agosto y cobra de nuevo el 20
+- **THEN** la tira no aparece en agosto
+- **AND** vuelve a aparecer con el primer ingreso de septiembre
 
 #### Scenario: El porcentaje se recuerda, no el importe
 
-- **WHEN** el usuario guardó el 10% de un ingreso de $2.000.000 en agosto
-- **AND** en septiembre registra un ingreso de $2.500.000
+- **WHEN** el usuario guardó $200.000 de un ingreso de $2.000.000
+- **AND** después registra un ingreso de $2.500.000
 - **THEN** la sugerencia es $250.000
+
+#### Scenario: La base es el ingreso, no el mes
+
+- **WHEN** en el mes ya habían entrado $1.000.000 y el usuario registra un sueldo de $5.000.000
+- **THEN** la sugerencia se calcula sobre $5.000.000
 
 #### Scenario: Un reintegro no dispara la sugerencia
 

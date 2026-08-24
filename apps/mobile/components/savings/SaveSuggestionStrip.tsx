@@ -4,7 +4,7 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   deriveSuggestion,
   getAvailableSums,
-  getLatestIncomeAmount,
+  getLatestIncome,
   getReserveHistory,
   lastSaveOf,
   shouldOfferSuggestion,
@@ -67,16 +67,18 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
         // period" is in practice "the one you just loaded" — without needing an
         // event to tell it, which is what would make it fragile.
         queryKey: ['savings', 'latest-income', monthKey] as const,
-        queryFn: () => getLatestIncomeAmount(supabase, 'ARS', monthStart, todayISO),
+        queryFn: () => getLatestIncome(supabase, 'ARS', monthStart, todayISO),
       },
     ],
   })
 
   const guidance = guidanceQuery.data
+  const latestIncome = incomeQuery.data ?? null
   const offerable = shouldOfferSuggestion({
     seenAt: guidance?.seen_at ?? null,
     dismissedAt: guidance?.dismissed_at ?? null,
     currentMonth,
+    latestIncomeAt: latestIncome?.createdAt ?? null,
   })
 
   const available = sumsQuery.data?.find((s) => s.currencyCode === 'ARS')?.available ?? 0
@@ -91,7 +93,7 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   const priorIncomeQuery = useQuery({
     queryKey: ['savings', 'latest-income', lastSaveMonth ?? 'none'] as const,
     queryFn: () =>
-      getLatestIncomeAmount(supabase, 'ARS', `${lastSaveMonth}-01`, lastSave!.date),
+      getLatestIncome(supabase, 'ARS', `${lastSaveMonth}-01`, lastSave!.date),
     enabled: lastSaveMonth != null,
     
   })
@@ -99,10 +101,10 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   // El porcentaje sale de la MISMA relación que la propuesta: lo guardado sobre
   // el ingreso del que salió. Derivarlo contra el total del mes daría un número
   // distinto del que el usuario aceptó.
-  const incomeAtLastSave = priorIncomeQuery.data ?? null
+  const incomeAtLastSave = priorIncomeQuery.data?.amount ?? null
 
   const suggestion = deriveSuggestion({
-    latestIncome: incomeQuery.data ?? 0,
+    latestIncome: latestIncome?.amount ?? 0,
     lastSave,
     incomeAtLastSave,
     available,
@@ -145,45 +147,34 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
 
   return (
     <View className="rounded-2xl border border-emerald-soft bg-emerald-bg p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="flex-1">
-          <Text className="text-[15px] font-extrabold text-text">
-            {t('savings.suggestion.title')}
-          </Text>
-          {/* "Podés apartar", not "te conviene guardar": a proposal about
-              behavior, not financial advice. */}
-          <Text className="mt-0.5 text-[13px] leading-snug text-text-muted">
-            {t('savings.suggestion.body', { amount })}
-          </Text>
-        </View>
-        <Pressable
-          onPress={() => close(true)}
+      <Text className="text-[15px] font-extrabold text-text">
+        {t('savings.suggestion.title')}
+      </Text>
+      {/* "Podés apartar", not "te conviene guardar": a proposal about behavior,
+          not financial advice. */}
+      <Text className="mt-0.5 text-[13px] leading-snug text-text-muted">
+        {t('savings.suggestion.body', { amount })}
+      </Text>
+      <View className="mt-3">
+        <Button
+          title={t('savings.suggestion.cta', { amount })}
+          onPress={save}
+          loading={busy}
           disabled={busy}
-          accessibilityRole="button"
-          accessibilityLabel={t('savings.suggestion.never')}
-          hitSlop={10}
-          className="p-1"
-        >
-          <Text className="text-[13px] font-bold text-text-soft">✕</Text>
-        </Pressable>
+        />
       </View>
-      <View className="mt-3 flex-row gap-2">
-        <View className="flex-1">
-          <Button
-            title={t('savings.suggestion.cta', { amount })}
-            onPress={save}
-            loading={busy}
-            disabled={busy}
-          />
-        </View>
-        <Pressable
-          onPress={() => close(false)}
-          disabled={busy}
-          accessibilityRole="button"
-          className="items-center justify-center rounded-xl px-4"
-        >
-          <Text className="text-[14px] font-bold text-text-muted">
+      {/* Three ways out, none permanent: "Ahora no" defers to the next income and
+          "No este mes" drops to a monthly cadence — the slowest the strip can go,
+          which is why nothing needs to kill it for good. */}
+      <View className="mt-2 flex-row justify-center gap-5">
+        <Pressable onPress={() => close(false)} disabled={busy} accessibilityRole="button">
+          <Text className="py-2 text-[14px] font-bold text-text-muted">
             {t('savings.suggestion.later')}
+          </Text>
+        </Pressable>
+        <Pressable onPress={() => close(true)} disabled={busy} accessibilityRole="button">
+          <Text className="py-2 text-[14px] font-bold text-text-muted">
+            {t('savings.suggestion.not_this_month')}
           </Text>
         </Pressable>
       </View>

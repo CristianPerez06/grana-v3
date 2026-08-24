@@ -133,7 +133,6 @@ export function SavingsDrawer({
           <SavingsForm
             mode={form.mode}
             initialCurrency={form.currency}
-            sums={sums}
             rowFor={rowFor}
             onCancel={() => setForm(null)}
             onDone={onDone}
@@ -263,14 +262,12 @@ const CurrencyBlock = ({
 const SavingsForm = ({
   mode,
   initialCurrency,
-  sums,
   rowFor,
   onCancel,
   onDone,
 }: {
   mode: Mode
   initialCurrency: Currency
-  sums: AvailableSums[] | null
   rowFor: (currency: Currency) => AvailableSums
   onCancel: () => void
   onDone: () => Promise<void>

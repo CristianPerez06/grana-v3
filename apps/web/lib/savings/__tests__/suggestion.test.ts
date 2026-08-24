@@ -93,42 +93,77 @@ describe('deriveSuggestion — the amount', () => {
   })
 })
 
-describe('shouldOfferSuggestion — at most once a month, and never after a dismissal', () => {
+describe('shouldOfferSuggestion — once per income, with an opt-in monthly cap', () => {
+  const INCOME_1 = '2026-08-05T10:00:00Z'
+  const INCOME_2 = '2026-08-20T10:00:00Z'
+
   it('offers it to someone who has never seen it', () => {
     expect(
-      shouldOfferSuggestion({ seenAt: null, dismissedAt: null, currentMonth: '2026-08' }),
+      shouldOfferSuggestion({
+        seenAt: null,
+        dismissedAt: null,
+        currentMonth: '2026-08',
+        latestIncomeAt: INCOME_1,
+      }),
     ).toBe(true)
   })
 
-  it('does not offer it twice in the same month', () => {
-    // Two incomes in one month (a quincena, a bonus) get one strip, not two.
+  it('does not repeat itself for the SAME income', () => {
     expect(
       shouldOfferSuggestion({
-        seenAt: '2026-08-05T10:00:00Z',
+        seenAt: '2026-08-05T10:00:05Z',
         dismissedAt: null,
         currentMonth: '2026-08',
+        latestIncomeAt: INCOME_1,
       }),
     ).toBe(false)
   })
 
-  it('comes back on its own the next month', () => {
-    // Which is why being shown marks `seen` and never `completed`: completing it
-    // would kill a recurring suggestion forever.
+  it('comes back with the NEXT income, same month', () => {
+    // A quincena is two paychecks and therefore two decisions. Offering only the
+    // first one misses half the moments the strip exists for.
     expect(
       shouldOfferSuggestion({
-        seenAt: '2026-08-05T10:00:00Z',
+        seenAt: '2026-08-05T10:00:05Z',
         dismissedAt: null,
-        currentMonth: '2026-09',
+        currentMonth: '2026-08',
+        latestIncomeAt: INCOME_2,
       }),
     ).toBe(true)
   })
 
-  it('stays gone once dismissed, in any month', () => {
+  it('stays quiet for the rest of the month after "No este mes"', () => {
     expect(
       shouldOfferSuggestion({
-        seenAt: '2026-08-05T10:00:00Z',
+        seenAt: '2026-08-05T10:00:05Z',
         dismissedAt: '2026-08-05T10:00:05Z',
-        currentMonth: '2026-12',
+        currentMonth: '2026-08',
+        latestIncomeAt: INCOME_2,
+      }),
+    ).toBe(false)
+  })
+
+  it('comes back next month after "No este mes"', () => {
+    // The monthly cap is opt-in, not permanent: the slowest the strip can go is
+    // once a month, so there is nothing left worth killing for good — and a
+    // one-tap permanent off would get pressed by accident.
+    expect(
+      shouldOfferSuggestion({
+        seenAt: '2026-08-05T10:00:05Z',
+        dismissedAt: '2026-08-05T10:00:05Z',
+        currentMonth: '2026-09',
+        latestIncomeAt: '2026-09-03T10:00:00Z',
+      }),
+    ).toBe(true)
+  })
+
+  it('says nothing when the month has no income', () => {
+    expect(
+      shouldOfferSuggestion({
+        seenAt: null,
+        dismissedAt: null,
+        currentMonth: '2026-08',
+        latestIncomeAt: null,
       }),
     ).toBe(false)
   })

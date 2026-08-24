@@ -125,36 +125,36 @@ export async function getReserveHistory(
   }))
 }
 
-// ── getLatestIncomeAmount ─────────────────────────────────────────────────────
-// El monto del ÚLTIMO ingreso de un período, en una moneda.
+// ── getLatestIncome ───────────────────────────────────────────────────────────
+// El ÚLTIMO ingreso cargado del período, en una moneda: su monto y cuándo se
+// registró.
 //
 // Es la base sobre la que la tira propone guardar, y tiene que ser ese y no el
 // total del mes: lo que el usuario acaba de cobrar es la plata sobre la que está
 // dispuesto a decidir, mientras que el total del mes incluye plata que ya gastó.
-// Proponer el 10% de todo lo que entró en agosto, un 24 de agosto, da un número
-// que no se corresponde con ningún acto.
 //
-// La tira aparece justo después de registrar un ingreso, así que "el último del
-// período" es en la práctica "el que acabás de cargar" — sin necesitar que un
-// evento se lo diga, que es lo que la haría frágil.
+// Ordena por `created_at`, NO por `date`: lo que la tira persigue es "el que
+// acabás de cargar", y eso es cuándo se registró, no qué fecha contable le
+// pusiste. Cargar hoy un sueldo con fecha del 19 tiene que disparar la
+// sugerencia igual — la plata es igual de nueva para el usuario.
 //
-// Orden determinístico hasta el desempate, para que dos ingresos del mismo día
-// no devuelvan uno u otro según el humor del planner.
-export async function getLatestIncomeAmount(
+// El rango sigue acotado por `date` al mes en curso: un ingreso de julio cargado
+// en agosto es plata de julio, y proponer guardarla ahora hablaría de un mes que
+// la pantalla no está mirando.
+export async function getLatestIncome(
   supabase: GranaSupabaseClient,
   currencyCode: BalanceCurrency,
   fromISO: string,
   toISO: string,
-): Promise<number | null> {
+): Promise<{ amount: number; createdAt: string } | null> {
   const { data, error } = await supabase
     .from('transactions')
-    .select('amount')
+    .select('amount, created_at')
     .eq('type', 'income')
     .eq('currency_code', currencyCode)
     .is('status', null)
     .gte('date', fromISO)
     .lte('date', toISO)
-    .order('date', { ascending: false })
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
     .limit(1)
@@ -162,5 +162,5 @@ export async function getLatestIncomeAmount(
   if (error) throw error
 
   const row = (data ?? [])[0]
-  return row ? toNumber(row.amount) : null
+  return row ? { amount: toNumber(row.amount), createdAt: row.created_at } : null
 }

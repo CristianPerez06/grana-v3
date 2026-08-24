@@ -96,24 +96,42 @@ export function lastSaveOf(entries: ReserveEntry[]): ReserveEntry | null {
 }
 
 /**
- * ¿Corresponde ofrecer la tira este mes?
+ * ¿Corresponde ofrecer la tira?
  *
- * Dos cortes distintos, y conviene no confundirlos:
+ * La regla es **una vez por INGRESO**, no una vez por mes. El anti-nagging
+ * protege contra que te pregunten cuando no pasó nada; acá sí pasó algo, entró
+ * plata. Dos sueldos —una quincena, un freelance que factura varias veces— son
+ * dos decisiones distintas, y ofrecer solo la primera se pierde la mitad de los
+ * momentos buenos.
  *
- * · `dismissedAt` es el "no me lo ofrezcas más" — permanente, y por eso no se
- *   toca desde acá.
- * · `seenAt` es el cursor MENSUAL. Se refresca cada vez que la tira se muestra,
- *   así que un segundo ingreso en el mismo mes ya no la dispara. Al mes
- *   siguiente vuelve sola, que es lo que uno quiere de una sugerencia
- *   recurrente — marcar `completed` la mataría para siempre.
+ * El tope mensual no desaparece: se vuelve **opt-in**. Quien sienta que es mucho
+ * toca "No este mes" y baja a esa cadencia, que es la más lenta que la tira
+ * puede tener. No hay apagado permanente, y por eso mismo no hace falta: el peor
+ * caso es una vez por mes.
+ *
+ * Los dos cortes usan columnas distintas de `guidance` y significan cosas
+ * distintas:
+ *
+ * · `seenAt`      cuándo se mostró por última vez. Se compara contra el
+ *                 `created_at` del ingreso, así que un ingreso posterior la
+ *                 vuelve a habilitar y el mismo ingreso no la repite.
+ * · `dismissedAt` "no este mes". Silencia SOLO el mes en que se tocó —
+ *                 deliberadamente NO es el "para siempre" que la columna
+ *                 significa en el resto de `guidance`, porque una sugerencia
+ *                 recurrente que se puede matar de un toque se mata sin querer.
  */
 export function shouldOfferSuggestion(input: {
   seenAt: string | null
   dismissedAt: string | null
   /** Mes financiero en curso, `YYYY-MM`. */
   currentMonth: string
+  /** `created_at` del último ingreso cargado del mes. Null si no hay ninguno. */
+  latestIncomeAt: string | null
 }): boolean {
-  if (input.dismissedAt != null) return false
+  if (input.dismissedAt != null && input.dismissedAt.slice(0, 7) === input.currentMonth) {
+    return false
+  }
+  if (input.latestIncomeAt == null) return false
   if (input.seenAt == null) return true
-  return input.seenAt.slice(0, 7) !== input.currentMonth
+  return input.latestIncomeAt > input.seenAt
 }
