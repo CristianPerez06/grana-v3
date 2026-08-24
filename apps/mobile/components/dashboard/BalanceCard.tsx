@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import {
@@ -5,12 +6,17 @@ import {
   derivePlacement,
   deriveMonthOpening,
   deriveMonthSummary,
+  deriveSavingsRow,
+  savingsIdentityTerm,
   type AmountDensity,
   type CurrencyPlacement,
+  type SavingsRow,
 } from '@grana/dashboard'
 import { useT } from '../../lib/locale-context'
 import { accountColors, colors } from '../../lib/colors'
 import { useDashboardHero, useMonthBalanceSeries } from '../../lib/dashboard/queries'
+import { useAvailableTotals, useReservedFlow } from '../../lib/savings/queries'
+import { SavingsDrawer } from '../savings/SavingsDrawer'
 import { useShowCents } from '../../lib/preferences-context'
 import { useDashboardMonth } from './DashboardMonthContext'
 import { HeroSkeleton } from './HeroSkeleton'
@@ -150,26 +156,112 @@ const Flow = ({
   </View>
 )
 
+/**
+ * The savings row — BELOW A RULE, never a fourth member of the strip.
+ *
+ * The strip of three is liquidity; saving is a decision about money that stayed
+ * where it was. On a phone the row is deliberately COMPACT — one line, label
+ * left, amount right — because the card is already tall and this is a readout
+ * with an action, not a fourth amount competing for attention.
+ *
+ * The sign comes from the STATE, never from the number: a raw signed net would
+ * eventually print "Guardaste este mes +$50.000".
+ */
+const SavingsLine = ({ row, onPress }: { row: SavingsRow; onPress: () => void }) => {
+  const t = useT()
+  const isEmpty = row.state === 'empty'
+  const sign = row.state === 'saved' ? '−' : row.state === 'released' ? '+' : undefined
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      className="mt-2.5 flex-row items-center justify-between border-t border-border-soft pt-2.5"
+    >
+      <View className="flex-row items-center gap-2">
+        <View
+          className="h-[7px] w-[7px] rounded-full"
+          style={{ backgroundColor: isEmpty ? colors.border : colors.positive }}
+        />
+        <Text
+          className={`text-[13px] font-bold ${isEmpty ? 'text-text-soft' : 'text-text-muted'}`}
+        >
+          {t(`dashboard.savings.${row.state}`)}
+        </Text>
+      </View>
+      <View className="flex-row items-center gap-1.5">
+        {!isEmpty && (
+          <MaskedAmount
+            amount={row.amount}
+            currency="ARS"
+            signPrefix={sign}
+            className="text-[15px] font-extrabold text-positive"
+          />
+        )}
+        <Text className="text-[14px] font-bold text-text-soft">›</Text>
+      </View>
+    </Pressable>
+  )
+}
+
 export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
   const t = useT()
   const showCents = useShowCents()
   const router = useRouter()
   const { selected, current, isCurrent } = useDashboardMonth()
 
-  const heroQuery = useDashboardHero(balanceCutISO(selected, current, todayISO))
+  const [savingsOpen, setSavingsOpen] = useState(false)
+  const cutISO = balanceCutISO(selected, current, todayISO)
+  const heroQuery = useDashboardHero(cutISO)
   const monthQuery = useMonthBalanceSeries(selected.year, selected.month)
+  // Only for the current month: the reserve is netted exactly where the card says
+  // "disponible", and a past month's label already says something else.
+  const availableQuery = useAvailableTotals(cutISO, isCurrent)
+  const flowQuery = useReservedFlow(selected.year, selected.month, todayISO, isCurrent)
 
   const hero = heroQuery.data
   const placement = hero ? derivePlacement(hero.accounts) : null
-  const hasUsd = hero != null && (placement!.USD.rows.length > 0 || hero.usd !== 0)
+
+  const available = isCurrent ? availableQuery.data : undefined
+  const reservedNet = flowQuery.data ?? { ARS: 0, USD: 0 }
+
+  // What the dark zone shows. The accounts total stays on `hero` untouched:
+  // "Dónde está" is the LOCATION cut and its percentages are shares of the money
+  // held in each account, which the reserve does not belong to.
+  const displayed = {
+    ARS: available?.available.ARS ?? hero?.ars ?? 0,
+    USD: available?.available.USD ?? hero?.usd ?? 0,
+  }
+  const hasUsd = hero != null && (placement!.USD.rows.length > 0 || displayed.USD !== 0)
 
   const summary = monthQuery.data ? deriveMonthSummary(monthQuery.data) : null
+  const savings = {
+    ARS: deriveSavingsRow({
+      isCurrentMonth: isCurrent,
+      reservedNet: reservedNet.ARS,
+      reserved: available?.reserved.ARS ?? 0,
+    }),
+    USD: deriveSavingsRow({
+      isCurrentMonth: isCurrent,
+      reservedNet: reservedNet.USD,
+      reserved: available?.reserved.USD ?? 0,
+    }),
+  }
   // Derived, not read: one less round-trip and the identity holds by construction.
+  // Only a FLOW enters it — a stock readout is already inside "Venía".
   const venia =
     hero && summary
       ? {
-          ARS: deriveMonthOpening(hero.ars, summary.ARS),
-          USD: deriveMonthOpening(hero.usd, summary.USD),
+          ARS: deriveMonthOpening(
+            displayed.ARS,
+            summary.ARS,
+            savingsIdentityTerm(savings.ARS, reservedNet.ARS),
+          ),
+          USD: deriveMonthOpening(
+            displayed.USD,
+            summary.USD,
+            savingsIdentityTerm(savings.USD, reservedNet.USD),
+          ),
         }
       : null
   const summaryHasUsd =
@@ -199,7 +291,7 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
           {hero ? (
             <>
               <MaskedAmountDisplay
-                amount={hero.ars}
+                amount={displayed.ARS}
                 currency="ARS"
                 className="text-center text-[34px] font-extrabold text-white"
                 decimalClassName="text-[15px] text-white/55"
@@ -210,7 +302,7 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
                     <Text className="text-[11px] font-extrabold text-positive">USD</Text>
                   </View>
                   <MaskedAmount
-                    amount={hero.usd}
+                    amount={displayed.USD}
                     currency="USD"
                     showCentsOverride
                     className="text-[15px] font-bold text-white/90"
@@ -289,7 +381,21 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
             density={summaryDensity}
           />
         </View>
+
+        {savings.ARS && (
+          <SavingsLine row={savings.ARS} onPress={() => setSavingsOpen(true)} />
+        )}
       </View>
+
+      {/* With nothing set aside there is no detail worth reading, so the row goes
+          straight to the act instead of through an empty screen. */}
+      <SavingsDrawer
+        visible={savingsOpen}
+        onClose={() => setSavingsOpen(false)}
+        initialMode={
+          savings.ARS?.state === 'empty' ? { mode: 'save', currency: 'ARS' } : undefined
+        }
+      />
     </View>
   )
 }

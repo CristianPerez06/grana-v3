@@ -52,11 +52,11 @@
 
 ## 6. Mobile — paridad
 
-- [ ] 6.1 `apps/mobile/components/savings/SaveMoneySheet.tsx` sobre `FormSheetBody` (tiene input)
-- [ ] 6.2 `apps/mobile/components/savings/SavingsDetailSheet.tsx`
-- [ ] 6.3 `apps/mobile/lib/savings/{queries,mutations}.ts` sobre `@grana/savings`
-- [ ] 6.4 La línea del dashboard en nativo, con la composición apilada que ya usa la zona clara
-- [ ] 6.5 Naming espejo web↔mobile según la convención del dashboard
+- [x] 6.1 `apps/mobile/components/savings/SaveMoneySheet.tsx` sobre `FormSheetBody` (tiene input)
+- [x] 6.2 `apps/mobile/components/savings/SavingsDetailSheet.tsx`
+- [x] 6.3 `apps/mobile/lib/savings/{queries,mutations}.ts` sobre `@grana/savings`
+- [x] 6.4 La línea del dashboard en nativo, con la composición apilada que ya usa la zona clara
+- [x] 6.5 Naming espejo web↔mobile según la convención del dashboard
 
 ## 7. La sugerencia al ingreso, sobre `guidance` (D5, D6)
 
@@ -75,6 +75,6 @@
 ## 9. Cierre
 
 - [ ] 9.1 Aviso no bloqueante cuando un gasto lleva el disponible por debajo de cero, con el patrón que ya existe. **No** reducir el guardado para que el número cierre
-- [ ] 9.2 Verificar que Movimientos no muestra nada nuevo y que ningún saldo de cuenta cambió: guardar no es un hecho del ledger
+- [x] 9.2 Verificar que Movimientos no muestra nada nuevo y que ningún saldo de cuenta cambió: guardar no es un hecho del ledger
 - [ ] 9.3 Actualizar la tabla de módulos de `AGENTS.md`: módulo 16 `savings` pasa de 🔲 Planned a ✅ Done con el alcance real de la fase 1 (guardar/liberar y disponible real; propósitos y posiciones siguen pendientes)
 - [ ] 9.4 `pnpm openspec:check`, lint, typecheck y tests en verde

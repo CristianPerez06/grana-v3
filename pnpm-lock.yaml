@@ -38,6 +38,9 @@ importers:
       '@grana/recurrences':
         specifier: workspace:*
         version: link:../../packages/recurrences
+      '@grana/savings':
+        specifier: workspace:*
+        version: link:../../packages/savings
       '@grana/shared':
         specifier: workspace:*
         version: link:../../packages/shared

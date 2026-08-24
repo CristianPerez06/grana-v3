@@ -27,7 +27,8 @@ const money = (amount: number, currency: Currency) =>
   currency === 'USD' ? formatUSD(amount) : formatARS(amount, true)
 
 /**
- * "Guardado" — the single surface for the act and for auditing it.
+ * "Guardado" — the single surface for the act and for auditing it. Mirrored on
+ * native as `SavingsDrawer` (a `BottomSheet` there, a `Drawer` here).
  *
  * It is an OVERLAY over the dashboard, not a page, and it has no route: you tap
  * the number, read, and close, and the number you tapped is still there. That is

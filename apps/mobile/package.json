@@ -25,6 +25,7 @@
     "@grana/money-logic": "workspace:*",
     "@grana/movement-form": "workspace:*",
     "@grana/recurrences": "workspace:*",
+    "@grana/savings": "workspace:*",
     "@grana/shared": "workspace:*",
     "@grana/supabase": "workspace:*",
     "@grana/transactions": "workspace:*",
