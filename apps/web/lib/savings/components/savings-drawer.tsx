@@ -1198,6 +1198,16 @@ const SavingsForm = ({
     const row = rowFor(c)
     return c === initialCurrency || row.available !== 0 || row.reserved !== 0
   })
+  /**
+   * «Sin destino» es un GRUPO, no el total.
+   *
+   * El formulario decía «Tenés guardado $ 55.000» cuando había $ 180.000
+   * guardados: el rótulo hablaba del total y el número era el del resto. Los
+   * dos coinciden solo cuando no hay ningún propósito — y ahí «Sin destino»
+   * sería jerga para alguien que nunca usó la función.
+   */
+  const unassignedIsTotal = purposes.length === 0
+
   /** Los orígenes posibles: al volver a usar, solo los que tienen plata ACÁ. */
   const purposeOptions: (Purpose | null)[] =
     mode === 'save'
@@ -1242,7 +1252,9 @@ const SavingsForm = ({
             limit: money(limit, currency),
             purpose: purpose.name,
           })
-        : t('errors.exceeds_reserved', { limit: money(limit, currency) })
+        : unassignedIsTotal
+          ? t('errors.exceeds_reserved', { limit: money(limit, currency) })
+          : t('errors.exceeds_unassigned_reserved', { limit: money(limit, currency) })
     : null
 
   const submit = () => {
@@ -1385,7 +1397,11 @@ const SavingsForm = ({
           tienen plata. Lo que no se ofrece nunca es cambiar el propósito cuando
           viene heredado del grupo desde el que se entró: eso ya se contestó con
           el dedo. */}
-      {!lockedPurpose && (
+      {/* Al volver a usar, un chip solo no es una elección: es un control que no
+          puede cambiar nada — la misma regla que ya aplica el chip de moneda.
+          Al guardar la fila se muestra igual aunque no haya ni un propósito:
+          ahí vive el «+», que es de dónde sale el primero. */}
+      {!lockedPurpose && (mode === 'save' || purposeOptions.length > 1) && (
         <div className="mt-3">
           <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
             {mode === 'save' ? t('purposes.label') : t('purposes.source_label')}
@@ -1434,7 +1450,9 @@ const SavingsForm = ({
               ? t('available_now')
               : purpose != null
                 ? t('saved_in', { purpose: purpose.name })
-                : t('saved_total')}
+                : unassignedIsTotal
+                  ? t('saved_total')
+                  : t('purposes.unassigned_available')}
           </span>
           <span className="font-semibold tabular-nums text-text">{money(limit, currency)}</span>
         </p>
@@ -1451,7 +1469,9 @@ const SavingsForm = ({
               ? t('left_to_spend')
               : purpose != null
                 ? t('stays_in', { purpose: purpose.name })
-                : t('stays_saved')}
+                : unassignedIsTotal
+                  ? t('stays_saved')
+                  : t('purposes.left_unassigned')}
           </span>
           <span
             className={cn(

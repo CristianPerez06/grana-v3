@@ -566,3 +566,36 @@ el tope se quedaba con el de la anterior — se podía confirmar volver a usar U
 con US$ 10, y el rechazo lo daba el trigger con un error genérico. Ahora llega como **función**
 `(moneda, propósito) => monto`, que es lo único que no puede quedar desfasado de lo que la pantalla
 está mostrando.
+
+## D27 — Un rótulo que nombra el total sobre un número que es el resto
+
+Con $180.000 guardados y $55.000 sin destino, el formulario de volver a usar decía:
+
+```
+Tenés guardado          $ 55.000,00
+```
+
+Las dos mitades de la fila son verdad por separado y la fila es mentira. El rótulo venía de la fase 1,
+cuando el resto **era** el total porque no había propósitos; con propósitos dejó de serlo y nadie
+volvió a mirar la frase. El rechazo repetía el error: *"no podés volver a usar más de lo que tenés
+guardado: $55.000"*, con los $180.000 a la vista una pantalla atrás.
+
+Es el mismo error de D22bis con otra cara: **tratar al resto como si fuera el total**, igual que antes
+lo tratábamos como si fuera un propósito. El resto es un grupo más — el que sobra — y hay que
+nombrarlo como lo que es.
+
+La excepción se sostiene: **si el usuario no tiene ningún propósito, los dos números son el mismo** y
+ahí «sin destino» sería jerga sobre una función que no está usando. La condición no es "cuánto hay
+sin destino" sino "¿existe algún propósito?", que es la pregunta de si el concepto está en juego.
+
+El servidor no puede hacer esa distinción sin una consulta de más, así que elige la frase que **siempre**
+es verdad («sin destino»). Su mensaje solo aparece en una carrera: el del cliente llega antes.
+
+De la misma pasada, dos controles que no podían cambiar nada:
+
+- Los chips de origen **no se dibujan si hay uno solo** — la misma regla que ya aplicaba el chip de
+  moneda, que solo aparece cuando hay más de una para ofrecer. Al pasar el monto a dólares con plata
+  en un único propósito, quedaba un chip seleccionado e intocable.
+- Al **guardar**, en cambio, la fila va igual aunque no haya ni un propósito: ahí vive el `+`, que es
+  de donde sale el primero. Esconderla por "no hay nada que elegir" dejaría al usuario del día uno sin
+  la puerta de entrada.

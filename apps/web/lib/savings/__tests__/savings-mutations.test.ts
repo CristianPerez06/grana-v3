@@ -162,7 +162,7 @@ describe('releaseAvailability — the floor', () => {
       ok: false,
       reason: 'exceeds_reserved',
       limit: 200_000,
-      messageKey: 'savings.errors.exceeds_reserved',
+      messageKey: 'savings.errors.exceeds_unassigned_reserved',
     })
     expect(inserted).toEqual([])
   })
@@ -292,7 +292,7 @@ describe('releaseAvailability — the floor is per purpose', () => {
       ok: false,
       reason: 'exceeds_reserved',
       limit: 40_000,
-      messageKey: 'savings.errors.exceeds_reserved',
+      messageKey: 'savings.errors.exceeds_unassigned_reserved',
     })
     expect(inserted).toEqual([])
   })

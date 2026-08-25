@@ -2068,6 +2068,7 @@
     "errors": {
       "exceeds_available": "You can't set aside more than you have available: {limit}.",
       "exceeds_reserved": "You can't make available more than you have set aside: {limit}.",
+      "exceeds_unassigned_reserved": "You can't make available more than you have unassigned: {limit}.",
       "exceeds_purpose_reserved": "You can’t make available more than you have saved in {purpose}: {limit}.",
       "generic": "We couldn't save the change. Please try again.",
       "duplicate": "That change was already recorded."

@@ -57,6 +57,10 @@ Cuando el rechazo sea por el piso de un propósito con nombre, el mensaje SHALL 
 y decir su monto — el usuario está mirando un total mayor en la misma pantalla, y un mensaje genérico
 se lee como un error del sistema.
 
+Cuando el grupo sea el resto, el sistema NO SHALL llamarlo «lo que tenés guardado»: ese rótulo nombra
+el total, y el número es el del resto. SHALL decir **«sin destino»**, salvo que el usuario no tenga
+ningún propósito — ahí los dos números son el mismo y «sin destino» sería jerga.
+
 #### Scenario: El total alcanza pero el propósito no
 
 - **GIVEN** "Emergencia" con $150.000 y «Sin destino» con $40.000
@@ -69,6 +73,20 @@ se lee como un error del sistema.
 - **WHEN** el usuario intenta volver a usar $200.000 desde "Emergencia", que tiene $150.000
 - **THEN** el mensaje dice que no puede volver a usar más de lo que tiene guardado **en Emergencia**,
   con el monto
+
+#### Scenario: El rótulo del resto no dice «guardado»
+
+- **GIVEN** $180.000 guardados, de los cuales $55.000 están sin destino
+- **WHEN** el usuario abre volver a usar con el resto como origen
+- **THEN** el bloque dice **«Sin destino $ 55.000»**, no «Tenés guardado $ 55.000»
+- **AND** el rechazo por pasarse dice que no puede volver a usar más de lo que tiene **sin destino**
+
+#### Scenario: Sin propósitos, el resto es el total y se dice así
+
+- **GIVEN** el usuario nunca creó un propósito y tiene $180.000 guardados
+- **WHEN** abre volver a usar
+- **THEN** el bloque dice **«Tenés guardado $ 180.000»**
+- **AND** la palabra «sin destino» no aparece en el formulario
 
 #### Scenario: Guardar no se topea por propósito
 

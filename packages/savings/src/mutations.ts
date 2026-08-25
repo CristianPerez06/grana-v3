@@ -85,11 +85,17 @@ async function writeReserve(args: {
     const purposeName = purposeId != null ? (groupSums?.purposeName ?? null) : null
 
     if (purposeName == null) {
+      // El tope acá es el RESTO sin destino, no el guardado total: decir "más de
+      // lo que tenés guardado: $55.000" con $180.000 guardados a la vista es
+      // falso. El cliente puede afinar más —si el usuario no tiene ni un
+      // propósito, «sin destino» sería jerga y dice "guardado"—; el servidor no
+      // sabe eso y prefiere la frase que siempre es verdad. Este mensaje solo
+      // aparece en una carrera: el del cliente llega antes.
       return {
         ok: false,
         reason: 'exceeds_reserved',
         limit,
-        messageKey: 'savings.errors.exceeds_reserved',
+        messageKey: 'savings.errors.exceeds_unassigned_reserved',
       }
     }
 

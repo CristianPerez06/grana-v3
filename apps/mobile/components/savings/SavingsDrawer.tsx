@@ -872,6 +872,13 @@ const SavingsForm = ({
     const row = rowFor(c)
     return c === initialCurrency || row.available !== 0 || row.reserved !== 0
   })
+  /**
+   * «Sin destino» es un GRUPO, no el total: el formulario decía «Tenés guardado
+   * $ 55.000» cuando había $ 180.000 guardados. Coinciden solo cuando no hay
+   * ningún propósito, y ahí «Sin destino» sería jerga.
+   */
+  const unassignedIsTotal = purposes.length === 0
+
   /** Los orígenes posibles: al volver a usar, solo los que tienen plata ACÁ. */
   const purposeOptions: (Purpose | null)[] =
     mode === 'save'
@@ -913,7 +920,9 @@ const SavingsForm = ({
             limit: money(limit, currency),
             purpose: purpose.name,
           })
-        : t('savings.errors.exceeds_reserved', { limit: money(limit, currency) })
+        : unassignedIsTotal
+          ? t('savings.errors.exceeds_reserved', { limit: money(limit, currency) })
+          : t('savings.errors.exceeds_unassigned_reserved', { limit: money(limit, currency) })
     : null
   const amountInputWidth = Math.max(1, formatForDisplay(amount).length) * 20 + 2
 
@@ -1047,7 +1056,9 @@ const SavingsForm = ({
           ahí se elige el ORIGEN, y solo entre los grupos que tienen plata. Lo
           que no se ofrece nunca es cambiarlo cuando viene heredado del grupo
           desde el que se entró. */}
-      {!lockedPurpose && (
+      {/* Al volver a usar, un chip solo no es una elección. Al guardar la fila
+          va igual aunque no haya ningún propósito: ahí vive el «+». */}
+      {!lockedPurpose && (mode === 'save' || purposeOptions.length > 1) && (
         <View className="mt-3">
           <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
             {mode === 'save' ? t('savings.purposes.label') : t('savings.purposes.source_label')}
@@ -1094,7 +1105,9 @@ const SavingsForm = ({
               ? t('savings.available_now')
               : purpose != null
                 ? t('savings.saved_in', { purpose: purpose.name })
-                : t('savings.saved_total')}
+                : unassignedIsTotal
+                  ? t('savings.saved_total')
+                  : t('savings.purposes.unassigned_available')}
           </Text>
           <Text className="text-[14px] font-semibold text-text">{money(limit, currency)}</Text>
         </View>
@@ -1112,7 +1125,9 @@ const SavingsForm = ({
               ? t('savings.left_to_spend')
               : purpose != null
                 ? t('savings.stays_in', { purpose: purpose.name })
-                : t('savings.stays_saved')}
+                : unassignedIsTotal
+                  ? t('savings.stays_saved')
+                  : t('savings.purposes.left_unassigned')}
           </Text>
           <Text
             className={`text-[16px] font-extrabold ${overLimit ? 'text-negative' : 'text-text'}`}
