@@ -87,35 +87,34 @@ Tenías + Entró − Se fué  ===  el saldo que muestra la card arriba
 
 Ese es el punto de los tres montos juntos: la card queda auditable en pantalla, sin salir a buscar nada.
 
-**En el mes corriente**, donde la zona oscura muestra el disponible real, la zona clara SHALL agregar **una fila propia bajo una regla**, y —cuando esa fila muestra un flujo— la identidad SHALL extenderse:
+**En el mes corriente**, donde la zona oscura muestra el disponible real, la zona clara SHALL agregar **una fila propia bajo una regla** y la identidad SHALL extenderse:
 
 ```
-Tenías + Entró − Se fué − Guardaste  ===  el disponible que muestra la card arriba
+Tenías + Entró − Se fué − Guardado  ===  el disponible que muestra la card arriba
 ```
 
-Ahí "Tenías" pasa a ser el **disponible con el que el usuario entró al mes** —el arrastrado ya neto de lo que venía guardado— y SHALL derivarse como `Disponible − (Entró − Se fué − Guardaste)`. Es la misma pieza cumpliendo la misma función: cerrar la card contra el número de arriba, sea cual sea ese número.
+donde **`Guardado` es el total apartado**, meses anteriores incluidos, y **`Tenías` sigue siendo el saldo de cuentas** con el que se abrió el mes — el mismo significado que en un mes pasado, y el mismo número que tendría sin nada guardado.
+
+Esa combinación es deliberada y es lo que hace la card verificable. La alternativa —restar solo el **flujo del mes** y que `Tenías` pase a ser "el disponible con el que entraste"— también cierra, pero **netea las reservas de meses anteriores adentro de un número que no lo dice**: alguien que suma los tres montos no puede reconstruir dónde fueron a parar esos pesos, y `Tenías` deja de ser algo que el usuario pueda verificar contra sus propias cuentas. Restar el stock los pone **en pantalla, una vez, con nombre**.
+
+El flujo del mes no se pierde: vive en la **vista de detalle**, que es donde corresponde la pregunta *"¿qué hice este mes?"*.
 
 Esa fila NO SHALL sumarse como cuarta columna de la tira: SHALL renderizarse **debajo de una regla**, a lo ancho, con el rótulo a la izquierda y el monto a la derecha. La tira de tres es **liquidez** —plata entrando y saliendo de las cuentas— y guardar no es ninguna de las dos cosas: es una decisión sobre plata que se quedó donde estaba. Meterla como cuarto hermano diría que es lo mismo que un ingreso o un gasto.
 
-**En el mes corriente la fila SHALL renderizarse siempre**, en uno de tres estados, y SHALL ser tocable en los tres:
+**En el mes corriente la fila SHALL renderizarse siempre**, en uno de dos estados, y SHALL ser tocable en los dos:
 
 | Estado | Rótulo | Monto | Adónde lleva |
 |---|---|---|---|
-| Hubo flujo este mes | *Guardaste este mes* / *Liberaste este mes* | el **neto del mes**, con signo | detalle del guardado |
-| Sin flujo este mes, con stock | *Guardado* | el **total guardado** | detalle del guardado |
-| Sin stock ni flujo | *Guardar algo* | ninguno | drawer de Guardar |
+| Hay algo guardado | *Guardado* | el **total**, con signo menos | detalle del guardado |
+| No hay nada guardado | *Guardar algo* | ninguno | drawer de Guardar |
 
-Renderizarla solo cuando hay flujo dejaría dos agujeros, y los dos son de uso normal: quien guardó en agosto y en septiembre no tocó nada **vería el Hero restando una plata que la pantalla no nombra en ningún lado**, sin forma de llegar al detalle; y quien descartó la sugerencia y se arrepiente tres días después no tendría por dónde volver. El acto tiene que tener una puerta que no dependa de haberlo hecho antes.
+Renderizarla solo cuando hay actividad dejaría dos agujeros, y los dos son de uso normal: quien guardó en agosto y en septiembre no tocó nada **vería el Hero restando una plata que la pantalla no nombra en ningún lado**, sin forma de llegar al detalle; y quien descartó la sugerencia y se arrepiente tres días después no tendría por dónde volver. El acto tiene que tener una puerta que no dependa de haberlo hecho antes.
 
 El estado sin stock SHALL abrir **directamente el drawer de Guardar**, no un detalle vacío: no hay nada que mirar todavía. SHALL renderizarse como una sola fila en gris, sin monto, sin ícono y sin color — es el precio de la puerta permanente para quien nunca va a guardar, y hay que mantenerlo en una línea.
 
-**El verbo y el signo SHALL girar juntos con la dirección del neto.** Guardado neto: *Guardaste este mes* con signo **menos**, porque salió de lo que el usuario puede gastar. Liberado neto: *Liberaste este mes* con signo **más**, porque volvió. Dejar el rótulo fijo obligaría a leer *"Guardaste este mes +$50.000"*, que dice lo contrario de lo que pasó.
+El monto SHALL llevar **signo menos** —salió de lo que el usuario puede gastar— y renderizarse en **emerald**, no en terracota: el terracota está reservado en Grana para lo que está por pagar o vencido, y esto es progreso.
 
-El monto SHALL renderizarse en **emerald** en los dos primeros estados, no en terracota: el terracota está reservado en Grana para lo que está por pagar o vencido, y esto es progreso. El signo dice la dirección; el color y el verbo dicen si eso es bueno.
-
-En el estado con flujo el monto SHALL ser el **flujo neto del mes** —lo guardado menos lo liberado en el período—, nunca el total acumulado: poner el acumulado rompe la identidad. En el estado sin flujo SHALL ser el **stock**, que no participa de ninguna identidad porque no hay nada que contabilizar.
-
-El neto SHALL leerse de la función normativa `get_reserve_flow_sums(p_from, p_to)` y el stock de `get_available_sums(p_today)`, por moneda, y el dashboard NO SHALL calcular ninguno de los dos por su cuenta.
+El stock SHALL leerse de la función normativa `get_available_sums(p_today)`, por moneda, y el dashboard NO SHALL calcularlo por su cuenta.
 
 En un mes que **no** es el corriente la fila NO SHALL renderizarse, ni la regla: la zona SHALL verse exactamente como antes de existir el guardado.
 
@@ -143,10 +142,10 @@ Los montos SHALL responder al selector de mes. La zona NO SHALL renderizar la ba
 
 #### Scenario: El mes corriente cierra con el guardado
 
-- **WHEN** en el mes corriente el usuario entró con $1.000.000 disponibles, le entraron $2.000.000, se le fueron $1.200.000 y guardó $200.000
-- **THEN** la línea muestra `−$200.000` en emerald, debajo de una regla
-- **AND** la zona oscura muestra $1.600.000
-- **AND** `1.000.000 + 2.000.000 − 1.200.000 − 200.000` es igual a ese $1.600.000
+- **WHEN** el usuario abrió el mes con $1.000.000 en sus cuentas, le entraron $2.000.000, se le fueron $1.200.000 y tiene $490.000 guardados
+- **THEN** la fila muestra `−$490.000` en emerald, debajo de una regla
+- **AND** la zona oscura muestra $1.310.000
+- **AND** `1.000.000 + 2.000.000 − 1.200.000 − 490.000` es igual a ese $1.310.000
 
 #### Scenario: Guardar no altera la tira de liquidez
 
@@ -154,30 +153,24 @@ Los montos SHALL responder al selector de mes. La zona NO SHALL renderizar la ba
 - **THEN** "Entró" y "Se fué" quedan exactamente iguales que antes de guardar
 - **AND** `Entró − Se fué` sigue siendo igual al cambio del saldo de sus cuentas en el mes
 
-#### Scenario: La línea muestra el neto del mes, no el acumulado
+#### Scenario: El total incluye lo guardado en meses anteriores
 
-- **WHEN** el usuario venía con $200.000 guardados de meses anteriores y este mes guardó $150.000 y liberó $50.000
-- **THEN** la línea muestra `−$100.000`
-- **AND** la card sigue cerrando contra el disponible
+- **WHEN** el usuario guardó $300.000 en julio y este mes guardó $190.000 netos
+- **THEN** la fila muestra $490.000
+- **AND** "Tenías" es el saldo de cuentas con el que abrió el mes, sin descontar nada
+- **AND** `Tenías + Entró − Se fué − 490.000` es igual al disponible
 
-#### Scenario: Un mes sin flujo, con guardado de meses anteriores
+#### Scenario: "Tenías" no cambia con lo guardado
 
-- **WHEN** el usuario tiene $350.000 guardados de meses anteriores y en el mes corriente no guardó ni liberó nada
-- **THEN** la fila muestra "Guardado" con $350.000
-- **AND** los tres montos de la tira cierran contra el disponible sin ningún término extra
-- **AND** tocarla abre el detalle del guardado
+- **WHEN** se compara la card de un usuario con $490.000 guardados contra la del mismo mes sin nada guardado
+- **THEN** "Tenías" es el mismo número en las dos
+- **AND** lo único que cambia es la fila del guardado y el disponible
 
 #### Scenario: El usuario que nunca guardó tiene puerta al acto
 
 - **WHEN** el usuario no tiene nada guardado
 - **THEN** la fila muestra "Guardar algo", sin monto
 - **AND** tocarla abre el drawer de Guardar, no un detalle vacío
-
-#### Scenario: Un mes en que se liberó más de lo que se guardó
-
-- **WHEN** en el mes corriente el usuario guardó $50.000 y liberó $100.000
-- **THEN** la fila dice "Liberaste este mes" y muestra `+$50.000`
-- **AND** la identidad de la card usa ese neto con su signo
 
 #### Scenario: La fila no aparece en meses pasados
 

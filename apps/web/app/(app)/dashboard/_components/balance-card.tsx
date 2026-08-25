@@ -200,21 +200,17 @@ const Flow = ({
 /**
  * The savings row — BELOW A RULE, never a fourth column of the strip.
  *
- * The strip of three is liquidity: money entering and leaving the accounts.
- * Saving is neither — it is a decision about money that stayed exactly where it
- * was — so making it a fourth sibling would claim it is the same kind of thing
- * as an income or an expense.
+ * Above the rule the card shows how the money MOVED this month; below it, how
+ * much of it the user decided not to touch. Making it a fourth sibling would
+ * claim it is the same kind of thing as an income or an expense.
  *
- * It renders in ALL FOUR states, and that is deliberate. A row that appeared
- * only when there was activity would leave the hero subtracting money the screen
- * never names, in any month the user did not touch their savings, with no way to
- * reach the detail — and no way back for whoever dismissed the suggestion and
- * changed their mind.
+ * It shows the TOTAL set aside, carried-over months included, which is what
+ * makes the card verifiable: `Tenías` stays the account balance the month opened
+ * with — a number the user can check against their own accounts — instead of
+ * silently absorbing earlier reserves.
  *
- * The sign comes from the STATE, never from the number: a raw signed net would
- * eventually print "Guardaste este mes +$50.000", which says the opposite of what
- * happened. Emerald, not terracotta — terracotta is reserved in Grana for what is
- * due or overdue, and this is progress.
+ * Emerald, not terracotta: terracotta is reserved in Grana for what is due or
+ * overdue, and this is progress.
  */
 const SavingsLine = ({
   row,
@@ -228,8 +224,6 @@ const SavingsLine = ({
   onOpen: () => void
 }) => {
   const t = useTranslations('dashboard')
-  const label = t(`savings.${row.state}`)
-  const signPrefix = row.state === 'saved' ? '−' : row.state === 'released' ? '+' : undefined
   const isEmpty = row.state === 'empty'
 
   return (
@@ -247,20 +241,20 @@ const SavingsLine = ({
           isEmpty ? 'text-text-soft group-hover:text-text-muted' : 'text-text-muted',
         )}
       >
-        {/* The empty state carries no colour either: it is an invitation, not a
-            reading. One muted line is the whole price of the permanent door for
-            someone who is never going to save. */}
+        {/* El estado vacío tampoco lleva color: es una invitación, no una
+            lectura. Una línea apagada es todo el precio de la puerta permanente
+            para quien nunca va a guardar. */}
         <span
           aria-hidden
           className={cn('size-[9px] rounded-full', isEmpty ? 'bg-border' : 'bg-emerald')}
         />
-        {label}
+        {t(`savings.${row.state}`)}
       </span>
       <span className="flex min-w-0 items-baseline gap-1.5">
         {!isEmpty && (
           <span className="flex flex-col items-end">
             <span className="whitespace-nowrap text-[17px] font-extrabold leading-none tracking-[-0.04em] text-emerald-deep">
-              <MaskedAmount amount={row.amount} currency="ARS" signPrefix={signPrefix} />
+              <MaskedAmount amount={row.amount} currency="ARS" signPrefix="−" />
             </span>
             {showUsd && usdRow && usdRow.state !== 'empty' && (
               <span className="mt-[5px] text-[12.5px] font-semibold text-text-soft">
@@ -268,9 +262,7 @@ const SavingsLine = ({
                   amount={usdRow.amount}
                   currency="USD"
                   showCentsOverride
-                  signPrefix={
-                    usdRow.state === 'saved' ? '−' : usdRow.state === 'released' ? '+' : undefined
-                  }
+                  signPrefix="−"
                 />
               </span>
             )}

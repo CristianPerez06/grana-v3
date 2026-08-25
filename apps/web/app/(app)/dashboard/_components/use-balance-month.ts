@@ -7,8 +7,6 @@ import {
   getAvailableTotals,
   getDashboardHero,
   getMonthBalanceSeries,
-  getReservedFlow,
-  resolveMonthRange,
   type DashboardHero,
   type MonthBalanceByCurrency,
 } from '@grana/dashboard'
@@ -84,17 +82,6 @@ export const useBalanceMonth = ({ todayISO, heroInitial, monthInitial }: Args) =
     staleTime: 60_000,
   })
 
-  const monthKey = `${selected.year}-${String(selected.month).padStart(2, '0')}`
-  const flowQuery = useQuery({
-    queryKey: ['dashboard', 'reserved-flow', monthKey],
-    queryFn: () => {
-      const { from, to } = resolveMonthRange(monthKey)
-      return getReservedFlow(createClient(), from, to, todayISO)
-    },
-    enabled: isCurrent,
-    staleTime: 60_000,
-  })
-
   const hero = heroQuery.data ?? null
   const summary = monthQuery.data ? deriveMonthSummary(monthQuery.data) : null
 
@@ -106,7 +93,6 @@ export const useBalanceMonth = ({ todayISO, heroInitial, monthInitial }: Args) =
     isCurrent,
     accounts: hero ? { ARS: hero.ars, USD: hero.usd } : null,
     available: isCurrent ? (availableQuery.data ?? null) : null,
-    reservedNet: flowQuery.data ?? { ARS: 0, USD: 0 },
     summary,
   })
 

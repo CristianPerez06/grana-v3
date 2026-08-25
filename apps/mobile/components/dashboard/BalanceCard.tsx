@@ -13,7 +13,7 @@ import {
 import { useT } from '../../lib/locale-context'
 import { accountColors, colors } from '../../lib/colors'
 import { useDashboardHero, useMonthBalanceSeries } from '../../lib/dashboard/queries'
-import { useAvailableTotals, useReservedFlow } from '../../lib/savings/queries'
+import { useAvailableTotals } from '../../lib/savings/queries'
 import { SavingsDrawer } from '../savings/SavingsDrawer'
 import { useShowCents } from '../../lib/preferences-context'
 import { useDashboardMonth } from './DashboardMonthContext'
@@ -157,18 +157,17 @@ const Flow = ({
 /**
  * The savings row — BELOW A RULE, never a fourth member of the strip.
  *
- * The strip of three is liquidity; saving is a decision about money that stayed
- * where it was. On a phone the row is deliberately COMPACT — one line, label
- * left, amount right — because the card is already tall and this is a readout
- * with an action, not a fourth amount competing for attention.
+ * Above the rule the card shows how the money MOVED; below it, how much of it
+ * the user decided not to touch. On a phone the row is deliberately COMPACT —
+ * one line, label left, amount right — because the card is already tall and this
+ * is a readout with an action, not a fourth amount competing for attention.
  *
- * The sign comes from the STATE, never from the number: a raw signed net would
- * eventually print "Guardaste este mes +$50.000".
+ * It shows the TOTAL set aside, which is what keeps "Venía" meaning the account
+ * balance the month opened with instead of silently absorbing earlier reserves.
  */
 const SavingsLine = ({ row, onPress }: { row: SavingsRow; onPress: () => void }) => {
   const t = useT()
   const isEmpty = row.state === 'empty'
-  const sign = row.state === 'saved' ? '−' : row.state === 'released' ? '+' : undefined
 
   return (
     <Pressable
@@ -192,7 +191,7 @@ const SavingsLine = ({ row, onPress }: { row: SavingsRow; onPress: () => void })
           <MaskedAmount
             amount={row.amount}
             currency="ARS"
-            signPrefix={sign}
+            signPrefix="−"
             className="text-[15px] font-extrabold text-positive"
           />
         )}
@@ -215,7 +214,6 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
   // Only for the current month: the reserve is netted exactly where the card says
   // "disponible", and a past month's label already says something else.
   const availableQuery = useAvailableTotals(cutISO, isCurrent)
-  const flowQuery = useReservedFlow(selected.year, selected.month, todayISO, isCurrent)
 
   const hero = heroQuery.data
   const placement = hero ? derivePlacement(hero.accounts) : null
@@ -227,7 +225,6 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
     isCurrent,
     accounts: hero ? { ARS: hero.ars, USD: hero.usd } : null,
     available: isCurrent ? (availableQuery.data ?? null) : null,
-    reservedNet: flowQuery.data ?? { ARS: 0, USD: 0 },
     summary,
   })
   const hasUsd = hero != null && (placement!.USD.rows.length > 0 || displayed.USD !== 0)

@@ -28,7 +28,7 @@ El fundamento conceptual completo vive en `docs/modelo-de-dinero.md`; el recorri
 **Dónde se ve.**
 
 - El Hero del dashboard muestra el **disponible real**. Un único monto de plata.
-- Bajo la tira de "Resumen del mes", separada por una regla, **una sola línea**: *Guardaste este mes*. La identidad de la card sigue cerrando en pantalla.
+- Bajo la tira de "Resumen del mes", separada por una regla, **una sola línea**: *Guardado*, con el total apartado. La identidad de la card sigue cerrando en pantalla: `Tenías + Entró − Se fué − Guardado = Disponible`, con `Tenías` siendo el **saldo de cuentas** del inicio del mes — el mismo número que tendría sin nada guardado.
 - Una **vista de detalle** —total, este mes, historial— a la que se llega tocando el número.
 
 **Cómo se llega al acto.**
@@ -105,9 +105,9 @@ de TS (web, mobile, dashboard), el próximo read que se olvide de restarla produ
 La identidad que la card deja verificar en pantalla:
 
 ```
-Tenías + Entró − Se fué − Guardaste  =  Disponible
+Tenías + Entró − Se fué − Guardado  =  Disponible
 ```
 
-`Tenías` se **deriva** (no se lee) como `Disponible − (Entró − Se fué − Guardaste)`, igual que hoy, de modo que cierre por construcción y no porque dos lecturas coincidan.
+`Tenías` se **deriva** (no se lee) como `Disponible − (Entró − Se fué − Guardado)`, de modo que cierre por construcción y no porque dos lecturas coincidan. Y lo que sale de esa derivación es el **saldo de cuentas** con el que se abrió el mes: el mismo número que tendría el usuario sin nada guardado, y uno que puede verificar mirando sus propias cuentas.
 
-`Guardaste` es el **flujo neto del mes** (guardado menos liberado), nunca el stock acumulado. Poner el acumulado rompe la identidad.
+`Guardado` es el **stock total**, meses anteriores incluidos. Restar solo el flujo del mes también cerraría, pero obligaría a que `Tenías` signifique "el disponible con el que entraste" — neteando las reservas viejas adentro de un número que no lo dice, donde nadie puede encontrarlas. El flujo del mes vive en la vista de detalle.

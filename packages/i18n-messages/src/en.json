@@ -214,8 +214,6 @@
     },
     "net_this_month": "you're at <amount>{net}</amount> this month",
     "savings": {
-      "saved": "Saved this month",
-      "released": "Released this month",
       "stock": "Set aside",
       "empty": "Set some aside"
     }

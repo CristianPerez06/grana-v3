@@ -181,27 +181,6 @@ export async function getAvailableTotals(
   }
 }
 
-/**
- * The net reserved in a range, per currency — the FLOW that feeds the savings
- * row and the card's identity. Negative when more was released than saved.
- */
-export async function getReservedFlow(
-  supabase: SupabaseClient,
-  fromISO: string,
-  toISO: string,
-  todayISO: string = financialTodayISO(),
-): Promise<CurrencyTotals> {
-  const { data, error } = await supabase.rpc('get_reserve_flow_sums', {
-    p_from: fromISO,
-    p_to: toISO,
-    p_today: todayISO,
-  })
-  if (error) throw error
-
-  const rows = (data ?? []) as { currency_code: string; reserved_net: number }[]
-  return foldByCurrency(rows, (r: { reserved_net: number }) => r.reserved_net)
-}
-
 /** Rows per round-trip of the month fetch. Independent of the server's
  *  `max-rows`: the loop advances by what came back and stops on an empty page. */
 const MONTH_ROWS_PAGE_SIZE = 1000

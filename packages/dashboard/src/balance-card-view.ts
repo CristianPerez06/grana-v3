@@ -4,9 +4,11 @@
 //
 //   1. Which number the dark zone renders — the disponible real in the current
 //      month, the closing balance in a past one.
-//   2. Which state the savings row is in, or whether it exists at all.
+//   2. Whether the savings row exists, and what it shows.
 //   3. What "Tenías" derives from, so the card closes against the number above
-//      it in every one of those states.
+//      it in both cases:
+//
+//          Tenías + Entró − Se fué − Guardado === lo que dice la zona oscura
 //
 // They used to be spelled out twice, once in the web hook and once in the native
 // card, which is exactly the shape that produced the divergence migration 0051
@@ -47,12 +49,10 @@ export function deriveBalanceCardView(input: {
    * without anything having happened in May.
    */
   available: { available: ByCurrency; reserved: ByCurrency } | null
-  /** The month's net reserve flow. Zero everywhere it does not apply. */
-  reservedNet: ByCurrency
   /** The month's flows. Null while they load. */
   summary: { ARS: MonthSummary; USD: MonthSummary } | null
 }): BalanceCardView {
-  const { isCurrent, accounts, available, reservedNet, summary } = input
+  const { isCurrent, accounts, available, summary } = input
 
   const displayed: ByCurrency = {
     ARS: available?.available.ARS ?? accounts?.ARS ?? 0,
@@ -60,37 +60,22 @@ export function deriveBalanceCardView(input: {
   }
 
   const savings = {
-    ARS: deriveSavingsRow({
-      isCurrentMonth: isCurrent,
-      reservedNet: reservedNet.ARS,
-      reserved: available?.reserved.ARS ?? 0,
-    }),
-    USD: deriveSavingsRow({
-      isCurrentMonth: isCurrent,
-      reservedNet: reservedNet.USD,
-      reserved: available?.reserved.USD ?? 0,
-    }),
+    ARS: deriveSavingsRow({ isCurrentMonth: isCurrent, reserved: available?.reserved.ARS ?? 0 }),
+    USD: deriveSavingsRow({ isCurrentMonth: isCurrent, reserved: available?.reserved.USD ?? 0 }),
   }
 
   return {
     displayed,
     savings,
-    // Only a FLOW enters the identity. A stock readout contributes zero because
-    // the carried-over reserve is already inside "Tenías" — which in the current
-    // month is the disponible the user opened with, not the raw balance.
+    // "Tenías" es el SALDO DE CUENTAS con el que se abrió el mes, y sale solo:
+    // el disponible ya tiene el guardado restado, así que devolvérselo deja el
+    // saldo. Mismo significado en un mes pasado que en el corriente — antes
+    // dependía de dónde estabas parado, que era la peor parte.
     venia:
       accounts && summary
         ? {
-            ARS: deriveMonthOpening(
-              displayed.ARS,
-              summary.ARS,
-              savingsIdentityTerm(savings.ARS, reservedNet.ARS),
-            ),
-            USD: deriveMonthOpening(
-              displayed.USD,
-              summary.USD,
-              savingsIdentityTerm(savings.USD, reservedNet.USD),
-            ),
+            ARS: deriveMonthOpening(displayed.ARS, summary.ARS, savingsIdentityTerm(savings.ARS)),
+            USD: deriveMonthOpening(displayed.USD, summary.USD, savingsIdentityTerm(savings.USD)),
           }
         : null,
   }

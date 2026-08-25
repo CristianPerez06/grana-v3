@@ -50,7 +50,7 @@ En consecuencia, cuando el guardado se muestre junto a un listado de cuentas, SH
 El sistema SHALL exponer el disponible real y el flujo reservado del período como **funciones de Postgres**, y toda superficie —web, mobile y las agregaciones del dashboard— SHALL consumirlas sin recomponer la resta por su cuenta:
 
 - `get_available_sums(p_today)` SHALL devolver, **por moneda**: el neto de las cuentas propias cortado a la fecha, lo reservado vigente, y el **disponible real** ya calculado.
-- `get_reserve_flow_sums(p_from, p_to)` SHALL devolver, **por moneda**, el **neto reservado** en el rango (guardado menos liberado).
+- `get_reserve_flow_sums(p_from, p_to)` SHALL devolver, **por moneda**, el **neto reservado** en el rango (guardado menos liberado). Lo consume la **vista de detalle**, no la card: el resumen del mes muestra el stock.
 
 Es la misma regla que estableció la migración `0051` para el criterio de "cuenta propia": ese predicado estaba replicado a mano en cada call site y **ya había divergido** en producción. Un concepto de plata, una definición. `get_available_sums` tiene tres consumidores —el Hero, el tope del alta y la validación del write path—, de modo que derivar la resta por separado en cada uno garantiza la divergencia.
 

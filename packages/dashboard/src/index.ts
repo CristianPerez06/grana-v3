@@ -2,7 +2,6 @@ export {
   getAvailableTotals,
   getCommittedOutlook,
   getDashboardHero,
-  getReservedFlow,
   getMonthBalanceSeries,
   getMonthCategoryBreakdown,
   getMonthSpending,

@@ -6,7 +6,7 @@ import {
   type AvailableSums,
   type ReserveEntry,
 } from '@grana/savings'
-import { getAvailableTotals, getReservedFlow, resolveMonthRange } from '@grana/dashboard'
+import { getAvailableTotals } from '@grana/dashboard'
 import { formatDateISO } from '@grana/money-logic'
 import { supabase } from '../supabase'
 
@@ -21,19 +21,6 @@ export function useAvailableTotals(asOfISO: string, enabled = true) {
   return useQuery({
     queryKey: ['dashboard', 'available', asOfISO] as const,
     queryFn: () => getAvailableTotals(supabase, asOfISO),
-    enabled,
-  })
-}
-
-/** The month's net reserve flow, per currency. Feeds the savings row. */
-export function useReservedFlow(year: number, month: number, todayISO: string, enabled = true) {
-  const key = `${year}-${String(month).padStart(2, '0')}`
-  return useQuery({
-    queryKey: ['dashboard', 'reserved-flow', key] as const,
-    queryFn: () => {
-      const { from, to } = resolveMonthRange(key)
-      return getReservedFlow(supabase, from, to, todayISO)
-    },
     enabled,
   })
 }

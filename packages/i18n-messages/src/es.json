@@ -214,8 +214,6 @@
     },
     "net_this_month": "vas <amount>{net}</amount> este mes",
     "savings": {
-      "saved": "Guardaste este mes",
-      "released": "Liberaste este mes",
       "stock": "Guardado",
       "empty": "Guardar algo"
     }
