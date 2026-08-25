@@ -54,7 +54,9 @@ export const SavingsDrawer = ({
   const t = useT()
   const queryClient = useQueryClient()
   const [form, setForm] = useState<{ mode: Mode; currency: Currency } | null>(null)
-  const { sums, history } = useSavingsDetail(visible)
+  const today = getTodayAR()
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+  const { sums, history, monthNet } = useSavingsDetail(visible, monthStart, today)
 
   // Reset the view when the sheet opens, derived DURING RENDER from the prop
   // rather than in an effect: it is not a synchronization with anything external
@@ -115,6 +117,7 @@ export const SavingsDrawer = ({
                   currency={currency}
                   sums={rowFor(currency)}
                   entries={history[currency]}
+                  monthNet={monthNet(currency)}
                   onSave={() => setForm({ mode: 'save', currency })}
                   onRelease={() => setForm({ mode: 'release', currency })}
                 />
@@ -137,21 +140,20 @@ const CurrencyBlock = ({
   currency,
   sums,
   entries,
+  monthNet,
   onSave,
   onRelease,
 }: {
   currency: Currency
   sums: AvailableSums
   entries: ReserveEntry[]
+  /** Neto del mes, de `get_reserve_flow_sums`. Nunca recompuesto acá. */
+  monthNet: number
   onSave: () => void
   onRelease: () => void
 }) => {
   const t = useT()
   const locale = useLocale()
-  const monthPrefix = formatDateISO(getTodayAR()).slice(0, 7)
-  const monthNet = entries
-    .filter((e) => e.date.startsWith(monthPrefix))
-    .reduce((acc, e) => acc + e.amount, 0)
 
   return (
     <View className="rounded-2xl border border-border bg-card p-4">

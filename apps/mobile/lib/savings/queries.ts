@@ -1,11 +1,13 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import {
   getAvailableSums,
+  getReserveFlowSums,
   getReserveHistory,
   type AvailableSums,
   type ReserveEntry,
 } from '@grana/savings'
 import { getAvailableTotals, getReservedFlow, resolveMonthRange } from '@grana/dashboard'
+import { formatDateISO } from '@grana/money-logic'
 import { supabase } from '../supabase'
 
 /**
@@ -42,8 +44,8 @@ export function useReservedFlow(year: number, month: number, todayISO: string, e
  * after saving would show the previous total on the screen that exists to audit
  * it.
  */
-export function useSavingsDetail(enabled: boolean) {
-  const [sums, ars, usd] = useQueries({
+export function useSavingsDetail(enabled: boolean, monthStart: Date, today: Date) {
+  const [sums, ars, usd, flow] = useQueries({
     queries: [
       {
         queryKey: ['savings', 'sums'] as const,
@@ -63,6 +65,16 @@ export function useSavingsDetail(enabled: boolean) {
         enabled,
         staleTime: 0,
       },
+      {
+        // "Este mes" sale de la MISMA lectura normativa que la fila del
+        // dashboard: sumarlo acá filtrando el historial sería una segunda
+        // implementación del mismo número, con floats crudos y sin corte
+        // temporal.
+        queryKey: ['savings', 'flow', formatDateISO(monthStart)] as const,
+        queryFn: () => getReserveFlowSums(supabase, monthStart, today),
+        enabled,
+        staleTime: 0,
+      },
     ],
   })
 
@@ -71,5 +83,8 @@ export function useSavingsDetail(enabled: boolean) {
     USD: usd.data ?? [],
   }
 
-  return { sums: (sums.data ?? null) as AvailableSums[] | null, history }
+  const monthNet = (currency: 'ARS' | 'USD'): number =>
+    flow.data?.find((f) => f.currencyCode === currency)?.reservedNet ?? 0
+
+  return { sums: (sums.data ?? null) as AvailableSums[] | null, history, monthNet }
 }

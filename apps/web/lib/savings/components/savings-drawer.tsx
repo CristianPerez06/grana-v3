@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
 import {
   getAvailableSums,
+  getReserveFlowSums,
   getReserveHistory,
   type AvailableSums,
   type ReserveEntry,
@@ -63,11 +64,15 @@ export function SavingsDrawer({
   const [form, setForm] = useState<{ mode: Mode; currency: Currency } | null>(null)
   const queryClient = useQueryClient()
 
+  const today = getTodayAR()
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+  const monthRange = { from: formatDateISO(monthStart), to: formatDateISO(today) }
+
   // The reads only run while the drawer is open: they are the detail's data, and
   // a closed drawer has no detail. `staleTime: 0` because the numbers here are
   // the ones the user just changed — a cached stock right after saving would show
   // the previous total on the screen that exists to audit it.
-  const [sumsQuery, arsQuery, usdQuery] = useQueries({
+  const [sumsQuery, arsQuery, usdQuery, flowQuery] = useQueries({
     queries: [
       {
         queryKey: ['savings', 'sums'],
@@ -87,6 +92,18 @@ export function SavingsDrawer({
         enabled: open,
         staleTime: 0,
       },
+      {
+        // "Este mes" sale de la MISMA lectura normativa que la fila del
+        // dashboard. Sumarlo acá a mano —filtrar el historial por prefijo de mes
+        // y acumular— era una segunda implementación del mismo número: con
+        // floats crudos en vez de `Money`, y sin el corte temporal, así que una
+        // reserva fechada mañana la contaba esta pantalla y no la contaba la
+        // fila. Dos números distintos para lo mismo, uno al lado del otro.
+        queryKey: ['savings', 'flow', monthRange.from, monthRange.to],
+        queryFn: () => getReserveFlowSums(createClient(), monthStart, today),
+        enabled: open,
+        staleTime: 0,
+      },
     ],
   })
 
@@ -95,6 +112,8 @@ export function SavingsDrawer({
     ARS: arsQuery.data ?? [],
     USD: usdQuery.data ?? [],
   }
+  const monthNet = (currency: Currency): number =>
+    flowQuery.data?.find((f) => f.currencyCode === currency)?.reservedNet ?? 0
 
   // Reset the view when the drawer opens, adjusting state DURING RENDER rather
   // than in an effect: the reset is derived from a prop changing, not a
@@ -161,6 +180,7 @@ export function SavingsDrawer({
                   currency={currency}
                   sums={rowFor(currency)}
                   entries={history[currency]}
+                  monthNet={monthNet(currency)}
                   onSave={() => setForm({ mode: 'save', currency })}
                   onRelease={() => setForm({ mode: 'release', currency })}
                 />
@@ -184,20 +204,19 @@ const CurrencyBlock = ({
   currency,
   sums,
   entries,
+  monthNet,
   onSave,
   onRelease,
 }: {
   currency: Currency
   sums: AvailableSums
   entries: ReserveEntry[]
+  /** Neto del mes, de `get_reserve_flow_sums`. Nunca recompuesto acá. */
+  monthNet: number
   onSave: () => void
   onRelease: () => void
 }) => {
   const t = useTranslations('savings')
-  const monthPrefix = formatDateISO(getTodayAR()).slice(0, 7)
-  const monthNet = entries
-    .filter((e) => e.date.startsWith(monthPrefix))
-    .reduce((acc, e) => acc + e.amount, 0)
 
   return (
     <section className="rounded-2xl border border-border-soft bg-card p-4">
