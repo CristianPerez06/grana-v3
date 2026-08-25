@@ -33,16 +33,30 @@ Los diseños de ruta se autoran como **archivos HTML versionados en este repo**,
 docs/design/<feature>/
 ├── README.md          # contexto, observaciones, propuesta, recomendación, lista de archivos de trabajo
 ├── shared.css         # tokens/estilos compartidos de los mocks
-├── web/<feature>.html # desktop + responsive mobile en el mismo archivo
-├── mobile/<feature>.html  # mock de app nativa (header navy + tab bar)
+├── web/<feature>.html # vista desktop
+├── mobile/<feature>.html  # vista mobile, común a web-mobile y app nativa
 └── components/*.html  # desglose por componente (route-shell, header, filas, estados…)
 ```
 
 Reglas:
 
-1. **Las tres vistas, antes de specear:** web desktop, web-mobile (responsive en navegador, topbar + drawer) y app nativa. Se diseñan las tres y recién después se genera el spec OpenSpec.
+1. **Las dos vistas, antes de specear:** desktop y mobile. Se diseñan las dos y recién después se genera el spec OpenSpec.
+
+   **La vista mobile es una sola para las dos plataformas.** El chrome de `apps/web` en viewport angosto y el de `apps/mobile` son el mismo: `PageHeader` navy que se come el safe-area, tab bar fija de cuatro slots, menú y overlays como bottom sheets. Un mock mobile describe las dos, y lo que cambia es la implementación —HTML contra React Native—, no el diseño.
+
+   Antes eran tres, y web-mobile se definía como "responsive en navegador, topbar + drawer" frente a la nativa "header navy + tab bar". Esa divergencia era deliberada, pero salía cara y no compraba nada: la web es una PWA `display: standalone`, así que instalada en el home screen de un teléfono competía de frente con la app nativa **viéndose como otro producto**. Se cerró en el change `mirror-native-chrome-on-web-mobile` (issue [#60](https://github.com/CristianPerez06/grana-v3/issues/60)), cuyo handoff —`docs/design/web-mobile-chrome/`— tiene el inventario de los dos shells y el mapeo pieza por pieza.
+
+   Dos aclaraciones para que la regla no se aplique de más:
+
+   - **Es el chrome lo que converge, no el contenido.** El layout interno de una ruta sigue siendo una decisión por plataforma y por ancho: qué se apila, qué columnas auxiliares se ocultan, dónde cae la acción más frecuente. Todo eso sigue en la sección **Responsive**.
+   - **Sigue habiendo dos implementaciones.** La política Web ↔ Mobile de `AGENTS.md` no se toca: mismos nombres y mismas props vía `@grana/ui-contracts`, JSX distinto de cada lado. Una vista de diseño compartida no habilita componentes compartidos.
+
+   Si una ruta necesita chrome mobile distinto entre plataformas, eso es una excepción y va argumentada en el `README.md` del feature — no un tercer mock por costumbre.
 2. **Los mocks son no-autoritativos.** El HTML usa datos de ejemplo y puede usar valores literales para representar el visual; no es la implementación. La implementación final usa tokens (`@grana/ui-tokens`) y componentes por plataforma. Nunca copiar un hex literal del mock al código: traducir a clases de token.
 3. El `README.md` de cada feature ancla la paleta a tokens y se referencia desde el `design.md` del change correspondiente.
+4. **Los handoffs previos a agosto 2026 siguen la convención de tres vistas.** En esos bundles, el archivo `web/<feature>.html` incluye una vista mobile con el chrome viejo (topbar blanca + drawer lateral) que ya no describe el producto. No se migran: son mocks no-autoritativos de trabajo ya implementado, y reescribirlos costaría más de lo que aclara. Al abrir uno, la vista mobile vigente es la de `mobile/<feature>.html`.
+
+   La excepción es `docs/design/web-mobile-chrome/`, que es el handoff de este cambio: ahí `web/chrome.html` es el chrome espejado en contexto y `mobile/chrome.html` la referencia nativa contra la que se comparó. Su objeto de diseño era justamente la divergencia, así que necesita las dos por separado.
 
 ## Antes de diseñar una ruta
 
@@ -192,8 +206,8 @@ Cuando se hacen mocks HTML, crear:
 docs/design/<feature>/
   README.md
   shared.css
-  web/<route>.html
-  mobile/<route>.html
+  web/<route>.html        # desktop
+  mobile/<route>.html     # mobile, común a web-mobile y app nativa
   components/<component>.html
 ```
 
@@ -214,6 +228,7 @@ Mobile:
 - Toolbar compacta o controles iconicos.
 - Ocultar columnas auxiliares como running balance si no hay espacio.
 - Mantener hit targets cercanos a 44px.
+- **El chrome no se diseña por ruta.** Header navy, tab bar, back-link y overlays los provee el shell, iguales en toda la app y en las dos plataformas. Un mock mobile los dibuja para dar contexto, no para proponerlos. Lo que sí decide la ruta es qué va en el slot `actions` de su header — y va ahí, visible en todo ancho, no en un botón flotante: el único FAB del producto es el de registrar movimiento.
 
 ## Estados
 

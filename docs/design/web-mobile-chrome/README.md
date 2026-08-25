@@ -192,6 +192,8 @@ Dentro de la fase 2, el orden importa: **primero el manejo de teclado**, despué
 
 ## Archivos de trabajo
 
+Este bundle usa `web/` y `mobile/` como "el chrome espejado" y "la referencia nativa", que es una excepción a la convención de `route-ui-system.md` — donde `mobile/<feature>.html` es una vista única para las dos plataformas. Acá el objeto de diseño era justamente la divergencia entre las dos, así que necesitaban archivos separados para poder compararse.
+
 - `shared.css` — tokens y primitivas de los mocks
 - `components/route-shell.html` — anatomía del shell, antes y después
 - `components/header.html` — `PageHeader` navy y sus variantes

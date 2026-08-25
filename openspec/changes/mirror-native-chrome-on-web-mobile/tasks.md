@@ -45,8 +45,8 @@
 
 ## 5. Fase 4 — Documentación
 
-- [ ] 5.1 En `docs/design/route-ui-system.md:43`, reescribir la regla de las tres vistas: pasan a ser **dos** (desktop y mobile compartida entre web y nativo), con el motivo escrito para que la pregunta no se re-abra sin datos nuevos
-- [ ] 5.2 Actualizar la estructura de carpetas del mismo doc: `web/<feature>.html` pasa a cubrir desktop, y `mobile/<feature>.html` pasa a ser la vista mobile de las dos plataformas
+- [x] 5.1 En `docs/design/route-ui-system.md:43`, reescribir la regla de las tres vistas: pasan a ser **dos** (desktop y mobile compartida entre web y nativo), con el motivo escrito para que la pregunta no se re-abra sin datos nuevos
+- [x] 5.2 Actualizar la estructura de carpetas del mismo doc (las dos veces que aparece): `web/<feature>.html` pasa a cubrir desktop, y `mobile/<feature>.html` pasa a ser la vista mobile de las dos plataformas. Se agrega la regla 4, que declara los handoffs previos a agosto 2026 como convención vieja y no los migra, y una nota en la sección Responsive: el chrome lo provee el shell y no se diseña por ruta
 
 ## 6. Spec
 
@@ -62,5 +62,6 @@
 - [ ] 7.6 Instalar la PWA en un iPhone real → el navy llega hasta el notch y la barra respeta la home indicator. Es lo único que el DevTools no puede verificar
 - [ ] 7.7 Repetir 7.1 y 7.4 en Android
 - [ ] 7.8 A 390px, abrir el alta de cuenta → el selector de banco despliega su lista dentro del sheet y scrollea con el dedo; ídem la calculadora de monto. Son los dos únicos consumidores que portalean adentro del panel (tarea 4.3)
-- [ ] 7.10 A 390px, recorrer `/accounts`, `/cards`, `/settings/categories`, `/transactions/recurring` y `/cards/[id]`: la acción de crear está en el header arriba a la derecha, en verde, y no hay ningún botón flotante. En `/dashboard`, `/transactions` y `/shared` el `QuickAddFab` sigue estando
 - [ ] 7.9 A 390px, abrir cualquier drawer con poco contenido (ej. editar nombre del hogar) → el sheet hugea su alto en vez de ocupar la pantalla entera
+
+- [ ] 7.10 A 390px, recorrer `/accounts`, `/cards`, `/settings/categories`, `/transactions/recurring` y `/cards/[id]`: la acción de crear está en el header arriba a la derecha, en verde, y no hay ningún botón flotante. En `/dashboard`, `/transactions` y `/shared` el `QuickAddFab` sigue estando
