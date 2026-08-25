@@ -2081,6 +2081,35 @@
     "accounts_total": "Your {currency} accounts",
     "to_spend": "To spend",
     "gap_note": "Your bank will still show the full amount. Grana doesn't move your money: it marks how much you decided not to touch.",
-    "history_truncated": "Showing the latest {count} entries."
+    "history_truncated": "Showing the latest {count} entries.",
+    "purposes": {
+      "label": "What for",
+      "none": "Unassigned",
+      "choose": "What for?",
+      "change": "Change",
+      "new": "New purpose",
+      "edit": "Edit purpose",
+      "name_label": "Name",
+      "icon_label": "Icon",
+      "suggestions": "Suggested",
+      "yours": "Yours",
+      "create_named": "Create “{name}”",
+      "empty": "You haven’t created any yet.",
+      "delete": "Delete purpose",
+      "delete_confirm": "Delete “{name}”?",
+      "delete_with_money": "You have {amounts} saved here. If you delete it, that money goes back to Unassigned. It isn’t lost or spent.",
+      "delete_empty": "It has no money saved.",
+      "seeds": {
+        "emergency": "Emergency",
+        "trip": "Trip",
+        "car": "Car",
+        "home": "Home",
+        "studies": "Studies"
+      },
+      "errors": {
+        "duplicate": "You already have a purpose called “{name}”.",
+        "generic": "We couldn’t save the purpose. Try again."
+      }
+    }
   }
 }

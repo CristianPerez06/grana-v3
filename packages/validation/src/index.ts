@@ -49,8 +49,10 @@ export {
 export {
   reserveAvailabilitySchema,
   releaseAvailabilitySchema,
+  savingsPurposeSchema,
   type ReserveAvailabilityInput,
   type ReleaseAvailabilityInput,
+  type SavingsPurposeInput,
 } from "./savings";
 export {
   createIncomeSchema,

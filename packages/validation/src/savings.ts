@@ -59,3 +59,20 @@ export const releaseAvailabilitySchema = yup
 
 export type ReserveAvailabilityInput = yup.InferType<typeof reserveAvailabilitySchema>
 export type ReleaseAvailabilityInput = yup.InferType<typeof releaseAvailabilitySchema>
+
+// El nombre es lo único obligatorio de un propósito. El tope de 40 no es
+// arbitrario: el nombre se muestra en el selector, en el detalle agrupado y —en
+// fase 4— en la card, y un nombre que no entra en la fila más angosta se corta
+// justo donde estaba lo que lo distinguía de otro.
+//
+// La unicidad NO se valida acá: depende de lo que el usuario ya tenga, que un
+// schema no puede ver. La hace cumplir el índice de la migración 0058, y la
+// mutación traduce el choque en un mensaje que dice cuál es el que ya existe.
+export const savingsPurposeSchema = yup
+  .object({
+    name: yup.string().label('name').required().trim().min(1).max(40),
+    icon: yup.string().label('icon').nullable().optional().default(null),
+  })
+  .strict()
+
+export type SavingsPurposeInput = yup.InferType<typeof savingsPurposeSchema>

@@ -178,11 +178,26 @@ export const RESERVE_HISTORY_LIMIT = 25
 export async function getReserveHistory(
   supabase: GranaSupabaseClient,
   currencyCode: BalanceCurrency,
+  /**
+   * Acota el listado a UN grupo. `undefined` trae todos; `null` trae «Sin
+   * destino», que es un grupo y no una ausencia — por eso los dos casos no
+   * pueden colapsarse en un solo valor.
+   */
+  purposeId?: string | null,
 ): Promise<{ entries: ReserveEntry[]; hasMore: boolean }> {
-  const { data, error } = await supabase
+  const base = supabase
     .from('availability_reserve')
-    .select('id, currency_code, amount, date, created_at')
+    .select('id, currency_code, amount, date, created_at, purpose_id')
     .eq('currency_code', currencyCode)
+
+  const scoped =
+    purposeId === undefined
+      ? base
+      : purposeId === null
+        ? base.is('purpose_id', null)
+        : base.eq('purpose_id', purposeId)
+
+  const { data, error } = await scoped
     .order('date', { ascending: false })
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
@@ -201,6 +216,7 @@ export async function getReserveHistory(
       amount: toNumber(row.amount),
       date: row.date,
       createdAt: row.created_at,
+      purposeId: row.purpose_id ?? null,
     })),
   }
 }

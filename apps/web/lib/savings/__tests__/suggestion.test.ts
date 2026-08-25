@@ -22,6 +22,7 @@ const entry = (amount: number, date: string): ReserveEntry => ({
   amount,
   date,
   createdAt: `${date}T12:00:00Z`,
+  purposeId: null,
 })
 
 describe('deriveSuggestedPct — the percentage comes from what the user did', () => {

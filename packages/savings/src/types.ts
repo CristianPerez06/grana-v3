@@ -34,6 +34,16 @@ export type ReserveFlowSums = {
 }
 
 /**
+ * Un propósito: para qué se guardó. Un nombre y un ícono, y nada más — sin
+ * objetivo, sin fecha y sin progreso, que es lo que lo separa de una meta.
+ */
+export type Purpose = {
+  id: string
+  name: string
+  icon: string | null
+}
+
+/**
  * Lo guardado de UN propósito en UNA moneda, tal como lo devuelve
  * `get_purpose_sums` (migración 0058).
  *
@@ -62,6 +72,8 @@ export type ReserveEntry = {
   amount: number
   date: string
   createdAt: string
+  /** El grupo al que pertenece. `null` es «Sin destino». */
+  purposeId: string | null
 }
 
 /**
@@ -81,4 +93,6 @@ export type SavingsMutationResult<T = never> =
       limit?: number
       /** El nombre del propósito cuando el rechazo fue su piso, para que el mensaje lo diga. */
       purposeName?: string | null
+      /** El nombre que ya ocupaba el lugar cuando el rechazo fue por duplicado. */
+      conflictingName?: string
     }

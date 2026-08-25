@@ -9,6 +9,7 @@ export {
   getLatestIncome,
 } from './queries'
 export { reserveAvailability, releaseAvailability } from './mutations'
+export { listPurposes, createPurpose, renamePurpose, deletePurpose } from './purposes'
 export {
   deriveSuggestion,
   deriveSuggestedPct,
@@ -22,6 +23,7 @@ export type {
   AvailableSums,
   ReserveFlowSums,
   PurposeSums,
+  Purpose,
   ReserveEntry,
   SavingsMutationResult,
 } from './types'

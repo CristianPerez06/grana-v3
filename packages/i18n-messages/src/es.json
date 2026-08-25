@@ -2081,6 +2081,35 @@
     "accounts_total": "Tus cuentas en {currency}",
     "to_spend": "Para gastar",
     "gap_note": "Tu banco va a seguir mostrando el total. Grana no mueve tu plata: marca cuánto decidiste no tocar.",
-    "history_truncated": "Se muestran los últimos {count} movimientos."
+    "history_truncated": "Se muestran los últimos {count} movimientos.",
+    "purposes": {
+      "label": "Para qué",
+      "none": "Sin destino",
+      "choose": "¿Para qué?",
+      "change": "Cambiar",
+      "new": "Nuevo propósito",
+      "edit": "Editar propósito",
+      "name_label": "Nombre",
+      "icon_label": "Ícono",
+      "suggestions": "Sugeridos",
+      "yours": "Tuyos",
+      "create_named": "Crear «{name}»",
+      "empty": "Todavía no creaste ninguno.",
+      "delete": "Borrar propósito",
+      "delete_confirm": "¿Borrar «{name}»?",
+      "delete_with_money": "Tenés {amounts} guardados acá. Si lo borrás, esa plata vuelve a Sin destino. No se pierde ni se gasta.",
+      "delete_empty": "No tiene plata guardada.",
+      "seeds": {
+        "emergency": "Emergencia",
+        "trip": "Viaje",
+        "car": "Auto",
+        "home": "Casa",
+        "studies": "Estudio"
+      },
+      "errors": {
+        "duplicate": "Ya tenés un propósito llamado «{name}».",
+        "generic": "No pudimos guardar el propósito. Probá de nuevo."
+      }
+    }
   }
 }
