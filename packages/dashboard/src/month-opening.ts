@@ -11,15 +11,22 @@
 // which is the whole card auditable on screen: the amounts of the light zone add
 // up to the number in the dark zone above them.
 //
-// `guardado` is the month's NET RESERVE FLOW and it is zero everywhere it does
-// not apply — a past month, or a current month with no saving activity. In those
-// cases the expression collapses to the three-term one it always was, and the
-// same pieces keep doing the same job.
+// `guardado` is the RESERVE STOCK — the whole thing, carried-over months
+// included — and it is zero everywhere it does not apply: a past month, or a
+// current month with nothing set aside. In those cases the expression collapses
+// to the three-term one it always was.
 //
-// It is the flow, never the accumulated stock: a carried-over reserve is already
-// inside "Tenías", which in the current month is the DISPONIBLE the user opened
-// with rather than the raw balance. Subtracting the stock here would count it
-// twice and the card would report an opening the user never had.
+// The stock and not the month's flow, because "Tenías" means the ACCOUNT BALANCE
+// the month opened with — a number the user can check against their own bank.
+// The reasoning is spelled out in `savings-row.ts`, which is also where the term
+// comes from; this comment used to say the opposite of what the code does, and
+// the caller has always passed `savingsIdentityTerm`, which returns the stock.
+//
+// The asymmetry to keep in mind when a term is added here: subtract the STOCK
+// for anything that leaves money sitting in the accounts (a reserve moves no
+// money), and the month's FLOW for anything that takes it out of them. Money
+// that left an account in a previous month is already absent from "Tenías", so
+// subtracting its stock again would count it twice.
 //
 // RN-safe: no DOM/Node deps.
 

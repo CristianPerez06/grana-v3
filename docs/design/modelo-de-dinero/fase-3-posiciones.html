@@ -302,6 +302,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     <div class="open"><b>Las dos preguntas que este mock viene a cerrar.</b>
       <ol>
         <li><b>Pasos 1–7 · ¿Cómo se crea un plazo fijo?</b> Dibujarlo pantalla por pantalla destapó un campo duplicado que un mock más corto dejaba pasar: <b>el capital se pedía dos veces</b>, en el monto de la transferencia y otra vez en el alta de la posición. Dos campos para el mismo número.</li>
+        <li><b>Paso 11 · ¿Stock o flujo?</b> Guardado resta el <b>stock entero</b> porque guardar no saca plata de las cuentas. Poner a trabajar sí la saca, así que su término es el <b>flujo del mes</b> — y por eso, al revés que Guardado, <b>se dibuja también en meses pasados</b>.</li>
         <li><b>Pasos 8–10 · ¿Aparece una línea nueva en «Resumen del mes»?</b> El README la dejó abierta porque es prima hermana de <i>«Pasaste a otras cuentas»</i>, que ya fue rechazada una vez. Se juzga con los mismos números al lado. <b>La cuenta la cierra</b> — ver el comparador al pie.</li>
         <li><b>Paso 2 · ¿Dónde entra «Invertir»?</b> El segmented ya tiene cinco tabs y llena el ancho de un teléfono. La sexta no entra. <b>La respuesta resultó ser que no hace falta ninguna.</b></li>
       </ol>
@@ -523,23 +524,23 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
       <span class="step-num">8</span>
       <div>
         <h2>El mes, sin línea nueva</h2>
-        <p class="sub">Lo que pasa si no se toca nada.</p>
-        <span class="badge b-bad">No cierra</span>
+        <p class="sub">Cierra igual. Ese es el problema.</p>
+        <span class="badge b-bad">Reescribe el pasado</span>
       </div>
     </div>
     <div class="phone"><div class="scr">
       <div class="ledger">
         <div class="cap">Resumen del mes · agosto</div>
-        <div class="l"><span class="k"><i></i>Tenías</span><span class="a">−$ 2.729.825,17</span></div>
+        <div class="l new" style="background:#FDECEA"><span class="k"><i></i>Tenías</span><span class="a">−$ 3.429.825,17</span></div>
         <div class="l"><span class="k"><i class="em"></i>Entró</span><span class="a em">+$ 8.021.007,00</span></div>
         <div class="l"><span class="k"><i class="sl"></i>Se fué</span><span class="a sl">−$ 205.433,66</span></div>
         <div class="l"><span class="k"><i class="em"></i>Guardado</span><span class="a em">−$ 180.000,00</span></div>
-        <div class="l sum"><span class="k">La cuenta da</span><span class="a">$ 4.905.748,17</span></div>
-        <div class="l"><span class="k">Pero arriba dice</span><span class="a">$ 4.205.748,17</span></div>
-        <div class="verdict no"><span class="m">✕</span><div><b>Faltan $ 700.000,00.</b> La card dejó de cerrar contra el número que tiene arriba. No hay ninguna línea que explique a dónde se fueron, y el usuario que sume los cuatro números va a creer que Grana perdió plata.</div></div>
+        <div class="l sum"><span class="k">Para gastar</span><span class="a">$ 4.205.748,17</span></div>
+        <div class="verdict no"><span class="m">✕</span><div><b>La suma cierra, y «Tenías» miente.</b> El 1 de agosto tenías <b>−$ 2.729.825,17</b>. La card dice −$ 3.429.825,17: exactamente $ 700.000 peor. Nadie lo puede notar sumando, porque la cuenta da.</div></div>
       </div>
     </div></div>
-    <p class="note"><b>Esto es lo que la pregunta abierta no estaba viendo.</b> El README la planteó como una cuestión de gusto —«¿molesta la línea o no?»— y no lo es: sin un cuarto término, <b>la identidad de la card se rompe</b>. Y esa identidad es lo que la hace auditable a ojo, que era el punto de toda la fase 1.</p>
+    <p class="note"><b>«Tenías» no se lee: se despeja.</b> <code>Tenías = disponible − (entró − se fué − guardado)</code>. La identidad se cumple <b>por construcción</b>, así que nunca se va a ver un hueco: cualquier plata que salga de las cuentas sin término propio la absorbe «Tenías» en silencio.</p>
+    <p class="note">Eso vuelve la falla <b>peor</b> que un hueco, no mejor. Una suma que no da es algo que el usuario puede agarrar. <b>Un pasado reescrito no.</b> Y es exactamente contra lo que ya advierte el código de la fase 1: <i>"mayo leería un número el lunes y otro el martes sin que haya pasado nada en mayo"</i>.</p>
     <p class="note">Por eso <b>no es prima hermana de <i>«Pasaste a otras cuentas»</i></b>. Aquella nombraba un movimiento que <b>no cambiaba el disponible</b> — plata yendo de un bolsillo tuyo a otro, los dos contando igual. Era ruido porque no explicaba ningún cambio. Esta explica exactamente $700.000 de cambio.</p>
   </section>
 
@@ -561,7 +562,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
         <div class="l"><span class="k"><i class="em"></i>Guardado</span><span class="a em">−$ 180.000,00</span></div>
         <div class="l new"><span class="k"><i class="pl"></i>Puesto a trabajar</span><span class="a pl">−$ 700.000,00</span></div>
         <div class="l sum"><span class="k">Para gastar</span><span class="a">$ 4.205.748,17</span></div>
-        <div class="verdict ok"><span class="m">✓</span><div><b>Cierra.</b> Cada línea nombra una razón por la que el disponible cambió, y no hay ninguna razón sin línea. Los cinco números se suman con el dedo y dan el de arriba.</div></div>
+        <div class="verdict ok"><span class="m">✓</span><div><b>Cierra, y «Tenías» vuelve a ser cierto.</b> −$ 2.729.825,17 es lo que había el 1 de agosto. Cada línea nombra una razón por la que el disponible cambió, y no hay ninguna razón sin línea.</div></div>
       </div>
     </div></div>
     <p class="note"><b>Color propio, no el emerald de Guardado.</b> Comparten que sacan plata del disponible, pero no son lo mismo: <b>guardado se deshace con un tap</b> y esto <b>no se puede tocar hasta el 24 de septiembre</b>. Pintarlas iguales diría que son la misma decisión con distinto nombre.</p>
@@ -591,6 +592,33 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     </div></div>
     <p class="note"><b>Es la trampa de la fase.</b> Cerrar la cuenta es fácil: cualquier término absorbe cualquier diferencia. Lo difícil es que además <b>cada término siga significando lo que dice</b>.</p>
     <p class="note">Y tiene una tercera variante, más tentadora: <b>una sola línea «Fuera de lo disponible −$ 880.000»</b> que junte guardado y posiciones. También cierra, y colapsa una decisión reversible con plata inmovilizada por un mes. El usuario que ve un solo número no sabe cuánto de eso puede recuperar hoy.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">11</span>
+      <div>
+        <h2>Guardado es un stock. Esto es un flujo.</h2>
+        <p class="sub">La diferencia decide si la línea aparece en meses pasados.</p>
+        <span class="badge b-new">Regla nueva</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="ledger">
+        <div class="cap">Agosto, mirado en noviembre</div>
+        <div class="l"><span class="k"><i></i>Tenías</span><span class="a">−$ 2.729.825,17</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Entró</span><span class="a em">+$ 8.021.007,00</span></div>
+        <div class="l"><span class="k"><i class="sl"></i>Se fué</span><span class="a sl">−$ 205.433,66</span></div>
+        <div class="l" style="opacity:.42"><span class="k"><i class="em"></i>Guardado</span><span class="a em">no se dibuja</span></div>
+        <div class="l new"><span class="k"><i class="pl"></i>Puesto a trabajar</span><span class="a pl">−$ 700.000,00</span></div>
+        <div class="l sum"><span class="k">Saldo al cierre</span><span class="a">$ 4.385.748,17</span></div>
+        <div class="verdict ok"><span class="m">✓</span><div><b>Las dos líneas hacen lo contrario, y por la misma razón.</b> Guardado desaparece de un mes cerrado; Puesto a trabajar se queda para siempre en el mes donde ocurrió.</div></div>
+      </div>
+      <div class="callout"><b>Guardar no saca plata de las cuentas.</b> Por eso su término es el <b>stock entero</b>, meses anteriores incluidos: el saldo con el que abrió el mes todavía lo contiene y hay que restarlo completo.<br><br><b>Poner a trabajar sí la saca.</b> Lo que salió en julio ya no está en el saldo con el que abrió agosto — restar el stock lo contaría dos veces. El término es el <b>flujo del mes</b>.</div>
+    </div></div>
+    <p class="note"><b>Que sea flujo es lo que la hace pertenecer a su mes.</b> Un stock es una postura de hoy, y mostrarlo sobre un mes cerrado reescribe el pasado — por eso Guardado no se dibuja ahí. Un flujo es un hecho fechado: en agosto salieron $700.000, y eso va a ser verdad en noviembre igual que hoy.</p>
+    <p class="note"><b>Sin el término, agosto queda mal para siempre.</b> Mirado en noviembre, «Tenías» se despeja contra el saldo de cuentas al cierre —que ya no tiene los $700.000— y da −$ 3.429.825,17. El mismo error del paso 8, congelado en un mes que ya nadie va a revisar.</p>
+    <p class="note"><b>Y tiene signo.</b> Cuando en septiembre vuelva el capital, el flujo de ese mes es negativo y la línea <b>suma</b> al disponible. Va a necesitar dos textos, como <i>Guardaste</i> / <i>Volviste a usar</i>. Cuál es el par correcto, todavía no está decidido.</p>
   </section>
 
 </div>
@@ -651,6 +679,16 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
         <li>Poner plata a trabajar es una <b>transferencia con destino a una posición</b>, no un tipo de movimiento nuevo.</li>
         <li>Una sexta pestaña sería modelar el <b>destino</b> como si fuera un <b>tipo</b> — el mismo error de categoría que el <code>counts_as_available</code> que el modelo ya descartó.</li>
         <li>Lo único que cambia es el <b>selector de destino</b>, que ya existía y gana filas.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Lo delicado</div>
+      <h4>El bucket, no la línea</h4>
+      <span class="taps">Hoy ya cae en «Se fué», sin escribir una línea de código</span>
+      <ol>
+        <li>El mes se arma desde <b>buckets con signo</b>: <code>totalAdjustment</code>, <code>totalSettlement</code>, <code>totalExchange</code>, <code>totalTransfer</code>. El negativo va a «Se fué», el positivo a «Entró».</li>
+        <li><code>totalTransfer</code> es <b>«el residual de las transferencias cuyas dos patas no son propias»</b> — cero en el caso normal. Una posición no es una cuenta propia, así que una transferencia hacia ella cae <b>ahí</b>, en negativo, <b>en «Se fué»</b>.</li>
+        <li>No es un riesgo a futuro: es el <b>comportamiento actual</b>. «Puesto a trabajar» tiene que nacer como <b>bucket propio de la agregación</b>. Si nace solo como fila de UI, tapa que abajo sigue entrando como gasto.</li>
       </ol>
     </div>
     <div class="way">
