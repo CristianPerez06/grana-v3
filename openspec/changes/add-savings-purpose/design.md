@@ -289,3 +289,46 @@ no aprende dos caminos para lo mismo según cuánto tenga hecho.
 **Guardar tampoco iría en esa vista**, y esa fue la observación que la destapó: guardar desde el
 resto no agrega nada sobre el botón del nivel de arriba, y es una versión *peor* del mismo botón —
 arriba se puede elegir propósito, ahí quedaría clavado en "ninguno".
+
+## D16 — La moneda es el eje de la OPERACIÓN; el propósito, el de la LECTURA
+
+El detalle arrancó partido por moneda —un bloque para pesos y otro para dólares— y después con un
+selector entre los dos. Las dos versiones son técnicamente correctas y las dos esconden la pregunta
+de la fase: *¿para qué tengo guardada la plata?*
+
+Con la moneda como eje, un propósito bimoneda **no existe en ninguna pantalla**: para saber cuánto
+hay para «Japón» había que mirar pesos, recordar el número, cambiar a dólares y sumar de cabeza — que
+es exactamente la operación que el modelo prohíbe hacer.
+
+Entonces:
+
+- **Leer** es por propósito. Cada fila muestra sus montos en las dos monedas, **sin sumarlos**. Y la
+  fila crece solo cuando el dato lo pide: un propósito con pesos únicamente ocupa una línea.
+- **Operar** es por moneda, porque una operación es sobre una plata concreta. El chip vive en los
+  formularios —guardar, destinar, volver a usar— que es donde la moneda es un dato y no una
+  estructura.
+
+El detalle queda con lo que la fase existe para contestar: **cuánto hay guardado**, **cuánto queda
+para gastar**, **para qué es**, y las dos acciones.
+
+### Lo explicativo se pliega, no se borra
+
+*«Cómo se ve en tu banco»* —el puente, la nota y el neto del mes— pasa a un desplegable. Fue el
+centro de la fase 1, cuando la idea nueva era *"tu banco muestra otro número"*. Ya no lo es.
+
+Pero **no se elimina**: es lo que evita que alguien abra su home banking, vea otra cifra y le crea al
+banco. Una explicación que se entiende una vez no tiene que cobrar altura todos los días — y tampoco
+puede desaparecer el día que alguien la necesita.
+
+El historial se pliega por lo mismo, y pasa a ser bimoneda en **una sola consulta**: dos listas de 25
+mezcladas a mano dan hasta 50 filas y un "hay más" que ya no significa nada.
+
+## D17 — El verbo lleva la dirección; el número, no
+
+*«Volviste a usar este mes −$110.000»* es una doble negación: el rótulo ya dice que la plata salió
+del guardado, y el signo lo dice otra vez. Se lee como *"des-volviste a usar"*.
+
+El neto del mes va **sin signo**. El rótulo dice para dónde y el número dice cuánto.
+
+En el historial el signo **se queda**, y no es incoherencia: ahí es el dato que hace escaneable la
+columna, y el verbo es la etiqueta de cada fila. Roles invertidos, tratamiento distinto.

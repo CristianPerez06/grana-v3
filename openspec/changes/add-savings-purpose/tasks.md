@@ -73,3 +73,13 @@
 - [x] 8.3 Actualizar `docs/modelo-de-dinero.md` si alguna decisión de esta fase corrige el documento — no hizo falta: la fase se implementó como el documento la describe, y las dos decisiones nuevas (D7 nombre único, D8 jerarquía diferida) son de implementación, no correcciones del modelo
 - [x] 8.4 `pnpm openspec:check`, lint, typecheck (web y mobile) y tests en verde
 - [ ] 8.5 **No archivar** hasta el QA nativo, y **no mergear** con la fase 1 y 2 solas: `feature/add-savings-set-aside` es la branch de integración del modelo y sube con las fases que lo completan. Una branch por fase se probó y se descartó: con merge squash a `main` todo colapsa en un commit igual, así que la branch extra no compraba nada y sí partía el trabajo en dos lugares
+
+## 11. El eje de lectura (D16, D17)
+
+- [x] 11.1 El detalle se organiza por propósito; cada fila muestra sus monedas sin sumarlas, y crece solo cuando el dato lo pide
+- [x] 11.2 Los dos números de cabecera —guardado y para gastar— bimoneda, sin selector
+- [x] 11.3 El selector de moneda baja a los formularios, donde determina el tope o el piso
+- [x] 11.4 *Cómo se ve en tu banco* plegado: el puente, la nota y el neto del mes
+- [x] 11.5 El historial plegado y bimoneda, en una sola consulta
+- [x] 11.6 El neto del mes pierde el signo: el verbo ya lleva la dirección
+- [x] 11.7 Paridad nativa

@@ -37,7 +37,7 @@ export function useAvailableTotals(asOfISO: string, enabled = true) {
  * it.
  */
 export function useSavingsDetail(enabled: boolean, monthStart: Date, today: Date) {
-  const [sums, ars, usd, flow, purposeSums, purposes] = useQueries({
+  const [sums, history, flow, purposeSums, purposes] = useQueries({
     queries: [
       {
         queryKey: ['savings', 'sums'] as const,
@@ -46,14 +46,10 @@ export function useSavingsDetail(enabled: boolean, monthStart: Date, today: Date
         staleTime: 0,
       },
       {
-        queryKey: ['savings', 'history', 'ARS'] as const,
-        queryFn: () => getReserveHistory(supabase, 'ARS'),
-        enabled,
-        staleTime: 0,
-      },
-      {
-        queryKey: ['savings', 'history', 'USD'] as const,
-        queryFn: () => getReserveHistory(supabase, 'USD'),
+        // Las dos monedas en UNA lista: el detalle ya no está partido por
+        // moneda, así que su historial tampoco.
+        queryKey: ['savings', 'history', 'all'] as const,
+        queryFn: () => getReserveHistory(supabase),
         enabled,
         staleTime: 0,
       },
@@ -86,18 +82,15 @@ export function useSavingsDetail(enabled: boolean, monthStart: Date, today: Date
     ],
   })
 
-  const empty = { entries: [] as ReserveEntry[], hasMore: false }
-  const history: Record<'ARS' | 'USD', { entries: ReserveEntry[]; hasMore: boolean }> = {
-    ARS: ars.data ?? empty,
-    USD: usd.data ?? empty,
-  }
-
   const monthNet = (currency: 'ARS' | 'USD'): number =>
     flow.data?.find((f) => f.currencyCode === currency)?.reservedNet ?? 0
 
   return {
     sums: (sums.data ?? null) as AvailableSums[] | null,
-    history,
+    history: (history.data ?? { entries: [] as ReserveEntry[], hasMore: false }) as {
+      entries: ReserveEntry[]
+      hasMore: boolean
+    },
     monthNet,
     purposeSums: (purposeSums.data ?? []) as PurposeSums[],
     purposes: (purposes.data ?? []) as Purpose[],

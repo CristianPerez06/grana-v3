@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
+import { ChevronDown } from 'lucide-react-native'
+import { colors } from '../../lib/colors'
 import { PURPOSE_SEEDS, type Purpose } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
@@ -28,9 +30,10 @@ const CURRENCY_SYMBOL: Record<Currency, string> = { ARS: '$', USD: 'U$D' }
 export const PurposeAllocate = ({
   purpose: fixedPurpose,
   purposes,
-  currency,
+  currency: initialCurrency,
+  currencies,
   direction,
-  available,
+  availableFor,
   onCreateSeed,
   onCreateCustom,
   onDone,
@@ -40,9 +43,15 @@ export const PurposeAllocate = ({
   purpose: Purpose | null
   purposes: Purpose[]
   currency: Currency
+  /** Las monedas que el usuario tiene en juego. */
+  currencies: Currency[]
   direction: 'allocate' | 'unallocate'
-  /** El piso: el resto al destinar, lo destinado al quitar. */
-  available: number
+  /**
+   * El piso de CADA moneda. Una función y no un número porque la moneda se
+   * elige acá: el detalle dejó de estar partido por moneda, así que la elección
+   * bajó al formulario, donde es un dato de la operación.
+   */
+  availableFor: (currency: Currency) => number
   /** Crea la sugerencia y devuelve el propósito, para dejarlo seleccionado. */
   onCreateSeed: (seedKey: string) => Promise<Purpose | null>
   onCreateCustom: () => void
@@ -50,6 +59,7 @@ export const PurposeAllocate = ({
   onBack: () => void
 }) => {
   const t = useT()
+  const [currency, setCurrency] = useState<Currency>(initialCurrency)
   const [chosen, setChosen] = useState<Purpose | null>(fixedPurpose)
   const [creating, setCreating] = useState(false)
   const [amount, setAmount] = useState('')
@@ -59,6 +69,7 @@ export const PurposeAllocate = ({
   const money = (value: number) => (currency === 'USD' ? formatUSD(value) : formatARS(value, true))
 
   const purpose = chosen
+  const available = availableFor(currency)
   const value = parseMoneyInput(amount) ?? 0
 
   const taken = new Set(purposes.map((x) => x.name.trim().toLowerCase()))
@@ -122,9 +133,21 @@ export const PurposeAllocate = ({
           <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
             {t('savings.amount_label')}
           </Text>
-          <View className="rounded-lg border border-border bg-surface px-2.5 py-1">
+          {/* La moneda se elige acá: cambiarla cambia el piso, porque lo que
+              hay sin destino en pesos no es lo que hay sin destino en dólares. */}
+          <Pressable
+            accessibilityRole="button"
+            disabled={currencies.length < 2}
+            onPress={() =>
+              setCurrency(
+                currencies[(currencies.indexOf(currency) + 1) % currencies.length] ?? currency,
+              )
+            }
+            className="flex-row items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1"
+          >
             <Text className="text-[11px] font-bold text-text">{currency}</Text>
-          </View>
+            {currencies.length > 1 && <ChevronDown size={11} color={colors.textMuted} />}
+          </Pressable>
         </View>
         <View className="mt-2 min-h-[56px] flex-row items-center justify-center">
           <Text className="pl-1 text-[30px] font-bold text-text">

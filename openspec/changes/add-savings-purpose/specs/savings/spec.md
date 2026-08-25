@@ -248,3 +248,47 @@ operación.
 
 - **WHEN** se intenta guardar o repartir usando el propósito de otro usuario
 - **THEN** la operación se rechaza y no se registra ninguna fila
+
+---
+
+### Requirement: El detalle se organiza por propósito, no por moneda
+
+La vista de detalle del guardado SHALL organizarse por **propósito**, y cada grupo SHALL mostrar sus
+montos en todas las monedas en que tenga algo, sin sumarlos y sin convertirlos. NO SHALL partir el
+detalle por moneda ni obligar a cambiar de moneda para conocer el total de un propósito.
+
+La elección de moneda SHALL vivir en los formularios de operación, donde determina el tope o el piso
+aplicable.
+
+La explicación de la diferencia con el saldo bancario SHALL seguir disponible, y PUEDE presentarse
+plegada.
+
+#### Scenario: Un propósito bimoneda se lee de una vez
+
+- **GIVEN** "Viaje" con $90.000 y US$ 10
+- **WHEN** el usuario abre el detalle del guardado
+- **THEN** la fila de "Viaje" muestra los dos montos
+- **AND** no aparece ningún número que los combine
+
+#### Scenario: Un propósito de una sola moneda no ocupa de más
+
+- **GIVEN** "Emergencia" con $50.000 y nada en dólares
+- **THEN** su fila muestra un solo monto
+
+#### Scenario: La moneda se elige al operar
+
+- **WHEN** el usuario destina un monto
+- **THEN** puede elegir la moneda en el formulario
+- **AND** el piso mostrado corresponde a la moneda elegida
+
+---
+
+### Requirement: El rótulo lleva la dirección, no el signo
+
+Cuando un rótulo ya exprese la dirección de un flujo, el monto NO SHALL repetirla con un signo
+negativo.
+
+#### Scenario: El neto del mes no se muestra en negativo
+
+- **GIVEN** un mes en que se volvió a usar más de lo que se guardó
+- **THEN** el rótulo dice "Volviste a usar este mes" y el monto se muestra sin signo negativo
