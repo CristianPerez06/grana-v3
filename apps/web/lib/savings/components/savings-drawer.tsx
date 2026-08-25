@@ -437,10 +437,11 @@ export function SavingsDrawer({
           <PurposeDelete
             purpose={view.purpose}
             sums={purposeSums}
-            onDone={async () => {
-              await refresh()
-              // Vuelve al detalle, no al grupo: el grupo ya no existe.
+            onDone={() => {
+              // Al detalle, no al grupo: el grupo ya no existe. Y navegar antes
+              // de refrescar, por lo mismo que arriba.
               setStack([{ kind: 'detail' }])
+              void refresh()
             }}
             onBack={back}
           />
@@ -459,9 +460,14 @@ export function SavingsDrawer({
             }
             onCreateSeed={createFromSeed}
             onCreateCustom={() => push({ kind: 'purposeForm', purpose: null })}
-            onDone={async () => {
-              await refresh()
+            onDone={() => {
+              // Navegar PRIMERO. Refrescar antes dejaba la pantalla un instante
+              // con los datos nuevos y el monto todavía escrito: el tope pasaba
+              // a estar cruzado y se pintaba el error en rojo, sobre una
+              // operación que había salido bien. Un destello que acusa un
+              // problema inexistente.
               back()
+              void refresh()
             }}
             onBack={back}
           />
@@ -513,6 +519,10 @@ export function SavingsDrawer({
             currency={view.currency}
             purpose={view.purpose}
             reserved={groupAmount(view.currency, view.purpose.id)}
+            amounts={(['ARS', 'USD'] as const).map((c) => ({
+              currency: c,
+              reserved: groupAmount(c, view.purpose.id),
+            }))}
             onSave={() =>
               push({
                 kind: 'form',
@@ -843,6 +853,7 @@ const GroupBlock = ({
   currency,
   purpose,
   reserved,
+  amounts,
   onSave,
   onRelease,
   onAllocate,
@@ -853,7 +864,10 @@ const GroupBlock = ({
 }: {
   currency: Currency
   purpose: Purpose
+  /** Lo de ESTA moneda: es el piso de las acciones, que son por moneda. */
   reserved: number
+  /** Lo de todas las monedas, para responder "cuánto tengo para esto". */
+  amounts: { currency: Currency; reserved: number }[]
   onSave: () => void
   onRelease: () => void
   /** Desde «Sin destino»: elegir a qué propósito apartar. Desde uno: apartarle más. */
@@ -905,11 +919,24 @@ const GroupBlock = ({
 
       <section className="mt-4 rounded-2xl border border-border-soft bg-card p-4">
         <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
-          {t('purposes.allocated_in', { purpose: purpose.name })}
+          {t('purposes.totals')}
         </p>
+        {/* Las dos monedas, una debajo de la otra y SIN un total que las sume.
+            "Tengo tanto para Japón" en un solo número exigiría convertir, y
+            Grana no convierte: son dos plata distintas. La que está en grande es
+            la de la moneda en la que se está operando; la otra acompaña, para
+            que la pregunta "¿cuánto tengo para esto?" no obligue a cambiar de
+            pantalla y recordar el número. */}
         <p className="mt-2 text-[26px] font-extrabold leading-none tracking-[-0.04em] text-text">
           {money(reserved, currency)}
         </p>
+        {amounts
+          .filter((a) => a.currency !== currency && a.reserved !== 0)
+          .map((a) => (
+            <p key={a.currency} className="mt-1.5 text-[15px] font-bold text-text-muted">
+              {money(a.reserved, a.currency)}
+            </p>
+          ))}
 
         <>
             <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">

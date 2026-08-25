@@ -29,6 +29,7 @@ export const PurposeGroup = ({
   currency,
   purpose,
   reserved,
+  amounts,
   onSave,
   onRelease,
   onAllocate,
@@ -39,7 +40,10 @@ export const PurposeGroup = ({
 }: {
   currency: Currency
   purpose: Purpose
+  /** Lo de ESTA moneda: es el piso de las acciones, que son por moneda. */
   reserved: number
+  /** Lo de todas las monedas, para responder "cuánto tengo para esto". */
+  amounts: { currency: Currency; reserved: number }[]
   onSave: () => void
   onRelease: () => void
   /** Desde «Sin destino»: elegir a qué apartar. Desde uno: apartarle más. */
@@ -88,11 +92,20 @@ export const PurposeGroup = ({
 
       <View className="mt-4 rounded-2xl border border-border bg-card p-4">
         <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
-          {t('savings.purposes.allocated_in', { purpose: purpose.name })}
+          {t('savings.purposes.totals')}
         </Text>
+        {/* Las dos monedas, sin un total que las sume: eso exigiría convertir, y
+            Grana no convierte. La grande es la de la moneda en la que se opera. */}
         <Text className="mt-1.5 text-[24px] font-extrabold text-text">
           {money(reserved, currency)}
         </Text>
+        {amounts
+          .filter((a) => a.currency !== currency && a.reserved !== 0)
+          .map((a) => (
+            <Text key={a.currency} className="mt-1 text-[15px] font-bold text-text-muted">
+              {money(a.reserved, a.currency)}
+            </Text>
+          ))}
 
         <>
             <Text className="mt-4 text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">

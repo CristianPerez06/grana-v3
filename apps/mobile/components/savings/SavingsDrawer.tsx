@@ -317,10 +317,9 @@ export const SavingsDrawer = ({
           <PurposeDelete
             purpose={view.purpose}
             sums={purposeSums}
-            onDone={async () => {
-              await refresh()
-              // Al detalle, no al grupo: el grupo ya no existe.
+            onDone={() => {
               setStack([{ kind: 'detail' }])
+              void refresh()
             }}
             onBack={back}
           />
@@ -339,9 +338,14 @@ export const SavingsDrawer = ({
             }
             onCreateSeed={createFromSeed}
             onCreateCustom={() => push({ kind: 'purposeForm', purpose: null })}
-            onDone={async () => {
-              await refresh()
+            onDone={() => {
+              // Navegar PRIMERO. Refrescar antes dejaba la pantalla un instante
+              // con los datos nuevos y el monto todavía escrito: el tope pasaba
+              // a estar cruzado y se pintaba el error en rojo, sobre una
+              // operación que había salido bien. Un destello que acusa un
+              // problema inexistente.
               back()
+              void refresh()
             }}
             onBack={back}
           />
@@ -387,6 +391,10 @@ export const SavingsDrawer = ({
             currency={view.currency}
             purpose={view.purpose}
             reserved={groupAmount(view.currency, view.purpose.id)}
+            amounts={(['ARS', 'USD'] as const).map((c) => ({
+              currency: c,
+              reserved: groupAmount(c, view.purpose.id),
+            }))}
             onAllocate={() =>
               push({
                 kind: 'allocate',

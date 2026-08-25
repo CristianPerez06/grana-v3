@@ -2132,7 +2132,8 @@
       "create_cta": "Crear propósito",
       "update_cta": "Guardar cambios",
       "pick_inline": "¿Para qué?",
-      "create_inline": "Nuevo"
+      "create_inline": "Nuevo",
+      "totals": "Guardado para esto"
     },
     "history_count": "Historial ({count})"
   }

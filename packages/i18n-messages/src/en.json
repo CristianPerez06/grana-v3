@@ -2132,7 +2132,8 @@
       "create_cta": "Create purpose",
       "update_cta": "Save changes",
       "pick_inline": "What for?",
-      "create_inline": "New"
+      "create_inline": "New",
+      "totals": "Saved for this"
     },
     "history_count": "History ({count})"
   }
