@@ -2,6 +2,8 @@ export {
   getAvailableSums,
   getAvailableForCurrency,
   getReserveFlowSums,
+  getPurposeSums,
+  getReservedForPurpose,
   getReserveHistory,
   RESERVE_HISTORY_LIMIT,
   getLatestIncome,
@@ -19,6 +21,7 @@ export {
 export type {
   AvailableSums,
   ReserveFlowSums,
+  PurposeSums,
   ReserveEntry,
   SavingsMutationResult,
 } from './types'

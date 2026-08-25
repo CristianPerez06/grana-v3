@@ -1,6 +1,6 @@
 import type { GranaSupabaseClient } from '@grana/supabase'
 import { formatDateISO, getTodayAR, type BalanceCurrency } from '@grana/money-logic'
-import type { AvailableSums, ReserveEntry, ReserveFlowSums } from './types'
+import type { AvailableSums, PurposeSums, ReserveEntry, ReserveFlowSums } from './types'
 
 const isBalanceCurrency = (c: string): c is BalanceCurrency => c === 'ARS' || c === 'USD'
 
@@ -60,6 +60,68 @@ export async function getAvailableForCurrency(
       accountsNet: 0,
       reserved: 0,
       available: 0,
+    }
+  )
+}
+
+// ── getPurposeSums ────────────────────────────────────────────────────────────
+// Lo guardado por (propósito, moneda), agregado en Postgres por
+// `get_purpose_sums` (migración 0058).
+//
+// Tiene dos consumidores y el segundo es el que obliga a que esto viva en SQL:
+// el detalle agrupado del drawer, y el PISO del write path. Con propósitos, "no
+// podés volver a usar más de lo que tenés guardado" deja de alcanzar — el total
+// puede cubrir un retiro que deja UN propósito en negativo. Sumar las filas en
+// TS para averiguarlo sería la misma divergencia de 0051 un nivel más abajo.
+//
+// El total por moneda de esta lectura es, por construcción, el `reserved` de
+// `getAvailableSums`. Ninguna de las dos se deriva de la otra: son dos cortes de
+// las mismas filas.
+export async function getPurposeSums(
+  supabase: GranaSupabaseClient,
+  today: Date = getTodayAR(),
+): Promise<PurposeSums[]> {
+  const { data, error } = await supabase.rpc('get_purpose_sums', {
+    p_today: formatDateISO(today),
+  })
+
+  if (error) throw error
+
+  return (data ?? [])
+    .filter((row) => isBalanceCurrency(row.currency_code))
+    .map((row) => ({
+      purposeId: row.purpose_id ?? null,
+      purposeName: row.purpose_name ?? null,
+      purposeIcon: row.purpose_icon ?? null,
+      currencyCode: row.currency_code as BalanceCurrency,
+      reserved: toNumber(row.reserved),
+    }))
+}
+
+/**
+ * El piso de UN propósito en UNA moneda: hasta acá se puede volver a usar.
+ *
+ * Ausente en la respuesta = cero, igual que en `getAvailableForCurrency`. Y acá
+ * el cero importa más: un propósito sin filas y un propósito que ya se vació
+ * significan lo mismo para esta pregunta —no hay nada que volver a usar— y los
+ * dos tienen que responder 0 y no `undefined`.
+ *
+ * `purposeId` en null pregunta por «Sin destino», que es un grupo más.
+ */
+export async function getReservedForPurpose(
+  supabase: GranaSupabaseClient,
+  currencyCode: BalanceCurrency,
+  purposeId: string | null,
+  today: Date = getTodayAR(),
+): Promise<PurposeSums> {
+  const sums = await getPurposeSums(supabase, today)
+  return (
+    sums.find((s) => s.currencyCode === currencyCode && s.purposeId === purposeId) ?? {
+      purposeId,
+      purposeName: null,
+      purposeIcon: null,
+      currencyCode,
+      reserved: 0,
     }
   )
 }

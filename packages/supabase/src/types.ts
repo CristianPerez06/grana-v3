@@ -66,6 +66,7 @@ export type Database = {
           currency_code: string
           date: string
           id: string
+          purpose_id: string | null
           user_id: string
         }
         Insert: {
@@ -74,6 +75,7 @@ export type Database = {
           currency_code: string
           date: string
           id?: string
+          purpose_id?: string | null
           user_id: string
         }
         Update: {
@@ -82,6 +84,7 @@ export type Database = {
           currency_code?: string
           date?: string
           id?: string
+          purpose_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -92,7 +95,38 @@ export type Database = {
             referencedRelation: "currencies"
             referencedColumns: ["code"]
           },
+          {
+            foreignKeyName: "availability_reserve_purpose_id_fkey"
+            columns: ["purpose_id"]
+            isOneToOne: false
+            referencedRelation: "savings_purpose"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      savings_purpose: {
+        Row: {
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       accounts: {
         Row: {
@@ -1170,6 +1204,16 @@ export type Database = {
         Returns: Json[]
       }
       get_owned_account_ids: { Args: never; Returns: string[] }
+      get_purpose_sums: {
+        Args: { p_today?: string }
+        Returns: {
+          currency_code: string
+          purpose_icon: string | null
+          purpose_id: string | null
+          purpose_name: string | null
+          reserved: number
+        }[]
+      }
       get_reserve_flow_sums: {
         Args: { p_from: string; p_to: string; p_today?: string }
         Returns: {

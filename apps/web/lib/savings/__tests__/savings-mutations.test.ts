@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { reserveAvailability, releaseAvailability } from '@grana/savings'
-import { arsRow, fakeSupabase } from './support/fake-supabase'
+import { arsRow, fakeSupabase, purposeRow } from './support/fake-supabase'
 
 /**
  * The cap and the floor of the savings write path.
@@ -38,7 +38,7 @@ describe('reserveAvailability — the cap', () => {
 
     expect(result).toEqual({ ok: true, id: 'reserve-1' })
     expect(inserted).toEqual([
-      { user_id: UID, currency_code: 'ARS', amount: 200_000, date: '2026-08-23' },
+      { user_id: UID, currency_code: 'ARS', amount: 200_000, date: '2026-08-23', purpose_id: null },
     ])
   })
 
@@ -131,7 +131,7 @@ describe('releaseAvailability — the floor', () => {
     expect(result.ok).toBe(true)
     // The user typed a positive amount; the VERB chose the sign.
     expect(inserted).toEqual([
-      { user_id: UID, currency_code: 'ARS', amount: -50_000, date: '2026-08-23' },
+      { user_id: UID, currency_code: 'ARS', amount: -50_000, date: '2026-08-23', purpose_id: null },
     ])
   })
 
@@ -245,5 +245,145 @@ describe('shape validation — the schema guards the form, the mutation guards t
       today: TODAY,
     })
     expect(result).toEqual({ ok: false, errorCode: '23514' })
+  })
+})
+
+/**
+ * The floor stops being global in phase 2.
+ *
+ * The failure it prevents is the one a global check cannot see: the total covers
+ * the withdrawal, so every number on screen agrees, and one purpose quietly goes
+ * negative. Grana would then be claiming the user may spend money that group does
+ * not have.
+ */
+describe('releaseAvailability — the floor is per purpose', () => {
+  const EMERGENCIA = '0000000e-0001-4000-8000-000000000001'
+
+  const withPurposes = () =>
+    fakeSupabase({
+      available: [arsRow(5_085_748.17, 190_000)],
+      purposes: [
+        purposeRow(150_000, { id: EMERGENCIA, name: 'Emergencia' }),
+        purposeRow(40_000),
+      ],
+      ownedPurposeIds: [EMERGENCIA],
+    })
+
+  const releaseFrom = (amount: number, purposeId: string | null) => ({
+    amount,
+    currency_code: 'ARS',
+    date: TODAY,
+    purpose_id: purposeId,
+  })
+
+  it('rejects an amount the global total covers but the purpose does not', async () => {
+    const { supabase, inserted } = withPurposes()
+
+    // $60.000 against a $190.000 total passes any global check, and leaves
+    // «Sin destino» at −$20.000.
+    const result = await releaseAvailability({
+      supabase,
+      userId: UID,
+      input: releaseFrom(60_000, null),
+      today: TODAY,
+    })
+
+    expect(result).toEqual({
+      ok: false,
+      reason: 'exceeds_reserved',
+      limit: 40_000,
+      messageKey: 'savings.errors.exceeds_reserved',
+    })
+    expect(inserted).toEqual([])
+  })
+
+  it('names the purpose in the rejection, because the screen shows a bigger total', async () => {
+    const { supabase } = withPurposes()
+
+    const result = await releaseAvailability({
+      supabase,
+      userId: UID,
+      input: releaseFrom(200_000, EMERGENCIA),
+      today: TODAY,
+    })
+
+    expect(result).toEqual({
+      ok: false,
+      reason: 'exceeds_purpose_reserved',
+      limit: 150_000,
+      purposeName: 'Emergencia',
+      messageKey: 'savings.errors.exceeds_purpose_reserved',
+    })
+  })
+
+  it('accepts exactly what the purpose holds, and tags the row with it', async () => {
+    const { supabase, inserted } = withPurposes()
+
+    const result = await releaseAvailability({
+      supabase,
+      userId: UID,
+      input: releaseFrom(150_000, EMERGENCIA),
+      today: TODAY,
+    })
+
+    expect(result.ok).toBe(true)
+    // The release carries the same purpose as the saves: a purpose's balance is
+    // the sum of its rows, signs included — the same mechanism as the total, one
+    // level down.
+    expect(inserted).toEqual([
+      {
+        user_id: UID,
+        currency_code: 'ARS',
+        amount: -150_000,
+        date: '2026-08-23',
+        purpose_id: EMERGENCIA,
+      },
+    ])
+  })
+
+  it('treats «Sin destino» as a group with the same rules, not as an absence', async () => {
+    const { supabase, inserted } = withPurposes()
+
+    const result = await releaseAvailability({
+      supabase,
+      userId: UID,
+      input: releaseFrom(40_000, null),
+      today: TODAY,
+    })
+
+    expect(result.ok).toBe(true)
+    expect(inserted[0].purpose_id).toBeNull()
+  })
+
+  it('refuses to tag a reserve with a purpose the user does not own', async () => {
+    const { supabase, inserted } = withPurposes()
+    const SOMEONE_ELSES = '0000000e-0009-4000-8000-000000000009'
+
+    // RLS already hides another user's purposes from reads, but the FK does not
+    // check ownership — without this the row would insert, hanging off a label
+    // the user cannot see or control.
+    const result = await reserveAvailability({
+      supabase,
+      userId: UID,
+      input: { ...releaseFrom(10_000, SOMEONE_ELSES) },
+      today: TODAY,
+    })
+
+    expect(result).toEqual({ ok: false, fieldErrors: { purpose_id: 'not_found' } })
+    expect(inserted).toEqual([])
+  })
+
+  it('does not cap SAVING by purpose — a purpose has no target until phase 4', async () => {
+    const { supabase } = withPurposes()
+
+    const result = await reserveAvailability({
+      supabase,
+      userId: UID,
+      input: releaseFrom(3_000_000, EMERGENCIA),
+      today: TODAY,
+    })
+
+    // Way past what Emergencia holds, well inside the disponible.
+    expect(result.ok).toBe(true)
   })
 })

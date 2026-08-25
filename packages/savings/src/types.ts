@@ -33,6 +33,27 @@ export type ReserveFlowSums = {
   reservedNet: number
 }
 
+/**
+ * Lo guardado de UN propósito en UNA moneda, tal como lo devuelve
+ * `get_purpose_sums` (migración 0058).
+ *
+ * `purposeId` en null es «Sin destino», y es un GRUPO, no una ausencia: tiene
+ * las mismas reglas que cualquier propósito, incluido el piso. `purposeName` en
+ * null lo acompaña — el rótulo es copy y vive en i18n, la base no habla
+ * castellano.
+ *
+ * Un propósito puede aparecer en dos filas, una por moneda. No se suman nunca:
+ * "Japón" tiene pesos y dólares, y son dos números distintos.
+ */
+export type PurposeSums = {
+  purposeId: string | null
+  purposeName: string | null
+  purposeIcon: string | null
+  currencyCode: BalanceCurrency
+  /** Suma con signo de las reservas del grupo. Nunca debería quedar negativa. */
+  reserved: number
+}
+
 /** Una decisión del historial: guardar (positivo) o liberar (negativo). */
 export type ReserveEntry = {
   id: string
@@ -56,6 +77,8 @@ export type SavingsMutationResult<T = never> =
       fieldErrors?: Partial<Record<keyof T, string>>
       messageKey?: string
       errorCode?: string
-      reason?: 'exceeds_available' | 'exceeds_reserved'
+      reason?: 'exceeds_available' | 'exceeds_reserved' | 'exceeds_purpose_reserved'
       limit?: number
+      /** El nombre del propósito cuando el rechazo fue su piso, para que el mensaje lo diga. */
+      purposeName?: string | null
     }
