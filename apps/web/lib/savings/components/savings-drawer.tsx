@@ -1454,7 +1454,8 @@ const SavingsForm = ({
               overLimit ? 'text-negative' : 'text-text',
             )}
           >
-            {money(remainder, currency)}
+            {remainder < 0 ? '−' : ''}
+            {money(Math.abs(remainder), currency)}
           </span>
         </p>
       </div>

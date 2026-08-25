@@ -1115,7 +1115,7 @@ const SavingsForm = ({
           <Text
             className={`text-[16px] font-extrabold ${overLimit ? 'text-negative' : 'text-text'}`}
           >
-            {money(remainder, currency)}
+            {`${remainder < 0 ? '−' : ''}${money(Math.abs(remainder), currency)}`}
           </Text>
         </View>
       </View>

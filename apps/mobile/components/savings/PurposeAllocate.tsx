@@ -252,7 +252,7 @@ export const PurposeAllocate = ({
           <Text
             className={`text-[16px] font-extrabold ${overLimit ? 'text-negative' : 'text-text'}`}
           >
-            {money(remainder)}
+            {`${remainder < 0 ? '−' : ''}${money(Math.abs(remainder))}`}
           </Text>
         </View>
       </View>

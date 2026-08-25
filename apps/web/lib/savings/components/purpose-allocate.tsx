@@ -250,7 +250,8 @@ export function PurposeAllocate({
               overLimit ? 'text-negative' : 'text-text'
             }`}
           >
-            {money(remainder)}
+            {remainder < 0 ? '−' : ''}
+            {money(Math.abs(remainder))}
           </span>
         </p>
       </div>

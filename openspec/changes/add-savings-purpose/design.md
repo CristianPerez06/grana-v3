@@ -511,3 +511,27 @@ Los montos van `shrink-0` y `whitespace-nowrap`; los nombres, `truncate`.
 De la misma familia: **las filas sin chevron compensan su ancho con padding**. La del resto no tiene
 flecha, así que sin compensar, su monto se corría 26 px a la derecha y la lista dejaba de leerse como
 una columna. Una columna de números que no está alineada se lee mal aunque cada número esté bien.
+
+## D25 — Un solo signo menos en toda la app
+
+La caja de previsualización mostraba dos guiones distintos, uno arriba del otro:
+
+```
+Vas a volver a usar     −$ 70.000,00   ← U+2212, puesto a mano
+Queda en Emergencia     -$ 20.000,00   ← U+002D, puesto por Intl
+```
+
+El primero es el signo que Grana escribe deliberadamente cuando quiere decir *"esto sale"*. El
+segundo lo pone `Intl.NumberFormat` cuando el número que recibe ya es negativo. Son dos glifos
+distintos, con distinto ancho, y juntos en la misma tarjeta se ven como un error de tipografía.
+
+La regla: **el signo lo decide la pantalla, nunca el formateador.** A `money()` se le pasa siempre
+un valor absoluto, y el `−` se pega adelante cuando la pantalla quiere afirmarlo. Un menos que
+aparece solo, por aritmética, es un menos que nadie eligió mostrar.
+
+Vale para los cuatro previews (guardar, volver a usar, destinar, quitar destino), que son las cuatro
+pantallas donde el resto puede quedar negativo porque el monto tipeado se pasó del límite.
+
+Y el negativo se **muestra**, no se recorta a cero: cuando alguien pide $70.000 sobre $50.000, el
+`−$ 20.000,00` dice *cuánto* se pasó. El mensaje de error dice cuál es el techo; el preview dice a
+qué distancia está. Son dos datos distintos y los dos hacen falta.
