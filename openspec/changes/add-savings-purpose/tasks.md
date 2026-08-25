@@ -55,7 +55,7 @@
 ## 8. Cierre
 
 - [x] 8.1 Verificar que el dashboard no cambió: ningún número, ninguna fila nueva
-- [ ] 8.2 Sumar al issue #58 la sección de QA nativo de la fase 2
-- [ ] 8.3 Actualizar `docs/modelo-de-dinero.md` si alguna decisión de esta fase corrige el documento
-- [ ] 8.4 `pnpm openspec:check`, lint, typecheck (web y mobile) y tests en verde
+- [x] 8.2 Sumar al issue #58 la sección de QA nativo de la fase 2 — quedó dividido en parte A (fase 1) y parte B (fase 2), con la indicación de correr A completa antes de B: es lo que hace atribuible un fallo a una fase o a la otra
+- [x] 8.3 Actualizar `docs/modelo-de-dinero.md` si alguna decisión de esta fase corrige el documento — no hizo falta: la fase se implementó como el documento la describe, y las dos decisiones nuevas (D7 nombre único, D8 jerarquía diferida) son de implementación, no correcciones del modelo
+- [x] 8.4 `pnpm openspec:check`, lint, typecheck (web y mobile) y tests en verde
 - [ ] 8.5 **No archivar** hasta el QA nativo, y **no mergear** con la fase 1 y 2 solas: la branch de integración sube con las fases que completan el modelo
