@@ -1,8 +1,15 @@
 # Proposal: add-savings-purpose
 
-> **Estado: en implementación.** Fase 2 del modelo de dinero. Se construye sobre
-> `feature/add-savings-set-aside`, que no se mergea con la fase 1 sola. Ver
-> el banner de esa change.
+> **Estado: implementado, sin archivar y sin mergear.** Fase 2 del modelo de dinero.
+>
+> Vive en `feature/add-savings-set-aside`, la **branch de integración del modelo**: todas las fases
+> se construyen ahí y suben juntas. El nombre quedó de la fase 1 y ya no la describe entera — se
+> mantiene igual porque renombrarla rompería las referencias del issue #58 y de las dos changes, y
+> el nombre de una branch que va a colapsar en un solo commit no vale ese costo.
+>
+> Las dos compuertas son las mismas que las de la fase 1: **no se archiva** hasta el QA nativo
+> ([#58](https://github.com/CristianPerez06/grana-v3/issues/58)), y **no se mergea** hasta que las
+> fases completen el modelo.
 
 ## Why
 
