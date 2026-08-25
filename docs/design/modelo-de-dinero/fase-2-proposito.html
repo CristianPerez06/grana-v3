@@ -29,6 +29,10 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
 .masthead p{margin:0;max-width:62ch;color:rgba(255,255,255,.66);font-size:16px}
 .masthead .warn{margin-top:24px;padding:14px 18px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-size:14px;color:rgba(255,255,255,.8);max-width:78ch}
 .masthead .warn b{color:#fff;font-weight:600}
+.masthead .stale{margin-top:20px;padding:16px 18px;border-radius:12px;background:rgba(255,196,120,.14);border:1px solid rgba(255,196,120,.38);font-size:14px;line-height:1.55;color:rgba(255,255,255,.86);max-width:78ch}
+.masthead .stale b{color:#ffd9a3;font-weight:700}
+.masthead .stale ul{margin:10px 0 0;padding-left:18px}
+.masthead .stale li{margin-top:5px}
 
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(392px,1fr));gap:44px 36px;align-items:start}
 
@@ -232,6 +236,13 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     <h1>Fase 2 · Para qué</h1>
     <p>El guardado gana un nombre. Nada más: ni monto objetivo, ni fecha, ni progreso — eso es fase 4. Cinco pantallas, y tres de ellas son la fase 1 con un campo más.</p>
     <div class="warn"><b>Por qué el "para qué" va antes que las posiciones.</b> «Guardaste $200.000» es una abstracción; «Guardaste $200.000 para Japón» es una razón para volver. Y no necesita saber dónde está esa plata ni cuánto rinde, así que es barato y compra retención temprana.</div>
+    <div class="stale"><b>Este mock quedó atrás de la implementación.</b> La fase 2 está construida, y construirla corrigió dos cosas que acá se dan por buenas. Se conserva como registro de por dónde empezó el pensamiento; <b>la referencia de qué hace la fase 2 es la app</b>, y el modelo vive en <code>docs/modelo-de-dinero.md</code>.
+      <ul>
+        <li><b>Los verbos cambiaron.</b> «Liberar» es <b>Volver a usar</b>; «asignar / desasignar» son <b>Destinar / Quitar destino</b>. Acá se lee la nomenclatura vieja en todas las pantallas.</li>
+        <li><b>El propósito NO se le cuelga a la fila de guardar.</b> La pantalla 5 dice que la fila de liberar «lleva el mismo <code>purpose_id</code> que las de guardar». Eso resultó ser un error de categoría —la plata guardada es fungible, igual que no tiene cuenta no tiene fila— y la migración 0059 lo corrigió: el propósito es un <b>reparto por monto</b> en su propia tabla, y «Sin destino» es el resto derivado.</li>
+        <li><b>«Volver a usar» desde el total ya no abre una pantalla para elegir el origen</b>: se elige con chips en el mismo formulario.</li>
+      </ul>
+    </div>
   </div>
 </header>
 

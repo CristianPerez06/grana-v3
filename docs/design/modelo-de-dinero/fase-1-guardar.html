@@ -29,6 +29,8 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
 .masthead p{margin:0;max-width:62ch;color:rgba(255,255,255,.66);font-size:16px}
 .masthead .warn{margin-top:24px;padding:14px 18px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-size:14px;color:rgba(255,255,255,.8);max-width:78ch}
 .masthead .warn b{color:#fff;font-weight:600}
+.masthead .stale{margin-top:20px;padding:16px 18px;border-radius:12px;background:rgba(255,196,120,.14);border:1px solid rgba(255,196,120,.38);font-size:14px;line-height:1.55;color:rgba(255,255,255,.86);max-width:78ch}
+.masthead .stale b{color:#ffd9a3;font-weight:700}
 
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(392px,1fr));gap:44px 36px;align-items:start}
 
@@ -232,6 +234,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     <h1>Fase 1 · Guardar</h1>
     <p>Un mes de punta a punta: cobrar el sueldo, guardar una parte, y ver dónde quedó todo. Los mismos números atraviesan las seis pantallas para que la aritmética se pueda seguir.</p>
     <div class="warn"><b>No es diseño final.</b> Es una referencia de producto redibujada sobre el lenguaje visual real de la app (segmented de tipos, card de monto con chip de moneda, filas con tile + label small-caps + chevron, botón emerald, hero navy), tomado de capturas de producción. El HTML no es código.</div>
+    <div class="stale"><b>La fase 1 está construida: la referencia es la app, no este mock.</b> Un cambio de nomenclatura que acá no está: <b>«Liberar» se llama «Volver a usar»</b>. «Liberar» describe lo que le pasa a la plata, no lo que hace el usuario. El modelo, ya corregido, vive en <code>docs/modelo-de-dinero.md</code>.</div>
   </div>
 </header>
 

@@ -5,10 +5,20 @@ en el navegador.
 
 | Archivo | Fase | Estado |
 |---|---|---|
-| `fase-1-guardar.html` | 1 · Guardar | Completo — es la fase que implementa `add-savings-set-aside` |
-| `fase-2-proposito.html` | 2 · Propósito | Completo — cuatro pantallas, dos de ellas son la fase 1 con un campo más |
+| `fase-1-guardar.html` | 1 · Guardar | **Superado por la implementación.** «Liberar» hoy se llama **Volver a usar** |
+| `fase-2-proposito.html` | 2 · Propósito | **Superado por la implementación**, y en un punto de modelo, no solo de nombres — ver abajo |
 | — | 3 · Posiciones | Pendiente — tiene una decisión abierta que el mock existe para resolver |
 | — | 4 y 5 | No se mockean todavía: dibujar el detalle de una meta o la pantalla de patrimonio sería inventar decisiones que no están tomadas, y un mock convincente de algo no decidido termina implementándose tal cual |
+
+**Un mock deja de ser la referencia el día que la fase se construye.** Las fases 1 y 2 están hechas: lo
+que hacen se mira en la app, y el modelo corregido está en `docs/modelo-de-dinero.md`. Los mocks quedan
+como registro de por dónde empezó el pensamiento, con un aviso arriba de cada uno.
+
+Lo que la fase 2 corrigió no es cosmético: el mock dice que la fila de volver a usar «lleva el mismo
+`purpose_id` que las de guardar». Eso resultó ser un error de categoría —la plata guardada es fungible,
+y por lo mismo que no tiene cuenta tampoco tiene fila— y la migración 0059 lo dio vuelta: el propósito
+es un **reparto por monto** en su propia tabla, y «Sin destino» es el resto derivado. Quien lea el mock
+para diseñar la fase 3 se llevaría el modelo viejo.
 
 **No es diseño final.** Es referencia de producto: qué pantalla responde qué pregunta, qué se
 reutiliza y qué hay que construir. Los mocks están redibujados sobre el lenguaje visual real de la
