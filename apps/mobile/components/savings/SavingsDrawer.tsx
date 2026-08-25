@@ -171,14 +171,17 @@ export const SavingsDrawer = ({
    * puesto — no al detalle. Perder el monto tipeado por haber ido a elegir una
    * etiqueta sería cobrarle al usuario haber querido ser prolijo.
    */
-  const pickPurpose = (purposeId: string | null) =>
+  const pickPurpose = (purposeId: string | null, known?: Purpose) =>
     setStack((prev) => {
       const picker = [...prev].reverse().find((v) => v.kind === 'picker') as
         | Extract<SheetView, { kind: 'picker' }>
         | undefined
 
       if (picker?.intent === 'allocate') {
-        const target = purposes.find((p) => p.id === purposeId)
+        // `known` viene de quien ACABA de crear el propósito: la lista de acá es
+        // la del render anterior y todavía no lo tiene. Buscarlo y no
+        // encontrarlo devolvía al detalle sin decir nada.
+        const target = known ?? purposes.find((p) => p.id === purposeId)
         if (!target) return prev.slice(0, 1)
         // Reemplaza al selector en vez de apilarse encima: volver desde apartar
         // lleva al grupo, no a la lista que ya cumplió su función.
@@ -211,9 +214,10 @@ export const SavingsDrawer = ({
       return
     }
 
-    // Antes de navegar: la vista siguiente resuelve el propósito desde la lista.
-    await refresh()
-    pickPurpose(result.id)
+    // El propósito recién creado NO está todavía en la lista de este render, así
+    // que se pasa armado.
+    pickPurpose(result.id, { id: result.id, name, icon: seed?.icon ?? null })
+    void refresh()
   }
 
   const openRelease = (currency: Currency) => {
@@ -274,13 +278,15 @@ export const SavingsDrawer = ({
             purpose={view.purpose}
             initialName={view.name}
             initialIcon={view.icon}
-            onDone={async (purposeId) => {
-              await refresh()
-              // Recién creado desde el selector: se elige solo. Desde "¿Para qué
-              // fue?" no hay formulario abajo al que volver, así que solo cierra.
-              if (view.purpose != null) back()
-              else if (stack.some((v) => v.kind === 'form')) pickPurpose(purposeId)
-              else back()
+            onDone={async (created) => {
+              if (view.purpose != null) {
+                back()
+              } else if (stack.some((v) => v.kind === 'form' || v.kind === 'picker')) {
+                pickPurpose(created.id, created)
+              } else {
+                back()
+              }
+              void refresh()
             }}
             onBack={back}
           />

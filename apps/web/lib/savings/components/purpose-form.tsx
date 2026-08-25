@@ -32,7 +32,9 @@ export function PurposeForm({
   /** Precarga del alta cuando se llegó tocando una sugerencia. */
   initialName?: string
   initialIcon?: string
-  onDone: (purposeId: string) => void | Promise<void>
+  /** Devuelve el propósito ARMADO: quien navegue después no puede buscarlo en
+   *  la lista, que todavía es la de antes de crearlo. */
+  onDone: (purpose: Purpose) => void | Promise<void>
   onBack: () => void
 }) {
   const t = useTranslations('savings')
@@ -53,7 +55,11 @@ export function PurposeForm({
         setError(result.formError ?? t('purposes.errors.generic'))
         return
       }
-      await onDone(result.id ?? purpose?.id ?? '')
+      await onDone({
+        id: result.id ?? purpose?.id ?? '',
+        name: name.trim(),
+        icon,
+      })
     })
   }
 

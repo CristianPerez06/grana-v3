@@ -275,14 +275,18 @@ export function SavingsDrawer({
    * y perder el monto tipeado para elegir una etiqueta sería cobrarle al usuario
    * haber querido ser prolijo.
    */
-  const pickPurpose = (purposeId: string | null) =>
+  const pickPurpose = (purposeId: string | null, known?: Purpose) =>
     setStack((prev) => {
       const picker = [...prev].reverse().find((v) => v.kind === 'picker') as
         | Extract<View, { kind: 'picker' }>
         | undefined
 
       if (picker?.intent === 'allocate') {
-        const target = purposes.find((p) => p.id === purposeId)
+        // `known` viene de quien ACABA de crear el propósito, y es necesario: la
+        // lista de acá es la del render anterior, así que un propósito recién
+        // creado todavía no está en ella. Buscarlo y no encontrarlo devolvía al
+        // detalle sin decir nada — la operación se perdía en silencio.
+        const target = known ?? purposes.find((p) => p.id === purposeId)
         if (!target) return prev.slice(0, 1)
         // Reemplaza al selector en vez de apilarse encima: volver desde apartar
         // tiene que llevar al grupo, no a la lista que ya cumplió su función.
@@ -319,10 +323,11 @@ export function SavingsDrawer({
       return
     }
 
-    // Antes de navegar: la vista siguiente resuelve el propósito desde la lista
-    // y con la lista vieja mostraría «Sin destino» en vez del recién creado.
-    await refresh()
-    pickPurpose(result.id)
+    // El propósito recién creado NO está todavía en la lista de este render, así
+    // que se pasa armado. Refrescar después: la navegación no tiene que esperar
+    // a que vuelva una lectura.
+    pickPurpose(result.id, { id: result.id, name, icon: seed?.icon ?? null })
+    void refresh()
   }
 
   const openRelease = (currency: Currency) => {
@@ -382,17 +387,17 @@ export function SavingsDrawer({
             purpose={view.purpose}
             initialName={view.name}
             initialIcon={view.icon}
-            onDone={async (purposeId) => {
-              await refresh()
-              // Recién creado desde el selector: se elige solo. Obligar a
-              // tocarlo de nuevo en la lista sería un paso que no decide nada.
-              //
-              // Creado desde "¿Para qué fue?" no hay formulario abajo al que
-              // volver, así que solo se cierra el alta y la lista de atrás ya lo
-              // muestra.
-              if (view.purpose != null) back()
-              else if (stack.some((v) => v.kind === 'form')) pickPurpose(purposeId)
-              else back()
+            onDone={async (created) => {
+              // Editar solo vuelve. Crear elige lo recién creado: obligar a
+              // buscarlo de nuevo en la lista sería un paso que no decide nada.
+              if (view.purpose != null) {
+                back()
+              } else if (stack.some((v) => v.kind === 'form' || v.kind === 'picker')) {
+                pickPurpose(created.id, created)
+              } else {
+                back()
+              }
+              void refresh()
             }}
             onBack={back}
           />

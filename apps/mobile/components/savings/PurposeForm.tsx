@@ -25,7 +25,9 @@ export const PurposeForm = ({
   /** Precarga del alta cuando se llegó tocando una sugerencia. */
   initialName?: string
   initialIcon?: string
-  onDone: (purposeId: string) => void | Promise<void>
+  /** Devuelve el propósito ARMADO: quien navegue después no puede buscarlo en
+   *  la lista, que todavía es la de antes de crearlo. */
+  onDone: (purpose: Purpose) => void | Promise<void>
   onBack: () => void
 }) => {
   const t = useT()
@@ -54,7 +56,11 @@ export const PurposeForm = ({
         )
         return
       }
-      await onDone(result.id ?? purpose?.id ?? '')
+      await onDone({
+        id: result.id ?? purpose?.id ?? '',
+        name: name.trim(),
+        icon,
+      })
     } finally {
       setPending(false)
     }
