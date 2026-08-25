@@ -3,6 +3,7 @@ export {
   getAvailableForCurrency,
   getReserveFlowSums,
   getReserveHistory,
+  RESERVE_HISTORY_LIMIT,
   getLatestIncome,
 } from './queries'
 export { reserveAvailability, releaseAvailability } from './mutations'

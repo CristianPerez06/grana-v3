@@ -2076,6 +2076,10 @@
       "later": "Ahora no",
       "enough_this_month": "Suficiente por este mes"
     },
-    "back": "Volver"
+    "back": "Volver",
+    "accounts_total": "Tus cuentas en {currency}",
+    "to_spend": "Para gastar",
+    "gap_note": "Tu banco va a seguir mostrando el total. Grana no mueve tu plata: marca cuánto decidiste no tocar.",
+    "history_truncated": "Se muestran los últimos {count} movimientos."
   }
 }

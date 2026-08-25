@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import { formatForDisplay, parseMoneyInput } from '@grana/validation'
-import type { AvailableSums, ReserveEntry } from '@grana/savings'
+import { RESERVE_HISTORY_LIMIT, type AvailableSums, type ReserveEntry } from '@grana/savings'
 import { useT, useLocale } from '../../lib/locale-context'
 import { formatShortDate } from '../transactions/detail/format'
 import { useSavingsDetail } from '../../lib/savings/queries'
@@ -116,7 +116,7 @@ export const SavingsDrawer = ({
                   key={currency}
                   currency={currency}
                   sums={rowFor(currency)}
-                  entries={history[currency]}
+                  history={history[currency]}
                   monthNet={monthNet(currency)}
                   onSave={() => setForm({ mode: 'save', currency })}
                   onRelease={() => setForm({ mode: 'release', currency })}
@@ -139,14 +139,14 @@ export const SavingsDrawer = ({
 const CurrencyBlock = ({
   currency,
   sums,
-  entries,
+  history,
   monthNet,
   onSave,
   onRelease,
 }: {
   currency: Currency
   sums: AvailableSums
-  entries: ReserveEntry[]
+  history: { entries: ReserveEntry[]; hasMore: boolean }
   /** Neto del mes, de `get_reserve_flow_sums`. Nunca recompuesto acá. */
   monthNet: number
   onSave: () => void
@@ -175,14 +175,46 @@ const CurrencyBlock = ({
         </Text>
       </View>
 
+      {/* El puente entre el número del banco y el de Grana. Sin esto, quien abre
+          su cuenta y ve un total distinto al de acá no tiene dónde entender la
+          diferencia — y le cree al banco. Alcanza con mostrar la resta. */}
+      <View className="mt-3 rounded-xl bg-border-soft px-3 py-2.5">
+        <View className="flex-row justify-between py-0.5">
+          <Text className="text-[13px] text-text-muted">
+            {t('savings.accounts_total', { currency })}
+          </Text>
+          <Text className="text-[13px] font-semibold text-text">
+            {money(sums.accountsNet, currency)}
+          </Text>
+        </View>
+        <View className="flex-row justify-between py-0.5">
+          <Text className="text-[13px] text-text-muted">{t('savings.title')}</Text>
+          <Text className="text-[13px] font-semibold text-positive">
+            − {money(sums.reserved, currency)}
+          </Text>
+        </View>
+        <View className="mt-1 flex-row justify-between border-t border-border pt-1.5">
+          <Text className="text-[13px] text-text-muted">{t('savings.to_spend')}</Text>
+          <Text className="text-[13px] font-extrabold text-text">
+            {money(sums.available, currency)}
+          </Text>
+        </View>
+      </View>
+
+      {/* Nombra la confusión antes de que ocurra, describiendo en vez de
+          aconsejar: el caso normal es que esa plata se quede meses donde está. */}
+      <Text className="mt-2 px-1 text-[12.5px] leading-snug text-text-soft">
+        {t('savings.gap_note')}
+      </Text>
+
       <Text className="mt-4 text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
         {t('savings.history')}
       </Text>
-      {entries.length === 0 ? (
+      {history.entries.length === 0 ? (
         <Text className="mt-1.5 text-[13px] text-text-soft">{t('savings.empty_history')}</Text>
       ) : (
         <View className="mt-1.5">
-          {entries.map((entry) => (
+          {history.entries.map((entry) => (
             <View
               key={entry.id}
               className="flex-row items-center justify-between border-t border-border-soft py-2.5"
@@ -205,6 +237,13 @@ const CurrencyBlock = ({
             </View>
           ))}
         </View>
+      )}
+      {/* Decirlo en vez de callarlo: una lista que se corta sin avisar es
+          indistinguible de un historial incompleto. */}
+      {history.hasMore && (
+        <Text className="mt-2 text-[12px] text-text-soft">
+          {t('savings.history_truncated', { count: String(RESERVE_HISTORY_LIMIT) })}
+        </Text>
       )}
 
       <View className="mt-4 flex-row gap-2">

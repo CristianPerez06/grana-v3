@@ -65,9 +65,10 @@ export function useSavingsDetail(enabled: boolean, monthStart: Date, today: Date
     ],
   })
 
-  const history: Record<'ARS' | 'USD', ReserveEntry[]> = {
-    ARS: ars.data ?? [],
-    USD: usd.data ?? [],
+  const empty = { entries: [] as ReserveEntry[], hasMore: false }
+  const history: Record<'ARS' | 'USD', { entries: ReserveEntry[]; hasMore: boolean }> = {
+    ARS: ars.data ?? empty,
+    USD: usd.data ?? empty,
   }
 
   const monthNet = (currency: 'ARS' | 'USD'): number =>

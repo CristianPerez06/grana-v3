@@ -88,8 +88,7 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   })
 
   const available = sumsQuery.data?.find((s) => s.currencyCode === 'ARS')?.available ?? 0
-  const history = historyQuery.data ?? []
-  const lastSave = lastSaveOf(history)
+  const lastSave = lastSaveOf(historyQuery.data?.entries ?? [])
 
   // The percentage the user established comes from the income of the month they
   // last saved in — which is almost never the month being viewed, since the

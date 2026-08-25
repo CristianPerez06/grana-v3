@@ -100,12 +100,23 @@ export async function getReserveFlowSums(
 // NO es un movimiento, no aparece en Movimientos, y sin este listado el usuario
 // no podría auditar su propia decisión.
 //
+// ACOTADA. Un `.select()` sin `.limit()` crece con el uso y, pasado el `max-rows`
+// de PostgREST, se trunca EN SILENCIO: sin error, con menos filas, y sin que
+// nada avise — el mismo defecto que la migración 0051 tuvo que sacar de los
+// saldos. Acá no corrompe ningún número (el total y el neto salen de SQL), pero
+// escondería movimientos viejos sin decirlo.
+//
+// Pide UNO DE MÁS que los que va a mostrar: es la forma barata de saber si hay
+// más sin contar la tabla entera, y deja que la UI lo diga en vez de callarlo.
+//
 // Orden determinístico hasta el desempate: dos reservas del mismo día llegan
 // siempre en el mismo orden, o el listado se reordenaría solo entre renders.
+export const RESERVE_HISTORY_LIMIT = 25
+
 export async function getReserveHistory(
   supabase: GranaSupabaseClient,
   currencyCode: BalanceCurrency,
-): Promise<ReserveEntry[]> {
+): Promise<{ entries: ReserveEntry[]; hasMore: boolean }> {
   const { data, error } = await supabase
     .from('availability_reserve')
     .select('id, currency_code, amount, date, created_at')
@@ -113,16 +124,23 @@ export async function getReserveHistory(
     .order('date', { ascending: false })
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
+    .limit(RESERVE_HISTORY_LIMIT + 1)
 
   if (error) throw error
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    currencyCode: row.currency_code as BalanceCurrency,
-    amount: toNumber(row.amount),
-    date: row.date,
-    createdAt: row.created_at,
-  }))
+  const rows = data ?? []
+  const hasMore = rows.length > RESERVE_HISTORY_LIMIT
+
+  return {
+    hasMore,
+    entries: rows.slice(0, RESERVE_HISTORY_LIMIT).map((row) => ({
+      id: row.id,
+      currencyCode: row.currency_code as BalanceCurrency,
+      amount: toNumber(row.amount),
+      date: row.date,
+      createdAt: row.created_at,
+    })),
+  }
 }
 
 // ── getLatestIncome ───────────────────────────────────────────────────────────

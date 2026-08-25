@@ -7,6 +7,7 @@ import {
   getAvailableSums,
   getReserveFlowSums,
   getReserveHistory,
+  RESERVE_HISTORY_LIMIT,
   type AvailableSums,
   type ReserveEntry,
 } from '@grana/savings'
@@ -108,9 +109,10 @@ export function SavingsDrawer({
   })
 
   const sums: AvailableSums[] | null = sumsQuery.data ?? null
-  const history: Record<Currency, ReserveEntry[]> = {
-    ARS: arsQuery.data ?? [],
-    USD: usdQuery.data ?? [],
+  const EMPTY = { entries: [] as ReserveEntry[], hasMore: false }
+  const history: Record<Currency, { entries: ReserveEntry[]; hasMore: boolean }> = {
+    ARS: arsQuery.data ?? EMPTY,
+    USD: usdQuery.data ?? EMPTY,
   }
   const monthNet = (currency: Currency): number =>
     flowQuery.data?.find((f) => f.currencyCode === currency)?.reservedNet ?? 0
@@ -179,7 +181,7 @@ export function SavingsDrawer({
                   key={currency}
                   currency={currency}
                   sums={rowFor(currency)}
-                  entries={history[currency]}
+                  history={history[currency]}
                   monthNet={monthNet(currency)}
                   onSave={() => setForm({ mode: 'save', currency })}
                   onRelease={() => setForm({ mode: 'release', currency })}
@@ -203,14 +205,14 @@ export function SavingsDrawer({
 const CurrencyBlock = ({
   currency,
   sums,
-  entries,
+  history,
   monthNet,
   onSave,
   onRelease,
 }: {
   currency: Currency
   sums: AvailableSums
-  entries: ReserveEntry[]
+  history: { entries: ReserveEntry[]; hasMore: boolean }
   /** Neto del mes, de `get_reserve_flow_sums`. Nunca recompuesto acá. */
   monthNet: number
   onSave: () => void
@@ -239,14 +241,48 @@ const CurrencyBlock = ({
         </span>
       </p>
 
+      {/* El puente entre los dos números que el usuario ve en dos lugares
+          distintos: el de su banco y el de Grana. Sin esto, alguien que abre su
+          cuenta y ve $5.085.748 y después abre Grana y ve $4.495.748 no tiene
+          dónde entender la diferencia — y le va a creer al banco, porque es "el
+          de verdad". Acá los dos aparecen juntos y lo que los separa tiene
+          nombre. No hace falta ningún consejo: alcanza con mostrar la resta. */}
+      <div className="mt-3 rounded-xl bg-surface-sunken px-3 py-2.5 text-[13px]">
+        <p className="flex justify-between py-0.5 text-text-muted">
+          <span>{t('accounts_total', { currency })}</span>
+          <span className="font-semibold tabular-nums text-text">
+            {money(sums.accountsNet, currency)}
+          </span>
+        </p>
+        <p className="flex justify-between py-0.5 text-text-muted">
+          <span>{t('title')}</span>
+          <span className="font-semibold tabular-nums text-emerald-deep">
+            − {money(sums.reserved, currency)}
+          </span>
+        </p>
+        <p className="mt-1 flex justify-between border-t border-border pt-1.5 text-text-muted">
+          <span>{t('to_spend')}</span>
+          <span className="font-extrabold tabular-nums text-text">
+            {money(sums.available, currency)}
+          </span>
+        </p>
+      </div>
+
+      {/* La frase que nombra la confusión antes de que ocurra. Describe — "Grana
+          no mueve tu plata" — en vez de aconsejar: decirle a alguien que mueva
+          los pesos a otra cuenta sería recomendarle una movida cuyo costo Grana
+          no conoce (puede estar perdiendo el rendimiento de una remunerada), y
+          además el caso normal es que esa plata se quede meses donde está. */}
+      <p className="mt-2 px-1 text-[12.5px] leading-snug text-text-soft">{t('gap_note')}</p>
+
       <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
         {t('history')}
       </p>
-      {entries.length === 0 ? (
+      {history.entries.length === 0 ? (
         <p className="mt-2 text-[13px] text-text-soft">{t('empty_history')}</p>
       ) : (
         <ul className="mt-2 flex flex-col divide-y divide-border-soft">
-          {entries.map((entry) => (
+          {history.entries.map((entry) => (
             <li key={entry.id} className="flex items-center justify-between gap-3 py-2.5">
               <span className="text-[14px] font-semibold text-text">
                 {entry.amount >= 0 ? t('entry_saved') : t('entry_released')}
@@ -266,6 +302,13 @@ const CurrencyBlock = ({
             </li>
           ))}
         </ul>
+      )}
+      {/* Decirlo en vez de callarlo: la lista está acotada, y una lista que se
+          corta sin avisar es indistinguible de un historial incompleto. */}
+      {history.hasMore && (
+        <p className="mt-2 text-[12px] text-text-soft">
+          {t('history_truncated', { count: RESERVE_HISTORY_LIMIT })}
+        </p>
       )}
 
       <div className="mt-4 flex gap-2">

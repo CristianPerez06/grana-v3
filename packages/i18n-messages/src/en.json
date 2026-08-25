@@ -2076,6 +2076,10 @@
       "later": "Not now",
       "enough_this_month": "Enough for this month"
     },
-    "back": "Back"
+    "back": "Back",
+    "accounts_total": "Your {currency} accounts",
+    "to_spend": "To spend",
+    "gap_note": "Your bank will still show the full amount. Grana doesn't move your money: it marks how much you decided not to touch.",
+    "history_truncated": "Showing the latest {count} entries."
   }
 }

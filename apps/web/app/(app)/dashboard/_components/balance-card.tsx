@@ -216,11 +216,16 @@ const SavingsLine = ({
   row,
   usdRow,
   showUsd,
+  density,
   onOpen,
 }: {
   row: SavingsRow
   usdRow: SavingsRow | null
   showUsd: boolean
+  /** El MISMO paso tipográfico que los tres de arriba: la fila es de otra
+   *  naturaleza, y eso ya lo dicen la regla y el color — un tamaño distinto no
+   *  agrega significado, se lee como un descuido. */
+  density: AmountDensity
   onOpen: () => void
 }) => {
   const t = useTranslations('dashboard')
@@ -253,7 +258,12 @@ const SavingsLine = ({
       <span className="flex min-w-0 items-baseline gap-1.5">
         {!isEmpty && (
           <span className="flex flex-col items-end">
-            <span className="whitespace-nowrap text-[17px] font-extrabold leading-none tracking-[-0.04em] text-emerald-deep">
+            <span
+              className={cn(
+                'whitespace-nowrap font-extrabold leading-none tracking-[-0.04em] text-emerald-deep',
+                SUMMARY_SIZE[density],
+              )}
+            >
               <MaskedAmount amount={row.amount} currency="ARS" signPrefix="−" />
             </span>
             {showUsd && usdRow && usdRow.state !== 'empty' && (
@@ -305,10 +315,17 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
   })
 
   const placement = derivePlacement(hero?.accounts ?? [])
-  // One type step for the three amounts, so they never shrink at different
-  // points — same rule as the tiles of "Cuánto gastaste".
+  // One type step for the whole block, so the amounts never shrink at different
+  // points — same rule as the tiles of "Cuánto gastaste". The savings amount is
+  // in the array too: it sits in the same block and, left out, a long total
+  // would overflow while the three above it stayed comfortable.
   const summaryDensity = densestAmountDensity(
-    [venia?.ARS ?? 0, summary?.ARS.entro ?? 0, summary?.ARS.seFue ?? 0],
+    [
+      venia?.ARS ?? 0,
+      summary?.ARS.entro ?? 0,
+      summary?.ARS.seFue ?? 0,
+      savings.ARS?.amount ?? 0,
+    ],
     showCents,
   )
   // One decision for the whole summary block (see `Flow`).
@@ -436,6 +453,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             row={savings.ARS}
             usdRow={savings.USD}
             showUsd={summaryHasUsd}
+            density={summaryDensity}
             onOpen={() => setSavingsOpen(true)}
           />
         )}
