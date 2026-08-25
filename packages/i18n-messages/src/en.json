@@ -2060,7 +2060,9 @@
     "you_will_release": "You'll make available",
     "left_to_spend": "Left to spend",
     "saved_total": "Currently set aside",
+    "saved_in": "Saved in {purpose}",
     "stays_saved": "Stays set aside",
+    "stays_in": "Stays in {purpose}",
     "save_note": "The money doesn't move. It just stops counting as available to spend.",
     "release_note": "The money doesn't move. It just counts as available to spend again.",
     "errors": {

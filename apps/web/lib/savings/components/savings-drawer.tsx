@@ -2,18 +2,23 @@
 
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
-import { useQueries, useQueryClient } from '@tanstack/react-query'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getAvailableSums,
+  getPurposeSums,
   getReserveFlowSums,
   getReserveHistory,
+  listPurposes,
+  PURPOSE_SEEDS,
   RESERVE_HISTORY_LIMIT,
   type AvailableSums,
+  type Purpose,
+  type PurposeSums,
   type ReserveEntry,
 } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { parseMoneyInput } from '@grana/validation'
-import { ChevronDown, ChevronLeft } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
 import { Drawer } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { DatePicker } from '@/components/ui/date-picker'
@@ -23,9 +28,38 @@ import { createClient } from '@/lib/supabase/client'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { cn } from '@/lib/utils'
 import { reserveAvailability, releaseAvailability } from '@/app/_actions/savings'
+import { DrawerBackHeader } from './drawer-back-header'
+import { PurposePicker } from './purpose-picker'
+import { PurposeForm } from './purpose-form'
+import { PurposeDelete } from './purpose-delete'
 
 type Currency = 'ARS' | 'USD'
 type Mode = 'save' | 'release'
+
+/**
+ * Las vistas que el drawer apila, como una PILA y no como un `view` suelto.
+ *
+ * La fase 1 tenía dos estados y alcanzaba con un booleano. Con propósitos hay
+ * seis, y varios se pueden alcanzar desde más de un lado: al selector se llega
+ * desde el formulario, y al alta se llega desde el selector. Con un estado plano
+ * cada vista tendría que recordar a dónde volver — que es una pila escrita a
+ * mano, peor. Con una pila, "volver" es siempre lo mismo.
+ */
+type View =
+  | { kind: 'detail' }
+  | { kind: 'group'; currency: Currency; purposeId: string | null }
+  | {
+      kind: 'form'
+      mode: Mode
+      currency: Currency
+      purposeId: string | null
+      /** Se llegó desde un grupo: el propósito se hereda y no se ofrece cambiarlo. */
+      locked: boolean
+    }
+  | { kind: 'picker'; currency: Currency }
+  | { kind: 'purposeForm'; purpose: Purpose | null; name?: string; icon?: string }
+  | { kind: 'purposeDelete'; purpose: Purpose }
+  | { kind: 'pickSource'; currency: Currency }
 
 const money = (amount: number, currency: Currency) =>
   currency === 'USD' ? formatUSD(amount) : formatARS(amount, true)
@@ -62,7 +96,10 @@ export function SavingsDrawer({
   initialMode?: { mode: Mode; currency: Currency }
 }) {
   const t = useTranslations('savings')
-  const [form, setForm] = useState<{ mode: Mode; currency: Currency } | null>(null)
+  const [stack, setStack] = useState<View[]>([{ kind: 'detail' }])
+  const view = stack[stack.length - 1]
+  const push = (next: View) => setStack((s) => [...s, next])
+  const back = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s))
   const queryClient = useQueryClient()
 
   const today = getTodayAR()
@@ -73,7 +110,7 @@ export function SavingsDrawer({
   // a closed drawer has no detail. `staleTime: 0` because the numbers here are
   // the ones the user just changed — a cached stock right after saving would show
   // the previous total on the screen that exists to audit it.
-  const [sumsQuery, arsQuery, usdQuery, flowQuery] = useQueries({
+  const [sumsQuery, arsQuery, usdQuery, flowQuery, purposeSumsQuery, purposesQuery] = useQueries({
     queries: [
       {
         queryKey: ['savings', 'sums'],
@@ -105,6 +142,24 @@ export function SavingsDrawer({
         enabled: open,
         staleTime: 0,
       },
+      {
+        // El corte por propósito, de la misma tabla y de la misma lectura
+        // normativa que usa el piso del write path. La suma de estos grupos ES
+        // el `reserved` de arriba: si alguna vez no coinciden, es una
+        // divergencia real y no un redondeo.
+        queryKey: ['savings', 'purpose-sums'],
+        queryFn: () => getPurposeSums(createClient()),
+        enabled: open,
+        staleTime: 0,
+      },
+      {
+        // La lista de propósitos es una lectura aparte y NO de plata: incluye
+        // los que todavía no tienen nada guardado, que no aparecen en el corte.
+        queryKey: ['savings', 'purposes'],
+        queryFn: () => listPurposes(createClient()),
+        enabled: open,
+        staleTime: 0,
+      },
     ],
   })
 
@@ -117,6 +172,32 @@ export function SavingsDrawer({
   const monthNet = (currency: Currency): number =>
     flowQuery.data?.find((f) => f.currencyCode === currency)?.reservedNet ?? 0
 
+  const purposeSums: PurposeSums[] = purposeSumsQuery.data ?? []
+  const purposes: Purpose[] = purposesQuery.data ?? []
+
+  const purposeById = (id: string | null): Purpose | null =>
+    id == null ? null : (purposes.find((p) => p.id === id) ?? null)
+
+  /**
+   * Los grupos de una moneda, con «Sin destino» SIEMPRE al final.
+   *
+   * Ordenados por monto descendente y no alfabéticamente: la pregunta que trae
+   * al usuario acá es "¿dónde está mi plata?", y la respuesta que más le sirve
+   * está arriba. «Sin destino» queda fijo abajo aunque sea el más grande —
+   * es el resto, y el resto va al final de una lista aunque pese.
+   */
+  const groupsOf = (currency: Currency): PurposeSums[] => {
+    const rows = purposeSums.filter((s) => s.currencyCode === currency)
+    const named = rows
+      .filter((r) => r.purposeId != null)
+      .sort((a, b) => b.reserved - a.reserved)
+    const rest = rows.filter((r) => r.purposeId == null)
+    return [...named, ...rest]
+  }
+
+  const groupAmount = (currency: Currency, purposeId: string | null): number =>
+    purposeSums.find((s) => s.currencyCode === currency && s.purposeId === purposeId)?.reserved ?? 0
+
   // Reset the view when the drawer opens, adjusting state DURING RENDER rather
   // than in an effect: the reset is derived from a prop changing, not a
   // synchronization with an external system, and doing it in an effect costs a
@@ -127,7 +208,16 @@ export function SavingsDrawer({
   const [wasOpen, setWasOpen] = useState(open)
   if (open !== wasOpen) {
     setWasOpen(open)
-    if (open) setForm(initialMode ?? null)
+    if (open) {
+      setStack(
+        initialMode
+          ? [
+              { kind: 'detail' },
+              { ...initialMode, kind: 'form', purposeId: null, locked: false },
+            ]
+          : [{ kind: 'detail' }],
+      )
+    }
   }
 
   const currencies: Currency[] = (['ARS', 'USD'] as const).filter((c) => {
@@ -151,7 +241,7 @@ export function SavingsDrawer({
   // en el detalle deja al usuario preguntándose si pasó algo, y ese es el peor
   // final posible para una acción sobre plata.
   const onDone = async () => {
-    setForm(null)
+    setStack([{ kind: 'detail' }])
     onClose()
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['savings'] }),
@@ -159,18 +249,178 @@ export function SavingsDrawer({
     ])
   }
 
+  /** Refresca sin cerrar: crear, renombrar o borrar un propósito no termina nada. */
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['savings'] })
+
+  /**
+   * Elegir un propósito vuelve AL FORMULARIO que lo pidió, con el propósito ya
+   * puesto — no al detalle. Se llega al selector desde el medio de una operación
+   * y perder el monto tipeado para elegir una etiqueta sería cobrarle al usuario
+   * haber querido ser prolijo.
+   */
+  const pickPurpose = (purposeId: string | null) =>
+    setStack((prev) => {
+      const at = prev.map((v) => v.kind).lastIndexOf('form')
+      if (at < 0) return prev.slice(0, 1)
+      const target = prev[at] as Extract<View, { kind: 'form' }>
+      return [...prev.slice(0, at), { ...target, purposeId }]
+    })
+
+  const openRelease = (currency: Currency) => {
+    const withMoney = groupsOf(currency).filter((g) => g.reserved > 0)
+    // Preguntar de cuál sale solo tiene sentido si hay más de uno. Con uno solo,
+    // la pregunta tiene una única respuesta posible y es puro paso de más.
+    if (withMoney.length > 1) return push({ kind: 'pickSource', currency })
+    push({
+      kind: 'form',
+      mode: 'release',
+      currency,
+      purposeId: withMoney[0]?.purposeId ?? null,
+      locked: true,
+    })
+  }
+
   return (
     <Drawer open={open} onClose={onClose} ariaLabel={t('title')} widthPx={480}>
       <div className="flex h-full flex-col overflow-y-auto bg-page px-5 pb-6 pt-5">
-        {form ? (
+        {view.kind === 'form' && (
           <SavingsForm
-            mode={form.mode}
-            initialCurrency={form.currency}
+            mode={view.mode}
+            initialCurrency={view.currency}
             rowFor={rowFor}
-            onCancel={() => setForm(null)}
+            purpose={purposeById(view.purposeId)}
+            purposeId={view.purposeId}
+            purposeAmount={groupAmount(view.currency, view.purposeId)}
+            lockedPurpose={view.locked}
+            onPickPurpose={() => push({ kind: 'picker', currency: view.currency })}
+            onCancel={back}
             onDone={onDone}
           />
-        ) : (
+        )}
+
+        {view.kind === 'picker' && (
+          <PurposePicker
+            purposes={purposes}
+            sums={purposeSums}
+            currency={view.currency}
+            selectedId={
+              (stack.find((v) => v.kind === 'form') as Extract<View, { kind: 'form' }>)
+                ?.purposeId ?? null
+            }
+            onPick={pickPurpose}
+            onCreate={(seedKey) =>
+              push({
+                kind: 'purposeForm',
+                purpose: null,
+                name: seedKey ? t(`purposes.seeds.${seedKey}`) : undefined,
+                icon: seedKey ? PURPOSE_SEEDS.find((s) => s.key === seedKey)?.icon : undefined,
+              })
+            }
+            onBack={back}
+          />
+        )}
+
+        {view.kind === 'purposeForm' && (
+          <PurposeForm
+            purpose={view.purpose}
+            initialName={view.name}
+            initialIcon={view.icon}
+            onDone={async (purposeId) => {
+              await refresh()
+              // Recién creado desde el selector: se elige solo. Obligar a
+              // tocarlo de nuevo en la lista sería un paso que no decide nada.
+              if (view.purpose == null) pickPurpose(purposeId)
+              else back()
+            }}
+            onBack={back}
+          />
+        )}
+
+        {view.kind === 'purposeDelete' && (
+          <PurposeDelete
+            purpose={view.purpose}
+            sums={purposeSums}
+            onDone={async () => {
+              await refresh()
+              // Vuelve al detalle, no al grupo: el grupo ya no existe.
+              setStack([{ kind: 'detail' }])
+            }}
+            onBack={back}
+          />
+        )}
+
+        {view.kind === 'pickSource' && (
+          <>
+            <DrawerBackHeader title={t('purposes.choose')} onBack={back} />
+            <ul className="mt-4 flex flex-col gap-2">
+              {groupsOf(view.currency)
+                .filter((g) => g.reserved > 0)
+                .map((group) => (
+                  <li key={group.purposeId ?? 'none'}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        push({
+                          kind: 'form',
+                          mode: 'release',
+                          currency: view.currency,
+                          purposeId: group.purposeId,
+                          locked: true,
+                        })
+                      }
+                      className="flex min-h-[52px] w-full items-center gap-3 rounded-xl border border-border-soft bg-card px-3 py-2 text-left transition-colors hover:bg-surface-sunken"
+                    >
+                      <span aria-hidden className="text-[18px]">
+                        {group.purposeIcon ?? '🫙'}
+                      </span>
+                      <span className="flex-1 text-[14px] font-semibold text-text">
+                        {group.purposeName ?? t('purposes.none')}
+                      </span>
+                      <span className="text-[13px] font-extrabold tabular-nums text-text-muted">
+                        {money(group.reserved, view.currency)}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+            </ul>
+            {/* No hay una opción "repartir": elegir de dónde sale es una
+                decisión del usuario, y repartirlo automáticamente sería
+                inventar una imputación — lo mismo que el modelo se niega a
+                hacer con los retiros de una cuenta. */}
+          </>
+        )}
+
+        {view.kind === 'group' && (
+          <GroupBlock
+            currency={view.currency}
+            purposeId={view.purposeId}
+            purpose={purposeById(view.purposeId)}
+            reserved={groupAmount(view.currency, view.purposeId)}
+            onSave={() =>
+              push({
+                kind: 'form',
+                mode: 'save',
+                currency: view.currency,
+                purposeId: view.purposeId,
+                locked: true,
+              })
+            }
+            onRelease={() =>
+              push({
+                kind: 'form',
+                mode: 'release',
+                currency: view.currency,
+                purposeId: view.purposeId,
+                locked: true,
+              })
+            }
+            onEdit={(purpose) => push({ kind: 'purposeForm', purpose })}
+            onDelete={(purpose) => push({ kind: 'purposeDelete', purpose })}
+            onBack={back}
+          />
+        )}
+
+        {view.kind === 'detail' && (
           <>
             <h2 className="text-[21px] font-extrabold tracking-[-0.025em] text-text">
               {t('title')}
@@ -183,8 +433,12 @@ export function SavingsDrawer({
                   sums={rowFor(currency)}
                   history={history[currency]}
                   monthNet={monthNet(currency)}
-                  onSave={() => setForm({ mode: 'save', currency })}
-                  onRelease={() => setForm({ mode: 'release', currency })}
+                  groups={groupsOf(currency)}
+                  onOpenGroup={(purposeId) => push({ kind: 'group', currency, purposeId })}
+                  onSave={() =>
+                    push({ kind: 'form', mode: 'save', currency, purposeId: null, locked: false })
+                  }
+                  onRelease={() => openRelease(currency)}
                 />
               ))}
             </div>
@@ -207,6 +461,8 @@ const CurrencyBlock = ({
   sums,
   history,
   monthNet,
+  groups,
+  onOpenGroup,
   onSave,
   onRelease,
 }: {
@@ -215,6 +471,9 @@ const CurrencyBlock = ({
   history: { entries: ReserveEntry[]; hasMore: boolean }
   /** Neto del mes, de `get_reserve_flow_sums`. Nunca recompuesto acá. */
   monthNet: number
+  /** El corte por propósito de esta moneda, «Sin destino» al final. */
+  groups: PurposeSums[]
+  onOpenGroup: (purposeId: string | null) => void
   onSave: () => void
   onRelease: () => void
 }) => {
@@ -275,6 +534,43 @@ const CurrencyBlock = ({
           además el caso normal es que esa plata se quede meses donde está. */}
       <p className="mt-2 px-1 text-[12.5px] leading-snug text-text-soft">{t('gap_note')}</p>
 
+      {/* El desglose por propósito. Va DESPUÉS del puente y antes del
+          historial, que es el orden en que se contesta lo que el usuario vino a
+          preguntar: cuánto hay, por qué no coincide con el banco, en qué está
+          repartido, y recién después el detalle movimiento por movimiento.
+
+          Con un solo grupo no se dibuja: un desglose de un elemento repite el
+          total con más tinta. */}
+      {groups.length > 1 && (
+        <>
+          <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
+            {t('purposes.label')}
+          </p>
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {groups.map((group) => (
+              <li key={group.purposeId ?? 'none'}>
+                <button
+                  type="button"
+                  onClick={() => onOpenGroup(group.purposeId)}
+                  className="flex min-h-[44px] w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-surface-sunken"
+                >
+                  <span aria-hidden className="text-[16px]">
+                    {group.purposeIcon ?? '🫙'}
+                  </span>
+                  <span className="flex-1 truncate text-[14px] font-semibold text-text">
+                    {group.purposeName ?? t('purposes.none')}
+                  </span>
+                  <span className="text-[14px] font-extrabold tabular-nums text-text">
+                    {money(group.reserved, currency)}
+                  </span>
+                  <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
       <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
         {t('history')}
       </p>
@@ -329,6 +625,140 @@ const CurrencyBlock = ({
 }
 
 /**
+ * Un grupo: el mismo bloque que una moneda, un nivel más abajo.
+ *
+ * Tiene su total, su historial y sus dos acciones — y las acciones llegan con el
+ * propósito YA PUESTO. Se llegó tocando este grupo, así que preguntar "¿de cuál
+ * sale?" sería preguntar algo que el usuario acaba de responder con el dedo.
+ *
+ * «Sin destino» no se puede editar ni borrar, y no es una restricción: no es una
+ * fila. Es el nombre que la app le da a lo que no tiene etiqueta.
+ */
+const GroupBlock = ({
+  currency,
+  purposeId,
+  purpose,
+  reserved,
+  onSave,
+  onRelease,
+  onEdit,
+  onDelete,
+  onBack,
+}: {
+  currency: Currency
+  purposeId: string | null
+  purpose: Purpose | null
+  reserved: number
+  onSave: () => void
+  onRelease: () => void
+  onEdit: (purpose: Purpose) => void
+  onDelete: (purpose: Purpose) => void
+  onBack: () => void
+}) => {
+  const t = useTranslations('savings')
+
+  // El historial ACOTADO A ESTE GRUPO, del mismo read que el de la moneda. La
+  // alternativa —filtrar en memoria el historial ya cargado— daría una lista
+  // recortada de un tope que ya se aplicó arriba: con 25 movimientos en pesos y
+  // 3 de este propósito entre ellos, mostraría 3 y escondería el resto sin
+  // decirlo.
+  const historyQuery = useQuery({
+    queryKey: ['savings', 'history', currency, purposeId ?? 'none'],
+    queryFn: () => getReserveHistory(createClient(), currency, purposeId),
+    staleTime: 0,
+  })
+  const history = historyQuery.data ?? { entries: [], hasMore: false }
+
+  return (
+    <div className="flex flex-col">
+      <DrawerBackHeader
+        title={purpose?.name ?? t('purposes.none')}
+        onBack={onBack}
+        action={
+          purpose ? (
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => onEdit(purpose)}
+                aria-label={t('purposes.edit')}
+                className="flex size-11 items-center justify-center rounded-xl text-text-muted transition-colors hover:bg-border-soft hover:text-text"
+              >
+                <Pencil className="size-4" aria-hidden />
+              </button>
+              <button
+                type="button"
+                onClick={() => onDelete(purpose)}
+                aria-label={t('purposes.delete')}
+                className="flex size-11 items-center justify-center rounded-xl text-text-muted transition-colors hover:bg-negative/10 hover:text-negative"
+              >
+                <Trash2 className="size-4" aria-hidden />
+              </button>
+            </div>
+          ) : undefined
+        }
+      />
+
+      <section className="mt-4 rounded-2xl border border-border-soft bg-card p-4">
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
+          {t('total_label', { currency })}
+        </p>
+        <p className="mt-2 text-[26px] font-extrabold leading-none tracking-[-0.04em] text-text">
+          {money(reserved, currency)}
+        </p>
+
+        <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
+          {t('history')}
+        </p>
+        {history.entries.length === 0 ? (
+          <p className="mt-2 text-[13px] text-text-soft">{t('empty_history')}</p>
+        ) : (
+          <ul className="mt-2 flex flex-col divide-y divide-border-soft">
+            {history.entries.map((entry) => (
+              <li key={entry.id} className="flex items-center justify-between gap-3 py-2.5">
+                <span className="text-[14px] font-semibold text-text">
+                  {entry.amount >= 0 ? t('entry_saved') : t('entry_released')}
+                  <span className="ml-2 text-[12px] font-medium text-text-soft">
+                    {shortDate(entry.date)}
+                  </span>
+                </span>
+                <span
+                  className={cn(
+                    'text-[14px] font-extrabold tabular-nums',
+                    entry.amount >= 0 ? 'text-emerald-deep' : 'text-text-muted',
+                  )}
+                >
+                  {entry.amount >= 0 ? '+' : '−'}
+                  {money(Math.abs(entry.amount), currency)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {history.hasMore && (
+          <p className="mt-2 text-[12px] text-text-soft">
+            {t('history_truncated', { count: RESERVE_HISTORY_LIMIT })}
+          </p>
+        )}
+
+        <div className="mt-4 flex gap-2">
+          <Button className="flex-1" onClick={onSave}>
+            {t('save')}
+          </Button>
+          <Button
+            variant="secondary"
+            className="flex-1"
+            onClick={onRelease}
+            disabled={reserved <= 0}
+          >
+            {t('release')}
+          </Button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+/**
  * The act itself.
  *
  * The amount field takes a POSITIVE number in both modes: the direction comes
@@ -344,12 +774,25 @@ const SavingsForm = ({
   mode,
   initialCurrency,
   rowFor,
+  purpose,
+  purposeId,
+  purposeAmount,
+  lockedPurpose,
+  onPickPurpose,
   onCancel,
   onDone,
 }: {
   mode: Mode
   initialCurrency: Currency
   rowFor: (currency: Currency) => AvailableSums
+  /** El propósito elegido, ya resuelto. `null` es «Sin destino». */
+  purpose: Purpose | null
+  purposeId: string | null
+  /** Lo guardado en ese grupo y esa moneda: es el piso cuando se vuelve a usar. */
+  purposeAmount: number
+  /** Se llegó desde un grupo: el propósito se hereda y no se ofrece cambiarlo. */
+  lockedPurpose: boolean
+  onPickPurpose: () => void
   onCancel: () => void
   onDone: () => Promise<void>
 }) => {
@@ -378,7 +821,12 @@ const SavingsForm = ({
   // EMPTY. A pre-filled number with no anchor would read as an amount Grana is
   // recommending, and Grana does not recommend amounts.
   const value = parseMoneyInput(amount) ?? 0
-  const limit = mode === 'save' ? row.available : row.reserved
+  // El tope de guardar es el disponible de la MONEDA; el piso de volver a usar
+  // es el de ESTE GRUPO. La asimetría es la misma que aplica el write path: un
+  // propósito no tiene objetivo, así que guardar no tiene contra qué toparse,
+  // pero volver a usar no puede dejar un grupo en negativo aunque el total
+  // guardado —que está a la vista en la pantalla anterior— lo cubra.
+  const limit = mode === 'save' ? row.available : purposeAmount
   const remainder = limit - value
   const overLimit = value > limit
   // El mismo mensaje que devolvería el servidor, con el mismo número. Un botón
@@ -386,9 +834,14 @@ const SavingsForm = ({
   // y no sabés por qué. Y decirlo acá no reemplaza la validación del write path
   // — la repite en el momento en que sirve.
   const limitError = overLimit
-    ? t(mode === 'save' ? 'errors.exceeds_available' : 'errors.exceeds_reserved', {
-        limit: money(limit, currency),
-      })
+    ? mode === 'save'
+      ? t('errors.exceeds_available', { limit: money(limit, currency) })
+      : purpose != null
+        ? t('errors.exceeds_purpose_reserved', {
+            limit: money(limit, currency),
+            purpose: purpose.name,
+          })
+        : t('errors.exceeds_reserved', { limit: money(limit, currency) })
     : null
 
   const submit = () => {
@@ -399,6 +852,7 @@ const SavingsForm = ({
         amount: value,
         currency_code: currency,
         date: new Date(`${date}T00:00:00`),
+        purpose_id: purposeId,
       })
       if (!result.ok) {
         setError(result.formError ?? t('errors.generic'))
@@ -468,9 +922,37 @@ const SavingsForm = ({
         />
       </div>
 
+      {/* Para qué. Una fila, no un selector inline: el propósito es opcional y
+          casi siempre va a quedar como está, así que ocupar altura con una lista
+          desplegada le cobraría a todos por lo que decide una minoría.
+
+          Bloqueada cuando se llegó desde un grupo: ahí el propósito se hereda de
+          dónde se tocó, igual que la moneda se hereda del ingreso. */}
+      <button
+        type="button"
+        onClick={onPickPurpose}
+        disabled={lockedPurpose}
+        className="mt-3 flex min-h-[52px] w-full items-center gap-3 rounded-2xl border border-border-soft bg-card px-4 py-2 text-left transition-colors enabled:hover:bg-surface-sunken disabled:opacity-100"
+      >
+        <span className="text-[13px] text-text-muted">{t('purposes.label')}</span>
+        <span aria-hidden className="ml-auto text-[16px]">
+          {purpose?.icon ?? '🫙'}
+        </span>
+        <span className="text-[14px] font-semibold text-text">
+          {purpose?.name ?? t('purposes.none')}
+        </span>
+        {!lockedPurpose && <ChevronRight className="size-4 text-text-soft" aria-hidden />}
+      </button>
+
       <div className="mt-3 rounded-2xl border border-border-soft bg-card p-4 text-[14px]">
         <p className="flex justify-between py-1 text-text-muted">
-          <span>{mode === 'save' ? t('available_now') : t('saved_total')}</span>
+          <span>
+            {mode === 'save'
+              ? t('available_now')
+              : purpose != null
+                ? t('saved_in', { purpose: purpose.name })
+                : t('saved_total')}
+          </span>
           <span className="font-semibold tabular-nums text-text">{money(limit, currency)}</span>
         </p>
         <p className="flex justify-between py-1 text-text-muted">
@@ -481,7 +963,13 @@ const SavingsForm = ({
           </span>
         </p>
         <p className="mt-1.5 flex justify-between border-t border-border-soft pt-2.5 text-text-muted">
-          <span>{mode === 'save' ? t('left_to_spend') : t('stays_saved')}</span>
+          <span>
+            {mode === 'save'
+              ? t('left_to_spend')
+              : purpose != null
+                ? t('stays_in', { purpose: purpose.name })
+                : t('stays_saved')}
+          </span>
           <span
             className={cn(
               'text-[16px] font-extrabold tabular-nums',

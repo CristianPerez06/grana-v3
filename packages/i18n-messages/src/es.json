@@ -2060,7 +2060,9 @@
     "you_will_release": "Vas a volver a usar",
     "left_to_spend": "Te queda para gastar",
     "saved_total": "Tenés guardado",
+    "saved_in": "Tenés guardado en {purpose}",
     "stays_saved": "Queda guardado",
+    "stays_in": "Queda en {purpose}",
     "save_note": "La plata no se mueve. Solo deja de contar como disponible para gastar.",
     "release_note": "La plata no se mueve. Solo vuelve a contar como disponible para gastar.",
     "errors": {
