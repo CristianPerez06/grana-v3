@@ -1,0 +1,168 @@
+'use client'
+
+import { useState, useTransition } from 'react'
+import { useTranslations } from 'next-intl'
+import type { Purpose } from '@grana/savings'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
+import { parseMoneyInput } from '@grana/validation'
+import { Button } from '@/components/ui/button'
+import { MoneyAmountInput } from '@/components/ui/money-amount-input'
+import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
+import { allocateToPurpose, unallocateFromPurpose } from '@/app/_actions/savings'
+import { DrawerBackHeader } from './drawer-back-header'
+
+type Currency = 'ARS' | 'USD'
+
+/**
+ * Repartir lo guardado: **apartar** para un propósito, o **soltar** de vuelta al
+ * resto.
+ *
+ * Pide un MONTO, y ahí está la corrección de fondo: antes esta pantalla pedía
+ * tocar un movimiento del historial, y eso ataba el propósito a una fila
+ * puntual. La plata guardada es fungible —igual que no está en una cuenta
+ * puntual— así que no existen "los $300.000 del 15/7": existe "hay $190.000
+ * guardados". Etiquetar aquella fila, cuando parte ya se había vuelto a usar,
+ * dejaba al resto en negativo con el total cerrando.
+ *
+ * No mueve plata y, a diferencia de guardar, **tampoco cambia el disponible ni
+ * el total guardado**: lo que entra en un grupo sale del otro.
+ */
+export function PurposeAllocate({
+  purpose,
+  currency,
+  direction,
+  available,
+  onDone,
+  onBack,
+}: {
+  purpose: Purpose
+  currency: Currency
+  /** `allocate` saca del resto hacia el propósito; `unallocate` lo devuelve. */
+  direction: 'allocate' | 'unallocate'
+  /** El piso: el resto al apartar, lo apartado al soltar. */
+  available: number
+  onDone: () => void | Promise<void>
+  onBack: () => void
+}) {
+  const t = useTranslations('savings')
+  const [amount, setAmount] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
+
+  const money = (value: number) => (currency === 'USD' ? formatUSD(value) : formatARS(value, true))
+
+  const value = parseMoneyInput(amount) ?? 0
+  const remainder = available - value
+  const overLimit = value > available
+  const allocating = direction === 'allocate'
+
+  // El mismo mensaje que devolvería el servidor, con el mismo número: un botón
+  // deshabilitado sin explicación no deja avanzar y tampoco dice por qué.
+  const limitError = overLimit
+    ? allocating
+      ? t('purposes.errors.exceeds_unassigned', { limit: money(available) })
+      : t('purposes.errors.exceeds_allocated', { limit: money(available), purpose: purpose.name })
+    : null
+
+  const submit = () => {
+    setError(null)
+    startTransition(async () => {
+      const action = allocating ? allocateToPurpose : unallocateFromPurpose
+      const result = await action({
+        amount: value,
+        currency_code: currency,
+        date: new Date(),
+        purpose_id: purpose.id,
+      })
+      if (!result.ok) {
+        setError(result.formError ?? t('purposes.errors.generic'))
+        return
+      }
+      await onDone()
+    })
+  }
+
+  return (
+    <div className="flex flex-col">
+      <DrawerBackHeader
+        title={t(allocating ? 'purposes.allocate_title' : 'purposes.unallocate_title')}
+        onBack={onBack}
+      />
+
+      {/* Mismo héroe de monto que el resto de las superficies que piden plata. */}
+      <div className="mt-4 rounded-[18px] border border-border bg-card px-[22px] pb-[22px] pt-5 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]">
+        <div className="flex items-start justify-between">
+          <label
+            htmlFor="allocation-amount"
+            className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft"
+          >
+            {t('amount_label')}
+          </label>
+          <span className="inline-flex items-center rounded-[9px] border border-border bg-[#FAFBFC] px-2.5 py-1 text-xs font-bold text-text">
+            {currency}
+          </span>
+        </div>
+        <div className="mt-2 flex items-baseline gap-1.5">
+          <span className="text-[27px] font-semibold leading-none text-text opacity-50">
+            {currency === 'USD' ? 'U$D' : '$'}
+          </span>
+          <MoneyAmountInput
+            id="allocation-amount"
+            value={amount}
+            onChange={setAmount}
+            autoFocus
+            className="w-full border-none bg-transparent p-0 text-[27px] font-semibold leading-none text-text outline-none"
+          />
+          <MoneyCalculatorPopover seed={amount} onResult={setAmount} />
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-2xl border border-border-soft bg-card p-4 text-[14px]">
+        <p className="flex justify-between py-1 text-text-muted">
+          <span>
+            {allocating
+              ? t('purposes.unassigned_available')
+              : t('purposes.allocated_in', { purpose: purpose.name })}
+          </span>
+          <span className="font-semibold tabular-nums text-text">{money(available)}</span>
+        </p>
+        <p className="flex justify-between py-1 text-text-muted">
+          <span>{t(allocating ? 'purposes.will_allocate' : 'purposes.will_unallocate')}</span>
+          <span className="font-semibold tabular-nums text-emerald-deep">
+            {value > 0 ? '−' : ''}
+            {money(value)}
+          </span>
+        </p>
+        <p className="mt-1.5 flex justify-between border-t border-border-soft pt-2.5 text-text-muted">
+          <span>{t(allocating ? 'purposes.left_unassigned' : 'purposes.stays_allocated')}</span>
+          <span
+            className={`text-[16px] font-extrabold tabular-nums ${
+              overLimit ? 'text-negative' : 'text-text'
+            }`}
+          >
+            {money(remainder)}
+          </span>
+        </p>
+      </div>
+
+      {/* Lo que hace falta decir en voz alta: esta operación no toca ningún
+          total. Sin la frase, alguien que ve dos números moverse en la pantalla
+          anterior supone que algo se gastó. */}
+      <p className="mt-3 px-1 text-[12.5px] leading-snug text-text-soft">
+        {t('purposes.allocate_note')}
+      </p>
+
+      {(limitError ?? error) && (
+        <p className="mt-3 text-[13px] font-semibold text-negative">{limitError ?? error}</p>
+      )}
+
+      <Button
+        className="mt-4 h-11"
+        onClick={submit}
+        disabled={pending || value <= 0 || overLimit}
+      >
+        {t(allocating ? 'purposes.allocate' : 'purposes.unallocate')}
+      </Button>
+    </div>
+  )
+}

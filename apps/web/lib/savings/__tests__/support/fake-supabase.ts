@@ -15,10 +15,10 @@ export type PurposeRow = {
   reserved: number
 }
 
+/** Lo que `write_reserve` recibió: el monto YA con signo y su reparto. */
 export type InsertedReserve = {
-  user_id: string
-  currency_code: string
   amount: number
+  currency_code: string
   date: string
   purpose_id: string | null
 }
@@ -26,12 +26,12 @@ export type InsertedReserve = {
 /**
  * Minimal stand-in for the Supabase client, covering exactly what the savings
  * mutations touch: the `get_available_sums` RPC that supplies the cap, the
- * `get_purpose_sums` RPC that supplies the floor, the ownership check on
- * `savings_purpose`, and the insert into `availability_reserve`.
+ * `get_purpose_sums` RPC that supplies the floor, and the `write_reserve` RPC
+ * that persists the reserve and its allocation in one transaction.
  *
- * It records every insert so the tests can assert the SIGN that was persisted —
+ * It records every call so the tests can assert the SIGN that was persisted —
  * the direction is chosen by the verb the user tapped, never by a sign typed into
- * the amount field, and that is only observable at the row level.
+ * the amount field, and that is only observable at the write.
  *
  * When `purposes` is omitted, the purpose sums are derived by putting ALL the
  * reserved money in the «Sin destino» bucket. That is not a shortcut: it is
@@ -60,36 +60,26 @@ export function fakeSupabase(options: {
       }))
 
   const client = {
-    rpc: async (fn: string) => {
+    rpc: async (fn: string, params?: Record<string, unknown>) => {
       if (fn === 'get_available_sums') return { data: options.available ?? [], error: null }
       if (fn === 'get_purpose_sums') return { data: options.purposes ?? untagged(), error: null }
-      throw new Error(`unexpected rpc: ${fn}`)
-    },
-    from: (table: string) => {
-      if (table === 'savings_purpose') {
-        return {
-          select: () => ({
-            eq: (_column: string, value: string) => ({
-              maybeSingle: async () => ({
-                data: (options.ownedPurposeIds ?? []).includes(value) ? { id: value } : null,
-                error: null,
-              }),
-            }),
-          }),
+      if (fn === 'write_reserve') {
+        if (options.insertError) return { data: null, error: options.insertError }
+        // La pertenencia del propósito la valida la función en la base, no el
+        // cliente: acá se replica ese rechazo para poder ejercerlo.
+        const purposeId = (params?.p_purpose_id ?? null) as string | null
+        if (purposeId != null && !(options.ownedPurposeIds ?? []).includes(purposeId)) {
+          return { data: null, error: { code: '23503' } }
         }
+        inserted.push({
+          amount: params?.p_amount as number,
+          currency_code: params?.p_currency as string,
+          date: params?.p_date as string,
+          purpose_id: purposeId,
+        })
+        return { data: 'reserve-1', error: null }
       }
-      if (table !== 'availability_reserve') throw new Error(`unexpected table: ${table}`)
-      return {
-        insert: (payload: InsertedReserve) => ({
-          select: () => ({
-            single: async () => {
-              if (options.insertError) return { data: null, error: options.insertError }
-              inserted.push(payload)
-              return { data: { id: 'reserve-1' }, error: null }
-            },
-          }),
-        }),
-      }
+      throw new Error(`unexpected rpc: ${fn}`)
     },
   }
 

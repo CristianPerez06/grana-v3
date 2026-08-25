@@ -38,7 +38,7 @@ describe('reserveAvailability — the cap', () => {
 
     expect(result).toEqual({ ok: true, id: 'reserve-1' })
     expect(inserted).toEqual([
-      { user_id: UID, currency_code: 'ARS', amount: 200_000, date: '2026-08-23', purpose_id: null },
+      { amount: 200_000, currency_code: 'ARS', date: '2026-08-23', purpose_id: null },
     ])
   })
 
@@ -131,7 +131,7 @@ describe('releaseAvailability — the floor', () => {
     expect(result.ok).toBe(true)
     // The user typed a positive amount; the VERB chose the sign.
     expect(inserted).toEqual([
-      { user_id: UID, currency_code: 'ARS', amount: -50_000, date: '2026-08-23', purpose_id: null },
+      { amount: -50_000, currency_code: 'ARS', date: '2026-08-23', purpose_id: null },
     ])
   })
 
@@ -331,13 +331,7 @@ describe('releaseAvailability — the floor is per purpose', () => {
     // the sum of its rows, signs included — the same mechanism as the total, one
     // level down.
     expect(inserted).toEqual([
-      {
-        user_id: UID,
-        currency_code: 'ARS',
-        amount: -150_000,
-        date: '2026-08-23',
-        purpose_id: EMERGENCIA,
-      },
+      { amount: -150_000, currency_code: 'ARS', date: '2026-08-23', purpose_id: EMERGENCIA },
     ])
   })
 
@@ -359,9 +353,9 @@ describe('releaseAvailability — the floor is per purpose', () => {
     const { supabase, inserted } = withPurposes()
     const SOMEONE_ELSES = '0000000e-0009-4000-8000-000000000009'
 
-    // RLS already hides another user's purposes from reads, but the FK does not
-    // check ownership — without this the row would insert, hanging off a label
-    // the user cannot see or control.
+    // La FK no mira dueños, así que la comprobación vive en `write_reserve` y
+    // se hace contra la base: acá lo que se ejerce es que la mutación NO la
+    // suplante con una validación de forma, y propague el rechazo.
     const result = await reserveAvailability({
       supabase,
       userId: UID,
@@ -369,7 +363,7 @@ describe('releaseAvailability — the floor is per purpose', () => {
       today: TODAY,
     })
 
-    expect(result).toEqual({ ok: false, fieldErrors: { purpose_id: 'not_found' } })
+    expect(result).toEqual({ ok: false, errorCode: '23503' })
     expect(inserted).toEqual([])
   })
 

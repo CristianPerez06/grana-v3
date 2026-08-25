@@ -66,7 +66,6 @@ export type Database = {
           currency_code: string
           date: string
           id: string
-          purpose_id: string | null
           user_id: string
         }
         Insert: {
@@ -75,7 +74,6 @@ export type Database = {
           currency_code: string
           date: string
           id?: string
-          purpose_id?: string | null
           user_id: string
         }
         Update: {
@@ -84,7 +82,6 @@ export type Database = {
           currency_code?: string
           date?: string
           id?: string
-          purpose_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -95,8 +92,46 @@ export type Database = {
             referencedRelation: "currencies"
             referencedColumns: ["code"]
           },
+        ]
+      }
+      savings_purpose_allocation: {
+        Row: {
+          amount: number
+          created_at: string
+          currency_code: string
+          date: string
+          id: string
+          purpose_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency_code: string
+          date: string
+          id?: string
+          purpose_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency_code?: string
+          date?: string
+          id?: string
+          purpose_id?: string
+          user_id?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "availability_reserve_purpose_id_fkey"
+            foreignKeyName: "savings_purpose_allocation_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "savings_purpose_allocation_purpose_id_fkey"
             columns: ["purpose_id"]
             isOneToOne: false
             referencedRelation: "savings_purpose"
@@ -1232,6 +1267,15 @@ export type Database = {
           p_amount: number
           p_currency: string
           p_date: string
+        }
+        Returns: string
+      }
+      write_reserve: {
+        Args: {
+          p_amount: number
+          p_currency: string
+          p_date: string
+          p_purpose_id?: string | null
         }
         Returns: string
       }

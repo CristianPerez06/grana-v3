@@ -39,7 +39,19 @@
 - [x] 5.3 Tocar un grupo abre sus acciones **heredando el propósito**: sin selector
 - [x] 5.4 Abrir *Volver a usar* desde el total con más de un grupo con saldo pide primero de cuál sale, con los montos a la vista
 - [x] 5.5 El historial de cada grupo, acotado igual que el de la fase 1
-- [x] 5.6 **Asignar ⇄ desasignar (D11)**: tocar un movimiento del historial abre *¿Para qué fue?* y permite ponerle, cambiarle o sacarle el propósito. Entrada en las dos listas de historial. No cambia ningún número
+- [x] 5.6 ~~Asignar ⇄ desasignar tocando un movimiento del historial~~ — **reemplazado por 10.x**: atar el propósito a una fila puntual estaba mal (D11)
+
+## 10. La corrección: repartir en vez de etiquetar (D11, D12, D13)
+
+- [x] 10.1 `0059_purpose_allocation.sql`: tabla `savings_purpose_allocation`, y fuera `availability_reserve.purpose_id`
+- [x] 10.2 «Sin destino» pasa a ser **el resto**, derivado en `get_purpose_sums`
+- [x] 10.3 El invariante en un trigger, disparado desde **las dos** tablas
+- [x] 10.4 `write_reserve`: la reserva y su reparto en una transacción, con el orden invertido según la dirección
+- [x] 10.5 Self-check que impide reintroducir `purpose_id` en la reserva
+- [x] 10.6 `allocateToPurpose` / `unallocateFromPurpose` en el paquete, con su piso y su copy
+- [x] 10.7 Pantalla de **apartar/soltar** por monto, en las dos superficies; el historial de guardados deja de ser tocable
+- [x] 10.8 El historial de un grupo pasa a ser el de sus **repartos**; «Sin destino» no tiene historial propio
+- [x] 10.9 Tests: 24 sobre el SQL real, incluidos los dos lados del trigger y la atomicidad de `write_reserve`
 
 ## 6. Editar y borrar (D4, D5)
 

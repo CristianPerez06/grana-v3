@@ -27,6 +27,7 @@ export function PurposePicker({
   sums,
   currency,
   selectedId,
+  allowNone = true,
   onPick,
   onCreate,
   onBack,
@@ -36,6 +37,12 @@ export function PurposePicker({
   sums: PurposeSums[]
   currency: Currency
   selectedId: string | null
+  /**
+   * «Sin destino» como opción. Al elegir para qué guardar, sí: no etiquetar es
+   * una respuesta válida. Al elegir hacia dónde apartar, no: apartar al resto
+   * es no apartar, y ofrecerlo sería un botón que no hace nada.
+   */
+  allowNone?: boolean
   onPick: (purposeId: string | null) => void
   /** Sin argumento abre el alta en blanco; con una clave, precargada. */
   onCreate: (seedKey?: string) => void
@@ -72,13 +79,15 @@ export function PurposePicker({
             onClick={() => onPick(purpose.id)}
           />
         ))}
-        <PurposeRow
-          icon={null}
-          name={t('purposes.none')}
-          amount={money(amountOf(null))}
-          selected={selectedId === null}
-          onClick={() => onPick(null)}
-        />
+        {allowNone && (
+          <PurposeRow
+            icon={null}
+            name={t('purposes.none')}
+            amount={money(amountOf(null))}
+            selected={selectedId === null}
+            onClick={() => onPick(null)}
+          />
+        )}
       </ul>
 
       {suggestions.length > 0 && (

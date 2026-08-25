@@ -1,9 +1,14 @@
 import type { GranaSupabaseClient } from '@grana/supabase'
 import {
+  Money,
+  purposeAllocationSchema,
   savingsPurposeSchema,
   validateActionInput,
+  type PurposeAllocationInput,
   type SavingsPurposeInput,
 } from '@grana/validation'
+import { formatDateISO, getTodayAR, type BalanceCurrency } from '@grana/money-logic'
+import { getReservedForPurpose } from './queries'
 import type { Purpose, SavingsMutationResult } from './types'
 
 /** Código de Postgres para violación de índice único. */
@@ -139,46 +144,107 @@ export async function deletePurpose(args: {
 }
 
 /**
- * Ponerle —o sacarle— un propósito a una reserva que ya existe.
+ * Repartir lo guardado: **apartar** para un propósito, o **soltar** de vuelta al
+ * resto.
  *
- * Es el SEGUNDO PAR DE VERBOS del modelo: asignar ⇄ desasignar. Igual que
- * guardar y volver a usar, no mueve plata; pero a diferencia de ellos, tampoco
- * cambia el disponible ni el total guardado. **Es la operación más inofensiva
- * del modelo**: lo único que cambia es para qué es.
+ * Es el segundo par de verbos del modelo. Igual que guardar y volver a usar, no
+ * mueve plata; pero a diferencia de ellos, **tampoco cambia el disponible ni el
+ * total guardado** — lo que entra en un grupo sale de otro.
  *
- * De ahí que no tenga tope, ni piso, ni confirmación: no hay ningún número que
- * pueda quedar mal. Se puede hacer sobre reservas viejas sin ningún riesgo,
- * porque el número de arriba no se entera.
+ * Reemplaza al etiquetado de una fila del historial, que era la forma anterior y
+ * estaba mal: no existen "los $300.000 guardados el 15/7", existe "hay $190.000
+ * guardados". La plata guardada es fungible, igual que no está en una cuenta
+ * puntual. Y el etiquetado por fila ni siquiera podía expresar la mayoría de los
+ * repartos: para decir "150.000 son para Japón" tenía que existir una fila de
+ * exactamente 150.000.
  *
- * `purposeId` en null desasigna, que es volver la fila a «Sin destino».
+ * `amount` es SIEMPRE positivo; la dirección la elige el verbo. El piso de cada
+ * dirección se lee del servidor y además lo vuelve a exigir el trigger de la
+ * base, que es el que no se puede olvidar.
  */
-export async function assignPurpose(args: {
+async function writeAllocation(args: {
   supabase: GranaSupabaseClient
-  reserveId: string
-  purposeId: string | null
-}): Promise<SavingsMutationResult> {
-  const { supabase, reserveId, purposeId } = args
+  userId: string
+  input: unknown
+  direction: 'allocate' | 'unallocate'
+  today?: Date
+}): Promise<SavingsMutationResult<PurposeAllocationInput>> {
+  const { supabase, userId, input, direction } = args
+  const today = args.today ?? getTodayAR()
 
-  // La misma verificación de pertenencia que hace el write path, y por lo mismo:
-  // RLS impide LEER el propósito de otro usuario, pero el FK no mira dueños.
-  if (purposeId != null) {
-    const { data: owned, error: ownedError } = await supabase
-      .from('savings_purpose')
-      .select('id')
-      .eq('id', purposeId)
-      .maybeSingle()
+  const validation = await validateActionInput(purposeAllocationSchema, input)
+  if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
 
-    if (ownedError) return { ok: false, errorCode: ownedError.code }
-    if (owned == null) return { ok: false, fieldErrors: { purpose_id: 'not_found' } }
+  const { amount, currency_code, date, purpose_id } = validation.data
+  const currencyCode = currency_code as BalanceCurrency
+
+  // Apartar sale del RESTO; soltar sale del propósito. Las dos direcciones miran
+  // el mismo corte, en grupos distintos.
+  const source = await getReservedForPurpose(
+    supabase,
+    currencyCode,
+    direction === 'allocate' ? null : purpose_id,
+    today,
+  )
+
+  const requested = Money.from(amount)
+
+  if (Money.compare(requested, Money.from(source.reserved)) > 0) {
+    return {
+      ok: false,
+      reason: direction === 'allocate' ? 'exceeds_unassigned' : 'exceeds_purpose_reserved',
+      limit: source.reserved,
+      purposeName: source.purposeName,
+      messageKey:
+        direction === 'allocate'
+          ? 'savings.purposes.errors.exceeds_unassigned'
+          : 'savings.purposes.errors.exceeds_allocated',
+    }
   }
 
-  // Sin `user_id` en el where: RLS ya acota el update a las filas propias.
-  const { error } = await supabase
-    .from('availability_reserve')
-    .update({ purpose_id: purposeId })
-    .eq('id', reserveId)
+  const signed =
+    direction === 'allocate'
+      ? amount
+      : Money.toNumber(Money.subtract(Money.from(0), requested))
+
+  const { data, error } = await supabase
+    .from('savings_purpose_allocation')
+    .insert({
+      user_id: userId,
+      purpose_id,
+      currency_code: currencyCode,
+      amount: signed,
+      date: formatDateISO(date),
+    })
+    .select('id')
+    .single()
 
   if (error) return { ok: false, errorCode: error.code }
 
-  return { ok: true, id: reserveId }
+  return { ok: true, id: data.id }
+}
+
+/** Apartar parte de lo que está guardado sin destino para un propósito. */
+export async function allocateToPurpose(args: {
+  supabase: GranaSupabaseClient
+  userId: string
+  input: unknown
+  today?: Date
+}): Promise<SavingsMutationResult<PurposeAllocationInput>> {
+  return writeAllocation({ ...args, direction: 'allocate' })
+}
+
+/**
+ * Soltar parte de lo apartado: vuelve al resto, sigue guardado.
+ *
+ * NO es lo mismo que volver a usar. Volver a usar saca la plata de lo guardado y
+ * la devuelve al disponible; soltar la deja guardada y solo le quita el destino.
+ */
+export async function unallocateFromPurpose(args: {
+  supabase: GranaSupabaseClient
+  userId: string
+  input: unknown
+  today?: Date
+}): Promise<SavingsMutationResult<PurposeAllocationInput>> {
+  return writeAllocation({ ...args, direction: 'unallocate' })
 }

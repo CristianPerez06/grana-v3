@@ -158,35 +158,83 @@ propósitos automáticamente.
 
 ---
 
-### Requirement: El propósito de una reserva existente se puede cambiar
+### Requirement: El propósito se reparte por monto, no se ata a un movimiento
 
-El sistema SHALL permitir asignar, cambiar o quitar el propósito de una reserva **ya registrada**, desde el historial. Quitar el propósito SHALL equivaler a asignarle «Sin destino».
+El sistema SHALL permitir **apartar** un monto de lo guardado sin destino hacia un propósito, y
+**soltarlo** de vuelta al resto. NO SHALL asociar un propósito a una fila puntual del historial de
+guardados: el dinero guardado es fungible y una reserva vieja puede haber sido usada en parte.
 
-Esta operación NO SHALL cambiar el total guardado, NO SHALL cambiar el disponible y NO SHALL tener tope ni piso: lo único que modifica es **para qué es** ese dinero.
+Apartar y soltar NO SHALL cambiar el total guardado, NO SHALL cambiar el disponible y NO SHALL mover
+dinero entre cuentas: lo que entra en un grupo sale de otro.
 
-Sin esta operación, la capability solo serviría hacia adelante y todo lo guardado antes quedaría permanentemente sin propósito.
+«Sin destino» SHALL derivarse como **el resto** —lo guardado menos lo repartido— y NO SHALL
+almacenarse.
 
-#### Scenario: Etiquetar un guardado viejo no mueve ningún número
+#### Scenario: Repartir no mueve ningún total
 
-- **GIVEN** una reserva de $50.000 sin propósito, de un mes anterior
-- **WHEN** el usuario le asigna "Japón"
-- **THEN** el total guardado y el disponible quedan sin cambios
-- **AND** los $50.000 pasan a contarse en el grupo "Japón"
+- **GIVEN** $190.000 guardados, nada repartido
+- **WHEN** el usuario aparta $150.000 para "Japón"
+- **THEN** el total guardado sigue siendo $190.000 y el disponible no cambia
+- **AND** "Japón" muestra $150.000 y «Sin destino» $40.000
 
-#### Scenario: Quitar el propósito devuelve la reserva a «Sin destino»
+#### Scenario: Se puede repartir cualquier monto
 
-- **WHEN** el usuario elige «Sin destino» para una reserva que tenía propósito
-- **THEN** la reserva queda sin propósito
-- **AND** ningún número cambia
+- **GIVEN** un historial cuyos guardados fueron de $300.000, $600.000 y $200.000
+- **WHEN** el usuario quiere decir que $150.000 son para "Japón"
+- **THEN** puede hacerlo, sin depender de que exista un movimiento de ese monto
+
+#### Scenario: Soltar devuelve al resto sin sacar del guardado
+
+- **WHEN** el usuario suelta $50.000 de "Japón"
+- **THEN** «Sin destino» sube $50.000 y el total guardado no cambia
+- **AND** el disponible no cambia
 
 ---
 
-### Requirement: Una reserva solo puede llevar un propósito del propio usuario
+### Requirement: Lo repartido nunca supera lo guardado
 
-El sistema SHALL verificar contra la base que el propósito indicado pertenece al usuario antes de
-registrar la reserva. NO SHALL alcanzar con la validación de forma del identificador.
+El sistema SHALL garantizar, **en la base de datos**, que por moneda la suma repartida entre
+propósitos nunca supere el total guardado, y que ningún propósito quede con un reparto negativo. La
+garantía NO SHALL depender de que cada camino de escritura la recuerde.
+
+La regla SHALL exigirse también cuando el usuario **vuelve a usar** dinero: retirar del guardado
+puede romper el invariante sin tocar ninguna fila de reparto.
+
+#### Scenario: No se puede apartar más de lo guardado
+
+- **GIVEN** $190.000 guardados
+- **WHEN** se intenta apartar $200.000 para un propósito
+- **THEN** la operación se rechaza
+
+#### Scenario: No se puede volver a usar lo que está repartido
+
+- **GIVEN** $190.000 guardados, de los cuales $150.000 están apartados para "Japón"
+- **WHEN** el usuario intenta volver a usar $100.000 sin tocar el reparto
+- **THEN** la operación se rechaza
+- **AND** volver a usar $40.000 sí se acepta
+
+---
+
+### Requirement: Guardar con un propósito es un solo acto
+
+Cuando el usuario guarde indicando un propósito, el sistema SHALL registrar la reserva y su reparto
+**de forma atómica**: o quedan las dos cosas, o no queda ninguna. NO SHALL quedar dinero guardado sin
+el reparto que el usuario pidió.
+
+#### Scenario: Si el reparto no se puede registrar, tampoco el guardado
+
+- **WHEN** se guarda con un propósito que no pertenece al usuario
+- **THEN** la operación se rechaza entera y no queda ninguna reserva registrada
+
+---
+
+### Requirement: Solo se puede repartir hacia un propósito propio
+
+El sistema SHALL verificar contra la base que el propósito indicado pertenece al usuario, y NO SHALL
+apoyarse únicamente en la validación de forma del identificador ni en el rol con el que se ejecute la
+operación.
 
 #### Scenario: Un propósito ajeno se rechaza
 
-- **WHEN** se intenta registrar una reserva con el `purpose_id` de otro usuario
+- **WHEN** se intenta guardar o repartir usando el propósito de otro usuario
 - **THEN** la operación se rechaza y no se registra ninguna fila

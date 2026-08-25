@@ -24,6 +24,7 @@ export const PurposePicker = ({
   sums,
   currency,
   selectedId,
+  allowNone = true,
   onPick,
   onCreate,
   onBack,
@@ -32,6 +33,12 @@ export const PurposePicker = ({
   sums: PurposeSums[]
   currency: Currency
   selectedId: string | null
+  /**
+   * «Sin destino» como opción. Al elegir para qué guardar, sí: no etiquetar es
+   * una respuesta válida. Al elegir hacia dónde apartar, no: apartar al resto es
+   * no apartar, y sería un botón que no hace nada.
+   */
+  allowNone?: boolean
   onPick: (purposeId: string | null) => void
   /** Sin argumento abre el alta en blanco; con una clave, precargada. */
   onCreate: (seedKey?: string) => void
@@ -68,13 +75,15 @@ export const PurposePicker = ({
             onPress={() => onPick(purpose.id)}
           />
         ))}
-        <PurposeRow
-          icon={null}
-          name={t('savings.purposes.none')}
-          amount={money(amountOf(null))}
-          selected={selectedId === null}
-          onPress={() => onPick(null)}
-        />
+        {allowNone && (
+          <PurposeRow
+            icon={null}
+            name={t('savings.purposes.none')}
+            amount={money(amountOf(null))}
+            selected={selectedId === null}
+            onPress={() => onPick(null)}
+          />
+        )}
       </View>
 
       {suggestions.length > 0 && (

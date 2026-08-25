@@ -156,24 +156,83 @@ sola por D4.
 Se valida en la mutación, como el tope y el piso, y por la misma razón: un schema valida la **forma**;
 el estado del servidor lo valida el servidor.
 
-## D11 — Asignar ⇄ desasignar: el segundo par de verbos
+## D11 — El propósito se REPARTE, no se etiqueta (corrige a 0058)
 
-Se llega tocando un movimiento del historial, y es una operación sobre una reserva que **ya
-existe**.
+Primero se implementó como una columna `purpose_id` en `availability_reserve`: cada fila del
+historial llevaba su propósito, y se etiquetaba tocando un movimiento. **Está mal**, y la migración
+`0059` lo corrige.
 
-Es el segundo par de verbos del modelo. Igual que guardar y volver a usar, no mueve plata; pero a
-diferencia de ellos, **tampoco cambia el disponible ni el total guardado**. Es la operación más
-inofensiva del modelo, y por eso no tiene tope, ni piso, ni confirmación: no hay ningún número que
-pueda quedar mal.
+**El motivo es el mismo por el que una reserva no tiene `account_id`: la plata guardada es
+fungible.** No existen "los $300.000 guardados el 15/7"; existe "hay $190.000 guardados". Si de esos
+$300.000 el usuario ya volvió a usar parte, etiquetar esa fila afirma que hay $300.000 apartados —
+y deja al grupo sin etiqueta en **negativo** mientras el total sigue cerrando. Es exactamente el
+estado que el piso de D2 existía para impedir, entrando por la puerta de atrás.
 
-**Existe porque sin ella la fase serviría solo hacia adelante.** Todo lo que el usuario venía
-guardando quedaría condenado a «Sin destino» para siempre, y la fase se estrenaría con la plata de la
-gente ya del lado equivocado — que es la peor primera impresión posible para algo cuyo valor es
-justamente poder decir para qué.
+**Y no se arregla validando.** Con filas de 300.000, 600.000, 10.000 y 200.000 no hay forma de
+expresar *"150.000 son para Japón"*: haría falta una fila de exactamente 150.000. El etiquetado por
+fila no puede expresar la mayoría de los repartos posibles. El problema no es el control, es la
+unidad.
 
-Desasignar no es un botón aparte: es elegir «Sin destino» en la misma lista. El par es simétrico y se
-expresa con un solo control.
+La pregunta correcta no es *¿para qué fue este guardado viejo?* —una pregunta sobre el pasado, que
+ya no se puede contestar— sino **de lo que tengo guardado hoy, ¿cuánto es para Japón?**, que se
+contesta con un monto.
 
-La entrada está en las **dos** listas de historial —la de la moneda y la de un grupo—, y la segunda es
-la que más importa: parado en «Sin destino», el usuario está mirando exactamente la plata que quiere
-etiquetar.
+Cada verbo con su tabla:
+
+| Tabla | Verbos | Efecto |
+|---|---|---|
+| `availability_reserve` | guardar ⇄ volver a usar | mueve el disponible |
+| `savings_purpose_allocation` | apartar ⇄ soltar | **no mueve ningún total** |
+
+**«Sin destino» deja de ser filas y pasa a ser el resto**, derivado en SQL: `guardado − lo
+repartido`. Que es lo que honestamente es — no un propósito, sino lo que sobra. Para el usuario
+sigue siendo un grupo, con las mismas reglas.
+
+Tres cosas se acomodan solas, y ninguna es un efecto lateral menor:
+
+- **Borrar un propósito ya no puede tocar plata, y no porque lo cuidemos.** La plata vive en
+  `availability_reserve`, que los propósitos ni rozan. El self-check de D4 sobre la regla de borrado
+  deja de hacer falta porque el peligro deja de existir; `0059` lo reemplaza por uno que impide
+  reintroducir `purpose_id` en la reserva.
+- **La fase 4 pide montos**, no filas: *"US$ 3.000 de los US$ 5.000 para Japón"*.
+- **La fase 3 no queda encajonada**: *"este plazo fijo respalda Japón"* es una fila más, y con la
+  columna en las reservas habría sido imposible sin inventar una reserva falsa para plata que ya
+  salió de la cuenta.
+
+## D12 — El invariante vive en la base, y se dispara desde las dos tablas
+
+```
+por moneda:     lo repartido  <=  lo guardado
+por propósito:  lo repartido  >=  0
+```
+
+En un trigger, no en el write path, y el motivo es que **el invariante lo pueden romper dos tablas
+distintas**. Apartar de más lo rompe por arriba. Volver a usar plata que ya estaba repartida lo rompe
+por abajo — **sin tocar una sola fila de reparto**. Un control en la mutación tendría que estar en
+los dos lados y acordarse para siempre, que es exactamente la forma del bug que 0051 sacó de
+producción.
+
+El control del write path se queda igual, pero cambia de rol: existe para **dar un mensaje con el
+número**, no para ser la única defensa.
+
+Sin corte temporal a propósito: el invariante es sobre todas las filas, no sobre las vigentes a una
+fecha. Si no, el estado dependería de qué día se lo mire.
+
+## D13 — Guardar "para Japón" son dos filas, y van juntas o no van
+
+`write_reserve` escribe la reserva y su reparto **en una transacción**. Con dos llamadas desde el
+cliente, entre una y otra puede fallar la red y quedar la mitad: plata guardada que el usuario pidió
+apartar y quedó sin apartar, sin que nada avise. No corrompe ningún total, pero es un estado que
+nadie pidió.
+
+El orden **no es simétrico**, y esto es lo que haría fallar una implementación descuidada:
+
+- **guardar** → reserva primero: sube el techo, después se reparte.
+- **volver a usar** → reparto primero: baja lo repartido, después baja el techo.
+
+Al revés, cada operación se cruzaría con su propio invariante a mitad de camino.
+
+La pertenencia del propósito se chequea con `user_id` **explícito** dentro de la función. En el resto
+del repo repetir el criterio de RLS es duplicación; acá no: no es un filtro de listado, es la
+decisión de seguridad de la función, y hacerla depender de qué rol la ejecute la vuelve
+silenciosamente permisiva para cualquier caller privilegiado.

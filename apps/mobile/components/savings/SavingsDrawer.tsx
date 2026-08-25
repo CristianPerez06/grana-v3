@@ -28,7 +28,7 @@ import { PurposePicker } from './PurposePicker'
 import { PurposeForm } from './PurposeForm'
 import { PurposeDelete } from './PurposeDelete'
 import { PurposeGroup } from './PurposeGroup'
-import { PurposeAssign } from './PurposeAssign'
+import { PurposeAllocate } from './PurposeAllocate'
 import { colors } from '../../lib/colors'
 
 type Currency = 'ARS' | 'USD'
@@ -46,11 +46,16 @@ type SheetView =
   | { kind: 'detail' }
   | { kind: 'group'; currency: Currency; purposeId: string | null }
   | { kind: 'form'; mode: Mode; currency: Currency; purposeId: string | null; locked: boolean }
-  | { kind: 'picker'; currency: Currency }
+  | { kind: 'picker'; currency: Currency; intent: 'form' | 'allocate' }
   | { kind: 'purposeForm'; purpose: Purpose | null; name?: string; icon?: string }
   | { kind: 'purposeDelete'; purpose: Purpose }
   | { kind: 'pickSource'; currency: Currency }
-  | { kind: 'assign'; currency: Currency; entry: ReserveEntry }
+  | {
+      kind: 'allocate'
+      currency: Currency
+      purpose: Purpose
+      direction: 'allocate' | 'unallocate'
+    }
 
 const money = (amount: number, currency: Currency) =>
   currency === 'USD' ? formatUSD(amount) : formatARS(amount, true)
@@ -164,6 +169,22 @@ export const SavingsDrawer = ({
    */
   const pickPurpose = (purposeId: string | null) =>
     setStack((prev) => {
+      const picker = [...prev].reverse().find((v) => v.kind === 'picker') as
+        | Extract<SheetView, { kind: 'picker' }>
+        | undefined
+
+      if (picker?.intent === 'allocate') {
+        const target = purposes.find((p) => p.id === purposeId)
+        if (!target) return prev.slice(0, 1)
+        // Reemplaza al selector en vez de apilarse encima: volver desde apartar
+        // lleva al grupo, no a la lista que ya cumplió su función.
+        const at = prev.indexOf(picker)
+        return [
+          ...prev.slice(0, at),
+          { kind: 'allocate', currency: picker.currency, purpose: target, direction: 'allocate' },
+        ]
+      }
+
       const at = prev.map((v) => v.kind).lastIndexOf('form')
       if (at < 0) return prev.slice(0, 1)
       const target = prev[at] as Extract<SheetView, { kind: 'form' }>
@@ -197,7 +218,7 @@ export const SavingsDrawer = ({
             purposeId={view.purposeId}
             purposeAmount={groupAmount(view.currency, view.purposeId)}
             lockedPurpose={view.locked}
-            onPickPurpose={() => push({ kind: 'picker', currency: view.currency })}
+            onPickPurpose={() => push({ kind: 'picker', currency: view.currency, intent: 'form' })}
             onCancel={back}
             onDone={onDone}
           />
@@ -208,6 +229,7 @@ export const SavingsDrawer = ({
             purposes={purposes}
             sums={purposeSums}
             currency={view.currency}
+            allowNone={view.intent === 'form'}
             selectedId={
               (stack.find((v) => v.kind === 'form') as Extract<SheetView, { kind: 'form' }>)
                 ?.purposeId ?? null
@@ -255,23 +277,20 @@ export const SavingsDrawer = ({
           />
         )}
 
-        {view.kind === 'assign' && (
-          <PurposeAssign
-            entry={view.entry}
+        {view.kind === 'allocate' && (
+          <PurposeAllocate
+            purpose={view.purpose}
             currency={view.currency}
-            purposes={purposes}
+            direction={view.direction}
+            available={
+              view.direction === 'allocate'
+                ? groupAmount(view.currency, null)
+                : groupAmount(view.currency, view.purpose.id)
+            }
             onDone={async () => {
               await refresh()
               back()
             }}
-            onCreate={(seedKey) =>
-              push({
-                kind: 'purposeForm',
-                purpose: null,
-                name: seedKey ? t(`savings.purposes.seeds.${seedKey}`) : undefined,
-                icon: seedKey ? PURPOSE_SEEDS.find((s) => s.key === seedKey)?.icon : undefined,
-              })
-            }
             onBack={back}
           />
         )}
@@ -317,7 +336,29 @@ export const SavingsDrawer = ({
             purposeId={view.purposeId}
             purpose={purposeById(view.purposeId)}
             reserved={groupAmount(view.currency, view.purposeId)}
-            onAssign={(entry) => push({ kind: 'assign', currency: view.currency, entry })}
+            onAllocate={() => {
+              // Desde «Sin destino» hay que elegir a cuál apartar; desde un
+              // propósito, ya se sabe.
+              const target = purposeById(view.purposeId)
+              if (target)
+                push({
+                  kind: 'allocate',
+                  currency: view.currency,
+                  purpose: target,
+                  direction: 'allocate',
+                })
+              else push({ kind: 'picker', currency: view.currency, intent: 'allocate' })
+            }}
+            onUnallocate={() => {
+              const target = purposeById(view.purposeId)
+              if (target)
+                push({
+                  kind: 'allocate',
+                  currency: view.currency,
+                  purpose: target,
+                  direction: 'unallocate',
+                })
+            }}
             onSave={() =>
               push({
                 kind: 'form',
@@ -355,7 +396,6 @@ export const SavingsDrawer = ({
                   monthNet={monthNet(currency)}
                   groups={groupsOf(currency)}
                   onOpenGroup={(purposeId) => push({ kind: 'group', currency, purposeId })}
-                  onAssign={(entry) => push({ kind: 'assign', currency, entry })}
                   onSave={() =>
                     push({ kind: 'form', mode: 'save', currency, purposeId: null, locked: false })
                   }
@@ -383,7 +423,6 @@ const CurrencyBlock = ({
   monthNet,
   groups,
   onOpenGroup,
-  onAssign,
   onSave,
   onRelease,
 }: {
@@ -395,7 +434,6 @@ const CurrencyBlock = ({
   /** El corte por propósito de esta moneda, «Sin destino» al final. */
   groups: PurposeSums[]
   onOpenGroup: (purposeId: string | null) => void
-  onAssign: (entry: ReserveEntry) => void
   onSave: () => void
   onRelease: () => void
 }) => {
@@ -493,13 +531,9 @@ const CurrencyBlock = ({
       ) : (
         <View className="mt-1.5">
           {history.entries.map((entry) => (
-            /* Tocable: es la puerta a "¿para qué fue?". Sin ella la fase 2 solo
-               serviría de acá en adelante. */
-            <Pressable
+            <View
               key={entry.id}
-              accessibilityRole="button"
-              onPress={() => onAssign(entry)}
-              className="min-h-[44px] flex-row items-center justify-between gap-2 border-t border-border-soft py-2.5"
+              className="flex-row items-center justify-between border-t border-border-soft py-2.5"
             >
               <Text className="text-[14px] font-semibold text-text">
                 {entry.amount >= 0 ? t('savings.entry_saved') : t('savings.entry_released')}
@@ -516,8 +550,7 @@ const CurrencyBlock = ({
                 {entry.amount >= 0 ? '+' : '−'}
                 {money(Math.abs(entry.amount), currency)}
               </Text>
-              <ChevronRight size={15} color={colors.textSoft} />
-            </Pressable>
+            </View>
           ))}
         </View>
       )}
@@ -526,11 +559,6 @@ const CurrencyBlock = ({
       {history.hasMore && (
         <Text className="mt-2 text-[12px] text-text-soft">
           {t('savings.history_truncated', { count: String(RESERVE_HISTORY_LIMIT) })}
-        </Text>
-      )}
-      {history.entries.length > 0 && (
-        <Text className="mt-1.5 text-[12px] text-text-soft">
-          {t('savings.purposes.assign_hint')}
         </Text>
       )}
 

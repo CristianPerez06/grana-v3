@@ -56,11 +56,16 @@ export type Purpose = {
  * "Japón" tiene pesos y dólares, y son dos números distintos.
  */
 export type PurposeSums = {
+  /** `null` es «Sin destino», que acá es EL RESTO: guardado menos lo repartido. */
   purposeId: string | null
   purposeName: string | null
   purposeIcon: string | null
   currencyCode: BalanceCurrency
-  /** Suma con signo de las reservas del grupo. Nunca debería quedar negativa. */
+  /**
+   * Lo que le corresponde al grupo. Para un propósito es la suma de sus
+   * repartos; para «Sin destino» es el resto. El invariante de la base impide
+   * que cualquiera de los dos quede negativo.
+   */
   reserved: number
 }
 
@@ -72,8 +77,22 @@ export type ReserveEntry = {
   amount: number
   date: string
   createdAt: string
-  /** El grupo al que pertenece. `null` es «Sin destino». */
-  purposeId: string | null
+}
+
+/**
+ * Un acto del reparto: apartar (positivo) o soltar (negativo).
+ *
+ * Es el SEGUNDO par de verbos del modelo y vive en su propia tabla porque es un
+ * acto distinto: guardar mueve el disponible, repartir no mueve ningún total.
+ */
+export type AllocationEntry = {
+  id: string
+  purposeId: string
+  currencyCode: BalanceCurrency
+  /** Con signo. La UI deriva el verbo de él. */
+  amount: number
+  date: string
+  createdAt: string
 }
 
 /**
@@ -89,7 +108,11 @@ export type SavingsMutationResult<T = never> =
       fieldErrors?: Partial<Record<keyof T, string>>
       messageKey?: string
       errorCode?: string
-      reason?: 'exceeds_available' | 'exceeds_reserved' | 'exceeds_purpose_reserved'
+      reason?:
+        | 'exceeds_available'
+        | 'exceeds_reserved'
+        | 'exceeds_purpose_reserved'
+        | 'exceeds_unassigned'
       limit?: number
       /** El nombre del propósito cuando el rechazo fue su piso, para que el mensaje lo diga. */
       purposeName?: string | null

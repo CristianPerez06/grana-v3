@@ -2088,10 +2088,6 @@
       "label": "What for",
       "none": "Unassigned",
       "choose": "What for?",
-      "assign_title": "What was it for?",
-      "assign_cta": "Save changes",
-      "assign_note": "Adding or removing a purpose doesn’t change how much you have saved or how much you can spend. It only changes what it’s for.",
-      "assign_hint": "Tap a movement to give it a purpose.",
       "change": "Change",
       "new": "New purpose",
       "edit": "Edit purpose",
@@ -2114,8 +2110,24 @@
       },
       "errors": {
         "duplicate": "You already have a purpose called “{name}”.",
-        "generic": "We couldn’t save the purpose. Try again."
-      }
+        "generic": "We couldn’t save the purpose. Try again.",
+        "exceeds_unassigned": "You can’t set aside more than you have unassigned: {limit}.",
+        "exceeds_allocated": "You can’t unset more than you have set for {purpose}: {limit}."
+      },
+      "allocate": "Set for",
+      "unallocate": "Unset",
+      "allocate_title": "Set money for a purpose",
+      "unallocate_title": "Unset from this purpose",
+      "unassigned_available": "Unassigned",
+      "allocated_in": "Set for {purpose}",
+      "will_allocate": "You’ll set aside",
+      "will_unallocate": "You’ll unset",
+      "left_unassigned": "Left unassigned",
+      "stays_allocated": "Stays set",
+      "allocate_note": "This doesn’t move money or change what you can spend. It only says what part of your savings is for.",
+      "entry_allocated": "Set for this",
+      "entry_unallocated": "Unset",
+      "empty_allocations": "Nothing set for this yet."
     }
   }
 }

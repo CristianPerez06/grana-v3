@@ -7,10 +7,15 @@ import {
   createPurpose as createPurposeImpl,
   renamePurpose as renamePurposeImpl,
   deletePurpose as deletePurposeImpl,
-  assignPurpose as assignPurposeImpl,
+  allocateToPurpose as allocateToPurposeImpl,
+  unallocateFromPurpose as unallocateFromPurposeImpl,
   type SavingsMutationResult,
 } from '@grana/savings'
-import type { ReserveAvailabilityInput, SavingsPurposeInput } from '@grana/validation'
+import type {
+  PurposeAllocationInput,
+  ReserveAvailabilityInput,
+  SavingsPurposeInput,
+} from '@grana/validation'
 import { createClient } from '@/lib/supabase/server'
 import { getTodayAR } from '@/lib/date'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -145,14 +150,52 @@ export async function deletePurpose(
 }
 
 /**
- * Asignar ⇄ desasignar: ponerle o sacarle el propósito a una reserva que ya
- * existe. No toca ningún número — ni el disponible, ni el total guardado.
+ * Apartar ⇄ soltar: repartir lo guardado entre propósitos.
+ *
+ * Ninguna de las dos toca un número: lo que entra en un grupo sale del otro, y
+ * el disponible y el total guardado quedan igual.
  */
-export async function assignPurpose(
-  reserveId: string,
-  purposeId: string | null,
-): Promise<ActionResult<SavingsPurposeInput> & { id?: string }> {
-  await getAuthenticatedUserId()
+async function finishAllocation(
+  result: SavingsMutationResult<PurposeAllocationInput>,
+  currencyCode: string,
+): Promise<ActionResult<PurposeAllocationInput> & { id?: string; reason?: string }> {
+  if (result.ok) {
+    revalidateAfterSavingsMutation()
+    return { ok: true, id: result.id }
+  }
+
+  let formError: string | undefined
+  if (result.messageKey != null) {
+    const t = await getTranslations()
+    formError = t(result.messageKey, {
+      limit: currencyCode === 'USD' ? formatUSD(result.limit ?? 0) : formatARS(result.limit ?? 0),
+      purpose: result.purposeName ?? '',
+    })
+  } else if (result.errorCode != null) {
+    formError = await translatePostgresError(result.errorCode, 'savings')
+  }
+
+  return { ok: false, fieldErrors: result.fieldErrors, formError, reason: result.reason }
+}
+
+export async function allocateToPurpose(
+  input: unknown,
+): Promise<ActionResult<PurposeAllocationInput> & { id?: string; reason?: string }> {
+  const userId = await getAuthenticatedUserId()
   const supabase = await createClient()
-  return finishPurpose(await assignPurposeImpl({ supabase, reserveId, purposeId }))
+  return finishAllocation(
+    await allocateToPurposeImpl({ supabase, userId, input, today: getTodayAR() }),
+    currencyOf(input),
+  )
+}
+
+export async function unallocateFromPurpose(
+  input: unknown,
+): Promise<ActionResult<PurposeAllocationInput> & { id?: string; reason?: string }> {
+  const userId = await getAuthenticatedUserId()
+  const supabase = await createClient()
+  return finishAllocation(
+    await unallocateFromPurposeImpl({ supabase, userId, input, today: getTodayAR() }),
+    currencyOf(input),
+  )
 }

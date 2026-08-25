@@ -3,6 +3,7 @@ import {
   getAvailableSums,
   getPurposeSums,
   getReserveFlowSums,
+  getAllocationHistory,
   getReserveHistory,
   listPurposes,
   type AvailableSums,
@@ -104,10 +105,10 @@ export function useSavingsDetail(enabled: boolean, monthStart: Date, today: Date
 }
 
 /**
- * El historial acotado a UN grupo. Filtrar en memoria el historial ya cargado
- * daría una lista recortada de un tope que ya se aplicó arriba: con 25
- * movimientos en pesos y 3 de este propósito entre ellos, mostraría 3 y
- * escondería el resto sin decirlo.
+ * El historial de UN propósito: sus REPARTOS, no reservas.
+ *
+ * Son dos actos distintos —guardar mueve el disponible, apartar no— y por eso
+ * son dos listas. «Sin destino» no tiene: es el resto, no tiene actos propios.
  */
 export function usePurposeHistory(
   enabled: boolean,
@@ -115,9 +116,9 @@ export function usePurposeHistory(
   purposeId: string | null,
 ) {
   return useQuery({
-    queryKey: ['savings', 'history', currency, purposeId ?? 'none'] as const,
-    queryFn: () => getReserveHistory(supabase, currency, purposeId),
-    enabled,
+    queryKey: ['savings', 'allocations', currency, purposeId ?? 'none'] as const,
+    queryFn: () => getAllocationHistory(supabase, currency, purposeId as string),
+    enabled: enabled && purposeId != null,
     staleTime: 0,
   })
 }

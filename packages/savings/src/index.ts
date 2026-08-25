@@ -5,6 +5,7 @@ export {
   getPurposeSums,
   getReservedForPurpose,
   getReserveHistory,
+  getAllocationHistory,
   RESERVE_HISTORY_LIMIT,
   getLatestIncome,
 } from './queries'
@@ -14,7 +15,8 @@ export {
   createPurpose,
   renamePurpose,
   deletePurpose,
-  assignPurpose,
+  allocateToPurpose,
+  unallocateFromPurpose,
 } from './purposes'
 export { PURPOSE_SEEDS, PURPOSE_ICONS, type PurposeSeed } from './seeds'
 export {
@@ -32,5 +34,6 @@ export type {
   PurposeSums,
   Purpose,
   ReserveEntry,
+  AllocationEntry,
   SavingsMutationResult,
 } from './types'

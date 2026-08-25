@@ -76,3 +76,18 @@ export const savingsPurposeSchema = yup
   .strict()
 
 export type SavingsPurposeInput = yup.InferType<typeof savingsPurposeSchema>
+
+// El reparto: cuánto de lo guardado va a un propósito. `purpose_id` es
+// obligatorio —repartir siempre es hacia o desde un propósito concreto; el
+// "resto" no es un propósito y no se elige— y el monto es positivo, igual que en
+// las reservas: la dirección la decide el verbo.
+export const purposeAllocationSchema = yup
+  .object({
+    amount: amountSchema,
+    currency_code: currencyCodeSchema,
+    date: dateSchema,
+    purpose_id: yup.string().label('purpose_id').uuid().required(),
+  })
+  .strict()
+
+export type PurposeAllocationInput = yup.InferType<typeof purposeAllocationSchema>

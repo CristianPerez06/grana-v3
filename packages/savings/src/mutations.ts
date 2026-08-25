@@ -38,7 +38,7 @@ async function writeReserve(args: {
   direction: 'reserve' | 'release'
   today?: Date
 }): Promise<SavingsMutationResult<ReserveAvailabilityInput>> {
-  const { supabase, userId, input, schema, direction } = args
+  const { supabase, input, schema, direction } = args
   const today = args.today ?? getTodayAR()
 
   const validation = await validateActionInput(schema, input)
@@ -48,36 +48,22 @@ async function writeReserve(args: {
   const currencyCode = currency_code as BalanceCurrency
   const purposeId = purpose_id ?? null
 
-  // Que el propósito sea del usuario se chequea contra la base y no contra el
-  // input. RLS ya impide LEER el de otro, así que un id ajeno vuelve vacío acá;
-  // sin este paso la fila se insertaría igual —el FK no mira dueños— y quedaría
-  // colgada de una etiqueta que el usuario no controla.
-  if (purposeId != null) {
-    const { data: owned, error: ownedError } = await supabase
-      .from('savings_purpose')
-      .select('id')
-      .eq('id', purposeId)
-      .maybeSingle()
-
-    if (ownedError) return { ok: false, errorCode: ownedError.code }
-    if (owned == null) return { ok: false, fieldErrors: { purpose_id: 'not_found' } }
-  }
-
   // El tope y el piso son las dos caras de la misma regla, y son la diferencia
   // deliberada con el ledger: un saldo negativo es un HECHO válido que Grana
   // muestra tal cual, pero guardar más de lo que tenés no es un estado incómodo
-  // — es un input inválido. Y el stock reservado no puede quedar negativo, que
-  // sería afirmar que podés gastar plata que no tenés.
+  // — es un input inválido.
   //
-  // El piso mira UN propósito; el tope mira toda la moneda. Ver el docblock.
-  const purposeSums =
+  // El piso mira EL GRUPO del que sale, no toda la moneda: si Japón tiene
+  // $150.000 y el resto $40.000, volver a usar $60.000 del resto pasa cualquier
+  // control sobre el total de $190.000 y deja ese grupo en negativo.
+  const groupSums =
     direction === 'release'
       ? await getReservedForPurpose(supabase, currencyCode, purposeId, today)
       : null
 
   const limit =
-    purposeSums != null
-      ? purposeSums.reserved
+    groupSums != null
+      ? groupSums.reserved
       : (await getAvailableForCurrency(supabase, currencyCode, today)).available
 
   const requested = Money.from(amount)
@@ -92,11 +78,11 @@ async function writeReserve(args: {
       }
     }
 
-    // Dos mensajes distintos, porque son dos hechos distintos: "no tenés tanto
+    // Dos mensajes distintos porque son dos hechos distintos: "no tenés tanto
     // guardado" y "no tenés tanto guardado EN ESE PROPÓSITO" se leen igual de mal
     // si se dicen igual, y el segundo es el que confunde — el usuario está
     // mirando un total mayor en la misma pantalla.
-    const purposeName = purposeId != null ? (purposeSums?.purposeName ?? null) : null
+    const purposeName = purposeId != null ? (groupSums?.purposeName ?? null) : null
 
     if (purposeName == null) {
       return {
@@ -121,21 +107,21 @@ async function writeReserve(args: {
       ? amount
       : Money.toNumber(Money.subtract(Money.from(0), requested))
 
-  const { data, error } = await supabase
-    .from('availability_reserve')
-    .insert({
-      user_id: userId,
-      currency_code: currencyCode,
-      amount: signed,
-      date: formatDateISO(date),
-      purpose_id: purposeId,
-    })
-    .select('id')
-    .single()
+  // Una sola llamada, no dos inserts: guardar "para Japón" son DOS filas en dos
+  // tablas, y escribirlas por separado deja la mitad si falla la red entre una y
+  // otra. `write_reserve` las pone en la misma transacción, y además vuelve a
+  // chequear el invariante del lado de la base — el control de acá existe para
+  // dar un mensaje con el número, no para ser la única defensa.
+  const { data, error } = await supabase.rpc('write_reserve', {
+    p_amount: signed,
+    p_currency: currencyCode,
+    p_date: formatDateISO(date),
+    p_purpose_id: purposeId,
+  })
 
   if (error) return { ok: false, errorCode: error.code }
 
-  return { ok: true, id: data.id }
+  return { ok: true, id: (data as unknown as string) ?? '' }
 }
 
 /**

@@ -4,7 +4,8 @@ import {
   createPurpose as createPurposeImpl,
   renamePurpose as renamePurposeImpl,
   deletePurpose as deletePurposeImpl,
-  assignPurpose as assignPurposeImpl,
+  allocateToPurpose as allocateToPurposeImpl,
+  unallocateFromPurpose as unallocateFromPurposeImpl,
   type SavingsMutationResult,
 } from '@grana/savings'
 import { getTodayAR } from '@grana/money-logic'
@@ -61,9 +62,14 @@ export async function deletePurpose(purposeId: string): Promise<SavingsMutationR
   return deletePurposeImpl({ supabase, purposeId })
 }
 
-export async function assignPurpose(
-  reserveId: string,
-  purposeId: string | null,
-): Promise<SavingsMutationResult> {
-  return assignPurposeImpl({ supabase, reserveId, purposeId })
+/**
+ * Apartar ⇄ soltar. No mueven plata ni cambian el disponible: lo que entra en un
+ * grupo sale del otro.
+ */
+export async function allocateToPurpose(input: unknown): Promise<SavingsMutationResult> {
+  return allocateToPurposeImpl({ supabase, userId: await currentUserId(), input })
+}
+
+export async function unallocateFromPurpose(input: unknown): Promise<SavingsMutationResult> {
+  return unallocateFromPurposeImpl({ supabase, userId: await currentUserId(), input })
 }

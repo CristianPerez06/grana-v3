@@ -1,6 +1,12 @@
 import type { GranaSupabaseClient } from '@grana/supabase'
 import { formatDateISO, getTodayAR, type BalanceCurrency } from '@grana/money-logic'
-import type { AvailableSums, PurposeSums, ReserveEntry, ReserveFlowSums } from './types'
+import type {
+  AllocationEntry,
+  AvailableSums,
+  PurposeSums,
+  ReserveEntry,
+  ReserveFlowSums,
+} from './types'
 
 const isBalanceCurrency = (c: string): c is BalanceCurrency => c === 'ARS' || c === 'USD'
 
@@ -178,26 +184,11 @@ export const RESERVE_HISTORY_LIMIT = 25
 export async function getReserveHistory(
   supabase: GranaSupabaseClient,
   currencyCode: BalanceCurrency,
-  /**
-   * Acota el listado a UN grupo. `undefined` trae todos; `null` trae «Sin
-   * destino», que es un grupo y no una ausencia — por eso los dos casos no
-   * pueden colapsarse en un solo valor.
-   */
-  purposeId?: string | null,
 ): Promise<{ entries: ReserveEntry[]; hasMore: boolean }> {
-  const base = supabase
+  const { data, error } = await supabase
     .from('availability_reserve')
-    .select('id, currency_code, amount, date, created_at, purpose_id')
+    .select('id, currency_code, amount, date, created_at')
     .eq('currency_code', currencyCode)
-
-  const scoped =
-    purposeId === undefined
-      ? base
-      : purposeId === null
-        ? base.is('purpose_id', null)
-        : base.eq('purpose_id', purposeId)
-
-  const { data, error } = await scoped
     .order('date', { ascending: false })
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
@@ -206,17 +197,57 @@ export async function getReserveHistory(
   if (error) throw error
 
   const rows = data ?? []
-  const hasMore = rows.length > RESERVE_HISTORY_LIMIT
 
   return {
-    hasMore,
+    hasMore: rows.length > RESERVE_HISTORY_LIMIT,
     entries: rows.slice(0, RESERVE_HISTORY_LIMIT).map((row) => ({
       id: row.id,
       currencyCode: row.currency_code as BalanceCurrency,
       amount: toNumber(row.amount),
       date: row.date,
       createdAt: row.created_at,
-      purposeId: row.purpose_id ?? null,
+    })),
+  }
+}
+
+// ── getAllocationHistory ──────────────────────────────────────────────────────
+// Los repartos de UN propósito, más recientes primero.
+//
+// Lista aparte de la de reservas, y es la consecuencia visible de que sean dos
+// actos distintos: "Guardaste $200.000" es un hecho sobre el disponible;
+// "Apartaste $150.000 para Japón" no mueve ningún total. Mezclarlos en un solo
+// listado obligaría al usuario a distinguir a ojo dos cosas que no se parecen.
+//
+// Acotada por la misma razón que la otra: una lista que se corta sin avisar es
+// indistinguible de un historial incompleto.
+export async function getAllocationHistory(
+  supabase: GranaSupabaseClient,
+  currencyCode: BalanceCurrency,
+  purposeId: string,
+): Promise<{ entries: AllocationEntry[]; hasMore: boolean }> {
+  const { data, error } = await supabase
+    .from('savings_purpose_allocation')
+    .select('id, purpose_id, currency_code, amount, date, created_at')
+    .eq('currency_code', currencyCode)
+    .eq('purpose_id', purposeId)
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(RESERVE_HISTORY_LIMIT + 1)
+
+  if (error) throw error
+
+  const rows = data ?? []
+
+  return {
+    hasMore: rows.length > RESERVE_HISTORY_LIMIT,
+    entries: rows.slice(0, RESERVE_HISTORY_LIMIT).map((row) => ({
+      id: row.id,
+      purposeId: row.purpose_id,
+      currencyCode: row.currency_code as BalanceCurrency,
+      amount: toNumber(row.amount),
+      date: row.date,
+      createdAt: row.created_at,
     })),
   }
 }

@@ -30,11 +30,17 @@ barato del roadmap.
 Una tabla, una columna, un selector y un `group by`:
 
 - **`savings_purpose`** — nombre e ícono, propiedad del usuario.
-- **`availability_reserve.purpose_id`** — nullable, sin backfill. Lo de la fase 1 queda
-  como *«Sin destino»*.
-- **`get_purpose_sums(date)`** — el guardado por (propósito, moneda). Alimenta el detalle
+- **`savings_purpose_allocation`** — cuánto del guardado actual va a cada propósito, con signo.
+  *«Sin destino»* es **el resto**, derivado.
+- **`get_purpose_sums(date)`** — el reparto por (propósito, moneda). Alimenta el detalle
   agrupado y, sobre todo, el **piso** del write path.
-- El drawer gana una fila y un selector; el detalle se agrupa.
+- **Un trigger** que sostiene el invariante desde las dos tablas, y **`write_reserve`**, que
+  escribe la reserva y su reparto en una transacción.
+- El drawer gana una fila, un selector y la pantalla de apartar; el detalle se agrupa.
+
+> La primera versión puso `purpose_id` en `availability_reserve` (migración `0058`) y la `0059` lo
+> corrige: atar el propósito a una fila histórica está mal por la misma razón por la que una reserva
+> no tiene `account_id`. El razonamiento completo está en D11 del design.
 
 ## Lo que NO cambia, y es lo que la hace barata
 
