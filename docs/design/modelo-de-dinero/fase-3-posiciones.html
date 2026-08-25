@@ -286,6 +286,10 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
 .callout b{color:var(--text);font-weight:700}
 .callout.warn-c{border-left-color:var(--warning)}
 .callout.bad-c{border-left-color:#B03A2E}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chips span{border:1px solid var(--border);background:#fff;border-radius:999px;padding:9px 13px;font-size:13px;font-weight:600;color:var(--text)}
+.chips span.on{border-color:var(--emerald-deep);background:var(--emerald-bg);color:#05614A}
 </style>
 </head>
 <body>
@@ -294,11 +298,12 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
   <div class="in">
     <p class="eyebrow">Grana · modelo de dinero · mock de producto</p>
     <h1>Fase 3 · Poner a trabajar</h1>
-    <p>Dos pantallas y una cuenta. El mock no existe para dibujar la fase entera: existe para contestar, con números, las dos decisiones que estaban abiertas antes de tocar el schema.</p>
+    <p>El circuito entero de poner plata a trabajar, pantalla por pantalla, y después la cuenta del mes con las tres alternativas al lado. El mock no dibuja la fase entera: existe para contestar, con números, lo que estaba abierto antes de tocar el schema.</p>
     <div class="open"><b>Las dos preguntas que este mock viene a cerrar.</b>
       <ol>
-        <li><b>¿Aparece una línea nueva en «Resumen del mes»?</b> El README la dejó abierta porque es prima hermana de <i>«Pasaste a otras cuentas»</i>, que ya fue rechazada una vez. Se juzga con los mismos números al lado. <b>La cuenta la cierra</b> — ver el comparador al pie.</li>
-        <li><b>¿Dónde entra «Invertir»?</b> El segmented ya tiene cinco tabs y llena el ancho de un teléfono. La sexta no entra. <b>La respuesta resultó ser que no hace falta ninguna.</b></li>
+        <li><b>Pasos 1–7 · ¿Cómo se crea un plazo fijo?</b> Dibujarlo pantalla por pantalla destapó un campo duplicado que un mock más corto dejaba pasar: <b>el capital se pedía dos veces</b>, en el monto de la transferencia y otra vez en el alta de la posición. Dos campos para el mismo número.</li>
+        <li><b>Pasos 8–10 · ¿Aparece una línea nueva en «Resumen del mes»?</b> El README la dejó abierta porque es prima hermana de <i>«Pasaste a otras cuentas»</i>, que ya fue rechazada una vez. Se juzga con los mismos números al lado. <b>La cuenta la cierra</b> — ver el comparador al pie.</li>
+        <li><b>Paso 2 · ¿Dónde entra «Invertir»?</b> El segmented ya tiene cinco tabs y llena el ancho de un teléfono. La sexta no entra. <b>La respuesta resultó ser que no hace falta ninguna.</b></li>
       </ol>
     </div>
     <div class="warn"><b>No es diseño final, y todavía no hay schema.</b> Los números son los de agosto de 2026 de una cuenta real, para que la aritmética se pueda auditar a ojo. El HTML no es código de producción.</div>
@@ -312,8 +317,40 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     <div class="step-head">
       <span class="step-num">1</span>
       <div>
-        <h2>Dónde se registra: en Transferencia</h2>
-        <p class="sub">El segmented no cambia. No hace falta una sexta pestaña.</p>
+        <h2>Desde el dashboard</h2>
+        <p class="sub">No hay entrada nueva. Se empieza donde se empieza todo.</p>
+        <span class="badge b-same">Sin cambios</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="dash">
+        <div class="dark">
+          <div class="lbl">Saldo disponible total</div>
+          <div class="big">$ 4.905.748<s>,17</s></div>
+          <div class="usd"><i>USD</i>US$ 0,00</div>
+        </div>
+        <div class="light">
+          <div class="t">Resumen del mes</div>
+          <div class="tri">
+            <div class="row"><span class="l"><i style="background:#D3DAE2"></i>Tenías</span><span class="a">−$ 2.729.825,17</span></div>
+            <div class="row"><span class="l"><i style="background:var(--emerald)"></i>Entró</span><span class="a" style="color:var(--emerald-deep)">+$ 8.021.007,00</span></div>
+            <div class="row"><span class="l"><i style="background:var(--slate)"></i>Se fué</span><span class="a" style="color:var(--slate)">−$ 205.433,66</span></div>
+          </div>
+          <div class="saved"><span class="l"><i></i>Guardado</span><span class="a">−$ 180.000,00</span></div>
+        </div>
+      </div>
+      <div class="cta">Nuevo movimiento</div>
+    </div></div>
+    <p class="note"><b>Grana no le va a decir a nadie que ponga plata a trabajar.</b> No hay una tira que diga <i>"tenés $4.900.000 sin rendir"</i> ni un botón «Invertir» en el dashboard. El modelo describe hechos sobre la plata del usuario; recomendar instrumentos es asesoramiento, y es una línea que la app no cruza.</p>
+    <p class="note">Consecuencia de producto que conviene aceptar de frente: <b>esta función no se descubre sola.</b> Se llega buscándola, como se llega a registrar un cambio de dólares. Está bien: nadie hace un plazo fijo por accidente.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">2</span>
+      <div>
+        <h2>Transferencia, y el monto</h2>
+        <p class="sub">El segmented se queda en cinco tabs.</p>
         <span class="badge b-same">Sin cambios</span>
       </div>
     </div>
@@ -326,53 +363,164 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
       </div>
       <div class="c rows">
         <div><div class="tile">🏦</div><div class="rw"><div class="k">Desde</div><div class="v"><span class="chip-acc"><i>C</i></span>Comafi</div></div><span class="chev">›</span></div>
-        <div><div class="tile">📈</div><div class="rw"><div class="k">Hacia</div><div class="v">Plazo fijo Comafi · 30 días</div></div><span class="chev">›</span></div>
+        <div><div class="tile">📍</div><div class="rw"><div class="k">Hacia</div><div class="v ph">Elegir destino</div></div><span class="chev">›</span></div>
         <div><div class="tile">📅</div><div class="rw"><div class="k">Fecha</div><div class="v">25 de ago</div></div><span class="chev">›</span></div>
       </div>
-      <div class="cta">Registrar transferencia</div>
+      <div class="cta ghost">Registrar transferencia</div>
     </div></div>
     <p class="note"><b>Una sexta pestaña habría sido el mismo error que el <code>counts_as_available</code>.</b> Poner plata a trabajar no es un tipo de movimiento distinto: es una <b>transferencia</b> cuyo <b>destino</b> es una posición en vez de una cuenta. Modelar el destino como si fuera un tipo es confundir a dónde va la plata con qué le pasó.</p>
-    <p class="note">Y resuelve de paso el problema de la etiqueta: el modelo ya observa que <b>una superficie llamada «Invertir» deja afuera al acto de protección más común del país</b>, que es comprar dólares. Acá no hay ninguna superficie llamada «Invertir» que pueda dejar algo afuera.</p>
-    <p class="note">El único control que cambia es el <b>selector de destino</b>: además de tus cuentas, ahora lista tus posiciones abiertas y un <b>+ Nuevo plazo fijo</b>. Es una lista que ya existía y gana filas.</p>
+    <p class="note">El <b>monto se escribe acá, una sola vez.</b> Es el detalle que más fácil se rompe: si la pantalla de crear el plazo fijo vuelve a pedir el capital, son dos campos para el mismo número y el primero que se desactualice manda.</p>
   </section>
 
   <section class="step">
     <div class="step-head">
-      <span class="step-num">2</span>
+      <span class="step-num">3</span>
       <div>
-        <h2>Crear el plazo fijo</h2>
-        <p class="sub">Se llega desde el selector de destino, no desde un módulo nuevo.</p>
+        <h2>El destino, que ahora tiene dos grupos</h2>
+        <p class="sub">La única lista que cambia en todo el circuito.</p>
+        <span class="badge b-mod">Gana filas</span>
+      </div>
+    </div>
+    <div class="phone ov"><div class="scrim"></div><div class="sheet">
+      <div class="grab"></div>
+      <div class="sh"><h3>¿Hacia dónde?</h3><span class="x">←</span></div>
+      <div class="sec-t">Tus cuentas</div>
+      <div class="c rows">
+        <div><div class="tile">👛</div><div class="rw"><div class="v">Billetera</div></div><span class="a" style="font-size:13px;color:var(--soft);font-variant-numeric:tabular-nums">$ 4.322.885,94</span></div>
+        <div><div class="tile">🏦</div><div class="rw"><div class="v">Comafi</div></div><span class="a" style="font-size:13px;color:var(--soft);font-variant-numeric:tabular-nums">$ 762.862,23</span></div>
+      </div>
+      <div class="sec-t">Puesto a trabajar</div>
+      <div class="c">
+        <div class="pos-row"><div class="tile">📈</div><div class="n"><b>Nuevo plazo fijo</b><span>En Comafi, de donde sale la plata</span></div><span class="chev">›</span></div>
+      </div>
+      <p class="note" style="border:0;padding:0;margin:2px 2px 0">Todavía no tenés ninguna posición abierta. Cuando tengas, aparecen acá arriba del <b>+</b>.</p>
+    </div></div>
+    <p class="note"><b>Los dos grupos dicen algo verdadero:</b> a una cuenta la plata llega y sigue disponible; a una posición llega y deja de estarlo. Es la misma distinción que la card del mes va a tener que nombrar en el paso 9, dicha antes de que pase.</p>
+    <p class="note"><b>El «Nuevo plazo fijo» ya viene con el banco resuelto</b> — el de la cuenta de origen. Un plazo fijo se constituye donde está la plata; preguntarlo sería preguntar algo que la pantalla anterior ya contestó. Se puede cambiar, para el caso raro del bróker.</p>
+    <p class="note">Con posiciones abiertas, esta lista es también por donde se les <b>agrega plata</b> a las que lo admiten. Un plazo fijo no; un FCI sí.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">4</span>
+      <div>
+        <h2>El plazo fijo: dos preguntas</h2>
+        <p class="sub">Todo lo demás ya está contestado.</p>
         <span class="badge b-new">Pantalla nueva</span>
       </div>
     </div>
     <div class="phone ov"><div class="scrim"></div><div class="sheet">
       <div class="grab"></div>
       <div class="sh"><h3>Nuevo plazo fijo</h3><span class="x">←</span></div>
+      <div class="c calc" style="padding:12px 15px">
+        <div><span>Capital</span><span>$ 700.000,00</span></div>
+        <div><span>En</span><span>Comafi</span></div>
+      </div>
+      <div class="sec-t">¿Hasta cuándo?</div>
+      <div class="chips"><span class="on">30 días</span><span>60</span><span>90</span><span>180</span><span>Otra fecha</span></div>
+      <div class="c rows">
+        <div><div class="tile">📅</div><div class="rw"><div class="k">Vence</div><div class="v">24 de sep de 2026</div></div></div>
+      </div>
+      <div class="sec-t">Tasa <span style="text-transform:none;letter-spacing:0;font-weight:500;color:var(--soft)">— opcional</span></div>
+      <div class="c rows">
+        <div><div class="tile">📊</div><div class="rw"><div class="k">TNA</div><div class="v ph">Si no la sabés, dejala vacía</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="cta">Listo</div>
+    </div></div>
+    <p class="note"><b>El capital y el banco se muestran, no se piden.</b> Los dos vienen del paso anterior. Es la misma regla que la fase 2 aprendió con los propósitos: <i>lo que se hereda de dónde se tocó no se vuelve a preguntar</i> — contestar dos veces lo mismo es la forma más común de que los dos números terminen distintos.</p>
+    <p class="note"><b>Los chips de plazo antes que la fecha.</b> Nadie piensa "24 de septiembre": piensa "a 30 días". La fecha se muestra debajo, calculada, porque es la que importa después y hay que poder verla. <b>Otra fecha</b> abre el picker para el caso que no entra en los chips.</p>
+    <p class="note"><b>La tasa es opcional y va última.</b> Un plazo fijo del que no sabés la tasa sigue siendo un plazo fijo; obligarla convierte un registro en un examen. Sin tasa, la posición vale su capital hasta que vence y el usuario dice cuánto volvió — que es, además, lo que de verdad pasó.</p>
+    <p class="note">El CTA dice <b>Listo</b>, no «Crear plazo fijo»: acá no se confirma nada todavía. Devuelve al paso 5, que es donde se registra el movimiento.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">5</span>
+      <div>
+        <h2>De vuelta, con las dos consecuencias</h2>
+        <p class="sub">La última pantalla donde los dos números se pueden mostrar juntos.</p>
+        <span class="badge b-mod">Gana la previsualización</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr tight">
+      <div class="dh"><div><div class="k">Nuevo movimiento</div><h3>Registrar</h3></div><span class="x">✕</span></div>
+      <div class="seg"><span>Gasto</span><span>Ingreso</span><span class="on">Transferencia</span><span>Ajuste</span><span>Cambio</span></div>
       <div class="c amt">
-        <div class="lbl">Capital</div><div class="cur">ARS</div>
+        <div class="lbl">Monto</div><div class="cur">ARS</div>
         <div class="val"><span class="s">$</span><span class="n">700.000</span></div>
       </div>
       <div class="c rows">
-        <div><div class="tile">🏦</div><div class="rw"><div class="k">Dónde</div><div class="v"><span class="chip-acc"><i>C</i></span>Comafi</div></div><span class="chev">›</span></div>
-        <div><div class="tile">📅</div><div class="rw"><div class="k">Vence</div><div class="v">24 de sep · 30 días</div></div><span class="chev">›</span></div>
-        <div><div class="tile">📊</div><div class="rw"><div class="k">Tasa <span style="text-transform:none;letter-spacing:0;font-weight:500">(opcional)</span></div><div class="v">42% TNA</div></div><span class="chev">›</span></div>
+        <div><div class="tile">🏦</div><div class="rw"><div class="k">Desde</div><div class="v"><span class="chip-acc"><i>C</i></span>Comafi</div></div><span class="chev">›</span></div>
+        <div><div class="tile">📈</div><div class="rw"><div class="k">Hacia</div><div class="v">Plazo fijo Comafi · vence 24 sep</div></div><span class="chev">›</span></div>
+        <div><div class="tile">📅</div><div class="rw"><div class="k">Fecha</div><div class="v">25 de ago</div></div><span class="chev">›</span></div>
       </div>
       <div class="c calc">
         <div><span>Queda en Comafi</span><span>$ 62.862,23</span></div>
         <div class="minus"><span>Pasa al plazo fijo</span><span>−$ 700.000,00</span></div>
         <div class="rule"><span>Te queda para gastar</span><span>$ 4.205.748,17</span></div>
       </div>
-      <p class="note" style="border:0;padding:0;margin:2px 2px 0">Tu plata no se gastó: cambió de lugar y no la vas a poder tocar hasta el <b>24 de septiembre</b>.</p>
-      <div class="cta">Crear plazo fijo</div>
+      <p class="note" style="border:0;padding:0;margin:2px 2px 0">Tu plata no se gastó: cambió de lugar, y no la vas a poder tocar hasta el <b>24 de septiembre</b>.</p>
+      <div class="cta">Registrar transferencia</div>
     </div></div>
-    <p class="note"><b>La tasa es opcional y va última</b>, detrás de un chevron. Un plazo fijo del que no sabés la tasa sigue siendo un plazo fijo; obligarla convertiría un registro en un examen. Sin tasa, la posición vale su capital hasta que vence y el usuario dice cuánto volvió.</p>
     <p class="note"><b>La frase de abajo es la única defensa contra el malentendido.</b> Es la hermana de <i>«La plata no se mueve. Solo deja de contar como disponible»</i> de la fase 1, con el signo cambiado: acá la plata <b>sí</b> se mueve, y lo que hay que decir es que <b>no se gastó</b>. Las dos frases existen porque el mismo número bajando significa dos cosas distintas.</p>
-    <p class="note">La previsualización muestra <b>las dos consecuencias</b>: el saldo de la cuenta y el disponible. Son números distintos y bajan por la misma razón, y es la última pantalla donde se pueden mostrar juntos.</p>
+    <p class="note"><b>Se muestran los dos números que bajan</b>, el saldo de la cuenta y el disponible, porque bajan por razones distintas y esta es la última pantalla donde se los puede ver juntos. Después de acá viven en dos lugares separados.</p>
+    <p class="note">Y se nombra la <b>fecha de vencimiento en la frase</b>, no solo en la fila. Es el dato que convierte esto en una decisión: lo que se está aceptando no es que baje el disponible, es <b>hasta cuándo</b>.</p>
   </section>
 
   <section class="step">
     <div class="step-head">
-      <span class="step-num">3</span>
+      <span class="step-num">6</span>
+      <div>
+        <h2>Cómo queda en Movimientos</h2>
+        <p class="sub">Un hecho del ledger, como cualquier otro.</p>
+        <span class="badge b-mod">Fila nueva, lista vieja</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="mv-head"><h3>Movimientos</h3><span class="chev">⌕</span></div>
+      <div class="c mv">
+        <div class="mv-day">Martes 25 de agosto</div>
+        <div class="r"><div class="av">📈</div><div class="n"><b>Plazo fijo Comafi</b><span>Transferencia · vence 24 sep</span></div><span class="a">$ 700.000,00</span></div>
+        <div class="r"><div class="av">🛒</div><div class="n"><b>Coto</b><span>Supermercado</span></div><span class="a neg">−$ 38.420,10</span></div>
+        <div class="mv-day">Lunes 24 de agosto</div>
+        <div class="r"><div class="av">💼</div><div class="n"><b>Sueldo</b><span>Ingreso</span></div><span class="a pos">+$ 1.240.000,00</span></div>
+      </div>
+      <div class="callout"><b>No lleva signo ni color de gasto.</b> Una transferencia no suma ni resta al mes: mueve. Es el mismo tratamiento que ya tiene una transferencia entre dos cuentas propias.</div>
+    </div></div>
+    <p class="note"><b>«En qué se fue» no lo muestra.</b> Las transferencias ya están fuera de la analítica de gastos desde antes de esta fase — no hay nada que construir, solo que no romperlo. Si el plazo fijo apareciera ahí, la categoría más grande del mes de cualquiera que ahorra sería «transferencias».</p>
+    <p class="note">La fila <b>dice el vencimiento</b> en el subtítulo. Es lo que la distingue de una transferencia común y lo que alguien va a estar buscando cuando la encuentre acá dentro de tres semanas.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">7</span>
+      <div>
+        <h2>Lo que el circuito NO pregunta</h2>
+        <p class="sub">Cinco campos que un formulario de plazo fijo suele tener.</p>
+        <span class="badge b-open">Criterio</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="states">
+        <div class="st"><div class="cap">No pregunta</div><div class="line"><span class="l"><i class="off"></i>Nombre del plazo fijo</span></div>
+          <p class="note" style="border:0;padding:6px 0 0;margin:0;font-size:12.5px">Se llama «Plazo fijo Comafi». Nadie le pone nombre propio a un plazo fijo, y pedirlo obliga a inventar uno por mes.</p></div>
+        <div class="st"><div class="cap">No pregunta</div><div class="line"><span class="l"><i class="off"></i>Moneda</span></div>
+          <p class="note" style="border:0;padding:6px 0 0;margin:0;font-size:12.5px">La del monto de la transferencia. Un plazo fijo en pesos no se hace con dólares.</p></div>
+        <div class="st"><div class="cap">No pregunta</div><div class="line"><span class="l"><i class="off"></i>Fecha de inicio</span></div>
+          <p class="note" style="border:0;padding:6px 0 0;margin:0;font-size:12.5px">Es la del movimiento. Dos fechas para el mismo hecho es una que puede quedar mal.</p></div>
+        <div class="st"><div class="cap">No pregunta</div><div class="line"><span class="l"><i class="off"></i>Interés estimado</span></div>
+          <p class="note" style="border:0;padding:6px 0 0;margin:0;font-size:12.5px">Se calcula si hay tasa, y no se muestra en el alta: <b>proyectar plata que todavía no existe</b> es lo más parecido a prometer un rendimiento.</p></div>
+        <div class="st"><div class="cap">No pregunta</div><div class="line"><span class="l"><i class="off"></i>¿Renueva solo?</span></div>
+          <p class="note" style="border:0;padding:6px 0 0;margin:0;font-size:12.5px">Se contesta el 24 de septiembre, cuando vence y hay algo que decidir. Preguntarlo hoy es pedir una decisión con un mes de anticipación.</p></div>
+      </div>
+    </div></div>
+    <p class="note"><b>Cada campo que no está es una decisión, no una omisión.</b> El circuito entero pide <b>dos datos nuevos</b>: cuánto tiempo, y la tasa si se sabe. Todo lo demás se hereda o se deriva.</p>
+    <p class="note">El total: <b>5 taps de decisión</b> desde el dashboard —monto, desde, hacia, plazo, confirmar—, los mismos que registrar una transferencia común más uno.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">8</span>
       <div>
         <h2>El mes, sin línea nueva</h2>
         <p class="sub">Lo que pasa si no se toca nada.</p>
@@ -397,7 +545,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
 
   <section class="step">
     <div class="step-head">
-      <span class="step-num">4</span>
+      <span class="step-num">9</span>
       <div>
         <h2>El mes, con la línea</h2>
         <p class="sub">Los mismos números, un término más.</p>
@@ -423,7 +571,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
 
   <section class="step">
     <div class="step-head">
-      <span class="step-num">5</span>
+      <span class="step-num">10</span>
       <div>
         <h2>La salida fácil, y por qué no</h2>
         <p class="sub">Meterlo adentro de «Se fué».</p>
@@ -503,6 +651,16 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
         <li>Poner plata a trabajar es una <b>transferencia con destino a una posición</b>, no un tipo de movimiento nuevo.</li>
         <li>Una sexta pestaña sería modelar el <b>destino</b> como si fuera un <b>tipo</b> — el mismo error de categoría que el <code>counts_as_available</code> que el modelo ya descartó.</li>
         <li>Lo único que cambia es el <b>selector de destino</b>, que ya existía y gana filas.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Cerrado</div>
+      <h4>El circuito pide dos datos</h4>
+      <span class="taps">5 taps, uno más que una transferencia común</span>
+      <ol>
+        <li><b>Cuánto tiempo</b> (chips: 30 · 60 · 90 · 180 · otra fecha) y <b>la tasa, opcional</b>. Nada más.</li>
+        <li><b>El capital y el banco se heredan</b> del paso anterior y se muestran, no se piden. Preguntarlos de nuevo es la forma más común de que los dos números terminen distintos.</li>
+        <li>No pregunta <b>nombre, moneda, fecha de inicio, interés estimado ni si renueva</b>. Cada uno se hereda, se deriva, o se contesta el día que hay algo que decidir.</li>
       </ol>
     </div>
     <div class="way">
