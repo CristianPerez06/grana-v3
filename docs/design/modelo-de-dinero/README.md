@@ -7,7 +7,7 @@ en el navegador.
 |---|---|---|
 | `fase-1-guardar.html` | 1 · Guardar | **Superado por la implementación.** «Liberar» hoy se llama **Volver a usar** |
 | `fase-2-proposito.html` | 2 · Propósito | **Superado por la implementación**, y en un punto de modelo, no solo de nombres — ver abajo |
-| `fase-3-posiciones.html` | 3 · Posiciones | **Parcial, y vigente.** Dos pantallas y la cuenta del mes: cerró las dos decisiones abiertas. Faltan detalle de posición, rescate y el hub |
+| `fase-3-posiciones.html` | 3 · Posiciones | **Vigente.** Diecisiete pantallas: el ciclo entero de un plazo fijo, de constituirlo al vencimiento, con la cuenta del mes en cada punta. Faltan el detalle de posición y el hub |
 | — | 4 y 5 | No se mockean todavía: dibujar el detalle de una meta o la pantalla de patrimonio sería inventar decisiones que no están tomadas, y un mock convincente de algo no decidido termina implementándose tal cual |
 
 **Un mock deja de ser la referencia el día que la fase se construye.** Las fases 1 y 2 están hechas: lo
@@ -64,9 +64,15 @@ es el **selector de destino**, que ya existía y gana filas.
 
 ### Todavía abiertas
 
-**Fase 3 — el rescate.** Cuando vence, vuelven $724.164,38 sobre $700.000. El capital es la
-contrapartida del que salió; los $24.164,38 son la realización de una valuación y **no un ingreso**.
-Cómo se registra eso sin meterlo en "Entró" no está mockeado.
+**~~El rescate.~~ Resuelto en los pasos 12–16.** Capital y rendimiento **no viajan juntos**: el
+capital vuelve por el mismo término por el que se fue —así el bucket **netea cero** en la vida de la
+posición— y el rendimiento es **línea propia con signo**, nunca `income`. Lo decide el caso negativo:
+una pérdida metida adentro de "Entró" aterriza en "Se fué", afirmando que salió plata de una cuenta
+que subió.
+
+Y "Rendimiento" no es la ganancia del mes: es **la ganancia que se hizo líquida**. Un interés
+capitalizado no entró a ninguna cuenta, así que el mes no lo nombra — vive en la posición, que vale
+más. Sigue abierto el **rescate parcial**, que es de 3B.
 
 **Fase 3 — el hub "Mi plata".** Se dibuja último: es lectura pura, y sale bien recién cuando sabemos
 qué hay para leer.

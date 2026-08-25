@@ -38,7 +38,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
 
 .step{display:flex;flex-direction:column;gap:14px}
 .step-head{display:flex;align-items:flex-start;gap:12px}
-.step-num{flex:0 0 auto;width:30px;height:30px;border-radius:9px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:14px;font-weight:700}
+.step-num{flex:0 0 auto;min-width:30px;padding:0 6px;height:30px;border-radius:9px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:14px;font-weight:700}
 .step-head h2{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
 .step-head .sub{margin:2px 0 0;font-size:13.5px;color:var(--muted)}
 .badge{display:inline-block;margin-top:6px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:999px}
@@ -298,10 +298,11 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
   <div class="in">
     <p class="eyebrow">Grana · modelo de dinero · mock de producto</p>
     <h1>Fase 3 · Poner a trabajar</h1>
-    <p>El circuito entero de poner plata a trabajar, pantalla por pantalla, y después la cuenta del mes con las tres alternativas al lado. El mock no dibuja la fase entera: existe para contestar, con números, lo que estaba abierto antes de tocar el schema.</p>
+    <p>El ciclo entero de un plazo fijo, pantalla por pantalla: constituirlo, la cuenta del mes, el vencimiento y el mes siguiente. El mock no dibuja la fase entera — no hay hub ni schema. Existe para contestar, con números, lo que estaba abierto antes de tocar tablas.</p>
     <div class="open"><b>Las dos preguntas que este mock viene a cerrar.</b>
       <ol>
         <li><b>Pasos 1–7 · ¿Cómo se crea un plazo fijo?</b> Dibujarlo pantalla por pantalla destapó un campo duplicado que un mock más corto dejaba pasar: <b>el capital se pedía dos veces</b>, en el monto de la transferencia y otra vez en el alta de la posición. Dos campos para el mismo número.</li>
+        <li><b>Pasos 12–16 · El vencimiento.</b> Vuelven $ 724.164,38 sobre $ 700.000. <b>Capital y rendimiento no viajan juntos</b>: el capital vuelve por el mismo término por el que se fue —así el bucket <b>netea cero</b>— y el rendimiento es línea propia. La prueba está en el caso capitalizado, donde <b>no entró nada a ninguna cuenta y el mes no dice nada</b>.</li>
         <li><b>Paso 11 · ¿Stock o flujo?</b> Guardado resta el <b>stock entero</b> porque guardar no saca plata de las cuentas. Poner a trabajar sí la saca, así que su término es el <b>flujo del mes</b> — y por eso, al revés que Guardado, <b>se dibuja también en meses pasados</b>.</li>
         <li><b>Pasos 8–10 · ¿Aparece una línea nueva en «Resumen del mes»?</b> El README la dejó abierta porque es prima hermana de <i>«Pasaste a otras cuentas»</i>, que ya fue rechazada una vez. Se juzga con los mismos números al lado. <b>La cuenta la cierra</b> — ver el comparador al pie.</li>
         <li><b>Paso 2 · ¿Dónde entra «Invertir»?</b> El segmented ya tiene cinco tabs y llena el ancho de un teléfono. La sexta no entra. <b>La respuesta resultó ser que no hace falta ninguna.</b></li>
@@ -621,6 +622,187 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     <p class="note"><b>Y tiene signo.</b> Cuando en septiembre vuelva el capital, el flujo de ese mes es negativo y la línea <b>suma</b> al disponible. Va a necesitar dos textos, como <i>Guardaste</i> / <i>Volviste a usar</i>. Cuál es el par correcto, todavía no está decidido.</p>
   </section>
 
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">12</span>
+      <div>
+        <h2>Venció, y Grana no se enteró</h2>
+        <p class="sub">No hay conexión con el banco. Lo tiene que decir el usuario.</p>
+        <span class="badge b-new">Pantalla nueva</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="sec-t">Puesto a trabajar</div>
+      <div class="c">
+        <div class="pos-row" style="background:#FFFBF2;border-radius:16px">
+          <div class="tile" style="background:#FDF0D5">⏰</div>
+          <div class="n"><b>Plazo fijo Comafi</b><span style="color:var(--warning);font-weight:600">Venció el 24 de sep</span></div>
+          <span class="a">$ 700.000,00</span>
+        </div>
+      </div>
+      <div class="gd">
+        <div class="top">
+          <div class="tile">⏰</div>
+          <div><h4>¿Qué pasó con este plazo fijo?</h4><p>Venció hace un día. Grana no se conecta con tu banco, así que necesita que se lo cuentes.</p></div>
+        </div>
+        <div class="acts"><div class="cta">Volvió a mi cuenta</div><div class="cta ghost">Lo renové</div></div>
+      </div>
+      <div class="callout warn-c"><b>Hasta que lo contestes, la posición sigue valiendo su capital.</b> Grana no inventa el interés que <i>debería</i> haber ganado: mientras no sepa qué pasó, muestra lo que puso, no lo que supone.</div>
+    </div></div>
+    <p class="note"><b>Es la primera vez que Grana pregunta algo por su cuenta.</b> Todo lo demás lo registra el usuario cuando quiere; un vencimiento tiene fecha propia y llega solo. La pregunta va donde vive la posición, no como notificación: nada acá es urgente.</p>
+    <p class="note"><b>Dos respuestas, no un formulario.</b> «Volvió a mi cuenta» y «Lo renové» son los dos caminos reales, y llevan a pantallas distintas. Preguntar primero <i>cuánto</i> obligaría a pensar en números antes de decir qué pasó.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">13</span>
+      <div>
+        <h2>Volvió: capital y rendimiento, separados</h2>
+        <p class="sub">Un número entra, dos salen.</p>
+        <span class="badge b-new">Pantalla nueva</span>
+      </div>
+    </div>
+    <div class="phone ov"><div class="scrim"></div><div class="sheet">
+      <div class="grab"></div>
+      <div class="sh"><h3>Volvió a mi cuenta</h3><span class="x">←</span></div>
+      <div class="c amt">
+        <div class="lbl">¿Cuánto volvió?</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">724.164,38</span></div>
+      </div>
+      <div class="c rows">
+        <div><div class="tile">🏦</div><div class="rw"><div class="k">A qué cuenta</div><div class="v"><span class="chip-acc"><i>C</i></span>Comafi</div></div><span class="chev">›</span></div>
+        <div><div class="tile">📅</div><div class="rw"><div class="k">Fecha</div><div class="v">24 de sep</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Capital que habías puesto</span><span>$ 700.000,00</span></div>
+        <div class="minus"><span>Rendimiento</span><span>+$ 24.164,38</span></div>
+        <div class="rule"><span>Volvió a Comafi</span><span>$ 724.164,38</span></div>
+      </div>
+      <p class="note" style="border:0;padding:0;margin:2px 2px 0">Los $ 700.000 ya eran tuyos y vuelven a estar disponibles. Lo que ganaste son <b>$ 24.164,38</b>.</p>
+      <div class="cta">Registrar</div>
+    </div></div>
+    <p class="note"><b>El usuario escribe UN número: el que dice el banco.</b> Grana hace la resta —lo que volvió menos lo que había puesto— y muestra las dos partes. Pedirle que las separe él sería pedirle una cuenta que la app ya puede hacer, y que además puede hacer mal.</p>
+    <p class="note"><b>Y la resta se hace contra el capital, no contra la tasa.</b> Si había tasa cargada, el monto viene prellenado; si el banco pagó otra cosa, manda el banco. La tasa era una estimación, el número que llegó es un hecho.</p>
+    <p class="note">Con esto, el <b>rendimiento negativo sale gratis</b>: si vuelven $ 680.000 sobre $ 700.000, la misma resta da <b>−$ 20.000</b> y la pantalla dice «Rendimiento −$ 20.000». No hay un caso especial que programar (paso 16).</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">13b</span>
+      <div>
+        <h2>Renové: y ahí se parte en dos</h2>
+        <p class="sub">La pregunta que decide si el mes muestra algo.</p>
+        <span class="badge b-open">La bisagra</span>
+      </div>
+    </div>
+    <div class="phone ov"><div class="scrim"></div><div class="sheet">
+      <div class="grab"></div>
+      <div class="sh"><h3>Lo renové</h3><span class="x">←</span></div>
+      <div class="c rows">
+        <div><div class="tile">📅</div><div class="rw"><div class="k">Nuevo vencimiento</div><div class="v">24 de oct · 30 días</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="sec-t">¿Y el interés?</div>
+      <div class="c rows">
+        <div><div class="tile">🔁</div><div class="rw"><div class="v">Quedó adentro, renovó todo</div><div class="k" style="text-transform:none;letter-spacing:0;font-weight:500;color:var(--soft);margin-top:3px">Ahora trabajan $ 724.164,38</div></div><span class="chev">✓</span></div>
+        <div><div class="tile">🏦</div><div class="rw"><div class="v">Me lo pagaron a la cuenta</div><div class="k" style="text-transform:none;letter-spacing:0;font-weight:500;color:var(--soft);margin-top:3px">Siguen trabajando $ 700.000</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="cta">Registrar</div>
+    </div></div>
+    <p class="note"><b>Esta pregunta parece un detalle contable y decide qué ve el usuario.</b> Si el interés se pagó a la cuenta, entró plata: el mes lo muestra. Si capitalizó, <b>no entró nada a ninguna cuenta</b> y el mes —que es una lectura de liquidez— no tiene nada que decir.</p>
+    <p class="note"><b>Un rendimiento capitalizado no es un evento del mes.</b> Es la posición que vale más. Aparece en su detalle y en el total de «Puesto a trabajar», no en «Resumen del mes». Meterlo ahí sería afirmar que entró plata que no entró.</p>
+    <p class="note">Consecuencia incómoda pero correcta: <b>alguien que renueva capitalizando todo el año no ve su ganancia en ningún mes.</b> La ve en la posición, que crece. La lectura de "cuánto gané" no es del mes — es de patrimonio, y es de la fase 5.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">14</span>
+      <div>
+        <h2>Septiembre, con las dos líneas</h2>
+        <p class="sub">Vencimiento normal, el capital vuelve a la cuenta.</p>
+        <span class="badge b-new">Propuesta</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="ledger">
+        <div class="cap">Resumen del mes · septiembre</div>
+        <div class="l"><span class="k"><i></i>Tenías</span><span class="a">$ 4.385.748,17</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Entró</span><span class="a em">+$ 1.240.000,00</span></div>
+        <div class="l"><span class="k"><i class="sl"></i>Se fué</span><span class="a sl">−$ 980.000,00</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Guardado</span><span class="a em">−$ 180.000,00</span></div>
+        <div class="l new"><span class="k"><i class="pl"></i>Volvió al disponible</span><span class="a pl">+$ 700.000,00</span></div>
+        <div class="l new" style="background:#FFF7E8"><span class="k"><i style="background:var(--warning)"></i>Rendimiento</span><span class="a" style="color:#9A6B12">+$ 24.164,38</span></div>
+        <div class="l sum"><span class="k">Para gastar</span><span class="a">$ 5.189.912,55</span></div>
+        <div class="verdict ok"><span class="m">✓</span><div><b>Las dos líneas dicen cosas distintas.</b> $ 700.000 volvieron: ya eran tuyos. $ 24.164,38 son nuevos. Juntarlos en un solo «+$ 724.164» borraría exactamente la diferencia que el usuario quiere saber.</div></div>
+      </div>
+      <div class="callout"><b>«Volvió al disponible» es la misma línea que «Pusiste a trabajar»</b>, con el flujo dado vuelta. Por eso el bucket <b>netea cero</b> en la vida de la posición: −700.000 en agosto, +700.000 en septiembre. Si diera distinto de cero, algo se coló adentro.</div>
+    </div></div>
+    <p class="note"><b>«Rendimiento» es línea propia y no se mete adentro de «Entró».</b> Y el caso que lo decide es el negativo: una pérdida metida en «Entró/Se fué» aterriza en «Se fué», afirmando que salió plata de una cuenta cuando la cuenta <b>subió</b>. Es el mismo error que meter el plazo fijo en «Se fué», del otro lado del espejo.</p>
+    <p class="note"><b>Ninguna de las dos líneas se dibuja si no hubo actividad</b>, igual que Guardado. Un mes normal sigue teniendo cuatro. Las líneas nuevas aparecen exactamente cuando hay algo nuevo que explicar.</p>
+    <p class="note"><b>Y nada de esto es <code>income</code>.</b> El bucket es propio, así que «ingresos del mes», la tira de ritmo y la sugerencia de guardar —que filtra por <code>type = 'income'</code>— no lo ven. El rendimiento no dispara «¿guardás una parte?».</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">15</span>
+      <div>
+        <h2>Renovó capitalizando: el mes no dice nada</h2>
+        <p class="sub">Y está bien que no diga.</p>
+        <span class="badge b-same">Sin líneas nuevas</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="ledger">
+        <div class="cap">Resumen del mes · septiembre</div>
+        <div class="l"><span class="k"><i></i>Tenías</span><span class="a">$ 4.385.748,17</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Entró</span><span class="a em">+$ 1.240.000,00</span></div>
+        <div class="l"><span class="k"><i class="sl"></i>Se fué</span><span class="a sl">−$ 980.000,00</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Guardado</span><span class="a em">−$ 180.000,00</span></div>
+        <div class="l sum"><span class="k">Para gastar</span><span class="a">$ 4.465.748,17</span></div>
+        <div class="verdict ok"><span class="m">✓</span><div><b>No cruzó plata ningún límite.</b> El capital siguió adentro y el interés también. La card es una lectura de liquidez: no tiene nada que reportar porque no pasó nada con la liquidez.</div></div>
+      </div>
+      <div class="c">
+        <div class="pos-row"><div class="tile">📈</div><div class="n"><b>Plazo fijo Comafi</b><span>Vence 24 de oct · renovado</span></div><span class="a">$ 724.164,38</span></div>
+      </div>
+      <div class="callout"><b>La ganancia está: la posición vale $ 24.164,38 más.</b> Se ve en su fila y en el total de «Puesto a trabajar». No se ve en el mes porque el mes cuenta cómo se movió la plata dentro y fuera de las cuentas, y esta no se movió.</div>
+    </div></div>
+    <p class="note"><b>Este caso es el que prueba que «Rendimiento» no puede ser simplemente «la ganancia del mes».</b> Es <b>la ganancia que se hizo líquida</b>. Un rendimiento capitalizado es real y no es líquido, y la card no es el lugar donde vive.</p>
+    <p class="note">Es también el que muestra por qué la pregunta del paso 13b no se puede saltear: sin ella, Grana no sabe si la posición pasó a valer $ 724.164,38 o si siguió valiendo $ 700.000 y entraron $ 24.164,38 a una cuenta. Son dos estados distintos del mundo.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">16</span>
+      <div>
+        <h2>Las variantes, sin caso especial</h2>
+        <p class="sub">La misma resta contesta las seis.</p>
+        <span class="badge b-new">Regla</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="ledger">
+        <div class="cap">Rescate anticipado, con penalidad</div>
+        <div class="l"><span class="k">Volvió</span><span class="a">$ 706.041,10</span></div>
+        <div class="l"><span class="k">Capital</span><span class="a">$ 700.000,00</span></div>
+        <div class="l sum"><span class="k">Rendimiento</span><span class="a" style="color:#9A6B12">+$ 6.041,10</span></div>
+      </div>
+      <div class="ledger">
+        <div class="cap">FCI con resultado negativo</div>
+        <div class="l"><span class="k">Volvió</span><span class="a">$ 680.000,00</span></div>
+        <div class="l"><span class="k">Capital</span><span class="a">$ 700.000,00</span></div>
+        <div class="l sum"><span class="k">Rendimiento</span><span class="a" style="color:#B03A2E">−$ 20.000,00</span></div>
+      </div>
+      <div class="ledger">
+        <div class="cap">Rescate parcial · FCI</div>
+        <div class="l"><span class="k">Volvió</span><span class="a">$ 310.000,00</span></div>
+        <div class="l"><span class="k">Capital rescatado</span><span class="a">$ 300.000,00</span></div>
+        <div class="l sum"><span class="k">Rendimiento</span><span class="a" style="color:#9A6B12">+$ 10.000,00</span></div>
+      </div>
+      <div class="callout"><b>Ninguna necesita código propio.</b> Todas son <code>volvió − capital</code>, con el signo que salga. La penalidad es un rendimiento chico; la pérdida es un rendimiento negativo; el rescate parcial es la misma resta sobre la parte que salió.</div>
+    </div></div>
+    <p class="note"><b>Lo único que el rescate parcial sí necesita</b> es que la posición sepa cuánto capital le queda adentro — <b>$ 400.000</b> después del ejemplo de arriba. Eso es de la fase <b>3B</b>: un plazo fijo común no se rescata en partes, un FCI sí.</p>
+    <p class="note">Y una que no entra por esta puerta: <b>el interés pagado a cuenta sin vencimiento</b>, típico de una cuenta remunerada. El modelo ya lo tiene resuelto por otro lado — <b>una cuenta remunerada no es una posición</b>, porque esa plata está disponible y se puede gastar mañana sin rescatar nada.</p>
+  </section>
+
 </div>
 
 <div class="ab">
@@ -712,13 +894,14 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
       </ol>
     </div>
     <div class="way">
-      <div class="cap">Propuesta</div>
+      <div class="cap">Cerrado</div>
       <h4>El rescate son dos cosas, no una</h4>
       <span class="taps">Vuelven $ 724.164,38 sobre $ 700.000</span>
       <ol>
         <li>Los <b>$ 700.000</b> vuelven por el <b>mismo término</b> que se fueron, con el flujo dado vuelta. Así el bucket <b>neto de una posición cerrada da exactamente cero</b> — que es un invariante que se puede testear.</li>
         <li>Los <b>$ 24.164,38</b> son plata que <b>nunca estuvo en una cuenta</b>. Meterlos en el mismo término lo rompe: el neto de la posición daría +$ 24.164,38, como si hubieras sacado más de lo que pusiste.</li>
-        <li>Van a <b>«Entró»</b>, pero <b>no como <code>income</code></b>. «Entró» es una lectura de <b>liquidez</b> —ya incluye reintegros, liquidaciones y ajustes—, y esa plata sí llegó a la cuenta. Lo que hay que proteger es <code>totalIncome</code>, que es de donde salen «ingresos del mes» y la tira que sugiere guardar.</li>
+        <li>El rendimiento es <b>línea propia con signo</b>, no una parte de «Entró». Lo decide el caso negativo: una pérdida metida ahí aterriza en «Se fué», afirmando que salió plata de una cuenta que <b>subió</b>. Y <b>nunca <code>income</code></b>, para que no lo vean «ingresos del mes» ni la tira que sugiere guardar.</li>
+        <li><b>Solo la ganancia que se hizo líquida.</b> Un rendimiento capitalizado es real y no entró a ninguna cuenta: vive en la posición, que vale más, y el mes no lo nombra. La lectura de «cuánto gané» no es del mes — es de patrimonio, fase 5.</li>
       </ol>
     </div>
     <div class="way">
@@ -726,8 +909,8 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
       <h4>Lo que sigue, y en qué orden</h4>
       <span class="taps">Antes de tocar schema</span>
       <ol>
-        <li><b>Partir la fase en 3A y 3B.</b> Plazo fijo primero —capital fijo, vencimiento fijo, sin rescate parcial— y FCI/bróker después. Es el caso cerrado, y la fase 2 ya enseñó lo que cuesta comprometer un modelo antes de que la pantalla lo pida.</li>
-        <li><b>Rescate, con sus cuatro variantes</b>: renovación, rescate parcial, penalidad por anticipado, rendimiento negativo.</li>
+        <li><b>Partir la fase en 3A y 3B.</b> Plazo fijo primero —capital fijo, vencimiento fijo, sin rescate parcial— y FCI/bróker después. Es el caso cerrado, y la fase 2 ya enseñó lo que cuesta comprometer un modelo antes de que la pantalla lo pida. El <b>rescate parcial</b> es lo único del paso 16 que queda para 3B.</li>
+        <li><b>El detalle de una posición</b>: capital, vencimiento, custodio, y qué se puede hacer antes de que venza.</li>
         <li><b>Un propósito sobre una posición.</b> Hoy el techo del reparto es lo guardado; con posiciones pasa a ser <b>lo guardado más las posiciones</b>, y eso cambia el trigger de la 0059.</li>
         <li><b>El hub «Mi plata»</b> — último, porque es lectura pura: se dibuja bien recién cuando sabemos qué hay para leer.</li>
       </ol>
