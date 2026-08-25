@@ -28,7 +28,7 @@ export function RegisterMovementButton({ disabled = false }: Props = {}) {
     <Button
       variant="primary"
       size="md"
-      className="hidden w-auto sm:inline-flex"
+      className="hidden w-auto md:inline-flex"
       disabled={isDisabled}
       onClick={isDisabled ? undefined : () => drawer?.openCreate()}
     >

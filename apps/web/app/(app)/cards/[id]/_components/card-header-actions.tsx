@@ -6,7 +6,6 @@ import { Archive, Pencil, Plus, Trash2 } from 'lucide-react'
 import * as AlertDialog from '@radix-ui/react-alert-dialog'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
-import { Fab } from '@/components/ui/fab'
 import { useMovementDrawer } from '@/lib/transactions/movement-drawer-context'
 import { deactivateCreditCardAccount } from '@/app/_actions/credit-cards'
 import { deleteAccount } from '@/app/_actions/accounts'
@@ -73,21 +72,15 @@ export const CardHeaderActions = ({ cardId, showAdd = true, hasMovements = false
     <>
       {showAdd && (
         <>
-          {/* Desktop: header CTA. Mobile: floating action button (thumb-reach). */}
           <Button
             size="sm"
-            className="hidden w-auto sm:inline-flex"
+            className="inline-flex w-auto"
             disabled={!movementDrawer}
             onClick={() => movementDrawer?.openCreate(cardId)}
           >
             <Plus size={16} strokeWidth={2} aria-hidden />
             {t('actions.register_purchase')}
           </Button>
-          <Fab
-            label={t('actions.register_purchase')}
-            disabled={!movementDrawer}
-            onClick={() => movementDrawer?.openCreate(cardId)}
-          />
         </>
       )}
       {editDrawer && (

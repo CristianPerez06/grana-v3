@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router'
 import { CreditCard, LogOut, Settings, Wallet, X } from 'lucide-react-native'
 import { supabase } from '../../lib/supabase'
 import { colors } from '../../lib/colors'
+import { useMenuIdentity } from '../../lib/profile/queries'
 import { useT } from '../../lib/locale-context'
 
 type Props = {
@@ -14,6 +15,7 @@ export function AppMenu({ onClose }: Props) {
   const t = useT()
   const insets = useSafeAreaInsets()
   const router = useRouter()
+  const { data: identity } = useMenuIdentity()
 
   async function handleSignOut() {
     onClose()
@@ -45,6 +47,8 @@ export function AppMenu({ onClose }: Props) {
         </Pressable>
       </View>
 
+      <ProfileBlock name={identity?.name ?? null} email={identity?.email ?? null} />
+
       <View className="gap-[2px] px-4">
         <SheetItem
           Icon={Wallet}
@@ -65,6 +69,40 @@ export function AppMenu({ onClose }: Props) {
         <View className="my-2 border-t border-border-soft" />
 
         <SheetItem Icon={LogOut} label={t('nav.logout')} onPress={handleSignOut} destructive />
+      </View>
+    </View>
+  )
+}
+
+/**
+ * "Logged in as" identity. Mirrors web's `ProfileBlock`
+ * (`apps/web/app/(app)/_components/profile-block.tsx`): same avatar-initial +
+ * name + email shape, built from React Native primitives.
+ *
+ * Renders nothing until the query resolves, rather than a skeleton — it sits
+ * above the destinations and a placeholder would push them down as it settles.
+ */
+function ProfileBlock({ name, email }: { name: string | null; email: string | null }) {
+  const primary = name || email
+  if (!primary) return null
+  const secondary = name ? email : null
+
+  return (
+    <View className="flex-row items-center gap-3 px-5 pb-3">
+      <View className="h-8 w-8 items-center justify-center rounded-full bg-emerald-soft">
+        <Text className="text-[13px] font-bold text-emerald">
+          {primary.charAt(0).toUpperCase()}
+        </Text>
+      </View>
+      <View className="min-w-0 flex-1">
+        <Text numberOfLines={1} className="text-[13px] font-bold text-text">
+          {primary}
+        </Text>
+        {secondary && (
+          <Text numberOfLines={1} className="text-[11px] text-text-soft">
+            {secondary}
+          </Text>
+        )}
       </View>
     </View>
   )
