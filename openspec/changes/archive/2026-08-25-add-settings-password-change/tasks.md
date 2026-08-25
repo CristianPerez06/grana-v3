@@ -44,22 +44,22 @@
 
 ## 6. Verificación funcional
 
-- [ ] 6.1 Camino feliz en web: contraseña cambiada, card de éxito, y navegar a `/dashboard` **no** redirige a `/login`
-- [ ] 6.2 Camino feliz en mobile: card de éxito y la app **no** salta a `(auth)/login` (si salta, el `scope` quedó en `'global'`)
-- [ ] 6.3 Dos dispositivos: cambiar en A y confirmar que B pierde la sesión al refrescar el token; A sigue adentro
-- [ ] 6.4 Contraseña actual incorrecta: error sobre el campo, sin llamada a `updateUser`, contraseña sin cambios
-- [ ] 6.5 Contraseña nueva igual a la actual: mensaje de `same_password` a nivel formulario, form montado, sin `signOut`
-- [ ] 6.6 Confirmación distinta: error de validación local, cero llamadas a Supabase (verificable en la pestaña de red / logs)
-- [ ] 6.7 Cortar la red entre el paso 2 y el 3: aparece la card con el body de revocación fallida, no el de éxito completo
-- [ ] 6.8 Tantear varias veces la contraseña actual: `over_request_rate_limit` se muestra traducido, sin romper la pantalla
-- [ ] 6.9 Confirmar que después de una verificación exitosa las cookies de auth (web) y `expo-secure-store` (mobile) no cambiaron
-- [ ] 6.10 Salir con el back-link a mitad del formulario y volver a entrar: el form arranca limpio
-- [ ] 6.11 Las dos pantallas en `en`: todo el copy propio del change traducido, incluidos los `accessibilityLabel` / `aria-label` del toggle de visibilidad. **Excepción conocida y esperada en mobile**: los mensajes base de Yup (`required`, `min`, `email`) salen en español por `apps/mobile/lib/yup-locale.ts` — deuda preexistente, fuera de alcance (ver Non-Goals). Web sí los muestra traducidos
-- [ ] 6.12 Mobile: el teclado no tapa el campo enfocado ni el botón de guardar
+- [x] 6.1 Camino feliz en web: contraseña cambiada, card de éxito, y navegar a `/dashboard` **no** redirige a `/login`
+- [x] 6.2 Camino feliz en mobile: card de éxito y la app **no** salta a `(auth)/login` (si salta, el `scope` quedó en `'global'`)
+- [x] 6.3 Dos dispositivos: cambiar en A y confirmar que B pierde la sesión al refrescar el token; A sigue adentro
+- [x] 6.4 Contraseña actual incorrecta: error sobre el campo, sin llamada a `updateUser`, contraseña sin cambios
+- [x] 6.5 Contraseña nueva igual a la actual: mensaje de `same_password` a nivel formulario, form montado, sin `signOut`
+- [x] 6.6 Confirmación distinta: error de validación local, cero llamadas a Supabase (verificable en la pestaña de red / logs)
+- [x] 6.7 Cortar la red entre el paso 2 y el 3: aparece la card con el body de revocación fallida, no el de éxito completo
+- [x] 6.8 Tantear varias veces la contraseña actual: `over_request_rate_limit` se muestra traducido, sin romper la pantalla
+- [x] 6.9 Confirmar que después de una verificación exitosa las cookies de auth (web) y `expo-secure-store` (mobile) no cambiaron
+- [x] 6.10 Salir con el back-link a mitad del formulario y volver a entrar: el form arranca limpio
+- [x] 6.11 Las dos pantallas en `en`: todo el copy propio del change traducido, incluidos los `accessibilityLabel` / `aria-label` del toggle de visibilidad. **Excepción conocida y esperada en mobile**: los mensajes base de Yup (`required`, `min`, `email`) salen en español por `apps/mobile/lib/yup-locale.ts` — deuda preexistente, fuera de alcance (ver Non-Goals). Web sí los muestra traducidos
+- [x] 6.12 Mobile: el teclado no tapa el campo enfocado ni el botón de guardar
 - [x] 6.13 `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm lint:mobile`, `pnpm typecheck:mobile` y `pnpm openspec:check` en verde
 
 ## 7. Archivo
 
-- [ ] 7.1 Mover la carpeta a `openspec/changes/archive/<fecha>-add-settings-password-change/`
-- [ ] 7.2 Integrar los deltas en `openspec/specs/auth/spec.md` y `openspec/specs/settings/spec.md` (sin secciones de delta en el master)
-- [ ] 7.3 `pnpm openspec:check` pasa en la rama
+- [x] 7.1 Mover la carpeta a `openspec/changes/archive/2026-08-25-add-settings-password-change/`
+- [x] 7.2 Integrar los deltas en `openspec/specs/auth/spec.md` y `openspec/specs/settings/spec.md` (sin secciones de delta en el master)
+- [x] 7.3 `pnpm openspec:check` pasa en la rama
