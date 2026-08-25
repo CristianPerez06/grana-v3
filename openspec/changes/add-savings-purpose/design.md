@@ -308,8 +308,13 @@ Entonces:
   formularios —guardar, destinar, volver a usar— que es donde la moneda es un dato y no una
   estructura.
 
-El detalle queda con lo que la fase existe para contestar: **cuánto hay guardado**, **cuánto queda
-para gastar**, **para qué es**, y las dos acciones.
+El detalle queda con lo que la fase existe para contestar: **cuánto hay guardado**, **para qué es**,
+y las dos acciones.
+
+**Un solo número protagonista.** *Para gastar* estuvo un rato como tarjeta gemela y se sacó: dos
+tarjetas iguales no dejan protagonista a ninguna, y esta pantalla contesta *"cuánto tengo guardado y
+para qué"*. El disponible es el número del **dashboard**, que está literalmente detrás del drawer, y
+acá aparece donde significa algo — como resultado de la resta, adentro del puente.
 
 ### Lo explicativo se pliega, no se borra
 

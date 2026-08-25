@@ -608,13 +608,19 @@ export function SavingsDrawer({
               {t('title')}
             </h2>
 
-            {/* Los dos números que la fase entera existe para contestar, en las
-                dos monedas y SIN sumarlas. Sin selector: la moneda es el eje de
-                la OPERACIÓN, no el de la lectura — partir el detalle en dos
-                pantallas obliga a recordar un número mientras se mira el otro. */}
-            <div className="mt-4 grid grid-cols-2 gap-3">
+            {/* UN solo número protagonista, en las dos monedas y sin sumarlas.
+                Sin selector: la moneda es el eje de la OPERACIÓN, no el de la
+                lectura — partir el detalle en dos pantallas obliga a recordar un
+                número mientras se mira el otro.
+
+                Y sin "Para gastar" al lado: dos tarjetas gemelas no dejan
+                protagonista a ninguna, y esta pantalla contesta "cuánto tengo
+                guardado y para qué". El disponible es el número del dashboard,
+                que está justo detrás de este drawer, y acá aparece donde
+                significa algo — como resultado de la resta, adentro de "Cómo se
+                ve en tu banco". */}
+            <div className="mt-4">
               <Headline label={t('total_saved')} amounts={totals('reserved')} />
-              <Headline label={t('to_spend')} amounts={totals('available')} />
             </div>
 
             <p className="mt-5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">

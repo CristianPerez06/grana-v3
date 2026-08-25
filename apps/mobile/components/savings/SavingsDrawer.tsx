@@ -469,12 +469,14 @@ export const SavingsDrawer = ({
           <View>
             <Text className="text-[19px] font-extrabold text-text">{t('savings.title')}</Text>
 
-            {/* Los dos números que la fase existe para contestar, en las dos
-                monedas y SIN sumarlas. Sin selector: la moneda es el eje de la
-                OPERACIÓN, no el de la lectura. */}
-            <View className="mt-3 flex-row gap-2.5">
+            {/* UN solo número protagonista, en las dos monedas y sin sumarlas.
+                Sin "Para gastar" al lado: dos tarjetas gemelas no dejan
+                protagonista a ninguna, y esta pantalla contesta "cuánto tengo
+                guardado y para qué". El disponible es el número del dashboard,
+                que está justo detrás, y acá aparece donde significa algo: como
+                resultado de la resta, adentro de "Cómo se ve en tu banco". */}
+            <View className="mt-3 flex-row">
               <Headline label={t('savings.total_saved')} amounts={totals('reserved')} />
-              <Headline label={t('savings.to_spend')} amounts={totals('available')} />
             </View>
 
             <Text className="mt-4 text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">

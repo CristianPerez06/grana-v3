@@ -261,7 +261,8 @@ La elección de moneda SHALL vivir en los formularios de operación, donde deter
 aplicable.
 
 La explicación de la diferencia con el saldo bancario SHALL seguir disponible, y PUEDE presentarse
-plegada.
+plegada. El **disponible** NO SHALL competir como número principal de esta vista: el detalle contesta
+cuánto hay guardado y para qué; el disponible es el número del dashboard.
 
 #### Scenario: Un propósito bimoneda se lee de una vez
 
