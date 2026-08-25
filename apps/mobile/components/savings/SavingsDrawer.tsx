@@ -164,9 +164,13 @@ const CurrencyBlock = ({
         {money(sums.reserved, currency)}
       </Text>
       <View className="mt-3 flex-row items-baseline justify-between border-t border-border-soft pt-3">
-        <Text className="text-[13px] text-text-muted">{t('savings.this_month')}</Text>
+        {/* Acá el verbo SÍ gira con el signo: es un dato suelto, no un término de
+            ninguna resta. En la card competía con la identidad. */}
+        <Text className="text-[13px] text-text-muted">
+          {t(monthNet < 0 ? 'savings.this_month_released' : 'savings.this_month_saved')}
+        </Text>
         <Text className="text-[14px] font-extrabold text-positive">
-          {monthNet >= 0 ? '+' : '−'}
+          {monthNet < 0 ? '−' : '+'}
           {money(Math.abs(monthNet), currency)}
         </Text>
       </View>

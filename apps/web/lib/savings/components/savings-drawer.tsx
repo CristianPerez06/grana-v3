@@ -226,10 +226,15 @@ const CurrencyBlock = ({
       <p className="mt-2 text-[26px] font-extrabold leading-none tracking-[-0.04em] text-text">
         {money(sums.reserved, currency)}
       </p>
+      {/* Acá el verbo SÍ gira con el signo, y es el lugar donde corresponde: es un
+          dato suelto, no un término de ninguna resta. En la card competía con la
+          identidad —el número tenía que sumar y a la vez decir una dirección— y
+          por eso necesitaba signo, color y verbo coordinados. Acá el verbo solo
+          tiene que hacerlo legible. */}
       <p className="mt-3 flex items-baseline justify-between border-t border-border-soft pt-3 text-[13px] text-text-muted">
-        <span>{t('this_month')}</span>
+        <span>{t(monthNet < 0 ? 'this_month_released' : 'this_month_saved')}</span>
         <span className="font-extrabold tabular-nums text-emerald-deep">
-          {monthNet >= 0 ? '+' : '−'}
+          {monthNet < 0 ? '−' : '+'}
           {money(Math.abs(monthNet), currency)}
         </span>
       </p>
