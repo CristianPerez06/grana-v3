@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Web-mobile — el chrome espejado en contexto</title>
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .anno {
+    width: 390px;
+    margin: 2px 0 0;
+    color: var(--text-soft);
+    font-size: 12.5px;
+    font-weight: 620;
+    line-height: 1.55;
+  }
+  .chip-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+  .chip {
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--card);
+    padding: 7px 13px;
+    font-size: 12.5px;
+    font-weight: 750;
+    color: var(--text-soft);
+  }
+  .chip.on { border-color: var(--emerald); background: var(--emerald-soft); color: #047857; }
+  .search {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: var(--card);
+    padding: 10px 13px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 620;
+  }
+  .desktop {
+    display: flex;
+    width: min(100%, 980px);
+    height: 420px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--page);
+    box-shadow: var(--shadow);
+  }
+  .desktop .side {
+    width: 210px;
+    flex-shrink: 0;
+    margin: 12px 0 12px 12px;
+    border: 1px solid var(--border-soft);
+    border-radius: 22px;
+    background: var(--card);
+    padding: 18px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .desktop .side .brand { padding: 0 12px 14px; color: var(--navy); font-size: 20px; font-weight: 850; letter-spacing: -.02em; }
+  .desktop .side a {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    border-radius: 14px;
+    padding: 10px 15px;
+    color: var(--text);
+    font-size: 13.5px;
+    font-weight: 750;
+    text-decoration: none;
+  }
+  .desktop .side a.on { background: rgba(16,185,129,.08); color: #047857; }
+  .desktop .main { flex: 1; min-width: 0; overflow: hidden; padding: 26px 30px; display: flex; flex-direction: column; gap: 16px; }
+</style>
+</head>
+<body>
+<main class="stage">
+  <h1>Web-mobile — el chrome espejado</h1>
+  <p class="lede">
+    Dos rutas completas con el chrome destino, elegidas porque estresan el patrón
+    por puntas opuestas: una lista con acción primaria y filtros
+    (<code>/transactions</code>, con tab bar) y un detalle anidado
+    (<code>/accounts/[id]</code>, sección chromeless). El contenido de las dos
+    <strong>no cambia</strong> — está acá solo para ver el chrome en contexto.
+  </p>
+
+  <section class="section">
+    <h2>1 · <code>/transactions</code> — ruta de tab</h2>
+    <p class="note">
+      Tiene slot propio en la barra, así que no lleva back-link: el spacer de
+      20px reserva el lugar igual. La acción primaria aparece dos veces por
+      diseño — en el slot <code>actions</code> del header y en el FAB — igual que
+      hoy en web.
+    </p>
+
+    <div class="row">
+      <div>
+        <div class="phone">
+          <div class="statusbar on-navy"><span>9:41</span><span class="dots">▮▮▮ ▲ ▰</span></div>
+          <div class="viewport">
+            <header class="pageheader">
+              <div class="backlink-spacer"></div>
+              <div class="headrow">
+                <div>
+                  <h1 class="title">Movimientos</h1>
+                  <p class="desc">Ver recurrencias ›</p>
+                </div>
+                <button class="action">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                  Registrar
+                </button>
+              </div>
+            </header>
+            <div class="scroll">
+              <div class="card">
+                <div class="card-label">Gastos · agosto 2026</div>
+                <div class="card-amount">$ 412.900</div>
+              </div>
+              <div class="search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                Buscar movimiento
+              </div>
+              <div class="chip-row">
+                <span class="chip on">Egresos</span>
+                <span class="chip">Categoría</span>
+                <span class="chip">Cuenta</span>
+                <span class="chip">Moneda</span>
+              </div>
+              <p class="group-label">Hoy</p>
+              <div class="card" style="padding:4px 16px">
+                <div class="ledger-row"><div class="who"><strong>Supermercado Coto</strong><span>Comida · Santander</span></div><div class="amt neg">−$ 38.400</div></div>
+                <div class="ledger-row"><div class="who"><strong>Netflix</strong><span>Suscripciones · Visa ••42</span></div><div class="amt neg">−$ 9.900</div></div>
+              </div>
+              <p class="group-label">Ayer</p>
+              <div class="card" style="padding:4px 16px">
+                <div class="ledger-row"><div class="who"><strong>Sueldo</strong><span>Ingreso · Galicia</span></div><div class="amt pos">+$ 980.000</div></div>
+                <div class="ledger-row"><div class="who"><strong>Nafta</strong><span>Transporte · Visa ••42</span></div><div class="amt neg">−$ 46.200</div></div>
+                <div class="ledger-row"><div class="who"><strong>Alquiler</strong><span>Hogar · Santander</span></div><div class="amt neg">−$ 310.000</div></div>
+              </div>
+            </div>
+            <button class="fab clears" aria-label="Registrar movimiento">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+            <nav class="tabbar">
+              <button class="tab"><span class="indicator"></span><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></span><span class="label">Inicio</span></button>
+              <button class="tab active"><span class="indicator"></span><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span><span class="label">Movimientos</span></button>
+              <button class="tab"><span class="indicator"></span><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg></span><span class="label">Hogar</span></button>
+              <div class="tab-menu"><button aria-label="Más opciones"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
+            </nav>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+        <p class="anno">
+          El scroll del contenido corre entre el header y la barra: las dos son
+          chrome fijo, no scrollean.
+        </p>
+      </div>
+
+      <div>
+        <div class="callout" style="width:390px;margin-top:26px">
+          <strong>El FAB necesita dos arreglos.</strong>
+          Hoy <code>fab.tsx:28</code> es
+          <code>fixed bottom-10 right-10 z-40 sm:hidden</code>. Primero, el gate
+          va a <code>md:hidden</code>: entre 640 y 767px hoy no hay FAB
+          <em>ni</em> sidebar, que es un bug preexistente. Segundo,
+          <code>bottom-10</code> se apoyaría sobre la barra — el offset tiene que
+          sumar su alto más <code>env(safe-area-inset-bottom)</code>.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>2 · <code>/accounts/[id]</code> — detalle en sección chromeless</h2>
+    <p class="note">
+      Cuentas cuelga del menú, así que ni la lista ni el detalle llevan tab bar.
+      El back-link deja de ser decorativo: es la única salida. El título es
+      dinámico (el nombre de la cuenta), así que en la carga va placeholder
+      mientras el resto del chrome ya está en pantalla.
+    </p>
+
+    <div class="row">
+      <div>
+        <div class="phone">
+          <div class="statusbar on-navy"><span>9:41</span><span class="dots">▮▮▮ ▲ ▰</span></div>
+          <div class="viewport">
+            <header class="pageheader">
+              <a class="backlink" href="#">← Cuentas</a>
+              <div class="headrow">
+                <div><h1 class="title">Santander</h1><p class="desc">Caja de ahorro · ARS</p></div>
+                <button class="action ghost">Editar</button>
+              </div>
+            </header>
+            <div class="scroll">
+              <div class="card">
+                <div class="card-label">Saldo actual</div>
+                <div class="card-amount">$ 284.100</div>
+              </div>
+              <p class="group-label">Últimos movimientos</p>
+              <div class="card" style="padding:4px 16px">
+                <div class="ledger-row"><div class="who"><strong>Supermercado Coto</strong><span>Comida · hoy</span></div><div class="amt neg">−$ 38.400</div></div>
+                <div class="ledger-row"><div class="who"><strong>Alquiler</strong><span>Hogar · ayer</span></div><div class="amt neg">−$ 310.000</div></div>
+                <div class="ledger-row"><div class="who"><strong>Transferencia recibida</strong><span>Ingreso · 22 ago</span></div><div class="amt pos">+$ 150.000</div></div>
+                <div class="ledger-row"><div class="who"><strong>Expensas</strong><span>Hogar · 21 ago</span></div><div class="amt neg">−$ 72.500</div></div>
+              </div>
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+        <p class="anno">
+          <strong>Sin tab bar.</strong> La <code>home-indicator</code> sigue
+          reservada: el contenido no puede terminar pegado al borde inferior
+          aunque no haya barra.
+        </p>
+      </div>
+
+      <div>
+        <div class="phone">
+          <div class="statusbar on-navy"><span>9:41</span><span class="dots">▮▮▮ ▲ ▰</span></div>
+          <div class="viewport">
+            <header class="pageheader">
+              <a class="backlink" href="#">← Cuentas</a>
+              <div class="headrow">
+                <div>
+                  <h1 class="title" style="opacity:.55">Cuentas</h1>
+                  <p class="desc"><span style="display:inline-block;width:120px;height:12px;border-radius:6px;background:var(--navy-soft)"></span></p>
+                </div>
+                <button class="action ghost" disabled>Editar</button>
+              </div>
+            </header>
+            <div class="scroll">
+              <div class="card"><div class="card-label">Saldo actual</div><div style="margin-top:8px;width:150px;height:26px;border-radius:8px;background:var(--border-soft)"></div></div>
+              <p class="group-label">Últimos movimientos</p>
+              <div class="card" style="padding:4px 16px">
+                <div class="ledger-row"><div class="who"><div style="width:150px;height:13px;border-radius:6px;background:var(--border-soft)"></div><div style="margin-top:6px;width:96px;height:10px;border-radius:6px;background:var(--border-soft)"></div></div><div style="width:74px;height:13px;border-radius:6px;background:var(--border-soft)"></div></div>
+                <div class="ledger-row"><div class="who"><div style="width:120px;height:13px;border-radius:6px;background:var(--border-soft)"></div><div style="margin-top:6px;width:80px;height:10px;border-radius:6px;background:var(--border-soft)"></div></div><div style="width:74px;height:13px;border-radius:6px;background:var(--border-soft)"></div></div>
+                <div class="ledger-row"><div class="who"><div style="width:170px;height:13px;border-radius:6px;background:var(--border-soft)"></div><div style="margin-top:6px;width:88px;height:10px;border-radius:6px;background:var(--border-soft)"></div></div><div style="width:74px;height:13px;border-radius:6px;background:var(--border-soft)"></div></div>
+              </div>
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+        <p class="anno">
+          <strong>Cargando.</strong> El back-link y su label están completos desde
+          el first paint; el botón está presente pero <code>disabled</code>. El
+          título cae al fallback <code>accounts.title</code>, igual que hace hoy
+          el nativo en <code>accounts/[id]/index.tsx:58</code>. Nunca se tapa el
+          header con un skeleton.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>3 · Desktop — no se toca</h2>
+    <p class="note">
+      Todo lo anterior vive bajo el breakpoint <code>md</code>. El sidebar sigue
+      <code>hidden md:flex</code>, el header sigue siendo texto en el flujo del
+      contenido y los overlays siguen siendo paneles laterales. Está acá para
+      dejar registrado qué <em>no</em> cambia.
+    </p>
+
+    <div class="desktop">
+      <aside class="side">
+        <div class="brand">grana</div>
+        <a href="#"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</a>
+        <a href="#"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>Cuentas</a>
+        <a href="#"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Tarjetas</a>
+        <a href="#" class="on"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Movimientos</a>
+        <a href="#"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>Compartido</a>
+      </aside>
+      <div class="main">
+        <div class="inline-header">
+          <h1 class="title">Movimientos</h1>
+          <p class="desc">Ver recurrencias ›</p>
+        </div>
+        <div class="card"><div class="card-label">Gastos · agosto 2026</div><div class="card-amount">$ 412.900</div></div>
+        <div class="card" style="padding:4px 16px">
+          <div class="ledger-row"><div class="who"><strong>Supermercado Coto</strong><span>Comida · Santander</span></div><div class="amt neg">−$ 38.400</div></div>
+          <div class="ledger-row"><div class="who"><strong>Sueldo</strong><span>Ingreso · Galicia</span></div><div class="amt pos">+$ 980.000</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+</body>
+</html>

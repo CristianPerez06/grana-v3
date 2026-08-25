@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PageHeader navy — variantes</title>
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .strip {
+    width: 390px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--page);
+  }
+  .strip .filler { padding: 14px 16px 18px; }
+  .anno {
+    width: 390px;
+    margin: 2px 0 0;
+    color: var(--text-soft);
+    font-size: 12.5px;
+    font-weight: 620;
+    line-height: 1.55;
+  }
+  .skel {
+    display: block;
+    border-radius: 6px;
+    background: var(--navy-soft);
+  }
+  .pill {
+    display: inline-block;
+    border-radius: 999px;
+    background: var(--navy-soft);
+    border: 1px solid var(--navy-border);
+    color: var(--navy-muted);
+    padding: 3px 9px;
+    font-size: 11px;
+    font-weight: 750;
+  }
+</style>
+</head>
+<body>
+<main class="stage">
+  <h1>PageHeader navy — variantes</h1>
+  <p class="lede">
+    El mismo componente que hoy renderiza texto en el flujo del contenido, con
+    tratamiento navy bajo <code>md</code>. Props del contrato compartido
+    (<code>packages/ui-contracts/src/index.ts:139</code>): <code>title</code>,
+    <code>description</code>, <code>backLink</code>, <code>actions</code>.
+    Implementación de referencia: <code>apps/mobile/components/ui/PageHeader.tsx</code>.
+  </p>
+
+  <div class="callout">
+    <strong>La variante narrativa no se porta: se borra.</strong>
+    <code>eyebrow</code>, <code>monthLabel</code>, <code>monthLabelParts</code>,
+    <code>prevMonthHref</code> y <code>nextMonthHref</code> existen en el
+    contrato y en <code>page-header.tsx:21-93</code>, pero
+    <strong>ningún consumidor los pasa</strong>. El dashboard resuelve la
+    navegación de mes con un <code>MonthNavigator</code> aparte, igual que el
+    nativo. Son ~73 de las 147 líneas del archivo.
+  </div>
+
+  <section class="section">
+    <h2>1 · Root de tab — sin backLink</h2>
+    <p class="note">
+      Las secciones que tienen slot en la tab bar (<code>dashboard</code>,
+      <code>transactions</code>, <code>shared</code>) no llevan back-link: la
+      salida es la tab bar. El espacio del link <strong>se reserva igual</strong>
+      con un spacer de 20px, para que el header no cambie de alto entre rutas.
+    </p>
+    <div class="row">
+      <div>
+        <div class="strip">
+          <header class="pageheader">
+            <div class="backlink-spacer"></div>
+            <div class="headrow">
+              <div><h1 class="title">Movimientos</h1><p class="desc">Ver recurrencias ›</p></div>
+              <button class="action">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                Registrar
+              </button>
+            </div>
+          </header>
+          <div class="filler"><div class="card"><div class="card-label">Contenido de la ruta</div></div></div>
+        </div>
+        <p class="anno">El spacer es la contraparte web de <code>&lt;View className="h-5" /&gt;</code> en el nativo.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>2 · Sección chromeless — backLink obligatorio</h2>
+    <p class="note">
+      <code>accounts</code>, <code>cards</code> y <code>settings</code> cuelgan
+      del Menú y renderizan sin tab bar. El back-link deja de ser decorativo:
+      es la única salida visible. Href fijo al dashboard, no <code>router.back()</code>,
+      para que el destino sea el mismo viniendo del menú o de un deep link.
+    </p>
+    <div class="row">
+      <div>
+        <div class="strip">
+          <header class="pageheader">
+            <a class="backlink" href="#">← Inicio</a>
+            <div class="headrow">
+              <div><h1 class="title">Tarjetas</h1><p class="desc">3 tarjetas · agosto 2026</p></div>
+              <button class="action">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                Agregar
+              </button>
+            </div>
+          </header>
+          <div class="filler"><div class="card"><div class="card-label">Contenido de la ruta</div></div></div>
+        </div>
+        <p class="anno">
+          En web hoy <strong>ninguna raíz de sección declara <code>backLink</code></strong>.
+          Agregar los tres es prerequisito de la fase 2, en el mismo commit que
+          quita el drawer.
+        </p>
+      </div>
+
+      <div>
+        <div class="strip">
+          <header class="pageheader">
+            <a class="backlink" href="#">← Tarjetas</a>
+            <div class="headrow">
+              <div><h1 class="title">Visa Santander</h1><p class="desc">Vence el 12 · cierra el 5</p></div>
+              <button class="action ghost">Editar</button>
+            </div>
+          </header>
+          <div class="filler"><div class="card"><div class="card-label">Contenido de la ruta</div></div></div>
+        </div>
+        <p class="anno">Pantalla anidada: el back-link apunta al padre, no al dashboard.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>3 · Cargando — el chrome nunca se tapa</h2>
+    <p class="note">
+      Regla canónica del repo (<code>route-loading-and-errors</code>): back-link y
+      slots de acciones están presentes desde el first paint; los botones van
+      <code>disabled</code> hasta que llega la data, y los títulos dinámicos usan
+      placeholder. <strong>Nunca</strong> se cubre el header con un skeleton.
+    </p>
+    <div class="row">
+      <div>
+        <div class="strip">
+          <header class="pageheader">
+            <a class="backlink" href="#">← Tarjetas</a>
+            <div class="headrow">
+              <div>
+                <h1 class="title"><span class="skel" style="width:190px;height:24px"></span></h1>
+                <p class="desc" style="margin-top:9px"><span class="skel" style="width:130px;height:13px"></span></p>
+              </div>
+              <button class="action ghost" disabled>Editar</button>
+            </div>
+          </header>
+          <div class="filler"><div class="card"><div class="card-label">Skeleton del contenido</div></div></div>
+        </div>
+        <p class="anno">
+          Solo el <em>título dinámico</em> es placeholder. El back-link, su label
+          y el botón siguen ahí — deshabilitado, no ausente.
+        </p>
+      </div>
+
+      <div>
+        <div class="strip">
+          <header class="pageheader">
+            <div class="backlink-spacer"></div>
+            <div class="headrow">
+              <div><h1 class="title">Movimientos</h1><p class="desc">Ver recurrencias ›</p></div>
+              <button class="action" disabled>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                Registrar
+              </button>
+            </div>
+          </header>
+          <div class="filler"><div class="card"><div class="card-label">Skeleton del contenido</div></div></div>
+        </div>
+        <p class="anno">
+          Título estático: no hay placeholder. Solo la acción espera a que el
+          drawer tenga cuentas y categorías.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>4 · Dashboard — la única sección con header propio</h2>
+    <p class="note">
+      Web y nativo tienen los dos un <code>DashboardHeader</code> custom que no
+      pasa por <code>PageHeader</code>. El nativo
+      (<code>components/dashboard/DashboardHeader.tsx:40</code>) ya es navy: la
+      fase 1 traduce esa referencia, no diseña nada nuevo.
+    </p>
+    <div class="row">
+      <div>
+        <div class="strip">
+          <header class="pageheader">
+            <div class="backlink-spacer"></div>
+            <div class="headrow">
+              <div style="min-width:0;flex:1">
+                <h1 class="title">Hola, Cristian</h1>
+                <p class="desc">Lunes 25 de agosto</p>
+              </div>
+              <div style="flex-shrink:0;display:flex;align-items:center;gap:6px">
+                <span class="pill" style="display:inline-flex;align-items:center;gap:6px">
+                  <span style="opacity:.7">‹</span> Ago <span style="opacity:.7">›</span>
+                </span>
+                <button class="action ghost" aria-label="Ocultar montos" style="padding:7px 8px">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+            </div>
+          </header>
+          <div class="filler"><div class="card"><div class="card-label">Balance total</div><div class="card-amount">$ 1.284.640</div></div></div>
+        </div>
+        <p class="anno">
+          Layout calcado de <code>DashboardHeader.tsx:43-64</code>: el saludo es
+          el título y la fecha va debajo en <code>navy-muted</code>; el
+          <code>MonthNavigator compact</code> y el <code>EyeMaskToggle</code>
+          comparten la fila a la derecha. El mes va a tres letras para que entre
+          al lado del saludo en vez de comerse una fila propia de ~44px. El
+          bloque que envuelve es el saludo: los controles no encogen.
+        </p>
+      </div>
+    </div>
+  </section>
+</main>
+</body>
+</html>

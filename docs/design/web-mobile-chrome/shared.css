@@ -1,0 +1,553 @@
+/* Tokens espejados de packages/ui-tokens/src/theme.css.
+   Los mocks son no-autoritativos: la implementación usa las utilidades de
+   token (bg-navy, text-navy-muted, …), nunca estos literales. */
+:root {
+  --navy: #0b1a2b;
+  --navy-muted: rgba(255, 255, 255, 0.62);
+  --navy-soft: rgba(255, 255, 255, 0.08);
+  --navy-border: rgba(255, 255, 255, 0.14);
+  --emerald: #10b981;
+  --emerald-soft: #e7f8f0;
+  --page: #f6f7f9;
+  --card: #ffffff;
+  --border: #e4e8ef;
+  --border-soft: #edf0f4;
+  --text: #142033;
+  --text-soft: #667085;
+  --muted: #98a2b3;
+  --error: #d92d20;
+  --terracotta: #d95f3d;
+  --shadow: 0 24px 60px -42px rgba(11, 26, 43, 0.48);
+  --radius-md: 10px;
+  --radius-xl: 14px;
+  font-family: "Plus Jakarta Sans", Inter, ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; cursor: pointer; }
+
+/* ── Página de mock ────────────────────────────────────────────────────── */
+
+.stage { padding: 32px 24px 64px; }
+
+.stage > h1 {
+  margin: 0 0 6px;
+  font-size: 24px;
+  font-weight: 850;
+  letter-spacing: -0.01em;
+}
+
+.stage > .lede {
+  margin: 0 0 32px;
+  max-width: 70ch;
+  color: var(--text-soft);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.section { margin-bottom: 44px; }
+
+.section > h2 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-soft);
+}
+
+.section > .note {
+  margin: 0 0 18px;
+  max-width: 70ch;
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.note code,
+.lede code {
+  background: var(--border-soft);
+  border-radius: 5px;
+  padding: 1px 5px;
+  font-size: 0.92em;
+  font-weight: 700;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  align-items: flex-start;
+}
+
+.spec {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.spec > .caption {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.spec > .caption .tag {
+  display: inline-block;
+  margin-left: 6px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  vertical-align: 1px;
+}
+
+.tag.now { background: #fdecea; color: var(--error); }
+.tag.next { background: var(--emerald-soft); color: #047857; }
+.tag.ref { background: var(--border-soft); color: var(--text-soft); }
+
+/* ── Marco de teléfono ─────────────────────────────────────────────────── */
+
+.phone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 390px;
+  height: 720px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background: var(--page);
+  box-shadow: var(--shadow);
+}
+
+.phone.short { height: 420px; }
+
+/* Barra de estado del sistema: en el mock representa el área que ocupa el
+   notch. En la implementación es `env(safe-area-inset-top)`. */
+.statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 22px 3px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.statusbar.on-navy { background: var(--navy); color: #fff; }
+.statusbar.on-card { background: var(--card); color: var(--text); }
+.statusbar .dots { letter-spacing: 2px; opacity: 0.75; }
+
+.viewport {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Home indicator: en la implementación es `env(safe-area-inset-bottom)`. */
+.home-indicator {
+  display: flex;
+  justify-content: center;
+  padding: 7px 0 8px;
+}
+
+.home-indicator::before {
+  content: "";
+  width: 134px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(20, 32, 51, 0.28);
+}
+
+/* ── PageHeader navy (destino) ─────────────────────────────────────────── */
+
+.pageheader {
+  background: var(--navy);
+  padding: 12px 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pageheader .backlink {
+  color: var(--navy-muted);
+  font-size: 14px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+/* Reserva del backlink: el chrome nunca colapsa, ni sin backlink ni cargando. */
+.pageheader .backlink-spacer { height: 20px; }
+
+.pageheader .headrow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pageheader .title {
+  margin: 0;
+  color: #fff;
+  font-size: 24px;
+  font-weight: 750;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.pageheader .desc {
+  margin: 5px 0 0;
+  color: var(--navy-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pageheader .action {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--emerald);
+  color: #fff;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.pageheader .action.ghost {
+  background: var(--navy-soft);
+  border: 1px solid var(--navy-border);
+}
+
+.pageheader .action[disabled] { opacity: 0.5; }
+
+/* ── TopBarMobile (estado actual, a eliminar) ──────────────────────────── */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--card);
+  padding: 12px 16px;
+}
+
+.topbar .burger {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-soft);
+}
+
+.topbar .wordmark {
+  color: var(--navy);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* Header de ruta en el flujo del contenido (estado actual). */
+.inline-header { padding: 4px 0 2px; }
+
+.inline-header .title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 850;
+  letter-spacing: -0.01em;
+}
+
+.inline-header .desc {
+  margin: 6px 0 0;
+  color: var(--text-soft);
+  font-size: 14px;
+  font-weight: 620;
+}
+
+/* ── TabBar ────────────────────────────────────────────────────────────── */
+
+.tabbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-top: 1px solid var(--border-soft);
+  border-radius: 12px 12px 0 0;
+  background: var(--card);
+  padding: 14px 12px 0;
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  color: var(--text-soft);
+}
+
+.tab .indicator {
+  width: 24px;
+  height: 3px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.tab.active { color: var(--emerald); }
+.tab.active .indicator { background: var(--emerald); }
+
+.tab .label { font-size: 10px; font-weight: 550; }
+.tab.active .label { font-weight: 700; }
+
+.tab .glyph { display: grid; place-items: center; height: 22px; }
+
+.tab-menu {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: 4px 0;
+}
+
+.tab-menu button {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--emerald);
+  color: #fff;
+}
+
+/* ── Bottom sheet ──────────────────────────────────────────────────────── */
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.sheet {
+  background: var(--card);
+  border-radius: 20px 20px 0 0;
+  padding-bottom: 8px;
+}
+
+.sheet .grabber {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 4px;
+}
+
+.sheet .grabber::before {
+  content: "";
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border-soft);
+}
+
+.sheet .sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px 12px;
+}
+
+.sheet .sheet-head .heading {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.sheet .sheet-head .close {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--page);
+  color: var(--text-soft);
+}
+
+.sheet .items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 16px;
+}
+
+.sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  padding: 13px 16px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 650;
+  text-align: left;
+  width: 100%;
+}
+
+.sheet-item.destructive { color: var(--error); }
+
+.sheet .divider {
+  margin: 8px 16px;
+  border-top: 1px solid var(--border-soft);
+}
+
+/* ── FAB ───────────────────────────────────────────────────────────────── */
+
+.fab {
+  position: absolute;
+  right: 20px;
+  display: grid;
+  width: 60px;
+  height: 60px;
+  place-items: center;
+  border: 0;
+  border-radius: 18px;
+  background: var(--emerald);
+  color: #fff;
+  box-shadow: 0 12px 28px -10px rgba(16, 185, 129, 0.6);
+  z-index: 5;
+}
+
+/* Colisión: `fixed bottom-10` se apoya sobre la tab bar. */
+.fab.collides { bottom: 40px; }
+/* Correcto: el offset suma el alto de la tab bar + la home indicator. */
+.fab.clears { bottom: 112px; }
+
+/* ── Piezas de contenido (relleno de los mocks) ────────────────────────── */
+
+.card {
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: 0 1px 2px rgba(20, 32, 51, 0.04);
+  padding: 16px;
+}
+
+.card .card-label {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.card .card-amount {
+  margin-top: 6px;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-soft);
+  padding: 12px 0;
+}
+
+.ledger-row:last-child { border-bottom: 0; }
+
+.ledger-row .who { min-width: 0; }
+
+.ledger-row .who strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ledger-row .who span {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.ledger-row .amt {
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger-row .amt.neg { color: var(--terracotta); }
+.ledger-row .amt.pos { color: #047857; }
+
+.group-label {
+  margin: 6px 0 -4px;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* ── Callouts ──────────────────────────────────────────────────────────── */
+
+.callout {
+  border-left: 3px solid var(--emerald);
+  background: var(--emerald-soft);
+  border-radius: 0 10px 10px 0;
+  padding: 12px 14px;
+  margin: 14px 0 0;
+  max-width: 70ch;
+  font-size: 13px;
+  font-weight: 620;
+  line-height: 1.6;
+  color: #065f46;
+}
+
+.callout.warn {
+  border-left-color: var(--terracotta);
+  background: #fff1ed;
+  color: #9a3412;
+}
+
+.callout strong { font-weight: 850; }
