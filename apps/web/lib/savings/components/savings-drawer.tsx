@@ -86,7 +86,13 @@ type View =
   | { kind: 'purposeForm'; purpose: Purpose | null; name?: string; icon?: string }
   | { kind: 'purposeDelete'; purpose: Purpose }
   | { kind: 'pickSource'; currency: Currency }
-  | { kind: 'allocate'; currency: Currency; purpose: Purpose; direction: 'allocate' | 'unallocate' }
+  | {
+      kind: 'allocate'
+      currency: Currency
+      /** Nulo: se llegó desde el resto y el propósito se elige en la misma pantalla. */
+      purpose: Purpose | null
+      direction: 'allocate' | 'unallocate'
+    }
 
 const money = (amount: number, currency: Currency) =>
   currency === 'USD' ? formatUSD(amount) : formatARS(amount, true)
@@ -247,6 +253,10 @@ export function SavingsDrawer({
     }
   }
 
+  // Cuál se muestra. Arranca en pesos y el usuario cambia con el selector; no
+  // se recuerda entre aperturas porque el caso normal es mirar pesos.
+  const [shown, setShown] = useState<Currency>('ARS')
+
   const currencies: Currency[] = (['ARS', 'USD'] as const).filter((c) => {
     const row = sums?.find((s) => s.currencyCode === c)
     // ARS is always shown: it is the primary currency and the drawer would look
@@ -254,6 +264,8 @@ export function SavingsDrawer({
     // the same bimoneda rule the rest of the app follows.
     return c === 'ARS' || (row != null && (row.reserved !== 0 || row.available !== 0))
   })
+
+  const shownCurrency: Currency = currencies.includes(shown) ? shown : (currencies[0] ?? 'ARS')
 
   const rowFor = (currency: Currency): AvailableSums =>
     sums?.find((s) => s.currencyCode === currency) ?? {
@@ -323,21 +335,29 @@ export function SavingsDrawer({
    * cae al formulario con el nombre puesto, que es donde el error se puede leer
    * y corregir.
    */
-  const createFromSeed = async (seedKey: string) => {
+  /**
+   * Crea una sugerencia y devuelve el propósito ARMADO.
+   *
+   * Armado y no buscado: la lista de este render es la de antes de crearlo, así
+   * que buscarlo ahí devuelve nada — y eso ya rompió la navegación una vez, en
+   * silencio.
+   */
+  const createFromSeed = async (seedKey: string): Promise<Purpose | null> => {
     const seed = PURPOSE_SEEDS.find((x) => x.key === seedKey)
     const name = t(`purposes.seeds.${seedKey}`)
     const result = await createPurpose({ name, icon: seed?.icon ?? null })
 
-    if (!result.ok || result.id == null) {
-      push({ kind: 'purposeForm', purpose: null, name, icon: seed?.icon })
-      return
-    }
+    if (!result.ok || result.id == null) return null
 
-    // El propósito recién creado NO está todavía en la lista de este render, así
-    // que se pasa armado. Refrescar después: la navegación no tiene que esperar
-    // a que vuelva una lectura.
-    pickPurpose(result.id, { id: result.id, name, icon: seed?.icon ?? null })
     void refresh()
+    return { id: result.id, name, icon: seed?.icon ?? null }
+  }
+
+  /** Desde el selector: crea y sigue al paso que lo pidió. */
+  const createFromSeedAndPick = async (seedKey: string) => {
+    const created = await createFromSeed(seedKey)
+    if (created) pickPurpose(created.id, created)
+    else push({ kind: 'purposeForm', purpose: null })
   }
 
   const openRelease = (currency: Currency) => {
@@ -385,7 +405,7 @@ export function SavingsDrawer({
             onPick={pickPurpose}
             onCreate={(seedKey) =>
               seedKey != null
-                ? createFromSeed(seedKey)
+                ? createFromSeedAndPick(seedKey)
                 : push({ kind: 'purposeForm', purpose: null })
             }
             onBack={back}
@@ -429,13 +449,16 @@ export function SavingsDrawer({
         {view.kind === 'allocate' && (
           <PurposeAllocate
             purpose={view.purpose}
+            purposes={purposes}
             currency={view.currency}
             direction={view.direction}
             available={
               view.direction === 'allocate'
                 ? groupAmount(view.currency, null)
-                : groupAmount(view.currency, view.purpose.id)
+                : groupAmount(view.currency, view.purpose?.id ?? null)
             }
+            onCreateSeed={createFromSeed}
+            onCreateCustom={() => push({ kind: 'purposeForm', purpose: null })}
             onDone={async () => {
               await refresh()
               back()
@@ -532,11 +555,37 @@ export function SavingsDrawer({
 
         {view.kind === 'detail' && (
           <>
-            <h2 className="text-[21px] font-extrabold tracking-[-0.025em] text-text">
-              {t('title')}
-            </h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-[21px] font-extrabold tracking-[-0.025em] text-text">
+                {t('title')}
+              </h2>
+              {/* Selector, no dos bloques apilados. Con las dos monedas una
+                  debajo de la otra el drawer duplicaba total, puente, desglose e
+                  historial —y la segunda quedaba a un scroll largo, donde nadie
+                  la ve—. Mismo control que el chip de moneda del alta de
+                  movimientos, que es donde el usuario ya lo aprendió. */}
+              {currencies.length > 1 && (
+                <div className="flex rounded-[10px] border border-border bg-[#FAFBFC] p-0.5">
+                  {currencies.map((code) => (
+                    <button
+                      key={code}
+                      type="button"
+                      onClick={() => setShown(code)}
+                      className={cn(
+                        'min-h-[32px] rounded-[8px] px-3 text-xs font-bold transition-colors',
+                        shownCurrency === code
+                          ? 'bg-card text-text shadow-[0_1px_2px_rgba(11,26,43,0.08)]'
+                          : 'text-text-soft hover:text-text',
+                      )}
+                    >
+                      {code}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="mt-4 flex flex-col gap-5">
-              {currencies.map((currency) => (
+              {[shownCurrency].map((currency) => (
                 <CurrencyBlock
                   key={currency}
                   currency={currency}
@@ -544,14 +593,14 @@ export function SavingsDrawer({
                   history={history[currency]}
                   monthNet={monthNet(currency)}
                   groups={groupsOf(currency)}
-                  // «Sin destino» no abre su grupo: va DERECHO a elegir para
-                  // qué. Es lo único que se hace con el resto, y hacerlo pasar
-                  // por una vista intermedia cobraba un toque por mostrar un
-                  // número que ya estaba en la fila que se tocó. Los propósitos
-                  // sí abren su grupo: tienen historial y acciones propias.
+                  // «Sin destino» va DERECHO a destinar, con el propósito por
+                  // elegir en la misma pantalla: cuánto y para qué son dos datos
+                  // de una sola decisión, y separarlos en dos pasos cobraba
+                  // navegación por no decidir nada. Los propósitos sí abren su
+                  // grupo: tienen historial y acciones propias.
                   onOpenGroup={(purposeId) =>
                     purposeId == null
-                      ? push({ kind: 'picker', currency, intent: 'allocate' })
+                      ? push({ kind: 'allocate', currency, purpose: null, direction: 'allocate' })
                       : push({ kind: 'group', currency, purpose: purposeById(purposeId)! })
                   }
                   onSave={() =>
@@ -613,7 +662,16 @@ const CurrencyBlock = ({
           tiene que hacerlo legible. */}
       <p className="mt-3 flex items-baseline justify-between border-t border-border-soft pt-3 text-[13px] text-text-muted">
         <span>{t(monthNet < 0 ? 'this_month_released' : 'this_month_saved')}</span>
-        <span className="font-extrabold tabular-nums text-emerald-deep">
+        {/* Mismo criterio que el historial de esta misma pantalla: el emerald
+            marca lo que se guardó. Un mes en que se volvió a usar más de lo que
+            se guardó no es una mejora, así que va en neutro — y el terracota
+            está reservado para por pagar y vencido. */}
+        <span
+          className={cn(
+            'font-extrabold tabular-nums',
+            monthNet >= 0 ? 'text-emerald-deep' : 'text-text-muted',
+          )}
+        >
           {monthNet < 0 ? '−' : '+'}
           {money(Math.abs(monthNet), currency)}
         </span>
@@ -706,43 +764,51 @@ const CurrencyBlock = ({
         </>
       )}
 
-      <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
-        {t('history')}
-      </p>
-      {history.entries.length === 0 ? (
-        <p className="mt-2 text-[13px] text-text-soft">{t('empty_history')}</p>
-      ) : (
-        <ul className="mt-2 flex flex-col divide-y divide-border-soft">
-          {history.entries.map((entry) => (
-            <li key={entry.id}>
-              <div className="flex items-center justify-between gap-3 py-2.5">
-                <span className="text-[14px] font-semibold text-text">
-                  {entry.amount >= 0 ? t('entry_saved') : t('entry_released')}
-                  <span className="ml-2 text-[12px] font-medium text-text-soft">
-                    {shortDate(entry.date)}
+      {/* Plegado por omisión. La lista está acotada en 25, pero 25 filas debajo
+          del desglose empujan las acciones fuera de la pantalla — y el
+          historial es para auditar, no para leer cada vez que se abre. El
+          número en el rótulo evita tener que abrirlo para saber si hay algo. */}
+      <details className="group mt-4">
+        <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
+          <ChevronRight
+            className="size-3.5 transition-transform group-open:rotate-90"
+            aria-hidden
+          />
+          {t('history_count', { count: history.entries.length })}
+        </summary>
+        {history.entries.length === 0 ? (
+          <p className="mt-2 text-[13px] text-text-soft">{t('empty_history')}</p>
+        ) : (
+          <ul className="mt-2 flex flex-col divide-y divide-border-soft">
+            {history.entries.map((entry) => (
+              <li key={entry.id}>
+                <div className="flex items-center justify-between gap-3 py-2.5">
+                  <span className="text-[14px] font-semibold text-text">
+                    {entry.amount >= 0 ? t('entry_saved') : t('entry_released')}
+                    <span className="ml-2 text-[12px] font-medium text-text-soft">
+                      {shortDate(entry.date)}
+                    </span>
                   </span>
-                </span>
-                <span
-                  className={cn(
-                    'text-[14px] font-extrabold tabular-nums',
-                    entry.amount >= 0 ? 'text-emerald-deep' : 'text-text-muted',
-                  )}
-                >
-                  {entry.amount >= 0 ? '+' : '−'}
-                  {money(Math.abs(entry.amount), currency)}
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-      {/* Decirlo en vez de callarlo: la lista está acotada, y una lista que se
-          corta sin avisar es indistinguible de un historial incompleto. */}
-      {history.hasMore && (
-        <p className="mt-2 text-[12px] text-text-soft">
-          {t('history_truncated', { count: RESERVE_HISTORY_LIMIT })}
-        </p>
-      )}
+                  <span
+                    className={cn(
+                      'text-[14px] font-extrabold tabular-nums',
+                      entry.amount >= 0 ? 'text-emerald-deep' : 'text-text-muted',
+                    )}
+                  >
+                    {entry.amount >= 0 ? '+' : '−'}
+                    {money(Math.abs(entry.amount), currency)}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {history.hasMore && (
+          <p className="mt-2 text-[12px] text-text-soft">
+            {t('history_truncated', { count: RESERVE_HISTORY_LIMIT })}
+          </p>
+        )}
+      </details>
 
       <div className="mt-4 flex gap-2">
         <Button className="flex-1" onClick={onSave}>

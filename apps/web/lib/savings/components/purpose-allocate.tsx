@@ -2,9 +2,10 @@
 
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
-import type { Purpose } from '@grana/savings'
+import { PURPOSE_SEEDS, type Purpose } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { parseMoneyInput } from '@grana/validation'
+import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
@@ -28,29 +29,49 @@ type Currency = 'ARS' | 'USD'
  * el total guardado**: lo que entra en un grupo sale del otro.
  */
 export function PurposeAllocate({
-  purpose,
+  purpose: fixedPurpose,
+  purposes,
   currency,
   direction,
   available,
+  onCreateSeed,
+  onCreateCustom,
   onDone,
   onBack,
 }: {
-  purpose: Purpose
+  /** Fijo cuando se llegó desde un propósito. Null: se elige acá mismo. */
+  purpose: Purpose | null
+  /** Los propósitos del usuario, para elegir sin cambiar de pantalla. */
+  purposes: Purpose[]
   currency: Currency
   /** `allocate` saca del resto hacia el propósito; `unallocate` lo devuelve. */
   direction: 'allocate' | 'unallocate'
-  /** El piso: el resto al apartar, lo apartado al soltar. */
+  /** El piso: el resto al destinar, lo destinado al quitar. */
   available: number
+  /** Crea la sugerencia y devuelve el propósito, para dejarlo seleccionado. */
+  onCreateSeed: (seedKey: string) => Promise<Purpose | null>
+  onCreateCustom: () => void
   onDone: () => void | Promise<void>
   onBack: () => void
 }) {
   const t = useTranslations('savings')
+  const [chosen, setChosen] = useState<Purpose | null>(fixedPurpose)
   const [amount, setAmount] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
   const [pending, startTransition] = useTransition()
+
+  // Las sugerencias que el usuario todavía no tiene: ofrecerle crear algo que ya
+  // existe lo empuja contra el nombre único con el atajo que existe para
+  // ahorrarle trabajo.
+  const taken = new Set(purposes.map((p) => p.name.trim().toLowerCase()))
+  const suggestions = PURPOSE_SEEDS.filter(
+    (seed) => !taken.has(t(`purposes.seeds.${seed.key}`).trim().toLowerCase()),
+  )
 
   const money = (value: number) => (currency === 'USD' ? formatUSD(value) : formatARS(value, true))
 
+  const purpose = chosen
   const value = parseMoneyInput(amount) ?? 0
   const remainder = available - value
   const overLimit = value > available
@@ -61,13 +82,17 @@ export function PurposeAllocate({
   const limitError = overLimit
     ? allocating
       ? t('purposes.errors.exceeds_unassigned', { limit: money(available) })
-      : t('purposes.errors.exceeds_allocated', { limit: money(available), purpose: purpose.name })
+      : t('purposes.errors.exceeds_allocated', {
+          limit: money(available),
+          purpose: purpose?.name ?? '',
+        })
     : null
 
   const submit = () => {
     setError(null)
     startTransition(async () => {
       const action = allocating ? allocateToPurpose : unallocateFromPurpose
+      if (purpose == null) return
       const result = await action({
         amount: value,
         currency_code: currency,
@@ -85,9 +110,13 @@ export function PurposeAllocate({
   return (
     <div className="flex flex-col">
       <DrawerBackHeader
-        title={t(allocating ? 'purposes.allocate_title' : 'purposes.unallocate_title', {
-          purpose: purpose.name,
-        })}
+        title={
+          purpose != null
+            ? t(allocating ? 'purposes.allocate_title' : 'purposes.unallocate_title', {
+                purpose: purpose.name,
+              })
+            : t('purposes.allocate')
+        }
         onBack={onBack}
       />
 
@@ -119,12 +148,67 @@ export function PurposeAllocate({
         </div>
       </div>
 
+      {/* Elegir para qué, EN LA MISMA PANTALLA. Antes era un paso aparte: se
+          tocaba el resto, se abría una lista, se elegía, y recién ahí aparecía
+          el monto. Tres pantallas para una decisión que son dos datos —cuánto y
+          para qué— y que entran juntos. Los propósitos son pocos por
+          naturaleza, así que caben como chips. */}
+      {fixedPurpose == null && (
+        <div className="mt-3">
+          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+            {t('purposes.pick_inline')}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {purposes.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setChosen(option)}
+                className={`flex min-h-[44px] items-center gap-2 rounded-full border px-3.5 text-[13.5px] font-semibold transition-colors ${
+                  chosen?.id === option.id
+                    ? 'border-emerald-deep bg-emerald-deep/5 text-text'
+                    : 'border-border-soft bg-card text-text hover:bg-surface-sunken'
+                }`}
+              >
+                <span aria-hidden>{option.icon ?? '🫙'}</span>
+                {option.name}
+              </button>
+            ))}
+            {suggestions.map((seed) => (
+              <button
+                key={seed.key}
+                type="button"
+                disabled={creating}
+                onClick={async () => {
+                  setCreating(true)
+                  const created = await onCreateSeed(seed.key)
+                  if (created) setChosen(created)
+                  setCreating(false)
+                }}
+                className="flex min-h-[44px] items-center gap-2 rounded-full border border-dashed border-border px-3.5 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-surface-sunken disabled:opacity-50"
+              >
+                <span aria-hidden>{seed.icon}</span>
+                {t(`purposes.seeds.${seed.key}`)}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={onCreateCustom}
+              className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-dashed border-border px-3.5 text-[13.5px] font-bold text-emerald-deep transition-colors hover:bg-surface-sunken"
+            >
+              <Plus size={15} strokeWidth={2.5} />
+              {t('purposes.create_inline')}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="mt-3 rounded-2xl border border-border-soft bg-card p-4 text-[14px]">
         <p className="flex justify-between py-1 text-text-muted">
           <span>
             {allocating
               ? t('purposes.unassigned_available')
-              : t('purposes.allocated_in', { purpose: purpose.name })}
+              : t('purposes.allocated_in', { purpose: purpose?.name ?? '' })}
           </span>
           <span className="font-semibold tabular-nums text-text">{money(available)}</span>
         </p>
@@ -161,7 +245,7 @@ export function PurposeAllocate({
       <Button
         className="mt-4 h-11"
         onClick={submit}
-        disabled={pending || value <= 0 || overLimit}
+        disabled={pending || value <= 0 || overLimit || purpose == null}
       >
         {t(allocating ? 'purposes.allocate' : 'purposes.unallocate')}
       </Button>

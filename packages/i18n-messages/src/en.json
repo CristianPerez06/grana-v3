@@ -2130,7 +2130,10 @@
       "empty_allocations": "Nothing assigned here yet.",
       "empty_cta": "Say what it’s for",
       "create_cta": "Create purpose",
-      "update_cta": "Save changes"
-    }
+      "update_cta": "Save changes",
+      "pick_inline": "What for?",
+      "create_inline": "New"
+    },
+    "history_count": "History ({count})"
   }
 }
