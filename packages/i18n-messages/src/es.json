@@ -2133,7 +2133,8 @@
       "update_cta": "Guardar cambios",
       "pick_inline": "¿Para qué?",
       "create_inline": "Nuevo",
-      "totals": "Guardado para esto"
+      "totals": "Guardado para esto",
+      "allocate_more": "Destinar más"
     },
     "history_count": "Historial ({count})",
     "total_saved": "Guardado",

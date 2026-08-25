@@ -83,3 +83,11 @@
 - [x] 11.5 El historial plegado y bimoneda, en una sola consulta
 - [x] 11.6 El neto del mes pierde el signo: el verbo ya lleva la dirección
 - [x] 11.7 Paridad nativa
+
+## 12. Menos pantallas por entidad (D18, D19, D20)
+
+- [x] 12.1 Fuera «Guardar» de la vista de un propósito: cambia el total, no el grupo
+- [x] 12.2 «Destinar más» pasa a botón principal y reemplaza al enlace que decía lo mismo
+- [x] 12.3 Los propósitos, como chips dentro del formulario de guardar; el selector queda para crear
+- [x] 12.4 La fecha, al control compacto con atajos Hoy / Ayer del alta de movimientos
+- [x] 12.5 Paridad nativa

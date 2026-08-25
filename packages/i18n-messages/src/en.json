@@ -2133,7 +2133,8 @@
       "update_cta": "Save changes",
       "pick_inline": "What for?",
       "create_inline": "New",
-      "totals": "Saved for this"
+      "totals": "Saved for this",
+      "allocate_more": "Assign more"
     },
     "history_count": "History ({count})",
     "total_saved": "Saved",

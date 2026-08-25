@@ -19,7 +19,7 @@ import {
 } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { parseMoneyInput } from '@grana/validation'
-import { ChevronDown, ChevronRight, Pencil, Trash2 } from 'lucide-react'
+import { Calendar, ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Drawer } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { DatePicker } from '@/components/ui/date-picker'
@@ -98,6 +98,13 @@ const money = (amount: number, currency: Currency) =>
   currency === 'USD' ? formatUSD(amount) : formatARS(amount, true)
 
 /** "25 de ago" — el historial mostraba el ISO crudo, que nadie lee como fecha. */
+/** Ayer, en fecha financiera AR. */
+const yesterdayISO = (): string => {
+  const d = getTodayAR()
+  d.setDate(d.getDate() - 1)
+  return formatDateISO(d)
+}
+
 const shortDate = (iso: string): string => {
   const [y, m, d] = iso.split('-').map(Number)
   if (!y || !m || !d) return iso
@@ -426,7 +433,15 @@ export function SavingsDrawer({
             purposeId={view.purposeId}
             purposeAmount={groupAmount(view.currency, view.purposeId)}
             lockedPurpose={view.locked}
-            onPickPurpose={() => push({ kind: 'picker', currency: view.currency, intent: 'form' })}
+            purposes={purposes}
+            onSetPurpose={(purposeId) =>
+              setStack((prev) => {
+                const at = prev.length - 1
+                const target = prev[at] as Extract<View, { kind: 'form' }>
+                return [...prev.slice(0, at), { ...target, purposeId }]
+              })
+            }
+            onPickPurpose={() => push({ kind: 'purposeForm', purpose: null })}
             onCancel={back}
             onDone={onDone}
           />
@@ -562,15 +577,6 @@ export function SavingsDrawer({
               currency: c,
               reserved: groupAmount(c, view.purpose.id),
             }))}
-            onSave={() =>
-              push({
-                kind: 'form',
-                mode: 'save',
-                currency: view.currency,
-                purposeId: view.purpose.id,
-                locked: true,
-              })
-            }
             onRelease={() =>
               push({
                 kind: 'form',
@@ -913,7 +919,6 @@ const GroupBlock = ({
   purpose,
   reserved,
   amounts,
-  onSave,
   onRelease,
   onAllocate,
   onUnallocate,
@@ -927,7 +932,6 @@ const GroupBlock = ({
   reserved: number
   /** Lo de todas las monedas, para responder "cuánto tengo para esto". */
   amounts: { currency: Currency; reserved: number }[]
-  onSave: () => void
   onRelease: () => void
   /** Desde «Sin destino»: elegir a qué propósito apartar. Desde uno: apartarle más. */
   onAllocate: () => void
@@ -1035,9 +1039,15 @@ const GroupBlock = ({
             )}
         </>
 
+        {/* SIN «Guardar», y es una separación de niveles, no una omisión:
+            guardar cambia el TOTAL, así que vive un nivel arriba, donde el total
+            está a la vista. Acá adentro las acciones son sobre ESTE grupo.
+
+            Y sin el enlace «Destinar» duplicando lo que ahora es el botón
+            principal: parado en Casa, lo que se hace es sumarle. */}
         <div className="mt-4 flex gap-2">
-          <Button className="flex-1" onClick={onSave}>
-            {t('save')}
+          <Button className="flex-1" onClick={onAllocate}>
+            {t('purposes.allocate_more')}
           </Button>
           <Button
             variant="secondary"
@@ -1049,13 +1059,9 @@ const GroupBlock = ({
           </Button>
         </div>
 
-        {/* El segundo par de verbos, como enlaces: reparten lo que ya está
-            guardado y no tocan ningún total, así que no compiten en peso con los
-            dos que sí lo hacen. */}
-        <div className="mt-3 flex justify-center gap-5 text-[13px] font-bold text-emerald-deep">
-          <button type="button" onClick={onAllocate} className="min-h-[44px]">
-            {t('purposes.allocate')}
-          </button>
+        {/* Quitar el destino es el inverso de destinar y no toca ningún total,
+            así que va como enlace: no compite con los dos de arriba. */}
+        <div className="mt-3 flex justify-center text-[13px] font-bold text-emerald-deep">
           <button
             type="button"
             onClick={onUnallocate}
@@ -1090,6 +1096,8 @@ const SavingsForm = ({
   purposeId,
   purposeAmount,
   lockedPurpose,
+  purposes,
+  onSetPurpose,
   onPickPurpose,
   onCancel,
   onDone,
@@ -1104,11 +1112,20 @@ const SavingsForm = ({
   purposeAmount: number
   /** Se llegó desde un grupo: el propósito se hereda y no se ofrece cambiarlo. */
   lockedPurpose: boolean
+  /** Los propósitos del usuario, como chips: elegir no debería costar pantalla. */
+  purposes: Purpose[]
+  /** Elegir uno de los chips, sin navegar. */
+  onSetPurpose: (purposeId: string | null) => void
+  /** Crear uno nuevo, que sí necesita su pantalla. */
   onPickPurpose: () => void
   onCancel: () => void
   onDone: () => Promise<void>
 }) => {
   const t = useTranslations('savings')
+  // Hoy / Ayer salen del catálogo de movimientos: es el mismo control y el
+  // mismo texto, y duplicarlo en `savings` sería una traducción que puede
+  // divergir de la otra sin que nadie lo note.
+  const tx = useTranslations('transactions')
   const [currency, setCurrency] = useState<Currency>(initialCurrency)
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(formatDateISO(getTodayAR()))
@@ -1231,36 +1248,108 @@ const SavingsForm = ({
         </div>
       </div>
 
-      <div className="mt-3 rounded-2xl border border-border-soft bg-card p-4">
+      {/* La fecha, compacta y con atajos: el mismo patrón que el alta de
+          movimientos en ancho de teléfono. Como card entera pesaba igual que el
+          monto, y acá la fecha es casi siempre hoy — el foco es cuánto y para
+          qué. */}
+      <div className="mt-3 flex items-center gap-3 rounded-2xl border border-border-soft bg-card px-3 py-2.5">
         <DatePicker
           value={date}
           onChange={setDate}
           label={t('date_label')}
           max={formatDateISO(getTodayAR())}
+          trigger={
+            <button type="button" className="flex min-w-0 items-center gap-2.5 text-left">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-[11px] bg-[#FAFBFC] text-text-muted">
+                <Calendar className="size-[18px]" aria-hidden />
+              </span>
+              <span className="truncate text-[13px] font-semibold text-text">
+                {shortDate(date)}
+              </span>
+            </button>
+          }
         />
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          {(
+            [
+              { label: tx('form.date_today'), value: formatDateISO(getTodayAR()) },
+              { label: tx('form.date_yesterday'), value: yesterdayISO() },
+            ] as const
+          ).map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setDate(option.value)}
+              className={cn(
+                'rounded-[8px] px-2.5 py-1.5 text-xs font-bold transition-colors',
+                date === option.value
+                  ? 'bg-navy text-white'
+                  : 'border border-border text-text-muted',
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Para qué. Una fila, no un selector inline: el propósito es opcional y
-          casi siempre va a quedar como está, así que ocupar altura con una lista
-          desplegada le cobraría a todos por lo que decide una minoría.
+      {/* Para qué, COMO CHIPS y no como una fila que abre otra pantalla.
+          Decir "guardo $10.000 para Casa" no debería costar tres pantallas, y
+          los propósitos son pocos por naturaleza: entran. El selector aparte
+          queda para crear uno nuevo.
 
-          Bloqueada cuando se llegó desde un grupo: ahí el propósito se hereda de
-          dónde se tocó, igual que la moneda se hereda del ingreso. */}
-      <button
-        type="button"
-        onClick={onPickPurpose}
-        disabled={lockedPurpose}
-        className="mt-3 flex min-h-[52px] w-full items-center gap-3 rounded-2xl border border-border-soft bg-card px-4 py-2 text-left transition-colors enabled:hover:bg-surface-sunken disabled:opacity-100"
-      >
-        <span className="text-[13px] text-text-muted">{t('purposes.label')}</span>
-        <span aria-hidden className="ml-auto text-[16px]">
-          {purpose?.icon ?? '🫙'}
-        </span>
-        <span className="text-[14px] font-semibold text-text">
-          {purpose?.name ?? t('purposes.none')}
-        </span>
-        {!lockedPurpose && <ChevronRight className="size-4 text-text-soft" aria-hidden />}
-      </button>
+          Solo al guardar: al volver a usar, el propósito viene heredado del
+          grupo desde el que se entró y elegirlo sería contestar algo que el
+          usuario ya contestó con el dedo. */}
+      {mode === 'save' && !lockedPurpose && (
+        <div className="mt-3">
+          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+            {t('purposes.label')}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {[null, ...purposes].map((option) => {
+              const id = option?.id ?? null
+              return (
+                <button
+                  key={id ?? 'none'}
+                  type="button"
+                  onClick={() => onSetPurpose(id)}
+                  className={cn(
+                    'flex min-h-[44px] items-center gap-2 rounded-full border px-3.5 text-[13.5px] font-semibold transition-colors',
+                    purposeId === id
+                      ? 'border-emerald-deep bg-emerald-deep/5 text-text'
+                      : 'border-border-soft bg-card text-text hover:bg-surface-sunken',
+                  )}
+                >
+                  <span aria-hidden>{option?.icon ?? '🫙'}</span>
+                  {option?.name ?? t('purposes.none')}
+                </button>
+              )
+            })}
+            <button
+              type="button"
+              onClick={onPickPurpose}
+              aria-label={t('purposes.new')}
+              className="flex size-11 items-center justify-center rounded-full border border-dashed border-border text-emerald-deep transition-colors hover:bg-surface-sunken"
+            >
+              <Plus size={16} strokeWidth={2.5} aria-hidden />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Heredado desde un grupo: se muestra, no se ofrece cambiar. */}
+      {(mode === 'release' || lockedPurpose) && (
+        <div className="mt-3 flex min-h-[52px] w-full items-center gap-3 rounded-2xl border border-border-soft bg-card px-4 py-2">
+          <span className="text-[13px] text-text-muted">{t('purposes.label')}</span>
+          <span aria-hidden className="ml-auto text-[16px]">
+            {purpose?.icon ?? '🫙'}
+          </span>
+          <span className="text-[14px] font-semibold text-text">
+            {purpose?.name ?? t('purposes.none')}
+          </span>
+        </div>
+      )}
 
       <div className="mt-3 rounded-2xl border border-border-soft bg-card p-4 text-[14px]">
         <p className="flex justify-between py-1 text-text-muted">

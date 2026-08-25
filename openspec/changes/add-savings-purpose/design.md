@@ -337,3 +337,43 @@ El neto del mes va **sin signo**. El rótulo dice para dónde y el número dice 
 
 En el historial el signo **se queda**, y no es incoherencia: ahí es el dato que hace escaneable la
 columna, y el verbo es la etiqueta de cada fila. Roles invertidos, tratamiento distinto.
+
+## D18 — Guardar vive un nivel arriba de los propósitos
+
+La vista de un propósito llegó a tener **cuatro** acciones: Guardar, Volver a usar, Destinar y Quitar
+destino. Son demasiadas, y una de ellas está en el nivel equivocado.
+
+**Guardar cambia el TOTAL guardado.** No es una acción sobre un grupo: es una acción sobre la plata,
+que después cae en un grupo. Vive donde el total está a la vista — el detalle — con los propósitos
+como chips para elegir destino en el mismo acto.
+
+Dentro de un propósito, las acciones son sobre **ese grupo**:
+
+| Acción | Qué hace |
+|---|---|
+| **Destinar más** | suma al grupo desde el resto — no cambia ningún total |
+| **Volver a usar** | saca del guardado, desde este grupo — cambia el disponible |
+| **Quitar destino** | devuelve al resto — no cambia ningún total |
+
+*Destinar más* pasa a ser el botón principal y reemplaza al enlace *Destinar*, que decía lo mismo con
+menos peso: parado en Casa, lo que se hace es **sumarle a Casa**.
+
+## D19 — Elegir propósito al guardar es un chip, no una pantalla
+
+Decir *"guardo $10.000 para Casa"* costaba tres pantallas: el formulario, el selector y la vuelta. Los
+propósitos son **pocos por naturaleza** —no son categorías, son metas de una persona— así que entran
+como chips en el propio formulario, con *«Sin destino»* como una opción más y un `+` para crear.
+
+El selector como pantalla aparte queda **solo para crear uno nuevo**, que sí necesita nombre e ícono.
+
+Al volver a usar no hay chips: el propósito viene **heredado** del grupo desde el que se entró, y
+ofrecer elegirlo sería pedirle al usuario que conteste algo que acaba de contestar con el dedo.
+
+## D20 — La fecha es secundaria en estos formularios
+
+Ocupaba una card entera, con el mismo peso visual que el monto. En guardar, destinar y volver a usar
+la fecha es **casi siempre hoy**: el foco es cuánto y para qué.
+
+Pasa al control compacto que el alta de movimientos ya usa en ancho de teléfono — ícono, fecha corta,
+y los atajos **Hoy / Ayer** — reutilizando su copy en vez de duplicarlo, porque dos traducciones del
+mismo botón divergen sin que nadie lo note.

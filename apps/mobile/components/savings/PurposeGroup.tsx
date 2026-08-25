@@ -30,7 +30,6 @@ export const PurposeGroup = ({
   purpose,
   reserved,
   amounts,
-  onSave,
   onRelease,
   onAllocate,
   onUnallocate,
@@ -44,7 +43,6 @@ export const PurposeGroup = ({
   reserved: number
   /** Lo de todas las monedas, para responder "cuánto tengo para esto". */
   amounts: { currency: Currency; reserved: number }[]
-  onSave: () => void
   onRelease: () => void
   /** Desde «Sin destino»: elegir a qué apartar. Desde uno: apartarle más. */
   onAllocate: () => void
@@ -150,9 +148,12 @@ export const PurposeGroup = ({
             )}
         </>
 
+        {/* SIN «Guardar», y es una separación de niveles: guardar cambia el
+            TOTAL, así que vive un nivel arriba, donde el total está a la vista.
+            Acá las acciones son sobre ESTE grupo. */}
         <View className="mt-4 flex-row gap-2">
           <View className="flex-1">
-            <Button title={t('savings.save')} onPress={onSave} />
+            <Button title={t('savings.purposes.allocate_more')} onPress={onAllocate} />
           </View>
           <View className="flex-1">
             <Button
@@ -164,18 +165,9 @@ export const PurposeGroup = ({
           </View>
         </View>
 
-        {/* El segundo par de verbos, como enlaces: no tocan ningún total, así
-            que no compiten en peso con los dos que sí lo hacen. */}
-        <View className="mt-3 flex-row justify-center gap-6">
-          <Pressable
-            onPress={onAllocate}
-            accessibilityRole="button"
-            className="min-h-[44px] justify-center"
-          >
-            <Text className="text-[13px] font-bold text-positive">
-              {t('savings.purposes.allocate')}
-            </Text>
-          </Pressable>
+        {/* Quitar el destino es el inverso de destinar y no toca ningún total:
+            va como enlace, sin competir con los dos de arriba. */}
+        <View className="mt-3 flex-row justify-center">
           <Pressable
             onPress={onUnallocate}
             disabled={reserved <= 0}

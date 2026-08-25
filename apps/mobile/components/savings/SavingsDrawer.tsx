@@ -75,6 +75,13 @@ const money = (amount: number, currency: Currency) =>
 
 const CURRENCY_SYMBOL: Record<Currency, string> = { ARS: '$', USD: 'U$D' }
 
+/** Ayer, en fecha financiera AR. */
+const yesterdayISO = (): string => {
+  const d = getTodayAR()
+  d.setDate(d.getDate() - 1)
+  return formatDateISO(d)
+}
+
 /**
  * Native mirror of the web `SavingsDrawer` — same export name per the mirror
  * convention, and a BOTTOM SHEET underneath, which is the idiomatic overlay on a
@@ -299,7 +306,15 @@ export const SavingsDrawer = ({
             purposeId={view.purposeId}
             purposeAmount={groupAmount(view.currency, view.purposeId)}
             lockedPurpose={view.locked}
-            onPickPurpose={() => push({ kind: 'picker', currency: view.currency, intent: 'form' })}
+            purposes={purposes}
+            onSetPurpose={(purposeId: string | null) =>
+              setStack((prev) => {
+                const at = prev.length - 1
+                const target = prev[at] as Extract<SheetView, { kind: 'form' }>
+                return [...prev.slice(0, at), { ...target, purposeId }]
+              })
+            }
+            onPickPurpose={() => push({ kind: 'purposeForm', purpose: null })}
             onCancel={back}
             onDone={onDone}
           />
@@ -439,15 +454,6 @@ export const SavingsDrawer = ({
                 currency: view.currency,
                 purpose: view.purpose,
                 direction: 'unallocate',
-              })
-            }
-            onSave={() =>
-              push({
-                kind: 'form',
-                mode: 'save',
-                currency: view.currency,
-                purposeId: view.purpose.id,
-                locked: true,
               })
             }
             onRelease={() =>
@@ -767,6 +773,8 @@ const SavingsForm = ({
   purposeId,
   purposeAmount,
   lockedPurpose,
+  purposes,
+  onSetPurpose,
   onPickPurpose,
   onCancel,
   onDone,
@@ -781,6 +789,10 @@ const SavingsForm = ({
   purposeAmount: number
   /** Se llegó desde un grupo: el propósito se hereda y no se ofrece cambiarlo. */
   lockedPurpose: boolean
+  /** Los propósitos del usuario, como chips: elegir no debería costar pantalla. */
+  purposes: Purpose[]
+  onSetPurpose: (purposeId: string | null) => void
+  /** Crear uno nuevo, que sí necesita su pantalla. */
   onPickPurpose: () => void
   onCancel: () => void
   onDone: () => Promise<void>
@@ -913,33 +925,91 @@ const SavingsForm = ({
         </View>
       </View>
 
-      <View className="mt-3 rounded-2xl border border-border bg-card p-4">
-        <Text className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
-          {t('savings.date_label')}
-        </Text>
-        <DateField value={date} onChange={setDate} />
+      {/* La fecha, compacta y con atajos: el mismo patrón que el alta de
+          movimientos. Como card entera pesaba igual que el monto, y acá la fecha
+          es casi siempre hoy — el foco es cuánto y para qué. */}
+      <View className="mt-3 flex-row items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2">
+        <View className="min-w-0 flex-1">
+          <DateField value={date} onChange={setDate} />
+        </View>
+        <View className="flex-row items-center gap-1.5">
+          {[
+            { label: t('transactions.form.date_today'), value: formatDateISO(getTodayAR()) },
+            { label: t('transactions.form.date_yesterday'), value: yesterdayISO() },
+          ].map((option) => (
+            <Pressable
+              key={option.value}
+              accessibilityRole="button"
+              onPress={() => setDate(option.value)}
+              className={`rounded-lg px-2.5 py-1.5 ${
+                date === option.value ? 'bg-navy' : 'border border-border'
+              }`}
+            >
+              <Text
+                className={`text-[11px] font-bold ${
+                  date === option.value ? 'text-white' : 'text-text-muted'
+                }`}
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
-      {/* Para qué. Una fila y no una lista desplegada: el propósito es opcional
-          y casi siempre queda como está, así que gastar alto de sheet en una
-          lista le cobraría a todos por lo que decide una minoría — y en un
-          teléfono ese alto es lo que empuja al CTA fuera de la pantalla.
+      {/* Para qué, COMO CHIPS y no como una fila que abre otra pantalla: decir
+          "guardo $10.000 para Casa" no debería costar tres pantallas, y los
+          propósitos son pocos por naturaleza. El selector aparte queda para
+          crear uno nuevo.
 
-          Bloqueada cuando se llegó desde un grupo: ahí el propósito se hereda,
-          igual que la moneda se hereda del ingreso. */}
-      <Pressable
-        onPress={onPickPurpose}
-        disabled={lockedPurpose}
-        accessibilityRole="button"
-        className="mt-3 min-h-[52px] flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 py-2"
-      >
-        <Text className="text-[13px] text-text-muted">{t('savings.purposes.label')}</Text>
-        <Text className="ml-auto text-[15px]">{purpose?.icon ?? '🫙'}</Text>
-        <Text className="text-[14px] font-semibold text-text" numberOfLines={1}>
-          {purpose?.name ?? t('savings.purposes.none')}
-        </Text>
-        {!lockedPurpose && <ChevronRight size={15} color={colors.textSoft} />}
-      </Pressable>
+          Solo al guardar: al volver a usar el propósito viene heredado del
+          grupo desde el que se entró. */}
+      {mode === 'save' && !lockedPurpose && (
+        <View className="mt-3">
+          <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
+            {t('savings.purposes.label')}
+          </Text>
+          <View className="mt-2 flex-row flex-wrap gap-2">
+            {[null, ...purposes].map((option) => {
+              const id = option?.id ?? null
+              return (
+                <Pressable
+                  key={id ?? 'none'}
+                  accessibilityRole="button"
+                  onPress={() => onSetPurpose(id)}
+                  className={`min-h-[44px] flex-row items-center gap-2 rounded-full border px-3.5 ${
+                    purposeId === id ? 'border-positive bg-border-soft' : 'border-border bg-card'
+                  }`}
+                >
+                  <Text className="text-[15px]">{option?.icon ?? '🫙'}</Text>
+                  <Text className="text-[13.5px] font-semibold text-text">
+                    {option?.name ?? t('savings.purposes.none')}
+                  </Text>
+                </Pressable>
+              )
+            })}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('savings.purposes.new')}
+              onPress={onPickPurpose}
+              className="size-11 items-center justify-center rounded-full border border-dashed border-border"
+            >
+              <Text className="text-[16px] font-bold text-positive">+</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+
+      {/* Heredado desde un grupo: se muestra, no se ofrece cambiar. */}
+      {(mode === 'release' || lockedPurpose) && (
+        <View className="mt-3 min-h-[52px] flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 py-2">
+          <Text className="text-[13px] text-text-muted">{t('savings.purposes.label')}</Text>
+          <Text className="ml-auto text-[15px]">{purpose?.icon ?? '🫙'}</Text>
+          <Text className="text-[14px] font-semibold text-text" numberOfLines={1}>
+            {purpose?.name ?? t('savings.purposes.none')}
+          </Text>
+        </View>
+      )}
 
       <View className="mt-3 rounded-2xl border border-border bg-card p-4">
         <View className="flex-row justify-between py-1">

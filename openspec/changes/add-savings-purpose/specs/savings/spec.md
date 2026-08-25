@@ -293,3 +293,26 @@ negativo.
 
 - **GIVEN** un mes en que se volvió a usar más de lo que se guardó
 - **THEN** el rótulo dice "Volviste a usar este mes" y el monto se muestra sin signo negativo
+
+---
+
+### Requirement: Guardar no es una acción de la vista de un propósito
+
+La vista de un propósito SHALL ofrecer únicamente acciones sobre ese grupo: destinarle más, volver a
+usar desde él y quitarle el destino. NO SHALL ofrecer guardar, que cambia el total y pertenece a la
+vista donde el total está a la vista.
+
+Al guardar, el sistema SHALL permitir elegir el propósito **en el mismo formulario**, sin navegar a
+otra pantalla. La pantalla aparte SHALL quedar reservada para crear un propósito nuevo.
+
+#### Scenario: Guardar con propósito en un solo paso
+
+- **WHEN** el usuario abre "Guardar" desde el detalle
+- **THEN** puede elegir el propósito entre los que ya tiene, sin cambiar de pantalla
+- **AND** «Sin destino» es una de las opciones
+
+#### Scenario: Dentro de un propósito no se guarda
+
+- **WHEN** el usuario abre la vista de "Casa"
+- **THEN** las acciones son destinarle más, volver a usar y quitar destino
+- **AND** no aparece "Guardar"
