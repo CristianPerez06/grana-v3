@@ -443,13 +443,23 @@ cada fila. Ahí se contesta leyendo hacia abajo.
 El problema de las dos es el mismo: **comportarse "casi igual pero no igual"**. Esa asimetría es
 justamente la que genera la pregunta *"¿por qué este no tiene X?"* — una y otra vez.
 
-La forma que queda lo dice de frente: **un bloque aparte, al final del desglose, con borde punteado y
-sus dos acciones adentro**.
+La tercera forma —bloque aparte con borde punteado y dos botones— decía la verdad pero **pesaba más
+que los propósitos reales**, y ahí invertía la jerarquía: el sobrante gritaba más que los destinos. Y
+sus dos botones competían con los dos globales de abajo, que hacen otra cosa.
+
+La forma final es un **pie de lista**: fila especial, no card.
 
 ```
-🫙 Sin destino                              $ 75.000
-   [ Destinar ]        [ Volver a usar ]
+  ✈️ Viaje                                  $ 45.000  ›
+  🚑 Emergencia                             $ 50.000  ›
+  ─────────────────────────────────────────────────────
+  🫙 Sin destino                            $ 65.000
+     Destinar · Volver a usar
 ```
+
+Sin caja, sin borde punteado, con el monto **apagado** y las acciones como **enlaces** —que es el peso
+que les corresponde al lado de los botones globales—. Distinto de un propósito, **sin ser más
+importante que un propósito**.
 
 La regla que separa los dos:
 
@@ -458,7 +468,8 @@ La regla que separa los dos:
 | Navega a una vista | sí | no |
 | Historial propio | sí | no (D22) |
 | Se edita y se borra | sí | no |
-| Acciones | 3, adentro | **2, a la vista** |
+| Acciones | 3, adentro | **2, como enlaces en la fila** |
+| Peso visual | fila normal | **apagado, al pie** |
 
 Ni pantalla completa, ni chevron igual, ni comportamiento distinto escondido. Se ve como lo que es:
 plata que todavía no tiene etiqueta, que se puede destinar o volver a usar.

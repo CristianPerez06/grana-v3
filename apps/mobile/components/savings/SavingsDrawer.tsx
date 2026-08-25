@@ -514,32 +514,33 @@ export const SavingsDrawer = ({
                 ))}
             </View>
 
-            {/* El resto, SEPARADO y con sus dos acciones a la vista. No es un
-                propósito, así que no se disfraza de uno: no navega, no tiene
-                flecha, no se edita ni se borra. Pero tampoco se comporta "casi
-                igual pero no igual" — dice lo que es y ofrece lo único que se
-                puede hacer con él. */}
+            {/* El resto: una fila especial al PIE de la lista, no una card. Como
+                caja con borde y botones pesaba más que Viaje o Emergencia —que
+                sí son cosas— e invertía la jerarquía. Sigue diciendo la verdad
+                —no navega, no tiene chevron— pero como pie de lista: distinto
+                sin ser más importante. */}
             {(() => {
               const rest = groupsUnified().find((g) => g.purposeId == null)
               if (rest == null) return null
               const hasMoney = rest.amounts.some((a) => a.reserved > 0)
 
               return (
-                <View className="mt-3 rounded-xl border border-dashed border-border bg-border-soft px-3 py-2.5">
-                  <View className="flex-row items-center gap-2.5">
+                <View className="mt-1 border-t border-border-soft pt-2">
+                  <View className="flex-row items-center gap-2.5 px-1">
                     <Text className="text-[15px]">🫙</Text>
-                    <Text className="flex-1 text-[14px] font-semibold text-text-muted">
+                    <Text
+                      className="flex-1 text-[14px] font-semibold text-text-muted"
+                      numberOfLines={1}
+                    >
                       {t('savings.purposes.none')}
                     </Text>
-                    <GroupAmounts amounts={rest.amounts} />
+                    <GroupAmounts amounts={rest.amounts} muted />
                   </View>
-                  <View className="mt-2 flex-row gap-2">
-                    <View className="flex-1">
-                      <Button
-                        title={t('savings.purposes.allocate')}
-                        variant="secondary"
-                        size="sm"
-                        disabled={!hasMoney}
+                  {hasMoney && (
+                    <View className="flex-row items-center gap-2 pl-[34px]">
+                      <Pressable
+                        accessibilityRole="button"
+                        className="min-h-[36px] justify-center"
                         onPress={() =>
                           push({
                             kind: 'allocate',
@@ -548,14 +549,15 @@ export const SavingsDrawer = ({
                             direction: 'allocate',
                           })
                         }
-                      />
-                    </View>
-                    <View className="flex-1">
-                      <Button
-                        title={t('savings.release')}
-                        variant="secondary"
-                        size="sm"
-                        disabled={!hasMoney}
+                      >
+                        <Text className="text-[12.5px] font-bold text-positive">
+                          {t('savings.purposes.allocate')}
+                        </Text>
+                      </Pressable>
+                      <Text className="text-[12.5px] text-text-soft">·</Text>
+                      <Pressable
+                        accessibilityRole="button"
+                        className="min-h-[36px] justify-center"
                         onPress={() =>
                           push({
                             kind: 'form',
@@ -565,9 +567,13 @@ export const SavingsDrawer = ({
                             locked: true,
                           })
                         }
-                      />
+                      >
+                        <Text className="text-[12.5px] font-bold text-positive">
+                          {t('savings.release')}
+                        </Text>
+                      </Pressable>
                     </View>
-                  </View>
+                  )}
                 </View>
               )
             })()}
@@ -752,7 +758,14 @@ const Headline = ({
 }
 
 /** Los montos de un grupo en las dos monedas, apilados y sin sumar. */
-const GroupAmounts = ({ amounts }: { amounts: { currency: Currency; reserved: number }[] }) => {
+const GroupAmounts = ({
+  amounts,
+  muted = false,
+}: {
+  amounts: { currency: Currency; reserved: number }[]
+  /** El resto se muestra apagado: es un sobrante, no un destino. */
+  muted?: boolean
+}) => {
   // Solo las monedas con algo: la fila crece únicamente cuando el dato lo pide.
   const shown = amounts.filter((a) => a.reserved !== 0)
   const list = shown.length > 0 ? shown : [amounts[0]]
@@ -762,7 +775,9 @@ const GroupAmounts = ({ amounts }: { amounts: { currency: Currency; reserved: nu
       {list.map((a, i) => (
         <Text
           key={a.currency}
-          className={`text-[14px] font-extrabold ${i === 0 ? 'text-text' : 'text-text-muted'}`}
+          className={`text-[14px] font-extrabold ${
+            muted || i > 0 ? 'text-text-muted' : 'text-text'
+          }`}
         >
           {money(a.reserved, a.currency)}
         </Text>

@@ -661,63 +661,68 @@ export function SavingsDrawer({
                 ))}
             </ul>
 
-            {/* El resto, SEPARADO y con sus dos acciones a la vista.
-                No es un propósito, así que no se disfraza de uno: no navega, no
-                tiene flecha, no se edita ni se borra. Pero tampoco se comporta
-                "casi igual pero no igual", que era lo que hacía ruido — como
-                fila idéntica prometía una vista que no existe, y su segunda
-                acción quedaba escondida en el botón de arriba.
-                Dice lo que es —plata sin clasificar— y ofrece lo único que se
-                puede hacer con ella. */}
+            {/* El resto: una fila especial al PIE de la lista, no una card.
+                Como caja con borde y botones pesaba más que Viaje o Emergencia
+                —que sí son cosas— e invertía la jerarquía: el sobrante gritaba
+                más que los destinos. Y sus dos botones competían con los dos
+                grandes de abajo, que hacen otra cosa.
+
+                Sigue diciendo la verdad —no navega, no tiene chevron, se ve
+                distinto— pero como pie de lista: distinto sin ser más
+                importante. Las acciones van como enlaces, que es el peso que les
+                corresponde al lado de los botones globales. */}
             {(() => {
               const rest = groupsUnified().find((g) => g.purposeId == null)
               if (rest == null) return null
               const hasMoney = rest.amounts.some((a) => a.reserved > 0)
 
               return (
-                <div className="mt-3 rounded-xl border border-dashed border-border bg-surface-sunken px-3 py-2.5">
-                  <div className="flex items-center gap-2.5">
+                <div className="mt-1 border-t border-border-soft pt-2">
+                  <div className="flex items-center gap-2.5 px-2">
                     <span aria-hidden className="text-[16px]">
                       🫙
                     </span>
-                    <span className="flex-1 text-[14px] font-semibold text-text-muted">
+                    <span className="flex-1 truncate text-[14px] font-semibold text-text-muted">
                       {t('purposes.none')}
                     </span>
-                    <GroupAmounts amounts={rest.amounts} />
+                    <GroupAmounts amounts={rest.amounts} muted />
                   </div>
-                  <div className="mt-2 flex gap-2">
-                    <Button
-                      variant="secondary"
-                      className="h-9 flex-1 text-[13px]"
-                      disabled={!hasMoney}
-                      onClick={() =>
-                        push({
-                          kind: 'allocate',
-                          currency: currencyWithMoney(null),
-                          purpose: null,
-                          direction: 'allocate',
-                        })
-                      }
-                    >
-                      {t('purposes.allocate')}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      className="h-9 flex-1 text-[13px]"
-                      disabled={!hasMoney}
-                      onClick={() =>
-                        push({
-                          kind: 'form',
-                          mode: 'release',
-                          currency: currencyWithMoney(null),
-                          purposeId: null,
-                          locked: true,
-                        })
-                      }
-                    >
-                      {t('release')}
-                    </Button>
-                  </div>
+                  {hasMoney && (
+                    <div className="flex items-center gap-2 pl-[38px] text-[12.5px] font-bold text-emerald-deep">
+                      <button
+                        type="button"
+                        className="min-h-[36px]"
+                        onClick={() =>
+                          push({
+                            kind: 'allocate',
+                            currency: currencyWithMoney(null),
+                            purpose: null,
+                            direction: 'allocate',
+                          })
+                        }
+                      >
+                        {t('purposes.allocate')}
+                      </button>
+                      <span aria-hidden className="text-text-soft">
+                        ·
+                      </span>
+                      <button
+                        type="button"
+                        className="min-h-[36px]"
+                        onClick={() =>
+                          push({
+                            kind: 'form',
+                            mode: 'release',
+                            currency: currencyWithMoney(null),
+                            purposeId: null,
+                            locked: true,
+                          })
+                        }
+                      >
+                        {t('release')}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )
             })()}
@@ -885,9 +890,12 @@ const Headline = ({
 const GroupAmounts = ({
   amounts,
   size = 'md',
+  muted = false,
 }: {
   amounts: { currency: Currency; reserved: number }[]
   size?: 'sm' | 'md'
+  /** El resto se muestra apagado: es un sobrante, no un destino. */
+  muted?: boolean
 }) => {
   // Solo las monedas con algo. Un propósito con pesos nada más ocupa una línea;
   // la fila crece únicamente cuando el dato lo pide.
@@ -902,7 +910,7 @@ const GroupAmounts = ({
           className={cn(
             'font-extrabold tabular-nums',
             size === 'sm' ? 'text-[13px]' : 'text-[14px]',
-            i === 0 ? 'text-text' : 'text-text-muted',
+            muted || i > 0 ? 'text-text-muted' : 'text-text',
           )}
         >
           {money(a.reserved, a.currency)}
