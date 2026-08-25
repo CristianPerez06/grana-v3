@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overlays — drawer lateral → bottom sheet</title>
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .anno {
+    width: 390px;
+    margin: 2px 0 0;
+    color: var(--text-soft);
+    font-size: 12.5px;
+    font-weight: 620;
+    line-height: 1.55;
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field .lbl { font-size: 12px; font-weight: 800; color: var(--text-soft); }
+  .field .box {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card);
+    padding: 11px 13px;
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--text);
+  }
+  .field .box.placeholder { color: var(--muted); }
+  .sheet-body { display: flex; flex-direction: column; gap: 14px; padding: 4px 20px 8px; }
+  .sheet-actions { display: flex; gap: 10px; padding: 6px 20px 4px; }
+  .sheet-actions button {
+    flex: 1;
+    border: 0;
+    border-radius: 13px;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 800;
+    background: var(--emerald);
+    color: #fff;
+  }
+  .sheet-actions button.secondary {
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+  }
+  .side-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 300px;
+    background: var(--card);
+    border-left: 1px solid var(--border);
+    box-shadow: -20px 0 50px -30px rgba(11, 26, 43, .5);
+    display: flex;
+    flex-direction: column;
+  }
+  .side-panel .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-soft);
+    padding: 16px 20px;
+    font-size: 15px;
+    font-weight: 850;
+  }
+  .centered {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(11, 26, 43, .4);
+    padding: 24px;
+  }
+  .dialog {
+    width: 100%;
+    border-radius: 20px;
+    background: var(--card);
+    padding: 22px 20px 16px;
+    box-shadow: var(--shadow);
+  }
+  .dialog h3 { margin: 0 0 8px; font-size: 17px; font-weight: 850; }
+  .dialog p { margin: 0 0 18px; color: var(--text-soft); font-size: 13.5px; font-weight: 620; line-height: 1.55; }
+  .dialog .acts { display: flex; gap: 10px; }
+  .dialog .acts button {
+    flex: 1;
+    border: 0;
+    border-radius: 13px;
+    padding: 11px;
+    font-size: 14px;
+    font-weight: 800;
+    background: var(--error);
+    color: #fff;
+  }
+  .dialog .acts button.secondary {
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+  }
+  .map { width: 100%; max-width: 900px; border-collapse: collapse; font-size: 13px; }
+  .map th, .map td { border-bottom: 1px solid var(--border-soft); padding: 8px 12px; text-align: left; vertical-align: top; }
+  .map th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-soft); }
+  .map code { font-size: 12px; }
+</style>
+</head>
+<body>
+<main class="stage">
+  <h1>Overlays</h1>
+  <p class="lede">
+    17 archivos importan <code>@/components/ui/drawer</code> y 2 importan
+    <code>@/components/ui/dialog</code>. Los drawers pasan a bottom sheet bajo
+    <code>md</code>; los dialogs no se tocan. El contrato
+    <code>DrawerProps</code> queda igual, así que <strong>los 17 consumidores no
+    se editan</strong>: el cambio es interno a <code>drawer.tsx</code>.
+  </p>
+
+  <section class="section">
+    <h2>1 · Drawer de formulario</h2>
+    <p class="note">
+      Ejemplo: <code>accounts/_components/accounts-edit-drawer.tsx</code>. Hoy es
+      un panel lateral de 528px sobre un scrim; en viewport de 390px ocupa casi
+      todo el ancho igual, pero entra desde el costado y arranca pegado al techo.
+    </p>
+
+    <div class="row">
+      <div>
+        <div class="phone short">
+          <div class="statusbar on-navy"><span>9:41</span><span class="dots">▮▮▮ ▲ ▰</span></div>
+          <div class="viewport">
+            <header class="pageheader"><div class="backlink-spacer"></div><div class="headrow"><div><h1 class="title">Cuentas</h1></div></div></header>
+            <div class="scroll"><div class="card"><div class="card-label">Santander</div><div class="card-amount">$ 284.100</div></div></div>
+            <div class="scrim" style="justify-content:flex-start">
+              <div class="side-panel">
+                <div class="panel-head">
+                  Editar cuenta
+                  <button class="close" style="display:grid;width:28px;height:28px;place-items:center;border:0;border-radius:999px;background:var(--page);color:var(--text-soft)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+                <div class="sheet-body" style="padding-top:16px">
+                  <div class="field"><span class="lbl">Nombre</span><div class="box">Santander</div></div>
+                  <div class="field"><span class="lbl">Moneda</span><div class="box">ARS</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="anno"><strong>Hoy.</strong> <code>side="right"</code>, <code>widthPx=528</code>, alto completo. Cierra con Esc o click en el scrim.</p>
+      </div>
+
+      <div>
+        <div class="phone short">
+          <div class="statusbar on-navy"><span>9:41</span><span class="dots">▮▮▮ ▲ ▰</span></div>
+          <div class="viewport">
+            <header class="pageheader"><div class="backlink-spacer"></div><div class="headrow"><div><h1 class="title">Cuentas</h1></div></div></header>
+            <div class="scroll"><div class="card"><div class="card-label">Santander</div><div class="card-amount">$ 284.100</div></div></div>
+            <div class="scrim">
+              <div style="flex:1"></div>
+              <div class="sheet">
+                <div class="grabber"></div>
+                <div class="sheet-head">
+                  <span class="heading">Editar cuenta</span>
+                  <button class="close" aria-label="Cerrar">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+                <div class="sheet-body">
+                  <div class="field"><span class="lbl">Nombre</span><div class="box">Santander</div></div>
+                  <div class="field"><span class="lbl">Moneda</span><div class="box">ARS</div></div>
+                </div>
+                <div class="sheet-actions">
+                  <button class="secondary">Cancelar</button>
+                  <button>Guardar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="anno"><strong>Destino.</strong> Sube desde abajo, hugea su contenido, tope en 90% del alto. Grabber arriba. Igual que <code>BottomSheet.tsx</code>.</p>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>El contrato no se toca.</strong> <code>DrawerProps</code> ya tiene
+      <code>side</code> y <code>widthPx</code>; bajo <code>md</code> se ignoran y
+      el panel se ancla abajo. Los 17 consumidores siguen pasando lo mismo y no
+      se editan. En <code>md+</code> nada cambia.
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>2 · Confirmaciones — no cambian</h2>
+    <p class="note">
+      <code>account-confirm-dialog.tsx</code> y
+      <code>leave-household-dialog.tsx</code>. En nativo también son modales
+      centrados: no hay divergencia que cerrar.
+    </p>
+
+    <div class="row">
+      <div>
+        <div class="phone short">
+          <div class="statusbar on-navy"><span>9:41</span><span class="dots">▮▮▮ ▲ ▰</span></div>
+          <div class="viewport">
+            <header class="pageheader"><div class="backlink-spacer"></div><div class="headrow"><div><h1 class="title">Cuentas</h1></div></div></header>
+            <div class="scroll"><div class="card"><div class="card-label">Santander</div><div class="card-amount">$ 284.100</div></div></div>
+            <div class="centered">
+              <div class="dialog">
+                <h3>¿Archivar Santander?</h3>
+                <p>La cuenta deja de aparecer en los selectores. Sus movimientos históricos se conservan.</p>
+                <div class="acts">
+                  <button class="secondary">Cancelar</button>
+                  <button>Archivar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="anno">Centrado, con acción destructiva en <code>error</code>. Mismo tratamiento en las dos plataformas.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>3 · El caso que hay que decidir: <code>MovementDrawer</code></h2>
+    <p class="note">
+      Es el único overlay montado en el shell y no en una ruta:
+      <code>MovementDrawerLoader</code> vive en <code>app-shell.tsx:91</code>, así
+      que está disponible desde cualquier ruta. Con tab bar fija hay que decidir
+      si el sheet la tapa o la respeta.
+    </p>
+
+    <div class="row">
+      <div>
+        <div class="phone">
+          <div class="statusbar on-navy"><span>9:41</span><span class="dots">▮▮▮ ▲ ▰</span></div>
+          <div class="viewport">
+            <header class="pageheader"><div class="backlink-spacer"></div><div class="headrow"><div><h1 class="title">Movimientos</h1></div></div></header>
+            <div class="scroll"><div class="card"><div class="card-label">Gastos de agosto</div><div class="card-amount">$ 412.900</div></div></div>
+            <nav class="tabbar">
+              <button class="tab"><span class="indicator"></span><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></span><span class="label">Inicio</span></button>
+              <button class="tab active"><span class="indicator"></span><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span><span class="label">Movimientos</span></button>
+              <button class="tab"><span class="indicator"></span><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg></span><span class="label">Hogar</span></button>
+              <div class="tab-menu"><button aria-label="Más opciones"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
+            </nav>
+            <div class="home-indicator"></div>
+
+            <div class="scrim">
+              <div style="flex:1"></div>
+              <div class="sheet">
+                <div class="grabber"></div>
+                <div class="sheet-head">
+                  <span class="heading">Registrar movimiento</span>
+                  <button class="close" aria-label="Cerrar">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+                <div class="sheet-body">
+                  <div class="field"><span class="lbl">Monto</span><div class="box" style="font-size:26px;font-weight:800;letter-spacing:-.02em">$ 0,00</div></div>
+                  <div class="field"><span class="lbl">Descripción</span><div class="box placeholder">Ej. Supermercado</div></div>
+                  <div class="field"><span class="lbl">Cuenta</span><div class="box">Santander</div></div>
+                </div>
+                <div class="sheet-actions">
+                  <button class="secondary">Cancelar</button>
+                  <button>Guardar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="anno">
+          <strong>Recomendado: tapa la tab bar.</strong> Es un flow de creación,
+          no una vista: navegar a otra sección con el form a medio llenar no es
+          algo que convenga ofrecer. Coincide con lo que hace el nativo, que
+          además manda el alta a una <em>pantalla</em> chromeless
+          (<code>transactions/new</code>).
+        </p>
+      </div>
+
+      <div>
+        <div class="callout warn" style="width:390px;margin-top:26px">
+          <strong>El teclado es el problema real de este sheet.</strong>
+          Con un campo enfocado, la tab bar se esconde (regla 3 de
+          <code>tab-bar.html</code>) y el sheet tiene que subir con el viewport.
+          En nativo eso lo resuelve <code>FormSheetBody</code>; en web hay que
+          apoyarse en <code>visualViewport</code>. Conviene resolver el sheet del
+          alta <em>después</em> de la fase 2, cuando el manejo de teclado ya esté
+          probado con la tab bar.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>4 · Inventario de consumidores</h2>
+    <table class="map">
+      <thead><tr><th>Archivo</th><th>Qué contiene</th><th>Destino</th></tr></thead>
+      <tbody>
+        <tr><td><code>transactions/_components/movement-drawer.tsx</code></td><td>alta/edición de movimiento</td><td>sheet · tapa la barra</td></tr>
+        <tr><td><code>transactions/[txId]/_components/global-transaction-detail.tsx</code></td><td>detalle de movimiento</td><td>sheet</td></tr>
+        <tr><td><code>transactions/recurring/_components/create-recurrence-modal.tsx</code></td><td>alta de recurrencia</td><td>sheet</td></tr>
+        <tr><td><code>transactions/recurring/[id]/_components/recurrence-edit-drawer.tsx</code></td><td>edición de recurrencia</td><td>sheet</td></tr>
+        <tr><td><code>accounts/_components/accounts-edit-drawer.tsx</code></td><td>edición de cuenta</td><td>sheet</td></tr>
+        <tr><td><code>accounts/_components/create-account-button.tsx</code></td><td>alta de cuenta</td><td>sheet</td></tr>
+        <tr><td><code>accounts/_components/bank-selector.tsx</code></td><td>selector de banco (popover anidado)</td><td>sheet · <strong>ver nota</strong></td></tr>
+        <tr><td><code>accounts/[id]/_components/edit-account-drawer.tsx</code></td><td>edición desde el detalle</td><td>sheet</td></tr>
+        <tr><td><code>cards/_components/add-card-button.tsx</code></td><td>alta de tarjeta</td><td>sheet</td></tr>
+        <tr><td><code>cards/_components/card-form-ui.tsx</code></td><td>form de tarjeta</td><td>sheet</td></tr>
+        <tr><td><code>cards/[id]/_components/edit-card-drawer.tsx</code></td><td>edición de tarjeta</td><td>sheet</td></tr>
+        <tr><td><code>settings/categories/_components/category-row.tsx</code></td><td>edición de categoría</td><td>sheet</td></tr>
+        <tr><td><code>settings/categories/_components/create-category-button.tsx</code></td><td>alta de categoría</td><td>sheet</td></tr>
+        <tr><td><code>settings/categories/[id]/subcategories/_components/create-subcategory-button.tsx</code></td><td>alta de subcategoría</td><td>sheet</td></tr>
+        <tr><td><code>shared/settings/_components/default-split-edit-drawer.tsx</code></td><td>edición de reparto</td><td>sheet</td></tr>
+        <tr><td><code>shared/settings/_components/name-edit-drawer.tsx</code></td><td>edición de nombre</td><td>sheet</td></tr>
+        <tr><td><code>shared/settle/_components/settle-drawer.tsx</code></td><td>saldar cuenta</td><td>sheet</td></tr>
+        <tr><td><code>components/ui/money-calculator-popover.tsx</code></td><td>calculadora de monto</td><td>sheet · <strong>ver nota</strong></td></tr>
+        <tr><td><code>accounts/_components/account-confirm-dialog.tsx</code></td><td>confirmación destructiva</td><td><em>sin cambios</em></td></tr>
+        <tr><td><code>shared/settings/_components/leave-household-dialog.tsx</code></td><td>confirmación destructiva</td><td><em>sin cambios</em></td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <strong>Los dos casos con popover anidado necesitan una mirada aparte.</strong>
+      <code>bank-selector.tsx</code> y <code>money-calculator-popover.tsx</code>
+      leen <code>useDrawerContainer()</code> para portalear su contenido
+      <em>dentro</em> del panel — si no, el scroll-lock de
+      <code>react-remove-scroll</code> no los deja scrollear (el comentario está
+      en <code>drawer.tsx:8-15</code>). Al pasar a sheet ese contenedor cambia de
+      forma y de alto. No rompen el contrato, pero son los dos únicos que hay que
+      probar a mano.
+    </div>
+  </section>
+</main>
+</body>
+</html>
