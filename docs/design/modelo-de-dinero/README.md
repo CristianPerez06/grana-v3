@@ -7,7 +7,7 @@ en el navegador.
 |---|---|---|
 | `fase-1-guardar.html` | 1 · Guardar | **Superado por la implementación.** «Liberar» hoy se llama **Volver a usar** |
 | `fase-2-proposito.html` | 2 · Propósito | **Superado por la implementación**, y en un punto de modelo, no solo de nombres — ver abajo |
-| — | 3 · Posiciones | Pendiente — tiene una decisión abierta que el mock existe para resolver |
+| `fase-3-posiciones.html` | 3 · Posiciones | **Parcial, y vigente.** Dos pantallas y la cuenta del mes: cerró las dos decisiones abiertas. Faltan detalle de posición, rescate y el hub |
 | — | 4 y 5 | No se mockean todavía: dibujar el detalle de una meta o la pantalla de patrimonio sería inventar decisiones que no están tomadas, y un mock convincente de algo no decidido termina implementándose tal cual |
 
 **Un mock deja de ser la referencia el día que la fase se construye.** Las fases 1 y 2 están hechas: lo
@@ -41,13 +41,32 @@ una **cuenta fuera del disponible**.
 
 ## Decisiones abiertas que los mocks tienen que resolver
 
-**Fase 3 — la segunda línea bajo la regla.** Cuando aparezcan las posiciones, el "Resumen del mes"
-necesita una línea hermana de *Guardaste este mes* —algo como *Pusiste a trabajar*— para que
-`Tenías` se siga derivando bien y la card no reescriba el pasado. Es prima hermana de la línea
-*"Pasaste a otras cuentas"* que ya fue rechazada una vez; la diferencia es que aquella hablaba de
-plata moviéndose entre dos bolsillos propios y esta habla de un acto que el usuario decidió. Se
-juzga mirando la pantalla, con las dos versiones al lado.
+### Cerradas por `fase-3-posiciones.html`
 
-**Fase 3 — dónde entra "Invertir".** El segmented de registrar movimiento ya tiene cinco tabs
-(Gasto · Ingreso · Transferencia · Ajuste · Cambio) y llena el ancho de un teléfono. Una sexta no
-entra sin rediseñar el control.
+**~~La segunda línea bajo la regla.~~ Sí va, y no era una decisión de gusto.** Estaba planteada como
+"¿molesta la línea o no?", prima hermana de *"Pasaste a otras cuentas"* que ya fue rechazada una vez.
+Con los números al lado resultó ser aritmética: **sin un cuarto término la card deja de cerrar contra
+el número que tiene arriba**, y esa identidad es lo que la hace auditable a ojo. Y no es prima de
+aquella: *"Pasaste a otras cuentas"* nombraba un movimiento que **no cambiaba el disponible** —plata
+entre dos bolsillos propios, los dos contando igual—, así que era ruido. Esta explica exactamente los
+$700.000 que el disponible bajó. Va **debajo de Guardado** y en **color propio**: las dos sacan plata
+del disponible, pero una se deshace con un tap y la otra está inmovilizada hasta que vence.
+
+Lo que **sigue abierto** es solo el nombre: *Puesto a trabajar* (largo), *Invertido* (mete la palabra
+que el propio modelo dice que deja afuera comprar dólares) o *Inmovilizado* (es lo que describe, y
+suena a embargo).
+
+**~~Dónde entra "Invertir".~~ No hace falta que entre a ningún lado.** El segmented se queda en cinco
+tabs. Poner plata a trabajar es una **transferencia cuyo destino es una posición**, no un tipo de
+movimiento nuevo; una sexta pestaña sería modelar el **destino** como si fuera un **tipo**, que es el
+mismo error de categoría que el `counts_as_available` que el modelo ya descartó. Lo único que cambia
+es el **selector de destino**, que ya existía y gana filas.
+
+### Todavía abiertas
+
+**Fase 3 — el rescate.** Cuando vence, vuelven $724.164,38 sobre $700.000. El capital es la
+contrapartida del que salió; los $24.164,38 son la realización de una valuación y **no un ingreso**.
+Cómo se registra eso sin meterlo en "Entró" no está mockeado.
+
+**Fase 3 — el hub "Mi plata".** Se dibuja último: es lectura pura, y sale bien recién cuando sabemos
+qué hay para leer.

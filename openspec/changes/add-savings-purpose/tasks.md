@@ -70,9 +70,12 @@
 
 - [x] 8.1 Verificar que el dashboard no cambió: ningún número, ninguna fila nueva
 - [x] 8.2 Sumar al issue #58 la sección de QA nativo de la fase 2 — quedó dividido en parte A (fase 1) y parte B (fase 2), con la indicación de correr A completa antes de B: es lo que hace atribuible un fallo a una fase o a la otra
-- [x] 8.3 Actualizar `docs/modelo-de-dinero.md` si alguna decisión de esta fase corrige el documento — no hizo falta: la fase se implementó como el documento la describe, y las dos decisiones nuevas (D7 nombre único, D8 jerarquía diferida) son de implementación, no correcciones del modelo
+- [x] 8.3 Actualizar `docs/modelo-de-dinero.md` si alguna decisión de esta fase corrige el documento. **Esta tarea se dio por cerrada mal la primera vez** —decía "no hizo falta"— y se corrigió al preparar la fase 3, que es cuando el documento se vuelve a leer. Sí hizo falta, en dos niveles:
+  - **Nombres**: el doc decía *Liberar / Asignar / Desasignar*; la app dice *Volver a usar / Destinar / Quitar destino*
+  - **Modelo**: la regla 8 y la tabla de fases decían que el propósito es «una etiqueta sobre lo guardado». Eso es la 0058, que la **0059 corrigió**: es un reparto por monto. Escrito como estaba, la fase 3 se habría diseñado sobre el modelo que ya habíamos descartado
+  - Lección, y por eso queda escrita acá: **una tarea de "actualizar el doc canónico" no se cierra el mismo día que se implementa la fase.** Recién se ve qué quedó mal cuando alguien lee el doc para hacer otra cosa. El mock de la fase 2 tenía el mismo error afirmado en una pantalla y también quedó marcado
 - [x] 8.4 `pnpm openspec:check`, lint, typecheck (web y mobile) y tests en verde
-- [ ] 8.5 **No archivar** hasta el QA nativo, y **no mergear** con la fase 1 y 2 solas: `feature/add-savings-set-aside` es la branch de integración del modelo y sube con las fases que lo completan. Una branch por fase se probó y se descartó: con merge squash a `main` todo colapsa en un commit igual, así que la branch extra no compraba nada y sí partía el trabajo en dos lugares
+- [ ] 8.5 **No archivar** hasta el QA nativo —**bloqueado por acceso a la máquina del tech lead**, ver `add-savings-set-aside` 9.5—, y **no mergear** con la fase 1 y 2 solas: `feature/add-savings-set-aside` es la branch de integración del modelo y sube con las fases que lo completan. Una branch por fase se probó y se descartó: con merge squash a `main` todo colapsa en un commit igual, así que la branch extra no compraba nada y sí partía el trabajo en dos lugares
 
 ## 11. El eje de lectura (D16, D17)
 
