@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { PURPOSE_SEEDS, type Purpose } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { parseMoneyInput } from '@grana/validation'
-import { Plus } from 'lucide-react'
+import { ChevronDown, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
@@ -31,9 +31,10 @@ type Currency = 'ARS' | 'USD'
 export function PurposeAllocate({
   purpose: fixedPurpose,
   purposes,
-  currency,
+  currency: initialCurrency,
+  currencies,
   direction,
-  available,
+  availableFor,
   onCreateSeed,
   onCreateCustom,
   onDone,
@@ -44,10 +45,18 @@ export function PurposeAllocate({
   /** Los propósitos del usuario, para elegir sin cambiar de pantalla. */
   purposes: Purpose[]
   currency: Currency
+  /** Las monedas que el usuario tiene en juego. */
+  currencies: Currency[]
   /** `allocate` saca del resto hacia el propósito; `unallocate` lo devuelve. */
   direction: 'allocate' | 'unallocate'
-  /** El piso: el resto al destinar, lo destinado al quitar. */
-  available: number
+  /**
+   * El piso de CADA moneda: el resto al destinar, lo destinado al quitar.
+   *
+   * Una función y no un número porque la moneda se elige acá: el detalle dejó de
+   * estar partido por moneda, así que la elección bajó al formulario — que es
+   * donde la moneda es un dato de la operación y no un eje de lectura.
+   */
+  availableFor: (currency: Currency) => number
   /** Crea la sugerencia y devuelve el propósito, para dejarlo seleccionado. */
   onCreateSeed: (seedKey: string) => Promise<Purpose | null>
   onCreateCustom: () => void
@@ -55,6 +64,7 @@ export function PurposeAllocate({
   onBack: () => void
 }) {
   const t = useTranslations('savings')
+  const [currency, setCurrency] = useState<Currency>(initialCurrency)
   const [chosen, setChosen] = useState<Purpose | null>(fixedPurpose)
   const [amount, setAmount] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -72,6 +82,7 @@ export function PurposeAllocate({
   const money = (value: number) => (currency === 'USD' ? formatUSD(value) : formatARS(value, true))
 
   const purpose = chosen
+  const available = availableFor(currency)
   const value = parseMoneyInput(amount) ?? 0
   const remainder = available - value
   const overLimit = value > available
@@ -129,9 +140,22 @@ export function PurposeAllocate({
           >
             {t('amount_label')}
           </label>
-          <span className="inline-flex items-center rounded-[9px] border border-border bg-[#FAFBFC] px-2.5 py-1 text-xs font-bold text-text">
+          {/* La moneda se elige acá, con el mismo chip que el alta de
+              movimientos. Cambiarla cambia el piso: lo que hay sin destino en
+              pesos no es lo que hay sin destino en dólares. */}
+          <button
+            type="button"
+            onClick={() =>
+              setCurrency(
+                currencies[(currencies.indexOf(currency) + 1) % currencies.length] ?? currency,
+              )
+            }
+            disabled={currencies.length < 2}
+            className="inline-flex items-center gap-1 rounded-[9px] border border-border bg-[#FAFBFC] px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
+          >
             {currency}
-          </span>
+            {currencies.length > 1 && <ChevronDown className="size-3" aria-hidden />}
+          </button>
         </div>
         <div className="mt-2 flex items-baseline gap-1.5">
           <span className="text-[27px] font-semibold leading-none text-text opacity-50">

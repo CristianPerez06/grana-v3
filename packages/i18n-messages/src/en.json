@@ -2135,6 +2135,9 @@
       "create_inline": "New",
       "totals": "Saved for this"
     },
-    "history_count": "History ({count})"
+    "history_count": "History ({count})",
+    "total_saved": "Saved",
+    "spendable": "To spend",
+    "bank_fold": "How your bank sees it"
   }
 }

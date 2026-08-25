@@ -2135,6 +2135,9 @@
       "create_inline": "Nuevo",
       "totals": "Guardado para esto"
     },
-    "history_count": "Historial ({count})"
+    "history_count": "Historial ({count})",
+    "total_saved": "Guardado",
+    "spendable": "Para gastar",
+    "bank_fold": "Cómo se ve en tu banco"
   }
 }

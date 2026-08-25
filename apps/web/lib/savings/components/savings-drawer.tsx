@@ -85,7 +85,7 @@ type View =
     }
   | { kind: 'purposeForm'; purpose: Purpose | null; name?: string; icon?: string }
   | { kind: 'purposeDelete'; purpose: Purpose }
-  | { kind: 'pickSource'; currency: Currency }
+  | { kind: 'pickSource' }
   | {
       kind: 'allocate'
       currency: Currency
@@ -143,7 +143,7 @@ export function SavingsDrawer({
   // a closed drawer has no detail. `staleTime: 0` because the numbers here are
   // the ones the user just changed — a cached stock right after saving would show
   // the previous total on the screen that exists to audit it.
-  const [sumsQuery, arsQuery, usdQuery, flowQuery, purposeSumsQuery, purposesQuery] = useQueries({
+  const [sumsQuery, historyQuery, flowQuery, purposeSumsQuery, purposesQuery] = useQueries({
     queries: [
       {
         queryKey: ['savings', 'sums'],
@@ -152,14 +152,10 @@ export function SavingsDrawer({
         staleTime: 0,
       },
       {
-        queryKey: ['savings', 'history', 'ARS'],
-        queryFn: () => getReserveHistory(createClient(), 'ARS'),
-        enabled: open,
-        staleTime: 0,
-      },
-      {
-        queryKey: ['savings', 'history', 'USD'],
-        queryFn: () => getReserveHistory(createClient(), 'USD'),
+        // Las dos monedas en UNA lista: el detalle ya no está partido por
+        // moneda, así que su historial tampoco.
+        queryKey: ['savings', 'history', 'all'],
+        queryFn: () => getReserveHistory(createClient()),
         enabled: open,
         staleTime: 0,
       },
@@ -197,35 +193,65 @@ export function SavingsDrawer({
   })
 
   const sums: AvailableSums[] | null = sumsQuery.data ?? null
-  const EMPTY = { entries: [] as ReserveEntry[], hasMore: false }
-  const history: Record<Currency, { entries: ReserveEntry[]; hasMore: boolean }> = {
-    ARS: arsQuery.data ?? EMPTY,
-    USD: usdQuery.data ?? EMPTY,
+  const history: { entries: ReserveEntry[]; hasMore: boolean } = historyQuery.data ?? {
+    entries: [] as ReserveEntry[],
+    hasMore: false,
   }
   const monthNet = (currency: Currency): number =>
     flowQuery.data?.find((f) => f.currencyCode === currency)?.reservedNet ?? 0
 
   const purposeSums: PurposeSums[] = purposeSumsQuery.data ?? []
+
+  const CURRENCIES = ['ARS', 'USD'] as const
   const purposes: Purpose[] = purposesQuery.data ?? []
 
   const purposeById = (id: string | null): Purpose | null =>
     id == null ? null : (purposes.find((p) => p.id === id) ?? null)
 
   /**
-   * Los grupos de una moneda, con «Sin destino» SIEMPRE al final.
+   * Los grupos, con sus montos EN LAS DOS MONEDAS y «Sin destino» al final.
    *
-   * Ordenados por monto descendente y no alfabéticamente: la pregunta que trae
-   * al usuario acá es "¿dónde está mi plata?", y la respuesta que más le sirve
-   * está arriba. «Sin destino» queda fijo abajo aunque sea el más grande —
-   * es el resto, y el resto va al final de una lista aunque pese.
+   * La lectura es por propósito y no por moneda: la pregunta que trae al usuario
+   * es "¿para qué tengo guardado?", y partirla en dos pantallas —una por
+   * moneda— lo obliga a recordar un número mientras mira el otro. Los montos
+   * conviven en la fila y NO se suman: sumarlos exigiría convertir.
+   *
+   * Ordenados por lo que pesa en pesos y, a igualdad, por dólares. «Sin destino»
+   * queda fijo abajo aunque sea el más grande: es el resto, y el resto va al
+   * final de una lista aunque pese.
    */
-  const groupsOf = (currency: Currency): PurposeSums[] => {
-    const rows = purposeSums.filter((s) => s.currencyCode === currency)
-    const named = rows
-      .filter((r) => r.purposeId != null)
-      .sort((a, b) => b.reserved - a.reserved)
-    const rest = rows.filter((r) => r.purposeId == null)
-    return [...named, ...rest]
+  const groupsUnified = (): {
+    purposeId: string | null
+    name: string | null
+    icon: string | null
+    amounts: { currency: Currency; reserved: number }[]
+  }[] => {
+    const byPurpose = new Map<string, (typeof rows)[number]>()
+    const rows = purposeSums
+    for (const row of rows) byPurpose.set(row.purposeId ?? 'none', row)
+
+    const keys = [...new Set(rows.map((r) => r.purposeId ?? 'none'))]
+    const built = keys.map((key) => {
+      const any = byPurpose.get(key)!
+      return {
+        purposeId: any.purposeId,
+        name: any.purposeName,
+        icon: any.purposeIcon,
+        amounts: CURRENCIES.map((c) => ({
+          currency: c,
+          reserved: groupAmount(c, any.purposeId),
+        })),
+      }
+    })
+
+    const amountIn = (g: (typeof built)[number], c: Currency) =>
+      g.amounts.find((a) => a.currency === c)?.reserved ?? 0
+
+    const named = built
+      .filter((g) => g.purposeId != null)
+      .sort((a, b) => amountIn(b, 'ARS') - amountIn(a, 'ARS') || amountIn(b, 'USD') - amountIn(a, 'USD'))
+
+    return [...named, ...built.filter((g) => g.purposeId == null)]
   }
 
   const groupAmount = (currency: Currency, purposeId: string | null): number =>
@@ -253,10 +279,6 @@ export function SavingsDrawer({
     }
   }
 
-  // Cuál se muestra. Arranca en pesos y el usuario cambia con el selector; no
-  // se recuerda entre aperturas porque el caso normal es mirar pesos.
-  const [shown, setShown] = useState<Currency>('ARS')
-
   const currencies: Currency[] = (['ARS', 'USD'] as const).filter((c) => {
     const row = sums?.find((s) => s.currencyCode === c)
     // ARS is always shown: it is the primary currency and the drawer would look
@@ -264,8 +286,6 @@ export function SavingsDrawer({
     // the same bimoneda rule the rest of the app follows.
     return c === 'ARS' || (row != null && (row.reserved !== 0 || row.available !== 0))
   })
-
-  const shownCurrency: Currency = currencies.includes(shown) ? shown : (currencies[0] ?? 'ARS')
 
   const rowFor = (currency: Currency): AvailableSums =>
     sums?.find((s) => s.currencyCode === currency) ?? {
@@ -360,16 +380,36 @@ export function SavingsDrawer({
     else push({ kind: 'purposeForm', purpose: null })
   }
 
-  const openRelease = (currency: Currency) => {
-    const withMoney = groupsOf(currency).filter((g) => g.reserved > 0)
-    // Preguntar de cuál sale solo tiene sentido si hay más de uno. Con uno solo,
-    // la pregunta tiene una única respuesta posible y es puro paso de más.
-    if (withMoney.length > 1) return push({ kind: 'pickSource', currency })
+  /**
+   * Volver a usar: de dónde sale.
+   *
+   * Con un solo grupo con saldo la pregunta tiene una única respuesta posible y
+   * es puro paso. Con varios, se elige — y NUNCA se reparte solo: eso sería
+   * inventar una imputación, lo mismo que el modelo se niega a hacer con las
+   * cuentas.
+   *
+   * La moneda de la operación sale del grupo: si tiene pesos, pesos; si solo
+   * tiene dólares, dólares. Y el formulario la deja cambiar.
+   */
+  /** Un número de la card, en las dos monedas. Nunca sumadas. */
+  const totals = (field: 'reserved' | 'available') =>
+    currencies.map((c) => ({ currency: c, reserved: rowFor(c)[field] }))
+
+  const currencyWithMoney = (purposeId: string | null): Currency =>
+    CURRENCIES.find((c) => groupAmount(c, purposeId) > 0) ?? 'ARS'
+
+  const openRelease = () => {
+    const withMoney = groupsUnified().filter((g) =>
+      g.amounts.some((a) => a.reserved > 0),
+    )
+    if (withMoney.length > 1) return push({ kind: 'pickSource' })
+
+    const only = withMoney[0]
     push({
       kind: 'form',
       mode: 'release',
-      currency,
-      purposeId: withMoney[0]?.purposeId ?? null,
+      currency: currencyWithMoney(only?.purposeId ?? null),
+      purposeId: only?.purposeId ?? null,
       locked: true,
     })
   }
@@ -452,11 +492,12 @@ export function SavingsDrawer({
             purpose={view.purpose}
             purposes={purposes}
             currency={view.currency}
+            currencies={currencies}
             direction={view.direction}
-            available={
+            availableFor={(c: Currency) =>
               view.direction === 'allocate'
-                ? groupAmount(view.currency, null)
-                : groupAmount(view.currency, view.purpose?.id ?? null)
+                ? groupAmount(c, null)
+                : groupAmount(c, view.purpose?.id ?? null)
             }
             onCreateSeed={createFromSeed}
             onCreateCustom={() => push({ kind: 'purposeForm', purpose: null })}
@@ -477,8 +518,8 @@ export function SavingsDrawer({
           <>
             <DrawerBackHeader title={t('purposes.choose')} onBack={back} />
             <ul className="mt-4 flex flex-col gap-2">
-              {groupsOf(view.currency)
-                .filter((g) => g.reserved > 0)
+              {groupsUnified()
+                .filter((g) => g.amounts.some((a) => a.reserved > 0))
                 .map((group) => (
                   <li key={group.purposeId ?? 'none'}>
                     <button
@@ -487,7 +528,7 @@ export function SavingsDrawer({
                         push({
                           kind: 'form',
                           mode: 'release',
-                          currency: view.currency,
+                          currency: currencyWithMoney(group.purposeId),
                           purposeId: group.purposeId,
                           locked: true,
                         })
@@ -495,14 +536,12 @@ export function SavingsDrawer({
                       className="flex min-h-[52px] w-full items-center gap-3 rounded-xl border border-border-soft bg-card px-3 py-2 text-left transition-colors hover:bg-surface-sunken"
                     >
                       <span aria-hidden className="text-[18px]">
-                        {group.purposeIcon ?? '🫙'}
+                        {group.icon ?? '🫙'}
                       </span>
                       <span className="flex-1 text-[14px] font-semibold text-text">
-                        {group.purposeName ?? t('purposes.none')}
+                        {group.name ?? t('purposes.none')}
                       </span>
-                      <span className="text-[13px] font-extrabold tabular-nums text-text-muted">
-                        {money(group.reserved, view.currency)}
-                      </span>
+                      <GroupAmounts amounts={group.amounts} size="sm" />
                     </button>
                   </li>
                 ))}
@@ -565,61 +604,152 @@ export function SavingsDrawer({
 
         {view.kind === 'detail' && (
           <>
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-[21px] font-extrabold tracking-[-0.025em] text-text">
-                {t('title')}
-              </h2>
-              {/* Selector, no dos bloques apilados. Con las dos monedas una
-                  debajo de la otra el drawer duplicaba total, puente, desglose e
-                  historial —y la segunda quedaba a un scroll largo, donde nadie
-                  la ve—. Mismo control que el chip de moneda del alta de
-                  movimientos, que es donde el usuario ya lo aprendió. */}
-              {currencies.length > 1 && (
-                <div className="flex rounded-[10px] border border-border bg-[#FAFBFC] p-0.5">
-                  {currencies.map((code) => (
-                    <button
-                      key={code}
-                      type="button"
-                      onClick={() => setShown(code)}
-                      className={cn(
-                        'min-h-[32px] rounded-[8px] px-3 text-xs font-bold transition-colors',
-                        shownCurrency === code
-                          ? 'bg-card text-text shadow-[0_1px_2px_rgba(11,26,43,0.08)]'
-                          : 'text-text-soft hover:text-text',
-                      )}
-                    >
-                      {code}
-                    </button>
-                  ))}
-                </div>
-              )}
+            <h2 className="text-[21px] font-extrabold tracking-[-0.025em] text-text">
+              {t('title')}
+            </h2>
+
+            {/* Los dos números que la fase entera existe para contestar, en las
+                dos monedas y SIN sumarlas. Sin selector: la moneda es el eje de
+                la OPERACIÓN, no el de la lectura — partir el detalle en dos
+                pantallas obliga a recordar un número mientras se mira el otro. */}
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <Headline label={t('total_saved')} amounts={totals('reserved')} />
+              <Headline label={t('to_spend')} amounts={totals('available')} />
             </div>
-            <div className="mt-4 flex flex-col gap-5">
-              {[shownCurrency].map((currency) => (
-                <CurrencyBlock
-                  key={currency}
-                  currency={currency}
-                  sums={rowFor(currency)}
-                  history={history[currency]}
-                  monthNet={monthNet(currency)}
-                  groups={groupsOf(currency)}
-                  // «Sin destino» va DERECHO a destinar, con el propósito por
-                  // elegir en la misma pantalla: cuánto y para qué son dos datos
-                  // de una sola decisión, y separarlos en dos pasos cobraba
-                  // navegación por no decidir nada. Los propósitos sí abren su
-                  // grupo: tienen historial y acciones propias.
-                  onOpenGroup={(purposeId) =>
-                    purposeId == null
-                      ? push({ kind: 'allocate', currency, purpose: null, direction: 'allocate' })
-                      : push({ kind: 'group', currency, purpose: purposeById(purposeId)! })
-                  }
-                  onSave={() =>
-                    push({ kind: 'form', mode: 'save', currency, purposeId: null, locked: false })
-                  }
-                  onRelease={() => openRelease(currency)}
-                />
+
+            <p className="mt-5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
+              {t('purposes.label')}
+            </p>
+            <ul className="mt-2 flex flex-col gap-1.5">
+              {groupsUnified().map((group) => (
+                <li key={group.purposeId ?? 'none'}>
+                  {/* «Sin destino» va DERECHO a destinar, con propósito y monto
+                      en la misma pantalla. Los propósitos abren su grupo:
+                      tienen historial y acciones propias. */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      group.purposeId == null
+                        ? push({
+                            kind: 'allocate',
+                            currency: currencyWithMoney(null),
+                            purpose: null,
+                            direction: 'allocate',
+                          })
+                        : push({
+                            kind: 'group',
+                            currency: currencyWithMoney(group.purposeId),
+                            purpose: purposeById(group.purposeId)!,
+                          })
+                    }
+                    className="flex min-h-[44px] w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-surface-sunken"
+                  >
+                    <span aria-hidden className="text-[16px]">
+                      {group.icon ?? '🫙'}
+                    </span>
+                    <span className="flex-1 truncate text-[14px] font-semibold text-text">
+                      {group.name ?? t('purposes.none')}
+                    </span>
+                    <GroupAmounts amounts={group.amounts} />
+                    <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
+                  </button>
+                </li>
               ))}
+            </ul>
+
+            <div className="mt-5 flex gap-2">
+              <Button
+                className="flex-1"
+                onClick={() =>
+                  push({
+                    kind: 'form',
+                    mode: 'save',
+                    currency: 'ARS',
+                    purposeId: null,
+                    locked: false,
+                  })
+                }
+              >
+                {t('save')}
+              </Button>
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={openRelease}
+                disabled={totals('reserved').every((a) => a.reserved <= 0)}
+              >
+                {t('release')}
+              </Button>
             </div>
+
+            {/* Plegado: era el centro de la fase 1, cuando la idea nueva era
+                "tu banco muestra otro número". Ya no lo es, y una explicación
+                que se entiende una vez no tiene que cobrar altura todos los
+                días. Pero no se borra: es lo que evita que alguien abra su home
+                banking, vea otra cifra y le crea al banco. */}
+            <details className="group mt-5">
+              <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
+                <ChevronRight
+                  className="size-3.5 transition-transform group-open:rotate-90"
+                  aria-hidden
+                />
+                {t('bank_fold')}
+              </summary>
+              <div className="mt-2 flex flex-col gap-3">
+                {currencies.map((currency) => (
+                  <BankBridge
+                    key={currency}
+                    currency={currency}
+                    sums={rowFor(currency)}
+                    monthNet={monthNet(currency)}
+                  />
+                ))}
+                <p className="px-1 text-[12.5px] leading-snug text-text-soft">{t('gap_note')}</p>
+              </div>
+            </details>
+
+            <details className="group mt-3">
+              <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
+                <ChevronRight
+                  className="size-3.5 transition-transform group-open:rotate-90"
+                  aria-hidden
+                />
+                {t('history_count', { count: history.entries.length })}
+              </summary>
+              {history.entries.length === 0 ? (
+                <p className="mt-2 text-[13px] text-text-soft">{t('empty_history')}</p>
+              ) : (
+                <ul className="mt-2 flex flex-col divide-y divide-border-soft">
+                  {history.entries.map((entry) => (
+                    <li
+                      key={entry.id}
+                      className="flex items-center justify-between gap-3 py-2.5"
+                    >
+                      <span className="text-[14px] font-semibold text-text">
+                        {entry.amount >= 0 ? t('entry_saved') : t('entry_released')}
+                        <span className="ml-2 text-[12px] font-medium text-text-soft">
+                          {shortDate(entry.date)}
+                        </span>
+                      </span>
+                      <span
+                        className={cn(
+                          'text-[14px] font-extrabold tabular-nums',
+                          entry.amount >= 0 ? 'text-emerald-deep' : 'text-text-muted',
+                        )}
+                      >
+                        {entry.amount >= 0 ? '+' : '−'}
+                        {money(Math.abs(entry.amount), entry.currencyCode)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {history.hasMore && (
+                <p className="mt-2 text-[12px] text-text-soft">
+                  {t('history_truncated', { count: RESERVE_HISTORY_LIMIT })}
+                </p>
+              )}
+            </details>
           </>
         )}
       </div>
@@ -628,212 +758,135 @@ export function SavingsDrawer({
 }
 
 /**
- * One currency's block: the STOCK, this month's FLOW, and the history.
+ * Un número de la card, en las dos monedas.
  *
- * The two numbers are kept apart on purpose — they are the pair users conflate.
- * The total is what is set aside right now; "este mes" is what moved in this
- * period, and it can be negative while the total is large.
+ * Sin total que las sume, y no es una omisión: sumarlas exige convertir, y Grana
+ * no convierte. La segunda línea aparece SOLO si hay algo — la mayoría de los
+ * usuarios tiene pesos y nada más, y una línea vacía de dólares les cobraría
+ * altura por un dato que no tienen.
  */
-const CurrencyBlock = ({
+const Headline = ({
+  label,
+  amounts,
+}: {
+  label: string
+  amounts: { currency: Currency; reserved: number }[]
+}) => {
+  const shown = amounts.filter((a, i) => a.reserved !== 0 || i === 0)
+
+  return (
+    <div className="rounded-2xl border border-border-soft bg-card p-3.5">
+      <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
+        {label}
+      </p>
+      {shown.map((a, i) => (
+        <p
+          key={a.currency}
+          className={cn(
+            'tabular-nums text-text',
+            i === 0
+              ? 'mt-1.5 text-[22px] font-extrabold leading-none tracking-[-0.03em]'
+              : 'mt-1 text-[14px] font-bold text-text-muted',
+          )}
+        >
+          {money(a.reserved, a.currency)}
+        </p>
+      ))}
+    </div>
+  )
+}
+
+/** Los montos de un grupo en las dos monedas, apilados y sin sumar. */
+const GroupAmounts = ({
+  amounts,
+  size = 'md',
+}: {
+  amounts: { currency: Currency; reserved: number }[]
+  size?: 'sm' | 'md'
+}) => {
+  // Solo las monedas con algo. Un propósito con pesos nada más ocupa una línea;
+  // la fila crece únicamente cuando el dato lo pide.
+  const shown = amounts.filter((a) => a.reserved !== 0)
+  const list = shown.length > 0 ? shown : [amounts[0]]
+
+  return (
+    <span className="flex flex-col items-end">
+      {list.map((a, i) => (
+        <span
+          key={a.currency}
+          className={cn(
+            'font-extrabold tabular-nums',
+            size === 'sm' ? 'text-[13px]' : 'text-[14px]',
+            i === 0 ? 'text-text' : 'text-text-muted',
+          )}
+        >
+          {money(a.reserved, a.currency)}
+        </span>
+      ))}
+    </span>
+  )
+}
+
+/**
+ * El puente entre los dos números que el usuario ve en dos lugares distintos: el
+ * de su banco y el de Grana.
+ *
+ * Sin esto, alguien que abre su cuenta y ve $5.085.748 y después abre Grana y ve
+ * $4.895.748 no tiene dónde entender la diferencia — y le va a creer al banco,
+ * porque es "el de verdad". Acá los dos aparecen juntos y lo que los separa
+ * tiene nombre. No hace falta ningún consejo: alcanza con mostrar la resta.
+ *
+ * Va plegado porque se entiende una vez, no porque haya dejado de importar.
+ */
+const BankBridge = ({
   currency,
   sums,
-  history,
   monthNet,
-  groups,
-  onOpenGroup,
-  onSave,
-  onRelease,
 }: {
   currency: Currency
   sums: AvailableSums
-  history: { entries: ReserveEntry[]; hasMore: boolean }
   /** Neto del mes, de `get_reserve_flow_sums`. Nunca recompuesto acá. */
   monthNet: number
-  /** El corte por propósito de esta moneda, «Sin destino» al final. */
-  groups: PurposeSums[]
-  onOpenGroup: (purposeId: string | null) => void
-  onSave: () => void
-  onRelease: () => void
 }) => {
   const t = useTranslations('savings')
 
   return (
-    <section className="rounded-2xl border border-border-soft bg-card p-4">
-      <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
-        {t('total_label', { currency })}
-      </p>
-      <p className="mt-2 text-[26px] font-extrabold leading-none tracking-[-0.04em] text-text">
-        {money(sums.reserved, currency)}
-      </p>
-      {/* Acá el verbo SÍ gira con el signo, y es el lugar donde corresponde: es un
-          dato suelto, no un término de ninguna resta. En la card competía con la
-          identidad —el número tenía que sumar y a la vez decir una dirección— y
-          por eso necesitaba signo, color y verbo coordinados. Acá el verbo solo
-          tiene que hacerlo legible. */}
-      <p className="mt-3 flex items-baseline justify-between border-t border-border-soft pt-3 text-[13px] text-text-muted">
-        <span>{t(monthNet < 0 ? 'this_month_released' : 'this_month_saved')}</span>
-        {/* Mismo criterio que el historial de esta misma pantalla: el emerald
-            marca lo que se guardó. Un mes en que se volvió a usar más de lo que
-            se guardó no es una mejora, así que va en neutro — y el terracota
-            está reservado para por pagar y vencido. */}
-        <span
-          className={cn(
-            'font-extrabold tabular-nums',
-            monthNet >= 0 ? 'text-emerald-deep' : 'text-text-muted',
-          )}
-        >
-          {monthNet < 0 ? '−' : '+'}
-          {money(Math.abs(monthNet), currency)}
+    <div className="rounded-xl bg-surface-sunken px-3 py-2.5 text-[13px]">
+      <p className="flex justify-between py-0.5 text-text-muted">
+        <span>{t('accounts_total', { currency })}</span>
+        <span className="font-semibold tabular-nums text-text">
+          {money(sums.accountsNet, currency)}
         </span>
       </p>
-
-      {/* El puente entre los dos números que el usuario ve en dos lugares
-          distintos: el de su banco y el de Grana. Sin esto, alguien que abre su
-          cuenta y ve $5.085.748 y después abre Grana y ve $4.495.748 no tiene
-          dónde entender la diferencia — y le va a creer al banco, porque es "el
-          de verdad". Acá los dos aparecen juntos y lo que los separa tiene
-          nombre. No hace falta ningún consejo: alcanza con mostrar la resta. */}
-      <div className="mt-3 rounded-xl bg-surface-sunken px-3 py-2.5 text-[13px]">
-        <p className="flex justify-between py-0.5 text-text-muted">
-          <span>{t('accounts_total', { currency })}</span>
-          <span className="font-semibold tabular-nums text-text">
-            {money(sums.accountsNet, currency)}
+      <p className="flex justify-between py-0.5 text-text-muted">
+        <span>{t('title')}</span>
+        <span className="font-semibold tabular-nums text-emerald-deep">
+          −{money(sums.reserved, currency)}
+        </span>
+      </p>
+      <p className="mt-1 flex justify-between border-t border-border pt-1.5 text-text-muted">
+        <span>{t('to_spend')}</span>
+        <span className="font-extrabold tabular-nums text-text">
+          {money(sums.available, currency)}
+        </span>
+      </p>
+      {monthNet !== 0 && (
+        <p className="mt-1.5 flex justify-between border-t border-border pt-1.5 text-text-muted">
+          <span>{t(monthNet < 0 ? 'this_month_released' : 'this_month_saved')}</span>
+          {/* Sin signo: el VERBO ya lleva la dirección. "Volviste a usar
+              −$110.000" es una doble negación — se lee como "des-volviste a
+              usar". El número dice cuánto; el rótulo dice para dónde. */}
+          <span
+            className={cn(
+              'font-extrabold tabular-nums',
+              monthNet >= 0 ? 'text-emerald-deep' : 'text-text-muted',
+            )}
+          >
+            {money(Math.abs(monthNet), currency)}
           </span>
         </p>
-        <p className="flex justify-between py-0.5 text-text-muted">
-          <span>{t('title')}</span>
-          <span className="font-semibold tabular-nums text-emerald-deep">
-            −{money(sums.reserved, currency)}
-          </span>
-        </p>
-        <p className="mt-1 flex justify-between border-t border-border pt-1.5 text-text-muted">
-          <span>{t('to_spend')}</span>
-          <span className="font-extrabold tabular-nums text-text">
-            {money(sums.available, currency)}
-          </span>
-        </p>
-      </div>
-
-      {/* La frase que nombra la confusión antes de que ocurra. Describe — "Grana
-          no mueve tu plata" — en vez de aconsejar: decirle a alguien que mueva
-          los pesos a otra cuenta sería recomendarle una movida cuyo costo Grana
-          no conoce (puede estar perdiendo el rendimiento de una remunerada), y
-          además el caso normal es que esa plata se quede meses donde está. */}
-      <p className="mt-2 px-1 text-[12.5px] leading-snug text-text-soft">{t('gap_note')}</p>
-
-      {/* El desglose por propósito. Va DESPUÉS del puente y antes del
-          historial, que es el orden en que se contesta lo que el usuario vino a
-          preguntar: cuánto hay, por qué no coincide con el banco, en qué está
-          repartido, y recién después el detalle movimiento por movimiento.
-
-          Con un solo grupo no hay desglose que mostrar —repetiría el total con
-          más tinta— pero SÍ tiene que haber puerta: sin ella, el usuario que
-          todavía no destinó nada no tiene por dónde empezar, y ese es el estado
-          de TODOS el primer día. Mismo patrón que la fila del dashboard, que
-          con cero guardado ofrece "Guardar algo" en vez de un cero. */}
-      {groups.length <= 1 && sums.reserved > 0 && (
-        <button
-          type="button"
-          onClick={() => onOpenGroup(null)}
-          className="mt-4 flex min-h-[44px] w-full items-center justify-between rounded-xl border border-dashed border-border px-3 py-2 text-left transition-colors hover:bg-surface-sunken"
-        >
-          <span className="text-[13.5px] font-semibold text-text-muted">
-            {t('purposes.empty_cta')}
-          </span>
-          <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
-        </button>
       )}
-
-      {groups.length > 1 && (
-        <>
-          <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
-            {t('purposes.label')}
-          </p>
-          <ul className="mt-2 flex flex-col gap-1.5">
-            {groups.map((group) => (
-              <li key={group.purposeId ?? 'none'}>
-                <button
-                  type="button"
-                  onClick={() => onOpenGroup(group.purposeId)}
-                  className="flex min-h-[44px] w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-surface-sunken"
-                >
-                  <span aria-hidden className="text-[16px]">
-                    {group.purposeIcon ?? '🫙'}
-                  </span>
-                  <span className="flex-1 truncate text-[14px] font-semibold text-text">
-                    {group.purposeName ?? t('purposes.none')}
-                  </span>
-                  <span className="text-[14px] font-extrabold tabular-nums text-text">
-                    {money(group.reserved, currency)}
-                  </span>
-                  <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {/* Plegado por omisión. La lista está acotada en 25, pero 25 filas debajo
-          del desglose empujan las acciones fuera de la pantalla — y el
-          historial es para auditar, no para leer cada vez que se abre. El
-          número en el rótulo evita tener que abrirlo para saber si hay algo. */}
-      <details className="group mt-4">
-        <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
-          <ChevronRight
-            className="size-3.5 transition-transform group-open:rotate-90"
-            aria-hidden
-          />
-          {t('history_count', { count: history.entries.length })}
-        </summary>
-        {history.entries.length === 0 ? (
-          <p className="mt-2 text-[13px] text-text-soft">{t('empty_history')}</p>
-        ) : (
-          <ul className="mt-2 flex flex-col divide-y divide-border-soft">
-            {history.entries.map((entry) => (
-              <li key={entry.id}>
-                <div className="flex items-center justify-between gap-3 py-2.5">
-                  <span className="text-[14px] font-semibold text-text">
-                    {entry.amount >= 0 ? t('entry_saved') : t('entry_released')}
-                    <span className="ml-2 text-[12px] font-medium text-text-soft">
-                      {shortDate(entry.date)}
-                    </span>
-                  </span>
-                  <span
-                    className={cn(
-                      'text-[14px] font-extrabold tabular-nums',
-                      entry.amount >= 0 ? 'text-emerald-deep' : 'text-text-muted',
-                    )}
-                  >
-                    {entry.amount >= 0 ? '+' : '−'}
-                    {money(Math.abs(entry.amount), currency)}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-        {history.hasMore && (
-          <p className="mt-2 text-[12px] text-text-soft">
-            {t('history_truncated', { count: RESERVE_HISTORY_LIMIT })}
-          </p>
-        )}
-      </details>
-
-      <div className="mt-4 flex gap-2">
-        <Button className="flex-1" onClick={onSave}>
-          {t('save')}
-        </Button>
-        <Button
-          variant="secondary"
-          className="flex-1"
-          onClick={onRelease}
-          disabled={sums.reserved <= 0}
-        >
-          {t('release')}
-        </Button>
-      </div>
-    </section>
+    </div>
   )
 }
 

@@ -183,12 +183,23 @@ export const RESERVE_HISTORY_LIMIT = 25
 
 export async function getReserveHistory(
   supabase: GranaSupabaseClient,
-  currencyCode: BalanceCurrency,
+  /**
+   * Omitida, trae TODAS las monedas en una sola lista.
+   *
+   * El detalle dejó de estar partido por moneda —la moneda es el eje de la
+   * operación, no el de la lectura— así que su historial tampoco puede estarlo.
+   * Y traerlo en una consulta y no en dos importa: dos listas de 25 mezcladas a
+   * mano dan hasta 50 filas y un "hay más" que ya no significa nada.
+   */
+  currencyCode?: BalanceCurrency,
 ): Promise<{ entries: ReserveEntry[]; hasMore: boolean }> {
-  const { data, error } = await supabase
+  const base = supabase
     .from('availability_reserve')
     .select('id, currency_code, amount, date, created_at')
-    .eq('currency_code', currencyCode)
+
+  const { data, error } = await (currencyCode
+    ? base.eq('currency_code', currencyCode)
+    : base)
     .order('date', { ascending: false })
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
