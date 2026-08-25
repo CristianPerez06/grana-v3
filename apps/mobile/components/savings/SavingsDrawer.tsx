@@ -57,11 +57,14 @@ type SheetView =
        */
       purpose: Purpose
     }
+  /**
+   * `locked`: se llegó desde un grupo y el propósito se hereda. Falso cuando se
+   * entró por el botón global, donde el origen se elige con los chips.
+   */
   | { kind: 'form'; mode: Mode; currency: Currency; purposeId: string | null; locked: boolean }
   | { kind: 'picker'; currency: Currency; intent: 'form' | 'allocate' }
   | { kind: 'purposeForm'; purpose: Purpose | null; name?: string; icon?: string }
   | { kind: 'purposeDelete'; purpose: Purpose }
-  | { kind: 'pickSource' }
   | {
       kind: 'allocate'
       currency: Currency
@@ -278,17 +281,26 @@ export const SavingsDrawer = ({
     else push({ kind: 'purposeForm', purpose: null })
   }
 
+  /**
+   * El botón global NO pregunta primero de dónde sale: abría una pantalla
+   * titulada «¿Para qué?» —la pregunta de DESTINAR— para elegir el origen de un
+   * retiro, y cobraba un tap por algo que el formulario muestra mejor, con el
+   * tope y el resto moviéndose al tocar el chip.
+   */
   const openRelease = () => {
     const withMoney = groupsUnified().filter((g) => g.amounts.some((a) => a.reserved > 0))
-    // Con un solo grupo la pregunta tiene una única respuesta: es puro paso.
-    if (withMoney.length > 1) return push({ kind: 'pickSource' })
-    const only = withMoney[0]
+    // Arranca en el resto si tiene plata: es el grupo del que se vuelve a usar
+    // sin deshacer ninguna decisión.
+    const start = withMoney.some((g) => g.purposeId == null)
+      ? null
+      : (withMoney[0]?.purposeId ?? null)
     push({
       kind: 'form',
       mode: 'release',
-      currency: currencyWithMoney(only?.purposeId ?? null),
-      purposeId: only?.purposeId ?? null,
-      locked: true,
+      currency: currencyWithMoney(start),
+      purposeId: start,
+      // Con un solo grupo con plata no hay nada que elegir.
+      locked: withMoney.length <= 1,
     })
   }
 
@@ -304,7 +316,7 @@ export const SavingsDrawer = ({
             rowFor={rowFor}
             purpose={purposeById(view.purposeId)}
             purposeId={view.purposeId}
-            purposeAmount={groupAmount(view.currency, view.purposeId)}
+            groupAmount={groupAmount}
             lockedPurpose={view.locked}
             purposes={purposes}
             onSetPurpose={(purposeId: string | null) =>
@@ -396,39 +408,6 @@ export const SavingsDrawer = ({
             }}
             onBack={back}
           />
-        )}
-
-        {view.kind === 'pickSource' && (
-          <View>
-            <SheetBackHeader title={t('savings.purposes.choose')} onBack={back} />
-            <View className="mt-4 gap-2">
-              {groupsUnified()
-                .filter((g) => g.amounts.some((a) => a.reserved > 0))
-                .map((group) => (
-                  <Pressable
-                    key={group.purposeId ?? 'none'}
-                    accessibilityRole="button"
-                    onPress={() =>
-                      push({
-                        kind: 'form',
-                        mode: 'release',
-                        currency: currencyWithMoney(group.purposeId),
-                        purposeId: group.purposeId,
-                        locked: true,
-                      })
-                    }
-                    className="min-h-[52px] flex-row items-center gap-3 rounded-xl border border-border bg-card px-3 py-2"
-                  >
-                    <Text className="text-[17px]">{group.icon ?? '🫙'}</Text>
-                    <Text className="flex-1 text-[14px] font-semibold text-text" numberOfLines={1}>
-                      {group.name ?? t('savings.purposes.none')}
-                    </Text>
-                    <GroupAmounts amounts={group.amounts} />
-                  </Pressable>
-                ))}
-            </View>
-            {/* No hay "repartir": sería inventar una imputación. */}
-          </View>
         )}
 
         {view.kind === 'group' && (
@@ -847,7 +826,7 @@ const SavingsForm = ({
   rowFor,
   purpose,
   purposeId,
-  purposeAmount,
+  groupAmount,
   lockedPurpose,
   purposes,
   onSetPurpose,
@@ -861,8 +840,14 @@ const SavingsForm = ({
   /** El propósito elegido, ya resuelto. `null` es «Sin destino». */
   purpose: Purpose | null
   purposeId: string | null
-  /** Lo guardado en ese grupo y esa moneda: es el piso cuando se vuelve a usar. */
-  purposeAmount: number
+  /**
+   * Lo guardado en un grupo y una moneda: el piso al volver a usar.
+   *
+   * FUNCIÓN y no número: acá adentro cambian la moneda (chip del monto) y el
+   * propósito (chips de origen). Congelado en la moneda inicial, alguien podía
+   * pasar a dólares con el tope de los pesos.
+   */
+  groupAmount: (currency: Currency, purposeId: string | null) => number
   /** Se llegó desde un grupo: el propósito se hereda y no se ofrece cambiarlo. */
   lockedPurpose: boolean
   /** Los propósitos del usuario, como chips: elegir no debería costar pantalla. */
@@ -887,11 +872,22 @@ const SavingsForm = ({
     const row = rowFor(c)
     return c === initialCurrency || row.available !== 0 || row.reserved !== 0
   })
+  /** Los orígenes posibles: al volver a usar, solo los que tienen plata ACÁ. */
+  const purposeOptions: (Purpose | null)[] =
+    mode === 'save'
+      ? [null, ...purposes]
+      : [null, ...purposes].filter((o) => groupAmount(currency, o?.id ?? null) > 0)
+
   const cycleCurrency = () => {
     if (currencyOptions.length < 2) return
-    setCurrency(
-      currencyOptions[(currencyOptions.indexOf(currency) + 1) % currencyOptions.length],
-    )
+    const next = currencyOptions[(currencyOptions.indexOf(currency) + 1) % currencyOptions.length]
+    setCurrency(next)
+    // El grupo elegido puede no tener plata en la moneda nueva: el tope quedaría
+    // en cero sobre una elección que ya no existe.
+    if (mode === 'release' && !lockedPurpose && groupAmount(next, purposeId) <= 0) {
+      const fallback = [null, ...purposes].find((o) => groupAmount(next, o?.id ?? null) > 0)
+      if (fallback !== undefined) onSetPurpose(fallback?.id ?? null)
+    }
   }
 
   const sums = rowFor(currency)
@@ -904,7 +900,7 @@ const SavingsForm = ({
   // propósito no tiene objetivo, así que guardar no tiene contra qué toparse,
   // pero volver a usar no puede dejar un grupo en negativo aunque el total
   // guardado —visible en la pantalla anterior— lo cubra.
-  const limit = mode === 'save' ? sums.available : purposeAmount
+  const limit = mode === 'save' ? sums.available : groupAmount(currency, purposeId)
   const remainder = limit - value
   const overLimit = value > limit
   // El mismo mensaje que devolvería el servidor, con el mismo número: un botón
@@ -962,7 +958,7 @@ const SavingsForm = ({
         title={
           mode === 'save'
             ? t('savings.save')
-            : purpose != null
+            : purpose != null && lockedPurpose
               ? t('savings.release_from', { purpose: purpose.name })
               : t('savings.release')
         }
@@ -1047,15 +1043,17 @@ const SavingsForm = ({
           propósitos son pocos por naturaleza. El selector aparte queda para
           crear uno nuevo.
 
-          Solo al guardar: al volver a usar el propósito viene heredado del
-          grupo desde el que se entró. */}
-      {mode === 'save' && !lockedPurpose && (
+          Al volver a usar valen los mismos chips con la pregunta dada vuelta:
+          ahí se elige el ORIGEN, y solo entre los grupos que tienen plata. Lo
+          que no se ofrece nunca es cambiarlo cuando viene heredado del grupo
+          desde el que se entró. */}
+      {!lockedPurpose && (
         <View className="mt-3">
           <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
-            {t('savings.purposes.label')}
+            {mode === 'save' ? t('savings.purposes.label') : t('savings.purposes.source_label')}
           </Text>
           <View className="mt-2 flex-row flex-wrap gap-2">
-            {[null, ...purposes].map((option) => {
+            {purposeOptions.map((option) => {
               const id = option?.id ?? null
               return (
                 <Pressable
@@ -1073,14 +1071,18 @@ const SavingsForm = ({
                 </Pressable>
               )
             })}
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('savings.purposes.new')}
-              onPress={onPickPurpose}
-              className="size-11 items-center justify-center rounded-full border border-dashed border-border"
-            >
-              <Text className="text-[16px] font-bold text-positive">+</Text>
-            </Pressable>
+            {/* Crear uno nuevo solo al guardar: recién creado no tiene plata,
+                así que como ORIGEN no serviría. */}
+            {mode === 'save' && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('savings.purposes.new')}
+                onPress={onPickPurpose}
+                className="size-11 items-center justify-center rounded-full border border-dashed border-border"
+              >
+                <Text className="text-[16px] font-bold text-positive">+</Text>
+              </Pressable>
+            )}
           </View>
         </View>
       )}

@@ -2088,6 +2088,7 @@
       "label": "Para qué",
       "none": "Sin destino",
       "choose": "¿Para qué?",
+      "source_label": "De dónde sale",
       "change": "Cambiar",
       "new": "Nuevo propósito",
       "edit": "Editar propósito",

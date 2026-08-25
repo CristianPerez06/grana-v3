@@ -69,7 +69,11 @@ type View =
       mode: Mode
       currency: Currency
       purposeId: string | null
-      /** Se llegó desde un grupo: el propósito se hereda y no se ofrece cambiarlo. */
+      /**
+       * Se llegó desde un grupo: el propósito se hereda y no se ofrece cambiarlo.
+       * Falso cuando se entró por el botón global, donde el origen todavía no se
+       * eligió y se elige con los chips, en esta misma pantalla.
+       */
       locked: boolean
     }
   | {
@@ -85,7 +89,6 @@ type View =
     }
   | { kind: 'purposeForm'; purpose: Purpose | null; name?: string; icon?: string }
   | { kind: 'purposeDelete'; purpose: Purpose }
-  | { kind: 'pickSource' }
   | {
       kind: 'allocate'
       currency: Currency
@@ -405,19 +408,32 @@ export function SavingsDrawer({
   const currencyWithMoney = (purposeId: string | null): Currency =>
     CURRENCIES.find((c) => groupAmount(c, purposeId) > 0) ?? 'ARS'
 
+  /**
+   * El botón global de volver a usar NO pregunta primero de dónde sale.
+   *
+   * Preguntaba: abría una pantalla titulada «¿Para qué?» —la pregunta de
+   * DESTINAR, heredada del otro selector— para elegir el origen de un retiro.
+   * La pantalla decía lo contrario de lo que hacía, y encima cobraba un tap
+   * para decidir algo que el formulario ya sabe mostrar: el origen es un chip
+   * más, al lado del monto, con el tope y el resto actualizándose al tocarlo.
+   */
   const openRelease = () => {
     const withMoney = groupsUnified().filter((g) =>
       g.amounts.some((a) => a.reserved > 0),
     )
-    if (withMoney.length > 1) return push({ kind: 'pickSource' })
-
-    const only = withMoney[0]
+    // Arranca en el resto si tiene plata: es el grupo del que se vuelve a usar
+    // sin deshacer ninguna decisión, y por eso el que casi siempre se busca.
+    const start = withMoney.some((g) => g.purposeId == null)
+      ? null
+      : (withMoney[0]?.purposeId ?? null)
     push({
       kind: 'form',
       mode: 'release',
-      currency: currencyWithMoney(only?.purposeId ?? null),
-      purposeId: only?.purposeId ?? null,
-      locked: true,
+      currency: currencyWithMoney(start),
+      purposeId: start,
+      // Con un solo grupo con plata no hay nada que elegir, y ofrecer un chip
+      // único es pedir una decisión que ya está tomada.
+      locked: withMoney.length <= 1,
     })
   }
 
@@ -431,7 +447,7 @@ export function SavingsDrawer({
             rowFor={rowFor}
             purpose={purposeById(view.purposeId)}
             purposeId={view.purposeId}
-            purposeAmount={groupAmount(view.currency, view.purposeId)}
+            groupAmount={groupAmount}
             lockedPurpose={view.locked}
             purposes={purposes}
             onSetPurpose={(purposeId) =>
@@ -527,45 +543,6 @@ export function SavingsDrawer({
             }}
             onBack={back}
           />
-        )}
-
-        {view.kind === 'pickSource' && (
-          <>
-            <DrawerBackHeader title={t('purposes.choose')} onBack={back} />
-            <ul className="mt-4 flex flex-col gap-2">
-              {groupsUnified()
-                .filter((g) => g.amounts.some((a) => a.reserved > 0))
-                .map((group) => (
-                  <li key={group.purposeId ?? 'none'}>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        push({
-                          kind: 'form',
-                          mode: 'release',
-                          currency: currencyWithMoney(group.purposeId),
-                          purposeId: group.purposeId,
-                          locked: true,
-                        })
-                      }
-                      className="flex min-h-[52px] w-full items-center gap-3 rounded-xl border border-border-soft bg-card px-3 py-2 text-left transition-colors hover:bg-surface-sunken"
-                    >
-                      <span aria-hidden className="text-[18px]">
-                        {group.icon ?? '🫙'}
-                      </span>
-                      <span className="flex-1 text-[14px] font-semibold text-text">
-                        {group.name ?? t('purposes.none')}
-                      </span>
-                      <GroupAmounts amounts={group.amounts} size="sm" />
-                    </button>
-                  </li>
-                ))}
-            </ul>
-            {/* No hay una opción "repartir": elegir de dónde sale es una
-                decisión del usuario, y repartirlo automáticamente sería
-                inventar una imputación — lo mismo que el modelo se niega a
-                hacer con los retiros de una cuenta. */}
-          </>
         )}
 
         {view.kind === 'group' && (
@@ -1168,7 +1145,7 @@ const SavingsForm = ({
   rowFor,
   purpose,
   purposeId,
-  purposeAmount,
+  groupAmount,
   lockedPurpose,
   purposes,
   onSetPurpose,
@@ -1182,8 +1159,16 @@ const SavingsForm = ({
   /** El propósito elegido, ya resuelto. `null` es «Sin destino». */
   purpose: Purpose | null
   purposeId: string | null
-  /** Lo guardado en ese grupo y esa moneda: es el piso cuando se vuelve a usar. */
-  purposeAmount: number
+  /**
+   * Lo guardado en un grupo y una moneda: es el piso cuando se vuelve a usar.
+   *
+   * Llega como FUNCIÓN y no como número porque acá adentro cambian las dos
+   * variables: la moneda con el chip del monto y el propósito con los chips de
+   * origen. Congelado en la moneda con la que se entró, alguien podía pasar a
+   * dólares y quedarse con el tope de los pesos — un formulario que deja
+   * confirmar lo que el trigger va a rechazar.
+   */
+  groupAmount: (currency: Currency, purposeId: string | null) => number
   /** Se llegó desde un grupo: el propósito se hereda y no se ofrece cambiarlo. */
   lockedPurpose: boolean
   /** Los propósitos del usuario, como chips: elegir no debería costar pantalla. */
@@ -1213,10 +1198,23 @@ const SavingsForm = ({
     const row = rowFor(c)
     return c === initialCurrency || row.available !== 0 || row.reserved !== 0
   })
+  /** Los orígenes posibles: al volver a usar, solo los que tienen plata ACÁ. */
+  const purposeOptions: (Purpose | null)[] =
+    mode === 'save'
+      ? [null, ...purposes]
+      : [null, ...purposes].filter((o) => groupAmount(currency, o?.id ?? null) > 0)
+
   const cycleCurrency = () => {
     if (currencyOptions.length < 2) return
     const next = currencyOptions[(currencyOptions.indexOf(currency) + 1) % currencyOptions.length]
     setCurrency(next)
+    // Cambiar de moneda puede dejar seleccionado un grupo que no tiene plata en
+    // la moneda nueva: el tope pasaría a cero sobre una elección que ya no
+    // existe. Se mueve al primero que sí la tenga.
+    if (mode === 'release' && !lockedPurpose && groupAmount(next, purposeId) <= 0) {
+      const fallback = [null, ...purposes].find((o) => groupAmount(next, o?.id ?? null) > 0)
+      if (fallback !== undefined) onSetPurpose(fallback?.id ?? null)
+    }
   }
 
   const row = rowFor(currency)
@@ -1229,7 +1227,7 @@ const SavingsForm = ({
   // propósito no tiene objetivo, así que guardar no tiene contra qué toparse,
   // pero volver a usar no puede dejar un grupo en negativo aunque el total
   // guardado —que está a la vista en la pantalla anterior— lo cubra.
-  const limit = mode === 'save' ? row.available : purposeAmount
+  const limit = mode === 'save' ? row.available : groupAmount(currency, purposeId)
   const remainder = limit - value
   const overLimit = value > limit
   // El mismo mensaje que devolvería el servidor, con el mismo número. Un botón
@@ -1283,7 +1281,7 @@ const SavingsForm = ({
         title={
           mode === 'save'
             ? t('save')
-            : purpose != null
+            : purpose != null && lockedPurpose
               ? t('release_from', { purpose: purpose.name })
               : t('release')
         }
@@ -1382,16 +1380,18 @@ const SavingsForm = ({
           los propósitos son pocos por naturaleza: entran. El selector aparte
           queda para crear uno nuevo.
 
-          Solo al guardar: al volver a usar, el propósito viene heredado del
-          grupo desde el que se entró y elegirlo sería contestar algo que el
-          usuario ya contestó con el dedo. */}
-      {mode === 'save' && !lockedPurpose && (
+          Al volver a usar valen los mismos chips, con la pregunta dada vuelta:
+          ahí no se elige el destino sino el ORIGEN, y solo entre los grupos que
+          tienen plata. Lo que no se ofrece nunca es cambiar el propósito cuando
+          viene heredado del grupo desde el que se entró: eso ya se contestó con
+          el dedo. */}
+      {!lockedPurpose && (
         <div className="mt-3">
           <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
-            {t('purposes.label')}
+            {mode === 'save' ? t('purposes.label') : t('purposes.source_label')}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {[null, ...purposes].map((option) => {
+            {purposeOptions.map((option) => {
               const id = option?.id ?? null
               return (
                 <button
@@ -1410,14 +1410,19 @@ const SavingsForm = ({
                 </button>
               )
             })}
-            <button
-              type="button"
-              onClick={onPickPurpose}
-              aria-label={t('purposes.new')}
-              className="flex size-11 items-center justify-center rounded-full border border-dashed border-border text-emerald-deep transition-colors hover:bg-surface-sunken"
-            >
-              <Plus size={16} strokeWidth={2.5} aria-hidden />
-            </button>
+            {/* Crear uno nuevo solo tiene sentido al guardar. Un propósito
+                recién creado no tiene plata, así que como ORIGEN no serviría
+                para nada. */}
+            {mode === 'save' && (
+              <button
+                type="button"
+                onClick={onPickPurpose}
+                aria-label={t('purposes.new')}
+                className="flex size-11 items-center justify-center rounded-full border border-dashed border-border text-emerald-deep transition-colors hover:bg-surface-sunken"
+              >
+                <Plus size={16} strokeWidth={2.5} aria-hidden />
+              </button>
+            )}
           </div>
         </div>
       )}

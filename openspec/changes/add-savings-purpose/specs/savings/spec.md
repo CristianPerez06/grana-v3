@@ -142,8 +142,9 @@ Al volver a usar plata desde un propósito, el sistema NO SHALL pedir que se eli
 heredarlo del grupo desde el que se abrió la operación.
 
 Cuando la operación se abra desde el total y exista **más de un grupo con saldo**, el sistema SHALL
-pedir primero de cuál sale, mostrando los montos. El sistema NO SHALL repartir el monto entre varios
-propósitos automáticamente.
+ofrecer el origen **dentro del mismo formulario**, junto al monto, y NO SHALL interponer una pantalla
+previa para elegirlo. SHALL ofrecer únicamente los grupos con saldo en la moneda de la operación. El
+sistema NO SHALL repartir el monto entre varios propósitos automáticamente.
 
 #### Scenario: El resto se presenta distinto de un propósito
 
@@ -157,11 +158,19 @@ propósitos automáticamente.
 - **THEN** no se muestra ningún selector de propósito
 - **AND** la fila registrada lleva el propósito "Emergencia"
 
-#### Scenario: Desde el total con varios grupos, se elige
+#### Scenario: Desde el total con varios grupos, se elige sin cambiar de pantalla
 
 - **GIVEN** el usuario tiene saldo en "Emergencia" y en «Sin destino»
 - **WHEN** abre "Volver a usar" desde el total
-- **THEN** primero elige de qué grupo sale, con los montos a la vista
+- **THEN** llega directo al formulario, con el origen como chips arriba del bloque de cuentas
+- **AND** el chip elegido cambia el tope y el resto sin navegar
+
+#### Scenario: El origen solo ofrece grupos con plata en esa moneda
+
+- **GIVEN** "Viaje" tiene $ 45.000 y US$ 10, y "Estudio" tiene $ 5.000 y nada en dólares
+- **WHEN** el usuario está volviendo a usar y pasa el monto a dólares
+- **THEN** "Estudio" deja de ofrecerse como origen
+- **AND** si estaba elegido, la selección pasa a un grupo con saldo en dólares
 
 ---
 

@@ -147,8 +147,8 @@ Al volver a usar plata desde un propósito, **no hay campo de propósito**: se l
 así que Grana ya sabe de dónde sale — igual que el drawer de la fase 1 hereda la moneda.
 
 El único caso en que sí pregunta es abrir *Volver a usar* desde el total teniendo **más de un grupo con
-saldo**. Ahí la primera pantalla es elegir cuál, con los montos a la vista. **No hay una tercera
-opción**: repartirlo automáticamente sería inventar una imputación (D8).
+saldo**. Ahí el origen se elige **en el formulario mismo** (D26). **No hay una tercera opción**:
+repartirlo automáticamente sería inventar una imputación (D8).
 
 ## D10 — La pertenencia del propósito se valida contra la base
 
@@ -535,3 +535,34 @@ pantallas donde el resto puede quedar negativo porque el monto tipeado se pasó 
 Y el negativo se **muestra**, no se recorta a cero: cuando alguien pide $70.000 sobre $50.000, el
 `−$ 20.000,00` dice *cuánto* se pasó. El mensaje de error dice cuál es el techo; el preview dice a
 qué distancia está. Son dos datos distintos y los dos hacen falta.
+
+## D26 — Una pantalla que pregunta lo contrario de lo que hace
+
+El botón global de *Volver a usar*, con varios grupos con plata, abría una pantalla para elegir de
+cuál sale. Esa pantalla estaba titulada **«¿Para qué?»** — reusaba la string del selector de
+DESTINAR. Es la pregunta exactamente opuesta: una pide destino, la otra pide origen. Alguien que
+llegaba ahí veía la lista de sus propósitos bajo la pregunta de asignar, en medio de un retiro.
+
+El arreglo no fue cambiar el título. Si el origen se puede elegir con un chip al lado del monto —como
+ya se elige el destino al guardar y como ya se elige el propósito al destinar— entonces la pantalla
+entera sobraba: cobraba un tap para decidir algo que el formulario muestra mejor, porque ahí el tope
+y el resto se mueven al tocar el chip. Se ve la consecuencia de la elección mientras se elige.
+
+Queda la asimetría de D9: **heredado no se pregunta**. Entrando desde un grupo no hay chips, y el
+título dice el origen (*"Volver a usar de Emergencia"*). Entrando por el botón global hay chips y el
+título es el verbo pelado — un título que cambia bajo el dedo no informa, distrae.
+
+Dos reglas que salieron de ponerlo en la misma pantalla:
+
+1. **Como origen solo se ofrece lo que tiene plata en ESA moneda.** Un chip que lleva el tope a cero
+   no es una opción, es una trampa. Y al cambiar de moneda, si el grupo elegido no tiene saldo en la
+   nueva, la selección se mueve sola a uno que sí.
+2. **El `+` de crear propósito solo aparece al guardar.** Un propósito recién creado no tiene plata:
+   como origen no sirve para nada.
+
+De paso, esto destapó un bug que la pantalla previa escondía: el piso llegaba al formulario como un
+**número**, calculado con la moneda de entrada. Adentro, el chip del monto podía cambiar la moneda y
+el tope se quedaba con el de la anterior — se podía confirmar volver a usar US$ 45.000 de un grupo
+con US$ 10, y el rechazo lo daba el trigger con un error genérico. Ahora llega como **función**
+`(moneda, propósito) => monto`, que es lo único que no puede quedar desfasado de lo que la pantalla
+está mostrando.
