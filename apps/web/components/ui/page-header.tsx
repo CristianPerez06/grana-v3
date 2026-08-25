@@ -1,103 +1,39 @@
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { PageHeaderProps } from '@grana/ui-contracts'
 import { cn } from '@/lib/utils'
 
+/**
+ * Page-level heading. Renders two different treatments depending on width:
+ *
+ * - **`md` and up** — the header lives in the content flow with no surface of
+ *   its own, the way it always has on desktop.
+ * - **Below `md`** — a full-bleed navy band that eats the safe area, mirroring
+ *   the native `PageHeader` (`apps/mobile/components/ui/PageHeader.tsx`). Web
+ *   in a mobile viewport and the native app are meant to read as the same
+ *   product; see `docs/design/web-mobile-chrome/`.
+ *
+ * ⚠️ **Coupled to the shell's content padding.** The navy band is full-bleed,
+ * but this component renders *inside* `<main>`'s padded wrapper
+ * (`mx-auto max-w-5xl px-4 py-5 …` in `app-shell.tsx`). The negative margins
+ * below cancel exactly that padding, so `-mx-4 -mt-5` must stay in sync with
+ * the wrapper's `px-4 py-5`. Change one and the band stops reaching the edges
+ * — nothing fails loudly. `app-shell.tsx` carries the matching note.
+ */
 export const PageHeader = ({
   title,
   description,
-  eyebrow,
-  monthLabel,
-  monthLabelParts,
-  prevMonthHref,
-  nextMonthHref,
   descriptionExtras,
   backLink,
   actions,
   className,
 }: PageHeaderProps) => {
-  const isNarrative = monthLabel != null || monthLabelParts != null
-
-  // ── Narrative variant ────────────────────────────────────────────────────
-  if (isNarrative) {
-    return (
-      <div className={cn('flex flex-col gap-2', className)}>
-        {backLink && (
-          <Link
-            href={backLink.href}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            ← {backLink.label}
-          </Link>
-        )}
-
-        {eyebrow && (
-          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-text-soft">
-            {eyebrow}
-          </span>
-        )}
-
-        <div className="flex items-center gap-4">
-          {prevMonthHref && (
-            <Link
-              href={prevMonthHref}
-              aria-label="Mes anterior"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-border bg-card text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ChevronLeft size={18} />
-            </Link>
-          )}
-
-          <div className="flex flex-col gap-0.5">
-            {/* `title` stays in the DOM as an h1 for a11y, but the display
-                role is carried by the monthLabel — so we render the heading
-                visually hidden and put monthLabel in the editorial slot. */}
-            <h1 className="sr-only">{title}</h1>
-            {monthLabelParts ? (
-              <span className="flex items-baseline gap-2" aria-hidden>
-                <span className="text-[28px] font-bold leading-none tracking-[-0.02em] text-text capitalize">
-                  {monthLabelParts.month}
-                </span>
-                <span className="text-sm font-medium leading-none text-muted-foreground tabular-nums">
-                  {monthLabelParts.year}
-                </span>
-              </span>
-            ) : (
-              <span
-                className="text-[28px] font-bold leading-none tracking-[-0.02em] text-text capitalize"
-                aria-hidden
-              >
-                {monthLabel}
-              </span>
-            )}
-            {(description || descriptionExtras) && (
-              <p className="text-sm text-muted-foreground">
-                {description}
-                {descriptionExtras}
-              </p>
-            )}
-          </div>
-
-          {nextMonthHref && (
-            <Link
-              href={nextMonthHref}
-              aria-label="Mes siguiente"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-border bg-card text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ChevronRight size={18} />
-            </Link>
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  // ── Classic variant (existing behavior) ──────────────────────────────────
   const titleAndDescription = (
     <div className="flex flex-col gap-1">
-      <h1 className="text-2xl font-semibold tracking-tight break-words">{title}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight break-words text-white md:text-foreground">
+        {title}
+      </h1>
       {(description || descriptionExtras) && (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-navy-muted md:text-muted-foreground">
           {description}
           {descriptionExtras}
         </p>
@@ -115,11 +51,13 @@ export const PageHeader = ({
     // below the row.
     <div className="flex flex-col gap-1">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight break-words">{title}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight break-words text-white md:text-foreground">
+          {title}
+        </h1>
         <div className="shrink-0">{actions}</div>
       </div>
       {(description || descriptionExtras) && (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-navy-muted md:text-muted-foreground">
           {description}
           {descriptionExtras}
         </p>
@@ -130,18 +68,33 @@ export const PageHeader = ({
   )
 
   return (
-    <div className={cn('flex flex-col gap-3', className)}>
-      {backLink && (
-        <div className="flex items-center gap-3">
-          <Link
-            href={backLink.href}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            ← {backLink.label}
-          </Link>
-        </div>
+    <div
+      className={cn(
+        // Below `md`: break out of the wrapper padding so the navy reaches the
+        // viewport edges and under the notch. Above it: inert.
+        '-mx-4 -mt-5 bg-navy pt-safe-top md:mx-0 md:mt-0 md:bg-transparent md:pt-0',
+        className,
       )}
-      {titleBlock}
+    >
+      <div className="flex flex-col gap-3 px-4 pt-3 pb-4 md:p-0">
+        {backLink ? (
+          <div className="flex items-center gap-3">
+            <Link
+              href={backLink.href}
+              className="text-sm text-navy-muted transition-colors hover:text-white md:text-muted-foreground md:hover:text-foreground"
+            >
+              ← {backLink.label}
+            </Link>
+          </div>
+        ) : (
+          // The back-link's slot is reserved even when there is no link, so the
+          // band keeps the same height across every route of a section and the
+          // chrome does not jump while navigating. Mirrors the native
+          // `<View className="h-5" />`. Desktop has no band to keep steady.
+          <div className="h-5 md:hidden" aria-hidden />
+        )}
+        {titleBlock}
+      </div>
     </div>
   )
 }

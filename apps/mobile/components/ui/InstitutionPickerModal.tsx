@@ -10,8 +10,12 @@ import {
 import { BottomSheet } from './BottomSheet'
 import { FormSheetKeyboardView } from '../layout/FormSheetKeyboardView'
 
-// Cap the results list so the sheet leaves room for the keyboard when searching.
-const LIST_MAX_HEIGHT = Math.round(Dimensions.get('window').height * 0.45)
+// Fixed slot for the results, sized to leave room for the keyboard when
+// searching. It is a height and not a maxHeight on purpose: with a cap the list
+// shrinks as the query filters rows, and since the sheet is anchored to the
+// bottom, the panel's top edge — and with it the field being typed into — slides
+// down under the user's finger. Fixed, the results filter in place.
+const LIST_HEIGHT = Math.round(Dimensions.get('window').height * 0.45)
 
 type Institution = { id: string; name: string }
 
@@ -82,7 +86,7 @@ export function InstitutionPickerModal({
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
           contentContainerClassName="px-5 pb-2 pt-2"
-          style={{ maxHeight: LIST_MAX_HEIGHT }}
+          style={{ height: LIST_HEIGHT }}
           ListEmptyComponent={
             <Text className="px-1 pt-4 text-sm text-text-muted">
               Sin resultados.

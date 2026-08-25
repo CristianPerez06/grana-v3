@@ -7,8 +7,8 @@ import { getCardPeriods } from '../../../../../lib/cards/queries'
 import { useShowCents } from '../../../../../lib/preferences-context'
 import { useT } from '../../../../../lib/locale-context'
 import { PageHeader } from '../../../../../components/ui/PageHeader'
-import { Spinner } from '../../../../../components/ui/Spinner'
 import { PeriodStatusPill } from '../../../../../components/cards/PeriodStatusPill'
+import { PeriodListSkeleton } from '../../../../../components/cards/PeriodListSkeleton'
 
 // Compact `dd/mm/yy` — statements can span years, so the list carries the year.
 const fmt = (iso: string): string => {
@@ -49,9 +49,7 @@ export default function CardPeriodsScreen() {
       />
       <ScrollView contentContainerClassName="px-6 py-6">
         {query.isPending ? (
-          <View className="items-center py-12">
-            <Spinner size="md" />
-          </View>
+          <PeriodListSkeleton />
         ) : periods.length === 0 ? (
           <Text className="py-8 text-center text-sm text-text-muted">
             {t('cards.list.periods_empty')}

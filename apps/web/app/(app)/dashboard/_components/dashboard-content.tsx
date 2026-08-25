@@ -7,6 +7,7 @@ import { CommittedSkeleton } from './committed-skeleton'
 import { DashboardErrorBoundary } from './dashboard-error-boundary'
 import { SharedStripContainer } from './shared-strip-container'
 import { SpentCardContainer } from './spent-card-container'
+import { SpentCardSkeleton } from './spent-card-skeleton'
 import { SaveSuggestionStrip } from '@/lib/savings/components/save-suggestion-strip'
 
 // Dashboard composition (design handoff `docs/design/dashboard-home/`), four
@@ -49,7 +50,9 @@ export const DashboardContent = async () => {
             dos terminan a la misma altura (`items-stretch` + la tira de ritmo
             anclada al pie). */}
         <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[1.12fr_1fr]">
-          <SpentCardContainer />
+          <Suspense fallback={<SpentCardSkeleton />}>
+            <SpentCardContainer />
+          </Suspense>
 
           <Suspense fallback={<CommittedSkeleton />}>
             <CommittedSectionContainer />

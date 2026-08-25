@@ -96,5 +96,23 @@ export const useBalanceMonth = ({ todayISO, heroInitial, monthInitial }: Args) =
     summary,
   })
 
-  return { hero, summary, isCurrent, selected, displayed, savings, venia }
+  return {
+    hero,
+    summary,
+    isCurrent,
+    selected,
+    /**
+     * True while either read for the selected month has not resolved. The current
+     * month arrives server-rendered as `initialData`, so this only turns on when
+     * navigating to an uncached month — where the card used to fall to `?? 0` and
+     * show zeros that were nobody's balance.
+     */
+    isLoading: heroQuery.isPending || monthQuery.isPending,
+    displayed,
+    savings,
+    // `venia` sale de `deriveBalanceCardView` y ya no se calcula acá: con el
+    // guardado en juego, "Tenías" tiene un término más y esa cuenta vive en un
+    // solo lugar para las dos plataformas.
+    venia,
+  }
 }

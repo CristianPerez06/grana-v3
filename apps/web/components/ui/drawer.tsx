@@ -17,9 +17,19 @@ const DrawerContainerContext = createContext<HTMLElement | null>(null)
 export const useDrawerContainer = () => useContext(DrawerContainerContext)
 
 /**
- * Side panel that slides in over a scrim. Built on Radix Dialog so focus trap,
- * Esc-to-close and focus restoration come for free. Closing on scrim click is
- * Radix's default (overlay click). The panel itself scrolls via its children.
+ * Sliding panel over a scrim, presented two ways:
+ *
+ * - **`md` and up** — a full-height side panel anchored to `side`, `widthPx` wide.
+ * - **Below `md`** — a bottom sheet: full width, anchored to the bottom edge,
+ *   hugging its content up to 90dvh, mirroring native's `BottomSheet`.
+ *
+ * The switch is internal on purpose. `DrawerProps` does not change and no
+ * consumer passes anything new: `side` and `widthPx` are simply inert below
+ * `md`. That is what keeps all seventeen call sites untouched.
+ *
+ * Built on Radix Dialog so focus trap, Esc-to-close and focus restoration come
+ * for free. Closing on scrim click is Radix's default (overlay click). The panel
+ * itself scrolls via its children.
  */
 export function Drawer({
   open,
@@ -44,14 +54,30 @@ export function Drawer({
           ref={setPanel}
           aria-label={ariaLabel}
           aria-describedby={undefined}
-          style={{ width: widthPx }}
+          // A CSS variable rather than `width`, because an inline width would
+          // beat the media query and leave the sheet 528px wide on a phone.
+          style={{ '--drawer-width': `${widthPx}px` } as React.CSSProperties}
           className={cn(
-            'fixed inset-y-0 z-50 flex h-dvh max-w-full flex-col overflow-hidden bg-page shadow-[-24px_0_60px_-20px_rgba(11,26,43,0.30)] outline-none',
-            side === 'right' ? 'right-0 grana-drawer-right' : 'left-0 grana-drawer-left',
+            'fixed z-50 flex max-w-full flex-col overflow-hidden bg-page outline-none',
+            // Below `md`: bottom sheet. `max-h` bounds the panel so the
+            // consumer's `min-h-0 flex-1` body still gets a scroll region once
+            // the content outgrows the screen.
+            'inset-x-0 bottom-0 max-h-[90dvh] rounded-t-[20px] shadow-[0_-24px_60px_-20px_rgba(11,26,43,0.30)]',
+            // `md` and up: the side panel, unchanged.
+            'md:inset-y-0 md:bottom-auto md:h-dvh md:max-h-none md:w-[var(--drawer-width)] md:rounded-none md:shadow-[-24px_0_60px_-20px_rgba(11,26,43,0.30)]',
+            side === 'right'
+              ? 'md:right-0 md:left-auto grana-drawer-right'
+              : 'md:left-0 md:right-auto grana-drawer-left',
             className,
           )}
         >
           <Dialog.Title className="sr-only">{ariaLabel}</Dialog.Title>
+          {/* Grab handle: the affordance that says "this came from the bottom
+              and can be dismissed". Decorative — dragging is not wired up, and
+              the scrim plus Esc already close the sheet. */}
+          <div aria-hidden className="flex shrink-0 justify-center pt-3 pb-1 md:hidden">
+            <span className="h-1 w-10 rounded-full bg-border" />
+          </div>
           <DrawerContainerContext.Provider value={panel}>
             {children}
           </DrawerContainerContext.Provider>

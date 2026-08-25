@@ -8,8 +8,8 @@ import { getCreditCardDetail, getCardNetworks } from '../../../../lib/cards/quer
 import { supabase } from '../../../../lib/supabase'
 import { useT } from '../../../../lib/locale-context'
 import { FormScreen } from '../../../../components/layout/FormScreen'
-import { Spinner } from '../../../../components/ui/Spinner'
 import { EditCardForm } from '../../../../components/cards/EditCardForm'
+import { EditCardFormSkeleton } from '../../../../components/cards/EditCardFormSkeleton'
 
 /**
  * Pushed edit screen for a credit card. Loads the card detail + institutions +
@@ -70,9 +70,7 @@ export default function EditCardScreen() {
           </Text>
         </View>
       ) : !ready ? (
-        <View className="items-center py-12">
-          <Spinner size="md" />
-        </View>
+        <EditCardFormSkeleton />
       ) : (
         <EditCardForm
           cardId={id}

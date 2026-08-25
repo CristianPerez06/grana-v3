@@ -347,11 +347,12 @@ La directiva NO se aplica al `_layout.tsx` raíz para no afectar las rutas fuera
 
 `apps/mobile` SHALL garantizar que, en toda superficie que contenga al menos un campo de texto, el campo enfocado, su mensaje de error asociado y la acción primaria de submit queden visibles por encima del teclado nativo, sin que el usuario tenga que cerrar el teclado ni scrollear a ciegas.
 
-La garantía SHALL cubrir **las tres familias de superficie** que existen hoy en la app, sin excepciones por plataforma:
+La garantía SHALL cubrir **toda superficie con al menos un campo de texto**, sin excepciones por plataforma y sin excepciones por tipo de pantalla. La enumeración que sigue describe las familias que existen hoy y NO SHALL leerse como una lista cerrada: una superficie que no encaje en ninguna igual queda alcanzada por el requirement.
 
 - Pantallas pusheadas con formulario (alta/edición de cuenta, tarjeta, movimiento, recurrencia, categoría, subcategoría, pago de resumen, liquidación, monedas de una cuenta).
 - Pantallas root de tab con formulario inline (p. ej. el alta de hogar en la pestaña Hogar).
 - Superficies de overlay: `Drawer`, `BottomSheet` y cualquier `Modal` que contenga inputs.
+- **Pantallas que no son de formulario y hospedan inputs de forma incidental**: feeds y detalles que muestran un campo dentro de un bloque expandible, un buscador inline o cualquier control de edición embebido. Que la pantalla no sea "un formulario" NO la exime: lo que activa el requirement es la presencia del campo, no la naturaleza de la pantalla.
 
 La garantía SHALL valer por igual en **iOS y en Android**, incluyendo Android en modo edge-to-edge. Una superficie que compense el teclado solo en una plataforma NO satisface este requirement.
 
@@ -359,7 +360,11 @@ Además del desplazamiento, la superficie SHALL **scrollear el campo enfocado a 
 
 La responsabilidad SHALL vivir en el **seam del shell** (un shell de pantalla de formulario y un cuerpo de overlay reutilizables), no en cada pantalla. Una pantalla o un overlay nuevos NO SHALL tener que resolver el teclado por su cuenta ni replicar la lógica de compensación.
 
-Toda superficie scrolleable con inputs SHALL declarar `keyboardShouldPersistTaps="handled"`, de modo que un tap sobre un control del formulario (chip, selector, submit) se procese en el primer toque en vez de consumirse cerrando el teclado.
+Cuando ningún seam aplica — la pantalla compone su propio header, necesita `RefreshControl`, o mantiene un hermano fuera del scroller (un FAB, una barra de acciones) — la pantalla SHALL consumir el **scroller compartido** del app shell (`apps/mobile/components/layout/keyboard-aware-scroll-view`) pasándole el `bottomOffset` compartido, y NO SHALL importar el scroller directamente de `react-native-keyboard-controller`: ese módulo es el que lo registra en NativeWind, y sin ese registro `className` / `contentContainerClassName` se descartan en silencio, sin que TypeScript lo detecte. Esto es una vía alternativa de consumo del seam, no una excepción a él: la pantalla sigue sin escribir lógica de teclado propia. `KeyboardAvoidingView` de `react-native` SHALL seguir prohibido en cualquiera de los dos caminos.
+
+El `bottomOffset` compartido SHALL incluir el alto del `KeyboardToolbar` además del margen de respiro: el scroller posiciona el campo respecto del borde superior del **teclado** y no conoce el toolbar, así que un offset menor deja el campo tapado por él.
+
+Toda superficie scrolleable con inputs SHALL declarar `keyboardShouldPersistTaps="handled"`, de modo que un tap sobre un control del formulario (chip, selector, submit) se procese en el primer toque en vez de consumirse cerrando el teclado. Esto SHALL valer también para las superficies que no son de formulario: en un feed o un detalle, los controles vecinos al campo (confirmar, limpiar la búsqueda, chips de filtro) son los que pagan el tap perdido.
 
 #### Scenario: El campo enfocado a media altura de un formulario largo queda visible
 
@@ -390,6 +395,25 @@ Toda superficie scrolleable con inputs SHALL declarar `keyboardShouldPersistTaps
 - **WHEN** se agrega una pantalla de formulario nueva bajo `apps/mobile/app/(app)/` usando el shell de formulario del app shell
 - **THEN** la pantalla compensa el teclado sin declarar ninguna lógica de teclado propia
 - **AND** NO importa ni monta un `KeyboardAvoidingView` a nivel pantalla
+
+#### Scenario: Un campo dentro de un bloque expandible del feed queda visible
+
+- **WHEN** un usuario expande un reintegro pendiente a media altura del feed de movimientos y enfoca el campo de monto real
+- **THEN** el contenido se reposiciona para que el campo, su texto de error y el botón de confirmar queden por encima del teclado y del `KeyboardToolbar`
+- **AND** con el teclado abierto, el tap sobre confirmar dispara la acción en el primer toque
+
+#### Scenario: El buscador inline de una pantalla de detalle no pierde taps
+
+- **WHEN** un usuario abre el buscador inline de los movimientos de una cuenta, que enfoca su campo automáticamente
+- **THEN** el campo queda visible con el teclado abierto
+- **AND** la acción de limpiar la búsqueda y los chips de filtro responden al primer toque, sin consumirse cerrando el teclado
+
+#### Scenario: Una pantalla que no puede usar un seam consume el scroller compartido
+
+- **WHEN** una pantalla que no es de formulario recibe un input y no puede adoptar el shell de formulario ni el cuerpo de overlay — porque compone su propio header, necesita `RefreshControl` o mantiene un hermano fuera del scroller
+- **THEN** obtiene su contenedor scrolleable del módulo de scroller compartido del app shell, con el `bottomOffset` compartido y `keyboardShouldPersistTaps="handled"`
+- **AND** NO importa el scroller directamente de `react-native-keyboard-controller` ni monta un `KeyboardAvoidingView`
+- **AND** conserva el comportamiento que ya tenía la pantalla, incluido el pull-to-refresh y el padding de su contenedor de contenido
 
 ### Requirement: El root layout provee el contexto de teclado a toda la app
 
@@ -491,4 +515,62 @@ La ausencia de un paquete bajo `apps/mobile/node_modules/` SHALL entenderse como
 
 - **WHEN** Metro bundlea un módulo instalado en el `node_modules` de la raíz del repo
 - **THEN** lo resuelve sin `Unable to resolve module`, porque `metro.config.js` incluye esa ruta en `nodeModulesPaths` y la raíz en `watchFolders`
+
+### Requirement: El tab bar se muestra sólo en los tabs reales, y toda sección del Menú declara su propia salida
+
+La navegación de `apps/mobile` SHALL responder a una regla de dos mitades que se mueven juntas.
+
+**Mitad 1 — visibilidad del tab bar.** El tab bar SHALL renderizarse únicamente en las pantallas de los tres tabs reales (`dashboard`, `transactions`, `home`). Toda sección top-level alcanzable desde el botón de menú del tab bar (el `AppMenu`) SHALL estar registrada en `CHROMELESS_SECTIONS` de `apps/mobile/components/layout/TabBar.tsx`, de modo que la lista sea exactamente "las secciones que se abren desde el botón …". Al momento de este change son `accounts`, `cards` y `settings`. El chromeless alcanza a la sección completa, subrutas incluidas (`/settings/categories/**`, `/accounts/[id]`, `/cards/new`, …): ninguna de ellas es un tab, así que el tab bar sólo podría mostrarse detached, sin slot resaltado.
+
+**Mitad 2 — salida visible.** Toda sección listada en `CHROMELESS_SECTIONS` SHALL declarar un `backLink` al dashboard en su **pantalla raíz**, con `href` fijo `'/(app)/dashboard'` y label `t('nav.dashboard')` (ver capability `page-header` para el estilo canónico y el requisito de primer paint). Sin esta mitad, ocultar el tab bar deja a la pantalla sin ninguna navegación visible: sólo quedan las salidas de sistema (botón físico Atrás en Android, gesto de swipe en iOS), que no son affordances en pantalla.
+
+Agregar una sección al `AppMenu` SHALL implicar las dos mitades a la vez. Cumplir una sola es un defecto: sin la mitad 1 el tab bar aparece detached; sin la mitad 2 la pantalla queda sin salida.
+
+Las rutas hijas de una sección chromeless SHALL seguir declarando su propio back-link al parent inmediato, no al dashboard.
+
+`CHROMELESS_SECTIONS` (secciones enteras alcanzables desde el Menú) y `CHROMELESS_SCREENS` (pantallas pusheadas dentro del stack de un tab, como `['transactions', 'new']` o las subpantallas de Compartido) son dos listas con reglas distintas y SHALL mantenerse separadas. En particular, la entrada `['home', 'settings']` de `CHROMELESS_SCREENS` es la pantalla de **configuración del Hogar** pusheada sobre el tab Hogar, y NO tiene relación con la sección `settings`; agregar `settings` a `CHROMELESS_SECTIONS` no la reemplaza ni la vuelve redundante.
+
+#### Scenario: Cada sección del Menú se abre sin tab bar y con back-link
+
+- **WHEN** un usuario abre el `AppMenu` desde el botón … del tab bar y navega a Cuentas, Tarjetas o Configuración
+- **THEN** la pantalla se renderiza sin tab bar
+- **AND** el header muestra el back-link `← Inicio` (`← Home` en `en`) arriba del título
+- **AND** presionarlo navega al dashboard
+
+#### Scenario: Los tabs reales conservan el tab bar y no muestran back-link
+
+- **WHEN** un usuario está en `dashboard`, `transactions` o `home`
+- **THEN** el tab bar se muestra con el slot correspondiente resaltado
+- **AND** el header de esas pantallas NO declara `backLink`
+
+#### Scenario: Las rutas hijas de una sección chromeless mantienen su propio back-link
+
+- **WHEN** un usuario navega a `/cards/new`, `/cards/[id]`, `/accounts/[id]` o `/settings/categories/**`
+- **THEN** la pantalla sigue sin tab bar
+- **AND** su header muestra el back-link al parent inmediato (no al dashboard)
+- **AND** no se apilan dos headers
+
+#### Scenario: Una sección nueva del Menú cumple las dos mitades
+
+- **WHEN** se agrega al `AppMenu` una entrada que navega a una sección top-level nueva
+- **THEN** el segmento de esa sección SHALL sumarse a `CHROMELESS_SECTIONS`
+- **AND** su pantalla raíz SHALL declarar `backLink={{ href: '/(app)/dashboard', label: t('nav.dashboard') }}`
+
+#### Scenario: La configuración del Hogar sigue siendo una pantalla pusheada del tab Hogar
+
+- **WHEN** un usuario entra a la configuración del Hogar desde el tab Hogar
+- **THEN** la pantalla sigue renderizándose chromeless por la entrada `['home', 'settings']` de `CHROMELESS_SCREENS`
+- **AND** su back-link sigue apuntando al Hogar, no al dashboard
+
+### Requirement: Las secciones chromeless compensan el safe-area inferior en su contenido scrolleable
+
+En una sección chromeless no hay tab bar, y con él desaparece el único elemento que pintaba el safe-area inferior (el tab bar aplica `paddingBottom: Math.max(14, insets.bottom)`). El contenedor scrolleable raíz de cada sección de `CHROMELESS_SECTIONS` SHALL agregar un padding inferior de al menos `insets.bottom` a su `contentContainer`, de modo que la última fila del contenido quede alcanzable y no tapada por el home indicator de iOS ni por la barra de gestos de Android.
+
+Las pantallas de formulario pusheadas ya cumplen esta regla vía el `contentClassName` por defecto de `FormScreen` (`pb-28`) y NO requieren cambios.
+
+#### Scenario: La última fila de una sección chromeless queda por encima del home indicator
+
+- **WHEN** un usuario scrollea hasta el final de Cuentas, Tarjetas o Configuración en un dispositivo con safe-area inferior mayor a cero
+- **THEN** la última fila del contenido se ve completa por encima del home indicator / barra de gestos
+- **AND** el espacio libre bajo esa fila es al menos `insets.bottom`
 

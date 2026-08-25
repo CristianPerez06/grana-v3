@@ -2,8 +2,8 @@ import { useCallback, useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { PageHeader } from '../../../../components/ui/PageHeader'
-import { Spinner } from '../../../../components/ui/Spinner'
 import { CategoryList } from '../../../../components/categories/CategoryList'
+import { CategoryListSkeleton } from '../../../../components/categories/CategoryListSkeleton'
 import { getAllCategories, type CategoryWithSubcategories } from '../../../../lib/categories'
 import { supabase } from '../../../../lib/supabase'
 import { useT } from '../../../../lib/locale-context'
@@ -60,9 +60,7 @@ export default function CategoriesScreen() {
         {error ? (
           <Text className="text-sm text-error">{error}</Text>
         ) : categories === null ? (
-          <View className="items-center py-12">
-            <Spinner size="md" />
-          </View>
+          <CategoryListSkeleton />
         ) : (
           <CategoryList categories={categories} onChanged={fetchCategories} />
         )}

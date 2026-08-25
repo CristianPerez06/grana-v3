@@ -132,9 +132,6 @@
     },
     "hero_loading": "Cargando tu disponible…",
     "hero_error": "No pudimos cargar tu disponible.",
-    "spending": {
-      "loading": "Cargando el desglose…"
-    },
     "accounts": {
       "title": "Dónde está",
       "view_accounts": "Ver cuentas"
@@ -301,6 +298,32 @@
           "title": "Nueva subcategoría",
           "name_placeholder": "Ej: Farmacéuticos",
           "submit": "Guardar subcategoría"
+        }
+      },
+      "route": {
+        "list_loading": "Cargando las categorías…",
+        "subcategories_loading": "Cargando las subcategorías…",
+        "form_loading": "Cargando la categoría…"
+      }
+    },
+    "security": {
+      "label": "Seguridad",
+      "change_password": {
+        "cta": "Cambiar contraseña",
+        "description": "Al cambiarla se cierra la sesión en tus otros dispositivos.",
+        "title": "Cambiar contraseña",
+        "current_label": "Contraseña actual",
+        "new_label": "Nueva contraseña",
+        "confirm_label": "Confirmar contraseña",
+        "submit": "Guardar contraseña",
+        "toggle_show": "Ver contraseña",
+        "toggle_hide": "Ocultar contraseña",
+        "success_title": "Contraseña actualizada",
+        "success_body": "Cerramos la sesión en tus otros dispositivos.",
+        "success_body_revoke_failed": "No pudimos cerrar la sesión en tus otros dispositivos. Volvé a cambiar la contraseña o cerrá sesión manualmente en cada uno.",
+        "back_cta": "Volver a ajustes",
+        "errors": {
+          "current_incorrect": "La contraseña actual es incorrecta."
         }
       }
     }
@@ -562,7 +585,9 @@
       "active_loading": "Cargando tus cuentas…",
       "active_error": "No pudimos cargar tus cuentas.",
       "archived_loading": "Cargando archivadas…",
-      "archived_error": "No pudimos cargar las archivadas."
+      "archived_error": "No pudimos cargar las archivadas.",
+      "detail_loading": "Cargando la cuenta…",
+      "form_loading": "Cargando el formulario…"
     }
   },
   "cards": {
@@ -836,7 +861,12 @@
       "wallet_loading": "Cargando tus tarjetas…",
       "wallet_error": "No pudimos cargar tus tarjetas.",
       "archived_loading": "Cargando archivadas…",
-      "archived_error": "No pudimos cargar las archivadas."
+      "archived_error": "No pudimos cargar las archivadas.",
+      "detail_loading": "Cargando la tarjeta…",
+      "periods_loading": "Cargando los resúmenes…",
+      "period_loading": "Cargando el resumen…",
+      "pay_loading": "Cargando el pago…",
+      "form_loading": "Cargando el formulario…"
     },
     "month_hero": {
       "eyebrow": "A pagar este mes",
@@ -1726,7 +1756,10 @@
     "duplicate_hint": "Ya tenés otra regla activa con la misma cuenta, moneda, tipo y monto. Si son gastos distintos, ignorá el aviso.",
     "duplicate_warning_title": "Ya tenés una regla así",
     "duplicate_warning_body": "«{rule}» tiene la misma cuenta, moneda, tipo y monto. Podés crearla igual si son gastos distintos.",
-    "duplicate_warning_body_untitled": "Ya tenés una regla activa con la misma cuenta, moneda, tipo y monto. Podés crearla igual si son gastos distintos."
+    "duplicate_warning_body_untitled": "Ya tenés una regla activa con la misma cuenta, moneda, tipo y monto. Podés crearla igual si son gastos distintos.",
+    "route": {
+      "form_loading": "Cargando el formulario…"
+    }
   },
   "subcategories": {
     "supermercado": "Supermercado",

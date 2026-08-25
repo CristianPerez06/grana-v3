@@ -1,18 +1,26 @@
 import { ScrollView, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
 import { CardsHeader } from '../../../components/cards/CardsHeader'
 import { CardsMonthHero } from '../../../components/cards/CardsMonthHero'
 import { Wallet } from '../../../components/cards/Wallet'
 import { ArchivedCardsSection } from '../../../components/cards/ArchivedCardsSection'
+import { CardsMonthHeroSkeleton } from '../../../components/cards/CardsMonthHeroSkeleton'
+import { WalletSkeleton } from '../../../components/cards/WalletSkeleton'
 import { SectionFallback } from '../../../components/dashboard/SectionFallback'
 import { getCardNetworks, getCardsMonthSummary, getCreditCards } from '../../../lib/cards/queries'
 import { useT } from '../../../lib/locale-context'
 
 export default function TarjetasScreen() {
+  const insets = useSafeAreaInsets()
+
   return (
     <View className="flex-1 bg-page">
       <CardsHeader />
-      <ScrollView contentContainerClassName="gap-6 px-6 py-6">
+      <ScrollView
+        contentContainerClassName="gap-6 px-6 pt-6"
+        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+      >
         <MonthHeroSection />
         <WalletSection />
         <ArchivedSection />
@@ -28,8 +36,7 @@ const MonthHeroSection = () => {
     queryFn: getCardsMonthSummary,
   })
 
-  if (query.isPending)
-    return <SectionFallback message={t('cards.route.hero_loading')} className="min-h-[14rem]" />
+  if (query.isPending) return <CardsMonthHeroSkeleton />
   if (query.isError)
     return <SectionFallback message={t('cards.route.hero_error')} className="min-h-[14rem]" />
   return <CardsMonthHero summary={query.data} />
@@ -46,8 +53,7 @@ const WalletSection = () => {
     queryFn: getCardNetworks,
   })
 
-  if (query.isPending)
-    return <SectionFallback message={t('cards.route.wallet_loading')} className="min-h-[18rem]" />
+  if (query.isPending) return <WalletSkeleton />
   if (query.isError)
     return <SectionFallback message={t('cards.route.wallet_error')} className="min-h-[18rem]" />
   if (query.data.length === 0) {
@@ -87,6 +93,10 @@ const ArchivedSection = () => {
     queryFn: () => getCreditCards({ archivedOnly: true }),
   })
 
+  // No skeleton on purpose: the strip is conditional — it only exists when the
+  // account has archived cards. A skeleton would promise content that most
+  // accounts never get, and jolt the layout when it resolves into nothing. Same
+  // decision as the dashboard's "Compartido" strip.
   if (query.isPending) return null
   if (query.isError)
     return <SectionFallback message={t('cards.route.archived_error')} className="min-h-[3rem]" />

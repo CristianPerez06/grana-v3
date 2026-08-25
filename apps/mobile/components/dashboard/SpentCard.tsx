@@ -18,7 +18,7 @@ import { getHousehold } from '../../lib/shared/queries'
 import { useDashboardMonth } from './DashboardMonthContext'
 import { useEyeMask } from './EyeMaskContext'
 import { SpentTile } from './SpentTile'
-import { SpendingSkeleton } from './SpendingSkeleton'
+import { SpentCardSkeleton } from './SpentCardSkeleton'
 
 // Native mirror of the web `spent-card.tsx`: the month's OWN spending split by
 // where it stands (`Gastaste = Ya se pagó + Por pagar`), with the shared
@@ -164,7 +164,7 @@ export const SpentCard = () => {
       </View>
 
       {isLoading ? (
-        <SpendingSkeleton />
+        <SpentCardSkeleton />
       ) : ars.gastaste === 0 && usd.gastaste === 0 ? (
         <Text className="py-6 text-center text-[12.5px] font-semibold text-text-soft">
           {t('dashboard.spent.empty')}

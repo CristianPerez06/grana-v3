@@ -25,16 +25,31 @@ export type BreakdownRow = { label: string; amount: number }
  *
  * The tile is a third of a card wide and has to hold up to ten digits plus
  * cents; clipping a money amount is the worst failure this card could have,
- * because a cut "$ 1.020.283,17" reads as another number. A third of a
- * phone-width card is ~90px of usable room — less than half the desktop tile —
- * so the desktop ramp cut the amounts clean off. Everything else in the tile
- * steps down with it, or the amount ends up smaller than its own caption.
+ * because a cut "$ 1.020.283,17" reads as another number — and the cut is
+ * SILENT: the amount is centred and `nowrap`, so an overlong one is trimmed at
+ * both ends and just looks like a tile with more padding.
+ *
+ * The base ramp is calibrated against the real budget, not the desktop one. On a
+ * 390px screen the tile gives ~95px of text room (16px page gutter + 16px card
+ * padding + two 8px gaps + the tile's own `px-1`), and the widest amount the
+ * card admits — "$ 1.234.567.890,00" — needs ~92px at 10px. The step the ladder
+ * picks is decided on CHARACTER count (`amountDensity`), which is only a proxy
+ * for width: a minus sign or an extra separator costs pixels without moving the
+ * count much, so each step keeps a few px of slack for the string that counts
+ * the same as its neighbour but draws wider.
+ *
+ * The `sm:` scale is the desktop tile and is untouched. Known edge of the ramp:
+ * at `tightest` the amount lands at 10px, the size of the caption under it and a
+ * point below the label above it. That step is a ten-digit amount WITH cents, and
+ * the amount still reads as the headline on weight, colour and tracking — but if
+ * it ever stops looking like one, the fix is to step the label and caption down
+ * with it, not to let the amount clip.
  */
 const AMOUNT_SIZE: Record<AmountDensity, string> = {
-  normal: 'text-[14px] sm:text-[19px]',
-  tight: 'text-[13px] sm:text-[17px]',
-  tighter: 'text-[12px] sm:text-[15px]',
-  tightest: 'text-[11px] sm:text-[13px]',
+  normal: 'text-[13px] sm:text-[19px]',
+  tight: 'text-[12px] sm:text-[17px]',
+  tighter: 'text-[11px] sm:text-[15px]',
+  tightest: 'text-[10px] sm:text-[13px]',
 }
 
 type Props = {
@@ -124,7 +139,7 @@ export const SpentTile = ({
 
   const front = (
     <>
-      <div className="flex flex-1 flex-col items-center justify-center px-1.5 py-3.5 text-center sm:px-3">
+      <div className="flex flex-1 flex-col items-center justify-center px-1 py-3.5 text-center sm:px-3">
         <span
           aria-hidden
           className={cn(

@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router'
 import { ChevronLeft, ChevronRight, Repeat, Search, SlidersHorizontal, X } from 'lucide-react-native'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import type { TransactionWithDetails } from '@grana/transactions'
-import { Spinner } from '../ui/Spinner'
 import { useLocale, useT } from '../../lib/locale-context'
 import { useShowCents } from '../../lib/preferences-context'
 import { colors } from '../../lib/colors'
@@ -19,6 +18,7 @@ import {
   type AccountMovementFilters,
 } from '../../lib/accounts/movement-filters'
 import { MovementRow } from './MovementRow'
+import { MovementRowsSkeleton } from './MovementRowsSkeleton'
 import { MovementFiltersSheet, type CategoryOption } from './MovementFiltersSheet'
 
 type Props = {
@@ -243,9 +243,7 @@ export function MovementsSection({ movements, accountId, loading }: Props) {
 
       {/* List */}
       {loading ? (
-        <View className="items-center py-8">
-          <Spinner size="md" />
-        </View>
+        <MovementRowsSkeleton />
       ) : filtered.length === 0 ? (
         <Text className="py-6 text-center text-sm text-text-muted">
           {t('accounts.movements_empty')}

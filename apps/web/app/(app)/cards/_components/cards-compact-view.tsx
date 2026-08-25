@@ -12,17 +12,20 @@ import type { CreditCardSummary } from '@/lib/cards/queries'
 import {
   groupCardsByBank,
   applyFilter,
+  countByFilter,
   sortCardsByDue,
   cardUsePercent,
   cardTone,
   cardAccent,
   cardMonogram,
   formatDayMonth,
-  type ViewFilter,
+  CARD_PREDICATE_FILTERS,
+  type CardPredicateFilter,
   type BankGroup,
   type CardTone,
 } from '@grana/cards'
 import { CardStatusPill } from './card-status-pill'
+import { WalletFilterChips } from './wallet-filter-chips'
 
 type Props = {
   cards: CreditCardSummary[]
@@ -31,9 +34,16 @@ type Props = {
   showCents?: boolean
 }
 
-const FILTERS: ViewFilter[] = ['by-bank', 'all', 'in-use', 'due-soon', 'with-balance']
-const FILTER_KEY: Record<ViewFilter, string> = {
+/** Grouped vs flat. Not a predicate — the predicates are the chip row. */
+type ViewMode = 'by-bank' | 'list'
+const VIEW_MODES: ViewMode[] = ['by-bank', 'list']
+
+/** The five segments the wide control offers: the mode, then every predicate. */
+const WIDE_OPTIONS: (ViewMode | CardPredicateFilter)[] = ['by-bank', ...CARD_PREDICATE_FILTERS]
+
+const FILTER_KEY: Record<ViewMode | CardPredicateFilter, string> = {
   'by-bank': 'by_bank',
+  list: 'list',
   all: 'all',
   'in-use': 'in_use',
   'due-soon': 'due_soon',
@@ -48,28 +58,83 @@ const BADGE_TONE: Record<CardTone, string> = {
 
 export const CardsCompactView = ({ cards, networkNames, showCents = false }: Props) => {
   const t = useTranslations('cards')
-  const [filter, setFilter] = useState<ViewFilter>('by-bank')
+  // Two independent axes, one state. The mode groups or flattens; the filter
+  // narrows the flat list. Keeping the filter across a round trip to "Por banco"
+  // means peeking at the grouped view doesn't cost the user their selection.
+  const [mode, setMode] = useState<ViewMode>('by-bank')
+  const [filter, setFilter] = useState<CardPredicateFilter>('all')
 
   const groups = useMemo(() => groupCardsByBank(cards), [cards])
+  const counts = useMemo(() => countByFilter(cards), [cards])
 
-  const segmentedOptions = FILTERS.map((value) => ({
+  // A refetch can empty the active filter; fall back rather than strand the user
+  // on a list with no rows and no obvious way back. Both control layouts disable
+  // a zero-count predicate, so a fresh `counts` is the only thing that can get
+  // us here. Adjusted during render (React's "adjusting state when props
+  // change") instead of in an effect: this is derived state, not synchronisation
+  // with an external system, and `set-state-in-effect` reserves its escape hatch
+  // for mount-time bridges. The reset is sticky on purpose — a later refetch
+  // that repopulates the predicate must not yank the view back under the user.
+  const [checkedCounts, setCheckedCounts] = useState(counts)
+  if (counts !== checkedCounts) {
+    setCheckedCounts(counts)
+    if (counts[filter] === 0) setFilter('all')
+  }
+
+  const modeOptions = VIEW_MODES.map((value) => ({
     value,
     label: t(`compact.filters.${FILTER_KEY[value]}`),
   }))
+
+  // The wide control is a projection of the same state, not a state of its own:
+  // "Por banco" reflects the grouped mode, any predicate implies the flat one.
+  // That is what makes crossing the breakpoint keep the current selection.
+  const wideOptions = WIDE_OPTIONS.map((value) => ({
+    value,
+    label: t(`compact.filters.${FILTER_KEY[value]}`),
+    disabled: value !== 'by-bank' && counts[value as CardPredicateFilter] === 0,
+  }))
+
+  const selectWide = (next: string) => {
+    if (next === 'by-bank') setMode('by-bank')
+    else {
+      setMode('list')
+      setFilter(next as CardPredicateFilter)
+    }
+  }
 
   const networkLabel = (card: CreditCardSummary): string | null =>
     card.network_id ? (networkNames[card.network_id] ?? card.other_network_name) : card.other_network_name
 
   return (
     <div className="flex flex-col gap-4">
-      <Segmented
-        value={filter}
-        options={segmentedOptions}
-        onValueChange={(next) => setFilter(next as ViewFilter)}
-        ariaLabel={t('compact.filters.by_bank')}
-      />
+      {/* Two control layouts, both mounted, swapped by CSS. A JS media query
+          (`useIsMobile`) returns false until mounted, which would flash the
+          five crushed segments on a phone — the very thing this replaces. The
+          hidden one is `display: none`, so it leaves the a11y tree and the tab
+          order: there is never a second radiogroup exposed. */}
+      <div className="flex flex-col gap-3 md:hidden">
+        <Segmented
+          value={mode}
+          options={modeOptions}
+          onValueChange={(next) => setMode(next as ViewMode)}
+          ariaLabel={t('compact.filters.by_bank')}
+        />
+        {mode === 'list' && (
+          <WalletFilterChips value={filter} counts={counts} onValueChange={setFilter} />
+        )}
+      </div>
 
-      {filter === 'by-bank' ? (
+      <div className="hidden md:block">
+        <Segmented
+          value={mode === 'by-bank' ? 'by-bank' : filter}
+          options={wideOptions}
+          onValueChange={selectWide}
+          ariaLabel={t('compact.filters.by_bank')}
+        />
+      </div>
+
+      {mode === 'by-bank' ? (
         <div className="flex flex-col gap-3">
           {groups.map((group) => (
             <BankGroupCard

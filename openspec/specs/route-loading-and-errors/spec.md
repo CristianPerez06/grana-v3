@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Define los estados de carga y error a nivel de ruta para `apps/web` y `apps/mobile`. Cubre los componentes primitivos compartidos (`Spinner`, `RouteError`) — sus variantes de tamaño, su API común vía `@grana/ui-contracts` y sus reglas de contenido (mensaje genérico, retry, ocultar detalles en producción) — y la regla de presencia por ruta en cada plataforma. Web usa `loading.tsx` y `error.tsx` de Next App Router por layout group; mobile usa los componentes inline contra los estados `isPending`/`error` de los hooks de TanStack Query.
+Define los estados de carga y error a nivel de ruta para `apps/web` y `apps/mobile`. Cubre los componentes primitivos compartidos (`Spinner`, `RouteError`) — sus variantes de tamaño, su API común vía `@grana/ui-contracts` y sus reglas de contenido (mensaje genérico, retry, ocultar detalles en producción) — y la regla de presencia por ruta en cada plataforma. Web usa `loading.tsx` y `error.tsx` de Next App Router por layout group; mobile resuelve inline contra los estados `isPending`/`error` de los hooks de TanStack Query, con un skeleton shell shape-matched como estado de carga y `RouteError` como estado de error. `Spinner` es indicador de acción en curso, no estado de pantalla en nativo.
+
 ## Requirements
 ### Requirement: La app provee un componente Spinner con tres variantes de tamaño
 
@@ -100,7 +101,7 @@ El callback se nombra `onRetry` (no `onPress` ni `onClick`) porque tiene semánt
 El `error.tsx` SHALL ser un Client Component (Next lo exige) que recibe `{ error, reset }` y renderiza `<RouteError error={error} onRetry={reset} />`. El `loading.tsx` SHALL renderizar un componente apropiado al nivel:
 
 - En layout group genérico: un `<RouteLoading />` que envuelve `<Spinner size="lg" />` centrado.
-- A nivel de ruta con in-page chrome: el set de skeletons shape-matched del contenido de la ruta (ej. `HeroSkeleton`, `MonthBalanceSkeleton`, etc. para dashboard).
+- A nivel de ruta con in-page chrome: el set de skeletons shape-matched del contenido de la ruta (ej. `BalanceCardSkeleton`, `SpentCardSkeleton`, `CommittedSkeleton` para dashboard).
 
 La regla operativa: agregar cobertura al **nivel más alto donde aplica el mismo fallback**. Las rutas hijas pueden sobrescribir solo si necesitan un comportamiento distinto. Cuando todas las rutas hijas de un layout group adoptan in-page chrome con su propio `loading.tsx`, el layout group MAY omitir el `loading.tsx` global; el `error.tsx` global SHALL mantenerse para capturar errores de render del propio shell.
 
@@ -126,36 +127,6 @@ La regla operativa: agregar cobertura al **nivel más alto donde aplica el mismo
 - **AND** existe al menos un `error.tsx` accesible desde cualquier ruta bajo `(onboarding-wizard)/`
 - **AND** toda ruta sin in-page chrome tiene un `loading.tsx` accesible (propio o heredado del layout group)
 - **AND** toda ruta con in-page chrome tiene su propio `loading.tsx` shape-matched o usa un mecanismo equivalente in-page
-
----
-
-### Requirement: Toda pantalla autenticada de apps/mobile con fetching cliente entrega loading y error states (mobile)
-
-`apps/mobile` SHALL renderizar un estado de loading y un estado de error consistentes en toda pantalla que dependa de un fetch cliente (típicamente vía `useQuery` de TanStack Query, ver `mobile-app-shell`). El loading SHALL usar `<Spinner size="lg" />`; el error SHALL usar `<RouteError>`.
-
-Patrón canónico para pantallas mobile:
-
-```tsx
-const { data, isPending, error, refetch } = useQuery({ ... })
-
-if (isPending) return <ScreenLoading />  // wrapper que centra <Spinner size="lg" />
-if (error) return <RouteError error={error} onRetry={() => refetch()} />
-return <ScreenContent data={data} />
-```
-
-Esta regla aplica a cualquier pantalla bajo `(app)/` que monte queries cliente. Pantallas placeholder (sin fetching) están exentas hasta su primera implementación real.
-
-#### Scenario: Una pantalla mobile en carga muestra Spinner centrado
-
-- **WHEN** un usuario abre una pantalla mobile cuyas queries cliente aún están en estado `pending`
-- **THEN** la pantalla muestra `<Spinner size="lg" />` centrado vertical y horizontalmente
-- **AND** no muestra el contenido principal vacío ni texto placeholder
-
-#### Scenario: Una pantalla mobile con error muestra RouteError con retry funcional
-
-- **WHEN** una query cliente en una pantalla mobile cae en error
-- **THEN** la pantalla muestra `<RouteError>` con el mensaje genérico y el botón "Reintentar"
-- **AND** presionar "Reintentar" llama a `refetch()` y la pantalla vuelve a entrar en estado de loading mientras la query reintenta
 
 ---
 
@@ -198,7 +169,7 @@ Las tres variantes NO reemplazan al requirement general de cobertura de loading/
 
 **Casos de uso aprobados:**
 
-- `apps/web/app/(app)/dashboard/`: **Variant C**. El chrome (saludo, fecha, navegador mensual, `eye toggle`, botón "Nuevo movimiento" en desktop) vive en `dashboard/layout.tsx` envuelto por `EyeMaskProvider` + `DashboardMonthProvider`. `dashboard/loading.tsx` renderiza los skeletons del contenido (`HeroSkeleton`, `MonthBalanceSkeleton`, `SpendingSkeleton` — la composición post-rediseño `redesign-dashboard-home`) con la misma disposición que `DashboardContent`. `page.tsx` es sync y solo retorna `<DashboardContent />` y el FAB. Las secciones internas mantienen su propio `<Suspense>` shape-matched (regla preexistente del spec `dashboard`).
+- `apps/web/app/(app)/dashboard/`: **Variant C**. El chrome (saludo, fecha, navegador mensual, `eye toggle`, botón "Nuevo movimiento" en desktop) vive en `dashboard/layout.tsx` envuelto por `EyeMaskProvider` + `DashboardMonthProvider`. `dashboard/loading.tsx` renderiza los skeletons del contenido (`BalanceCardSkeleton`, `SpentCardSkeleton`, `CommittedSkeleton` — la composición de `redesign-dashboard-home-v2`) con la misma disposición que `DashboardContent`, uno por bloque y sin reusar el skeleton de un bloque como stand-in de otro. La tira Compartido no aparece en el `loading.tsx`: es condicional y su estado de carga es no ocupar espacio (ver el requirement de skeletons del spec `dashboard`). `page.tsx` es sync y solo retorna `<DashboardContent />` y el FAB. Las secciones internas mantienen su propio `<Suspense>` shape-matched (regla preexistente del spec `dashboard`).
 - `apps/web/app/(app)/transactions/`: **Variant C** para el chrome del header. El header del módulo vive en `transactions/layout.tsx`. `transactions/loading.tsx` renderiza skeletons del cuerpo (filtros + lista). El `page.tsx` es sync y monta el `TransactionsShell` client. Internamente, el shell sigue el patrón de Variant B para sus secciones (cada query tiene su loading/error inline). Si un control del header depende del estado del shell (ej. botón gated por queries del drawer), ese control puede permanecer en el shell y el header del layout limitarse al título + acciones estáticas — la decisión específica se documenta en la implementación.
 - `apps/web/app/(app)/accounts/`: **Variant C**. El `<AccountsHeader />` (Client Component que fetchea `institutions` con supabase browser) vive en `accounts/layout.tsx`. `accounts/loading.tsx` renderiza los skeletons shape-matched de las dos secciones (active accounts + archived accounts). `page.tsx` queda sync (o async solo para `getTranslations()` si las strings de `<SectionFallback>` de los Suspense internos siguen viviendo en page; ver Decision 3 del design.md de `complete-shell-loading-coverage` para opciones). Internamente, el scaffold de Suspense + containers async aislados con `try/catch` + `AccountsErrorBoundary` se mantiene.
 - `apps/web/app/(app)/cards/`: **Variant C**. El `<CardsHeader />` (Client Component que fetchea count + institutions + card_networks) vive en `cards/layout.tsx`. `cards/loading.tsx` renderiza los skeletons shape-matched de las tres secciones (month hero + wallet + archived). `page.tsx` simétrico a accounts. Scaffold de Suspense + containers async aislados + `CardsErrorBoundary` se mantienen.
@@ -551,7 +522,7 @@ Cuando un colaborador agrega una ruta nueva a `apps/web` o una pantalla nueva co
 Aplicación concreta por plataforma:
 
 - **Web** (`apps/web/app/.../page.tsx`): el segmento SHALL tener un `loading.tsx` y un `error.tsx` colocalizados, o estar cubierto por un par a nivel de layout group ancestro. La regla operativa es: si la ruta nueva queda cubierta por el `loading.tsx`/`error.tsx` del layout group superior con un fallback aceptable, no hace falta duplicar; si necesita un fallback distinto, agregar el par específico.
-- **Mobile** (`apps/mobile/app/.../<screen>.tsx`): la pantalla SHALL manejar explícitamente los estados `isPending` y `error` de sus queries, usando `<Spinner size="lg" />` y `<RouteError>` (componentes provistos por la capability `route-loading-and-errors`). Pantallas placeholder (sin queries) están exentas hasta su primera implementación real.
+- **Mobile** (`apps/mobile/app/.../<screen>.tsx`): la pantalla SHALL manejar explícitamente los estados `isPending` y `error` de sus queries, usando un **skeleton shell shape-matched** del contenido de esa pantalla y `<RouteError>` (ver el requirement de loading y error states en mobile). El skeleton se escribe junto al componente cuya forma espeja, no se resuelve con un `<Spinner>`. Pantallas placeholder (sin queries) están exentas hasta su primera implementación real.
 
 Esta regla NO aplica retroactivamente a rutas anteriores al change que introdujo la capability `route-loading-and-errors` — aunque ese change agrega el par a las rutas existentes en un solo commit, lo que importa para esta convención es que **de aquí en adelante** ninguna ruta nueva se mergee sin loading/error.
 
@@ -565,6 +536,102 @@ Esta regla NO aplica retroactivamente a rutas anteriores al change que introdujo
 #### Scenario: Una pantalla mobile nueva con queries entrega loading y error states en el mismo PR
 
 - **WHEN** un colaborador crea una nueva pantalla `apps/mobile/app/(app)/<screen>.tsx` que invoca `useQuery({ ... })`
-- **THEN** el componente maneja `isPending` (renderizando `<Spinner size="lg" />`) y `error` (renderizando `<RouteError>`) antes de renderizar contenido
+- **THEN** el componente maneja `isPending` (renderizando el skeleton shape-matched de ese contenido) y `error` (renderizando `<RouteError>`) antes de renderizar contenido
 - **AND** el PR no se mergea sin esa cobertura
+
+### Requirement: Toda pantalla autenticada de apps/mobile con fetching cliente carga con skeleton shell y entrega error state (mobile)
+
+`apps/mobile` SHALL renderizar un estado de loading y un estado de error consistentes en toda pantalla que dependa de un fetch cliente (típicamente vía `useQuery` de TanStack Query, ver `mobile-app-shell`). El loading SHALL ser un **skeleton shell shape-matched** del contenido de esa pantalla; el error SHALL usar `<RouteError>`.
+
+Un skeleton shell shape-matched es —con la misma definición que ya rige para los bloques del dashboard (ver capability `dashboard`)— una composición de bloques rectangulares con animación pulse que respeta la forma final del contenido: mismos radios, misma altura aproximada, misma cantidad de bloques, de modo que la pantalla no salte al resolverse. Los bloques SHALL componer el primitivo `SkeletonBlock` de `apps/mobile/components/ui/` en vez de reimplementar la animación (`SkeletonBlock` respeta `useReducedMotion()`).
+
+El skeleton SHALL reemplazar **sólo el cuerpo** de la pantalla. El chrome —`PageHeader` o `FormScreen`, su back-link y sus slots de acción— SHALL seguir visible desde el primer paint, con la acción primaria `disabled` mientras la data que necesita no esté lista.
+
+`<Spinner>` NO SHALL usarse como estado de carga de una pantalla nativa. Su uso queda acotado a **indicador de una acción en curso**: `<Button loading>`, un refresh disparado por el usuario, o un control puntual esperando una mutación. El primitivo NO se da de baja y `SpinnerProps` no cambia — web lo sigue usando en el `loading.tsx` del layout group genérico.
+
+Tampoco SHALL usarse como estado de carga un texto placeholder ("Cargando…") ni el estado vacío del contenido, por la misma razón por la que el dashboard lo tiene prohibido: afirman algo que todavía no se sabe.
+
+Patrón canónico para pantallas mobile:
+
+```tsx
+const { data, isPending, error, refetch } = useQuery({ ... })
+
+if (isPending) return <ContentSkeleton />  // shape-matched, compone SkeletonBlock
+if (error) return <RouteError error={error} onRetry={() => refetch()} />
+return <ScreenContent data={data} />
+```
+
+Esta regla aplica a cualquier pantalla bajo `(app)/` que monte queries cliente. Pantallas placeholder (sin fetching) están exentas hasta su primera implementación real.
+
+#### Scenario: Una pantalla mobile en carga muestra un skeleton con la forma de su contenido
+
+- **WHEN** un usuario abre una pantalla mobile cuyas queries cliente aún están en estado `pending`
+- **THEN** la pantalla muestra bloques `SkeletonBlock` dispuestos con la forma del contenido final (misma cantidad de secciones/filas, alturas y radios equivalentes)
+- **AND** NO muestra un `<Spinner>` centrado, un texto "Cargando…" ni el estado vacío del contenido
+- **AND** al resolver la query el contenido ocupa el mismo espacio, sin salto de layout perceptible
+
+#### Scenario: El chrome de la pantalla no se reemplaza durante la carga
+
+- **WHEN** una pantalla mobile con `PageHeader` o `FormScreen` está en estado de carga
+- **THEN** el header, su back-link y sus slots de acción están visibles desde el primer paint
+- **AND** la acción primaria que depende de la data se muestra `disabled` en vez de ocultarse
+
+#### Scenario: Spinner sólo aparece como indicador de acción
+
+- **WHEN** un usuario dispara una mutación desde un botón nativo (guardar, pagar, archivar)
+- **THEN** el `<Spinner>` puede aparecer dentro de ese control (`<Button loading>`) mientras la acción está en vuelo
+- **AND** ninguna pantalla nativa usa `<Spinner>` como su estado de carga de contenido
+
+#### Scenario: Una pantalla mobile con error muestra RouteError con retry funcional
+
+- **WHEN** una query cliente en una pantalla mobile cae en error
+- **THEN** la pantalla muestra `<RouteError>` con el mensaje genérico y el botón "Reintentar"
+- **AND** presionar "Reintentar" llama a `refetch()` y la pantalla vuelve a entrar en estado de loading mientras la query reintenta
+
+### Requirement: Cuentas, Tarjetas y Configuración cargan con skeleton shells en mobile
+
+Las tres secciones alcanzables desde el botón "…" del tab bar SHALL cubrir su estado de carga con skeletons shape-matched, sin `<Spinner>` de pantalla ni cajas de texto "Cargando…". Superficies cubiertas:
+
+- **Cuentas**: la lista (`accounts/index.tsx`), el detalle (`accounts/[id]/index.tsx`) y los tres formularios (`new`, `[id]/edit`, `[id]/currency`).
+- **Tarjetas**: los tres bloques de la raíz (`cards/index.tsx`: hero del mes, billetera y archivadas), el detalle (`cards/[id]/index.tsx`), la lista de resúmenes (`cards/[id]/periods/index.tsx`), el detalle de resumen (`.../[periodId]/index.tsx`), el pago (`.../[periodId]/pay.tsx`) y los formularios de alta y edición.
+- **Configuración**: la lista de categorías, la edición de categoría y la lista de subcategorías bajo `settings/categories/**`.
+
+Cada skeleton SHALL vivir junto al componente cuya forma espeja (`components/accounts/`, `components/cards/`, `components/cards/detail/`, `components/categories/`) y nombrarse `<Componente>Skeleton`, siguiendo la convención de naming espejo que ya usan los skeletons del dashboard y de movimientos.
+
+Cada skeleton SHALL escribirse **con la forma de esa pantalla concreta**. NO SHALL introducirse un shell genérico parametrizado (del tipo `<FormSkeleton rows={n} />`) que sirva a varias pantallas: un select, un input de monto y una fila de chips tienen formas distintas, y un shell genérico las aplana, que es justamente lo que la regla shape-matched evita. Web sigue el mismo criterio: cada `loading.tsx` compone el suyo.
+
+Excepciones, escritas para que no se "completen" por error:
+
+- La **raíz de Configuración** (`settings/index.tsx`) NO SHALL tener skeleton: no monta ninguna query, lee `showCents` y el locale de contexto y renderiza sincrónico.
+- La **tira de archivadas** de la raíz de Tarjetas (y su equivalente en Cuentas) SHALL seguir sin dibujar nada mientras carga: es un bloque condicional —existe sólo si hay elementos archivados— y un skeleton prometería contenido que en la mayoría de las cuentas no aparece. Es la misma decisión que la tira "Compartido" del dashboard.
+
+La regla general (skeleton por defecto, `Spinner` sólo como indicador de acción) rige para toda la app nativa, no sólo para estas tres secciones: al momento de este change la única pantalla fuera de ellas que usaba `<Spinner>` como estado de pantalla es `/transactions/recurring/new`, que también SHALL migrar.
+
+El skeleton NO SHALL mostrar copy visible. Su nodo raíz SHALL declarar `accessibilityState={{ busy: true }}` y un `accessibilityLabel` derivado de la key de esa superficie; los bloques internos NO SHALL declarar atributos de accesibilidad (son decorativos). Es la misma regla de accesibilidad que ya rige para los skeletons del dashboard.
+
+Las keys de carga existentes (`accounts.route.active_loading`, `accounts.route.archived_loading`, `cards.route.hero_loading`, `cards.route.wallet_loading`, `cards.route.archived_loading`) SHALL reusarse como ese label en vez de darse de baja: dejan de pintarse como texto y pasan a anunciarse. Una superficie sin key propia SHALL recibir una key específica en `es.json` y `en.json`; NO SHALL reusarse un mensaje genérico (`common.loading`) para varias superficies distintas.
+
+#### Scenario: La raíz de Tarjetas carga con los tres bloques en skeleton
+
+- **WHEN** un usuario abre `/cards` con las queries del hero y de la billetera en `pending`
+- **THEN** el hero del mes y la billetera muestran skeletons con su forma final (card del hero, filas de tarjeta de la billetera)
+- **AND** ninguno muestra una caja de borde punteado con texto de carga
+- **AND** la tira de archivadas no ocupa espacio hasta que su query resuelve con contenido
+
+#### Scenario: Un formulario que espera catálogo muestra la forma de sus campos
+
+- **WHEN** un usuario abre `/cards/new` y el catálogo de instituciones y redes todavía carga
+- **THEN** el cuerpo muestra el skeleton propio de ese formulario, con un bloque por campo real y el botón de submit
+- **AND** el `FormScreen` (título y back-link) está visible desde el primer paint
+
+#### Scenario: La raíz de Configuración no tiene estado de carga
+
+- **WHEN** un usuario abre `/settings`
+- **THEN** la pantalla renderiza sus secciones directamente, sin skeleton ni spinner intermedios
+
+#### Scenario: Ninguna pantalla de las tres secciones usa Spinner como estado de pantalla
+
+- **WHEN** se inspeccionan las pantallas bajo `app/(app)/accounts/**`, `app/(app)/cards/**` y `app/(app)/settings/**`
+- **THEN** ninguna renderiza `<Spinner>` como estado de carga de contenido
+- **AND** los `<Spinner>` que quedan están dentro de controles que esperan una acción del usuario
 

@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Route shell — web-mobile ↔ nativo</title>
+<link rel="stylesheet" href="../shared.css">
+</head>
+<body>
+<main class="stage">
+  <h1>Anatomía del shell</h1>
+  <p class="lede">
+    Las tres capas de chrome que envuelven el contenido en viewport mobile, hoy y
+    en el destino. El contenido es el mismo en las tres columnas: lo que cambia
+    es lo que lo rodea. Referencias: <code>apps/web/app/(app)/_components/app-shell.tsx</code>
+    y <code>apps/mobile/app/(app)/_layout.tsx</code>.
+  </p>
+
+  <section class="section">
+    <h2>Comparación lado a lado</h2>
+    <p class="note">
+      La ruta de ejemplo es <code>/transactions</code>, elegida porque monta las
+      tres piezas a la vez: header con acción, contenido scrolleable y acción
+      flotante.
+    </p>
+
+    <div class="row">
+
+      <!-- ── HOY: web-mobile ─────────────────────────────────────────── -->
+      <div class="spec">
+        <div class="caption">Web-mobile hoy <span class="tag now">a reemplazar</span></div>
+        <div class="phone">
+          <div class="statusbar on-card">
+            <span>9:41</span>
+            <span class="dots">▮▮▮ ▲ ▰</span>
+          </div>
+          <div class="viewport">
+            <!-- TopBarMobile: app-shell.tsx:309-328 -->
+            <header class="topbar">
+              <button class="burger" aria-label="Abrir menú">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+              </button>
+              <span class="wordmark">grana</span>
+            </header>
+            <div class="scroll">
+              <!-- PageHeader: en el flujo, dentro del padding del <main> -->
+              <div class="inline-header">
+                <h1 class="title">Movimientos</h1>
+                <p class="desc">Ver recurrencias ›</p>
+              </div>
+              <div class="card">
+                <div class="card-label">Gastos de agosto</div>
+                <div class="card-amount">$ 412.900</div>
+              </div>
+              <p class="group-label">Hoy</p>
+              <div class="card" style="padding:4px 16px">
+                <div class="ledger-row"><div class="who"><strong>Supermercado Coto</strong><span>Comida · Santander</span></div><div class="amt neg">−$ 38.400</div></div>
+                <div class="ledger-row"><div class="who"><strong>Sueldo</strong><span>Ingreso · Galicia</span></div><div class="amt pos">+$ 980.000</div></div>
+                <div class="ledger-row"><div class="who"><strong>Netflix</strong><span>Suscripciones · Visa ••42</span></div><div class="amt neg">−$ 9.900</div></div>
+              </div>
+            </div>
+            <!-- Fab: fixed bottom-10, sin tab bar debajo -->
+            <button class="fab collides" aria-label="Registrar movimiento">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+        </div>
+        <p class="note" style="width:390px;margin-top:2px">
+          Topbar blanca con hamburguesa, header como texto en el flujo, sin
+          navegación persistente. La salida es el drawer.
+        </p>
+      </div>
+
+      <!-- ── DESTINO: web-mobile ─────────────────────────────────────── -->
+      <div class="spec">
+        <div class="caption">Web-mobile destino <span class="tag next">este change</span></div>
+        <div class="phone">
+          <div class="statusbar on-navy">
+            <span>9:41</span>
+            <span class="dots">▮▮▮ ▲ ▰</span>
+          </div>
+          <div class="viewport">
+            <!-- PageHeader navy: full-bleed, rompe el padding del <main> -->
+            <header class="pageheader">
+              <div class="backlink-spacer"></div>
+              <div class="headrow">
+                <div>
+                  <h1 class="title">Movimientos</h1>
+                  <p class="desc">Ver recurrencias ›</p>
+                </div>
+                <button class="action">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                  Registrar
+                </button>
+              </div>
+            </header>
+            <div class="scroll">
+              <div class="card">
+                <div class="card-label">Gastos de agosto</div>
+                <div class="card-amount">$ 412.900</div>
+              </div>
+              <p class="group-label">Hoy</p>
+              <div class="card" style="padding:4px 16px">
+                <div class="ledger-row"><div class="who"><strong>Supermercado Coto</strong><span>Comida · Santander</span></div><div class="amt neg">−$ 38.400</div></div>
+                <div class="ledger-row"><div class="who"><strong>Sueldo</strong><span>Ingreso · Galicia</span></div><div class="amt pos">+$ 980.000</div></div>
+                <div class="ledger-row"><div class="who"><strong>Netflix</strong><span>Suscripciones · Visa ••42</span></div><div class="amt neg">−$ 9.900</div></div>
+              </div>
+            </div>
+            <button class="fab clears" aria-label="Registrar movimiento">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+            <nav class="tabbar">
+              <button class="tab"><span class="indicator"></span><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></span><span class="label">Inicio</span></button>
+              <button class="tab active"><span class="indicator"></span><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span><span class="label">Movimientos</span></button>
+              <button class="tab"><span class="indicator"></span><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg></span><span class="label">Hogar</span></button>
+              <div class="tab-menu">
+                <button aria-label="Más opciones">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>
+                </button>
+              </div>
+            </nav>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+        <p class="note" style="width:390px;margin-top:2px">
+          Banda navy que come el notch, tab bar fija con la sección activa
+          marcada, FAB con offset sobre la barra.
+        </p>
+      </div>
+
+      <!-- ── REFERENCIA: nativo ──────────────────────────────────────── -->
+      <div class="spec">
+        <div class="caption">Nativo — referencia <span class="tag ref">ya implementado</span></div>
+        <div class="phone">
+          <div class="statusbar on-navy">
+            <span>9:41</span>
+            <span class="dots">▮▮▮ ▲ ▰</span>
+          </div>
+          <div class="viewport">
+            <header class="pageheader">
+              <div class="backlink-spacer"></div>
+              <div class="headrow">
+                <div>
+                  <h1 class="title">Movimientos</h1>
+                  <p class="desc">Ver recurrencias ›</p>
+                </div>
+              </div>
+            </header>
+            <div class="scroll">
+              <div class="card">
+                <div class="card-label">Gastos de agosto</div>
+                <div class="card-amount">$ 412.900</div>
+              </div>
+              <p class="group-label">Hoy</p>
+              <div class="card" style="padding:4px 16px">
+                <div class="ledger-row"><div class="who"><strong>Supermercado Coto</strong><span>Comida · Santander</span></div><div class="amt neg">−$ 38.400</div></div>
+                <div class="ledger-row"><div class="who"><strong>Sueldo</strong><span>Ingreso · Galicia</span></div><div class="amt pos">+$ 980.000</div></div>
+                <div class="ledger-row"><div class="who"><strong>Netflix</strong><span>Suscripciones · Visa ••42</span></div><div class="amt neg">−$ 9.900</div></div>
+              </div>
+            </div>
+            <button class="fab clears" aria-label="Registrar movimiento">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+            <nav class="tabbar">
+              <button class="tab"><span class="indicator"></span><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></span><span class="label">Inicio</span></button>
+              <button class="tab active"><span class="indicator"></span><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span><span class="label">Movimientos</span></button>
+              <button class="tab"><span class="indicator"></span><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg></span><span class="label">Hogar</span></button>
+              <div class="tab-menu">
+                <button aria-label="Más opciones">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>
+                </button>
+              </div>
+            </nav>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+        <p class="note" style="width:390px;margin-top:2px">
+          La acción primaria vive en el FAB, no en el header. La web puede
+          quedarse con las dos: el header tiene slot de <code>actions</code>.
+        </p>
+      </div>
+
+    </div>
+
+    <div class="callout warn">
+      <strong>El costo real de la fase 1 está en el padding.</strong>
+      El <code>PageHeader</code> web se monta dentro de
+      <code>&lt;main&gt;</code>, adentro del wrapper
+      <code>mx-auto w-full max-w-5xl px-4 py-5 md:px-8 md:py-8</code>
+      (<code>app-shell.tsx:92</code>). Una banda navy full-bleed no vive ahí sin
+      romper ese padding: hace falta <code>-mx-4 -mt-5 md:mx-0 md:mt-0</code> en
+      el propio header. Queda acoplado a los valores del shell — se documenta con
+      un comentario cruzado en los dos archivos.
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Qué pieza reemplaza a cuál</h2>
+    <p class="note">
+      El sidebar de desktop no aparece acá porque no cambia: sigue
+      <code>hidden md:flex</code>. Todo lo de esta tabla vive bajo el
+      breakpoint <code>md</code>.
+    </p>
+
+    <div class="row">
+      <div class="spec">
+        <div class="caption">Se elimina <span class="tag now">hoy</span></div>
+        <div class="phone short">
+          <div class="statusbar on-card"><span>9:41</span><span class="dots">▮▮▮ ▲ ▰</span></div>
+          <div class="viewport">
+            <header class="topbar">
+              <button class="burger" aria-label="Abrir menú">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+              </button>
+              <span class="wordmark">grana</span>
+            </header>
+            <div class="scroll">
+              <div class="inline-header"><h1 class="title">Cuentas</h1></div>
+              <div class="card"><div class="card-label">Santander</div><div class="card-amount">$ 284.100</div></div>
+              <div class="card"><div class="card-label">Galicia</div><div class="card-amount">$ 91.740</div></div>
+            </div>
+          </div>
+        </div>
+        <p class="note" style="width:390px;margin-top:2px">
+          <code>TopBarMobile</code> (<code>app-shell.tsx:309</code>) + header en
+          el flujo. La hamburguesa abre el <code>&lt;dialog&gt;</code> lateral.
+        </p>
+      </div>
+
+      <div class="spec">
+        <div class="caption">Lo reemplaza <span class="tag next">destino</span></div>
+        <div class="phone short">
+          <div class="statusbar on-navy"><span>9:41</span><span class="dots">▮▮▮ ▲ ▰</span></div>
+          <div class="viewport">
+            <header class="pageheader">
+              <a class="backlink" href="#">← Inicio</a>
+              <div class="headrow">
+                <div><h1 class="title">Cuentas</h1></div>
+                <button class="action">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                  Nueva
+                </button>
+              </div>
+            </header>
+            <div class="scroll">
+              <div class="card"><div class="card-label">Santander</div><div class="card-amount">$ 284.100</div></div>
+              <div class="card"><div class="card-label">Galicia</div><div class="card-amount">$ 91.740</div></div>
+            </div>
+          </div>
+        </div>
+        <p class="note" style="width:390px;margin-top:2px">
+          Navy + <code>backLink</code>. <strong>Cuentas es sección chromeless</strong>:
+          cuelga del Menú y no lleva tab bar, así que el back-link es la única
+          salida y pasa a ser obligatorio.
+        </p>
+      </div>
+    </div>
+  </section>
+</main>
+</body>
+</html>

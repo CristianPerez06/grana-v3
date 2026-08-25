@@ -18,6 +18,12 @@ import { Card } from '@/components/ui/card'
 import { SavingsDrawer } from '@/lib/savings/components/savings-drawer'
 import { useShowCents } from '@/lib/preferences-context'
 import { cn } from '@/lib/utils'
+import {
+  HeroAmountSkeleton,
+  HeroUsdSkeleton,
+  PlacementGridSkeleton,
+  SummaryAmountSkeleton,
+} from './balance-card-body-skeleton'
 import { MaskedAmount } from './masked-amount'
 import { MaskedAmountDisplay } from './masked-amount-display'
 import { useBalanceMonth } from './use-balance-month'
@@ -144,6 +150,7 @@ const Flow = ({
   signPrefix,
   align,
   density,
+  loading,
 }: {
   label: string
   dotClassName: string
@@ -162,6 +169,8 @@ const Flow = ({
   align: keyof typeof ALIGN
   /** Type step, decided once for the three (see the card). */
   density: AmountDensity
+  /** While the new month loads: the label stays, the amount goes to skeleton. */
+  loading?: boolean
 }) => (
   // A ROW when narrow — label left, amount right — and a column once the three
   // fit side by side. Three thirds of a phone-width card is ~105px, and the
@@ -178,20 +187,26 @@ const Flow = ({
       {label}
     </span>
     <span className={cn('flex min-w-0 flex-col items-end sm:mt-2.5 sm:w-full', ALIGN[align])}>
-      <span
-        className={cn(
-          'whitespace-nowrap font-extrabold leading-none tracking-[-0.04em]',
-          SUMMARY_SIZE[density],
-          amountClassName,
-        )}
-      >
-        <MaskedAmount amount={ars} currency="ARS" signPrefix={signPrefix} />
-      </span>
-      {/* Bimoneda: the USD line only shows when there is money in dollars. */}
-      {showUsd && (
-        <span className="mt-[5px] text-[12.5px] font-semibold text-text-soft">
-          <MaskedAmount amount={usd} currency="USD" showCentsOverride signPrefix={signPrefix} />
-        </span>
+      {loading ? (
+        <SummaryAmountSkeleton />
+      ) : (
+        <>
+          <span
+            className={cn(
+              'whitespace-nowrap font-extrabold leading-none tracking-[-0.04em]',
+              SUMMARY_SIZE[density],
+              amountClassName,
+            )}
+          >
+            <MaskedAmount amount={ars} currency="ARS" signPrefix={signPrefix} />
+          </span>
+          {/* Bimoneda: the USD line only shows when there is money in dollars. */}
+          {showUsd && (
+            <span className="mt-[5px] text-[12.5px] font-semibold text-text-soft">
+              <MaskedAmount amount={usd} currency="USD" showCentsOverride signPrefix={signPrefix} />
+            </span>
+          )}
+        </>
       )}
     </span>
   </div>
@@ -308,11 +323,12 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
   const format = useFormatter()
   const showCents = useShowCents()
   const [savingsOpen, setSavingsOpen] = useState(false)
-  const { hero, summary, venia, savings, displayed, isCurrent, selected } = useBalanceMonth({
-    todayISO,
-    heroInitial,
-    monthInitial,
-  })
+  const { hero, summary, venia, savings, displayed, isCurrent, selected, isLoading } =
+    useBalanceMonth({
+      todayISO,
+      heroInitial,
+      monthInitial,
+    })
 
   const placement = derivePlacement(hero?.accounts ?? [])
   // One type step for the whole block, so the amounts never shrink at different
@@ -346,6 +362,17 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
           {isCurrent ? t('hero.total_label') : t('hero.balance_as_of', { month: monthLabel })}
         </p>
 
+        {/* Navigating to an uncached month sends the amounts to skeleton, not to
+            `?? 0`: a zero is a claim about the balance, and not the right one.
+            The labels and the link stay — they do not depend on the read, and
+            they are what tell you which month you are looking at. */}
+        {isLoading ? (
+          <>
+            <HeroAmountSkeleton />
+            <HeroUsdSkeleton />
+          </>
+        ) : (
+          <>
         <p className="mt-[11px] text-[clamp(2.125rem,3.4vw,2.625rem)] font-extrabold leading-[0.95] tracking-[-0.05em]">
           {/* The disponible real in the current month; the closing balance in a
               past one. The label above already tells them apart, and the reserve
@@ -362,6 +389,8 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
               <MaskedAmount amount={displayed.USD} currency="USD" showCentsOverride />
             </span>
           </p>
+        )}
+          </>
         )}
 
         {/* "Dónde está" — the labels and the columns below are capped and centered
@@ -399,11 +428,17 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             turns with the layout — vertical between columns, horizontal between
             stacked blocks. */}
         <div className="mx-auto mt-3 grid max-w-[660px] grid-cols-1 gap-3 text-left sm:grid-cols-2 sm:gap-4">
-          <PlacementColumn placement={placement.ARS} currency="ARS" />
-          {hasUsd && (
-            <div className="border-t border-white/10 pt-3 sm:border-l sm:border-t-0 sm:pl-[15px] sm:pt-0">
-              <PlacementColumn placement={placement.USD} currency="USD" />
-            </div>
+          {isLoading ? (
+            <PlacementGridSkeleton />
+          ) : (
+            <>
+              <PlacementColumn placement={placement.ARS} currency="ARS" />
+              {hasUsd && (
+                <div className="border-t border-white/10 pt-3 sm:border-l sm:border-t-0 sm:pl-[15px] sm:pt-0">
+                  <PlacementColumn placement={placement.USD} currency="USD" />
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -423,6 +458,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             showUsd={summaryHasUsd}
             align="start"
             density={summaryDensity}
+            loading={isLoading}
           />
           <Flow
             label={t('month.came_in')}
@@ -434,6 +470,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             signPrefix="+"
             align="center"
             density={summaryDensity}
+            loading={isLoading}
           />
           <Flow
             label={t('month.went_out')}
@@ -445,6 +482,7 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             signPrefix="−"
             align="end"
             density={summaryDensity}
+            loading={isLoading}
           />
         </div>
 
