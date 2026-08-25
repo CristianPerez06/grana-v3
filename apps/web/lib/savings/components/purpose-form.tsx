@@ -110,7 +110,11 @@ export function PurposeForm({
         onClick={submit}
         disabled={pending || name.trim().length === 0}
       >
-        {purpose ? t('purposes.edit') : t('purposes.new')}
+        {/* El CTA dice la ACCIÓN, no repite el título de la pantalla. Un
+            encabezado "Nuevo propósito" con un botón "Nuevo propósito" abajo es
+            la misma palabra dos veces sin agregar nada — el mismo defecto que ya
+            se corrigió en el formulario de guardar. */}
+        {purpose ? t('purposes.update_cta') : t('purposes.create_cta')}
       </Button>
     </div>
   )

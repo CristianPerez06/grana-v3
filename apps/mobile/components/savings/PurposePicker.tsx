@@ -64,6 +64,11 @@ export const PurposePicker = ({
       <Text className="mt-4 text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
         {t('savings.purposes.yours')}
       </Text>
+      {/* Sin propósitos propios y sin «Sin destino» como opción, la lista queda
+          vacía y se lee como un error. Es el estado de todos la primera vez. */}
+      {purposes.length === 0 && !allowNone ? (
+        <Text className="mt-2 text-[13px] text-text-soft">{t('savings.purposes.empty')}</Text>
+      ) : (
       <View className="mt-2 gap-2">
         {purposes.map((purpose) => (
           <PurposeRow
@@ -85,6 +90,7 @@ export const PurposePicker = ({
           />
         )}
       </View>
+      )}
 
       {suggestions.length > 0 && (
         <>

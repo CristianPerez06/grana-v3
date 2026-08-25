@@ -2128,7 +2128,9 @@
       "entry_allocated": "Assigned",
       "entry_unallocated": "Unassigned",
       "empty_allocations": "Nothing assigned here yet.",
-      "empty_cta": "Say what it’s for"
+      "empty_cta": "Say what it’s for",
+      "create_cta": "Create purpose",
+      "update_cta": "Save changes"
     }
   }
 }

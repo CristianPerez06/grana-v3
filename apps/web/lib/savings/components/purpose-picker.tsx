@@ -65,6 +65,19 @@ export function PurposePicker({
     <>
       <DrawerBackHeader title={t('purposes.choose')} onBack={onBack} />
 
+      {/* Sin propósitos propios y sin «Sin destino» como opción, la lista queda
+          vacía: un recuadro con borde y nada adentro, que se lee como un error.
+          Es el estado de todos la primera vez, así que en vez de la lista va la
+          frase — y abajo siguen las sugerencias, que es por donde se empieza. */}
+      {purposes.length === 0 && !allowNone ? (
+        <>
+          <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
+            {t('purposes.yours')}
+          </p>
+          <p className="mt-2 text-[13px] text-text-soft">{t('purposes.empty')}</p>
+        </>
+      ) : (
+        <>
       <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
         {t('purposes.yours')}
       </p>
@@ -89,6 +102,8 @@ export function PurposePicker({
           />
         )}
       </ul>
+        </>
+      )}
 
       {suggestions.length > 0 && (
         <>

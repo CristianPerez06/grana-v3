@@ -105,7 +105,7 @@ export const PurposeForm = ({
 
       <View className="mt-6">
         <Button
-          title={purpose ? t('savings.purposes.edit') : t('savings.purposes.new')}
+          title={purpose ? t('savings.purposes.update_cta') : t('savings.purposes.create_cta')}
           onPress={submit}
           loading={pending}
           disabled={pending || name.trim().length === 0}

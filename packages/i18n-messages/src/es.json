@@ -2128,7 +2128,9 @@
       "entry_allocated": "Destinaste",
       "entry_unallocated": "Quitaste",
       "empty_allocations": "Todavía no destinaste nada acá.",
-      "empty_cta": "Decir para qué es"
+      "empty_cta": "Decir para qué es",
+      "create_cta": "Crear propósito",
+      "update_cta": "Guardar cambios"
     }
   }
 }
