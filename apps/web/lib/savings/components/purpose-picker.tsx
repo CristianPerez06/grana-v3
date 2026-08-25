@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { PURPOSE_SEEDS, type Purpose, type PurposeSums } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -44,11 +45,24 @@ export function PurposePicker({
    */
   allowNone?: boolean
   onPick: (purposeId: string | null) => void
-  /** Sin argumento abre el alta en blanco; con una clave, precargada. */
-  onCreate: (seedKey?: string) => void
+  /** Con una clave, CREA esa sugerencia y sigue. Sin argumento, abre el alta. */
+  onCreate: (seedKey?: string) => void | Promise<void>
   onBack: () => void
 }) {
   const t = useTranslations('savings')
+  const [creating, setCreating] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
+
+  // Un segundo toque mientras el primero está en vuelo crearía el duplicado que
+  // el índice rechaza, y el usuario vería un error por haber tocado dos veces.
+  const create = (seedKey?: string) => {
+    if (pending) return
+    setCreating(seedKey ?? '')
+    startTransition(async () => {
+      await onCreate(seedKey)
+      setCreating(null)
+    })
+  }
 
   const money = (amount: number) =>
     currency === 'USD' ? formatUSD(amount) : formatARS(amount, true)
@@ -115,8 +129,11 @@ export function PurposePicker({
               <button
                 key={seed.key}
                 type="button"
-                onClick={() => onCreate(seed.key)}
-                className="flex min-h-[44px] items-center gap-2 rounded-full border border-border-soft bg-card px-3.5 text-[13.5px] font-semibold text-text transition-colors hover:bg-surface-sunken"
+                onClick={() => create(seed.key)}
+                disabled={pending}
+                className={`flex min-h-[44px] items-center gap-2 rounded-full border border-border-soft bg-card px-3.5 text-[13.5px] font-semibold text-text transition-colors hover:bg-surface-sunken ${
+                  creating === seed.key ? 'opacity-60' : ''
+                } disabled:cursor-default`}
               >
                 <span aria-hidden>{seed.icon}</span>
                 {t(`purposes.seeds.${seed.key}`)}
@@ -128,8 +145,9 @@ export function PurposePicker({
 
       <button
         type="button"
-        onClick={() => onCreate()}
-        className="mt-5 flex min-h-[44px] items-center gap-2 self-start text-[13.5px] font-bold text-emerald-deep"
+        onClick={() => create()}
+        disabled={pending}
+        className="mt-5 flex min-h-[44px] items-center gap-2 self-start text-[13.5px] font-bold text-emerald-deep disabled:opacity-50"
       >
         <Plus size={16} strokeWidth={2.5} />
         {t('purposes.new')}

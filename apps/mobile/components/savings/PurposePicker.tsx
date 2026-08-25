@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { Plus } from 'lucide-react-native'
 import { PURPOSE_SEEDS, type Purpose, type PurposeSums } from '@grana/savings'
@@ -40,11 +41,24 @@ export const PurposePicker = ({
    */
   allowNone?: boolean
   onPick: (purposeId: string | null) => void
-  /** Sin argumento abre el alta en blanco; con una clave, precargada. */
-  onCreate: (seedKey?: string) => void
+  /** Con una clave, CREA esa sugerencia y sigue. Sin argumento, abre el alta. */
+  onCreate: (seedKey?: string) => void | Promise<void>
   onBack: () => void
 }) => {
   const t = useT()
+  const [busy, setBusy] = useState(false)
+
+  // Un segundo toque mientras el primero está en vuelo crearía el duplicado que
+  // el índice rechaza, y el usuario vería un error por haber tocado dos veces.
+  const create = async (seedKey?: string) => {
+    if (busy) return
+    setBusy(true)
+    try {
+      await onCreate(seedKey)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const money = (amount: number) =>
     currency === 'USD' ? formatUSD(amount) : formatARS(amount, true)
@@ -101,9 +115,12 @@ export const PurposePicker = ({
             {suggestions.map((seed) => (
               <Pressable
                 key={seed.key}
-                onPress={() => onCreate(seed.key)}
+                onPress={() => create(seed.key)}
+                disabled={busy}
                 accessibilityRole="button"
-                className="min-h-[44px] flex-row items-center gap-2 rounded-full border border-border bg-card px-3.5"
+                className={`min-h-[44px] flex-row items-center gap-2 rounded-full border border-border bg-card px-3.5 ${
+                  busy ? 'opacity-60' : ''
+                }`}
               >
                 <Text className="text-[15px]">{seed.icon}</Text>
                 <Text className="text-[13.5px] font-semibold text-text">
@@ -116,7 +133,8 @@ export const PurposePicker = ({
       )}
 
       <Pressable
-        onPress={() => onCreate()}
+        onPress={() => create()}
+        disabled={busy}
         accessibilityRole="button"
         className="mt-5 min-h-[44px] flex-row items-center gap-2 self-start"
       >

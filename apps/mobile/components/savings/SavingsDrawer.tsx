@@ -16,7 +16,11 @@ import {
 import { useT, useLocale } from '../../lib/locale-context'
 import { formatShortDate } from '../transactions/detail/format'
 import { useSavingsDetail } from '../../lib/savings/queries'
-import { reserveAvailability, releaseAvailability } from '../../lib/savings/mutations'
+import {
+  reserveAvailability,
+  releaseAvailability,
+  createPurpose,
+} from '../../lib/savings/mutations'
 import { BottomSheet } from '../ui/BottomSheet'
 import { Button } from '../ui/Button'
 import { DateField } from '../ui/DateField'
@@ -191,6 +195,27 @@ export const SavingsDrawer = ({
       return [...prev.slice(0, at), { ...target, purposeId }]
     })
 
+  /**
+   * Tocar una sugerencia CREA el propósito y sigue: el nombre y el ícono ya son
+   * los que el usuario eligió al tocar, así que el formulario intermedio no
+   * decide nada y cobra dos toques por confirmarse a sí mismo. Quien quiera otro
+   * nombre tiene «Nuevo propósito» al lado.
+   */
+  const createFromSeed = async (seedKey: string) => {
+    const seed = PURPOSE_SEEDS.find((x) => x.key === seedKey)
+    const name = t(`savings.purposes.seeds.${seedKey}`)
+    const result = await createPurpose({ name, icon: seed?.icon ?? null })
+
+    if (!result.ok || result.id == null) {
+      push({ kind: 'purposeForm', purpose: null, name, icon: seed?.icon })
+      return
+    }
+
+    // Antes de navegar: la vista siguiente resuelve el propósito desde la lista.
+    await refresh()
+    pickPurpose(result.id)
+  }
+
   const openRelease = (currency: Currency) => {
     const withMoney = groupsOf(currency).filter((g) => g.reserved > 0)
     // Con un solo grupo la pregunta tiene una única respuesta: es puro paso.
@@ -236,12 +261,9 @@ export const SavingsDrawer = ({
             }
             onPick={pickPurpose}
             onCreate={(seedKey) =>
-              push({
-                kind: 'purposeForm',
-                purpose: null,
-                name: seedKey ? t(`savings.purposes.seeds.${seedKey}`) : undefined,
-                icon: seedKey ? PURPOSE_SEEDS.find((s) => s.key === seedKey)?.icon : undefined,
-              })
+              seedKey != null
+                ? createFromSeed(seedKey)
+                : push({ kind: 'purposeForm', purpose: null })
             }
             onBack={back}
           />

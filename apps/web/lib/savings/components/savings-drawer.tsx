@@ -28,7 +28,11 @@ import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover
 import { createClient } from '@/lib/supabase/client'
 import { formatDateISO, getTodayAR } from '@/lib/date'
 import { cn } from '@/lib/utils'
-import { reserveAvailability, releaseAvailability } from '@/app/_actions/savings'
+import {
+  reserveAvailability,
+  releaseAvailability,
+  createPurpose,
+} from '@/app/_actions/savings'
 import { DrawerBackHeader } from './drawer-back-header'
 import { PurposePicker } from './purpose-picker'
 import { PurposeForm } from './purpose-form'
@@ -295,6 +299,32 @@ export function SavingsDrawer({
       return [...prev.slice(0, at), { ...target, purposeId }]
     })
 
+  /**
+   * Tocar una sugerencia CREA el propósito y sigue. No abre el formulario:
+   * el nombre y el ícono ya son los que el usuario eligió al tocar, así que la
+   * pantalla intermedia no decide nada y cobra dos toques por confirmarse a sí
+   * misma. Quien quiera otro nombre tiene «Nuevo propósito» al lado.
+   *
+   * Si el alta falla —por ejemplo, un nombre que ya existe con otra caja— se
+   * cae al formulario con el nombre puesto, que es donde el error se puede leer
+   * y corregir.
+   */
+  const createFromSeed = async (seedKey: string) => {
+    const seed = PURPOSE_SEEDS.find((x) => x.key === seedKey)
+    const name = t(`purposes.seeds.${seedKey}`)
+    const result = await createPurpose({ name, icon: seed?.icon ?? null })
+
+    if (!result.ok || result.id == null) {
+      push({ kind: 'purposeForm', purpose: null, name, icon: seed?.icon })
+      return
+    }
+
+    // Antes de navegar: la vista siguiente resuelve el propósito desde la lista
+    // y con la lista vieja mostraría «Sin destino» en vez del recién creado.
+    await refresh()
+    pickPurpose(result.id)
+  }
+
   const openRelease = (currency: Currency) => {
     const withMoney = groupsOf(currency).filter((g) => g.reserved > 0)
     // Preguntar de cuál sale solo tiene sentido si hay más de uno. Con uno solo,
@@ -339,12 +369,9 @@ export function SavingsDrawer({
             }
             onPick={pickPurpose}
             onCreate={(seedKey) =>
-              push({
-                kind: 'purposeForm',
-                purpose: null,
-                name: seedKey ? t(`purposes.seeds.${seedKey}`) : undefined,
-                icon: seedKey ? PURPOSE_SEEDS.find((s) => s.key === seedKey)?.icon : undefined,
-              })
+              seedKey != null
+                ? createFromSeed(seedKey)
+                : push({ kind: 'purposeForm', purpose: null })
             }
             onBack={back}
           />

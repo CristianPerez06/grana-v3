@@ -80,8 +80,12 @@ propósito de sistema tampoco se podría renombrar, y ahí el costo es la fase e
 de fábrica, no se puede convertir en **Japón** — y el nombre personal *es* el valor de esta fase.
 
 Las sugeridas (**🚑 Emergencia · ✈️ Viaje · 🚗 Auto · 🏠 Casa · 🎓 Estudio**) son copy en i18n. Tocar
-una **crea un propósito propio**, editable y borrable, con el nombre ya escrito y el foco adentro:
-cero tipeo para arrancar, nada intocable al final.
+una **crea el propósito y sigue** — no abre un formulario a confirmar lo que ya está escrito.
+
+Esa pantalla intermedia existió en la primera versión y se sacó: el nombre y el ícono ya son los que
+el usuario eligió **al tocar**, así que no decidía nada y cobraba dos toques por confirmarse a sí
+misma. Quien quiere otro nombre tiene *«Nuevo propósito»* al lado, que es la puerta correcta para
+eso. El propósito creado sigue siendo suyo, renombrable y borrable.
 
 *Emergencia* va primero a propósito. Es la única con contenido financiero real detrás, y ponerla a la
 vista es lo más parecido a un consejo que Grana puede dar sin dar consejos.

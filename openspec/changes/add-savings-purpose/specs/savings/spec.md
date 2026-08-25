@@ -116,16 +116,17 @@ mismo nombre. El sistema SHALL rechazar un nombre vacío.
 ### Requirement: Los propósitos sugeridos no son filas del sistema
 
 El sistema SHALL ofrecer propósitos sugeridos como **copy**, no como filas compartidas. Elegir una
-sugerencia SHALL crear un propósito **propiedad del usuario**, renombrable y borrable, con el nombre
-precargado y editable en el momento.
+sugerencia SHALL crear un propósito **propiedad del usuario**, renombrable y borrable, y SHALL
+continuar con la operación en curso. NO SHALL intercalar un paso de confirmación del nombre: el
+nombre y el ícono ya quedaron elegidos al tocar la sugerencia.
 
 El sistema NO SHALL ofrecer una sugerencia cuyo nombre el usuario ya tiene.
 
 #### Scenario: Una sugerencia elegida es del usuario
 
 - **WHEN** el usuario toca la sugerencia "Viaje"
-- **THEN** se crea un propósito suyo llamado "Viaje", con el nombre editable
-- **AND** puede renombrarlo a "Japón" sin restricciones
+- **THEN** se crea un propósito suyo llamado "Viaje" y la operación continúa
+- **AND** puede renombrarlo a "Japón" después, sin restricciones
 
 #### Scenario: No se sugiere lo que ya existe
 
