@@ -23,6 +23,11 @@ export const EyeMaskToggle = ({ disabled = false }: Props) => {
       disabled={disabled}
       aria-label={label}
       title={label}
+      // The ghost variant is tuned for light surfaces, and below `md` this
+      // button sits on the navy band of `DashboardHeader`, where `text-text-muted`
+      // all but disappears. Native solves it the same way — a plain white icon
+      // (`apps/mobile/components/dashboard/EyeMaskToggle.tsx`).
+      className="text-white hover:bg-navy-soft md:text-text-muted md:hover:bg-border-soft"
     >
       <Icon size={18} />
     </Button>

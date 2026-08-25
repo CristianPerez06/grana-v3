@@ -67,44 +67,57 @@ export const DashboardHeader = ({ todayISO }: Props) => {
   const greeting = firstName ? t('welcome', { name: firstName }) : t('welcome_anon')
 
   return (
-    // ONE ROW at every width. Stacked, the selector took a full-width pill and
-    // ~44px of its own on the viewport where vertical room is scarcest, for a
-    // control that fits beside the title. The month goes to three letters below
-    // `sm` to make that room, and the greeting is the block that wraps — the
-    // controls never shrink.
-    <header className="mb-6 flex flex-row items-start justify-between gap-3 sm:gap-4">
-      <div className="min-w-0 flex-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-text">
-          {greeting}
-        </h1>
-        <p className="mt-1 text-sm text-text-muted">
-          {formatToday(todayISO, localeCode)}
-        </p>
-      </div>
+    // The dashboard is the one section with a header of its own instead of a
+    // `PageHeader`, on both platforms. It still wears the same navy band below
+    // `md` — see `page-header.tsx` for why the negative margins are what they
+    // are, and `apps/mobile/components/dashboard/DashboardHeader.tsx` for the
+    // native original this mirrors.
+    <header className="-mx-4 -mt-5 mb-6 bg-navy pt-safe-top md:mx-0 md:mt-0 md:bg-transparent md:pt-0">
+      <div className="px-4 pt-3 pb-4 md:p-0">
+        {/* Reserves the back-link's slot so the dashboard's band is the same
+            height as every other route's. The dashboard is a tab root and
+            never has one. */}
+        <div className="mb-3 h-5 md:hidden" aria-hidden />
+        {/* ONE ROW at every width. Stacked, the selector took a full-width pill
+            and ~44px of its own on the viewport where vertical room is
+            scarcest, for a control that fits beside the title. The month goes
+            to three letters below `sm` to make that room, and the greeting is
+            the block that wraps — the controls never shrink. */}
+        <div className="flex flex-row items-start justify-between gap-3 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-semibold tracking-tight text-white md:text-text">
+              {greeting}
+            </h1>
+            <p className="mt-1 text-sm text-navy-muted md:text-text-muted">
+              {formatToday(todayISO, localeCode)}
+            </p>
+          </div>
 
-      <div className="flex shrink-0 items-center gap-2">
-        <MonthNavigator
-          responsive
-          year={selected.year}
-          month={selected.month}
-          onPrev={isDisabled ? undefined : goPrev}
-          onNext={isDisabled ? undefined : goNext}
-        />
-        <EyeMaskToggle disabled={isDisabled} />
-        {isDisabled || !drawer ? (
-          <Button className="hidden w-auto sm:inline-flex" disabled>
-            <Plus size={18} strokeWidth={2} />
-            {t('new_movement')}
-          </Button>
-        ) : (
-          <Button
-            className="hidden w-auto sm:inline-flex"
-            onClick={() => drawer.openCreate()}
-          >
-            <Plus size={18} strokeWidth={2} />
-            {t('new_movement')}
-          </Button>
-        )}
+          <div className="flex shrink-0 items-center gap-2">
+            <MonthNavigator
+              responsive
+              year={selected.year}
+              month={selected.month}
+              onPrev={isDisabled ? undefined : goPrev}
+              onNext={isDisabled ? undefined : goNext}
+            />
+            <EyeMaskToggle disabled={isDisabled} />
+            {isDisabled || !drawer ? (
+              <Button className="hidden w-auto sm:inline-flex" disabled>
+                <Plus size={18} strokeWidth={2} />
+                {t('new_movement')}
+              </Button>
+            ) : (
+              <Button
+                className="hidden w-auto sm:inline-flex"
+                onClick={() => drawer.openCreate()}
+              >
+                <Plus size={18} strokeWidth={2} />
+                {t('new_movement')}
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     </header>
   )

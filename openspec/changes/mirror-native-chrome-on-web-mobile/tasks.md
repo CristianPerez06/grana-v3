@@ -2,21 +2,21 @@
 
 ## 1. Fase 0 — Safe areas
 
-- [ ] 1.1 En `apps/web/app/layout.tsx`, agregar `export const viewport: Viewport = { viewportFit: 'cover', themeColor: '#0B1A2B' }` importando `Viewport` de `next`, junto al `export const metadata` que ya vive ahí. El trabajo en vuelo sobre `manifest.ts` (íconos PWA) es otro archivo: no hay conflicto ni orden obligado
-- [ ] 1.2 En `packages/ui-tokens/src/theme.css`, agregar los tokens de safe area (`--safe-top`, `--safe-bottom`) resolviendo a `env(safe-area-inset-top, 0px)` / `env(safe-area-inset-bottom, 0px)`, y mapearlos en el bloque `@theme` para que existan como utilidades
-- [ ] 1.3 Confirmar por lectura que ningún componente web usa `env(safe-area-inset-*)` directo: el acceso es siempre vía token
+- [x] 1.1 En `apps/web/app/layout.tsx`, agregar `export const viewport: Viewport = { viewportFit: 'cover', themeColor: '#0B1A2B' }` importando `Viewport` de `next`, junto al `export const metadata` que ya vive ahí. El trabajo en vuelo sobre `manifest.ts` (íconos PWA) es otro archivo: no hay conflicto ni orden obligado
+- [x] 1.2 En `packages/ui-tokens/src/theme.css`, agregar los tokens de safe area (`--safe-top`, `--safe-bottom`) resolviendo a `env(safe-area-inset-top, 0px)` / `env(safe-area-inset-bottom, 0px)`, y mapearlos en el bloque `@theme` para que existan como utilidades
+- [x] 1.3 Confirmar por lectura que ningún componente web usa `env(safe-area-inset-*)` directo: el acceso es siempre vía token
 
 ## 2. Fase 1 — Header navy
 
-- [ ] 2.1 En `apps/web/components/ui/page-header.tsx`, borrar la rama narrativa completa (`:21-93`) y el `isNarrative`; queda solo la variante clásica
-- [ ] 2.2 En `packages/ui-contracts/src/index.ts`, sacar `eyebrow`, `monthLabel`, `monthLabelParts`, `prevMonthHref`, `nextMonthHref` y `descriptionExtras` de `PageHeaderProps` **solo si ningún consumidor las pasa** — verificar `descriptionExtras` aparte: `transactions-header.tsx:47` la usa, así que esa se queda
-- [ ] 2.3 En `page-header.tsx`, aplicar el tratamiento navy bajo `md`: `bg-navy` full-bleed con `-mx-4 -mt-5 md:mx-0 md:mt-0`, `pt-[--safe-top]`, título en blanco, `description` y back-link en `text-navy-muted`. En `md+` el render no cambia
-- [ ] 2.4 En `page-header.tsx`, reservar el espacio del back-link cuando no existe: un spacer de 20px bajo `md`, espejo de `<View className="h-5" />` del nativo. El header no cambia de alto entre rutas
-- [ ] 2.5 Agregar comentarios cruzados en `page-header.tsx` y `app-shell.tsx:92` documentando el acoplamiento de los negative margins con el padding del wrapper (decisión 1 del design)
-- [ ] 2.6 En `apps/web/app/(app)/dashboard/_components/dashboard-header.tsx`, pasar a navy bajo `md` calcando el layout de `apps/mobile/components/dashboard/DashboardHeader.tsx:43-64`: saludo como título con la fecha debajo en `navy-muted`, y `MonthNavigator` + `EyeMaskToggle` compartiendo la fila a la derecha
-- [ ] 2.7 **`TopBarMobile` no se toca en esta fase.** Es el único acceso a la navegación mientras el drawer siga siendo el menú: sacarla acá deja la app sin salida hasta que aterrice la fase 2. El estado intermedio —topbar blanca sobre header navy— es redundante pero funcional y coherente. Se va en 3.6, junto con el drawer que la justifica
-- [ ] 2.8 Actualizar `apps/web/components/ui/page-header.stories.tsx`: se van las historias de la variante narrativa, se suman las del tratamiento navy
-- [ ] 2.9 `pnpm typecheck` y `pnpm lint` sin errores
+- [x] 2.1 En `apps/web/components/ui/page-header.tsx`, borrar la rama narrativa completa (`:21-93`) y el `isNarrative`; queda solo la variante clásica
+- [x] 2.2 En `packages/ui-contracts/src/index.ts`, sacar `eyebrow`, `monthLabel`, `monthLabelParts`, `prevMonthHref`, `nextMonthHref` y `descriptionExtras` de `PageHeaderProps` **solo si ningún consumidor las pasa** — verificar `descriptionExtras` aparte: `transactions-header.tsx:47` la usa, así que esa se queda
+- [x] 2.3 En `page-header.tsx`, aplicar el tratamiento navy bajo `md`: `bg-navy` full-bleed con `-mx-4 -mt-5 md:mx-0 md:mt-0`, `pt-[--safe-top]`, título en blanco, `description` y back-link en `text-navy-muted`. En `md+` el render no cambia
+- [x] 2.4 En `page-header.tsx`, reservar el espacio del back-link cuando no existe: un spacer de 20px bajo `md`, espejo de `<View className="h-5" />` del nativo. El header no cambia de alto entre rutas
+- [x] 2.5 Agregar comentarios cruzados en `page-header.tsx` y `app-shell.tsx:92` documentando el acoplamiento de los negative margins con el padding del wrapper (decisión 1 del design)
+- [x] 2.6 En `apps/web/app/(app)/dashboard/_components/dashboard-header.tsx`, pasar a navy bajo `md` calcando el layout de `apps/mobile/components/dashboard/DashboardHeader.tsx:43-64`: saludo como título con la fecha debajo en `navy-muted`, y `MonthNavigator` + `EyeMaskToggle` compartiendo la fila a la derecha
+- [x] 2.7 **`TopBarMobile` no se toca en esta fase.** Es el único acceso a la navegación mientras el drawer siga siendo el menú: sacarla acá deja la app sin salida hasta que aterrice la fase 2. El estado intermedio —topbar blanca sobre header navy— es redundante pero funcional y coherente. Se va en 3.6, junto con el drawer que la justifica
+- [x] 2.8 Actualizar `apps/web/components/ui/page-header.stories.tsx`. **Salió distinto de lo previsto:** no había ninguna historia de la variante narrativa que borrar, y las del tratamiento navy no se pueden agregar — el navy depende de una media query, y Storybook no tiene el addon de viewport instalado (`main.ts` solo carga `@storybook/addon-themes`), así que el decorator `w-[640px]` acota el contenedor pero no el viewport. Se documentó la limitación en el `meta` y se apuntó a `docs/design/web-mobile-chrome/components/header.html`, que sí mockea todas las variantes. **Agregar el addon quedó pendiente de decisión** — ver #64
+- [x] 2.9 `pnpm typecheck` y `pnpm lint` sin errores
 
 ## 3. Fase 2 — Tab bar
 

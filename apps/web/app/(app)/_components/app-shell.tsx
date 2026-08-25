@@ -89,6 +89,10 @@ export const AppShell = ({
           content (e.g. an expanded card group) unreachable with no scrollbar. */}
       <main className="min-h-0 flex-1 overflow-y-auto">
         <MovementDrawerLoader>
+          {/* ⚠️ `px-4 py-5` is mirrored by `PageHeader`'s `-mx-4 -mt-5`, which
+              is how the navy band goes full-bleed below `md` from inside this
+              padded wrapper. The two have to move together: change these values
+              and the band stops reaching the viewport edges, silently. */}
           <div className="mx-auto w-full max-w-5xl px-4 py-5 md:px-8 md:py-8">{children}</div>
         </MovementDrawerLoader>
       </main>
