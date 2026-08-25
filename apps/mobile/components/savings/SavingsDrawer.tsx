@@ -6,7 +6,8 @@ import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import { formatForDisplay, parseMoneyInput } from '@grana/validation'
 import type { AvailableSums, ReserveEntry } from '@grana/savings'
-import { useT } from '../../lib/locale-context'
+import { useT, useLocale } from '../../lib/locale-context'
+import { formatShortDate } from '../transactions/detail/format'
 import { useSavingsDetail } from '../../lib/savings/queries'
 import { reserveAvailability, releaseAvailability } from '../../lib/savings/mutations'
 import { BottomSheet } from '../ui/BottomSheet'
@@ -79,8 +80,12 @@ export const SavingsDrawer = ({
     return c === 'ARS' || row.reserved !== 0 || row.available !== 0
   })
 
+  // Al terminar, el sheet SE CIERRA. La confirmación es que el número del que
+  // venías cambió; quedarse en el detalle deja al usuario preguntándose si pasó
+  // algo, que es el peor final para una acción sobre plata.
   const onDone = async () => {
     setForm(null)
+    onClose()
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['savings'] }),
       queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
@@ -142,6 +147,7 @@ const CurrencyBlock = ({
   onRelease: () => void
 }) => {
   const t = useT()
+  const locale = useLocale()
   const monthPrefix = formatDateISO(getTodayAR()).slice(0, 7)
   const monthNet = entries
     .filter((e) => e.date.startsWith(monthPrefix))
@@ -177,7 +183,10 @@ const CurrencyBlock = ({
             >
               <Text className="text-[14px] font-semibold text-text">
                 {entry.amount >= 0 ? t('savings.entry_saved') : t('savings.entry_released')}
-                <Text className="text-[12px] font-medium text-text-soft"> {entry.date}</Text>
+                <Text className="text-[12px] font-medium text-text-soft">
+                  {' '}
+                  {formatShortDate(entry.date, locale)}
+                </Text>
               </Text>
               <Text
                 className={`text-[14px] font-extrabold ${

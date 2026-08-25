@@ -28,6 +28,15 @@ type Mode = 'save' | 'release'
 const money = (amount: number, currency: Currency) =>
   currency === 'USD' ? formatUSD(amount) : formatARS(amount, true)
 
+/** "25 de ago" — el historial mostraba el ISO crudo, que nadie lee como fecha. */
+const shortDate = (iso: string): string => {
+  const [y, m, d] = iso.split('-').map(Number)
+  if (!y || !m || !d) return iso
+  return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short' }).format(
+    new Date(y, m - 1, d),
+  )
+}
+
 /**
  * "Guardado" — the single surface for the act and for auditing it. Mirrored on
  * native as `SavingsDrawer` (a `BottomSheet` there, a `Drawer` here).
@@ -116,10 +125,13 @@ export function SavingsDrawer({
       available: 0,
     }
 
+  // Al terminar la operación el drawer SE CIERRA, como el resto de los drawers
+  // del repo. La confirmación es que el número del que venías cambió: quedarse
+  // en el detalle deja al usuario preguntándose si pasó algo, y ese es el peor
+  // final posible para una acción sobre plata.
   const onDone = async () => {
     setForm(null)
-    // Both trees change with every save: this drawer's stock and history, and
-    // the dashboard's disponible and month flow.
+    onClose()
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['savings'] }),
       queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
@@ -214,7 +226,9 @@ const CurrencyBlock = ({
             <li key={entry.id} className="flex items-center justify-between gap-3 py-2.5">
               <span className="text-[14px] font-semibold text-text">
                 {entry.amount >= 0 ? t('entry_saved') : t('entry_released')}
-                <span className="ml-2 text-[12px] font-medium text-text-soft">{entry.date}</span>
+                <span className="ml-2 text-[12px] font-medium text-text-soft">
+                  {shortDate(entry.date)}
+                </span>
               </span>
               <span
                 className={cn(
