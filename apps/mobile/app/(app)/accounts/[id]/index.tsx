@@ -1,5 +1,9 @@
 import { useCallback } from 'react'
-import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native'
+import { Pressable, RefreshControl, Text, View } from 'react-native'
+import {
+  KEYBOARD_BOTTOM_OFFSET,
+  KeyboardAwareScrollView,
+} from '../../../../components/layout/keyboard-aware-scroll-view'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Pencil, Plus } from 'lucide-react-native'
 import { PageHeader } from '../../../../components/ui/PageHeader'
@@ -69,7 +73,9 @@ export default function AccountDetailScreen() {
         }
       />
 
-      <ScrollView
+      <KeyboardAwareScrollView
+        bottomOffset={KEYBOARD_BOTTOM_OFFSET}
+        keyboardShouldPersistTaps="handled"
         contentContainerClassName="gap-5 px-6 py-6"
         refreshControl={
           <RefreshControl
@@ -111,7 +117,7 @@ export default function AccountDetailScreen() {
             />
           </>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   )
 }

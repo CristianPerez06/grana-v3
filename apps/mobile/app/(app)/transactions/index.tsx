@@ -1,5 +1,9 @@
 import { useState } from 'react'
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
+import {
+  KEYBOARD_BOTTOM_OFFSET,
+  KeyboardAwareScrollView,
+} from '../../../components/layout/keyboard-aware-scroll-view'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { Repeat } from 'lucide-react-native'
@@ -124,7 +128,11 @@ export default function MovimientosScreen() {
           </Pressable>
         }
       />
-      <ScrollView contentContainerClassName="gap-4 px-6 py-6 pb-28">
+      <KeyboardAwareScrollView
+        bottomOffset={KEYBOARD_BOTTOM_OFFSET}
+        keyboardShouldPersistTaps="handled"
+        contentContainerClassName="gap-4 px-6 py-6 pb-28"
+      >
         <MonthNavigator
           year={year}
           month={monthNum}
@@ -167,7 +175,7 @@ export default function MovimientosScreen() {
             )}
           </>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
       <QuickAddFab />
     </View>
   )
