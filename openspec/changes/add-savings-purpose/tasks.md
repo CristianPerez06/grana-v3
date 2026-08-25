@@ -39,6 +39,7 @@
 - [x] 5.3 Tocar un grupo abre sus acciones **heredando el propósito**: sin selector
 - [x] 5.4 Abrir *Volver a usar* desde el total con más de un grupo con saldo pide primero de cuál sale, con los montos a la vista
 - [x] 5.5 El historial de cada grupo, acotado igual que el de la fase 1
+- [x] 5.6 **Asignar ⇄ desasignar (D11)**: tocar un movimiento del historial abre *¿Para qué fue?* y permite ponerle, cambiarle o sacarle el propósito. Entrada en las dos listas de historial. No cambia ningún número
 
 ## 6. Editar y borrar (D4, D5)
 

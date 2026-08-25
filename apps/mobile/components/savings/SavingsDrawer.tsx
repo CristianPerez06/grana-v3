@@ -28,6 +28,7 @@ import { PurposePicker } from './PurposePicker'
 import { PurposeForm } from './PurposeForm'
 import { PurposeDelete } from './PurposeDelete'
 import { PurposeGroup } from './PurposeGroup'
+import { PurposeAssign } from './PurposeAssign'
 import { colors } from '../../lib/colors'
 
 type Currency = 'ARS' | 'USD'
@@ -49,6 +50,7 @@ type SheetView =
   | { kind: 'purposeForm'; purpose: Purpose | null; name?: string; icon?: string }
   | { kind: 'purposeDelete'; purpose: Purpose }
   | { kind: 'pickSource'; currency: Currency }
+  | { kind: 'assign'; currency: Currency; entry: ReserveEntry }
 
 const money = (amount: number, currency: Currency) =>
   currency === 'USD' ? formatUSD(amount) : formatARS(amount, true)
@@ -230,8 +232,10 @@ export const SavingsDrawer = ({
             initialIcon={view.icon}
             onDone={async (purposeId) => {
               await refresh()
-              // Recién creado desde el selector: se elige solo.
-              if (view.purpose == null) pickPurpose(purposeId)
+              // Recién creado desde el selector: se elige solo. Desde "¿Para qué
+              // fue?" no hay formulario abajo al que volver, así que solo cierra.
+              if (view.purpose != null) back()
+              else if (stack.some((v) => v.kind === 'form')) pickPurpose(purposeId)
               else back()
             }}
             onBack={back}
@@ -247,6 +251,27 @@ export const SavingsDrawer = ({
               // Al detalle, no al grupo: el grupo ya no existe.
               setStack([{ kind: 'detail' }])
             }}
+            onBack={back}
+          />
+        )}
+
+        {view.kind === 'assign' && (
+          <PurposeAssign
+            entry={view.entry}
+            currency={view.currency}
+            purposes={purposes}
+            onDone={async () => {
+              await refresh()
+              back()
+            }}
+            onCreate={(seedKey) =>
+              push({
+                kind: 'purposeForm',
+                purpose: null,
+                name: seedKey ? t(`savings.purposes.seeds.${seedKey}`) : undefined,
+                icon: seedKey ? PURPOSE_SEEDS.find((s) => s.key === seedKey)?.icon : undefined,
+              })
+            }
             onBack={back}
           />
         )}
@@ -292,6 +317,7 @@ export const SavingsDrawer = ({
             purposeId={view.purposeId}
             purpose={purposeById(view.purposeId)}
             reserved={groupAmount(view.currency, view.purposeId)}
+            onAssign={(entry) => push({ kind: 'assign', currency: view.currency, entry })}
             onSave={() =>
               push({
                 kind: 'form',
@@ -329,6 +355,7 @@ export const SavingsDrawer = ({
                   monthNet={monthNet(currency)}
                   groups={groupsOf(currency)}
                   onOpenGroup={(purposeId) => push({ kind: 'group', currency, purposeId })}
+                  onAssign={(entry) => push({ kind: 'assign', currency, entry })}
                   onSave={() =>
                     push({ kind: 'form', mode: 'save', currency, purposeId: null, locked: false })
                   }
@@ -356,6 +383,7 @@ const CurrencyBlock = ({
   monthNet,
   groups,
   onOpenGroup,
+  onAssign,
   onSave,
   onRelease,
 }: {
@@ -367,6 +395,7 @@ const CurrencyBlock = ({
   /** El corte por propósito de esta moneda, «Sin destino» al final. */
   groups: PurposeSums[]
   onOpenGroup: (purposeId: string | null) => void
+  onAssign: (entry: ReserveEntry) => void
   onSave: () => void
   onRelease: () => void
 }) => {
@@ -464,9 +493,13 @@ const CurrencyBlock = ({
       ) : (
         <View className="mt-1.5">
           {history.entries.map((entry) => (
-            <View
+            /* Tocable: es la puerta a "¿para qué fue?". Sin ella la fase 2 solo
+               serviría de acá en adelante. */
+            <Pressable
               key={entry.id}
-              className="flex-row items-center justify-between border-t border-border-soft py-2.5"
+              accessibilityRole="button"
+              onPress={() => onAssign(entry)}
+              className="min-h-[44px] flex-row items-center justify-between gap-2 border-t border-border-soft py-2.5"
             >
               <Text className="text-[14px] font-semibold text-text">
                 {entry.amount >= 0 ? t('savings.entry_saved') : t('savings.entry_released')}
@@ -483,7 +516,8 @@ const CurrencyBlock = ({
                 {entry.amount >= 0 ? '+' : '−'}
                 {money(Math.abs(entry.amount), currency)}
               </Text>
-            </View>
+              <ChevronRight size={15} color={colors.textSoft} />
+            </Pressable>
           ))}
         </View>
       )}
@@ -492,6 +526,11 @@ const CurrencyBlock = ({
       {history.hasMore && (
         <Text className="mt-2 text-[12px] text-text-soft">
           {t('savings.history_truncated', { count: String(RESERVE_HISTORY_LIMIT) })}
+        </Text>
+      )}
+      {history.entries.length > 0 && (
+        <Text className="mt-1.5 text-[12px] text-text-soft">
+          {t('savings.purposes.assign_hint')}
         </Text>
       )}
 

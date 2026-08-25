@@ -9,7 +9,13 @@ export {
   getLatestIncome,
 } from './queries'
 export { reserveAvailability, releaseAvailability } from './mutations'
-export { listPurposes, createPurpose, renamePurpose, deletePurpose } from './purposes'
+export {
+  listPurposes,
+  createPurpose,
+  renamePurpose,
+  deletePurpose,
+  assignPurpose,
+} from './purposes'
 export { PURPOSE_SEEDS, PURPOSE_ICONS, type PurposeSeed } from './seeds'
 export {
   deriveSuggestion,

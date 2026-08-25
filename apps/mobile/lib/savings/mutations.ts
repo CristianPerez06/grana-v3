@@ -4,6 +4,7 @@ import {
   createPurpose as createPurposeImpl,
   renamePurpose as renamePurposeImpl,
   deletePurpose as deletePurposeImpl,
+  assignPurpose as assignPurposeImpl,
   type SavingsMutationResult,
 } from '@grana/savings'
 import { getTodayAR } from '@grana/money-logic'
@@ -58,4 +59,11 @@ export async function renamePurpose(
 
 export async function deletePurpose(purposeId: string): Promise<SavingsMutationResult> {
   return deletePurposeImpl({ supabase, purposeId })
+}
+
+export async function assignPurpose(
+  reserveId: string,
+  purposeId: string | null,
+): Promise<SavingsMutationResult> {
+  return assignPurposeImpl({ supabase, reserveId, purposeId })
 }

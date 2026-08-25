@@ -155,3 +155,25 @@ sola por D4.
 
 Se valida en la mutación, como el tope y el piso, y por la misma razón: un schema valida la **forma**;
 el estado del servidor lo valida el servidor.
+
+## D11 — Asignar ⇄ desasignar: el segundo par de verbos
+
+Se llega tocando un movimiento del historial, y es una operación sobre una reserva que **ya
+existe**.
+
+Es el segundo par de verbos del modelo. Igual que guardar y volver a usar, no mueve plata; pero a
+diferencia de ellos, **tampoco cambia el disponible ni el total guardado**. Es la operación más
+inofensiva del modelo, y por eso no tiene tope, ni piso, ni confirmación: no hay ningún número que
+pueda quedar mal.
+
+**Existe porque sin ella la fase serviría solo hacia adelante.** Todo lo que el usuario venía
+guardando quedaría condenado a «Sin destino» para siempre, y la fase se estrenaría con la plata de la
+gente ya del lado equivocado — que es la peor primera impresión posible para algo cuyo valor es
+justamente poder decir para qué.
+
+Desasignar no es un botón aparte: es elegir «Sin destino» en la misma lista. El par es simétrico y se
+expresa con un solo control.
+
+La entrada está en las **dos** listas de historial —la de la moneda y la de un grupo—, y la segunda es
+la que más importa: parado en «Sin destino», el usuario está mirando exactamente la plata que quiere
+etiquetar.

@@ -137,3 +137,48 @@ export async function deletePurpose(args: {
 
   return { ok: true, id: args.purposeId }
 }
+
+/**
+ * Ponerle —o sacarle— un propósito a una reserva que ya existe.
+ *
+ * Es el SEGUNDO PAR DE VERBOS del modelo: asignar ⇄ desasignar. Igual que
+ * guardar y volver a usar, no mueve plata; pero a diferencia de ellos, tampoco
+ * cambia el disponible ni el total guardado. **Es la operación más inofensiva
+ * del modelo**: lo único que cambia es para qué es.
+ *
+ * De ahí que no tenga tope, ni piso, ni confirmación: no hay ningún número que
+ * pueda quedar mal. Se puede hacer sobre reservas viejas sin ningún riesgo,
+ * porque el número de arriba no se entera.
+ *
+ * `purposeId` en null desasigna, que es volver la fila a «Sin destino».
+ */
+export async function assignPurpose(args: {
+  supabase: GranaSupabaseClient
+  reserveId: string
+  purposeId: string | null
+}): Promise<SavingsMutationResult> {
+  const { supabase, reserveId, purposeId } = args
+
+  // La misma verificación de pertenencia que hace el write path, y por lo mismo:
+  // RLS impide LEER el propósito de otro usuario, pero el FK no mira dueños.
+  if (purposeId != null) {
+    const { data: owned, error: ownedError } = await supabase
+      .from('savings_purpose')
+      .select('id')
+      .eq('id', purposeId)
+      .maybeSingle()
+
+    if (ownedError) return { ok: false, errorCode: ownedError.code }
+    if (owned == null) return { ok: false, fieldErrors: { purpose_id: 'not_found' } }
+  }
+
+  // Sin `user_id` en el where: RLS ya acota el update a las filas propias.
+  const { error } = await supabase
+    .from('availability_reserve')
+    .update({ purpose_id: purposeId })
+    .eq('id', reserveId)
+
+  if (error) return { ok: false, errorCode: error.code }
+
+  return { ok: true, id: reserveId }
+}

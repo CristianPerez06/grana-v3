@@ -1,6 +1,6 @@
 import { Pressable, Text, View } from 'react-native'
-import { Pencil, Trash2 } from 'lucide-react-native'
-import { RESERVE_HISTORY_LIMIT, type Purpose } from '@grana/savings'
+import { ChevronRight, Pencil, Trash2 } from 'lucide-react-native'
+import { RESERVE_HISTORY_LIMIT, type Purpose, type ReserveEntry } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useT, useLocale } from '../../lib/locale-context'
 import { formatShortDate } from '../transactions/detail/format'
@@ -30,6 +30,7 @@ export const PurposeGroup = ({
   purposeId,
   purpose,
   reserved,
+  onAssign,
   onSave,
   onRelease,
   onEdit,
@@ -40,6 +41,7 @@ export const PurposeGroup = ({
   purposeId: string | null
   purpose: Purpose | null
   reserved: number
+  onAssign: (entry: ReserveEntry) => void
   onSave: () => void
   onRelease: () => void
   onEdit: (purpose: Purpose) => void
@@ -99,9 +101,13 @@ export const PurposeGroup = ({
         ) : (
           <View className="mt-1.5">
             {history.entries.map((entry) => (
-              <View
+              /* Tocable, y acá es el caso que más importa: parado en «Sin
+                 destino» el usuario está mirando la plata que quiere etiquetar. */
+              <Pressable
                 key={entry.id}
-                className="flex-row items-center justify-between border-t border-border-soft py-2.5"
+                accessibilityRole="button"
+                onPress={() => onAssign(entry)}
+                className="min-h-[44px] flex-row items-center justify-between gap-2 border-t border-border-soft py-2.5"
               >
                 <Text className="text-[14px] font-semibold text-text">
                   {entry.amount >= 0 ? t('savings.entry_saved') : t('savings.entry_released')}
@@ -118,7 +124,8 @@ export const PurposeGroup = ({
                   {entry.amount >= 0 ? '+' : '−'}
                   {money(Math.abs(entry.amount), currency)}
                 </Text>
-              </View>
+                <ChevronRight size={15} color={colors.textSoft} />
+              </Pressable>
             ))}
           </View>
         )}

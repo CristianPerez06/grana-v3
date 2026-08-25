@@ -32,6 +32,7 @@ import { DrawerBackHeader } from './drawer-back-header'
 import { PurposePicker } from './purpose-picker'
 import { PurposeForm } from './purpose-form'
 import { PurposeDelete } from './purpose-delete'
+import { PurposeAssign } from './purpose-assign'
 
 type Currency = 'ARS' | 'USD'
 type Mode = 'save' | 'release'
@@ -60,6 +61,7 @@ type View =
   | { kind: 'purposeForm'; purpose: Purpose | null; name?: string; icon?: string }
   | { kind: 'purposeDelete'; purpose: Purpose }
   | { kind: 'pickSource'; currency: Currency }
+  | { kind: 'assign'; currency: Currency; entry: ReserveEntry }
 
 const money = (amount: number, currency: Currency) =>
   currency === 'USD' ? formatUSD(amount) : formatARS(amount, true)
@@ -329,7 +331,12 @@ export function SavingsDrawer({
               await refresh()
               // Recién creado desde el selector: se elige solo. Obligar a
               // tocarlo de nuevo en la lista sería un paso que no decide nada.
-              if (view.purpose == null) pickPurpose(purposeId)
+              //
+              // Creado desde "¿Para qué fue?" no hay formulario abajo al que
+              // volver, así que solo se cierra el alta y la lista de atrás ya lo
+              // muestra.
+              if (view.purpose != null) back()
+              else if (stack.some((v) => v.kind === 'form')) pickPurpose(purposeId)
               else back()
             }}
             onBack={back}
@@ -345,6 +352,27 @@ export function SavingsDrawer({
               // Vuelve al detalle, no al grupo: el grupo ya no existe.
               setStack([{ kind: 'detail' }])
             }}
+            onBack={back}
+          />
+        )}
+
+        {view.kind === 'assign' && (
+          <PurposeAssign
+            entry={view.entry}
+            currency={view.currency}
+            purposes={purposes}
+            onDone={async () => {
+              await refresh()
+              back()
+            }}
+            onCreate={(seedKey) =>
+              push({
+                kind: 'purposeForm',
+                purpose: null,
+                name: seedKey ? t(`purposes.seeds.${seedKey}`) : undefined,
+                icon: seedKey ? PURPOSE_SEEDS.find((s) => s.key === seedKey)?.icon : undefined,
+              })
+            }
             onBack={back}
           />
         )}
@@ -396,6 +424,7 @@ export function SavingsDrawer({
             purposeId={view.purposeId}
             purpose={purposeById(view.purposeId)}
             reserved={groupAmount(view.currency, view.purposeId)}
+            onAssign={(entry) => push({ kind: 'assign', currency: view.currency, entry })}
             onSave={() =>
               push({
                 kind: 'form',
@@ -435,6 +464,7 @@ export function SavingsDrawer({
                   monthNet={monthNet(currency)}
                   groups={groupsOf(currency)}
                   onOpenGroup={(purposeId) => push({ kind: 'group', currency, purposeId })}
+                  onAssign={(entry) => push({ kind: 'assign', currency, entry })}
                   onSave={() =>
                     push({ kind: 'form', mode: 'save', currency, purposeId: null, locked: false })
                   }
@@ -463,6 +493,7 @@ const CurrencyBlock = ({
   monthNet,
   groups,
   onOpenGroup,
+  onAssign,
   onSave,
   onRelease,
 }: {
@@ -474,6 +505,7 @@ const CurrencyBlock = ({
   /** El corte por propósito de esta moneda, «Sin destino» al final. */
   groups: PurposeSums[]
   onOpenGroup: (purposeId: string | null) => void
+  onAssign: (entry: ReserveEntry) => void
   onSave: () => void
   onRelease: () => void
 }) => {
@@ -579,22 +611,32 @@ const CurrencyBlock = ({
       ) : (
         <ul className="mt-2 flex flex-col divide-y divide-border-soft">
           {history.entries.map((entry) => (
-            <li key={entry.id} className="flex items-center justify-between gap-3 py-2.5">
-              <span className="text-[14px] font-semibold text-text">
-                {entry.amount >= 0 ? t('entry_saved') : t('entry_released')}
-                <span className="ml-2 text-[12px] font-medium text-text-soft">
-                  {shortDate(entry.date)}
-                </span>
-              </span>
-              <span
-                className={cn(
-                  'text-[14px] font-extrabold tabular-nums',
-                  entry.amount >= 0 ? 'text-emerald-deep' : 'text-text-muted',
-                )}
+            <li key={entry.id}>
+              {/* Tocable: es la puerta a "¿para qué fue?". Sin ella, la fase 2
+                  solo serviría de acá en adelante y todo lo que el usuario
+                  venía guardando quedaría condenado a «Sin destino». */}
+              <button
+                type="button"
+                onClick={() => onAssign(entry)}
+                className="flex min-h-[44px] w-full items-center justify-between gap-3 py-2.5 text-left transition-colors hover:bg-surface-sunken"
               >
-                {entry.amount >= 0 ? '+' : '−'}
-                {money(Math.abs(entry.amount), currency)}
-              </span>
+                <span className="text-[14px] font-semibold text-text">
+                  {entry.amount >= 0 ? t('entry_saved') : t('entry_released')}
+                  <span className="ml-2 text-[12px] font-medium text-text-soft">
+                    {shortDate(entry.date)}
+                  </span>
+                </span>
+                <span
+                  className={cn(
+                    'text-[14px] font-extrabold tabular-nums',
+                    entry.amount >= 0 ? 'text-emerald-deep' : 'text-text-muted',
+                  )}
+                >
+                  {entry.amount >= 0 ? '+' : '−'}
+                  {money(Math.abs(entry.amount), currency)}
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
+              </button>
             </li>
           ))}
         </ul>
@@ -605,6 +647,9 @@ const CurrencyBlock = ({
         <p className="mt-2 text-[12px] text-text-soft">
           {t('history_truncated', { count: RESERVE_HISTORY_LIMIT })}
         </p>
+      )}
+      {history.entries.length > 0 && (
+        <p className="mt-1.5 text-[12px] text-text-soft">{t('purposes.assign_hint')}</p>
       )}
 
       <div className="mt-4 flex gap-2">
@@ -639,6 +684,7 @@ const GroupBlock = ({
   purposeId,
   purpose,
   reserved,
+  onAssign,
   onSave,
   onRelease,
   onEdit,
@@ -649,6 +695,7 @@ const GroupBlock = ({
   purposeId: string | null
   purpose: Purpose | null
   reserved: number
+  onAssign: (entry: ReserveEntry) => void
   onSave: () => void
   onRelease: () => void
   onEdit: (purpose: Purpose) => void
@@ -714,22 +761,32 @@ const GroupBlock = ({
         ) : (
           <ul className="mt-2 flex flex-col divide-y divide-border-soft">
             {history.entries.map((entry) => (
-              <li key={entry.id} className="flex items-center justify-between gap-3 py-2.5">
-                <span className="text-[14px] font-semibold text-text">
-                  {entry.amount >= 0 ? t('entry_saved') : t('entry_released')}
-                  <span className="ml-2 text-[12px] font-medium text-text-soft">
-                    {shortDate(entry.date)}
-                  </span>
-                </span>
-                <span
-                  className={cn(
-                    'text-[14px] font-extrabold tabular-nums',
-                    entry.amount >= 0 ? 'text-emerald-deep' : 'text-text-muted',
-                  )}
+              <li key={entry.id}>
+                {/* Tocable también acá, y es el caso que más importa: parado en
+                    «Sin destino» el usuario está mirando exactamente la plata
+                    que quiere etiquetar. */}
+                <button
+                  type="button"
+                  onClick={() => onAssign(entry)}
+                  className="flex min-h-[44px] w-full items-center justify-between gap-3 py-2.5 text-left transition-colors hover:bg-surface-sunken"
                 >
-                  {entry.amount >= 0 ? '+' : '−'}
-                  {money(Math.abs(entry.amount), currency)}
-                </span>
+                  <span className="text-[14px] font-semibold text-text">
+                    {entry.amount >= 0 ? t('entry_saved') : t('entry_released')}
+                    <span className="ml-2 text-[12px] font-medium text-text-soft">
+                      {shortDate(entry.date)}
+                    </span>
+                  </span>
+                  <span
+                    className={cn(
+                      'text-[14px] font-extrabold tabular-nums',
+                      entry.amount >= 0 ? 'text-emerald-deep' : 'text-text-muted',
+                    )}
+                  >
+                    {entry.amount >= 0 ? '+' : '−'}
+                    {money(Math.abs(entry.amount), currency)}
+                  </span>
+                  <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
+                </button>
               </li>
             ))}
           </ul>

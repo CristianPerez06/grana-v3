@@ -158,6 +158,29 @@ propósitos automáticamente.
 
 ---
 
+### Requirement: El propósito de una reserva existente se puede cambiar
+
+El sistema SHALL permitir asignar, cambiar o quitar el propósito de una reserva **ya registrada**, desde el historial. Quitar el propósito SHALL equivaler a asignarle «Sin destino».
+
+Esta operación NO SHALL cambiar el total guardado, NO SHALL cambiar el disponible y NO SHALL tener tope ni piso: lo único que modifica es **para qué es** ese dinero.
+
+Sin esta operación, la capability solo serviría hacia adelante y todo lo guardado antes quedaría permanentemente sin propósito.
+
+#### Scenario: Etiquetar un guardado viejo no mueve ningún número
+
+- **GIVEN** una reserva de $50.000 sin propósito, de un mes anterior
+- **WHEN** el usuario le asigna "Japón"
+- **THEN** el total guardado y el disponible quedan sin cambios
+- **AND** los $50.000 pasan a contarse en el grupo "Japón"
+
+#### Scenario: Quitar el propósito devuelve la reserva a «Sin destino»
+
+- **WHEN** el usuario elige «Sin destino» para una reserva que tenía propósito
+- **THEN** la reserva queda sin propósito
+- **AND** ningún número cambia
+
+---
+
 ### Requirement: Una reserva solo puede llevar un propósito del propio usuario
 
 El sistema SHALL verificar contra la base que el propósito indicado pertenece al usuario antes de

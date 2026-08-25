@@ -7,6 +7,7 @@ import {
   createPurpose as createPurposeImpl,
   renamePurpose as renamePurposeImpl,
   deletePurpose as deletePurposeImpl,
+  assignPurpose as assignPurposeImpl,
   type SavingsMutationResult,
 } from '@grana/savings'
 import type { ReserveAvailabilityInput, SavingsPurposeInput } from '@grana/validation'
@@ -141,4 +142,17 @@ export async function deletePurpose(
   await getAuthenticatedUserId()
   const supabase = await createClient()
   return finishPurpose(await deletePurposeImpl({ supabase, purposeId }))
+}
+
+/**
+ * Asignar ⇄ desasignar: ponerle o sacarle el propósito a una reserva que ya
+ * existe. No toca ningún número — ni el disponible, ni el total guardado.
+ */
+export async function assignPurpose(
+  reserveId: string,
+  purposeId: string | null,
+): Promise<ActionResult<SavingsPurposeInput> & { id?: string }> {
+  await getAuthenticatedUserId()
+  const supabase = await createClient()
+  return finishPurpose(await assignPurposeImpl({ supabase, reserveId, purposeId }))
 }
