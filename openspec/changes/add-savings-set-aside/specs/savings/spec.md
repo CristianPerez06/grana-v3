@@ -169,7 +169,9 @@ NO SHALL existir un apagado permanente, y no hace falta: la cadencia más lenta 
 
 La tira SHALL servirse desde el módulo `guidance`, con dos cortes que significan cosas distintas: `seen_at` es **cuándo se mostró por última vez** y se compara contra el `created_at` del ingreso, de modo que un ingreso posterior la vuelve a habilitar y el mismo ingreso no la repite; `dismissed_at` es *"suficiente por este mes"* y silencia **solo ese mes** — deliberadamente NO es el "para siempre" que la columna significa en el resto de `guidance`. `completed_at` NO SHALL usarse nunca acá: mataría una sugerencia recurrente.
 
-El monto sugerido SHALL calcularse sobre **el ingreso que la disparó** —el último cargado del mes—, nunca sobre el total del mes: el total incluye plata que el usuario ya gastó, y proponer una parte de eso da un número que no se corresponde con ningún acto. "El último cargado" SHALL resolverse por `created_at` y no por fecha contable, para que un ingreso cargado hoy con fecha de anteayer dispare igual.
+El monto sugerido SHALL calcularse sobre **el ingreso que la disparó** —el último cargado—, nunca sobre el total del mes: el total incluye plata que el usuario ya gastó, y proponer una parte de eso da un número que no se corresponde con ningún acto.
+
+"El último cargado" SHALL resolverse por `created_at` y NO por fecha contable, y NO SHALL acotarse al mes en curso. Un ingreso viejo registrado hoy —poner al día atrasos— es plata que **sí está en el disponible de hoy**, así que negarle la propuesta sería preciosista: el usuario acaba de registrar plata y el momento de decidir es ese. Lo único que queda afuera es el **futuro**: un ingreso fechado mañana existe pero todavía no es un hecho, y no dispara nada.
 
 El monto SHALL derivarse del **porcentaje** usado la vez anterior —no del importe— y la primera vez SHALL ser el 10%. NO SHALL existir una pantalla de configuración para esto.
 
@@ -197,6 +199,16 @@ El copy SHALL formular una **propuesta de comportamiento**, no una recomendació
 
 - **WHEN** en el mes ya habían entrado $1.000.000 y el usuario registra un sueldo de $5.000.000
 - **THEN** la sugerencia se calcula sobre $5.000.000
+
+#### Scenario: Un ingreso viejo cargado hoy también propone
+
+- **WHEN** el usuario registra hoy una factura cobrada el mes pasado
+- **THEN** la tira se ofrece sobre ese monto
+
+#### Scenario: Un ingreso futuro no propone nada
+
+- **WHEN** el usuario registra un ingreso con fecha del mes que viene
+- **THEN** la tira no se ofrece hasta que llegue esa fecha
 
 #### Scenario: Un reintegro no dispara la sugerencia
 

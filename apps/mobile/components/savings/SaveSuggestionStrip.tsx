@@ -44,7 +44,6 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   const monthKey = `${year}-${String(month).padStart(2, '0')}`
   const currentMonth = formatDateISO(getTodayAR()).slice(0, 7)
   const todayISO = formatDateISO(getTodayAR())
-  const monthStart = `${monthKey}-01`
 
   const [guidanceQuery, sumsQuery, historyQuery, incomeQuery] = useQueries({
     queries: [
@@ -65,8 +64,8 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
         // appears right after registering an income, so "the last one of the
         // period" is in practice "the one you just loaded" — without needing an
         // event to tell it, which is what would make it fragile.
-        queryKey: ['savings', 'latest-income', monthKey] as const,
-        queryFn: () => getLatestIncome(supabase, 'ARS', monthStart, todayISO),
+        queryKey: ['savings', 'latest-income', todayISO] as const,
+        queryFn: () => getLatestIncome(supabase, 'ARS', todayISO),
       },
     ],
   })
@@ -87,13 +86,12 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   // which is almost never the month on screen — carrying the habit across months
   // is the whole point. That month's series is its own read, fetched only when
   // it is a different month; without it the derivation falls back to 10%.
-  const lastSaveMonth = lastSave?.date.slice(0, 7) ?? null
+  const lastSaveDate = lastSave?.date ?? null
 
   const priorIncomeQuery = useQuery({
-    queryKey: ['savings', 'latest-income', lastSaveMonth ?? 'none'] as const,
-    queryFn: () =>
-      getLatestIncome(supabase, 'ARS', `${lastSaveMonth}-01`, lastSave!.date),
-    enabled: lastSaveMonth != null,
+    queryKey: ['savings', 'latest-income', lastSaveDate ?? 'none'] as const,
+    queryFn: () => getLatestIncome(supabase, 'ARS', lastSave!.date),
+    enabled: lastSaveDate != null,
     
   })
 

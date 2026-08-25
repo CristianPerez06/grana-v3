@@ -126,26 +126,26 @@ export async function getReserveHistory(
 }
 
 // ── getLatestIncome ───────────────────────────────────────────────────────────
-// El ÚLTIMO ingreso cargado del período, en una moneda: su monto y cuándo se
-// registró.
+// El ÚLTIMO ingreso cargado, en una moneda: su monto y cuándo se registró.
 //
-// Es la base sobre la que la tira propone guardar, y tiene que ser ese y no el
-// total del mes: lo que el usuario acaba de cobrar es la plata sobre la que está
-// dispuesto a decidir, mientras que el total del mes incluye plata que ya gastó.
+// Es la base sobre la que la tira propone guardar, y tiene que ser un ingreso y
+// no el total del mes: lo que el usuario acaba de cobrar es la plata sobre la
+// que está dispuesto a decidir, mientras que el total del mes incluye plata que
+// ya gastó.
 //
 // Ordena por `created_at`, NO por `date`: lo que la tira persigue es "el que
 // acabás de cargar", y eso es cuándo se registró, no qué fecha contable le
-// pusiste. Cargar hoy un sueldo con fecha del 19 tiene que disparar la
-// sugerencia igual — la plata es igual de nueva para el usuario.
+// pusiste.
 //
-// El rango sigue acotado por `date` al mes en curso: un ingreso de julio cargado
-// en agosto es plata de julio, y proponer guardarla ahora hablaría de un mes que
-// la pantalla no está mirando.
+// Y NO se acota al mes en curso. Un ingreso viejo cargado hoy —poner al día
+// atrasos— es plata que **sí está en el disponible de hoy**, así que negarle la
+// propuesta sería preciosista: el usuario acaba de registrar plata y el momento
+// de decidir es ese. Lo único que queda afuera es el FUTURO, por `p_on_or_before`:
+// un ingreso fechado mañana existe pero todavía no es un hecho.
 export async function getLatestIncome(
   supabase: GranaSupabaseClient,
   currencyCode: BalanceCurrency,
-  fromISO: string,
-  toISO: string,
+  onOrBeforeISO: string,
 ): Promise<{ amount: number; createdAt: string } | null> {
   const { data, error } = await supabase
     .from('transactions')
@@ -153,8 +153,7 @@ export async function getLatestIncome(
     .eq('type', 'income')
     .eq('currency_code', currencyCode)
     .is('status', null)
-    .gte('date', fromISO)
-    .lte('date', toISO)
+    .lte('date', onOrBeforeISO)
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
     .limit(1)

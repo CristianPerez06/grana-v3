@@ -48,7 +48,6 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   const monthKey = `${year}-${String(month).padStart(2, '0')}`
   const currentMonth = formatDateISO(getTodayAR()).slice(0, 7)
   const todayISO = formatDateISO(getTodayAR())
-  const monthStart = `${monthKey}-01`
 
   const [guidanceQuery, sumsQuery, historyQuery, incomeQuery] = useQueries({
     queries: [
@@ -72,8 +71,8 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
         // appears right after registering an income, so "the last one of the
         // period" is in practice "the one you just loaded" — without needing an
         // event to tell it, which is what would make it fragile.
-        queryKey: ['savings', 'latest-income', monthKey],
-        queryFn: () => getLatestIncome(createClient(), 'ARS', monthStart, todayISO),
+        queryKey: ['savings', 'latest-income', todayISO],
+        queryFn: () => getLatestIncome(createClient(), 'ARS', todayISO),
         staleTime: 60_000,
       },
     ],
@@ -98,13 +97,12 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   // series is its own read, fetched only when there is a previous save and it
   // lives in a different month. Without it the derivation falls back to 10%,
   // which is what a first-time user gets anyway.
-  const lastSaveMonth = lastSave?.date.slice(0, 7) ?? null
+  const lastSaveDate = lastSave?.date ?? null
 
   const priorIncomeQuery = useQuery({
-    queryKey: ['savings', 'latest-income', lastSaveMonth ?? 'none'] ,
-    queryFn: () =>
-      getLatestIncome(createClient(), 'ARS', `${lastSaveMonth}-01`, lastSave!.date),
-    enabled: lastSaveMonth != null,
+    queryKey: ['savings', 'latest-income', lastSaveDate ?? 'none'] ,
+    queryFn: () => getLatestIncome(createClient(), 'ARS', lastSave!.date),
+    enabled: lastSaveDate != null,
     staleTime: 60_000,
   })
 
