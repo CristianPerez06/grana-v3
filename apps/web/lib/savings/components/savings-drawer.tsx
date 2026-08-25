@@ -678,7 +678,11 @@ export function SavingsDrawer({
 
               return (
                 <div className="mt-1 border-t border-border-soft pt-2">
-                  <div className="flex items-center gap-2.5 px-2">
+                  {/* `pr` compensa el ancho del chevron que esta fila NO tiene
+                      (16px + los 10px del gap), para que los montos queden en
+                      una sola columna. Sin eso, el del resto se corría 26px a la
+                      derecha y la lista dejaba de leerse como lista. */}
+                  <div className="flex items-center gap-2.5 py-1.5 pl-2 pr-[34px]">
                     <span aria-hidden className="text-[16px]">
                       🫙
                     </span>
@@ -903,7 +907,12 @@ const GroupAmounts = ({
   const list = shown.length > 0 ? shown : [amounts[0]]
 
   return (
-    <span className="flex flex-col items-end">
+    // `shrink-0` y `whitespace-nowrap`: el monto es un flex child al lado de un
+    // nombre que puede ser largo, y sin esto el navegador lo encoge a él —
+    // parte el número o lo corta. En una app de plata un monto cortado no es un
+    // detalle de layout: se lee como un número poco confiable. El que cede es
+    // el NOMBRE, que ya trunca con puntos suspensivos.
+    <span className="flex shrink-0 flex-col items-end whitespace-nowrap">
       {list.map((a, i) => (
         <span
           key={a.currency}

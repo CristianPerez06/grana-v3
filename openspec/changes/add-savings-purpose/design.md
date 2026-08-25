@@ -495,3 +495,19 @@ Los tres corolarios, útiles como criterio de revisión:
    distinto.
 2. Si dos cosas **se ven iguales**, tienen que **prometer lo mismo**. Un chevron promete una pantalla.
 3. Si algo **no es una entidad real**, no debería tener **forma visual de entidad real**.
+
+## D24 — El que cede es el nombre, nunca el monto
+
+En una fila de plata conviven un **nombre** de largo libre y un **monto** de largo acotado. Cuando no
+entran, el navegador encoge lo que puede: sin instrucciones, encoge el monto — lo parte en dos líneas
+o lo corta.
+
+**Un monto cortado no es un detalle de layout.** En una app de plata se lee como un número poco
+confiable, y la confianza en los números es lo único que Grana tiene. El que cede es el **nombre**,
+que trunca con puntos suspensivos y sigue siendo reconocible por su principio.
+
+Los montos van `shrink-0` y `whitespace-nowrap`; los nombres, `truncate`.
+
+De la misma familia: **las filas sin chevron compensan su ancho con padding**. La del resto no tiene
+flecha, así que sin compensar, su monto se corría 26 px a la derecha y la lista dejaba de leerse como
+una columna. Una columna de números que no está alineada se lee mal aunque cada número esté bien.

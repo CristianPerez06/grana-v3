@@ -526,7 +526,9 @@ export const SavingsDrawer = ({
 
               return (
                 <View className="mt-1 border-t border-border-soft pt-2">
-                  <View className="flex-row items-center gap-2.5 px-1">
+                  {/* `pr` compensa el chevron que esta fila NO tiene (15px + el
+                      gap), para que los montos queden en una sola columna. */}
+                  <View className="flex-row items-center gap-2.5 py-1.5 pl-1 pr-[29px]">
                     <Text className="text-[15px]">🫙</Text>
                     <Text
                       className="flex-1 text-[14px] font-semibold text-text-muted"
@@ -771,7 +773,10 @@ const GroupAmounts = ({
   const list = shown.length > 0 ? shown : [amounts[0]]
 
   return (
-    <View className="items-end">
+    // `shrink-0`: el monto va al lado de un nombre que puede ser largo, y sin
+    // esto se encoge y se corta. En una app de plata un monto cortado se lee
+    // como un número poco confiable. El que cede es el nombre, que ya trunca.
+    <View className="shrink-0 items-end">
       {list.map((a, i) => (
         <Text
           key={a.currency}
