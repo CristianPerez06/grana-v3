@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl'
 import { useQueries } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Fab } from '@/components/ui/fab'
 import { createClient } from '@/lib/supabase/client'
 import { getAccounts } from '@/lib/accounts/queries'
 import { getAllCategories } from '@/lib/categories/queries'
@@ -73,14 +72,13 @@ export const CreateRecurrenceButton = () => {
     <>
       <Button
         variant="primary"
-        className="hidden w-auto md:inline-flex"
+        className="inline-flex w-auto"
         onClick={() => setOpen(true)}
         disabled={disabled}
       >
         <Plus className="size-4" aria-hidden />
         {tRec('actions.create')}
       </Button>
-      <Fab label={tRec('actions.create')} disabled={disabled} onClick={() => setOpen(true)} />
       <CreateRecurrenceModal
         open={open}
         onClose={() => setOpen(false)}

@@ -32,6 +32,7 @@
 - [x] 3.10 Unificar el label del destino compartido en `nav.home` ("Hogar"): cambiar el item del sidebar en `app-shell.tsx` de `labelKey: 'shared'` a `'home'`, y ajustar el tipo `NavItem` (decisión 5 del design). `nav.shared` queda en el catálogo
 - [x] 3.11 Confirmar que la transición del sheet respeta `prefers-reduced-motion`, como hacía el drawer
 - [x] 3.12 `pnpm typecheck` y `pnpm lint` sin errores
+- [x] 3.13 **Corrección posterior a review.** La acción de crear de una ruta pasa al slot `actions` del `PageHeader`, visible en todos los anchos, y se le saca el FAB. Aplica a las seis rutas que lo tenían: `accounts`, `cards`, `settings/categories`, `settings/categories/[id]/subcategories`, `transactions/recurring` y `cards/[id]`. El `QuickAddFab` de `/dashboard`, `/transactions` y `/shared` queda como el único botón flotante del producto, que es lo que hace el nativo. `components/ui/fab.tsx` se conserva —lo usa `QuickAddFab`— con el doc reescrito para que la regla no se pierda. Ojo: `cards/[id]` ("Registrar compra") **no tiene espejo nativo**, porque los write flows de tarjetas todavía no existen en `apps/mobile`; se movió al header por la misma regla, no por paridad
 
 ## 4. Fase 3 — Overlays
 
@@ -61,4 +62,5 @@
 - [ ] 7.6 Instalar la PWA en un iPhone real → el navy llega hasta el notch y la barra respeta la home indicator. Es lo único que el DevTools no puede verificar
 - [ ] 7.7 Repetir 7.1 y 7.4 en Android
 - [ ] 7.8 A 390px, abrir el alta de cuenta → el selector de banco despliega su lista dentro del sheet y scrollea con el dedo; ídem la calculadora de monto. Son los dos únicos consumidores que portalean adentro del panel (tarea 4.3)
+- [ ] 7.10 A 390px, recorrer `/accounts`, `/cards`, `/settings/categories`, `/transactions/recurring` y `/cards/[id]`: la acción de crear está en el header arriba a la derecha, en verde, y no hay ningún botón flotante. En `/dashboard`, `/transactions` y `/shared` el `QuickAddFab` sigue estando
 - [ ] 7.9 A 390px, abrir cualquier drawer con poco contenido (ej. editar nombre del hogar) → el sheet hugea su alto en vez de ocupar la pantalla entera

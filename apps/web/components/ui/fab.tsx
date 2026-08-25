@@ -14,15 +14,20 @@ type FabProps = {
 }
 
 /**
- * Floating action button for a page's PRIMARY action on mobile. Desktop keeps
- * the header CTA, so the FAB is `md:hidden`; the paired header button must be
- * `hidden md:inline-flex` so exactly one of them shows at any width. The two
- * gates have to match: at `sm` they used to leave 640–767px with neither the
- * FAB nor the sidebar, and flipping only one of them would show both instead.
+ * Floating action button, `md:hidden`, fixed to the viewport bottom-right above
+ * the scrolling content (`z-40`) and lifted clear of the tab bar by
+ * `--tab-bar-inset` — published by `AppShell`, and `0px` on the chromeless
+ * sections that render no bar.
  *
- * Fixed to the viewport bottom-right, above the scrolling content (`z-40`), and
- * lifted clear of the tab bar by `--tab-bar-inset` — published by `AppShell`,
- * and `0px` on the chromeless sections that render no bar.
+ * **The only FAB in the product is `QuickAddFab`** — registering a movement,
+ * on the three tab roots. That is the rule native follows and web now matches:
+ * a create action for the entity a route lists (an account, a card, a
+ * category, a recurrence) goes in the `PageHeader`'s `actions` slot, visible at
+ * every width, never behind a floating button. A route's own primary create
+ * action is part of its chrome, and chrome does not change shape by viewport.
+ *
+ * So: do not reach for this for a new route's create button. If a second FAB
+ * ever looks warranted, that is the conversation to have first.
  */
 export const Fab = ({ onClick, label, disabled = false, icon }: FabProps) => (
   <Button
