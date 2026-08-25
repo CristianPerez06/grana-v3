@@ -462,3 +462,25 @@ La regla que separa los dos:
 
 Ni pantalla completa, ni chevron igual, ni comportamiento distinto escondido. Se ve como lo que es:
 plata que todavía no tiene etiqueta, que se puede destinar o volver a usar.
+
+## D23 — Cuando la misma pregunta vuelve, la respuesta no es un argumento mejor
+
+«Sin destino» generó la misma pregunta tres veces —*"¿por qué este no tiene historial?"*, *"¿por qué
+no tiene botón de volver a usar?"*— y las tres veces la respuesta fue una explicación correcta. El
+modelo estaba bien. **La pantalla no estaba haciendo su trabajo.**
+
+La regla, que vale para todo el producto y no solo para esta fase:
+
+> Cuando la misma pregunta vuelve, la respuesta no es un argumento mejor: es revisar si la excepción
+> está mal dibujada.
+
+Grana tiene muchas decisiones conceptualmente finas —el disponible no es el saldo, guardar no mueve
+plata, un propósito no es una meta— y todas se pueden defender por escrito. Ese es justamente el
+riesgo: **una pantalla que necesita que le expliquen la excepción tiene la excepción mal dibujada.**
+
+Los tres corolarios, útiles como criterio de revisión:
+
+1. Si hay que **explicar** por qué algo se comporta distinto, probablemente tenga que **verse**
+   distinto.
+2. Si dos cosas **se ven iguales**, tienen que **prometer lo mismo**. Un chevron promete una pantalla.
+3. Si algo **no es una entidad real**, no debería tener **forma visual de entidad real**.
