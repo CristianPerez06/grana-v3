@@ -103,13 +103,13 @@ export const DashboardHeader = ({ todayISO }: Props) => {
             />
             <EyeMaskToggle disabled={isDisabled} />
             {isDisabled || !drawer ? (
-              <Button className="hidden w-auto sm:inline-flex" disabled>
+              <Button className="hidden w-auto md:inline-flex" disabled>
                 <Plus size={18} strokeWidth={2} />
                 {t('new_movement')}
               </Button>
             ) : (
               <Button
-                className="hidden w-auto sm:inline-flex"
+                className="hidden w-auto md:inline-flex"
                 onClick={() => drawer.openCreate()}
               >
                 <Plus size={18} strokeWidth={2} />

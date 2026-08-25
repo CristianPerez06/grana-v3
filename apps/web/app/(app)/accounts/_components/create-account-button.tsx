@@ -55,7 +55,7 @@ export function CreateAccountButton({ institutions, disabled = false }: Props) {
   return (
     <>
       <Button
-        className="hidden w-auto sm:inline-flex"
+        className="hidden w-auto md:inline-flex"
         disabled={disabled}
         onClick={openCreate}
       >

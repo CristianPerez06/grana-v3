@@ -73,7 +73,7 @@ export const CreateRecurrenceButton = () => {
     <>
       <Button
         variant="primary"
-        className="hidden w-auto sm:inline-flex"
+        className="hidden w-auto md:inline-flex"
         onClick={() => setOpen(true)}
         disabled={disabled}
       >

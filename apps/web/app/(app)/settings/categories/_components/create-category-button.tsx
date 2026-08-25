@@ -47,7 +47,7 @@ export function CreateCategoryButton() {
 
   return (
     <>
-      <Button className="hidden w-auto sm:inline-flex" onClick={openCreate}>
+      <Button className="hidden w-auto md:inline-flex" onClick={openCreate}>
         <Plus className="size-4" aria-hidden />
         {t('actions.add')}
       </Button>

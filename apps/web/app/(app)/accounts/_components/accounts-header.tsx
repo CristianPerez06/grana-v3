@@ -10,6 +10,7 @@ import { CreateAccountButton } from './create-account-button'
 
 export const AccountsHeader = () => {
   const t = useTranslations('accounts')
+  const tNav = useTranslations('nav')
   const pathname = usePathname()
   const [institutions, setInstitutions] = useState<Institution[] | null>(null)
 
@@ -43,6 +44,11 @@ export const AccountsHeader = () => {
   return (
     <PageHeader
       title={t('title')}
+      // Root screen of a chromeless section: below `md` this route renders
+      // without a tab bar, so this link is the only visible way out. Fixed href
+      // over `router.back()` so the destination is the same coming from the
+      // menu, a deep link or a dashboard card.
+      backLink={{ href: '/dashboard', label: tNav('dashboard') }}
       actions={
         <CreateAccountButton
           institutions={institutions ?? []}

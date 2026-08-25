@@ -18,6 +18,7 @@ type Catalogs = {
 export const CardsHeader = () => {
   const t = useTranslations('cards')
   const tRoute = useTranslations('cards.route')
+  const tNav = useTranslations('nav')
   const locale = useLocale()
   const pathname = usePathname()
 
@@ -92,6 +93,11 @@ export const CardsHeader = () => {
     <PageHeader
       title={t('title')}
       description={description}
+      // Root screen of a chromeless section: below `md` this route renders
+      // without a tab bar, so this link is the only visible way out. Fixed href
+      // over `router.back()` so the destination is the same coming from the
+      // menu, a deep link or a dashboard card.
+      backLink={{ href: '/dashboard', label: tNav('dashboard') }}
       actions={
         <AddCardButton
           institutions={catalogs?.institutions ?? []}

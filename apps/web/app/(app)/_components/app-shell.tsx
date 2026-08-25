@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -10,21 +10,23 @@ import {
   LayoutDashboard,
   List,
   LogOut,
-  Menu,
   Settings,
   Users,
   Wallet,
-  X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { logoutAction } from "@/app/_actions/logout";
 import { setSidebarCollapsed as setSidebarCollapsedAction } from "@/app/_actions/preferences";
 import { GranaIsotype, GranaLogo } from "@/components/ui/grana-logo";
 import { MovementDrawerLoader } from "@/app/(app)/transactions/_components/movement-drawer-loader";
+import { AppMenu } from "./app-menu";
+import { ProfileBlock } from "./profile-block";
+import { TabBar } from "./tab-bar";
+import { isActive, isChromeless } from "@/lib/nav";
 
 type NavItem = {
   href: string;
-  labelKey: "dashboard" | "accounts" | "cards" | "movements" | "shared";
+  labelKey: "dashboard" | "accounts" | "cards" | "movements" | "home";
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
 };
 
@@ -33,13 +35,10 @@ const PRIMARY_NAV: NavItem[] = [
   { href: "/accounts", labelKey: "accounts", icon: Wallet },
   { href: "/cards", labelKey: "cards", icon: CreditCard },
   { href: "/transactions", labelKey: "movements", icon: List },
-  { href: "/shared", labelKey: "shared", icon: Users },
+  // `nav.home` ("Hogar"), not `nav.shared` ("Compartido"): the tab bar and this
+  // sidebar point at the same place, so they say the same word.
+  { href: "/shared", labelKey: "home", icon: Users },
 ];
-
-const isActive = (pathname: string, href: string) => {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
-};
 
 const findActiveHref = (pathname: string) => {
   let best: string | null = null;
@@ -67,9 +66,15 @@ export const AppShell = ({
   userName: string | null;
   userEmail: string | null;
 }) => {
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(initialCollapsed);
   const [, startTransition] = useTransition();
+  const pathname = usePathname();
+
+  // Sections reached from the menu, and full-screen flows, render bare. The
+  // decision lives here rather than inside `TabBar` because the FAB and the
+  // content padding need the same answer — see `--tab-bar-inset` below.
+  const showTabBar = !isChromeless(pathname);
 
   const toggleCollapsed = () => {
     const next = !collapsed;
@@ -80,10 +85,26 @@ export const AppShell = ({
   };
 
   return (
-    <div className="flex h-full flex-1 flex-col overflow-hidden md:flex-row">
+    <div
+      className="flex h-full flex-1 flex-col overflow-hidden md:flex-row"
+      // How much room the fixed tab bar takes at the bottom edge: its own
+      // height (52px button + 14px of top padding + 20px of labels) plus the
+      // safe-area allowance. Zero where the bar does not render, so chromeless
+      // sections do not carry dead space.
+      //
+      // Published as a variable because two things out of the bar's control
+      // need it: the content wrapper, so the last rows are not covered, and
+      // `Fab`, which is a `components/ui/` primitive with no business knowing
+      // about app navigation.
+      style={
+        {
+          '--tab-bar-inset': showTabBar
+            ? 'calc(86px + max(14px, var(--safe-bottom)))'
+            : '0px',
+        } as React.CSSProperties
+      }
+    >
       <Sidebar collapsed={collapsed} onToggle={toggleCollapsed} userName={userName} userEmail={userEmail} />
-      <TopBarMobile onOpenDrawer={() => setDrawerOpen(true)} />
-      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} userName={userName} userEmail={userEmail} />
       {/* `min-h-0 overflow-y-auto` (not gated to `md`) makes <main> the scroll
           container on mobile too — otherwise the 100vh-locked shell leaves tall
           content (e.g. an expanded card group) unreachable with no scrollbar. */}
@@ -92,10 +113,22 @@ export const AppShell = ({
           {/* ⚠️ `px-4 py-5` is mirrored by `PageHeader`'s `-mx-4 -mt-5`, which
               is how the navy band goes full-bleed below `md` from inside this
               padded wrapper. The two have to move together: change these values
-              and the band stops reaching the viewport edges, silently. */}
-          <div className="mx-auto w-full max-w-5xl px-4 py-5 md:px-8 md:py-8">{children}</div>
+              and the band stops reaching the viewport edges, silently.
+
+              The bottom padding clears the fixed tab bar, which is out of flow
+              and would otherwise sit on top of the last rows of content. */}
+          <div className="mx-auto w-full max-w-5xl px-4 pt-5 pb-[calc(1.25rem+var(--tab-bar-inset,0px))] md:px-8 md:py-8">
+            {children}
+          </div>
         </MovementDrawerLoader>
       </main>
+      {showTabBar && <TabBar onOpenMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
+      <AppMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        userName={userName}
+        userEmail={userEmail}
+      />
     </div>
   );
 };
@@ -156,13 +189,11 @@ const SidebarEdgeToggle = ({
 const SidebarContent = ({
   activeHref,
   collapsed,
-  onNavigate,
   userName,
   userEmail,
 }: {
   activeHref: string | null;
   collapsed: boolean;
-  onNavigate?: () => void;
   userName: string | null;
   userEmail: string | null;
 }) => {
@@ -175,7 +206,6 @@ const SidebarContent = ({
       >
         <Link
           href="/dashboard"
-          onClick={onNavigate}
           aria-label="grana"
           className="flex items-center"
         >
@@ -194,7 +224,6 @@ const SidebarContent = ({
             label={tNav(item.labelKey)}
             active={activeHref === item.href}
             collapsed={collapsed}
-            onNavigate={onNavigate}
           />
         ))}
       </nav>
@@ -210,50 +239,10 @@ const SidebarContent = ({
           label={tNav("settings")}
           active={activeHref === "/settings"}
           collapsed={collapsed}
-          onNavigate={onNavigate}
         />
         <LogoutButton label={tNav("logout")} collapsed={collapsed} />
       </nav>
     </>
-  );
-};
-
-/** "Logged in as" identity above the settings/logout block. */
-const ProfileBlock = ({
-  name,
-  email,
-  collapsed,
-}: {
-  name: string | null;
-  email: string | null;
-  collapsed: boolean;
-}) => {
-  const primary = name || email;
-  if (!primary) return null;
-  const initial = primary.charAt(0).toUpperCase();
-  const secondary = name ? email : null;
-  const tooltip = secondary ? `${primary} · ${secondary}` : primary;
-
-  return (
-    <div
-      className={`flex shrink-0 items-center gap-3 pb-1 ${collapsed ? "justify-center px-0" : "px-4"}`}
-    >
-      <span
-        aria-hidden
-        title={collapsed ? tooltip : undefined}
-        className="flex size-8 shrink-0 items-center justify-center rounded-full bg-positive/10 text-[13px] font-bold text-positive"
-      >
-        {initial}
-      </span>
-      {!collapsed && (
-        <div className="min-w-0">
-          <p className="truncate text-[13px] font-bold leading-tight text-text">{primary}</p>
-          {secondary && (
-            <p className="truncate text-[11px] leading-tight text-text-soft">{secondary}</p>
-          )}
-        </div>
-      )}
-    </div>
   );
 };
 
@@ -265,18 +254,15 @@ const SidebarLink = ({
   label,
   active,
   collapsed,
-  onNavigate,
 }: {
   href: string;
   icon: IconType;
   label: string;
   active: boolean;
   collapsed: boolean;
-  onNavigate?: () => void;
 }) => (
   <Link
     href={href}
-    onClick={onNavigate}
     aria-current={active ? "page" : undefined}
     aria-label={collapsed ? label : undefined}
     title={collapsed ? label : undefined}
@@ -310,101 +296,3 @@ const LogoutButton = ({
     </button>
   </form>
 );
-
-const TopBarMobile = ({ onOpenDrawer }: { onOpenDrawer: () => void }) => {
-  const tNav = useTranslations("nav");
-  return (
-    <header className="flex shrink-0 items-center gap-3 border-b border-border-soft bg-card px-4 py-3 md:hidden">
-      <button
-        type="button"
-        onClick={onOpenDrawer}
-        aria-label={tNav("open_menu")}
-        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-[var(--radius-md)] text-text-soft transition-colors hover:bg-page hover:text-text"
-      >
-        <Menu size={22} strokeWidth={1.9} />
-      </button>
-      <Link
-        href="/dashboard"
-        className="text-xl font-bold tracking-tight text-navy"
-      >
-        grana
-      </Link>
-    </header>
-  );
-};
-
-const Drawer = ({
-  open,
-  onClose,
-  userName,
-  userEmail,
-}: {
-  open: boolean;
-  onClose: () => void;
-  userName: string | null;
-  userEmail: string | null;
-}) => {
-  const pathname = usePathname();
-  const activeHref = findActiveHref(pathname);
-  const tNav = useTranslations("nav");
-  const dialogRef = useRef<HTMLDialogElement | null>(null);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const html = document.documentElement;
-    const previous = html.style.overflow;
-    html.style.overflow = "hidden";
-    return () => {
-      html.style.overflow = previous;
-    };
-  }, [open]);
-
-  return (
-    <dialog
-      ref={dialogRef}
-      onClose={onClose}
-      onClick={(event) => {
-        if (event.target === dialogRef.current) onClose();
-      }}
-      className={[
-        "m-0 h-full max-h-none w-screen max-w-none bg-card p-0 text-text md:hidden",
-        "-translate-x-full opacity-0 open:translate-x-0 open:opacity-100",
-        "starting:open:-translate-x-full starting:open:opacity-0",
-        "transition-[transform,opacity,display,overlay] duration-200 ease-out transition-discrete",
-        "motion-reduce:transition-none",
-        "backdrop:bg-black/40 backdrop:opacity-0 open:backdrop:opacity-100",
-        "starting:open:backdrop:opacity-0",
-        "backdrop:transition-[opacity,display,overlay] backdrop:duration-200 backdrop:transition-discrete",
-        "motion-reduce:backdrop:transition-none",
-      ].join(" ")}
-    >
-      <div className="flex h-full flex-col py-5">
-        <div className="flex items-center justify-between px-4">
-          <span className="sr-only">{tNav("open_menu")}</span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={tNav("close_menu")}
-            className="ml-auto flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-text-soft transition-colors hover:bg-page hover:text-text cursor-pointer"
-          >
-            <X size={20} strokeWidth={1.9} />
-          </button>
-        </div>
-        <SidebarContent
-          activeHref={activeHref}
-          collapsed={false}
-          onNavigate={onClose}
-          userName={userName}
-          userEmail={userEmail}
-        />
-      </div>
-    </dialog>
-  );
-};

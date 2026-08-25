@@ -76,7 +76,7 @@ export const CardHeaderActions = ({ cardId, showAdd = true, hasMovements = false
           {/* Desktop: header CTA. Mobile: floating action button (thumb-reach). */}
           <Button
             size="sm"
-            className="hidden w-auto sm:inline-flex"
+            className="hidden w-auto md:inline-flex"
             disabled={!movementDrawer}
             onClick={() => movementDrawer?.openCreate(cardId)}
           >
