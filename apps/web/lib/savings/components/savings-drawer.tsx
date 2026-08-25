@@ -663,7 +663,21 @@ export function SavingsDrawer({
                       {group.name ?? t('purposes.none')}
                     </span>
                     <GroupAmounts amounts={group.amounts} />
-                    <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
+                    {/* El resto NO lleva chevron: la flecha promete "entrás a
+                        ver esto", y tocarlo abre DESTINAR. Con el mismo adorno
+                        que los propósitos, la fila prometía una vista que no
+                        existe — el resto no tiene historial ni acciones propias
+                        porque no es un grupo de filas, es lo que sobra.
+
+                        Decir el verbo es más honesto que una flecha: la fila es
+                        una acción, no una puerta. */}
+                    {group.purposeId == null ? (
+                      <span className="shrink-0 text-[12.5px] font-bold text-emerald-deep">
+                        {t('purposes.allocate')}
+                      </span>
+                    ) : (
+                      <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
+                    )}
                   </button>
                 </li>
               ))}

@@ -514,7 +514,16 @@ export const SavingsDrawer = ({
                     {group.name ?? t('savings.purposes.none')}
                   </Text>
                   <GroupAmounts amounts={group.amounts} />
-                  <ChevronRight size={15} color={colors.textSoft} />
+                  {/* El resto NO lleva chevron: la flecha promete "entrás a ver
+                      esto", y tocarlo abre DESTINAR. Decir el verbo es más
+                      honesto — la fila es una acción, no una puerta. */}
+                  {group.purposeId == null ? (
+                    <Text className="text-[12.5px] font-bold text-positive">
+                      {t('savings.purposes.allocate')}
+                    </Text>
+                  ) : (
+                    <ChevronRight size={15} color={colors.textSoft} />
+                  )}
                 </Pressable>
               ))}
             </View>

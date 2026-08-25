@@ -282,6 +282,10 @@ por no decidir nada.
 
 Los propósitos sí abren su grupo: ahí hay historial de repartos, renombre, borrado y cuatro acciones.
 
+La fila del resto **no lleva chevron**, y esa diferencia es el punto: la flecha promete *"entrás a
+ver esto"*, y tocar el resto abre **destinar**. Con el mismo adorno que los propósitos, la fila
+prometía una vista que no existe. Dice el verbo en su lugar — es una acción, no una puerta.
+
 De paso, esto hace que **la puerta sea una sola**: con cero repartos, la fila dice *"Decir para qué
 es"*; con repartos, el desglose muestra «Sin destino» — y las dos llevan al mismo lugar. El usuario
 no aprende dos caminos para lo mismo según cuánto tenga hecho.
@@ -402,3 +406,29 @@ lo que contesta, y no por su categoría, es lo que hace que alguien la abra el d
 
 El neto del mes se muda al **historial**, arriba de la lista: es el mismo flujo contado de dos
 maneras, y ahí sí se acompañan.
+
+## D22 — El resto no tiene historial, y no es una omisión
+
+«Sin destino» aparece en la lista como una fila más, pero **no es un grupo de filas: es lo que
+sobra**. Su saldo se deriva (`guardado − lo repartido`), así que no tiene actos propios que listar.
+
+Los actos que lo mueven pertenecen a otros dos lados, y **todos ya están listados**:
+
+| Lo hace subir | Dónde se ve |
+|---|---|
+| Guardaste | historial del drawer |
+| Quitaste el destino a un propósito | historial de ese propósito |
+
+| Lo hace bajar | Dónde se ve |
+|---|---|
+| Destinaste a un propósito | historial de ese propósito |
+| Volviste a usar | historial del drawer |
+
+Un historial del resto sería una vista derivada de esos mismos actos **con el signo dado vuelta para
+la mitad** —*"Destinaste $150.000 a Japón"* tendría que aparecer ahí como −$150.000— y obligaría a
+devolverle una pantalla propia, que es justamente lo que D15 sacó.
+
+**Lo que sí cuesta hoy dos lugares** es la pregunta *"¿por qué me quedan $35.000 y no $40.000?"*. Si
+aparece en el uso, la forma que menos rompe no es darle vista al resto: es **unificar el historial del
+drawer** para que muestre los cuatro verbos en una sola línea de tiempo, con el propósito nombrado en
+cada fila. Ahí se contesta leyendo hacia abajo.
