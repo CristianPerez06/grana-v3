@@ -396,6 +396,9 @@ export const SavingsDrawer = ({
                   monthNet={monthNet(currency)}
                   groups={groupsOf(currency)}
                   onOpenGroup={(purposeId) => push({ kind: 'group', currency, purposeId })}
+                  onAllocateEmpty={() =>
+                    push({ kind: 'picker', currency, intent: 'allocate' })
+                  }
                   onSave={() =>
                     push({ kind: 'form', mode: 'save', currency, purposeId: null, locked: false })
                   }
@@ -423,6 +426,7 @@ const CurrencyBlock = ({
   monthNet,
   groups,
   onOpenGroup,
+  onAllocateEmpty,
   onSave,
   onRelease,
 }: {
@@ -434,6 +438,8 @@ const CurrencyBlock = ({
   /** El corte por propósito de esta moneda, «Sin destino» al final. */
   groups: PurposeSums[]
   onOpenGroup: (purposeId: string | null) => void
+  /** Puerta de entrada cuando todavía no hay nada destinado. */
+  onAllocateEmpty: () => void
   onSave: () => void
   onRelease: () => void
 }) => {
@@ -496,6 +502,22 @@ const CurrencyBlock = ({
           por qué no coincide con el banco, en qué está repartido, y recién
           después el movimiento por movimiento. Con un solo grupo no se dibuja —
           repetiría el total con más tinta, y en un teléfono eso es alto real. */}
+      {/* Con un solo grupo no hay desglose, pero SÍ tiene que haber puerta: sin
+          ella, quien todavía no destinó nada no tiene por dónde empezar — y ese
+          es el estado de todos el primer día. */}
+      {groups.length <= 1 && sums.reserved > 0 && (
+        <Pressable
+          accessibilityRole="button"
+          onPress={onAllocateEmpty}
+          className="mt-4 min-h-[44px] flex-row items-center justify-between rounded-xl border border-dashed border-border px-3 py-2"
+        >
+          <Text className="text-[13.5px] font-semibold text-text-muted">
+            {t('savings.purposes.empty_cta')}
+          </Text>
+          <ChevronRight size={15} color={colors.textSoft} />
+        </Pressable>
+      )}
+
       {groups.length > 1 && (
         <>
           <Text className="mt-4 text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">

@@ -499,6 +499,9 @@ export function SavingsDrawer({
                   monthNet={monthNet(currency)}
                   groups={groupsOf(currency)}
                   onOpenGroup={(purposeId) => push({ kind: 'group', currency, purposeId })}
+                  onAllocateEmpty={() =>
+                    push({ kind: 'picker', currency, intent: 'allocate' })
+                  }
                   onSave={() =>
                     push({ kind: 'form', mode: 'save', currency, purposeId: null, locked: false })
                   }
@@ -527,6 +530,7 @@ const CurrencyBlock = ({
   monthNet,
   groups,
   onOpenGroup,
+  onAllocateEmpty,
   onSave,
   onRelease,
 }: {
@@ -538,6 +542,8 @@ const CurrencyBlock = ({
   /** El corte por propósito de esta moneda, «Sin destino» al final. */
   groups: PurposeSums[]
   onOpenGroup: (purposeId: string | null) => void
+  /** Puerta de entrada cuando todavía no hay nada destinado. */
+  onAllocateEmpty: () => void
   onSave: () => void
   onRelease: () => void
 }) => {
@@ -603,8 +609,24 @@ const CurrencyBlock = ({
           preguntar: cuánto hay, por qué no coincide con el banco, en qué está
           repartido, y recién después el detalle movimiento por movimiento.
 
-          Con un solo grupo no se dibuja: un desglose de un elemento repite el
-          total con más tinta. */}
+          Con un solo grupo no hay desglose que mostrar —repetiría el total con
+          más tinta— pero SÍ tiene que haber puerta: sin ella, el usuario que
+          todavía no destinó nada no tiene por dónde empezar, y ese es el estado
+          de TODOS el primer día. Mismo patrón que la fila del dashboard, que
+          con cero guardado ofrece "Guardar algo" en vez de un cero. */}
+      {groups.length <= 1 && sums.reserved > 0 && (
+        <button
+          type="button"
+          onClick={onAllocateEmpty}
+          className="mt-4 flex min-h-[44px] w-full items-center justify-between rounded-xl border border-dashed border-border px-3 py-2 text-left transition-colors hover:bg-surface-sunken"
+        >
+          <span className="text-[13.5px] font-semibold text-text-muted">
+            {t('purposes.empty_cta')}
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
+        </button>
+      )}
+
       {groups.length > 1 && (
         <>
           <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">

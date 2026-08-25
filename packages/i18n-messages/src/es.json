@@ -2127,7 +2127,8 @@
       "allocate_note": "No mueve plata ni cambia cuánto podés gastar. Solo dice para qué es parte de lo que ya tenés guardado.",
       "entry_allocated": "Destinaste",
       "entry_unallocated": "Quitaste",
-      "empty_allocations": "Todavía no destinaste nada acá."
+      "empty_allocations": "Todavía no destinaste nada acá.",
+      "empty_cta": "Decir para qué es"
     }
   }
 }

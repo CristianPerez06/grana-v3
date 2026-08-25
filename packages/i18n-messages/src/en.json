@@ -2127,7 +2127,8 @@
       "allocate_note": "This doesn’t move money or change what you can spend. It only says what part of your savings is for.",
       "entry_allocated": "Assigned",
       "entry_unallocated": "Unassigned",
-      "empty_allocations": "Nothing assigned here yet."
+      "empty_allocations": "Nothing assigned here yet.",
+      "empty_cta": "Say what it’s for"
     }
   }
 }
