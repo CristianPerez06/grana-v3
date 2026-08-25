@@ -168,7 +168,7 @@ describe('get_reserve_flow_sums — the month line is a flow, never the stock', 
     await reserve(50_000, { date: '2026-08-05' })
     await reserve(-100_000, { date: '2026-08-18' })
 
-    // The UI turns the verb around with the sign: "Liberaste este mes".
+    // The UI turns the verb around with the sign: "Volviste a usar este mes".
     expect(await flow('2026-08-01', '2026-08-31')).toEqual([
       { currency_code: 'ARS', reserved_net: '-50000.00' },
     ])

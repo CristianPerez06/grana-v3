@@ -120,7 +120,9 @@ El drawer SHALL mostrar el cálculo **al momento de la operación** —disponibl
 
 Abierto desde la vista de detalle —que es **por moneda**— el drawer SHALL heredar esa moneda y NO SHALL ofrecer elegirla. Abierto suelto NO SHALL prellenar ningún monto: sin un ingreso del cual sacar el porcentaje, un número prellenado sería una cifra recomendada por Grana, que es justamente lo que el producto no hace.
 
-**Liberar NO SHALL pedir una cuenta de destino, y el copy SHALL decir explícitamente que la plata no se mueve.** Es el punto donde el modelo se puede malentender: los verbos *guardar* y *liberar* suenan a mover, y el usuario puede esperar elegir adónde va. No va a ninguna parte — estuvo todo el tiempo en las mismas cuentas. Lo único que cambia es cuánto de eso Grana cuenta como gastable. Un selector de cuenta ahí enseñaría el modelo equivocado en el momento exacto en que el usuario lo está aprendiendo.
+**Liberar NO SHALL pedir una cuenta de destino, y el copy SHALL decir explícitamente que la plata no se mueve.** Es el punto donde el modelo se puede malentender: el usuario puede esperar elegir adónde va.
+
+Por lo mismo, la UI NO SHALL llamar a esta operación *"Sacar"*, *"Retirar"* ni ningún verbo que la gente use para **retirar plata del banco**: sugerir movimiento es exactamente la confusión que el modelo combate. El verbo de la UI es **"Volver a usar"** —dice lo que pasa, que esa plata vuelve a contar como gastable— mientras que en el código la operación se sigue llamando `releaseAvailability`. No va a ninguna parte — estuvo todo el tiempo en las mismas cuentas. Lo único que cambia es cuánto de eso Grana cuenta como gastable. Un selector de cuenta ahí enseñaría el modelo equivocado en el momento exacto en que el usuario lo está aprendiendo.
 
 El copy NO SHALL sugerir que hubo una transferencia. Grana **nunca inventa un movimiento financiero para representar una intención**.
 
@@ -219,7 +221,7 @@ El copy SHALL formular una **propuesta de comportamiento**, no una recomendació
 
 ### Requirement: El guardado tiene una vista de detalle, y no entra en la navegación
 
-El sistema SHALL exponer una vista de detalle del guardado con: el **total guardado por moneda** (stock), el **neto del mes en curso** (flujo) y el **historial** de reservas y liberaciones con su fecha. La vista SHALL ofrecer las acciones Guardar y Liberar.
+El sistema SHALL exponer una vista de detalle del guardado con: el **total guardado por moneda** (stock), el **neto del mes en curso** (flujo) y el **historial** de reservas y liberaciones con su fecha. La vista SHALL ofrecer las acciones **Guardar** y **Volver a usar**.
 
 Se SHALL llegar a ella **tocando la fila de guardado del dashboard**, y esa fila SHALL estar presente en el mes corriente sin importar si el usuario guardó algo o no. NO SHALL agregarse una entrada nueva a la navegación de la app.
 

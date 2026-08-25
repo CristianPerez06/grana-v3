@@ -26,7 +26,7 @@ export type AvailableSums = {
  * y poner el acumulado rompería la identidad de la card.
  *
  * Negativo cuando en el período se liberó más de lo que se guardó — ahí la UI
- * gira el verbo con el signo ("Liberaste este mes").
+ * gira el verbo con el signo ("Volviste a usar este mes").
  */
 export type ReserveFlowSums = {
   currencyCode: BalanceCurrency

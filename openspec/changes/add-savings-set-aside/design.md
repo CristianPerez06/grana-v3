@@ -146,10 +146,28 @@ Qué hub la agrupa se decide en fase 2, con uso real.
 
 ## D10 — El verbo es "Guardar"
 
-En la UI: **Guardar** / **Liberar**, y el dato se llama **Guardado**.
+En la UI: **Guardar** / **Volver a usar**, y el dato se llama **Guardado**.
 
 "Reservar" suena a reservar una mesa; "Ahorrar" interpreta antes de describir. *Guardar plata* es
 lenguaje cotidiano argentino. En el código y en las specs el módulo es `savings`.
+
+**El inverso NO es "Liberar".** Es correcto técnicamente y es como se llama la operación en el código
+(`releaseAvailability`), pero nadie dice "voy a liberar $100.000": es palabra de sistemas —liberar
+espacio, liberar un recurso—, no de plata.
+
+Los candidatos y por qué caen:
+
+| | Por qué no |
+|---|---|
+| **Sacar** | Es el verbo que la gente usa para **retirar plata del banco**, y sugerir movimiento es justo la confusión que este modelo combate |
+| **Usar** | Promete que la estás gastando ahora, y la operación no gasta nada |
+| **Retirar** | Igual que "Sacar", con más olor a cajero |
+| **Dejar de guardar** | Preciso, pero tres palabras al lado de un botón de una, y suena a apagar una conducta más que a elegir un monto |
+| **Desguardar** | No es una palabra |
+
+**"Volver a usar"** dice exactamente lo que pasa —esa plata vuelve a contar como gastable— sin
+insinuar que se mueve, y el *"volver a"* desactiva la promesa de "Usar": no es *usala*, es *que vuelva
+a estar para usar*.
 
 ## D11 — El detalle de una cuenta no menciona el guardado
 

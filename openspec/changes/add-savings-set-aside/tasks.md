@@ -44,10 +44,10 @@
 - [x] 5.3 El drawer muestra el cálculo **del momento**: disponible actual → monto a guardar → remanente. **No** lo calcula contra el ingreso que lo abrió: la reserva es fungible y no pertenece a ningún movimiento
 - [x] 5.4 Contexto de origen: viniendo de un ingreso hereda la moneda, prellena con el porcentaje y **no** pide fecha. Suelto, ofrece moneda solo si el usuario tiene saldo en más de una, y fecha con hoy por defecto
 - [x] 5.5 El copy no sugiere en ningún lado que hubo una transferencia
-- [x] 5.6 Línea *Guardaste este mes* en la zona clara de la card de saldo: **debajo de una regla**, a lo ancho, rótulo izquierda / monto derecha, con signo menos y en **emerald** (el terracota está reservado para por pagar y vencido)
-- [x] 5.7 La línea se renderiza solo si el mes seleccionado es el corriente **y** el neto es distinto de cero. En cualquier otro caso la zona queda exactamente como estaba, sin regla
+- [x] 5.6 Línea *Guardado* en la zona clara de la card de saldo: **debajo de una regla**, a lo ancho, rótulo izquierda / monto derecha, con signo menos y en **emerald** (el terracota está reservado para por pagar y vencido). El monto es el **stock total** guardado, no el flujo del mes: la card muestra acumulados con corte en el mes y un flujo ahí adentro no cerraba la identidad *Tenías + Entró − Se fue − Guardado = Disponible*. El flujo del mes (*Guardaste este mes* / *Volviste a usar este mes*) vive en el drawer
+- [x] 5.7 La línea se renderiza solo si el mes seleccionado es el corriente. Con stock en cero muestra el estado *Guardar algo*, que abre el drawer; en meses pasados la zona queda exactamente como estaba, sin regla
 - [x] 5.8 La línea respeta el eye toggle, incluido el signo — resuelto por construcción: `MaskedAmount` ya oculta el `signPrefix` junto con el monto, y la fila lo usa en las dos plataformas
-- [x] 5.9 `savings-detail-drawer.tsx`: total guardado por moneda (stock), neto del mes (flujo) e historial con fecha, más las acciones Guardar y Liberar. Se llega **tocando el monto**, como al detalle de un resumen de tarjeta
+- [x] 5.9 `savings-detail-drawer.tsx`: total guardado por moneda (stock), neto del mes (flujo) e historial con fecha, más las acciones Guardar y Volver a usar. Se llega **tocando el monto**, como al detalle de un resumen de tarjeta
 - [x] 5.10 **No** agregar entrada de navegación
 
 ## 6. Mobile — paridad
@@ -68,7 +68,7 @@
 
 ## 8. Copy e i18n
 
-- [x] 8.1 `packages/i18n-messages`: Guardar, Liberar, Guardado, *Guardaste este mes*, el copy del drawer, el de la sugerencia, y los errores de tope y de piso
+- [x] 8.1 `packages/i18n-messages`: Guardar, **Volver a usar** (D10), Guardado, *Guardaste este mes* / *Volviste a usar este mes*, el copy del drawer, el de la sugerencia, y los errores de tope y de piso
 - [x] 8.2 Los errores dicen el número: *"Tenés $300.000 disponibles"*, no *"monto inválido"*
 - [x] 8.3 Cambiar `accounts.labels.balance` de "Saldo" a **"Saldo en esta cuenta"** (y su par en inglés). Es el único cambio fuera de `savings` y `dashboard`, y es copy: después de esta fase el número del dashboard deja de significar lo mismo que el de la cuenta, y dos rótulos iguales para dos cosas distintas es la confusión que la fase viene a evitar. Verificar que entra en el hero del detalle de cuenta en ancho de teléfono sin cortarse
 
@@ -83,3 +83,4 @@
 - [x] 9.2 Verificar que Movimientos no muestra nada nuevo y que ningún saldo de cuenta cambió: guardar no es un hecho del ledger
 - [x] 9.3 Actualizar la tabla de módulos de `AGENTS.md`: módulo 16 `savings` pasa de 🔲 Planned a ✅ Done con el alcance real de la fase 1 (guardar/liberar y disponible real; propósitos y posiciones siguen pendientes)
 - [x] 9.4 `pnpm openspec:check`, lint, typecheck y tests en verde
+- [ ] 9.5 **QA en la app nativa — pendiente.** Todo lo que se probó de mobile fue la vista mobile del navegador, que comparte el código de web y no ejerce nada de React Native. Falta correr en un dispositivo/emulador: el `BottomSheet` subiendo desde abajo (no un panel lateral), `FormSheetBody` con el teclado abierto sin tapar el input de monto, el `DateField` abriendo el picker nativo de Android, y la fila del dashboard entrando en una línea compacta sin empujar la card. Queda como issue en el backlog de GitHub, no bloquea el archivado de la fase
