@@ -1,11 +1,18 @@
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
-import { ChevronDown, ChevronLeft } from 'lucide-react-native'
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import { formatForDisplay, parseMoneyInput } from '@grana/validation'
-import { RESERVE_HISTORY_LIMIT, type AvailableSums, type ReserveEntry } from '@grana/savings'
+import {
+  PURPOSE_SEEDS,
+  RESERVE_HISTORY_LIMIT,
+  type AvailableSums,
+  type Purpose,
+  type PurposeSums,
+  type ReserveEntry,
+} from '@grana/savings'
 import { useT, useLocale } from '../../lib/locale-context'
 import { formatShortDate } from '../transactions/detail/format'
 import { useSavingsDetail } from '../../lib/savings/queries'
@@ -16,10 +23,32 @@ import { DateField } from '../ui/DateField'
 import { MoneyAmountInput } from '../ui/MoneyAmountInput'
 import { MoneyCalculator } from '../ui/MoneyCalculator'
 import { FormSheetBody } from '../layout/FormSheetBody'
+import { SheetBackHeader } from './SheetBackHeader'
+import { PurposePicker } from './PurposePicker'
+import { PurposeForm } from './PurposeForm'
+import { PurposeDelete } from './PurposeDelete'
+import { PurposeGroup } from './PurposeGroup'
 import { colors } from '../../lib/colors'
 
 type Currency = 'ARS' | 'USD'
 type Mode = 'save' | 'release'
+
+/**
+ * Las vistas que el sheet apila, igual que en web y por la misma razón: con seis
+ * vistas y varias alcanzables desde más de un lado, un estado plano obligaría a
+ * cada una a recordar a dónde volver — una pila escrita a mano, peor.
+ *
+ * `SheetView` y no `View` como en web: acá `View` es el componente de React
+ * Native y el tipo lo taparía.
+ */
+type SheetView =
+  | { kind: 'detail' }
+  | { kind: 'group'; currency: Currency; purposeId: string | null }
+  | { kind: 'form'; mode: Mode; currency: Currency; purposeId: string | null; locked: boolean }
+  | { kind: 'picker'; currency: Currency }
+  | { kind: 'purposeForm'; purpose: Purpose | null; name?: string; icon?: string }
+  | { kind: 'purposeDelete'; purpose: Purpose }
+  | { kind: 'pickSource'; currency: Currency }
 
 const money = (amount: number, currency: Currency) =>
   currency === 'USD' ? formatUSD(amount) : formatARS(amount, true)
@@ -53,10 +82,17 @@ export const SavingsDrawer = ({
 }) => {
   const t = useT()
   const queryClient = useQueryClient()
-  const [form, setForm] = useState<{ mode: Mode; currency: Currency } | null>(null)
+  const [stack, setStack] = useState<SheetView[]>([{ kind: 'detail' }])
+  const view = stack[stack.length - 1]
+  const push = (next: SheetView) => setStack((s) => [...s, next])
+  const back = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s))
   const today = getTodayAR()
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-  const { sums, history, monthNet } = useSavingsDetail(visible, monthStart, today)
+  const { sums, history, monthNet, purposeSums, purposes } = useSavingsDetail(
+    visible,
+    monthStart,
+    today,
+  )
 
   // Reset the view when the sheet opens, derived DURING RENDER from the prop
   // rather than in an effect: it is not a synchronization with anything external
@@ -64,7 +100,16 @@ export const SavingsDrawer = ({
   const [wasVisible, setWasVisible] = useState(visible)
   if (visible !== wasVisible) {
     setWasVisible(visible)
-    if (visible) setForm(initialMode ?? null)
+    if (visible) {
+      setStack(
+        initialMode
+          ? [
+              { kind: 'detail' },
+              { ...initialMode, kind: 'form', purposeId: null, locked: false },
+            ]
+          : [{ kind: 'detail' }],
+      )
+    }
   }
 
   const rowFor = (currency: Currency): AvailableSums =>
@@ -86,7 +131,7 @@ export const SavingsDrawer = ({
   // venías cambió; quedarse en el detalle deja al usuario preguntándose si pasó
   // algo, que es el peor final para una acción sobre plata.
   const onDone = async () => {
-    setForm(null)
+    setStack([{ kind: 'detail' }])
     onClose()
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['savings'] }),
@@ -94,20 +139,184 @@ export const SavingsDrawer = ({
     ])
   }
 
+  const purposeById = (id: string | null): Purpose | null =>
+    id == null ? null : (purposes.find((p) => p.id === id) ?? null)
+
+  /** Los grupos de una moneda, por monto y con «Sin destino» fijo al final. */
+  const groupsOf = (currency: Currency): PurposeSums[] => {
+    const rows = purposeSums.filter((s) => s.currencyCode === currency)
+    const named = rows.filter((r) => r.purposeId != null).sort((a, b) => b.reserved - a.reserved)
+    return [...named, ...rows.filter((r) => r.purposeId == null)]
+  }
+
+  const groupAmount = (currency: Currency, purposeId: string | null): number =>
+    purposeSums.find((s) => s.currencyCode === currency && s.purposeId === purposeId)?.reserved ?? 0
+
+  /** Refresca sin cerrar: tocar una etiqueta no termina ninguna operación. */
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['savings'] })
+
+  /**
+   * Elegir un propósito vuelve AL FORMULARIO que lo pidió, con el propósito ya
+   * puesto — no al detalle. Perder el monto tipeado por haber ido a elegir una
+   * etiqueta sería cobrarle al usuario haber querido ser prolijo.
+   */
+  const pickPurpose = (purposeId: string | null) =>
+    setStack((prev) => {
+      const at = prev.map((v) => v.kind).lastIndexOf('form')
+      if (at < 0) return prev.slice(0, 1)
+      const target = prev[at] as Extract<SheetView, { kind: 'form' }>
+      return [...prev.slice(0, at), { ...target, purposeId }]
+    })
+
+  const openRelease = (currency: Currency) => {
+    const withMoney = groupsOf(currency).filter((g) => g.reserved > 0)
+    // Con un solo grupo la pregunta tiene una única respuesta: es puro paso.
+    if (withMoney.length > 1) return push({ kind: 'pickSource', currency })
+    push({
+      kind: 'form',
+      mode: 'release',
+      currency,
+      purposeId: withMoney[0]?.purposeId ?? null,
+      locked: true,
+    })
+  }
+
   return (
     <BottomSheet visible={visible} onClose={onClose} ariaLabel={t('savings.title')}>
       {/* FormSheetBody because the form has a text input: an RN Modal renders in
           its own native window, so the keyboard context has to be mounted here. */}
       <FormSheetBody contentClassName="px-4 pb-2 pt-1" maxHeight={560}>
-        {form ? (
+        {view.kind === 'form' && (
           <SavingsForm
-            mode={form.mode}
-            initialCurrency={form.currency}
+            mode={view.mode}
+            initialCurrency={view.currency}
             rowFor={rowFor}
-            onCancel={() => setForm(null)}
+            purpose={purposeById(view.purposeId)}
+            purposeId={view.purposeId}
+            purposeAmount={groupAmount(view.currency, view.purposeId)}
+            lockedPurpose={view.locked}
+            onPickPurpose={() => push({ kind: 'picker', currency: view.currency })}
+            onCancel={back}
             onDone={onDone}
           />
-        ) : (
+        )}
+
+        {view.kind === 'picker' && (
+          <PurposePicker
+            purposes={purposes}
+            sums={purposeSums}
+            currency={view.currency}
+            selectedId={
+              (stack.find((v) => v.kind === 'form') as Extract<SheetView, { kind: 'form' }>)
+                ?.purposeId ?? null
+            }
+            onPick={pickPurpose}
+            onCreate={(seedKey) =>
+              push({
+                kind: 'purposeForm',
+                purpose: null,
+                name: seedKey ? t(`savings.purposes.seeds.${seedKey}`) : undefined,
+                icon: seedKey ? PURPOSE_SEEDS.find((s) => s.key === seedKey)?.icon : undefined,
+              })
+            }
+            onBack={back}
+          />
+        )}
+
+        {view.kind === 'purposeForm' && (
+          <PurposeForm
+            purpose={view.purpose}
+            initialName={view.name}
+            initialIcon={view.icon}
+            onDone={async (purposeId) => {
+              await refresh()
+              // Recién creado desde el selector: se elige solo.
+              if (view.purpose == null) pickPurpose(purposeId)
+              else back()
+            }}
+            onBack={back}
+          />
+        )}
+
+        {view.kind === 'purposeDelete' && (
+          <PurposeDelete
+            purpose={view.purpose}
+            sums={purposeSums}
+            onDone={async () => {
+              await refresh()
+              // Al detalle, no al grupo: el grupo ya no existe.
+              setStack([{ kind: 'detail' }])
+            }}
+            onBack={back}
+          />
+        )}
+
+        {view.kind === 'pickSource' && (
+          <View>
+            <SheetBackHeader title={t('savings.purposes.choose')} onBack={back} />
+            <View className="mt-4 gap-2">
+              {groupsOf(view.currency)
+                .filter((g) => g.reserved > 0)
+                .map((group) => (
+                  <Pressable
+                    key={group.purposeId ?? 'none'}
+                    accessibilityRole="button"
+                    onPress={() =>
+                      push({
+                        kind: 'form',
+                        mode: 'release',
+                        currency: view.currency,
+                        purposeId: group.purposeId,
+                        locked: true,
+                      })
+                    }
+                    className="min-h-[52px] flex-row items-center gap-3 rounded-xl border border-border bg-card px-3 py-2"
+                  >
+                    <Text className="text-[17px]">{group.purposeIcon ?? '🫙'}</Text>
+                    <Text className="flex-1 text-[14px] font-semibold text-text" numberOfLines={1}>
+                      {group.purposeName ?? t('savings.purposes.none')}
+                    </Text>
+                    <Text className="text-[13px] font-extrabold text-text-muted">
+                      {money(group.reserved, view.currency)}
+                    </Text>
+                  </Pressable>
+                ))}
+            </View>
+            {/* No hay "repartir": sería inventar una imputación. */}
+          </View>
+        )}
+
+        {view.kind === 'group' && (
+          <PurposeGroup
+            currency={view.currency}
+            purposeId={view.purposeId}
+            purpose={purposeById(view.purposeId)}
+            reserved={groupAmount(view.currency, view.purposeId)}
+            onSave={() =>
+              push({
+                kind: 'form',
+                mode: 'save',
+                currency: view.currency,
+                purposeId: view.purposeId,
+                locked: true,
+              })
+            }
+            onRelease={() =>
+              push({
+                kind: 'form',
+                mode: 'release',
+                currency: view.currency,
+                purposeId: view.purposeId,
+                locked: true,
+              })
+            }
+            onEdit={(purpose) => push({ kind: 'purposeForm', purpose })}
+            onDelete={(purpose) => push({ kind: 'purposeDelete', purpose })}
+            onBack={back}
+          />
+        )}
+
+        {view.kind === 'detail' && (
           <View>
             <Text className="text-[19px] font-extrabold text-text">{t('savings.title')}</Text>
             <View className="mt-3 gap-4">
@@ -118,8 +327,12 @@ export const SavingsDrawer = ({
                   sums={rowFor(currency)}
                   history={history[currency]}
                   monthNet={monthNet(currency)}
-                  onSave={() => setForm({ mode: 'save', currency })}
-                  onRelease={() => setForm({ mode: 'release', currency })}
+                  groups={groupsOf(currency)}
+                  onOpenGroup={(purposeId) => push({ kind: 'group', currency, purposeId })}
+                  onSave={() =>
+                    push({ kind: 'form', mode: 'save', currency, purposeId: null, locked: false })
+                  }
+                  onRelease={() => openRelease(currency)}
                 />
               ))}
             </View>
@@ -141,6 +354,8 @@ const CurrencyBlock = ({
   sums,
   history,
   monthNet,
+  groups,
+  onOpenGroup,
   onSave,
   onRelease,
 }: {
@@ -149,6 +364,9 @@ const CurrencyBlock = ({
   history: { entries: ReserveEntry[]; hasMore: boolean }
   /** Neto del mes, de `get_reserve_flow_sums`. Nunca recompuesto acá. */
   monthNet: number
+  /** El corte por propósito de esta moneda, «Sin destino» al final. */
+  groups: PurposeSums[]
+  onOpenGroup: (purposeId: string | null) => void
   onSave: () => void
   onRelease: () => void
 }) => {
@@ -206,6 +424,37 @@ const CurrencyBlock = ({
       <Text className="mt-2 px-1 text-[12.5px] leading-snug text-text-soft">
         {t('savings.gap_note')}
       </Text>
+
+      {/* El desglose por propósito, entre el puente y el historial: cuánto hay,
+          por qué no coincide con el banco, en qué está repartido, y recién
+          después el movimiento por movimiento. Con un solo grupo no se dibuja —
+          repetiría el total con más tinta, y en un teléfono eso es alto real. */}
+      {groups.length > 1 && (
+        <>
+          <Text className="mt-4 text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
+            {t('savings.purposes.label')}
+          </Text>
+          <View className="mt-1.5 gap-1">
+            {groups.map((group) => (
+              <Pressable
+                key={group.purposeId ?? 'none'}
+                accessibilityRole="button"
+                onPress={() => onOpenGroup(group.purposeId)}
+                className="min-h-[44px] flex-row items-center gap-2.5 rounded-xl px-1 py-1.5"
+              >
+                <Text className="text-[15px]">{group.purposeIcon ?? '🫙'}</Text>
+                <Text className="flex-1 text-[14px] font-semibold text-text" numberOfLines={1}>
+                  {group.purposeName ?? t('savings.purposes.none')}
+                </Text>
+                <Text className="text-[14px] font-extrabold text-text">
+                  {money(group.reserved, currency)}
+                </Text>
+                <ChevronRight size={15} color={colors.textSoft} />
+              </Pressable>
+            ))}
+          </View>
+        </>
+      )}
 
       <Text className="mt-4 text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
         {t('savings.history')}
@@ -275,12 +524,25 @@ const SavingsForm = ({
   mode,
   initialCurrency,
   rowFor,
+  purpose,
+  purposeId,
+  purposeAmount,
+  lockedPurpose,
+  onPickPurpose,
   onCancel,
   onDone,
 }: {
   mode: Mode
   initialCurrency: Currency
   rowFor: (currency: Currency) => AvailableSums
+  /** El propósito elegido, ya resuelto. `null` es «Sin destino». */
+  purpose: Purpose | null
+  purposeId: string | null
+  /** Lo guardado en ese grupo y esa moneda: es el piso cuando se vuelve a usar. */
+  purposeAmount: number
+  /** Se llegó desde un grupo: el propósito se hereda y no se ofrece cambiarlo. */
+  lockedPurpose: boolean
+  onPickPurpose: () => void
   onCancel: () => void
   onDone: () => Promise<void>
 }) => {
@@ -310,18 +572,25 @@ const SavingsForm = ({
   // EMPTY: a pre-filled number with no anchor would read as an amount Grana is
   // recommending, and Grana does not recommend amounts.
   const value = parseMoneyInput(amount) ?? 0
-  const limit = mode === 'save' ? sums.available : sums.reserved
+  // El tope de guardar es el disponible de la MONEDA; el piso de volver a usar
+  // es el de ESTE GRUPO. La misma asimetría que aplica el write path: un
+  // propósito no tiene objetivo, así que guardar no tiene contra qué toparse,
+  // pero volver a usar no puede dejar un grupo en negativo aunque el total
+  // guardado —visible en la pantalla anterior— lo cubra.
+  const limit = mode === 'save' ? sums.available : purposeAmount
   const remainder = limit - value
   const overLimit = value > limit
   // El mismo mensaje que devolvería el servidor, con el mismo número: un botón
   // deshabilitado sin explicación no deja avanzar y tampoco dice por qué.
   const limitError = overLimit
-    ? t(
-        mode === 'save'
-          ? 'savings.errors.exceeds_available'
-          : 'savings.errors.exceeds_reserved',
-        { limit: money(limit, currency) },
-      )
+    ? mode === 'save'
+      ? t('savings.errors.exceeds_available', { limit: money(limit, currency) })
+      : purpose != null
+        ? t('savings.errors.exceeds_purpose_reserved', {
+            limit: money(limit, currency),
+            purpose: purpose.name,
+          })
+        : t('savings.errors.exceeds_reserved', { limit: money(limit, currency) })
     : null
   const amountInputWidth = Math.max(1, formatForDisplay(amount).length) * 20 + 2
 
@@ -334,6 +603,7 @@ const SavingsForm = ({
         amount: value,
         currency_code: currency,
         date: new Date(`${date}T00:00:00`),
+        purpose_id: purposeId,
       })
       if (!result.ok) {
         const limitText = money(result.limit ?? 0, currency)
@@ -406,10 +676,35 @@ const SavingsForm = ({
         <DateField value={date} onChange={setDate} />
       </View>
 
+      {/* Para qué. Una fila y no una lista desplegada: el propósito es opcional
+          y casi siempre queda como está, así que gastar alto de sheet en una
+          lista le cobraría a todos por lo que decide una minoría — y en un
+          teléfono ese alto es lo que empuja al CTA fuera de la pantalla.
+
+          Bloqueada cuando se llegó desde un grupo: ahí el propósito se hereda,
+          igual que la moneda se hereda del ingreso. */}
+      <Pressable
+        onPress={onPickPurpose}
+        disabled={lockedPurpose}
+        accessibilityRole="button"
+        className="mt-3 min-h-[52px] flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 py-2"
+      >
+        <Text className="text-[13px] text-text-muted">{t('savings.purposes.label')}</Text>
+        <Text className="ml-auto text-[15px]">{purpose?.icon ?? '🫙'}</Text>
+        <Text className="text-[14px] font-semibold text-text" numberOfLines={1}>
+          {purpose?.name ?? t('savings.purposes.none')}
+        </Text>
+        {!lockedPurpose && <ChevronRight size={15} color={colors.textSoft} />}
+      </Pressable>
+
       <View className="mt-3 rounded-2xl border border-border bg-card p-4">
         <View className="flex-row justify-between py-1">
           <Text className="text-[14px] text-text-muted">
-            {mode === 'save' ? t('savings.available_now') : t('savings.saved_total')}
+            {mode === 'save'
+              ? t('savings.available_now')
+              : purpose != null
+                ? t('savings.saved_in', { purpose: purpose.name })
+                : t('savings.saved_total')}
           </Text>
           <Text className="text-[14px] font-semibold text-text">{money(limit, currency)}</Text>
         </View>
@@ -423,7 +718,11 @@ const SavingsForm = ({
         </View>
         <View className="mt-1.5 flex-row justify-between border-t border-border-soft pt-2.5">
           <Text className="text-[14px] text-text-muted">
-            {mode === 'save' ? t('savings.left_to_spend') : t('savings.stays_saved')}
+            {mode === 'save'
+              ? t('savings.left_to_spend')
+              : purpose != null
+                ? t('savings.stays_in', { purpose: purpose.name })
+                : t('savings.stays_saved')}
           </Text>
           <Text
             className={`text-[16px] font-extrabold ${overLimit ? 'text-negative' : 'text-text'}`}

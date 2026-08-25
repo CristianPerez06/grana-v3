@@ -1,6 +1,9 @@
 import {
   reserveAvailability as reserveAvailabilityImpl,
   releaseAvailability as releaseAvailabilityImpl,
+  createPurpose as createPurposeImpl,
+  renamePurpose as renamePurposeImpl,
+  deletePurpose as deletePurposeImpl,
   type SavingsMutationResult,
 } from '@grana/savings'
 import { getTodayAR } from '@grana/money-logic'
@@ -35,4 +38,24 @@ export async function releaseAvailability(input: unknown): Promise<SavingsMutati
     input,
     today: getTodayAR(),
   })
+}
+
+// ── Propósitos ────────────────────────────────────────────────────────────────
+// Ninguna de las tres toca un número: crear, renombrar y borrar son operaciones
+// sobre una etiqueta. El borrado en particular devuelve la plata a «Sin destino»
+// por la regla del schema, no por algo que se haga acá.
+
+export async function createPurpose(input: unknown): Promise<SavingsMutationResult> {
+  return createPurposeImpl({ supabase, userId: await currentUserId(), input })
+}
+
+export async function renamePurpose(
+  purposeId: string,
+  input: unknown,
+): Promise<SavingsMutationResult> {
+  return renamePurposeImpl({ supabase, purposeId, input })
+}
+
+export async function deletePurpose(purposeId: string): Promise<SavingsMutationResult> {
+  return deletePurposeImpl({ supabase, purposeId })
 }

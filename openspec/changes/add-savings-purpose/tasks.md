@@ -25,36 +25,36 @@
 
 ## 4. El selector y el alta (D6, D7)
 
-- [ ] 4.1 Fila de propósito en el drawer de Guardar, con el propósito actual o *Sin destino*
-- [ ] 4.2 Pantalla de selección dentro del mismo drawer: propósitos del usuario con su monto, y las sugerencias que todavía no tiene
-- [ ] 4.3 Tocar una sugerencia crea el propósito **del usuario**, con el nombre precargado y editable en el momento
-- [ ] 4.4 Alta manual con nombre libre y selector de ícono
-- [ ] 4.5 El nombre duplicado se rechaza con un mensaje que dice cuál ya existe, no con un error genérico
-- [ ] 4.6 Sugerencias en `packages/i18n-messages` (es/en): Emergencia, Viaje, Auto, Casa, Estudio
+- [x] 4.1 Fila de propósito en el drawer de Guardar, con el propósito actual o *Sin destino*
+- [x] 4.2 Pantalla de selección dentro del mismo drawer: propósitos del usuario con su monto, y las sugerencias que todavía no tiene
+- [x] 4.3 Tocar una sugerencia crea el propósito **del usuario**, con el nombre precargado y editable en el momento
+- [x] 4.4 Alta manual con nombre libre y selector de ícono
+- [x] 4.5 El nombre duplicado se rechaza con un mensaje que dice cuál ya existe, no con un error genérico
+- [x] 4.6 Sugerencias en `packages/i18n-messages` (es/en): Emergencia, Viaje, Auto, Casa, Estudio
 
 ## 5. El detalle agrupado (D3, D9)
 
-- [ ] 5.1 El detalle del guardado se agrupa por propósito, con el monto de cada grupo
-- [ ] 5.2 «Sin destino» aparece como un grupo más, al final
-- [ ] 5.3 Tocar un grupo abre sus acciones **heredando el propósito**: sin selector
-- [ ] 5.4 Abrir *Volver a usar* desde el total con más de un grupo con saldo pide primero de cuál sale, con los montos a la vista
-- [ ] 5.5 El historial de cada grupo, acotado igual que el de la fase 1
+- [x] 5.1 El detalle del guardado se agrupa por propósito, con el monto de cada grupo
+- [x] 5.2 «Sin destino» aparece como un grupo más, al final
+- [x] 5.3 Tocar un grupo abre sus acciones **heredando el propósito**: sin selector
+- [x] 5.4 Abrir *Volver a usar* desde el total con más de un grupo con saldo pide primero de cuál sale, con los montos a la vista
+- [x] 5.5 El historial de cada grupo, acotado igual que el de la fase 1
 
 ## 6. Editar y borrar (D4, D5)
 
-- [ ] 6.1 Renombrar y cambiar el ícono de un propósito
-- [ ] 6.2 Borrar avisa **cuánta plata se reasigna, por moneda**, y que vuelve a «Sin destino»
-- [ ] 6.3 Borrar un propósito vacío no necesita aviso
+- [x] 6.1 Renombrar y cambiar el ícono de un propósito
+- [x] 6.2 Borrar avisa **cuánta plata se reasigna, por moneda**, y que vuelve a «Sin destino»
+- [x] 6.3 Borrar un propósito vacío no necesita aviso
 
 ## 7. Mobile — paridad
 
-- [ ] 7.1 Selector y detalle agrupado en el `SavingsDrawer` nativo, como pantallas propias dentro del mismo sheet
-- [ ] 7.2 Naming espejo web↔mobile
-- [ ] 7.3 **No reformar las pantallas de la fase 1 que todavía no se probaron en dispositivo** (issue #58): las de la fase 2 se agregan al lado, para que un fallo en nativo se pueda atribuir a una fase o a la otra
+- [x] 7.1 Selector y detalle agrupado en el `SavingsDrawer` nativo, como pantallas propias dentro del mismo sheet
+- [x] 7.2 Naming espejo web↔mobile
+- [x] 7.3 **No reformar las pantallas de la fase 1 que todavía no se probaron en dispositivo** (issue #58): las de la fase 2 se agregan al lado, para que un fallo en nativo se pueda atribuir a una fase o a la otra
 
 ## 8. Cierre
 
-- [ ] 8.1 Verificar que el dashboard no cambió: ningún número, ninguna fila nueva
+- [x] 8.1 Verificar que el dashboard no cambió: ningún número, ninguna fila nueva
 - [ ] 8.2 Sumar al issue #58 la sección de QA nativo de la fase 2
 - [ ] 8.3 Actualizar `docs/modelo-de-dinero.md` si alguna decisión de esta fase corrige el documento
 - [ ] 8.4 `pnpm openspec:check`, lint, typecheck (web y mobile) y tests en verde
