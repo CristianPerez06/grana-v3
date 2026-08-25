@@ -282,9 +282,7 @@ por no decidir nada.
 
 Los propósitos sí abren su grupo: ahí hay historial de repartos, renombre, borrado y cuatro acciones.
 
-La fila del resto **no lleva chevron**, y esa diferencia es el punto: la flecha promete *"entrás a
-ver esto"*, y tocar el resto abre **destinar**. Con el mismo adorno que los propósitos, la fila
-prometía una vista que no existe. Dice el verbo en su lugar — es una acción, no una puerta.
+El resto **no va en la lista**: va separado abajo, con sus dos acciones a la vista. Ver D22bis.
 
 De paso, esto hace que **la puerta sea una sola**: con cero repartos, la fila dice *"Decir para qué
 es"*; con repartos, el desglose muestra «Sin destino» — y las dos llevan al mismo lugar. El usuario
@@ -432,3 +430,35 @@ devolverle una pantalla propia, que es justamente lo que D15 sacó.
 aparece en el uso, la forma que menos rompe no es darle vista al resto: es **unificar el historial del
 drawer** para que muestre los cuatro verbos en una sola línea de tiempo, con el propósito nombrado en
 cada fila. Ahí se contesta leyendo hacia abajo.
+
+## D22bis — Si el resto no es un propósito, que no se disfrace de propósito
+
+«Sin destino» pasó por tres formas antes de quedar bien, y las dos primeras fallan por lo mismo:
+
+1. **Fila igual a las demás, con chevron** → prometía una vista de propósito que no existe.
+2. **Fila igual pero sin chevron, que abre destinar** → no miente con la flecha, pero sigue pareciendo
+   un par de *Viaje* y *Casa* mientras se comporta distinto. Y su segunda acción —volver a usar— queda
+   escondida en el botón de arriba, donde hay que saber buscarla.
+
+El problema de las dos es el mismo: **comportarse "casi igual pero no igual"**. Esa asimetría es
+justamente la que genera la pregunta *"¿por qué este no tiene X?"* — una y otra vez.
+
+La forma que queda lo dice de frente: **un bloque aparte, al final del desglose, con borde punteado y
+sus dos acciones adentro**.
+
+```
+🫙 Sin destino                              $ 75.000
+   [ Destinar ]        [ Volver a usar ]
+```
+
+La regla que separa los dos:
+
+| | Propósito | El resto |
+|---|---|---|
+| Navega a una vista | sí | no |
+| Historial propio | sí | no (D22) |
+| Se edita y se borra | sí | no |
+| Acciones | 3, adentro | **2, a la vista** |
+
+Ni pantalla completa, ni chevron igual, ni comportamiento distinto escondido. Se ve como lo que es:
+plata que todavía no tiene etiqueta, que se puede destinar o volver a usar.

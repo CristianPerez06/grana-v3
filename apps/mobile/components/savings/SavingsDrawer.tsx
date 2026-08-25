@@ -489,44 +489,88 @@ export const SavingsDrawer = ({
               {t('savings.purposes.label')}
             </Text>
             <View className="mt-1.5 gap-1">
-              {groupsUnified().map((group) => (
-                <Pressable
-                  key={group.purposeId ?? 'none'}
-                  accessibilityRole="button"
-                  onPress={() =>
-                    group.purposeId == null
-                      ? push({
-                          kind: 'allocate',
-                          currency: currencyWithMoney(null),
-                          purpose: null,
-                          direction: 'allocate',
-                        })
-                      : push({
-                          kind: 'group',
-                          currency: currencyWithMoney(group.purposeId),
-                          purpose: purposeById(group.purposeId)!,
-                        })
-                  }
-                  className="min-h-[44px] flex-row items-center gap-2.5 rounded-xl px-1 py-1.5"
-                >
-                  <Text className="text-[15px]">{group.icon ?? '🫙'}</Text>
-                  <Text className="flex-1 text-[14px] font-semibold text-text" numberOfLines={1}>
-                    {group.name ?? t('savings.purposes.none')}
-                  </Text>
-                  <GroupAmounts amounts={group.amounts} />
-                  {/* El resto NO lleva chevron: la flecha promete "entrás a ver
-                      esto", y tocarlo abre DESTINAR. Decir el verbo es más
-                      honesto — la fila es una acción, no una puerta. */}
-                  {group.purposeId == null ? (
-                    <Text className="text-[12.5px] font-bold text-positive">
-                      {t('savings.purposes.allocate')}
+              {groupsUnified()
+                .filter((g) => g.purposeId != null)
+                .map((group) => (
+                  <Pressable
+                    key={group.purposeId}
+                    accessibilityRole="button"
+                    onPress={() =>
+                      push({
+                        kind: 'group',
+                        currency: currencyWithMoney(group.purposeId),
+                        purpose: purposeById(group.purposeId)!,
+                      })
+                    }
+                    className="min-h-[44px] flex-row items-center gap-2.5 rounded-xl px-1 py-1.5"
+                  >
+                    <Text className="text-[15px]">{group.icon ?? '🫙'}</Text>
+                    <Text className="flex-1 text-[14px] font-semibold text-text" numberOfLines={1}>
+                      {group.name}
                     </Text>
-                  ) : (
+                    <GroupAmounts amounts={group.amounts} />
                     <ChevronRight size={15} color={colors.textSoft} />
-                  )}
-                </Pressable>
-              ))}
+                  </Pressable>
+                ))}
             </View>
+
+            {/* El resto, SEPARADO y con sus dos acciones a la vista. No es un
+                propósito, así que no se disfraza de uno: no navega, no tiene
+                flecha, no se edita ni se borra. Pero tampoco se comporta "casi
+                igual pero no igual" — dice lo que es y ofrece lo único que se
+                puede hacer con él. */}
+            {(() => {
+              const rest = groupsUnified().find((g) => g.purposeId == null)
+              if (rest == null) return null
+              const hasMoney = rest.amounts.some((a) => a.reserved > 0)
+
+              return (
+                <View className="mt-3 rounded-xl border border-dashed border-border bg-border-soft px-3 py-2.5">
+                  <View className="flex-row items-center gap-2.5">
+                    <Text className="text-[15px]">🫙</Text>
+                    <Text className="flex-1 text-[14px] font-semibold text-text-muted">
+                      {t('savings.purposes.none')}
+                    </Text>
+                    <GroupAmounts amounts={rest.amounts} />
+                  </View>
+                  <View className="mt-2 flex-row gap-2">
+                    <View className="flex-1">
+                      <Button
+                        title={t('savings.purposes.allocate')}
+                        variant="secondary"
+                        size="sm"
+                        disabled={!hasMoney}
+                        onPress={() =>
+                          push({
+                            kind: 'allocate',
+                            currency: currencyWithMoney(null),
+                            purpose: null,
+                            direction: 'allocate',
+                          })
+                        }
+                      />
+                    </View>
+                    <View className="flex-1">
+                      <Button
+                        title={t('savings.release')}
+                        variant="secondary"
+                        size="sm"
+                        disabled={!hasMoney}
+                        onPress={() =>
+                          push({
+                            kind: 'form',
+                            mode: 'release',
+                            currency: currencyWithMoney(null),
+                            purposeId: null,
+                            locked: true,
+                          })
+                        }
+                      />
+                    </View>
+                  </View>
+                </View>
+              )
+            })()}
 
             <View className="mt-4 flex-row gap-2">
               <View className="flex-1">

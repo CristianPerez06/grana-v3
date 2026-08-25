@@ -94,3 +94,4 @@
 - [x] 12.6 Fuera la fila «Para qué» cuando el propósito viene heredado: el título dice el origen (D19)
 - [x] 12.7 El puente queda como conciliación pura, con rótulos que nombran los dos sistemas y el título convertido en la pregunta (D21)
 - [x] 12.8 El neto del mes se muda al historial, que es donde el flujo se cuenta
+- [x] 12.9 «Sin destino» sale de la lista y pasa a un bloque propio con sus dos acciones a la vista (D22bis)

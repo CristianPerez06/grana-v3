@@ -145,11 +145,11 @@ Cuando la operación se abra desde el total y exista **más de un grupo con sald
 pedir primero de cuál sale, mostrando los montos. El sistema NO SHALL repartir el monto entre varios
 propósitos automáticamente.
 
-#### Scenario: El resto lleva directo a elegir para qué
+#### Scenario: El resto se presenta distinto de un propósito
 
-- **WHEN** el usuario toca «Sin destino» en el desglose
-- **THEN** pasa directamente a elegir el propósito, sin una vista intermedia del grupo
-- **AND** el mismo camino es el que ofrece la fila que aparece cuando no hay nada repartido
+- **WHEN** el usuario mira el desglose
+- **THEN** «Sin destino» aparece separado de la lista de propósitos, sin control de navegación
+- **AND** ofrece sus dos acciones —destinar y volver a usar— sin entrar a ninguna vista
 
 #### Scenario: Volver a usar desde un propósito no pregunta
 

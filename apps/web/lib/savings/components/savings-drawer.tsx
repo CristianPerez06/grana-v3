@@ -633,55 +633,94 @@ export function SavingsDrawer({
               {t('purposes.label')}
             </p>
             <ul className="mt-2 flex flex-col gap-1.5">
-              {groupsUnified().map((group) => (
-                <li key={group.purposeId ?? 'none'}>
-                  {/* «Sin destino» va DERECHO a destinar, con propósito y monto
-                      en la misma pantalla. Los propósitos abren su grupo:
-                      tienen historial y acciones propias. */}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      group.purposeId == null
-                        ? push({
-                            kind: 'allocate',
-                            currency: currencyWithMoney(null),
-                            purpose: null,
-                            direction: 'allocate',
-                          })
-                        : push({
-                            kind: 'group',
-                            currency: currencyWithMoney(group.purposeId),
-                            purpose: purposeById(group.purposeId)!,
-                          })
-                    }
-                    className="flex min-h-[44px] w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-surface-sunken"
-                  >
-                    <span aria-hidden className="text-[16px]">
-                      {group.icon ?? '🫙'}
-                    </span>
-                    <span className="flex-1 truncate text-[14px] font-semibold text-text">
-                      {group.name ?? t('purposes.none')}
-                    </span>
-                    <GroupAmounts amounts={group.amounts} />
-                    {/* El resto NO lleva chevron: la flecha promete "entrás a
-                        ver esto", y tocarlo abre DESTINAR. Con el mismo adorno
-                        que los propósitos, la fila prometía una vista que no
-                        existe — el resto no tiene historial ni acciones propias
-                        porque no es un grupo de filas, es lo que sobra.
-
-                        Decir el verbo es más honesto que una flecha: la fila es
-                        una acción, no una puerta. */}
-                    {group.purposeId == null ? (
-                      <span className="shrink-0 text-[12.5px] font-bold text-emerald-deep">
-                        {t('purposes.allocate')}
+              {groupsUnified()
+                .filter((g) => g.purposeId != null)
+                .map((group) => (
+                  <li key={group.purposeId}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        push({
+                          kind: 'group',
+                          currency: currencyWithMoney(group.purposeId),
+                          purpose: purposeById(group.purposeId)!,
+                        })
+                      }
+                      className="flex min-h-[44px] w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-surface-sunken"
+                    >
+                      <span aria-hidden className="text-[16px]">
+                        {group.icon ?? '🫙'}
                       </span>
-                    ) : (
+                      <span className="flex-1 truncate text-[14px] font-semibold text-text">
+                        {group.name}
+                      </span>
+                      <GroupAmounts amounts={group.amounts} />
                       <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
-                    )}
-                  </button>
-                </li>
-              ))}
+                    </button>
+                  </li>
+                ))}
             </ul>
+
+            {/* El resto, SEPARADO y con sus dos acciones a la vista.
+                No es un propósito, así que no se disfraza de uno: no navega, no
+                tiene flecha, no se edita ni se borra. Pero tampoco se comporta
+                "casi igual pero no igual", que era lo que hacía ruido — como
+                fila idéntica prometía una vista que no existe, y su segunda
+                acción quedaba escondida en el botón de arriba.
+                Dice lo que es —plata sin clasificar— y ofrece lo único que se
+                puede hacer con ella. */}
+            {(() => {
+              const rest = groupsUnified().find((g) => g.purposeId == null)
+              if (rest == null) return null
+              const hasMoney = rest.amounts.some((a) => a.reserved > 0)
+
+              return (
+                <div className="mt-3 rounded-xl border border-dashed border-border bg-surface-sunken px-3 py-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <span aria-hidden className="text-[16px]">
+                      🫙
+                    </span>
+                    <span className="flex-1 text-[14px] font-semibold text-text-muted">
+                      {t('purposes.none')}
+                    </span>
+                    <GroupAmounts amounts={rest.amounts} />
+                  </div>
+                  <div className="mt-2 flex gap-2">
+                    <Button
+                      variant="secondary"
+                      className="h-9 flex-1 text-[13px]"
+                      disabled={!hasMoney}
+                      onClick={() =>
+                        push({
+                          kind: 'allocate',
+                          currency: currencyWithMoney(null),
+                          purpose: null,
+                          direction: 'allocate',
+                        })
+                      }
+                    >
+                      {t('purposes.allocate')}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="h-9 flex-1 text-[13px]"
+                      disabled={!hasMoney}
+                      onClick={() =>
+                        push({
+                          kind: 'form',
+                          mode: 'release',
+                          currency: currencyWithMoney(null),
+                          purposeId: null,
+                          locked: true,
+                        })
+                      }
+                    >
+                      {t('release')}
+                    </Button>
+                  </div>
+                </div>
+              )
+            })()}
 
             <div className="mt-5 flex gap-2">
               <Button
