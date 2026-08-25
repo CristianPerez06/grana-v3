@@ -35,12 +35,12 @@
 
 ## 4. Fase 3 — Overlays
 
-- [ ] 4.1 En `apps/web/components/ui/drawer.tsx`, presentar el panel como bottom sheet bajo `md`: anclado abajo, `rounded-t-[20px]`, alto que hugea el contenido con tope en 90dvh, grabber arriba, `padding-bottom` = `max(8px, --safe-bottom)`. `side` y `widthPx` se ignoran bajo `md`. En `md+` no cambia nada
-- [ ] 4.2 Confirmar por lectura que ninguno de los 17 consumidores necesita editarse: `DrawerProps` no cambia
-- [ ] 4.3 Verificar a mano `accounts/_components/bank-selector.tsx` y `components/ui/money-calculator-popover.tsx`, los dos que portalean adentro del panel vía `useDrawerContainer()` (decisión 6 del design)
-- [ ] 4.4 Verificar el `MovementDrawer` con el teclado abierto: el sheet tapa la barra y sube con el viewport (decisión 7 del design)
-- [ ] 4.5 Actualizar `apps/web/components/ui/drawer.stories.tsx` con la presentación mobile
-- [ ] 4.6 `pnpm typecheck` y `pnpm lint` sin errores
+- [x] 4.1 `apps/web/components/ui/drawer.tsx` presenta el panel como bottom sheet bajo `md`: anclado abajo, `rounded-t-[20px]`, alto que hugea el contenido con tope en 90dvh, grabber arriba. `side` y `widthPx` inertes bajo `md`; en `md+` nada cambia. Dos detalles: (a) `widthPx` pasó de `style={{ width }}` a la variable `--drawer-width`, porque un width inline le gana a la media query y dejaría el sheet de 528px en un teléfono; (b) la animación se cambia en `globals.css` sobreescribiendo solo el `animation-name` bajo 767px, así que duración, easing y los hooks `[data-state]` siguen compartidos y el elemento conserva su clase de lado
+- [x] 4.2 Confirmar por lectura que ninguno de los 17 consumidores necesita editarse: `DrawerProps` no cambia
+- [ ] 4.3 Verificar **en navegador** `accounts/_components/bank-selector.tsx` y `components/ui/money-calculator-popover.tsx`, los dos que portalean adentro del panel vía `useDrawerContainer()` (decisión 6 del design). Por lectura no requieren cambios: los dos son collision-aware y acotan su alto con `--radix-popover-content-available-height`, así que un contenedor más bajo los hace flipear hacia arriba en vez de recortarse. El panel ya tenía un `transform` persistente (`animation-fill-mode: both`) antes de este change, así que el containing block de los descendientes `fixed` no cambia. **Queda por confirmar a ojo** → ver 7.8
+- [ ] 4.4 Verificar **en navegador** el `MovementDrawer` con el teclado abierto: el sheet tapa la barra y sube con el viewport (decisión 7 del design). No se puede confirmar sin un teclado virtual real → ver 7.4
+- [x] 4.5 `drawer.stories.tsx` suma `SheetShort` y `SheetTall`, que fijan el viewport `grana` y muestran los dos casos que importan: contenido corto que el sheet hugea, y contenido que llega al tope de 90dvh y scrollea adentro
+- [x] 4.6 `pnpm typecheck` y `pnpm lint` sin errores
 
 ## 5. Fase 4 — Documentación
 
@@ -60,3 +60,5 @@
 - [ ] 7.5 Redimensionar a 800px → sidebar de vuelta, sin tab bar, sin FAB, headers en el flujo del contenido
 - [ ] 7.6 Instalar la PWA en un iPhone real → el navy llega hasta el notch y la barra respeta la home indicator. Es lo único que el DevTools no puede verificar
 - [ ] 7.7 Repetir 7.1 y 7.4 en Android
+- [ ] 7.8 A 390px, abrir el alta de cuenta → el selector de banco despliega su lista dentro del sheet y scrollea con el dedo; ídem la calculadora de monto. Son los dos únicos consumidores que portalean adentro del panel (tarea 4.3)
+- [ ] 7.9 A 390px, abrir cualquier drawer con poco contenido (ej. editar nombre del hogar) → el sheet hugea su alto en vez de ocupar la pantalla entera
