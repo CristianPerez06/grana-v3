@@ -17,11 +17,13 @@ export {
   loginSchema,
   forgotSchema,
   resetSchema,
+  changePasswordSchema,
   otpCodeSchema,
   type SignupInput,
   type LoginInput,
   type ForgotInput,
   type ResetInput,
+  type ChangePasswordInput,
   type OtpCodeInput,
 } from "./auth";
 export {

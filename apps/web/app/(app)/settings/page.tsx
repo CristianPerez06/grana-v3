@@ -44,6 +44,23 @@ const SettingsPage = async () => {
           <ChevronRight className="size-5 shrink-0 text-text-soft" aria-hidden />
         </Link>
       </SettingsSection>
+
+      <SettingsSection title={t('security.label')}>
+        <Link
+          href="/settings/password"
+          className="flex min-h-[68px] items-center justify-between gap-[18px] px-[18px] py-4 transition-colors hover:bg-muted/40"
+        >
+          <div className="min-w-0">
+            <p className="text-[15px] font-extrabold text-text">
+              {t('security.change_password.cta')}
+            </p>
+            <p className="mt-0.5 text-[13px] text-text-muted">
+              {t('security.change_password.description')}
+            </p>
+          </div>
+          <ChevronRight className="size-5 shrink-0 text-text-soft" aria-hidden />
+        </Link>
+      </SettingsSection>
     </div>
   )
 }
