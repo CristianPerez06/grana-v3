@@ -625,15 +625,15 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
 
 <div class="ab">
   <h2>El comparador, con la cuenta hecha</h2>
-  <p class="lede">Las tres opciones sobre los mismos números de agosto: $700.000 a un plazo fijo el 25, con el disponible pasando de $4.905.748,17 a $4.205.748,17.</p>
+  <p class="lede">Las cuatro opciones sobre los mismos números de agosto: $700.000 a un plazo fijo el 25, con el disponible pasando de $4.905.748,17 a $4.205.748,17. <b>Tres de las cuatro cierran la suma</b> — cerrar no alcanza como criterio.</p>
   <table>
-    <thead><tr><th style="width:26%">Opción</th><th style="width:19%">«Se fué» dice</th><th style="width:19%">¿Cierra?</th><th>Qué rompe</th></tr></thead>
+    <thead><tr><th style="width:26%">Opción</th><th style="width:19%">«Se fué» dice</th><th style="width:19%">¿La suma cierra?</th><th>Qué rompe</th></tr></thead>
     <tbody>
       <tr>
         <td><b>Sin línea nueva</b><br>No tocar nada</td>
         <td class="num">−$ 205.433,66</td>
-        <td class="no">No · faltan $ 700.000</td>
-        <td>La identidad de la card. El usuario suma los cuatro números y le faltan $700.000 sin ninguna explicación en pantalla.</td>
+        <td class="no">Sí, con «Tenías» falso</td>
+        <td>El arranque del mes. «Tenías» se despeja, así que absorbe los $700.000 y agosto pasa a decir −$&nbsp;3.429.825,17 cuando fue −$&nbsp;2.729.825,17. <b>La suma cierra: nadie lo puede notar sumando.</b></td>
       </tr>
       <tr>
         <td><b>Dentro de «Se fué»</b><br>Tratarlo como gasto</td>
@@ -650,7 +650,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
       <tr style="background:#F6FDFA">
         <td><b>Línea propia</b><br>«Puesto a trabajar»</td>
         <td class="num">−$ 205.433,66</td>
-        <td class="yes">Sí</td>
+        <td class="yes">Sí, y «Tenías» es cierto</td>
         <td><b>Nada.</b> Cada línea nombra una razón del cambio, y ninguna razón queda sin línea.</td>
       </tr>
     </tbody>
@@ -712,12 +712,23 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
       </ol>
     </div>
     <div class="way">
+      <div class="cap">Propuesta</div>
+      <h4>El rescate son dos cosas, no una</h4>
+      <span class="taps">Vuelven $ 724.164,38 sobre $ 700.000</span>
+      <ol>
+        <li>Los <b>$ 700.000</b> vuelven por el <b>mismo término</b> que se fueron, con el flujo dado vuelta. Así el bucket <b>neto de una posición cerrada da exactamente cero</b> — que es un invariante que se puede testear.</li>
+        <li>Los <b>$ 24.164,38</b> son plata que <b>nunca estuvo en una cuenta</b>. Meterlos en el mismo término lo rompe: el neto de la posición daría +$ 24.164,38, como si hubieras sacado más de lo que pusiste.</li>
+        <li>Van a <b>«Entró»</b>, pero <b>no como <code>income</code></b>. «Entró» es una lectura de <b>liquidez</b> —ya incluye reintegros, liquidaciones y ajustes—, y esa plata sí llegó a la cuenta. Lo que hay que proteger es <code>totalIncome</code>, que es de donde salen «ingresos del mes» y la tira que sugiere guardar.</li>
+      </ol>
+    </div>
+    <div class="way">
       <div class="cap">Abierto</div>
       <h4>Lo que sigue, y en qué orden</h4>
       <span class="taps">Antes de tocar schema</span>
       <ol>
-        <li><b>Detalle de posición</b> — capital, vencimiento, custodio, y qué se puede hacer antes de que venza.</li>
-        <li><b>Rescate y vencimiento</b> — vuelven $724.164,38 sobre $700.000. El capital es la contrapartida del que salió; los $24.164,38 <b>no son un ingreso</b>.</li>
+        <li><b>Partir la fase en 3A y 3B.</b> Plazo fijo primero —capital fijo, vencimiento fijo, sin rescate parcial— y FCI/bróker después. Es el caso cerrado, y la fase 2 ya enseñó lo que cuesta comprometer un modelo antes de que la pantalla lo pida.</li>
+        <li><b>Rescate, con sus cuatro variantes</b>: renovación, rescate parcial, penalidad por anticipado, rendimiento negativo.</li>
+        <li><b>Un propósito sobre una posición.</b> Hoy el techo del reparto es lo guardado; con posiciones pasa a ser <b>lo guardado más las posiciones</b>, y eso cambia el trigger de la 0059.</li>
         <li><b>El hub «Mi plata»</b> — último, porque es lectura pura: se dibuja bien recién cuando sabemos qué hay para leer.</li>
       </ol>
     </div>
