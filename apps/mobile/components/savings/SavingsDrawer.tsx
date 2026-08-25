@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
-import { ChevronDown } from 'lucide-react-native'
+import { ChevronDown, ChevronLeft } from 'lucide-react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
@@ -406,12 +406,16 @@ const SavingsForm = ({
       )}
 
       <View className="mt-4 flex-row gap-2">
+        {/* Volver al detalle. Era un "‹" tipográfico suelto: casi invisible y con
+            un área táctil por debajo de los 44px que pide el repo. */}
         <Pressable
           onPress={onCancel}
           disabled={busy}
-          className="items-center justify-center rounded-xl border border-border px-4"
+          accessibilityRole="button"
+          accessibilityLabel={t('savings.back')}
+          className="h-12 w-12 items-center justify-center rounded-xl border border-border bg-card"
         >
-          <Text className="text-[15px] font-bold text-text-muted">‹</Text>
+          <ChevronLeft size={20} color={colors.textMuted} />
         </Pressable>
         <View className="flex-1">
           <Button

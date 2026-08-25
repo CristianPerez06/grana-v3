@@ -12,7 +12,7 @@ import {
 } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { parseMoneyInput } from '@grana/validation'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, ChevronLeft } from 'lucide-react'
 import { Drawer } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { DatePicker } from '@/components/ui/date-picker'
@@ -462,10 +462,19 @@ const SavingsForm = ({
       )}
 
       <div className="mt-5 flex gap-2">
-        <Button variant="ghost" onClick={onCancel} disabled={pending}>
-          ‹
-        </Button>
-        <Button className="flex-1" onClick={submit} disabled={pending || value <= 0 || overLimit}>
+        {/* Volver al detalle. Era un botón fantasma con un "‹" tipográfico
+            suelto: no se veía, y el área táctil quedaba por debajo de los 44px
+            que pide el repo para un control. */}
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={pending}
+          aria-label={t('back')}
+          className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-text-muted transition-colors hover:bg-border-soft hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+        >
+          <ChevronLeft className="size-5" aria-hidden />
+        </button>
+        <Button className="h-11 flex-1" onClick={submit} disabled={pending || value <= 0 || overLimit}>
           {mode === 'save' ? t('save') : t('release')}
         </Button>
       </div>

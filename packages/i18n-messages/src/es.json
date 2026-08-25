@@ -2075,6 +2075,7 @@
       "cta": "Guardar {amount}",
       "later": "Ahora no",
       "enough_this_month": "Suficiente por este mes"
-    }
+    },
+    "back": "Volver"
   }
 }

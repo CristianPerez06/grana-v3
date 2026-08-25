@@ -2075,6 +2075,7 @@
       "cta": "Set aside {amount}",
       "later": "Not now",
       "enough_this_month": "Enough for this month"
-    }
+    },
+    "back": "Back"
   }
 }
