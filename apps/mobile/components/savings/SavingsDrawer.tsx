@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
-import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react-native'
+import { ChevronDown, ChevronRight } from 'lucide-react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
@@ -816,9 +816,14 @@ const SavingsForm = ({
     <View>
       {/* Un solo título: el verbo. La eyebrow decía "Guardar" y el título
           "Guardado" — dos formas de la misma palabra sin agregar nada. */}
-      <Text className="text-[19px] font-extrabold text-text">
-        {mode === 'save' ? t('savings.save') : t('savings.release')}
-      </Text>
+      {/* La vuelta atrás va ACÁ, como en el resto de la app y como en las demás
+          vistas de este mismo sheet. En el pie competía con el CTA: dos
+          controles juntos, uno que avanza y otro que retrocede, y el que
+          retrocede no es una alternativa a confirmar. */}
+      <SheetBackHeader
+        title={mode === 'save' ? t('savings.save') : t('savings.release')}
+        onBack={onCancel}
+      />
 
       {/* Same amount hero as the native "Registrar movimiento": eyebrow top-left,
           currency chip and calculator pinned top-right (both absolute, so they
@@ -935,26 +940,13 @@ const SavingsForm = ({
         </Text>
       )}
 
-      <View className="mt-4 flex-row gap-2">
-        {/* Volver al detalle. Era un "‹" tipográfico suelto: casi invisible y con
-            un área táctil por debajo de los 44px que pide el repo. */}
-        <Pressable
-          onPress={onCancel}
-          disabled={busy}
-          accessibilityRole="button"
-          accessibilityLabel={t('savings.back')}
-          className="h-12 w-12 items-center justify-center rounded-xl border border-border bg-card"
-        >
-          <ChevronLeft size={20} color={colors.textMuted} />
-        </Pressable>
-        <View className="flex-1">
-          <Button
-            title={mode === 'save' ? t('savings.save') : t('savings.release')}
-            onPress={submit}
-            loading={busy}
-            disabled={busy || value <= 0 || overLimit}
-          />
-        </View>
+      <View className="mt-4">
+        <Button
+          title={mode === 'save' ? t('savings.save') : t('savings.release')}
+          onPress={submit}
+          loading={busy}
+          disabled={busy || value <= 0 || overLimit}
+        />
       </View>
     </View>
   )

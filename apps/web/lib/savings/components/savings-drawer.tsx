@@ -19,7 +19,7 @@ import {
 } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { parseMoneyInput } from '@grana/validation'
-import { ChevronDown, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Pencil, Trash2 } from 'lucide-react'
 import { Drawer } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { DatePicker } from '@/components/ui/date-picker'
@@ -1092,10 +1092,16 @@ const SavingsForm = ({
     <div className="flex flex-col">
       {/* Un solo título: el verbo. La eyebrow decía "Guardar" y el título
           "Guardado" — dos formas de la misma palabra, una arriba de la otra, sin
-          agregar nada. La moneda ya la dice el chip del monto. */}
-      <h2 className="text-[21px] font-extrabold tracking-[-0.025em] text-text">
-        {mode === 'save' ? t('save') : t('release')}
-      </h2>
+          agregar nada. La moneda ya la dice el chip del monto.
+
+          La vuelta atrás va ACÁ, como en el resto de la app y como en las demás
+          vistas de este mismo drawer. En el pie competía con el CTA: dos
+          controles juntos, uno que avanza y otro que retrocede, y el que
+          retrocede no es una alternativa a confirmar. */}
+      <DrawerBackHeader
+        title={mode === 'save' ? t('save') : t('release')}
+        onBack={onCancel}
+      />
 
       {/* Same amount hero as "Registrar movimiento" — same radius, same type
           scale, same currency chip, same calculator. Two surfaces that ask for
@@ -1219,23 +1225,13 @@ const SavingsForm = ({
         </p>
       )}
 
-      <div className="mt-5 flex gap-2">
-        {/* Volver al detalle. Era un botón fantasma con un "‹" tipográfico
-            suelto: no se veía, y el área táctil quedaba por debajo de los 44px
-            que pide el repo para un control. */}
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={pending}
-          aria-label={t('back')}
-          className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-text-muted transition-colors hover:bg-border-soft hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-        >
-          <ChevronLeft className="size-5" aria-hidden />
-        </button>
-        <Button className="h-11 flex-1" onClick={submit} disabled={pending || value <= 0 || overLimit}>
-          {mode === 'save' ? t('save') : t('release')}
-        </Button>
-      </div>
+      <Button
+        className="mt-5 h-11"
+        onClick={submit}
+        disabled={pending || value <= 0 || overLimit}
+      >
+        {mode === 'save' ? t('save') : t('release')}
+      </Button>
     </div>
   )
 }
