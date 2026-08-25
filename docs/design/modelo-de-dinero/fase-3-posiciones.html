@@ -344,6 +344,8 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     <p class="note"><b>Esto salió de una observación del producto:</b> <i>"cuando uno invierte, el dinero va a salir siempre de la misma entidad financiera desde donde se está eligiendo sacar el dinero."</i> Es cierto, y tiene una consecuencia de navegación: <b>si la plata no cruza de entidad, la acción no es un movimiento entre lugares — es algo que hacés con la plata que ya está ahí.</b></p>
     <p class="note">Entrando desde la cuenta, <b>dos preguntas ya están contestadas</b>: de dónde sale y en qué banco queda el plazo fijo. El circuito pasa de <b>5 taps de decisión a 3</b> — monto, plazo, confirmar.</p>
     <p class="note"><b>Y escala sin pestañas.</b> Mañana la misma cuenta ofrece «Comprar dólares» o «Suscribir un FCI» como cosas que hacés con la plata que está ahí, no como tipos de movimiento nuevos. Una pestaña por instrumento convierte el selector en un menú de productos.</p>
+    <p class="note"><b>Y no aparece en todas las cuentas.</b> El tipo ya está en la base —<code>account_type</code> es <code>'cash' | 'bank'</code>— así que la regla de 3A se escribe sola: <b>solo en las de tipo <code>bank</code></b>. En Billetera no se dibuja: no se hace un plazo fijo con la plata de una billetera virtual.</p>
+    <p class="note"><b>Ofrecer un producto imposible es peor que no ofrecerlo.</b> Quien lo toca desde una cuenta que no puede tiene que enterarse recién en el error, y eso enseña que la app no sabe con qué está trabajando. 3B necesita más finura —un bróker no es <code>bank</code> y no hace plazos fijos, hace suscripciones— pero eso es una distinción que 3A no tiene que anticipar.</p>
     <p class="note"><b>Grana igual no le va a decir a nadie que invierta.</b> No hay tira que diga <i>"tenés $4.900.000 sin rendir"</i>: describir hechos es una cosa, recomendar instrumentos es otra. La acción está donde tiene sentido, no ofrecida.</p>
   </section>
 
@@ -527,7 +529,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
       </div>
     </div></div>
     <p class="note"><b>Cada campo que no está es una decisión, no una omisión.</b> El circuito entero pide <b>dos datos nuevos</b>: cuánto tiempo y a qué tasa. Todo lo demás se hereda o se deriva.</p>
-    <p class="note">El total: <b>5 taps de decisión</b> desde el dashboard —monto, desde, hacia, plazo, confirmar—, los mismos que registrar una transferencia común más uno.</p>
+    <p class="note">El total, entrando por la cuenta: <b>3 taps de decisión</b> —monto, plazo, confirmar—. Por la puerta secundaria de Transferencia son 5, porque de dónde sale y hacia dónde va hay que decirlos.</p>
   </section>
 
   <section class="step">
@@ -786,6 +788,38 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
 
   <section class="step">
     <div class="step-head">
+      <span class="step-num">15b</span>
+      <div>
+        <h2>Renovó el capital y cobró el interés</h2>
+        <p class="sub">El tercer desenlace, y el que prueba que la línea puede ir sola.</p>
+        <span class="badge b-new">Propuesta</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="ledger">
+        <div class="cap">Resumen del mes · septiembre</div>
+        <div class="l"><span class="k"><i></i>Tenías</span><span class="a">$ 4.385.748,17</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Entró</span><span class="a em">+$ 1.240.000,00</span></div>
+        <div class="l"><span class="k"><i class="sl"></i>Se fué</span><span class="a sl">−$ 980.000,00</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Guardado</span><span class="a em">−$ 180.000,00</span></div>
+        <div class="l new" style="background:#FFF7E8"><span class="k"><i style="background:var(--warning)"></i>Rendimiento cobrado</span><span class="a" style="color:#9A6B12">+$ 24.164,38</span></div>
+        <div class="l sum"><span class="k">Para gastar</span><span class="a">$ 4.489.912,55</span></div>
+        <div class="verdict ok"><span class="m">✓</span><div><b>El capital no se movió, el interés sí.</b> Los $ 700.000 siguen adentro del plazo fijo nuevo, así que no hay línea de posición. Entraron $ 24.164,38 a la cuenta, así que sí hay línea de rendimiento.</div></div>
+      </div>
+      <div class="callout"><b>Las dos líneas son independientes.</b> Una nombra el capital que cruzó el límite; la otra, la ganancia que se hizo líquida. Pueden aparecer juntas, sola cada una, o ninguna — y cada combinación es un desenlace real del vencimiento.</div>
+    </div></div>
+    <p class="note"><b>Los tres desenlaces, y qué muestra el mes:</b></p>
+    <div class="states">
+      <div class="st"><div class="cap">Volvió todo a la cuenta</div><div class="line"><span class="l"><i></i>Volvió del plazo fijo <b style="color:var(--text)">+$ 700.000</b></span></div><div class="line" style="margin-top:5px"><span class="l"><i></i>Rendimiento cobrado <b style="color:var(--text)">+$ 24.164,38</b></span></div></div>
+      <div class="st"><div class="cap">Renovó capital, cobró el interés</div><div class="line"><span class="l"><i></i>Rendimiento cobrado <b style="color:var(--text)">+$ 24.164,38</b></span></div><div class="line mute" style="margin-top:5px"><span class="l"><i class="off"></i>Sin línea de posición</span></div></div>
+      <div class="st"><div class="cap">Renovó todo, capitalizando</div><div class="line mute"><span class="l"><i class="off"></i>El mes no dice nada</span></div><div class="line mute" style="margin-top:5px"><span class="l"><i class="off"></i>La posición pasa a valer $ 724.164,38</span></div></div>
+    </div>
+    <p class="note"><b>Son tres, no cuatro.</b> «Renovar el capital» y «cobrar el interés y renovar el capital» son el mismo desenlace: si el capital renovó, el interés fue a algún lado, y el único lado posible es tu cuenta. No existe un interés que se quede flotando sin cobrarse ni capitalizarse.</p>
+    <p class="note">Por eso alcanzan <b>dos preguntas</b> —¿volvió o renovaste? y, solo si renovaste, ¿el interés quedó adentro o te lo pagaron?— en vez de una lista de cuatro opciones donde dos dicen lo mismo.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
       <span class="step-num">16</span>
       <div>
         <h2>Las variantes, sin caso especial</h2>
@@ -891,11 +925,12 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     <div class="way">
       <div class="cap">Cerrado</div>
       <h4>El circuito pide dos datos</h4>
-      <span class="taps">5 taps, uno más que una transferencia común</span>
+      <span class="taps">3 taps entrando por la cuenta</span>
       <ol>
-        <li><b>Cuánto tiempo</b> (chips: 30 · 60 · 90 · 180 · otra fecha) y <b>la tasa, opcional</b>. Nada más.</li>
-        <li><b>El capital y el banco se heredan</b> del paso anterior y se muestran, no se piden. Preguntarlos de nuevo es la forma más común de que los dos números terminen distintos.</li>
-        <li>No pregunta <b>nombre, moneda, fecha de inicio, interés estimado ni si renueva</b>. Cada uno se hereda, se deriva, o se contesta el día que hay algo que decidir.</li>
+        <li><b>Cuánto tiempo</b> (chips: 30 · 60 · 90 · 180 · otra fecha) y <b>a qué tasa</b>. Nada más.</li>
+        <li><b>El capital y el banco se heredan</b> y se muestran, no se piden. Preguntarlos de nuevo es la forma más común de que los dos números terminen distintos.</li>
+        <li><b>El monto al vencimiento se calcula y se muestra</b>, editable. No es una proyección: es la aritmética de un contrato firmado.</li>
+        <li>No pregunta <b>nombre, moneda, fecha de inicio ni si renueva</b>. Cada uno se hereda, se deriva, o se contesta el día que hay algo que decidir.</li>
       </ol>
     </div>
     <div class="way">
