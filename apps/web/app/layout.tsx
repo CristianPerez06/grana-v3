@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono, Plus_Jakarta_Sans } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
@@ -16,6 +16,24 @@ const plusJakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: 'grana',
   description: 'Personal finances, made simple.',
+}
+
+/**
+ * `viewportFit: 'cover'` is what makes `env(safe-area-inset-*)` resolve to
+ * anything other than `0px`. Without it the chrome anchored to the viewport
+ * edges — the navy PageHeader on top, the tab bar at the bottom — renders
+ * under the notch and the home indicator once the PWA runs standalone.
+ * The safe-area tokens in `@grana/ui-tokens` read those variables, so this
+ * export is a prerequisite for all of them.
+ *
+ * `themeColor` is the `<meta name="theme-color">` tag, which tints the
+ * browser UI. It is deliberately the same navy as the manifest's
+ * `theme_color` (see `manifest.ts`): the manifest paints the system bars of
+ * the installed app, this one paints the browser's own chrome.
+ */
+export const viewport: Viewport = {
+  viewportFit: 'cover',
+  themeColor: '#0B1A2B',
 }
 
 const RootLayout = async ({ children }: { children: React.ReactNode }) => {
