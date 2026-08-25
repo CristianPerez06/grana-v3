@@ -12,6 +12,7 @@ import { CreateCategoryButton } from './create-category-button'
  * de cada sub-ruta (/new, /[id]/edit, /[id]/subcategories, /[id]/subcategories/new).
  */
 export const CategoriesHeader = () => {
+  const t = useTranslations('settings')
   const tCat = useTranslations('settings.categories')
   const pathname = usePathname()
 
@@ -21,6 +22,7 @@ export const CategoriesHeader = () => {
     <PageHeader
       title={tCat('label')}
       description={tCat('description')}
+      backLink={{ href: '/settings', label: t('title') }}
       actions={<CreateCategoryButton />}
     />
   )
