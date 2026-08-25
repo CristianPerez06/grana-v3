@@ -257,7 +257,7 @@ const CurrencyBlock = ({
         <p className="flex justify-between py-0.5 text-text-muted">
           <span>{t('title')}</span>
           <span className="font-semibold tabular-nums text-emerald-deep">
-            − {money(sums.reserved, currency)}
+            −{money(sums.reserved, currency)}
           </span>
         </p>
         <p className="mt-1 flex justify-between border-t border-border pt-1.5 text-text-muted">
@@ -476,7 +476,8 @@ const SavingsForm = ({
         <p className="flex justify-between py-1 text-text-muted">
           <span>{mode === 'save' ? t('you_will_save') : t('you_will_release')}</span>
           <span className="font-semibold tabular-nums text-emerald-deep">
-            − {money(value, currency)}
+            {value > 0 ? '−' : ''}
+            {money(value, currency)}
           </span>
         </p>
         <p className="mt-1.5 flex justify-between border-t border-border-soft pt-2.5 text-text-muted">

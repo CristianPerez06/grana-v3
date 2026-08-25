@@ -190,7 +190,7 @@ const CurrencyBlock = ({
         <View className="flex-row justify-between py-0.5">
           <Text className="text-[13px] text-text-muted">{t('savings.title')}</Text>
           <Text className="text-[13px] font-semibold text-positive">
-            − {money(sums.reserved, currency)}
+            {`−${money(sums.reserved, currency)}`}
           </Text>
         </View>
         <View className="mt-1 flex-row justify-between border-t border-border pt-1.5">
@@ -418,7 +418,7 @@ const SavingsForm = ({
             {mode === 'save' ? t('savings.you_will_save') : t('savings.you_will_release')}
           </Text>
           <Text className="text-[14px] font-semibold text-positive">
-            − {money(value, currency)}
+            {`${value > 0 ? '−' : ''}${money(value, currency)}`}
           </Text>
         </View>
         <View className="mt-1.5 flex-row justify-between border-t border-border-soft pt-2.5">
