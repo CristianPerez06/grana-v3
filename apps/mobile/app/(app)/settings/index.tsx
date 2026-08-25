@@ -83,6 +83,24 @@ export default function SettingsScreen() {
             <Text className="text-text-soft">→</Text>
           </Pressable>
         </SettingsSection>
+
+        <SettingsSection title={t('settings.security.label')}>
+          <Pressable
+            onPress={() => router.push('/(app)/settings/password')}
+            accessibilityRole="link"
+            className="-m-4 flex-row items-center justify-between gap-4 rounded-2xl p-4 active:bg-emerald-soft"
+          >
+            <View className="min-w-0 flex-1">
+              <Text className="text-sm font-medium text-text">
+                {t('settings.security.change_password.cta')}
+              </Text>
+              <Text className="mt-0.5 text-xs text-text-muted">
+                {t('settings.security.change_password.description')}
+              </Text>
+            </View>
+            <Text className="text-text-soft">→</Text>
+          </Pressable>
+        </SettingsSection>
         </View>
       </ScrollView>
     </View>

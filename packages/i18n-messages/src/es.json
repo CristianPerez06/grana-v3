@@ -301,6 +301,27 @@
         "subcategories_loading": "Cargando las subcategorías…",
         "form_loading": "Cargando la categoría…"
       }
+    },
+    "security": {
+      "label": "Seguridad",
+      "change_password": {
+        "cta": "Cambiar contraseña",
+        "description": "Al cambiarla se cierra la sesión en tus otros dispositivos.",
+        "title": "Cambiar contraseña",
+        "current_label": "Contraseña actual",
+        "new_label": "Nueva contraseña",
+        "confirm_label": "Confirmar contraseña",
+        "submit": "Guardar contraseña",
+        "toggle_show": "Ver contraseña",
+        "toggle_hide": "Ocultar contraseña",
+        "success_title": "Contraseña actualizada",
+        "success_body": "Cerramos la sesión en tus otros dispositivos.",
+        "success_body_revoke_failed": "No pudimos cerrar la sesión en tus otros dispositivos. Volvé a cambiar la contraseña o cerrá sesión manualmente en cada uno.",
+        "back_cta": "Volver a ajustes",
+        "errors": {
+          "current_incorrect": "La contraseña actual es incorrecta."
+        }
+      }
     }
   },
   "common": {

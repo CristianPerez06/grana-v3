@@ -301,6 +301,27 @@
         "subcategories_loading": "Loading the subcategories…",
         "form_loading": "Loading the category…"
       }
+    },
+    "security": {
+      "label": "Security",
+      "change_password": {
+        "cta": "Change password",
+        "description": "Changing it signs you out on your other devices.",
+        "title": "Change password",
+        "current_label": "Current password",
+        "new_label": "New password",
+        "confirm_label": "Confirm password",
+        "submit": "Save password",
+        "toggle_show": "Show password",
+        "toggle_hide": "Hide password",
+        "success_title": "Password updated",
+        "success_body": "We signed you out on your other devices.",
+        "success_body_revoke_failed": "We couldn't sign you out on your other devices. Change the password again, or sign out manually on each one.",
+        "back_cta": "Back to settings",
+        "errors": {
+          "current_incorrect": "That's not your current password."
+        }
+      }
     }
   },
   "common": {

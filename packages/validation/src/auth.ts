@@ -50,6 +50,18 @@ export const resetSchema = yup
   })
   .strict()
 
+export const changePasswordSchema = yup
+  .object({
+    currentPassword: yup.string().label('current_password').required(),
+    password: passwordRules.clone().label('password'),
+    confirmPassword: yup
+      .string()
+      .label('confirm_password')
+      .required()
+      .oneOf([yup.ref('password')], 'password_match'),
+  })
+  .strict()
+
 export const otpCodeSchema = yup
   .object({
     code: yup
@@ -64,4 +76,5 @@ export type SignupInput = yup.InferType<typeof signupSchema>
 export type LoginInput = yup.InferType<typeof loginSchema>
 export type ForgotInput = yup.InferType<typeof forgotSchema>
 export type ResetInput = yup.InferType<typeof resetSchema>
+export type ChangePasswordInput = yup.InferType<typeof changePasswordSchema>
 export type OtpCodeInput = yup.InferType<typeof otpCodeSchema>

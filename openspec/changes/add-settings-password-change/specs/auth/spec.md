@@ -21,7 +21,9 @@ Al completarse el paso 2, el formulario SHALL desmontarse y ser reemplazado por 
 
 El copy SHALL describir la revocación sin prometer efecto instantáneo: `signOut({ scope: 'others' })` revoca los refresh tokens, pero los access tokens ya emitidos siguen siendo válidos hasta expirar.
 
-Los errores de Supabase SHALL traducirse con `mapSupabaseError` y renderizarse según su naturaleza: `invalid_credentials` (contraseña actual incorrecta) SHALL renderizarse **a nivel de campo** sobre "Contraseña actual"; el resto (`same_password`, `weak_password`, `over_request_rate_limit`, genérico) SHALL renderizarse a nivel formulario. Este requirement NO SHALL agregar entradas nuevas al mapeo de códigos.
+Los errores de Supabase SHALL renderizarse según su naturaleza: `invalid_credentials` (contraseña actual incorrecta) SHALL renderizarse **a nivel de campo** sobre "Contraseña actual"; el resto (`same_password`, `weak_password`, `over_request_rate_limit`, genérico) SHALL renderizarse a nivel formulario con el mensaje que devuelve `mapSupabaseError`.
+
+El caso de `invalid_credentials` SHALL usar copy propio de esta pantalla (`settings.security.change_password.errors.current_incorrect`), NO el mensaje que `mapSupabaseError` mapea para ese código. El mapeo existente resuelve a "Email o contraseña incorrectos" / "Incorrect email or password", redactado para el login: acá no hay email en juego y el error pertenece a un campo puntual, así que nombrar el email confundiría sobre qué corregir. El mapeo compartido NO SHALL modificarse — es correcto para el login, que es su consumidor —; lo que cambia es que esta pantalla no lo consulta para ese único código. Este requirement NO SHALL agregar entradas nuevas al mapeo de códigos.
 
 Todo el texto visible de las dos pantallas SHALL provenir de los catálogos i18n bajo `settings.security.*`, incluidos los labels del toggle de visibilidad de `PasswordField` (`toggleLabelShow` / `toggleLabelHide`), que de no pasarse caerían a defaults hardcodeados en el componente.
 
@@ -42,7 +44,8 @@ Todo el texto visible de las dos pantallas SHALL provenir de los catálogos i18n
 #### Scenario: Contraseña actual incorrecta
 
 - **WHEN** un usuario envía el formulario con una contraseña actual que no es la suya
-- **THEN** la verificación devuelve `invalid_credentials` y el error localizado se muestra **sobre el campo "Contraseña actual"**, no en el bloque de error del formulario
+- **THEN** la verificación devuelve `invalid_credentials` y el error se muestra **sobre el campo "Contraseña actual"**, no en el bloque de error del formulario
+- **AND** el texto es el de `settings.security.change_password.errors.current_incorrect`, que no menciona el email
 - **AND** el sistema NO llama a `updateUser` ni a `signOut`
 - **AND** la contraseña de la cuenta queda sin cambios
 

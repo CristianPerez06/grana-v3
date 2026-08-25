@@ -25,3 +25,32 @@ export function mapSupabaseError(
   const code = error?.code ?? undefined
   return (code && SUPABASE_ERROR_MESSAGES[code]) ?? GENERIC
 }
+
+// Locale-aware twin of `mapSupabaseError`, mirroring `supabaseErrorKey` in
+// apps/web/lib/supabase/errors.ts: it returns the i18n key instead of a
+// literal, so the caller can translate it with the active locale via `useT()`.
+// New screens SHALL use this one — `mapSupabaseError` above still hardcodes
+// Spanish and stays only for the `(auth)` screens that have not been
+// retrofitted with the translator yet.
+const SUPABASE_ERROR_KEYS: Record<string, string> = {
+  invalid_credentials: 'auth.errors.invalid_credentials',
+  email_not_confirmed: 'auth.errors.email_not_confirmed',
+  user_already_exists: 'auth.errors.user_already_exists',
+  email_exists: 'auth.errors.user_already_exists',
+  weak_password: 'auth.errors.weak_password',
+  same_password: 'auth.errors.same_password',
+  otp_expired: 'auth.errors.otp_expired',
+  otp_disabled: 'auth.errors.invalid_otp',
+  invalid_otp: 'auth.errors.invalid_otp',
+  over_email_send_rate_limit: 'auth.errors.over_email_send_rate_limit',
+  over_request_rate_limit: 'auth.errors.over_email_send_rate_limit',
+}
+
+const GENERIC_KEY = 'auth.errors.generic'
+
+export function supabaseErrorKey(
+  error: { code?: string | null } | null,
+): string {
+  const code = error?.code ?? undefined
+  return (code && SUPABASE_ERROR_KEYS[code]) ?? GENERIC_KEY
+}
