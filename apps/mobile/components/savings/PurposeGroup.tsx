@@ -27,7 +27,6 @@ const money = (amount: number, currency: Currency) =>
  */
 export const PurposeGroup = ({
   currency,
-  purposeId,
   purpose,
   reserved,
   onSave,
@@ -39,16 +38,15 @@ export const PurposeGroup = ({
   onBack,
 }: {
   currency: Currency
-  purposeId: string | null
-  purpose: Purpose | null
+  purpose: Purpose
   reserved: number
   onSave: () => void
   onRelease: () => void
   /** Desde «Sin destino»: elegir a qué apartar. Desde uno: apartarle más. */
   onAllocate: () => void
   onUnallocate: () => void
-  onEdit: (purpose: Purpose) => void
-  onDelete: (purpose: Purpose) => void
+  onEdit: () => void
+  onDelete: () => void
   onBack: () => void
 }) => {
   const t = useT()
@@ -58,19 +56,18 @@ export const PurposeGroup = ({
   // distintos —guardar mueve el disponible, apartar no— y mezclarlos obligaría a
   // distinguir a ojo cosas que no se parecen. «Sin destino» no tiene: es el
   // resto, no tiene actos propios.
-  const { data } = usePurposeHistory(true, currency, purposeId)
+  const { data } = usePurposeHistory(true, currency, purpose.id)
   const history = data ?? { entries: [], hasMore: false }
 
   return (
     <View>
       <SheetBackHeader
-        title={purpose?.name ?? t('savings.purposes.none')}
+        title={purpose.name}
         onBack={onBack}
         action={
-          purpose ? (
-            <View className="flex-row gap-1">
+          <View className="flex-row gap-1">
               <Pressable
-                onPress={() => onEdit(purpose)}
+                onPress={onEdit}
                 accessibilityRole="button"
                 accessibilityLabel={t('savings.purposes.edit')}
                 className="size-11 items-center justify-center rounded-xl"
@@ -78,30 +75,26 @@ export const PurposeGroup = ({
                 <Pencil size={17} color={colors.textMuted} />
               </Pressable>
               <Pressable
-                onPress={() => onDelete(purpose)}
+                onPress={onDelete}
                 accessibilityRole="button"
                 accessibilityLabel={t('savings.purposes.delete')}
                 className="size-11 items-center justify-center rounded-xl"
               >
                 <Trash2 size={17} color={colors.textMuted} />
               </Pressable>
-            </View>
-          ) : undefined
+          </View>
         }
       />
 
       <View className="mt-4 rounded-2xl border border-border bg-card p-4">
         <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
-          {purpose
-            ? t('savings.purposes.allocated_in', { purpose: purpose.name })
-            : t('savings.purposes.none')}
+          {t('savings.purposes.allocated_in', { purpose: purpose.name })}
         </Text>
         <Text className="mt-1.5 text-[24px] font-extrabold text-text">
           {money(reserved, currency)}
         </Text>
 
-        {purposeId != null && (
-          <>
+        <>
             <Text className="mt-4 text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
               {t('savings.history')}
             </Text>
@@ -142,8 +135,7 @@ export const PurposeGroup = ({
                 {t('savings.history_truncated', { count: String(RESERVE_HISTORY_LIMIT) })}
               </Text>
             )}
-          </>
-        )}
+        </>
 
         <View className="mt-4 flex-row gap-2">
           <View className="flex-1">
@@ -159,27 +151,28 @@ export const PurposeGroup = ({
           </View>
         </View>
 
-        {/* El segundo par de verbos, como enlaces: reparten lo que ya está
-            guardado y no tocan ningún total, así que no compiten en peso con
-            los dos que sí lo hacen. */}
+        {/* El segundo par de verbos, como enlaces: no tocan ningún total, así
+            que no compiten en peso con los dos que sí lo hacen. */}
         <View className="mt-3 flex-row justify-center gap-6">
-          <Pressable onPress={onAllocate} accessibilityRole="button" className="min-h-[44px] justify-center">
+          <Pressable
+            onPress={onAllocate}
+            accessibilityRole="button"
+            className="min-h-[44px] justify-center"
+          >
             <Text className="text-[13px] font-bold text-positive">
               {t('savings.purposes.allocate')}
             </Text>
           </Pressable>
-          {purposeId != null && (
-            <Pressable
-              onPress={onUnallocate}
-              disabled={reserved <= 0}
-              accessibilityRole="button"
-              className={`min-h-[44px] justify-center ${reserved <= 0 ? 'opacity-40' : ''}`}
-            >
-              <Text className="text-[13px] font-bold text-positive">
-                {t('savings.purposes.unallocate')}
-              </Text>
-            </Pressable>
-          )}
+          <Pressable
+            onPress={onUnallocate}
+            disabled={reserved <= 0}
+            accessibilityRole="button"
+            className={`min-h-[44px] justify-center ${reserved <= 0 ? 'opacity-40' : ''}`}
+          >
+            <Text className="text-[13px] font-bold text-positive">
+              {t('savings.purposes.unallocate')}
+            </Text>
+          </Pressable>
         </View>
       </View>
     </View>

@@ -48,7 +48,15 @@ type Mode = 'save' | 'release'
  */
 type SheetView =
   | { kind: 'detail' }
-  | { kind: 'group'; currency: Currency; purposeId: string | null }
+  | {
+      kind: 'group'
+      currency: Currency
+      /**
+       * Siempre un propósito con nombre. «Sin destino» NO tiene vista propia: es
+       * el resto, y lo único que se hace con él —darle destino— es la fila misma.
+       */
+      purpose: Purpose
+    }
   | { kind: 'form'; mode: Mode; currency: Currency; purposeId: string | null; locked: boolean }
   | { kind: 'picker'; currency: Currency; intent: 'form' | 'allocate' }
   | { kind: 'purposeForm'; purpose: Purpose | null; name?: string; icon?: string }
@@ -361,38 +369,30 @@ export const SavingsDrawer = ({
         {view.kind === 'group' && (
           <PurposeGroup
             currency={view.currency}
-            purposeId={view.purposeId}
-            purpose={purposeById(view.purposeId)}
-            reserved={groupAmount(view.currency, view.purposeId)}
-            onAllocate={() => {
-              // Desde «Sin destino» hay que elegir a cuál apartar; desde un
-              // propósito, ya se sabe.
-              const target = purposeById(view.purposeId)
-              if (target)
-                push({
-                  kind: 'allocate',
-                  currency: view.currency,
-                  purpose: target,
-                  direction: 'allocate',
-                })
-              else push({ kind: 'picker', currency: view.currency, intent: 'allocate' })
-            }}
-            onUnallocate={() => {
-              const target = purposeById(view.purposeId)
-              if (target)
-                push({
-                  kind: 'allocate',
-                  currency: view.currency,
-                  purpose: target,
-                  direction: 'unallocate',
-                })
-            }}
+            purpose={view.purpose}
+            reserved={groupAmount(view.currency, view.purpose.id)}
+            onAllocate={() =>
+              push({
+                kind: 'allocate',
+                currency: view.currency,
+                purpose: view.purpose,
+                direction: 'allocate',
+              })
+            }
+            onUnallocate={() =>
+              push({
+                kind: 'allocate',
+                currency: view.currency,
+                purpose: view.purpose,
+                direction: 'unallocate',
+              })
+            }
             onSave={() =>
               push({
                 kind: 'form',
                 mode: 'save',
                 currency: view.currency,
-                purposeId: view.purposeId,
+                purposeId: view.purpose.id,
                 locked: true,
               })
             }
@@ -401,12 +401,12 @@ export const SavingsDrawer = ({
                 kind: 'form',
                 mode: 'release',
                 currency: view.currency,
-                purposeId: view.purposeId,
+                purposeId: view.purpose.id,
                 locked: true,
               })
             }
-            onEdit={(purpose) => push({ kind: 'purposeForm', purpose })}
-            onDelete={(purpose) => push({ kind: 'purposeDelete', purpose })}
+            onEdit={() => push({ kind: 'purposeForm', purpose: view.purpose })}
+            onDelete={() => push({ kind: 'purposeDelete', purpose: view.purpose })}
             onBack={back}
           />
         )}
@@ -423,9 +423,15 @@ export const SavingsDrawer = ({
                   history={history[currency]}
                   monthNet={monthNet(currency)}
                   groups={groupsOf(currency)}
-                  onOpenGroup={(purposeId) => push({ kind: 'group', currency, purposeId })}
-                  onAllocateEmpty={() =>
-                    push({ kind: 'picker', currency, intent: 'allocate' })
+                  // «Sin destino» no abre su grupo: va DERECHO a elegir para
+                  // qué. Es lo único que se hace con el resto, y hacerlo pasar
+                  // por una vista intermedia cobraba un toque por mostrar un
+                  // número que ya estaba en la fila que se tocó. Los propósitos
+                  // sí abren su grupo: tienen historial y acciones propias.
+                  onOpenGroup={(purposeId) =>
+                    purposeId == null
+                      ? push({ kind: 'picker', currency, intent: 'allocate' })
+                      : push({ kind: 'group', currency, purpose: purposeById(purposeId)! })
                   }
                   onSave={() =>
                     push({ kind: 'form', mode: 'save', currency, purposeId: null, locked: false })
@@ -454,7 +460,6 @@ const CurrencyBlock = ({
   monthNet,
   groups,
   onOpenGroup,
-  onAllocateEmpty,
   onSave,
   onRelease,
 }: {
@@ -466,8 +471,6 @@ const CurrencyBlock = ({
   /** El corte por propósito de esta moneda, «Sin destino» al final. */
   groups: PurposeSums[]
   onOpenGroup: (purposeId: string | null) => void
-  /** Puerta de entrada cuando todavía no hay nada destinado. */
-  onAllocateEmpty: () => void
   onSave: () => void
   onRelease: () => void
 }) => {
@@ -536,7 +539,7 @@ const CurrencyBlock = ({
       {groups.length <= 1 && sums.reserved > 0 && (
         <Pressable
           accessibilityRole="button"
-          onPress={onAllocateEmpty}
+          onPress={() => onOpenGroup(null)}
           className="mt-4 min-h-[44px] flex-row items-center justify-between rounded-xl border border-dashed border-border px-3 py-2"
         >
           <Text className="text-[13.5px] font-semibold text-text-muted">

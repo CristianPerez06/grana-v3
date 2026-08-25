@@ -270,3 +270,22 @@ El inverso es **Quitar destino**, que se lee solo por la misma razón.
 Los nombres técnicos siguen siendo `allocateToPurpose` / `unallocateFromPurpose`, como
 `releaseAvailability` sigue llamándose así mientras la UI dice *Volver a usar*: el repo nombra en
 técnico preciso lo que el producto llama distinto.
+
+## D15 — «Sin destino» no tiene vista propia: la fila ES la acción
+
+Tocar el resto en el desglose lleva **directo a elegir para qué**, sin pasar por una vista de grupo.
+
+El resto no es un propósito: no tiene nombre que editar, no tiene historial propio —no hay actos
+suyos que listar— y **lo único que se hace con él es darle destino**. Una pantalla intermedia para
+mostrar un número que ya estaba en la fila que se tocó no es una vista, es un peaje: cobraba un toque
+por no decidir nada.
+
+Los propósitos sí abren su grupo: ahí hay historial de repartos, renombre, borrado y cuatro acciones.
+
+De paso, esto hace que **la puerta sea una sola**: con cero repartos, la fila dice *"Decir para qué
+es"*; con repartos, el desglose muestra «Sin destino» — y las dos llevan al mismo lugar. El usuario
+no aprende dos caminos para lo mismo según cuánto tenga hecho.
+
+**Guardar tampoco iría en esa vista**, y esa fue la observación que la destapó: guardar desde el
+resto no agrega nada sobre el botón del nivel de arriba, y es una versión *peor* del mismo botón —
+arriba se puede elegir propósito, ahí quedaría clavado en "ninguno".

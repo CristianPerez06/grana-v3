@@ -53,7 +53,17 @@ type Mode = 'save' | 'release'
  */
 type View =
   | { kind: 'detail' }
-  | { kind: 'group'; currency: Currency; purposeId: string | null }
+  | {
+      kind: 'group'
+      currency: Currency
+      /**
+       * Siempre un propósito con nombre. «Sin destino» NO tiene vista propia: es
+       * el resto, y lo único que se hace con él —darle destino— es la fila
+       * misma. Una vista para mostrar un número que ya estaba en la fila que se
+       * tocó no es una vista, es un peaje.
+       */
+      purpose: Purpose
+    }
   | {
       kind: 'form'
       mode: Mode
@@ -478,15 +488,14 @@ export function SavingsDrawer({
         {view.kind === 'group' && (
           <GroupBlock
             currency={view.currency}
-            purposeId={view.purposeId}
-            purpose={purposeById(view.purposeId)}
-            reserved={groupAmount(view.currency, view.purposeId)}
+            purpose={view.purpose}
+            reserved={groupAmount(view.currency, view.purpose.id)}
             onSave={() =>
               push({
                 kind: 'form',
                 mode: 'save',
                 currency: view.currency,
-                purposeId: view.purposeId,
+                purposeId: view.purpose.id,
                 locked: true,
               })
             }
@@ -495,23 +504,28 @@ export function SavingsDrawer({
                 kind: 'form',
                 mode: 'release',
                 currency: view.currency,
-                purposeId: view.purposeId,
+                purposeId: view.purpose.id,
                 locked: true,
               })
             }
-            onAllocate={() => {
-              // Desde «Sin destino» hay que elegir a cuál apartar; desde un
-              // propósito, ya se sabe.
-              const target = purposeById(view.purposeId)
-              if (target) push({ kind: 'allocate', currency: view.currency, purpose: target, direction: 'allocate' })
-              else push({ kind: 'picker', currency: view.currency, intent: 'allocate' })
-            }}
-            onUnallocate={() => {
-              const target = purposeById(view.purposeId)
-              if (target) push({ kind: 'allocate', currency: view.currency, purpose: target, direction: 'unallocate' })
-            }}
-            onEdit={(purpose) => push({ kind: 'purposeForm', purpose })}
-            onDelete={(purpose) => push({ kind: 'purposeDelete', purpose })}
+            onAllocate={() =>
+              push({
+                kind: 'allocate',
+                currency: view.currency,
+                purpose: view.purpose,
+                direction: 'allocate',
+              })
+            }
+            onUnallocate={() =>
+              push({
+                kind: 'allocate',
+                currency: view.currency,
+                purpose: view.purpose,
+                direction: 'unallocate',
+              })
+            }
+            onEdit={() => push({ kind: 'purposeForm', purpose: view.purpose })}
+            onDelete={() => push({ kind: 'purposeDelete', purpose: view.purpose })}
             onBack={back}
           />
         )}
@@ -530,9 +544,15 @@ export function SavingsDrawer({
                   history={history[currency]}
                   monthNet={monthNet(currency)}
                   groups={groupsOf(currency)}
-                  onOpenGroup={(purposeId) => push({ kind: 'group', currency, purposeId })}
-                  onAllocateEmpty={() =>
-                    push({ kind: 'picker', currency, intent: 'allocate' })
+                  // «Sin destino» no abre su grupo: va DERECHO a elegir para
+                  // qué. Es lo único que se hace con el resto, y hacerlo pasar
+                  // por una vista intermedia cobraba un toque por mostrar un
+                  // número que ya estaba en la fila que se tocó. Los propósitos
+                  // sí abren su grupo: tienen historial y acciones propias.
+                  onOpenGroup={(purposeId) =>
+                    purposeId == null
+                      ? push({ kind: 'picker', currency, intent: 'allocate' })
+                      : push({ kind: 'group', currency, purpose: purposeById(purposeId)! })
                   }
                   onSave={() =>
                     push({ kind: 'form', mode: 'save', currency, purposeId: null, locked: false })
@@ -562,7 +582,6 @@ const CurrencyBlock = ({
   monthNet,
   groups,
   onOpenGroup,
-  onAllocateEmpty,
   onSave,
   onRelease,
 }: {
@@ -574,8 +593,6 @@ const CurrencyBlock = ({
   /** El corte por propósito de esta moneda, «Sin destino» al final. */
   groups: PurposeSums[]
   onOpenGroup: (purposeId: string | null) => void
-  /** Puerta de entrada cuando todavía no hay nada destinado. */
-  onAllocateEmpty: () => void
   onSave: () => void
   onRelease: () => void
 }) => {
@@ -649,7 +666,7 @@ const CurrencyBlock = ({
       {groups.length <= 1 && sums.reserved > 0 && (
         <button
           type="button"
-          onClick={onAllocateEmpty}
+          onClick={() => onOpenGroup(null)}
           className="mt-4 flex min-h-[44px] w-full items-center justify-between rounded-xl border border-dashed border-border px-3 py-2 text-left transition-colors hover:bg-surface-sunken"
         >
           <span className="text-[13.5px] font-semibold text-text-muted">
@@ -758,7 +775,6 @@ const CurrencyBlock = ({
  */
 const GroupBlock = ({
   currency,
-  purposeId,
   purpose,
   reserved,
   onSave,
@@ -770,16 +786,15 @@ const GroupBlock = ({
   onBack,
 }: {
   currency: Currency
-  purposeId: string | null
-  purpose: Purpose | null
+  purpose: Purpose
   reserved: number
   onSave: () => void
   onRelease: () => void
   /** Desde «Sin destino»: elegir a qué propósito apartar. Desde uno: apartarle más. */
   onAllocate: () => void
   onUnallocate: () => void
-  onEdit: (purpose: Purpose) => void
-  onDelete: (purpose: Purpose) => void
+  onEdit: () => void
+  onDelete: () => void
   onBack: () => void
 }) => {
   const t = useTranslations('savings')
@@ -789,9 +804,8 @@ const GroupBlock = ({
   // mezclar las dos listas obligaría a distinguir a ojo dos actos que no se
   // parecen — uno mueve el disponible y el otro no.
   const historyQuery = useQuery({
-    queryKey: ['savings', 'allocations', currency, purposeId ?? 'none'],
-    queryFn: () => getAllocationHistory(createClient(), currency, purposeId as string),
-    enabled: purposeId != null,
+    queryKey: ['savings', 'allocations', currency, purpose.id],
+    queryFn: () => getAllocationHistory(createClient(), currency, purpose.id),
     staleTime: 0,
   })
   const history = historyQuery.data ?? { entries: [], hasMore: false }
@@ -799,14 +813,13 @@ const GroupBlock = ({
   return (
     <div className="flex flex-col">
       <DrawerBackHeader
-        title={purpose?.name ?? t('purposes.none')}
+        title={purpose.name}
         onBack={onBack}
         action={
-          purpose ? (
-            <div className="flex gap-1">
+          <div className="flex gap-1">
               <button
                 type="button"
-                onClick={() => onEdit(purpose)}
+                onClick={onEdit}
                 aria-label={t('purposes.edit')}
                 className="flex size-11 items-center justify-center rounded-xl text-text-muted transition-colors hover:bg-border-soft hover:text-text"
               >
@@ -814,27 +827,25 @@ const GroupBlock = ({
               </button>
               <button
                 type="button"
-                onClick={() => onDelete(purpose)}
+                onClick={onDelete}
                 aria-label={t('purposes.delete')}
                 className="flex size-11 items-center justify-center rounded-xl text-text-muted transition-colors hover:bg-negative/10 hover:text-negative"
               >
                 <Trash2 className="size-4" aria-hidden />
               </button>
-            </div>
-          ) : undefined
+          </div>
         }
       />
 
       <section className="mt-4 rounded-2xl border border-border-soft bg-card p-4">
         <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
-          {purpose ? t('purposes.allocated_in', { purpose: purpose.name }) : t('purposes.none')}
+          {t('purposes.allocated_in', { purpose: purpose.name })}
         </p>
         <p className="mt-2 text-[26px] font-extrabold leading-none tracking-[-0.04em] text-text">
           {money(reserved, currency)}
         </p>
 
-        {purposeId != null && (
-          <>
+        <>
             <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
               {t('history')}
             </p>
@@ -870,8 +881,7 @@ const GroupBlock = ({
                 {t('history_truncated', { count: RESERVE_HISTORY_LIMIT })}
               </p>
             )}
-          </>
-        )}
+        </>
 
         <div className="mt-4 flex gap-2">
           <Button className="flex-1" onClick={onSave}>
@@ -894,16 +904,14 @@ const GroupBlock = ({
           <button type="button" onClick={onAllocate} className="min-h-[44px]">
             {t('purposes.allocate')}
           </button>
-          {purposeId != null && (
-            <button
-              type="button"
-              onClick={onUnallocate}
-              disabled={reserved <= 0}
-              className="min-h-[44px] disabled:opacity-40"
-            >
-              {t('purposes.unallocate')}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onUnallocate}
+            disabled={reserved <= 0}
+            className="min-h-[44px] disabled:opacity-40"
+          >
+            {t('purposes.unallocate')}
+          </button>
         </div>
       </section>
     </div>
