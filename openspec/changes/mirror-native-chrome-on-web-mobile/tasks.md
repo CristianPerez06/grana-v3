@@ -2,7 +2,7 @@
 
 ## 1. Fase 0 — Safe areas
 
-- [ ] 1.1 En `apps/web/app/layout.tsx`, agregar `export const viewport: Viewport = { viewportFit: 'cover', themeColor: '#0B1A2B' }` importando `Viewport` de `next`. Coordinar con el trabajo en vuelo sobre `manifest.ts` (íconos PWA): ese aterriza primero
+- [ ] 1.1 En `apps/web/app/layout.tsx`, agregar `export const viewport: Viewport = { viewportFit: 'cover', themeColor: '#0B1A2B' }` importando `Viewport` de `next`, junto al `export const metadata` que ya vive ahí. El trabajo en vuelo sobre `manifest.ts` (íconos PWA) es otro archivo: no hay conflicto ni orden obligado
 - [ ] 1.2 En `packages/ui-tokens/src/theme.css`, agregar los tokens de safe area (`--safe-top`, `--safe-bottom`) resolviendo a `env(safe-area-inset-top, 0px)` / `env(safe-area-inset-bottom, 0px)`, y mapearlos en el bloque `@theme` para que existan como utilidades
 - [ ] 1.3 Confirmar por lectura que ningún componente web usa `env(safe-area-inset-*)` directo: el acceso es siempre vía token
 

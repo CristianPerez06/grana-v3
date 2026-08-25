@@ -34,7 +34,7 @@ Sin cambios de datos, queries, validación ni contables. Desktop no se toca.
 
 **Pre-change check.** Las changes activas (`add-mobile-money-calculator`, `align-mobile-movement-form-surface`, `close-movement-form-parity-gaps`, `fix-native-movement-form-spec-drift`) tocan `transactions` y superficies de `apps/mobile`. Este change no toca ninguna de las dos: su superficie es `apps/web` + los primitivos web. Sin solapamiento.
 
-**Nota de coordinación.** Hay trabajo en vuelo sobre `apps/web/app/manifest.ts` (íconos PWA, `purpose: any` / `maskable` y un `apple-icon.png` nuevo). La fase 0 de este change toca el mismo archivo para agregar el `viewport`. Conviene que ese trabajo aterrice primero.
+**Nota de coordinación.** Hay trabajo en vuelo sobre `apps/web/app/manifest.ts` (íconos PWA, `purpose: any` / `maskable` y un `apple-icon.png` nuevo). **No hay conflicto de archivo**: el `viewport` de la fase 0 va en `apps/web/app/layout.tsx`, junto al `export const metadata` que ya vive ahí. Las dos cosas son configuración de PWA y se complementan —el `theme_color` del manifest pinta la barra del sistema, el `viewportFit: 'cover'` hace que el layout sepa dónde está el notch— pero pueden aterrizar en cualquier orden.
 
 ## Impact
 

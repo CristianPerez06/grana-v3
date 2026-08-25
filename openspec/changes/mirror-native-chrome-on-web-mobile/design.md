@@ -2,6 +2,8 @@
 
 Handoff visual: `docs/design/web-mobile-chrome/`. El `README.md` de ese bundle tiene el inventario de los dos shells, el mapeo componente→componente y los hallazgos completos. Este documento cubre solo las decisiones técnicas que la implementación necesita resueltas de antemano.
 
+**Estado: las siete decisiones están cerradas y aprobadas.** Las cinco primeras son técnicas y se derivan del código; las decisiones 4 y 5 eran de producto y quedaron confirmadas explícitamente antes de arrancar la implementación. Ninguna se re-abre durante el apply: si algo no cierra, se para y se discute, no se improvisa una alternativa.
+
 ## Decisión 1 — El navy rompe el padding con negative margins, no reestructurando el `<main>`
 
 El `PageHeader` web se monta dentro de `<main>`, adentro del wrapper `mx-auto w-full max-w-5xl px-4 py-5 md:px-8 md:py-8` (`app-shell.tsx:92`). Una banda navy full-bleed no vive ahí sin romper ese padding.
@@ -31,7 +33,7 @@ En el shell actual el logout es un `<form action={logoutAction}>` dentro de `Sid
 
 En nativo es un `supabase.auth.signOut()` directo, así que **la referencia nativa no aplica acá**: es el único punto del change donde web no puede calcar al nativo. El sheet web y el `AppMenu` nativo van a tener el mismo aspecto y distinta mecánica, que es exactamente lo que la política Web ↔ Mobile del repo pide.
 
-## Decisión 4 — El `ProfileBlock` se conserva, y se agrega al nativo
+## Decisión 4 — El `ProfileBlock` se conserva, y se agrega al nativo — **confirmada**
 
 El sidebar web muestra nombre y email arriba de settings/logout. El `AppMenu` nativo no muestra identidad, así que espejo exacto = se pierde en web-mobile.
 
@@ -39,7 +41,7 @@ El sidebar web muestra nombre y email arriba de settings/logout. El `AppMenu` na
 
 Consecuencia asumida: para que la paridad no se rompa por la otra punta, el `AppMenu` nativo tiene que sumarlo también. Ese ajuste es de una sola pieza y va en la fase 2, aunque toque `apps/mobile`.
 
-## Decisión 5 — "Compartido" y "Hogar" se unifican en "Hogar"
+## Decisión 5 — "Compartido" y "Hogar" se unifican en "Hogar" — **confirmada**
 
 `nav.shared` = "Compartido" (sidebar web) y `nav.home` = "Hogar" (tab nativa) apuntan al mismo destino con dos nombres distintos. Espejar sin más dejaría a la web diciendo "Compartido" en desktop y "Hogar" en mobile: una inconsistencia nueva, dentro de la misma app.
 
