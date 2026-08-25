@@ -316,3 +316,26 @@ otra pantalla. La pantalla aparte SHALL quedar reservada para crear un propósit
 - **WHEN** el usuario abre la vista de "Casa"
 - **THEN** las acciones son destinarle más, volver a usar y quitar destino
 - **AND** no aparece "Guardar"
+
+---
+
+### Requirement: El origen heredado no se muestra como un campo
+
+Cuando el propósito de una operación quede determinado por el lugar desde el que se entró, el sistema
+NO SHALL presentarlo como un campo ni como una fila de la operación. SHALL indicarlo en el título o en
+el resumen.
+
+La explicación de la diferencia con el saldo bancario SHALL limitarse a esa conciliación, y NO SHALL
+incluir el flujo del período.
+
+#### Scenario: Volver a usar desde un propósito
+
+- **WHEN** el usuario abre "Volver a usar" desde el grupo "Viaje"
+- **THEN** el título nombra el origen
+- **AND** no aparece ninguna fila de propósito
+
+#### Scenario: La conciliación no incluye el flujo del mes
+
+- **WHEN** el usuario abre la explicación de la diferencia con el banco
+- **THEN** ve el saldo bancario, lo guardado y el disponible
+- **AND** no ve cuánto guardó o volvió a usar en el período

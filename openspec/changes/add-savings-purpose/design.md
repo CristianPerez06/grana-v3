@@ -366,8 +366,11 @@ como chips en el propio formulario, con *«Sin destino»* como una opción más 
 
 El selector como pantalla aparte queda **solo para crear uno nuevo**, que sí necesita nombre e ícono.
 
-Al volver a usar no hay chips: el propósito viene **heredado** del grupo desde el que se entró, y
-ofrecer elegirlo sería pedirle al usuario que conteste algo que acaba de contestar con el dedo.
+Al volver a usar no hay chips **ni fila**: el propósito viene **heredado** del grupo desde el que se
+entró. La primera versión mostraba una fila *«Para qué → Viaje»* de solo lectura, y se sacó: no dejaba
+decidir nada, no cambiaba nada, y repetía lo que el bloque de abajo ya dice (*«Tenés guardado en
+Viaje»*). **Una sección que no decide es una sección de más.** El origen lo dice el título: *«Volver a
+usar de Viaje»*.
 
 ## D20 — La fecha es secundaria en estos formularios
 
@@ -377,3 +380,25 @@ la fecha es **casi siempre hoy**: el foco es cuánto y para qué.
 Pasa al control compacto que el alta de movimientos ya usa en ancho de teléfono — ícono, fecha corta,
 y los atajos **Hoy / Ayer** — reutilizando su copy en vez de duplicarlo, porque dos traducciones del
 mismo botón divergen sin que nadie lo note.
+
+## D21 — El puente explica una cosa sola
+
+*«Cómo se ve en tu banco»* mezclaba dos preguntas: **por qué los dos números no coinciden** y
+**cuánto me moví este mes**. Mezcladas, la explicación deja de explicar.
+
+El plegable queda como conciliación pura, y sus rótulos nombran **los dos sistemas** en vez de las
+entidades de Grana — porque la pregunta no es *"cuánto tengo en cuentas"* sino *"por qué mi banco dice
+otra cosa"*, y para contestarla hay que decir de quién es cada número:
+
+```
+ARS
+Tu banco muestra          $ 5.085.748,17
+Guardado en Grana        −$   190.000,00
+Para gastar en Grana      $ 4.895.748,17
+```
+
+El título pasa a ser **la pregunta**: *«Por qué tu banco muestra otro número»*. Nombrar la sección por
+lo que contesta, y no por su categoría, es lo que hace que alguien la abra el día que la necesita.
+
+El neto del mes se muda al **historial**, arriba de la lista: es el mismo flujo contado de dos
+maneras, y ahí sí se acompañan.

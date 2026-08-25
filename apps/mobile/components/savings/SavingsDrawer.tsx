@@ -565,12 +565,7 @@ export const SavingsDrawer = ({
             {bankOpen && (
               <View className="mt-1.5 gap-2.5">
                 {currencies.map((currency) => (
-                  <BankBridge
-                    key={currency}
-                    currency={currency}
-                    sums={rowFor(currency)}
-                    monthNet={monthNet(currency)}
-                  />
+                  <BankBridge key={currency} currency={currency} sums={rowFor(currency)} />
                 ))}
                 <Text className="px-1 text-[12.5px] leading-snug text-text-soft">
                   {t('savings.gap_note')}
@@ -594,6 +589,33 @@ export const SavingsDrawer = ({
             </Pressable>
             {historyOpen && (
               <View className="mt-1.5">
+                {/* El neto del mes, arriba de la lista que resume: el mismo
+                    flujo contado de dos maneras. Vivía en el puente, donde
+                    competía con una pregunta distinta. */}
+                {currencies.some((c) => monthNet(c) !== 0) && (
+                  <View className="mb-2 gap-0.5 rounded-xl bg-border-soft px-3 py-2">
+                    {currencies
+                      .filter((c) => monthNet(c) !== 0)
+                      .map((c) => (
+                        <View key={c} className="flex-row justify-between">
+                          <Text className="text-[13px] text-text-muted">
+                            {t(
+                              monthNet(c) < 0
+                                ? 'savings.this_month_released'
+                                : 'savings.this_month_saved',
+                            )}
+                          </Text>
+                          <Text
+                            className={`text-[13px] font-extrabold ${
+                              monthNet(c) >= 0 ? 'text-positive' : 'text-text-muted'
+                            }`}
+                          >
+                            {money(Math.abs(monthNet(c)), c)}
+                          </Text>
+                        </View>
+                      ))}
+                  </View>
+                )}
                 {history.entries.length === 0 ? (
                   <Text className="text-[13px] text-text-soft">
                     {t('savings.empty_history')}
@@ -697,62 +719,43 @@ const GroupAmounts = ({ amounts }: { amounts: { currency: Currency; reserved: nu
 }
 
 /**
- * El puente entre el número del banco y el de Grana.
+ * Por qué el banco muestra otro número.
  *
  * Sin esto, quien abre su cuenta y ve un total distinto al de acá no tiene dónde
- * entender la diferencia — y le cree al banco. Va plegado porque se entiende una
- * vez, no porque haya dejado de importar.
+ * entender la diferencia — y le cree al banco.
+ *
+ * Es SOLO la conciliación. El flujo del mes vivía acá y se fue al historial: una
+ * cosa es "por qué los dos números no coinciden" y otra "cuánto me moví este
+ * mes". Mezcladas, la explicación deja de explicar.
  */
-const BankBridge = ({
-  currency,
-  sums,
-  monthNet,
-}: {
-  currency: Currency
-  sums: AvailableSums
-  /** Neto del mes, de `get_reserve_flow_sums`. Nunca recompuesto acá. */
-  monthNet: number
-}) => {
+const BankBridge = ({ currency, sums }: { currency: Currency; sums: AvailableSums }) => {
   const t = useT()
 
   return (
     <View className="rounded-xl bg-border-soft px-3 py-2.5">
+      <Text className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-text-soft">
+        {currency}
+      </Text>
+      {/* Los rótulos nombran los DOS sistemas: la pregunta acá no es "cuánto
+          tengo en cuentas" sino "por qué mi banco dice otra cosa". */}
       <View className="flex-row justify-between py-0.5">
-        <Text className="text-[13px] text-text-muted">
-          {t('savings.accounts_total', { currency })}
-        </Text>
+        <Text className="text-[13px] text-text-muted">{t('savings.bank_shows')}</Text>
         <Text className="text-[13px] font-semibold text-text">
           {money(sums.accountsNet, currency)}
         </Text>
       </View>
       <View className="flex-row justify-between py-0.5">
-        <Text className="text-[13px] text-text-muted">{t('savings.title')}</Text>
+        <Text className="text-[13px] text-text-muted">{t('savings.saved_in_grana')}</Text>
         <Text className="text-[13px] font-semibold text-positive">
           {`−${money(sums.reserved, currency)}`}
         </Text>
       </View>
       <View className="mt-1 flex-row justify-between border-t border-border pt-1.5">
-        <Text className="text-[13px] text-text-muted">{t('savings.to_spend')}</Text>
+        <Text className="text-[13px] text-text-muted">{t('savings.spendable_in_grana')}</Text>
         <Text className="text-[13px] font-extrabold text-text">
           {money(sums.available, currency)}
         </Text>
       </View>
-      {monthNet !== 0 && (
-        <View className="mt-1.5 flex-row justify-between border-t border-border pt-1.5">
-          <Text className="text-[13px] text-text-muted">
-            {t(monthNet < 0 ? 'savings.this_month_released' : 'savings.this_month_saved')}
-          </Text>
-          {/* Sin signo: el VERBO ya lleva la dirección. "Volviste a usar
-              −$110.000" es una doble negación. */}
-          <Text
-            className={`text-[13px] font-extrabold ${
-              monthNet >= 0 ? 'text-positive' : 'text-text-muted'
-            }`}
-          >
-            {money(Math.abs(monthNet), currency)}
-          </Text>
-        </View>
-      )}
     </View>
   )
 }
@@ -879,8 +882,17 @@ const SavingsForm = ({
           vistas de este mismo sheet. En el pie competía con el CTA: dos
           controles juntos, uno que avanza y otro que retrocede, y el que
           retrocede no es una alternativa a confirmar. */}
+      {/* El título dice el ORIGEN cuando viene heredado: la fila "Para qué →
+          Viaje" no dejaba decidir nada y repetía lo que el bloque de abajo ya
+          dice. Una sección que no decide es una sección de más. */}
       <SheetBackHeader
-        title={mode === 'save' ? t('savings.save') : t('savings.release')}
+        title={
+          mode === 'save'
+            ? t('savings.save')
+            : purpose != null
+              ? t('savings.release_from', { purpose: purpose.name })
+              : t('savings.release')
+        }
         onBack={onCancel}
       />
 
@@ -997,17 +1009,6 @@ const SavingsForm = ({
               <Text className="text-[16px] font-bold text-positive">+</Text>
             </Pressable>
           </View>
-        </View>
-      )}
-
-      {/* Heredado desde un grupo: se muestra, no se ofrece cambiar. */}
-      {(mode === 'release' || lockedPurpose) && (
-        <View className="mt-3 min-h-[52px] flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 py-2">
-          <Text className="text-[13px] text-text-muted">{t('savings.purposes.label')}</Text>
-          <Text className="ml-auto text-[15px]">{purpose?.icon ?? '🫙'}</Text>
-          <Text className="text-[14px] font-semibold text-text" numberOfLines={1}>
-            {purpose?.name ?? t('savings.purposes.none')}
-          </Text>
         </View>
       )}
 

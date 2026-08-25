@@ -91,3 +91,6 @@
 - [x] 12.3 Los propósitos, como chips dentro del formulario de guardar; el selector queda para crear
 - [x] 12.4 La fecha, al control compacto con atajos Hoy / Ayer del alta de movimientos
 - [x] 12.5 Paridad nativa
+- [x] 12.6 Fuera la fila «Para qué» cuando el propósito viene heredado: el título dice el origen (D19)
+- [x] 12.7 El puente queda como conciliación pura, con rótulos que nombran los dos sistemas y el título convertido en la pregunta (D21)
+- [x] 12.8 El neto del mes se muda al historial, que es donde el flujo se cuenta

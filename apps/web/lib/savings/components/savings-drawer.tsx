@@ -709,12 +709,7 @@ export function SavingsDrawer({
               </summary>
               <div className="mt-2 flex flex-col gap-3">
                 {currencies.map((currency) => (
-                  <BankBridge
-                    key={currency}
-                    currency={currency}
-                    sums={rowFor(currency)}
-                    monthNet={monthNet(currency)}
-                  />
+                  <BankBridge key={currency} currency={currency} sums={rowFor(currency)} />
                 ))}
                 <p className="px-1 text-[12.5px] leading-snug text-text-soft">{t('gap_note')}</p>
               </div>
@@ -728,6 +723,31 @@ export function SavingsDrawer({
                 />
                 {t('history_count', { count: history.entries.length })}
               </summary>
+              {/* El neto del mes, arriba de la lista que resume: es el mismo
+                  flujo, contado de dos maneras. Vivía en el puente y ahí
+                  competía con la explicación de por qué el banco dice otra
+                  cosa, que es una pregunta distinta. */}
+              {currencies.some((c) => monthNet(c) !== 0) && (
+                <div className="mt-2 flex flex-col gap-0.5 rounded-xl bg-surface-sunken px-3 py-2 text-[13px]">
+                  {currencies
+                    .filter((c) => monthNet(c) !== 0)
+                    .map((c) => (
+                      <p key={c} className="flex justify-between text-text-muted">
+                        <span>
+                          {t(monthNet(c) < 0 ? 'this_month_released' : 'this_month_saved')}
+                        </span>
+                        <span
+                          className={cn(
+                            'font-extrabold tabular-nums',
+                            monthNet(c) >= 0 ? 'text-emerald-deep' : 'text-text-muted',
+                          )}
+                        >
+                          {money(Math.abs(monthNet(c)), c)}
+                        </span>
+                      </p>
+                    ))}
+                </div>
+              )}
               {history.entries.length === 0 ? (
                 <p className="mt-2 text-[13px] text-text-soft">{t('empty_history')}</p>
               ) : (
@@ -840,64 +860,48 @@ const GroupAmounts = ({
 }
 
 /**
- * El puente entre los dos números que el usuario ve en dos lugares distintos: el
- * de su banco y el de Grana.
+ * Por qué el banco muestra otro número.
  *
  * Sin esto, alguien que abre su cuenta y ve $5.085.748 y después abre Grana y ve
  * $4.895.748 no tiene dónde entender la diferencia — y le va a creer al banco,
  * porque es "el de verdad". Acá los dos aparecen juntos y lo que los separa
  * tiene nombre. No hace falta ningún consejo: alcanza con mostrar la resta.
  *
+ * Es SOLO la conciliación. El flujo del mes vivía acá y se fue al historial: una
+ * cosa es "por qué los dos números no coinciden" y otra "cuánto me moví este
+ * mes". Mezcladas, la explicación deja de explicar.
+ *
  * Va plegado porque se entiende una vez, no porque haya dejado de importar.
  */
-const BankBridge = ({
-  currency,
-  sums,
-  monthNet,
-}: {
-  currency: Currency
-  sums: AvailableSums
-  /** Neto del mes, de `get_reserve_flow_sums`. Nunca recompuesto acá. */
-  monthNet: number
-}) => {
+const BankBridge = ({ currency, sums }: { currency: Currency; sums: AvailableSums }) => {
   const t = useTranslations('savings')
 
   return (
     <div className="rounded-xl bg-surface-sunken px-3 py-2.5 text-[13px]">
+      <p className="mb-1 text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
+        {currency}
+      </p>
+      {/* Los rótulos nombran los DOS sistemas, no las entidades de Grana. Acá la
+          pregunta no es "cuánto tengo en cuentas": es "por qué mi banco dice
+          otra cosa", y para contestarla hay que decir de quién es cada número. */}
       <p className="flex justify-between py-0.5 text-text-muted">
-        <span>{t('accounts_total', { currency })}</span>
+        <span>{t('bank_shows')}</span>
         <span className="font-semibold tabular-nums text-text">
           {money(sums.accountsNet, currency)}
         </span>
       </p>
       <p className="flex justify-between py-0.5 text-text-muted">
-        <span>{t('title')}</span>
+        <span>{t('saved_in_grana')}</span>
         <span className="font-semibold tabular-nums text-emerald-deep">
           −{money(sums.reserved, currency)}
         </span>
       </p>
       <p className="mt-1 flex justify-between border-t border-border pt-1.5 text-text-muted">
-        <span>{t('to_spend')}</span>
+        <span>{t('spendable_in_grana')}</span>
         <span className="font-extrabold tabular-nums text-text">
           {money(sums.available, currency)}
         </span>
       </p>
-      {monthNet !== 0 && (
-        <p className="mt-1.5 flex justify-between border-t border-border pt-1.5 text-text-muted">
-          <span>{t(monthNet < 0 ? 'this_month_released' : 'this_month_saved')}</span>
-          {/* Sin signo: el VERBO ya lleva la dirección. "Volviste a usar
-              −$110.000" es una doble negación — se lee como "des-volviste a
-              usar". El número dice cuánto; el rótulo dice para dónde. */}
-          <span
-            className={cn(
-              'font-extrabold tabular-nums',
-              monthNet >= 0 ? 'text-emerald-deep' : 'text-text-muted',
-            )}
-          >
-            {money(Math.abs(monthNet), currency)}
-          </span>
-        </p>
-      )}
     </div>
   )
 }
@@ -1201,8 +1205,18 @@ const SavingsForm = ({
           vistas de este mismo drawer. En el pie competía con el CTA: dos
           controles juntos, uno que avanza y otro que retrocede, y el que
           retrocede no es una alternativa a confirmar. */}
+      {/* El título dice el ORIGEN cuando viene heredado. Antes había una fila
+          "Para qué → Viaje" debajo del monto: no dejaba decidir nada, no
+          cambiaba nada, y repetía lo que el bloque de abajo ya dice ("Tenés
+          guardado en Viaje"). Una sección que no decide es una sección de más. */}
       <DrawerBackHeader
-        title={mode === 'save' ? t('save') : t('release')}
+        title={
+          mode === 'save'
+            ? t('save')
+            : purpose != null
+              ? t('release_from', { purpose: purpose.name })
+              : t('release')
+        }
         onBack={onCancel}
       />
 
@@ -1335,19 +1349,6 @@ const SavingsForm = ({
               <Plus size={16} strokeWidth={2.5} aria-hidden />
             </button>
           </div>
-        </div>
-      )}
-
-      {/* Heredado desde un grupo: se muestra, no se ofrece cambiar. */}
-      {(mode === 'release' || lockedPurpose) && (
-        <div className="mt-3 flex min-h-[52px] w-full items-center gap-3 rounded-2xl border border-border-soft bg-card px-4 py-2">
-          <span className="text-[13px] text-text-muted">{t('purposes.label')}</span>
-          <span aria-hidden className="ml-auto text-[16px]">
-            {purpose?.icon ?? '🫙'}
-          </span>
-          <span className="text-[14px] font-semibold text-text">
-            {purpose?.name ?? t('purposes.none')}
-          </span>
         </div>
       )}
 

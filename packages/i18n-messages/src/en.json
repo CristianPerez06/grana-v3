@@ -2139,6 +2139,11 @@
     "history_count": "History ({count})",
     "total_saved": "Saved",
     "spendable": "To spend",
-    "bank_fold": "How your bank sees it"
+    "bank_fold": "Why your bank shows a different number",
+    "release_from": "Make available from {purpose}",
+    "bank_shows": "Your bank shows",
+    "saved_in_grana": "Saved in Grana",
+    "spendable_in_grana": "To spend in Grana",
+    "this_month": "This month"
   }
 }
