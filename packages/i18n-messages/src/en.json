@@ -2111,23 +2111,23 @@
       "errors": {
         "duplicate": "You already have a purpose called “{name}”.",
         "generic": "We couldn’t save the purpose. Try again.",
-        "exceeds_unassigned": "You can’t set aside more than you have unassigned: {limit}.",
-        "exceeds_allocated": "You can’t unset more than you have set for {purpose}: {limit}."
+        "exceeds_unassigned": "You can’t assign more than you have unassigned: {limit}.",
+        "exceeds_allocated": "You can’t unassign more than you have assigned to {purpose}: {limit}."
       },
-      "allocate": "Set for",
-      "unallocate": "Unset",
-      "allocate_title": "Set money for a purpose",
-      "unallocate_title": "Unset from this purpose",
+      "allocate": "Assign",
+      "unallocate": "Unassign",
+      "allocate_title": "Assign to {purpose}",
+      "unallocate_title": "Unassign from {purpose}",
       "unassigned_available": "Unassigned",
-      "allocated_in": "Set for {purpose}",
-      "will_allocate": "You’ll set aside",
-      "will_unallocate": "You’ll unset",
+      "allocated_in": "Assigned to {purpose}",
+      "will_allocate": "You’ll assign",
+      "will_unallocate": "You’ll unassign",
       "left_unassigned": "Left unassigned",
-      "stays_allocated": "Stays set",
+      "stays_allocated": "Stays assigned",
       "allocate_note": "This doesn’t move money or change what you can spend. It only says what part of your savings is for.",
-      "entry_allocated": "Set for this",
-      "entry_unallocated": "Unset",
-      "empty_allocations": "Nothing set for this yet."
+      "entry_allocated": "Assigned",
+      "entry_unallocated": "Unassigned",
+      "empty_allocations": "Nothing assigned here yet."
     }
   }
 }

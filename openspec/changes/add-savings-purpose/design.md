@@ -182,7 +182,7 @@ Cada verbo con su tabla:
 | Tabla | Verbos | Efecto |
 |---|---|---|
 | `availability_reserve` | guardar ⇄ volver a usar | mueve el disponible |
-| `savings_purpose_allocation` | apartar ⇄ soltar | **no mueve ningún total** |
+| `savings_purpose_allocation` | destinar ⇄ quitar destino | **no mueve ningún total** |
 
 **«Sin destino» deja de ser filas y pasa a ser el resto**, derivado en SQL: `guardado − lo
 repartido`. Que es lo que honestamente es — no un propósito, sino lo que sobra. Para el usuario
@@ -236,3 +236,33 @@ La pertenencia del propósito se chequea con `user_id` **explícito** dentro de 
 del repo repetir el criterio de RLS es duplicación; acá no: no es un filtro de listado, es la
 decisión de seguridad de la función, y hacerla depender de qué rol la ejecute la vuelve
 silenciosamente permisiva para cualquier caller privilegiado.
+
+## D14 — El verbo del reparto es **Destinar**, no "Apartar"
+
+La primera versión de la UI lo llamó *Apartar*. **Choca con la fase 1**: el copy de la tira de
+sugerencia ya dice *"Podés **apartar** $10.000 de este ingreso"* usando "apartar" como sinónimo de
+**guardar**. Dos operaciones distintas con la misma palabra, en la misma pantalla, es la confusión
+que el modelo entero viene a evitar.
+
+Candidatos y por qué caen:
+
+| Candidato | Por qué no |
+|---|---|
+| Apartar | Ya significa *guardar* en el copy de la fase 1 |
+| Mover a Japón | "Mover" es exactamente lo que la operación NO hace, y es la creencia que el modelo combate |
+| Sacar de Japón | "Sacar" está descartado desde D10: es el verbo de retirar plata del banco |
+| Asignar ⇄ desasignar | Correcto y neutro, pero "desasignar" no es una palabra que nadie diga |
+
+**Destinar** gana por tres razones:
+
+1. **No choca con nada.** Ningún otro acto de la app lo usa.
+2. **Es el verbo del sustantivo que ya está en pantalla.** El resto se llama *«Sin destino»*, así que
+   la acción y el grupo se explican mutuamente: destinás algo, y lo que no destinaste queda sin
+   destino.
+3. **No dice nada sobre movimiento.** Ni sugiere que la plata cambie de lugar.
+
+El inverso es **Quitar destino**, que se lee solo por la misma razón.
+
+Los nombres técnicos siguen siendo `allocateToPurpose` / `unallocateFromPurpose`, como
+`releaseAvailability` sigue llamándose así mientras la UI dice *Volver a usar*: el repo nombra en
+técnico preciso lo que el producto llama distinto.

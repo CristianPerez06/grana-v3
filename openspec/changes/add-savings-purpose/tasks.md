@@ -49,8 +49,9 @@
 - [x] 10.4 `write_reserve`: la reserva y su reparto en una transacción, con el orden invertido según la dirección
 - [x] 10.5 Self-check que impide reintroducir `purpose_id` en la reserva
 - [x] 10.6 `allocateToPurpose` / `unallocateFromPurpose` en el paquete, con su piso y su copy
-- [x] 10.7 Pantalla de **apartar/soltar** por monto, en las dos superficies; el historial de guardados deja de ser tocable
+- [x] 10.7 Pantalla de **destinar / quitar destino** por monto (D14), en las dos superficies; el historial de guardados deja de ser tocable
 - [x] 10.8 El historial de un grupo pasa a ser el de sus **repartos**; «Sin destino» no tiene historial propio
+- [x] 10.10 El verbo es **Destinar**, no "Apartar": esa palabra ya significa *guardar* en el copy de la tira de sugerencia de la fase 1 (D14)
 - [x] 10.9 Tests: 24 sobre el SQL real, incluidos los dos lados del trigger y la atomicidad de `write_reserve`
 
 ## 6. Editar y borrar (D4, D5)

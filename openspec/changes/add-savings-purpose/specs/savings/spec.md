@@ -160,12 +160,15 @@ propósitos automáticamente.
 
 ### Requirement: El propósito se reparte por monto, no se ata a un movimiento
 
-El sistema SHALL permitir **apartar** un monto de lo guardado sin destino hacia un propósito, y
-**soltarlo** de vuelta al resto. NO SHALL asociar un propósito a una fila puntual del historial de
+El sistema SHALL permitir **destinar** un monto de lo guardado sin destino hacia un propósito, y
+**quitarle el destino** para devolverlo al resto. NO SHALL asociar un propósito a una fila puntual del historial de
 guardados: el dinero guardado es fungible y una reserva vieja puede haber sido usada en parte.
 
-Apartar y soltar NO SHALL cambiar el total guardado, NO SHALL cambiar el disponible y NO SHALL mover
+Destinar y quitar destino NO SHALL cambiar el total guardado, NO SHALL cambiar el disponible y NO SHALL mover
 dinero entre cuentas: lo que entra en un grupo sale de otro.
+
+El verbo de esta acción NO SHALL ser "apartar", que en la app ya significa **guardar**, ni ninguno que
+sugiera que el dinero cambia de lugar.
 
 «Sin destino» SHALL derivarse como **el resto** —lo guardado menos lo repartido— y NO SHALL
 almacenarse.
@@ -173,7 +176,7 @@ almacenarse.
 #### Scenario: Repartir no mueve ningún total
 
 - **GIVEN** $190.000 guardados, nada repartido
-- **WHEN** el usuario aparta $150.000 para "Japón"
+- **WHEN** el usuario destina $150.000 a "Japón"
 - **THEN** el total guardado sigue siendo $190.000 y el disponible no cambia
 - **AND** "Japón" muestra $150.000 y «Sin destino» $40.000
 
@@ -183,9 +186,9 @@ almacenarse.
 - **WHEN** el usuario quiere decir que $150.000 son para "Japón"
 - **THEN** puede hacerlo, sin depender de que exista un movimiento de ese monto
 
-#### Scenario: Soltar devuelve al resto sin sacar del guardado
+#### Scenario: Quitar el destino devuelve al resto sin sacar del guardado
 
-- **WHEN** el usuario suelta $50.000 de "Japón"
+- **WHEN** el usuario le quita el destino a $50.000 de "Japón"
 - **THEN** «Sin destino» sube $50.000 y el total guardado no cambia
 - **AND** el disponible no cambia
 
@@ -203,7 +206,7 @@ puede romper el invariante sin tocar ninguna fila de reparto.
 #### Scenario: No se puede apartar más de lo guardado
 
 - **GIVEN** $190.000 guardados
-- **WHEN** se intenta apartar $200.000 para un propósito
+- **WHEN** se intenta destinar $200.000 a un propósito
 - **THEN** la operación se rechaza
 
 #### Scenario: No se puede volver a usar lo que está repartido

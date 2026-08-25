@@ -26,7 +26,7 @@
 -- Cada verbo con su tabla:
 --
 --   availability_reserve         guardar ⇄ volver a usar   → mueve el disponible
---   savings_purpose_allocation   apartar ⇄ soltar          → NO mueve ningún total
+--   savings_purpose_allocation   destinar ⇄ quitar destino → NO mueve ningún total
 --
 -- «Sin destino» deja de ser filas y pasa a ser **el resto**, derivado:
 -- `guardado − lo repartido`. Que es lo que honestamente es: no un propósito, sino
@@ -48,7 +48,7 @@ begin;
 -- 1. savings_purpose_allocation — cuánto de lo guardado es para qué
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- Monto CON SIGNO, como las reservas: apartar es positivo, soltar es negativo, y
+-- Monto CON SIGNO, como las reservas: destinar es positivo, quitar es negativo, y
 -- lo repartido a un propósito se DERIVA de la suma de sus filas. Ningún total se
 -- persiste, igual que en todo el resto de Grana.
 --

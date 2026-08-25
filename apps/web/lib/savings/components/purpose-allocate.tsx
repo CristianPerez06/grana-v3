@@ -85,7 +85,9 @@ export function PurposeAllocate({
   return (
     <div className="flex flex-col">
       <DrawerBackHeader
-        title={t(allocating ? 'purposes.allocate_title' : 'purposes.unallocate_title')}
+        title={t(allocating ? 'purposes.allocate_title' : 'purposes.unallocate_title', {
+          purpose: purpose.name,
+        })}
         onBack={onBack}
       />
 

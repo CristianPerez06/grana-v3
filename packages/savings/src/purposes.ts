@@ -144,8 +144,8 @@ export async function deletePurpose(args: {
 }
 
 /**
- * Repartir lo guardado: **apartar** para un propósito, o **soltar** de vuelta al
- * resto.
+ * Repartir lo guardado: **destinar** a un propósito, o **quitarle el destino**
+ * para devolverlo al resto.
  *
  * Es el segundo par de verbos del modelo. Igual que guardar y volver a usar, no
  * mueve plata; pero a diferencia de ellos, **tampoco cambia el disponible ni el
@@ -178,7 +178,7 @@ async function writeAllocation(args: {
   const { amount, currency_code, date, purpose_id } = validation.data
   const currencyCode = currency_code as BalanceCurrency
 
-  // Apartar sale del RESTO; soltar sale del propósito. Las dos direcciones miran
+  // Destinar sale del RESTO; quitar sale del propósito. Las dos direcciones miran
   // el mismo corte, en grupos distintos.
   const source = await getReservedForPurpose(
     supabase,
@@ -224,7 +224,7 @@ async function writeAllocation(args: {
   return { ok: true, id: data.id }
 }
 
-/** Apartar parte de lo que está guardado sin destino para un propósito. */
+/** Destinar a un propósito parte de lo que está guardado sin destino. */
 export async function allocateToPurpose(args: {
   supabase: GranaSupabaseClient
   userId: string
@@ -235,10 +235,11 @@ export async function allocateToPurpose(args: {
 }
 
 /**
- * Soltar parte de lo apartado: vuelve al resto, sigue guardado.
+ * Quitarle el destino a parte de lo destinado: vuelve al resto, sigue guardado.
  *
  * NO es lo mismo que volver a usar. Volver a usar saca la plata de lo guardado y
- * la devuelve al disponible; soltar la deja guardada y solo le quita el destino.
+ * la devuelve al disponible; quitar el destino la deja guardada y solo le saca
+ * el para qué.
  */
 export async function unallocateFromPurpose(args: {
   supabase: GranaSupabaseClient

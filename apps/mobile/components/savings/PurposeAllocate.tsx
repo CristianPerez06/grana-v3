@@ -87,7 +87,12 @@ export const PurposeAllocate = ({
   return (
     <View>
       <SheetBackHeader
-        title={t(allocating ? 'savings.purposes.allocate_title' : 'savings.purposes.unallocate_title')}
+        title={t(
+          allocating
+            ? 'savings.purposes.allocate_title'
+            : 'savings.purposes.unallocate_title',
+          { purpose: purpose.name },
+        )}
         onBack={onBack}
       />
 

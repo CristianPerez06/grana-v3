@@ -2111,23 +2111,23 @@
       "errors": {
         "duplicate": "Ya tenés un propósito llamado «{name}».",
         "generic": "No pudimos guardar el propósito. Probá de nuevo.",
-        "exceeds_unassigned": "No podés apartar más de lo que tenés sin destino: {limit}.",
-        "exceeds_allocated": "No podés soltar más de lo que tenés apartado en {purpose}: {limit}."
+        "exceeds_unassigned": "No podés destinar más de lo que tenés sin destino: {limit}.",
+        "exceeds_allocated": "No podés quitar más de lo que tenés destinado a {purpose}: {limit}."
       },
-      "allocate": "Apartar",
-      "unallocate": "Soltar",
-      "allocate_title": "Apartar para un propósito",
-      "unallocate_title": "Soltar de este propósito",
+      "allocate": "Destinar",
+      "unallocate": "Quitar destino",
+      "allocate_title": "Destinar a {purpose}",
+      "unallocate_title": "Quitar de {purpose}",
       "unassigned_available": "Sin destino",
-      "allocated_in": "Apartado en {purpose}",
-      "will_allocate": "Vas a apartar",
-      "will_unallocate": "Vas a soltar",
+      "allocated_in": "Destinado a {purpose}",
+      "will_allocate": "Vas a destinar",
+      "will_unallocate": "Vas a quitar",
       "left_unassigned": "Queda sin destino",
-      "stays_allocated": "Queda apartado",
+      "stays_allocated": "Queda destinado",
       "allocate_note": "No mueve plata ni cambia cuánto podés gastar. Solo dice para qué es parte de lo que ya tenés guardado.",
-      "entry_allocated": "Apartaste",
-      "entry_unallocated": "Soltaste",
-      "empty_allocations": "Todavía no apartaste nada para esto."
+      "entry_allocated": "Destinaste",
+      "entry_unallocated": "Quitaste",
+      "empty_allocations": "Todavía no destinaste nada acá."
     }
   }
 }
