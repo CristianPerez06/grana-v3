@@ -1,5 +1,12 @@
 # Proposal: add-savings-set-aside
 
+> **Estado: implementado, sin archivar y sin mergear.** Dos compuertas distintas:
+>
+> 1. **No se archiva** hasta que pase el QA en la app nativa ([#58](https://github.com/CristianPerez06/grana-v3/issues/58)). Todo lo que se probó de mobile fue el viewport angosto del navegador, que corre el código de `apps/web`: el `BottomSheet`, el teclado sobre el input de monto y el picker nativo de fecha no se ejercieron una sola vez. Archivar es declarar la fase terminada, y está probada a medias.
+> 2. **No se mergea con la fase 1 sola.** Sola le da al usuario un *disponible* real pero ningún lugar donde decir para qué guardó. Sube a producción junto con las fases que la completan, y esas fases se construyen sobre esta branch.
+>
+> Detalle en `tasks.md` 9.5, 9.6 y 9.7.
+
 ## Why
 
 Hoy Grana no tiene forma de expresar la decisión más básica del ahorro: **"esto que tengo, decidí que no lo voy a gastar"**. El usuario que aparta plata mentalmente sigue viendo ese dinero contado como disponible, y no hay ningún rodeo posible — a diferencia de casi todo lo demás, esto no se puede simular con las piezas que ya existen.
