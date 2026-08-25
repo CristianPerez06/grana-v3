@@ -65,7 +65,8 @@ type SheetView =
   | {
       kind: 'allocate'
       currency: Currency
-      purpose: Purpose
+      /** Nulo: se llegó desde el resto y el propósito se elige en la misma pantalla. */
+      purpose: Purpose | null
       direction: 'allocate' | 'unallocate'
     }
 
@@ -141,10 +142,16 @@ export const SavingsDrawer = ({
 
   // ARS always renders — it is the primary currency and an empty sheet reads as
   // broken. USD only when it has something to say, per the bimoneda rule.
+  // Cuál se muestra. Arranca en pesos; no se recuerda entre aperturas porque el
+  // caso normal es mirar pesos.
+  const [shown, setShown] = useState<Currency>('ARS')
+
   const currencies = (['ARS', 'USD'] as const).filter((c) => {
     const row = rowFor(c)
     return c === 'ARS' || row.reserved !== 0 || row.available !== 0
   })
+
+  const shownCurrency: Currency = currencies.includes(shown) ? shown : (currencies[0] ?? 'ARS')
 
   // Al terminar, el sheet SE CIERRA. La confirmación es que el número del que
   // venías cambió; quedarse en el detalle deja al usuario preguntándose si pasó
@@ -212,20 +219,26 @@ export const SavingsDrawer = ({
    * decide nada y cobra dos toques por confirmarse a sí mismo. Quien quiera otro
    * nombre tiene «Nuevo propósito» al lado.
    */
-  const createFromSeed = async (seedKey: string) => {
+  /**
+   * Crea una sugerencia y devuelve el propósito ARMADO: la lista de este render
+   * es la de antes de crearlo, y buscarlo ahí ya rompió la navegación una vez.
+   */
+  const createFromSeed = async (seedKey: string): Promise<Purpose | null> => {
     const seed = PURPOSE_SEEDS.find((x) => x.key === seedKey)
     const name = t(`savings.purposes.seeds.${seedKey}`)
     const result = await createPurpose({ name, icon: seed?.icon ?? null })
 
-    if (!result.ok || result.id == null) {
-      push({ kind: 'purposeForm', purpose: null, name, icon: seed?.icon })
-      return
-    }
+    if (!result.ok || result.id == null) return null
 
-    // El propósito recién creado NO está todavía en la lista de este render, así
-    // que se pasa armado.
-    pickPurpose(result.id, { id: result.id, name, icon: seed?.icon ?? null })
     void refresh()
+    return { id: result.id, name, icon: seed?.icon ?? null }
+  }
+
+  /** Desde el selector: crea y sigue al paso que lo pidió. */
+  const createFromSeedAndPick = async (seedKey: string) => {
+    const created = await createFromSeed(seedKey)
+    if (created) pickPurpose(created.id, created)
+    else push({ kind: 'purposeForm', purpose: null })
   }
 
   const openRelease = (currency: Currency) => {
@@ -274,7 +287,7 @@ export const SavingsDrawer = ({
             onPick={pickPurpose}
             onCreate={(seedKey) =>
               seedKey != null
-                ? createFromSeed(seedKey)
+                ? createFromSeedAndPick(seedKey)
                 : push({ kind: 'purposeForm', purpose: null })
             }
             onBack={back}
@@ -316,13 +329,16 @@ export const SavingsDrawer = ({
         {view.kind === 'allocate' && (
           <PurposeAllocate
             purpose={view.purpose}
+            purposes={purposes}
             currency={view.currency}
             direction={view.direction}
             available={
               view.direction === 'allocate'
                 ? groupAmount(view.currency, null)
-                : groupAmount(view.currency, view.purpose.id)
+                : groupAmount(view.currency, view.purpose?.id ?? null)
             }
+            onCreateSeed={createFromSeed}
+            onCreateCustom={() => push({ kind: 'purposeForm', purpose: null })}
             onDone={async () => {
               await refresh()
               back()
@@ -413,9 +429,36 @@ export const SavingsDrawer = ({
 
         {view.kind === 'detail' && (
           <View>
-            <Text className="text-[19px] font-extrabold text-text">{t('savings.title')}</Text>
+            <View className="flex-row items-center justify-between gap-3">
+              <Text className="text-[19px] font-extrabold text-text">{t('savings.title')}</Text>
+              {/* Selector, no dos bloques apilados: con una moneda debajo de la
+                  otra el sheet duplicaba total, puente, desglose e historial, y
+                  la segunda quedaba a un scroll largo. */}
+              {currencies.length > 1 && (
+                <View className="flex-row rounded-[10px] border border-border bg-surface p-0.5">
+                  {currencies.map((code) => (
+                    <Pressable
+                      key={code}
+                      accessibilityRole="button"
+                      onPress={() => setShown(code)}
+                      className={`min-h-[32px] justify-center rounded-lg px-3 ${
+                        shownCurrency === code ? 'bg-card' : ''
+                      }`}
+                    >
+                      <Text
+                        className={`text-[11px] font-bold ${
+                          shownCurrency === code ? 'text-text' : 'text-text-soft'
+                        }`}
+                      >
+                        {code}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </View>
             <View className="mt-3 gap-4">
-              {currencies.map((currency) => (
+              {[shownCurrency].map((currency) => (
                 <CurrencyBlock
                   key={currency}
                   currency={currency}
@@ -428,9 +471,12 @@ export const SavingsDrawer = ({
                   // por una vista intermedia cobraba un toque por mostrar un
                   // número que ya estaba en la fila que se tocó. Los propósitos
                   // sí abren su grupo: tienen historial y acciones propias.
+                  // «Sin destino» va DERECHO a destinar, con el propósito por
+                  // elegir en la misma pantalla. Los propósitos abren su grupo:
+                  // tienen historial y acciones propias.
                   onOpenGroup={(purposeId) =>
                     purposeId == null
-                      ? push({ kind: 'picker', currency, intent: 'allocate' })
+                      ? push({ kind: 'allocate', currency, purpose: null, direction: 'allocate' })
                       : push({ kind: 'group', currency, purpose: purposeById(purposeId)! })
                   }
                   onSave={() =>
@@ -476,6 +522,7 @@ const CurrencyBlock = ({
 }) => {
   const t = useT()
   const locale = useLocale()
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   return (
     <View className="rounded-2xl border border-border bg-card p-4">
@@ -491,7 +538,13 @@ const CurrencyBlock = ({
         <Text className="text-[13px] text-text-muted">
           {t(monthNet < 0 ? 'savings.this_month_released' : 'savings.this_month_saved')}
         </Text>
-        <Text className="text-[14px] font-extrabold text-positive">
+        {/* Mismo criterio que el historial: el emerald marca lo guardado. Un mes
+            en que se volvió a usar más de lo que se guardó no es una mejora. */}
+        <Text
+          className={`text-[14px] font-extrabold ${
+            monthNet >= 0 ? 'text-positive' : 'text-text-muted'
+          }`}
+        >
           {monthNet < 0 ? '−' : '+'}
           {money(Math.abs(monthNet), currency)}
         </Text>
@@ -576,43 +629,62 @@ const CurrencyBlock = ({
         </>
       )}
 
-      <Text className="mt-4 text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
-        {t('savings.history')}
-      </Text>
-      {history.entries.length === 0 ? (
-        <Text className="mt-1.5 text-[13px] text-text-soft">{t('savings.empty_history')}</Text>
-      ) : (
-        <View className="mt-1.5">
-          {history.entries.map((entry) => (
-            <View
-              key={entry.id}
-              className="flex-row items-center justify-between border-t border-border-soft py-2.5"
-            >
-              <Text className="text-[14px] font-semibold text-text">
-                {entry.amount >= 0 ? t('savings.entry_saved') : t('savings.entry_released')}
-                <Text className="text-[12px] font-medium text-text-soft">
-                  {' '}
-                  {formatShortDate(entry.date, locale)}
-                </Text>
-              </Text>
-              <Text
-                className={`text-[14px] font-extrabold ${
-                  entry.amount >= 0 ? 'text-positive' : 'text-text-muted'
-                }`}
-              >
-                {entry.amount >= 0 ? '+' : '−'}
-                {money(Math.abs(entry.amount), currency)}
-              </Text>
-            </View>
-          ))}
-        </View>
-      )}
-      {/* Decirlo en vez de callarlo: una lista que se corta sin avisar es
-          indistinguible de un historial incompleto. */}
-      {history.hasMore && (
-        <Text className="mt-2 text-[12px] text-text-soft">
-          {t('savings.history_truncated', { count: String(RESERVE_HISTORY_LIMIT) })}
+      {/* Plegado por omisión: está acotado en 25, pero 25 filas debajo del
+          desglose empujan las acciones fuera de la pantalla — y en un teléfono
+          eso es todo el alto. El número en el rótulo evita abrirlo para saber
+          si hay algo. */}
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => setHistoryOpen((v) => !v)}
+        className="mt-4 min-h-[44px] flex-row items-center gap-1.5"
+      >
+        <ChevronRight
+          size={13}
+          color={colors.textSoft}
+          style={{ transform: [{ rotate: historyOpen ? '90deg' : '0deg' }] }}
+        />
+        <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
+          {t('savings.history_count', { count: String(history.entries.length) })}
         </Text>
+      </Pressable>
+      {historyOpen && (
+        <>
+          {history.entries.length === 0 ? (
+            <Text className="mt-1.5 text-[13px] text-text-soft">
+              {t('savings.empty_history')}
+            </Text>
+          ) : (
+            <View className="mt-1.5">
+              {history.entries.map((entry) => (
+                <View
+                  key={entry.id}
+                  className="flex-row items-center justify-between border-t border-border-soft py-2.5"
+                >
+                  <Text className="text-[14px] font-semibold text-text">
+                    {entry.amount >= 0 ? t('savings.entry_saved') : t('savings.entry_released')}
+                    <Text className="text-[12px] font-medium text-text-soft">
+                      {' '}
+                      {formatShortDate(entry.date, locale)}
+                    </Text>
+                  </Text>
+                  <Text
+                    className={`text-[14px] font-extrabold ${
+                      entry.amount >= 0 ? 'text-positive' : 'text-text-muted'
+                    }`}
+                  >
+                    {entry.amount >= 0 ? '+' : '−'}
+                    {money(Math.abs(entry.amount), currency)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+          {history.hasMore && (
+            <Text className="mt-2 text-[12px] text-text-soft">
+              {t('savings.history_truncated', { count: String(RESERVE_HISTORY_LIMIT) })}
+            </Text>
+          )}
+        </>
       )}
 
       <View className="mt-4 flex-row gap-2">

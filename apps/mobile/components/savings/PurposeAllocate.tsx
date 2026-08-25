@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Text, View } from 'react-native'
-import type { Purpose } from '@grana/savings'
+import { Pressable, Text, View } from 'react-native'
+import { PURPOSE_SEEDS, type Purpose } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import { formatForDisplay, parseMoneyInput } from '@grana/validation'
@@ -26,29 +26,45 @@ const CURRENCY_SYMBOL: Record<Currency, string> = { ARS: '$', USD: 'U$D' }
  * total guardado.
  */
 export const PurposeAllocate = ({
-  purpose,
+  purpose: fixedPurpose,
+  purposes,
   currency,
   direction,
   available,
+  onCreateSeed,
+  onCreateCustom,
   onDone,
   onBack,
 }: {
-  purpose: Purpose
+  /** Fijo cuando se llegó desde un propósito. Null: se elige acá mismo. */
+  purpose: Purpose | null
+  purposes: Purpose[]
   currency: Currency
   direction: 'allocate' | 'unallocate'
-  /** El piso: el resto al apartar, lo apartado al soltar. */
+  /** El piso: el resto al destinar, lo destinado al quitar. */
   available: number
+  /** Crea la sugerencia y devuelve el propósito, para dejarlo seleccionado. */
+  onCreateSeed: (seedKey: string) => Promise<Purpose | null>
+  onCreateCustom: () => void
   onDone: () => void | Promise<void>
   onBack: () => void
 }) => {
   const t = useT()
+  const [chosen, setChosen] = useState<Purpose | null>(fixedPurpose)
+  const [creating, setCreating] = useState(false)
   const [amount, setAmount] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   const money = (value: number) => (currency === 'USD' ? formatUSD(value) : formatARS(value, true))
 
+  const purpose = chosen
   const value = parseMoneyInput(amount) ?? 0
+
+  const taken = new Set(purposes.map((x) => x.name.trim().toLowerCase()))
+  const suggestions = PURPOSE_SEEDS.filter(
+    (seed) => !taken.has(t(`savings.purposes.seeds.${seed.key}`).trim().toLowerCase()),
+  )
   const remainder = available - value
   const overLimit = value > available
   const allocating = direction === 'allocate'
@@ -59,7 +75,7 @@ export const PurposeAllocate = ({
       ? t('savings.purposes.errors.exceeds_unassigned', { limit: money(available) })
       : t('savings.purposes.errors.exceeds_allocated', {
           limit: money(available),
-          purpose: purpose.name,
+          purpose: purpose?.name ?? '',
         })
     : null
 
@@ -67,6 +83,7 @@ export const PurposeAllocate = ({
     setError(null)
     setBusy(true)
     try {
+      if (purpose == null) return
       const action = allocating ? allocateToPurpose : unallocateFromPurpose
       const result = await action({
         amount: value,
@@ -87,12 +104,16 @@ export const PurposeAllocate = ({
   return (
     <View>
       <SheetBackHeader
-        title={t(
-          allocating
-            ? 'savings.purposes.allocate_title'
-            : 'savings.purposes.unallocate_title',
-          { purpose: purpose.name },
-        )}
+        title={
+          purpose != null
+            ? t(
+                allocating
+                  ? 'savings.purposes.allocate_title'
+                  : 'savings.purposes.unallocate_title',
+                { purpose: purpose.name },
+              )
+            : t('savings.purposes.allocate')
+        }
         onBack={onBack}
       />
 
@@ -122,12 +143,74 @@ export const PurposeAllocate = ({
         </View>
       </View>
 
+      {/* Elegir para qué EN LA MISMA PANTALLA: cuánto y para qué son dos datos
+          de una sola decisión, y separarlos cobraba navegación por no decidir
+          nada. Los propósitos son pocos por naturaleza, así que caben como
+          chips. */}
+      {fixedPurpose == null && (
+        <View className="mt-3">
+          <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
+            {t('savings.purposes.pick_inline')}
+          </Text>
+          <View className="mt-2 flex-row flex-wrap gap-2">
+            {purposes.map((option) => (
+              <Pressable
+                key={option.id}
+                accessibilityRole="button"
+                onPress={() => setChosen(option)}
+                className={`min-h-[44px] flex-row items-center gap-2 rounded-full border px-3.5 ${
+                  chosen?.id === option.id
+                    ? 'border-positive bg-border-soft'
+                    : 'border-border bg-card'
+                }`}
+              >
+                <Text className="text-[15px]">{option.icon ?? '🫙'}</Text>
+                <Text className="text-[13.5px] font-semibold text-text">{option.name}</Text>
+              </Pressable>
+            ))}
+            {suggestions.map((seed) => (
+              <Pressable
+                key={seed.key}
+                accessibilityRole="button"
+                disabled={creating}
+                onPress={async () => {
+                  setCreating(true)
+                  try {
+                    const created = await onCreateSeed(seed.key)
+                    if (created) setChosen(created)
+                  } finally {
+                    setCreating(false)
+                  }
+                }}
+                className={`min-h-[44px] flex-row items-center gap-2 rounded-full border border-dashed border-border px-3.5 ${
+                  creating ? 'opacity-50' : ''
+                }`}
+              >
+                <Text className="text-[15px]">{seed.icon}</Text>
+                <Text className="text-[13.5px] font-semibold text-text-muted">
+                  {t(`savings.purposes.seeds.${seed.key}`)}
+                </Text>
+              </Pressable>
+            ))}
+            <Pressable
+              accessibilityRole="button"
+              onPress={onCreateCustom}
+              className="min-h-[44px] flex-row items-center justify-center gap-1.5 rounded-full border border-dashed border-border px-3.5"
+            >
+              <Text className="text-[13.5px] font-bold text-positive">
+                + {t('savings.purposes.create_inline')}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+
       <View className="mt-3 rounded-2xl border border-border bg-card p-4">
         <View className="flex-row justify-between py-1">
           <Text className="text-[14px] text-text-muted">
             {allocating
               ? t('savings.purposes.unassigned_available')
-              : t('savings.purposes.allocated_in', { purpose: purpose.name })}
+              : t('savings.purposes.allocated_in', { purpose: purpose?.name ?? '' })}
           </Text>
           <Text className="text-[14px] font-semibold text-text">{money(available)}</Text>
         </View>
@@ -166,7 +249,7 @@ export const PurposeAllocate = ({
           title={t(allocating ? 'savings.purposes.allocate' : 'savings.purposes.unallocate')}
           onPress={submit}
           loading={busy}
-          disabled={busy || value <= 0 || overLimit}
+          disabled={busy || value <= 0 || overLimit || purpose == null}
         />
       </View>
     </View>
