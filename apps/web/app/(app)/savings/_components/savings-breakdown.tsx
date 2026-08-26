@@ -9,6 +9,7 @@ import {
   moduleVisibleAmounts,
 } from '@grana/savings'
 import type { ModuleAmount, ModuleGroup, PurposeSums } from '@grana/savings'
+import { purposeGlyph, purposeTint } from '@/lib/savings/purpose-emblem'
 import { cn } from '@/lib/utils'
 import { useSavingsOverlay } from './savings-overlay-context'
 import { money } from './money'
@@ -198,10 +199,10 @@ const PurposeCard = ({ group, onOpen }: { group: ModuleGroup; onOpen: () => void
         aria-hidden
         className={cn(
           'grid size-[42px] shrink-0 place-items-center rounded-[15px] text-[20px]',
-          TINTS[hashTint(group.purposeId)],
+          purposeTint(group.purposeId),
         )}
       >
-        {group.icon ?? '🫙'}
+        {purposeGlyph(group.icon)}
       </span>
 
       <span className="min-w-0 flex-1 truncate text-[14.5px] font-extrabold tracking-[-0.015em] text-text">
@@ -228,25 +229,4 @@ const PurposeCard = ({ group, onOpen }: { group: ModuleGroup; onOpen: () => void
       <ChevronRight className="size-[18px] shrink-0 text-text-soft" aria-hidden />
     </button>
   )
-}
-
-/**
- * Los cinco tintes del emblema, del set de la app y no de una paleta nueva.
- *
- * Ciclan por el id del propósito y no por su posición en la lista: ordenada por
- * monto, la lista se reordena sola cuando cambian los números, y un propósito
- * que cambia de color porque otro creció es un propósito que cuesta reencontrar.
- */
-const TINTS = [
-  'bg-slate-soft text-slate-deep',
-  'bg-emerald-bg text-emerald-deep',
-  'bg-plum-soft text-plum-deep',
-  'bg-terracotta-soft text-terracotta-deep',
-  'bg-surface-sunken text-text-muted',
-] as const
-
-const hashTint = (id: string): number => {
-  let h = 0
-  for (let i = 0; i < id.length; i += 1) h = (h * 31 + id.charCodeAt(i)) >>> 0
-  return h % TINTS.length
 }

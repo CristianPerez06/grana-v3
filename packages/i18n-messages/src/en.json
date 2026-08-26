@@ -2120,6 +2120,7 @@
     "gap_note": "Your bank will still show the full amount. Grana doesn't move your money: it marks how much you decided not to touch.",
     "history_truncated": "Showing the latest {count} entries.",
     "purposes": {
+      "unallocate_note": "Removing the purpose sends the money back to «Unassigned»: it stays set aside. To spend it, use «Make available».",
       "breakdown_title": "How it is split",
       "none_explainer": "What is left over, not a purpose. It is set aside, but you have not said what for yet.",
       "label": "What for",
@@ -2176,6 +2177,9 @@
     "history_count": "History ({count})",
     "module_support": "Money set aside: it stays in your accounts, but does not count as spendable.",
     "release_from_unassigned": "Make this available",
+    "shortcut_all": "All",
+    "save_amount": "Set aside {amount}",
+    "release_amount": "Make {amount} available",
     "total_saved": "Saved",
     "spendable": "To spend",
     "bank_fold": "Why your bank shows a different number",

@@ -122,13 +122,25 @@
   `--savings-unassigned-{bg,border,text,deep,on-deep}`, con variante dark, derivados del ámbar del
   sistema y NO de `--warning`, que es semántica de alerta. El botón «Destinar» pasa a cálido oscuro:
   en navy competía con el total, que es la superficie de la acción global
-- [ ] 4c.6 Los tres formularios con la anatomía del handoff — rótulo, pregunta, línea de movimiento,
-  segmentado de moneda, monto, atajos, CTA con el monto escrito y nota al pie. **Sin teclado 3×4**:
-  `MoneyAmountInput` con `inputMode="decimal"`, que es el teclado del sistema (E14)
-- [ ] 4c.7 Detalle de propósito con la anatomía nueva (cabecera horizontal, par de monedas, dos
-  acciones, movimientos). **Sin fecha y sin subtítulo** (E12). Sin barras de progreso ni porcentajes
+- [x] 4c.6 Los formularios adoptan del handoff lo que les faltaba: **segmentado de moneda** de 44 px
+  en lugar del chip de 22 —la decisión que más cambia el significado de lo escrito estaba en el
+  control más chico—, **atajos de monto** por moneda (+$10.000/+$50.000, +US$10/+US$50, «Todo») que
+  se ocultan cuando pasarían el tope, y **CTA con el monto escrito**. **Sin teclado 3×4**:
+  `MoneyAmountInput` con `inputMode="decimal"`, que es el teclado del sistema (E14). **No se adoptó
+  el rótulo + pregunta**: el título del formulario ya es el verbo, y la eyebrow se había sacado en
+  fase 2 justo por decir dos veces la misma palabra
+- [x] 4c.7 Detalle de propósito: **emblema junto al nombre** con el mismo tinte que en la grilla —es
+  lo que confirma que se entró a donde se quería—, el negativo del historial en **terracotta** (en
+  gris se leía igual que la fecha, y las dos direcciones parecían la misma) y el **pie que explica la
+  diferencia** entre quitar destino y volver a usar. **Sin fecha y sin subtítulo** (E12). Sin barras
+  de progreso ni porcentajes
+- [ ] 4c.7b **Pendiente de decisión, no de trabajo:** el handoff deja en el detalle solo «Destinar
+  acá» y «Sacar de acá», y manda a Ahorro para volver a usar. Hoy conviven las tres acciones. Sacar
+  una es cambiar un flujo que la fase 2 ya QA-eó, así que no se tocó — se decide mirándolo
 - [ ] 4c.8 Pantalla de **nuevo propósito**: nombre, emblema, y el monto inicial en cero —que **no se
-  prellena** salvo que se venga del flujo de destinar
+  prellena** salvo que se venga del flujo de destinar. **Ojo:** el monto inicial NO existe hoy, y
+  agregarlo compone dos mutaciones en un gesto (crear + destinar). No toca schema, pero tampoco es
+  visual: qué pasa si la segunda falla y el propósito ya se creó es una decisión de producto
 - [x] 4c.9 El par de monedas de la card del total pasa a ser **fijo**: `$ 0 / US$ 0` cuando no hay
   saldo. Revierte `moduleShowsUsd`, que hoy esconde la columna, **y sus tests**. En los propósitos la
   regla NO cambia: nunca «US$ 0»

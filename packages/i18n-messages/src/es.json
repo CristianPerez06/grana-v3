@@ -2120,6 +2120,7 @@
     "gap_note": "Tu banco va a seguir mostrando el total. Grana no mueve tu plata: marca cuánto decidiste no tocar.",
     "history_truncated": "Se muestran los últimos {count} movimientos.",
     "purposes": {
+      "unallocate_note": "Quitar el destino devuelve la plata a «Sin destino»: sigue guardada. Para poder gastarla, usá «Volver a usar».",
       "breakdown_title": "En qué está repartido",
       "none_explainer": "Resto sin asignar, no es un propósito. Está guardado, pero todavía no dijiste para qué.",
       "label": "Para qué",
@@ -2176,6 +2177,9 @@
     "history_count": "Historial ({count})",
     "module_support": "Plata apartada: sigue en tus cuentas, pero no cuenta para gastar.",
     "release_from_unassigned": "Volver a usar de acá",
+    "shortcut_all": "Todo",
+    "save_amount": "Guardar {amount}",
+    "release_amount": "Volver a usar {amount}",
     "total_saved": "Guardado",
     "spendable": "Para gastar",
     "bank_fold": "Por qué tu banco muestra otro número",

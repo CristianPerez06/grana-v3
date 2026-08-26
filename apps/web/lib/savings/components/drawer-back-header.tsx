@@ -13,10 +13,17 @@ import { ChevronLeft } from 'lucide-react'
  */
 export function DrawerBackHeader({
   title,
+  icon,
   onBack,
   action,
 }: {
   title: string
+  /**
+   * Emblema a la izquierda del título, cuando la vista es de una cosa que ya
+   * tenía cara en la pantalla anterior. Es lo que confirma que se entró a donde
+   * se quería sin releer el nombre.
+   */
+  icon?: React.ReactNode
   onBack: () => void
   /** Acción secundaria a la derecha, cuando la vista tiene una. */
   action?: React.ReactNode
@@ -33,7 +40,10 @@ export function DrawerBackHeader({
       >
         <ChevronLeft className="size-5" aria-hidden />
       </button>
-      <h2 className="flex-1 text-[21px] font-extrabold tracking-[-0.025em] text-text">{title}</h2>
+      {icon}
+      <h2 className="min-w-0 flex-1 truncate text-[21px] font-extrabold tracking-[-0.025em] text-text">
+        {title}
+      </h2>
       {action}
     </div>
   )

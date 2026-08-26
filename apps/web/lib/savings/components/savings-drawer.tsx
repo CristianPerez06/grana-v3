@@ -20,8 +20,9 @@ import {
 } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { parseMoneyInput } from '@grana/validation'
-import { Calendar, ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Calendar, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Drawer } from '@/components/ui/drawer'
+import { purposeGlyph, purposeTint } from '@/lib/savings/purpose-emblem'
 import { Button } from '@/components/ui/button'
 import { DatePicker } from '@/components/ui/date-picker'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
@@ -105,6 +106,19 @@ type View =
  * arma tres de ellas, y una copia suya podría decir algo que la pila no acepta.
  */
 export type SavingsDrawerInitialView = Exclude<View, { kind: 'detail' }>
+
+/**
+ * Los pasos de los atajos de monto, por moneda.
+ *
+ * No es un número escalado por cotización: son las cifras redondas con las que
+ * la gente piensa en cada moneda. Diez mil pesos y diez dólares no son el mismo
+ * monto, pero sí el mismo GESTO — «un poco»— y eso es lo que un atajo tiene que
+ * ofrecer.
+ */
+const AMOUNT_STEPS: Record<Currency, readonly number[]> = {
+  ARS: [10_000, 50_000],
+  USD: [10, 50],
+}
 
 const money = (amount: number, currency: Currency) =>
   currency === 'USD' ? formatUSD(amount) : formatARS(amount, true)
@@ -823,7 +837,11 @@ export function SavingsDrawer({
                       <span
                         className={cn(
                           'text-[14px] font-extrabold tabular-nums',
-                          entry.amount >= 0 ? 'text-emerald-deep' : 'text-text-muted',
+                          // El negativo en terracotta, que es el color de lo
+                        // que sale en toda la app. En gris, «soltaste $20.000»
+                        // se leía igual que la fecha de al lado y las dos
+                        // direcciones del historial parecían la misma.
+                        entry.amount >= 0 ? 'text-emerald-deep' : 'text-terracotta-deep',
                         )}
                       >
                         {entry.amount >= 0 ? '+' : '−'}
@@ -1024,8 +1042,23 @@ const GroupBlock = ({
 
   return (
     <div className="flex flex-col">
+      {/* El emblema acompaña al nombre, con el MISMO tinte que en la grilla: es
+          lo que confirma que esta pantalla es la card que se tocó. Sin él, el
+          detalle abría con un título de texto y había que releer el nombre para
+          saber si se había entrado a donde se quería. */}
       <DrawerBackHeader
         title={purpose.name}
+        icon={
+          <span
+            aria-hidden
+            className={cn(
+              'grid size-[38px] shrink-0 place-items-center rounded-[13px] text-[19px]',
+              purposeTint(purpose.id),
+            )}
+          >
+            {purposeGlyph(purpose.icon)}
+          </span>
+        }
         onBack={onBack}
         action={
           <div className="flex gap-1">
@@ -1127,6 +1160,15 @@ const GroupBlock = ({
             {t('release')}
           </Button>
         </div>
+
+        {/* La diferencia entre las dos acciones de abajo NO es adivinable: las
+            dos «sacan» del propósito, pero una devuelve la plata a «Sin destino»
+            —sigue guardada— y la otra la vuelve disponible para gastar. Sin esta
+            línea, elegir mal es gratis y el error solo se descubre después,
+            mirando el total. */}
+        <p className="mt-3 text-[12.5px] leading-[1.45] text-text-muted">
+          {t('purposes.unallocate_note')}
+        </p>
 
         {/* Quitar el destino es el inverso de destinar y no toca ningún total,
             así que va como enlace: no compite con los dos de arriba. */}
@@ -1242,10 +1284,6 @@ const SavingsForm = ({
    */
   const canPickOrigin = !lockedPurpose && purposeOptions.length > 1
 
-  const cycleCurrency = () => {
-    if (currencyOptions.length < 2) return
-    setCurrency(currencyOptions[(currencyOptions.indexOf(currency) + 1) % currencyOptions.length])
-  }
 
   /**
    * El origen preseleccionado nunca se queda sobre un grupo vacío.
@@ -1357,22 +1395,41 @@ const SavingsForm = ({
           an amount should not look like two different apps, and the chip is what
           gives this one its currency selector. */}
       <div className="mt-4 rounded-[18px] border border-border bg-card px-[22px] pb-[22px] pt-5 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]">
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-3">
           <label
             htmlFor="savings-amount"
-            className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft"
+            className="pt-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft"
           >
             {t('amount_label')}
           </label>
-          <button
-            type="button"
-            onClick={cycleCurrency}
-            disabled={currencyOptions.length < 2}
-            className="inline-flex items-center gap-1 rounded-[9px] border border-border bg-[#FAFBFC] px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
-          >
-            {currency}
-            {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
-          </button>
+          {/* Segmentado y no un desplegable de 22px: la moneda es la decisión
+              que MÁS cambia el significado de lo que se escribe, y estaba en el
+              control más chico de la pantalla, por debajo del mínimo de 44 px.
+              Las dos opciones a la vista también dicen que hay dos — el chip
+              obligaba a tocarlo para enterarse.
+
+              Aparece solo con dos monedas que ofrecer: quien tiene únicamente
+              pesos no debería confirmar que tiene pesos. */}
+          {currencyOptions.length > 1 && (
+            <div className="flex shrink-0 rounded-[11px] border border-border bg-surface-sunken p-0.5">
+              {currencyOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setCurrency(option)}
+                  aria-pressed={currency === option}
+                  className={cn(
+                    'min-h-11 rounded-[9px] px-3 text-[12.5px] font-bold transition-colors',
+                    currency === option
+                      ? 'bg-card text-text shadow-sm'
+                      : 'text-text-muted hover:text-text',
+                  )}
+                >
+                  {option === 'USD' ? t('currency_usd') : t('currency_ars')}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="mt-2 flex items-baseline gap-1.5">
           <span className="text-[27px] font-semibold leading-none text-text opacity-50">
@@ -1393,6 +1450,41 @@ const SavingsForm = ({
           />
         </div>
       </div>
+
+      {/* Atajos de monto: suman al valor actual, y «Todo» lleva al tope.
+          Guardar suele ser una cifra redonda, y escribir 50.000 en un teclado de
+          teléfono son cinco toques que un chip resuelve en uno.
+
+          Los pasos son POR MONEDA y no un número fijo: +$10.000 tiene sentido en
+          pesos y sería absurdo en dólares, donde el mismo gesto es +US$ 10.
+
+          Un atajo que deja el monto por encima del tope no se ofrece: sería un
+          botón que solo sirve para romper el formulario. «Todo» hace lo mismo
+          que el resto —lleva al máximo— pero se muestra siempre que haya algo,
+          porque es el atajo que más se usa y su número no es adivinable. */}
+      {limit > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {AMOUNT_STEPS[currency]
+            .filter((step) => value + step <= limit)
+            .map((step) => (
+              <button
+                key={step}
+                type="button"
+                onClick={() => setAmount(String(value + step))}
+                className="min-h-11 rounded-full border border-border-soft bg-card px-3.5 text-[13px] font-bold text-text transition-colors hover:bg-surface-sunken"
+              >
+                +{money(step, currency)}
+              </button>
+            ))}
+          <button
+            type="button"
+            onClick={() => setAmount(String(limit))}
+            className="min-h-11 rounded-full border border-border-soft bg-card px-3.5 text-[13px] font-bold text-text transition-colors hover:bg-surface-sunken"
+          >
+            {t('shortcut_all')}
+          </button>
+        </div>
+      )}
 
       {/* La fecha, compacta y con atajos: el mismo patrón que el alta de
           movimientos en ancho de teléfono. Como card entera pesaba igual que el
@@ -1549,12 +1641,17 @@ const SavingsForm = ({
         </p>
       )}
 
-      <Button
-        className="mt-5 h-11"
-        onClick={submit}
-        disabled={pending || value <= 0 || overLimit}
-      >
-        {mode === 'save' ? t('save') : t('release')}
+      {/* El CTA dice el MONTO, no solo el verbo. Es lo último que se lee antes
+          de confirmar, y es donde un error de tipeo —un cero de más— todavía se
+          puede cachar. Sin monto escrito, el botón dice lo mismo con $5.000 que
+          con $500.000. Vuelve al verbo solo mientras no hay monto: «Guardar $ 0»
+          sería un botón que anuncia una operación que no existe. */}
+      <Button className="mt-5 h-12" onClick={submit} disabled={pending || value <= 0 || overLimit}>
+        {value > 0
+          ? t(mode === 'save' ? 'save_amount' : 'release_amount', {
+              amount: money(value, currency),
+            })
+          : t(mode === 'save' ? 'save' : 'release')}
       </Button>
     </div>
   )
