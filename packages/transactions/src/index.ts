@@ -77,3 +77,8 @@ export type {
 // Amount tone (pure). `toneToClass` (Tailwind) stays in web.
 export { resolveTone } from './tone'
 export type { Tone } from './tone'
+
+// Option catalog for the movement filters sheet (accounts / categories /
+// subcategories of the active category), shared by web and mobile.
+export { getMovementFilterOptions } from './filter-options'
+export type { MovementFilterOptions } from './filter-options'

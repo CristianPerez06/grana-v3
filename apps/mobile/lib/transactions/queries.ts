@@ -8,12 +8,15 @@ import { supabase } from '../supabase'
 import {
   getGlobalMovementsPage,
   getInstallmentFamily,
+  getMovementFilterOptions as getMovementFilterOptionsImpl,
   getPendingReimbursements as getPendingReimbursementsImpl,
   getReimbursementsForExpense,
   getTransactionDetail,
   hasAnyTransaction as hasAnyTransactionImpl,
   toFinancialMovement,
   type FinancialMovement,
+  type MovementFilterOptions,
+  type MovementFilters,
   type PendingReimbursementVM,
 } from '@grana/transactions'
 import { getMovementSharedInfo } from '../shared/queries'
@@ -27,14 +30,34 @@ export type MovementsFeedPage = {
   nextLimit: number
 }
 
-// One page of the global movements feed for a `YYYY-MM` month. `limit` grows via
+// One page of the global movements feed for a given filter set. `limit` grows via
 // the "load more" action (the shared read applies the limit+1 lookahead and
 // returns `hasMore` / `nextLimit`).
+//
+// The WHOLE filter set goes to the RPC, not just the month: the feed paginates,
+// so narrowing the page it got back would answer "which of these 50 rows match"
+// instead of "which rows of the month match", and `hasMore` would stop
+// describing the list on screen. The account detail is the one that filters in
+// memory, and only because it loads its account's full history.
 export async function getMovementsFeedPage(
-  month: string,
+  filters: MovementFilters,
   limit: number,
 ): Promise<MovementsFeedPage> {
-  return getGlobalMovementsPage(supabase, { limit, filters: { month } })
+  return getGlobalMovementsPage(supabase, { limit, filters })
+}
+
+// Option catalog for the filters sheet (active accounts + active categories +
+// the active category's subcategories). Shared with web — same implementation,
+// same RLS path. The options come from the CATALOG and not from the loaded rows:
+// on a paginated feed, row-derived options would grow the filter menu every time
+// the user pressed "load more".
+export type { MovementFilterOptions } from '@grana/transactions'
+export async function getMovementFilterOptions(
+  categoryId: string | null,
+): Promise<MovementFilterOptions> {
+  return getMovementFilterOptionsImpl(supabase, {
+    categoryId: categoryId ?? undefined,
+  })
 }
 
 // Welcome vs. month-empty empty-state discriminator (LIMIT 1, constant cost).
