@@ -284,6 +284,17 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
 .sh.back,.dh.back{justify-content:flex-start;gap:12px}
 .bk{flex:0 0 auto;width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:#fff;display:grid;place-items:center;color:var(--muted);font-size:21px;line-height:1;font-weight:500}
 .sh.back h3,.dh.back > div{flex:1;min-width:0}
+
+/* la grilla de la cabecera: dos conceptos por dos monedas, sin totales */
+.mtx{display:grid;grid-template-columns:1fr auto auto;gap:4px 14px;align-items:baseline}
+.mtx .mh{font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);text-align:right;padding-bottom:3px}
+.mtx .mk{font-size:13.5px;color:var(--muted)}
+.mtx .mk.st{font-size:14px;color:var(--text);font-weight:600}
+.mtx .mv{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.mtx .mv.st{font-size:21px;font-weight:800;letter-spacing:-.01em}
+.mtx .mv.usd{font-size:13px;font-weight:600;color:var(--muted)}
+.mtx .mv.st.usd{font-size:15px;font-weight:700}
+.mtx .mv.em{color:var(--emerald-deep)}
 </style>
 </head>
 <body>
@@ -535,6 +546,97 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     </div></div>
     <p class="note"><b>La cabecera se queda</b>, con el guardado en cero apagado. Es lo que hace que el vacío se entienda: al lado de $ 4.905.748 disponibles, un cero dice <i>"de todo esto, nada está separado"</i>. Sola, la tarjeta explicativa flotaría.</p>
     <p class="note"><b>Sin propósitos en cero, sin «Sin destino» en cero, sin inversiones.</b> Un propósito sin plata no tiene nada que decir, y un módulo que se estrena mostrando lo que no hace enseña a ignorar la pantalla.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">9</span>
+      <div>
+        <h2>El USD, probado en dos magnitudes</h2>
+        <p class="sub">La línea subordinada aguanta US$ 10. No aguanta US$ 3.200.</p>
+        <span class="badge b-bad">Se rompe</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="sec-t">Hoy · US$ 10 guardados</div>
+      <div class="c pad" style="padding:16px 18px">
+        <div class="hrow"><span class="hk">Para gastar</span><span class="hv">$ 4.905.748,17</span></div>
+        <div class="hrow big"><span class="hk">Guardado</span><span class="hv em">$ 180.000,00</span></div>
+        <div class="hrow sub"><span class="hk">En dólares</span><span class="hv">US$ 10,00</span></div>
+      </div>
+      <div class="sec-t">Con dólares de verdad</div>
+      <div class="c pad" style="padding:16px 18px">
+        <div class="hrow"><span class="hk">Para gastar</span><span class="hv">$ 4.905.748,17</span></div>
+        <div class="hrow big"><span class="hk">Guardado</span><span class="hv em">$ 180.000,00</span></div>
+        <div class="hrow sub"><span class="hk">En dólares</span><span class="hv">US$ 3.200,00</span></div>
+      </div>
+      <div class="callout bad-c"><b>¿Y los US$ 850 que tenés para gastar?</b> No están. La línea subordinada alcanza para <b>un</b> número en dólares, y en cuanto los dólares importan hacen falta <b>dos</b> — con lo que la cabecera pasa a ser dos bloques apilados, que es justo lo que queríamos evitar.</div>
+    </div></div>
+    <p class="note"><b>El problema no aparece con los datos de hoy</b>, y por eso valía dibujarlo: con US$ 10 y US$ 0 disponibles, la línea única es correcta <i>por casualidad</i> — el segundo número no existe.</p>
+    <p class="note"><b>Y una cabecera que cambia de estructura</b> según cuántos dólares tengas es peor que cualquiera de las dos: la pantalla se reacomoda sola el día que comprás dólares en serio.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">10</span>
+      <div>
+        <h2>La cabecera que aguanta las dos</h2>
+        <p class="sub">Dos conceptos, dos monedas, una grilla.</p>
+        <span class="badge b-new">Propuesta</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="sec-t">Hoy</div>
+      <div class="c pad" style="padding:15px 17px">
+        <div class="mtx">
+          <span class="mh"></span><span class="mh">Pesos</span><span class="mh usd">Dólares</span>
+          <span class="mk">Para gastar</span><span class="mv">$ 4.905.748,17</span><span class="mv usd">—</span>
+          <span class="mk st">Guardado</span><span class="mv st em">$ 180.000,00</span><span class="mv st usd em">US$ 10,00</span>
+        </div>
+      </div>
+      <div class="sec-t">Con dólares de verdad</div>
+      <div class="c pad" style="padding:15px 17px">
+        <div class="mtx">
+          <span class="mh"></span><span class="mh">Pesos</span><span class="mh usd">Dólares</span>
+          <span class="mk">Para gastar</span><span class="mv">$ 4.905.748,17</span><span class="mv usd">US$ 850,00</span>
+          <span class="mk st">Guardado</span><span class="mv st em">$ 180.000,00</span><span class="mv st usd em">US$ 3.200,00</span>
+        </div>
+      </div>
+      <div class="callout"><b>La misma estructura en los dos casos.</b> Cuando no hay dólares disponibles, la celda dice <b>—</b>: es más honesto que esconder la fila, porque dice <i>"no tenés"</i> en vez de dejar la pregunta sin contestar.</div>
+    </div></div>
+    <p class="note"><b>Los pesos siguen siendo primarios</b> —tipografía más grande, columna primera— y los dólares subordinados, en chico. Es la regla que la app ya tiene, aplicada a dos conceptos en vez de a uno.</p>
+    <p class="note"><b>No es una tabla de Excel porque no hay totales.</b> Las dos columnas nunca se suman ni se cruzan: son dos lecturas paralelas del mismo par de preguntas. Lo que sí gana es que <i>«de lo que tengo, cuánto separé»</i> se lee por moneda sin cambiar de pantalla.</p>
+    <p class="note"><b>Y resuelve el caso que la línea subordinada dejaba afuera</b>: con dólares en serio, «Para gastar en dólares» es tan importante como el resto y acá tiene su lugar sin agregar un bloque.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">11</span>
+      <div>
+        <h2>Adentro de un propósito</h2>
+        <p class="sub">La cuarta superficie, con sus tres acciones de grupo.</p>
+        <span class="badge b-same">Ya existe</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="dh back"><span class="bk">‹</span><div><div class="k">Propósito</div><h3>✈️ Viaje</h3></div></div>
+      <div class="c pad" style="padding:15px 17px">
+        <div class="mtx">
+          <span class="mh"></span><span class="mh">Pesos</span><span class="mh usd">Dólares</span>
+          <span class="mk st">Guardado acá</span><span class="mv st em">$ 45.000,00</span><span class="mv st usd em">US$ 10,00</span>
+        </div>
+      </div>
+      <div class="two"><div class="cta">Destinar más</div><div class="cta ghost">Volver a usar</div></div>
+      <div style="display:flex;gap:9px;padding:2px 4px;font-size:12.5px;font-weight:700;color:var(--emerald-deep)"><span>Quitar destino</span><span style="color:var(--soft)">·</span><span>Editar</span><span style="color:var(--soft)">·</span><span>Borrar</span></div>
+      <div class="sec-t">Movimientos de este propósito</div>
+      <div class="c hist">
+        <div><div class="n"><b>Destinaste</b><span>18 de ago</span></div><span class="a pos">+$ 45.000,00</span></div>
+        <div><div class="n"><b>Destinaste</b><span>12 de ago</span></div><span class="a pos">+US$ 10,00</span></div>
+      </div>
+    </div></div>
+    <p class="note"><b>Las tres acciones del grupo, y ninguna cambia el total guardado</b> salvo <i>Volver a usar</i>, que es la única que toca el disponible. <i>Destinar más</i> suma desde el resto y <i>Quitar destino</i> se lo devuelve: las dos mueven el reparto y nada más.</p>
+    <p class="note"><b>Guardar no está</b>, y es D18: guardar cambia el total, así que vive abajo en la pantalla anterior, donde el disponible está a la vista. Acá quedaría clavado en este propósito y con un tope que la pantalla no muestra.</p>
+    <p class="note"><b>La misma grilla de la cabecera</b>, con una fila sola. Un propósito bimoneda se lee entero acá también, sin cambiar de pestaña ni sumar de cabeza.</p>
   </section>
 
 </div>

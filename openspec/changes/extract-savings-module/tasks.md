@@ -39,8 +39,19 @@
   botones del mismo verbo y el único con su tope a la vista es el global (D18)—; *Destinar* por fila
   está en el nivel correcto pero **no ahorra ningún tap**: destinar desde el enlace de «Sin destino»
   ya son cuatro. Cinco controles que no compran nada
-- [ ] 2.6 **Para mirar usándolo**: si guardar-para-un-propósito (5 taps) se siente lento, si destinar
-  desde «Sin destino» se entiende, y si el USD subordinado en la cabecera suma o hace ruido
+- [x] 2.6 **La cabecera es una grilla de dos conceptos por dos monedas, no una línea subordinada.**
+  Se dibujó con los datos de hoy (US$ 10) y con dólares de verdad (US$ 3.200 + US$ 850 disponibles), y
+  la línea única se rompe en el segundo caso: alcanza para **un** número en dólares, y cuando los
+  dólares importan hacen falta **dos** — con lo que la cabecera vuelve a ser dos bloques apilados. Una
+  estructura que se reacomoda sola el día que alguien compra dólares en serio es peor que cualquiera
+  de las dos. La grilla aguanta las dos magnitudes, mantiene los pesos primarios (tipografía más
+  grande, primera columna) y **nunca suma ni cruza las columnas**. Con la celda vacía va `—`: dice
+  *"no tenés"* en vez de dejar la pregunta sin contestar
+- [x] 2.8 Dibujada la **vista de un propósito** dentro del módulo, con las tres acciones del grupo
+  —destinar más, volver a usar, quitar destino— y sin *Guardar*, que vive un nivel arriba (D18)
+- [ ] 2.9 **Para mirar usándolo**: si guardar-para-un-propósito (5 taps) se siente lento, si el copy
+  *«¿Para qué es?»* del sheet B se entiende, y si la grilla de la cabecera se sostiene con plata real
+  en las dos monedas
 - [x] 2.7 **La flecha de volver va arriba a la IZQUIERDA**, antes del título, como control de 44×44
   con borde — el `DrawerBackHeader` que la app ya usa. Los mocks de la fase 3 y del módulo la tenían a
   la derecha: se había reusado el slot del ✕ de cerrar, que sí va a la derecha. Son dos controles
