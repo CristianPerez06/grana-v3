@@ -4,12 +4,12 @@
 
 ## 1. La corrección documental, primero
 
-- [ ] 1.1 `docs/modelo-de-dinero.md`: separar *"ahorro e inversión no son dos modelos de datos"* —que
+- [x] 1.1 `docs/modelo-de-dinero.md`: separar *"ahorro e inversión no son dos modelos de datos"* —que
   sigue valiendo— de *"no son un lugar en la app"*, que era una conclusión que la frase no sostenía.
   Va primero porque es la frase que bloqueó esta discusión durante tres fases
-- [ ] 1.2 Anotar ahí mismo que la objeción a **«Invertir»** era contra esa palabra, no contra un
+- [x] 1.2 Anotar ahí mismo que la objeción a **«Invertir»** era contra esa palabra, no contra un
   módulo, y que *«Ahorro e inversión»* no la hereda
-- [ ] 1.3 `AGENTS.md`: el módulo `16 savings` gana superficie propia; dejar dicho que `18 investments`
+- [x] 1.3 `AGENTS.md`: el módulo `16 savings` gana superficie propia; dejar dicho que `18 investments`
   se construye **adentro** de él y no como módulo aparte
 
 ## 2. Dibujar antes de construir

@@ -72,8 +72,12 @@ dólares o hacer un plazo fijo no se siente como invertir — se siente como cub
 | **Crecer** | Que valga más, asumiendo riesgo | Acciones y CEDEARs · cripto |
 
 Consecuencia de producto: **una superficie llamada "Invertir" deja afuera al acto de protección más
-común del país**, que es comprar dólares. Y consecuencia de modelo: la etiqueta de un movimiento que
-saca plata del disponible sale del **instrumento** elegido, no de la mecánica de la transferencia.
+común del país**, que es comprar dólares. Ojo con el alcance de esta objeción: es contra **esa
+palabra**, no contra que exista un módulo. *«Ahorro e inversión»* no la hereda — comprar dólares para
+cubrirse es **ahorro** en el sentido que le da cualquier argentino.
+
+Y consecuencia de modelo: la etiqueta de un movimiento que saca plata del disponible sale del
+**instrumento** elegido, no de la mecánica de la transferencia.
 
 ### Ahorro e inversión no son dimensiones
 
@@ -82,8 +86,25 @@ Son **resultados** de ejercer las otras:
 - **Ahorrar** = ejercer una decisión (*guardar*) sobre plata disponible.
 - **Invertir** = una propiedad de la **posición** donde esa plata quedó.
 
-Por eso nunca fueron dos módulos, y por eso mover plata de una caja de ahorro a un FCI no es
-"pasar de ahorro a inversión": es la misma plata cambiando de posición.
+Por eso **no son dos modelos de datos**, y por eso mover plata de una caja de ahorro a un FCI no es
+"pasar de ahorro a inversión": es la misma plata cambiando de posición. Hay **un** modelo, con una
+tabla de reservas y una de posiciones, no dos universos paralelos que dupliquen la plata.
+
+#### Esto es sobre el schema, NO sobre la navegación
+
+Esta frase decía antes *"nunca fueron dos módulos"*, y así redactada se usó durante tres fases para
+rechazar que el ahorro tuviera una pantalla propia. **No es lo que dice.**
+
+Un **lugar en la app** donde conviven ahorro e inversión es compatible con esto: un solo modelo, un
+solo lugar, dos verbos. Lo que la frase prohíbe es lo contrario — dos lugares con dos modelos.
+
+Y el resultado de no tener ese lugar ya se vio: las fases 1 y 2 salieron **cosidas** a pantallas
+ajenas —una fila en la card del dashboard, una tira post-ingreso, un desglose adentro de un drawer— y
+así **no se pueden ocultar, apagar ni empaquetar**. Esa decisión no se toma de una: se toma una fila
+por vez. El módulo **«Ahorro e inversión»** (`extract-savings-module`) existe para revertirlo.
+
+**Un documento de modelado no decide navegación.** Argumenta desde la corrección conceptual, que es
+otra pregunta.
 
 ## 2. Las cuatro naturalezas
 
@@ -216,6 +237,10 @@ columnas nuevas son nullable o tienen default.
 | **4 · Metas** | *¿Estoy llegando?* | El propósito gana objetivo, fecha y moneda. Progreso respaldado por posiciones | Sin empezar |
 | **5 · Patrimonio** | *¿Estoy mejor que antes?* | La vara, el consolidado y el rendimiento real | Sin empezar |
 | **Transversal** | *¿Está donde corresponde para cuándo la necesito?* | Horizonte y adecuación. Se puede empezar en la 3 | Sin empezar |
+
+**Todas viven en el módulo «Ahorro e inversión»** (`/savings`), que se construye antes que la fase 3:
+las fases 1 y 2 quedaron sin puerta y sin borde, y la 3 no puede colgarse de un detalle de cuenta sin
+convertirlo en un home banking.
 
 **Ninguna fase se archiva sin QA en la app nativa.** La paridad web/mobile es política del producto, y
 la vista mobile del navegador comparte el código de web: no ejerce nada de React Native. Una fase
