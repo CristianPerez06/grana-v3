@@ -7,7 +7,8 @@ en el navegador.
 |---|---|---|
 | `fase-1-guardar.html` | 1 · Guardar | **Superado por la implementación.** «Liberar» hoy se llama **Volver a usar** |
 | `fase-2-proposito.html` | 2 · Propósito | **Superado por la implementación**, y en un punto de modelo, no solo de nombres — ver abajo |
-| `fase-3-posiciones.html` | 3 · Posiciones | **Vigente.** Diecisiete pantallas: el ciclo entero de un plazo fijo, de constituirlo al vencimiento, con la cuenta del mes en cada punta. Faltan el detalle de posición y el hub |
+| `fase-3a-plazo-fijo.html` | 3A · Plazo fijo | **Vigente.** Siete pantallas, dos de carga. Rehecho de cero aplicando las reglas de la fase 2 |
+| `fase-3-posiciones.html` | 3 · Posiciones | **Superado por `fase-3a`.** Se conserva por el razonamiento contable —stock vs. flujo, el bucket, los tres desenlaces—, pero su circuito de once pantallas repetía el patrón que la fase 2 desarmó |
 | — | 4 y 5 | No se mockean todavía: dibujar el detalle de una meta o la pantalla de patrimonio sería inventar decisiones que no están tomadas, y un mock convincente de algo no decidido termina implementándose tal cual |
 
 **Un mock deja de ser la referencia el día que la fase se construye.** Las fases 1 y 2 están hechas: lo

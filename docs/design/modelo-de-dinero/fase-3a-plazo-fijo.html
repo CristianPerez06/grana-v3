@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fase 3A · Plazo fijo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  --navy:#0B1A2B; --page:#F6F7F9; --card:#FFF; --border:#E6EAEF; --border-soft:#EEF1F4;
+  --text:#0B1A2B; --muted:#6B7683; --soft:#8A94A3; --neutral:#7A8494;
+  --emerald:#10B981; --emerald-deep:#059669; --emerald-bg:#ECFDF5;
+  --terracotta:#B56A5A; --slate:#3A6B8A; --plum:#8A6E98; --warning:#C49A3C;
+  --tile:#F1F3F6;
+  --sans:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --shadow:0 1px 2px rgba(11,26,43,.05),0 6px 18px rgba(11,26,43,.05);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+/* ---------- page chrome ---------- */
+.doc{max-width:1240px;margin:0 auto;padding:0 28px 100px}
+.masthead{background:var(--navy);color:#fff;padding:52px 28px 44px;margin-bottom:44px}
+.masthead .in{max-width:1240px;margin:0 auto}
+.eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.62);margin:0 0 12px;font-weight:600}
+.masthead h1{margin:0 0 12px;font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.masthead p{margin:0;max-width:62ch;color:rgba(255,255,255,.66);font-size:16px}
+.masthead .warn{margin-top:24px;padding:14px 18px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-size:14px;color:rgba(255,255,255,.8);max-width:78ch}
+.masthead .warn b{color:#fff;font-weight:600}
+.masthead .stale{margin-top:20px;padding:16px 18px;border-radius:12px;background:rgba(255,196,120,.14);border:1px solid rgba(255,196,120,.38);font-size:14px;line-height:1.55;color:rgba(255,255,255,.86);max-width:78ch}
+.masthead .stale b{color:#ffd9a3;font-weight:700}
+.masthead .stale ul{margin:10px 0 0;padding-left:18px}
+.masthead .stale li{margin-top:5px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(392px,1fr));gap:44px 36px;align-items:start}
+
+.step{display:flex;flex-direction:column;gap:14px}
+.step-head{display:flex;align-items:flex-start;gap:12px}
+.step-num{flex:0 0 auto;width:30px;height:30px;border-radius:9px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:14px;font-weight:700}
+.step-head h2{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.step-head .sub{margin:2px 0 0;font-size:13.5px;color:var(--muted)}
+.badge{display:inline-block;margin-top:6px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:999px}
+.b-new{background:var(--emerald-bg);color:var(--emerald-deep)}
+.b-mod{background:#EAF1F6;color:var(--slate)}
+.b-same{background:var(--tile);color:var(--neutral)}
+
+.note{font-size:13.5px;color:var(--muted);border-left:2px solid var(--border);padding-left:14px}
+.note b{color:var(--text);font-weight:600}
+.note + .note{margin-top:-4px}
+
+/* ---------- phone ---------- */
+.phone{width:100%;max-width:392px;border:1px solid var(--border);border-radius:22px;background:var(--page);overflow:hidden;box-shadow:var(--shadow)}
+.scr{padding:16px;display:flex;flex-direction:column;gap:12px}
+.scr.tight{gap:10px}
+
+/* drawer header */
+.dh{display:flex;align-items:flex-start;justify-content:space-between;padding:4px 2px 2px}
+.dh .k{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}
+.dh h3{margin:2px 0 0;font-size:21px;font-weight:800;letter-spacing:-.02em}
+.x{width:32px;height:32px;border-radius:9px;border:1px solid var(--border);background:#fff;display:grid;place-items:center;color:var(--muted);font-size:15px}
+
+/* segmented */
+.seg{display:flex;gap:2px;background:var(--tile);border-radius:12px;padding:4px}
+.seg span{flex:1;text-align:center;font-size:12px;font-weight:600;color:var(--muted);padding:8px 4px;border-radius:9px;white-space:nowrap}
+.seg span.on{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(11,26,43,.08)}
+.seg.ghost span.ghost{color:#B6BFCA;border:1px dashed #C9D2DC}
+
+/* cards */
+.c{background:#fff;border:1px solid var(--border-soft);border-radius:16px}
+.c.pad{padding:14px 15px}
+
+/* amount */
+.amt{padding:15px 16px 17px;position:relative}
+.amt .lbl{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.amt .cur{position:absolute;right:14px;top:13px;border:1px solid var(--border);border-radius:9px;padding:5px 9px;font-size:12px;font-weight:600;color:var(--text)}
+.amt .val{display:flex;align-items:baseline;gap:6px;margin-top:8px}
+.amt .val .s{font-size:23px;font-weight:600;color:var(--soft)}
+.amt .val .n{font-size:38px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.amt .val .n.zero{color:#C4CBD4}
+
+/* rows */
+.rows > div{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--border-soft)}
+.rows > div:first-child{border-top:0}
+.tile{flex:0 0 auto;width:34px;height:34px;border-radius:10px;background:var(--tile);display:grid;place-items:center;font-size:15px}
+.rw{flex:1;min-width:0}
+.rw .k{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.rw .v{font-size:15px;font-weight:600;margin-top:1px;display:flex;align-items:center;gap:7px}
+.rw .v.ph{color:#B6BFCA;font-weight:500}
+.chip-acc{display:inline-flex;align-items:center;gap:6px}
+.chip-acc i{width:22px;height:22px;border-radius:7px;background:var(--slate);display:grid;place-items:center;font-size:11px;font-style:normal}
+.chev{color:#C4CBD4;font-size:16px}
+
+/* calc row (the drawer's math) */
+.calc{padding:13px 15px}
+.calc div{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;padding:5px 0}
+.calc div span:first-child{color:var(--muted)}
+.calc div span:last-child{font-weight:600;font-variant-numeric:tabular-nums}
+.calc .rule{border-top:1px solid var(--border-soft);margin-top:6px;padding-top:9px}
+.calc .rule span:last-child{font-size:16px;font-weight:700}
+.calc .minus span:last-child{color:var(--emerald-deep)}
+
+/* cta */
+.cta{margin-top:2px;background:var(--emerald);color:#fff;border-radius:13px;padding:15px;text-align:center;font-size:15.5px;font-weight:700}
+.cta.ghost{background:#fff;color:var(--muted);border:1px solid var(--border);font-weight:600}
+
+/* guidance strip */
+.gd{background:#fff;border:1px solid var(--border-soft);border-radius:16px;padding:14px 15px}
+.gd .top{display:flex;gap:12px;align-items:flex-start}
+.gd .tile{background:var(--emerald-bg)}
+.gd h4{margin:0;font-size:15px;font-weight:700;letter-spacing:-.01em}
+.gd p{margin:3px 0 0;font-size:13px;color:var(--muted);line-height:1.4}
+.gd .acts{display:flex;gap:8px;margin-top:13px}
+.gd .acts .cta{flex:1;margin:0;padding:11px;font-size:14px;border-radius:11px}
+
+/* dashboard card */
+.dash{border-radius:20px;overflow:hidden;border:1px solid var(--border-soft);background:#fff}
+.dark{background:radial-gradient(120% 140% at 92% 12%,rgba(16,185,129,.16),transparent 60%),var(--navy);color:#fff;padding:22px 18px 18px;text-align:center}
+.dark .lbl{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.dark .big{font-size:36px;font-weight:700;letter-spacing:-.025em;margin-top:9px;line-height:1}
+.dark .big s{font-size:21px;font-weight:600;text-decoration:none;color:rgba(255,255,255,.72)}
+.dark .usd{margin-top:9px;font-size:14px;color:rgba(255,255,255,.72);display:flex;align-items:center;justify-content:center;gap:7px}
+.dark .usd i{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.1em;background:rgba(255,255,255,.12);border-radius:5px;padding:3px 6px}
+.donde{margin-top:20px;border-top:1px solid rgba(255,255,255,.14);padding-top:14px;display:grid;grid-template-columns:1fr 1px 1fr;gap:0;text-align:left}
+.donde .divi{background:rgba(255,255,255,.14)}
+.donde .col{padding:0 12px}
+.donde .col:first-child{padding-left:2px}
+.donde .ch{display:flex;justify-content:space-between;align-items:baseline;font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:9px}
+.donde .r{display:flex;align-items:center;gap:7px;font-size:12.5px;padding:3px 0;color:rgba(255,255,255,.88)}
+.donde .r i{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
+.donde .r b{margin-left:auto;font-weight:600;color:rgba(255,255,255,.62);font-variant-numeric:tabular-nums}
+.light{padding:16px 18px 18px}
+.light .t{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);margin-bottom:12px}
+.tri{display:grid;grid-template-columns:1fr;gap:9px}
+.tri .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tri .row .l{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted)}
+.tri .row .l i{width:7px;height:7px;border-radius:50%}
+.tri .row .a{font-size:15.5px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.saved{margin-top:12px;padding-top:12px;border-top:1px solid var(--border-soft);display:flex;align-items:center;justify-content:space-between}
+.saved .l{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted)}
+.saved .l i{width:7px;height:7px;border-radius:50%;background:var(--emerald)}
+.saved .a{font-size:15.5px;font-weight:700;color:var(--emerald-deep);font-variant-numeric:tabular-nums}
+.saved .a .g{color:#C4CBD4;font-size:13px;margin-left:5px;font-weight:600}
+
+/* overlay presentation (drawer web / bottom sheet mobile) */
+.ov{position:relative;background:var(--page)}
+.ov .behind{filter:saturate(.7);opacity:.55;padding:16px 16px 0;pointer-events:none}
+.ov .scrim{position:absolute;inset:0;background:rgba(11,26,43,.42)}
+.ov .sheet{position:relative;margin-top:-14px;background:var(--page);border-radius:20px 20px 0 0;box-shadow:0 -8px 28px rgba(11,26,43,.18);padding:10px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.ov .grab{width:38px;height:4px;border-radius:999px;background:#D3DAE2;margin:0 auto 4px}
+.ov .sh{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 2px}
+.ov .sh h3{margin:0;font-size:19px;font-weight:800;letter-spacing:-.02em}
+
+/* wayfinding */
+.ways{margin-top:56px;background:#fff;border:1px solid var(--border);border-radius:20px;padding:28px 30px 30px}
+.ways h2{margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.ways .lede{margin:0 0 24px;font-size:15px;color:var(--muted);max-width:66ch}
+.ways .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:26px 34px}
+.way{border:1px solid var(--border-soft);border-radius:16px;padding:18px 20px 20px;background:var(--page)}
+.way .cap{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.way h4{margin:5px 0 4px;font-size:16px;font-weight:700;letter-spacing:-.01em}
+.way .taps{font-size:12px;font-weight:700;color:var(--emerald-deep);background:var(--emerald-bg);border-radius:999px;padding:3px 9px;display:inline-block;margin-bottom:14px}
+.way ol{margin:0;padding-left:0;list-style:none;counter-reset:s}
+.way li{counter-increment:s;position:relative;padding-left:30px;font-size:14px;color:var(--muted);margin-bottom:11px;line-height:1.45}
+.way li::before{content:counter(s);position:absolute;left:0;top:1px;width:21px;height:21px;border-radius:7px;background:#fff;border:1px solid var(--border);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--text)}
+.way li b{color:var(--text);font-weight:600}
+.way li:last-child{margin-bottom:0}
+
+/* three states of the row */
+.states{background:#fff;border:1px solid var(--border-soft);border-radius:16px;padding:4px 15px 12px}
+.states .st{padding-top:11px}
+.states .st + .st{border-top:1px solid var(--border-soft);margin-top:11px}
+.states .cap{font-size:9.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#B6BFCA;margin-bottom:7px}
+.states .line{display:flex;align-items:center;justify-content:space-between}
+.states .line .l{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted)}
+.states .line .l i{width:7px;height:7px;border-radius:50%;background:var(--emerald)}
+.states .line .l i.off{background:#D3DAE2}
+.states .line .a{font-size:15.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.states .line .a.em{color:var(--emerald-deep)}
+.states .line .a.nt{color:var(--text)}
+.states .line .g{color:#C4CBD4;font-size:13px;margin-left:5px;font-weight:600}
+.states .line.mute .l{color:var(--soft)}
+
+/* detail view */
+.dt-hero{background:radial-gradient(120% 140% at 92% 12%,rgba(16,185,129,.18),transparent 60%),var(--navy);color:#fff;border-radius:18px;padding:18px}
+.dt-hero .k{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.dt-hero .n{font-size:31px;font-weight:700;letter-spacing:-.02em;margin-top:8px;line-height:1}
+.dt-hero .sub{margin-top:9px;font-size:13px;color:rgba(255,255,255,.68)}
+.dt-hero .flow{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.14);display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:rgba(255,255,255,.68)}
+.dt-hero .flow b{color:#6EE7B7;font-weight:700;font-size:15px}
+.sec-t{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);padding:2px 4px}
+.hist > div{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--border-soft)}
+.hist > div:first-child{border-top:0}
+.hist .n{flex:1}
+.hist .n b{display:block;font-size:14.5px;font-weight:600}
+.hist .n span{font-size:12px;color:var(--soft)}
+.hist .a{font-weight:700;font-size:14.5px;font-variant-numeric:tabular-nums}
+.hist .a.pos{color:var(--emerald-deep)}
+.hist .a.neg{color:var(--neutral)}
+.two{display:flex;gap:9px}
+.two .cta{flex:1;margin:0}
+
+/* movements list */
+.mv-head{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 0}
+.mv-head h3{margin:0;font-size:21px;font-weight:800;letter-spacing:-.02em}
+.mv-day{font-size:11px;font-weight:600;color:var(--soft);padding:12px 14px 6px}
+.mv > div.r{display:flex;align-items:center;gap:11px;padding:11px 14px;border-top:1px solid var(--border-soft)}
+.mv .av{width:32px;height:32px;border-radius:50%;background:var(--tile);display:grid;place-items:center;font-size:14px}
+.mv .n{flex:1;min-width:0}
+.mv .n b{display:block;font-size:14px;font-weight:700}
+.mv .n span{font-size:11.5px;color:var(--soft)}
+.mv .a{font-weight:600;font-size:14px;font-variant-numeric:tabular-nums}
+.mv .a.neg{color:var(--terracotta)}
+.mv .a.pos{color:var(--emerald-deep)}
+.tag{display:inline-block;font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:5px;background:var(--tile);color:var(--neutral);margin-left:5px;vertical-align:1px}
+
+.overlay-empty{margin-top:10px;border:1px dashed var(--border);border-radius:12px;padding:13px 14px;font-size:13px;color:var(--muted);background:#fff}
+.overlay-empty b{color:var(--text);font-weight:700}
+
+.foot{margin-top:64px;padding-top:32px;border-top:1px solid #DCE2E9;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:34px 44px}
+.foot h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft);margin:0 0 12px;font-weight:700}
+.foot p{margin:0 0 11px;font-size:14.5px;color:var(--muted);max-width:58ch}
+.foot strong{color:var(--text);font-weight:600}
+.foot ul{margin:0;padding-left:18px;font-size:14.5px;color:var(--muted)}
+.foot li{margin-bottom:8px}
+.foot li b{color:var(--text);font-weight:600}
+@media (max-width:520px){.doc{padding:0 16px 60px}.masthead{padding:36px 16px 30px}.masthead h1{font-size:27px}}
+
+/* ---------- fase 3A ---------- */
+.masthead .open{margin-top:20px;padding:16px 18px;border-radius:12px;background:rgba(110,231,183,.10);border:1px solid rgba(110,231,183,.30);font-size:14px;line-height:1.55;color:rgba(255,255,255,.84);max-width:78ch}
+.masthead .open b{color:#6EE7B7;font-weight:700}
+.masthead .open ol{margin:10px 0 0;padding-left:20px}
+.masthead .open li{margin-top:6px}
+.b-open{background:#FFF6E5;color:#9A6B12}
+.b-bad{background:#FDECEA;color:#B03A2E}
+
+.ledger{background:#fff;border:1px solid var(--border-soft);border-radius:16px;padding:6px 16px 14px}
+.ledger + .ledger{margin-top:0}
+.ledger .cap{font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#B6BFCA;padding:12px 0 8px}
+.ledger .l{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:7px 0;font-size:13.5px}
+.ledger .l .k{color:var(--muted);display:flex;align-items:center;gap:8px}
+.ledger .l .k i{width:7px;height:7px;border-radius:50%;background:#D3DAE2;flex:0 0 auto}
+.ledger .l .k i.em{background:var(--emerald)}
+.ledger .l .k i.sl{background:var(--slate)}
+.ledger .l .k i.pl{background:var(--plum)}
+.ledger .l .a{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;white-space:nowrap}
+.ledger .l .a.em{color:var(--emerald-deep)}
+.ledger .l .a.sl{color:var(--slate)}
+.ledger .l .a.pl{color:var(--plum)}
+.ledger .l.new{background:#F3F0F7;margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:9px}
+.ledger .sum{border-top:1px solid var(--border);margin-top:8px;padding-top:10px}
+.ledger .sum .k{color:var(--text);font-weight:700;font-size:13.5px}
+.ledger .sum .a{font-size:17px;font-weight:800}
+.ledger .verdict{margin-top:11px;border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.45;display:flex;gap:9px;align-items:flex-start}
+.ledger .verdict b{font-weight:700}
+.ledger .verdict.ok{background:var(--emerald-bg);color:#05614A}
+.ledger .verdict.no{background:#FDECEA;color:#8C2F24}
+.ledger .verdict .m{font-size:14px;line-height:1;margin-top:1px}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chips span{border:1px solid var(--border);background:#fff;border-radius:999px;padding:9px 13px;font-size:13px;font-weight:600;color:var(--text)}
+.chips span.on{border-color:var(--emerald-deep);background:var(--emerald-bg);color:#05614A}
+
+/* radios del vencimiento: una lista, no una cadena de preguntas */
+.radios{background:#fff;border:1px solid var(--border-soft);border-radius:16px;overflow:hidden}
+.radios > div{display:flex;align-items:center;gap:11px;padding:13px 14px;border-top:1px solid var(--border-soft)}
+.radios > div:first-child{border-top:0}
+.radios > div.on{background:#F6FDFA}
+.radios .dot{flex:0 0 auto;width:19px;height:19px;border-radius:50%;border:2px solid var(--emerald-deep);position:relative}
+.radios .dot::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--emerald-deep)}
+.radios .dot.off{border-color:#C9D2DC}
+.radios .dot.off::after{display:none}
+.radios .rw .v{font-size:14.5px;font-weight:600;margin:0}
+.radios .sub-f{display:block;padding:0;border-top:0;background:#F6FDFA}
+
+.pos-row{display:flex;align-items:center;gap:11px;padding:13px 14px;border-top:1px solid var(--border-soft)}
+.pos-row:first-child{border-top:0}
+.pos-row .tile{background:#EFEBF4}
+.pos-row .n{flex:1;min-width:0}
+.pos-row .n b{display:block;font-size:14.5px;font-weight:700}
+.pos-row .n span{font-size:11.5px;color:var(--soft)}
+.pos-row .a{font-weight:700;font-size:13.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.callout{background:#fff;border:1px solid var(--border-soft);border-left:3px solid var(--plum);border-radius:12px;padding:13px 15px;font-size:13.5px;color:var(--muted);line-height:1.5}
+.callout b{color:var(--text);font-weight:700}
+.callout.warn-c{border-left-color:var(--warning)}
+.callout.bad-c{border-left-color:#B03A2E}
+
+.ab{margin-top:56px;background:#fff;border:1px solid var(--border);border-radius:20px;padding:28px 30px 30px}
+.ab h2{margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.ab .lede{margin:0 0 22px;font-size:15px;color:var(--muted);max-width:70ch}
+.ab table{width:100%;border-collapse:collapse;font-size:14px}
+.ab th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);padding:0 12px 10px 0;border-bottom:1px solid var(--border)}
+.ab td{padding:11px 12px 11px 0;border-bottom:1px solid var(--border-soft);color:var(--muted);vertical-align:top}
+.ab td b{color:var(--text);font-weight:600}
+.ab td:last-child,.ab th:last-child{padding-right:0}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="in">
+    <p class="eyebrow">Grana · modelo de dinero · mock de producto</p>
+    <h1>Fase 3A · Plazo fijo</h1>
+    <p>Rehecho desde cero. El mock anterior repetía el patrón que la fase 2 tardó dos semanas en desarmar: formulario → selector → formulario → vuelta. Este tiene <b>dos pantallas de carga</b>, una para hacer el plazo fijo y otra para resolverlo cuando vence.</p>
+    <div class="open"><b>Lo que cambió, y de dónde salió cada cambio.</b>
+      <ol>
+        <li><b>No se pide la tasa. Se pide cuánto vas a cobrar.</b> El banco te muestra los dos números; el segundo es el que importa y el que no hay que calcular. La ganancia es una resta, y el impuesto de sellos queda absorbido sin modelarlo.</li>
+        <li><b>El vencimiento se resuelve en una pantalla</b>, con las tres salidas a la vista. Antes eran dos preguntas encadenadas — justo lo que la fase 2 enseñó a evitar.</li>
+        <li><b>La acción vive en la cuenta</b>, no en «Nuevo movimiento». Si la plata no cruza de entidad, de dónde sale y en qué banco queda ya están contestados.</li>
+      </ol>
+    </div>
+    <div class="warn"><b>No es diseño final, y no hay schema.</b> Los números son los de agosto de 2026 de una cuenta real, para que la aritmética se pueda auditar a ojo. El HTML no es código de producción.</div>
+  </div>
+</header>
+
+<div class="doc">
+
+<div class="ways" style="margin-top:0;margin-bottom:44px">
+  <h2>Las reglas de la fase 2, aplicadas acá</h2>
+  <p class="lede">La función anterior salió con cinco pantallas y el QA con el usuario las bajó a una. Cada corrección dejó una regla. Estas son, y qué hace cada una en este mock.</p>
+  <div class="cols">
+    <div class="way">
+      <div class="cap">Regla</div>
+      <h4>Un chip al lado del monto no merece pantalla</h4>
+      <ol>
+        <li>Elegir el propósito costaba tres pantallas. Ahora son chips en el mismo formulario.</li>
+        <li><b>Acá:</b> el plazo son chips —30 · 60 · 90 · 180— y la cuenta viene heredada. No hay selector aparte de nada.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Regla</div>
+      <h4>Ver la consecuencia mientras elegís</h4>
+      <ol>
+        <li>Con los chips adentro del formulario, tocar uno mueve el tope y el resto a la vista.</li>
+        <li><b>Acá:</b> cambiar el plazo mueve la fecha de vencimiento; cambiar el monto mueve lo que queda en la cuenta. En la misma pantalla.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Regla</div>
+      <h4>Lo heredado no se vuelve a preguntar</h4>
+      <ol>
+        <li>Había una fila de solo lectura «Para qué → Viaje» y se borró: <b>una sección que no decide es una sección de más.</b></li>
+        <li><b>Acá:</b> entrando desde Comafi no hay campo «cuenta» ni campo «banco». Lo dice el título.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Regla</div>
+      <h4>Tocar una sugerencia la ejecuta</h4>
+      <ol>
+        <li>Tocar «Emergencia» abría un alta para confirmar el nombre. <i>"Ese propósito ya está creado, suma taps de gusto."</i></li>
+        <li><b>Acá:</b> tocar «Resolver» en el aviso de vencido abre la pantalla con la salida más común <b>ya elegida</b> y el monto <b>ya escrito</b>.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Regla</div>
+      <h4>Un control que no cambia nada no se dibuja</h4>
+      <ol>
+        <li>El chip de moneda aparece solo si hay más de una para ofrecer.</li>
+        <li><b>Acá:</b> la acción aparece solo en cuentas de tipo <code>bank</code>. En una billetera virtual no se hace un plazo fijo.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Regla</div>
+      <h4>Si hay que explicarla, está mal dibujada</h4>
+      <ol>
+        <li>Cuando la misma pregunta del usuario volvió dos veces, la respuesta no fue un argumento mejor: fue cambiar el dibujo.</li>
+        <li><b>Acá:</b> el mock anterior necesitaba cuatro párrafos para justificar por qué la creación pasaba por «Transferencia». Se borró la ruta.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<div class="grid">
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">1</span>
+      <div>
+        <h2>La cuenta, que es donde está la plata</h2>
+        <p class="sub">Una fila más. No hay módulo nuevo ni pestaña nueva.</p>
+        <span class="badge b-mod">Gana una acción</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">Cuenta</div><h3>Comafi</h3></div><span class="x">←</span></div>
+      <div class="dt-hero">
+        <div class="k">Saldo</div>
+        <div class="n">$ 762.862<s style="font-size:20px;font-weight:600;text-decoration:none;color:rgba(255,255,255,.72)">,23</s></div>
+        <div class="sub">Caja de ahorro en pesos</div>
+      </div>
+      <div class="c rows">
+        <div><div class="tile">🏦</div><div class="rw"><div class="v">Hacer un plazo fijo</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="sec-t">Movimientos</div>
+      <div class="c mv">
+        <div class="r"><div class="av">💼</div><div class="n"><b>Sueldo</b><span>24 de ago</span></div><span class="a pos">+$ 1.240.000,00</span></div>
+        <div class="r"><div class="av">🛒</div><div class="n"><b>Coto</b><span>23 de ago</span></div><span class="a neg">−$ 38.420,10</span></div>
+      </div>
+    </div></div>
+    <p class="note"><b>De una observación del producto:</b> <i>"cuando uno invierte, el dinero sale siempre de la misma entidad financiera desde donde se está eligiendo sacarlo"</i>. Si la plata no cruza de entidad, la acción no es un movimiento entre lugares: <b>es algo que hacés con la plata que ya está ahí.</b></p>
+    <p class="note">Entrando por acá, <b>dos preguntas ya están contestadas</b> —de dónde sale, en qué banco queda— y no hay que dibujarlas. El mock anterior las preguntaba en dos pantallas.</p>
+    <p class="note"><b>Solo en cuentas de tipo <code>bank</code>.</b> El tipo ya existe en la base (<code>'cash' | 'bank'</code>), así que la regla se escribe sola: en Billetera no se dibuja. Ofrecer un producto imposible enseña que la app no sabe con qué está trabajando.</p>
+    <p class="note"><b>Y no hay «Guardado» en esta pantalla</b>, aunque sea tentador. Una reserva <b>no vive en ninguna cuenta</b> —la tabla no tiene <code>account_id</code>, a propósito— así que un detalle de cuenta no puede contestar "cuánto puedo gastar de acá". Un plazo fijo sí tiene banco: por eso él sí aparece (paso 7).</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">2</span>
+      <div>
+        <h2>Hacer el plazo fijo, en una pantalla</h2>
+        <p class="sub">Tres datos, y ninguno es la tasa.</p>
+        <span class="badge b-new">La pantalla</span>
+      </div>
+    </div>
+    <div class="phone ov"><div class="scrim"></div><div class="sheet">
+      <div class="grab"></div>
+      <div class="sh"><h3>Plazo fijo en Comafi</h3><span class="x">←</span></div>
+      <div class="c amt">
+        <div class="lbl">¿Cuánto ponés?</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">700.000</span></div>
+      </div>
+      <div class="sec-t">¿Hasta cuándo?</div>
+      <div class="chips"><span class="on">30 días</span><span>60</span><span>90</span><span>180</span><span>📅</span></div>
+      <p class="note" style="border:0;padding:0;margin:-2px 2px 0;font-size:13px">Vence el <b>24 de septiembre</b></p>
+      <div class="c amt" style="padding-top:13px;padding-bottom:14px">
+        <div class="lbl">¿Cuánto vas a cobrar?</div>
+        <div class="val"><span class="s" style="font-size:19px">$</span><span class="n" style="font-size:29px">724.164,38</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Queda en Comafi</span><span>$ 62.862,23</span></div>
+        <div class="minus"><span>Vas a ganar</span><span>+$ 24.164,38</span></div>
+      </div>
+      <div class="c calc" style="background:#FAFBFC;border-style:dashed">
+        <div style="padding-bottom:2px"><span style="font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--soft)">Si el número fuera otro</span><span></span></div>
+        <div><span>Cobrás menos de lo que ponés</span><span style="color:#B03A2E">Vas a perder −$ 5.000</span></div>
+        <div><span>Cobrás lo mismo</span><span style="color:var(--muted)">Cobrás lo mismo que ponés</span></div>
+      </div>
+      <p class="note" style="border:0;padding:0;margin:2px 2px 0">Tu plata no se gastó: cambió de lugar, y no la vas a poder tocar hasta el <b>24 de septiembre</b>.</p>
+      <div class="cta">Hacer el plazo fijo</div>
+    </div></div>
+    <p class="note"><b>No se pide la tasa: se pide cuánto vas a cobrar.</b> El banco muestra los dos números antes de que confirmes, y el segundo es el que importa. Pedir la TNA obliga a mirar la letra chica y a confiar en una cuenta que Grana hace por atrás; pedir el monto final es copiar un número que está en pantalla.</p>
+    <p class="note"><b>Y arregla el impuesto sin modelarlo.</b> Si el banco descuenta sellos y muestra un neto más bajo, ese es el número que se escribe. No hace falta un campo «impuestos» ni una nota al pie: la resta ya dice la verdad.</p>
+    <p class="note"><b>La ganancia se calcula, no se pregunta.</b> <code>vas a cobrar − ponés</code>. Es la misma regla que en el vencimiento (paso 5), y por eso las dos pantallas se parecen.</p>
+    <p class="note"><b>Y la frase no asume que ganes.</b> Tres estados según la resta: <b>«Vas a ganar +$X»</b>, <b>«Vas a perder −$X»</b> y <b>«Cobrás lo mismo que ponés»</b>. El par ganar/perder es simétrico y no es jerga —«Resultado estimado» sería justo el lenguaje de banco que estamos evitando—, aunque <i>perder</i> puede sonar fuerte para lo que en realidad es una retención. Es una decisión de copy que queda abierta.</p>
+    <p class="note"><b>El tope es el saldo de ESA cuenta, no el disponible global.</b> Es la asimetría con guardar: guardar no mueve plata, así que se topea contra el disponible de la moneda; un plazo fijo sale de una cuenta concreta y no puede tomar más de lo que hay ahí. Con $ 762.862,23 en Comafi, $ 800.000 se rechaza aunque en Billetera sobren cuatro millones.</p>
+    <p class="note"><b>Y si deja el disponible en negativo, avisa sin bloquear.</b> Es la regla que la app ya tiene para los gastos: el saldo negativo es un hecho válido, no un error de input. El tope duro es el saldo de la cuenta; el disponible negativo es un aviso blando.</p>
+    <p class="note"><b>¿Y qué pasa con lo que estaba guardado?</b> Nada, y la respuesta ya está escrita en el modelo: <i>"la disponibilidad tiene dos fuentes independientes —la posición y la decisión— y ninguna implica la otra"</i>. Guardar y hacer un plazo fijo son las dos, así que <b>pueden solaparse</b>: con $ 800.000 en cuentas, $ 700.000 guardados y un plazo fijo de $ 750.000, el disponible queda en <b>−$ 650.000</b>.</p>
+    <p class="note"><b>Bajar el guardado solo sería inventar una decisión que el usuario no tomó</b> — lo mismo que Grana se niega a hacer cuando reparte un retiro entre propósitos, o cuando borra un propósito sin mover ningún número. El solapamiento <b>se ve solo</b>, como disponible negativo, y el aviso puede nombrarlo: <i>«inmovilizaste plata que habías decidido no tocar»</i>. Queda escrito acá para no descubrirlo implementando.</p>
+    <p class="note"><b>Tres decisiones: monto, plazo, confirmar</b> — más un número que se copia. El mock anterior tenía cinco decisiones repartidas en cuatro superficies.</p>
+    <p class="note">El chip 📅 abre el calendario para el plazo que no entra en la fila. Y la <b>fecha de inicio es hoy</b>, sin campo: quien registra uno viejo tiene otro problema, y es otro flujo (ver el pie).</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">3</span>
+      <div>
+        <h2>Agosto: una línea nueva, y no es un gasto</h2>
+        <p class="sub">La card tiene que explicar por qué bajó el disponible.</p>
+        <span class="badge b-new">Línea nueva</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="ledger">
+        <div class="cap">Resumen del mes · agosto</div>
+        <div class="l"><span class="k"><i></i>Tenías</span><span class="a">−$ 2.729.825,17</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Entró</span><span class="a em">+$ 8.021.007,00</span></div>
+        <div class="l"><span class="k"><i class="sl"></i>Se fué</span><span class="a sl">−$ 205.433,66</span></div>
+        <div class="l"><span class="k"><i class="em"></i>Guardado</span><span class="a em">−$ 180.000,00</span></div>
+        <div class="l new"><span class="k"><i class="pl"></i>Hiciste un plazo fijo</span><span class="a pl">−$ 700.000,00</span></div>
+        <div class="l sum"><span class="k">Para gastar</span><span class="a">$ 4.205.748,17</span></div>
+        <div class="verdict ok"><span class="m">✓</span><div><b>Cada línea nombra una razón por la que el disponible cambió</b>, y ninguna razón queda sin línea. Los cinco números se suman con el dedo y dan el de arriba.</div></div>
+      </div>
+      <div class="callout bad-c"><b>Sin esa línea la card cierra igual, y miente.</b> «Tenías» no se lee: se despeja contra el disponible. Así que absorbe los $ 700.000 en silencio y agosto pasa a decir <b>−$ 3.429.825,17</b>. Una suma que no da se puede agarrar; un pasado reescrito, no.</div>
+    </div></div>
+    <p class="note"><b>La línea dice el vehículo, no una abstracción.</b> El mock anterior decía «Puesto a trabajar» —el término del documento del modelo, heredado y nunca cuestionado—. En pantalla suena a newsletter financiera. <b>«Hiciste un plazo fijo» es lo que diría cualquiera.</b></p>
+    <p class="note"><b>Color propio, no el de Guardado.</b> Las dos sacan plata del disponible, pero guardado se deshace con un tap y esto no se toca hasta el 24 de septiembre. Y va <b>debajo</b>, que es el orden de irreversibilidad.</p>
+    <p class="note"><b>Metido en «Se fué» también cerraría</b>, y diría que gastaste $ 905.433 cuando gastaste $ 205.433. Ese número alimenta la tira de ritmo y «En qué se fue»: el error no se queda ahí, se propaga. <b>Tres de las cuatro alternativas cierran la suma — cerrar no alcanza como criterio.</b></p>
+    <p class="note"><b>No hay sección nueva en ningún lado.</b> Dos superficies que ya existen se reparten el trabajo: el <b>Resumen del mes</b> gana una línea condicional —término de la identidad, como Guardado—, y <b>Movimientos</b> gana una fila, porque la salida de la plata sí es un hecho del ledger. Nada de «Actividad» como bloque aparte.</p>
+    <p class="note"><b>Y la ganancia no se suma adentro de «Entró».</b> Es línea propia: aumenta el disponible porque entró a la cuenta, pero no es <code>income</code>, no es sueldo, no dispara la sugerencia de guardar y no entra en analíticas de ingresos. Metida adentro, el día que un rescate dé negativo la pérdida aterriza en «Se fué» — afirmando que salió plata de una cuenta que subió.</p>
+    <p class="note"><b>Y el bucket tiene que nacer en la agregación, no acá.</b> Hoy una transferencia hacia algo que no es una cuenta propia cae en <code>totalTransfer</code> negativo, o sea en «Se fué», sin escribir una línea de código. La fila de pantalla no alcanza: taparía que abajo sigue entrando como gasto.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">4</span>
+      <div>
+        <h2>Venció: el aviso</h2>
+        <p class="sub">Grana no se conecta con el banco. Lo tiene que decir el usuario.</p>
+        <span class="badge b-new">Tira</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="gd">
+        <div class="top">
+          <div class="tile" style="background:#FDF0D5">⏰</div>
+          <div><h4>Venció tu plazo fijo de Comafi</h4><p>Esperabas cobrar <b>$ 724.164,38</b>. Contanos qué pasó para que las cuentas queden bien.</p></div>
+        </div>
+        <div class="acts"><div class="cta">Resolver</div></div>
+      </div>
+      <div class="dash">
+        <div class="dark">
+          <div class="lbl">Saldo disponible total</div>
+          <div class="big">$ 4.205.748<s>,17</s></div>
+        </div>
+      </div>
+    </div></div>
+    <p class="note"><b>Esto sí va en el dashboard, y no contradice la regla de no empujar.</b> No es una sugerencia de invertir: es un hecho del usuario que Grana no puede saber sola. Hasta que se conteste, <b>el disponible está mal</b> — la plata volvió al banco y la app no se enteró.</p>
+    <p class="note">Usa la <b>tira de guidance</b> que la fase 1 ya construyó para la sugerencia post-ingreso: mismo componente, misma altura, mismo lugar. No hay que inventar una superficie.</p>
+    <p class="note"><b>Dice cuánto esperabas cobrar.</b> Ese número es la mitad del trabajo de la pantalla siguiente, y ponerlo acá hace que el usuario ya sepa qué va a confirmar antes de tocar.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">5</span>
+      <div>
+        <h2>Resolverlo, en una pantalla</h2>
+        <p class="sub">Tres salidas a la vista, y la más común ya elegida.</p>
+        <span class="badge b-new">La otra pantalla</span>
+      </div>
+    </div>
+    <div class="phone ov"><div class="scrim"></div><div class="sheet">
+      <div class="grab"></div>
+      <div class="sh"><h3>Venció tu plazo fijo</h3><span class="x">←</span></div>
+      <p class="note" style="border:0;padding:0;margin:0 2px;font-size:13px">Comafi · pusiste <b>$ 700.000</b> el 25 de agosto</p>
+      <div class="sec-t">¿Qué pasó?</div>
+      <div class="c radios">
+        <div class="on">
+          <span class="dot"></span>
+          <div class="rw"><div class="v">Volvió todo a la cuenta</div></div>
+        </div>
+        <div class="sub-f">
+          <div class="c amt" style="border:0;padding:11px 13px 12px">
+            <div class="lbl">¿Cuánto volvió a la cuenta?</div>
+            <div class="val"><span class="s" style="font-size:19px">$</span><span class="n" style="font-size:29px">724.164,38</span></div>
+          </div>
+          <div class="c calc" style="border:0;padding:0 13px 11px">
+            <div class="minus"><span>Ganaste</span><span>+$ 24.164,38</span></div>
+          </div>
+        </div>
+        <div><span class="dot off"></span><div class="rw"><div class="v">Renové el capital y cobré la ganancia</div></div></div>
+        <div><span class="dot off"></span><div class="rw"><div class="v">Renové todo, no cobré nada</div></div></div>
+      </div>
+      <div class="cta">Confirmar</div>
+    </div></div>
+    <p class="note"><b>Antes eran dos preguntas encadenadas</b> —¿volvió o renovaste? y después ¿el interés quedó adentro o te lo pagaron?—. Encadenar preguntas binarias es exactamente lo que la fase 2 enseñó a evitar: las tres salidas caben en una lista y se leen de un vistazo.</p>
+    <p class="note"><b>La más común viene elegida y el monto viene escrito.</b> En el caso normal esto es <b>un solo tap</b>: Confirmar. El número se sabe desde el día uno, así que la pantalla no pregunta — propone y deja corregir.</p>
+    <p class="note"><b>El usuario nunca separa capital de ganancia.</b> Escribe lo que le depositaron; Grana hace la resta y la muestra. Pedirle el desglose sería pedirle una cuenta que la app puede hacer y él puede hacer mal — y ahí es donde se cuela el error que después nadie encuentra.</p>
+    <p class="note"><b>El rótulo del monto cambia con la salida elegida</b>, porque en cada una el número significa otra cosa: <i>«¿Cuánto volvió a la cuenta?»</i> · <i>«¿Cuánto cobraste?»</i> · <i>«¿Por cuánto quedó el nuevo?»</i>. Un rótulo genérico tipo «monto final recibido u operado» obliga a traducir en la cabeza cuál de los tres es.</p>
+    <p class="note"><b>Las otras dos salidas despliegan sus campos en el mismo lugar</b>: nueva fecha de vencimiento y nuevo monto a cobrar. Nunca hay dos abiertas, así que la pantalla no crece.</p>
+    <p class="note"><b>Son tres, no cuatro.</b> «Renovar el capital» y «cobrar la ganancia y renovar el capital» son la misma salida: si el capital renovó y la ganancia no capitalizó, fue a tu cuenta. No hay un cuarto estado.</p>
+    <p class="note"><b>Los rótulos dicen si cobraste o no</b>, porque ahí es donde se cuela el error. «Lo renové» a secas no distingue si la ganancia entró a la cuenta —y esa es exactamente la diferencia entre que aparezca <i>Ganancia cobrada</i> o no.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">6</span>
+      <div>
+        <h2>Septiembre: qué muestra cada salida</h2>
+        <p class="sub">Dos líneas independientes, que aparecen o no.</p>
+        <span class="badge b-new">Regla</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="ledger">
+        <div class="cap">Volvió todo a la cuenta</div>
+        <div class="l new"><span class="k"><i class="pl"></i>Volvió del plazo fijo</span><span class="a pl">+$ 700.000,00</span></div>
+        <div class="l new" style="background:#FFF7E8"><span class="k"><i style="background:var(--warning)"></i>Ganancia cobrada</span><span class="a" style="color:#9A6B12">+$ 24.164,38</span></div>
+        <div class="l sum"><span class="k">Para gastar</span><span class="a">$ 5.189.912,55</span></div>
+      </div>
+      <div class="ledger">
+        <div class="cap">Renovó el capital, cobró la ganancia · sigue uno de $ 700.000</div>
+        <div class="l new" style="background:#FFF7E8"><span class="k"><i style="background:var(--warning)"></i>Ganancia cobrada</span><span class="a" style="color:#9A6B12">+$ 24.164,38</span></div>
+        <div class="l sum"><span class="k">Para gastar</span><span class="a">$ 4.489.912,55</span></div>
+      </div>
+      <div class="ledger">
+        <div class="cap">Renovó todo · sigue uno de $ 724.164,38</div>
+        <div class="l" style="opacity:.5"><span class="k">El mes no dice nada</span><span class="a">—</span></div>
+        <div class="l sum"><span class="k">Para gastar</span><span class="a">$ 4.465.748,17</span></div>
+      </div>
+      <div class="callout"><b>«Volvió del plazo fijo» es la misma línea que «Hiciste un plazo fijo»</b>, con el flujo dado vuelta. Por eso <b>netea cero</b> en la vida del plazo fijo: −700.000 en agosto, +700.000 en septiembre. Si da distinto de cero, algo se coló adentro.</div>
+      <div class="callout warn-c"><b>Renovar no es ninguna de las dos líneas.</b> No es «Entró», no es «Se fué», no es «Ganancia cobrada» y no cambia el disponible: ninguna plata tocó ninguna cuenta. <b>No participa de la identidad del mes y tampoco es una fila de Movimientos</b> — es un hecho del plazo fijo, y vive en su historial. El que renueva el capital y cobra la ganancia hace <b>dos cosas</b>: la ganancia sí es una fila y una línea; la renovación no es ninguna.</div>
+    </div></div>
+    <p class="note"><b>La ganancia es línea propia, no una parte de «Entró».</b> Lo decide el caso negativo, que llega en 3B: si un FCI devuelve $ 680.000 sobre $ 700.000, metida adentro la pérdida aterriza en «Se fué» — afirmando que salió plata de una cuenta que <b>subió</b>. Es el mismo error que meter el plazo fijo en «Se fué», del otro lado del espejo.</p>
+    <p class="note"><b>Y nunca como <code>income</code>.</b> Con bucket propio, «ingresos del mes», la tira de ritmo y la sugerencia de guardar —que filtra por <code>type = 'income'</code>— no la ven. Cobrar un plazo fijo no dispara <i>«¿guardás una parte?»</i>.</p>
+    <p class="note"><b>El caso «renovó todo» es el que define qué significa la línea.</b> No entró nada a ninguna cuenta, así que el mes —que es una lectura de liquidez— no tiene nada que decir. La ganancia está: el plazo fijo pasó a valer $ 724.164,38. <b>Así que no es «la ganancia del mes» sino la que se hizo líquida</b>, y quien renueva todo el año no la ve en ningún mes. Esa lectura es de patrimonio, fase 5.</p>
+    <p class="note"><b>Ninguna de las dos líneas se dibuja si no pasó nada</b>, igual que Guardado. Un mes normal sigue teniendo cuatro.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">7</span>
+      <div>
+        <h2>El plazo fijo, mientras corre</h2>
+        <p class="sub">En la cuenta donde vive, y su detalle.</p>
+        <span class="badge b-new">Lectura</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">Cuenta</div><h3>Comafi</h3></div><span class="x">←</span></div>
+      <div class="dt-hero">
+        <div class="k">Saldo</div>
+        <div class="n">$ 62.862<s style="font-size:20px;font-weight:600;text-decoration:none;color:rgba(255,255,255,.72)">,23</s></div>
+        <div class="sub">Caja de ahorro en pesos</div>
+      </div>
+      <div class="sec-t">Plazos fijos acá</div>
+      <div class="c">
+        <div class="pos-row"><div class="tile">🏦</div><div class="n"><b>$ 700.000,00</b><span>Vence el 24 de sep · en 30 días</span></div><span class="a" style="color:#9A6B12">→ $ 724.164,38</span></div>
+      </div>
+      <div class="c rows">
+        <div><div class="tile">🏦</div><div class="rw"><div class="v">Hacer otro plazo fijo</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="sec-t">Movimientos</div>
+      <div class="c mv">
+        <div class="r"><div class="av">🏦</div><div class="n"><b>Plazo fijo en Comafi</b><span>25 de ago</span></div><span class="a">−$ 700.000,00</span></div>
+        <div class="r"><div class="av">💼</div><div class="n"><b>Sueldo</b><span>24 de ago</span></div><span class="a pos">+$ 1.240.000,00</span></div>
+      </div>
+    </div></div>
+    <p class="note"><b>El saldo de la cuenta bajó y el plazo fijo está abajo, no adentro.</b> No se suman: son dos cosas en el mismo banco, una que podés tocar y otra que no. Un total que las junte diría que tenés $ 762.862 disponibles en Comafi, y no es cierto.</p>
+    <p class="note"><b>La fila dice de dónde a dónde va</b> —<code>$ 700.000 → $ 724.164,38</code>— y cuándo. Es todo lo que hay que saber mientras corre, y es la misma información que la tira del vencimiento va a repetir el día que venza.</p>
+    <p class="note"><b>Sin tasa a la vista.</b> Ya no se pide, y mostrarla derivada tampoco agrega: lo que importa día a día es cuánto pusiste, cuánto vas a cobrar y cuántos días faltan. La tasa es la forma en que el banco explica la diferencia, no un dato que el usuario use.</p>
+    <p class="note"><b>La fila va en neutro, no en el color de gasto.</b> Lleva signo menos porque el saldo bajó, pero en el gris de las transferencias y no en el terracota de los gastos, y el subtítulo dice el vencimiento. Es la misma señal que ya distingue una transferencia entre cuentas propias de un gasto.</p>
+    <p class="note"><b>La salida de la plata sí es un movimiento de la cuenta</b>, y aparece en su lista. Eso es un hecho del ledger. <b>Renovar, en cambio, no lo es</b>: cuando el plazo fijo se renueva capitalizando, ninguna plata toca ninguna cuenta, así que no hay fila que registrar — el hecho vive en el historial del plazo fijo, no en Movimientos.</p>
+    <p class="note">Tocando la fila se abre su detalle, con los mismos números más la fecha de inicio y la acción de <b>borrarlo</b> —para el que lo cargó mal—. No hay «editar» de lo ya ocurrido: se borra y se vuelve a cargar, como cualquier movimiento.</p>
+  </section>
+
+</div>
+
+<div class="ab">
+  <h2>Lo que se borró del mock anterior</h2>
+  <p class="lede">De once pantallas de circuito a dos de carga. No es prolijidad: cada superficie que se va es una decisión que el usuario no toma y un título que no tiene que aprender.</p>
+  <table>
+    <thead><tr><th style="width:30%">Se borró</th><th style="width:34%">Por qué estaba</th><th>Por qué se va</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>El formulario de Transferencia</b> como paso previo</td>
+        <td>Porque por abajo un plazo fijo es una transferencia hacia una posición</td>
+        <td>Eso es el <b>modelo</b>, no el lenguaje. El usuario no piensa «voy a transferir»: piensa «voy a hacer un plazo fijo». Adentro sigue siendo lo mismo</td>
+      </tr>
+      <tr>
+        <td><b>El selector de destino</b></td>
+        <td>Para elegir entre cuentas y plazos fijos</td>
+        <td>Entrando desde la cuenta <b>no hay destino que elegir</b>. Era una pantalla para contestar algo ya contestado</td>
+      </tr>
+      <tr>
+        <td><b>La vuelta al formulario</b> para confirmar</td>
+        <td>Porque el alta del plazo fijo era una pantalla aparte</td>
+        <td>Con una sola pantalla no hay a dónde volver. El resumen vive arriba del botón</td>
+      </tr>
+      <tr>
+        <td><b>El campo de tasa</b></td>
+        <td>Porque define el instrumento</td>
+        <td>Obliga a mirar la letra chica y a confiar en una cuenta ajena. <b>El monto final es un número que está en pantalla del banco</b></td>
+      </tr>
+      <tr>
+        <td><b>La segunda pregunta del vencimiento</b></td>
+        <td>Para separar «renové todo» de «renové el capital»</td>
+        <td>Las tres salidas caben en una lista. Encadenar binarias es lo que la fase 2 enseñó a evitar</td>
+      </tr>
+      <tr style="background:#FDECEA">
+        <td><b>«Guardado» en el detalle de cuenta</b></td>
+        <td>Propuesto para mostrar los tres niveles de disponibilidad en un solo lugar</td>
+        <td><b>Rompe un invariante.</b> Una reserva no vive en ninguna cuenta —la tabla no tiene <code>account_id</code>— así que repartirla por banco sería inventar una imputación</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="ways">
+  <h2>Lo que queda abierto</h2>
+  <p class="lede">Lo que este mock decidió está arriba. Esto no lo decidió, y conviene que se note.</p>
+  <div class="cols">
+    <div class="way">
+      <div class="cap">Abierto</div>
+      <h4>El plazo fijo que ya tenías</h4>
+      <ol>
+        <li>Alguien que empieza a usar Grana con un plazo fijo en curso <b>no tiene una transferencia que registrar</b>: la plata salió de la cuenta antes.</li>
+        <li>Es otro flujo —cargar una posición sin movimiento— y probablemente otra pantalla. No está dibujado.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Abierto</div>
+      <h4>El nombre del paraguas</h4>
+      <ol>
+        <li>En 3A la pantalla dice <b>plazo fijo</b> y alcanza. En el hub, con FCI y dólares, va a hacer falta una palabra que los agrupe.</li>
+        <li><b>«Plazos fijos e inversiones»</b> es la más clara y la menos poética. Se decide cuando el hub se dibuje.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Abierto</div>
+      <h4>El hub «Mi plata»</h4>
+      <ol>
+        <li>Dos cortes del mismo total: <b>por función</b> (para gastar · guardado · en plazos fijos) y <b>por ubicación</b> (Billetera · Comafi · el plazo fijo de Comafi).</li>
+        <li>Va último: es lectura pura, y se dibuja bien recién cuando sabemos qué hay para leer.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">3B</div>
+      <h4>Lo que no entra en 3A</h4>
+      <ol>
+        <li><b>FCI y bróker</b>: valor variable, rescates parciales, valuaciones. El plazo fijo es el caso cerrado y por eso va primero.</li>
+        <li><b>Rendimiento negativo</b> y <b>rescate parcial</b>: sirven para validar el modelo —la resta los cubre— pero no para agrandar el alcance.</li>
+        <li><b>Un propósito sobre un plazo fijo.</b> Hoy el techo del reparto es lo guardado; ahí pasaría a ser lo guardado más las posiciones, y cambia el trigger de la 0059.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  <div>
+    <h3>Por qué estos números</h3>
+    <p>Son los de <strong>agosto de 2026 de una cuenta real</strong>, con el guardado y los propósitos de la fase 2 ya cargados. Un mock con números redondos deja pasar errores que uno con números reales no.</p>
+    <p>El plazo fijo sale de <strong>Comafi</strong>, que tiene $762.862,23, y la deja en $62.862,23 — una cuenta casi vacía, que es lo que pasa cuando alguien pone a rendir casi todo lo que tenía en un banco.</p>
+  </div>
+  <div>
+    <h3>Las cuentas, para auditar</h3>
+    <ul>
+      <li>Agosto: −2.729.825,17 + 8.021.007 − 205.433,66 − 180.000 − 700.000 = <strong>4.205.748,17</strong></li>
+      <li>Septiembre, volvió todo: + 700.000 + 24.164,38 → <strong>5.189.912,55</strong></li>
+      <li>Renovó capital: solo + 24.164,38 → <strong>4.489.912,55</strong></li>
+      <li>Renovó todo: sin términos → <strong>4.465.748,17</strong></li>
+    </ul>
+  </div>
+  <div>
+    <h3>Dónde vive el razonamiento</h3>
+    <p><code>docs/modelo-de-dinero.md</code> — el modelo, corregido con lo que las fases 1 y 2 enseñaron.</p>
+    <p><code>openspec/changes/add-savings-purpose/design.md</code> — las 27 decisiones de la fase 2, que son de donde salen las reglas de arriba.</p>
+    <p>Este mock reemplaza a la versión de 18 pantallas, que quedó como registro de por dónde empezó el pensamiento.</p>
+  </div>
+</div>
+
+</div>
+</body>
+</html>
