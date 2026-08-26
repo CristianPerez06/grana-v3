@@ -79,11 +79,21 @@
   duplicada. Cableados: los dos botones globales (formulario), las filas de propósito (su grupo) y
   los dos enlaces del resto (destinar / volver a usar). La moneda de entrada sale del dato
   (`moduleGroupCurrency`) y no de un default, que abriría un propósito de solo dólares con tope cero
-- [ ] 4.1c **Podar del overlay la vista de detalle**, que ya vive en la página. Queda para cuando la
-  fila del dashboard navegue (4.2): hasta entonces es la única puerta que todavía la usa
-- [ ] 4.2 La fila de Guardado del dashboard **navega** en vez de abrir el overlay
+- [x] 4.1c **Podada del overlay la vista de detalle.** Con ella se fueron el `Headline`, el puente
+  bancario, el historial y `groupsUnified` — y **dos de las cinco consultas por apertura**, que eran
+  lectura y ahora la hace la página. El overlay dejó de tener vista raíz: `initialView` pasa a ser
+  obligatorio, la pila arranca donde se pidió, y **la flecha del fondo CIERRA** en vez de revelar la
+  lista duplicada
+- [x] 4.1d **El puente bancario y el historial se mudaron a `/savings`**, plegados y al pie, con su
+  propia sección y su propia consulta. No se borraron con el detalle: el puente es lo que evita que
+  alguien mire su home banking, vea otra cifra y le crea al banco
+- [x] 4.2 La fila de Guardado del dashboard **navega** en vez de abrir el overlay, y es un `Link` de
+  verdad —se abre en otra pestaña, se precarga—. El dashboard **ya no monta el overlay**: el estado
+  vacío paga un tap de más y a cambio la operatoria queda en un solo lugar (E3, 4b.5)
 - [ ] 4.3 La tira post-ingreso queda donde está, y su acción sigue resolviendo en el lugar (E3)
-- [ ] 4.4 Verificar que ningún formulario de ahorro quedó montado en otra superficie
+- [x] 4.4 Verificado: en web, el único que monta `SavingsDrawer` es el módulo. En **mobile sigue
+  montado en la card de saldo**, y así queda hasta que exista el módulo nativo — ahí no hay a dónde
+  navegar todavía
 
 ## 4b. El borde (E10)
 

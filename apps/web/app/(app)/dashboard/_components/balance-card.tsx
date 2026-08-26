@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { useFormatter, useTranslations } from 'next-intl'
 import type { ResolvedAccountAvatar } from '@grana/ui-contracts'
@@ -15,7 +14,6 @@ import {
   type SavingsRow,
 } from '@grana/dashboard'
 import { Card } from '@/components/ui/card'
-import { SavingsDrawer } from '@/lib/savings/components/savings-drawer'
 import { useShowCents } from '@/lib/preferences-context'
 import { cn } from '@/lib/utils'
 import {
@@ -232,7 +230,6 @@ const SavingsLine = ({
   usdRow,
   showUsd,
   density,
-  onOpen,
 }: {
   row: SavingsRow
   usdRow: SavingsRow | null
@@ -241,15 +238,20 @@ const SavingsLine = ({
    *  naturaleza, y eso ya lo dicen la regla y el color — un tamaño distinto no
    *  agrega significado, se lee como un descuido. */
   density: AmountDensity
-  onOpen: () => void
 }) => {
   const t = useTranslations('dashboard')
   const isEmpty = row.state === 'empty'
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
+    // NAVEGA al módulo, no abre un overlay. El dashboard conserva la lectura y
+    // pierde la operatoria (E3): con el formulario montado acá, «Ahorro e
+    // inversión» tenía dos puertas que abrían cosas distintas, y la de más a
+    // mano era la que no llevaba al módulo.
+    //
+    // Un `Link` de verdad y no un botón que navega: se puede abrir en otra
+    // pestaña, se puede copiar el destino, y el navegador lo precarga.
+    <Link
+      href="/savings"
       // Sin relleno al pasar el mouse: un bloque gris a todo el ancho debajo de
       // los tres montos se lee como otra card metida adentro de la card. Lo que
       // marca que es tocable es el chevron, que se oscurece con el resto.
@@ -300,7 +302,7 @@ const SavingsLine = ({
           ›
         </span>
       </span>
-    </button>
+    </Link>
   )
 }
 
@@ -322,7 +324,6 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
   const t = useTranslations('dashboard')
   const format = useFormatter()
   const showCents = useShowCents()
-  const [savingsOpen, setSavingsOpen] = useState(false)
   const { hero, summary, venia, savings, displayed, isCurrent, selected, isLoading } =
     useBalanceMonth({
       todayISO,
@@ -492,23 +493,9 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
             usdRow={savings.USD}
             showUsd={summaryHasUsd}
             density={summaryDensity}
-            onOpen={() => setSavingsOpen(true)}
           />
         )}
       </div>
-
-      {/* With nothing set aside there is no detail worth reading, so the row goes
-          straight to the act — two taps instead of three, through an empty
-          screen nobody needs to see. */}
-      <SavingsDrawer
-        open={savingsOpen}
-        onClose={() => setSavingsOpen(false)}
-        initialView={
-          savings.ARS?.state === 'empty'
-            ? { kind: 'form', mode: 'save', currency: 'ARS', purposeId: null, locked: false }
-            : undefined
-        }
-      />
     </Card>
   )
 }

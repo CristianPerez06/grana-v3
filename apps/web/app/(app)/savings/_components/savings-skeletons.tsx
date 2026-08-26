@@ -73,3 +73,21 @@ export const SavingsBreakdownSkeleton = async () => {
     </div>
   )
 }
+
+/** Dos resúmenes plegados: lo único que ocupa alto mientras carga. */
+export const SavingsLedgerSkeleton = async () => {
+  const t = await getTranslations('savings.route')
+  return (
+    <div
+      className="mt-1 flex min-h-[5.5rem] flex-col gap-1 sm:max-w-[34rem]"
+      aria-busy="true"
+      aria-label={t('ledger_loading')}
+    >
+      {Array.from({ length: 2 }).map((_, i) => (
+        <div key={i} className="flex min-h-[44px] items-center px-1">
+          <span className="h-3 w-52 animate-pulse rounded bg-muted" />
+        </div>
+      ))}
+    </div>
+  )
+}

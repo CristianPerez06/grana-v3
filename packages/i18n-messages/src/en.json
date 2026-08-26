@@ -2194,6 +2194,8 @@
     "empty_body": "You can mark part of your money so it stops counting as available. It doesn't leave your bank: Grana just helps you keep it apart from day-to-day spending.",
     "empty_cta": "Set something aside",
     "route": {
+      "ledger_loading": "Loading history…",
+      "ledger_error": "We could not load the history.",
       "loading": "Loading your savings",
       "error": "We couldn't load your savings. Try again.",
       "headline_loading": "Loading how much you have set aside",

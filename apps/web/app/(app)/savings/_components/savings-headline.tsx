@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils'
 import { SavingsOverlayProvider, type SavingsOverlay } from './savings-overlay-context'
 import { moneyParts } from './money'
 
-/** `null` con el overlay cerrado. Un solo dueño del estado, y es este. */
+/** `null` mientras el overlay nunca se abrió. Un solo dueño del estado, y es este. */
 type DrawerState = SavingsDrawerInitialView | null
 
 /**
@@ -66,7 +66,16 @@ export const SavingsHeadline = ({
   children: React.ReactNode
 }) => {
   const t = useTranslations('savings')
-  const [drawer, setDrawer] = useState<DrawerState>(null)
+  // Dos estados y no uno: el overlay ya no tiene vista raíz, así que necesita
+  // saber a qué abre — y si al cerrar se borrara esa vista, se desmontaría de
+  // golpe y perdería la animación de salida. `view` se queda con la última;
+  // `open` es lo que la muestra.
+  const [view, setView] = useState<DrawerState>(null)
+  const [open, setOpen] = useState(false)
+  const setDrawer = (next: SavingsDrawerInitialView) => {
+    setView(next)
+    setOpen(true)
+  }
 
   const hasAnythingSaved = moduleHasSavings(sums)
 
@@ -145,13 +154,12 @@ export const SavingsHeadline = ({
         </div>
       )}
 
-      {/* El overlay abre DIRECTO a la vista que se pidió, así que su detalle
-          nunca se dibuja: la lectura vive en esta página y no se duplica. */}
-      <SavingsDrawer
-        open={drawer != null}
-        onClose={() => setDrawer(null)}
-        initialView={drawer ?? undefined}
-      />
+      {/* El overlay abre DIRECTO a lo que se pidió. Ya no tiene lectura propia:
+          se la llevó esta página, y lo que queda son actos. No se monta hasta el
+          primer uso — quien solo viene a mirar cuánto tiene no paga su carga. */}
+      {view != null && (
+        <SavingsDrawer open={open} onClose={() => setOpen(false)} initialView={view} />
+      )}
     </div>
   )
 }

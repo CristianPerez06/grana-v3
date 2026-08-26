@@ -2194,6 +2194,8 @@
     "empty_body": "Podés separar una parte para que no cuente como disponible. No se mueve de tu banco: Grana solo te ayuda a no mezclarla con lo del día a día.",
     "empty_cta": "Guardar algo",
     "route": {
+      "ledger_loading": "Cargando el historial…",
+      "ledger_error": "No pudimos cargar el historial.",
       "loading": "Cargando tu ahorro",
       "error": "No pudimos cargar tu ahorro. Probá de nuevo.",
       "headline_loading": "Cargando cuánto tenés guardado",

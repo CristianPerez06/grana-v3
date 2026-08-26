@@ -334,3 +334,32 @@ pantalla. Contraste verificado: 5.91:1 en claro, 8.47:1 en oscuro.
 Y hay tokens de modo oscuro desde el día uno, aunque hoy nada los encienda: el cálido se aclara y
 el botón invierte —fondo ámbar, texto navy— porque un cálido oscuro sobre una página oscura
 desaparece.
+
+## E18 — El overlay se quedó sin lectura, y eso lo cambia de naturaleza
+
+Podar la vista de detalle no fue borrar una pantalla: fue sacarle al overlay la única parte que
+**no** era un acto. Lo que queda son un formulario, un grupo y un reparto — todos empiezan por algo
+que el usuario tocó, y ninguno es un lugar al que «ir a mirar».
+
+Tres consecuencias, y ninguna es cosmética:
+
+**`initialView` pasa a ser obligatorio.** Antes era opcional porque había una raíz de la que colgar
+todo; ahora abrir el overlay sin decir a qué es una contradicción, y el tipo lo dice.
+
+**La flecha del fondo de la pila CIERRA.** Antes caía en el detalle: entrabas desde la lista del
+módulo, volvías, y aparecía otra lista — la misma, peor dibujada, encima de la que ya estaba atrás.
+Era el síntoma más visible de la duplicación y desaparece solo al sacar la raíz.
+
+**Cada apertura hace dos consultas menos.** El historial y el flujo del mes eran del detalle. No se
+borraron: se mudaron a `/savings`, plegados al pie, donde son lectura entre lectura. El overlay se
+quedó con las tres que son topes de operación — cuánto hay, cómo está repartido, y qué propósitos
+existen.
+
+Y una que se decidió al pasar: **el dashboard ya no monta el overlay.** Su fila navega. El estado
+vacío paga un tap de más —antes iba derecho al formulario— y a cambio «Ahorro e inversión» deja de
+tener dos puertas que abren cosas distintas, con la de más a mano llevando a la que no es el módulo.
+Es exactamente lo que 4b.5 pide para el estado apagado, adelantado: no hay drawer viejo al que caer.
+
+**Mobile queda como está**, con el overlay montado en su card de saldo. No es una omisión: sin módulo
+nativo no hay a dónde navegar, y cambiar la fila antes de que exista el destino sería romper la única
+puerta que tiene.

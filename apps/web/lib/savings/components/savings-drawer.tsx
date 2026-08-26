@@ -6,21 +6,17 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getAvailableSums,
   getPurposeSums,
-  getReserveFlowSums,
   getAllocationHistory,
-  getReserveHistory,
   listPurposes,
-  moduleGroupCurrency,
   PURPOSE_SEEDS,
   RESERVE_HISTORY_LIMIT,
   type AvailableSums,
   type Purpose,
   type PurposeSums,
-  type ReserveEntry,
 } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { parseMoneyInput } from '@grana/validation'
-import { Calendar, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Calendar, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Drawer } from '@/components/ui/drawer'
 import { purposeGlyph, purposeTint } from '@/lib/savings/purpose-emblem'
 import { Button } from '@/components/ui/button'
@@ -54,7 +50,6 @@ type Mode = 'save' | 'release'
  * mano, peor. Con una pila, "volver" es siempre lo mismo.
  */
 type View =
-  | { kind: 'detail' }
   | {
       kind: 'group'
       currency: Currency
@@ -105,7 +100,13 @@ type View =
  * Exportado para que quien lo abre no vuelva a escribir estas formas: el módulo
  * arma tres de ellas, y una copia suya podría decir algo que la pila no acepta.
  */
-export type SavingsDrawerInitialView = Exclude<View, { kind: 'detail' }>
+/**
+ * Por dónde abre el overlay. Es CUALQUIER vista, porque ya no hay una vista raíz
+ * de la que colgar las demás: el overlay dejó de tener lectura propia el día que
+ * el módulo se la llevó, y lo que queda son actos — un formulario, un grupo, un
+ * reparto. Todos empiezan por algo que el usuario tocó.
+ */
+export type SavingsDrawerInitialView = View
 
 /**
  * Los pasos de los atajos de monto, por moneda.
@@ -169,48 +170,30 @@ export function SavingsDrawer({
    * algo. Cuando el módulo es la lectura, esa vista intermedia no se dibuja
    * nunca — la lista de la página ya la reemplazó.
    */
-  initialView?: SavingsDrawerInitialView
+  initialView: SavingsDrawerInitialView
 }) {
   const t = useTranslations('savings')
-  const [stack, setStack] = useState<View[]>([{ kind: 'detail' }])
+  const [stack, setStack] = useState<View[]>([initialView])
   const view = stack[stack.length - 1]
   const push = (next: View) => setStack((s) => [...s, next])
-  const back = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s))
+  // En el fondo de la pila la flecha CIERRA. Antes caía en la vista de detalle,
+  // que era la misma lista que la página de atrás: entrabas desde la lista del
+  // módulo, volvías, y aparecía otra lista.
+  const back = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : (onClose(), s)))
   const queryClient = useQueryClient()
 
-  const today = getTodayAR()
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-  const monthRange = { from: formatDateISO(monthStart), to: formatDateISO(today) }
-
-  // The reads only run while the drawer is open: they are the detail's data, and
-  // a closed drawer has no detail. `staleTime: 0` because the numbers here are
-  // the ones the user just changed — a cached stock right after saving would show
-  // the previous total on the screen that exists to audit it.
-  const [sumsQuery, historyQuery, flowQuery, purposeSumsQuery, purposesQuery] = useQueries({
+  // Las lecturas corren SOLO con el overlay abierto: son los topes de las
+  // operaciones, y un overlay cerrado no está por operar. `staleTime: 0` porque
+  // son los números que el usuario acaba de cambiar.
+  //
+  // Quedaron tres. El historial y el flujo del mes se fueron con la vista de
+  // detalle: eran lectura, y la lectura vive en la página. Cada apertura del
+  // overlay hace dos consultas menos.
+  const [sumsQuery, purposeSumsQuery, purposesQuery] = useQueries({
     queries: [
       {
         queryKey: ['savings', 'sums'],
         queryFn: () => getAvailableSums(createClient()),
-        enabled: open,
-        staleTime: 0,
-      },
-      {
-        // Las dos monedas en UNA lista: el detalle ya no está partido por
-        // moneda, así que su historial tampoco.
-        queryKey: ['savings', 'history', 'all'],
-        queryFn: () => getReserveHistory(createClient()),
-        enabled: open,
-        staleTime: 0,
-      },
-      {
-        // "Este mes" sale de la MISMA lectura normativa que la fila del
-        // dashboard. Sumarlo acá a mano —filtrar el historial por prefijo de mes
-        // y acumular— era una segunda implementación del mismo número: con
-        // floats crudos en vez de `Money`, y sin el corte temporal, así que una
-        // reserva fechada mañana la contaba esta pantalla y no la contaba la
-        // fila. Dos números distintos para lo mismo, uno al lado del otro.
-        queryKey: ['savings', 'flow', monthRange.from, monthRange.to],
-        queryFn: () => getReserveFlowSums(createClient(), monthStart, today),
         enabled: open,
         staleTime: 0,
       },
@@ -236,66 +219,13 @@ export function SavingsDrawer({
   })
 
   const sums: AvailableSums[] | null = sumsQuery.data ?? null
-  const history: { entries: ReserveEntry[]; hasMore: boolean } = historyQuery.data ?? {
-    entries: [] as ReserveEntry[],
-    hasMore: false,
-  }
-  const monthNet = (currency: Currency): number =>
-    flowQuery.data?.find((f) => f.currencyCode === currency)?.reservedNet ?? 0
-
   const purposeSums: PurposeSums[] = purposeSumsQuery.data ?? []
 
-  const CURRENCIES = ['ARS', 'USD'] as const
   const purposes: Purpose[] = purposesQuery.data ?? []
 
   const purposeById = (id: string | null): Purpose | null =>
     id == null ? null : (purposes.find((p) => p.id === id) ?? null)
 
-  /**
-   * Los grupos, con sus montos EN LAS DOS MONEDAS y «Sin destino» al final.
-   *
-   * La lectura es por propósito y no por moneda: la pregunta que trae al usuario
-   * es "¿para qué tengo guardado?", y partirla en dos pantallas —una por
-   * moneda— lo obliga a recordar un número mientras mira el otro. Los montos
-   * conviven en la fila y NO se suman: sumarlos exigiría convertir.
-   *
-   * Ordenados por lo que pesa en pesos y, a igualdad, por dólares. «Sin destino»
-   * queda fijo abajo aunque sea el más grande: es el resto, y el resto va al
-   * final de una lista aunque pese.
-   */
-  const groupsUnified = (): {
-    purposeId: string | null
-    name: string | null
-    icon: string | null
-    amounts: { currency: Currency; reserved: number }[]
-  }[] => {
-    const byPurpose = new Map<string, (typeof rows)[number]>()
-    const rows = purposeSums
-    for (const row of rows) byPurpose.set(row.purposeId ?? 'none', row)
-
-    const keys = [...new Set(rows.map((r) => r.purposeId ?? 'none'))]
-    const built = keys.map((key) => {
-      const any = byPurpose.get(key)!
-      return {
-        purposeId: any.purposeId,
-        name: any.purposeName,
-        icon: any.purposeIcon,
-        amounts: CURRENCIES.map((c) => ({
-          currency: c,
-          reserved: groupAmount(c, any.purposeId),
-        })),
-      }
-    })
-
-    const amountIn = (g: (typeof built)[number], c: Currency) =>
-      g.amounts.find((a) => a.currency === c)?.reserved ?? 0
-
-    const named = built
-      .filter((g) => g.purposeId != null)
-      .sort((a, b) => amountIn(b, 'ARS') - amountIn(a, 'ARS') || amountIn(b, 'USD') - amountIn(a, 'USD'))
-
-    return [...named, ...built.filter((g) => g.purposeId == null)]
-  }
 
   const groupAmount = (currency: Currency, purposeId: string | null): number =>
     purposeSums.find((s) => s.currencyCode === currency && s.purposeId === purposeId)?.reserved ?? 0
@@ -312,7 +242,7 @@ export function SavingsDrawer({
     setWasOpen(open)
     if (open) {
       // El detalle queda SIEMPRE debajo en la pila: es a donde vuelve la flecha.
-      setStack(initialView == null ? [{ kind: 'detail' }] : [{ kind: 'detail' }, initialView])
+      setStack([initialView])
     }
   }
 
@@ -337,7 +267,6 @@ export function SavingsDrawer({
   // en el detalle deja al usuario preguntándose si pasó algo, y ese es el peor
   // final posible para una acción sobre plata.
   const onDone = async () => {
-    setStack([{ kind: 'detail' }])
     onClose()
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['savings'] }),
@@ -417,57 +346,6 @@ export function SavingsDrawer({
     else push({ kind: 'purposeForm', purpose: null })
   }
 
-  /**
-   * Volver a usar: de dónde sale.
-   *
-   * Con un solo grupo con saldo la pregunta tiene una única respuesta posible y
-   * es puro paso. Con varios, se elige — y NUNCA se reparte solo: eso sería
-   * inventar una imputación, lo mismo que el modelo se niega a hacer con las
-   * cuentas.
-   *
-   * La moneda de la operación sale del grupo: si tiene pesos, pesos; si solo
-   * tiene dólares, dólares. Y el formulario la deja cambiar.
-   */
-  /** Un número de la card, en las dos monedas. Nunca sumadas. */
-  const totals = (field: 'reserved' | 'available') =>
-    currencies.map((c) => ({ currency: c, reserved: rowFor(c)[field] }))
-
-  // La regla vive en `@grana/savings` porque el módulo entra a los mismos grupos
-  // desde su lista: dos copias podrían abrir el mismo propósito en monedas
-  // distintas según por dónde se entró.
-  const currencyWithMoney = (purposeId: string | null): Currency =>
-    moduleGroupCurrency(
-      CURRENCIES.map((c) => ({ currency: c, reserved: groupAmount(c, purposeId) })),
-    )
-
-  /**
-   * El botón global de volver a usar NO pregunta primero de dónde sale.
-   *
-   * Preguntaba: abría una pantalla titulada «¿Para qué?» —la pregunta de
-   * DESTINAR, heredada del otro selector— para elegir el origen de un retiro.
-   * La pantalla decía lo contrario de lo que hacía, y encima cobraba un tap
-   * para decidir algo que el formulario ya sabe mostrar: el origen es un chip
-   * más, al lado del monto, con el tope y el resto actualizándose al tocarlo.
-   */
-  const openRelease = () => {
-    const withMoney = groupsUnified().filter((g) =>
-      g.amounts.some((a) => a.reserved > 0),
-    )
-    // Arranca en el resto si tiene plata: es el grupo del que se vuelve a usar
-    // sin deshacer ninguna decisión, y por eso el que casi siempre se busca.
-    const start = withMoney.some((g) => g.purposeId == null)
-      ? null
-      : (withMoney[0]?.purposeId ?? null)
-    push({
-      kind: 'form',
-      mode: 'release',
-      currency: currencyWithMoney(start),
-      purposeId: start,
-      // Con un solo grupo con plata no hay nada que elegir, y ofrecer un chip
-      // único es pedir una decisión que ya está tomada.
-      locked: withMoney.length <= 1,
-    })
-  }
 
   return (
     <Drawer open={open} onClose={onClose} ariaLabel={t('title')} widthPx={480}>
@@ -541,9 +419,10 @@ export function SavingsDrawer({
             purpose={view.purpose}
             sums={purposeSums}
             onDone={() => {
-              // Al detalle, no al grupo: el grupo ya no existe. Y navegar antes
-              // de refrescar, por lo mismo que arriba.
-              setStack([{ kind: 'detail' }])
+              // Se cierra: el grupo que se estaba mirando ya no existe, y no hay
+              // vista de atrás a la que volver — la lista vive en la página, que
+              // es justo la que se va a refrescar.
+              onClose()
               void refresh()
             }}
             onBack={back}
@@ -617,375 +496,8 @@ export function SavingsDrawer({
           />
         )}
 
-        {view.kind === 'detail' && (
-          <>
-            <h2 className="text-[21px] font-extrabold tracking-[-0.025em] text-text">
-              {t('title')}
-            </h2>
-
-            {/* UN solo número protagonista, en las dos monedas y sin sumarlas.
-                Sin selector: la moneda es el eje de la OPERACIÓN, no el de la
-                lectura — partir el detalle en dos pantallas obliga a recordar un
-                número mientras se mira el otro.
-
-                Y sin "Para gastar" al lado: dos tarjetas gemelas no dejan
-                protagonista a ninguna, y esta pantalla contesta "cuánto tengo
-                guardado y para qué". El disponible es el número del dashboard,
-                que está justo detrás de este drawer, y acá aparece donde
-                significa algo — como resultado de la resta, adentro de "Cómo se
-                ve en tu banco". */}
-            <div className="mt-4">
-              <Headline label={t('total_saved')} amounts={totals('reserved')} />
-            </div>
-
-            <p className="mt-5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
-              {t('purposes.label')}
-            </p>
-            <ul className="mt-2 flex flex-col gap-1.5">
-              {groupsUnified()
-                .filter((g) => g.purposeId != null)
-                .map((group) => (
-                  <li key={group.purposeId}>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        push({
-                          kind: 'group',
-                          currency: currencyWithMoney(group.purposeId),
-                          purpose: purposeById(group.purposeId)!,
-                        })
-                      }
-                      className="flex min-h-[44px] w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-surface-sunken"
-                    >
-                      <span aria-hidden className="text-[16px]">
-                        {group.icon ?? '🫙'}
-                      </span>
-                      <span className="flex-1 truncate text-[14px] font-semibold text-text">
-                        {group.name}
-                      </span>
-                      <GroupAmounts amounts={group.amounts} />
-                      <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
-                    </button>
-                  </li>
-                ))}
-            </ul>
-
-            {/* El resto: una fila especial al PIE de la lista, no una card.
-                Como caja con borde y botones pesaba más que Viaje o Emergencia
-                —que sí son cosas— e invertía la jerarquía: el sobrante gritaba
-                más que los destinos. Y sus dos botones competían con los dos
-                grandes de abajo, que hacen otra cosa.
-
-                Sigue diciendo la verdad —no navega, no tiene chevron, se ve
-                distinto— pero como pie de lista: distinto sin ser más
-                importante. Las acciones van como enlaces, que es el peso que les
-                corresponde al lado de los botones globales. */}
-            {(() => {
-              const rest = groupsUnified().find((g) => g.purposeId == null)
-              if (rest == null) return null
-              const hasMoney = rest.amounts.some((a) => a.reserved > 0)
-
-              return (
-                <div className="mt-1 border-t border-border-soft pt-2">
-                  {/* `pr` compensa el ancho del chevron que esta fila NO tiene
-                      (16px + los 10px del gap), para que los montos queden en
-                      una sola columna. Sin eso, el del resto se corría 26px a la
-                      derecha y la lista dejaba de leerse como lista. */}
-                  <div className="flex items-center gap-2.5 py-1.5 pl-2 pr-[34px]">
-                    <span aria-hidden className="text-[16px]">
-                      🫙
-                    </span>
-                    <span className="flex-1 truncate text-[14px] font-semibold text-text-muted">
-                      {t('purposes.none')}
-                    </span>
-                    <GroupAmounts amounts={rest.amounts} muted />
-                  </div>
-                  {hasMoney && (
-                    <div className="flex items-center gap-2 pl-[38px] text-[12.5px] font-bold text-emerald-deep">
-                      <button
-                        type="button"
-                        className="min-h-[36px]"
-                        onClick={() =>
-                          push({
-                            kind: 'allocate',
-                            currency: currencyWithMoney(null),
-                            purpose: null,
-                            direction: 'allocate',
-                          })
-                        }
-                      >
-                        {t('purposes.allocate')}
-                      </button>
-                      <span aria-hidden className="text-text-soft">
-                        ·
-                      </span>
-                      <button
-                        type="button"
-                        className="min-h-[36px]"
-                        onClick={() =>
-                          push({
-                            kind: 'form',
-                            mode: 'release',
-                            currency: currencyWithMoney(null),
-                            purposeId: null,
-                            locked: true,
-                          })
-                        }
-                      >
-                        {t('release')}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )
-            })()}
-
-            <div className="mt-5 flex gap-2">
-              <Button
-                className="flex-1"
-                onClick={() =>
-                  push({
-                    kind: 'form',
-                    mode: 'save',
-                    currency: 'ARS',
-                    purposeId: null,
-                    locked: false,
-                  })
-                }
-              >
-                {t('save')}
-              </Button>
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onClick={openRelease}
-                disabled={totals('reserved').every((a) => a.reserved <= 0)}
-              >
-                {t('release')}
-              </Button>
-            </div>
-
-            {/* Plegado: era el centro de la fase 1, cuando la idea nueva era
-                "tu banco muestra otro número". Ya no lo es, y una explicación
-                que se entiende una vez no tiene que cobrar altura todos los
-                días. Pero no se borra: es lo que evita que alguien abra su home
-                banking, vea otra cifra y le crea al banco. */}
-            <details className="group mt-5">
-              <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
-                <ChevronRight
-                  className="size-3.5 transition-transform group-open:rotate-90"
-                  aria-hidden
-                />
-                {t('bank_fold')}
-              </summary>
-              <div className="mt-2 flex flex-col gap-3">
-                {currencies.map((currency) => (
-                  <BankBridge key={currency} currency={currency} sums={rowFor(currency)} />
-                ))}
-                <p className="px-1 text-[12.5px] leading-snug text-text-soft">{t('gap_note')}</p>
-              </div>
-            </details>
-
-            <details className="group mt-3">
-              <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
-                <ChevronRight
-                  className="size-3.5 transition-transform group-open:rotate-90"
-                  aria-hidden
-                />
-                {t('history_count', { count: history.entries.length })}
-              </summary>
-              {/* El neto del mes, arriba de la lista que resume: es el mismo
-                  flujo, contado de dos maneras. Vivía en el puente y ahí
-                  competía con la explicación de por qué el banco dice otra
-                  cosa, que es una pregunta distinta. */}
-              {currencies.some((c) => monthNet(c) !== 0) && (
-                <div className="mt-2 flex flex-col gap-0.5 rounded-xl bg-surface-sunken px-3 py-2 text-[13px]">
-                  {currencies
-                    .filter((c) => monthNet(c) !== 0)
-                    .map((c) => (
-                      <p key={c} className="flex justify-between text-text-muted">
-                        <span>
-                          {t(monthNet(c) < 0 ? 'this_month_released' : 'this_month_saved')}
-                        </span>
-                        <span
-                          className={cn(
-                            'font-extrabold tabular-nums',
-                            monthNet(c) >= 0 ? 'text-emerald-deep' : 'text-text-muted',
-                          )}
-                        >
-                          {money(Math.abs(monthNet(c)), c)}
-                        </span>
-                      </p>
-                    ))}
-                </div>
-              )}
-              {history.entries.length === 0 ? (
-                <p className="mt-2 text-[13px] text-text-soft">{t('empty_history')}</p>
-              ) : (
-                <ul className="mt-2 flex flex-col divide-y divide-border-soft">
-                  {history.entries.map((entry) => (
-                    <li
-                      key={entry.id}
-                      className="flex items-center justify-between gap-3 py-2.5"
-                    >
-                      <span className="text-[14px] font-semibold text-text">
-                        {entry.amount >= 0 ? t('entry_saved') : t('entry_released')}
-                        <span className="ml-2 text-[12px] font-medium text-text-soft">
-                          {shortDate(entry.date)}
-                        </span>
-                      </span>
-                      <span
-                        className={cn(
-                          'text-[14px] font-extrabold tabular-nums',
-                          // El negativo en terracotta, que es el color de lo
-                        // que sale en toda la app. En gris, «soltaste $20.000»
-                        // se leía igual que la fecha de al lado y las dos
-                        // direcciones del historial parecían la misma.
-                        entry.amount >= 0 ? 'text-emerald-deep' : 'text-terracotta-deep',
-                        )}
-                      >
-                        {entry.amount >= 0 ? '+' : '−'}
-                        {money(Math.abs(entry.amount), entry.currencyCode)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {history.hasMore && (
-                <p className="mt-2 text-[12px] text-text-soft">
-                  {t('history_truncated', { count: RESERVE_HISTORY_LIMIT })}
-                </p>
-              )}
-            </details>
-          </>
-        )}
       </div>
     </Drawer>
-  )
-}
-
-/**
- * Un número de la card, en las dos monedas.
- *
- * Sin total que las sume, y no es una omisión: sumarlas exige convertir, y Grana
- * no convierte. La segunda línea aparece SOLO si hay algo — la mayoría de los
- * usuarios tiene pesos y nada más, y una línea vacía de dólares les cobraría
- * altura por un dato que no tienen.
- */
-const Headline = ({
-  label,
-  amounts,
-}: {
-  label: string
-  amounts: { currency: Currency; reserved: number }[]
-}) => {
-  const shown = amounts.filter((a, i) => a.reserved !== 0 || i === 0)
-
-  return (
-    <div className="rounded-2xl border border-border-soft bg-card p-3.5">
-      <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
-        {label}
-      </p>
-      {shown.map((a, i) => (
-        <p
-          key={a.currency}
-          className={cn(
-            'tabular-nums text-text',
-            i === 0
-              ? 'mt-1.5 text-[22px] font-extrabold leading-none tracking-[-0.03em]'
-              : 'mt-1 text-[14px] font-bold text-text-muted',
-          )}
-        >
-          {money(a.reserved, a.currency)}
-        </p>
-      ))}
-    </div>
-  )
-}
-
-/** Los montos de un grupo en las dos monedas, apilados y sin sumar. */
-const GroupAmounts = ({
-  amounts,
-  size = 'md',
-  muted = false,
-}: {
-  amounts: { currency: Currency; reserved: number }[]
-  size?: 'sm' | 'md'
-  /** El resto se muestra apagado: es un sobrante, no un destino. */
-  muted?: boolean
-}) => {
-  // Solo las monedas con algo. Un propósito con pesos nada más ocupa una línea;
-  // la fila crece únicamente cuando el dato lo pide.
-  const shown = amounts.filter((a) => a.reserved !== 0)
-  const list = shown.length > 0 ? shown : [amounts[0]]
-
-  return (
-    // `shrink-0` y `whitespace-nowrap`: el monto es un flex child al lado de un
-    // nombre que puede ser largo, y sin esto el navegador lo encoge a él —
-    // parte el número o lo corta. En una app de plata un monto cortado no es un
-    // detalle de layout: se lee como un número poco confiable. El que cede es
-    // el NOMBRE, que ya trunca con puntos suspensivos.
-    <span className="flex shrink-0 flex-col items-end whitespace-nowrap">
-      {list.map((a, i) => (
-        <span
-          key={a.currency}
-          className={cn(
-            'font-extrabold tabular-nums',
-            size === 'sm' ? 'text-[13px]' : 'text-[14px]',
-            muted || i > 0 ? 'text-text-muted' : 'text-text',
-          )}
-        >
-          {money(a.reserved, a.currency)}
-        </span>
-      ))}
-    </span>
-  )
-}
-
-/**
- * Por qué el banco muestra otro número.
- *
- * Sin esto, alguien que abre su cuenta y ve $5.085.748 y después abre Grana y ve
- * $4.895.748 no tiene dónde entender la diferencia — y le va a creer al banco,
- * porque es "el de verdad". Acá los dos aparecen juntos y lo que los separa
- * tiene nombre. No hace falta ningún consejo: alcanza con mostrar la resta.
- *
- * Es SOLO la conciliación. El flujo del mes vivía acá y se fue al historial: una
- * cosa es "por qué los dos números no coinciden" y otra "cuánto me moví este
- * mes". Mezcladas, la explicación deja de explicar.
- *
- * Va plegado porque se entiende una vez, no porque haya dejado de importar.
- */
-const BankBridge = ({ currency, sums }: { currency: Currency; sums: AvailableSums }) => {
-  const t = useTranslations('savings')
-
-  return (
-    <div className="rounded-xl bg-surface-sunken px-3 py-2.5 text-[13px]">
-      <p className="mb-1 text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
-        {currency}
-      </p>
-      {/* Los rótulos nombran los DOS sistemas, no las entidades de Grana. Acá la
-          pregunta no es "cuánto tengo en cuentas": es "por qué mi banco dice
-          otra cosa", y para contestarla hay que decir de quién es cada número. */}
-      <p className="flex justify-between py-0.5 text-text-muted">
-        <span>{t('bank_shows')}</span>
-        <span className="font-semibold tabular-nums text-text">
-          {money(sums.accountsNet, currency)}
-        </span>
-      </p>
-      <p className="flex justify-between py-0.5 text-text-muted">
-        <span>{t('saved_in_grana')}</span>
-        <span className="font-semibold tabular-nums text-emerald-deep">
-          −{money(sums.reserved, currency)}
-        </span>
-      </p>
-      <p className="mt-1 flex justify-between border-t border-border pt-1.5 text-text-muted">
-        <span>{t('spendable_in_grana')}</span>
-        <span className="font-extrabold tabular-nums text-text">
-          {money(sums.available, currency)}
-        </span>
-      </p>
-    </div>
   )
 }
 
