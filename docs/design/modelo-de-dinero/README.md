@@ -7,7 +7,7 @@ en el navegador.
 |---|---|---|
 | `fase-1-guardar.html` | 1 · Guardar | **Superado por la implementación.** «Liberar» hoy se llama **Volver a usar** |
 | `fase-2-proposito.html` | 2 · Propósito | **Superado por la implementación**, y en un punto de modelo, no solo de nombres — ver abajo |
-| `fase-3a-plazo-fijo.html` | 3A · Plazo fijo | **Vigente.** Siete pantallas, dos de carga. Rehecho de cero aplicando las reglas de la fase 2 |
+| `fase-3a-plazo-fijo.html` | 3A · Plazo fijo | **Vigente en lo contable, a redibujar en la navegación.** Siete pantallas, dos de carga. Entra a `extract-savings-module`: la cuenta pasa a ser **atajo contextual**, no la puerta principal |
 | `fase-3-posiciones.html` | 3 · Posiciones | **Superado por `fase-3a`.** Se conserva por el razonamiento contable —stock vs. flujo, el bucket, los tres desenlaces—, pero su circuito de once pantallas repetía el patrón que la fase 2 desarmó |
 | — | 4 y 5 | No se mockean todavía: dibujar el detalle de una meta o la pantalla de patrimonio sería inventar decisiones que no están tomadas, y un mock convincente de algo no decidido termina implementándose tal cual |
 
