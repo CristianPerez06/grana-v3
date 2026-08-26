@@ -56,7 +56,9 @@ export const SavingsOverview = ({
       available: 0,
     }
 
-  const totalReserved = CURRENCIES.reduce((acc, c) => acc + row(c).reserved, 0)
+  // `some`, no una suma: preguntar "¿hay algo guardado?" no justifica sumar ARS
+  // con USD ni siquiera para un booleano. La regla no tiene excepción de uso.
+  const hasAnythingSaved = CURRENCIES.some((c) => row(c).reserved > 0)
 
   // Los grupos con nombre, por lo que pesan; «Sin destino» va aparte, al pie.
   const groups: Group[] = Array.from(
@@ -95,9 +97,9 @@ export const SavingsOverview = ({
   }))
   const restHasMoney = restAmounts.some((a) => a.reserved > 0)
 
-  if (totalReserved <= 0) {
+  if (!hasAnythingSaved) {
     return (
-      <>
+      <div className="flex flex-col">
         <Headline sums={sums} rowFor={row} />
         <div className="mt-4 rounded-2xl border border-border-soft bg-card p-5">
           <h2 className="text-[16px] font-extrabold tracking-[-0.01em] text-text">
@@ -109,12 +111,15 @@ export const SavingsOverview = ({
           </Button>
         </div>
         <Drawer state={drawer} onClose={() => setDrawer(null)} />
-      </>
+      </div>
     )
   }
 
+  // Un solo contenedor, y el espaciado en márgenes propios. Devolver un
+  // fragmento dejaba a cada bloque como item del `flex gap-6` del layout, que se
+  // sumaba a los `mt-*` y separaba todo al doble.
   return (
-    <>
+    <div className="flex flex-col">
       <Headline sums={sums} rowFor={row} />
 
       <p className="mt-5 px-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
@@ -190,7 +195,7 @@ export const SavingsOverview = ({
       </div>
 
       <Drawer state={drawer} onClose={() => setDrawer(null)} />
-    </>
+    </div>
   )
 }
 
@@ -261,8 +266,11 @@ const Amount = ({
   <span
     className={cn(
       'whitespace-nowrap text-right tabular-nums',
-      strong ? 'font-extrabold text-emerald-deep' : 'font-bold text-text',
-      subordinate ? (strong ? 'text-[15px]' : 'text-[13px] font-semibold text-text-muted') : strong ? 'text-[21px] tracking-[-0.01em]' : 'text-[15px]',
+      strong && 'font-extrabold text-emerald-deep',
+      !strong && !subordinate && 'text-[15px] font-bold text-text',
+      !strong && subordinate && 'text-[13px] font-semibold text-text-muted',
+      strong && !subordinate && 'text-[21px] tracking-[-0.01em]',
+      strong && subordinate && 'text-[15px]',
     )}
   >
     {value === 0 && subordinate ? '—' : money(value, currency)}
