@@ -503,8 +503,10 @@ export const BalanceCard = ({ todayISO, heroInitial, monthInitial }: Props) => {
       <SavingsDrawer
         open={savingsOpen}
         onClose={() => setSavingsOpen(false)}
-        initialMode={
-          savings.ARS?.state === 'empty' ? { mode: 'save', currency: 'ARS' } : undefined
+        initialView={
+          savings.ARS?.state === 'empty'
+            ? { kind: 'form', mode: 'save', currency: 'ARS', purposeId: null, locked: false }
+            : undefined
         }
       />
     </Card>

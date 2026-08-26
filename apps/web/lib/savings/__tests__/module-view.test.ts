@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   moduleAmountOf,
+  moduleGroupCurrency,
   moduleGroups,
   moduleHasSavings,
   moduleRest,
@@ -170,5 +171,34 @@ describe('cuántos montos muestra una fila', () => {
         { currency: 'USD', reserved: 0 },
       ]),
     ).toEqual([{ currency: 'ARS', reserved: 0 }])
+  })
+})
+
+describe('en qué moneda entra una fila', () => {
+  it('en pesos cuando tiene pesos, aunque también tenga dólares', () => {
+    const viaje = moduleGroups(ROWS).find((g) => g.name === 'Viaje')!
+    expect(moduleGroupCurrency(viaje.amounts)).toBe('ARS')
+  })
+
+  it('en dólares cuando es lo único que tiene', () => {
+    expect(
+      moduleGroupCurrency([
+        { currency: 'ARS', reserved: 0 },
+        { currency: 'USD', reserved: 10 },
+      ]),
+    ).toBe('USD')
+  })
+
+  it('en pesos cuando no tiene nada: no hay moneda que el dato indique', () => {
+    expect(
+      moduleGroupCurrency([
+        { currency: 'ARS', reserved: 0 },
+        { currency: 'USD', reserved: 0 },
+      ]),
+    ).toBe('ARS')
+  })
+
+  it('el resto de agosto abre en pesos, que es donde está', () => {
+    expect(moduleGroupCurrency(moduleRest(ROWS))).toBe('ARS')
   })
 })

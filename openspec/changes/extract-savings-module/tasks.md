@@ -74,10 +74,13 @@
 - [x] 4.1a La **lectura** vive en el módulo: la grilla bimoneda, la lista de propósitos y «Sin
   destino» al pie, desde `get_available_sums` y `get_purpose_sums` — las mismas dos lecturas
   normativas que consume el dashboard, sin recomponer nada
-- [ ] 4.1b Los **formularios**: hoy los botones globales abren el overlay existente **directo al
-  formulario** (`initialMode`), así que su vista de detalle nunca se dibuja y no hay lectura
-  duplicada. Falta cablear las filas de propósito (detalle), los enlaces del resto (destinar / volver
-  a usar) y después **podar del overlay la vista de detalle**, que ya vive en la página
+- [x] 4.1b Los **formularios**: todo lo que se toca en el módulo abre el overlay **directo a la
+  vista que se pidió** (`initialView`), así que su detalle nunca se dibuja y no hay lectura
+  duplicada. Cableados: los dos botones globales (formulario), las filas de propósito (su grupo) y
+  los dos enlaces del resto (destinar / volver a usar). La moneda de entrada sale del dato
+  (`moduleGroupCurrency`) y no de un default, que abriría un propósito de solo dólares con tope cero
+- [ ] 4.1c **Podar del overlay la vista de detalle**, que ya vive en la página. Queda para cuando la
+  fila del dashboard navegue (4.2): hasta entonces es la única puerta que todavía la usa
 - [ ] 4.2 La fila de Guardado del dashboard **navega** en vez de abrir el overlay
 - [ ] 4.3 La tira post-ingreso queda donde está, y su acción sigue resolviendo en el lugar (E3)
 - [ ] 4.4 Verificar que ningún formulario de ahorro quedó montado en otra superficie

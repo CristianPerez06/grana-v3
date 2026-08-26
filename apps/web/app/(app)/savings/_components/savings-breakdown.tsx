@@ -2,9 +2,15 @@
 
 import { useTranslations } from 'next-intl'
 import { ChevronRight } from 'lucide-react'
-import { moduleGroups, moduleRest, moduleVisibleAmounts } from '@grana/savings'
+import {
+  moduleGroupCurrency,
+  moduleGroups,
+  moduleRest,
+  moduleVisibleAmounts,
+} from '@grana/savings'
 import type { ModuleAmount, PurposeSums } from '@grana/savings'
 import { cn } from '@/lib/utils'
+import { useSavingsOverlay } from './savings-overlay-context'
 import { money } from './money'
 
 /**
@@ -21,10 +27,15 @@ import { money } from './money'
  */
 export const SavingsBreakdown = ({ purposeSums }: { purposeSums: PurposeSums[] }) => {
   const t = useTranslations('savings')
+  const overlay = useSavingsOverlay()
 
   const groups = moduleGroups(purposeSums)
   const rest = moduleRest(purposeSums)
   const restHasMoney = rest.some((a) => a.reserved > 0)
+  // La moneda de la operación sale del dato, no de un default: un resto de solo
+  // dólares abriría en pesos, con tope cero, sobre una pantalla que no explica
+  // por qué.
+  const restCurrency = moduleGroupCurrency(rest)
 
   return (
     <div className="mt-6 sm:max-w-[34rem]">
@@ -38,6 +49,12 @@ export const SavingsBreakdown = ({ purposeSums }: { purposeSums: PurposeSums[] }
             <li key={g.purposeId}>
               <button
                 type="button"
+                onClick={() =>
+                  overlay.openPurpose(
+                    { id: g.purposeId, name: g.name, icon: g.icon },
+                    moduleGroupCurrency(g.amounts),
+                  )
+                }
                 className="flex min-h-[60px] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-surface-sunken"
               >
                 <Icon>{g.icon ?? '🫙'}</Icon>
@@ -72,8 +89,14 @@ export const SavingsBreakdown = ({ purposeSums }: { purposeSums: PurposeSums[] }
             // usar» queriendo «Destinar» — la que saca plata del disponible y la
             // que no la toca.
             <div className="flex justify-end gap-2 px-4 pb-3">
-              <RestAction label={t('purposes.allocate')} />
-              <RestAction label={t('release')} />
+              <RestAction
+                label={t('purposes.allocate')}
+                onClick={() => overlay.openRestAllocate(restCurrency)}
+              />
+              <RestAction
+                label={t('release')}
+                onClick={() => overlay.openRestRelease(restCurrency)}
+              />
             </div>
           )}
         </div>
@@ -96,13 +119,20 @@ const Icon = ({ children, muted = false }: { children: React.ReactNode; muted?: 
   </span>
 )
 
-/** 44px de alto, que es el mínimo del repo. Al volverlas pills se habían
- *  quedado en 36 — más prolijo y peor de tocar, sobre una de las dos acciones
- *  que mueven plata. */
-const RestAction = ({ label }: { label: string }) => (
+/**
+ * 44px de alto, que es el mínimo del repo. Al volverlas pills se habían quedado
+ * en 36 — más prolijo y peor de tocar, sobre una de las dos acciones que mueven
+ * plata.
+ *
+ * Texto en tinta plena y no gris: en gris se leían como rótulos apagados y no
+ * como algo que se toca. Y no verdes: el acento es de los botones globales, y
+ * dos verdes en la misma pantalla los pone a competir.
+ */
+const RestAction = ({ label, onClick }: { label: string; onClick: () => void }) => (
   <button
     type="button"
-    className="flex min-h-[44px] items-center rounded-full border border-border bg-card px-4 text-[13px] font-semibold text-text-muted transition-colors hover:bg-surface-sunken hover:text-text"
+    onClick={onClick}
+    className="flex min-h-[44px] items-center rounded-full border border-border bg-card px-4 text-[13px] font-semibold text-text transition-colors hover:bg-surface-sunken"
   >
     {label}
   </button>

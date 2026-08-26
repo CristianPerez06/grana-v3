@@ -46,6 +46,7 @@ export {
   moduleGroups,
   moduleRest,
   moduleVisibleAmounts,
+  moduleGroupCurrency,
   type ModuleAmount,
   type ModuleGroup,
 } from './module-view'

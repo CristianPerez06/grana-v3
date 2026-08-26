@@ -10,6 +10,7 @@ import {
   getAllocationHistory,
   getReserveHistory,
   listPurposes,
+  moduleGroupCurrency,
   PURPOSE_SEEDS,
   RESERVE_HISTORY_LIMIT,
   type AvailableSums,
@@ -97,6 +98,14 @@ type View =
       direction: 'allocate' | 'unallocate'
     }
 
+/**
+ * Por dónde puede ABRIR el overlay: cualquier vista de la pila menos el detalle.
+ *
+ * Exportado para que quien lo abre no vuelva a escribir estas formas: el módulo
+ * arma tres de ellas, y una copia suya podría decir algo que la pila no acepta.
+ */
+export type SavingsDrawerInitialView = Exclude<View, { kind: 'detail' }>
+
 const money = (amount: number, currency: Currency) =>
   currency === 'USD' ? formatUSD(amount) : formatARS(amount, true)
 
@@ -131,12 +140,22 @@ const shortDate = (iso: string): string => {
 export function SavingsDrawer({
   open,
   onClose,
-  initialMode,
+  initialView,
 }: {
   open: boolean
   onClose: () => void
-  /** The dashboard row opens straight into the form when nothing is saved yet. */
-  initialMode?: { mode: Mode; currency: Currency }
+  /**
+   * Dónde abre el overlay, cuando no es el detalle.
+   *
+   * Es CUALQUIER vista de la pila menos el detalle, y no una lista corta aparte:
+   * el módulo entra a cuatro de ellas y una unión paralela habría que ampliarla
+   * cada vez, con la de acá y la de allá pudiendo decir cosas distintas.
+   *
+   * El detalle queda igual debajo en la pila, así que la flecha siempre vuelve a
+   * algo. Cuando el módulo es la lectura, esa vista intermedia no se dibuja
+   * nunca — la lista de la página ya la reemplazó.
+   */
+  initialView?: SavingsDrawerInitialView
 }) {
   const t = useTranslations('savings')
   const [stack, setStack] = useState<View[]>([{ kind: 'detail' }])
@@ -272,20 +291,14 @@ export function SavingsDrawer({
   // synchronization with an external system, and doing it in an effect costs a
   // second render with the previous view still on screen.
   //
-  // `initialMode` is read once per opening on purpose — reacting to it would
-  // yank the user back to the form after they navigated to the detail.
+  // `initialView` is read once per opening on purpose — reacting to it would
+  // yank the user back after they navigated.
   const [wasOpen, setWasOpen] = useState(open)
   if (open !== wasOpen) {
     setWasOpen(open)
     if (open) {
-      setStack(
-        initialMode
-          ? [
-              { kind: 'detail' },
-              { ...initialMode, kind: 'form', purposeId: null, locked: false },
-            ]
-          : [{ kind: 'detail' }],
-      )
+      // El detalle queda SIEMPRE debajo en la pila: es a donde vuelve la flecha.
+      setStack(initialView == null ? [{ kind: 'detail' }] : [{ kind: 'detail' }, initialView])
     }
   }
 
@@ -405,8 +418,13 @@ export function SavingsDrawer({
   const totals = (field: 'reserved' | 'available') =>
     currencies.map((c) => ({ currency: c, reserved: rowFor(c)[field] }))
 
+  // La regla vive en `@grana/savings` porque el módulo entra a los mismos grupos
+  // desde su lista: dos copias podrían abrir el mismo propósito en monedas
+  // distintas según por dónde se entró.
   const currencyWithMoney = (purposeId: string | null): Currency =>
-    CURRENCIES.find((c) => groupAmount(c, purposeId) > 0) ?? 'ARS'
+    moduleGroupCurrency(
+      CURRENCIES.map((c) => ({ currency: c, reserved: groupAmount(c, purposeId) })),
+    )
 
   /**
    * El botón global de volver a usar NO pregunta primero de dónde sale.

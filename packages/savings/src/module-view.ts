@@ -1,12 +1,13 @@
 // Qué MUESTRA el módulo «Ahorro e inversión», decidido una sola vez para las dos
 // plataformas — igual que `balance-card-view.ts` hace con la card de saldo.
 //
-// Acá viven cuatro decisiones que se pueden equivocar en silencio:
+// Acá viven cinco decisiones que se pueden equivocar en silencio:
 //
 //   1. Si hay algo guardado, que decide entre la foto y el estado vacío.
 //   2. Si se dibuja la columna de dólares.
 //   3. El orden de los propósitos.
 //   4. Cuántos montos muestra una fila.
+//   5. En qué moneda entra una fila cuando se la toca.
 //
 // Escritas dentro de un componente, cada plataforma las volvería a escribir y
 // divergirían — que es la forma exacta en que la migración 0051 tuvo que
@@ -115,4 +116,19 @@ export function moduleRest(rows: PurposeSums[]): ModuleAmount[] {
 export function moduleVisibleAmounts(amounts: ModuleAmount[]): ModuleAmount[] {
   const shown = amounts.filter((a) => a.reserved !== 0)
   return shown.length > 0 ? shown : [amounts[0]]
+}
+
+/**
+ * En qué moneda abre un grupo cuando se toca su fila.
+ *
+ * La primera que tenga plata, y pesos si no tiene ninguna. La fila muestra las
+ * dos monedas sin sumarlas, pero las operaciones que siguen —volver a usar,
+ * apartar— son de UNA moneda (D16), así que entrar exige elegir una. Elegir
+ * pesos siempre abriría un propósito de solo dólares en su moneda vacía.
+ *
+ * Vive acá porque el drawer ya tomaba esta misma decisión por su cuenta: dos
+ * copias de la misma regla es exactamente lo que la 0051 vino a enseñar.
+ */
+export function moduleGroupCurrency(amounts: ModuleAmount[]): BalanceCurrency {
+  return amounts.find((a) => a.reserved > 0)?.currency ?? 'ARS'
 }

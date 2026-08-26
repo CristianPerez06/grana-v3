@@ -1,16 +1,38 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { moduleHasSavings, moduleRowFor, moduleShowsUsd } from '@grana/savings'
 import type { AvailableSums } from '@grana/savings'
 import type { BalanceCurrency } from '@grana/money-logic'
 import { Button } from '@/components/ui/button'
 import { SavingsDrawer } from '@/lib/savings/components/savings-drawer'
+import type { SavingsDrawerInitialView } from '@/lib/savings/components/savings-drawer'
 import { cn } from '@/lib/utils'
+import { SavingsOverlayProvider, type SavingsOverlay } from './savings-overlay-context'
 import { money } from './money'
 
-type DrawerState = { mode: 'save' | 'release'; currency: BalanceCurrency } | null
+/** `null` con el overlay cerrado. Un solo dueño del estado, y es este. */
+type DrawerState = SavingsDrawerInitialView | null
+
+/**
+ * Los dos botones globales entran sin propósito elegido: el destino se decide
+ * adentro, con los chips, y no antes de saber el monto.
+ */
+const SAVE_ARS = {
+  kind: 'form',
+  mode: 'save',
+  currency: 'ARS',
+  purposeId: null,
+  locked: false,
+} as const satisfies DrawerState
+const RELEASE_ARS = {
+  kind: 'form',
+  mode: 'release',
+  currency: 'ARS',
+  purposeId: null,
+  locked: false,
+} as const satisfies DrawerState
 
 /**
  * La foto del módulo y sus dos acciones globales, con el desglose en el medio.
@@ -36,20 +58,36 @@ export const SavingsHeadline = ({
   // compartidas con lo que va a necesitar mobile. Acá solo se dibujan.
   const hasAnythingSaved = moduleHasSavings(sums)
 
+  // Estable entre renders: es el valor de un contexto, y uno nuevo por render
+  // volvería a dibujar la lista entera cada vez que se abre o cierra el overlay.
+  const overlay = useMemo<SavingsOverlay>(
+    () => ({
+      openPurpose: (purpose, currency) => setDrawer({ kind: 'group', currency, purpose }),
+      // Darle destino al resto: el propósito va nulo porque se elige adentro —
+      // se entró desde el resto, que no es uno.
+      openRestAllocate: (currency) =>
+        setDrawer({ kind: 'allocate', currency, purpose: null, direction: 'allocate' }),
+      // `locked` porque el origen ya está elegido: se tocó la fila del resto.
+      openRestRelease: (currency) =>
+        setDrawer({ kind: 'form', mode: 'release', currency, purposeId: null, locked: true }),
+    }),
+    [],
+  )
+
   return (
     <div className="flex flex-col">
       <Grid sums={sums} />
 
       {hasAnythingSaved ? (
         <>
-          {children}
+          <SavingsOverlayProvider value={overlay}>{children}</SavingsOverlayProvider>
           {/* Contenidos en desktop: a lo ancho de la página quedaban enormes
               para dos acciones. En teléfono siguen ocupando el ancho. */}
           <div className="mt-5 flex gap-2.5 sm:max-w-[26rem]">
             <Button
               size="lg"
               className="h-12 flex-1 font-semibold"
-              onClick={() => setDrawer({ mode: 'save', currency: 'ARS' })}
+              onClick={() => setDrawer(SAVE_ARS)}
             >
               {t('save')}
             </Button>
@@ -59,7 +97,7 @@ export const SavingsHeadline = ({
               variant="secondary"
               size="lg"
               className="h-12 flex-1 border border-border bg-card font-semibold hover:bg-border-soft"
-              onClick={() => setDrawer({ mode: 'release', currency: 'ARS' })}
+              onClick={() => setDrawer(RELEASE_ARS)}
             >
               {t('release')}
             </Button>
@@ -76,19 +114,19 @@ export const SavingsHeadline = ({
           <Button
             size="lg"
             className="mt-4 h-12 font-semibold sm:max-w-[16rem]"
-            onClick={() => setDrawer({ mode: 'save', currency: 'ARS' })}
+            onClick={() => setDrawer(SAVE_ARS)}
           >
             {t('empty_cta')}
           </Button>
         </div>
       )}
 
-      {/* El overlay abre DIRECTO al formulario, así que su vista de detalle
+      {/* El overlay abre DIRECTO a la vista que se pidió, así que su detalle
           nunca se dibuja: la lectura vive en esta página y no se duplica. */}
       <SavingsDrawer
         open={drawer != null}
         onClose={() => setDrawer(null)}
-        initialMode={drawer ?? undefined}
+        initialView={drawer ?? undefined}
       />
     </div>
   )
@@ -165,7 +203,10 @@ const Amount = ({
   <span
     className={cn(
       'whitespace-nowrap pt-1.5 text-right tabular-nums',
-      subordinate ? 'text-[15px]' : 'text-[20px] tracking-[-0.01em]',
+      // El protagonista es más grande, pero sigue sin ser verde: el acento es de
+      // las acciones y este número no lo es. Con los dos montos al mismo cuerpo,
+      // el peso solo no alcanzaba y la grilla se leía como dos filas iguales.
+      subordinate ? 'text-[15px]' : strong ? 'text-[23px] tracking-[-0.02em]' : 'text-[19px]',
       strong ? 'font-extrabold text-text' : 'font-normal text-text-muted',
     )}
   >
