@@ -89,13 +89,18 @@ export const SavingsBreakdown = ({ purposeSums }: { purposeSums: PurposeSums[] }
 /**
  * «Sin destino»: el resto de lo guardado que todavía no tiene para qué.
  *
- * Va ENTRE el total y los propósitos, y se distingue de ellos por FORMA y no
- * por color: el círculo punteado y el borde punteado dicen «esto está sin
- * terminar» sin gastar un color del sistema en una sola caja. Un propósito es
- * una cosa; esto es un sobrante, y por eso ni siquiera tiene ícono propio.
+ * Va ENTRE el total y los propósitos, y se distingue de ellos por forma Y por
+ * color. Primero se probó solo con la forma —punteado sobre gris— para no
+ * agregar tokens: no alcanzó. Un bloque gris con borde punteado tiene un
+ * significado que ya existe en toda interfaz, y es «deshabilitado». Decía lo
+ * contrario de lo que es: acá hay plata, y hay algo para decidir.
  *
- * No navega: no hay detalle que abrir, porque no es un propósito. Sus dos
- * acciones resuelven en el lugar.
+ * El cálido es lo que lo vuelve «pendiente de decidir» en vez de «apagado», y
+ * son tokens propios (`--savings-unassigned-*`) y no `--warning`, porque esto
+ * NO es una alerta: no hay nada mal, es un estado normal que puede durar meses.
+ *
+ * Un propósito es una cosa; esto es un sobrante, y por eso no tiene ícono propio
+ * ni navega — no hay detalle que abrir. Sus dos acciones resuelven en el lugar.
  */
 const UnassignedBlock = ({
   amounts,
@@ -110,11 +115,11 @@ const UnassignedBlock = ({
   const visible = moduleVisibleAmounts(amounts)
 
   return (
-    <section className="rounded-[20px] border border-dashed border-border bg-surface-sunken/50 p-[15px] sm:px-5 sm:py-[18px]">
+    <section className="rounded-[20px] border border-dashed border-savings-unassigned-border bg-savings-unassigned-bg p-[15px] sm:px-5 sm:py-[18px]">
       <div className="flex items-center gap-3">
         <span
           aria-hidden
-          className="grid size-10 shrink-0 place-items-center rounded-full border-[1.5px] border-dashed border-text-soft text-text-muted"
+          className="grid size-10 shrink-0 place-items-center rounded-full border-[1.5px] border-dashed border-savings-unassigned-deep/50 text-savings-unassigned-deep"
         >
           <Plus className="size-[19px]" strokeWidth={2.1} />
         </span>
@@ -122,7 +127,7 @@ const UnassignedBlock = ({
         <div className="min-w-0 flex-1">
           {/* Versalitas y no nombre propio: «Sin destino» no es un nombre que
               alguien eligió, es la etiqueta de lo que quedó. */}
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.11em] text-text-muted">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.11em] text-savings-unassigned-deep">
             {t('purposes.none')}
           </p>
           <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3">
@@ -130,8 +135,8 @@ const UnassignedBlock = ({
               <span
                 key={a.currency}
                 className={cn(
-                  'whitespace-nowrap font-extrabold tracking-[-0.045em] tabular-nums text-text',
-                  i === 0 ? 'text-[22px]' : 'text-[14px] text-text-muted',
+                  'whitespace-nowrap font-extrabold tracking-[-0.045em] tabular-nums text-savings-unassigned-text',
+                  i === 0 ? 'text-[22px]' : 'text-[14px] opacity-80',
                 )}
               >
                 {money(a.reserved, a.currency)}
@@ -143,14 +148,14 @@ const UnassignedBlock = ({
         <button
           type="button"
           onClick={onAllocate}
-          className="min-h-11 shrink-0 rounded-[13px] bg-text px-4 text-[12.5px] font-extrabold text-white transition-opacity hover:opacity-90"
+          className="min-h-11 shrink-0 rounded-[13px] bg-savings-unassigned-deep px-4 text-[12.5px] font-extrabold text-savings-unassigned-on-deep transition-opacity hover:opacity-90"
         >
           {t('purposes.allocate')}
         </button>
       </div>
 
-      <div className="mt-[11px] border-t border-dashed border-border pt-[11px]">
-        <p className="text-[11.5px] font-semibold leading-[1.45] text-text-muted">
+      <div className="mt-[11px] border-t border-dashed border-savings-unassigned-border pt-[11px]">
+        <p className="text-[11.5px] font-semibold leading-[1.45] text-savings-unassigned-text/85">
           {t('purposes.none_explainer')}
         </p>
         {/* «Volver a usar» va como enlace y no como segundo botón: es la acción
@@ -159,7 +164,7 @@ const UnassignedBlock = ({
         <button
           type="button"
           onClick={onRelease}
-          className="mt-1 inline-flex min-h-11 items-center text-[12.5px] font-extrabold text-emerald-deep transition-colors hover:text-text"
+          className="mt-1 inline-flex min-h-11 items-center text-[12.5px] font-extrabold text-savings-unassigned-deep underline decoration-savings-unassigned-deep/35 underline-offset-[5px] transition-colors hover:decoration-savings-unassigned-deep"
         >
           {t('release_from_unassigned')}
         </button>

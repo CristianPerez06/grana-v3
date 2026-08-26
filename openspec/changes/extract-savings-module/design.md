@@ -294,3 +294,43 @@ respetaba era `Grana - Guardado V1 compacta.html` —un estudio previo que qued�
 frame de tablet pone la card del total y la botonera lado a lado en `1.35fr 1fr`. Quedó marcado como
 superado adentro del propio archivo: un mock que contradice el invariante y no lo dice es una trampa
 para el próximo que lo abra.
+
+## E17 — «Sin destino» necesitaba color, y por qué el gris decía otra cosa
+
+E13 resolvió «Sin destino» solo con la forma —círculo punteado, borde punteado,
+ubicación— para no agregar tokens. **No alcanzó, y el modo en que falló vale más que el
+resultado.**
+
+Un bloque gris con borde punteado no es neutro: ya significa algo en cualquier interfaz, y
+ese algo es **«deshabilitado»**. La caja terminó diciendo lo contrario de lo que es —acá hay
+plata, y hay una decisión para tomar— y encima lo decía con más fuerza que el copy, porque el
+tratamiento se lee antes que el texto.
+
+La lección no es «hacía falta color». Es que **la ausencia de color no es la ausencia de
+significado**: el gris es una decisión de diseño como cualquier otra, y en este lugar era la
+equivocada. «Resolver por forma para no gastar un token» era ahorrar en el lado equivocado.
+
+**Los tokens son propios, no `--warning`.** El sistema ya tiene un ámbar (`--warning: #C49A3C`),
+pero su semántica es alerta: algo está mal y hay que corregirlo. Esto no está mal. Es un estado
+normal que puede durar meses, y con semántica de alerta el bloque le reclama al usuario por algo
+que nadie le pidió. Tampoco un `--cat-*`: esos identifican categorías de gasto, y reusarlos haría
+que el mismo tono signifique dos cosas en la misma app.
+
+Así que `--savings-unassigned-{bg,border,text,deep,on-deep}`, derivados del ámbar del sistema para
+que sea EL cálido de Grana y no el del mock — que venía de una paleta crema y sobre la página fría
+de la app se veía sucio.
+
+**El fondo no se separa por luminancia, y no puede.** Sobre un `--page` casi blanco, un cálido que
+se separara por brillo dejaría de ser suave: medido, `#F8EFDA` contra `#F6F7F9` da 1.07:1. Se separa
+por MATIZ y por un borde bastante más marcado que el de una card normal. Y la comparación que
+importa no es contra la página: es contra las **cards blancas de los propósitos**, que están al
+lado, donde sí hay diferencia (1.14:1 más el matiz).
+
+**El botón «Destinar» es cálido oscuro y no navy.** En navy competía con el total de arriba —el
+navy es la superficie del total— y ponía «ordenar un pendiente» al mismo peso que la acción global.
+El cálido lo mantiene adentro de su bloque: es la acción DE este estado, no una acción de la
+pantalla. Contraste verificado: 5.91:1 en claro, 8.47:1 en oscuro.
+
+Y hay tokens de modo oscuro desde el día uno, aunque hoy nada los encienda: el cálido se aclara y
+el botón invierte —fondo ámbar, texto navy— porque un cálido oscuro sobre una página oscura
+desaparece.

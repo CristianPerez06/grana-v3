@@ -75,6 +75,33 @@
   --warning-soft: rgba(196, 154, 60, 0.12);
   --warning-bg: rgba(196, 154, 60, 0.10);
 
+  /* Estado — «sin destino» de Ahorro: plata guardada a la que todavía no se le
+     dijo para qué.
+
+     Tokens propios y no `--warning`: esto NO es una alerta y no hay nada que
+     corregir; es una decisión pendiente, que es un estado normal y puede durar
+     meses. Con la semántica de alerta, el bloque le gritaba al usuario por no
+     haber hecho algo que nadie le pidió.
+
+     Tampoco un color de categoría (`--cat-*`): esos identifican categorías de
+     gasto, y reusarlos acá haría que el mismo tono signifique dos cosas.
+
+     El ámbar sale de `--warning: #C49A3C`, el único cálido del sistema, para que
+     sea EL cálido de Grana y no el del mock —que venía de una paleta crema y
+     sobre la página fría de la app se veía sucio.
+
+     El fondo NO se separa de la página por luminancia: sobre un `--page` casi
+     blanco, un cálido que lo hiciera dejaría de ser suave. Se separa por MATIZ
+     —amarillo contra gris azulado— y por el borde, que va bastante más marcado
+     de lo que pide un borde normal. La comparación que importa no es contra la
+     página sino contra las cards blancas de los propósitos, que están al lado:
+     ahí sí hay diferencia clara. */
+  --savings-unassigned-bg: #F8EFDA;
+  --savings-unassigned-border: #DFCCA4;
+  --savings-unassigned-text: #6B4E14;
+  --savings-unassigned-deep: #8A5A16;
+  --savings-unassigned-on-deep: #FFFFFF;
+
   /* Semantic — error (critical alerts) */
   --error: #C54B3C;
   --error-deep: #8A2A1E;
@@ -172,6 +199,15 @@
   --error-soft: rgba(197, 75, 60, 0.18);
   --error-bg: rgba(197, 75, 60, 0.10);
 
+  /* «Sin destino» sobre superficie oscura: el cálido se aclara para sostener el
+     contraste, y el botón invierte —fondo ámbar, texto navy— porque un cálido
+     oscuro sobre una página oscura desaparece. */
+  --savings-unassigned-bg: rgba(196, 154, 60, 0.12);
+  --savings-unassigned-border: rgba(196, 154, 60, 0.34);
+  --savings-unassigned-text: #E8C77A;
+  --savings-unassigned-deep: #D9AE55;
+  --savings-unassigned-on-deep: #0B1A2B;
+
   /* shadcn semantic remap for dark: bright accent becomes the CTA primary */
   --background: var(--page);
   --foreground: var(--text);
@@ -237,6 +273,12 @@
   --color-expense: var(--expense);
   --color-neutral-amount: var(--neutral-amount);
   --color-pending: var(--pending);
+  --color-savings-unassigned-bg: var(--savings-unassigned-bg);
+  --color-savings-unassigned-border: var(--savings-unassigned-border);
+  --color-savings-unassigned-text: var(--savings-unassigned-text);
+  --color-savings-unassigned-deep: var(--savings-unassigned-deep);
+  --color-savings-unassigned-on-deep: var(--savings-unassigned-on-deep);
+
   --color-warning: var(--warning);
   --color-warning-deep: var(--warning-deep);
   --color-warning-soft: var(--warning-soft);

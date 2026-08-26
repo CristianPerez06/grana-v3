@@ -116,8 +116,12 @@
 - [x] 4c.4 `PurposeCard` + grilla `repeat(auto-fill, minmax(330px, 1fr))`. Reemplaza la lista de
   filas. **El emoji se conserva**; lo que se adopta es el contenedor con tinte ciclado (E14)
 - [x] 4c.5 `UnassignedBlock`: bloque propio **entre** el total y los propósitos, visible solo con
-  monto > 0, diferenciado **por forma y no por color** (E13). Con monto en cero su explicación baja
-  al pie de la lista
+  monto > 0. Con monto en cero su explicación baja al pie de la lista
+- [x] 4c.5b **Corregido en QA: el bloque necesitaba color** (E17). Solo con forma —punteado sobre
+  gris— se leía como *deshabilitado*, que es lo contrario de lo que es. Entran
+  `--savings-unassigned-{bg,border,text,deep,on-deep}`, con variante dark, derivados del ámbar del
+  sistema y NO de `--warning`, que es semántica de alerta. El botón «Destinar» pasa a cálido oscuro:
+  en navy competía con el total, que es la superficie de la acción global
 - [ ] 4c.6 Los tres formularios con la anatomía del handoff — rótulo, pregunta, línea de movimiento,
   segmentado de moneda, monto, atajos, CTA con el monto escrito y nota al pie. **Sin teclado 3×4**:
   `MoneyAmountInput` con `inputMode="decimal"`, que es el teclado del sistema (E14)

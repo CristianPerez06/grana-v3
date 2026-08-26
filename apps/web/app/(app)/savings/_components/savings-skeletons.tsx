@@ -47,10 +47,12 @@ export const SavingsBreakdownSkeleton = async () => {
       aria-busy="true"
       aria-label={t('breakdown_loading')}
     >
-      <div className="rounded-[20px] border border-dashed border-border bg-surface-sunken/50 p-[15px]">
+      {/* Cálido ya en el placeholder: si apareciera gris y virara al resolver,
+          el bloque saltaría de «apagado» a «pendiente» a la vista. */}
+      <div className="rounded-[20px] border border-dashed border-savings-unassigned-border bg-savings-unassigned-bg p-[15px]">
         <div className="flex items-center gap-3">
-          <span className="size-10 shrink-0 animate-pulse rounded-full bg-muted" />
-          <span className="h-6 flex-1 animate-pulse rounded bg-muted" />
+          <span className="size-10 shrink-0 animate-pulse rounded-full bg-savings-unassigned-deep/15" />
+          <span className="h-6 flex-1 animate-pulse rounded bg-savings-unassigned-deep/15" />
         </div>
       </div>
       <div className="flex flex-col gap-2.5">
