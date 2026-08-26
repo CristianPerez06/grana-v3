@@ -363,7 +363,7 @@
     "movements": "Movimientos",
     "shared": "Compartido",
     "home": "Hogar",
-    "savings": "Ahorros",
+    "savings": "Ahorro e inversión",
     "settings": "Configuración",
     "logout": "Cerrar sesión",
     "open_menu": "Abrir menú",
@@ -2178,6 +2178,15 @@
     "bank_shows": "Tu banco muestra",
     "saved_in_grana": "Guardado en Grana",
     "spendable_in_grana": "Para gastar en Grana",
-    "this_month": "Este mes"
+    "this_month": "Este mes",
+    "currency_ars": "Pesos",
+    "currency_usd": "Dólares",
+    "empty_title": "Todavía no tenés plata guardada",
+    "empty_body": "Podés separar una parte para que no cuente como disponible. No se mueve de tu banco: Grana solo te ayuda a no mezclarla con lo del día a día.",
+    "empty_cta": "Guardar algo",
+    "route": {
+      "loading": "Cargando tu ahorro",
+      "error": "No pudimos cargar tu ahorro. Probá de nuevo."
+    }
   }
 }

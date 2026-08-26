@@ -59,18 +59,25 @@
 
 ## 3. La ruta y la entrada
 
-- [ ] 3.1 Ruta web **`/savings`** con su layout y estados de carga. La ruta va en inglés como todas
+- [x] 3.1 Ruta web **`/savings`** con su layout y estados de carga. La ruta va en inglés como todas
   —`/accounts`, `/cards`, `/transactions`— y el rótulo del menú en castellano, **«Ahorro e
   inversión»**, como todos. Que no coincidan es lo normal: `/shared` se llama *Compartido* (E11)
-- [ ] 3.2 Entrada en el menú web (`app-menu.tsx`) y en el chrome mobile, con el mismo rótulo
-- [ ] 3.3 Skeleton shell que matchee la forma real, como el resto de las secciones
-- [ ] 3.4 Estado vacío (mockeado): el número en cero, **una sola acción**, y la frase que evita el
+- [x] 3.2 Entrada en el menú web (`app-menu.tsx`), con el rótulo `nav.savings` — que existía como
+  clave huérfana ("Ahorros") y pasa a **«Ahorro e inversión»**. Falta el chrome mobile
+- [x] 3.3 Skeleton shell shape-matched: la grilla arriba y cuatro filas de lista abajo
+- [x] 3.4 Estado vacío: el número en cero, **una sola acción**, y la frase que evita el
   malentendido —*"guardar no mueve tu plata"*—. Sin propósitos, sin «Sin destino» en cero, y **sin
   ningún rastro de inversiones**, aunque el módulo se llame así (E8)
 
 ## 4. Mover la operatoria
 
-- [ ] 4.1 Montar en el módulo el detalle, el desglose y los formularios que hoy viven en el overlay
+- [x] 4.1a La **lectura** vive en el módulo: la grilla bimoneda, la lista de propósitos y «Sin
+  destino» al pie, desde `get_available_sums` y `get_purpose_sums` — las mismas dos lecturas
+  normativas que consume el dashboard, sin recomponer nada
+- [ ] 4.1b Los **formularios**: hoy los botones globales abren el overlay existente **directo al
+  formulario** (`initialMode`), así que su vista de detalle nunca se dibuja y no hay lectura
+  duplicada. Falta cablear las filas de propósito (detalle), los enlaces del resto (destinar / volver
+  a usar) y después **podar del overlay la vista de detalle**, que ya vive en la página
 - [ ] 4.2 La fila de Guardado del dashboard **navega** en vez de abrir el overlay
 - [ ] 4.3 La tira post-ingreso queda donde está, y su acción sigue resolviendo en el lugar (E3)
 - [ ] 4.4 Verificar que ningún formulario de ahorro quedó montado en otra superficie

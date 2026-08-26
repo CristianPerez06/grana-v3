@@ -363,7 +363,7 @@
     "movements": "Transactions",
     "shared": "Shared",
     "home": "Household",
-    "savings": "Savings",
+    "savings": "Savings & investing",
     "settings": "Settings",
     "logout": "Sign out",
     "open_menu": "Open menu",
@@ -2178,6 +2178,15 @@
     "bank_shows": "Your bank shows",
     "saved_in_grana": "Saved in Grana",
     "spendable_in_grana": "To spend in Grana",
-    "this_month": "This month"
+    "this_month": "This month",
+    "currency_ars": "Pesos",
+    "currency_usd": "Dollars",
+    "empty_title": "You haven't set anything aside yet",
+    "empty_body": "You can mark part of your money so it stops counting as available. It doesn't leave your bank: Grana just helps you keep it apart from day-to-day spending.",
+    "empty_cta": "Set something aside",
+    "route": {
+      "loading": "Loading your savings",
+      "error": "We couldn't load your savings. Try again."
+    }
   }
 }
