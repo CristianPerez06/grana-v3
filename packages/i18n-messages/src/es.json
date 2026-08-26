@@ -2186,7 +2186,11 @@
     "empty_cta": "Guardar algo",
     "route": {
       "loading": "Cargando tu ahorro",
-      "error": "No pudimos cargar tu ahorro. Probá de nuevo."
+      "error": "No pudimos cargar tu ahorro. Probá de nuevo.",
+      "headline_loading": "Cargando cuánto tenés guardado",
+      "headline_error": "No pudimos cargar cuánto tenés guardado.",
+      "breakdown_loading": "Cargando para qué es",
+      "breakdown_error": "No pudimos cargar el desglose por propósito."
     }
   }
 }

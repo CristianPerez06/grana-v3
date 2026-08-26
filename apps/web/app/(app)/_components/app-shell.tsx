@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   List,
   LogOut,
+  PiggyBank,
   Settings,
   Users,
   Wallet,
@@ -26,7 +27,7 @@ import { isActive, isChromeless } from "@/lib/nav";
 
 type NavItem = {
   href: string;
-  labelKey: "dashboard" | "accounts" | "cards" | "movements" | "home";
+  labelKey: "dashboard" | "accounts" | "cards" | "movements" | "home" | "savings";
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
 };
 
@@ -35,6 +36,7 @@ const PRIMARY_NAV: NavItem[] = [
   { href: "/accounts", labelKey: "accounts", icon: Wallet },
   { href: "/cards", labelKey: "cards", icon: CreditCard },
   { href: "/transactions", labelKey: "movements", icon: List },
+  { href: "/savings", labelKey: "savings", icon: PiggyBank },
   // `nav.home` ("Hogar"), not `nav.shared` ("Compartido"): the tab bar and this
   // sidebar point at the same place, so they say the same word.
   { href: "/shared", labelKey: "home", icon: Users },

@@ -2186,7 +2186,11 @@
     "empty_cta": "Set something aside",
     "route": {
       "loading": "Loading your savings",
-      "error": "We couldn't load your savings. Try again."
+      "error": "We couldn't load your savings. Try again.",
+      "headline_loading": "Loading how much you have set aside",
+      "headline_error": "We couldn't load how much you have set aside.",
+      "breakdown_loading": "Loading what it's for",
+      "breakdown_error": "We couldn't load the breakdown by purpose."
     }
   }
 }
