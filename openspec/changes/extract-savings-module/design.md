@@ -127,3 +127,55 @@ navegación cuesta más que nombrarlo bien la primera vez.
 
 Que el nombre prometa un poco más de lo que hay hoy es aceptable **mientras la pantalla no lo
 prometa** (E8).
+
+## E10 — Apagar el módulo nunca puede secuestrar plata
+
+El borde es el entregable (E2), así que hay que decir **qué pasa cuando el módulo está apagado** — por
+un plan vencido, un rollout parcial o una bandera de depuración.
+
+La trampa está en el caso del medio, y no la cubre ninguna regla simple:
+
+**El guardado sigue restando del disponible esté el módulo prendido o apagado.** Es un hecho sobre la
+plata, no una función: `disponible = cuentas − guardado`. Entonces alguien con $ 180.000 guardados y
+el módulo apagado tiene **$ 180.000 menos para gastar y ninguna forma de recuperarlos**. Su plata
+queda rehén de una bandera.
+
+Los tres estados:
+
+| | Menú y ruta | Fila del dashboard | Qué se puede hacer |
+|---|---|---|---|
+| **Prendido** | Sí | Navega al módulo | Todo |
+| **Apagado, guardado = 0** | No | No se dibuja | Nada, y no falta nada |
+| **Apagado, guardado > 0** | No | **Se queda y navega** | **Leer y volver a usar** |
+
+En el tercer estado el módulo entra en un **estado degradado**: la grilla, la lista de grupos en solo
+lectura y **una sola acción, volver a usar**. Sin chevrones, sin crear propósitos, sin destinar y sin
+guardar más.
+
+**La lectura sobrevive porque la acción la necesita.** El invariante de la fase 2 no deja sacar de un
+propósito sin nombrarlo, así que la lista tiene que estar para poder elegir el origen. No es
+decoración: es el mínimo para que la plata salga.
+
+### Esto NO es volver al drawer viejo
+
+Un fallback al drawer obligaría a mantenerlo montado en el dashboard **para siempre**, que es
+exactamente el acoplamiento que este change viene a sacar. El estado degradado es el **mismo módulo**
+con menos cosas, no una superficie paralela que hay que seguir manteniendo.
+
+### La bandera controla la superficie, nunca los números
+
+Apagar el módulo no puede cambiarle el disponible a nadie. Una bandera que reescribe la plata del
+usuario es peor que cualquier acoplamiento — y sería, además, la primera vez que un número de Grana
+depende de algo que no es un hecho.
+
+## E11 — La ruta en inglés, el rótulo en castellano
+
+`/savings`, y el menú dice **«Ahorro e inversión»**.
+
+Las rutas de la app son en inglés —`/accounts`, `/cards`, `/transactions`, `/shared`, `/settings`— con
+una sola excepción, `/shared/cuenta-corriente`, que es un término del dominio sin equivalente limpio.
+*Ahorro* sí lo tiene, y es además el nombre del módulo en la tabla de `AGENTS.md` (`16 savings`).
+
+Los **rótulos**, en cambio, son todos en castellano, como el resto de la interfaz. Que la ruta y el
+rótulo no coincidan literalmente es lo normal en la app: `/shared` se llama *Compartido* y
+`/transactions`, *Movimientos*.

@@ -295,6 +295,13 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
 .mtx .mv.usd{font-size:13px;font-weight:600;color:var(--muted)}
 .mtx .mv.st.usd{font-size:15px;font-weight:700}
 .mtx .mv.em{color:var(--emerald-deep)}
+
+/* la grilla partida: cuando no entra, cede el rótulo y los montos bajan */
+.mtx.stack{grid-template-columns:auto auto;justify-content:end;gap:2px 14px}
+.mtx.stack .mk{grid-column:1 / -1;text-align:left;padding-top:6px}
+/* enlaces del resto: livianos de peso, 44px de alto */
+.lnks{display:flex;gap:6px;padding-left:20px}
+.lnks span{min-height:44px;display:flex;align-items:center;padding:0 10px;font-size:13px;font-weight:700;color:var(--emerald-deep);border-radius:10px}
 </style>
 </head>
 <body>
@@ -361,7 +368,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
       </div>
       <div style="border-top:1px solid var(--border-soft);margin-top:2px;padding-top:8px">
         <div class="prow" style="padding-right:34px"><span class="ic">🫙</span><div class="nm"><b style="color:var(--muted);font-weight:600">Sin destino</b></div><div class="am" style="color:var(--muted)">$ 55.000,00</div></div>
-        <div style="display:flex;gap:9px;padding:2px 0 0 40px;font-size:12.5px;font-weight:700;color:var(--emerald-deep)"><span>Destinar</span><span style="color:var(--soft)">·</span><span>Volver a usar</span></div>
+        <div class="lnks" style="padding-left:32px"><span>Destinar</span><span>Volver a usar</span></div>
       </div>
       <div class="two" style="margin-top:15px"><div class="cta">Guardar</div><div class="cta ghost">Volver a usar</div></div>
     </div></div>
@@ -637,6 +644,98 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     <p class="note"><b>Las tres acciones del grupo, y ninguna cambia el total guardado</b> salvo <i>Volver a usar</i>, que es la única que toca el disponible. <i>Destinar más</i> suma desde el resto y <i>Quitar destino</i> se lo devuelve: las dos mueven el reparto y nada más.</p>
     <p class="note"><b>Guardar no está</b>, y es D18: guardar cambia el total, así que vive abajo en la pantalla anterior, donde el disponible está a la vista. Acá quedaría clavado en este propósito y con un tope que la pantalla no muestra.</p>
     <p class="note"><b>La misma grilla de la cabecera</b>, con una fila sola. Un propósito bimoneda se lee entero acá también, sin cambiar de pestaña ni sumar de cabeza.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">12</span>
+      <div>
+        <h2>La grilla en 360 px, con montos largos</h2>
+        <p class="sub">Dónde se rompe, y qué cede cuando se rompe.</p>
+        <span class="badge b-mod">Prueba de ancho</span>
+      </div>
+    </div>
+    <div class="phone" style="max-width:360px"><div class="scr">
+      <div class="sec-t">Entra</div>
+      <div class="c pad" style="padding:15px 17px">
+        <div class="mtx">
+          <span class="mh"></span><span class="mh">Pesos</span><span class="mh usd">Dólares</span>
+          <span class="mk">Para gastar</span><span class="mv">$ 4.905.748,17</span><span class="mv usd">US$ 850,00</span>
+          <span class="mk st">Guardado</span><span class="mv st em">$ 180.000,00</span><span class="mv st usd em">US$ 3.200,00</span>
+        </div>
+      </div>
+      <div class="sec-t">No entra: dos monedas de ocho cifras</div>
+      <div class="c pad" style="padding:15px 17px">
+        <div class="mtx stack">
+          <span class="mk">Para gastar</span>
+          <span class="mv">$ 12.345.678,90</span><span class="mv usd">US$ 123.456,78</span>
+          <span class="mk st">Guardado</span>
+          <span class="mv st em">$ 8.760.432,15</span><span class="mv st usd em">US$ 98.765,43</span>
+        </div>
+      </div>
+      <div class="callout"><b>Cuando no entra, la fila se parte en dos líneas</b>: el rótulo arriba, los dos montos abajo. Lo que <b>nunca</b> pasa es que un monto se achique o se corte — es la regla que la fase 2 ya escribió (D24): <i>el que cede es el nombre, nunca el monto</i>.</div>
+    </div></div>
+    <p class="note"><b>El punto de quiebre es concreto:</b> rótulo (~90 px) + pesos (~120) + dólares (~95) + separaciones (28) + padding de la card (34) ≈ <b>367 px</b>. En 360 no entra por poco, y con ocho cifras en las dos monedas no entra por mucho.</p>
+    <p class="note"><b>Por eso el quiebre no puede ser un <code>@media</code> por ancho de pantalla</b>: depende de cuántas cifras tenga <i>este</i> usuario. La fila se parte cuando su contenido no entra, no cuando el teléfono es chico.</p>
+    <p class="note"><b>Partida, sigue sin sumar nada</b> y sigue diciendo qué es cada número. Es más alta y es fea, y las dos cosas son mejores que un número truncado — <i>un monto cortado se lee como un número poco confiable, y la confianza en los números es lo único que Grana tiene.</i></p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">13</span>
+      <div>
+        <h2>«Sin destino»: liviano y tocable</h2>
+        <p class="sub">Dos cosas que parecían incompatibles.</p>
+        <span class="badge b-mod">Corregido</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="sec-t">Antes: dos textos pegados</div>
+      <div class="c pad">
+        <div class="prow" style="padding:6px 0"><span class="ic">🫙</span><div class="nm"><b style="color:var(--muted);font-weight:600">Sin destino</b></div><div class="am" style="color:var(--muted)">$ 55.000,00</div></div>
+        <div style="display:flex;gap:6px;padding-left:28px;font-size:12.5px;font-weight:700;color:var(--emerald-deep)"><span>Destinar</span><span style="color:var(--soft)">·</span><span>Volver a usar</span></div>
+      </div>
+      <div class="sec-t">Ahora: dos objetivos de 44 px</div>
+      <div class="c pad">
+        <div class="prow" style="padding:6px 0"><span class="ic">🫙</span><div class="nm"><b style="color:var(--muted);font-weight:600">Sin destino</b></div><div class="am" style="color:var(--muted)">$ 55.000,00</div></div>
+        <div class="lnks"><span>Destinar</span><span>Volver a usar</span></div>
+      </div>
+      <div class="callout"><b>El peso visual no cambia</b> —siguen siendo enlaces, no botones— pero cada uno tiene su caja de 44 px de alto y aire alrededor. El punto medio que los pegaba ahorraba 8 px y costaba la mitad de los toques.</div>
+    </div></div>
+    <p class="note"><b>Liviano es una decisión de jerarquía, no de tamaño táctil.</b> Se logra con el color, el peso de la tipografía y la ausencia de fondo — no achicando el área que hay que tocar con el pulgar.</p>
+    <p class="note"><b>Y se separan.</b> Pegados, el error más probable es tocar <i>Volver a usar</i> queriendo <i>Destinar</i> — que son la operación que saca plata del disponible y la que no lo toca. El peor par posible para confundir.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">14</span>
+      <div>
+        <h2>El módulo apagado, con plata adentro</h2>
+        <p class="sub">El caso que ninguna regla simple cubría.</p>
+        <span class="badge b-new">El borde</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="dh back"><span class="bk">‹</span><div><div class="k">Guardado</div><h3>Tu plata guardada</h3></div></div>
+      <div class="c pad" style="padding:15px 17px">
+        <div class="mtx">
+          <span class="mh"></span><span class="mh">Pesos</span><span class="mh usd">Dólares</span>
+          <span class="mk st">Guardado</span><span class="mv st em">$ 180.000,00</span><span class="mv st usd em">US$ 10,00</span>
+        </div>
+      </div>
+      <div class="c">
+        <div class="prow"><span class="ic">🚑</span><div class="nm"><b>Emergencia</b></div><div class="am">$ 50.000,00</div></div>
+        <div class="prow"><span class="ic">✈️</span><div class="nm"><b>Viaje</b></div><div class="am">$ 45.000,00<i>US$ 10,00</i></div></div>
+        <div class="prow"><span class="ic">🫙</span><div class="nm"><b style="color:var(--muted);font-weight:600">Sin destino</b></div><div class="am" style="color:var(--muted)">$ 55.000,00</div></div>
+      </div>
+      <div class="cta ghost" style="border-color:var(--emerald-deep);color:var(--emerald-deep)">Volver a usar</div>
+      <div class="callout warn-c"><b>Se lee y se recupera. No se agrega ni se reorganiza.</b> Sin chevrones —no hay detalle— sin crear propósitos, sin destinar y sin guardar más. Una sola acción: sacar la plata de acá.</div>
+    </div></div>
+    <p class="note"><b>La regla que hace falta escribir: apagar el módulo nunca puede secuestrar plata.</b> El guardado sigue restando del disponible esté el módulo prendido o apagado —es un hecho sobre la plata, no una función— así que alguien con $ 180.000 guardados y el módulo apagado tiene $ 180.000 menos para gastar <b>y ninguna forma de recuperarlos</b>. Eso no puede pasar, ni por un plan vencido ni por un rollout parcial.</p>
+    <p class="note"><b>Por eso «volver a usar» sobrevive al apagado</b>, y con él la lectura: sin ver dónde está repartida la plata no se puede sacar —el invariante de la fase 2 no deja sacar de un propósito sin nombrarlo— así que la lista tiene que estar, aunque sea de solo lectura.</p>
+    <p class="note"><b>Y esto NO es volver al drawer viejo.</b> Es el mismo módulo en estado degradado. Un fallback al drawer obligaría a mantenerlo montado en el dashboard para siempre, que es exactamente el acoplamiento que este change viene a sacar.</p>
+    <p class="note"><b>Con guardado en cero, en cambio, no queda nada:</b> ni entrada de menú, ni fila en el dashboard, ni ruta. No hay plata que rescatar y no hay número que explicar.</p>
+    <p class="note"><b>La bandera controla la superficie, nunca los números.</b> Apagar el módulo no puede cambiarle el disponible a nadie: eso sería una bandera reescribiendo la plata del usuario.</p>
   </section>
 
 </div>

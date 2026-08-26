@@ -59,7 +59,9 @@
 
 ## 3. La ruta y la entrada
 
-- [ ] 3.1 Ruta web `/savings` (o el slug que salga de 2.2) con su layout y estados de carga
+- [ ] 3.1 Ruta web **`/savings`** con su layout y estados de carga. La ruta va en inglés como todas
+  —`/accounts`, `/cards`, `/transactions`— y el rótulo del menú en castellano, **«Ahorro e
+  inversión»**, como todos. Que no coincidan es lo normal: `/shared` se llama *Compartido* (E11)
 - [ ] 3.2 Entrada en el menú web (`app-menu.tsx`) y en el chrome mobile, con el mismo rótulo
 - [ ] 3.3 Skeleton shell que matchee la forma real, como el resto de las secciones
 - [ ] 3.4 Estado vacío (mockeado): el número en cero, **una sola acción**, y la frase que evita el
@@ -72,6 +74,20 @@
 - [ ] 4.2 La fila de Guardado del dashboard **navega** en vez de abrir el overlay
 - [ ] 4.3 La tira post-ingreso queda donde está, y su acción sigue resolviendo en el lugar (E3)
 - [ ] 4.4 Verificar que ningún formulario de ahorro quedó montado en otra superficie
+
+## 4b. El borde (E10)
+
+- [ ] 4b.1 **Estado apagado con guardado en cero**: sin entrada de menú, sin ruta, sin fila en el
+  dashboard. No hay plata que rescatar ni número que explicar
+- [ ] 4b.2 **Estado apagado con guardado > 0**: la fila del dashboard **se queda y navega** —la card
+  tiene que seguir cerrando— y el módulo entra en **estado degradado**: la grilla, los grupos en solo
+  lectura y **una sola acción, volver a usar**. Sin crear, sin destinar, sin guardar más
+- [ ] 4b.3 La lista de grupos sobrevive al apagado **porque la acción la necesita**: el invariante de
+  la fase 2 no deja sacar de un propósito sin nombrarlo
+- [ ] 4b.4 **Verificar que apagar el módulo no cambia ningún número.** El guardado sigue restando del
+  disponible: la bandera controla la superficie, nunca la plata
+- [ ] 4b.5 **No existe fallback al drawer viejo.** Mantenerlo montado en el dashboard reintroduciría
+  el acoplamiento que este change saca
 
 ## 5. Lo que no se toca
 
@@ -91,6 +107,13 @@
   preselección**; desde un propósito → heredado. **Nunca se toca un propósito sin mostrarlo antes.**
   Falta verificar el tercer caso, que hoy no está implementado así
 - [ ] 6.3 Bimoneda: nada suma ARS con USD en ninguna pantalla del módulo
+- [ ] 6.7 **La grilla en 360 px con montos de ocho cifras en las dos monedas**: cuando no entra, la
+  fila se parte en dos líneas —rótulo arriba, montos abajo— y **ningún monto se achica ni se corta**
+  (D24). El quiebre depende del contenido, no del ancho de la pantalla, así que no puede ser un
+  `@media`
+- [ ] 6.8 **Los enlaces de «Sin destino» con el pulgar**: 44 px de alto cada uno y separados. Pegados
+  por un punto medio, el error más probable es tocar *Volver a usar* queriendo *Destinar* — la que
+  saca plata del disponible y la que no lo toca
 - [ ] 6.4 Regresión del dashboard: ningún número cambió, la card cierra, la tira sigue apareciendo
 - [ ] 6.5 QA nativo del módulo — **bloqueado por el mismo acceso que el issue #58**
 - [ ] 6.6 `pnpm openspec:check`, lint, typecheck (web y mobile) y tests en verde
