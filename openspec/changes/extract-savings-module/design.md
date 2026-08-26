@@ -179,3 +179,89 @@ una sola excepción, `/shared/cuenta-corriente`, que es un término del dominio 
 Los **rótulos**, en cambio, son todos en castellano, como el resto de la interfaz. Que la ruta y el
 rótulo no coincidan literalmente es lo normal en la app: `/shared` se llama *Compartido* y
 `/transactions`, *Movimientos*.
+
+## E12 — El rediseño llega después del modelo, y por eso no lo toca
+
+El handoff de diseño (`design_handoff_ahorro/`) reemplaza la pantalla entera. Vale la pena decir qué
+**no** reemplaza, porque es casi todo lo que costó: las dos lecturas normativas, los pisos por grupo,
+la tabla de repartos, la identidad de la card del mes y `module-view.ts`. El rediseño es piel y
+pantallas nuevas sobre el mismo modelo.
+
+Tres cosas del handoff sí eran modelo, y se resolvieron antes de dibujar nada:
+
+**La cascada de «Volver a usar» no entra.** El handoff proponía: *"primero sale de lo que no tiene
+propósito; si querés más, elegís de cuál sacarlo"*. Eso es una operación que toca dos grupos, y en la
+que **nadie eligió vaciar Sin destino** — lo decidió el orden de la regla. El historial de un
+propósito terminaría con un renglón que su dueño no puede explicar mirándolo. Es la misma imputación
+automática que el modelo se niega a hacer entre cuentas.
+
+Queda: **un origen por operación**. La app sugiere —preselecciona «Sin destino» si tiene saldo, con
+el tope a la vista— pero no imputa. Si el monto supera ese origen, no reparte: lo dice y ofrece la
+salida.
+
+Lo notable es que **esto ya estaba construido**. Lo único que faltaba era el final del mensaje: decía
+*"No podés volver a usar más de lo que tenés sin destino: $55.000"* —que solo niega— y pasa a decir
+*"Sin destino tiene $55.000. Para volver a usar más, elegí un propósito."* Con un solo grupo con
+saldo no hay propósito que elegir, así que ahí el mensaje se queda en la primera oración: ofrecer una
+salida que no existe es peor que no ofrecer ninguna.
+
+**La fecha del propósito espera a Metas.** El handoff agrega *«¿Para cuándo?»*, *«Julio 2027»*,
+*«Sin fecha»*. `savings_purpose` no tiene fecha y no es un olvido: el modelo define que *una meta es
+un propósito que ganó un objetivo*, con `target_amount`, `target_date` y `target_currency` **juntos**,
+en fase 4. Agregar sola la fecha deja la mitad decorativa —una fecha sin objetivo no calcula ningún
+progreso— y borra el límite que hizo que la fase 2 fuera chica. Sin fecha, el subtítulo de la card no
+tiene nada que decir, así que no hay subtítulo.
+
+**«Para gastar» sale de la pantalla, y está bien.** El disponible aparece donde significa algo: como
+tope del formulario de guardar. Es la misma conclusión a la que había llegado el detalle del overlay.
+
+## E13 — La paleta del handoff se traduce, no se importa
+
+El handoff trae su propio set de tokens: fondo crema `#F5F2EC`, bordes cálidos `#EAE5DC`, un ink
+`#1B2A33` y un ámbar completo. Grana es fría: `--page #F6F7F9`, `--border #E6EAEF`. Importarla tal
+cual deja dos opciones malas —un módulo que parece otro producto, o repintar la app entera desde una
+pantalla— así que se traduce a los tokens que ya existen.
+
+Dos traducciones no son obvias:
+
+**La card oscura del total usa `--navy`, el que ya viste.** Grana ya tiene una superficie oscura: la
+card de saldo del dashboard. Que el total de Ahorro sea *esa* superficie y no un segundo oscuro
+parecido es lo que hace que las dos se lean como el mismo sistema. El `#1B2A33` del handoff se
+descarta.
+
+**«Sin destino» se diferencia por FORMA, no por color.** El handoff lo resuelve con un bloque ámbar
+entero, y Grana no tiene ámbar: lo más cercano es `--cat-6`, que es un color de categoría y lo ataría
+a un significado ajeno. Agregar un token al sistema para una sola caja es caro, y el sistema se
+defiende mejor si el color se gana. Queda: **borde punteado, contorno del ícono, copy y ubicación** —
+el punteado ya dice «esto está incompleto» sin gastar un color. Si en el QA se pierde claridad, ahí
+se evalúa sumar el token; no de entrada.
+
+## E14 — Lo que el handoff da por hecho y no se construye así
+
+Tres cosas del handoff son trabajo dado por resuelto que choca con reglas del repo. Se listan acá
+para que la desviación sea explícita y no una omisión.
+
+**El teclado numérico 3×4 no se dibuja.** `MoneyAmountInput` es obligatorio y por una razón concreta
+(un `type="number"` enfocado convierte `3000` en `2999.99` con la rueda del mouse). Y en un teléfono,
+un `inputMode="decimal"` ya abre el teclado numérico del sistema: dibujar uno propio es reconstruir
+peor lo que el SO da gratis, con su propia accesibilidad y su propio manejo de decimales. Si más
+adelante se quiere el teclado propio, va **encima** del parseo, nunca en lugar de él.
+
+**El emblema conserva el emoji.** El handoff reemplaza el ícono por un set de SVG con cinco tintes.
+Los propósitos que ya existen tienen un emoji guardado en `icon`, así que cambiar el glifo es una
+migración de datos. Lo que sí se adopta es el **contenedor**: el emoji entra en el cuadro de 42 px con
+tinte ciclado por posición. Se gana la prolijidad visual sin tocar datos. El set de SVG, si se quiere,
+es su propio change con su propia migración.
+
+**«Ver todos» a partir de 8 propósitos queda afuera de esta pasada.** Es una pantalla más, y el orden
+por monto descendente ya sostiene la escala hasta bastante más arriba de lo que hay hoy.
+
+## E15 — El chrome no vuelve
+
+El handoff dibuja el desktop con el sidebar y «Ahorro e inversión» activo. Pero `/savings` es
+`CHROMELESS_SECTIONS`, como Cuentas, Tarjetas y Ajustes: en esas rutas la app esconde el chrome y la
+pantalla se queda con su propia cabecera y su flecha de volver.
+
+Gana la convención de la app. Una sola pantalla con chrome distinto al de sus tres hermanas se lee
+como un error de la app, no como una decisión del módulo — y el handoff no estaba mirando esas tres
+cuando dibujó el sidebar.
