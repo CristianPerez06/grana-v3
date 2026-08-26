@@ -4048,13 +4048,22 @@ Cada fila SHALL mostrar el **chip de ícono + tinte de la categoría** derivada
 teñido con el color de la categoría. Sin ícono derivado la fila NO SHALL dibujar
 un chip vacío.
 
-**Confirmar** SHALL ser una reconciliación de **monto + fecha únicamente**,
-paridad con web: la fila SHALL exponer inline (expand in-place, sin sheet) un
-`MoneyAmountInput` con default = monto estimado y un `DateField` con default =
-fecha del gasto (o hoy). El commit SHALL enviar `{ id, amount, date }` — NO
-SHALL ofrecer selector de cuenta ni de período: para el subtipo `account` la
-cuenta declarada queda intacta, y para `statement` el período se deriva del
-lado del servidor a partir de la fecha (rechazando un período ya pagado).
+**Confirmar** SHALL ser una reconciliación de **monto + fecha únicamente**. La
+fila SHALL exponer los dos controles —un `MoneyAmountInput` con default = monto
+estimado y un `DateField` con default = fecha del gasto (o hoy)— **visibles
+desde el primer paint**, sin sheet y sin paso de expand, paridad con web. El
+botón primario SHALL commitear `{ id, amount, date }` en su **primer** press:
+NO SHALL gastar un press en revelar los controles.
+
+Los controles NO SHALL esconderse detrás del botón de confirmar. Un reintegro
+pendiente es una expectativa, y confirmarlo es el momento de declarar cuánto
+llegó realmente; dejar la corrección un press detrás del botón que aparenta
+aceptar el estimado esconde justamente el dato que la fila existe para capturar.
+
+El commit NO SHALL ofrecer selector de cuenta ni de período: para el subtipo
+`account` la cuenta declarada queda intacta, y para `statement` el período se
+deriva del lado del servidor a partir de la fecha (rechazando un período ya
+pagado).
 
 **Cancelar** SHALL pedir una confirmación destructiva (`Alert.alert`) antes de
 setear `cancelled_at`. La fila SHALL mostrar estado de carga por fila y error
@@ -4095,14 +4104,21 @@ Los copies SHALL leerse del catálogo compartido `@grana/i18n-messages`
 - **AND** con un solo pendiente el bloque abre expandido, y con dos o más abre
   colapsado, hasta que el usuario elige lo contrario
 
-#### Scenario: Confirmar reconcilia monto y fecha inline
+#### Scenario: La fila expone monto y fecha desde el primer paint
+
+- **WHEN** el usuario abre el bloque y mira una fila pendiente
+- **THEN** ve el input de monto (default = estimado) y el selector de fecha
+  (default = fecha del gasto o hoy) ya visibles, sin haber tocado nada
+- **AND** puede corregir el monto antes de tocar "Confirmar"
+
+#### Scenario: Confirmar commitea en un solo press
 
 - **WHEN** el usuario toca "Confirmar" en una fila
-- **THEN** la fila expande in-place un input de monto (default = estimado) y un
-  selector de fecha (default = fecha del gasto o hoy)
-- **AND** al commitear, envía `{ id, amount, date }` al mutator, que setea
+- **THEN** el press commitea: envía `{ id, amount, date }` al mutator, que setea
   `received_at`, sobrescribe `amount` y `date`, y NO altera `estimated_amount`
 - **AND** el bloque invalida cache vía `invalidateAfterReimbursementMutation`
+- **AND** NO hace falta un segundo press: el primero no se gasta en revelar los
+  controles
 
 #### Scenario: Confirmar un reintegro en resumen deriva el período del lado del servidor
 

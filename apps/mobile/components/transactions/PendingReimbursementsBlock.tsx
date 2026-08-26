@@ -17,12 +17,17 @@ import { DateField } from '../ui/DateField'
 
 type DoneAction = 'confirmed' | 'cancelled'
 
-// One pending reintegro row. Collapsed it shows the category chip + title + estimated
-// amount and the [Confirmar] / [Cancelar] actions; tapping Confirmar expands the
-// reconcile inputs in place (real amount defaulted to the estimate, real date to the
-// consumption date), and a second Confirmar commits `{ id, amount, date }`.
-// Confirm reconciles amount + date only — no account/period picker (parity with
-// web); a `statement` reintegro derives its period server-side from the date.
+// One pending reintegro row: the category chip + title + estimated amount, then
+// the reconcile fields (real amount defaulted to the estimate, real date to the
+// consumption date), then [Confirmar] / [Cancelar]. Confirm commits
+// `{ id, amount, date }` on its FIRST press.
+//
+// The two fields are visible from the first paint, like web. They used to hide
+// behind a press on Confirmar, which put the correction one press behind the
+// button that appears to accept the estimate — on the one row whose whole job is
+// to ask "how much actually arrived?". Confirm reconciles amount + date only, no
+// account/period picker: a `statement` reintegro derives its period server-side
+// from the date.
 //
 // The row reports WHICH action succeeded and nothing else: the success notice is
 // owned by the block, because a notice living in the row would unmount with the
@@ -39,7 +44,6 @@ function PendingRow({
   const t = useT()
   const showCents = useShowCents()
 
-  const [expanded, setExpanded] = useState(false)
   const [amount, setAmount] = useState(String(item.estimatedAmount))
   const [date, setDate] = useState(item.expenseDate ?? todayISO)
   const [busy, setBusy] = useState(false)
@@ -118,25 +122,25 @@ function PendingRow({
         </Text>
       </View>
 
-      {expanded ? (
-        <View className="gap-2.5">
-          <View className="flex-row gap-2.5">
-            <View className="flex-1 gap-1.5">
-              <Label>{t('transactions.reimbursement.pending.real_amount')}</Label>
-              <MoneyAmountInput value={amount} onChangeText={setAmount} invalid={Boolean(error)} />
-            </View>
-            <View className="flex-1 gap-1.5">
-              <Label>{t('transactions.reimbursement.pending.real_date')}</Label>
-              <DateField value={date} onChange={setDate} />
-            </View>
+      {/* Two columns rather than web's single wrapping row: on a phone the four
+          controls in one line crush the inputs to a few characters each. */}
+      <View className="gap-2.5">
+        <View className="flex-row gap-2.5">
+          <View className="flex-1 gap-1.5">
+            <Label>{t('transactions.reimbursement.pending.real_amount')}</Label>
+            <MoneyAmountInput value={amount} onChangeText={setAmount} invalid={Boolean(error)} />
           </View>
-          {error ? <Text className="text-[12px] text-error">{error}</Text> : null}
+          <View className="flex-1 gap-1.5">
+            <Label>{t('transactions.reimbursement.pending.real_date')}</Label>
+            <DateField value={date} onChange={setDate} />
+          </View>
         </View>
-      ) : null}
+        {error ? <Text className="text-[12px] text-error">{error}</Text> : null}
+      </View>
 
       <View className="flex-row gap-2">
         <Pressable
-          onPress={expanded ? commit : () => setExpanded(true)}
+          onPress={commit}
           disabled={busy}
           className="flex-1 items-center rounded-xl bg-navy py-2.5 active:opacity-90 disabled:opacity-60"
         >
