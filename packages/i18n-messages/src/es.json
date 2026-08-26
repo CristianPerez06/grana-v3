@@ -2101,7 +2101,8 @@
     "errors": {
       "exceeds_available": "No podés guardar más de lo que tenés disponible: {limit}.",
       "exceeds_reserved": "No podés volver a usar más de lo que tenés guardado: {limit}.",
-    "exceeds_unassigned_reserved": "No podés volver a usar más de lo que tenés sin destino: {limit}.",
+      "exceeds_unassigned_reserved": "No podés volver a usar más de lo que tenés sin destino: {limit}.",
+      "exceeds_unassigned_reserved_pick": "Sin destino tiene {limit}. Para volver a usar más, elegí un propósito.",
       "exceeds_purpose_reserved": "No podés volver a usar más de lo que tenés guardado en {purpose}: {limit}.",
       "generic": "No pudimos registrar el cambio. Probá de nuevo.",
       "duplicate": "Esa operación ya estaba registrada."

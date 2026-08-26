@@ -104,7 +104,7 @@
 `design_handoff_ahorro/` reemplaza la pantalla que las secciones 3 y 4 construyeron. Lo de abajo
 —las dos lecturas normativas, los pisos, `module-view.ts`, el cableado al overlay— **no se toca**.
 
-- [ ] 4c.1 **La regla del origen único, terminada.** Ya está construida (un origen por operación,
+- [x] 4c.1 **La regla del origen único, terminada.** Ya está construida (un origen por operación,
   «Sin destino» preseleccionado, tope a la vista, sin reparto automático). Falta el final del
   mensaje: `savings.errors.exceeds_unassigned_reserved` pasa a *«Sin destino tiene {limit}. Para
   volver a usar más, elegí un propósito.»* — **y una segunda variante sin esa salida** para cuando no

@@ -1232,6 +1232,16 @@ const SavingsForm = ({
       ? [null, ...purposes]
       : [null, ...purposes].filter((o) => groupAmount(currency, o?.id ?? null) > 0)
 
+  /**
+   * ¿Hay otro origen que el usuario pueda elegir, acá y ahora?
+   *
+   * Es la MISMA condición que dibuja los chips, y tiene que serlo: el mensaje
+   * de tope ofrece esa salida, y ofrecer una salida que la pantalla no tiene
+   * es peor que no ofrecer ninguna. Con el chip bloqueado —se entró desde la
+   * fila del resto— hay propósitos con plata pero este formulario no los toca.
+   */
+  const canPickOrigin = !lockedPurpose && purposeOptions.length > 1
+
   const cycleCurrency = () => {
     if (currencyOptions.length < 2) return
     const next = currencyOptions[(currencyOptions.indexOf(currency) + 1) % currencyOptions.length]
@@ -1272,7 +1282,12 @@ const SavingsForm = ({
           })
         : unassignedIsTotal
           ? t('errors.exceeds_reserved', { limit: money(limit, currency) })
-          : t('errors.exceeds_unassigned_reserved', { limit: money(limit, currency) })
+          : // Con otro origen a mano, el mensaje NO se queda en negar: dice el
+            // tope y nombra la salida. Negar y callar deja al usuario probando
+            // números contra una pared.
+            canPickOrigin
+            ? t('errors.exceeds_unassigned_reserved_pick', { limit: money(limit, currency) })
+            : t('errors.exceeds_unassigned_reserved', { limit: money(limit, currency) })
     : null
 
   const submit = () => {
@@ -1419,7 +1434,7 @@ const SavingsForm = ({
           puede cambiar nada — la misma regla que ya aplica el chip de moneda.
           Al guardar la fila se muestra igual aunque no haya ni un propósito:
           ahí vive el «+», que es de dónde sale el primero. */}
-      {!lockedPurpose && (mode === 'save' || purposeOptions.length > 1) && (
+      {(mode === 'save' ? !lockedPurpose : canPickOrigin) && (
         <div className="mt-3">
           <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
             {mode === 'save' ? t('purposes.label') : t('purposes.source_label')}
