@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import type { MovementPerspective } from '@grana/money-logic'
 import type { FinancialMovement } from '@grana/transactions'
 import { useLocale, useT } from '../../lib/locale-context'
@@ -33,10 +33,16 @@ const MONTHS: Record<Locale, readonly string[]> = {
   ],
 }
 
-/** Why the list is empty — copy injected by the caller. Scoped to the card pane's "none" case. */
+/** Why the list is empty — copy injected by the caller. */
 export type MovementEmptyState = {
   title: string
   body: string
+  /**
+   * Optional way out. The feed's "no movement matches your filters" variant
+   * needs one: unlike an empty month, that state is a consequence of what the
+   * user just did, so showing it without an undo strands them.
+   */
+  action?: { label: string; onPress: () => void }
 }
 
 type Props = {
@@ -84,6 +90,15 @@ export function MovementList({
       <View className="rounded-[20px] border border-dashed border-border p-8">
         <Text className="text-center text-sm font-semibold text-text">{emptyState.title}</Text>
         <Text className="mt-1 text-center text-sm text-text-muted">{emptyState.body}</Text>
+        {emptyState.action && (
+          <Pressable
+            onPress={emptyState.action.onPress}
+            accessibilityRole="button"
+            className="mt-4 items-center self-center rounded-xl bg-emerald px-4 py-2.5"
+          >
+            <Text className="text-sm font-semibold text-white">{emptyState.action.label}</Text>
+          </Pressable>
+        )}
       </View>
     )
   }
