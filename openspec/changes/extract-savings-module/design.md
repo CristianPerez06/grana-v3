@@ -265,3 +265,32 @@ pantalla se queda con su propia cabecera y su flecha de volver.
 Gana la convención de la app. Una sola pantalla con chrome distinto al de sus tres hermanas se lee
 como un error de la app, no como una decisión del módulo — y el handoff no estaba mirando esas tres
 cuando dibujó el sidebar.
+
+## E16 — La jerarquía no es responsive
+
+> En responsive se puede cambiar la cantidad de columnas. **No se puede cambiar la jerarquía
+> conceptual.** Guardado total es siempre el bloque padre; «Sin destino» y los propósitos son
+> siempre su desglose.
+
+Es la regla más fácil de romper sin darse cuenta, porque se rompe por comodidad de layout: hay ancho
+de sobra en desktop, la card del total queda corta, y poner algo al lado parece aprovechar el espacio.
+Pero el ancho no es el problema que la pantalla resuelve. Lo que resuelve es que alguien lea *«tengo
+tanto guardado, y está repartido así»* y no *«acá hay varias cajas: Guardado, Sin destino, Viaje»*.
+Una card al lado del total la convierte en una hermana, y ahí el total deja de ser el total.
+
+Dos consecuencias que no se negocian:
+
+- **Si hay dos columnas, van adentro del desglose.** Nunca entre el total y sus partes. La card del
+  total no comparte fila con nada — ni con la botonera, ni con un propósito, ni con «Sin destino».
+- **El panel lateral es solo para el detalle del propósito seleccionado.** Nunca para poner Guardado
+  al lado de un propósito.
+
+El orden del DOM es el mismo en los tres tamaños y es una columna: total → botonera pegada a él →
+desglose (Sin destino, después los propósitos). Lo único que cambia con el ancho es cuántas columnas
+tiene la grilla **de propósitos**.
+
+Esto ya estaba respetado en el código y en los dos archivos `FINAL` del handoff. Lo que no lo
+respetaba era `Grana - Guardado V1 compacta.html` —un estudio previo que quedó en el bundle— cuyo
+frame de tablet pone la card del total y la botonera lado a lado en `1.35fr 1fr`. Quedó marcado como
+superado adentro del propio archivo: un mock que contradice el invariante y no lo dice es una trampa
+para el próximo que lo abra.

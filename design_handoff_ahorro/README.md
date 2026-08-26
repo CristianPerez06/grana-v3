@@ -39,7 +39,34 @@ Los archivos HTML de este bundle son **referencias de diseño**: prototipos que 
 
 **High-fidelity.** Colores, tipografía, espaciados, radios y copy son finales. Recrear pixel-perfect con la librería de componentes del codebase. El copy en español está definido y no debe reescribirse.
 
-## Regla de jerarquía (la más importante)
+## Invariante de jerarquía (corregido — manda sobre todo lo demás de este doc)
+
+> **En responsive podés cambiar la cantidad de columnas. No podés cambiar la jerarquía conceptual.**
+>
+> **Guardado total es siempre el bloque padre. «Sin destino» y los propósitos son siempre desglose de
+> ese total.**
+
+El orden es el MISMO en mobile, tablet y desktop, y es una columna:
+
+1. Header / título
+2. Card principal de **Guardado total**, dominante y a todo el ancho
+3. Botonera **Guardar / Volver a usar / Destinar**, pegada a esa card
+4. Sección de desglose:
+   - **Sin destino**, si existe
+   - **Propósitos** como cards
+
+Dos prohibiciones que se derivan y no se negocian:
+
+- **Si hay dos columnas, van DENTRO del desglose** — nunca entre el total y sus partes. La card del
+  total no comparte fila con nada: ni con la botonera, ni con un propósito, ni con «Sin destino».
+- **El panel lateral es solo para el detalle del propósito seleccionado.** Nunca para poner Guardado
+  al lado de un propósito.
+
+El archivo `Grana - Guardado V1 compacta.html` viola esto en su frame de tablet y quedó marcado como
+superado dentro del propio archivo. La referencia válida son los dos `FINAL`, que son una sola
+columna en los tres tamaños.
+
+## Regla de jerarquía (redacción original)
 
 **Guardado es el total. Sin destino y los propósitos son partes de ese total.** El diseño tiene que hacer leer, en este orden:
 
@@ -295,6 +322,6 @@ Ningún bitmap. Todos los íconos son SVG inline `stroke`, `fill: none`, `stroke
 |---|---|
 | `Grana - Ahorro FINAL mobile.html` | Mobile 390 · 8 pantallas: módulo con saldo, estado vacío, 7 propósitos, detalle, sheets Guardar / Volver a usar / Destinar, y nuevo propósito |
 | `Grana - Ahorro FINAL web y tablet.html` | Desktop 1280, desktop con panel de detalle y tablet 834 — jerarquía total → desglose |
-| `Grana - Guardado V1 compacta.html` | Estudio previo: 360px y comparación contra la lista actual de `/savings` |
+| `Grana - Guardado V1 compacta.html` | **SUPERADO — no usar.** Estudio previo. Su frame de tablet pone Guardado y la botonera lado a lado, contra el invariante de jerarquía |
 
 > Las versiones anteriores de la vista web (`Grana - Ahorro web y tablet.html`) quedaron **sin efecto**: ponían el total como card hermana de un propósito. No usarlas como referencia.

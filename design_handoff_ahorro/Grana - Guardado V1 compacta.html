@@ -97,6 +97,29 @@ button{font-family:inherit;cursor:pointer}
 </head>
 <body>
 
+<!-- ============================================================
+     SUPERADO — NO USAR COMO REFERENCIA
+     ============================================================ -->
+<div style="position:absolute;left:60px;top:-460px;width:2100px;box-sizing:border-box;background:#7A1F1F;color:#fff;border-radius:18px;padding:26px 30px;font-family:'Plus Jakarta Sans',system-ui,sans-serif">
+  <div style="font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;opacity:.75">Superado · no usar como referencia</div>
+  <h2 style="font-size:26px;font-weight:800;letter-spacing:-.03em;margin:8px 0 12px">Este archivo rompe la jerarquía del módulo</h2>
+  <p style="font-size:15px;font-weight:600;line-height:1.5;max-width:1100px;margin:0 0 10px">
+    El frame <strong>«Tablet · dos columnas»</strong> pone la card de Guardado y la botonera lado a lado, en una
+    grilla de <code>1.35fr 1fr</code> arriba de todo. Eso parte el total en una fila de dos columnas y despega la
+    botonera de su card. La regla del módulo no lo permite: <strong>Guardado es el bloque padre, y «Sin destino» y
+    los propósitos son su desglose</strong>. En responsive se puede cambiar la cantidad de columnas; la jerarquía
+    conceptual, no.
+  </p>
+  <p style="font-size:15px;font-weight:600;line-height:1.5;max-width:1100px;margin:0">
+    También muestra <strong>«Para gastar» dentro de la card</strong>, que salió del módulo: pertenece al mes y se
+    lee en la home.
+  </p>
+  <p style="font-size:14px;font-weight:700;line-height:1.5;margin:14px 0 0;opacity:.85">
+    La referencia válida son <code>Grana - Ahorro FINAL mobile.html</code> y
+    <code>Grana - Ahorro FINAL web y tablet.html</code>, que son una sola columna en los tres tamaños.
+  </p>
+</div>
+
 <!-- ===== 390 · DESTINAR ===== -->
 <div class="tag" style="left:60px;top:40px"><div class="kk">V1 compacta · 390px</div><h3>Botón "Destinar"</h3><p>Todo el módulo entra en el primer viewport: hero, botonera, tres propósitos y el resto sin asignar.</p></div>
 
