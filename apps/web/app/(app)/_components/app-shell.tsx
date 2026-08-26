@@ -10,9 +10,9 @@ import {
   LayoutDashboard,
   List,
   LogOut,
-  PiggyBank,
   Settings,
   Users,
+  Vault,
   Wallet,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -36,7 +36,7 @@ const PRIMARY_NAV: NavItem[] = [
   { href: "/accounts", labelKey: "accounts", icon: Wallet },
   { href: "/cards", labelKey: "cards", icon: CreditCard },
   { href: "/transactions", labelKey: "movements", icon: List },
-  { href: "/savings", labelKey: "savings", icon: PiggyBank },
+  { href: "/savings", labelKey: "savings", icon: Vault },
   // `nav.home` ("Hogar"), not `nav.shared` ("Compartido"): the tab bar and this
   // sidebar point at the same place, so they say the same word.
   { href: "/shared", labelKey: "home", icon: Users },

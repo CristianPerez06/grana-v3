@@ -10,6 +10,11 @@ import { money } from './money'
 /**
  * El desglose: para qué es lo guardado.
  *
+ * UNA card contiene todas las filas, con divisores finos entre ellas. Antes eran
+ * filas sueltas sobre el fondo con su propio hover: la superficie competía con
+ * el contenido y la que estuviera bajo el cursor parecía otra cosa. La card es
+ * la superficie; las filas no tienen fondo propio.
+ *
  * Cada fila hace UNA cosa —abrir el detalle— y lo promete con su chevron. Sin
  * acción contextual: guardar cambia el total y su tope no está acá, y destinar
  * por fila no ahorra ningún tap sobre el enlace del resto.
@@ -17,67 +22,84 @@ import { money } from './money'
 export const SavingsBreakdown = ({ purposeSums }: { purposeSums: PurposeSums[] }) => {
   const t = useTranslations('savings')
 
-  // El orden, el resto y cuántos montos muestra cada fila salen de
-  // `@grana/savings`: testeados una vez y compartidos con mobile.
   const groups = moduleGroups(purposeSums)
   const rest = moduleRest(purposeSums)
   const restHasMoney = rest.some((a) => a.reserved > 0)
 
   return (
-    <div className="mt-5">
-      <p className="px-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
+    <div className="mt-6 sm:max-w-[34rem]">
+      <p className="px-1 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-text-soft">
         {t('purposes.label')}
       </p>
 
-      <ul className="mt-2 flex flex-col gap-1.5">
-        {groups.map((g) => (
-          <li key={g.purposeId}>
-            <button
-              type="button"
-              className="flex min-h-[52px] w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-surface-sunken"
-            >
-              <span aria-hidden className="text-[16px]">
-                {g.icon ?? '🫙'}
-              </span>
-              <span className="flex-1 truncate text-[14px] font-semibold text-text">{g.name}</span>
-              <Amounts amounts={g.amounts} />
-              <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
-            </button>
-          </li>
-        ))}
-      </ul>
+      <div className="overflow-hidden rounded-2xl border border-border-soft bg-card shadow-sm">
+        <ul className="flex flex-col divide-y divide-border-soft">
+          {groups.map((g) => (
+            <li key={g.purposeId}>
+              <button
+                type="button"
+                className="flex min-h-[60px] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-surface-sunken"
+              >
+                <Icon>{g.icon ?? '🫙'}</Icon>
+                <span className="flex-1 truncate text-[14.5px] font-semibold text-text">
+                  {g.name}
+                </span>
+                <Amounts amounts={g.amounts} />
+                <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
+              </button>
+            </li>
+          ))}
+        </ul>
 
-      {/* El resto al pie, tras una regla: no es un propósito. Sin chevron —no
-          tiene detalle— y con el monto apagado. El `pr` compensa el ancho del
-          chevron que no tiene, para que los montos queden en una columna. */}
-      <div className="mt-1 border-t border-border-soft pt-2">
-        <div className="flex items-center gap-2.5 py-1.5 pl-2 pr-[34px]">
-          <span aria-hidden className="text-[16px]">
-            🫙
-          </span>
-          <span className="flex-1 truncate text-[14px] font-semibold text-text-muted">
-            {t('purposes.none')}
-          </span>
-          <Amounts amounts={rest} muted />
-        </div>
-        {restHasMoney && (
-          // 44px de alto cada uno y separados: pegados por un punto medio, el
-          // error más probable es tocar «Volver a usar» queriendo «Destinar» —
-          // la que saca plata del disponible y la que no la toca.
-          <div className="flex gap-1.5 pl-[30px]">
-            <RestLink label={t('purposes.allocate')} />
-            <RestLink label={t('release')} />
+        {/* El resto es la última fila de la misma card, separada por un divisor
+            más marcado: no es un propósito —no navega, no tiene chevron— pero
+            tampoco es otra sección. Es el pie de esta lista. */}
+        <div className="border-t border-border bg-surface-sunken/40">
+          <div className="flex min-h-[60px] items-center gap-3 px-4">
+            <Icon muted>🫙</Icon>
+            <span className="flex-1 truncate text-[14.5px] font-semibold text-text-muted">
+              {t('purposes.none')}
+            </span>
+            <Amounts amounts={rest} muted />
+            {/* Compensa el ancho del chevron que esta fila NO tiene, para que
+                los montos queden en una sola columna con los de arriba. */}
+            <span aria-hidden className="w-4 shrink-0" />
           </div>
-        )}
+          {restHasMoney && (
+            // Alineadas a la derecha, bajo la columna de montos: sueltas a la
+            // izquierda quedaban huérfanas y rompían la grilla vertical.
+            // Separadas entre sí porque el error más probable es tocar «Volver a
+            // usar» queriendo «Destinar» — la que saca plata del disponible y la
+            // que no la toca.
+            <div className="flex justify-end gap-2 px-4 pb-3">
+              <RestAction label={t('purposes.allocate')} />
+              <RestAction label={t('release')} />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
 }
 
-const RestLink = ({ label }: { label: string }) => (
+/** Caja fija para el emoji: sueltos al lado del texto, los nombres arrancaban
+ *  en distinta `x` según el ancho del glifo y la lista dejaba de leerse. */
+const Icon = ({ children, muted = false }: { children: React.ReactNode; muted?: boolean }) => (
+  <span
+    aria-hidden
+    className={cn(
+      'grid size-8 shrink-0 place-items-center rounded-[10px] text-[16px]',
+      muted ? 'bg-border-soft/60' : 'bg-surface-sunken',
+    )}
+  >
+    {children}
+  </span>
+)
+
+const RestAction = ({ label }: { label: string }) => (
   <button
     type="button"
-    className="flex min-h-[44px] items-center rounded-[10px] px-2.5 text-[13px] font-bold text-emerald-deep transition-colors hover:bg-surface-sunken"
+    className="flex min-h-[36px] items-center rounded-full border border-border bg-card px-3.5 text-[12.5px] font-semibold text-text-muted transition-colors hover:border-border hover:bg-surface-sunken hover:text-text"
   >
     {label}
   </button>
@@ -88,13 +110,7 @@ const RestLink = ({ label }: { label: string }) => (
  * cuando el dato lo pide: un propósito con pesos únicamente ocupa una línea.
  * Los montos no se achican ni se parten — el que cede es el nombre (D24).
  */
-const Amounts = ({
-  amounts,
-  muted = false,
-}: {
-  amounts: ModuleAmount[]
-  muted?: boolean
-}) => {
+const Amounts = ({ amounts, muted = false }: { amounts: ModuleAmount[]; muted?: boolean }) => {
   const list = moduleVisibleAmounts(amounts)
 
   return (
@@ -105,7 +121,7 @@ const Amounts = ({
           className={cn(
             'whitespace-nowrap tabular-nums',
             i === 0
-              ? cn('text-[14px] font-extrabold', muted ? 'text-text-muted' : 'text-text')
+              ? cn('text-[14.5px] font-bold', muted ? 'text-text-muted' : 'text-text')
               : 'text-[11.5px] font-semibold text-text-soft',
           )}
         >

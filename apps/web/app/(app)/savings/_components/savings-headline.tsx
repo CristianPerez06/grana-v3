@@ -32,25 +32,33 @@ export const SavingsHeadline = ({
   const t = useTranslations('savings')
   const [drawer, setDrawer] = useState<DrawerState>(null)
 
-  // Las cuatro decisiones de qué se muestra viven en `@grana/savings`, testeadas
-  // y compartidas con lo que va a necesitar mobile. Acá solo se dibujan.
-  const rowFor = (currency: BalanceCurrency) => moduleRowFor(sums, currency)
+  // Las decisiones de qué se muestra viven en `@grana/savings`, testeadas y
+  // compartidas con lo que va a necesitar mobile. Acá solo se dibujan.
   const hasAnythingSaved = moduleHasSavings(sums)
 
   return (
     <div className="flex flex-col">
-      <Grid sums={sums} rowFor={rowFor} />
+      <Grid sums={sums} />
 
       {hasAnythingSaved ? (
         <>
           {children}
-          <div className="mt-5 flex gap-2">
-            <Button className="flex-1" onClick={() => setDrawer({ mode: 'save', currency: 'ARS' })}>
+          {/* Contenidos en desktop: a lo ancho de la página quedaban enormes
+              para dos acciones. En teléfono siguen ocupando el ancho. */}
+          <div className="mt-5 flex gap-2.5 sm:max-w-[26rem]">
+            <Button
+              size="lg"
+              className="h-12 flex-1 font-semibold"
+              onClick={() => setDrawer({ mode: 'save', currency: 'ARS' })}
+            >
               {t('save')}
             </Button>
+            {/* El borde es lo que lo separa de un control deshabilitado: sin él,
+                un relleno gris claro se lee como apagado y no como secundario. */}
             <Button
               variant="secondary"
-              className="flex-1"
+              size="lg"
+              className="h-12 flex-1 border border-border bg-card font-semibold hover:bg-border-soft"
               onClick={() => setDrawer({ mode: 'release', currency: 'ARS' })}
             >
               {t('release')}
@@ -60,13 +68,14 @@ export const SavingsHeadline = ({
       ) : (
         // Sin nada guardado no hay desglose que mostrar ni de dónde volver a
         // usar: una sola acción y la frase que evita el malentendido.
-        <div className="mt-4 rounded-2xl border border-border-soft bg-card p-5">
+        <div className="mt-4 rounded-2xl border border-border-soft bg-card p-5 sm:max-w-[34rem]">
           <h2 className="text-[16px] font-extrabold tracking-[-0.01em] text-text">
             {t('empty_title')}
           </h2>
           <p className="mt-1.5 text-[13.5px] leading-snug text-text-muted">{t('empty_body')}</p>
           <Button
-            className="mt-4 h-11 w-full"
+            size="lg"
+            className="mt-4 h-12 font-semibold sm:max-w-[16rem]"
             onClick={() => setDrawer({ mode: 'save', currency: 'ARS' })}
           >
             {t('empty_cta')}
@@ -85,21 +94,27 @@ export const SavingsHeadline = ({
   )
 }
 
-const Grid = ({
-  sums,
-  rowFor,
-}: {
-  sums: AvailableSums[]
-  rowFor: (currency: BalanceCurrency) => AvailableSums
-}) => {
+/**
+ * Dos conceptos por dos monedas.
+ *
+ * El protagonismo de «Guardado» sale del PESO y no del tamaño ni del color: los
+ * dos montos comparten cuerpo, y lo que los separa es que uno es extrabold en
+ * tinta plena y el otro normal en gris. Una cifra verde gigante grita, y encima
+ * usa el color de acento —el de las acciones— en un número que no es una acción.
+ *
+ * El ancho se topea: estirada a la página entera, la distancia entre el rótulo y
+ * su monto la volvía una planilla.
+ */
+const Grid = ({ sums }: { sums: AvailableSums[] }) => {
   const t = useTranslations('savings')
   const showUsd = moduleShowsUsd(sums)
+  const rowFor = (currency: BalanceCurrency) => moduleRowFor(sums, currency)
 
   return (
-    <div className="rounded-2xl border border-border-soft bg-card px-[18px] py-4">
+    <div className="rounded-2xl border border-border-soft bg-card px-5 py-[18px] shadow-sm sm:max-w-[34rem]">
       <div
         className={cn(
-          'grid items-baseline gap-x-4 gap-y-1',
+          'grid items-baseline gap-x-6 gap-y-1.5',
           showUsd ? 'grid-cols-[1fr_auto_auto]' : 'grid-cols-[1fr_auto]',
         )}
       >
@@ -107,21 +122,31 @@ const Grid = ({
         <HeadCell>{t('currency_ars')}</HeadCell>
         {showUsd && <HeadCell>{t('currency_usd')}</HeadCell>}
 
-        <span className="text-[13.5px] text-text-muted">{t('to_spend')}</span>
+        <Label>{t('to_spend')}</Label>
         <Amount value={rowFor('ARS').available} currency="ARS" />
         {showUsd && <Amount value={rowFor('USD').available} currency="USD" subordinate />}
 
-        <span className="pt-1 text-[14px] font-semibold text-text">{t('total_saved')}</span>
+        <Label strong>{t('total_saved')}</Label>
         <Amount value={rowFor('ARS').reserved} currency="ARS" strong />
         {showUsd && <Amount value={rowFor('USD').reserved} currency="USD" strong subordinate />}
       </div>
-      {sums.length === 0 && <span className="sr-only">{t('empty_title')}</span>}
     </div>
   )
 }
 
 const HeadCell = ({ children }: { children: React.ReactNode }) => (
-  <span className="pb-0.5 text-right text-[9.5px] font-bold uppercase tracking-[0.12em] text-text-soft">
+  <span className="pb-1 text-right text-[10px] font-bold uppercase tracking-[0.14em] text-text-soft">
+    {children}
+  </span>
+)
+
+const Label = ({ children, strong = false }: { children: React.ReactNode; strong?: boolean }) => (
+  <span
+    className={cn(
+      'pt-1.5 text-[14px]',
+      strong ? 'font-semibold text-text' : 'font-normal text-text-muted',
+    )}
+  >
     {children}
   </span>
 )
@@ -139,12 +164,9 @@ const Amount = ({
 }) => (
   <span
     className={cn(
-      'whitespace-nowrap text-right tabular-nums',
-      strong && 'font-extrabold text-emerald-deep',
-      !strong && !subordinate && 'text-[15px] font-bold text-text',
-      !strong && subordinate && 'text-[13px] font-semibold text-text-muted',
-      strong && !subordinate && 'text-[21px] tracking-[-0.01em]',
-      strong && subordinate && 'text-[15px]',
+      'whitespace-nowrap pt-1.5 text-right tabular-nums',
+      subordinate ? 'text-[15px]' : 'text-[20px] tracking-[-0.01em]',
+      strong ? 'font-extrabold text-text' : 'font-normal text-text-muted',
     )}
   >
     {money(value, currency)}
