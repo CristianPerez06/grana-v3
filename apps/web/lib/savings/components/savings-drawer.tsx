@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -1244,16 +1244,35 @@ const SavingsForm = ({
 
   const cycleCurrency = () => {
     if (currencyOptions.length < 2) return
-    const next = currencyOptions[(currencyOptions.indexOf(currency) + 1) % currencyOptions.length]
-    setCurrency(next)
-    // Cambiar de moneda puede dejar seleccionado un grupo que no tiene plata en
-    // la moneda nueva: el tope pasaría a cero sobre una elección que ya no
-    // existe. Se mueve al primero que sí la tenga.
-    if (mode === 'release' && !lockedPurpose && groupAmount(next, purposeId) <= 0) {
-      const fallback = [null, ...purposes].find((o) => groupAmount(next, o?.id ?? null) > 0)
-      if (fallback !== undefined) onSetPurpose(fallback?.id ?? null)
-    }
+    setCurrency(currencyOptions[(currencyOptions.indexOf(currency) + 1) % currencyOptions.length])
   }
+
+  /**
+   * El origen preseleccionado nunca se queda sobre un grupo vacío.
+   *
+   * Pasa por tres caminos distintos: se entró desde el módulo, que preselecciona
+   * «Sin destino» sin saber todavía si tiene saldo —su lectura vive en otra
+   * sección de la página—; se cambió de moneda y el grupo elegido no tiene plata
+   * en la nueva; o la consulta terminó de cargar después de que el formulario se
+   * dibujó. Los tres terminan igual: el tope en cero sobre una elección que no
+   * existe, y un CTA que no se puede tocar sin que nada lo explique.
+   *
+   * No pelea con el usuario: los chips que puede elegir son, por construcción,
+   * los que tienen plata, así que esto solo corrige lo que él no eligió.
+   */
+  const selectedAmount = groupAmount(currency, purposeId)
+
+  useEffect(() => {
+    if (mode !== 'release' || lockedPurpose) return
+    if (selectedAmount > 0) return
+    const fallback = [null, ...purposes].find((o) => groupAmount(currency, o?.id ?? null) > 0)
+    if (fallback !== undefined) onSetPurpose(fallback?.id ?? null)
+    // `purposes` y `groupAmount` se rehacen en cada render del drawer, así que
+    // no sirven de dependencia. Las reales son dos: cuánto tiene el grupo
+    // elegido, y cuántos orígenes hay para elegir —que es lo que cambia cuando
+    // la consulta termina de cargar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, lockedPurpose, currency, purposeId, selectedAmount, purposeOptions.length])
 
   const row = rowFor(currency)
   // Opened loose there is no income to take a percentage of, so the field starts

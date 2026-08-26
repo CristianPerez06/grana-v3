@@ -109,13 +109,13 @@
   mensaje: `savings.errors.exceeds_unassigned_reserved` pasa a *«Sin destino tiene {limit}. Para
   volver a usar más, elegí un propósito.»* — **y una segunda variante sin esa salida** para cuando no
   hay otro grupo con saldo, que es cuando el chip está bloqueado (E12)
-- [ ] 4c.2 **Traducir la paleta del handoff a los tokens de Grana** (E13). Cálido → frío, `#1B2A33` →
+- [x] 4c.2 **Traducir la paleta del handoff a los tokens de Grana** (E13). Cálido → frío, `#1B2A33` →
   `--navy`, y **cero tokens nuevos** en esta pasada
-- [ ] 4c.3 `SavingsCard`: card oscura a todo el ancho, par de monedas con divisor, frase de apoyo, y
+- [x] 4c.3 `SavingsCard`: card oscura a todo el ancho, par de monedas con divisor, frase de apoyo, y
   la `ActionBar` de tres acciones como zócalo **de la misma card**. Reemplaza la grilla de 2×2
-- [ ] 4c.4 `PurposeCard` + grilla `repeat(auto-fill, minmax(330px, 1fr))`. Reemplaza la lista de
+- [x] 4c.4 `PurposeCard` + grilla `repeat(auto-fill, minmax(330px, 1fr))`. Reemplaza la lista de
   filas. **El emoji se conserva**; lo que se adopta es el contenedor con tinte ciclado (E14)
-- [ ] 4c.5 `UnassignedBlock`: bloque propio **entre** el total y los propósitos, visible solo con
+- [x] 4c.5 `UnassignedBlock`: bloque propio **entre** el total y los propósitos, visible solo con
   monto > 0, diferenciado **por forma y no por color** (E13). Con monto en cero su explicación baja
   al pie de la lista
 - [ ] 4c.6 Los tres formularios con la anatomía del handoff — rótulo, pregunta, línea de movimiento,
@@ -125,12 +125,12 @@
   acciones, movimientos). **Sin fecha y sin subtítulo** (E12). Sin barras de progreso ni porcentajes
 - [ ] 4c.8 Pantalla de **nuevo propósito**: nombre, emblema, y el monto inicial en cero —que **no se
   prellena** salvo que se venga del flujo de destinar
-- [ ] 4c.9 El par de monedas de la card del total pasa a ser **fijo**: `$ 0 / US$ 0` cuando no hay
+- [x] 4c.9 El par de monedas de la card del total pasa a ser **fijo**: `$ 0 / US$ 0` cuando no hay
   saldo. Revierte `moduleShowsUsd`, que hoy esconde la columna, **y sus tests**. En los propósitos la
   regla NO cambia: nunca «US$ 0»
-- [ ] 4c.10 **El chrome no vuelve** (E15): `/savings` sigue en `CHROMELESS_SECTIONS`, contra lo que
+- [x] 4c.10 **El chrome no vuelve** (E15): `/savings` sigue en `CHROMELESS_SECTIONS`, contra lo que
   dibuja el desktop del handoff
-- [ ] 4c.11 Al confirmar **no hay toast**: cerrar el overlay es el acuse, como en el resto de la app.
+- [x] 4c.11 Al confirmar **no hay toast**: cerrar el overlay es el acuse, como en el resto de la app.
   El handoff pedía «confirmación breve»
 - [ ] 4c.12 Fuera de esta pasada, anotado para no perderlo: el set de emblemas SVG con su migración,
   «Ver todos» a partir de 8 propósitos, y el panel lateral de 420 px que empuja el stage — el drawer

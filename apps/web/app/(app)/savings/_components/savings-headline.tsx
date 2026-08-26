@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { moduleHasSavings, moduleRowFor, moduleShowsUsd } from '@grana/savings'
+import { ArrowDown, ArrowUp, Split } from 'lucide-react'
+import { moduleHasSavings, moduleRowFor } from '@grana/savings'
 import type { AvailableSums } from '@grana/savings'
 import type { BalanceCurrency } from '@grana/money-logic'
 import { Button } from '@/components/ui/button'
@@ -10,14 +11,18 @@ import { SavingsDrawer } from '@/lib/savings/components/savings-drawer'
 import type { SavingsDrawerInitialView } from '@/lib/savings/components/savings-drawer'
 import { cn } from '@/lib/utils'
 import { SavingsOverlayProvider, type SavingsOverlay } from './savings-overlay-context'
-import { money } from './money'
+import { moneyParts } from './money'
 
 /** `null` con el overlay cerrado. Un solo dueño del estado, y es este. */
 type DrawerState = SavingsDrawerInitialView | null
 
 /**
- * Los dos botones globales entran sin propósito elegido: el destino se decide
+ * Los tres botones globales entran sin propósito elegido: el destino se decide
  * adentro, con los chips, y no antes de saber el monto.
+ *
+ * `release` preselecciona «Sin destino» (`purposeId: null`), y si resulta que no
+ * tiene saldo, el formulario se corre solo al primer grupo que sí lo tenga —
+ * esta pantalla no puede saberlo, porque el reparto vive en la otra sección.
  */
 const SAVE_ARS = {
   kind: 'form',
@@ -33,16 +38,25 @@ const RELEASE_ARS = {
   purposeId: null,
   locked: false,
 } as const satisfies DrawerState
+const ALLOCATE_ARS = {
+  kind: 'allocate',
+  currency: 'ARS',
+  purpose: null,
+  direction: 'allocate',
+} as const satisfies DrawerState
 
 /**
- * La foto del módulo y sus dos acciones globales, con el desglose en el medio.
+ * El total guardado, y las tres acciones que lo mueven.
  *
- * La cabecera es una GRILLA de dos conceptos por dos monedas, no una línea
- * subordinada: con dólares de verdad hacen falta dos números en dólares, y la
- * línea única solo alcanza para uno. Las columnas NUNCA se suman ni se cruzan.
+ * Es UNA card oscura a todo el ancho, con la botonera de zócalo adentro. El
+ * oscuro no es decoración: es lo que ancla el total por tratamiento y no solo
+ * por tamaño, y es el mismo `--navy` de la card de saldo del dashboard — que
+ * las dos superficies oscuras de la app sean la MISMA es lo que las hace leer
+ * como un sistema y no como dos pantallas parecidas.
  *
- * Las acciones viven acá y no en las filas de la lista: guardar cambia el TOTAL
- * guardado, y su tope —el disponible— es justo lo que esta grilla muestra.
+ * La jerarquía que esta card sostiene: acá está el TOTAL, y todo lo que viene
+ * abajo —«Sin destino», los propósitos— son partes de él. Nada de lo de abajo
+ * puede subir a este nivel ni ponerse al lado.
  */
 export const SavingsHeadline = ({
   sums,
@@ -54,8 +68,6 @@ export const SavingsHeadline = ({
   const t = useTranslations('savings')
   const [drawer, setDrawer] = useState<DrawerState>(null)
 
-  // Las decisiones de qué se muestra viven en `@grana/savings`, testeadas y
-  // compartidas con lo que va a necesitar mobile. Acá solo se dibujan.
   const hasAnythingSaved = moduleHasSavings(sums)
 
   // Estable entre renders: es el valor de un contexto, y uno nuevo por render
@@ -63,8 +75,6 @@ export const SavingsHeadline = ({
   const overlay = useMemo<SavingsOverlay>(
     () => ({
       openPurpose: (purpose, currency) => setDrawer({ kind: 'group', currency, purpose }),
-      // Darle destino al resto: el propósito va nulo porque se elige adentro —
-      // se entró desde el resto, que no es uno.
       openRestAllocate: (currency) =>
         setDrawer({ kind: 'allocate', currency, purpose: null, direction: 'allocate' }),
       // `locked` porque el origen ya está elegido: se tocó la fila del resto.
@@ -75,45 +85,59 @@ export const SavingsHeadline = ({
   )
 
   return (
-    <div className="flex flex-col">
-      <Grid sums={sums} />
+    <div className="flex flex-col gap-3 sm:gap-[18px]">
+      <section className="overflow-hidden rounded-[22px] shadow-sm">
+        <div className="bg-surface-dark px-[18px] pb-4 pt-[18px] sm:px-7 sm:pb-[22px] sm:pt-6">
+          <p className="text-[10.5px] font-extrabold uppercase tracking-[0.13em] text-white/55">
+            {t('total_saved')}
+          </p>
+
+          {/* Las dos monedas en columnas iguales, con un divisor de 1px en el
+              medio. Iguales a propósito: no hay una moneda principal, y la
+              cuenta de dólares no es un apéndice de la de pesos. NUNCA se
+              suman, y el divisor es lo que lo dice sin escribirlo. */}
+          <div className="mt-[15px] grid grid-cols-[1fr_1px_1fr] items-start gap-4">
+            <DarkAmount value={moduleRowFor(sums, 'ARS').reserved} currency="ARS" />
+            <div aria-hidden className="h-full w-px self-stretch bg-navy-border" />
+            <DarkAmount value={moduleRowFor(sums, 'USD').reserved} currency="USD" />
+          </div>
+
+          <p className="mt-[15px] max-w-[620px] text-[12px] font-semibold leading-[1.45] text-white/[0.66]">
+            {t('module_support')}
+          </p>
+        </div>
+
+        {hasAnythingSaved ? (
+          // El zócalo va ADENTRO de la card: son las acciones de este total, y
+          // sueltas abajo se leían como acciones de la pantalla. El cambio de
+          // fondo ya las separa, así que no lleva borde superior.
+          <div className="grid grid-cols-3 bg-card">
+            <BarAction icon={ArrowDown} label={t('save')} onClick={() => setDrawer(SAVE_ARS)} />
+            <BarAction icon={ArrowUp} label={t('release')} onClick={() => setDrawer(RELEASE_ARS)} />
+            <BarAction
+              icon={Split}
+              label={t('purposes.allocate')}
+              onClick={() => setDrawer(ALLOCATE_ARS)}
+            />
+          </div>
+        ) : null}
+      </section>
 
       {hasAnythingSaved ? (
-        <>
-          <SavingsOverlayProvider value={overlay}>{children}</SavingsOverlayProvider>
-          {/* Contenidos en desktop: a lo ancho de la página quedaban enormes
-              para dos acciones. En teléfono siguen ocupando el ancho. */}
-          <div className="mt-5 flex gap-2.5 sm:max-w-[26rem]">
-            <Button
-              size="lg"
-              className="h-12 flex-1 font-semibold"
-              onClick={() => setDrawer(SAVE_ARS)}
-            >
-              {t('save')}
-            </Button>
-            {/* El borde es lo que lo separa de un control deshabilitado: sin él,
-                un relleno gris claro se lee como apagado y no como secundario. */}
-            <Button
-              variant="secondary"
-              size="lg"
-              className="h-12 flex-1 border border-border bg-card font-semibold hover:bg-border-soft"
-              onClick={() => setDrawer(RELEASE_ARS)}
-            >
-              {t('release')}
-            </Button>
-          </div>
-        </>
+        <SavingsOverlayProvider value={overlay}>{children}</SavingsOverlayProvider>
       ) : (
-        // Sin nada guardado no hay desglose que mostrar ni de dónde volver a
-        // usar: una sola acción y la frase que evita el malentendido.
-        <div className="mt-4 rounded-2xl border border-border-soft bg-card p-5 sm:max-w-[34rem]">
-          <h2 className="text-[16px] font-extrabold tracking-[-0.01em] text-text">
+        // Sin nada guardado no hay desglose ni de dónde volver a usar: una sola
+        // acción y la frase que evita el malentendido.
+        <div className="rounded-[20px] border border-border-soft bg-card p-5 text-center sm:p-7">
+          <h2 className="text-[19px] font-extrabold tracking-[-0.02em] text-text sm:text-[23px]">
             {t('empty_title')}
           </h2>
-          <p className="mt-1.5 text-[13.5px] leading-snug text-text-muted">{t('empty_body')}</p>
+          <p className="mx-auto mt-2 max-w-[520px] text-[13.5px] font-semibold leading-snug text-text-muted">
+            {t('empty_body')}
+          </p>
           <Button
             size="lg"
-            className="mt-4 h-12 font-semibold sm:max-w-[16rem]"
+            className="mt-5 h-12 w-full font-semibold sm:w-[300px]"
             onClick={() => setDrawer(SAVE_ARS)}
           >
             {t('empty_cta')}
@@ -133,83 +157,50 @@ export const SavingsHeadline = ({
 }
 
 /**
- * Dos conceptos por dos monedas.
+ * Un monto del total. El símbolo va más chico y en menor contraste: es lo único
+ * que distingue las dos columnas, y al mismo cuerpo que la cifra hacía que
+ * «US$ 900» compitiera con «$ 1.150.000».
  *
- * El protagonismo de «Guardado» sale del PESO y no del tamaño ni del color: los
- * dos montos comparten cuerpo, y lo que los separa es que uno es extrabold en
- * tinta plena y el otro normal en gris. Una cifra verde gigante grita, y encima
- * usa el color de acento —el de las acciones— en un número que no es una acción.
- *
- * El ancho se topea: estirada a la página entera, la distancia entre el rótulo y
- * su monto la volvía una planilla.
+ * Con saldo en cero baja el contraste en vez de esconderse: el par de monedas es
+ * FIJO acá —a diferencia de los propósitos, donde un «US$ 0» sería ruido— porque
+ * dos columnas que aparecen y desaparecen cambian la estructura de la card según
+ * el día.
  */
-const Grid = ({ sums }: { sums: AvailableSums[] }) => {
-  const t = useTranslations('savings')
-  const showUsd = moduleShowsUsd(sums)
-  const rowFor = (currency: BalanceCurrency) => moduleRowFor(sums, currency)
+const DarkAmount = ({ value, currency }: { value: number; currency: BalanceCurrency }) => {
+  const { symbol, digits } = moneyParts(value, currency)
+  const empty = value === 0
 
   return (
-    <div className="rounded-2xl border border-border-soft bg-card px-5 py-[18px] shadow-sm sm:max-w-[34rem]">
-      <div
-        className={cn(
-          'grid items-baseline gap-x-6 gap-y-1.5',
-          showUsd ? 'grid-cols-[1fr_auto_auto]' : 'grid-cols-[1fr_auto]',
-        )}
-      >
-        <span />
-        <HeadCell>{t('currency_ars')}</HeadCell>
-        {showUsd && <HeadCell>{t('currency_usd')}</HeadCell>}
-
-        <Label>{t('to_spend')}</Label>
-        <Amount value={rowFor('ARS').available} currency="ARS" />
-        {showUsd && <Amount value={rowFor('USD').available} currency="USD" subordinate />}
-
-        <Label strong>{t('total_saved')}</Label>
-        <Amount value={rowFor('ARS').reserved} currency="ARS" strong />
-        {showUsd && <Amount value={rowFor('USD').reserved} currency="USD" strong subordinate />}
-      </div>
-    </div>
+    <p
+      className={cn(
+        'whitespace-nowrap text-[27px] font-extrabold leading-none tracking-[-0.045em] tabular-nums sm:text-[34px]',
+        empty ? 'text-white/[0.42]' : 'text-white',
+      )}
+    >
+      <span className={cn('text-[0.8em] font-bold', empty ? 'text-white/[0.32]' : 'text-white/50')}>
+        {symbol}
+      </span>{' '}
+      {digits}
+    </p>
   )
 }
 
-const HeadCell = ({ children }: { children: React.ReactNode }) => (
-  <span className="pb-1 text-right text-[10px] font-bold uppercase tracking-[0.14em] text-text-soft">
-    {children}
-  </span>
-)
-
-const Label = ({ children, strong = false }: { children: React.ReactNode; strong?: boolean }) => (
-  <span
-    className={cn(
-      'pt-1.5 text-[14px]',
-      strong ? 'font-semibold text-text' : 'font-normal text-text-muted',
-    )}
-  >
-    {children}
-  </span>
-)
-
-const Amount = ({
-  value,
-  currency,
-  strong = false,
-  subordinate = false,
+/** 48px de alto en teléfono y 60 en desktop, sobre el mínimo de 44 del repo. */
+const BarAction = ({
+  icon: Icon,
+  label,
+  onClick,
 }: {
-  value: number
-  currency: BalanceCurrency
-  strong?: boolean
-  subordinate?: boolean
+  icon: typeof ArrowDown
+  label: string
+  onClick: () => void
 }) => (
-  <span
-    className={cn(
-      'whitespace-nowrap pt-1.5 text-right tabular-nums',
-      // El protagonista es más grande, pero sigue sin ser verde: el acento es de
-      // las acciones y este número no lo es. Con los dos montos al mismo cuerpo,
-      // el peso solo no alcanzaba y la grilla se leía como dos filas iguales.
-      subordinate ? 'text-[15px]' : strong ? 'text-[23px] tracking-[-0.02em]' : 'text-[19px]',
-      strong ? 'font-extrabold text-text' : 'font-normal text-text-muted',
-    )}
+  <button
+    type="button"
+    onClick={onClick}
+    className="flex min-h-12 items-center justify-center gap-2 border-border-soft px-2 text-[12px] font-extrabold tracking-[-0.01em] text-text transition-colors first:border-l-0 hover:bg-surface-sunken [&+&]:border-l sm:min-h-[60px] sm:text-[13px]"
   >
-    {money(value, currency)}
-  </span>
+    <Icon className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
+    {label}
+  </button>
 )

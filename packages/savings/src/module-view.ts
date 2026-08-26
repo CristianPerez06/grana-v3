@@ -3,8 +3,8 @@
 //
 // Acá viven cinco decisiones que se pueden equivocar en silencio:
 //
-//   1. Si hay algo guardado, que decide entre la foto y el estado vacío.
-//   2. Si se dibuja la columna de dólares.
+//   1. Si hay algo guardado, que decide entre la card y el estado vacío.
+//   2. Cuándo un monto se muestra y cuándo no.
 //   3. El orden de los propósitos.
 //   4. Cuántos montos muestra una fila.
 //   5. En qué moneda entra una fila cuando se la toca.
@@ -53,15 +53,19 @@ export function moduleHasSavings(sums: AvailableSums[]): boolean {
 }
 
 /**
- * ¿Se dibuja la columna de dólares?
+ * ¿Muestra un monto una fila del desglose?
  *
- * Solo si hay algún número en dólares. A cero no hay nada que leer y una columna
- * de guiones pide espacio para nada. Aparece el día que hay dólares y se queda:
- * no es la cabecera cambiando de estructura, es una columna que se suma.
+ * Solo si tiene plata. Un propósito de solo pesos ocupa una línea, y «US$ 0» en
+ * cada card sería ruido repetido tantas veces como propósitos haya.
+ *
+ * La card del TOTAL no sigue esta regla y por eso no la pregunta: ahí el par de
+ * monedas es fijo, con su divisor, y muestra `$ 0 / US$ 0` cuando no hay saldo.
+ * La asimetría es deliberada — una card que cambia de estructura según el día
+ * es una card que hay que volver a leer cada vez, y esa es la única de la
+ * pantalla que tiene que poder leerse de un vistazo.
  */
-export function moduleShowsUsd(sums: AvailableSums[]): boolean {
-  const usd = moduleRowFor(sums, 'USD')
-  return usd.available !== 0 || usd.reserved !== 0
+export function moduleAmountIsShown(amount: ModuleAmount): boolean {
+  return amount.reserved !== 0
 }
 
 /** Lo guardado en un grupo y una moneda. Ausente en la respuesta = cero. */
@@ -114,7 +118,7 @@ export function moduleRest(rows: PurposeSums[]): ModuleAmount[] {
  * bimoneda crece a dos. Nunca se suman.
  */
 export function moduleVisibleAmounts(amounts: ModuleAmount[]): ModuleAmount[] {
-  const shown = amounts.filter((a) => a.reserved !== 0)
+  const shown = amounts.filter(moduleAmountIsShown)
   return shown.length > 0 ? shown : [amounts[0]]
 }
 

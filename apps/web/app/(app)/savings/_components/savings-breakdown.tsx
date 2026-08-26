@@ -1,29 +1,27 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Plus } from 'lucide-react'
 import {
   moduleGroupCurrency,
   moduleGroups,
   moduleRest,
   moduleVisibleAmounts,
 } from '@grana/savings'
-import type { ModuleAmount, PurposeSums } from '@grana/savings'
+import type { ModuleAmount, ModuleGroup, PurposeSums } from '@grana/savings'
 import { cn } from '@/lib/utils'
 import { useSavingsOverlay } from './savings-overlay-context'
 import { money } from './money'
 
 /**
- * El desglose: para qué es lo guardado.
+ * Las PARTES del total: primero el resto sin destino, después los propósitos.
  *
- * UNA card contiene todas las filas, con divisores finos entre ellas. Antes eran
- * filas sueltas sobre el fondo con su propio hover: la superficie competía con
- * el contenido y la que estuviera bajo el cursor parecía otra cosa. La card es
- * la superficie; las filas no tienen fondo propio.
- *
- * Cada fila hace UNA cosa —abrir el detalle— y lo promete con su chevron. Sin
- * acción contextual: guardar cambia el total y su tope no está acá, y destinar
- * por fila no ahorra ningún tap sobre el enlace del resto.
+ * El orden del DOM es la jerarquía y no cambia entre tamaños: arriba está el
+ * total (la card oscura, que dibuja la otra sección), y todo esto es su
+ * desglose. Nada de acá puede ponerse al lado del total ni tomar su escala —
+ * los montos de un propósito miden 16.5px contra los 27–34 del total, y esa
+ * diferencia de ~3× es lo que hace que la pantalla se lea como «tengo tanto, y
+ * está repartido así» en vez de como una pila de cards del mismo rango.
  */
 export const SavingsBreakdown = ({ purposeSums }: { purposeSums: PurposeSums[] }) => {
   const t = useTranslations('savings')
@@ -38,129 +36,212 @@ export const SavingsBreakdown = ({ purposeSums }: { purposeSums: PurposeSums[] }
   const restCurrency = moduleGroupCurrency(rest)
 
   return (
-    <div className="mt-6 sm:max-w-[34rem]">
-      <p className="px-1 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-text-soft">
-        {t('purposes.label')}
-      </p>
+    <div className="flex flex-col gap-3 sm:gap-[18px]">
+      {restHasMoney && (
+        <UnassignedBlock
+          amounts={rest}
+          onAllocate={() => overlay.openRestAllocate(restCurrency)}
+          onRelease={() => overlay.openRestRelease(restCurrency)}
+        />
+      )}
 
-      <div className="overflow-hidden rounded-2xl border border-border-soft bg-card shadow-sm">
-        <ul className="flex flex-col divide-y divide-border-soft">
+      <section className="flex flex-col gap-2.5">
+        <div className="flex items-center justify-between gap-3 px-[3px]">
+          <div className="min-w-0">
+            <h2 className="text-[14.5px] font-extrabold tracking-[-0.02em] text-text sm:text-[17px]">
+              {t('purposes.breakdown_title')}
+            </h2>
+          </div>
+        </div>
+
+        {/* Grilla y no lista: el ancho decide cuántas columnas entran, así el
+            nombre no se parte en dos líneas en desktop. Es el MISMO componente
+            en los tres tamaños — nunca se convierte en fila de tabla. */}
+        <ul className="grid grid-cols-1 gap-[9px] sm:grid-cols-[repeat(auto-fill,minmax(330px,1fr))] sm:gap-[11px]">
           {groups.map((g) => (
             <li key={g.purposeId}>
-              <button
-                type="button"
-                onClick={() =>
+              <PurposeCard
+                group={g}
+                onOpen={() =>
                   overlay.openPurpose(
                     { id: g.purposeId, name: g.name, icon: g.icon },
                     moduleGroupCurrency(g.amounts),
                   )
                 }
-                className="flex min-h-[60px] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-surface-sunken"
-              >
-                <Icon>{g.icon ?? '🫙'}</Icon>
-                <span className="flex-1 truncate text-[14.5px] font-semibold text-text">
-                  {g.name}
-                </span>
-                <Amounts amounts={g.amounts} />
-                <ChevronRight className="size-4 shrink-0 text-text-soft" aria-hidden />
-              </button>
+              />
             </li>
           ))}
         </ul>
 
-        {/* El resto es la última fila de la misma card, separada por un divisor
-            más marcado: no es un propósito —no navega, no tiene chevron— pero
-            tampoco es otra sección. Es el pie de esta lista. */}
-        <div className="border-t border-border bg-surface-sunken/40">
-          <div className="flex min-h-[60px] items-center gap-3 px-4">
-            <Icon muted>🫙</Icon>
-            <span className="flex-1 truncate text-[14.5px] font-semibold text-text-muted">
-              {t('purposes.none')}
-            </span>
-            <Amounts amounts={rest} muted />
-            {/* Compensa el ancho del chevron que esta fila NO tiene, para que
-                los montos queden en una sola columna con los de arriba. */}
-            <span aria-hidden className="w-4 shrink-0" />
-          </div>
-          {restHasMoney && (
-            // Alineadas a la derecha, bajo la columna de montos: sueltas a la
-            // izquierda quedaban huérfanas y rompían la grilla vertical.
-            // Separadas entre sí porque el error más probable es tocar «Volver a
-            // usar» queriendo «Destinar» — la que saca plata del disponible y la
-            // que no la toca.
-            <div className="flex justify-end gap-2 px-4 pb-3">
-              <RestAction
-                label={t('purposes.allocate')}
-                onClick={() => overlay.openRestAllocate(restCurrency)}
-              />
-              <RestAction
-                label={t('release')}
-                onClick={() => overlay.openRestRelease(restCurrency)}
-              />
-            </div>
-          )}
-        </div>
-      </div>
+        {/* Con el resto en cero su explicación no desaparece: baja acá, en gris,
+            porque sigue siendo lo que evita entender «guardado» como una cuenta
+            aparte. */}
+        {!restHasMoney && (
+          <p className="px-[3px] pt-1 text-[11.5px] font-semibold leading-[1.45] text-text-soft">
+            {t('purposes.none_explainer')}
+          </p>
+        )}
+      </section>
     </div>
   )
 }
 
-/** Caja fija para el emoji: sueltos al lado del texto, los nombres arrancaban
- *  en distinta `x` según el ancho del glifo y la lista dejaba de leerse. */
-const Icon = ({ children, muted = false }: { children: React.ReactNode; muted?: boolean }) => (
-  <span
-    aria-hidden
-    className={cn(
-      'grid size-8 shrink-0 place-items-center rounded-[10px] text-[16px]',
-      muted ? 'bg-border-soft/60' : 'bg-surface-sunken',
-    )}
-  >
-    {children}
-  </span>
-)
-
 /**
- * 44px de alto, que es el mínimo del repo. Al volverlas pills se habían quedado
- * en 36 — más prolijo y peor de tocar, sobre una de las dos acciones que mueven
- * plata.
+ * «Sin destino»: el resto de lo guardado que todavía no tiene para qué.
  *
- * Texto en tinta plena y no gris: en gris se leían como rótulos apagados y no
- * como algo que se toca. Y no verdes: el acento es de los botones globales, y
- * dos verdes en la misma pantalla los pone a competir.
+ * Va ENTRE el total y los propósitos, y se distingue de ellos por FORMA y no
+ * por color: el círculo punteado y el borde punteado dicen «esto está sin
+ * terminar» sin gastar un color del sistema en una sola caja. Un propósito es
+ * una cosa; esto es un sobrante, y por eso ni siquiera tiene ícono propio.
+ *
+ * No navega: no hay detalle que abrir, porque no es un propósito. Sus dos
+ * acciones resuelven en el lugar.
  */
-const RestAction = ({ label, onClick }: { label: string; onClick: () => void }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="flex min-h-[44px] items-center rounded-full border border-border bg-card px-4 text-[13px] font-semibold text-text transition-colors hover:bg-surface-sunken"
-  >
-    {label}
-  </button>
-)
-
-/**
- * Los montos de un grupo, en las dos monedas y SIN sumarlas. La fila crece solo
- * cuando el dato lo pide: un propósito con pesos únicamente ocupa una línea.
- * Los montos no se achican ni se parten — el que cede es el nombre (D24).
- */
-const Amounts = ({ amounts, muted = false }: { amounts: ModuleAmount[]; muted?: boolean }) => {
-  const list = moduleVisibleAmounts(amounts)
+const UnassignedBlock = ({
+  amounts,
+  onAllocate,
+  onRelease,
+}: {
+  amounts: ModuleAmount[]
+  onAllocate: () => void
+  onRelease: () => void
+}) => {
+  const t = useTranslations('savings')
+  const visible = moduleVisibleAmounts(amounts)
 
   return (
-    <span className="flex shrink-0 flex-col items-end">
-      {list.map((a, i) => (
+    <section className="rounded-[20px] border border-dashed border-border bg-surface-sunken/50 p-[15px] sm:px-5 sm:py-[18px]">
+      <div className="flex items-center gap-3">
         <span
-          key={a.currency}
-          className={cn(
-            'whitespace-nowrap tabular-nums',
-            i === 0
-              ? cn('text-[14.5px] font-bold', muted ? 'text-text-muted' : 'text-text')
-              : 'text-[11.5px] font-semibold text-text-soft',
-          )}
+          aria-hidden
+          className="grid size-10 shrink-0 place-items-center rounded-full border-[1.5px] border-dashed border-text-soft text-text-muted"
         >
-          {money(a.reserved, a.currency)}
+          <Plus className="size-[19px]" strokeWidth={2.1} />
         </span>
-      ))}
-    </span>
+
+        <div className="min-w-0 flex-1">
+          {/* Versalitas y no nombre propio: «Sin destino» no es un nombre que
+              alguien eligió, es la etiqueta de lo que quedó. */}
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.11em] text-text-muted">
+            {t('purposes.none')}
+          </p>
+          <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3">
+            {visible.map((a, i) => (
+              <span
+                key={a.currency}
+                className={cn(
+                  'whitespace-nowrap font-extrabold tracking-[-0.045em] tabular-nums text-text',
+                  i === 0 ? 'text-[22px]' : 'text-[14px] text-text-muted',
+                )}
+              >
+                {money(a.reserved, a.currency)}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onAllocate}
+          className="min-h-11 shrink-0 rounded-[13px] bg-text px-4 text-[12.5px] font-extrabold text-white transition-opacity hover:opacity-90"
+        >
+          {t('purposes.allocate')}
+        </button>
+      </div>
+
+      <div className="mt-[11px] border-t border-dashed border-border pt-[11px]">
+        <p className="text-[11.5px] font-semibold leading-[1.45] text-text-muted">
+          {t('purposes.none_explainer')}
+        </p>
+        {/* «Volver a usar» va como enlace y no como segundo botón: es la acción
+            que SÍ mueve el disponible, y dos botones gemelos acá invitaban a
+            confundirla con destinar, que no lo mueve. */}
+        <button
+          type="button"
+          onClick={onRelease}
+          className="mt-1 inline-flex min-h-11 items-center text-[12.5px] font-extrabold text-emerald-deep transition-colors hover:text-text"
+        >
+          {t('release_from_unassigned')}
+        </button>
+      </div>
+    </section>
   )
+}
+
+/**
+ * Un propósito. Toda la card abre su detalle — una sola cosa, prometida por el
+ * chevron. Sin acciones contextuales: guardar cambia el total y su tope no está
+ * acá, y destinar por card no ahorra ningún tap sobre el bloque de arriba.
+ *
+ * Sin subtítulo: un propósito no tiene fecha hasta que exista Metas, y «Sin
+ * fecha» para todos es un renglón que no dice nada.
+ */
+const PurposeCard = ({ group, onOpen }: { group: ModuleGroup; onOpen: () => void }) => {
+  const visible = moduleVisibleAmounts(group.amounts)
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex min-h-[72px] w-full items-center gap-[13px] rounded-[18px] border border-border-soft bg-card px-3.5 py-[13px] text-left transition-all hover:border-border hover:shadow-[0_8px_20px_-14px_rgba(11,26,43,0.4)]"
+    >
+      {/* Caja fija para el emoji: suelto al lado del texto, los nombres
+          arrancaban en distinta `x` según el ancho del glifo y la grilla dejaba
+          de leerse como grilla. El tinte cicla por posición — es identidad
+          visual, no significado, así que no hace falta un color por propósito. */}
+      <span
+        aria-hidden
+        className={cn(
+          'grid size-[42px] shrink-0 place-items-center rounded-[15px] text-[20px]',
+          TINTS[hashTint(group.purposeId)],
+        )}
+      >
+        {group.icon ?? '🫙'}
+      </span>
+
+      <span className="min-w-0 flex-1 truncate text-[14.5px] font-extrabold tracking-[-0.015em] text-text">
+        {group.name}
+      </span>
+
+      {/* Los montos no se achican ni se parten: el que cede es el nombre. */}
+      <span className="flex shrink-0 flex-col items-end">
+        {visible.map((a, i) => (
+          <span
+            key={a.currency}
+            className={cn(
+              'whitespace-nowrap tabular-nums',
+              i === 0
+                ? 'text-[16.5px] font-extrabold tracking-[-0.02em] text-text'
+                : 'text-[11.5px] font-bold text-text-muted',
+            )}
+          >
+            {money(a.reserved, a.currency)}
+          </span>
+        ))}
+      </span>
+
+      <ChevronRight className="size-[18px] shrink-0 text-text-soft" aria-hidden />
+    </button>
+  )
+}
+
+/**
+ * Los cinco tintes del emblema, del set de la app y no de una paleta nueva.
+ *
+ * Ciclan por el id del propósito y no por su posición en la lista: ordenada por
+ * monto, la lista se reordena sola cuando cambian los números, y un propósito
+ * que cambia de color porque otro creció es un propósito que cuesta reencontrar.
+ */
+const TINTS = [
+  'bg-slate-soft text-slate-deep',
+  'bg-emerald-bg text-emerald-deep',
+  'bg-plum-soft text-plum-deep',
+  'bg-terracotta-soft text-terracotta-deep',
+  'bg-surface-sunken text-text-muted',
+] as const
+
+const hashTint = (id: string): number => {
+  let h = 0
+  for (let i = 0; i < id.length; i += 1) h = (h * 31 + id.charCodeAt(i)) >>> 0
+  return h % TINTS.length
 }

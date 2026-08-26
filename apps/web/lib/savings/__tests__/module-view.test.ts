@@ -6,7 +6,7 @@ import {
   moduleHasSavings,
   moduleRest,
   moduleRowFor,
-  moduleShowsUsd,
+  moduleAmountIsShown,
   moduleVisibleAmounts,
 } from '@grana/savings'
 import type { AvailableSums, PurposeSums } from '@grana/savings'
@@ -77,25 +77,17 @@ describe('la foto del módulo', () => {
   })
 })
 
-describe('la columna de dólares', () => {
-  it('se dibuja cuando hay guardado en dólares, aunque el disponible sea cero', () => {
-    expect(moduleShowsUsd(SUMS)).toBe(true)
+describe('cuándo se muestra un monto', () => {
+  it('se muestra si tiene plata', () => {
+    expect(moduleAmountIsShown({ currency: 'USD', reserved: 10 })).toBe(true)
   })
 
-  it('se dibuja cuando hay disponible en dólares, aunque no haya guardado', () => {
-    expect(
-      moduleShowsUsd([SUMS[0], { currencyCode: 'USD', accountsNet: 850, reserved: 0, available: 850 }]),
-    ).toBe(true)
+  it('no se muestra en cero: «US$ 0» en cada card es ruido repetido', () => {
+    expect(moduleAmountIsShown({ currency: 'USD', reserved: 0 })).toBe(false)
   })
 
-  it('NO se dibuja con todo en cero: una columna de guiones pide espacio para nada', () => {
-    expect(
-      moduleShowsUsd([SUMS[0], { currencyCode: 'USD', accountsNet: 0, reserved: 0, available: 0 }]),
-    ).toBe(false)
-  })
-
-  it('tampoco se dibuja si la moneda no vino en la respuesta', () => {
-    expect(moduleShowsUsd([SUMS[0]])).toBe(false)
+  it('un negativo se muestra: es un hecho, no una ausencia', () => {
+    expect(moduleAmountIsShown({ currency: 'ARS', reserved: -500 })).toBe(true)
   })
 })
 

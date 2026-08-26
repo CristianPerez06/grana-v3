@@ -41,7 +41,7 @@ export {
   MODULE_CURRENCIES,
   moduleRowFor,
   moduleHasSavings,
-  moduleShowsUsd,
+  moduleAmountIsShown,
   moduleAmountOf,
   moduleGroups,
   moduleRest,
