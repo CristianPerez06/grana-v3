@@ -123,7 +123,15 @@
   saca plata del disponible y la que no lo toca
 - [ ] 6.4 Regresión del dashboard: ningún número cambió, la card cierra, la tira sigue apareciendo
 - [ ] 6.5 QA nativo del módulo — **bloqueado por el mismo acceso que el issue #58**
+- [x] 5.4 La derivación de qué muestra el módulo —si hay guardado, si va la columna de dólares, el
+  orden de los propósitos y cuántos montos muestra una fila— vive en `@grana/savings/module-view.ts`,
+  **no adentro de los componentes**. Mismo precedente que `balance-card-view.ts`: escrita en el
+  componente, mobile la reescribiría y divergirían, que es la forma exacta en que la 0051 tuvo que
+  deshacer una cuenta duplicada. 18 tests con los números reales de agosto
 - [ ] 6.6 `pnpm openspec:check`, lint, typecheck (web y mobile) y tests en verde
+- [x] 6.9 Verificación previa al QA: **build de producción** —que agarra lo que el typecheck no ve— y
+  los 18 tests de la derivación. Encontró y cerró: la entrada faltante en el sidebar, `/savings` fuera
+  de `CHROMELESS_SECTIONS`, las dos consultas en un solo container, y los fallbacks sin alto reservado
 
 ## 7. Compuertas
 

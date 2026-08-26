@@ -2,21 +2,10 @@
 
 import { useTranslations } from 'next-intl'
 import { ChevronRight } from 'lucide-react'
-import type { PurposeSums } from '@grana/savings'
-import type { BalanceCurrency } from '@grana/money-logic'
+import { moduleGroups, moduleRest, moduleVisibleAmounts } from '@grana/savings'
+import type { ModuleAmount, PurposeSums } from '@grana/savings'
 import { cn } from '@/lib/utils'
-import { CURRENCIES, money } from './money'
-
-type Group = {
-  purposeId: string
-  name: string
-  icon: string | null
-  amounts: { currency: BalanceCurrency; reserved: number }[]
-}
-
-/** El monto de un grupo en una moneda. Ausente en la respuesta = cero. */
-const amountOf = (rows: PurposeSums[], currency: BalanceCurrency, purposeId: string | null) =>
-  rows.find((r) => r.currencyCode === currency && r.purposeId === purposeId)?.reserved ?? 0
+import { money } from './money'
 
 /**
  * El desglose: para qué es lo guardado.
@@ -28,32 +17,10 @@ const amountOf = (rows: PurposeSums[], currency: BalanceCurrency, purposeId: str
 export const SavingsBreakdown = ({ purposeSums }: { purposeSums: PurposeSums[] }) => {
   const t = useTranslations('savings')
 
-  const groups: Group[] = Array.from(
-    new Map(
-      purposeSums
-        .filter((r) => r.purposeId != null)
-        .map((r) => [r.purposeId as string, { name: r.purposeName, icon: r.purposeIcon }]),
-    ),
-  )
-    .map(([purposeId, meta]) => ({
-      purposeId,
-      name: meta.name ?? '',
-      icon: meta.icon,
-      amounts: CURRENCIES.map((c) => ({
-        currency: c,
-        reserved: amountOf(purposeSums, c, purposeId),
-      })),
-    }))
-    .sort(
-      (a, b) =>
-        b.amounts[0].reserved - a.amounts[0].reserved ||
-        b.amounts[1].reserved - a.amounts[1].reserved,
-    )
-
-  const rest = CURRENCIES.map((c) => ({
-    currency: c,
-    reserved: amountOf(purposeSums, c, null),
-  }))
+  // El orden, el resto y cuántos montos muestra cada fila salen de
+  // `@grana/savings`: testeados una vez y compartidos con mobile.
+  const groups = moduleGroups(purposeSums)
+  const rest = moduleRest(purposeSums)
   const restHasMoney = rest.some((a) => a.reserved > 0)
 
   return (
@@ -125,11 +92,10 @@ const Amounts = ({
   amounts,
   muted = false,
 }: {
-  amounts: { currency: BalanceCurrency; reserved: number }[]
+  amounts: ModuleAmount[]
   muted?: boolean
 }) => {
-  const shown = amounts.filter((a) => a.reserved !== 0)
-  const list = shown.length > 0 ? shown : [amounts[0]]
+  const list = moduleVisibleAmounts(amounts)
 
   return (
     <span className="flex shrink-0 flex-col items-end">

@@ -2,12 +2,13 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { moduleHasSavings, moduleRowFor, moduleShowsUsd } from '@grana/savings'
 import type { AvailableSums } from '@grana/savings'
 import type { BalanceCurrency } from '@grana/money-logic'
 import { Button } from '@/components/ui/button'
 import { SavingsDrawer } from '@/lib/savings/components/savings-drawer'
 import { cn } from '@/lib/utils'
-import { CURRENCIES, money } from './money'
+import { money } from './money'
 
 type DrawerState = { mode: 'save' | 'release'; currency: BalanceCurrency } | null
 
@@ -31,17 +32,10 @@ export const SavingsHeadline = ({
   const t = useTranslations('savings')
   const [drawer, setDrawer] = useState<DrawerState>(null)
 
-  const rowFor = (currency: BalanceCurrency): AvailableSums =>
-    sums.find((s) => s.currencyCode === currency) ?? {
-      currencyCode: currency,
-      accountsNet: 0,
-      reserved: 0,
-      available: 0,
-    }
-
-  // `some`, no una suma: preguntar "¿hay algo guardado?" no justifica sumar ARS
-  // con USD ni siquiera para un booleano. La regla no tiene excepción de uso.
-  const hasAnythingSaved = CURRENCIES.some((c) => rowFor(c).reserved > 0)
+  // Las cuatro decisiones de qué se muestra viven en `@grana/savings`, testeadas
+  // y compartidas con lo que va a necesitar mobile. Acá solo se dibujan.
+  const rowFor = (currency: BalanceCurrency) => moduleRowFor(sums, currency)
+  const hasAnythingSaved = moduleHasSavings(sums)
 
   return (
     <div className="flex flex-col">
@@ -99,9 +93,7 @@ const Grid = ({
   rowFor: (currency: BalanceCurrency) => AvailableSums
 }) => {
   const t = useTranslations('savings')
-  // La columna de dólares aparece cuando hay algún número en dólares. A cero no
-  // hay nada que leer, y una columna de guiones pide espacio para nada.
-  const showUsd = rowFor('USD').available !== 0 || rowFor('USD').reserved !== 0
+  const showUsd = moduleShowsUsd(sums)
 
   return (
     <div className="rounded-2xl border border-border-soft bg-card px-[18px] py-4">

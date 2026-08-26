@@ -37,3 +37,15 @@ export type {
   AllocationEntry,
   SavingsMutationResult,
 } from './types'
+export {
+  MODULE_CURRENCIES,
+  moduleRowFor,
+  moduleHasSavings,
+  moduleShowsUsd,
+  moduleAmountOf,
+  moduleGroups,
+  moduleRest,
+  moduleVisibleAmounts,
+  type ModuleAmount,
+  type ModuleGroup,
+} from './module-view'
