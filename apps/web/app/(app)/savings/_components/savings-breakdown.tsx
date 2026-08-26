@@ -96,10 +96,13 @@ const Icon = ({ children, muted = false }: { children: React.ReactNode; muted?: 
   </span>
 )
 
+/** 44px de alto, que es el mínimo del repo. Al volverlas pills se habían
+ *  quedado en 36 — más prolijo y peor de tocar, sobre una de las dos acciones
+ *  que mueven plata. */
 const RestAction = ({ label }: { label: string }) => (
   <button
     type="button"
-    className="flex min-h-[36px] items-center rounded-full border border-border bg-card px-3.5 text-[12.5px] font-semibold text-text-muted transition-colors hover:border-border hover:bg-surface-sunken hover:text-text"
+    className="flex min-h-[44px] items-center rounded-full border border-border bg-card px-4 text-[13px] font-semibold text-text-muted transition-colors hover:bg-surface-sunken hover:text-text"
   >
     {label}
   </button>
