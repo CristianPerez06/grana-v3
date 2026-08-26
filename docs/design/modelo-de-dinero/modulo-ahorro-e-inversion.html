@@ -254,23 +254,46 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
 .ab td{padding:11px 12px 11px 0;border-bottom:1px solid var(--border-soft);color:var(--muted);vertical-align:top}
 .ab td b{color:var(--text);font-weight:600}
 .ab td:last-child,.ab th:last-child{padding-right:0}
+
+/* cabecera sobria */
+.hrow{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:5px 0}
+.hrow .hk{font-size:13.5px;color:var(--muted)}
+.hrow .hv{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.hrow.big{padding-top:7px}
+.hrow.big .hk{font-size:14px;color:var(--text);font-weight:600}
+.hrow.big .hv{font-size:24px;font-weight:800}
+.hrow .hv.em{color:var(--emerald-deep)}
+.hrow.sub{padding-top:1px}
+.hrow.sub .hk,.hrow.sub .hv{font-size:12.5px;color:var(--soft);font-weight:600}
+
+/* filas de propósito, con acción contextual */
+.prow{display:flex;align-items:center;gap:10px;padding:11px 12px;border-top:1px solid var(--border-soft)}
+.prow:first-child{border-top:0}
+.prow .ic{flex:0 0 auto;font-size:17px}
+.prow .nm{flex:1;min-width:0}
+.prow .nm b{display:block;font-size:14.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prow .am{flex:0 0 auto;white-space:nowrap;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.prow .am i{display:block;font-style:normal;font-size:11.5px;font-weight:600;color:var(--soft);margin-top:1px}
+.prow .act{flex:0 0 auto;font-size:11.5px;font-weight:700;color:var(--emerald-deep);background:var(--emerald-bg);border-radius:999px;padding:6px 10px;white-space:nowrap}
+.prow .act.warn{color:#9A6B12;background:#FFF6E5}
+.prow .chev{flex:0 0 auto}
 </style>
 </head>
 <body>
 
 <header class="masthead">
   <div class="in">
-    <p class="eyebrow">Grana · extract-savings-module · tarea 2.1</p>
+    <p class="eyebrow">Grana · extract-savings-module · tarea 2.1 · v2</p>
     <h1>Ahorro e inversión</h1>
-    <p>El módulo que las fases 1 y 2 nunca tuvieron. No hay funcionalidad nueva: guardar, los propósitos y sus formularios ya existen — lo que no existe es una casa donde vivan, ni un borde que permita ocultarlos.</p>
-    <div class="open"><b>Lo que este mock viene a decidir.</b>
+    <p>Segunda pasada, con la arquitectura de interacción propuesta: cabecera sobria, filas más ricas, acción contextual por propósito y los cuatro sheets de un paso. Lenguaje visual real de la app — fondo claro, cards blancas, mobile first.</p>
+    <div class="open"><b>Tres cosas que ajusté de la propuesta, y por qué.</b>
       <ol>
-        <li><b>El corte de moneda:</b> tabs ARS/USD contra una sola lista bimoneda. Están las dos dibujadas, y la comparación tiene un antecedente concreto — ver el paso 3.</li>
-        <li><b>La jerarquía:</b> qué es lo primero que se lee al entrar, y dónde queda «Para gastar».</li>
-        <li><b>La puerta:</b> cómo se llega desde el dashboard sin que la card siga siendo la casa.</li>
+        <li><b>El USD no se esconde: se subordina.</b> Ocultarlo en la cabecera sería el primer lugar de la app donde una moneda que tenés desaparece. La app ya tiene el patrón — ARS grande, USD chico y rotulado — y no mete ruido.</li>
+        <li><b>La acción de la fila es «Destinar», no «Guardar».</b> Guardar cambia el <b>total</b> guardado, así que no es una acción sobre un grupo (D18). Destinar sí lo es, ahorra el mismo tap, y su origen está a la vista dos filas más abajo.</li>
+        <li><b>«Sin destino» conserva sus dos enlaces.</b> Sacarle «Volver a usar» empuja la salida más común al botón global, que después te vuelve a preguntar de dónde sale.</li>
       </ol>
     </div>
-    <div class="warn"><b>Números reales de agosto de 2026</b>, con el guardado y los propósitos ya cargados. El HTML no es código de producción.</div>
+    <div class="warn"><b>Números reales de agosto de 2026.</b> El HTML no es código de producción.</div>
   </div>
 </header>
 
@@ -281,137 +304,174 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     <div class="step-head">
       <span class="step-num">1</span>
       <div>
-        <h2>La puerta, desde el dashboard</h2>
-        <p class="sub">La fila se queda. Lo que cambia es a dónde lleva.</p>
-        <span class="badge b-mod">Navega, no abre</span>
+        <h2>La cabecera, sobria</h2>
+        <p class="sub">Dos números y nada más.</p>
+        <span class="badge b-new">Variante B</span>
       </div>
     </div>
     <div class="phone"><div class="scr">
-      <div class="dash">
-        <div class="dark">
-          <div class="lbl">Saldo disponible total</div>
-          <div class="big">$ 4.905.748<s>,17</s></div>
-          <div class="usd"><i>USD</i>US$ 0,00</div>
-        </div>
-        <div class="light">
-          <div class="t">Resumen del mes</div>
-          <div class="tri">
-            <div class="row"><span class="l"><i style="background:#D3DAE2"></i>Tenías</span><span class="a">−$ 2.729.825,17</span></div>
-            <div class="row"><span class="l"><i style="background:var(--emerald)"></i>Entró</span><span class="a" style="color:var(--emerald-deep)">+$ 8.021.007,00</span></div>
-            <div class="row"><span class="l"><i style="background:var(--slate)"></i>Se fué</span><span class="a" style="color:var(--slate)">−$ 205.433,66</span></div>
-          </div>
-          <div class="saved"><span class="l"><i></i>Guardado</span><span class="a">−$ 180.000,00 <span class="chev" style="font-size:14px">›</span></span></div>
-        </div>
+      <div class="dh"><div><div class="k">Menú</div><h3>Ahorro e inversión</h3></div></div>
+      <div class="c pad" style="padding:16px 18px">
+        <div class="hrow"><span class="hk">Para gastar</span><span class="hv">$ 4.905.748,17</span></div>
+        <div class="hrow big"><span class="hk">Guardado</span><span class="hv em">$ 180.000,00</span></div>
+        <div class="hrow sub"><span class="hk">En dólares</span><span class="hv">US$ 10,00</span></div>
       </div>
-      <div class="callout"><b>El chevron es todo el cambio visual.</b> Antes abría un drawer sobre el dashboard; ahora promete una pantalla, que es lo que un chevron promete en toda la app.</div>
+      <div class="callout"><b>Sin card oscura y sin número gigante.</b> El titular grande es el del dashboard; acá los dos números conviven al mismo peso porque la pregunta es la relación entre ellos: cuánto de lo que tengo decidí no tocar.</div>
     </div></div>
-    <p class="note"><b>La fila no se puede sacar</b>, y no es costumbre: es un término de la identidad de la card —<code>Tenías + Entró − Se fué − Guardado = Para gastar</code>— y sin ella los números dejan de cerrar contra el de arriba. <b>Explica el disponible.</b> Ese es su trabajo ahí, y es lectura.</p>
-    <p class="note"><b>Lo que sí se va es la operatoria.</b> Tocarla lleva al módulo en vez de abrir el detalle con sus formularios encima del dashboard. Es el criterio del change: una superficie ajena puede <b>leer</b> del módulo, no puede ser su casa.</p>
-    <p class="note"><b>Y la tira post-ingreso se queda donde está</b>, fuera del módulo. Su valor es aparecer justo cuando hay plata nueva; meterla adentro sería esconderla del único momento en que sirve.</p>
+    <p class="note"><b>El USD va subordinado, no oculto.</b> La app ya tiene la regla —ARS primario en grande, USD secundario en chico y rotulado— y la usa en el hero del dashboard. Esconder los US$ 10 haría que la única forma de saber que existen sea leer la fila de <i>Viaje</i>.</p>
+    <p class="note"><b>Y no hay «Para gastar en dólares».</b> Está en cero y una fila que dice cero no informa nada. Cuando haya dólares disponibles, aparece.</p>
+    <p class="note"><b>Es la mitad de la altura de una card oscura.</b> Lo que se gana con eso es que el desglose —que es la razón de la pantalla— entre arriba del pliegue en un teléfono.</p>
   </section>
 
   <section class="step">
     <div class="step-head">
       <span class="step-num">2</span>
       <div>
-        <h2>El módulo: una lista, dos monedas</h2>
-        <p class="sub">La propuesta.</p>
-        <span class="badge b-new">Recomendado</span>
+        <h2>Las filas, con acción contextual</h2>
+        <p class="sub">Tocar el cuerpo abre el detalle; el botón hace una cosa sola.</p>
+        <span class="badge b-new">Propuesta ajustada</span>
       </div>
     </div>
     <div class="phone"><div class="scr">
-      <div class="dh"><div><div class="k">Menú</div><h3>Ahorro e inversión</h3></div></div>
-      <div class="dt-hero">
-        <div class="k">Guardado</div>
-        <div class="n">$ 180.000<s style="font-size:20px;font-weight:600;text-decoration:none;color:rgba(255,255,255,.72)">,00</s></div>
-        <div class="flow" style="border-top:1px solid rgba(255,255,255,.14)"><span>US$ 10,00</span><span style="font-size:13px;color:rgba(255,255,255,.68)">Para gastar $ 4.905.748,17</span></div>
-      </div>
       <div class="sec-t">¿Para qué?</div>
-      <ul style="list-style:none;margin:0;padding:0" class="plist">
-        <li><span class="ic">🚑</span><span class="nm">Emergencia</span><span class="am">$ 50.000,00</span><span class="chev">›</span></li>
-        <li><span class="ic">✈️</span><span class="nm">Viaje</span><span class="am">$ 45.000,00<i>US$ 10,00</i></span><span class="chev">›</span></li>
-        <li><span class="ic">🏠</span><span class="nm">Casa</span><span class="am">$ 20.000,00</span><span class="chev">›</span></li>
-        <li><span class="ic">🎓</span><span class="nm">Estudio</span><span class="am">$ 5.000,00</span><span class="chev">›</span></li>
-        <li><span class="ic">🚗</span><span class="nm">Auto</span><span class="am">$ 5.000,00</span><span class="chev">›</span></li>
-      </ul>
-      <div style="border-top:1px solid var(--border-soft);padding-top:8px">
-        <div class="plist"><div style="display:flex;align-items:center;gap:10px;padding:6px 8px 4px 8px"><span class="ic">🫙</span><span class="nm" style="color:var(--muted)">Sin destino</span><span class="am" style="color:var(--muted);padding-right:26px">$ 55.000,00</span></div></div>
-        <div style="display:flex;gap:8px;padding-left:38px;font-size:12.5px;font-weight:700;color:var(--emerald-deep)"><span>Destinar</span><span style="color:var(--soft)">·</span><span>Volver a usar</span></div>
+      <div class="c">
+        <div class="prow"><span class="ic">🚑</span><div class="nm"><b>Emergencia</b></div><div class="am">$ 50.000,00</div><span class="act">Destinar</span><span class="chev">›</span></div>
+        <div class="prow"><span class="ic">✈️</span><div class="nm"><b>Viaje</b></div><div class="am">$ 45.000,00<i>US$ 10,00</i></div><span class="act">Destinar</span><span class="chev">›</span></div>
+        <div class="prow"><span class="ic">🏠</span><div class="nm"><b>Casa</b></div><div class="am">$ 20.000,00</div><span class="act">Destinar</span><span class="chev">›</span></div>
+        <div class="prow"><span class="ic">🎓</span><div class="nm"><b>Estudio</b></div><div class="am">$ 5.000,00</div><span class="act">Destinar</span><span class="chev">›</span></div>
+        <div class="prow"><span class="ic">🚗</span><div class="nm"><b>Auto</b></div><div class="am">$ 5.000,00</div><span class="act">Destinar</span><span class="chev">›</span></div>
       </div>
-      <div class="two" style="margin-top:14px"><div class="cta">Guardar</div><div class="cta ghost">Volver a usar</div></div>
+      <div style="border-top:1px solid var(--border-soft);margin-top:2px;padding-top:8px">
+        <div class="prow" style="padding-right:34px"><span class="ic">🫙</span><div class="nm"><b style="color:var(--muted);font-weight:600">Sin destino</b></div><div class="am" style="color:var(--muted)">$ 55.000,00</div></div>
+        <div style="display:flex;gap:9px;padding:2px 0 0 40px;font-size:12.5px;font-weight:700;color:var(--emerald-deep)"><span>Destinar</span><span style="color:var(--soft)">·</span><span>Volver a usar</span></div>
+      </div>
+      <div class="two" style="margin-top:15px"><div class="cta">Guardar</div><div class="cta ghost">Volver a usar</div></div>
     </div></div>
-    <p class="note"><b>Un solo número protagonista, y es Guardado.</b> «Para gastar» va como línea de contexto, chiquita: es el número que el <b>dashboard</b> ya titula, y repetirlo grande acá haría dos pantallas con el mismo protagonista. Acá aparece donde significa algo — como la otra mitad de la foto.</p>
-    <p class="note"><b>Cada propósito muestra sus dos monedas, sin sumarlas</b>, y la fila crece solo cuando el dato lo pide: los que tienen solo pesos ocupan una línea. <i>Viaje</i> es el único que hoy tiene dólares, y se lee entero de un vistazo.</p>
-    <p class="note"><b>«Sin destino» al pie</b>, separado por una regla, sin chevron y con el monto apagado, con sus dos acciones como enlaces. No es un propósito: es el resto derivado. Es lo mismo que la fase 2 resolvió en el drawer, y no hay motivo para cambiarlo al mudarse.</p>
+    <p class="note"><b>La acción de la fila es «Destinar», no «Guardar», y la diferencia es de nivel.</b> <i>Guardar</i> cambia el <b>total</b> guardado: su tope es el disponible, que es un número global y no está en esa fila. <i>Destinar</i> mueve lo que ya está guardado hacia ese propósito, y su origen —«Sin destino», $ 55.000— está dos filas más abajo, a la vista.</p>
+    <p class="note"><b>Es la regla que la fase 2 ya escribió (D18):</b> <i>"guardar no es una acción sobre un grupo: es una acción sobre la plata, que después cae en un grupo"</i>. Un botón que cambia el total viviendo en la fila de un grupo es el nivel equivocado, y hace cinco botones del mismo verbo compitiendo con el global de abajo.</p>
+    <p class="note"><b>Y ahorra el mismo tap que buscabas.</b> Con el botón: tocar <i>Destinar</i> en Viaje → monto → confirmar. Sin él: tocar Viaje → <i>Destinar más</i> → monto → confirmar. Un tap menos, sin mover nada de nivel.</p>
+    <p class="note"><b>El botón no se dibuja si no hay nada que destinar.</b> Con «Sin destino» en cero, <i>Destinar</i> desaparece de todas las filas — un control que no puede cambiar nada no va.</p>
   </section>
 
   <section class="step">
     <div class="step-head">
       <span class="step-num">3</span>
       <div>
-        <h2>La alternativa con tabs, y qué cuesta</h2>
-        <p class="sub">La misma pantalla, partida por moneda.</p>
+        <h2>La versión con «+ Guardar», para comparar</h2>
+        <p class="sub">Lo propuesto, dibujado.</p>
         <span class="badge b-bad">No recomendada</span>
       </div>
     </div>
     <div class="phone"><div class="scr">
-      <div class="dh"><div><div class="k">Menú</div><h3>Ahorro e inversión</h3></div></div>
-      <div class="seg"><span class="on">Pesos</span><span>Dólares</span></div>
-      <div class="dt-hero">
-        <div class="k">Guardado en pesos</div>
-        <div class="n">$ 180.000<s style="font-size:20px;font-weight:600;text-decoration:none;color:rgba(255,255,255,.72)">,00</s></div>
-        <div class="sub">Para gastar $ 4.905.748,17</div>
-      </div>
       <div class="sec-t">¿Para qué?</div>
-      <ul style="list-style:none;margin:0;padding:0" class="plist">
-        <li><span class="ic">🚑</span><span class="nm">Emergencia</span><span class="am">$ 50.000,00</span><span class="chev">›</span></li>
-        <li><span class="ic">✈️</span><span class="nm">Viaje</span><span class="am">$ 45.000,00</span><span class="chev">›</span></li>
-        <li><span class="ic">🏠</span><span class="nm">Casa</span><span class="am">$ 20.000,00</span><span class="chev">›</span></li>
-      </ul>
-      <div class="callout bad-c"><b>En esta pantalla, «Viaje» tiene $ 45.000.</b> En la pestaña de al lado tiene US$ 10. <b>En ninguna de las dos existe el propósito entero</b> — para saber cuánto hay para Viaje hay que mirar una, recordar el número y cambiar de pestaña.</div>
+      <div class="c">
+        <div class="prow"><span class="ic">🚑</span><div class="nm"><b>Emergencia</b></div><div class="am">$ 50.000,00</div><span class="act warn">+ Guardar</span><span class="chev">›</span></div>
+        <div class="prow"><span class="ic">✈️</span><div class="nm"><b>Viaje</b></div><div class="am">$ 45.000,00<i>US$ 10,00</i></div><span class="act warn">+ Guardar</span><span class="chev">›</span></div>
+        <div class="prow"><span class="ic">🏠</span><div class="nm"><b>Casa</b></div><div class="am">$ 20.000,00</div><span class="act warn">+ Guardar</span><span class="chev">›</span></div>
+        <div class="prow"><span class="ic">🎓</span><div class="nm"><b>Estudio</b></div><div class="am">$ 5.000,00</div><span class="act warn">+ Guardar</span><span class="chev">›</span></div>
+        <div class="prow"><span class="ic">🚗</span><div class="nm"><b>Auto</b></div><div class="am">$ 5.000,00</div><span class="act warn">+ Guardar</span><span class="chev">›</span></div>
+      </div>
+      <div class="two" style="margin-top:15px"><div class="cta">Guardar</div><div class="cta ghost">Volver a usar</div></div>
+      <div class="callout bad-c"><b>Seis botones que dicen «Guardar» en una pantalla.</b> Cinco en las filas y uno abajo, todos el mismo verbo, y el de abajo es el único cuyo tope se puede ver.</div>
     </div></div>
-    <p class="note"><b>Esto ya pasó, y la queja fue textual:</b> <i>"no hay ninguna manera donde yo pueda ver cuanto tengo para viaje en ars y usd junto"</i>. El detalle del drawer arrancó partido por moneda, después con un selector, y las dos versiones se descartaron por lo mismo. Quedó como <b>D16</b> de la fase 2.</p>
-    <p class="note"><b>La regla que salió de ahí:</b> la moneda es el eje de la <b>operación</b>; el propósito, el de la <b>lectura</b>. Un chip de moneda vive en un formulario —guardar, destinar, volver a usar— donde la moneda es un dato de esa operación. En una pantalla de lectura es una estructura, y parte lo que se venía a leer.</p>
-    <p class="note"><b>Y el módulo es lectura</b>, aunque tenga botones. Los botones abren formularios; ahí sí aparece el chip. La pantalla de atrás contesta <i>"cuánto tengo guardado y para qué"</i>, y esa pregunta no es por moneda.</p>
-    <p class="note"><b>Lo que sí es cierto de la intuición de las tabs</b> es que apilar dos bloques —uno de pesos y otro de dólares— mete ruido. Pero eso no lleva a partir en pestañas: lleva a <b>una sola lista con las dos monedas por fila</b>, que es el paso 2. Las tabs y el apilado son los dos extremos del mismo error.</p>
+    <p class="note"><b>El ahorro real es de un tap</b>, y es el tap del chip. Hoy «guardar $10.000 para Viaje» es: <i>Guardar</i> → monto → chip Viaje → confirmar. Con el botón en la fila: <i>+ Guardar</i> → monto → confirmar.</p>
+    <p class="note"><b>Y ese tap compra algo.</b> Con los chips ves <b>todos</b> tus propósitos mientras decidís el monto — es donde alguien se da cuenta de que en realidad lo quiere en Emergencia. Con el botón en la fila, el destino queda decidido antes de ver los montos.</p>
+    <p class="note">Es el mismo patrón que la fase 2 vigila con los dos <i>«Volver a usar»</i>: <b>repetir un verbo en dos niveles obliga a leer el contexto para saber cuál hace qué.</b> Con seis, la lectura ya no alcanza.</p>
   </section>
 
   <section class="step">
     <div class="step-head">
       <span class="step-num">4</span>
       <div>
-        <h2>Sin nada guardado</h2>
-        <p class="sub">El estado del día uno, que hoy no existe en ningún lado.</p>
-        <span class="badge b-new">Estado vacío</span>
+        <h2>Sheet A · Destinar a un propósito</h2>
+        <p class="sub">Desde el botón de la fila. El destino no se vuelve a preguntar.</p>
+        <span class="badge b-new">Un paso</span>
       </div>
     </div>
-    <div class="phone"><div class="scr">
-      <div class="dh"><div><div class="k">Menú</div><h3>Ahorro e inversión</h3></div></div>
-      <div class="dt-hero">
-        <div class="k">Guardado</div>
-        <div class="n" style="color:rgba(255,255,255,.45)">$ 0,00</div>
-        <div class="flow" style="border-top:1px solid rgba(255,255,255,.14)"><span></span><span style="font-size:13px;color:rgba(255,255,255,.68)">Para gastar $ 4.905.748,17</span></div>
+    <div class="phone ov"><div class="scrim"></div><div class="sheet">
+      <div class="grab"></div>
+      <div class="sh"><h3>Destinar a Viaje</h3><span class="x">←</span></div>
+      <div class="c amt">
+        <div class="lbl">Monto</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n zero">0</span></div>
       </div>
-      <div class="gd">
-        <div class="top">
-          <div class="tile">🫙</div>
-          <div><h4>Guardar no mueve tu plata</h4><p>Marca una parte como algo que no vas a tocar. Sigue en tu cuenta; solo deja de contar como disponible para gastar.</p></div>
-        </div>
-        <div class="acts"><div class="cta">Guardar algo</div></div>
+      <div class="c calc">
+        <div><span>Sin destino</span><span>$ 55.000,00</span></div>
+        <div class="minus"><span>Vas a destinar</span><span>$ 0,00</span></div>
+        <div class="rule"><span>Queda sin destino</span><span>$ 55.000,00</span></div>
       </div>
+      <p class="note" style="border:0;padding:0;margin:2px 2px 0">No mueve plata ni cambia cuánto podés gastar. Solo dice para qué es parte de lo que ya tenés guardado.</p>
+      <div class="cta">Destinar</div>
     </div></div>
-    <p class="note"><b>Una sola acción, y la frase que evita el malentendido.</b> Es el único momento en que hay que explicar qué es guardar, porque después el número lo explica solo. La misma frase que la fase 1 puso en el formulario.</p>
-    <p class="note"><b>Sin propósitos, sin «Sin destino», sin botones apagados.</b> Un propósito sin plata no tiene nada que decir, y «Sin destino» de cero es una fila que dice cero. Aparecen cuando hay algo que repartir.</p>
-    <p class="note"><b>Y sin ningún rastro de inversiones</b>, aunque el módulo se llame así. Un módulo que se estrena mostrando lo que no hace enseña a ignorar la pantalla, y esa lección no se revierte cuando la funcionalidad llega.</p>
+    <p class="note"><b>Sin chips de propósito</b>, porque el tap ya lo contestó. Es D9 de la fase 2: <i>lo que se hereda de dónde se tocó no se vuelve a preguntar</i>, y el título lo dice.</p>
+    <p class="note"><b>El chip de moneda sí está</b>, arriba a la derecha. Operar es sobre una plata concreta: ahí la moneda es un dato de la operación, no una estructura de la pantalla.</p>
   </section>
 
   <section class="step">
     <div class="step-head">
       <span class="step-num">5</span>
       <div>
-        <h2>La operatoria, adentro</h2>
-        <p class="sub">Los formularios no cambian. Cambia desde dónde se abren.</p>
-        <span class="badge b-same">Sin cambios</span>
+        <h2>Sheet B · Destinar desde «Sin destino»</h2>
+        <p class="sub">Origen heredado; el destino se elige acá.</p>
+        <span class="badge b-same">Ya existe</span>
+      </div>
+    </div>
+    <div class="phone ov"><div class="scrim"></div><div class="sheet">
+      <div class="grab"></div>
+      <div class="sh"><h3>¿Para qué es?</h3><span class="x">←</span></div>
+      <div class="c amt">
+        <div class="lbl">Monto</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">20.000</span></div>
+      </div>
+      <div class="sec-t">Destino</div>
+      <div class="chips"><span>🚑 Emergencia</span><span class="on">✈️ Viaje</span><span>🏠 Casa</span><span>🎓 Estudio</span><span>🚗 Auto</span><span>＋</span></div>
+      <div class="c calc">
+        <div><span>Sin destino</span><span>$ 55.000,00</span></div>
+        <div class="minus"><span>Vas a destinar</span><span>$ 20.000,00</span></div>
+        <div class="rule"><span>Queda sin destino</span><span>$ 35.000,00</span></div>
+      </div>
+      <div class="cta">Destinar</div>
+    </div></div>
+    <p class="note"><b>El título es la pregunta, no el mecanismo.</b> <i>«Destinar plata sin destino»</i> repite la palabra dos veces y nombra la operación; <b>«¿Para qué es?»</b> nombra lo que el usuario está decidiendo. El origen ya lo dice el bloque de abajo.</p>
+    <p class="note">Es el sheet que la fase 2 ya construyó, tal cual. El <b>＋</b> crea un propósito nuevo y lo deja elegido en el acto.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">6</span>
+      <div>
+        <h2>Sheet C · Guardar</h2>
+        <p class="sub">El botón principal. El propósito es opcional.</p>
+        <span class="badge b-same">Ya existe</span>
+      </div>
+    </div>
+    <div class="phone ov"><div class="scrim"></div><div class="sheet">
+      <div class="grab"></div>
+      <div class="sh"><h3>Guardar</h3><span class="x">←</span></div>
+      <div class="c amt">
+        <div class="lbl">Monto</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">10.000</span></div>
+      </div>
+      <div class="sec-t">Para qué</div>
+      <div class="chips"><span class="on">🫙 Sin destino</span><span>🚑 Emergencia</span><span>✈️ Viaje</span><span>🏠 Casa</span><span>＋</span></div>
+      <div class="c calc">
+        <div><span>Disponible hoy</span><span>$ 4.905.748,17</span></div>
+        <div class="minus"><span>Vas a guardar</span><span>−$ 10.000,00</span></div>
+        <div class="rule"><span>Te queda para gastar</span><span>$ 4.895.748,17</span></div>
+      </div>
+      <div class="cta">Guardar</div>
+    </div></div>
+    <p class="note"><b>Acá el tope sí está a la vista</b> —el disponible— y por eso este es el nivel donde vive guardar. La comparación con el paso 3 es directa: el botón de la fila abriría esta misma pantalla con un tope que la fila no mostraba.</p>
+    <p class="note"><b>«Sin destino» viene elegido</b>, y es el caso normal: <i>"guardé $200.000, todavía no sé para qué"</i>. Los chips dejan decirlo en el mismo acto sin obligar a nadie.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">7</span>
+      <div>
+        <h2>Sheet D · Volver a usar</h2>
+        <p class="sub">Con la regla del origen ya cerrada.</p>
+        <span class="badge b-same">Ya existe</span>
       </div>
     </div>
     <div class="phone ov"><div class="scrim"></div><div class="sheet">
@@ -422,7 +482,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
         <div class="val"><span class="s">$</span><span class="n zero">0</span></div>
       </div>
       <div class="sec-t">De dónde sale</div>
-      <div class="chips"><span class="on">🫙 Sin destino</span><span>🚑 Emergencia</span><span>✈️ Viaje</span><span>🏠 Casa</span></div>
+      <div class="chips"><span class="on">🫙 Sin destino</span><span>🚑 Emergencia</span><span>✈️ Viaje</span><span>🏠 Casa</span><span>🎓 Estudio</span><span>🚗 Auto</span></div>
       <div class="c calc">
         <div><span>Sin destino</span><span>$ 55.000,00</span></div>
         <div class="minus"><span>Vas a volver a usar</span><span>$ 0,00</span></div>
@@ -430,75 +490,89 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
       </div>
       <div class="cta">Volver a usar</div>
     </div></div>
-    <p class="note"><b>El mismo overlay de siempre</b>, montado sobre el módulo en vez de sobre el dashboard. Nada de esto se reescribe: si el change termina tocando SQL o formularios, algo se entendió mal.</p>
-    <p class="note"><b>Acá sí hay chip de moneda</b>, arriba a la derecha del monto. Es el otro lado de D16: operar es sobre una plata concreta, así que la moneda es un dato de esta operación.</p>
-    <p class="note"><b>Y el origen queda con la regla cerrada:</b> un solo grupo con saldo va directo al monto; varios con «Sin destino» con saldo lo preseleccionan; varios sin saldo en el resto no preseleccionan nada; desde un propósito se hereda. <b>Nunca se toca un propósito sin mostrarlo antes.</b></p>
+    <p class="note"><b>Sin ＋ en los chips</b>: un propósito recién creado no tiene plata, así que como origen no sirve. Y solo aparecen los que tienen saldo en <b>esa</b> moneda.</p>
+    <p class="note"><b>La regla completa, cerrada:</b> un solo grupo con saldo va directo al monto, sin chips. Varios y «Sin destino» con saldo → preseleccionado y visible. <b>Varios y el resto en cero → sin preselección</b>, el CTA arranca deshabilitado. Desde un propósito → heredado, sin chips, y el título dice el origen.</p>
+    <p class="note"><b>El tercer caso hoy no está así</b>: el código preselecciona el primer propósito. Es el que más importa, porque preseleccionar un propósito toca algo que el usuario sí decidió. Queda como tarea.</p>
+  </section>
+
+  <section class="step">
+    <div class="step-head">
+      <span class="step-num">8</span>
+      <div>
+        <h2>Sin nada guardado</h2>
+        <p class="sub">El vacío enseña, no espera.</p>
+        <span class="badge b-new">Estado vacío</span>
+      </div>
+    </div>
+    <div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">Menú</div><h3>Ahorro e inversión</h3></div></div>
+      <div class="c pad" style="padding:16px 18px">
+        <div class="hrow"><span class="hk">Para gastar</span><span class="hv">$ 4.905.748,17</span></div>
+        <div class="hrow big"><span class="hk">Guardado</span><span class="hv" style="color:#C4CBD4">$ 0,00</span></div>
+      </div>
+      <div class="gd">
+        <div class="top">
+          <div class="tile">🫙</div>
+          <div><h4>Todavía no tenés plata guardada</h4><p>Podés separar una parte para que no cuente como disponible. No se mueve de tu banco: Grana solo te ayuda a no mezclarla con lo del día a día.</p></div>
+        </div>
+        <div class="acts"><div class="cta">Guardar algo</div></div>
+      </div>
+    </div></div>
+    <p class="note"><b>La cabecera se queda</b>, con el guardado en cero apagado. Es lo que hace que el vacío se entienda: al lado de $ 4.905.748 disponibles, un cero dice <i>"de todo esto, nada está separado"</i>. Sola, la tarjeta explicativa flotaría.</p>
+    <p class="note"><b>Sin propósitos en cero, sin «Sin destino» en cero, sin inversiones.</b> Un propósito sin plata no tiene nada que decir, y un módulo que se estrena mostrando lo que no hace enseña a ignorar la pantalla.</p>
   </section>
 
 </div>
 
 <div class="ab">
-  <h2>La decisión del corte de moneda, con el antecedente</h2>
-  <p class="lede">Las tres formas de resolver la bimoneda en esta pantalla. Dos ya se probaron y se descartaron en la fase 2.</p>
+  <h2>Los taps, contados</h2>
+  <p class="lede">Contra el drawer de hoy, que se abre tocando un número en la card del dashboard. Un «tap de decisión» es tocar algo que cambia el resultado — escribir el monto cuenta como uno.</p>
   <table>
-    <thead><tr><th style="width:24%">Forma</th><th style="width:32%">Qué pasa con «Viaje»</th><th>Veredicto</th></tr></thead>
+    <thead><tr><th style="width:34%">Tarea</th><th style="width:22%">Hoy, en el drawer</th><th style="width:22%">En el módulo</th><th>Qué cambió</th></tr></thead>
     <tbody>
-      <tr>
-        <td><b>Dos bloques apilados</b><br>Pesos arriba, dólares abajo</td>
-        <td>Aparece dos veces, en dos listas distintas</td>
-        <td><b>Descartado en la fase 2.</b> <i>"No sé si me convence que lo de USD esté abajo"</i> — duplica la lista entera para un propósito que tiene dólares</td>
-      </tr>
-      <tr>
-        <td><b>Tabs o selector</b><br>Una moneda por vez</td>
-        <td>Existe partido: $ 45.000 acá, US$ 10 en la otra pestaña. <b>Entero, en ningún lado</b></td>
-        <td><b>Descartado en la fase 2.</b> <i>"No hay ninguna manera donde yo pueda ver cuánto tengo para Viaje en ARS y USD junto"</i></td>
-      </tr>
-      <tr style="background:#F6FDFA">
-        <td><b>Una lista, dos montos por fila</b></td>
-        <td>Una fila: <b>$ 45.000,00 · US$ 10,00</b>, sin sumarlos</td>
-        <td><b>Es D16</b>, y es lo que está funcionando hoy en el drawer. La fila crece solo cuando hay dólares que mostrar</td>
-      </tr>
+      <tr><td><b>Ver para qué tengo guardado</b></td><td class="num">2</td><td class="num">1</td><td>Es la pantalla, no un overlay adentro de otra</td></tr>
+      <tr><td><b>Guardar sin propósito</b></td><td class="num">4</td><td class="num">4</td><td>Igual. El botón global sigue siendo el camino</td></tr>
+      <tr><td><b>Guardar para un propósito</b></td><td class="num">5</td><td class="num">5</td><td>Igual, y a propósito: el tope vive en ese nivel</td></tr>
+      <tr style="background:#F6FDFA"><td><b>Destinar a un propósito</b></td><td class="num">6</td><td class="num">4</td><td><b>Dos menos</b>, por el botón de la fila</td></tr>
+      <tr style="background:#F6FDFA"><td><b>Volver a usar desde el resto</b></td><td class="num">5</td><td class="num">4</td><td><b>Uno menos</b>: el enlace del pie</td></tr>
+      <tr><td><b>Ver el detalle de un propósito</b></td><td class="num">3</td><td class="num">2</td><td>Uno menos</td></tr>
     </tbody>
   </table>
 </div>
 
 <div class="ways">
-  <h2>Lo que decide este mock, y lo que no</h2>
+  <h2>Lo que queda por decidir</h2>
   <div class="cols">
     <div class="way">
-      <div class="cap">Propuesto</div>
-      <h4>La jerarquía</h4>
+      <div class="cap">Para mirar</div>
+      <h4>La acción de la fila</h4>
       <ol>
-        <li><b>Guardado es el protagonista</b>, en las dos monedas. Es la pregunta del módulo.</li>
-        <li><b>«Para gastar» va de contexto</b>, en chico: es el titular del dashboard, y dos pantallas con el mismo protagonista no dejan protagonista a ninguna.</li>
-        <li>Después el desglose, el resto al pie, y las dos acciones abajo.</li>
+        <li><b>Destinar</b> (paso 2) contra <b>+ Guardar</b> (paso 3). El primero respeta el nivel y ahorra el mismo tap.</li>
+        <li>Si al usarlo resulta que lo que más se busca es <b>guardar plata nueva</b> para un propósito, la conclusión sería otra — pero eso se ve usando, no discutiendo.</li>
       </ol>
     </div>
     <div class="way">
-      <div class="cap">Propuesto</div>
-      <h4>Sin tabs</h4>
+      <div class="cap">Para mirar</div>
+      <h4>El USD en la cabecera</h4>
       <ol>
-        <li>La moneda es el eje de la <b>operación</b> (los formularios, con su chip), no el de la <b>lectura</b>.</li>
-        <li>Partir por moneda hace que un propósito bimoneda <b>no exista entero en ninguna pantalla</b>.</li>
-        <li>Apilar dos bloques es el otro extremo del mismo error. La salida es una lista con dos montos por fila.</li>
-      </ol>
-    </div>
-    <div class="way">
-      <div class="cap">Cerrado</div>
-      <h4>El origen al volver a usar</h4>
-      <ol>
-        <li>Un grupo con saldo → directo al monto. Varios, con resto con saldo → «Sin destino» preseleccionado y visible.</li>
-        <li>Varios, con el resto en cero → sin preselección.</li>
-        <li>Desde un propósito → heredado. <b>Nunca se toca un propósito sin mostrarlo antes.</b></li>
+        <li>Está como <b>tercera línea subordinada</b>. Con más plata en dólares puede pedir el mismo peso que el peso.</li>
+        <li>Lo que no cambia: <b>nunca se suman</b>.</li>
       </ol>
     </div>
     <div class="way">
       <div class="cap">Abierto</div>
-      <h4>Lo que falta</h4>
+      <h4>Dónde va lo plegado</h4>
       <ol>
-        <li><b>El rótulo del menú y el slug</b> de la ruta.</li>
-        <li><b>Dónde va el pliegue del banco</b> —«Por qué tu banco muestra otro número»— y el historial: siguen plegados, pero ahora hay una página entera donde ubicarlos.</li>
-        <li><b>El borde técnico:</b> qué se apaga exactamente cuando el módulo se apaga, y qué queda del dashboard.</li>
+        <li>El pliegue del banco —<i>«por qué tu banco muestra otro número»</i>— y el historial siguen plegados, pero ahora hay una página entera donde ubicarlos.</li>
+        <li>Candidato: los dos al pie, después de las acciones.</li>
+      </ol>
+    </div>
+    <div class="way">
+      <div class="cap">Abierto</div>
+      <h4>El borde técnico</h4>
+      <ol>
+        <li>Qué se apaga exactamente cuando el módulo se apaga, y qué queda del dashboard.</li>
+        <li>El rótulo del menú y el slug de la ruta.</li>
       </ol>
     </div>
   </div>
@@ -507,21 +581,22 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
 <div class="foot">
   <div>
     <h3>Los números</h3>
-    <p>Agosto de 2026, reales. Guardado <strong>$ 180.000</strong> repartido en Emergencia 50.000 · Viaje 45.000 · Casa 20.000 · Estudio 5.000 · Auto 5.000, y <strong>$ 55.000 sin destino</strong>. En dólares, <strong>US$ 10</strong>, todos en Viaje.</p>
-    <p>Los cinco propósitos más el resto dan <strong>$ 180.000</strong> exactos, que es el invariante que la fase 2 defiende con un trigger.</p>
+    <p>Agosto de 2026. Para gastar <strong>$ 4.905.748,17</strong> y <strong>US$ 0</strong>; guardado <strong>$ 180.000</strong> y <strong>US$ 10</strong>.</p>
+    <p>Emergencia 50.000 · Viaje 45.000 + US$ 10 · Casa 20.000 · Estudio 5.000 · Auto 5.000 · Sin destino 55.000. Los cinco más el resto dan <strong>$ 180.000</strong> exactos.</p>
   </div>
   <div>
-    <h3>Lo que este change NO hace</h3>
+    <h3>Lo que NO entra</h3>
     <ul>
-      <li>Ninguna <strong>migración</strong>. Las tablas, los triggers y el write path se reutilizan tal cual.</li>
-      <li>Ningún <strong>formulario nuevo</strong>. Los que hay se montan en otro lado.</li>
-      <li>Nada de <strong>plazo fijo, FCI ni dólares</strong>. Eso es la fase 3, y va adentro de esta casa.</li>
+      <li>Barras de progreso — no hay metas todavía, y una barra sin objetivo no mide nada.</li>
+      <li>Inputs inline en las filas — con el teclado abierto en un teléfono, la fila que estás editando se va de pantalla.</li>
+      <li>«A resguardo», instrumentos, plazo fijo, FCI, dólares.</li>
+      <li>Cualquier control apagado esperando una fase futura.</li>
     </ul>
   </div>
   <div>
     <h3>De dónde salen las reglas</h3>
-    <p><code>openspec/changes/add-savings-purpose/design.md</code> — D16 (el eje de lectura), D15 y D22bis (el resto al pie), D18 (guardar vive un nivel arriba).</p>
-    <p><code>openspec/changes/extract-savings-module/design.md</code> — E1 a E9, y en particular E2: el borde es el entregable.</p>
+    <p><code>add-savings-purpose/design.md</code> — D9 (lo heredado no se pregunta), D16 (el eje de lectura), D18 (guardar vive un nivel arriba), D19 (el chip en vez de la pantalla).</p>
+    <p><code>extract-savings-module/design.md</code> — E2 (el borde es el entregable), E8 (no se estrena mostrando lo que no hace).</p>
   </div>
 </div>
 

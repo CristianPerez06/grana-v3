@@ -28,6 +28,15 @@
 - [ ] 2.3 Dibujar la **puerta sobria** desde el dashboard: la fila de Guardado lleva al módulo sin
   convertir la card en su casa
 
+- [x] 2.4 Segunda pasada del mock con la arquitectura de interacción propuesta: cabecera sobria (Para
+  gastar + Guardado, con el USD **subordinado y no oculto**), filas con acción contextual, los cuatro
+  sheets de un paso y el vacío educativo. **Ajuste sobre lo propuesto: la acción de la fila es
+  «Destinar», no «+ Guardar»** — guardar cambia el *total* y su tope es el disponible, que la fila no
+  muestra (D18). *Destinar* es una acción del grupo, su origen está a la vista dos filas más abajo, y
+  ahorra el mismo tap. Las dos versiones están dibujadas para mirarlas
+- [ ] 2.5 **Decidir mirando**: la acción de la fila (*Destinar* vs *+ Guardar*) y si el USD de la
+  cabecera necesita más peso cuando haya más plata en dólares
+
 ## 3. La ruta y la entrada
 
 - [ ] 3.1 Ruta web `/savings` (o el slug que salga de 2.2) con su layout y estados de carga
