@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="design_doc_mode" content="canvas" />
+<title>grana · V1 compacta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+:root{--bg:#F5F2EC;--card:#FFFFFF;--ink:#1B2A33;--muted:#6F7A80;--soft:#5F6A70;--faint:#7C858A;--border:#EAE5DC;--line:#F1EDE5;--emerald:#11B981;--emerald-deep:#0B7F58;--emerald-soft:#EFFAF4;--terracota:#C97A5F;--amber:#E0A03F;--amber-deep:#845714;--amber-soft:#FDF7EC;--slate:#4A7B92;--slate-deep:#27505F;--clay:#8C7A66;--violet:#7E6BB0;--violet-deep:#544485;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+body{background:#DED9D0}
+a{text-decoration:none;color:inherit}a:hover{color:var(--emerald-deep)}
+button{font-family:inherit;cursor:pointer}
+.tnum{font-variant-numeric:tabular-nums}
+.tag{position:absolute;width:390px}
+.tag .kk{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#7E786C}
+.tag h3{font-size:21px;font-weight:800;letter-spacing:-.03em;margin-top:6px}
+.tag p{font-size:13px;font-weight:500;color:#66625A;margin-top:5px;line-height:1.45;text-wrap:pretty}
+.ph{position:absolute;background:var(--bg);border-radius:30px;border:1px solid #DCD6CB;overflow:hidden;box-shadow:0 24px 50px -28px rgba(27,42,51,.4)}
+.scr{display:flex;flex-direction:column;height:100%;position:relative}
+/* nav */
+.nb{display:flex;align-items:center;gap:11px;padding:18px 16px 6px}
+.nb .bk{width:36px;height:36px;border-radius:12px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;color:var(--muted);flex:none}
+.nb .bk svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.nb .ti{font-size:16.5px;font-weight:800;letter-spacing:-.03em}
+.nb .rt{margin-left:auto}
+.nb .ic{width:36px;height:36px;border-radius:12px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;color:var(--muted)}
+.nb .ic svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.body{flex:1;padding:8px 16px 20px;display:flex;flex-direction:column;gap:11px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:22px}
+.lbl{font-size:10.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.foot{font-size:11.5px;font-weight:600;color:var(--muted);line-height:1.45;text-wrap:pretty}
+.link{position:relative;color:var(--emerald-deep);font-size:12px;font-weight:800;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;align-self:center;padding:4px 6px;margin-right:-6px}
+.link::after{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:44px}
+.link svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round}
+.rowh{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 3px}
+.rowh h2{font-size:14.5px;font-weight:800;letter-spacing:-.02em}
+/* hero compacto */
+.hero{padding:17px 18px 15px}
+.hero .hd{display:flex;align-items:flex-start;gap:12px}
+.hero .amt{font-size:33px;font-weight:800;letter-spacing:-.05em;line-height:1;margin-top:9px}
+.hero .amt .cur{color:#B8C0C4;font-weight:700}
+.hero .usd{margin-left:auto;flex:none;text-align:right}
+.hero .usd .p{font-size:9.5px;font-weight:800;letter-spacing:.08em;color:var(--slate-deep);background:#EDF3F6;border-radius:999px;padding:4px 8px}
+.hero .usd .a{font-size:14.5px;font-weight:800;letter-spacing:-.03em;margin-top:8px}
+.hero .sup{font-size:12px;font-weight:600;color:var(--muted);margin-top:11px;line-height:1.45}
+.hero .spend{margin-top:13px;padding-top:12px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.hero .spend .k{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--soft)}
+.hero .spend .v{margin-left:auto;font-size:15px;font-weight:800;letter-spacing:-.03em;color:var(--muted)}
+/* botonera compacta */
+.abar{display:grid;grid-template-columns:repeat(3,1fr);background:var(--card);border:1px solid var(--border);border-radius:18px;overflow:hidden}
+.abar button{border:none;background:transparent;min-height:56px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:11.5px;font-weight:800;letter-spacing:-.01em;color:var(--ink)}
+.abar button+button{border-left:1px solid var(--line)}
+.abar button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.abar button.pri{background:var(--emerald-soft);color:var(--emerald-deep)}
+/* cards de propósito */
+.plist{display:flex;flex-direction:column;gap:9px}
+.pcard{border-radius:18px;padding:13px 14px;display:flex;align-items:center;gap:12px;min-height:70px;border:1px solid transparent}
+.pcard .ic{width:38px;height:38px;border-radius:13px;display:grid;place-items:center;flex:none}
+.pcard .ic svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+.pcard .tx{flex:1;min-width:0}
+.pcard .tx .n{font-size:14px;font-weight:800;letter-spacing:-.015em}
+.pcard .tx .s{font-size:11.5px;font-weight:600;margin-top:4px;opacity:.85}
+.pcard .am{text-align:right;flex:none}
+.pcard .am .a{font-size:16.5px;font-weight:800;letter-spacing:-.04em;white-space:nowrap}
+.pcard .am .u{font-size:11.5px;font-weight:700;margin-top:4px;opacity:.85;white-space:nowrap}
+.pcard .go{flex:none;opacity:.5;margin-left:2px}
+.pcard .go svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+/* sin destino */
+.rest{border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:12px;min-height:70px;background:var(--amber-soft);border:1px dashed #E3CFA4}
+.rest .tx{flex:1;min-width:0}
+.rest .tx .n{font-size:13.5px;font-weight:800;color:var(--amber-deep);letter-spacing:-.01em}
+.rest .tx .s{font-size:11.5px;font-weight:600;color:#7A5A20;margin-top:4px}
+.rest .am{font-size:16px;font-weight:800;letter-spacing:-.04em;color:#6B4610;white-space:nowrap}
+.rest .b{flex:none;border:none;background:var(--amber-deep);color:#fff;font-size:12.5px;font-weight:800;border-radius:13px;padding:0 14px;min-height:44px}
+/* grilla desktop */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* fold */
+.fold{position:absolute;left:0;right:0;border-top:2px dashed rgba(201,122,95,.75);pointer-events:none}
+.fold span{position:absolute;right:10px;top:-9px;background:var(--terracota);color:#fff;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:999px}
+.note{position:absolute;width:440px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:22px}
+.note h4{font-size:15.5px;font-weight:800;letter-spacing:-.02em}
+.note .nl{margin-top:14px;display:flex;flex-direction:column;gap:13px}
+.note .k{font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.note .t{font-size:13px;font-weight:600;color:#4E575C;line-height:1.5;margin-top:5px;text-wrap:pretty}
+.note .t b{color:var(--ink);font-weight:800}
+.note .win{color:var(--emerald-deep)}
+.note .lose{color:#A85336}
+</style>
+<template id="__bundler_thumbnail" data-bg-color="#F5F2EC">
+<svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg"><rect width="1200" height="800" fill="#F5F2EC"/><text x="600" y="300" text-anchor="middle" font-family="'Plus Jakarta Sans',system-ui,sans-serif" font-size="110" font-weight="800" letter-spacing="-4" fill="#1B2A33">Guardado</text><rect x="330" y="380" width="540" height="76" rx="26" fill="#F2F7F9"/><rect x="330" y="470" width="540" height="76" rx="26" fill="#EFFAF4"/><rect x="330" y="560" width="540" height="76" rx="26" fill="#FDF7EC"/></svg>
+</template>
+</head>
+<body>
+
+<!-- ===== 390 · DESTINAR ===== -->
+<div class="tag" style="left:60px;top:40px"><div class="kk">V1 compacta · 390px</div><h3>Botón "Destinar"</h3><p>Todo el módulo entra en el primer viewport: hero, botonera, tres propósitos y el resto sin asignar.</p></div>
+
+<div class="ph" style="left:60px;top:180px;width:390px;height:844px" data-screen-label="V1 compacta 390 · Destinar">
+<div class="scr">
+  <div class="nb"><button class="bk"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="ti">Ahorro</span><div class="rt"><span class="ic"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span></div></div>
+  <div class="body">
+    <div class="card hero">
+      <div class="hd">
+        <div><div class="lbl">Guardado</div><div class="amt tnum"><span class="cur">$</span> 1.150.000</div></div>
+        <div class="usd"><span class="p">USD</span><div class="a tnum">US$ 900</div></div>
+      </div>
+      <p class="sup">Plata apartada: sigue en tus cuentas, pero no cuenta para gastar.</p>
+      <div class="spend"><span class="k">Para gastar</span><span class="v tnum">$ 842.300</span></div>
+    </div>
+    <div class="abar">
+      <button class="pri"><svg viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>Guardar</button>
+      <button><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Volver a usar</button>
+      <button><svg viewBox="0 0 24 24"><path d="M12 4v6M12 10L6 20M12 10l6 10"/></svg>Destinar</button>
+    </div>
+    <div class="rowh"><h2>Para qué guardaste</h2><a class="link" href="#">Nuevo<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></a></div>
+    <div class="plist">
+      <div class="pcard" style="background:#F2F7F9;border-color:#E1EBF0;color:var(--slate-deep)"><span class="ic" style="background:rgba(74,123,146,.15)"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg></span><div class="tx"><div class="n">Viaje a Bariloche</div><div class="s">Julio 2027</div></div><div class="am"><div class="a tnum">$ 480.000</div><div class="u tnum">US$ 300</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="background:#EFFAF4;border-color:#D8F0E4;color:var(--emerald-deep)"><span class="ic" style="background:rgba(17,185,129,.15)"><svg viewBox="0 0 24 24"><path d="M12 3l8 3.5v5c0 5-3.4 8.6-8 9.5-4.6-.9-8-4.5-8-9.5v-5L12 3z"/></svg></span><div class="tx"><div class="n">Fondo de emergencia</div><div class="s">Sin fecha</div></div><div class="am"><div class="a tnum">$ 420.000</div><div class="u tnum">US$ 600</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="background:#F4F1F9;border-color:#E6E0F2;color:var(--violet-deep)"><span class="ic" style="background:rgba(126,107,176,.15)"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M2 20h20"/></svg></span><div class="tx"><div class="n">Notebook nueva</div><div class="s">Sin fecha</div></div><div class="am"><div class="a tnum">$ 90.000</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="rest"><div class="tx"><div class="n">Sin destino</div><div class="s">Resto sin asignar</div></div><span class="am tnum">$ 160.000</span><button class="b">Destinar</button></div>
+    </div>
+    <p class="foot" style="padding:0 4px">Los dólares se muestran aparte y nunca se suman a los pesos.</p>
+  </div>
+</div>
+</div>
+
+<!-- ===== 360 · REPARTIR ===== -->
+<div class="tag" style="left:500px;top:40px"><div class="kk">V1 compacta · 360px</div><h3>Botón "Repartir"</h3><p>Mismo diseño en el ancho más chico, con la otra etiqueta para comparar. Nada se rompe ni se corta.</p></div>
+
+<div class="ph" style="left:500px;top:180px;width:360px;height:844px" data-screen-label="V1 compacta 360 · Repartir">
+<div class="scr">
+  <div class="nb"><button class="bk"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="ti">Ahorro</span><div class="rt"><span class="ic"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span></div></div>
+  <div class="body">
+    <div class="card hero">
+      <div class="hd">
+        <div><div class="lbl">Guardado</div><div class="amt tnum"><span class="cur">$</span> 1.150.000</div></div>
+        <div class="usd"><span class="p">USD</span><div class="a tnum">US$ 900</div></div>
+      </div>
+      <p class="sup">Plata apartada: sigue en tus cuentas, pero no cuenta para gastar.</p>
+      <div class="spend"><span class="k">Para gastar</span><span class="v tnum">$ 842.300</span></div>
+    </div>
+    <div class="abar">
+      <button class="pri"><svg viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>Guardar</button>
+      <button><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Volver a usar</button>
+      <button><svg viewBox="0 0 24 24"><path d="M12 4v6M12 10L6 20M12 10l6 10"/></svg>Repartir</button>
+    </div>
+    <div class="rowh"><h2>Para qué guardaste</h2><a class="link" href="#">Nuevo<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></a></div>
+    <div class="plist">
+      <div class="pcard" style="background:#F2F7F9;border-color:#E1EBF0;color:var(--slate-deep)"><span class="ic" style="background:rgba(74,123,146,.15)"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg></span><div class="tx"><div class="n">Viaje a Bariloche</div><div class="s">Julio 2027</div></div><div class="am"><div class="a tnum">$ 480.000</div><div class="u tnum">US$ 300</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="background:#EFFAF4;border-color:#D8F0E4;color:var(--emerald-deep)"><span class="ic" style="background:rgba(17,185,129,.15)"><svg viewBox="0 0 24 24"><path d="M12 3l8 3.5v5c0 5-3.4 8.6-8 9.5-4.6-.9-8-4.5-8-9.5v-5L12 3z"/></svg></span><div class="tx"><div class="n">Fondo de emergencia</div><div class="s">Sin fecha</div></div><div class="am"><div class="a tnum">$ 420.000</div><div class="u tnum">US$ 600</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="background:#F4F1F9;border-color:#E6E0F2;color:var(--violet-deep)"><span class="ic" style="background:rgba(126,107,176,.15)"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M2 20h20"/></svg></span><div class="tx"><div class="n">Notebook nueva</div><div class="s">Sin fecha</div></div><div class="am"><div class="a tnum">$ 90.000</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="rest"><div class="tx"><div class="n">Sin destino</div><div class="s">Resto sin asignar</div></div><span class="am tnum">$ 160.000</span><button class="b">Repartir</button></div>
+    </div>
+    <p class="foot" style="padding:0 4px">Los dólares se muestran aparte y nunca se suman a los pesos.</p>
+  </div>
+</div>
+</div>
+
+<!-- ===== 7 PROPÓSITOS ===== -->
+<div class="tag" style="left:920px;top:40px"><div class="kk">Escala</div><h3>Con 7 propósitos</h3><p>La línea marca el corte del primer viewport en 390×844. Hero, botonera y tres propósitos quedan arriba del corte.</p></div>
+
+<div class="ph" style="left:920px;top:180px;width:390px;height:1230px" data-screen-label="V1 compacta · 7 propósitos">
+<div class="scr">
+  <div class="nb"><button class="bk"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="ti">Ahorro</span><div class="rt"><span class="ic"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span></div></div>
+  <div class="body">
+    <div class="card hero">
+      <div class="hd">
+        <div><div class="lbl">Guardado</div><div class="amt tnum"><span class="cur">$</span> 1.150.000</div></div>
+        <div class="usd"><span class="p">USD</span><div class="a tnum">US$ 900</div></div>
+      </div>
+      <p class="sup">Plata apartada: sigue en tus cuentas, pero no cuenta para gastar.</p>
+      <div class="spend"><span class="k">Para gastar</span><span class="v tnum">$ 842.300</span></div>
+    </div>
+    <div class="abar">
+      <button class="pri"><svg viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>Guardar</button>
+      <button><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Volver a usar</button>
+      <button><svg viewBox="0 0 24 24"><path d="M12 4v6M12 10L6 20M12 10l6 10"/></svg>Destinar</button>
+    </div>
+    <div class="rowh"><h2>Para qué guardaste</h2><a class="link" href="#">Nuevo<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></a></div>
+    <div class="plist">
+      <div class="pcard" style="background:#F2F7F9;border-color:#E1EBF0;color:var(--slate-deep)"><span class="ic" style="background:rgba(74,123,146,.15)"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg></span><div class="tx"><div class="n">Viaje a Bariloche</div><div class="s">Julio 2027</div></div><div class="am"><div class="a tnum">$ 480.000</div><div class="u tnum">US$ 300</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="background:#EFFAF4;border-color:#D8F0E4;color:var(--emerald-deep)"><span class="ic" style="background:rgba(17,185,129,.15)"><svg viewBox="0 0 24 24"><path d="M12 3l8 3.5v5c0 5-3.4 8.6-8 9.5-4.6-.9-8-4.5-8-9.5v-5L12 3z"/></svg></span><div class="tx"><div class="n">Fondo de emergencia</div><div class="s">Sin fecha</div></div><div class="am"><div class="a tnum">$ 420.000</div><div class="u tnum">US$ 600</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="background:#F4F1F9;border-color:#E6E0F2;color:var(--violet-deep)"><span class="ic" style="background:rgba(126,107,176,.15)"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M2 20h20"/></svg></span><div class="tx"><div class="n">Notebook nueva</div><div class="s">Sin fecha</div></div><div class="am"><div class="a tnum">$ 90.000</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="background:#FCF4F0;border-color:#F2E1D8;color:#8A4530"><span class="ic" style="background:rgba(201,122,95,.15)"><svg viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-7h6v7"/></svg></span><div class="tx"><div class="n">Alquiler de enero</div><div class="s">Enero 2027</div></div><div class="am"><div class="a tnum">$ 70.000</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="background:#F2F1EC;border-color:#E4E1D8;color:#6B6053"><span class="ic" style="background:rgba(140,122,102,.15)"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 8l7-5 7 5"/></svg></span><div class="tx"><div class="n">Curso de inglés</div><div class="s">Marzo 2027</div></div><div class="am"><div class="a tnum">$ 60.000</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="background:#F2F7F9;border-color:#E1EBF0;color:var(--slate-deep)"><span class="ic" style="background:rgba(74,123,146,.15)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg></span><div class="tx"><div class="n">Regalos</div><div class="s">Sin fecha</div></div><div class="am"><div class="a tnum">$ 40.000</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="background:#F4F1F9;border-color:#E6E0F2;color:var(--violet-deep)"><span class="ic" style="background:rgba(126,107,176,.15)"><svg viewBox="0 0 24 24"><path d="M4 20V6a2 2 0 0 1 2-2h12v16"/><path d="M4 20h14"/></svg></span><div class="tx"><div class="n">Mudanza</div><div class="s">Sin fecha</div></div><div class="am"><div class="a tnum">$ 30.000</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="rest"><div class="tx"><div class="n">Sin destino</div><div class="s">Resto sin asignar</div></div><span class="am tnum">$ 160.000</span><button class="b">Destinar</button></div>
+    </div>
+    <p class="foot" style="padding:0 4px">Los dólares se muestran aparte y nunca se suman a los pesos.</p>
+  </div>
+  <div class="fold" style="top:844px"><span>Fin del primer viewport</span></div>
+</div>
+</div>
+
+<!-- ===== TABLET ===== -->
+<div class="tag" style="left:1370px;top:40px"><div class="kk">Escala</div><h3>Tablet · dos columnas</h3><p>El mismo componente en grilla de dos columnas. El hero y la botonera se estiran; las cards no cambian de forma.</p></div>
+
+<div class="ph" style="left:1370px;top:180px;width:720px;height:620px" data-screen-label="V1 compacta · tablet 2 columnas">
+<div class="scr">
+  <div class="nb" style="padding:20px 24px 6px"><button class="bk"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="ti">Ahorro</span><div class="rt"><span class="ic"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span></div></div>
+  <div class="body" style="padding:10px 24px 24px;gap:13px">
+    <div style="display:grid;grid-template-columns:1.35fr 1fr;gap:13px">
+      <div class="card hero">
+        <div class="hd">
+          <div><div class="lbl">Guardado</div><div class="amt tnum" style="font-size:38px"><span class="cur">$</span> 1.150.000</div></div>
+          <div class="usd"><span class="p">USD</span><div class="a tnum">US$ 900</div></div>
+        </div>
+        <p class="sup">Plata apartada: sigue en tus cuentas, pero no cuenta para gastar.</p>
+        <div class="spend"><span class="k">Para gastar</span><span class="v tnum">$ 842.300</span></div>
+      </div>
+      <div class="abar" style="grid-template-columns:1fr;align-content:stretch">
+        <button class="pri" style="flex-direction:row;gap:9px;justify-content:flex-start;padding:0 18px"><svg viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>Guardar</button>
+        <button style="flex-direction:row;gap:9px;justify-content:flex-start;padding:0 18px;border-left:none;border-top:1px solid var(--line)"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Volver a usar</button>
+        <button style="flex-direction:row;gap:9px;justify-content:flex-start;padding:0 18px;border-left:none;border-top:1px solid var(--line)"><svg viewBox="0 0 24 24"><path d="M12 4v6M12 10L6 20M12 10l6 10"/></svg>Destinar</button>
+      </div>
+    </div>
+    <div class="rowh"><h2>Para qué guardaste</h2><a class="link" href="#">Nuevo propósito<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></a></div>
+    <div class="grid2">
+      <div class="pcard" style="background:#F2F7F9;border-color:#E1EBF0;color:var(--slate-deep)"><span class="ic" style="background:rgba(74,123,146,.15)"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg></span><div class="tx"><div class="n">Viaje a Bariloche</div><div class="s">Julio 2027</div></div><div class="am"><div class="a tnum">$ 480.000</div><div class="u tnum">US$ 300</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="background:#EFFAF4;border-color:#D8F0E4;color:var(--emerald-deep)"><span class="ic" style="background:rgba(17,185,129,.15)"><svg viewBox="0 0 24 24"><path d="M12 3l8 3.5v5c0 5-3.4 8.6-8 9.5-4.6-.9-8-4.5-8-9.5v-5L12 3z"/></svg></span><div class="tx"><div class="n">Fondo de emergencia</div><div class="s">Sin fecha</div></div><div class="am"><div class="a tnum">$ 420.000</div><div class="u tnum">US$ 600</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="pcard" style="background:#F4F1F9;border-color:#E6E0F2;color:var(--violet-deep)"><span class="ic" style="background:rgba(126,107,176,.15)"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M2 20h20"/></svg></span><div class="tx"><div class="n">Notebook nueva</div><div class="s">Sin fecha</div></div><div class="am"><div class="a tnum">$ 90.000</div></div><span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
+      <div class="rest"><div class="tx"><div class="n">Sin destino</div><div class="s">Resto sin asignar</div></div><span class="am tnum">$ 160.000</span><button class="b">Destinar</button></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ===== NOTAS ===== -->
+<div class="note" style="left:60px;top:1064px">
+<h4>V1 compacta vs. la lista actual</h4>
+<div class="nl">
+<div><div class="k">1 · Qué se entiende mejor</div><div class="t win">Tres cosas que la lista no dice: que <b>Guardado</b> es un concepto y no una cuenta (hero propio, con la frase de plata apartada), que <b>Sin destino</b> es un resto y no un propósito (card ámbar punteada, sin ícono, sin fecha), y que los <b>dólares van aparte</b> (columna propia a la derecha, nunca sumada). Cada propósito se lee como un objeto con nombre, no como una fila de tabla.</div></div>
+<div><div class="k">2 · Qué se vuelve más largo</div><div class="t lose">Cada propósito ocupa 70px contra ~54px de una fila: con 7 propósitos son ~110px más de scroll. Y comparar montos entre propósitos cuesta un poco más, porque las cards separan visualmente lo que una tabla alinea. Si el usuario viene a comparar cifras, la lista gana; si viene a entender o a operar, no.</div></div>
+<div><div class="k">3 · Primer viewport en 390×844</div><div class="t">Entra todo el módulo: hero con Guardado, dólares y Para gastar; la botonera de tres acciones; los tres propósitos; y la card de Sin destino. El pie sobre dólares queda justo al borde. Con 7 propósitos el corte cae después del tercero, así que el usuario siempre ve el patrón antes de scrollear.</div></div>
+<div><div class="k">4 · Dónde vive la acción</div><div class="t">Botonera compacta de 56px pegada al hero: las tres acciones juntas, con el mismo peso salvo <b>Guardar</b>, que va en verde. Descarté las cards grandes de acción de la variante operativa: ocupaban 100px y le robaban el protagonismo al número. <b>Destinar</b> aparece dos veces —en la botonera y en la card de Sin destino— porque son dos intenciones distintas: "quiero repartir algo" y "quiero repartir <i>esto</i>".</div></div>
+<div><div class="k">5 · Con 6 o 7 propósitos</div><div class="t">Aguanta, pero pide dos reglas: los propósitos se ordenan por monto y la paleta cicla sobre cinco colores fijos (no uno por propósito). A partir de ~8, sumaría un "Ver todos" con la lista completa en otra pantalla y dejaría en la home los cinco más grandes. En tablet el mismo componente pasa a dos columnas y el problema desaparece.</div></div>
+</div>
+</div>
+
+<div class="note" style="left:920px;top:1450px">
+<h4>Destinar o Repartir</h4>
+<div class="nl">
+<div><div class="k">Destinar</div><div class="t"><b>Más preciso, menos natural.</b> Nombra exactamente la operación (asignar plata a un propósito) y es el término que ya usamos en el modelo. Suena un poco administrativo dicho en voz alta.</div></div>
+<div><div class="k">Repartir</div><div class="t"><b>Más humano, menos exacto.</b> Se entiende sin explicación, pero sugiere dividir entre varios: en un tap que manda plata a un solo propósito, promete algo distinto de lo que hace.</div></div>
+<div><div class="k">Mi elección</div><div class="t"><b>Destinar</b> en la botonera y en la card de Sin destino, por consistencia con el resto del módulo, y <b>repartir</b> como verbo en el copy explicativo ("todavía no repartiste $160.000"). El concepto se enseña con la palabra amigable y se opera con la precisa.</div></div>
+<div><div class="k">Ancho de 360</div><div class="t">Con "Volver a usar" la botonera queda al límite: la etiqueta ocupa las dos líneas disponibles. Si aparece un idioma más largo, la botonera pasa a ícono + label en una sola línea con scroll horizontal, no a tres líneas.</div></div>
+</div>
+</div>
+
+</body>
+</html>
