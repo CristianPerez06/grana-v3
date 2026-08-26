@@ -290,6 +290,13 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
 .chips{display:flex;flex-wrap:wrap;gap:7px}
 .chips span{border:1px solid var(--border);background:#fff;border-radius:999px;padding:9px 13px;font-size:13px;font-weight:600;color:var(--text)}
 .chips span.on{border-color:var(--emerald-deep);background:var(--emerald-bg);color:#05614A}
+
+/* La vuelta atrás va ARRIBA A LA IZQUIERDA, antes del título, y es un control
+   de 44×44 con borde — el mismo `DrawerBackHeader` que usa la app. El ✕ de
+   cerrar sí va a la derecha: son dos controles distintos y estaban confundidos. */
+.sh.back,.dh.back{justify-content:flex-start;gap:12px}
+.bk{flex:0 0 auto;width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:#fff;display:grid;place-items:center;color:var(--muted);font-size:21px;line-height:1;font-weight:500}
+.sh.back h3,.dh.back > div{flex:1;min-width:0}
 </style>
 </head>
 <body>
@@ -327,7 +334,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
       </div>
     </div>
     <div class="phone"><div class="scr">
-      <div class="dh"><div><div class="k">Cuenta</div><h3>Comafi</h3></div><span class="x">←</span></div>
+      <div class="dh back"><span class="bk">‹</span><div><div class="k">Cuenta</div><h3>Comafi</h3></div></div>
       <div class="dt-hero">
         <div class="k">Saldo</div>
         <div class="n">$ 762.862<s style="font-size:20px;font-weight:600;text-decoration:none;color:rgba(255,255,255,.72)">,23</s></div>
@@ -389,7 +396,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     </div>
     <div class="phone ov"><div class="scrim"></div><div class="sheet">
       <div class="grab"></div>
-      <div class="sh"><h3>¿Hacia dónde?</h3><span class="x">←</span></div>
+      <div class="sh back"><span class="bk">‹</span><h3>¿Hacia dónde?</h3></div>
       <div class="sec-t">Tus cuentas</div>
       <div class="c rows">
         <div><div class="tile">👛</div><div class="rw"><div class="v">Billetera</div></div><span class="a" style="font-size:13px;color:var(--soft);font-variant-numeric:tabular-nums">$ 4.322.885,94</span></div>
@@ -418,7 +425,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     </div>
     <div class="phone ov"><div class="scrim"></div><div class="sheet">
       <div class="grab"></div>
-      <div class="sh"><h3>Nuevo plazo fijo</h3><span class="x">←</span></div>
+      <div class="sh back"><span class="bk">‹</span><h3>Nuevo plazo fijo</h3></div>
       <div class="c calc" style="padding:12px 15px">
         <div><span>Capital</span><span>$ 700.000,00</span></div>
         <div><span>En</span><span>Comafi</span></div>
@@ -679,7 +686,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     </div>
     <div class="phone ov"><div class="scrim"></div><div class="sheet">
       <div class="grab"></div>
-      <div class="sh"><h3>Volvió a mi cuenta</h3><span class="x">←</span></div>
+      <div class="sh back"><span class="bk">‹</span><h3>Volvió a mi cuenta</h3></div>
       <div class="c amt">
         <div class="lbl">¿Cuánto volvió?</div><div class="cur">ARS</div>
         <div class="val"><span class="s">$</span><span class="n">724.164,38</span></div>
@@ -714,7 +721,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     </div>
     <div class="phone ov"><div class="scrim"></div><div class="sheet">
       <div class="grab"></div>
-      <div class="sh"><h3>Lo renové</h3><span class="x">←</span></div>
+      <div class="sh back"><span class="bk">‹</span><h3>Lo renové</h3></div>
       <div class="c rows">
         <div><div class="tile">📅</div><div class="rw"><div class="k">Nuevo vencimiento</div><div class="v">24 de oct · 30 días</div></div><span class="chev">›</span></div>
       </div>

@@ -277,6 +277,13 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
 .prow .act{flex:0 0 auto;font-size:11.5px;font-weight:700;color:var(--emerald-deep);background:var(--emerald-bg);border-radius:999px;padding:6px 10px;white-space:nowrap}
 .prow .act.warn{color:#9A6B12;background:#FFF6E5}
 .prow .chev{flex:0 0 auto}
+
+/* La vuelta atrás va ARRIBA A LA IZQUIERDA, antes del título, y es un control
+   de 44×44 con borde — el mismo `DrawerBackHeader` que usa la app. El ✕ de
+   cerrar sí va a la derecha: son dos controles distintos y estaban confundidos. */
+.sh.back,.dh.back{justify-content:flex-start;gap:12px}
+.bk{flex:0 0 auto;width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:#fff;display:grid;place-items:center;color:var(--muted);font-size:21px;line-height:1;font-weight:500}
+.sh.back h3,.dh.back > div{flex:1;min-width:0}
 </style>
 </head>
 <body>
@@ -327,19 +334,19 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     <div class="step-head">
       <span class="step-num">2</span>
       <div>
-        <h2>Las filas, con acción contextual</h2>
-        <p class="sub">Tocar el cuerpo abre el detalle; el botón hace una cosa sola.</p>
-        <span class="badge b-new">Propuesta ajustada</span>
+        <h2>Las filas, limpias</h2>
+        <p class="sub">Tocar la fila abre el detalle. Nada más.</p>
+        <span class="badge b-new">Principal</span>
       </div>
     </div>
     <div class="phone"><div class="scr">
       <div class="sec-t">¿Para qué?</div>
       <div class="c">
-        <div class="prow"><span class="ic">🚑</span><div class="nm"><b>Emergencia</b></div><div class="am">$ 50.000,00</div><span class="act">Destinar</span><span class="chev">›</span></div>
-        <div class="prow"><span class="ic">✈️</span><div class="nm"><b>Viaje</b></div><div class="am">$ 45.000,00<i>US$ 10,00</i></div><span class="act">Destinar</span><span class="chev">›</span></div>
-        <div class="prow"><span class="ic">🏠</span><div class="nm"><b>Casa</b></div><div class="am">$ 20.000,00</div><span class="act">Destinar</span><span class="chev">›</span></div>
-        <div class="prow"><span class="ic">🎓</span><div class="nm"><b>Estudio</b></div><div class="am">$ 5.000,00</div><span class="act">Destinar</span><span class="chev">›</span></div>
-        <div class="prow"><span class="ic">🚗</span><div class="nm"><b>Auto</b></div><div class="am">$ 5.000,00</div><span class="act">Destinar</span><span class="chev">›</span></div>
+        <div class="prow"><span class="ic">🚑</span><div class="nm"><b>Emergencia</b></div><div class="am">$ 50.000,00</div><span class="chev">›</span></div>
+        <div class="prow"><span class="ic">✈️</span><div class="nm"><b>Viaje</b></div><div class="am">$ 45.000,00<i>US$ 10,00</i></div><span class="chev">›</span></div>
+        <div class="prow"><span class="ic">🏠</span><div class="nm"><b>Casa</b></div><div class="am">$ 20.000,00</div><span class="chev">›</span></div>
+        <div class="prow"><span class="ic">🎓</span><div class="nm"><b>Estudio</b></div><div class="am">$ 5.000,00</div><span class="chev">›</span></div>
+        <div class="prow"><span class="ic">🚗</span><div class="nm"><b>Auto</b></div><div class="am">$ 5.000,00</div><span class="chev">›</span></div>
       </div>
       <div style="border-top:1px solid var(--border-soft);margin-top:2px;padding-top:8px">
         <div class="prow" style="padding-right:34px"><span class="ic">🫙</span><div class="nm"><b style="color:var(--muted);font-weight:600">Sin destino</b></div><div class="am" style="color:var(--muted)">$ 55.000,00</div></div>
@@ -347,19 +354,19 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
       </div>
       <div class="two" style="margin-top:15px"><div class="cta">Guardar</div><div class="cta ghost">Volver a usar</div></div>
     </div></div>
-    <p class="note"><b>La acción de la fila es «Destinar», no «Guardar», y la diferencia es de nivel.</b> <i>Guardar</i> cambia el <b>total</b> guardado: su tope es el disponible, que es un número global y no está en esa fila. <i>Destinar</i> mueve lo que ya está guardado hacia ese propósito, y su origen —«Sin destino», $ 55.000— está dos filas más abajo, a la vista.</p>
-    <p class="note"><b>Es la regla que la fase 2 ya escribió (D18):</b> <i>"guardar no es una acción sobre un grupo: es una acción sobre la plata, que después cae en un grupo"</i>. Un botón que cambia el total viviendo en la fila de un grupo es el nivel equivocado, y hace cinco botones del mismo verbo compitiendo con el global de abajo.</p>
-    <p class="note"><b>Y ahorra el mismo tap que buscabas.</b> Con el botón: tocar <i>Destinar</i> en Viaje → monto → confirmar. Sin él: tocar Viaje → <i>Destinar más</i> → monto → confirmar. Un tap menos, sin mover nada de nivel.</p>
-    <p class="note"><b>El botón no se dibuja si no hay nada que destinar.</b> Con «Sin destino» en cero, <i>Destinar</i> desaparece de todas las filas — un control que no puede cambiar nada no va.</p>
+    <p class="note"><b>Una fila, una promesa.</b> El chevron dice que hay una pantalla atrás, y eso es todo lo que hace: ícono, nombre, montos, detalle. Sin botones repetidos cinco veces.</p>
+    <p class="note"><b>Las acciones viven en dos niveles y ninguno es la fila.</b> Abajo, los <b>globales</b>: guardar y volver a usar, que operan sobre el total y tienen su tope a la vista. Adentro del propósito, las <b>del grupo</b>: destinar más, volver a usar y quitar destino. Cada acción donde su tope se puede leer.</p>
+    <p class="note"><b>El camino más común de destinar no pasa por acá</b>: pasa por el enlace de «Sin destino», que es de donde sale la plata. Ahí se elige el destino con chips, y son los mismos cuatro taps que tendría un botón en cada fila — sin llenar la lista de botones.</p>
+    <p class="note"><b>Los montos quedan en una columna</b>, incluido el del resto, que compensa el ancho del chevron que no tiene. Y el que cede cuando no entra es el <b>nombre</b>, nunca el monto (D24).</p>
   </section>
 
   <section class="step">
     <div class="step-head">
       <span class="step-num">3</span>
       <div>
-        <h2>La versión con «+ Guardar», para comparar</h2>
-        <p class="sub">Lo propuesto, dibujado.</p>
-        <span class="badge b-bad">No recomendada</span>
+        <h2>Las dos versiones con botón, descartadas</h2>
+        <p class="sub">Dibujadas para que la decisión se pueda ver.</p>
+        <span class="badge b-bad">Descartadas</span>
       </div>
     </div>
     <div class="phone"><div class="scr">
@@ -373,24 +380,31 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
       </div>
       <div class="two" style="margin-top:15px"><div class="cta">Guardar</div><div class="cta ghost">Volver a usar</div></div>
       <div class="callout bad-c"><b>Seis botones que dicen «Guardar» en una pantalla.</b> Cinco en las filas y uno abajo, todos el mismo verbo, y el de abajo es el único cuyo tope se puede ver.</div>
+      <div class="sec-t" style="margin-top:8px">La intermedia: «Destinar» en cada fila</div>
+      <div class="c">
+        <div class="prow"><span class="ic">🚑</span><div class="nm"><b>Emergencia</b></div><div class="am">$ 50.000,00</div><span class="act">Destinar</span><span class="chev">›</span></div>
+        <div class="prow"><span class="ic">✈️</span><div class="nm"><b>Viaje</b></div><div class="am">$ 45.000,00<i>US$ 10,00</i></div><span class="act">Destinar</span><span class="chev">›</span></div>
+      </div>
+      <div class="callout"><b>Está en el nivel correcto</b> —destinar es una acción del grupo y su origen está a la vista— pero <b>ahorra los mismos taps que el enlace de «Sin destino»</b>, que ya existe. Cinco botones para no ahorrar nada.</div>
     </div></div>
     <p class="note"><b>El ahorro real es de un tap</b>, y es el tap del chip. Hoy «guardar $10.000 para Viaje» es: <i>Guardar</i> → monto → chip Viaje → confirmar. Con el botón en la fila: <i>+ Guardar</i> → monto → confirmar.</p>
     <p class="note"><b>Y ese tap compra algo.</b> Con los chips ves <b>todos</b> tus propósitos mientras decidís el monto — es donde alguien se da cuenta de que en realidad lo quiere en Emergencia. Con el botón en la fila, el destino queda decidido antes de ver los montos.</p>
     <p class="note">Es el mismo patrón que la fase 2 vigila con los dos <i>«Volver a usar»</i>: <b>repetir un verbo en dos niveles obliga a leer el contexto para saber cuál hace qué.</b> Con seis, la lectura ya no alcanza.</p>
+    <p class="note"><b>La intermedia cae por otro motivo, y es más interesante:</b> está bien de nivel, pero <b>no ahorra nada</b>. Destinar desde el enlace de «Sin destino» ya son cuatro taps, y desde el botón de la fila también. Cinco controles nuevos que no compran un solo tap.</p>
   </section>
 
   <section class="step">
     <div class="step-head">
       <span class="step-num">4</span>
       <div>
-        <h2>Sheet A · Destinar a un propósito</h2>
-        <p class="sub">Desde el botón de la fila. El destino no se vuelve a preguntar.</p>
+        <h2>Sheet A · Destinar más, desde un propósito</h2>
+        <p class="sub">Desde adentro de Viaje. El destino no se vuelve a preguntar.</p>
         <span class="badge b-new">Un paso</span>
       </div>
     </div>
     <div class="phone ov"><div class="scrim"></div><div class="sheet">
       <div class="grab"></div>
-      <div class="sh"><h3>Destinar a Viaje</h3><span class="x">←</span></div>
+      <div class="sh back"><span class="bk">‹</span><h3>Destinar más a Viaje</h3></div>
       <div class="c amt">
         <div class="lbl">Monto</div><div class="cur">ARS</div>
         <div class="val"><span class="s">$</span><span class="n zero">0</span></div>
@@ -403,7 +417,8 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
       <p class="note" style="border:0;padding:0;margin:2px 2px 0">No mueve plata ni cambia cuánto podés gastar. Solo dice para qué es parte de lo que ya tenés guardado.</p>
       <div class="cta">Destinar</div>
     </div></div>
-    <p class="note"><b>Sin chips de propósito</b>, porque el tap ya lo contestó. Es D9 de la fase 2: <i>lo que se hereda de dónde se tocó no se vuelve a preguntar</i>, y el título lo dice.</p>
+    <p class="note"><b>Sin chips de propósito</b>, porque se entró parado en Viaje. Es D9 de la fase 2: <i>lo que se hereda de dónde se tocó no se vuelve a preguntar</i>, y el título lo dice.</p>
+    <p class="note"><b>Es la acción secundaria</b>, para quien ya está mirando ese propósito. El camino principal de destinar es el del sheet B: desde «Sin destino», que es de donde sale la plata.</p>
     <p class="note"><b>El chip de moneda sí está</b>, arriba a la derecha. Operar es sobre una plata concreta: ahí la moneda es un dato de la operación, no una estructura de la pantalla.</p>
   </section>
 
@@ -418,7 +433,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     </div>
     <div class="phone ov"><div class="scrim"></div><div class="sheet">
       <div class="grab"></div>
-      <div class="sh"><h3>¿Para qué es?</h3><span class="x">←</span></div>
+      <div class="sh back"><span class="bk">‹</span><h3>¿Para qué es?</h3></div>
       <div class="c amt">
         <div class="lbl">Monto</div><div class="cur">ARS</div>
         <div class="val"><span class="s">$</span><span class="n">20.000</span></div>
@@ -447,7 +462,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     </div>
     <div class="phone ov"><div class="scrim"></div><div class="sheet">
       <div class="grab"></div>
-      <div class="sh"><h3>Guardar</h3><span class="x">←</span></div>
+      <div class="sh back"><span class="bk">‹</span><h3>Guardar</h3></div>
       <div class="c amt">
         <div class="lbl">Monto</div><div class="cur">ARS</div>
         <div class="val"><span class="s">$</span><span class="n">10.000</span></div>
@@ -476,7 +491,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     </div>
     <div class="phone ov"><div class="scrim"></div><div class="sheet">
       <div class="grab"></div>
-      <div class="sh"><h3>Volver a usar</h3><span class="x">←</span></div>
+      <div class="sh back"><span class="bk">‹</span><h3>Volver a usar</h3></div>
       <div class="c amt">
         <div class="lbl">Monto</div><div class="cur">ARS</div>
         <div class="val"><span class="s">$</span><span class="n zero">0</span></div>
@@ -533,7 +548,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
       <tr><td><b>Ver para qué tengo guardado</b></td><td class="num">2</td><td class="num">1</td><td>Es la pantalla, no un overlay adentro de otra</td></tr>
       <tr><td><b>Guardar sin propósito</b></td><td class="num">4</td><td class="num">4</td><td>Igual. El botón global sigue siendo el camino</td></tr>
       <tr><td><b>Guardar para un propósito</b></td><td class="num">5</td><td class="num">5</td><td>Igual, y a propósito: el tope vive en ese nivel</td></tr>
-      <tr style="background:#F6FDFA"><td><b>Destinar a un propósito</b></td><td class="num">6</td><td class="num">4</td><td><b>Dos menos</b>, por el botón de la fila</td></tr>
+      <tr style="background:#F6FDFA"><td><b>Destinar desde el resto</b></td><td class="num">6</td><td class="num">4</td><td><b>Dos menos</b>: el enlace del pie va directo, sin pasar por el detalle</td></tr>
       <tr style="background:#F6FDFA"><td><b>Volver a usar desde el resto</b></td><td class="num">5</td><td class="num">4</td><td><b>Uno menos</b>: el enlace del pie</td></tr>
       <tr><td><b>Ver el detalle de un propósito</b></td><td class="num">3</td><td class="num">2</td><td>Uno menos</td></tr>
     </tbody>
@@ -545,10 +560,10 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
   <div class="cols">
     <div class="way">
       <div class="cap">Para mirar</div>
-      <h4>La acción de la fila</h4>
+      <h4>Guardar para un propósito</h4>
       <ol>
-        <li><b>Destinar</b> (paso 2) contra <b>+ Guardar</b> (paso 3). El primero respeta el nivel y ahorra el mismo tap.</li>
-        <li>Si al usarlo resulta que lo que más se busca es <b>guardar plata nueva</b> para un propósito, la conclusión sería otra — pero eso se ve usando, no discutiendo.</li>
+        <li>Son <b>cinco taps</b>: guardar → monto → chip → confirmar. El chip es el único que se podría ahorrar, y ahorrarlo cuesta cinco botones (paso 3).</li>
+        <li>Lo que hay que mirar usándolo: <b>si ese tap se siente de más</b>. Si resulta que guardar-para-un-propósito es lo que más se hace, la conclusión puede ser otra.</li>
       </ol>
     </div>
     <div class="way">

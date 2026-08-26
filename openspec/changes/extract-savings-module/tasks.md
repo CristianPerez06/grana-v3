@@ -34,8 +34,17 @@
   «Destinar», no «+ Guardar»** — guardar cambia el *total* y su tope es el disponible, que la fila no
   muestra (D18). *Destinar* es una acción del grupo, su origen está a la vista dos filas más abajo, y
   ahorra el mismo tap. Las dos versiones están dibujadas para mirarlas
-- [ ] 2.5 **Decidir mirando**: la acción de la fila (*Destinar* vs *+ Guardar*) y si el USD de la
-  cabecera necesita más peso cuando haya más plata en dólares
+- [x] 2.5 **La fila no lleva acción contextual.** Se evaluaron tres versiones y quedan dibujadas:
+  filas limpias (elegida), *+ Guardar* por fila y *Destinar* por fila. *+ Guardar* cae por nivel —seis
+  botones del mismo verbo y el único con su tope a la vista es el global (D18)—; *Destinar* por fila
+  está en el nivel correcto pero **no ahorra ningún tap**: destinar desde el enlace de «Sin destino»
+  ya son cuatro. Cinco controles que no compran nada
+- [ ] 2.6 **Para mirar usándolo**: si guardar-para-un-propósito (5 taps) se siente lento, si destinar
+  desde «Sin destino» se entiende, y si el USD subordinado en la cabecera suma o hace ruido
+- [x] 2.7 **La flecha de volver va arriba a la IZQUIERDA**, antes del título, como control de 44×44
+  con borde — el `DrawerBackHeader` que la app ya usa. Los mocks de la fase 3 y del módulo la tenían a
+  la derecha: se había reusado el slot del ✕ de cerrar, que sí va a la derecha. Son dos controles
+  distintos y estaban confundidos
 
 ## 3. La ruta y la entrada
 

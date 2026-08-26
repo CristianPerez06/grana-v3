@@ -295,6 +295,13 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
 .ab td{padding:11px 12px 11px 0;border-bottom:1px solid var(--border-soft);color:var(--muted);vertical-align:top}
 .ab td b{color:var(--text);font-weight:600}
 .ab td:last-child,.ab th:last-child{padding-right:0}
+
+/* La vuelta atrás va ARRIBA A LA IZQUIERDA, antes del título, y es un control
+   de 44×44 con borde — el mismo `DrawerBackHeader` que usa la app. El ✕ de
+   cerrar sí va a la derecha: son dos controles distintos y estaban confundidos. */
+.sh.back,.dh.back{justify-content:flex-start;gap:12px}
+.bk{flex:0 0 auto;width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:#fff;display:grid;place-items:center;color:var(--muted);font-size:21px;line-height:1;font-weight:500}
+.sh.back h3,.dh.back > div{flex:1;min-width:0}
 </style>
 </head>
 <body>
@@ -384,7 +391,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
       </div>
     </div>
     <div class="phone"><div class="scr">
-      <div class="dh"><div><div class="k">Cuenta</div><h3>Comafi</h3></div><span class="x">←</span></div>
+      <div class="dh back"><span class="bk">‹</span><div><div class="k">Cuenta</div><h3>Comafi</h3></div></div>
       <div class="dt-hero">
         <div class="k">Saldo</div>
         <div class="n">$ 762.862<s style="font-size:20px;font-weight:600;text-decoration:none;color:rgba(255,255,255,.72)">,23</s></div>
@@ -416,7 +423,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     </div>
     <div class="phone ov"><div class="scrim"></div><div class="sheet">
       <div class="grab"></div>
-      <div class="sh"><h3>Plazo fijo en Comafi</h3><span class="x">←</span></div>
+      <div class="sh back"><span class="bk">‹</span><h3>Plazo fijo en Comafi</h3></div>
       <div class="c amt">
         <div class="lbl">¿Cuánto ponés?</div><div class="cur">ARS</div>
         <div class="val"><span class="s">$</span><span class="n">700.000</span></div>
@@ -522,7 +529,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
     </div>
     <div class="phone ov"><div class="scrim"></div><div class="sheet">
       <div class="grab"></div>
-      <div class="sh"><h3>Venció tu plazo fijo</h3><span class="x">←</span></div>
+      <div class="sh back"><span class="bk">‹</span><h3>Venció tu plazo fijo</h3></div>
       <p class="note" style="border:0;padding:0;margin:0 2px;font-size:13px">Comafi · pusiste <b>$ 700.000</b> el 25 de agosto</p>
       <div class="sec-t">¿Qué pasó?</div>
       <div class="c radios">
@@ -608,7 +615,7 @@ body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-
       </div>
     </div>
     <div class="phone"><div class="scr">
-      <div class="dh"><div><div class="k">Cuenta</div><h3>Comafi</h3></div><span class="x">←</span></div>
+      <div class="dh back"><span class="bk">‹</span><div><div class="k">Cuenta</div><h3>Comafi</h3></div></div>
       <div class="dt-hero">
         <div class="k">Saldo</div>
         <div class="n">$ 62.862<s style="font-size:20px;font-weight:600;text-decoration:none;color:rgba(255,255,255,.72)">,23</s></div>
