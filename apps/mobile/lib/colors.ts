@@ -18,6 +18,7 @@ export const colors = {
   slate: '#3A6B8A',
   plum: '#8A6E98',
   terracotta: '#B56A5A',
+  warning: '#C49A3C',
   warningDeep: '#B45309',
   text: '#0B1A2B',
   textMuted: '#6B7683',
