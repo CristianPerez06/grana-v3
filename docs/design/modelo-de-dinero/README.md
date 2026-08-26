@@ -5,6 +5,7 @@ en el navegador.
 
 | Archivo | Fase | Estado |
 |---|---|---|
+| `modulo-ahorro-e-inversion.html` | Módulo | **Vigente.** La casa de Guardado y Propósitos: la puerta desde el dashboard, la jerarquía, el estado vacío y la decisión del corte de moneda. Es `extract-savings-module`, prerrequisito de la fase 3 |
 | `fase-1-guardar.html` | 1 · Guardar | **Superado por la implementación.** «Liberar» hoy se llama **Volver a usar** |
 | `fase-2-proposito.html` | 2 · Propósito | **Superado por la implementación**, y en un punto de modelo, no solo de nombres — ver abajo |
 | `fase-3a-plazo-fijo.html` | 3A · Plazo fijo | **Vigente en lo contable, a redibujar en la navegación.** Siete pantallas, dos de carga. Entra a `extract-savings-module`: la cuenta pasa a ser **atajo contextual**, no la puerta principal |

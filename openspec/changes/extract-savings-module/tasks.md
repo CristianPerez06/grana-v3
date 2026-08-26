@@ -14,9 +14,17 @@
 
 ## 2. Dibujar antes de construir
 
-- [ ] 2.1 Mock del módulo, con los números reales de agosto. Decidir el corte de moneda —selector,
-  tabs o apilado— mirando las dos versiones (E5, y D16 de la fase 2)
-- [ ] 2.2 Decidir la jerarquía: qué es lo primero que se lee al entrar
+- [x] 2.1 Mock del módulo, con los números reales de agosto: `docs/design/modelo-de-dinero/modulo-ahorro-e-inversion.html`.
+  **El corte de moneda quedó decidido y va contra la intuición inicial: sin tabs.** Las tres formas se
+  compararon con el mismo dato, y dos ya habían sido descartadas en la fase 2 por el mismo usuario:
+  apilar dos bloques (*"no sé si me convence que lo de USD esté abajo"*) y partir por moneda
+  (*"no hay ninguna manera donde yo pueda ver cuánto tengo para Viaje en ARS y USD junto"*). Con tabs,
+  un propósito bimoneda **no existe entero en ninguna pantalla**. La salida es la de D16: una lista con
+  los dos montos por fila, sin sumarlos. El chip de moneda vive en los formularios, que es donde la
+  moneda es un dato de la operación y no una estructura
+- [x] 2.2 La jerarquía: **Guardado es el protagonista** en las dos monedas, y **«Para gastar» va de
+  contexto en chico** — es el titular del dashboard, y dos pantallas con el mismo protagonista no dejan
+  protagonista a ninguna (D16). Después el desglose, «Sin destino» al pie y las dos acciones
 - [ ] 2.3 Dibujar la **puerta sobria** desde el dashboard: la fila de Guardado lleva al módulo sin
   convertir la card en su casa
 
@@ -25,7 +33,9 @@
 - [ ] 3.1 Ruta web `/savings` (o el slug que salga de 2.2) con su layout y estados de carga
 - [ ] 3.2 Entrada en el menú web (`app-menu.tsx`) y en el chrome mobile, con el mismo rótulo
 - [ ] 3.3 Skeleton shell que matchee la forma real, como el resto de las secciones
-- [ ] 3.4 Estado vacío: alguien que nunca guardó nada entra igual y entiende qué es
+- [ ] 3.4 Estado vacío (mockeado): el número en cero, **una sola acción**, y la frase que evita el
+  malentendido —*"guardar no mueve tu plata"*—. Sin propósitos, sin «Sin destino» en cero, y **sin
+  ningún rastro de inversiones**, aunque el módulo se llame así (E8)
 
 ## 4. Mover la operatoria
 
@@ -45,8 +55,12 @@
 
 - [ ] 6.1 Guardar, volver a usar, destinar y quitar destino desde el módulo, con los mismos topes y
   pisos que antes
-- [ ] 6.2 **El default del origen al volver a usar** (E7): probar con y sin preselección de «Sin
-  destino», y decidir mirando
+- [x] 6.2 **El default del origen al volver a usar** (E7) — **cerrado sin QA**: preseleccionar es
+  aceptable mientras el chip esté visible y se pueda cambiar antes de confirmar; no es imputación
+  silenciosa si está en pantalla. La regla completa: un solo grupo con saldo → directo al monto;
+  varios y «Sin destino» con saldo → preseleccionado; varios y el resto en cero → **sin
+  preselección**; desde un propósito → heredado. **Nunca se toca un propósito sin mostrarlo antes.**
+  Falta verificar el tercer caso, que hoy no está implementado así
 - [ ] 6.3 Bimoneda: nada suma ARS con USD en ninguna pantalla del módulo
 - [ ] 6.4 Regresión del dashboard: ningún número cambió, la card cierra, la tira sigue apareciendo
 - [ ] 6.5 QA nativo del módulo — **bloqueado por el mismo acceso que el issue #58**
