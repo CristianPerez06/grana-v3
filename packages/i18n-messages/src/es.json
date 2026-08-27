@@ -2121,6 +2121,8 @@
     "history_more": "Ver {count} más",
     "history_truncated": "Se muestran los últimos {count} movimientos.",
     "purposes": {
+      "show_more": "Ver más ({count})",
+      "show_empty": "Ver propósitos sin saldo ({count})",
       "created_skip": "Ahora no",
       "created_title": "Listo, creaste «{purpose}»",
       "created_body": "Ya está en tu lista, todavía sin plata. ¿Le destinás algo ahora?",

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { ChevronRight, Plus, Tag } from 'lucide-react'
 import {
@@ -34,8 +35,19 @@ export const SavingsBreakdown = ({
 }) => {
   const t = useTranslations('savings')
   const overlay = useSavingsOverlay()
+  const [showEmpty, setShowEmpty] = useState(false)
 
   const groups = moduleGroups(purposeSums, purposes)
+  // Los que tienen plata y los que no. Un propósito en cero es válido —se creó y
+  // todavía no se le destinó nada— pero al lado de los activos compite por
+  // atención sin tener nada que mostrar: una card entera para decir «$ 0».
+  //
+  // Solo se esconden si hay CON QUÉ compararlos. Si todos están en cero, la
+  // lista son ellos, y esconderlos dejaría la sección vacía con un enlace.
+  const active = groups.filter((g) => g.amounts.some((a) => a.reserved !== 0))
+  const empty = groups.filter((g) => g.amounts.every((a) => a.reserved === 0))
+  const hidesEmpty = active.length > 0 && empty.length > 0 && !showEmpty
+  const visibleGroups = hidesEmpty ? active : groups
   const rest = moduleRest(purposeSums)
   const restHasMoney = rest.some((a) => a.reserved > 0)
   // La moneda de la operación sale del dato, no de un default: un resto de solo
@@ -98,7 +110,7 @@ export const SavingsBreakdown = ({
             que es ancho de sobra para el contenido, y las mismas nueve caben en
             tres filas. En tablet siguen siendo dos y en teléfono una. */}
         <ul className="grid grid-cols-1 gap-[9px] sm:grid-cols-[repeat(auto-fill,minmax(290px,1fr))] sm:gap-[11px]">
-          {groups.map((g) => (
+          {visibleGroups.map((g) => (
             <li key={g.purposeId}>
               <PurposeCard
                 group={g}
@@ -128,6 +140,20 @@ export const SavingsBreakdown = ({
             </li>
           )}
         </ul>
+
+        {/* Los que no tienen saldo, detrás de un control al pie. No es un
+            «ver todos» que navega ni un plegado con chevron: es una línea que
+            dice cuántos hay y los trae acá mismo. Una vez abiertos no se
+            vuelven a esconder — quien los pidió es porque los está buscando. */}
+        {hidesEmpty && (
+          <button
+            type="button"
+            onClick={() => setShowEmpty(true)}
+            className="relative mt-1 self-start px-[3px] text-[12.5px] font-bold text-text-muted transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
+          >
+            {t('purposes.show_empty', { count: empty.length })}
+          </button>
+        )}
 
         {/* Con el resto en cero NO baja ninguna explicación al pie.
 

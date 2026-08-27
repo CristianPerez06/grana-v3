@@ -92,10 +92,14 @@ export function PurposeAllocate({
   // Las sugerencias que el usuario todavía no tiene: ofrecerle crear algo que ya
   // existe lo empuja contra el nombre único con el atajo que existe para
   // ahorrarle trabajo.
-  /** Seis chips antes de plegar, el mismo techo que el formulario de guardar. */
-  const PURPOSE_CHIP_LIMIT = 6
+  /**
+   * Ocho chips antes de plegar, el mismo techo que el formulario de guardar, y
+   * dos de tolerancia: esconder dos ocupa casi el mismo lugar que mostrarlos.
+   */
+  const PURPOSE_CHIP_LIMIT = 8
+  const PURPOSE_CHIP_SLACK = 2
   const shownPurposes =
-    showAllPurposes || purposes.length <= PURPOSE_CHIP_LIMIT
+    showAllPurposes || purposes.length <= PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK
       ? purposes
       : (() => {
           const head = purposes.slice(0, PURPOSE_CHIP_LIMIT)
@@ -232,14 +236,29 @@ export function PurposeAllocate({
             <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
               {t('purposes.pick_inline')}
             </p>
-            <button
-              type="button"
-              onClick={onCreateCustom}
-              className="relative flex shrink-0 items-center gap-1 text-[12px] font-extrabold text-emerald-deep transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
-            >
-              <Plus className="size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
-              {t('purposes.new')}
-            </button>
+            <div className="flex shrink-0 items-center gap-3">
+              {/* El control de overflow, en la fila del RÓTULO y nunca entre los
+                  chips: al final de la fila caía solo en su renglón cuando la
+                  última estaba llena, y ahí no se lee como acción sino como algo
+                  cortado. */}
+              {hiddenPurposes > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllPurposes(true)}
+                  className="relative shrink-0 text-[12px] font-extrabold text-text-muted transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
+                >
+                  {t('purposes.show_more', { count: hiddenPurposes })}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onCreateCustom}
+                className="relative flex shrink-0 items-center gap-1 text-[12px] font-extrabold text-emerald-deep transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
+              >
+                <Plus className="size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+                {t('purposes.new')}
+              </button>
+            </div>
           </div>
           {/* Mismos chips compactos y mismo techo que en guardar: con diez
               propósitos, la lista completa empujaba el resumen y el CTA fuera de
@@ -261,15 +280,6 @@ export function PurposeAllocate({
                 {option.name}
               </button>
             ))}
-            {hiddenPurposes > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowAllPurposes(true)}
-                className="relative flex items-center rounded-full border border-dashed border-border px-3 py-2 text-[13px] font-bold text-text-muted transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:bg-surface-sunken hover:text-text"
-              >
-                +{hiddenPurposes}
-              </button>
-            )}
             {/* Las sugerencias solo cuando NO hay propósitos plegados: son un
                 atajo para quien todavía no armó los suyos, y ofrecerlas al lado
                 de un «+3» sería empujar a crear mientras se esconde lo que ya

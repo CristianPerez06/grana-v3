@@ -1224,18 +1224,35 @@ const SavingsForm = ({
             <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
               {mode === 'save' ? t('purposes.label') : t('purposes.source_label')}
             </p>
-            {/* Crear uno nuevo solo tiene sentido al guardar. Un propósito recién
-                creado no tiene plata, así que como ORIGEN no serviría para nada. */}
-            {mode === 'save' && (
-              <button
-                type="button"
-                onClick={onPickPurpose}
-                className="relative flex shrink-0 items-center gap-1 text-[12px] font-extrabold text-emerald-deep transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
-              >
-                <Plus className="size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
-                {t('purposes.new')}
-              </button>
-            )}
+            <div className="flex shrink-0 items-center gap-3">
+              {/* El control de overflow vive en la fila del RÓTULO, nunca entre
+                  los chips. Al final de la fila de chips caía solo en una línea
+                  propia cuando la última estaba llena, y un control solo en su
+                  renglón no se lee como acción: se lee como algo cortado. Acá no
+                  puede quedar huérfano, porque no está en esa fila. */}
+              {hiddenCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllPurposes(true)}
+                  className="relative shrink-0 text-[12px] font-extrabold text-text-muted transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
+                >
+                  {t('purposes.show_more', { count: hiddenCount })}
+                </button>
+              )}
+              {/* Crear uno nuevo solo tiene sentido al guardar. Un propósito
+                  recién creado no tiene plata, así que como ORIGEN no serviría
+                  para nada. */}
+              {mode === 'save' && (
+                <button
+                  type="button"
+                  onClick={onPickPurpose}
+                  className="relative flex shrink-0 items-center gap-1 text-[12px] font-extrabold text-emerald-deep transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
+                >
+                  <Plus className="size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+                  {t('purposes.new')}
+                </button>
+              )}
+            </div>
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {shownOptions.map((option) => {
@@ -1261,25 +1278,6 @@ const SavingsForm = ({
               )
             })}
 
-            {/* «+N» en vez de la lista entera. Con muchos propósitos la fila de
-                chips crecía sin techo y empujaba el resumen y el CTA fuera de
-                la pantalla: elegir una etiqueta terminaba costando más alto que
-                escribir el monto.
-
-                Se muestran los primeros y el resto se despliega acá mismo, sin
-                cambiar de pantalla — que es lo que la fase 2 sacó del medio. El
-                elegido SIEMPRE está entre los visibles: un chip seleccionado que
-                se esconde al plegar sería la pantalla mintiendo sobre lo que
-                está por hacer. */}
-            {hiddenCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowAllPurposes(true)}
-                className="relative flex items-center rounded-full border border-dashed border-border px-3 py-2 text-[13px] font-bold text-text-muted transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:bg-surface-sunken hover:text-text"
-              >
-                +{hiddenCount}
-              </button>
-            )}
           </div>
         </div>
       )}

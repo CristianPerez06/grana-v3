@@ -2121,6 +2121,8 @@
     "history_more": "Show {count} more",
     "history_truncated": "Showing the latest {count} entries.",
     "purposes": {
+      "show_more": "Show more ({count})",
+      "show_empty": "Show purposes with no money ({count})",
       "created_skip": "Not now",
       "created_title": "Done, you created «{purpose}»",
       "created_body": "It is in your list now, still with no money. Do you want to assign some?",
