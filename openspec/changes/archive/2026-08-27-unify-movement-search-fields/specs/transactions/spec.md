@@ -75,7 +75,7 @@ La UI de filtros SHALL ser una **barra compacta** (búsqueda + navegación por m
 
 El período SHALL navegarse **por mes** (mes anterior / mes siguiente) como control primario; por defecto SHALL mostrarse el **mes actual** (computado en la zona horaria financiera con `getTodayAR()`), conservando una opción de rango personalizado que tiene prioridad sobre el mes. El filtro por cuenta SHALL mostrarse únicamente cuando el usuario tiene **dos o más cuentas**; con una sola cuenta no se ofrece.
 
-#### Scenario: Buscar de forma instantánea sobre el set canónico
+#### Scenario: Buscar por descripción de forma instantánea
 
 - **WHEN** el usuario tipea en la búsqueda
 - **THEN** el sistema filtra (con un breve debounce) los movimientos cuyo título, descripción efectiva, nombre de cuenta o nombre de institución coincida, sin requerir un botón de aplicar
@@ -210,6 +210,13 @@ El read SHALL usar el mismo RPC `get_movements_page` y el mismo anon-key/RLS pat
 - **THEN** si el usuario no tiene ningún movimiento en ningún mes (`hasAnyTransaction === false`), la pantalla muestra el copy de bienvenida
 - **AND** si tiene historial en otros meses, muestra el copy de mes-vacío
 - **AND** los tres copies se leen del catálogo compartido `@grana/i18n-messages`
+
+#### Scenario: La búsqueda del feed no matchea nombres de categoría
+
+- **WHEN** el usuario busca el nombre de una categoría en el feed y ningún movimiento la lleva en su descripción ni como su título derivado
+- **THEN** la lista no devuelve esos movimientos, porque la categoría no es un eje explícito del set: entra sólo cuando es el título, que es el caso de ingresos y gastos
+- **AND** una transferencia clasificada con esa categoría, cuyo título es la etiqueta fija, no aparece
+- **AND** el filtro de categoría de la hoja sí la devuelve
 
 #### Scenario: La búsqueda del feed matchea el mismo set que el detalle de cuenta
 
