@@ -8,6 +8,8 @@ import {
   getPurposeSums,
   getAllocationHistory,
   listPurposes,
+  moduleGroupCurrency,
+  MODULE_CURRENCIES,
   PURPOSE_SEEDS,
   RESERVE_HISTORY_LIMIT,
   type AvailableSums,
@@ -224,6 +226,19 @@ export function SavingsDrawer({
   const groupAmount = (currency: Currency, purposeId: string | null): number =>
     purposeSums.find((s) => s.currencyCode === currency && s.purposeId === purposeId)?.reserved ?? 0
 
+  /**
+   * La moneda en la que hay resto para destinar, si hay alguna.
+   *
+   * `null` cuando «Sin destino» está en cero en las dos: no es un default, es la
+   * ausencia de una respuesta, y quien la consume tiene que decidir qué hacer
+   * con eso en vez de recibir «pesos» y abrir un formulario con tope cero.
+   */
+  const restCurrency: Currency | null = MODULE_CURRENCIES.some((c) => groupAmount(c, null) > 0)
+    ? moduleGroupCurrency(
+        MODULE_CURRENCIES.map((c) => ({ currency: c, reserved: groupAmount(c, null) })),
+      )
+    : null
+
   // Reset the view when the drawer opens, adjusting state DURING RENDER rather
   // than in an effect: the reset is derived from a prop changing, not a
   // synchronization with an external system, and doing it in an effect costs a
@@ -400,7 +415,25 @@ export function SavingsDrawer({
               } else if (stack.some((v) => v.kind === 'form' || v.kind === 'picker')) {
                 pickPurpose(created.id, created)
               } else {
-                back()
+                // Creado desde la página, donde no hay operación en curso a la
+                // que volver. Un propósito recién creado está en cero y no sirve
+                // para nada hasta que se le destine algo, así que en vez de
+                // cerrar y dejar una fila vacía en la lista, sigue al acto que
+                // le da sentido, con el destino ya elegido.
+                //
+                // Salvo que no haya nada sin destino: ahí destinar tiene tope
+                // cero y sería mandar a una pantalla que no puede hacer nada.
+                // El propósito queda creado y vacío, que es lo que se pidió.
+                if (restCurrency == null) onClose()
+                else
+                  setStack([
+                    {
+                      kind: 'allocate',
+                      currency: restCurrency,
+                      purpose: created,
+                      direction: 'allocate',
+                    },
+                  ])
               }
               void refresh()
             }}

@@ -431,3 +431,36 @@ enlace justo debajo — el orden en que se lee la diferencia antes de tocarla. E
 
 Y las dos que se confundían dejan de competir: ahora una es botón y la otra enlace, que es la
 distinción que la nota tenía que hacer con palabras.
+
+## E21 — El monto inicial al crear un propósito, y el camino que ya existía
+
+El handoff pide una cuarta card en «nuevo propósito»: *«¿Le destinás algo ahora?»*. Son **dos
+escrituras en dos tablas** —`savings_purpose` y `savings_purpose_allocation`— sin transacción entre
+ellas, y sus modos de fallar no son simétricos:
+
+- **Falla por tope.** Con $55.000 sin destino, crear «Notebook» con $70.000 crea el propósito y
+  rechaza el reparto. Queda un propósito en cero y un error. Se puede validar antes de enviar, pero
+  entre leer el tope y confirmar, otra pestaña pudo destinar.
+- **Falla por red.** Se crea el propósito, se corta antes del reparto. Al reintentar: *«Ya existe un
+  propósito llamado Notebook»* — uno que el usuario nunca vio creado. Este es el que no se arregla
+  con validación.
+
+Y no hace falta correr ese riesgo, porque **el camino ya existe y es mejor**: entrando por
+**Destinar**, el selector de destino tiene un «+» que crea el nombre y vuelve al formulario **con el
+monto ya escrito**. Una sola escritura de reparto, y el monto se escribe donde el tope está a la
+vista — que es justo lo que le falta al campo del handoff.
+
+El handoff pide el campo porque no conocía ese camino, y él mismo lo trata como accesorio: dice que
+el monto arranca en cero y que se puede crear tocando solo nombre y CTA.
+
+Así que crear un propósito crea un nombre. Ponerle plata es destinar, y destinar tiene su pantalla.
+Agregar el campo inventa un tercer acto —«crear-con-plata»— que no existe en el modelo.
+
+**Si algún día hace falta**, la forma correcta no es componer dos llamadas desde el cliente: es una
+función SQL que haga las dos en una transacción, como el resto del write path. Eso elimina el estado
+intermedio en vez de administrarlo.
+
+**Lo que sí se hizo**, que ataca el mismo dolor sin acoplar escrituras: crear un propósito **desde la
+página** ya no cierra el overlay dejando una fila en cero — sigue a destinarle, con el destino
+elegido. Con «Sin destino» en cero no: ahí destinar tendría tope cero, y mandar a una pantalla que no
+puede hacer nada es el error que ya se corrigió en el formulario de volver a usar.

@@ -150,10 +150,13 @@
   incluía, con el mismo peso, otra que también lo cambia). Los dos botones quedan para lo que es del
   propósito —sumarle, sacarle—, y las dos salidas que se confundían pasan a tener pesos distintos en
   vez de explicarse al pie. No se pierde el atajo: parado en Viaje, usar esos pesos sigue a un tap
-- [ ] 4c.8 Pantalla de **nuevo propósito**: nombre, emblema, y el monto inicial en cero —que **no se
-  prellena** salvo que se venga del flujo de destinar. **Ojo:** el monto inicial NO existe hoy, y
-  agregarlo compone dos mutaciones en un gesto (crear + destinar). No toca schema, pero tampoco es
-  visual: qué pasa si la segunda falla y el propósito ya se creó es una decisión de producto
+- [x] 4c.8 **Decidido: el campo de monto inicial NO entra** (E21). Compone dos escrituras en dos
+  tablas sin transacción, y su peor caso deja al usuario con un propósito que no sabe que creó. El
+  camino ya existe y es mejor: entrando por **Destinar**, el «+» del selector crea el nombre y
+  vuelve al formulario con el monto ya escrito y el tope a la vista — una sola escritura
+- [x] 4c.8b **Crear desde la página sigue a destinarle**, con el propósito ya elegido, en vez de
+  cerrar y dejar una fila en cero. Salvo con «Sin destino» en cero, donde destinar tendría tope cero:
+  ahí el propósito queda creado y vacío, que es lo único que se puede hacer
 - [x] 4c.9 El par de monedas de la card del total pasa a ser **fijo**: `$ 0 / US$ 0` cuando no hay
   saldo. Revierte `moduleShowsUsd`, que hoy esconde la columna, **y sus tests**. En los propósitos la
   regla NO cambia: nunca «US$ 0»
