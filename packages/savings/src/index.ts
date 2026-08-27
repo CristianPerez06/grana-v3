@@ -50,3 +50,12 @@ export {
   type ModuleAmount,
   type ModuleGroup,
 } from './module-view'
+export {
+  moduleAccess,
+  moduleShowsNav,
+  moduleRouteIsOpen,
+  moduleShowsDashboardRow,
+  moduleCan,
+  type ModuleAccess,
+  type ModuleAbility,
+} from './module-access'
