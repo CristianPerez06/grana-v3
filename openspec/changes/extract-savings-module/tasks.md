@@ -190,7 +190,8 @@
 
 ## 6. QA
 
-- [ ] 6.1 Guardar, volver a usar, destinar y quitar destino desde el módulo, con los mismos topes y
+- [x] 6.1 **QA web hecho.** Guardar (con propósito nuevo creado en el medio), destinar, volver a
+  usar, quitar destino y borrar un propósito —con su plata volviendo al resto—, con los mismos topes y
   pisos que antes
 - [x] 6.2 **El default del origen al volver a usar** (E7) — **cerrado sin QA**: preseleccionar es
   aceptable mientras el chip esté visible y se pueda cambiar antes de confirmar; no es imputación
@@ -204,10 +205,13 @@
   fila se parte en dos líneas —rótulo arriba, montos abajo— y **ningún monto se achica ni se corta**
   (D24). El quiebre depende del contenido, no del ancho de la pantalla, así que no puede ser un
   `@media`
-- [ ] 6.8 **Los enlaces de «Sin destino» con el pulgar**: 44 px de alto cada uno y separados. Pegados
+- [x] 6.8 **Los enlaces de «Sin destino» con el pulgar**: 44 px de área táctil por pseudo-elemento,
+  sin inflar la fila. Verificado en QA — no cuesta acertarles. Pegados
   por un punto medio, el error más probable es tocar *Volver a usar* queriendo *Destinar* — la que
   saca plata del disponible y la que no lo toca
-- [ ] 6.4 Regresión del dashboard: ningún número cambió, la card cierra, la tira sigue apareciendo
+- [x] 6.4 **Regresión del dashboard verificada CON DATOS del QA**: guardar $15.000 movió el guardado
+  de 180.000 a 195.000 y el disponible de 4.905.748,17 a 4.890.748,17 —exactamente $15.000 en cada
+  lado—, y la identidad del mes cierra al centavo en las dos monedas. La fila navega, la tira sigue
 - [ ] 6.5 QA nativo del módulo — **bloqueado por el mismo acceso que el issue #58**
 - [x] 5.5 **Con tests lo nuevo que es lógica pura**: `moneyParts` —que parte lo que devuelve `Intl`
   en vez de armar el número a mano, y si el corte se moviera pondría un «$» en el medio de la cifra—
