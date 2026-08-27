@@ -143,15 +143,19 @@ export const SavingsBreakdown = ({
 
         {/* Los que no tienen saldo, detrás de un control al pie. No es un
             «ver todos» que navega ni un plegado con chevron: es una línea que
-            dice cuántos hay y los trae acá mismo. Una vez abiertos no se
-            vuelven a esconder — quien los pidió es porque los está buscando. */}
-        {hidesEmpty && (
+            dice cuántos hay y los trae acá mismo.
+
+            Y con vuelta: mostrarlos sin poder volver a esconderlos deja la
+            grilla más larga para siempre por una mirada de un segundo. */}
+        {active.length > 0 && empty.length > 0 && (
           <button
             type="button"
-            onClick={() => setShowEmpty(true)}
+            onClick={() => setShowEmpty((v) => !v)}
             className="relative mt-1 self-start px-[3px] text-[12.5px] font-bold text-text-muted transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
           >
-            {t('purposes.show_empty', { count: empty.length })}
+            {showEmpty
+              ? t('purposes.hide_empty')
+              : t('purposes.show_empty', { count: empty.length })}
           </button>
         )}
 

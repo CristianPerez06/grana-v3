@@ -2121,6 +2121,7 @@
     "history_more": "Show {count} more",
     "history_truncated": "Showing the latest {count} entries.",
     "purposes": {
+      "hide_empty": "Hide purposes with no money",
       "show_less": "Show less",
       "show_more": "Show more ({count})",
       "show_empty": "Show purposes with no money ({count})",

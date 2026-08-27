@@ -947,20 +947,29 @@ const SavingsForm = ({
   /**
    * Los chips que se dibujan, y cuántos quedan plegados.
    *
-   * El elegido entra SIEMPRE, aunque caiga fuera del corte: un chip
-   * seleccionado que se esconde al plegar deja la pantalla diciendo que se va a
-   * guardar «sin destino» cuando en realidad va a otro lado.
+   * El techo cuenta PROPÓSITOS, y «Sin destino» no es uno: va siempre visible y
+   * fuera del conteo. Contándolo, este formulario mostraba cinco propósitos y el
+   * de destinar seis —que no lo ofrece— con el mismo techo y la misma lista, así
+   * que el mismo propósito estaba en una pantalla y plegado en la otra. Y encima
+   * el que perdía el lugar era uno real, desplazado por el default.
+   *
+   * El elegido entra SIEMPRE, aunque caiga fuera del corte: un chip seleccionado
+   * que se esconde al plegar deja la pantalla diciendo que se va a guardar «sin
+   * destino» cuando en realidad va a otro lado.
    */
-  const shownOptions =
-    showAllPurposes || purposeOptions.length <= PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK
-      ? purposeOptions
+  const hasRestOption = purposeOptions.some((o) => o == null)
+  const namedOptions = purposeOptions.filter((o): o is Purpose => o != null)
+  const shownNamed =
+    showAllPurposes || namedOptions.length <= PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK
+      ? namedOptions
       : (() => {
-          const head = purposeOptions.slice(0, PURPOSE_CHIP_LIMIT)
-          if (head.some((o) => (o?.id ?? null) === purposeId)) return head
-          const chosen = purposeOptions.find((o) => (o?.id ?? null) === purposeId)
+          const head = namedOptions.slice(0, PURPOSE_CHIP_LIMIT)
+          if (purposeId == null || head.some((o) => o.id === purposeId)) return head
+          const chosen = namedOptions.find((o) => o.id === purposeId)
           return chosen == null ? head : [...head.slice(0, PURPOSE_CHIP_LIMIT - 1), chosen]
         })()
-  const hiddenCount = purposeOptions.length - shownOptions.length
+  const shownOptions: (Purpose | null)[] = hasRestOption ? [null, ...shownNamed] : shownNamed
+  const hiddenCount = namedOptions.length - shownNamed.length
 
   /**
    * ¿Hay otro origen que el usuario pueda elegir, acá y ahora?
@@ -1267,7 +1276,7 @@ const SavingsForm = ({
               )}
               {/* La vuelta atrás. Desplegar sin poder volver a plegar deja la
                   pantalla más alta para siempre por una mirada de un segundo. */}
-              {showAllPurposes && purposeOptions.length > PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK && (
+              {showAllPurposes && namedOptions.length > PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK && (
                 <button
                   type="button"
                   onClick={() => setShowAllPurposes(false)}

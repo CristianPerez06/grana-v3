@@ -2121,6 +2121,7 @@
     "history_more": "Ver {count} más",
     "history_truncated": "Se muestran los últimos {count} movimientos.",
     "purposes": {
+      "hide_empty": "Ocultar propósitos sin saldo",
       "show_less": "Ver menos",
       "show_more": "Ver más ({count})",
       "show_empty": "Ver propósitos sin saldo ({count})",
