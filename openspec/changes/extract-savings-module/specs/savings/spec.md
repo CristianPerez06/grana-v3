@@ -66,6 +66,48 @@ card del total no comparte fila con nada.
 - **THEN** el total sigue arriba, a todo el ancho
 - **AND** ningún propósito queda al lado del total
 
+### Requirement: Ningún monto se corta, y el quiebre lo decide el contenido
+
+En toda fila del módulo que combine texto y plata, el que cede es el texto. Un monto nunca se achica,
+nunca se parte y nunca se corta — ni por el borde de su contenedor ni por debajo de otro control.
+
+Cuando el texto ya cedió todo lo que podía y el monto sigue sin entrar, la fila **se parte en dos
+líneas**: el rótulo arriba, los montos abajo, alineados a la derecha para que la columna de números
+siga siendo una columna.
+
+El quiebre depende del CONTENIDO —cuánto miden ese nombre y esos números—, nunca del ancho de la
+pantalla: no es un breakpoint. Dos filas del mismo ancho se parten distinto si sus montos son
+distintos.
+
+El nombre trunca con puntos suspensivos, pero no por debajo de un piso que lo deje irreconocible.
+
+#### Scenario: Ocho cifras en las dos monedas, en un teléfono de 360px
+
+- **WHEN** el usuario tiene guardado ocho cifras en pesos y ocho cifras en dólares
+- **AND** abre el módulo en un teléfono de 360px
+- **THEN** la card del total muestra los dos montos completos, uno arriba del otro
+- **AND** el divisor entre las dos monedas se dibuja horizontal, entre ellas
+- **AND** ningún monto queda cortado, desbordado ni tapado por otro elemento
+
+#### Scenario: Los mismos montos entran al lado en una pantalla ancha
+
+- **WHEN** esos dos montos entran uno al lado del otro
+- **THEN** la card los muestra en dos mitades iguales, con el divisor vertical entre ellas
+- **AND** no hace falta ningún ancho de pantalla en particular: entra porque los números miden menos
+
+#### Scenario: Un propósito de nombre largo con un monto grande
+
+- **WHEN** el nombre y el monto no entran en una línea
+- **THEN** el nombre queda arriba y el monto abajo, alineado a la derecha
+- **AND** el nombre conserva un ancho mínimo que lo deja reconocible por su principio
+- **AND** el monto se muestra entero
+
+#### Scenario: «Sin destino» con su botón
+
+- **WHEN** el monto sin destino y el botón «Destinar» no entran en la misma línea
+- **THEN** el botón baja a la línea de abajo
+- **AND** el monto nunca queda por debajo del botón
+
 ### Requirement: El módulo es la lectura y el overlay son los actos
 
 El overlay no tiene vista de detalle: abre directo a lo que se tocó. La lectura —el total, el

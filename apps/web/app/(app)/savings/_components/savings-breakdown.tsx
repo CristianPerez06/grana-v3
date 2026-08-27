@@ -209,7 +209,10 @@ const UnassignedBlock = ({
 
   return (
     <section className="rounded-3xl border border-dashed border-savings-unassigned-border bg-savings-unassigned-bg px-[15px] py-3 sm:px-5 sm:py-[14px]">
-      <div className="flex items-center gap-3">
+      {/* La fila se parte por contenido, igual que todo lo demás: si el monto
+          más ancho y el botón no entran juntos, el botón baja a la línea de
+          abajo en vez de pisarlo. */}
+      <div className="flex flex-wrap items-center gap-3">
         {/* Una etiqueta, no un «+». El «+» ya es el glifo de CREAR en esta misma
             pantalla —la card punteada del final de la grilla— y dos círculos
             punteados con el mismo signo, a dos bloques de distancia, se leen
@@ -226,7 +229,12 @@ const UnassignedBlock = ({
             rótulo es la etiqueta de ese número, no el título de una sección, y
             apilados cobraban una fila entera por decir lo mismo. Con las dos
             monedas, la segunda sigue en la misma línea, más chica. */}
-        <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
+        {/* Sin `min-w-0`: este bloque NO puede encogerse por debajo de su monto
+            más ancho. Con `min-w-0` podía, y a 320px el «$ 12.345.678,00» se
+            metía 15px por debajo del botón «Destinar» —los montos van
+            `whitespace-nowrap`, así que lo que no entra no se parte: se
+            superpone—. El piso ahora es el número, y lo que cede es el aire. */}
+        <div className="flex flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
           {/* Versalitas y no nombre propio: «Sin destino» no es un nombre que
               alguien eligió, es la etiqueta de lo que quedó. */}
           <p className="text-[12px] font-extrabold uppercase tracking-[0.09em] text-savings-unassigned-deep">
@@ -248,7 +256,7 @@ const UnassignedBlock = ({
         <button
           type="button"
           onClick={onAllocate}
-          className="relative shrink-0 rounded-lg bg-savings-unassigned-deep px-3.5 py-2 text-[12px] font-extrabold text-savings-unassigned-on-deep transition-opacity after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:opacity-90"
+          className="relative ml-auto shrink-0 rounded-lg bg-savings-unassigned-deep px-3.5 py-2 text-[12px] font-extrabold text-savings-unassigned-on-deep transition-opacity after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:opacity-90"
         >
           {t('purposes.allocate')}
         </button>
@@ -318,25 +326,42 @@ const PurposeCard = ({ group, onOpen }: { group: ModuleGroup; onOpen: () => void
         {purposeGlyph(group.icon)}
       </span>
 
-      <span className="min-w-0 flex-1 truncate text-[14.5px] font-extrabold tracking-[-0.015em] text-text">
-        {group.name}
-      </span>
+      {/* Nombre y montos en la MISMA fila mientras entren, y en dos líneas
+          cuando no —nombre arriba, montos abajo, alineados a la derecha para
+          que la columna de números siga siendo una columna (D24)—.
 
-      {/* Los montos no se achican ni se parten: el que cede es el nombre. */}
-      <span className="flex shrink-0 flex-col items-end">
-        {visible.map((a, i) => (
-          <span
-            key={a.currency}
-            className={cn(
-              'whitespace-nowrap tabular-nums',
-              i === 0
-                ? 'text-[16.5px] font-extrabold tracking-[-0.02em] text-text'
-                : 'text-[11.5px] font-bold text-text-muted',
-            )}
-          >
-            {money(a.reserved, a.currency)}
-          </span>
-        ))}
+          El que cede es el nombre, pero hasta un piso: con dos montos de ocho
+          cifras en un teléfono de 360px le quedaban 66px, que es «Vacaci…» —un
+          nombre truncado tan temprano no es reconocible por su principio, que es
+          justo lo que la regla del truncado promete. Con `min-w-[7.5rem]` el
+          nombre nunca baja de ~13 caracteres: si los montos no entran al lado de
+          eso, bajan ellos.
+
+          El quiebre lo decide EL CONTENIDO —cuánto miden ese nombre y esos
+          números—, no el ancho de pantalla: un propósito de nombre corto con un
+          monto chico sigue en una línea en el mismo teléfono donde otro se
+          parte en dos. */}
+      <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-[13px] gap-y-1">
+        <span className="min-w-[7.5rem] flex-1 truncate text-[14.5px] font-extrabold tracking-[-0.015em] text-text">
+          {group.name}
+        </span>
+
+        {/* Los montos no se achican ni se parten: el que cede es el nombre. */}
+        <span className="ml-auto flex shrink-0 flex-col items-end">
+          {visible.map((a, i) => (
+            <span
+              key={a.currency}
+              className={cn(
+                'whitespace-nowrap tabular-nums',
+                i === 0
+                  ? 'text-[16.5px] font-extrabold tracking-[-0.02em] text-text'
+                  : 'text-[11.5px] font-bold text-text-muted',
+              )}
+            >
+              {money(a.reserved, a.currency)}
+            </span>
+          ))}
+        </span>
       </span>
 
       <ChevronRight className="size-[18px] shrink-0 text-text-soft" aria-hidden />

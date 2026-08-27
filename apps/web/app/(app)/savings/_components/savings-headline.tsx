@@ -117,11 +117,35 @@ export const SavingsHeadline = ({
 
               Centrados y no alineados al borde: en columnas de igual ancho, un
               monto pegado a su izquierda se lee como el arranque de una lista;
-              centrado, se lee como el valor de esa mitad. */}
-          <div className="mt-[15px] grid grid-cols-[1fr_1px_1fr] items-stretch gap-4">
-            <DarkAmount value={moduleRowFor(sums, 'ARS').reserved} currency="ARS" />
-            <div aria-hidden className="h-full w-px self-stretch bg-navy-border" />
-            <DarkAmount value={moduleRowFor(sums, 'USD').reserved} currency="USD" />
+              centrado, se lee como el valor de esa mitad.
+
+              Y SE APILAN CUANDO NO ENTRAN. Con dos montos de ocho cifras en un
+              teléfono de 360px, las mitades daban 130px para un número que mide
+              200: el de dólares se cortaba en «US$ 12.» contra el borde de la
+              card, y como la sección recorta lo que se sale, se cortaba en
+              silencio. Un monto cortado se lee como un número poco confiable
+              (D24), y en una app de plata eso es lo único que no se puede
+              perder.
+
+              El quiebre lo decide EL CONTENIDO y no el ancho de pantalla: cada
+              mitad pide `max-content` como mínimo, así que la fila se parte
+              cuando los dos números no entran juntos —y no cuando la pantalla
+              baja de cierta medida—. Con $1.150.000 y US$900 siguen lado a lado
+              en el mismo teléfono donde ocho cifras las apilan.
+
+              El divisor deja de ser un elemento y pasa a ser el borde de cada
+              mitad: `border-l` para el corte vertical, `border-t` para el
+              horizontal, y el recorte del contenedor —que empieza 1px arriba y
+              1px a la izquierda— se come los que darían contra el marco. Así la
+              línea aparece SIEMPRE entre las dos y nunca alrededor, en las dos
+              direcciones, sin que nadie tenga que saber cuál se dibujó. Un
+              divisor como elemento no puede hacer eso: al partirse la fila
+              quedaba como una rayita vertical al costado del monto de abajo. */}
+          <div className="mt-[15px] overflow-hidden">
+            <div className="-ml-px -mt-px flex flex-wrap">
+              <DarkAmount value={moduleRowFor(sums, 'ARS').reserved} currency="ARS" />
+              <DarkAmount value={moduleRowFor(sums, 'USD').reserved} currency="USD" />
+            </div>
           </div>
 
           <p className="mt-[15px] max-w-[620px] text-[12px] font-semibold leading-[1.45] text-navy-muted">
@@ -200,6 +224,12 @@ const DarkAmount = ({ value, currency }: { value: number; currency: BalanceCurre
   return (
     <p
       className={cn(
+        // `flex-1` + `min-w-max`: crecen iguales mientras entren, y piden como
+        // mínimo lo que mide su propio número — que es lo que hace que la fila
+        // se parta por contenido. El padding lateral hace de la mitad del gap
+        // que había, para que los dos montos sigan a la misma distancia del
+        // divisor ahora que el divisor es un borde y no un elemento con aire.
+        'min-w-max flex-1 border-l border-t border-navy-border px-2 py-0.5',
         'whitespace-nowrap text-center text-[27px] font-extrabold leading-none tracking-[-0.045em] tabular-nums sm:text-[34px]',
         empty ? 'text-white/[0.42]' : 'text-white',
       )}

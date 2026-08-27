@@ -228,10 +228,20 @@ definición.
   Falta verificar el tercer caso, que hoy no está implementado así
 - [x] 6.3 **Auditado**: los únicos `+` del módulo son glifos de signo, no sumas, y cada `money()`
   lleva su moneda explícita. `moduleHasSavings` usa `some` y no una suma
-- [ ] 6.7 **La grilla en 360 px con montos de ocho cifras en las dos monedas**: cuando no entra, la
-  fila se parte en dos líneas —rótulo arriba, montos abajo— y **ningún monto se achica ni se corta**
-  (D24). El quiebre depende del contenido, no del ancho de la pantalla, así que no puede ser un
-  `@media`
+- [x] 6.7 **La grilla en 360 px con montos de ocho cifras en las dos monedas** — corrido sobre la
+  pantalla real, midiendo cajas de 320 a 1280. **Las tres zonas que llevan plata se rompían** (E24):
+  la card del total cortaba el monto de dólares contra el borde y lo dejaba en «US$ 12.» sin ninguna
+  señal, la card de un propósito dejaba el nombre en 66px («Vacaci…»), y a 320px el monto de «Sin
+  destino» se metía por debajo del botón «Destinar». Las tres se arreglan con la misma regla: cada
+  pieza pide como mínimo lo que mide su propio número y la fila se parte cuando esos mínimos no
+  entran — **por contenido, sin un solo `@media`**. Verificado: ningún desborde, ningún scroll
+  horizontal, y el nombre nunca por debajo de su piso
+- [ ] 6.7b **Los centavos del módulo, contra la preferencia de la app** (E24, destapado por 6.7).
+  El módulo formatea con centavos fijos —en tres definiciones locales de `money`— mientras la app
+  tiene `showCents` y el dashboard lo respeta: la fila «Guardado» y el total del módulo son el mismo
+  número con dos formatos. Además es lo que deja la card apilada en el teléfono para casi cualquier
+  monto real. **No se toca en este change**: cambia todos los números del módulo, incluidos los de
+  los formularios y los mensajes de tope, con el QA nativo por correr
 - [x] 6.8 **Los enlaces de «Sin destino» con el pulgar**: 44 px de área táctil por pseudo-elemento,
   sin inflar la fila. Verificado en QA — no cuesta acertarles. Pegados
   por un punto medio, el error más probable es tocar *Volver a usar* queriendo *Destinar* — la que

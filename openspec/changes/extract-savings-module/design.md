@@ -564,3 +564,70 @@ Y el techo cuenta **propósitos**, no chips: «Sin destino» va siempre visible 
 Contándolo, guardar mostraba cinco propósitos y destinar seis con el mismo techo y la misma lista.
 La consecuencia aceptada es que las dos pantallas tienen distinta cantidad de CHIPS —guardar suma
 «Sin destino»— y eso está bien: coinciden en lo que importa, que es qué propósitos se ven.
+
+## E24 — Un monto cortado, y las tres formas de que el ancho lo corte
+
+La única prueba del guion que quedaba sin correr era el teléfono chico: **360px con montos de ocho
+cifras en las dos monedas**. Se corrió sobre la pantalla real, midiendo cajas y no mirando capturas,
+y de las tres zonas que llevan plata, **las tres se rompían** — cada una a su manera, y ninguna se
+notaba con los montos del QA anterior.
+
+**1. La card del total cortaba el monto de dólares, en silencio.** Las dos mitades daban 130px cada
+una para un número que mide 200. El de pesos se desbordaba sobre el divisor; el de dólares se salía
+de la card, y como la sección recorta lo que se sale, quedaba «US$ 12.» contra el borde. Sin scroll
+horizontal, sin ninguna señal: el número simplemente no estaba.
+
+Esa es la falla que D24 nombra: *un monto cortado no es un detalle de layout, se lee como un número
+poco confiable*. Y era la peor de las tres, porque el número cortado era el TOTAL.
+
+**2. La card de un propósito dejaba el nombre en 66px.** El nombre cede antes que el monto, eso está
+bien y es la regla — pero cede *hasta un piso*. «Vacaciones en Japón con la familia» truncado a
+«Vacaci…» ya no es reconocible por su principio, que es exactamente lo que el truncado promete a
+cambio de recortar. Con piso, el mismo nombre conserva 212px y llega hasta «con la…».
+
+**3. El bloque «Sin destino» metía el monto debajo del botón.** A 320px, con `min-w-0`, el bloque de
+texto se encogía por debajo de su propio número; como los montos van `nowrap`, lo que no entra no se
+parte: se superpone. El monto pasaba por atrás de «Destinar».
+
+### Lo que se corrige, y por qué no es un breakpoint
+
+Las tres se arreglan con la misma regla, y la regla es la que ya estaba escrita en la tarea: **el
+quiebre lo decide el CONTENIDO, no el ancho de la pantalla.** Un `@media` acierta y erra al mismo
+tiempo — apila «$ 1.150.000 / US$ 900» en un teléfono donde entraban al lado, y deja cortado
+«$ 12.345.678 / US$ 12.345.678» en una tablet donde no entran.
+
+Se expresa con flexbox: cada pieza pide como mínimo lo que mide su propio número (`min-w-max`, o
+`min-width: auto`), y la fila se parte cuando esos mínimos no entran juntos. Nada sabe el ancho de la
+pantalla; cada fila sabe cuánto miden sus cosas.
+
+Tres detalles que costaron y conviene no volver a descubrir:
+
+- **`truncate` es `nowrap`, así que el min-content de un nombre es el nombre ENTERO.** Quitarle el
+  `min-w-0` al contenedor para proteger el monto hacía que el nombre dejara de truncar y desbordara
+  la card. El nombre necesita poder encogerse; el que necesita piso es el monto. Son contenedores
+  distintos y la respuesta es distinta en cada uno.
+- **El divisor no puede ser un elemento** si la fila se parte: al apilarse quedaba como una rayita
+  vertical al costado del monto de abajo. Pasa a ser el borde de cada mitad —`border-l` y `border-t`—
+  con el contenedor recortando el que daría contra el marco. La línea aparece siempre entre las dos y
+  nunca alrededor, en las dos direcciones, sin que nadie tenga que saber cuál se dibujó.
+- **Un piso de nombre se escribe en `rem`, no en caracteres.** `min-w-[7.5rem]` son ~13 caracteres de
+  este cuerpo; el navegador no sabe contar caracteres, y `ch` mide el «0» de la fuente, que en una
+  extrabold con tracking negativo no es el ancho promedio de una letra.
+
+Verificado de 320 a 1280 con montos de ocho cifras en las dos monedas: ningún desborde en ninguna
+caja, ningún scroll horizontal, y el nombre nunca por debajo de su piso.
+
+### Lo que esto destapó y no se corrige acá
+
+Con centavos siempre encendidos, «$ 150.000,00» y «US$ 900,00» tampoco entran lado a lado en 360px:
+la card del total queda apilada en el teléfono para casi cualquier monto real. **El módulo formatea
+con centavos fijos y la app tiene una preferencia de usuario para eso** (`showCents`, que el
+dashboard respeta vía `MaskedAmount`: pesos según la preferencia, dólares siempre con centavos). La
+fila «Guardado» del dashboard y el total del módulo son EL MISMO número mostrado con dos formatos
+distintos.
+
+Es la deriva de E23 otra vez, y tiene tres copias: `_components/money.ts`, y sendas definiciones
+locales dentro de `savings-drawer.tsx` y `purpose-picker.tsx`. Respetar la preferencia además
+devolvería las dos mitades al teléfono. No se toca en este change —cambia todos los números del
+módulo, incluidos los de los formularios y los mensajes de tope, y el QA nativo está por correr—,
+pero queda dicho acá y en el backlog.
