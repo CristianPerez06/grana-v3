@@ -7,9 +7,10 @@ import {
   getLatestIncome,
   getReserveHistory,
   lastSaveOf,
+  pickLatestIncome,
   shouldOfferSuggestion,
 } from '@grana/savings'
-import { formatARS } from '@grana/i18n-messages'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import { useT } from '../../lib/locale-context'
 import { supabase } from '../../lib/supabase'
@@ -45,7 +46,7 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   const currentMonth = formatDateISO(getTodayAR()).slice(0, 7)
   const todayISO = formatDateISO(getTodayAR())
 
-  const [guidanceQuery, sumsQuery, historyQuery, incomeQuery] = useQueries({
+  const [guidanceQuery, sumsQuery, arsIncomeQuery, usdIncomeQuery] = useQueries({
     queries: [
       {
         queryKey: ['savings', 'guidance', GUIDANCE_ID] as const,
@@ -55,23 +56,34 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
         queryKey: ['savings', 'sums'] as const,
         queryFn: () => getAvailableSums(supabase),
       },
+      // El último ingreso de CADA moneda. La consulta siempre recibió la moneda
+      // por parámetro; el que no se la pasaba era este componente, así que un
+      // ingreso en dólares no despertaba nunca la tira.
+      //
+      // The amount the user JUST got paid, not the month's total: the strip
+      // appears right after registering an income, so "the last one of the
+      // period" is in practice "the one you just loaded" — without needing an
+      // event to tell it, which is what would make it fragile.
       {
-        queryKey: ['savings', 'history', 'ARS'] as const,
-        queryFn: () => getReserveHistory(supabase, 'ARS'),
+        queryKey: ['savings', 'latest-income', 'ARS', todayISO] as const,
+        queryFn: () => getLatestIncome(supabase, 'ARS', todayISO),
       },
       {
-        // The amount the user JUST got paid, not the month's total: the strip
-        // appears right after registering an income, so "the last one of the
-        // period" is in practice "the one you just loaded" — without needing an
-        // event to tell it, which is what would make it fragile.
-        queryKey: ['savings', 'latest-income', todayISO] as const,
-        queryFn: () => getLatestIncome(supabase, 'ARS', todayISO),
+        queryKey: ['savings', 'latest-income', 'USD', todayISO] as const,
+        queryFn: () => getLatestIncome(supabase, 'USD', todayISO),
       },
     ],
   })
 
   const guidance = guidanceQuery.data
-  const latestIncome = incomeQuery.data ?? null
+
+  // UNA tira, la del ingreso más reciente. Misma regla que en web, y por el
+  // mismo motivo: la tira promete «acabás de cobrar esto», así que la moneda es
+  // la de lo último que se cargó.
+  const latest = pickLatestIncome(arsIncomeQuery.data ?? null, usdIncomeQuery.data ?? null)
+  const currency = latest?.currency ?? null
+  const latestIncome = latest?.income ?? null
+
   const offerable = shouldOfferSuggestion({
     seenAt: guidance?.seen_at ?? null,
     dismissedAt: guidance?.dismissed_at ?? null,
@@ -79,7 +91,15 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
     latestIncomeAt: latestIncome?.createdAt ?? null,
   })
 
-  const available = sumsQuery.data?.find((s) => s.currencyCode === 'ARS')?.available ?? 0
+  // Historial POR MONEDA: el hábito que la tira deriva es lo guardado sobre el
+  // ingreso del que salió, y cruzarlo mezclaría dos monedas que no se mezclan.
+  const historyQuery = useQuery({
+    queryKey: ['savings', 'history', currency ?? 'none'] as const,
+    queryFn: () => getReserveHistory(supabase, currency!),
+    enabled: currency != null,
+  })
+
+  const available = sumsQuery.data?.find((s) => s.currencyCode === currency)?.available ?? 0
   const lastSave = lastSaveOf(historyQuery.data?.entries ?? [])
 
   // The percentage comes from the income of the month the user LAST saved in,
@@ -89,10 +109,9 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   const lastSaveDate = lastSave?.date ?? null
 
   const priorIncomeQuery = useQuery({
-    queryKey: ['savings', 'latest-income', lastSaveDate ?? 'none'] as const,
-    queryFn: () => getLatestIncome(supabase, 'ARS', lastSave!.date),
-    enabled: lastSaveDate != null,
-    
+    queryKey: ['savings', 'latest-income', currency ?? 'none', lastSaveDate ?? 'none'] as const,
+    queryFn: () => getLatestIncome(supabase, currency!, lastSave!.date),
+    enabled: currency != null && lastSaveDate != null,
   })
 
   // El porcentaje sale de la MISMA relación que la propuesta: lo guardado sobre
@@ -109,7 +128,7 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
 
   // A suggestion to act is about now: offering it while the user browses May
   // would be asking them to save in the past.
-  if (monthKey !== currentMonth || !offerable || !suggestion) return null
+  if (monthKey !== currentMonth || !offerable || !suggestion || currency == null) return null
 
   // Hiding is a DATA write, not component state. A `hidden` flag would live for
   // as long as the dashboard stays mounted, so after "Ahora no" the strip would
@@ -137,7 +156,7 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
     try {
       const result = await reserveAvailability({
         amount: suggestion.amount,
-        currency_code: 'ARS',
+        currency_code: currency,
         date: getTodayAR(),
       })
       if (!result.ok) {
@@ -160,7 +179,9 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
     }
   }
 
-  const amount = formatARS(suggestion.amount)
+  // El monto va en el TEXTO y no en el botón: el mismo número dos veces, a dos
+  // renglones de distancia, se lee como dos datos.
+  const amount = currency === 'USD' ? formatUSD(suggestion.amount) : formatARS(suggestion.amount)
 
   return (
     // Two rows: the copy, then every action on one line. A taller strip on a
@@ -175,14 +196,14 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
         {t('savings.suggestion.body', { amount })}
       </Text>
       {/* Three ways out, none permanent: "Ahora no" defers to the next income and
-          "Suficiente por este mes" drops to a monthly cadence — the slowest the
+          "No más este mes" drops to a monthly cadence — the slowest the
           strip can go, which is why nothing needs to kill it for good. The two
           are plain text, not buttons: three buttons read as three equally
           weighted choices and only one of them is the point. */}
       <View className="mt-3 flex-row items-center gap-3">
         <View className="flex-1">
           <Button
-            title={t('savings.suggestion.cta', { amount })}
+            title={t('savings.suggestion.cta')}
             onPress={save}
             loading={busy}
             disabled={busy}
