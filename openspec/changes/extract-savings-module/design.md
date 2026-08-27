@@ -363,3 +363,43 @@ Es exactamente lo que 4b.5 pide para el estado apagado, adelantado: no hay drawe
 **Mobile queda como está**, con el overlay montado en su card de saldo. No es una omisión: sin módulo
 nativo no hay a dónde navegar, y cambiar la fila antes de que exista el destino sería romper la única
 puerta que tiene.
+
+## E19 — La pasada de coherencia antes del QA
+
+Antes de mirar la pantalla se revisó el rediseño contra sí mismo y contra el resto de la app. Salieron
+ocho cosas, y ninguna se veía leyendo un archivo solo: todas aparecen al comparar piezas entre sí.
+
+**El pie era más angosto que todo lo demás.** El desglose y la card del total van a todo el ancho del
+stage; el pie había heredado un `sm:max-w-[34rem]` de la versión anterior. En desktop cortaba a la
+mitad y desalineaba el borde derecho de la página. Los tres bloques ahora comparten el ancho del
+shell, que es lo que E16 pide sin decirlo.
+
+**Los radios venían de otra escala.** El handoff traía 22/20/18/15/13/11 px, y el sistema tiene
+12/16/18/20/24 (`--radius-lg` … `--radius-4xl`). Cada diferencia sola es invisible; juntas hacen que
+la pantalla se sienta de otro producto sin que se pueda señalar por qué. Todo mapeado a los tokens.
+
+**La escala tipográfica estaba mezclada.** Convivían dos series —la del handoff, con medios puntos, y
+una entera— y producían pares casi idénticos dentro de una misma sección: 10.5 contra 11 en dos
+rótulos, 12 contra 12.5 en dos textos de apoyo, 14 contra 14.5 en dos montos. Eso no se lee como
+jerarquía, se lee como descuido. Unificados, y los cuatro rótulos del módulo comparten cuerpo y
+tracking.
+
+**Dos círculos punteados con un «+», a dos bloques de distancia.** El ícono de «Sin destino» y el de
+«nuevo propósito» eran el mismo glifo con significados distintos. «Sin destino» pasa a una etiqueta:
+lo que falta ahí no es sumar plata, es ponerle nombre a la que ya está.
+
+**El desglose sin propósitos era un título sobre una lista vacía.** Se resuelve con la card punteada
+de crear al final de la grilla: con cero propósitos es una sola card que invita, con propósitos es la
+última de la fila. De paso da la puerta para crear, que la página no tenía —solo se llegaba desde el
+«+» del formulario de guardar.
+
+**Los colores sobre el oscuro no usaban los tokens** (`text-white/55`, `/66`) teniendo
+`--navy-muted` y `--navy-soft` a mano.
+
+**El divisor de la botonera dependía de `[&+&]`**, que exige que las dos clases sean idénticas
+carácter por carácter: envolver un botón o cambiarle una clase a uno solo borraba los divisores sin
+error. Ahora quién lleva borde lo decide quien arma la barra.
+
+**`shortDate` estaba escrito dos veces**, con dos APIs distintas, en dos historiales que se ven en la
+misma sesión. Daban lo mismo hoy; el día que una cambiara, serían dos formatos de fecha en la misma
+app sin que ningún test se enterara.

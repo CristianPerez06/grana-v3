@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { ChevronRight, Plus } from 'lucide-react'
+import { ChevronRight, Plus, Tag } from 'lucide-react'
 import {
   moduleGroupCurrency,
   moduleGroups,
@@ -47,13 +47,9 @@ export const SavingsBreakdown = ({ purposeSums }: { purposeSums: PurposeSums[] }
       )}
 
       <section className="flex flex-col gap-2.5">
-        <div className="flex items-center justify-between gap-3 px-[3px]">
-          <div className="min-w-0">
-            <h2 className="text-[14.5px] font-extrabold tracking-[-0.02em] text-text sm:text-[17px]">
-              {t('purposes.breakdown_title')}
-            </h2>
-          </div>
-        </div>
+        <h2 className="px-[3px] text-[14.5px] font-extrabold tracking-[-0.02em] text-text sm:text-[17px]">
+          {t('purposes.breakdown_title')}
+        </h2>
 
         {/* Grilla y no lista: el ancho decide cuántas columnas entran, así el
             nombre no se parte en dos líneas en desktop. Es el MISMO componente
@@ -72,6 +68,22 @@ export const SavingsBreakdown = ({ purposeSums }: { purposeSums: PurposeSums[] }
               />
             </li>
           ))}
+          {/* La puerta para crear, al FINAL de la grilla y con la misma forma
+              que una card: es lo que hace que sin ningún propósito la sección no
+              sea un título sobre una lista vacía — se ve una sola card punteada
+              que invita, y con propósitos es la última de la fila.
+
+              Punteada, como «Sin destino»: las dos dicen «acá falta algo». */}
+          <li>
+            <button
+              type="button"
+              onClick={overlay.openNewPurpose}
+              className="flex min-h-[72px] w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border px-3.5 py-[13px] text-[13.5px] font-bold text-text-muted transition-colors hover:border-text-soft hover:bg-card hover:text-text"
+            >
+              <Plus className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
+              {t('purposes.new')}
+            </button>
+          </li>
         </ul>
 
         {/* Con el resto en cero su explicación no desaparece: baja acá, en gris,
@@ -116,19 +128,24 @@ const UnassignedBlock = ({
   const visible = moduleVisibleAmounts(amounts)
 
   return (
-    <section className="rounded-[20px] border border-dashed border-savings-unassigned-border bg-savings-unassigned-bg p-[15px] sm:px-5 sm:py-[18px]">
+    <section className="rounded-3xl border border-dashed border-savings-unassigned-border bg-savings-unassigned-bg p-[15px] sm:px-5 sm:py-[18px]">
       <div className="flex items-center gap-3">
+        {/* Una etiqueta, no un «+». El «+» ya es el glifo de CREAR en esta misma
+            pantalla —la card punteada del final de la grilla— y dos círculos
+            punteados con el mismo signo, a dos bloques de distancia, se leen
+            como la misma acción. Acá lo que falta no es sumar plata: es ponerle
+            nombre a la que ya está. */}
         <span
           aria-hidden
           className="grid size-10 shrink-0 place-items-center rounded-full border-[1.5px] border-dashed border-savings-unassigned-deep/50 text-savings-unassigned-deep"
         >
-          <Plus className="size-[19px]" strokeWidth={2.1} />
+          <Tag className="size-[18px]" strokeWidth={2.1} />
         </span>
 
         <div className="min-w-0 flex-1">
           {/* Versalitas y no nombre propio: «Sin destino» no es un nombre que
               alguien eligió, es la etiqueta de lo que quedó. */}
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.11em] text-savings-unassigned-deep">
+          <p className="text-[10.5px] font-extrabold uppercase tracking-[0.13em] text-savings-unassigned-deep">
             {t('purposes.none')}
           </p>
           <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3">
@@ -137,7 +154,7 @@ const UnassignedBlock = ({
                 key={a.currency}
                 className={cn(
                   'whitespace-nowrap font-extrabold tracking-[-0.045em] tabular-nums text-savings-unassigned-text',
-                  i === 0 ? 'text-[22px]' : 'text-[14px] opacity-80',
+                  i === 0 ? 'text-[22px]' : 'text-[14.5px] opacity-80',
                 )}
               >
                 {money(a.reserved, a.currency)}
@@ -149,7 +166,7 @@ const UnassignedBlock = ({
         <button
           type="button"
           onClick={onAllocate}
-          className="min-h-11 shrink-0 rounded-[13px] bg-savings-unassigned-deep px-4 text-[12.5px] font-extrabold text-savings-unassigned-on-deep transition-opacity hover:opacity-90"
+          className="min-h-11 shrink-0 rounded-lg bg-savings-unassigned-deep px-4 text-[12.5px] font-extrabold text-savings-unassigned-on-deep transition-opacity hover:opacity-90"
         >
           {t('purposes.allocate')}
         </button>
@@ -189,7 +206,7 @@ const PurposeCard = ({ group, onOpen }: { group: ModuleGroup; onOpen: () => void
     <button
       type="button"
       onClick={onOpen}
-      className="flex min-h-[72px] w-full items-center gap-[13px] rounded-[18px] border border-border-soft bg-card px-3.5 py-[13px] text-left transition-all hover:border-border hover:shadow-[0_8px_20px_-14px_rgba(11,26,43,0.4)]"
+      className="flex min-h-[72px] w-full items-center gap-[13px] rounded-2xl border border-border-soft bg-card px-3.5 py-[13px] text-left transition-all hover:border-border hover:shadow-[0_8px_20px_-14px_rgba(11,26,43,0.4)]"
     >
       {/* Caja fija para el emoji: suelto al lado del texto, los nombres
           arrancaban en distinta `x` según el ancho del glifo y la grilla dejaba
@@ -198,7 +215,7 @@ const PurposeCard = ({ group, onOpen }: { group: ModuleGroup; onOpen: () => void
       <span
         aria-hidden
         className={cn(
-          'grid size-[42px] shrink-0 place-items-center rounded-[15px] text-[20px]',
+          'grid size-[42px] shrink-0 place-items-center rounded-xl text-[20px]',
           purposeTint(group.purposeId),
         )}
       >

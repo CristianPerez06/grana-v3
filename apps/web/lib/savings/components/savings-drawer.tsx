@@ -19,6 +19,7 @@ import { parseMoneyInput } from '@grana/validation'
 import { Calendar, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Drawer } from '@/components/ui/drawer'
 import { purposeGlyph, purposeTint } from '@/lib/savings/purpose-emblem'
+import { shortDate } from '@/lib/savings/short-date'
 import { Button } from '@/components/ui/button'
 import { DatePicker } from '@/components/ui/date-picker'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
@@ -132,13 +133,6 @@ const yesterdayISO = (): string => {
   return formatDateISO(d)
 }
 
-const shortDate = (iso: string): string => {
-  const [y, m, d] = iso.split('-').map(Number)
-  if (!y || !m || !d) return iso
-  return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short' }).format(
-    new Date(y, m - 1, d),
-  )
-}
 
 /**
  * "Guardado" — the single surface for the act and for auditing it. Mirrored on
@@ -564,7 +558,7 @@ const GroupBlock = ({
           <span
             aria-hidden
             className={cn(
-              'grid size-[38px] shrink-0 place-items-center rounded-[13px] text-[19px]',
+              'grid size-[38px] shrink-0 place-items-center rounded-lg text-[19px]',
               purposeTint(purpose.id),
             )}
           >
@@ -906,7 +900,7 @@ const SavingsForm = ({
           scale, same currency chip, same calculator. Two surfaces that ask for
           an amount should not look like two different apps, and the chip is what
           gives this one its currency selector. */}
-      <div className="mt-4 rounded-[18px] border border-border bg-card px-[22px] pb-[22px] pt-5 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]">
+      <div className="mt-4 rounded-2xl border border-border bg-card px-[22px] pb-[22px] pt-5 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]">
         <div className="flex items-start justify-between gap-3">
           <label
             htmlFor="savings-amount"
@@ -923,7 +917,7 @@ const SavingsForm = ({
               Aparece solo con dos monedas que ofrecer: quien tiene únicamente
               pesos no debería confirmar que tiene pesos. */}
           {currencyOptions.length > 1 && (
-            <div className="flex shrink-0 rounded-[11px] border border-border bg-surface-sunken p-0.5">
+            <div className="flex shrink-0 rounded-xl border border-border bg-surface-sunken p-0.5">
               {currencyOptions.map((option) => (
                 <button
                   key={option}
@@ -1010,7 +1004,7 @@ const SavingsForm = ({
           max={formatDateISO(getTodayAR())}
           trigger={
             <button type="button" className="flex min-w-0 items-center gap-2.5 text-left">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-[11px] bg-[#FAFBFC] text-text-muted">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#FAFBFC] text-text-muted">
                 <Calendar className="size-[18px]" aria-hidden />
               </span>
               <span className="truncate text-[13px] font-semibold text-text">

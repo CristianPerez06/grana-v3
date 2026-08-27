@@ -163,6 +163,11 @@
   «Ver todos» a partir de 8 propósitos, y el panel lateral de 420 px que empuja el stage — el drawer
   de 480 px ya cubre esa lectura en desktop
 
+- [x] 4c.13 **Pasada de coherencia antes del QA** (E19): ancho de las tres secciones, radios a los
+  tokens del sistema, escala tipográfica unificada, el ícono de «Sin destino» que chocaba con el de
+  crear, el desglose vacío, los tokens sobre oscuro, el divisor frágil de la botonera y `shortDate`
+  duplicado
+
 ## 5. Lo que no se toca
 
 - [x] 5.1 **Verificado con `git diff` desde el commit que abre el change**: cero cambios en

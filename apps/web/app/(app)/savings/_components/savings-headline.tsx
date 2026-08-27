@@ -89,15 +89,16 @@ export const SavingsHeadline = ({
       // `locked` porque el origen ya está elegido: se tocó la fila del resto.
       openRestRelease: (currency) =>
         setDrawer({ kind: 'form', mode: 'release', currency, purposeId: null, locked: true }),
+      openNewPurpose: () => setDrawer({ kind: 'purposeForm', purpose: null }),
     }),
     [],
   )
 
   return (
     <div className="flex flex-col gap-3 sm:gap-[18px]">
-      <section className="overflow-hidden rounded-[22px] shadow-sm">
+      <section className="overflow-hidden rounded-3xl shadow-sm">
         <div className="bg-surface-dark px-[18px] pb-4 pt-[18px] sm:px-7 sm:pb-[22px] sm:pt-6">
-          <p className="text-[10.5px] font-extrabold uppercase tracking-[0.13em] text-white/55">
+          <p className="text-[10.5px] font-extrabold uppercase tracking-[0.13em] text-navy-muted">
             {t('total_saved')}
           </p>
 
@@ -111,7 +112,7 @@ export const SavingsHeadline = ({
             <DarkAmount value={moduleRowFor(sums, 'USD').reserved} currency="USD" />
           </div>
 
-          <p className="mt-[15px] max-w-[620px] text-[12px] font-semibold leading-[1.45] text-white/[0.66]">
+          <p className="mt-[15px] max-w-[620px] text-[12px] font-semibold leading-[1.45] text-navy-muted">
             {t('module_support')}
           </p>
         </div>
@@ -122,10 +123,16 @@ export const SavingsHeadline = ({
           // fondo ya las separa, así que no lleva borde superior.
           <div className="grid grid-cols-3 bg-card">
             <BarAction icon={ArrowDown} label={t('save')} onClick={() => setDrawer(SAVE_ARS)} />
-            <BarAction icon={ArrowUp} label={t('release')} onClick={() => setDrawer(RELEASE_ARS)} />
+            <BarAction
+              icon={ArrowUp}
+              label={t('release')}
+              divided
+              onClick={() => setDrawer(RELEASE_ARS)}
+            />
             <BarAction
               icon={Split}
               label={t('purposes.allocate')}
+              divided
               onClick={() => setDrawer(ALLOCATE_ARS)}
             />
           </div>
@@ -137,7 +144,7 @@ export const SavingsHeadline = ({
       ) : (
         // Sin nada guardado no hay desglose ni de dónde volver a usar: una sola
         // acción y la frase que evita el malentendido.
-        <div className="rounded-[20px] border border-border-soft bg-card p-5 text-center sm:p-7">
+        <div className="rounded-3xl border border-border-soft bg-card p-5 text-center sm:p-7">
           <h2 className="text-[19px] font-extrabold tracking-[-0.02em] text-text sm:text-[23px]">
             {t('empty_title')}
           </h2>
@@ -193,20 +200,33 @@ const DarkAmount = ({ value, currency }: { value: number; currency: BalanceCurre
   )
 }
 
-/** 48px de alto en teléfono y 60 en desktop, sobre el mínimo de 44 del repo. */
+/**
+ * 48px de alto en teléfono y 60 en desktop, sobre el mínimo de 44 del repo.
+ *
+ * El divisor va por prop y no por un selector de hermano adyacente: `[&+&]`
+ * depende de que las dos clases sean idénticas carácter por carácter, así que
+ * envolver un botón —o cambiarle una clase a uno solo— borra los divisores sin
+ * error. Acá quién lleva borde es una decisión del que arma la barra.
+ */
 const BarAction = ({
   icon: Icon,
   label,
+  divided = false,
   onClick,
 }: {
   icon: typeof ArrowDown
   label: string
+  /** Lleva el borde de la izquierda: todos menos el primero. */
+  divided?: boolean
   onClick: () => void
 }) => (
   <button
     type="button"
     onClick={onClick}
-    className="flex min-h-12 items-center justify-center gap-2 border-border-soft px-2 text-[12px] font-extrabold tracking-[-0.01em] text-text transition-colors first:border-l-0 hover:bg-surface-sunken [&+&]:border-l sm:min-h-[60px] sm:text-[13px]"
+    className={cn(
+      'flex min-h-12 items-center justify-center gap-2 px-2 text-[12px] font-extrabold tracking-[-0.01em] text-text transition-colors hover:bg-surface-sunken sm:min-h-[60px] sm:text-[13px]',
+      divided && 'border-l border-border-soft',
+    )}
   >
     <Icon className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
     {label}

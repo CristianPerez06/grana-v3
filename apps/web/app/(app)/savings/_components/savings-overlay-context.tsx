@@ -26,6 +26,8 @@ export type SavingsOverlay = {
   openRestAllocate: (currency: BalanceCurrency) => void
   /** Del resto: volver a usarlo. Esta sí lo mueve. */
   openRestRelease: (currency: BalanceCurrency) => void
+  /** Crear uno nuevo. No mueve plata: solo crea el nombre al que después repartir. */
+  openNewPurpose: () => void
 }
 
 const SavingsOverlayContext = createContext<SavingsOverlay | null>(null)

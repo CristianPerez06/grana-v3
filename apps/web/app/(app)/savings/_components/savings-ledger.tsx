@@ -5,6 +5,7 @@ import { ChevronRight } from 'lucide-react'
 import { moduleRowFor, MODULE_CURRENCIES, RESERVE_HISTORY_LIMIT } from '@grana/savings'
 import type { AvailableSums, ReserveEntry, ReserveFlowSums } from '@grana/savings'
 import type { BalanceCurrency } from '@grana/money-logic'
+import { shortDate } from '@/lib/savings/short-date'
 import { cn } from '@/lib/utils'
 import { money } from './money'
 
@@ -42,7 +43,7 @@ export const SavingsLedger = ({
     flow.find((f) => f.currencyCode === currency)?.reservedNet ?? 0
 
   return (
-    <section className="mt-1 flex flex-col gap-1 sm:max-w-[34rem]">
+    <section className="flex flex-col gap-1">
       <Fold label={t('bank_fold')}>
         <div className="mt-2 flex flex-col gap-3">
           {currencies.map((currency) => (
@@ -83,7 +84,7 @@ export const SavingsLedger = ({
               <li key={entry.id} className="flex items-center justify-between gap-3 py-2.5">
                 <span className="text-[14px] font-semibold text-text">
                   {entry.amount >= 0 ? t('entry_saved') : t('entry_released')}
-                  <span className="ml-2 text-[12px] font-medium text-text-soft">
+                  <span className="ml-2 text-[12.5px] font-medium text-text-soft">
                     {shortDate(entry.date)}
                   </span>
                 </span>
@@ -101,7 +102,7 @@ export const SavingsLedger = ({
           </ul>
         )}
         {history.hasMore && (
-          <p className="mt-2 px-1 text-[12px] text-text-soft">
+          <p className="mt-2 px-1 text-[12.5px] text-text-soft">
             {t('history_truncated', { count: RESERVE_HISTORY_LIMIT })}
           </p>
         )}
@@ -113,7 +114,7 @@ export const SavingsLedger = ({
 /** 44px de alto en el resumen, que es lo mínimo para abrirlo con el pulgar. */
 const Fold = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <details className="group">
-    <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-1.5 px-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
+    <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-1.5 px-1 text-[10.5px] font-extrabold uppercase tracking-[0.13em] text-text-soft">
       <ChevronRight className="size-3.5 transition-transform group-open:rotate-90" aria-hidden />
       {label}
     </summary>
@@ -133,7 +134,7 @@ const BankBridge = ({ currency, sums }: { currency: BalanceCurrency; sums: Avail
 
   return (
     <div className="rounded-xl bg-surface-sunken px-3 py-2.5 text-[13px]">
-      <p className="mb-1 text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-text-soft">
+      <p className="mb-1 text-[10.5px] font-extrabold uppercase tracking-[0.13em] text-text-soft">
         {currency}
       </p>
       <p className="flex justify-between py-0.5 text-text-muted">
@@ -156,10 +157,4 @@ const BankBridge = ({ currency, sums }: { currency: BalanceCurrency; sums: Avail
       </p>
     </div>
   )
-}
-
-/** El mismo formato corto que usa el resto del módulo. */
-const shortDate = (iso: string): string => {
-  const [y, m, d] = iso.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
 }
