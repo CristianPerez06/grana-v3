@@ -98,6 +98,46 @@ export function useSavingsDetail(enabled: boolean, monthStart: Date, today: Date
 }
 
 /**
+ * Lo que necesitan los ACTOS, y nada más: el stock por moneda, el corte por
+ * propósito y la lista de propósitos.
+ *
+ * Sin historial ni flujo del mes — eso era del detalle del overlay, que se podó
+ * cuando la lectura pasó a vivir en `/savings`. Son dos consultas menos por
+ * apertura, y las que quedan comparten `queryKey` con las de la pantalla, así
+ * que abrir el overlay desde el módulo no dispara ninguna: ya están en caché.
+ */
+export function useSavingsOperationData(enabled: boolean) {
+  const [sums, purposeSums, purposes] = useQueries({
+    queries: [
+      {
+        queryKey: ['savings', 'sums'] as const,
+        queryFn: () => getAvailableSums(supabase),
+        enabled,
+        staleTime: 0,
+      },
+      {
+        queryKey: ['savings', 'purpose-sums'] as const,
+        queryFn: () => getPurposeSums(supabase),
+        enabled,
+        staleTime: 0,
+      },
+      {
+        queryKey: ['savings', 'purposes'] as const,
+        queryFn: () => listPurposes(supabase),
+        enabled,
+        staleTime: 0,
+      },
+    ],
+  })
+
+  return {
+    sums: (sums.data ?? null) as AvailableSums[] | null,
+    purposeSums: (purposeSums.data ?? []) as PurposeSums[],
+    purposes: (purposes.data ?? []) as Purpose[],
+  }
+}
+
+/**
  * El historial de UN propósito: sus REPARTOS, no reservas.
  *
  * Son dos actos distintos —guardar mueve el disponible, apartar no— y por eso

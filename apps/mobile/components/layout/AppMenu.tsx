@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import { CreditCard, LogOut, Settings, Wallet, X } from 'lucide-react-native'
+import { CreditCard, PiggyBank, LogOut, Settings, Wallet, X } from 'lucide-react-native'
 import { supabase } from '../../lib/supabase'
 import { colors } from '../../lib/colors'
 import { useMenuIdentity } from '../../lib/profile/queries'
@@ -22,7 +22,9 @@ export function AppMenu({ onClose }: Props) {
     await supabase.auth.signOut()
   }
 
-  const navigateAndClose = (path: '/accounts' | '/cards' | '/(app)/settings') => {
+  const navigateAndClose = (
+    path: '/accounts' | '/cards' | '/(app)/savings' | '/(app)/settings',
+  ) => {
     onClose()
     router.push(path)
   }
@@ -59,6 +61,15 @@ export function AppMenu({ onClose }: Props) {
           Icon={CreditCard}
           label={t('nav.cards')}
           onPress={() => navigateAndClose('/cards')}
+        />
+        {/* «Ahorro e inversión» va acá y no en el tab bar, por lo mismo que
+            Cuentas y Tarjetas: el tab bar son los cuatro destinos del día a día
+            y sumar un quinto le saca ancho a los que sí se usan todos los días.
+            En el sidebar de la web vive en este mismo grupo. */}
+        <SheetItem
+          Icon={PiggyBank}
+          label={t('nav.savings')}
+          onPress={() => navigateAndClose('/(app)/savings')}
         />
         <SheetItem
           Icon={Settings}

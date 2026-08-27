@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PURPOSE_TINTS, purposeGlyph, purposeTint } from '../purpose-emblem'
+import { PURPOSE_TINTS, purposeGlyph, purposeTint } from '@grana/savings'
 
 /**
  * El emblema es identidad, no significado. Lo único que tiene que garantizar es

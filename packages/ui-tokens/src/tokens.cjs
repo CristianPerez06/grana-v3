@@ -133,6 +133,26 @@ module.exports = {
     "warning-bg": {
       "DEFAULT": "rgba(196, 154, 60, 0.10)"
     },
+    "savings-unassigned-bg": {
+      "DEFAULT": "#F8EFDA",
+      "dark": "rgba(196, 154, 60, 0.12)"
+    },
+    "savings-unassigned-border": {
+      "DEFAULT": "#DFCCA4",
+      "dark": "rgba(196, 154, 60, 0.34)"
+    },
+    "savings-unassigned-text": {
+      "DEFAULT": "#6B4E14",
+      "dark": "#E8C77A"
+    },
+    "savings-unassigned-deep": {
+      "DEFAULT": "#8A5A16",
+      "dark": "#D9AE55"
+    },
+    "savings-unassigned-on-deep": {
+      "DEFAULT": "#FFFFFF",
+      "dark": "#0B1A2B"
+    },
     "error": {
       "DEFAULT": "#C54B3C"
     },
@@ -274,6 +294,18 @@ module.exports = {
     "info-foreground": {
       "DEFAULT": "var(--white)",
       "dark": "var(--white)"
+    },
+    "safe-top": {
+      "DEFAULT": "env(safe-area-inset-top, 0px)"
+    },
+    "safe-bottom": {
+      "DEFAULT": "env(safe-area-inset-bottom, 0px)"
+    },
+    "safe-left": {
+      "DEFAULT": "env(safe-area-inset-left, 0px)"
+    },
+    "safe-right": {
+      "DEFAULT": "env(safe-area-inset-right, 0px)"
     }
   }
 };

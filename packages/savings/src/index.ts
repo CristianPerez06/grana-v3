@@ -19,6 +19,7 @@ export {
   unallocateFromPurpose,
 } from './purposes'
 export { PURPOSE_SEEDS, PURPOSE_ICONS, type PurposeSeed } from './seeds'
+export { PURPOSE_TINTS, purposeTint, purposeGlyph } from './purpose-emblem'
 export {
   deriveSuggestion,
   deriveSuggestedPct,

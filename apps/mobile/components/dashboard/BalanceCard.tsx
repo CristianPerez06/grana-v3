@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import {
@@ -14,7 +13,6 @@ import { useT } from '../../lib/locale-context'
 import { accountColors, colors } from '../../lib/colors'
 import { useDashboardHero, useMonthBalanceSeries } from '../../lib/dashboard/queries'
 import { useAvailableTotals } from '../../lib/savings/queries'
-import { SavingsDrawer } from '../savings/SavingsDrawer'
 import { useShowCents } from '../../lib/preferences-context'
 import { useDashboardMonth } from './DashboardMonthContext'
 import {
@@ -219,7 +217,6 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
   const router = useRouter()
   const { selected, current, isCurrent } = useDashboardMonth()
 
-  const [savingsOpen, setSavingsOpen] = useState(false)
   const cutISO = balanceCutISO(selected, current, todayISO)
   const heroQuery = useDashboardHero(cutISO)
   const monthQuery = useMonthBalanceSeries(selected.year, selected.month)
@@ -377,20 +374,15 @@ export const BalanceCard = ({ todayISO }: { todayISO: string }) => {
           />
         </View>
 
+        {/* La fila EXPLICA el disponible —la identidad de la card cierra con
+            ella— y para operar LLEVA al módulo. La card explica; el módulo opera
+            (E3). Ya no monta el overlay: el estado vacío paga un tap de más y a
+            cambio la operatoria queda en un solo lugar. */}
         {savings.ARS && (
-          <SavingsLine row={savings.ARS} onPress={() => setSavingsOpen(true)} />
+          <SavingsLine row={savings.ARS} onPress={() => router.push('/(app)/savings')} />
         )}
       </View>
 
-      {/* With nothing set aside there is no detail worth reading, so the row goes
-          straight to the act instead of through an empty screen. */}
-      <SavingsDrawer
-        visible={savingsOpen}
-        onClose={() => setSavingsOpen(false)}
-        initialMode={
-          savings.ARS?.state === 'empty' ? { mode: 'save', currency: 'ARS' } : undefined
-        }
-      />
     </View>
   )
 }

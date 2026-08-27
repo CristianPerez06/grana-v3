@@ -92,9 +92,14 @@
   vacío paga un tap de más y a cambio la operatoria queda en un solo lugar (E3, 4b.5)
 - [x] 4.3 Verificado: la tira post-ingreso **no monta el overlay** —llama directo a
   `reserveAvailability`—, así que resuelve en el lugar y no la tocó la poda (E3)
-- [x] 4.4 Verificado: en web, el único que monta `SavingsDrawer` es el módulo. En **mobile sigue
-  montado en la card de saldo**, y así queda hasta que exista el módulo nativo — ahí no hay a dónde
-  navegar todavía
+- [x] 4.4 **El módulo existe en las DOS apps.** En web y en nativa el único que monta
+  `SavingsDrawer` es el módulo, la fila del dashboard navega, y el overlay abre directo a la vista
+  que se pidió.
+  Esta tarea decía antes que en mobile el overlay seguía en la card «hasta que exista el módulo
+  nativo — ahí no hay a dónde navegar todavía», y era **circular**: este change es el que crea el
+  módulo. El `proposal.md` nunca sacó a mobile del alcance —lo que declara fuera es plazo fijo, FCI,
+  bróker y los placeholders, todo funcional— y la paridad web/mobile es política del producto. Era un
+  supuesto disfrazado de decisión (E26)
 
 ## 4b. El borde (E10) — DIFERIDO
 
@@ -268,11 +273,15 @@ definición.
   este mes»**, que además empareja las dos salidas —«Ahora no» / «No más este mes»—, y el botón pasa a
   `px-3`, porque el aire se calibra contra lo que dice y ya no dice un monto. Sin filas de más. Medido
   de 320 a 430 con ocho cifras en el texto
-- [ ] 6.5 QA nativo — **bloqueado por acceso, issue #58**, que quedó ampliado el 27/08 con lo que
-  este change le cambió a la nativa **sin tocarle una línea de React Native**: las cinco frases de
-  copy, la tira siguiendo la moneda del último ingreso, y el nombre de propósito que ya no se rechaza
-  por un espacio de más. La pantalla `/savings` y su rediseño son web y así queda hasta que exista el
-  módulo nativo (4.4); el ticket lo dice explícito para que no se reporte como bug
+- [ ] 6.5 QA nativo — **bloqueado por acceso, issue #58**. El ticket cubre las cinco frases de copy,
+  la tira siguiendo la moneda del último ingreso y el nombre con espacio de más; **falta agregarle el
+  módulo nativo entero**, que se construyó después de ampliarlo: la ruta, la entrada del menú, la fila
+  del dashboard navegando y el overlay sin vista de detalle
+- [ ] 6.13 **El módulo nativo no se ejecutó nunca.** Typecheck y lint en verde es todo lo que hay:
+  no hay forma de correr Expo desde acá. Lo que más riesgo tiene, en orden: el envoltorio de las dos
+  monedas de la card oscura (Yoga y el navegador no rompen la línea igual), los bordes que hacen de
+  divisor —que dependen de `overflow: hidden` con margen negativo—, y el efecto que corrige el origen
+  vacío al volver a usar
 - [x] 5.5 **Con tests lo nuevo que es lógica pura**: `moneyParts` —que parte lo que devuelve `Intl`
   en vez de armar el número a mano, y si el corte se moviera pondría un «$» en el medio de la cifra—
   y `purposeTint`, cuya única promesa es que el mismo propósito se vea igual siempre: si se rompe no

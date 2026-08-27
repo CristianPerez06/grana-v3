@@ -8,9 +8,11 @@ import {
   moduleGroups,
   moduleRest,
   moduleVisibleAmounts,
+  purposeGlyph,
+  purposeTint,
 } from '@grana/savings'
 import type { ModuleAmount, ModuleGroup, Purpose, PurposeSums } from '@grana/savings'
-import { purposeGlyph, purposeTint } from '@/lib/savings/purpose-emblem'
+
 import { cn } from '@/lib/utils'
 import { useSavingsOverlay } from './savings-overlay-context'
 import { money } from './money'

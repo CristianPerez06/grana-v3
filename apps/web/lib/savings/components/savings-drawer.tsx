@@ -11,6 +11,8 @@ import {
   moduleGroupCurrency,
   MODULE_CURRENCIES,
   PURPOSE_SEEDS,
+  purposeGlyph,
+  purposeTint,
   RESERVE_HISTORY_LIMIT,
   type AvailableSums,
   type Purpose,
@@ -20,7 +22,7 @@ import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { parseMoneyInput } from '@grana/validation'
 import { Calendar, ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Drawer } from '@/components/ui/drawer'
-import { purposeGlyph, purposeTint } from '@/lib/savings/purpose-emblem'
+
 import { shortDate } from '@/lib/savings/short-date'
 import { Button } from '@/components/ui/button'
 import { DatePicker } from '@/components/ui/date-picker'

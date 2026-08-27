@@ -1,11 +1,15 @@
 /**
  * El emblema de un propósito: su emoji dentro de un cuadro con tinte.
  *
- * Vive acá y no adentro de un componente porque lo dibujan DOS superficies —la
- * grilla del módulo y el detalle del overlay— y tienen que coincidir: el emblema
- * es lo que confirma que la pantalla que se abrió es la card que se tocó. Dos
- * listas de tintes divergiendo sería el mismo propósito con dos colores según
- * dónde se lo mire.
+ * Vive en el PAQUETE y no adentro de un componente porque lo dibujan cuatro
+ * superficies —la grilla del módulo y el detalle del overlay, en web y en
+ * nativa— y tienen que coincidir: el emblema es lo que confirma que la pantalla
+ * que se abrió es la card que se tocó. Dos listas de tintes divergiendo sería el
+ * mismo propósito con dos colores según dónde se lo mire, y con dos apps la
+ * copia se habría hecho sola.
+ *
+ * Devuelve clases de Tailwind, que es lenguaje común: los tokens salen de
+ * `@grana/ui-tokens` y nativewind los resuelve igual que la web.
  *
  * Son cinco tintes del set de la app, no una paleta nueva, y son IDENTIDAD y no
  * significado: no dicen nada del propósito, solo lo hacen reconocible.

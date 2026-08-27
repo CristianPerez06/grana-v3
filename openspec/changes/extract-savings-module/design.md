@@ -725,3 +725,71 @@ Y una lección de método, porque casi se me pasa: **medir «hijo contra padre»
 cuando el que se sale es el padre**. La fila de acciones es `shrink-0`, así que crecía ella y sus
 hijos entraban perfectos adentro; el chequeo daba limpio y la captura mostraba el texto cortado. Lo
 que hay que medir es contra el ANCHO DE LA PANTALLA.
+
+## E26 — Un supuesto disfrazado de decisión dejó el módulo a medias
+
+El change se implementó **solo en web**, y la tarea 4.4 lo justificaba así: *"en mobile sigue montado
+en la card de saldo, y así queda hasta que exista el módulo nativo — ahí no hay a dónde navegar
+todavía"*.
+
+Es circular: **este change es el que crea el módulo**. La frase describe el estado del que se parte
+como si fuera el estado al que se llega.
+
+Y no venía de ningún lado. El `proposal.md` no saca a mobile del alcance —lo que declara fuera es
+plazo fijo, FCI, bróker, comprar dólares y los placeholders de inversiones, todo funcional y ninguna
+plataforma—, y la paridad web/mobile es política del producto: el propio ticket de QA nativo la
+enuncia para explicar por qué la fase no está terminada sin él.
+
+**Nadie decidió dejar mobile afuera. Se asumió, y después se escribió como si se hubiera decidido**,
+que es la forma más difícil de detectar un faltante: el documento que tendría que delatarlo lo
+explica.
+
+La señal que lo delató no fue leer el documento sino una pregunta: *"¿por qué no lo implementaste en
+la app mobile? Tiene que estar todo listo para el QA"*. Un QA que corre sobre menos de lo que el
+change dice haber hecho no es un QA parcial: es un QA que **valida una cosa distinta** de la que se
+va a mergear.
+
+### Qué es igual y qué es distinto en la nativa
+
+Igual, porque es lo que hace que sea el mismo producto: la ruta y su entrada de navegación, la card
+oscura del total con las dos monedas y su zócalo de tres acciones, «Sin destino» cálido y punteado
+con sus dos salidas, la lista de propósitos con emblema y monto, el pie con el puente bancario y el
+historial plegados, la fila del dashboard que navega en vez de operar, y el overlay que abre directo
+a lo que se tocó y perdió su vista de detalle.
+
+Distinto, y a propósito:
+
+- **No hay grilla.** La web pasa a dos y tres columnas porque en desktop sobra ancho; en un teléfono
+  nunca sobra, así que es una columna siempre. El componente no "se convierte" en nada: nunca tuvo
+  otra forma.
+- **El área táctil es alto real, no un pseudo-elemento.** En nativo no hay `::after`, así que los
+  controles de 38px con 44 de área pasan a medir 44.
+- **La entrada va en el menú, no en el tab bar.** El tab bar son los cuatro destinos del día a día y
+  un quinto les saca ancho a los cuatro. En el sidebar de la web, «Ahorro e inversión» vive en el
+  mismo grupo que Cuentas y Tarjetas; en la nativa ese grupo ES el menú.
+- **Una sola consulta para la pantalla**, no tres con Suspense por sección: sin streaming, partirla
+  solo agregaría estados de carga que nadie ve.
+
+### Dos cosas que la paridad destapó
+
+**El emblema del propósito estaba en `apps/web`.** `purposeTint` y `purposeGlyph` decidían color y
+glifo, y la nativa iba a necesitar exactamente los mismos: la promesa del emblema es que el mismo
+propósito se vea igual **siempre y en todas partes**, y con la función de un solo lado la copia se
+hacía sola. Se mudó a `packages/savings`. Devuelve clases de Tailwind, que es lenguaje común — los
+tokens salen de `@grana/ui-tokens` y nativewind los resuelve igual que la web.
+
+**El codegen de tokens no se había corrido.** Los `--savings-unassigned-*` que el rediseño agregó
+viven en `theme.css`, que la web lee directo; la nativa lee un archivo **generado** a partir de él, y
+ese archivo estaba viejo. El bloque cálido habría salido sin color y sin ningún error: una clase que
+no existe no rompe nada, simplemente no pinta. Es el modo de falla más caro que tiene un sistema de
+tokens con dos consumidores y un solo generador.
+
+### Lo que NO se puede afirmar
+
+**El módulo nativo no se ejecutó nunca.** Typecheck y lint en verde es todo lo que hay: no hay Expo
+en este entorno. Lo escrito es un espejo cuidadoso, y un espejo cuidadoso no es una app corriendo.
+
+Los tres lugares donde más chances hay de que rompa, en orden: el envoltorio por contenido de las dos
+monedas del total —Yoga y el navegador no deciden el quiebre de línea con las mismas reglas—, los
+bordes que hacen de divisor, que dependen de `overflow: hidden` con margen negativo, y el efecto que
+corre el origen cuando el grupo elegido no tiene saldo.

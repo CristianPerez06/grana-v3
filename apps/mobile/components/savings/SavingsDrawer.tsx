@@ -1,21 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
-import { ChevronDown, ChevronRight } from 'lucide-react-native'
+import { ChevronDown } from 'lucide-react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import { formatForDisplay, parseMoneyInput } from '@grana/validation'
 import {
   PURPOSE_SEEDS,
-  RESERVE_HISTORY_LIMIT,
   type AvailableSums,
   type Purpose,
-  type PurposeSums,
-  type ReserveEntry,
 } from '@grana/savings'
-import { useT, useLocale } from '../../lib/locale-context'
-import { formatShortDate } from '../transactions/detail/format'
-import { useSavingsDetail } from '../../lib/savings/queries'
+import { useT } from '../../lib/locale-context'
+import { useSavingsOperationData } from '../../lib/savings/queries'
 import {
   reserveAvailability,
   releaseAvailability,
@@ -73,6 +69,16 @@ type SheetView =
       direction: 'allocate' | 'unallocate'
     }
 
+/**
+ * A qué abre el overlay cuando lo abre el MÓDULO: directo a lo que se tocó.
+ *
+ * Excluye `detail` a propósito. La lectura ya vive en la pantalla, así que
+ * abrirla otra vez adentro sería la misma información dos veces, con dos
+ * consultas de más — y la flecha del fondo revelaría una lista duplicada en vez
+ * de cerrar.
+ */
+export type SavingsDrawerInitialView = Exclude<SheetView, { kind: 'detail' }>
+
 const money = (amount: number, currency: Currency) =>
   currency === 'USD' ? formatUSD(amount) : formatARS(amount, true)
 
@@ -103,29 +109,34 @@ const yesterdayISO = (): string => {
 export const SavingsDrawer = ({
   visible,
   onClose,
-  initialMode,
+  initialView,
 }: {
   visible: boolean
   onClose: () => void
-  /** The dashboard row opens straight into the form when nothing is saved yet. */
-  initialMode?: { mode: Mode; currency: Currency }
+  /**
+   * La vista con la que arranca la pila. Obligatoria: el overlay ya no tiene
+   * vista raíz — se la llevó el módulo (`/savings`), y lo que queda son actos.
+   */
+  initialView: SavingsDrawerInitialView
 }) => {
   const t = useT()
-  const locale = useLocale()
   const queryClient = useQueryClient()
-  const [bankOpen, setBankOpen] = useState(false)
-  const [historyOpen, setHistoryOpen] = useState(false)
-  const [stack, setStack] = useState<SheetView[]>([{ kind: 'detail' }])
+  const [stack, setStack] = useState<SheetView[]>([initialView])
   const view = stack[stack.length - 1]
   const push = (next: SheetView) => setStack((s) => [...s, next])
-  const back = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s))
-  const today = getTodayAR()
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-  const { sums, history, monthNet, purposeSums, purposes } = useSavingsDetail(
-    visible,
-    monthStart,
-    today,
-  )
+  // En el fondo de la pila la flecha CIERRA. Antes revelaba el detalle; ahora ese
+  // detalle es la pantalla de la que se vino, y volver a dibujarlo adentro sería
+  // mostrar la misma lectura dos veces. La decisión se toma AFUERA del updater:
+  // llamar a `onClose()` adentro sería un setState durante el render de otro
+  // componente.
+  const back = () => {
+    if (stack.length > 1) setStack((s) => s.slice(0, -1))
+    else onClose()
+  }
+  // Solo lo que los ACTOS necesitan. El historial y el flujo del mes eran del
+  // detalle, que ya no está: se mudaron a la pantalla del módulo, y con ellos
+  // dos de las cinco consultas que este overlay disparaba en cada apertura.
+  const { sums, purposeSums, purposes } = useSavingsOperationData(visible)
 
   // Reset the view when the sheet opens, derived DURING RENDER from the prop
   // rather than in an effect: it is not a synchronization with anything external
@@ -133,16 +144,7 @@ export const SavingsDrawer = ({
   const [wasVisible, setWasVisible] = useState(visible)
   if (visible !== wasVisible) {
     setWasVisible(visible)
-    if (visible) {
-      setStack(
-        initialMode
-          ? [
-              { kind: 'detail' },
-              { ...initialMode, kind: 'form', purposeId: null, locked: false },
-            ]
-          : [{ kind: 'detail' }],
-      )
-    }
+    if (visible) setStack([initialView])
   }
 
   const rowFor = (currency: Currency): AvailableSums =>
@@ -164,7 +166,7 @@ export const SavingsDrawer = ({
   // venías cambió; quedarse en el detalle deja al usuario preguntándose si pasó
   // algo, que es el peor final para una acción sobre plata.
   const onDone = async () => {
-    setStack([{ kind: 'detail' }])
+    setStack([initialView])
     onClose()
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['savings'] }),
@@ -175,45 +177,11 @@ export const SavingsDrawer = ({
   const purposeById = (id: string | null): Purpose | null =>
     id == null ? null : (purposes.find((p) => p.id === id) ?? null)
 
-  const CURRENCIES = ['ARS', 'USD'] as const
 
-  /**
-   * Los grupos con sus montos EN LAS DOS MONEDAS y «Sin destino» al final.
-   *
-   * La lectura es por propósito y no por moneda: partirla en dos pantallas
-   * obliga a recordar un número mientras se mira el otro. Los montos conviven en
-   * la fila y NO se suman.
-   */
-  const groupsUnified = () => {
-    const keys = [...new Set(purposeSums.map((r) => r.purposeId ?? 'none'))]
-    const built = keys.map((key) => {
-      const any = purposeSums.find((r) => (r.purposeId ?? 'none') === key)!
-      return {
-        purposeId: any.purposeId,
-        name: any.purposeName,
-        icon: any.purposeIcon,
-        amounts: CURRENCIES.map((c) => ({
-          currency: c as Currency,
-          reserved: groupAmount(c, any.purposeId),
-        })),
-      }
-    })
-    const amountIn = (g: (typeof built)[number], c: Currency) =>
-      g.amounts.find((a) => a.currency === c)?.reserved ?? 0
-    const named = built
-      .filter((g) => g.purposeId != null)
-      .sort(
-        (a, b) => amountIn(b, 'ARS') - amountIn(a, 'ARS') || amountIn(b, 'USD') - amountIn(a, 'USD'),
-      )
-    return [...named, ...built.filter((g) => g.purposeId == null)]
-  }
-
-  /** Un número de la card, en las dos monedas. Nunca sumadas. */
-  const totals = (field: 'reserved' | 'available') =>
-    currencies.map((c) => ({ currency: c as Currency, reserved: rowFor(c)[field] }))
-
-  const currencyWithMoney = (purposeId: string | null): Currency =>
-    (CURRENCIES.find((c) => groupAmount(c, purposeId) > 0) ?? 'ARS') as Currency
+  // `groupsUnified` y `currencyWithMoney` se fueron con el detalle: la lista de
+  // grupos la arma ahora la pantalla del módulo con `moduleGroups`, que es la
+  // MISMA derivación que usa la web — un solo lugar donde se decide el orden y
+  // qué monedas se muestran, en vez de una copia por plataforma.
 
   const groupAmount = (currency: Currency, purposeId: string | null): number =>
     purposeSums.find((s) => s.currencyCode === currency && s.purposeId === purposeId)?.reserved ?? 0
@@ -281,28 +249,6 @@ export const SavingsDrawer = ({
     else push({ kind: 'purposeForm', purpose: null })
   }
 
-  /**
-   * El botón global NO pregunta primero de dónde sale: abría una pantalla
-   * titulada «¿Para qué?» —la pregunta de DESTINAR— para elegir el origen de un
-   * retiro, y cobraba un tap por algo que el formulario muestra mejor, con el
-   * tope y el resto moviéndose al tocar el chip.
-   */
-  const openRelease = () => {
-    const withMoney = groupsUnified().filter((g) => g.amounts.some((a) => a.reserved > 0))
-    // Arranca en el resto si tiene plata: es el grupo del que se vuelve a usar
-    // sin deshacer ninguna decisión.
-    const start = withMoney.some((g) => g.purposeId == null)
-      ? null
-      : (withMoney[0]?.purposeId ?? null)
-    push({
-      kind: 'form',
-      mode: 'release',
-      currency: currencyWithMoney(start),
-      purposeId: start,
-      // Con un solo grupo con plata no hay nada que elegir.
-      locked: withMoney.length <= 1,
-    })
-  }
 
   return (
     <BottomSheet visible={visible} onClose={onClose} ariaLabel={t('savings.title')}>
@@ -376,7 +322,7 @@ export const SavingsDrawer = ({
             purpose={view.purpose}
             sums={purposeSums}
             onDone={() => {
-              setStack([{ kind: 'detail' }])
+              setStack([initialView])
               void refresh()
             }}
             onBack={back}
@@ -450,367 +396,18 @@ export const SavingsDrawer = ({
           />
         )}
 
-        {view.kind === 'detail' && (
-          <View>
-            <Text className="text-[19px] font-extrabold text-text">{t('savings.title')}</Text>
-
-            {/* UN solo número protagonista, en las dos monedas y sin sumarlas.
-                Sin "Para gastar" al lado: dos tarjetas gemelas no dejan
-                protagonista a ninguna, y esta pantalla contesta "cuánto tengo
-                guardado y para qué". El disponible es el número del dashboard,
-                que está justo detrás, y acá aparece donde significa algo: como
-                resultado de la resta, adentro de "Cómo se ve en tu banco". */}
-            <View className="mt-3 flex-row">
-              <Headline label={t('savings.total_saved')} amounts={totals('reserved')} />
-            </View>
-
-            <Text className="mt-4 text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
-              {t('savings.purposes.label')}
-            </Text>
-            <View className="mt-1.5 gap-1">
-              {groupsUnified()
-                .filter((g) => g.purposeId != null)
-                .map((group) => (
-                  <Pressable
-                    key={group.purposeId}
-                    accessibilityRole="button"
-                    onPress={() =>
-                      push({
-                        kind: 'group',
-                        currency: currencyWithMoney(group.purposeId),
-                        purpose: purposeById(group.purposeId)!,
-                      })
-                    }
-                    className="min-h-[44px] flex-row items-center gap-2.5 rounded-xl px-1 py-1.5"
-                  >
-                    <Text className="text-[15px]">{group.icon ?? '🫙'}</Text>
-                    <Text className="flex-1 text-[14px] font-semibold text-text" numberOfLines={1}>
-                      {group.name}
-                    </Text>
-                    <GroupAmounts amounts={group.amounts} />
-                    <ChevronRight size={15} color={colors.textSoft} />
-                  </Pressable>
-                ))}
-            </View>
-
-            {/* El resto: una fila especial al PIE de la lista, no una card. Como
-                caja con borde y botones pesaba más que Viaje o Emergencia —que
-                sí son cosas— e invertía la jerarquía. Sigue diciendo la verdad
-                —no navega, no tiene chevron— pero como pie de lista: distinto
-                sin ser más importante. */}
-            {(() => {
-              const rest = groupsUnified().find((g) => g.purposeId == null)
-              if (rest == null) return null
-              const hasMoney = rest.amounts.some((a) => a.reserved > 0)
-
-              return (
-                <View className="mt-1 border-t border-border-soft pt-2">
-                  {/* `pr` compensa el chevron que esta fila NO tiene (15px + el
-                      gap), para que los montos queden en una sola columna. */}
-                  <View className="flex-row items-center gap-2.5 py-1.5 pl-1 pr-[29px]">
-                    <Text className="text-[15px]">🫙</Text>
-                    <Text
-                      className="flex-1 text-[14px] font-semibold text-text-muted"
-                      numberOfLines={1}
-                    >
-                      {t('savings.purposes.none')}
-                    </Text>
-                    <GroupAmounts amounts={rest.amounts} muted />
-                  </View>
-                  {hasMoney && (
-                    <View className="flex-row items-center gap-2 pl-[34px]">
-                      <Pressable
-                        accessibilityRole="button"
-                        className="min-h-[36px] justify-center"
-                        onPress={() =>
-                          push({
-                            kind: 'allocate',
-                            currency: currencyWithMoney(null),
-                            purpose: null,
-                            direction: 'allocate',
-                          })
-                        }
-                      >
-                        <Text className="text-[12.5px] font-bold text-positive">
-                          {t('savings.purposes.allocate')}
-                        </Text>
-                      </Pressable>
-                      <Text className="text-[12.5px] text-text-soft">·</Text>
-                      <Pressable
-                        accessibilityRole="button"
-                        className="min-h-[36px] justify-center"
-                        onPress={() =>
-                          push({
-                            kind: 'form',
-                            mode: 'release',
-                            currency: currencyWithMoney(null),
-                            purposeId: null,
-                            locked: true,
-                          })
-                        }
-                      >
-                        <Text className="text-[12.5px] font-bold text-positive">
-                          {t('savings.release')}
-                        </Text>
-                      </Pressable>
-                    </View>
-                  )}
-                </View>
-              )
-            })()}
-
-            <View className="mt-4 flex-row gap-2">
-              <View className="flex-1">
-                <Button
-                  title={t('savings.save')}
-                  onPress={() =>
-                    push({
-                      kind: 'form',
-                      mode: 'save',
-                      currency: 'ARS',
-                      purposeId: null,
-                      locked: false,
-                    })
-                  }
-                />
-              </View>
-              <View className="flex-1">
-                <Button
-                  title={t('savings.release')}
-                  variant="secondary"
-                  onPress={openRelease}
-                  disabled={totals('reserved').every((a) => a.reserved <= 0)}
-                />
-              </View>
-            </View>
-
-            {/* Plegado: era el centro de la fase 1, cuando la idea nueva era "tu
-                banco muestra otro número". Ya no lo es, pero no se borra — es lo
-                que evita que alguien abra su home banking, vea otra cifra y le
-                crea al banco. */}
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setBankOpen((v) => !v)}
-              className="mt-4 min-h-[44px] flex-row items-center gap-1.5"
-            >
-              <ChevronRight
-                size={13}
-                color={colors.textSoft}
-                style={{ transform: [{ rotate: bankOpen ? '90deg' : '0deg' }] }}
-              />
-              <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
-                {t('savings.bank_fold')}
-              </Text>
-            </Pressable>
-            {bankOpen && (
-              <View className="mt-1.5 gap-2.5">
-                {currencies.map((currency) => (
-                  <BankBridge key={currency} currency={currency} sums={rowFor(currency)} />
-                ))}
-                <Text className="px-1 text-[12.5px] leading-snug text-text-soft">
-                  {t('savings.gap_note')}
-                </Text>
-              </View>
-            )}
-
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setHistoryOpen((v) => !v)}
-              className="mt-3 min-h-[44px] flex-row items-center gap-1.5"
-            >
-              <ChevronRight
-                size={13}
-                color={colors.textSoft}
-                style={{ transform: [{ rotate: historyOpen ? '90deg' : '0deg' }] }}
-              />
-              <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
-                {t('savings.history_count', { count: String(history.entries.length) })}
-              </Text>
-            </Pressable>
-            {historyOpen && (
-              <View className="mt-1.5">
-                {/* El neto del mes, arriba de la lista que resume: el mismo
-                    flujo contado de dos maneras. Vivía en el puente, donde
-                    competía con una pregunta distinta. */}
-                {currencies.some((c) => monthNet(c) !== 0) && (
-                  <View className="mb-2 gap-0.5 rounded-xl bg-border-soft px-3 py-2">
-                    {currencies
-                      .filter((c) => monthNet(c) !== 0)
-                      .map((c) => (
-                        <View key={c} className="flex-row justify-between">
-                          <Text className="text-[13px] text-text-muted">
-                            {t(
-                              monthNet(c) < 0
-                                ? 'savings.this_month_released'
-                                : 'savings.this_month_saved',
-                            )}
-                          </Text>
-                          <Text
-                            className={`text-[13px] font-extrabold ${
-                              monthNet(c) >= 0 ? 'text-positive' : 'text-text-muted'
-                            }`}
-                          >
-                            {money(Math.abs(monthNet(c)), c)}
-                          </Text>
-                        </View>
-                      ))}
-                  </View>
-                )}
-                {history.entries.length === 0 ? (
-                  <Text className="text-[13px] text-text-soft">
-                    {t('savings.empty_history')}
-                  </Text>
-                ) : (
-                  history.entries.map((entry) => (
-                    <View
-                      key={entry.id}
-                      className="flex-row items-center justify-between border-t border-border-soft py-2.5"
-                    >
-                      <Text className="text-[14px] font-semibold text-text">
-                        {entry.amount >= 0
-                          ? t('savings.entry_saved')
-                          : t('savings.entry_released')}
-                        <Text className="text-[12px] font-medium text-text-soft">
-                          {' '}
-                          {formatShortDate(entry.date, locale)}
-                        </Text>
-                      </Text>
-                      <Text
-                        className={`text-[14px] font-extrabold ${
-                          entry.amount >= 0 ? 'text-positive' : 'text-text-muted'
-                        }`}
-                      >
-                        {entry.amount >= 0 ? '+' : '−'}
-                        {money(Math.abs(entry.amount), entry.currencyCode)}
-                      </Text>
-                    </View>
-                  ))
-                )}
-                {history.hasMore && (
-                  <Text className="mt-2 text-[12px] text-text-soft">
-                    {t('savings.history_truncated', { count: String(RESERVE_HISTORY_LIMIT) })}
-                  </Text>
-                )}
-              </View>
-            )}
-          </View>
-        )}
+        {/* La vista de DETALLE se podó: la lectura vive en `/savings`, que es la
+            pantalla de la que se vino. Con ella se fueron el encabezado, el
+            puente bancario y el historial —que se mudaron al módulo, no se
+            borraron— y dos de las cinco consultas por apertura, que eran lectura
+            y ahora las hace la pantalla. */}
       </FormSheetBody>
     </BottomSheet>
   )
 }
 
-/**
- * Un número de la card, en las dos monedas.
- *
- * Sin total que las sume: eso exige convertir, y Grana no convierte. La segunda
- * línea aparece SOLO si hay algo — la mayoría tiene pesos y nada más, y una
- * línea vacía de dólares les cobraría altura por un dato que no tienen.
- */
-const Headline = ({
-  label,
-  amounts,
-}: {
-  label: string
-  amounts: { currency: Currency; reserved: number }[]
-}) => {
-  const shown = amounts.filter((a, i) => a.reserved !== 0 || i === 0)
 
-  return (
-    <View className="flex-1 rounded-2xl border border-border bg-card p-3">
-      <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
-        {label}
-      </Text>
-      {shown.map((a, i) => (
-        <Text
-          key={a.currency}
-          className={
-            i === 0
-              ? 'mt-1.5 text-[19px] font-extrabold text-text'
-              : 'mt-0.5 text-[13px] font-bold text-text-muted'
-          }
-          numberOfLines={1}
-        >
-          {money(a.reserved, a.currency)}
-        </Text>
-      ))}
-    </View>
-  )
-}
 
-/** Los montos de un grupo en las dos monedas, apilados y sin sumar. */
-const GroupAmounts = ({
-  amounts,
-  muted = false,
-}: {
-  amounts: { currency: Currency; reserved: number }[]
-  /** El resto se muestra apagado: es un sobrante, no un destino. */
-  muted?: boolean
-}) => {
-  // Solo las monedas con algo: la fila crece únicamente cuando el dato lo pide.
-  const shown = amounts.filter((a) => a.reserved !== 0)
-  const list = shown.length > 0 ? shown : [amounts[0]]
-
-  return (
-    // `shrink-0`: el monto va al lado de un nombre que puede ser largo, y sin
-    // esto se encoge y se corta. En una app de plata un monto cortado se lee
-    // como un número poco confiable. El que cede es el nombre, que ya trunca.
-    <View className="shrink-0 items-end">
-      {list.map((a, i) => (
-        <Text
-          key={a.currency}
-          className={`text-[14px] font-extrabold ${
-            muted || i > 0 ? 'text-text-muted' : 'text-text'
-          }`}
-        >
-          {money(a.reserved, a.currency)}
-        </Text>
-      ))}
-    </View>
-  )
-}
-
-/**
- * Por qué el banco muestra otro número.
- *
- * Sin esto, quien abre su cuenta y ve un total distinto al de acá no tiene dónde
- * entender la diferencia — y le cree al banco.
- *
- * Es SOLO la conciliación. El flujo del mes vivía acá y se fue al historial: una
- * cosa es "por qué los dos números no coinciden" y otra "cuánto me moví este
- * mes". Mezcladas, la explicación deja de explicar.
- */
-const BankBridge = ({ currency, sums }: { currency: Currency; sums: AvailableSums }) => {
-  const t = useT()
-
-  return (
-    <View className="rounded-xl bg-border-soft px-3 py-2.5">
-      <Text className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-text-soft">
-        {currency}
-      </Text>
-      {/* Los rótulos nombran los DOS sistemas: la pregunta acá no es "cuánto
-          tengo en cuentas" sino "por qué mi banco dice otra cosa". */}
-      <View className="flex-row justify-between py-0.5">
-        <Text className="text-[13px] text-text-muted">{t('savings.bank_shows')}</Text>
-        <Text className="text-[13px] font-semibold text-text">
-          {money(sums.accountsNet, currency)}
-        </Text>
-      </View>
-      <View className="flex-row justify-between py-0.5">
-        <Text className="text-[13px] text-text-muted">{t('savings.saved_in_grana')}</Text>
-        <Text className="text-[13px] font-semibold text-positive">
-          {`−${money(sums.reserved, currency)}`}
-        </Text>
-      </View>
-      <View className="mt-1 flex-row justify-between border-t border-border pt-1.5">
-        <Text className="text-[13px] text-text-muted">{t('savings.spendable_in_grana')}</Text>
-        <Text className="text-[13px] font-extrabold text-text">
-          {money(sums.available, currency)}
-        </Text>
-      </View>
-    </View>
-  )
-}
 
 /**
  * The act. The amount field takes a POSITIVE number in both modes: the direction
@@ -887,15 +484,39 @@ const SavingsForm = ({
 
   const cycleCurrency = () => {
     if (currencyOptions.length < 2) return
-    const next = currencyOptions[(currencyOptions.indexOf(currency) + 1) % currencyOptions.length]
-    setCurrency(next)
-    // El grupo elegido puede no tener plata en la moneda nueva: el tope quedaría
-    // en cero sobre una elección que ya no existe.
-    if (mode === 'release' && !lockedPurpose && groupAmount(next, purposeId) <= 0) {
-      const fallback = [null, ...purposes].find((o) => groupAmount(next, o?.id ?? null) > 0)
-      if (fallback !== undefined) onSetPurpose(fallback?.id ?? null)
-    }
+    setCurrency(currencyOptions[(currencyOptions.indexOf(currency) + 1) % currencyOptions.length])
   }
+
+  /**
+   * El origen preseleccionado nunca se queda sobre un grupo vacío.
+   *
+   * Pasa por tres caminos distintos: se entró desde el MÓDULO, que preselecciona
+   * «Sin destino» sin saber todavía si tiene saldo —su lectura vive en otra
+   * sección de la pantalla—; se cambió de moneda y el grupo elegido no tiene
+   * plata en la nueva; o la consulta terminó de cargar después de que el
+   * formulario se dibujó. Los tres terminan igual: el tope en cero sobre una
+   * elección que no existe, y un CTA que no se puede tocar sin que nada lo
+   * explique.
+   *
+   * No pelea con el usuario: los chips que puede elegir son, por construcción,
+   * los que tienen plata, así que esto solo corrige lo que él no eligió.
+   *
+   * Antes vivía adentro de `cycleCurrency` y cubría UN camino de los tres — el
+   * único que existía cuando el overlay se abría siempre en el detalle.
+   */
+  const selectedAmount = groupAmount(currency, purposeId)
+
+  useEffect(() => {
+    if (mode !== 'release' || lockedPurpose) return
+    if (selectedAmount > 0) return
+    const fallback = [null, ...purposes].find((o) => groupAmount(currency, o?.id ?? null) > 0)
+    if (fallback !== undefined) onSetPurpose(fallback?.id ?? null)
+    // `purposes` y `groupAmount` se rehacen en cada render del drawer, así que no
+    // sirven de dependencia. Las reales son dos: cuánto tiene el grupo elegido, y
+    // cuántos orígenes hay para elegir —que es lo que cambia cuando la consulta
+    // termina de cargar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, lockedPurpose, currency, purposeId, selectedAmount, purposeOptions.length])
 
   const sums = rowFor(currency)
   // Opened loose there is no income to take a percentage of, so the field starts

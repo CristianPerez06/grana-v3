@@ -24,6 +24,13 @@ pierde de a una fila por vez.
 - **THEN** el formulario se abre desde el módulo
 - **AND** ninguna otra pantalla ofrece esos formularios
 
+#### Scenario: El módulo existe en las dos apps
+
+- **WHEN** el usuario abre Grana en web o en la app nativa
+- **THEN** encuentra «Ahorro e inversión» en la navegación de esa app
+- **AND** la pantalla tiene el total, el desglose y las tres acciones en las dos
+- **AND** la fila de Guardado del dashboard lleva al módulo en las dos, en vez de operar
+
 ### Requirement: El módulo muestra la foto por moneda y el bloque de guardado
 
 El módulo SHALL mostrar, **por moneda y sin sumar ARS con USD**, una foto simple con **Para gastar** y
