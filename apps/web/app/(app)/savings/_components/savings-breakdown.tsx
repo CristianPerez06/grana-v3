@@ -185,9 +185,15 @@ const UnassignedBlock = ({
           la derecha de su propio texto cae bajo el botón «Destinar» de arriba, y
           las dos acciones del bloque comparten una sola columna.
 
-          `items-end` para que en pantalla angosta, donde el párrafo ocupa dos o
-          tres líneas, el enlace se apoye en la última y no en la primera. */}
-      <div className="mt-[11px] flex items-end justify-between gap-3 border-t border-dashed border-savings-unassigned-border pt-[11px]">
+          Alineados ARRIBA: el párrafo ocupa varias líneas y el enlace una, así
+          que alineados abajo el enlace se hundía al pie de un párrafo que
+          arrancaba mucho más arriba — dejaba de leerse como su acción y parecía
+          otra cosa suelta.
+
+          Y el enlace no infla la fila: 44 px de área táctil por un
+          pseudo-elemento centrado, no por alto propio. Con `min-h-11` medía 44
+          px de verdad, casi tres veces su texto, y ese sobrante era el hueco. */}
+      <div className="mt-[11px] flex items-start justify-between gap-3 border-t border-dashed border-savings-unassigned-border pt-[11px]">
         <p className="flex-1 text-[11.5px] font-semibold leading-[1.45] text-savings-unassigned-text/85">
           {t('purposes.none_explainer')}
         </p>
@@ -197,7 +203,7 @@ const UnassignedBlock = ({
         <button
           type="button"
           onClick={onRelease}
-          className="inline-flex min-h-11 shrink-0 items-center text-[12.5px] font-extrabold text-savings-unassigned-deep underline decoration-savings-unassigned-deep/35 underline-offset-[5px] transition-colors hover:decoration-savings-unassigned-deep"
+          className="relative shrink-0 text-[12.5px] font-extrabold leading-[1.45] text-savings-unassigned-deep underline decoration-savings-unassigned-deep/35 underline-offset-[5px] transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:decoration-savings-unassigned-deep"
         >
           {t('release_from_unassigned')}
         </button>

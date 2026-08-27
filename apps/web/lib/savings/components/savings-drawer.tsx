@@ -752,7 +752,7 @@ const GroupBlock = ({
             type="button"
             onClick={onRelease}
             disabled={reserved <= 0}
-            className="mt-1 inline-flex min-h-[44px] items-center text-[13px] font-bold text-emerald-deep underline decoration-emerald-deep/35 underline-offset-[5px] transition-colors hover:decoration-emerald-deep disabled:opacity-40 disabled:no-underline"
+            className="relative mt-2 inline-block text-[13px] font-bold leading-[1.45] text-emerald-deep underline decoration-emerald-deep/35 underline-offset-[5px] transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:decoration-emerald-deep disabled:opacity-40 disabled:no-underline"
           >
             {t('release')}
           </button>
