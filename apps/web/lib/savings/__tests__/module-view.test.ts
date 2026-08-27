@@ -194,3 +194,31 @@ describe('en qué moneda entra una fila', () => {
     expect(moduleGroupCurrency(moduleRest(ROWS))).toBe('ARS')
   })
 })
+
+describe('los propósitos que existen pero todavía no tienen plata', () => {
+  const NUEVO = { id: 'n', name: 'Notebook', icon: '💻' }
+
+  it('aparecen en la lista, en cero', () => {
+    const groups = moduleGroups(ROWS, [NUEVO])
+    const nuevo = groups.find((g) => g.purposeId === 'n')
+    expect(nuevo).toBeDefined()
+    expect(nuevo!.name).toBe('Notebook')
+    expect(nuevo!.amounts.every((a) => a.reserved === 0)).toBe(true)
+  })
+
+  it('van al final: en cero, después de cualquiera con plata', () => {
+    const groups = moduleGroups(ROWS, [NUEVO])
+    expect(groups[groups.length - 1].purposeId).toBe('n')
+  })
+
+  it('no duplican al que ya tiene plata', () => {
+    const conocidos = [{ id: 'v', name: 'Viaje', icon: '✈️' }, NUEVO]
+    const groups = moduleGroups(ROWS, conocidos)
+    expect(groups.filter((g) => g.purposeId === 'v')).toHaveLength(1)
+    expect(moduleAmountOf(ROWS, 'ARS', 'v')).toBe(45_000)
+  })
+
+  it('sin la lista se comporta como antes: solo los que tienen filas', () => {
+    expect(moduleGroups(ROWS).some((g) => g.purposeId === 'n')).toBe(false)
+  })
+})

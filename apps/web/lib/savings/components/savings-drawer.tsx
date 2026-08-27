@@ -111,6 +111,14 @@ type View =
  */
 export type SavingsDrawerInitialView = View
 
+/** Lo que el usuario escribió y no se pierde al desviarse a otra vista. */
+type Draft = {
+  amount: string
+  date: string
+  /** `null` = la que trajo la vista. Deja de serlo apenas se toca el segmentado. */
+  currency: Currency | null
+}
+
 /**
  * Los pasos de los atajos de monto, por moneda.
  *
@@ -239,6 +247,26 @@ export function SavingsDrawer({
       )
     : null
 
+  /**
+   * El borrador del formulario: monto, fecha y moneda.
+   *
+   * Vive ACÁ y no adentro de `SavingsForm` porque el formulario se desmonta
+   * cuando la pila muestra otra vista. Ir a crear un propósito en el medio de
+   * guardar —que es lo que el «+» ofrece— borraba el monto tipeado y devolvía al
+   * formulario en cero, con el CTA deshabilitado y sin nada que explicara por
+   * qué. El código decía que perder el monto sería «cobrarle al usuario haber
+   * querido ser prolijo»; el estado local hacía exactamente eso.
+   *
+   * Se resetea al ABRIR el overlay, no al cambiar de vista: dentro de una misma
+   * apertura, el borrador es uno solo y sobrevive a los desvíos.
+   */
+  const emptyDraft = (): Draft => ({
+    amount: '',
+    date: formatDateISO(getTodayAR()),
+    currency: null,
+  })
+  const [draft, setDraft] = useState<Draft>(emptyDraft)
+
   // Reset the view when the drawer opens, adjusting state DURING RENDER rather
   // than in an effect: the reset is derived from a prop changing, not a
   // synchronization with an external system, and doing it in an effect costs a
@@ -252,6 +280,7 @@ export function SavingsDrawer({
     if (open) {
       // El detalle queda SIEMPRE debajo en la pila: es a donde vuelve la flecha.
       setStack([initialView])
+      setDraft(emptyDraft())
     }
   }
 
@@ -369,6 +398,8 @@ export function SavingsDrawer({
             groupAmount={groupAmount}
             lockedPurpose={view.locked}
             purposes={purposes}
+            draft={draft}
+            onDraftChange={setDraft}
             onSetPurpose={(purposeId) =>
               setStack((prev) => {
                 const at = prev.length - 1
@@ -752,6 +783,8 @@ const SavingsForm = ({
   groupAmount,
   lockedPurpose,
   purposes,
+  draft,
+  onDraftChange,
   onSetPurpose,
   onPickPurpose,
   onCancel,
@@ -777,6 +810,9 @@ const SavingsForm = ({
   lockedPurpose: boolean
   /** Los propósitos del usuario, como chips: elegir no debería costar pantalla. */
   purposes: Purpose[]
+  /** Lo escrito, que vive un nivel arriba para sobrevivir a los desvíos. */
+  draft: Draft
+  onDraftChange: (next: Draft) => void
   /** Elegir uno de los chips, sin navegar. */
   onSetPurpose: (purposeId: string | null) => void
   /** Crear uno nuevo, que sí necesita su pantalla. */
@@ -789,11 +825,19 @@ const SavingsForm = ({
   // mismo texto, y duplicarlo en `savings` sería una traducción que puede
   // divergir de la otra sin que nadie lo note.
   const tx = useTranslations('transactions')
-  const [currency, setCurrency] = useState<Currency>(initialCurrency)
-  const [amount, setAmount] = useState('')
-  const [date, setDate] = useState(formatDateISO(getTodayAR()))
+  // `error` y `pending` SÍ son locales: son de este intento de envío, y morir
+  // con el formulario es exactamente lo que tienen que hacer.
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+
+  // La moneda del borrador manda apenas se toca el segmentado; hasta entonces,
+  // la que trajo la vista.
+  const currency = draft.currency ?? initialCurrency
+  const amount = draft.amount
+  const date = draft.date
+  const setCurrency = (next: Currency) => onDraftChange({ ...draft, currency: next })
+  const setAmount = (next: string) => onDraftChange({ ...draft, amount: next })
+  const setDate = (next: string) => onDraftChange({ ...draft, date: next })
 
   // The currency is offered ONLY when there is more than one to offer. Coming
   // from an income it is inherited and never asked; opened loose, a user who

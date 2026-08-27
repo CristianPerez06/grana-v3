@@ -102,11 +102,21 @@ export const SavingsHeadline = ({
             {t('total_saved')}
           </p>
 
-          {/* Las dos monedas en columnas iguales, con un divisor de 1px en el
-              medio. Iguales a propósito: no hay una moneda principal, y la
-              cuenta de dólares no es un apéndice de la de pesos. NUNCA se
-              suman, y el divisor es lo que lo dice sin escribirlo. */}
-          <div className="mt-[15px] grid grid-cols-[1fr_1px_1fr] items-start gap-4">
+          {/* Las dos monedas separadas por un divisor de 1px. Ninguna es
+              principal: la cuenta de dólares no es un apéndice de la de pesos.
+              NUNCA se suman, y el divisor es lo que lo dice sin escribirlo.
+
+              En teléfono las columnas son MITADES (`1fr`), que es lo que hace
+              que el par ocupe el ancho y se lea como una unidad. De `sm` para
+              arriba pasan a `auto`: con la card a 960 px, dos mitades dejaban
+              cada monto flotando en 470 px de vacío y —peor— ponían el divisor
+              en el centro geométrico de la card, a media card de distancia de
+              los dos números. Un divisor que separa dos vacíos no separa nada.
+
+              Con `auto` el par se encoge a su contenido y queda pegado a la
+              izquierda, en la misma línea vertical que el rótulo de arriba y la
+              frase de abajo: UNA alineación para toda la card. */}
+          <div className="mt-[15px] grid grid-cols-[1fr_1px_1fr] items-start gap-4 sm:w-fit sm:grid-cols-[auto_1px_auto] sm:gap-7">
             <DarkAmount value={moduleRowFor(sums, 'ARS').reserved} currency="ARS" />
             <div aria-hidden className="h-full w-px self-stretch bg-navy-border" />
             <DarkAmount value={moduleRowFor(sums, 'USD').reserved} currency="USD" />

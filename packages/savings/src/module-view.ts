@@ -16,7 +16,7 @@
 // RN-safe: sin dependencias de DOM ni de Node.
 
 import type { BalanceCurrency } from '@grana/money-logic'
-import type { AvailableSums, PurposeSums } from './types'
+import type { AvailableSums, Purpose, PurposeSums } from './types'
 
 export const MODULE_CURRENCIES: readonly BalanceCurrency[] = ['ARS', 'USD']
 
@@ -80,9 +80,18 @@ export function moduleAmountOf(
 /**
  * Los propósitos con nombre, ordenados por lo que pesan en pesos y, a igualdad,
  * por dólares. «Sin destino» NO está acá: es el resto y va al pie de la lista.
+ *
+ * `known` son los propósitos que EXISTEN, que no es lo mismo que los que tienen
+ * plata: el corte por moneda sale de la tabla de repartos, así que uno recién
+ * creado no aparece en ninguna fila. Sin esta lista, crearlo y no verlo era
+ * indistinguible de que no se hubiera creado — y encima no había forma de
+ * borrarlo ni de destinarle desde la página, porque no estaba.
+ *
+ * Van al final por el orden natural: en cero, después de cualquiera con plata.
  */
-export function moduleGroups(rows: PurposeSums[]): ModuleGroup[] {
+export function moduleGroups(rows: PurposeSums[], known: Purpose[] = []): ModuleGroup[] {
   const meta = new Map<string, { name: string | null; icon: string | null }>()
+  for (const p of known) meta.set(p.id, { name: p.name, icon: p.icon })
   for (const r of rows) {
     if (r.purposeId == null) continue
     const prev = meta.get(r.purposeId)

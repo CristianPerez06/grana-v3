@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useRef } from 'react'
-import { CreditCard, LogOut, Settings, Vault, Wallet, X } from 'lucide-react'
+import { CreditCard, LogOut, PiggyBank, Settings, Wallet, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { logoutAction } from '@/app/_actions/logout'
 import { ProfileBlock } from './profile-block'
@@ -93,7 +93,7 @@ export const AppMenu = ({
 
         <div className="flex flex-col gap-[2px] px-4">
           <SheetLink href="/accounts" icon={Wallet} label={tNav('accounts')} onNavigate={onClose} />
-          <SheetLink href="/savings" icon={Vault} label={tNav('savings')} onNavigate={onClose} />
+          <SheetLink href="/savings" icon={PiggyBank} label={tNav('savings')} onNavigate={onClose} />
           <SheetLink href="/cards" icon={CreditCard} label={tNav('cards')} onNavigate={onClose} />
           <SheetLink
             href="/settings"

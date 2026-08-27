@@ -8,7 +8,7 @@ import {
   moduleRest,
   moduleVisibleAmounts,
 } from '@grana/savings'
-import type { ModuleAmount, ModuleGroup, PurposeSums } from '@grana/savings'
+import type { ModuleAmount, ModuleGroup, Purpose, PurposeSums } from '@grana/savings'
 import { purposeGlyph, purposeTint } from '@/lib/savings/purpose-emblem'
 import { cn } from '@/lib/utils'
 import { useSavingsOverlay } from './savings-overlay-context'
@@ -24,11 +24,18 @@ import { money } from './money'
  * diferencia de ~3× es lo que hace que la pantalla se lea como «tengo tanto, y
  * está repartido así» en vez de como una pila de cards del mismo rango.
  */
-export const SavingsBreakdown = ({ purposeSums }: { purposeSums: PurposeSums[] }) => {
+export const SavingsBreakdown = ({
+  purposeSums,
+  purposes,
+}: {
+  purposeSums: PurposeSums[]
+  /** Los que existen, incluidos los que todavía no tienen plata. */
+  purposes: Purpose[]
+}) => {
   const t = useTranslations('savings')
   const overlay = useSavingsOverlay()
 
-  const groups = moduleGroups(purposeSums)
+  const groups = moduleGroups(purposeSums, purposes)
   const rest = moduleRest(purposeSums)
   const restHasMoney = rest.some((a) => a.reserved > 0)
   // La moneda de la operación sale del dato, no de un default: un resto de solo
@@ -172,17 +179,25 @@ const UnassignedBlock = ({
         </button>
       </div>
 
-      <div className="mt-[11px] border-t border-dashed border-savings-unassigned-border pt-[11px]">
-        <p className="text-[11.5px] font-semibold leading-[1.45] text-savings-unassigned-text/85">
+      {/* La explicación y su acción en UNA fila, no apiladas: debajo del párrafo
+          el enlace arrancaba una tercera zona en un bloque que ya tiene dos, y
+          quedaba flotando contra el margen izquierdo sin nada que lo anclara. A
+          la derecha de su propio texto cae bajo el botón «Destinar» de arriba, y
+          las dos acciones del bloque comparten una sola columna.
+
+          `items-end` para que en pantalla angosta, donde el párrafo ocupa dos o
+          tres líneas, el enlace se apoye en la última y no en la primera. */}
+      <div className="mt-[11px] flex items-end justify-between gap-3 border-t border-dashed border-savings-unassigned-border pt-[11px]">
+        <p className="flex-1 text-[11.5px] font-semibold leading-[1.45] text-savings-unassigned-text/85">
           {t('purposes.none_explainer')}
         </p>
-        {/* «Volver a usar» va como enlace y no como segundo botón: es la acción
-            que SÍ mueve el disponible, y dos botones gemelos acá invitaban a
-            confundirla con destinar, que no lo mueve. */}
+        {/* Enlace y no un segundo botón: es la acción que SÍ mueve el
+            disponible, y dos botones gemelos acá invitaban a confundirla con
+            destinar, que no lo mueve. */}
         <button
           type="button"
           onClick={onRelease}
-          className="mt-1 inline-flex min-h-11 items-center text-[12.5px] font-extrabold text-savings-unassigned-deep underline decoration-savings-unassigned-deep/35 underline-offset-[5px] transition-colors hover:decoration-savings-unassigned-deep"
+          className="inline-flex min-h-11 shrink-0 items-center text-[12.5px] font-extrabold text-savings-unassigned-deep underline decoration-savings-unassigned-deep/35 underline-offset-[5px] transition-colors hover:decoration-savings-unassigned-deep"
         >
           {t('release_from_unassigned')}
         </button>
