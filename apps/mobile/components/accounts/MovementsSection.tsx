@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Repeat, Search, SlidersHorizontal, X } from 
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import {
   toFinancialMovement,
-  type MovementTypeFilter,
+  type FinancialMovement,
   type TransactionWithDetails,
 } from '@grana/transactions'
 import { useLocale, useT } from '../../lib/locale-context'
@@ -65,19 +65,21 @@ export function MovementsSection({ movements, accountId, loading }: Props) {
   })
   const options = optionsQuery.data
 
-  // The type axis is the DERIVED `kind`, not the `transaction_type` column, so
-  // the shared sheet speaks one language on both surfaces. Derived once per
-  // movements load with `toFinancialMovement` — the repo's single kind
-  // derivation — not on every filter interaction.
-  const kindById = useMemo(() => {
-    const map = new Map<string, MovementTypeFilter>()
-    for (const tx of movements) map.set(tx.id, toFinancialMovement(tx).kind)
+  // The derived `FinancialMovement` per row, which the filters need twice over:
+  // the type axis is the DERIVED `kind` (not the `transaction_type` column) so
+  // the shared sheet speaks one language on both surfaces, and the free-text
+  // match runs on the same shared `movementMatchesText` web uses, which reads
+  // this model. Derived once per movements load with `toFinancialMovement` — the
+  // repo's single kind derivation — not on every filter interaction.
+  const movementById = useMemo(() => {
+    const map = new Map<string, FinancialMovement>()
+    for (const tx of movements) map.set(tx.id, toFinancialMovement(tx))
     return map
   }, [movements])
 
   const filtered = useMemo(
-    () => applyAccountFilters(movements, filters, kindById).slice().reverse(),
-    [movements, filters, kindById],
+    () => applyAccountFilters(movements, filters, movementById).slice().reverse(),
+    [movements, filters, movementById],
   )
   const activeCount = activeFilterCount(filters)
 
