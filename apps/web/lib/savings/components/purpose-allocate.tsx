@@ -99,12 +99,9 @@ export function PurposeAllocate({
   // Las sugerencias que el usuario todavía no tiene: ofrecerle crear algo que ya
   // existe lo empuja contra el nombre único con el atajo que existe para
   // ahorrarle trabajo.
-  /**
-   * Ocho chips antes de plegar, el mismo techo que el formulario de guardar, y
-   * dos de tolerancia: esconder dos ocupa casi el mismo lugar que mostrarlos.
-   */
-  const PURPOSE_CHIP_LIMIT = 8
-  const PURPOSE_CHIP_SLACK = 2
+  /** Seis chips —dos filas— antes de plegar, igual que el formulario de guardar. */
+  const PURPOSE_CHIP_LIMIT = 6
+  const PURPOSE_CHIP_SLACK = 1
   // Por saldo descendente y, a igualdad, por nombre: lo que se pliega son los
   // que menos tienen, no los últimos del abecedario.
   const sortedPurposes = [...purposes].sort(

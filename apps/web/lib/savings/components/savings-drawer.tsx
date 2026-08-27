@@ -885,14 +885,17 @@ const SavingsForm = ({
   /**
    * Cuántos propósitos se muestran antes de plegar el resto.
    *
-   * Ocho, con dos de tolerancia: el formulario tiene alto para DOS filas
-   * completas de chips antes del resumen, y esconder lo que entra es peor que
-   * mostrarlo. Y si lo que sobra son dos o menos no se esconde nada, porque el
-   * control ocupa casi el mismo lugar que los dos chips con la desventaja de no
-   * decir cuáles son.
+   * SEIS, que son dos filas completas de chips en el ancho del drawer. Se probó
+   * con ocho y el efecto fue que con diez propósitos no se plegaba ninguno: el
+   * control desaparecía, y con él la única señal de que la lista sigue. Dos
+   * filas más un «Ver más» en la cabecera es la forma que se buscaba; un techo
+   * tan alto que nunca se alcanza no es un techo.
+   *
+   * Uno de tolerancia: esconder un solo chip detrás de un control que ocupa
+   * casi lo mismo no es esconder nada.
    */
-  const PURPOSE_CHIP_LIMIT = 8
-  const PURPOSE_CHIP_SLACK = 2
+  const PURPOSE_CHIP_LIMIT = 6
+  const PURPOSE_CHIP_SLACK = 1
 
   /** Cicla entre las monedas que hay para ofrecer, como el resto de la app. */
   const cycleCurrency = () => {
