@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fase 3A · Naming, comparación final</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  --navy:#0B1A2B; --page:#F6F7F9; --card:#FFF; --border:#E6EAEF; --border-soft:#EEF1F4;
+  --text:#0B1A2B; --muted:#6B7683; --soft:#8A94A3; --neutral:#7A8494;
+  --emerald:#10B981; --emerald-deep:#059669; --emerald-bg:#ECFDF5;
+  --terracotta:#B56A5A; --terracotta-bg:#FBEDEA; --slate:#3A6B8A; --plum:#8A6E98; --warning:#C49A3C;
+  --warm-bg:#F8EFDA; --warm-bd:#DFCCA4; --warm-tx:#6B4E14; --warm-dp:#8A5A16;
+  --tile:#F1F3F6;
+  --sans:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --shadow:0 1px 2px rgba(11,26,43,.05),0 6px 18px rgba(11,26,43,.05);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+.doc{max-width:1320px;margin:0 auto;padding:0 28px 110px}
+.masthead{background:var(--navy);color:#fff;padding:52px 28px 44px;margin-bottom:40px}
+.masthead .in{max-width:1320px;margin:0 auto}
+.eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.62);margin:0 0 12px;font-weight:600}
+.masthead h1{margin:0 0 12px;font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.masthead p{margin:0;max-width:72ch;color:rgba(255,255,255,.68);font-size:16px}
+.masthead .warn{margin-top:22px;padding:14px 18px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-size:14px;color:rgba(255,255,255,.8);max-width:86ch}
+.masthead .warn b{color:#fff;font-weight:700}
+.masthead .warn ul{margin:9px 0 0;padding-left:18px}
+.masthead .warn li{margin-top:4px}
+.masthead .warn.ok{background:rgba(16,185,129,.14);border-color:rgba(16,185,129,.35)}
+
+h2.sec{margin:52px 0 4px;font-size:23px;font-weight:800;letter-spacing:-.02em}
+p.lead{margin:0 0 24px;font-size:15px;color:var(--muted);max-width:82ch}
+p.lead b{color:var(--text);font-weight:600}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(392px,1fr));gap:40px 34px;align-items:start}
+.step{display:flex;flex-direction:column;gap:12px}
+.step-head{display:flex;align-items:flex-start;gap:11px}
+.step-num{flex:0 0 auto;width:29px;height:29px;border-radius:9px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:800}
+.step-head h3{margin:0;font-size:16.5px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.step-head .sub{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.tag{display:inline-block;margin-top:6px;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:999px}
+.t-new{background:var(--emerald-bg);color:var(--emerald-deep)}
+.t-mod{background:#EAF1F6;color:var(--slate)}
+.t-warn{background:#FBF3E2;color:var(--warm-dp)}
+.t-no{background:var(--terracotta-bg);color:var(--terracotta)}
+.t-fut{background:#F1EEF6;color:var(--plum)}
+
+.note{font-size:13.5px;color:var(--muted);border-left:2px solid var(--border);padding-left:13px}
+.note b{color:var(--text);font-weight:600}
+.note.ok{border-left-color:var(--emerald)}
+.note.warn{border-left-color:var(--warm-bd)}
+.note.no{border-left-color:var(--terracotta)}
+
+.phone{width:100%;max-width:392px;border:1px solid var(--border);border-radius:22px;background:var(--page);overflow:hidden;box-shadow:var(--shadow)}
+.scr{padding:15px;display:flex;flex-direction:column;gap:11px}
+.hdr{background:var(--navy);color:#fff;padding:13px 16px 15px}
+.hdr .bk{font-size:12px;color:rgba(255,255,255,.6)}
+.hdr h4{margin:5px 0 0;font-size:18px;font-weight:800;letter-spacing:-.02em}
+
+.tot{border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
+.tot .dark{background:var(--navy);color:#fff;padding:15px 16px 13px}
+.tot .lbl{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.tot .pair{display:grid;grid-template-columns:1fr 1px 1fr;margin-top:11px}
+.tot .pair .divi{background:rgba(255,255,255,.15)}
+.tot .pair .h{text-align:center;padding:0 8px;font-size:22px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.tot .pair .h s{text-decoration:none;font-size:.78em;font-weight:700;color:rgba(255,255,255,.5)}
+.tot .pair .h.zero{color:rgba(255,255,255,.42)}
+.tot .sup{margin:11px 0 0;font-size:11.5px;font-weight:600;color:rgba(255,255,255,.6);line-height:1.45}
+.tot .bar{display:grid;grid-template-columns:1fr 1fr 1fr;background:#fff}
+.tot .bar div{padding:11px 4px;text-align:center;font-size:11.5px;font-weight:800;color:var(--text)}
+.tot .bar div + div{border-left:1px solid var(--border-soft)}
+
+.blk{display:flex;flex-direction:column;gap:9px}
+.blk .bh{display:flex;align-items:center;justify-content:space-between;padding:0 3px}
+.blk .bh h5{margin:0;font-size:14px;font-weight:800;letter-spacing:-.02em}
+.blk .bh .add{font-size:12px;font-weight:800;color:var(--emerald-deep)}
+
+.row{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--border-soft);border-radius:15px;padding:12px 13px}
+.row .ic{flex:0 0 auto;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:18px;background:var(--tile)}
+.row .ic.g{background:#EAF1F6}.row .ic.p{background:#F1EEF6}.row .ic.e{background:var(--emerald-bg)}
+.row .nm{flex:1;min-width:0;font-size:14px;font-weight:800;letter-spacing:-.015em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .nm em{display:block;font-style:normal;font-size:11px;font-weight:600;color:var(--soft);letter-spacing:0;margin-top:2px}
+.row .am{flex:0 0 auto;text-align:right}
+.row .am b{display:block;font-size:15.5px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.row .am s{display:block;text-decoration:none;font-size:11px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.row .chev{color:#C4CBD4;font-size:15px;flex:0 0 auto}
+
+.hint{display:flex;align-items:center;gap:7px;padding:2px 4px;font-size:11.5px;color:var(--soft);font-weight:600}
+.hint i{font-style:normal;font-size:11px}
+
+.ghostblk{border:1px dashed var(--border);border-radius:15px;padding:16px 14px;text-align:center;font-size:12.5px;color:#B6BFCA;font-weight:600;background:repeating-linear-gradient(135deg,#FAFBFC,#FAFBFC 8px,#F4F6F8 8px,#F4F6F8 16px)}
+.quiet{padding:3px 4px;font-size:12.5px;color:var(--muted);font-weight:600}
+.quiet a{color:var(--emerald-deep);text-decoration:none;font-weight:800}
+
+.c{background:#fff;border:1px solid var(--border-soft);border-radius:15px}
+.c.pad{padding:13px 14px}
+.dh{display:flex;align-items:flex-start;justify-content:space-between;padding:3px 2px 0}
+.dh .k{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}
+.dh h6{margin:2px 0 0;font-size:19px;font-weight:800;letter-spacing:-.02em}
+.dh .x{width:30px;height:30px;border-radius:9px;border:1px solid var(--border);background:#fff;display:grid;place-items:center;color:var(--muted);font-size:14px}
+
+.fld{padding:11px 14px;border-top:1px solid var(--border-soft);display:flex;align-items:center;gap:11px}
+.fld:first-child{border-top:0}
+.fld .k{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.fld .v{font-size:14.5px;font-weight:600;margin-top:1px}
+.fld .v.ph{color:#B6BFCA;font-weight:500}
+.fld .gr{flex:1;min-width:0}
+.fld .sq{flex:0 0 auto;width:32px;height:32px;border-radius:9px;background:var(--tile);display:grid;place-items:center;font-size:14px}
+.fld .sq.acc{background:var(--slate);color:#fff;font-size:11px;font-weight:800}
+.fld .chev{color:#C4CBD4;font-size:15px}
+
+.amt{padding:14px 15px 15px;position:relative}
+.amt .lbl{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.amt .cur{position:absolute;right:13px;top:12px;border:1px solid var(--border);border-radius:9px;padding:4px 9px;font-size:11.5px;font-weight:700}
+.amt .val{display:flex;align-items:baseline;gap:6px;margin-top:8px;justify-content:center}
+.amt .val .s{font-size:21px;font-weight:600;color:var(--soft)}
+.amt .val .n{font-size:34px;font-weight:700;letter-spacing:-.025em;line-height:1;font-variant-numeric:tabular-nums}
+
+.calc{padding:12px 14px}
+.calc div{display:flex;justify-content:space-between;align-items:baseline;font-size:13.5px;padding:4px 0}
+.calc div span:first-child{color:var(--muted)}
+.calc div span:last-child{font-weight:700;font-variant-numeric:tabular-nums}
+.calc .rule{border-top:1px solid var(--border-soft);margin-top:5px;padding-top:8px}
+.calc .rule span:last-child{font-size:15.5px;font-weight:800}
+.calc .pos span:last-child{color:var(--emerald-deep)}
+.calc .neg span:last-child{color:var(--terracotta)}
+.calc .em span:first-child{color:var(--text);font-weight:700}
+
+.cta{background:var(--emerald);color:#fff;border-radius:12px;padding:14px;text-align:center;font-size:15px;font-weight:800}
+.cta.ghost{background:#fff;color:var(--muted);border:1px solid var(--border);font-weight:700}
+.acts{display:flex;gap:8px}
+.acts .cta{flex:1;padding:12px;font-size:13.5px;border-radius:11px}
+
+.ask{background:#fff;border:1px solid var(--border-soft);border-radius:15px;padding:13px 14px}
+.ask h6{margin:0 0 4px;font-size:14px;font-weight:800;letter-spacing:-.01em;line-height:1.35}
+.ask p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.45}
+.ask .opts{display:flex;gap:8px;margin-top:11px}
+.ask .opts div{flex:1;border:1px solid var(--border);border-radius:11px;padding:9px;text-align:center;font-size:13px;font-weight:700}
+.ask .opts div.on{border-color:var(--emerald);background:var(--emerald-bg);color:var(--emerald-deep)}
+.out{margin-top:11px;padding:11px 12px;border-radius:11px;font-size:12.5px;line-height:1.45}
+.out.si{background:#FBF3E2;color:var(--warm-tx);border:1px solid var(--warm-bd)}
+.out.no{background:var(--emerald-bg);color:#065F46;border:1px solid #A7F3D0}
+
+.month{background:#fff;border:1px solid var(--border-soft);border-radius:16px;padding:14px 15px}
+.month .k{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);margin-bottom:9px}
+.month .l{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:13.5px}
+.month .l span:first-child{color:var(--muted)}
+.month .l span:last-child{font-weight:700;font-variant-numeric:tabular-nums}
+.month .l.fin{border-top:1px dashed var(--border);border-bottom:1px dashed var(--border);margin:5px 0;padding:7px 0}
+.month .l.fin span:first-child{color:var(--slate);font-weight:700}
+.month .l.fin span:last-child{color:var(--slate)}
+.month .l.tot{border-top:1px solid var(--border-soft);margin-top:6px;padding-top:9px}
+.month .l.tot span:last-child{font-size:15.5px;font-weight:800}
+.month .l.off span{color:#B6BFCA !important;font-weight:600}
+
+.mv{background:#fff;border:1px solid var(--border-soft);border-radius:15px;overflow:hidden}
+.mv .it{display:flex;align-items:center;gap:11px;padding:11px 13px;border-top:1px solid var(--border-soft)}
+.mv .it:first-child{border-top:0}
+.mv .av{flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:#EAF1F6;display:grid;place-items:center;font-size:14px}
+.mv .tx{flex:1;min-width:0;font-size:13.5px;font-weight:700}
+.mv .tx em{display:block;font-style:normal;font-size:11px;font-weight:600;color:var(--soft);margin-top:1px}
+.mv .n{font-size:13.5px;font-weight:800;font-variant-numeric:tabular-nums}
+.mv .n.pos{color:var(--emerald-deep)}
+.mv .n.neu{color:var(--slate)}
+
+ol.chk{counter-reset:c;list-style:none;padding:0;margin:16px 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+ol.chk li{counter-increment:c;background:#fff;border:1px solid var(--border-soft);border-radius:14px;padding:13px 15px 13px 48px;position:relative;font-size:13.5px;line-height:1.5;box-shadow:var(--shadow)}
+ol.chk li::before{content:counter(c);position:absolute;left:14px;top:13px;width:22px;height:22px;border-radius:7px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800}
+ol.chk li b{font-weight:700}
+ol.chk li em{display:block;font-style:normal;margin-top:5px;color:var(--muted);font-size:12.5px}
+</style>
+
+<style>
+.cmp{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;align-items:start;margin-top:18px}
+@media (max-width:1180px){.cmp{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:10px}
+.colhd{display:flex;align-items:center;gap:9px;padding:0 2px}
+.colhd .badge{flex:0 0 auto;width:24px;height:24px;border-radius:8px;display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff}
+.colhd.a .badge{background:var(--slate)}
+.colhd.b .badge{background:var(--plum)}
+.colhd.c .badge{background:var(--neutral)}
+.colhd h4{margin:0;font-size:15px;font-weight:800;letter-spacing:-.02em}
+.colhd em{font-style:normal;font-size:11.5px;color:var(--soft);font-weight:600;display:block;margin-top:1px}
+.case{margin-top:44px}
+.case-hd{display:flex;align-items:flex-start;gap:11px}
+.case-hd .n{flex:0 0 auto;width:29px;height:29px;border-radius:9px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:800}
+.case-hd h3{margin:0;font-size:18px;font-weight:800;letter-spacing:-.02em}
+.case-hd .sub{margin:2px 0 0;font-size:13.5px;color:var(--muted);max-width:80ch}
+.reads{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;margin-top:14px}
+@media (max-width:1180px){.reads{grid-template-columns:1fr}}
+.rd{font-size:13px;color:var(--muted);border-left:2px solid var(--border);padding-left:12px;line-height:1.5}
+.rd b{color:var(--text);font-weight:700}
+.rd.ok{border-left-color:var(--emerald)}
+.rd.warn{border-left-color:var(--warm-bd)}
+.rd.no{border-left-color:var(--terracotta)}
+.varies{width:100%;border-collapse:collapse;margin-top:18px;font-size:13.5px;background:#fff;border:1px solid var(--border-soft);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+.varies th,.varies td{padding:10px 14px;text-align:left;border-top:1px solid var(--border-soft);vertical-align:top}
+.varies thead th{border-top:0;background:#FAFBFC;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);font-weight:800}
+.varies td:first-child{font-weight:700;color:var(--text);width:24%}
+.varies code{font-family:var(--sans);font-weight:700;color:var(--text)}
+.verdict{background:#fff;border:1px solid var(--border-soft);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);margin-top:16px}
+.verdict h4{margin:0 0 8px;font-size:16px;font-weight:800;letter-spacing:-.02em}
+.verdict p{margin:0 0 10px;font-size:14px;color:var(--muted);line-height:1.55}
+.verdict p:last-child{margin-bottom:0}
+.verdict b{color:var(--text);font-weight:700}
+.scorecard{width:100%;border-collapse:collapse;margin-top:18px;font-size:13.5px;background:#fff;border:1px solid var(--border-soft);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+.scorecard th,.scorecard td{padding:10px 13px;border-top:1px solid var(--border-soft);text-align:left;vertical-align:top}
+.scorecard thead th{border-top:0;background:#FAFBFC;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--soft);font-weight:800}
+.scorecard td:first-child{font-weight:700;width:26%}
+</style>
+
+</head>
+<body>
+
+<div class="masthead"><div class="in">
+  <p class="eyebrow">Mock exploratorio · fase 3A · comparación final de naming</p>
+  <h1>Tres nombres, las mismas cinco pantallas</h1>
+  <p>Tomado tal cual de <b>fase-3a-fci-v1.html</b>. Mismo modelo, mismo flujo, mismo layout, mismos
+     datos. Lo único que cambia son las cuatro cosas de la tabla de abajo.</p>
+  <div class="warn ok">
+    <b>Qué se está decidiendo, y con qué regla</b>
+    <ul>
+      <li>Que el nombre <b>no prometa ganancia</b>, <b>no suene a broker</b> y <b>no se confunda con «Guardado»</b>.</li>
+      <li>Si <b>«En rendimiento»</b> aguanta los cinco casos, se cierra. Si se cae en el <b>negativo</b> o
+          en <b>FCI + plazo fijo</b>, se vuelve a <b>«Plata colocada»</b>.</li>
+      <li><b>«Inversiones» está como control</b>, no como candidato: ya fue descartado como rótulo madre
+          porque una caja de ahorro remunerada no es una inversión para nadie.</li>
+    </ul>
+  </div>
+  <div class="warn">
+    <b>Qué NO cambia acá.</b> Ni el modelo, ni el flujo, ni el layout, ni los datos, ni una sola
+    decisión de producto. Y no toca <b>extract-savings-module</b>, que sigue congelado hasta el QA
+    visual nativo. Es exploración visual.
+  </div>
+</div></div>
+
+<div class="doc">
+
+<h2 class="sec">Lo único que varía</h2>
+<p class="lead">Cuatro celdas por columna. Todo lo demás es idéntico entre las tres, y verificable
+poniendo dos pantallas al lado.</p>
+
+<table class="varies">
+  <thead><tr><th>Variable</th><th>A · En rendimiento</th><th>B · Plata colocada</th><th>C · Inversiones</th></tr></thead>
+  <tbody>
+    <tr><td>Título de sección</td><td><code>En rendimiento</code></td><td><code>Plata colocada</code></td><td><code>Inversiones</code></td></tr>
+    <tr><td>Verbo del alta</td><td><code>Ponés a rendir</code></td><td><code>Colocás</code></td><td><code>Invertís</code></td></tr>
+    <tr><td>Verbo del mes</td><td><code>Pusiste a rendir</code></td><td><code>Colocaste</code></td><td><code>Invertiste</code></td></tr>
+    <tr><td>Resultado <b>+</b></td><td><code>Resultado</code><br><span style="color:var(--soft);font-size:12.5px">forzado: el nombre ocupó la palabra</span></td><td><code>Rendimiento cobrado</code></td><td><code>Rendimiento cobrado</code></td></tr>
+    <tr><td>Resultado <b>−</b></td><td><code>Resultado</code></td><td><code>Resultado</code></td><td><code>Resultado</code></td></tr>
+  </tbody>
+</table>
+<p class="lead" style="margin-top:14px">El rótulo del resultado negativo es <b>el mismo en las tres</b>:
+lo fija la decisión de tono sobrio, no el nombre. El positivo es la única celda donde el nombre manda,
+y es exactamente el riesgo 3 puesto en pantalla.</p>
+
+<h2 class="sec">Los cinco casos, más el verbo</h2>
+<p class="lead">Cada caso, tres veces. La lectura de abajo es <b>evaluación, no pantalla</b>: se puede
+ignorar y mirar solo las columnas.</p>
+
+<div class="case">
+  <div class="case-hd"><div class="n">1</div><div><h3>Estado con un FCI activo</h3><p class="sub">La adyacencia con «Guardado», que es el riesgo 3 —confundirse— en su forma más pura. Mismo total, mismos propósitos, misma fila, misma ayuda de valor.</p></div></div>
+  <div class="cmp"><div class="col"><div class="colhd a"><span class="badge">A</span><div><h4>En rendimiento</h4><em>el candidato actual</em></div></div><div class="phone">
+      <div class="hdr"><div class="bk">← Inicio</div><h4>Ahorro e inversión</h4></div>
+      <div class="scr">
+        <div class="tot">
+          <div class="dark">
+            <div class="lbl">Guardado</div>
+            <div class="pair"><div class="h"><s>$</s> 200.000</div><div class="divi"></div><div class="h zero"><s>US$</s> 0</div></div>
+            <p class="sup">Sigue en tus cuentas, pero no cuenta para gastar.</p>
+          </div>
+          <div class="bar"><div>↓ Guardar</div><div>↑ Volver a usar</div><div>⤳ Destinar</div></div>
+        </div>
+        <div class="blk">
+          <div class="bh"><h5>En qué está repartido</h5><span class="add">+ Nuevo propósito</span></div>
+          <div class="row"><span class="ic e">🛟</span><span class="nm">Emergencia</span><span class="am"><b>$ 150.000</b></span><span class="chev">›</span></div>
+          <div class="row"><span class="ic p">✈️</span><span class="nm">Viaje</span><span class="am"><b>$ 50.000</b></span><span class="chev">›</span></div>
+        </div>
+        <div class="blk">
+          <div class="bh"><h5>En rendimiento</h5><span class="add">+ Agregar</span></div>
+          <div class="row"><span class="ic g">📄</span><span class="nm">FCI Mercado Pago<em>con rescate</em></span><span class="am"><b>$ 350.000</b></span><span class="chev">›</span></div>
+          <div class="hint"><i>ⓘ</i> Valor no actualizado automáticamente</div>
+        </div>
+      </div>
+    </div></div><div class="col"><div class="colhd b"><span class="badge">B</span><div><h4>Plata colocada</h4><em>la alternativa de reserva</em></div></div><div class="phone">
+      <div class="hdr"><div class="bk">← Inicio</div><h4>Ahorro e inversión</h4></div>
+      <div class="scr">
+        <div class="tot">
+          <div class="dark">
+            <div class="lbl">Guardado</div>
+            <div class="pair"><div class="h"><s>$</s> 200.000</div><div class="divi"></div><div class="h zero"><s>US$</s> 0</div></div>
+            <p class="sup">Sigue en tus cuentas, pero no cuenta para gastar.</p>
+          </div>
+          <div class="bar"><div>↓ Guardar</div><div>↑ Volver a usar</div><div>⤳ Destinar</div></div>
+        </div>
+        <div class="blk">
+          <div class="bh"><h5>En qué está repartido</h5><span class="add">+ Nuevo propósito</span></div>
+          <div class="row"><span class="ic e">🛟</span><span class="nm">Emergencia</span><span class="am"><b>$ 150.000</b></span><span class="chev">›</span></div>
+          <div class="row"><span class="ic p">✈️</span><span class="nm">Viaje</span><span class="am"><b>$ 50.000</b></span><span class="chev">›</span></div>
+        </div>
+        <div class="blk">
+          <div class="bh"><h5>Plata colocada</h5><span class="add">+ Agregar</span></div>
+          <div class="row"><span class="ic g">📄</span><span class="nm">FCI Mercado Pago<em>con rescate</em></span><span class="am"><b>$ 350.000</b></span><span class="chev">›</span></div>
+          <div class="hint"><i>ⓘ</i> Valor no actualizado automáticamente</div>
+        </div>
+      </div>
+    </div></div><div class="col"><div class="colhd c"><span class="badge">C</span><div><h4>Inversiones</h4><em>control</em></div></div><div class="phone">
+      <div class="hdr"><div class="bk">← Inicio</div><h4>Ahorro e inversión</h4></div>
+      <div class="scr">
+        <div class="tot">
+          <div class="dark">
+            <div class="lbl">Guardado</div>
+            <div class="pair"><div class="h"><s>$</s> 200.000</div><div class="divi"></div><div class="h zero"><s>US$</s> 0</div></div>
+            <p class="sup">Sigue en tus cuentas, pero no cuenta para gastar.</p>
+          </div>
+          <div class="bar"><div>↓ Guardar</div><div>↑ Volver a usar</div><div>⤳ Destinar</div></div>
+        </div>
+        <div class="blk">
+          <div class="bh"><h5>En qué está repartido</h5><span class="add">+ Nuevo propósito</span></div>
+          <div class="row"><span class="ic e">🛟</span><span class="nm">Emergencia</span><span class="am"><b>$ 150.000</b></span><span class="chev">›</span></div>
+          <div class="row"><span class="ic p">✈️</span><span class="nm">Viaje</span><span class="am"><b>$ 50.000</b></span><span class="chev">›</span></div>
+        </div>
+        <div class="blk">
+          <div class="bh"><h5>Inversiones</h5><span class="add">+ Agregar</span></div>
+          <div class="row"><span class="ic g">📄</span><span class="nm">FCI Mercado Pago<em>con rescate</em></span><span class="am"><b>$ 350.000</b></span><span class="chev">›</span></div>
+          <div class="hint"><i>ⓘ</i> Valor no actualizado automáticamente</div>
+        </div>
+      </div>
+    </div></div></div>
+  <div class="reads"><div class="rd ok"><b>No compite en el mismo plano.</b> «Guardado» nombra un acto tuyo, «En rendimiento» un estado de la plata: son dos preguntas distintas y por eso no se pisan. Es el que más se separa de la fila de arriba.</div><div class="rd warn"><b>Los dos son participios de «dejé la plata en algún lado».</b> «Guardado» y «Plata colocada» contestan la misma pregunta con dos palabras, y hay que explicar la diferencia. Es la alerta conocida de este nombre y sigue estando acá.</div><div class="rd warn"><b>Se distingue sin esfuerzo</b>, y por eso es el control. El problema no es esta pantalla: es que la palabra ya trae una promesa de rendimiento adentro, y una caja de ahorro remunerada no es «una inversión» para nadie.</div></div>
+</div>
+<div class="case">
+  <div class="case-hd"><div class="n">2</div><div><h3>Alta «Lo puse hoy»</h3><p class="sub">La única pantalla donde el nombre tiene que producir un <b>verbo en presente</b>, arriba de un número que baja «Para gastar».</p></div></div>
+  <div class="cmp"><div class="col"><div class="colhd a"><span class="badge">A</span><div><h4>En rendimiento</h4><em>el candidato actual</em></div></div><div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">En rendimiento</div><h6>Lo puse hoy</h6></div><div class="x">←</div></div>
+      <div class="c amt">
+        <div class="lbl">Cuánto pusiste</div><div class="cur">ARS ⌄</div>
+        <div class="val"><span class="s">$</span><span class="n">100.000</span></div>
+      </div>
+      <div class="c">
+        <div class="fld"><span class="sq acc">MP</span><div class="gr"><div class="k">Sale de</div><div class="v">Mercado Pago</div></div><span class="chev">›</span></div>
+        <div class="fld"><span class="sq">📄</span><div class="gr"><div class="k">Hacia</div><div class="v">FCI Mercado Pago</div></div><span class="chev">›</span></div>
+        <div class="fld"><span class="sq">📅</span><div class="gr"><div class="k">Fecha</div><div class="v">Hoy · 27 de ago</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Para gastar ahora</span><span>$ 4.885.748,17</span></div>
+        <div><span>Ponés a rendir</span><span style="color:var(--emerald-deep)">−$ 100.000,00</span></div>
+        <div class="rule"><span>Te queda para gastar</span><span>$ 4.785.748,17</span></div>
+      </div>
+      <div class="cta">Confirmar</div>
+    </div></div></div><div class="col"><div class="colhd b"><span class="badge">B</span><div><h4>Plata colocada</h4><em>la alternativa de reserva</em></div></div><div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">Plata colocada</div><h6>Lo puse hoy</h6></div><div class="x">←</div></div>
+      <div class="c amt">
+        <div class="lbl">Cuánto pusiste</div><div class="cur">ARS ⌄</div>
+        <div class="val"><span class="s">$</span><span class="n">100.000</span></div>
+      </div>
+      <div class="c">
+        <div class="fld"><span class="sq acc">MP</span><div class="gr"><div class="k">Sale de</div><div class="v">Mercado Pago</div></div><span class="chev">›</span></div>
+        <div class="fld"><span class="sq">📄</span><div class="gr"><div class="k">Hacia</div><div class="v">FCI Mercado Pago</div></div><span class="chev">›</span></div>
+        <div class="fld"><span class="sq">📅</span><div class="gr"><div class="k">Fecha</div><div class="v">Hoy · 27 de ago</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Para gastar ahora</span><span>$ 4.885.748,17</span></div>
+        <div><span>Colocás</span><span style="color:var(--emerald-deep)">−$ 100.000,00</span></div>
+        <div class="rule"><span>Te queda para gastar</span><span>$ 4.785.748,17</span></div>
+      </div>
+      <div class="cta">Confirmar</div>
+    </div></div></div><div class="col"><div class="colhd c"><span class="badge">C</span><div><h4>Inversiones</h4><em>control</em></div></div><div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">Inversiones</div><h6>Lo puse hoy</h6></div><div class="x">←</div></div>
+      <div class="c amt">
+        <div class="lbl">Cuánto pusiste</div><div class="cur">ARS ⌄</div>
+        <div class="val"><span class="s">$</span><span class="n">100.000</span></div>
+      </div>
+      <div class="c">
+        <div class="fld"><span class="sq acc">MP</span><div class="gr"><div class="k">Sale de</div><div class="v">Mercado Pago</div></div><span class="chev">›</span></div>
+        <div class="fld"><span class="sq">📄</span><div class="gr"><div class="k">Hacia</div><div class="v">FCI Mercado Pago</div></div><span class="chev">›</span></div>
+        <div class="fld"><span class="sq">📅</span><div class="gr"><div class="k">Fecha</div><div class="v">Hoy · 27 de ago</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Para gastar ahora</span><span>$ 4.885.748,17</span></div>
+        <div><span>Invertís</span><span style="color:var(--emerald-deep)">−$ 100.000,00</span></div>
+        <div class="rule"><span>Te queda para gastar</span><span>$ 4.785.748,17</span></div>
+      </div>
+      <div class="cta">Confirmar</div>
+    </div></div></div></div>
+  <div class="reads"><div class="rd ok"><b>«Ponés a rendir» es el más largo de los tres</b> y el único que no sale del nombre: hay que elegirlo. A cambio, dice literalmente lo que pasa y no promete resultado.</div><div class="rd warn"><b>«Colocás» sale gratis del nombre</b> y es corto. El costo es de voz: «colocar» es la palabra del que vende el producto, no la del que pone la plata.</div><div class="rd no"><b>«Invertís» es el más natural de los tres</b> en una sola línea. Y es exactamente donde el nombre miente más rápido: nadie dice que «invierte» al dejar plata en una caja remunerada.</div></div>
+</div>
+<div class="case">
+  <div class="case-hd"><div class="n">3</div><div><h3>Rescate total positivo</h3><p class="sub">Donde se ve el riesgo 3 completo: si el nombre ocupa la palabra «rendimiento», adentro hay que llamar «Resultado» a algo que tiene un nombre mejor.</p></div></div>
+  <div class="cmp"><div class="col"><div class="colhd a"><span class="badge">A</span><div><h4>En rendimiento</h4><em>el candidato actual</em></div></div><div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">FCI Mercado Pago</div><h6>Rescatar todo</h6></div><div class="x">←</div></div>
+      <div class="c amt">
+        <div class="lbl">Cuánto volvió</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">380.000</span></div>
+      </div>
+      <div class="c">
+        <div class="fld"><span class="sq acc">MP</span><div class="gr"><div class="k">Vuelve a</div><div class="v">Mercado Pago</div></div><span class="chev">›</span></div>
+        <div class="fld"><span class="sq">📅</span><div class="gr"><div class="k">Fecha</div><div class="v">Hoy · 27 de ago</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Volvió</span><span>$ 380.000,00</span></div>
+        <div><span>Habías puesto</span><span>$ 350.000,00</span></div>
+        <div class="rule pos em"><span>Resultado</span><span>+$ 30.000,00</span></div>
+      </div>
+      <div class="cta">Rescatar todo</div>
+    </div></div></div><div class="col"><div class="colhd b"><span class="badge">B</span><div><h4>Plata colocada</h4><em>la alternativa de reserva</em></div></div><div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">FCI Mercado Pago</div><h6>Rescatar todo</h6></div><div class="x">←</div></div>
+      <div class="c amt">
+        <div class="lbl">Cuánto volvió</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">380.000</span></div>
+      </div>
+      <div class="c">
+        <div class="fld"><span class="sq acc">MP</span><div class="gr"><div class="k">Vuelve a</div><div class="v">Mercado Pago</div></div><span class="chev">›</span></div>
+        <div class="fld"><span class="sq">📅</span><div class="gr"><div class="k">Fecha</div><div class="v">Hoy · 27 de ago</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Volvió</span><span>$ 380.000,00</span></div>
+        <div><span>Habías puesto</span><span>$ 350.000,00</span></div>
+        <div class="rule pos em"><span>Rendimiento cobrado</span><span>+$ 30.000,00</span></div>
+      </div>
+      <div class="cta">Rescatar todo</div>
+    </div></div></div><div class="col"><div class="colhd c"><span class="badge">C</span><div><h4>Inversiones</h4><em>control</em></div></div><div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">FCI Mercado Pago</div><h6>Rescatar todo</h6></div><div class="x">←</div></div>
+      <div class="c amt">
+        <div class="lbl">Cuánto volvió</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">380.000</span></div>
+      </div>
+      <div class="c">
+        <div class="fld"><span class="sq acc">MP</span><div class="gr"><div class="k">Vuelve a</div><div class="v">Mercado Pago</div></div><span class="chev">›</span></div>
+        <div class="fld"><span class="sq">📅</span><div class="gr"><div class="k">Fecha</div><div class="v">Hoy · 27 de ago</div></div><span class="chev">›</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Volvió</span><span>$ 380.000,00</span></div>
+        <div><span>Habías puesto</span><span>$ 350.000,00</span></div>
+        <div class="rule pos em"><span>Rendimiento cobrado</span><span>+$ 30.000,00</span></div>
+      </div>
+      <div class="cta">Rescatar todo</div>
+    </div></div></div></div>
+  <div class="reads"><div class="rd warn"><b>Acá se paga el nombre.</b> «Rendimiento cobrado» sería más preciso —es positivo y ya está en la cuenta— pero repetiría la palabra de la sección, así que queda «Resultado», que es correcto y más frío.</div><div class="rd ok"><b>La palabra queda libre y se puede usar donde más precisa.</b> «Rendimiento cobrado» dice las dos cosas que importan: que hubo ganancia y que ya está disponible.</div><div class="rd ok"><b>Igual que B:</b> la palabra está libre. En las tres, la resta la hace el usuario con datos del banco; Grana no estima nada.</div></div>
+</div>
+<div class="case">
+  <div class="case-hd"><div class="n">4</div><div><h3>Rescate total negativo</h3><p class="sub">Condición de descarte. <b>Las tres columnas salieron idénticas, y ese es el hallazgo</b>: el nombre de la sección no aparece en ninguna, porque el encabezado del rescate es el del fondo.</p></div></div>
+  <div class="cmp"><div class="col"><div class="colhd a"><span class="badge">A</span><div><h4>En rendimiento</h4><em>el candidato actual</em></div></div><div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">FCI Mercado Pago</div><h6>Rescatar todo</h6></div><div class="x">←</div></div>
+      <div class="c amt">
+        <div class="lbl">Cuánto volvió</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">346.000</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Volvió</span><span>$ 346.000,00</span></div>
+        <div><span>Habías puesto</span><span>$ 350.000,00</span></div>
+        <div class="rule neg em"><span>Resultado</span><span>−$ 4.000,00</span></div>
+      </div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        <b style="color:var(--text)">No es un gasto.</b> No gastaste $4.000: el fondo devolvió menos de
+        lo que pusiste. No entra en «Se fué» ni en «En qué se fue».
+      </div>
+      <div class="cta">Rescatar todo</div>
+    </div></div></div><div class="col"><div class="colhd b"><span class="badge">B</span><div><h4>Plata colocada</h4><em>la alternativa de reserva</em></div></div><div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">FCI Mercado Pago</div><h6>Rescatar todo</h6></div><div class="x">←</div></div>
+      <div class="c amt">
+        <div class="lbl">Cuánto volvió</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">346.000</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Volvió</span><span>$ 346.000,00</span></div>
+        <div><span>Habías puesto</span><span>$ 350.000,00</span></div>
+        <div class="rule neg em"><span>Resultado</span><span>−$ 4.000,00</span></div>
+      </div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        <b style="color:var(--text)">No es un gasto.</b> No gastaste $4.000: el fondo devolvió menos de
+        lo que pusiste. No entra en «Se fué» ni en «En qué se fue».
+      </div>
+      <div class="cta">Rescatar todo</div>
+    </div></div></div><div class="col"><div class="colhd c"><span class="badge">C</span><div><h4>Inversiones</h4><em>control</em></div></div><div class="phone"><div class="scr">
+      <div class="dh"><div><div class="k">FCI Mercado Pago</div><h6>Rescatar todo</h6></div><div class="x">←</div></div>
+      <div class="c amt">
+        <div class="lbl">Cuánto volvió</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">346.000</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Volvió</span><span>$ 346.000,00</span></div>
+        <div><span>Habías puesto</span><span>$ 350.000,00</span></div>
+        <div class="rule neg em"><span>Resultado</span><span>−$ 4.000,00</span></div>
+      </div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        <b style="color:var(--text)">No es un gasto.</b> No gastaste $4.000: el fondo devolvió menos de
+        lo que pusiste. No entra en «Se fué» ni en «En qué se fue».
+      </div>
+      <div class="cta">Rescatar todo</div>
+    </div></div></div></div>
+  <div class="reads"><div class="rd ok"><b>El nombre de la sección no está en esta pantalla.</b> El encabezado dice «FCI Mercado Pago», y la posición se está yendo. La contradicción existe en la memoria del usuario, no en el pixel — y la fila nunca llegó a mostrar una pérdida, porque v1 muestra capital puesto, no valor de hoy.</div><div class="rd ok"><b>Neutral por construcción:</b> «colocada» no dice nada sobre el signo, así que no hay nada que contradecir. Es la ventaja real de un nombre que no promete.</div><div class="rd warn"><b>El más expuesto de los tres a la lectura de fracaso.</b> «Invertí y perdí» es una frase que ya existe en la cabeza del usuario; «puse a rendir y volvió menos» no la activa igual.</div></div>
+</div>
+<div class="case">
+  <div class="case-hd"><div class="n">5</div><div><h3>FCI + plazo fijo futuro</h3><p class="sub">La prueba de escala: el nombre se elige hoy con un fondo adentro y va a tener que aguantar 3B —plazo fijo— y 3C —posiciones variables—.</p></div></div>
+  <div class="cmp"><div class="col"><div class="colhd a"><span class="badge">A</span><div><h4>En rendimiento</h4><em>el candidato actual</em></div></div><div class="phone">
+      <div class="hdr"><div class="bk">← Inicio</div><h4>Ahorro e inversión</h4></div>
+      <div class="scr">
+        <div class="tot">
+          <div class="dark">
+            <div class="lbl">Guardado</div>
+            <div class="pair"><div class="h"><s>$</s> 200.000</div><div class="divi"></div><div class="h zero"><s>US$</s> 0</div></div>
+            <p class="sup">Sigue en tus cuentas, pero no cuenta para gastar.</p>
+          </div>
+          <div class="bar"><div>↓ Guardar</div><div>↑ Volver a usar</div><div>⤳ Destinar</div></div>
+        </div>
+        <div class="blk">
+          <div class="bh"><h5>En qué está repartido</h5><span class="add">+ Nuevo propósito</span></div>
+          <div class="row"><span class="ic e">🛟</span><span class="nm">Emergencia</span><span class="am"><b>$ 150.000</b></span><span class="chev">›</span></div>
+        </div>
+        <div class="blk">
+          <div class="bh"><h5>En rendimiento</h5><span class="add">+ Agregar</span></div>
+          <div class="row"><span class="ic g">📄</span><span class="nm">FCI Mercado Pago<em>con rescate</em></span><span class="am"><b>$ 350.000</b></span><span class="chev">›</span></div>
+          <div class="row"><span class="ic p">🔒</span><span class="nm">Plazo fijo Comafi<em>vence el 24 de sep</em></span><span class="am"><b>$ 700.000</b></span><span class="chev">›</span></div>
+          <div class="hint"><i>ⓘ</i> Valor no actualizado automáticamente</div>
+        </div>
+      </div>
+    </div></div><div class="col"><div class="colhd b"><span class="badge">B</span><div><h4>Plata colocada</h4><em>la alternativa de reserva</em></div></div><div class="phone">
+      <div class="hdr"><div class="bk">← Inicio</div><h4>Ahorro e inversión</h4></div>
+      <div class="scr">
+        <div class="tot">
+          <div class="dark">
+            <div class="lbl">Guardado</div>
+            <div class="pair"><div class="h"><s>$</s> 200.000</div><div class="divi"></div><div class="h zero"><s>US$</s> 0</div></div>
+            <p class="sup">Sigue en tus cuentas, pero no cuenta para gastar.</p>
+          </div>
+          <div class="bar"><div>↓ Guardar</div><div>↑ Volver a usar</div><div>⤳ Destinar</div></div>
+        </div>
+        <div class="blk">
+          <div class="bh"><h5>En qué está repartido</h5><span class="add">+ Nuevo propósito</span></div>
+          <div class="row"><span class="ic e">🛟</span><span class="nm">Emergencia</span><span class="am"><b>$ 150.000</b></span><span class="chev">›</span></div>
+        </div>
+        <div class="blk">
+          <div class="bh"><h5>Plata colocada</h5><span class="add">+ Agregar</span></div>
+          <div class="row"><span class="ic g">📄</span><span class="nm">FCI Mercado Pago<em>con rescate</em></span><span class="am"><b>$ 350.000</b></span><span class="chev">›</span></div>
+          <div class="row"><span class="ic p">🔒</span><span class="nm">Plazo fijo Comafi<em>vence el 24 de sep</em></span><span class="am"><b>$ 700.000</b></span><span class="chev">›</span></div>
+          <div class="hint"><i>ⓘ</i> Valor no actualizado automáticamente</div>
+        </div>
+      </div>
+    </div></div><div class="col"><div class="colhd c"><span class="badge">C</span><div><h4>Inversiones</h4><em>control</em></div></div><div class="phone">
+      <div class="hdr"><div class="bk">← Inicio</div><h4>Ahorro e inversión</h4></div>
+      <div class="scr">
+        <div class="tot">
+          <div class="dark">
+            <div class="lbl">Guardado</div>
+            <div class="pair"><div class="h"><s>$</s> 200.000</div><div class="divi"></div><div class="h zero"><s>US$</s> 0</div></div>
+            <p class="sup">Sigue en tus cuentas, pero no cuenta para gastar.</p>
+          </div>
+          <div class="bar"><div>↓ Guardar</div><div>↑ Volver a usar</div><div>⤳ Destinar</div></div>
+        </div>
+        <div class="blk">
+          <div class="bh"><h5>En qué está repartido</h5><span class="add">+ Nuevo propósito</span></div>
+          <div class="row"><span class="ic e">🛟</span><span class="nm">Emergencia</span><span class="am"><b>$ 150.000</b></span><span class="chev">›</span></div>
+        </div>
+        <div class="blk">
+          <div class="bh"><h5>Inversiones</h5><span class="add">+ Agregar</span></div>
+          <div class="row"><span class="ic g">📄</span><span class="nm">FCI Mercado Pago<em>con rescate</em></span><span class="am"><b>$ 350.000</b></span><span class="chev">›</span></div>
+          <div class="row"><span class="ic p">🔒</span><span class="nm">Plazo fijo Comafi<em>vence el 24 de sep</em></span><span class="am"><b>$ 700.000</b></span><span class="chev">›</span></div>
+          <div class="hint"><i>ⓘ</i> Valor no actualizado automáticamente</div>
+        </div>
+      </div>
+    </div></div></div>
+  <div class="reads"><div class="rd warn"><b>Aguanta 3B sin forzar</b>: un plazo fijo está rindiendo, y un money market también. Donde se estira es en 3C: un CEDEAR en baja no está «en rendimiento», está perdiendo. Es el mismo riesgo 2, pero en la lista y no en el rescate.</div><div class="rd ok"><b>Es el que mejor escala de los tres</b>, y por lo mismo que lo debilita arriba: no dice nada del resultado. Un CEDEAR, un plazo fijo y un FCI son todos «plata colocada» sin que el rótulo se esfuerce.</div><div class="rd no"><b>Se rompe hacia abajo, no hacia arriba.</b> Escala perfecto a 3C, pero ya está mal en 3A: una caja de ahorro remunerada bajo «Inversiones» es lo que hizo descartarlo como rótulo madre.</div></div>
+</div>
+<div class="case">
+  <div class="case-hd"><div class="n">6</div><div><h3>La línea del mes y Movimientos</h3><p class="sub">No estaba en los cinco, pero el <b>verbo del mes</b> es una de las cuatro cosas que se pidió variar y no se ve en ninguno de ellos. Mismo mes, mismos números, mismo movimiento.</p></div></div>
+  <div class="cmp"><div class="col"><div class="colhd a"><span class="badge">A</span><div><h4>En rendimiento</h4><em>el candidato actual</em></div></div><div class="phone"><div class="scr">
+      <div class="month">
+        <div class="k">Resumen del mes · agosto</div>
+        <div class="l"><span>Tenías</span><span>−$ 2.729.825,17</span></div>
+        <div class="l"><span>Entró</span><span>+$ 8.021.007,00</span></div>
+        <div class="l"><span>Se fué</span><span>−$ 205.433,66</span></div>
+        <div class="l"><span>Guardado</span><span>−$ 200.000,00</span></div>
+        <div class="l fin"><span>Pusiste a rendir</span><span>−$ 100.000,00</span></div>
+        <div class="l tot"><span>Para gastar</span><span>$ 4.785.748,17</span></div>
+      </div>
+      <div class="mv">
+        <div class="it"><span class="av">🍽</span><span class="tx">Almuerzo<em>Comida · Mercado Pago</em></span><span class="n">−$ 18.400</span></div>
+        <div class="it"><span class="av" style="background:#EAF1F6">↓</span><span class="tx">Pusiste a rendir en FCI Mercado Pago<em>En rendimiento · desde Mercado Pago</em></span><span class="n neu">−$ 100.000</span></div>
+      </div>
+    </div></div></div><div class="col"><div class="colhd b"><span class="badge">B</span><div><h4>Plata colocada</h4><em>la alternativa de reserva</em></div></div><div class="phone"><div class="scr">
+      <div class="month">
+        <div class="k">Resumen del mes · agosto</div>
+        <div class="l"><span>Tenías</span><span>−$ 2.729.825,17</span></div>
+        <div class="l"><span>Entró</span><span>+$ 8.021.007,00</span></div>
+        <div class="l"><span>Se fué</span><span>−$ 205.433,66</span></div>
+        <div class="l"><span>Guardado</span><span>−$ 200.000,00</span></div>
+        <div class="l fin"><span>Colocaste</span><span>−$ 100.000,00</span></div>
+        <div class="l tot"><span>Para gastar</span><span>$ 4.785.748,17</span></div>
+      </div>
+      <div class="mv">
+        <div class="it"><span class="av">🍽</span><span class="tx">Almuerzo<em>Comida · Mercado Pago</em></span><span class="n">−$ 18.400</span></div>
+        <div class="it"><span class="av" style="background:#EAF1F6">↓</span><span class="tx">Colocaste en FCI Mercado Pago<em>Plata colocada · desde Mercado Pago</em></span><span class="n neu">−$ 100.000</span></div>
+      </div>
+    </div></div></div><div class="col"><div class="colhd c"><span class="badge">C</span><div><h4>Inversiones</h4><em>control</em></div></div><div class="phone"><div class="scr">
+      <div class="month">
+        <div class="k">Resumen del mes · agosto</div>
+        <div class="l"><span>Tenías</span><span>−$ 2.729.825,17</span></div>
+        <div class="l"><span>Entró</span><span>+$ 8.021.007,00</span></div>
+        <div class="l"><span>Se fué</span><span>−$ 205.433,66</span></div>
+        <div class="l"><span>Guardado</span><span>−$ 200.000,00</span></div>
+        <div class="l fin"><span>Invertiste</span><span>−$ 100.000,00</span></div>
+        <div class="l tot"><span>Para gastar</span><span>$ 4.785.748,17</span></div>
+      </div>
+      <div class="mv">
+        <div class="it"><span class="av">🍽</span><span class="tx">Almuerzo<em>Comida · Mercado Pago</em></span><span class="n">−$ 18.400</span></div>
+        <div class="it"><span class="av" style="background:#EAF1F6">↓</span><span class="tx">Invertiste en FCI Mercado Pago<em>Inversiones · desde Mercado Pago</em></span><span class="n neu">−$ 100.000</span></div>
+      </div>
+    </div></div></div></div>
+  <div class="reads"><div class="rd warn"><b>Entra sin problema, y el largo no lo distingue.</b> Es el rótulo más largo de la card y no se acerca al borde; en Movimientos <b>las tres</b> filas rompen en dos líneas. Lo que sí lo distingue es que el verbo <b>hay que inventarlo</b>: el nombre es un estado y no lo regala.</div><div class="rd ok"><b>Sale del nombre sin esfuerzo</b>, que es su ventaja real y la única acá. En Movimientos también rompe en dos líneas: el largo no separa a ninguno de los tres.</div><div class="rd ok"><b>«Invertiste» entra igual.</b> El problema de este nombre nunca fue el largo — y el render confirma que el de A tampoco.</div></div>
+</div>
+
+<h2 class="sec">Cómo queda el tablero</h2>
+<p class="lead">Los tres riesgos que se pusieron sobre la mesa, más los dos que ya estaban.</p>
+
+<table class="scorecard">
+  <thead><tr><th>Riesgo</th><th>A · En rendimiento</th><th>B · Plata colocada</th><th>C · Inversiones</th></tr></thead>
+  <tbody>
+    <tr><td>1 · Promete que siempre rinde</td>
+        <td>🟡 <b>Riesgo real pero acotado.</b> Es un estado descriptivo, no una proyección, y la fila no muestra ningún rendimiento</td>
+        <td>🟢 <b>No promete nada.</b> Es su mejor propiedad</td>
+        <td>🔴 La palabra trae la promesa incorporada</td></tr>
+    <tr><td>2 · Se contradice en negativo</td>
+        <td>🟢 <b>Más chico de lo que parecía.</b> El nombre no está en la pantalla del rescate (caso 4) y la fila nunca muestra pérdida: v1 muestra capital puesto, no valor de hoy</td>
+        <td>🟢 Neutral por construcción</td>
+        <td>🟡 «Invertí y perdí» es una frase que ya existe</td></tr>
+    <tr><td>3 · Ocupa la palabra «rendimiento»</td>
+        <td>🟡 <b>Confirmado, y es el costo más concreto.</b> Cuesta «Rendimiento cobrado» en el caso 3, y obliga a inventar el verbo del mes (caso 6)</td>
+        <td>🟢 La palabra queda libre donde más precisa</td>
+        <td>🟢 Libre</td></tr>
+    <tr><td>4 · Se confunde con «Guardado»</td>
+        <td>🟢 <b>El que mejor se separa.</b> Acto tuyo vs. estado de la plata</td>
+        <td>🟡 <b>Su alerta conocida.</b> Dos participios de lo mismo</td>
+        <td>🟢 Se separa</td></tr>
+    <tr><td>5 · Aguanta 3B y 3C</td>
+        <td>🟡 3B sí; en 3C un CEDEAR en baja no está «en rendimiento»</td>
+        <td>🟢 <b>El que mejor escala</b>, justamente por no decir nada del resultado</td>
+        <td>🔴 Escala a 3C pero ya está mal en 3A</td></tr>
+  </tbody>
+</table>
+
+<h2 class="sec">Cómo cae la regla que se fijó de antemano</h2>
+<p class="lead">La regla era: <b>si «En rendimiento» se cae en el negativo o en FCI + plazo fijo, se
+vuelve a «Plata colocada»</b>. Los dos casos ya están mirados.</p>
+
+<div class="verdict">
+  <h4>En el negativo no se cae — y por una razón estructural, no de gusto</h4>
+  <p>Las tres columnas del caso 4 <b>salieron idénticas</b>. El encabezado del rescate es el nombre del
+  fondo, no el de la sección, así que <b>el nombre no está en la pantalla donde aparece el número
+  negativo</b>. Y la fila tampoco llegó nunca a mostrar una pérdida: v1 muestra <b>capital puesto, no
+  valor de hoy</b>, que es la simplificación que ya estaba decidida por otros motivos.</p>
+  <p>La contradicción del riesgo 2 existe, pero <b>en la memoria del usuario, no en ningún pixel</b>.
+  Sigue valiendo mirarla con alguien delante; lo que este caso descarta es que sea un problema de
+  diseño de pantalla.</p>
+</div>
+
+<div class="verdict">
+  <h4>En FCI + plazo fijo tampoco se cae</h4>
+  <p>Un plazo fijo <b>está rindiendo</b>: el caso 5 se lee sin forzar con las dos filas adentro. Donde
+  «En rendimiento» sí se estira es en <b>3C</b> —un CEDEAR en baja no está «en rendimiento»—, y 3C no
+  era la condición. B escala mejor ahí, justamente porque no dice nada del resultado.</p>
+</div>
+
+<div class="verdict">
+  <h4>Donde sí pierde, y no era condición de descarte: el caso 3</h4>
+  <p>Es la única diferencia <b>visible</b> entre las tres columnas en toda la comparación.
+  <b>«Rendimiento cobrado +$30.000»</b> dice dos cosas —que hubo ganancia y que ya está en la cuenta—;
+  <b>«Resultado +$30.000»</b> dice una y suena más frío. A lo paga porque el nombre se quedó con la
+  palabra.</p>
+  <p><b>Por la regla fijada, «En rendimiento» sobrevive los dos casos que podían tumbarlo.</b> Lo que
+  queda no es un descarte sino un canje, y es una decisión de producto, no de mock: se cambia
+  <b>«Rendimiento cobrado» por la mejor separación de «Guardado»</b> —el caso 1, donde A es el único
+  que no compite en el mismo plano que la fila de arriba.</p>
+</div>
+
+<h2 class="sec">Lo que este mock no puede contestar</h2>
+<div class="verdict">
+  <h4>Ninguna de las cinco filas de arriba se contesta leyendo</h4>
+  <p>La comparación pone las tres versiones al lado con los mismos datos, que es lo que evita que la
+  discusión vuelva a la prosa. Pero <b>quién decide sigue siendo alguien mirando la pantalla</b>, y hay
+  dos cosas que este documento no puede resolver:</p>
+  <p><b>Si «En rendimiento» se lee como promesa.</b> Es el riesgo 1, y es el único que nadie —ni esta
+  tabla ni el mock anterior— puede contestar sin poner la pantalla delante de un usuario. Lo que sí
+  quedó establecido es que la fila no muestra ningún rendimiento, así que la promesa, si aparece, la
+  pone la palabra sola.</p>
+  <p><b>Si el costo del caso 3 importa.</b> Perder «Rendimiento cobrado» es real y está dibujado. Si al
+  mirarlo «Resultado +$30.000» se siente frío o burocrático, eso solo se ve mirándolo — y es reversible:
+  el nombre de la sección nunca fue un tipo interno, así que cambiarlo es un rename sin costo de modelo.</p>
+</div>
+
+</div>
+</body>
+</html>

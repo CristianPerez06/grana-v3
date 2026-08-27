@@ -9,6 +9,7 @@ en el navegador.
 | `fase-1-guardar.html` | 1 · Guardar | **Superado por la implementación.** «Liberar» hoy se llama **Volver a usar** |
 | `fase-2-proposito.html` | 2 · Propósito | **Superado por la implementación**, y en un punto de modelo, no solo de nombres — ver abajo |
 | `fase-3a-fci-v1.html` | 3A · FCI | **Vigente, y es el mock de referencia de la fase.** Diecisiete pantallas con la dirección provisoria cerrada: la sección se llama **«En rendimiento»**, el criterio de admisión es de comportamiento y no de producto, v1 es manual y simple, el «pusiste» nunca va solo y el resultado se dice sobrio. Incluye los dos estados sin nada, las dos altas con la pregunta de duplicación, el rescate total en los dos signos, el parcial, y las líneas del mes |
+| `fase-3a-naming-final.html` | 3A · FCI | **Vigente. Es donde se decide el nombre.** Los cinco casos que producto puso como prueba —un FCI activo, el alta «lo puse hoy», rescate positivo, rescate negativo, FCI + plazo fijo— más la línea del mes, cada uno con los tres nombres y **los mismos datos**. Solo varían título de sección, verbo del alta, verbo del mes y rótulo del resultado. Su hallazgo más fuerte es que en el rescate negativo **las tres columnas salen idénticas** |
 | `fase-3a-fci-naming.html` | 3A · FCI | **Superado por `fase-3a-fci-v1.html` en lo que decidía.** Comparaba tres nombres con los mismos datos (A «Puesto a trabajar» · B «Plata colocada» · C «Inversiones» de control). Cumplió: sacó la discusión de la prosa y la puso en pantalla. El nombre que salió de ahí y del feedback externo **no es ninguno de los tres** — es «En rendimiento». Se conserva porque es la evidencia de por qué. Su razonamiento está en `docs/exploracion-instrumentos.md` |
 | `fase-3a-plazo-fijo.html` | 3B · Plazo fijo | **Cambió de número: ahora es 3B.** El orden de fases se corrigió y la primera es FCI, no plazo fijo. Su razonamiento contable —stock vs. flujo, los tres desenlaces, el interés que no es ingreso— **sigue vigente y es de donde sale medio el documento de exploración**; lo que cambia es cuándo se construye. La navegación hay que redibujarla: la cuenta pasa a ser **atajo contextual**, no la puerta principal |
 | `fase-3-posiciones.html` | 3 · Posiciones | **Superado por `fase-3a`.** Se conserva por el razonamiento contable —stock vs. flujo, el bucket, los tres desenlaces—, pero su circuito de once pantallas repetía el patrón que la fase 2 desarmó |
@@ -64,7 +65,13 @@ es el **selector de destino**, que ya existía y gana filas.
 
 ### Cerradas por `fase-3a-fci-v1.html`
 
-**~~El nombre.~~ Provisoriamente cerrado en «En rendimiento»** (`fase-3a-fci-v1.html`). Descartados:
+**El nombre — sigue abierto a propósito, con la comparación final ya hecha.** La hipótesis es
+**«En rendimiento»** (`fase-3a-fci-v1.html`), y `fase-3a-naming-final.html` la somete a los cinco casos
+que producto fijó, con la regla de descarte puesta de antemano: *si se cae en el negativo o en FCI +
+plazo fijo, se vuelve a «Plata colocada»*. **No se cae en ninguno de los dos** —en el negativo el
+nombre ni siquiera está en la pantalla, y un plazo fijo está rindiendo—, así que lo que queda es un
+canje, no un descarte: se pierde «Rendimiento cobrado» en el rescate positivo y se gana la mejor
+separación de «Guardado». Esa última decisión es de producto. Descartados:
 *Invertido* mete la palabra que el propio modelo deja afuera para comprar dólares, *Inmovilizado* suena
 a embargo, *Inversiones* no puede ser rótulo madre de una caja de ahorro remunerada. *Plata colocada* y
 *Puesto a trabajar* quedan como alternativas vivas.
