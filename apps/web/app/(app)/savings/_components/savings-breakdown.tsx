@@ -150,6 +150,12 @@ export const SavingsBreakdown = ({
  *
  * Un propósito es una cosa; esto es un sobrante, y por eso no tiene ícono propio
  * ni navega — no hay detalle que abrir. Sus dos acciones resuelven en el lugar.
+ *
+ * Y pesa lo MISMO que un propósito, no más: su monto usa el cuerpo de las cards
+ * de abajo y su botón dejó de ser el control más grande de la sección. Estaba al
+ * revés —el resto gritaba más que «Emergencia», que tenía más plata— y eso
+ * invertía la lectura: lo que falta decidir parecía el protagonista del
+ * desglose. Lo que lo distingue es la FORMA y el color, no el tamaño.
  */
 const UnassignedBlock = ({
   amounts,
@@ -173,9 +179,9 @@ const UnassignedBlock = ({
             nombre a la que ya está. */}
         <span
           aria-hidden
-          className="grid size-10 shrink-0 place-items-center rounded-full border-[1.5px] border-dashed border-savings-unassigned-deep/50 text-savings-unassigned-deep"
+          className="grid size-9 shrink-0 place-items-center rounded-full border-[1.5px] border-dashed border-savings-unassigned-deep/50 text-savings-unassigned-deep"
         >
-          <Tag className="size-[18px]" strokeWidth={2.1} />
+          <Tag className="size-4" strokeWidth={2.1} />
         </span>
 
         {/* El rótulo y el monto en UNA línea, sobre la misma baseline: el
@@ -185,7 +191,7 @@ const UnassignedBlock = ({
         <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
           {/* Versalitas y no nombre propio: «Sin destino» no es un nombre que
               alguien eligió, es la etiqueta de lo que quedó. */}
-          <p className="text-[10.5px] font-extrabold uppercase tracking-[0.13em] text-savings-unassigned-deep">
+          <p className="text-[12px] font-extrabold uppercase tracking-[0.09em] text-savings-unassigned-deep">
             {t('purposes.none')}
           </p>
           {visible.map((a, i) => (
@@ -193,7 +199,7 @@ const UnassignedBlock = ({
               key={a.currency}
               className={cn(
                 'whitespace-nowrap font-extrabold tracking-[-0.045em] tabular-nums text-savings-unassigned-text',
-                i === 0 ? 'text-[20px]' : 'text-[13.5px] opacity-80',
+                i === 0 ? 'text-[16.5px]' : 'text-[11.5px] opacity-80',
               )}
             >
               {money(a.reserved, a.currency)}
@@ -204,7 +210,7 @@ const UnassignedBlock = ({
         <button
           type="button"
           onClick={onAllocate}
-          className="min-h-11 shrink-0 rounded-lg bg-savings-unassigned-deep px-4 text-[12.5px] font-extrabold text-savings-unassigned-on-deep transition-opacity hover:opacity-90"
+          className="relative shrink-0 rounded-lg bg-savings-unassigned-deep px-3.5 py-2 text-[12px] font-extrabold text-savings-unassigned-on-deep transition-opacity after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:opacity-90"
         >
           {t('purposes.allocate')}
         </button>

@@ -53,8 +53,8 @@ export const SavingsBreakdownSkeleton = async () => {
           el bloque saltaría de «apagado» a «pendiente» a la vista. */}
       <div className="rounded-3xl border border-dashed border-savings-unassigned-border bg-savings-unassigned-bg p-[15px]">
         <div className="flex items-center gap-3">
-          <span className="size-10 shrink-0 animate-pulse rounded-full bg-savings-unassigned-deep/15" />
-          <span className="h-6 flex-1 animate-pulse rounded bg-savings-unassigned-deep/15" />
+          <span className="size-9 shrink-0 animate-pulse rounded-full bg-savings-unassigned-deep/15" />
+          <span className="h-5 flex-1 animate-pulse rounded bg-savings-unassigned-deep/15" />
         </div>
       </div>
       <div className="flex flex-col gap-2.5">
