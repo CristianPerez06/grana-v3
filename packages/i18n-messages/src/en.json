@@ -2122,7 +2122,7 @@
     "purposes": {
       "unallocate_note": "Removing the purpose sends the money back to «Unassigned»: it stays set aside. To spend it, use «Make available».",
       "breakdown_title": "How it is split",
-      "none_explainer": "What is left over, not a purpose. It is set aside, but you have not said what for yet.",
+      "none_explainer": "It is set aside, but you have not said what for yet.",
       "label": "What for",
       "none": "Unassigned",
       "choose": "What for?",

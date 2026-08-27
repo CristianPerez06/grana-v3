@@ -208,7 +208,12 @@ const DarkAmount = ({ value, currency }: { value: number; currency: BalanceCurre
 }
 
 /**
- * 48px de alto en teléfono y 60 en desktop, sobre el mínimo de 44 del repo.
+ * 44px en teléfono y 48 en desktop: el mínimo del repo, no más.
+ *
+ * Venían de 48 y 60 —los del handoff— y era alto de sobra: son tres botones de
+ * una línea, con un ícono de 16px, y ese zócalo compite en altura con el bloque
+ * que lleva los dos montos del total. La botonera acompaña a la card, no pesa
+ * como ella.
  *
  * El divisor va por prop y no por un selector de hermano adyacente: `[&+&]`
  * depende de que las dos clases sean idénticas carácter por carácter, así que
@@ -231,7 +236,7 @@ const BarAction = ({
     type="button"
     onClick={onClick}
     className={cn(
-      'flex min-h-12 items-center justify-center gap-2 px-2 text-[12px] font-extrabold tracking-[-0.01em] text-text transition-colors hover:bg-surface-sunken sm:min-h-[60px] sm:text-[13px]',
+      'flex min-h-11 items-center justify-center gap-2 px-2 text-[12px] font-extrabold tracking-[-0.01em] text-text transition-colors hover:bg-surface-sunken sm:min-h-12 sm:text-[13px]',
       divided && 'border-l border-border-soft',
     )}
   >

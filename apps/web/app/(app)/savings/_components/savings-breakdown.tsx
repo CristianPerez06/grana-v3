@@ -44,19 +44,27 @@ export const SavingsBreakdown = ({
   const restCurrency = moduleGroupCurrency(rest)
 
   return (
-    <div className="flex flex-col gap-3 sm:gap-[18px]">
-      {restHasMoney && (
-        <UnassignedBlock
-          amounts={rest}
-          onAllocate={() => overlay.openRestAllocate(restCurrency)}
-          onRelease={() => overlay.openRestRelease(restCurrency)}
-        />
-      )}
-
+    <div className="flex flex-col">
       <section className="flex flex-col gap-2.5">
+        {/* El título cubre TODO el desglose, y «Sin destino» es parte de él: es
+            la parte que todavía no tiene nombre. Antes iba arriba del título y
+            quedaba colgado entre el total y la sección, sin pertenecer a
+            ninguno de los dos.
+
+            Adentro del título pero FUERA de la grilla: sigue sin ser un
+            propósito —no navega, no tiene ícono propio, no se ordena por monto
+            entre ellos— y por eso conserva su forma aparte. */}
         <h2 className="px-[3px] text-[14.5px] font-extrabold tracking-[-0.02em] text-text sm:text-[17px]">
           {t('purposes.breakdown_title')}
         </h2>
+
+        {restHasMoney && (
+          <UnassignedBlock
+            amounts={rest}
+            onAllocate={() => overlay.openRestAllocate(restCurrency)}
+            onRelease={() => overlay.openRestRelease(restCurrency)}
+          />
+        )}
 
         {/* Grilla y no lista: el ancho decide cuántas columnas entran, así el
             nombre no se parte en dos líneas en desktop. Es el MISMO componente
@@ -135,7 +143,7 @@ const UnassignedBlock = ({
   const visible = moduleVisibleAmounts(amounts)
 
   return (
-    <section className="rounded-3xl border border-dashed border-savings-unassigned-border bg-savings-unassigned-bg p-[15px] sm:px-5 sm:py-[18px]">
+    <section className="rounded-3xl border border-dashed border-savings-unassigned-border bg-savings-unassigned-bg px-[15px] py-3 sm:px-5 sm:py-[14px]">
       <div className="flex items-center gap-3">
         {/* Una etiqueta, no un «+». El «+» ya es el glifo de CREAR en esta misma
             pantalla —la card punteada del final de la grilla— y dos círculos
@@ -149,25 +157,27 @@ const UnassignedBlock = ({
           <Tag className="size-[18px]" strokeWidth={2.1} />
         </span>
 
-        <div className="min-w-0 flex-1">
+        {/* El rótulo y el monto en UNA línea, sobre la misma baseline: el
+            rótulo es la etiqueta de ese número, no el título de una sección, y
+            apilados cobraban una fila entera por decir lo mismo. Con las dos
+            monedas, la segunda sigue en la misma línea, más chica. */}
+        <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
           {/* Versalitas y no nombre propio: «Sin destino» no es un nombre que
               alguien eligió, es la etiqueta de lo que quedó. */}
           <p className="text-[10.5px] font-extrabold uppercase tracking-[0.13em] text-savings-unassigned-deep">
             {t('purposes.none')}
           </p>
-          <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3">
-            {visible.map((a, i) => (
-              <span
-                key={a.currency}
-                className={cn(
-                  'whitespace-nowrap font-extrabold tracking-[-0.045em] tabular-nums text-savings-unassigned-text',
-                  i === 0 ? 'text-[22px]' : 'text-[14.5px] opacity-80',
-                )}
-              >
-                {money(a.reserved, a.currency)}
-              </span>
-            ))}
-          </div>
+          {visible.map((a, i) => (
+            <span
+              key={a.currency}
+              className={cn(
+                'whitespace-nowrap font-extrabold tracking-[-0.045em] tabular-nums text-savings-unassigned-text',
+                i === 0 ? 'text-[20px]' : 'text-[13.5px] opacity-80',
+              )}
+            >
+              {money(a.reserved, a.currency)}
+            </span>
+          ))}
         </div>
 
         <button
@@ -193,7 +203,7 @@ const UnassignedBlock = ({
           Y el enlace no infla la fila: 44 px de área táctil por un
           pseudo-elemento centrado, no por alto propio. Con `min-h-11` medía 44
           px de verdad, casi tres veces su texto, y ese sobrante era el hueco. */}
-      <div className="mt-[11px] flex items-start justify-between gap-3 border-t border-dashed border-savings-unassigned-border pt-[11px]">
+      <div className="mt-2.5 flex items-start justify-between gap-3 border-t border-dashed border-savings-unassigned-border pt-2.5">
         <p className="flex-1 text-[11.5px] font-semibold leading-[1.45] text-savings-unassigned-text/85">
           {t('purposes.none_explainer')}
         </p>
