@@ -2109,7 +2109,7 @@
     },
     "suggestion": {
       "title": "¿Guardás una parte?",
-      "body": "Podés apartar {amount} de este ingreso. No se mueve de tus cuentas.",
+      "body": "Se aparta de este ingreso y sigue en tus cuentas.",
       "cta": "Guardar {amount}",
       "later": "Ahora no",
       "enough_this_month": "Suficiente por este mes"

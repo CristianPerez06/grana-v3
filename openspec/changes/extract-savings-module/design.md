@@ -691,3 +691,24 @@ pesos.
 
 `pickLatestIncome` vive en el paquete y no en el componente: es la única decisión de la tira que se
 puede probar sin montar nada.
+
+
+### Y dos cosas más que la tira arrastraba, visibles recién con el monto en pantalla
+
+**El monto estaba dos veces.** «Podés apartar US$ 10.000,00 de este ingreso» arriba y «Guardar
+US$ 10.000,00» en el botón, a dos renglones de distancia. El mismo número repetido tan cerca no se
+lee como énfasis: se lee como dos datos, y el lector se para a comparar si dicen lo mismo.
+
+Se queda en el **botón**, que es el que se toca y por lo tanto el que tiene que decir a qué te estás
+comprometiendo — un «Guardar» pelado obliga a volver a leer arriba para saber cuánto. El cuerpo queda
+con lo único que solo él puede decir: que la plata no se va a ningún lado. Y lo dice con las palabras
+que el módulo ya usa —«sigue en tus cuentas»—, no con unas nuevas.
+
+**Las tres acciones no entraban en una línea de teléfono.** «Suficiente por este mes» se salía de la
+pantalla, cortado por el borde. Ahora se parten en dos filas: el botón a todo el ancho arriba, los dos
+enlaces abajo repartidos a los extremos —juntos contra la izquierda, el segundo se lee como
+continuación del primero, y el que cambia la cadencia conviene que no quede bajo el pulgar que acaba
+de tocar el CTA—.
+
+Acá **sí** es un breakpoint, y no contradice a E24: lo que cambia no es si algo entra, es la
+disposición de tres controles. El ancho del botón depende del número, pero el de la fila entera no.

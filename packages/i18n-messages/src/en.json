@@ -2109,7 +2109,7 @@
     },
     "suggestion": {
       "title": "Set some of it aside?",
-      "body": "You can set aside {amount} of this income. It doesn't leave your accounts.",
+      "body": "It comes out of this income and stays in your accounts.",
       "cta": "Set aside {amount}",
       "later": "Not now",
       "enough_this_month": "Enough for this month"

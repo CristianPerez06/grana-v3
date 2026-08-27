@@ -205,7 +205,13 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   }
 
   // El monto ya viene formateado al copy, así que el texto no sabe de monedas:
-  // «Podés apartar US$ 900,00» y «Podés apartar $ 90.000,00» son la misma frase.
+  // «Guardar US$ 900,00» y «Guardar $ 90.000,00» son la misma frase.
+  //
+  // Y va en UN solo lugar: el botón. Estaba también en el cuerpo —«Podés apartar
+  // US$ 10.000,00 de este ingreso»— y el mismo número dos veces a dos renglones
+  // de distancia se lee como dos datos, no como uno repetido. El botón es el que
+  // se toca, así que es el que tiene que decir cuánto; el cuerpo queda con lo
+  // único que solo él puede decir, que la plata no se va a ningún lado.
   const amount = currency === 'USD' ? formatUSD(suggestion.amount) : formatARS(suggestion.amount)
 
   return (
@@ -229,27 +235,44 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
           good. A one-tap permanent off would get pressed by accident and the
           feature would silently disappear for that user forever.
           The two of them are links, not buttons: three buttons in a row read as
-          three equally weighted choices, and only one of them is the point. */}
-      <div className="flex shrink-0 items-center gap-4">
-        <Button onClick={save} disabled={pending} className="whitespace-nowrap">
+          three equally weighted choices, and only one of them is the point.
+
+          En teléfono las tres NO entran en una línea: el botón lleva el monto,
+          así que mide lo que mida el número, y «Suficiente por este mes» se
+          salía de la pantalla —cortado por el borde, sin scroll y sin señal—.
+          Se parten en dos filas: el botón a todo el ancho arriba, los dos
+          enlaces abajo repartidos a los extremos.
+
+          Repartidos y no pegados: son las dos salidas, y juntas contra la
+          izquierda la segunda se lee como continuación de la primera. En los
+          extremos, cada una es su propia decisión y la de la derecha —la que
+          cambia la cadencia— queda lejos del pulgar que viene de tocar el CTA.
+
+          Acá SÍ es un breakpoint y no un quiebre por contenido: lo que cambia no
+          es si algo entra, es la disposición de tres controles. En desktop la
+          fila entra siempre, porque el ancho no lo pone el número. */}
+      <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <Button onClick={save} disabled={pending} className="w-full whitespace-nowrap sm:w-auto">
           {t('cta', { amount })}
         </Button>
-        <button
-          type="button"
-          onClick={() => close(false)}
-          disabled={pending}
-          className="whitespace-nowrap rounded text-[13.5px] font-semibold text-text-muted transition-colors hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {t('later')}
-        </button>
-        <button
-          type="button"
-          onClick={() => close(true)}
-          disabled={pending}
-          className="whitespace-nowrap rounded text-[13.5px] font-semibold text-text-soft transition-colors hover:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {t('enough_this_month')}
-        </button>
+        <div className="flex items-center justify-between gap-4 sm:justify-start">
+          <button
+            type="button"
+            onClick={() => close(false)}
+            disabled={pending}
+            className="whitespace-nowrap rounded text-[13.5px] font-semibold text-text-muted transition-colors hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {t('later')}
+          </button>
+          <button
+            type="button"
+            onClick={() => close(true)}
+            disabled={pending}
+            className="whitespace-nowrap rounded text-[13.5px] font-semibold text-text-soft transition-colors hover:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {t('enough_this_month')}
+          </button>
+        </div>
       </div>
     </section>
   )
