@@ -1140,11 +1140,15 @@ const SavingsForm = ({
         </div>
       )}
 
-      {/* La fecha, compacta y con atajos: el mismo patrón que el alta de
-          movimientos en ancho de teléfono. Como card entera pesaba igual que el
-          monto, y acá la fecha es casi siempre hoy — el foco es cuánto y para
-          qué. */}
-      <div className="mt-2.5 flex items-center gap-3 rounded-xl border border-border-soft bg-card px-3 py-1.5">
+      {/* La fecha, SIN recuadro propio. Con borde y fondo era una card más —del
+          mismo peso que el monto y el resumen, que sí lo son— pero de una sola
+          línea, así que se leía como una card a medio hacer. Acá la fecha es
+          casi siempre hoy: es un control secundario, y como fila suelta lo dice
+          sin ocupar el lugar de un bloque.
+
+          Sin recuadro se alinea además con el rótulo «Para qué» de abajo, que
+          tampoco lo tiene: los dos son controles, no contenido. */}
+      <div className="mt-3 flex items-center gap-3 px-1">
         <DatePicker
           value={date}
           onChange={setDate}
@@ -1179,10 +1183,14 @@ const SavingsForm = ({
               type="button"
               onClick={() => setDate(option.value)}
               className={cn(
-                'rounded-[8px] px-2.5 py-1.5 text-xs font-bold transition-colors',
+                // Seleccionado en emerald suave y no en navy sólido: el navy es
+                // la superficie del total y el color del CTA de la app, y acá
+                // pintaba de negro el control MENOS importante del formulario —
+                // el ojo caía en «Hoy» antes que en el monto.
+                'rounded-[8px] border px-2.5 py-1.5 text-xs font-bold transition-colors',
                 date === option.value
-                  ? 'bg-navy text-white'
-                  : 'border border-border text-text-muted',
+                  ? 'border-emerald-deep bg-emerald-deep/5 text-text'
+                  : 'border-border text-text-muted hover:bg-surface-sunken',
               )}
             >
               {option.label}

@@ -88,8 +88,16 @@ export const SavingsBreakdown = ({
 
         {/* Grilla y no lista: el ancho decide cuántas columnas entran, así el
             nombre no se parte en dos líneas en desktop. Es el MISMO componente
-            en los tres tamaños — nunca se convierte en fila de tabla. */}
-        <ul className="grid grid-cols-1 gap-[9px] sm:grid-cols-[repeat(auto-fill,minmax(330px,1fr))] sm:gap-[11px]">
+            en los tres tamaños — nunca se convierte en fila de tabla.
+
+            El mínimo es 290px y no 330. Con 330, en el ancho útil de una
+            notebook (960px: el shell topea en 1024 y se come 64 de padding)
+            entraban DOS columnas de 474px — una card de 474px para un nombre y
+            un monto, con un vacío enorme en el medio, y nueve propósitos en
+            cinco filas que obligaban a scrollear. Con 290 entran tres de 313px,
+            que es ancho de sobra para el contenido, y las mismas nueve caben en
+            tres filas. En tablet siguen siendo dos y en teléfono una. */}
+        <ul className="grid grid-cols-1 gap-[9px] sm:grid-cols-[repeat(auto-fill,minmax(290px,1fr))] sm:gap-[11px]">
           {groups.map((g) => (
             <li key={g.purposeId}>
               <PurposeCard

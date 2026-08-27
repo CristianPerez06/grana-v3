@@ -59,7 +59,7 @@ export const SavingsBreakdownSkeleton = async () => {
       </div>
       <div className="flex flex-col gap-2.5">
         <span className="h-4 w-40 animate-pulse rounded bg-muted" />
-        <div className="grid grid-cols-1 gap-[9px] sm:grid-cols-[repeat(auto-fill,minmax(330px,1fr))] sm:gap-[11px]">
+        <div className="grid grid-cols-1 gap-[9px] sm:grid-cols-[repeat(auto-fill,minmax(290px,1fr))] sm:gap-[11px]">
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
