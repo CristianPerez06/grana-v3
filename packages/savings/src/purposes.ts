@@ -57,6 +57,23 @@ async function conflictingName(
   return data?.name ?? null
 }
 
+/**
+ * Recorta el nombre ANTES de validar.
+ *
+ * El schema es `.strict()`, y en ese modo el `.trim()` de Yup deja de recortar y
+ * pasa a EXIGIR que el string ya venga recortado: «Prueba » se rechaza en vez de
+ * guardarse como «Prueba». Un espacio de más al final es el error de tipeo más
+ * común que existe —lo deja el autocompletado del teclado en teléfono— y no es
+ * algo que el usuario pueda ver ni corregir mirando el campo.
+ *
+ * Se normaliza acá y no en cada formulario porque el paquete es el que usan las
+ * dos plataformas: arreglarlo en la web dejaría el mismo bug esperando en mobile.
+ */
+const withTrimmedName = (input: unknown): unknown =>
+  typeof input === 'object' && input !== null && 'name' in input
+    ? { ...input, name: typeof input.name === 'string' ? input.name.trim() : input.name }
+    : input
+
 export async function createPurpose(args: {
   supabase: GranaSupabaseClient
   userId: string
@@ -64,14 +81,14 @@ export async function createPurpose(args: {
 }): Promise<SavingsMutationResult<SavingsPurposeInput>> {
   const { supabase, userId, input } = args
 
-  const validation = await validateActionInput(savingsPurposeSchema, input)
+  const validation = await validateActionInput(savingsPurposeSchema, withTrimmedName(input))
   if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
 
   const { name, icon } = validation.data
 
   const { data, error } = await supabase
     .from('savings_purpose')
-    .insert({ user_id: userId, name: name.trim(), icon: icon ?? null })
+    .insert({ user_id: userId, name, icon: icon ?? null })
     .select('id')
     .single()
 
@@ -79,7 +96,7 @@ export async function createPurpose(args: {
     return {
       ok: false,
       messageKey: 'savings.purposes.errors.duplicate',
-      conflictingName: (await conflictingName(supabase, name)) ?? name.trim(),
+      conflictingName: (await conflictingName(supabase, name)) ?? name,
     }
   }
   if (error) return { ok: false, errorCode: error.code }
@@ -94,7 +111,7 @@ export async function renamePurpose(args: {
 }): Promise<SavingsMutationResult<SavingsPurposeInput>> {
   const { supabase, purposeId, input } = args
 
-  const validation = await validateActionInput(savingsPurposeSchema, input)
+  const validation = await validateActionInput(savingsPurposeSchema, withTrimmedName(input))
   if (!validation.ok) return { ok: false, fieldErrors: validation.fieldErrors }
 
   const { name, icon } = validation.data
@@ -103,14 +120,14 @@ export async function renamePurpose(args: {
   // repetir el criterio acá sería la duplicación que 0051 dejó de lección.
   const { error } = await supabase
     .from('savings_purpose')
-    .update({ name: name.trim(), icon: icon ?? null })
+    .update({ name, icon: icon ?? null })
     .eq('id', purposeId)
 
   if (error?.code === UNIQUE_VIOLATION) {
     return {
       ok: false,
       messageKey: 'savings.purposes.errors.duplicate',
-      conflictingName: (await conflictingName(supabase, name)) ?? name.trim(),
+      conflictingName: (await conflictingName(supabase, name)) ?? name,
     }
   }
   if (error) return { ok: false, errorCode: error.code }

@@ -52,7 +52,13 @@ export function PurposeForm({
         : await createPurpose(input)
 
       if (!result.ok) {
-        setError(result.formError ?? t('purposes.errors.generic'))
+        // El error del CAMPO gana al genérico. Se descartaba: una validación que
+        // rechazaba el nombre terminaba mostrando «no pudimos guardar, probá de
+        // nuevo» —que invita a repetir exactamente lo mismo— sobre un formulario
+        // donde el único dato problemático estaba a la vista y sin marcar.
+        setError(
+          result.fieldErrors?.name ?? result.formError ?? t('purposes.errors.generic'),
+        )
         return
       }
       await onDone({
