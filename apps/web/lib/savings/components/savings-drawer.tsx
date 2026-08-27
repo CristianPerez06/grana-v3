@@ -623,6 +623,18 @@ const GroupBlock = ({
   })
   const history = historyQuery.data ?? { entries: [], hasMore: false }
 
+  /**
+   * Cuántos repartos se leen sin desplegar.
+   *
+   * Cinco entran sin empujar las dos acciones fuera de la pantalla, que es para
+   * lo que se entra acá. El historial se consulta de vez en cuando; las acciones
+   * son de todos los días.
+   */
+  const HISTORY_PREVIEW = 5
+  const [showAllHistory, setShowAllHistory] = useState(false)
+  const shownEntries = showAllHistory ? history.entries : history.entries.slice(0, HISTORY_PREVIEW)
+  const moreEntries = history.entries.length - shownEntries.length
+
   return (
     <div className="flex flex-col">
       {/* El emblema acompaña al nombre, con el MISMO tinte que en la grilla: es
@@ -694,7 +706,7 @@ const GroupBlock = ({
               <p className="mt-2 text-[13px] text-text-soft">{t('purposes.empty_allocations')}</p>
             ) : (
               <ul className="mt-2 flex flex-col divide-y divide-border-soft">
-                {history.entries.map((entry) => (
+                {shownEntries.map((entry) => (
                   <li key={entry.id} className="flex items-center justify-between gap-3 py-2.5">
                     <span className="text-[14px] font-semibold text-text">
                       {entry.amount >= 0
@@ -717,7 +729,23 @@ const GroupBlock = ({
                 ))}
               </ul>
             )}
-            {history.hasMore && (
+            {/* Se muestran unos pocos y el resto se despliega acá. Con veinte
+                repartos, la lista completa empujaba las dos acciones —que son
+                para lo que se entró— abajo de todo, y el drawer se volvía un
+                scroll largo para leer algo que se consulta de vez en cuando.
+
+                No cambia de pantalla y no hay «ver todos» que navegue: la
+                consulta ya trajo estos, así que expandir es gratis. */}
+            {moreEntries > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowAllHistory(true)}
+                className="relative mt-2 inline-block text-[12.5px] font-bold text-emerald-deep transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
+              >
+                {t('history_more', { count: moreEntries })}
+              </button>
+            )}
+            {history.hasMore && showAllHistory && (
               <p className="mt-2 text-[12px] text-text-soft">
                 {t('history_truncated', { count: RESERVE_HISTORY_LIMIT })}
               </p>
@@ -841,6 +869,7 @@ const SavingsForm = ({
   // `error` y `pending` SÍ son locales: son de este intento de envío, y morir
   // con el formulario es exactamente lo que tienen que hacer.
   const [error, setError] = useState<string | null>(null)
+  const [showAllPurposes, setShowAllPurposes] = useState(false)
   const [pending, startTransition] = useTransition()
 
   // La moneda del borrador manda apenas se toca el segmentado; hasta entonces,
@@ -851,6 +880,14 @@ const SavingsForm = ({
   const setCurrency = (next: Currency) => onDraftChange({ ...draft, currency: next })
   const setAmount = (next: string) => onDraftChange({ ...draft, amount: next })
   const setDate = (next: string) => onDraftChange({ ...draft, date: next })
+
+  /**
+   * Cuántos propósitos se muestran antes de plegar el resto.
+   *
+   * Seis entran en dos o tres filas en un teléfono, que es lo que el bloque
+   * puede ocupar sin empujar el resumen y el CTA fuera de la pantalla.
+   */
+  const PURPOSE_CHIP_LIMIT = 6
 
   /** Cicla entre las monedas que hay para ofrecer, como el resto de la app. */
   const cycleCurrency = () => {
@@ -880,6 +917,24 @@ const SavingsForm = ({
     mode === 'save'
       ? [null, ...purposes]
       : [null, ...purposes].filter((o) => groupAmount(currency, o?.id ?? null) > 0)
+
+  /**
+   * Los chips que se dibujan, y cuántos quedan plegados.
+   *
+   * El elegido entra SIEMPRE, aunque caiga fuera del corte: un chip
+   * seleccionado que se esconde al plegar deja la pantalla diciendo que se va a
+   * guardar «sin destino» cuando en realidad va a otro lado.
+   */
+  const shownOptions =
+    showAllPurposes || purposeOptions.length <= PURPOSE_CHIP_LIMIT
+      ? purposeOptions
+      : (() => {
+          const head = purposeOptions.slice(0, PURPOSE_CHIP_LIMIT)
+          if (head.some((o) => (o?.id ?? null) === purposeId)) return head
+          const chosen = purposeOptions.find((o) => (o?.id ?? null) === purposeId)
+          return chosen == null ? head : [...head.slice(0, PURPOSE_CHIP_LIMIT - 1), chosen]
+        })()
+  const hiddenCount = purposeOptions.length - shownOptions.length
 
   /**
    * ¿Hay otro origen que el usuario pueda elegir, acá y ahora?
@@ -1147,8 +1202,8 @@ const SavingsForm = ({
           <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
             {mode === 'save' ? t('purposes.label') : t('purposes.source_label')}
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {purposeOptions.map((option) => {
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {shownOptions.map((option) => {
               const id = option?.id ?? null
               return (
                 <button
@@ -1156,7 +1211,10 @@ const SavingsForm = ({
                   type="button"
                   onClick={() => onSetPurpose(id)}
                   className={cn(
-                    'flex min-h-[44px] items-center gap-2 rounded-full border px-3.5 text-[13.5px] font-semibold transition-colors',
+                    // Alto táctil de 44 px por pseudo-elemento, no por alto
+                    // propio: con diez propósitos, 44 px reales por chip eran
+                    // cinco filas de altura para elegir una etiqueta.
+                    'relative flex items-center gap-1.5 rounded-full border px-3 py-2 text-[13px] font-semibold transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[\'\']',
                     purposeId === id
                       ? 'border-emerald-deep bg-emerald-deep/5 text-text'
                       : 'border-border-soft bg-card text-text hover:bg-surface-sunken',
@@ -1167,6 +1225,26 @@ const SavingsForm = ({
                 </button>
               )
             })}
+
+            {/* «+N» en vez de la lista entera. Con muchos propósitos la fila de
+                chips crecía sin techo y empujaba el resumen y el CTA fuera de
+                la pantalla: elegir una etiqueta terminaba costando más alto que
+                escribir el monto.
+
+                Se muestran los primeros y el resto se despliega acá mismo, sin
+                cambiar de pantalla — que es lo que la fase 2 sacó del medio. El
+                elegido SIEMPRE está entre los visibles: un chip seleccionado que
+                se esconde al plegar sería la pantalla mintiendo sobre lo que
+                está por hacer. */}
+            {hiddenCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowAllPurposes(true)}
+                className="relative flex items-center rounded-full border border-dashed border-border px-3 py-2 text-[13px] font-bold text-text-muted transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:bg-surface-sunken hover:text-text"
+              >
+                +{hiddenCount}
+              </button>
+            )}
             {/* Crear uno nuevo solo tiene sentido al guardar. Un propósito
                 recién creado no tiene plata, así que como ORIGEN no serviría
                 para nada. */}

@@ -2118,6 +2118,7 @@
     "accounts_total": "Your {currency} accounts",
     "to_spend": "To spend",
     "gap_note": "Your bank will still show the full amount. Grana doesn't move your money: it marks how much you decided not to touch.",
+    "history_more": "Show {count} more",
     "history_truncated": "Showing the latest {count} entries.",
     "purposes": {
       "created_skip": "Not now",

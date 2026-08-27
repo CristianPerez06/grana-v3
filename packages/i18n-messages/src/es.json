@@ -2118,6 +2118,7 @@
     "accounts_total": "Tus cuentas en {currency}",
     "to_spend": "Para gastar",
     "gap_note": "Tu banco va a seguir mostrando el total. Grana no mueve tu plata: marca cuánto decidiste no tocar.",
+    "history_more": "Ver {count} más",
     "history_truncated": "Se muestran los últimos {count} movimientos.",
     "purposes": {
       "created_skip": "Ahora no",
