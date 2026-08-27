@@ -25,8 +25,9 @@
 - [x] 2.2 La jerarquía: **Guardado es el protagonista** en las dos monedas, y **«Para gastar» va de
   contexto en chico** — es el titular del dashboard, y dos pantallas con el mismo protagonista no dejan
   protagonista a ninguna (D16). Después el desglose, «Sin destino» al pie y las dos acciones
-- [ ] 2.3 Dibujar la **puerta sobria** desde el dashboard: la fila de Guardado lleva al módulo sin
-  convertir la card en su casa
+- [x] 2.3 Dibujar la **puerta sobria** desde el dashboard: la fila de Guardado lleva al módulo sin
+  convertir la card en su casa. **Implementado en las dos apps**: en web es un `Link` a `/savings`,
+  en nativa un `router.push('/(app)/savings')`, y ninguna de las dos monta ya el overlay (4.2, 4.4)
 
 - [x] 2.4 Segunda pasada del mock con la arquitectura de interacción propuesta: cabecera sobria (Para
   gastar + Guardado, con el USD **subordinado y no oculto**), filas con acción contextual, los cuatro
@@ -49,9 +50,10 @@
   *"no tenés"* en vez de dejar la pregunta sin contestar
 - [x] 2.8 Dibujada la **vista de un propósito** dentro del módulo, con las tres acciones del grupo
   —destinar más, volver a usar, quitar destino— y sin *Guardar*, que vive un nivel arriba (D18)
-- [ ] 2.9 **Para mirar usándolo**: si guardar-para-un-propósito (5 taps) se siente lento, si el copy
-  *«¿Para qué es?»* del sheet B se entiende, y si la grilla de la cabecera se sostiene con plata real
-  en las dos monedas
+- [ ] 2.9 **Para mirar usándolo** — no es implementación, es criterio para el QA visual: si
+  guardar-para-un-propósito (5 taps) se siente lento, si el copy *«¿Para qué es?»* se entiende, y si
+  la cabecera se sostiene con plata real en las dos monedas. En web ya se miró; **en nativa queda
+  para el QA visual**
 - [x] 2.7 **La flecha de volver va arriba a la IZQUIERDA**, antes del título, como control de 44×44
   con borde — el `DrawerBackHeader` que la app ya usa. Los mocks de la fase 3 y del módulo la tenían a
   la derecha: se había reusado el slot del ✕ de cerrar, que sí va a la derecha. Son dos controles
@@ -59,11 +61,14 @@
 
 ## 3. La ruta y la entrada
 
-- [x] 3.1 Ruta web **`/savings`** con su layout y estados de carga. La ruta va en inglés como todas
+- [x] 3.1 Ruta **`/savings`** en las dos apps, con su layout y estados de carga. La ruta va en inglés como todas
   —`/accounts`, `/cards`, `/transactions`— y el rótulo del menú en castellano, **«Ahorro e
   inversión»**, como todos. Que no coincidan es lo normal: `/shared` se llama *Compartido* (E11)
-- [x] 3.2 Entrada en el menú web (`app-menu.tsx`), con el rótulo `nav.savings` — que existía como
-  clave huérfana ("Ahorros") y pasa a **«Ahorro e inversión»**. Falta el chrome mobile
+- [x] 3.2 Entrada de navegación en las **dos** apps, con el rótulo `nav.savings` — que existía como
+  clave huérfana ("Ahorros") y pasa a **«Ahorro e inversión»**. En web, el sidebar (`app-shell.tsx`);
+  en nativa, el sheet del menú (`AppMenu.tsx`), junto a Cuentas y Tarjetas, que es el mismo grupo que
+  ocupa en el sidebar. **No** va al tab bar: son los cuatro destinos del día a día y un quinto les
+  saca ancho a los cuatro
 - [x] 3.3 Skeleton shell shape-matched: la grilla arriba y cuatro filas de lista abajo
 - [x] 3.4 Estado vacío: el número en cero, **una sola acción**, y la frase que evita el
   malentendido —*"guardar no mueve tu plata"*—. Sin propósitos, sin «Sin destino» en cero, y **sin
@@ -131,10 +136,11 @@ definición.
 - [ ] 4b.4 **Verificar que apagar el módulo no cambia ningún número.** El guardado sigue restando del
   disponible: la bandera controla la superficie, nunca la plata. Por construcción se cumple —la
   bandera no toca ninguna consulta— pero se verifica cuando se cablee, no antes
-- [x] 4b.5 **No existe fallback al drawer viejo.** Mantenerlo montado en el dashboard reintroduciría
-  el acoplamiento que este change saca. En web ya no existe: la fila de guardado es un `Link` a
-  `/savings` y `balance-card.tsx` no monta `SavingsDrawer`. En mobile sigue montado y así queda hasta
-  que exista el módulo nativo (4.4)
+- [x] 4b.5 **No existe fallback al drawer viejo, en ninguna de las dos apps.** Mantenerlo montado en
+  el dashboard reintroduciría el acoplamiento que este change saca. En web la fila de guardado es un
+  `Link` a `/savings` y `balance-card.tsx` no monta `SavingsDrawer`; en nativa la fila hace
+  `router.push('/(app)/savings')` y `BalanceCard.tsx` tampoco lo monta. El único que lo monta, en las
+  dos, es el módulo
 
 ## 4c. El rediseño (handoff de Claude Design, E12–E15)
 
@@ -273,16 +279,23 @@ definición.
   este mes»**, que además empareja las dos salidas —«Ahora no» / «No más este mes»—, y el botón pasa a
   `px-3`, porque el aire se calibra contra lo que dice y ya no dice un monto. Sin filas de más. Medido
   de 320 a 430 con ocho cifras en el texto
-- [ ] 6.5 QA nativo — **bloqueado por acceso, issue #58**. El ticket cubre las cinco frases de copy,
-  la tira siguiendo la moneda del último ingreso y el nombre con espacio de más; **falta agregarle el
-  módulo nativo entero**, que se construyó después de ampliarlo: la ruta, la entrada del menú, la fila
-  del dashboard navegando y el overlay sin vista de detalle
+- [ ] 6.5 **QA visual nativo** — lo único que le falta al módulo en mobile, que por lo demás está
+  **implementado**. Bloqueado por acceso, issue #58, que ya cubre todo: las cinco frases de copy, la
+  tira siguiendo la moneda del último ingreso, el nombre con espacio de más, y una **sección C** de
+  30 checks para el módulo nativo —la ruta, la entrada del menú, la card oscura, el desglose, el pie
+  y la regresión— con el aviso de que es código que corre por primera vez
 - [x] 6.14 **Comparativa web ↔ nativa, superficie por superficie** (E27): **nueve divergencias**, tres
   graves —lo tipeado se perdía en el desvío, el detalle de un propósito tenía botón y enlace
   invertidos, y el tope negaba sin ofrecer la salida—. Las nueve corregidas. La comparación mecánica
   de claves de i18n encontró cinco de ellas y hoy da **cero** diferencias: la única que queda es
   `date_label`, aceptada porque en nativo el selector de fecha lo rotula el sistema operativo
-- [ ] 6.13 **El módulo nativo no se ejecutó nunca.** Typecheck y lint en verde es todo lo que hay:
+- [ ] 6.13 **El módulo nativo está implementado y SIN QA visual nativo: nunca se ejecutó.**
+  Lo que las seis verificaciones de 6.6 **no** pueden afirmar: que la pantalla se dibuje, que el
+  envoltorio de las dos monedas rompa la línea donde corresponde, que los bordes que hacen de divisor
+  caigan entre las monedas y no alrededor, que los tokens cálidos pinten, que el teclado no tape el
+  CTA, que el `BottomSheet` abra y cierre con gesto, que el picker de fecha nativo devuelva la fecha,
+  y que la navegación desde el menú y desde la fila llegue. TypeScript compara tipos y ESLint lee
+  sintaxis; ninguno de los dos ejecuta un layout. Typecheck y lint en verde es todo lo que hay:
   no hay forma de correr Expo desde acá. Lo que más riesgo tiene, en orden: el envoltorio de las dos
   monedas de la card oscura (Yoga y el navegador no rompen la línea igual), los bordes que hacen de
   divisor —que dependen de `overflow: hidden` con margen negativo—, y el efecto que corrige el origen
@@ -296,7 +309,9 @@ definición.
   **no adentro de los componentes**. Mismo precedente que `balance-card-view.ts`: escrita en el
   componente, mobile la reescribiría y divergirían, que es la forma exacta en que la 0051 tuvo que
   deshacer una cuenta duplicada. 18 tests con los números reales de agosto
-- [ ] 6.6 `pnpm openspec:check`, lint, typecheck (web y mobile) y tests en verde
+- [x] 6.6 **Verificación completa en verde**, corrida sobre el módulo nativo ya implementado:
+  `openspec:check`, typecheck web, typecheck mobile, lint web, lint mobile, 711 tests en 62 archivos
+  y build de producción de web. **Ninguna de estas seis ejecuta una sola pantalla nativa** — ver 6.13
 - [x] 6.9 Verificación previa al QA: **build de producción** —que agarra lo que el typecheck no ve— y
   los 18 tests de la derivación. Encontró y cerró: la entrada faltante en el sidebar, `/savings` fuera
   de `CHROMELESS_SECTIONS`, las dos consultas en un solo container, y los fallbacks sin alto reservado

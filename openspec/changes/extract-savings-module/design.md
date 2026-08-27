@@ -728,7 +728,11 @@ que hay que medir es contra el ANCHO DE LA PANTALLA.
 
 ## E26 — Un supuesto disfrazado de decisión dejó el módulo a medias
 
-El change se implementó **solo en web**, y la tarea 4.4 lo justificaba así: *"en mobile sigue montado
+> **Estado actual: el módulo existe en las dos apps.** Lo que sigue narra en pasado un faltante que
+> ya se cerró; el código de hoy tiene ruta, entrada de navegación y módulo nativo. Lo único que queda
+> abierto es el **QA visual nativo** (issue #58).
+
+El change se implementó, en su primera versión, **solo en web**, y la tarea 4.4 lo justificaba así: *"en mobile sigue montado
 en la card de saldo, y así queda hasta que exista el módulo nativo — ahí no hay a dónde navegar
 todavía"*.
 
