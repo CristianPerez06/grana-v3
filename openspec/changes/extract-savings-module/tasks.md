@@ -2,6 +2,26 @@
 
 > **Sin migraciones.** Si este change termina tocando SQL, algo se entendió mal (E6).
 
+## Estado
+
+**El módulo está implementado y verificado por código en las DOS apps** —web y nativa—: ruta, entrada
+de navegación, la fila del dashboard que navega en vez de operar, el overlay sin vista de detalle y
+montado solo por el módulo. `openspec:check`, typecheck web, typecheck mobile, lint web, lint mobile,
+711 tests y build de producción, en verde (6.6).
+
+Lo que queda abierto es de **cuatro** clases, y ninguna es implementación pendiente:
+
+| clase | tareas | por qué sigue abierta |
+|---|---|---|
+| **QA visual nativo** | 2.9 · 6.5 · 6.13 | Bloqueado por acceso a la máquina del tech lead (issue #58). **El módulo nativo nunca se ejecutó** |
+| **Diferido a monetización** | 4b.1–4b.4 | Apagar el módulo solo tiene sentido con sistema de planes, que no existe (E10) |
+| **Backlog no bloqueante** | 4c.12 · 6.7b | Anotado para no perderlo; no frena nada |
+| **Compuertas** | 7.1 · 7.2 | No archivar hasta el QA visual nativo; la fase 3A viene después |
+
+**Nada de esto se toca hasta mirar la app nativa corriendo**: lo que el QA visual encuentre puede
+cambiar lo que haya que hacer, y arreglar a ciegas sobre código que nunca se ejecutó es escribir dos
+veces.
+
 ## 1. La corrección documental, primero
 
 - [x] 1.1 `docs/modelo-de-dinero.md`: separar *"ahorro e inversión no son dos modelos de datos"* —que
@@ -124,7 +144,8 @@ el enchufe, esperando el cable.
 El comportamiento ya está normado en E10 y en el spec, así que lo diferido es el cableado, no la
 definición.
 
-- [ ] 4b.1 **Estado apagado con guardado en cero**: sin entrada de menú, sin ruta, sin fila en el
+- [ ] 4b.1 **Estado apagado con guardado en cero** — describe lo que tendría que pasar CUANDO se
+  apague, no lo de hoy: se esconde la entrada de menú, se cierra la ruta y no va la fila en el
   dashboard. No hay plata que rescatar ni número que explicar — *decidido en `moduleAccess`/
   `moduleShowsNav`; falta cablear*
 - [ ] 4b.2 **Estado apagado con guardado > 0**: la fila del dashboard **se queda y navega** —la card
@@ -196,7 +217,7 @@ definición.
   dibuja el desktop del handoff
 - [x] 4c.11 Al confirmar **no hay toast**: cerrar el overlay es el acuse, como en el resto de la app.
   El handoff pedía «confirmación breve»
-- [ ] 4c.12 Fuera de esta pasada, anotado para no perderlo: el set de emblemas SVG con su migración,
+- [ ] 4c.12 **Backlog, no bloquea nada.** Fuera de esta pasada, anotado para no perderlo: el set de emblemas SVG con su migración,
   «Ver todos» a partir de 8 propósitos, y el panel lateral de 420 px que empuja el stage — el drawer
   de 480 px ya cubre esa lectura en desktop
 
@@ -221,8 +242,9 @@ definición.
 - [x] 5.1 **Verificado con `git diff` desde el commit que abre el change**: cero cambios en
   `supabase/` y en `packages/savings/src/mutations.ts`. Cero cambios en
   `write_reserve`
-- [x] 5.2 **Verificado**: cero cambios en Cuentas y Movimientos en TODA la rama, no solo en este
-  change
+- [x] 5.2 **Verificado**: cero cambios en Cuentas y Movimientos **desde que abrió este change**
+  (`e7cf96f..HEAD`). Antes decía «en TODA la rama», y eso era sobreafirmar: la rama sí los tocó, en el
+  rediseño del dashboard que vino antes. Lo que este change promete es no tocarlos, y eso se cumple
 - [x] 5.3 **Verificado**: cero cambios en `packages/dashboard/src` desde que abrió el change, así
   que la identidad de la card no puede haberse movido — no hay dónde
 
@@ -253,7 +275,7 @@ definición.
   tiene `showCents` y el dashboard lo respeta: la fila «Guardado» y el total del módulo son el mismo
   número con dos formatos. Además es lo que deja la card apilada en el teléfono para casi cualquier
   monto real. **No se toca en este change**: cambia todos los números del módulo, incluidos los de
-  los formularios y los mensajes de tope, con el QA nativo por correr
+  los formularios y los mensajes de tope, con el QA visual nativo por correr. **No bloquea nada**
 - [x] 6.8 **Los enlaces de «Sin destino» con el pulgar**: 44 px de área táctil por pseudo-elemento,
   sin inflar la fila. Verificado en QA — no cuesta acertarles. Pegados
   por un punto medio, el error más probable es tocar *Volver a usar* queriendo *Destinar* — la que
@@ -318,7 +340,8 @@ definición.
 
 ## 7. Compuertas
 
-- [ ] 7.1 **No archivar** hasta el QA nativo, como las fases 1 y 2
+- [ ] 7.1 **No archivar** hasta el **QA visual nativo**, como las fases 1 y 2. La compuerta no es
+  «que mobile esté implementado» —ya lo está— sino que alguien lo haya visto correr
 - [ ] 7.2 **La fase 3A (plazo fijo) se construye adentro de este módulo** y por eso va después. El
   mock `fase-3a-plazo-fijo.html` hay que redibujarlo con la cuenta como **atajo contextual** y no
   como arquitectura
