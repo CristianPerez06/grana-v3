@@ -464,3 +464,29 @@ intermedio en vez de administrarlo.
 página** ya no cierra el overlay dejando una fila en cero — sigue a destinarle, con el destino
 elegido. Con «Sin destino» en cero no: ahí destinar tendría tope cero, y mandar a una pantalla que no
 puede hacer nada es el error que ya se corrigió en el formulario de volver a usar.
+
+## E22 — Crear un propósito tiene que decir que lo creó
+
+Encontrado en QA: se crea «Prueba», la pantalla pasa a «Destinar a Prueba», un clic afuera cierra el
+overlay, y el usuario vuelve a crear «Prueba» — donde la app contesta *«ya tenés un propósito llamado
+Prueba»*. Una respuesta correcta a una pregunta que nunca debió hacerse.
+
+**En ningún momento la app dijo que el propósito se había creado.** La pantalla siguiente daba por
+sabido que existía: su título lo nombra como si el usuario ya lo supiera.
+
+Es exactamente el escenario que E21 usó para descartar el monto inicial —«un propósito que el usuario
+nunca vio creado»— entrando por otra puerta: no por dos escrituras acopladas, sino por un paso que
+confirma sin acusar.
+
+**El acuse va en la pantalla siguiente, no en un toast.** La regla del repo es que el cambio de
+pantalla ES el acuse; lo que faltaba es que la pantalla dijera qué pasó. Recién creado, la cabecera
+pasa a «Listo, creaste "Prueba"» y debajo dice lo que todavía le falta: está en la lista, sin plata,
+y la pregunta que sigue es si quiere destinarle algo.
+
+**Y una salida explícita, «Ahora no».** La flecha cierra igual, pero bajo un título que dice «Listo,
+creaste…» se lee como «volver a crear», no como «terminé». Destinar es opcional —un propósito en cero
+es un estado válido— y hay que poder llegar a él diciéndolo, no abandonando.
+
+Queda un caso sin acuse propio y está bien: cuando «Sin destino» está en cero, crear cierra el
+overlay directamente. Ahí el acuse es la card nueva que aparece en la lista, que es el cambio de
+pantalla de siempre.

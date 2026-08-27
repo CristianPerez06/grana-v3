@@ -95,6 +95,8 @@ type View =
       /** Nulo: se llegó desde el resto y el propósito se elige en la misma pantalla. */
       purpose: Purpose | null
       direction: 'allocate' | 'unallocate'
+      /** Se llegó recién de crearlo: la pantalla acusa la creación. */
+      justCreated?: boolean
     }
 
 /**
@@ -463,6 +465,7 @@ export function SavingsDrawer({
                       currency: restCurrency,
                       purpose: created,
                       direction: 'allocate',
+                      justCreated: true,
                     },
                   ])
               }
@@ -494,6 +497,7 @@ export function SavingsDrawer({
             currency={view.currency}
             currencies={currencies}
             direction={view.direction}
+            justCreated={view.justCreated}
             availableFor={(c: Currency) =>
               view.direction === 'allocate'
                 ? groupAmount(c, null)

@@ -34,6 +34,7 @@ export function PurposeAllocate({
   currency: initialCurrency,
   currencies,
   direction,
+  justCreated = false,
   availableFor,
   onCreateSeed,
   onCreateCustom,
@@ -49,6 +50,21 @@ export function PurposeAllocate({
   currencies: Currency[]
   /** `allocate` saca del resto hacia el propósito; `unallocate` lo devuelve. */
   direction: 'allocate' | 'unallocate'
+  /**
+   * Se llegó recién de CREAR este propósito.
+   *
+   * Cambia la cabecera por un acuse. Sin él, crear no confirmaba nada: la
+   * pantalla pasaba a «Destinar a Prueba» dando por sabido que Prueba existía, y
+   * quien cerraba acá —un clic afuera del overlay alcanza— se quedaba sin saber
+   * si había quedado creado. Al reintentar chocaba contra «ya tenés un propósito
+   * llamado Prueba», que es una respuesta correcta a una pregunta que nunca
+   * debió hacerse.
+   *
+   * El acuse va en la pantalla siguiente y no en un toast: la regla del repo es
+   * que el cambio de pantalla ES el acuse, y una pantalla que no dice qué pasó
+   * no lo cumple.
+   */
+  justCreated?: boolean
   /**
    * El piso de CADA moneda: el resto al destinar, lo destinado al quitar.
    *
@@ -122,14 +138,25 @@ export function PurposeAllocate({
     <div className="flex flex-col">
       <DrawerBackHeader
         title={
-          purpose != null
-            ? t(allocating ? 'purposes.allocate_title' : 'purposes.unallocate_title', {
-                purpose: purpose.name,
-              })
-            : t('purposes.allocate')
+          justCreated && purpose != null
+            ? t('purposes.created_title', { purpose: purpose.name })
+            : purpose != null
+              ? t(allocating ? 'purposes.allocate_title' : 'purposes.unallocate_title', {
+                  purpose: purpose.name,
+                })
+              : t('purposes.allocate')
         }
         onBack={onBack}
       />
+
+      {/* Lo que el propósito recién creado TODAVÍA no tiene, y la pregunta que
+          sigue. Es lo que convierte esta pantalla en la confirmación de la
+          anterior en vez de un paso que aparece de la nada. */}
+      {justCreated && (
+        <p className="mt-3 text-[13px] leading-snug text-text-muted">
+          {t('purposes.created_body')}
+        </p>
+      )}
 
       {/* Mismo héroe de monto que el resto de las superficies que piden plata. */}
       <div className="mt-4 rounded-[18px] border border-border bg-card px-[22px] pb-[22px] pt-5 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]">
@@ -274,6 +301,20 @@ export function PurposeAllocate({
       >
         {t(allocating ? 'purposes.allocate' : 'purposes.unallocate')}
       </Button>
+
+      {/* La salida explícita, solo recién creado. La flecha de arriba cierra
+          igual, pero bajo un título que dice «Listo, creaste…» se lee como
+          «volver a crear», no como «terminé». Destinar es OPCIONAL: un propósito
+          en cero es un estado válido, y hay que poder llegar a él diciéndolo. */}
+      {justCreated && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="relative mx-auto mt-3 block text-[13px] font-bold text-text-muted transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
+        >
+          {t('purposes.created_skip')}
+        </button>
+      )}
     </div>
   )
 }

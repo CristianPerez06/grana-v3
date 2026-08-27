@@ -173,6 +173,11 @@
   crear, el desglose vacío, los tokens sobre oscuro, el divisor frágil de la botonera y `shortDate`
   duplicado
 
+- [x] 4c.14 **Crear un propósito acusa la creación** (E22). Encontrado en QA: se creaba, la pantalla
+  pasaba a destinar dando por sabido que existía, y quien cerraba ahí volvía a crearlo para chocar
+  con «ya tenés un propósito llamado…». La cabecera pasa a «Listo, creaste …» con lo que todavía le
+  falta, y gana una salida explícita: destinar es opcional
+
 ## 5. Lo que no se toca
 
 - [x] 5.1 **Verificado con `git diff` desde el commit que abre el change**: cero cambios en
