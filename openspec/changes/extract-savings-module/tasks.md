@@ -261,10 +261,12 @@ definición.
   montos se leían como un solo importe partido, y la única señal de que son dos cosas que nunca se
   suman era el cambio de cuerpo. Como columna, el dólar cae siempre alineado bajo el peso —no cuando
   el ancho lo obliga—, igual que en las cards de propósito
-- [x] 6.12 **La tira, en teléfono** (E25): «Suficiente por este mes» se salía de la pantalla —las
-  tres acciones en una línea, con un botón que mide lo que mida el número—. Se parten en dos filas,
-  botón a todo el ancho y los dos enlaces a los extremos. Y **el monto va en un solo lugar**: estaba
-  en el cuerpo y en el botón a dos renglones de distancia; queda en el botón, que es el que se toca
+- [x] 6.12 **La tira, en teléfono** (E25): «Suficiente por este mes» se salía de la pantalla. **El
+  monto va en un solo lugar** —estaba en el cuerpo y en el botón, a dos renglones de distancia—: queda
+  en el TEXTO, que es donde vive la propuesta, y el botón vuelve a ser «Guardar». Eso solo no
+  alcanzaba: lo que se salía era el tercer control, así que **«Suficiente por este mes» → «Este mes
+  no»**, que además empareja las dos salidas —«Ahora no» / «Este mes no»— y dice la escala sola. Sin
+  filas de más. Medido de 320 a 430 con ocho cifras en el texto
 - [ ] 6.5 QA nativo del módulo — **bloqueado por el mismo acceso que el issue #58**
 - [x] 5.5 **Con tests lo nuevo que es lógica pura**: `moneyParts` —que parte lo que devuelve `Intl`
   en vez de armar el número a mano, y si el corte se moviera pondría un «$» en el medio de la cifra—

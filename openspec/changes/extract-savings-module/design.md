@@ -699,16 +699,24 @@ puede probar sin montar nada.
 US$ 10.000,00» en el botón, a dos renglones de distancia. El mismo número repetido tan cerca no se
 lee como énfasis: se lee como dos datos, y el lector se para a comparar si dicen lo mismo.
 
-Se queda en el **botón**, que es el que se toca y por lo tanto el que tiene que decir a qué te estás
-comprometiendo — un «Guardar» pelado obliga a volver a leer arriba para saber cuánto. El cuerpo queda
-con lo único que solo él puede decir: que la plata no se va a ningún lado. Y lo dice con las palabras
-que el módulo ya usa —«sigue en tus cuentas»—, no con unas nuevas.
+Se queda en el **texto**, y el botón vuelve a ser «Guardar». La propuesta es una frase —cuánto, de
+dónde sale y qué le pasa a la plata—, y el botón es la respuesta a esa frase; poner el número en el
+botón lo convertía a él en la propuesta y dejaba al texto repitiéndola.
 
-**Las tres acciones no entraban en una línea de teléfono.** «Suficiente por este mes» se salía de la
-pantalla, cortado por el borde. Ahora se parten en dos filas: el botón a todo el ancho arriba, los dos
-enlaces abajo repartidos a los extremos —juntos contra la izquierda, el segundo se lee como
-continuación del primero, y el que cambia la cadencia conviene que no quede bajo el pulgar que acaba
-de tocar el CTA—.
+**Las tres acciones no entraban en una línea de teléfono**, y sacar el monto del botón NO alcanzó: lo
+que se salía era el tercer control. Se probó partirlas en dos filas y se descartó — la tira crece
+hacia abajo, y cuanto más alta más se parece a algo que hay que resolver antes de mirar el saldo, que
+es justo lo que promete no ser.
 
-Acá **sí** es un breakpoint, y no contradice a E24: lo que cambia no es si algo entra, es la
-disposición de tres controles. El ancho del botón depende del número, pero el de la fila entera no.
+Lo que sobraba era el copy: **«Suficiente por este mes» → «Este mes no»**. Y queda mejor de lo que
+estaba, porque las dos salidas pasan a ser el mismo giro con distinto alcance —«Ahora no» / «Este mes
+no»—, y esa simetría dice la escala sola: una posterga hasta el próximo ingreso, la otra hasta el mes
+que viene. El texto largo lo explicaba; el corto lo muestra.
+
+Medido de 320 a 430, con un monto de ocho cifras en el texto: las tres acciones entran en una línea y
+nada se sale de la pantalla.
+
+Y una lección de método, porque casi se me pasa: **medir «hijo contra padre» no encuentra un desborde
+cuando el que se sale es el padre**. La fila de acciones es `shrink-0`, así que crecía ella y sus
+hijos entraban perfectos adentro; el chequeo daba limpio y la captura mostraba el texto cortado. Lo
+que hay que medir es contra el ANCHO DE LA PANTALLA.

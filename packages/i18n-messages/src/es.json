@@ -2109,10 +2109,10 @@
     },
     "suggestion": {
       "title": "¿Guardás una parte?",
-      "body": "Se aparta de este ingreso y sigue en tus cuentas.",
-      "cta": "Guardar {amount}",
+      "body": "Podés apartar {amount} de este ingreso. Sigue en tus cuentas.",
+      "cta": "Guardar",
       "later": "Ahora no",
-      "enough_this_month": "Suficiente por este mes"
+      "enough_this_month": "Este mes no"
     },
     "back": "Volver",
     "accounts_total": "Tus cuentas en {currency}",
