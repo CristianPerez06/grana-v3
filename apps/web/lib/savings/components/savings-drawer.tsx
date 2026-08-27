@@ -512,6 +512,7 @@ export function SavingsDrawer({
                 ? groupAmount(c, null)
                 : groupAmount(c, view.purpose?.id ?? null)
             }
+            allocatedIn={(c: Currency, id: string) => groupAmount(c, id)}
             onCreateSeed={createFromSeed}
             onCreateCustom={() => push({ kind: 'purposeForm', purpose: null })}
             onDone={() => {
@@ -884,10 +885,14 @@ const SavingsForm = ({
   /**
    * Cuántos propósitos se muestran antes de plegar el resto.
    *
-   * Seis entran en dos o tres filas en un teléfono, que es lo que el bloque
-   * puede ocupar sin empujar el resumen y el CTA fuera de la pantalla.
+   * Ocho, con dos de tolerancia: el formulario tiene alto para DOS filas
+   * completas de chips antes del resumen, y esconder lo que entra es peor que
+   * mostrarlo. Y si lo que sobra son dos o menos no se esconde nada, porque el
+   * control ocupa casi el mismo lugar que los dos chips con la desventaja de no
+   * decir cuáles son.
    */
-  const PURPOSE_CHIP_LIMIT = 6
+  const PURPOSE_CHIP_LIMIT = 8
+  const PURPOSE_CHIP_SLACK = 2
 
   /** Cicla entre las monedas que hay para ofrecer, como el resto de la app. */
   const cycleCurrency = () => {
@@ -912,11 +917,29 @@ const SavingsForm = ({
    */
   const unassignedIsTotal = purposes.length === 0
 
-  /** Los orígenes posibles: al volver a usar, solo los que tienen plata ACÁ. */
-  const purposeOptions: (Purpose | null)[] =
-    mode === 'save'
-      ? [null, ...purposes]
-      : [null, ...purposes].filter((o) => groupAmount(currency, o?.id ?? null) > 0)
+  /**
+   * Los orígenes posibles, ORDENADOS POR SALDO.
+   *
+   * Al volver a usar, solo los que tienen plata acá.
+   *
+   * El orden importa porque decide qué se pliega detrás de «Ver más»: la lista
+   * venía alfabética —`listPurposes` ordena por nombre— así que lo escondido
+   * eran los últimos del abecedario. «Viaje» con $45.000 se plegaba antes que
+   * «Prueba» con $0, que es exactamente al revés de lo que alguien busca.
+   *
+   * Por saldo descendente, y a igualdad por nombre para que el orden sea
+   * estable. «Sin destino» queda siempre primero, fuera del criterio: no compite
+   * con los propósitos, es el default.
+   */
+  const purposeOptions: (Purpose | null)[] = (() => {
+    const named = [...purposes].sort(
+      (a, b) =>
+        groupAmount(currency, b.id) - groupAmount(currency, a.id) || a.name.localeCompare(b.name),
+    )
+    return mode === 'save'
+      ? [null, ...named]
+      : [null, ...named].filter((o) => groupAmount(currency, o?.id ?? null) > 0)
+  })()
 
   /**
    * Los chips que se dibujan, y cuántos quedan plegados.
@@ -926,7 +949,7 @@ const SavingsForm = ({
    * guardar «sin destino» cuando en realidad va a otro lado.
    */
   const shownOptions =
-    showAllPurposes || purposeOptions.length <= PURPOSE_CHIP_LIMIT
+    showAllPurposes || purposeOptions.length <= PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK
       ? purposeOptions
       : (() => {
           const head = purposeOptions.slice(0, PURPOSE_CHIP_LIMIT)
@@ -1237,6 +1260,17 @@ const SavingsForm = ({
                   className="relative shrink-0 text-[12px] font-extrabold text-text-muted transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
                 >
                   {t('purposes.show_more', { count: hiddenCount })}
+                </button>
+              )}
+              {/* La vuelta atrás. Desplegar sin poder volver a plegar deja la
+                  pantalla más alta para siempre por una mirada de un segundo. */}
+              {showAllPurposes && purposeOptions.length > PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllPurposes(false)}
+                  className="relative shrink-0 text-[12px] font-extrabold text-text-muted transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
+                >
+                  {t('purposes.show_less')}
                 </button>
               )}
               {/* Crear uno nuevo solo tiene sentido al guardar. Un propósito

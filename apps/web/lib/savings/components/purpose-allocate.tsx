@@ -37,6 +37,7 @@ export function PurposeAllocate({
   direction,
   justCreated = false,
   availableFor,
+  allocatedIn,
   onCreateSeed,
   onCreateCustom,
   onDone,
@@ -74,6 +75,12 @@ export function PurposeAllocate({
    * donde la moneda es un dato de la operación y no un eje de lectura.
    */
   availableFor: (currency: Currency) => number
+  /**
+   * Lo destinado a un propósito en esta moneda. Solo para ORDENAR los chips:
+   * los que ya tienen plata primero, que son los que se buscan. Sin esto la
+   * lista queda alfabética y lo que se pliega son los últimos del abecedario.
+   */
+  allocatedIn: (currency: Currency, purposeId: string) => number
   /** Crea la sugerencia y devuelve el propósito, para dejarlo seleccionado. */
   onCreateSeed: (seedKey: string) => Promise<Purpose | null>
   onCreateCustom: () => void
@@ -98,15 +105,20 @@ export function PurposeAllocate({
    */
   const PURPOSE_CHIP_LIMIT = 8
   const PURPOSE_CHIP_SLACK = 2
+  // Por saldo descendente y, a igualdad, por nombre: lo que se pliega son los
+  // que menos tienen, no los últimos del abecedario.
+  const sortedPurposes = [...purposes].sort(
+    (a, b) => allocatedIn(currency, b.id) - allocatedIn(currency, a.id) || a.name.localeCompare(b.name),
+  )
   const shownPurposes =
-    showAllPurposes || purposes.length <= PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK
-      ? purposes
+    showAllPurposes || sortedPurposes.length <= PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK
+      ? sortedPurposes
       : (() => {
-          const head = purposes.slice(0, PURPOSE_CHIP_LIMIT)
+          const head = sortedPurposes.slice(0, PURPOSE_CHIP_LIMIT)
           if (chosen == null || head.some((p) => p.id === chosen.id)) return head
           return [...head.slice(0, PURPOSE_CHIP_LIMIT - 1), chosen]
         })()
-  const hiddenPurposes = purposes.length - shownPurposes.length
+  const hiddenPurposes = sortedPurposes.length - shownPurposes.length
 
   const taken = new Set(purposes.map((p) => p.name.trim().toLowerCase()))
   const suggestions = PURPOSE_SEEDS.filter(
@@ -248,6 +260,15 @@ export function PurposeAllocate({
                   className="relative shrink-0 text-[12px] font-extrabold text-text-muted transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
                 >
                   {t('purposes.show_more', { count: hiddenPurposes })}
+                </button>
+              )}
+              {showAllPurposes && purposes.length > PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllPurposes(false)}
+                  className="relative shrink-0 text-[12px] font-extrabold text-text-muted transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
+                >
+                  {t('purposes.show_less')}
                 </button>
               )}
               <button
