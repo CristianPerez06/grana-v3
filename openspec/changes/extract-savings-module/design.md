@@ -490,3 +490,71 @@ es un estado válido— y hay que poder llegar a él diciéndolo, no abandonando
 Queda un caso sin acuse propio y está bien: cuando «Sin destino» está en cero, crear cierra el
 overlay directamente. Ahí el acuse es la card nueva que aparece en la lista, que es el cambio de
 pantalla de siempre.
+
+## E23 — Lo que el QA cambió sobre lo que estaba definido
+
+El change se planificó antes de tocar la pantalla, y el QA lo movió bastante. Esto es el registro de
+qué se corrigió y por qué, para que la distancia entre lo escrito al empezar y lo que quedó no haya
+que reconstruirla leyendo commits.
+
+### Los cinco bugs, y qué tenían en común
+
+Ninguno lo habría encontrado un test, y cuatro de los cinco eran **estado o formato mal ubicado**:
+
+| Síntoma | Causa |
+|---|---|
+| «Guardo, creo un propósito, y el monto vuelve a cero» | El borrador vivía en `SavingsForm`, que se desmonta al cambiar de vista en la pila |
+| «Creé el propósito y no lo veo» | La lista salía solo de `get_purpose_sums`, que es la tabla de repartos: uno sin reparto no figura |
+| «Prueba » con un espacio no se podía crear | El schema es `.strict()`, y ahí el `.trim()` de Yup deja de recortar y pasa a EXIGIR que ya venga recortado |
+| `Cannot update a component while rendering another` | `onClose()` metido dentro del updater de `setStack`: React lo ejecuta durante el render |
+| El tope negaba sin ofrecer la salida que existía | El origen venía `locked` desde el enlace del resto, escondiendo los propósitos que sí tenían plata |
+
+El del nombre tenía un segundo problema encima: el formulario **descartaba los `fieldErrors`** y mostraba
+un genérico. Un rechazo del nombre terminaba diciendo «probá de nuevo» —que invita a repetir lo
+mismo— sobre un campo problemático que estaba a la vista y sin marcar.
+
+### El patrón que se repitió: el módulo se apartaba del sistema
+
+Tres veces, en decisiones distintas, y cada una parecía razonable sola:
+
+- **El chip de moneda.** Se había reemplazado por un segmentado «Pesos / Dólares», más grande y con
+  las dos opciones visibles. No era peor: era OTRO. Estas pantallas piden un monto igual que las de
+  movimientos, y dos controles distintos para la misma decisión obligan a aprenderla dos veces.
+- **La escala del monto.** Había TRES: movimientos a 30px, guardar a 46, destinar a 27. Los dos
+  formularios de ahorro ni siquiera coincidían entre sí.
+- **Los radios.** El handoff traía 22/20/18/15/13/11 px y el sistema tiene 12/16/18/20/24. Cada
+  diferencia sola es invisible; juntas hacen que la pantalla se sienta de otro producto.
+
+La regla que queda: **la consistencia con el sistema gana sobre la mejora local.** Optimizar una
+pantalla y desalinear el conjunto es un mal negocio, y no se nota hasta que se ven dos pantallas
+juntas.
+
+### Ajustes de densidad, todos por la misma razón
+
+El drawer pedía scroll y la página pedía scroll, y en los dos casos el alto se iba en cosas que no lo
+justificaban: el recuadro de 36px del ícono de la fecha fijando el alto de una fila de una línea; los
+44px reales de cada chip cuando el área táctil puede salir de un pseudo-elemento; la botonera a 60px;
+la grilla pidiendo 330px por card y entrando dos columnas de 474px en una notebook.
+
+De ahí sale un recurso que el módulo usa en todos lados y conviene conocer: **el alto táctil por
+`::after`**. Un control puede medir 38px y seguir teniendo 44 de área. Lo decía el handoff en una
+línea que no se había aplicado.
+
+### Dos techos, y la lección de ponerlos
+
+Los chips de propósito y el historial de un propósito crecían sin límite y empujaban fuera de
+pantalla justo lo que la pantalla existe para hacer. Poner un techo trajo tres problemas propios:
+
+1. **El criterio de qué se pliega no estaba pensado.** La lista venía alfabética, así que se plegaban
+   los últimos del abecedario: «Viaje» con $45.000 antes que «Prueba» con $0. Ahora ordenan por saldo.
+2. **El control de overflow al final de la fila quedaba huérfano** en su propio renglón cuando la
+   última fila estaba llena, y ahí no se lee como acción sino como algo cortado. Vive en la fila del
+   rótulo, donde no puede quedar solo.
+3. **Un techo tan alto que nunca se alcanza no es un techo.** Se subió de 6 a 8 «por las dudas» y con
+   diez opciones dejó de plegarse nada: el control desapareció, y con él la única señal de que la
+   lista sigue.
+
+Y el techo cuenta **propósitos**, no chips: «Sin destino» va siempre visible y fuera del conteo.
+Contándolo, guardar mostraba cinco propósitos y destinar seis con el mismo techo y la misma lista.
+La consecuencia aceptada es que las dos pantallas tienen distinta cantidad de CHIPS —guardar suma
+«Sin destino»— y eso está bien: coinciden en lo que importa, que es qué propósitos se ven.

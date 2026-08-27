@@ -178,6 +178,12 @@
   con «ya tenés un propósito llamado…». La cabecera pasa a «Listo, creaste …» con lo que todavía le
   falta, y gana una salida explícita: destinar es opcional
 
+- [x] 4c.15 **Spec y design al día con lo que el QA cambió** (E23): el spec gana los requisitos que
+  no existían al planificar —jerarquía no responsive, el overlay sin lectura, el propósito sin plata,
+  el acuse de creación, el origen único con su mensaje, el nombre con espacios y el borrador que
+  sobrevive a los desvíos— y el design registra los cinco bugs, el patrón de apartarse del sistema y
+  las tres lecciones de poner un techo
+
 ## 5. Lo que no se toca
 
 - [x] 5.1 **Verificado con `git diff` desde el commit que abre el change**: cero cambios en
