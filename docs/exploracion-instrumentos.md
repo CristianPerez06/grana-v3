@@ -16,6 +16,13 @@
 > proponía empezar por plazo fijo. Producto lo corrigió: se empieza por **FCI / fondos con rescate**.
 > Y el criterio dejó de clasificar **por producto** para clasificar **por comportamiento** (§2.1), que
 > es lo que hace que un mismo FCI pueda ser cuenta en una billetera y posición en un banco.
+>
+> **Revisión 3 — la dirección de FCI v1 quedó cerrada sobre el mock, no sobre este texto.** La sección
+> se llama **«En rendimiento»**, que no era ninguno de los tres candidatos que este documento comparó
+> (§5.2c). El resultado de un rescate se dice **«Resultado»**, un rótulo para los dos signos, y el
+> «pusiste» **nunca va solo**. Todo está dibujado en
+> `docs/design/modelo-de-dinero/fase-3a-fci-v1.html`, que es la referencia de la fase; §5.2 y §5.2b se
+> conservan como el razonamiento que llevó ahí, no como la recomendación vigente.
 
 ---
 
@@ -53,8 +60,17 @@ Firmados por producto. No se vuelven a discutir por texto.
    inventa rendimiento parcial, y usa copy honesto —**«pusiste»**, no «tenés»— mientras el valor
    actual no esté confirmado.
 
-**Lo único que NO se cierra por texto es el nombre visible de la sección** — se decide sobre el mock
-(§5.2 y abajo).
+6. **La sección se llama «En rendimiento»**, provisoriamente y sobre el mock, no sobre esta tabla
+   (§5.2c). «Plata colocada» y «Puesto a trabajar» quedan como alternativas vivas.
+7. **El resultado de un rescate se dice «Resultado +$X / −$X»**, un solo rótulo para los dos signos.
+   Nada de «Ganaste» ni «Perdiste» — y tampoco «Rendimiento cobrado», que era el candidato preciso
+   para el positivo líquido hasta que la sección se quedó con esa palabra.
+8. **El «pusiste» nunca va solo.** Donde aparece el capital lo acompañan *«Valor no actualizado
+   automáticamente»* y la fecha de la última actualización manual. Es lo que evita que el número
+   choque contra lo que el usuario ve en la app del banco.
+
+**Todo lo de arriba está dibujado en `docs/design/modelo-de-dinero/fase-3a-fci-v1.html`**, diecisiete
+pantallas. Lo que sigue sin cerrarse es el **verbo del mes** (§5.2c) y todo lo listado en §9.2.
 
 ---
 
@@ -396,12 +412,17 @@ Grana no es. La cuenta podrá tener un **atajo contextual**; no es su casa.
 
 ### 5.2 El nombre de la sección
 
+> **Superado por §5.2c.** La recomendación de esta sección —«Puesto a trabajar»— **no es la decisión
+> vigente**. Se conserva porque es el razonamiento que llevó a poner el naming en pantalla, que es lo
+> que después destapó una cuarta opción que ninguna tabla iba a encontrar.
+
 El nombre tiene que servir para **las tres fases**, no solo para la primera: lo que se elija con un
 fondo adentro va a tener que aguantar un plazo fijo y, después, un CEDEAR. Renombrar una sección
 cuesta más que nombrarla bien — es la lección que ya dejó «Ahorro e inversión».
 
 | Candidato | Entiende un argentino común | Sirve FCI | Sirve PF | Sirve broker | ¿Se confunde con Guardado? | ¿Suena a banco/broker? | Voz de Grana |
 |---|:--:|:--:|:--:|:--:|---|---|---|
+| **En rendimiento** *(elegido)* | 🟢 alto | 🟢 | 🟢 | 🟡 un CEDEAR en baja no está «rindiendo» | 🟢 **No**: «guardado» es un acto tuyo, «en rendimiento» es un estado de la plata | 🟢 No | 🟢 Palabra corriente, no de folleto |
 | **Puesto a trabajar** | 🟢 alto | 🟢 | 🟢 | 🟢 | 🟢 **No**: «guardado» es quieto, «trabajando» hace algo | 🟢 No | 🟢 Verbo del usuario |
 | **Plata colocada** | 🟡 medio-alto | 🟢 | 🟢 | 🟡 se estira | 🟡 **Riesgo**: los dos son participios de «dejé la plata en algún lado» | 🟡 «Colocación» es palabra del que vende | 🟡 Correcta pero neutra |
 | Inversiones | 🟢 alto | 🟢 | 🔴 no se siente inversión | 🟢 | 🟢 No | 🟡 | 🔴 Deja afuera protegerse, que es el acto argentino |
@@ -447,6 +468,35 @@ siempre.
 **Y la recomendación de este documento no gobierna esa decisión.** Si en el mock A dispara cualquiera
 de las dos alertas, gana B. Si C —el control— se entiende mucho mejor que las dos, la conclusión no es
 usar C: es que ni A ni B se entienden y hay que buscar una cuarta.
+
+### 5.2c Cerrado, y con una cuarta que esta tabla no tenía
+
+**Ganó «En rendimiento»**, que no era ninguno de los tres del mock. Salió de contrastar el mock con
+feedback externo, que es exactamente el desenlace que §5.2b había dejado previsto —«hay que buscar una
+cuarta»— y la única razón por la que estaba previsto es que la comparación se hizo **en pantalla y con
+los mismos datos**. En la tabla de arriba, «Puesto a trabajar» ganaba.
+
+Por qué aguanta la adyacencia mejor que las dos anteriores: **«Guardado» y «Plata colocada» son los dos
+participios de «dejé la plata en algún lado»**, y esa era la alerta conocida de B. «En rendimiento» no
+compite en el mismo plano — **«Guardado» nombra un acto del usuario y «En rendimiento» nombra un estado
+de la plata**. Son dos preguntas distintas y por eso no se pisan.
+
+```
+   Guardado          $ 200.000     ← lo apartaste vos; sigue en tus cuentas
+   En rendimiento    $ 550.000     ← está haciendo algo, y no la podés gastar hoy
+```
+
+**Lo que el nombre cuesta, y está dibujado, no supuesto:**
+
+| Costo | Dónde se ve | Cómo lo resuelve el mock v1 |
+|---|---|---|
+| **No regala el verbo.** «Plata colocada» daba «Colocaste» gratis; un estado no se conjuga | Card del mes, fila de Movimientos | Propone **«Pusiste a rendir»** —el rótulo más largo de la card, y entra—. Alternativas dibujadas: «A rendimiento» (corto, pero no es un acto) y «Colocaste» (suelto del nombre) |
+| **Ocupa la palabra «rendimiento».** No puede nombrar además a un desenlace de lo que contiene | Rescate total, positivo | Cae «Rendimiento cobrado». Queda **«Resultado»** para los dos signos |
+| **Un desenlace negativo lo contradice de frente** | Rescate total, negativo (pantalla 12) | No lo esconde: el nombre describe qué hace la plata, no promete cuánto. Es la pantalla donde hay que mirar si igual se lee como promesa incumplida |
+
+El tercero es el único que puede tumbarlo, y **no se contesta leyendo**: se contesta mirando a alguien
+rescatar en rojo. Si se cae, «Plata colocada» está a un rename de distancia y sin costo de modelo — el
+nombre de la sección nunca fue un tipo interno (§5.3).
 
 ### 5.3 Nombre de sección ≠ tipos internos
 
@@ -789,8 +839,8 @@ dibujar los tres estados aunque se implemente uno.**
 | # | Pregunta | Por qué esperar |
 |---|---|---|
 | A | **¿El techo del reparto pasa a «guardado + colocado», y el propósito distingue las dos partes?** | Es la pregunta central de la fase 4. Necesita pantalla |
-| B | **El nombre definitivo de la sección** | «Puesto a trabajar» es la hipótesis; se valida en el mock (§5.2) |
-| C | **Cómo se llama el término del resultado** en la card y en Movimientos | Depende de cómo quede la línea nueva |
+| B | **El nombre definitivo de la sección** | Provisoriamente **«En rendimiento»** (§5.2c). Lo único que puede tumbarlo es que un rescate en rojo lo haga leer como promesa incumplida, y eso se mira, no se argumenta |
+| C | **El verbo del mes** | El nombre elegido es un estado y no regala uno. **«Pusiste a rendir»** es la propuesta; «A rendimiento» y «Colocaste» están dibujadas al lado (pantalla 15). El *resultado* ya no es parte de esta pregunta: no lleva línea propia en la card |
 | D | **Si la corrección por duplicación la hace la app** (ajuste automático) **o se le pide al usuario** | UX vs. no inventar. Se ve en la pantalla del alta A |
 | E | **Si el custodio es obligatorio u opcional** en el alta | Depende de si el corte por ubicación entra en 3A |
 | F | **Qué hace Grana con el drift** de las cuentas que rinden solas | Ya abierto en el modelo; esta capa lo agrava |
@@ -828,13 +878,17 @@ Las que solo se contestan dibujando, agrupadas por pantalla.
 
 **La card del mes**
 
-- ¿«Puse a trabajar» funciona como rótulo de línea, o compite con el nombre de la sección?
+- ¿**«Pusiste a rendir»** funciona como rótulo de línea? Es el más largo de la card y el nombre de la
+  sección no lo regala: hay que elegirlo, no derivarlo.
 - ¿Qué pasa en un mes con suscripción **y** rescate? ¿Dos líneas, o una neta? *(Una neta escondería
-  que hubo dos actos; dos líneas alargan la card.)*
+  que hubo dos actos; dos líneas alargan la card.)* El mock v1 propone **dos**.
 
 **El nombre**
 
-- ¿«Puesto a trabajar» se lee como promesa de rendimiento? Es lo único que lo tumba.
+- ¿**«En rendimiento»** aguanta una posición que dio negativo? Es lo único que lo tumba, y se ve en la
+  pantalla 12 del mock v1, no en una tabla.
+- ¿Se distingue de «Guardado» leyéndolos seguidos? La apuesta es que sí porque no compiten en el mismo
+  plano —uno nombra un acto tuyo, el otro un estado de la plata—, pero es una apuesta.
 
 ---
 
@@ -857,16 +911,21 @@ mismo que evitó que el propósito naciera colgado de una fila.
 **Recién con esas ocho contestadas** tiene sentido preguntarse qué datos hacen falta — y ahí, seguro,
 la respuesta va a ser más chica de lo que parecía antes de dibujar.
 
+**Las ocho ya tienen pantalla** (`fase-3a-fci-v1.html`, sección E), lo que no es lo mismo que tenerlas
+contestadas: ninguna se contesta leyendo el mock. Se contestan mirando a alguien usarlo.
+
 ---
 
 ## 12. Cómo sigue
 
 1. **Nada de esto se implementa antes del QA visual nativo de `extract-savings-module`.** Es la
    compuerta vigente, y el change está congelado.
-2. ✅ **El mock existe**: `docs/design/modelo-de-dinero/fase-3a-fci-naming.html`. Tiene la comparativa
-   de naming en contexto, los tres estados de la lista —cero, un FCI, y FCI + plazo fijo futuro—, las
-   dos altas con la pregunta de duplicación, el rescate total y el parcial, y las doce preguntas que
-   tiene que contestar. **Ninguna tabla, ningún schema, ninguna migración.**
+2. ✅ **Los dos mocks existen.** `fase-3a-fci-naming.html` sacó el naming de la prosa y comparó tres
+   nombres con los mismos datos; su desenlace fue el que él mismo había previsto —ninguno de los tres,
+   una cuarta (§5.2c)—. **`fase-3a-fci-v1.html` es ahora la referencia de la fase**: diecisiete
+   pantallas con la dirección cerrada, los dos estados sin nada, las dos altas con la pregunta de
+   duplicación y sus dos ramas, el rescate total **en los dos signos**, el parcial y la fila que queda
+   después, y las líneas del mes. **Ninguna tabla, ningún schema, ninguna migración.**
 3. `docs/design/modelo-de-dinero/fase-3a-plazo-fijo.html` **cambia de número**: pasa a ser referencia
    de la **3B**. Su razonamiento contable —stock vs. flujo, el interés que no es ingreso— sigue vigente
    y es de donde sale medio este documento; lo que cambia es cuándo se construye.

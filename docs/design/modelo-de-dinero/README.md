@@ -8,7 +8,8 @@ en el navegador.
 | `modulo-ahorro-e-inversion.html` | Módulo | **Vigente.** La casa de Guardado y Propósitos: la puerta desde el dashboard, la jerarquía, el estado vacío y la decisión del corte de moneda. Es `extract-savings-module`, prerrequisito de la fase 3 |
 | `fase-1-guardar.html` | 1 · Guardar | **Superado por la implementación.** «Liberar» hoy se llama **Volver a usar** |
 | `fase-2-proposito.html` | 2 · Propósito | **Superado por la implementación**, y en un punto de modelo, no solo de nombres — ver abajo |
-| `fase-3a-fci-naming.html` | 3A · FCI | **Vigente.** El nombre de la sección en contexto (A «Puesto a trabajar» · B «Plata colocada» · C «Inversiones» de control), los tres estados de la lista, las dos altas —«ya lo tenía» y «lo puse hoy»—, el rescate total y el parcial. Es la pantalla de la discusión que no se puede seguir dando en prosa. Su razonamiento está en `docs/exploracion-instrumentos.md` |
+| `fase-3a-fci-v1.html` | 3A · FCI | **Vigente, y es el mock de referencia de la fase.** Diecisiete pantallas con la dirección provisoria cerrada: la sección se llama **«En rendimiento»**, el criterio de admisión es de comportamiento y no de producto, v1 es manual y simple, el «pusiste» nunca va solo y el resultado se dice sobrio. Incluye los dos estados sin nada, las dos altas con la pregunta de duplicación, el rescate total en los dos signos, el parcial, y las líneas del mes |
+| `fase-3a-fci-naming.html` | 3A · FCI | **Superado por `fase-3a-fci-v1.html` en lo que decidía.** Comparaba tres nombres con los mismos datos (A «Puesto a trabajar» · B «Plata colocada» · C «Inversiones» de control). Cumplió: sacó la discusión de la prosa y la puso en pantalla. El nombre que salió de ahí y del feedback externo **no es ninguno de los tres** — es «En rendimiento». Se conserva porque es la evidencia de por qué. Su razonamiento está en `docs/exploracion-instrumentos.md` |
 | `fase-3a-plazo-fijo.html` | 3B · Plazo fijo | **Cambió de número: ahora es 3B.** El orden de fases se corrigió y la primera es FCI, no plazo fijo. Su razonamiento contable —stock vs. flujo, los tres desenlaces, el interés que no es ingreso— **sigue vigente y es de donde sale medio el documento de exploración**; lo que cambia es cuándo se construye. La navegación hay que redibujarla: la cuenta pasa a ser **atajo contextual**, no la puerta principal |
 | `fase-3-posiciones.html` | 3 · Posiciones | **Superado por `fase-3a`.** Se conserva por el razonamiento contable —stock vs. flujo, el bucket, los tres desenlaces—, pero su circuito de once pantallas repetía el patrón que la fase 2 desarmó |
 | — | 4 y 5 | No se mockean todavía: dibujar el detalle de una meta o la pantalla de patrimonio sería inventar decisiones que no están tomadas, y un mock convincente de algo no decidido termina implementándose tal cual |
@@ -55,27 +56,48 @@ entre dos bolsillos propios, los dos contando igual—, así que era ruido. Esta
 $700.000 que el disponible bajó. Va **debajo de Guardado** y en **color propio**: las dos sacan plata
 del disponible, pero una se deshace con un tap y la otra está inmovilizada hasta que vence.
 
-Lo que **sigue abierto** es solo el nombre: *Puesto a trabajar* (largo), *Invertido* (mete la palabra
-que el propio modelo dice que deja afuera comprar dólares) o *Inmovilizado* (es lo que describe, y
-suena a embargo).
-
 **~~Dónde entra "Invertir".~~ No hace falta que entre a ningún lado.** El segmented se queda en cinco
 tabs. Poner plata a trabajar es una **transferencia cuyo destino es una posición**, no un tipo de
 movimiento nuevo; una sexta pestaña sería modelar el **destino** como si fuera un **tipo**, que es el
 mismo error de categoría que el `counts_as_available` que el modelo ya descartó. Lo único que cambia
 es el **selector de destino**, que ya existía y gana filas.
 
+### Cerradas por `fase-3a-fci-v1.html`
+
+**~~El nombre.~~ Provisoriamente cerrado en «En rendimiento»** (`fase-3a-fci-v1.html`). Descartados:
+*Invertido* mete la palabra que el propio modelo deja afuera para comprar dólares, *Inmovilizado* suena
+a embargo, *Inversiones* no puede ser rótulo madre de una caja de ahorro remunerada. *Plata colocada* y
+*Puesto a trabajar* quedan como alternativas vivas.
+
+El nombre elegido **se paga en dos lugares y los dos están dibujados**: es un estado, así que no regala
+el verbo del mes —«Pusiste a rendir», y las alternativas están en la pantalla 15—, y ocupa la palabra
+*rendimiento*, que por eso ya no puede rotular el resultado de un rescate: ese dice **«Resultado»**, un
+solo rótulo para los dos signos.
+
+**~~El rescate parcial.~~ Cerrado, y por simplificación explícita.** Reduce el capital registrado y
+**no inventa un resultado parcial**: el resultado se reconoce al cerrar la posición, o antes si lo
+rescatado acumulado supera lo puesto. El total es exacto; lo único que se corre es *cuándo* se
+reconoce. La contrapartida es que la fila muestra **capital puesto, no valor de hoy**, y por eso el
+«pusiste» **nunca va solo**: lo acompañan *«Valor no actualizado automáticamente»* y la fecha de la
+última actualización manual. Deja de ser de 3B: era el precio de que FCI fuera primero.
+
 ### Todavía abiertas
 
-**~~El rescate.~~ Resuelto en los pasos 12–16.** Capital y rendimiento **no viajan juntos**: el
-capital vuelve por el mismo término por el que se fue —así el bucket **netea cero** en la vida de la
-posición— y el rendimiento es **línea propia con signo**, nunca `income`. Lo decide el caso negativo:
-una pérdida metida adentro de "Entró" aterriza en "Se fué", afirmando que salió plata de una cuenta
-que subió.
+**~~El rescate.~~ Resuelto en los pasos 12–16, y corregido en un punto por `fase-3a-fci-v1.html`.**
+Lo que se sostiene: el rescate **nunca es `income`**, y el capital vuelve por el mismo término por el
+que se fue, así el bucket **netea cero** en la vida de la posición. Lo decide el caso negativo: una
+pérdida metida adentro de "Entró" aterriza en "Se fué", afirmando que salió plata de una cuenta que
+subió.
+
+Lo que cambió: aquel mock daba al resultado **línea propia con signo en el mes**. El de v1 dice
+**«Rescataste +$380.000» y nada más**, porque los $30.000 ya están adentro de esos $380.000 —ponerlos
+aparte los contaría dos veces, o exigiría partir la línea en capital y resultado, que es más card por
+el mismo dato. El resultado vive en el detalle de la posición y en el movimiento, no en la card del
+mes.
 
 Y "Rendimiento" no es la ganancia del mes: es **la ganancia que se hizo líquida**. Un interés
 capitalizado no entró a ninguna cuenta, así que el mes no lo nombra — vive en la posición, que vale
-más. Sigue abierto el **rescate parcial**, que es de 3B.
+más. El **rescate parcial** ya no queda abierto acá: lo cierra `fase-3a-fci-v1.html`, arriba.
 
 **Fase 3 — el hub "Mi plata".** Se dibuja último: es lectura pura, y sale bien recién cuando sabemos
 qué hay para leer.
