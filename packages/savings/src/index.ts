@@ -24,9 +24,11 @@ export {
   deriveSuggestedPct,
   lastSaveOf,
   shouldOfferSuggestion,
+  pickLatestIncome,
   DEFAULT_SUGGESTION_PCT,
   type Suggestion,
   type SuggestionInput,
+  type LatestIncome,
 } from './suggestion'
 export type {
   AvailableSums,

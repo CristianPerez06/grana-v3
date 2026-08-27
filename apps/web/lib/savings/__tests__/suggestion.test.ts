@@ -4,6 +4,7 @@ import {
   deriveSuggestedPct,
   deriveSuggestion,
   lastSaveOf,
+  pickLatestIncome,
   shouldOfferSuggestion,
 } from '@grana/savings'
 import type { ReserveEntry } from '@grana/savings'
@@ -166,5 +167,52 @@ describe('shouldOfferSuggestion — once per income, with an opt-in monthly cap'
         latestIncomeAt: null,
       }),
     ).toBe(false)
+  })
+})
+
+/**
+ * Qué moneda ofrece la tira.
+ *
+ * Antes no era una pregunta: la tira solo miraba pesos, así que un ingreso en
+ * dólares no la despertaba nunca. Estos casos son el bug que eso era.
+ */
+describe('pickLatestIncome', () => {
+  const income = (createdAt: string, amount = 1000) => ({ amount, createdAt })
+
+  it('ofrece la moneda del ingreso que se cargó último', () => {
+    expect(
+      pickLatestIncome(income('2026-08-01T10:00:00Z'), income('2026-08-01T11:00:00Z', 900)),
+    ).toEqual({ currency: 'USD', income: income('2026-08-01T11:00:00Z', 900) })
+
+    expect(
+      pickLatestIncome(income('2026-08-02T09:00:00Z'), income('2026-08-01T11:00:00Z', 900)),
+    ).toEqual({ currency: 'ARS', income: income('2026-08-02T09:00:00Z') })
+  })
+
+  it('un ingreso en dólares despierta la tira aunque no haya ninguno en pesos', () => {
+    expect(pickLatestIncome(null, income('2026-08-01T11:00:00Z', 900))).toEqual({
+      currency: 'USD',
+      income: income('2026-08-01T11:00:00Z', 900),
+    })
+  })
+
+  it('sin ingresos no hay tira', () => {
+    expect(pickLatestIncome(null, null)).toBeNull()
+  })
+
+  it('compara el momento de CARGA, no la fecha contable', () => {
+    // El de dólares se cargó después aunque su fecha sea anterior: la tira
+    // persigue "el que acabás de cargar".
+    const ars = { amount: 500000, createdAt: '2026-08-10T08:00:00Z' }
+    const usd = { amount: 900, createdAt: '2026-08-10T08:00:01Z' }
+    expect(pickLatestIncome(ars, usd)?.currency).toBe('USD')
+  })
+
+  it('ante el empate exacto la elección es estable', () => {
+    const at = '2026-08-10T08:00:00Z'
+    const first = pickLatestIncome({ amount: 1, createdAt: at }, { amount: 2, createdAt: at })
+    const second = pickLatestIncome({ amount: 1, createdAt: at }, { amount: 2, createdAt: at })
+    expect(first).toEqual(second)
+    expect(first?.currency).toBe('ARS')
   })
 })

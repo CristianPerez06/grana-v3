@@ -646,3 +646,48 @@ locales dentro de `savings-drawer.tsx` y `purpose-picker.tsx`. Respetar la prefe
 devolvería las dos mitades al teléfono. No se toca en este change —cambia todos los números del
 módulo, incluidos los de los formularios y los mensajes de tope, y el QA nativo está por correr—,
 pero queda dicho acá y en el backlog.
+
+
+## E25 — La tira ofrecía guardar solo en pesos, y nadie lo había visto
+
+Salió del QA de 6.7, de rebote: para probar la card del total con dos monedas hacía falta cargar un
+ingreso en dólares, y al cargarlo **no apareció la tira** — con el mismo importe en pesos sí.
+
+La causa era mecánica y estaba a la vista: `save-suggestion-strip.tsx` tenía `'ARS'` escrito en seis
+lugares —el historial, el último ingreso, el disponible, el ingreso del último guardado, la moneda con
+la que guarda y el formateo del copy—. La consulta de abajo, `getLatestIncome`, **siempre** recibió la
+moneda por parámetro; el que nunca se la pasaba era el componente.
+
+Vale anotar por qué no se notó: la tira es la única superficie del módulo que no está en el módulo.
+Vive sobre `guidance`, aparece en el dashboard después de un ingreso (E3), y por eso quedó afuera de
+todas las pasadas que se hicieron sobre la pantalla de ahorro. **Un componente que ninguna pantalla
+del módulo contiene no se revisa cuando se revisa el módulo.**
+
+### Con dos monedas hay que elegir, y elegir mal es peor que no ofrecer
+
+Tres opciones, y solo una sirve:
+
+- **Dos tiras, una por moneda.** No: la tira es una sugerencia parada arriba de la card que el usuario
+  vino a leer. Dos apiladas son dos cosas para resolver antes de mirar el saldo, que es exactamente lo
+  que la tira promete no ser.
+- **La moneda con más disponible.** No: es el mismo error de origen con otro disfraz. Decide por el
+  usuario en base a algo que él no hizo.
+- **La moneda del ingreso más reciente.** Sí. Es lo único que la tira ya prometía —«acabás de cobrar
+  esto, ¿guardás una parte?»— y lo que la hace aparecer en el momento en que hay algo que decidir.
+
+Se compara `created_at` y no la fecha contable, por la misma razón que la consulta ya ordenaba así: lo
+que la tira persigue es **el acto de cargar**, no qué día se cobró. Un ingreso de la quincena pasada
+que se carga hoy es plata que hoy está en el disponible.
+
+Y el porcentaje se deriva **dentro de la misma moneda**: lo guardado en dólares sobre el ingreso en
+dólares del que salió. Cruzarlo —un hábito de pesos dictando un monto en dólares— sería mezclar dos
+monedas que en todo el resto del modelo no se mezclan, y el número que saldría no tendría ningún
+significado.
+
+La regla del anti-nagging no cambia y no hacía falta tocarla: es **una vez por ingreso**, y el ingreso
+más reciente es uno solo, sea de la moneda que sea. Cargar pesos y después dólares vuelve a habilitar
+la tira porque el segundo ingreso es posterior al `seen_at`, que es lo que ya hacían dos sueldos en
+pesos.
+
+`pickLatestIncome` vive en el paquete y no en el componente: es la única decisión de la tira que se
+puede probar sin montar nada.

@@ -250,6 +250,17 @@ definición.
 - [x] 6.4 **Regresión del dashboard verificada CON DATOS del QA**: guardar $15.000 movió el guardado
   de 180.000 a 195.000 y el disponible de 4.905.748,17 a 4.890.748,17 —exactamente $15.000 en cada
   lado—, y la identidad del mes cierra al centavo en las dos monedas. La fila navega, la tira sigue
+- [x] 6.10 **La tira post-ingreso ignoraba los ingresos en dólares** (E25). Salió del QA de 6.7:
+  cargar un ingreso en USD no la despertaba, el mismo importe en ARS sí. `save-suggestion-strip.tsx`
+  tenía `'ARS'` escrito en seis lugares mientras la consulta de abajo siempre recibió la moneda por
+  parámetro. Ahora la tira sigue **la moneda del ingreso más reciente**, es **una sola** y deriva todo
+  —disponible, historial, porcentaje— de esa misma moneda. `pickLatestIncome` en el paquete, con
+  tests. No se notó antes porque es la única superficie del módulo que no vive en el módulo: aparece
+  en el dashboard, y quedó afuera de todas las pasadas sobre la pantalla de ahorro
+- [x] 6.11 **El dólar de «Sin destino» va debajo del peso**, no a su lado: en una línea los dos
+  montos se leían como un solo importe partido, y la única señal de que son dos cosas que nunca se
+  suman era el cambio de cuerpo. Como columna, el dólar cae siempre alineado bajo el peso —no cuando
+  el ancho lo obliga—, igual que en las cards de propósito
 - [ ] 6.5 QA nativo del módulo — **bloqueado por el mismo acceso que el issue #58**
 - [x] 5.5 **Con tests lo nuevo que es lógica pura**: `moneyParts` —que parte lo que devuelve `Intl`
   en vez de armar el número a mano, y si el corte se moviera pondría un «$» en el medio de la cifra—

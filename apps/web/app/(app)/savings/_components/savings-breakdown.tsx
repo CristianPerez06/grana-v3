@@ -227,9 +227,20 @@ const UnassignedBlock = ({
 
         {/* El rótulo y el monto en UNA línea, sobre la misma baseline: el
             rótulo es la etiqueta de ese número, no el título de una sección, y
-            apilados cobraban una fila entera por decir lo mismo. Con las dos
-            monedas, la segunda sigue en la misma línea, más chica. */}
-        {/* Sin `min-w-0`: este bloque NO puede encogerse por debajo de su monto
+            apilados cobraban una fila entera por decir lo mismo.
+
+            La SEGUNDA moneda va abajo de la primera y no a su lado, igual que en
+            las cards de propósito: en una línea, «$ 41.635,00 US$ 1.000,00» se
+            lee como un solo importe partido, y la única señal de que son dos
+            cosas que nunca se suman es un cambio de cuerpo. Apilada, la columna
+            lo dice sola.
+
+            Por eso los montos son su propia columna y no dos hermanos sueltos en
+            el flex del rótulo: como columna, el dólar cae SIEMPRE debajo del
+            peso y alineado con él —no cuando el ancho lo obliga—, y el rótulo
+            sigue en la baseline del primero.
+
+            Sin `min-w-0`: este bloque NO puede encogerse por debajo de su monto
             más ancho. Con `min-w-0` podía, y a 320px el «$ 12.345.678,00» se
             metía 15px por debajo del botón «Destinar» —los montos van
             `whitespace-nowrap`, así que lo que no entra no se parte: se
@@ -240,17 +251,19 @@ const UnassignedBlock = ({
           <p className="text-[12px] font-extrabold uppercase tracking-[0.09em] text-savings-unassigned-deep">
             {t('purposes.none')}
           </p>
-          {visible.map((a, i) => (
-            <span
-              key={a.currency}
-              className={cn(
-                'whitespace-nowrap font-extrabold tracking-[-0.045em] tabular-nums text-savings-unassigned-text',
-                i === 0 ? 'text-[16.5px]' : 'text-[11.5px] opacity-80',
-              )}
-            >
-              {money(a.reserved, a.currency)}
-            </span>
-          ))}
+          <span className="flex flex-col items-start">
+            {visible.map((a, i) => (
+              <span
+                key={a.currency}
+                className={cn(
+                  'whitespace-nowrap font-extrabold tracking-[-0.045em] tabular-nums text-savings-unassigned-text',
+                  i === 0 ? 'text-[16.5px]' : 'text-[11.5px] opacity-80',
+                )}
+              >
+                {money(a.reserved, a.currency)}
+              </span>
+            ))}
+          </span>
         </div>
 
         <button

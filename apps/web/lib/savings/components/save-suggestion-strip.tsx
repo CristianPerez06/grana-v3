@@ -9,9 +9,10 @@ import {
   getLatestIncome,
   getReserveHistory,
   lastSaveOf,
+  pickLatestIncome,
   shouldOfferSuggestion,
 } from '@grana/savings'
-import { formatARS } from '@grana/i18n-messages'
+import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { formatDateISO, getTodayAR } from '@/lib/date'
@@ -20,6 +21,7 @@ import { getGuidanceStatus, markGuidance } from '@/app/_actions/guidance'
 import { reserveAvailability } from '@/app/_actions/savings'
 
 const GUIDANCE_ID = GUIDANCE_IDS.SAVINGS_SUGGEST_AFTER_INCOME
+
 
 /**
  * "¿Guardás una parte?" — the light strip that turns getting paid into the
@@ -49,7 +51,7 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   const currentMonth = formatDateISO(getTodayAR()).slice(0, 7)
   const todayISO = formatDateISO(getTodayAR())
 
-  const [guidanceQuery, sumsQuery, historyQuery, incomeQuery] = useQueries({
+  const [guidanceQuery, sumsQuery, arsIncomeQuery, usdIncomeQuery] = useQueries({
     queries: [
       {
         queryKey: ['savings', 'guidance', GUIDANCE_ID],
@@ -61,25 +63,43 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
         queryFn: () => getAvailableSums(createClient()),
         staleTime: 60_000,
       },
+      // El último ingreso de CADA moneda, y no solo el de pesos. La consulta
+      // siempre recibió la moneda por parámetro; el que nunca se la pasaba era
+      // este componente, y por eso un ingreso en dólares no despertaba nunca la
+      // tira. Era la única superficie del módulo donde el dólar no existía, y
+      // justo la del gesto principal.
+      //
+      // The amount the user JUST got paid, not the month's total: the strip
+      // appears right after registering an income, so "the last one of the
+      // period" is in practice "the one you just loaded" — without needing an
+      // event to tell it, which is what would make it fragile.
       {
-        queryKey: ['savings', 'history', 'ARS'],
-        queryFn: () => getReserveHistory(createClient(), 'ARS'),
+        queryKey: ['savings', 'latest-income', 'ARS', todayISO],
+        queryFn: () => getLatestIncome(createClient(), 'ARS', todayISO),
         staleTime: 60_000,
       },
       {
-        // The amount the user JUST got paid, not the month's total: the strip
-        // appears right after registering an income, so "the last one of the
-        // period" is in practice "the one you just loaded" — without needing an
-        // event to tell it, which is what would make it fragile.
-        queryKey: ['savings', 'latest-income', todayISO],
-        queryFn: () => getLatestIncome(createClient(), 'ARS', todayISO),
+        queryKey: ['savings', 'latest-income', 'USD', todayISO],
+        queryFn: () => getLatestIncome(createClient(), 'USD', todayISO),
         staleTime: 60_000,
       },
     ],
   })
 
   const guidance = guidanceQuery.data
-  const latestIncome = incomeQuery.data ?? null
+
+  // UNA tira, la del ingreso MÁS RECIENTE — nunca dos. La tira promete «acabás
+  // de cobrar esto, ¿guardás una parte?», así que la moneda es la de lo último
+  // que se cargó; dos tiras apiladas serían dos decisiones sobre la card que el
+  // usuario vino a leer, y elegir siempre pesos sería decidir por él.
+  //
+  // Se comparan los `created_at` (ISO, así que el orden lexicográfico ES el
+  // cronológico), no las fechas contables: lo que persigue la tira es el acto de
+  // cargar, no qué día se cobró.
+  const latest = pickLatestIncome(arsIncomeQuery.data ?? null, usdIncomeQuery.data ?? null)
+  const currency = latest?.currency ?? null
+  const latestIncome = latest?.income ?? null
+
   const offerable = shouldOfferSuggestion({
     seenAt: guidance?.seen_at ?? null,
     dismissedAt: guidance?.dismissed_at ?? null,
@@ -87,7 +107,18 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
     latestIncomeAt: latestIncome?.createdAt ?? null,
   })
 
-  const available = sumsQuery.data?.find((s) => s.currencyCode === 'ARS')?.available ?? 0
+  // El historial es POR MONEDA, igual que todo lo demás del módulo: el hábito
+  // que la tira deriva es lo guardado sobre el ingreso del que salió, y hacerlo
+  // cruzado —un porcentaje de pesos dictando un monto en dólares— sería mezclar
+  // dos monedas que no se mezclan.
+  const historyQuery = useQuery({
+    queryKey: ['savings', 'history', currency ?? 'none'],
+    queryFn: () => getReserveHistory(createClient(), currency!),
+    enabled: currency != null,
+    staleTime: 60_000,
+  })
+
+  const available = sumsQuery.data?.find((s) => s.currencyCode === currency)?.available ?? 0
   const lastSave = lastSaveOf(historyQuery.data?.entries ?? [])
 
   // The percentage the user established comes from the income of the month they
@@ -99,9 +130,9 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   const lastSaveDate = lastSave?.date ?? null
 
   const priorIncomeQuery = useQuery({
-    queryKey: ['savings', 'latest-income', lastSaveDate ?? 'none'] ,
-    queryFn: () => getLatestIncome(createClient(), 'ARS', lastSave!.date),
-    enabled: lastSaveDate != null,
+    queryKey: ['savings', 'latest-income', currency ?? 'none', lastSaveDate ?? 'none'],
+    queryFn: () => getLatestIncome(createClient(), currency!, lastSave!.date),
+    enabled: currency != null && lastSaveDate != null,
     staleTime: 60_000,
   })
 
@@ -121,7 +152,7 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
   // while the user browses May would be asking them to save in the past.
   const isCurrentMonth = monthKey === currentMonth
 
-  if (!isCurrentMonth || !offerable || !suggestion) return null
+  if (!isCurrentMonth || !offerable || !suggestion || currency == null) return null
 
   // Hiding is a DATA write, not component state. A `hidden` flag would live for
   // as long as the dashboard stays mounted, so after "Ahora no" the strip would
@@ -151,7 +182,7 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
     startTransition(async () => {
       const result = await reserveAvailability({
         amount: suggestion.amount,
-        currency_code: 'ARS',
+        currency_code: currency,
         date: getTodayAR(),
       })
       if (!result.ok) {
@@ -173,7 +204,9 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
     })
   }
 
-  const amount = formatARS(suggestion.amount)
+  // El monto ya viene formateado al copy, así que el texto no sabe de monedas:
+  // «Podés apartar US$ 900,00» y «Podés apartar $ 90.000,00» son la misma frase.
+  const amount = currency === 'USD' ? formatUSD(suggestion.amount) : formatARS(suggestion.amount)
 
   return (
     // Two rows at most, and one on a wide screen: the copy on the left, every

@@ -1,4 +1,5 @@
 import { Money } from '@grana/validation'
+import type { BalanceCurrency } from '@grana/money-logic'
 import type { ReserveEntry } from './types'
 
 /**
@@ -134,4 +135,36 @@ export function shouldOfferSuggestion(input: {
   if (input.latestIncomeAt == null) return false
   if (input.seenAt == null) return true
   return input.latestIncomeAt > input.seenAt
+}
+
+/** El último ingreso cargado de una moneda: lo que devuelve `getLatestIncome`. */
+export type LatestIncome = { amount: number; createdAt: string }
+
+/**
+ * De los últimos ingresos de cada moneda, el que se cargó DESPUÉS.
+ *
+ * La tira ofrece una sola vez y en una sola moneda, porque promete «acabás de
+ * cobrar esto, ¿guardás una parte?»: dos tiras apiladas serían dos decisiones
+ * sobre la card que el usuario vino a leer, y elegir siempre pesos sería decidir
+ * por él — que es exactamente lo que pasaba, porque la tira ni siquiera miraba
+ * los ingresos en dólares.
+ *
+ * Compara `created_at` y no la fecha contable: lo que la tira persigue es el
+ * acto de CARGAR, no qué día se cobró. Son ISO, así que el orden lexicográfico
+ * es el cronológico.
+ *
+ * Ante el empate exacto gana pesos, y no importa cuál: dos ingresos con el mismo
+ * `created_at` al milisegundo no es un caso real, y lo que sí importa es que la
+ * elección sea siempre la misma y no dependa del orden en que llegaron las
+ * consultas.
+ */
+export function pickLatestIncome(
+  ars: LatestIncome | null,
+  usd: LatestIncome | null,
+): { currency: BalanceCurrency; income: LatestIncome } | null {
+  if (usd == null) return ars == null ? null : { currency: 'ARS', income: ars }
+  if (ars == null) return { currency: 'USD', income: usd }
+  return usd.createdAt > ars.createdAt
+    ? { currency: 'USD', income: usd }
+    : { currency: 'ARS', income: ars }
 }

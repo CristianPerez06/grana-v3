@@ -233,6 +233,37 @@ lo dice y nombra la salida en vez de solo negar.
 
 ## MODIFIED Requirements
 
+### Requirement: La tira post-ingreso sigue la moneda del ingreso, y hay una sola
+
+La tira «¿guardás una parte?» aparece después de cargar un ingreso, **en la moneda de ese ingreso**.
+Un ingreso en dólares la despierta igual que uno en pesos.
+
+Cuando hay ingresos en las dos monedas, la tira es UNA sola y ofrece la del ingreso cargado más
+recientemente — nunca dos tiras, y nunca una moneda elegida por defecto.
+
+Todo lo que la tira deriva es de esa misma moneda: el disponible que la limita, el historial del que
+sale el porcentaje, y el ingreso contra el que ese porcentaje se calculó. Un hábito en una moneda
+nunca dicta un monto en la otra.
+
+#### Scenario: Un ingreso en dólares ofrece guardar dólares
+
+- **WHEN** el usuario carga un ingreso en dólares
+- **THEN** la tira aparece y propone un monto en dólares
+- **AND** al aceptarla, lo guardado se registra en dólares
+
+#### Scenario: Ingresos en las dos monedas
+
+- **WHEN** el usuario cargó un ingreso en pesos y después uno en dólares
+- **THEN** se ofrece una sola tira, la de dólares
+- **AND** no aparece una segunda tira para los pesos
+
+#### Scenario: El porcentaje no cruza monedas
+
+- **WHEN** la tira propone sobre un ingreso en dólares
+- **THEN** el porcentaje sale de lo que el usuario guardó en dólares sobre el ingreso en dólares del
+  que lo sacó
+- **AND** si nunca guardó en esa moneda, propone el 10% de partida
+
 ### Requirement: La fila de Guardado del dashboard explica el disponible y lleva al módulo
 
 La card de saldo SHALL conservar la fila **Guardado** en el mes corriente: es un término de la
