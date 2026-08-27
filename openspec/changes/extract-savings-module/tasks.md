@@ -268,7 +268,11 @@ definición.
   este mes»**, que además empareja las dos salidas —«Ahora no» / «No más este mes»—, y el botón pasa a
   `px-3`, porque el aire se calibra contra lo que dice y ya no dice un monto. Sin filas de más. Medido
   de 320 a 430 con ocho cifras en el texto
-- [ ] 6.5 QA nativo del módulo — **bloqueado por el mismo acceso que el issue #58**
+- [ ] 6.5 QA nativo — **bloqueado por acceso, issue #58**, que quedó ampliado el 27/08 con lo que
+  este change le cambió a la nativa **sin tocarle una línea de React Native**: las cinco frases de
+  copy, la tira siguiendo la moneda del último ingreso, y el nombre de propósito que ya no se rechaza
+  por un espacio de más. La pantalla `/savings` y su rediseño son web y así queda hasta que exista el
+  módulo nativo (4.4); el ticket lo dice explícito para que no se reporte como bug
 - [x] 5.5 **Con tests lo nuevo que es lógica pura**: `moneyParts` —que parte lo que devuelve `Intl`
   en vez de armar el número a mano, y si el corte se moviera pondría un «$» en el medio de la cifra—
   y `purposeTint`, cuya única promesa es que el mismo propósito se vea igual siempre: si se rompe no
