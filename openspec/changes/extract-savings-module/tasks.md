@@ -90,7 +90,8 @@
 - [x] 4.2 La fila de Guardado del dashboard **navega** en vez de abrir el overlay, y es un `Link` de
   verdad —se abre en otra pestaña, se precarga—. El dashboard **ya no monta el overlay**: el estado
   vacío paga un tap de más y a cambio la operatoria queda en un solo lugar (E3, 4b.5)
-- [ ] 4.3 La tira post-ingreso queda donde está, y su acción sigue resolviendo en el lugar (E3)
+- [x] 4.3 Verificado: la tira post-ingreso **no monta el overlay** —llama directo a
+  `reserveAvailability`—, así que resuelve en el lugar y no la tocó la poda (E3)
 - [x] 4.4 Verificado: en web, el único que monta `SavingsDrawer` es el módulo. En **mobile sigue
   montado en la card de saldo**, y así queda hasta que exista el módulo nativo — ahí no hay a dónde
   navegar todavía
@@ -164,10 +165,13 @@
 
 ## 5. Lo que no se toca
 
-- [ ] 5.1 Cero cambios en `availability_reserve`, `savings_purpose_allocation`, sus triggers y
+- [x] 5.1 **Verificado con `git diff` desde el commit que abre el change**: cero cambios en
+  `supabase/` y en `packages/savings/src/mutations.ts`. Cero cambios en
   `write_reserve`
-- [ ] 5.2 Cero filas nuevas en Cuentas y cero entradas nuevas en Movimientos
-- [ ] 5.3 La identidad de la card del mes sigue cerrando, con los mismos números
+- [x] 5.2 **Verificado**: cero cambios en Cuentas y Movimientos en TODA la rama, no solo en este
+  change
+- [x] 5.3 **Verificado**: cero cambios en `packages/dashboard/src` desde que abrió el change, así
+  que la identidad de la card no puede haberse movido — no hay dónde
 
 ## 6. QA
 
@@ -179,7 +183,8 @@
   varios y «Sin destino» con saldo → preseleccionado; varios y el resto en cero → **sin
   preselección**; desde un propósito → heredado. **Nunca se toca un propósito sin mostrarlo antes.**
   Falta verificar el tercer caso, que hoy no está implementado así
-- [ ] 6.3 Bimoneda: nada suma ARS con USD en ninguna pantalla del módulo
+- [x] 6.3 **Auditado**: los únicos `+` del módulo son glifos de signo, no sumas, y cada `money()`
+  lleva su moneda explícita. `moduleHasSavings` usa `some` y no una suma
 - [ ] 6.7 **La grilla en 360 px con montos de ocho cifras en las dos monedas**: cuando no entra, la
   fila se parte en dos líneas —rótulo arriba, montos abajo— y **ningún monto se achica ni se corta**
   (D24). El quiebre depende del contenido, no del ancho de la pantalla, así que no puede ser un
@@ -189,6 +194,10 @@
   saca plata del disponible y la que no lo toca
 - [ ] 6.4 Regresión del dashboard: ningún número cambió, la card cierra, la tira sigue apareciendo
 - [ ] 6.5 QA nativo del módulo — **bloqueado por el mismo acceso que el issue #58**
+- [x] 5.5 **Con tests lo nuevo que es lógica pura**: `moneyParts` —que parte lo que devuelve `Intl`
+  en vez de armar el número a mano, y si el corte se moviera pondría un «$» en el medio de la cifra—
+  y `purposeTint`, cuya única promesa es que el mismo propósito se vea igual siempre: si se rompe no
+  falla ningún test de plata, pero alguien deja de reconocer «Viaje» de un vistazo
 - [x] 5.4 La derivación de qué muestra el módulo —si hay guardado, si va la columna de dólares, el
   orden de los propósitos y cuántos montos muestra una fila— vive en `@grana/savings/module-view.ts`,
   **no adentro de los componentes**. Mismo precedente que `balance-card-view.ts`: escrita en el
