@@ -145,9 +145,11 @@
   gris se leía igual que la fecha, y las dos direcciones parecían la misma) y el **pie que explica la
   diferencia** entre quitar destino y volver a usar. **Sin fecha y sin subtítulo** (E12). Sin barras
   de progreso ni porcentajes
-- [ ] 4c.7b **Pendiente de decisión, no de trabajo:** el handoff deja en el detalle solo «Destinar
-  acá» y «Sacar de acá», y manda a Ahorro para volver a usar. Hoy conviven las tres acciones. Sacar
-  una es cambiar un flujo que la fase 2 ya QA-eó, así que no se tocó — se decide mirándolo
+- [x] 4c.7b **Decidido: «Volver a usar» baja a enlace, no se va.** El handoff la sacaba del detalle;
+  dejarla como botón hacía que la pantalla se contradijera (excluía «Guardar» por cambiar el total e
+  incluía, con el mismo peso, otra que también lo cambia). Los dos botones quedan para lo que es del
+  propósito —sumarle, sacarle—, y las dos salidas que se confundían pasan a tener pesos distintos en
+  vez de explicarse al pie. No se pierde el atajo: parado en Viaje, usar esos pesos sigue a un tap
 - [ ] 4c.8 Pantalla de **nuevo propósito**: nombre, emblema, y el monto inicial en cero —que **no se
   prellena** salvo que se venga del flujo de destinar. **Ojo:** el monto inicial NO existe hoy, y
   agregarlo compone dos mutaciones en un gesto (crear + destinar). No toca schema, pero tampoco es

@@ -403,3 +403,31 @@ error. Ahora quién lleva borde lo decide quien arma la barra.
 **`shortDate` estaba escrito dos veces**, con dos APIs distintas, en dos historiales que se ven en la
 misma sesión. Daban lo mismo hoy; el día que una cambiara, serían dos formatos de fecha en la misma
 app sin que ningún test se enterara.
+
+## E20 — Las tres salidas de un propósito, y por qué no pesan igual
+
+El detalle de un propósito ofrece tres cosas, y dos de ellas se parecen tanto que hubo que escribir
+una nota al pie para distinguirlas. Una nota al pie suele ser el síntoma de que la pantalla ofrece
+algo con el peso equivocado.
+
+| Acción | Qué mueve | Peso |
+|---|---|---|
+| **Destinar más** | El reparto. El total guardado NO cambia | Botón |
+| **Quitar destino** | El reparto, al revés. El total tampoco cambia | Botón |
+| **Volver a usar** | El TOTAL: la plata vuelve a ser gastable | Enlace |
+
+El handoff proponía sacar «Volver a usar» de esta pantalla y mandar a Ahorro. El argumento era bueno
+—una acción por nivel— pero el costo era real: parado en «Viaje», querer usar esos pesos es un caso
+común, y volver a Ahorro cobra dos taps y obliga a re-elegir con un chip un propósito que ya estaba
+en pantalla.
+
+Lo que estaba mal no era que estuviera: era que fuera **un botón al lado de «Destinar más»**. Con ese
+peso la pantalla se contradecía sola — excluía «Guardar» por cambiar el total (D18) e incluía, con
+el mismo tratamiento, otra que también lo cambia.
+
+Bajarla a enlace resuelve las dos cosas a la vez. Los botones quedan para lo que es del propósito y
+no toca el total; lo que sí lo toca queda abajo, tras un divisor, con la nota justo encima y el
+enlace justo debajo — el orden en que se lee la diferencia antes de tocarla. El atajo sigue a un tap.
+
+Y las dos que se confundían dejan de competir: ahora una es botón y la otra enlace, que es la
+distinción que la nota tenía que hacer con palabras.

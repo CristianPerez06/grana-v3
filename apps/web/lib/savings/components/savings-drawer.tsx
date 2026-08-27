@@ -647,12 +647,15 @@ const GroupBlock = ({
             )}
         </>
 
-        {/* SIN «Guardar», y es una separación de niveles, no una omisión:
-            guardar cambia el TOTAL, así que vive un nivel arriba, donde el total
-            está a la vista. Acá adentro las acciones son sobre ESTE grupo.
+        {/* Los BOTONES son lo que se le hace a ESTE propósito: sumarle y
+            sacarle. Los dos mueven su reparto y ninguno mueve el total guardado.
 
-            Y sin el enlace «Destinar» duplicando lo que ahora es el botón
-            principal: parado en Casa, lo que se hace es sumarle. */}
+            «Guardar» no está, y es separación de niveles: cambia el TOTAL, así
+            que vive un nivel arriba, donde el total está a la vista (D18).
+            «Volver a usar» tampoco está acá abajo por la misma razón — también
+            cambia el total— y bajó a enlace. Tenerlo como botón hacía que esta
+            pantalla se contradijera: excluía a Guardar por cambiar el total e
+            incluía, con el mismo peso, otra que también lo cambia. */}
         <div className="mt-4 flex gap-2">
           <Button className="flex-1" onClick={onAllocate}>
             {t('purposes.allocate_more')}
@@ -660,32 +663,34 @@ const GroupBlock = ({
           <Button
             variant="secondary"
             className="flex-1"
-            onClick={onRelease}
+            onClick={onUnallocate}
             disabled={reserved <= 0}
           >
-            {t('release')}
+            {t('purposes.unallocate')}
           </Button>
         </div>
 
-        {/* La diferencia entre las dos acciones de abajo NO es adivinable: las
-            dos «sacan» del propósito, pero una devuelve la plata a «Sin destino»
-            —sigue guardada— y la otra la vuelve disponible para gastar. Sin esta
-            línea, elegir mal es gratis y el error solo se descubre después,
-            mirando el total. */}
-        <p className="mt-3 text-[12.5px] leading-[1.45] text-text-muted">
-          {t('purposes.unallocate_note')}
-        </p>
+        {/* «Volver a usar», como enlace y no como botón.
 
-        {/* Quitar el destino es el inverso de destinar y no toca ningún total,
-            así que va como enlace: no compite con los dos de arriba. */}
-        <div className="mt-3 flex justify-center text-[13px] font-bold text-emerald-deep">
+            Es la única salida de acá que vuelve la plata GASTABLE, y por eso no
+            comparte peso con las dos de arriba, que no tocan el total. Pero
+            tampoco se va de la pantalla: parado en Viaje, querer usar esos pesos
+            es un caso real, y mandarlo a Ahorro le cobraría dos taps y
+            re-elegir un propósito que ya tenía delante.
+
+            Separado por un divisor y no pegado a los botones: lo que lo
+            distingue no es la forma, es que hace otra cosa. */}
+        <div className="mt-4 border-t border-border-soft pt-3">
+          <p className="text-[12.5px] leading-[1.45] text-text-muted">
+            {t('purposes.unallocate_note')}
+          </p>
           <button
             type="button"
-            onClick={onUnallocate}
+            onClick={onRelease}
             disabled={reserved <= 0}
-            className="min-h-[44px] disabled:opacity-40"
+            className="mt-1 inline-flex min-h-[44px] items-center text-[13px] font-bold text-emerald-deep underline decoration-emerald-deep/35 underline-offset-[5px] transition-colors hover:decoration-emerald-deep disabled:opacity-40 disabled:no-underline"
           >
-            {t('purposes.unallocate')}
+            {t('release')}
           </button>
         </div>
       </section>
