@@ -9,6 +9,12 @@
 >
 > **Estado de lo construido, para no confundir planos:** el módulo `/savings` está implementado en
 > web y en nativa, con QA visual nativo bloqueado por acceso. Nada de acá se implementa antes de eso.
+>
+> **Revisión — el orden de fases cambió.** La primera versión de este documento proponía empezar por
+> plazo fijo, porque el contrato da los números y eso permite entregar sin construir valuación.
+> **Producto lo corrigió**: se empieza por **FCI / dinero con rescate**, que es lo que la gente usa
+> hoy. El documento está reescrito sobre esa tesis — no es un apéndice: cambia el recorte (§6), la
+> respuesta al valor (§3.4) y dos veredictos de nombre (§5.2).
 
 ---
 
@@ -16,10 +22,14 @@
 
 Grana hoy contesta **cuánto puedo gastar**. Lo que no contesta es **qué está haciendo el resto**.
 
-Y no es una pregunta de inversores. Un usuario con $2.000.000 en la caja de ahorro y $500.000 en un
-plazo fijo no se pregunta cuál fue su rendimiento anualizado: se pregunta cuánto de eso puede tocar
-si mañana se le rompe el auto. Esa es la pregunta que abre esta capa, y es de liquidez antes que de
-rentabilidad.
+Y no es una pregunta de inversores. Un usuario con $2.000.000 en la caja de ahorro y $800.000 en el
+fondo de la billetera no se pregunta cuál fue su rendimiento anualizado: se pregunta cuánto de eso
+puede tocar si mañana se le rompe el auto. Esa es la pregunta que abre esta capa, y es de liquidez
+antes que de rentabilidad.
+
+Y el ejemplo no es casual: **el que tiene un plazo fijo ya sabe que esa plata no la puede tocar; el
+que tiene plata en un fondo cree que la tiene disponible**. La confusión más común es también la más
+usada, y por eso la capa empieza ahí (§6.2).
 
 ---
 
@@ -132,11 +142,24 @@ discute desde cero. Se propone uno, de una sola pregunta:
 El test es bueno porque es la pregunta que el usuario se hace, no una clasificación financiera. Y
 porque se apoya en lo único que el modelo ya considera duro: la disponibilidad.
 
-Tiene un borde incómodo y conviene nombrarlo antes de que aparezca: **un FCI money market se rescata
-en el día**. El test lo manda a posición por poco. Se sostiene igual —hay que pedir el rescate, la
-plata no está en la cuenta, la tarjeta no se debita de ahí— pero es el caso donde el criterio se apoya
-en un acto casi instantáneo, y por eso es el caso que hay que mirar con el usuario, no resolver en un
-documento.
+Tiene un borde incómodo: **un FCI money market se rescata en el día**. El test lo manda a posición
+por poco. Se sostiene igual —hay que pedir el rescate, la plata no está en la cuenta, la tarjeta no se
+debita de ahí— pero es el caso donde el criterio se apoya en un acto casi instantáneo.
+
+**Y como el FCI pasa a ser el primer instrumento (§6), ese borde deja de ser algo para más
+adelante: es la primera decisión de la fase.** No se resuelve argumentando, se resuelve mirando la
+pantalla. La versión de este documento que ponía al plazo fijo primero podía dejarlo abierto; esta no.
+
+La formulación exacta de la pregunta importa, porque hay dos y solo una es la buena:
+
+- ❌ *«¿El FCI es líquido?»* — Sí, en el sentido financiero. Y así planteada la respuesta empuja a
+  meterlo en el disponible.
+- ✅ *«¿Grana puede decir que ese dinero se puede gastar hoy?»* — **No.** La tarjeta no se debita de
+  ahí, la transferencia no sale de ahí, y si el usuario no pide el rescate esa plata no aparece en
+  ninguna cuenta. Decir que está disponible sería exactamente el error que Grana existe para evitar.
+
+**Decisión propuesta: el FCI es posición.** Lo que se puede rescatar en el día no es lo mismo que lo
+que se puede gastar hoy, y esa distinción es la que hace que «Para gastar» signifique algo.
 
 ### 2.2 Caso por caso
 
@@ -144,9 +167,9 @@ documento.
 |---|---|---|
 | **Cuenta remunerada** | **Cuenta, no posición.** Ya decidido en el modelo (§7.7) | Esa plata se gasta mañana sin rescatar nada. Modelarla como posición rompería el disponible del caso **más común del país**. Es una cuenta con rendimiento |
 | **USD en cuenta o en caja** | **Cuenta, en otra moneda** | Gastar dólares es gastar dólares. Comprarlos es un `exchange`, que ya existe. Ver §1.1 |
-| **FCI money market** | **Posición, liquidez inmediata** — con reserva | Pasa el test por poco. Es el borde del criterio, y el más común entre usuarios jóvenes |
-| **Plazo fijo (tradicional o UVA)** | **Posición, liquidez a fecha** | El caso canónico: capital, plazo, tasa, vencimiento. El contrato da los números |
-| **Broker: CEDEARs, acciones, bonos** | **Posición, liquidez de mercado** — y **no en la primera fase** | Trae la valuación, que es una capa entera. Y trae *el problema del comitente*: un broker es **una** cuenta con **muchas** tenencias adentro |
+| **FCI money market** | **Posición, liquidez inmediata — y el PRIMER instrumento** (§6) | Es el borde del criterio (§2.1) y a la vez lo más usado hoy en Argentina. Lo segundo pesa más que lo primero |
+| **Plazo fijo (tradicional o UVA)** | **Posición, liquidez a fecha — fase 3B** | Capital, plazo, tasa, vencimiento. El contrato da los números, y por eso es más fácil… pero no es lo que la gente usa hoy |
+| **Broker: CEDEARs, acciones, bonos** | **Posición, liquidez de mercado — fase 3C** | Trae la valuación continua, que es una capa entera. Y trae *el problema del comitente*: un broker es **una** cuenta con **muchas** tenencias adentro |
 | **Cripto** | **Fuera, por ahora** | No por prejuicio: por costo. Valuación 24/7, custodia propia vs. exchange, y una fiscalidad que el usuario espera que la app entienda. Nada de eso mejora la pregunta de liquidez que abre esta capa |
 
 ### 2.3 Dos cosas que no entran, y que van a pedir entrar
@@ -238,11 +261,45 @@ Tres casos que la gente vive distinto y que el modelo tiene que separar:
   preferible a inventar un número, y hay que decirlo en pantalla, no dejarlo implícito (regla 11: *lo
   que Grana no puede saber, lo declara*).
 
+#### Y acá está el costo de empezar por FCI, que hay que mirar de frente
+
+El plazo fijo tenía una ventaja que el FCI **no tiene**: el contrato da los números. El banco ya dijo
+cuánto vas a cobrar y cuándo, así que Grana repite un número, no lo inventa. Un FCI no tiene eso: sube
+todos los días, y nadie le dice a la app cuánto.
+
+Empezar por FCI, entonces, obliga a contestar de dónde sale el valor **en la primera versión**. Hay
+tres respuestas posibles y solo una entra en el recorte:
+
+| Respuesta | Qué implica | |
+|---|---|---|
+| **Cotización automática** | Integración, un proveedor de datos, y un número que se mueve solo | Fuera del recorte, y fuera de lo que Grana es |
+| **Rendimiento estimado** | Grana calculando una tasa | **Prohibido**: sería inventar un número sobre plata ajena |
+| **Vale lo que pusiste, hasta que el usuario diga otra cosa** | Un dato que el usuario puede actualizar cuando quiera, y que nadie le exige | **Propuesto** |
+
+La tercera parece pobre y no lo es, por una razón que solo se ve mirando el ciclo completo:
+
+> **Con el FCI, la verdad no llega con la valuación: llega con el rescate.**
+
+Cuando el usuario rescata, sabe **exactamente** cuánto volvió a su cuenta — se lo dice el banco, no
+Grana. Y ahí, contra el capital colocado, la diferencia queda determinada sin haber estimado nada.
+
+O sea: **la fase 3A puede entregar el circuito contable completo sin construir la capa de valuación**,
+igual que la versión anterior de este documento proponía lograr con el contrato del plazo fijo. Cambia
+el mecanismo —antes lo daba el contrato al empezar, ahora lo da el banco al terminar— pero el
+resultado es el mismo: rendimiento y pérdida bien mostrados, sin cotizaciones y sin estimaciones.
+
+La actualización manual del valor queda como **opcional y puntual**: sirve para que el bloque no
+mienta a los seis meses, no para calcular nada. Y mientras no la haya, la pantalla lo dice: *«vale lo
+que pusiste; actualizalo cuando quieras»*.
+
 **Pérdida** — el CEDEAR que vale menos que lo que pagaste.
 
 - Simétrica del rendimiento y ninguna app argentina la muestra bien. No es un gasto: no gastaste nada.
 - Es la razón más fuerte para **dejar la valuación de mercado fuera de la primera fase**: una capa que
   solo sabe sumar está incompleta de una forma que se nota justo el mes que al usuario le fue mal.
+- Con FCI money market la pérdida es **rara pero posible** (comisiones, un día malo), y por eso el
+  circuito tiene que soportarla desde el día uno aunque casi nunca se vea. Un circuito que solo maneja
+  el caso feliz se descubre roto el peor día.
 
 ### 3.5 Una consecuencia que ya está anotada y conviene no perder
 
@@ -325,13 +382,23 @@ es. La cuenta podrá tener un **atajo contextual** cuando el instrumento exista;
 
 ### 5.2 El nombre
 
+El nombre tiene que servir para **las tres fases**, no solo para la primera: lo que se elija con un
+FCI adentro va a tener que aguantar un plazo fijo y, más adelante, un CEDEAR. Renombrar una sección
+después cuesta más que nombrarla bien ahora — es la misma lección que dejó «Ahorro e inversión».
+
 | Candidato | A favor | En contra | |
 |---|---|---|---|
-| **«Puesto a trabajar»** | Lenguaje del usuario, no del sistema. Describe la **función**, que es el corte de esta pantalla. Ya se usa en el hub del modelo | Levemente informal | **Propuesto** |
+| **«Puesto a trabajar»** | Lenguaje del usuario, no del sistema. Describe la **función**, que es el corte de esta pantalla. Ya se usa en el hub del modelo. Aguanta las tres fases | Levemente informal | **Propuesto** |
+| «Con rescate» | Describe con precisión lo de la fase 3A | **Se rompe en 3B**: un plazo fijo no se rescata, vence. Nombraría la sección por la propiedad del primer instrumento, que es el error que este orden de fases justamente busca evitar | Descartado |
 | «Instrumentos» | Preciso | Jerga. Nadie dice «mis instrumentos» | Descartado |
 | «Inversiones» | Conocido | **Deja afuera comprar dólares y el plazo fijo**, que no se sienten como invertir sino como cubrirse. Es la objeción que el modelo ya tiene escrita | Descartado |
-| «A resguardo» | Suena a protección, que es el escalón real en Argentina | Sugiere que **no se puede tocar**, y buena parte de esto se rescata en el día | Descartado |
+| «A resguardo» | Suena a protección, que es el escalón real en Argentina | Sugiere que **no se puede tocar** — y con FCI primero eso es directamente falso: se rescata en el día. Con plazo fijo primero era discutible; ahora no | Descartado |
 | «Plata colocada» | Correcto y neutro | Suena a banco. Es la palabra del que vende el producto | Descartado |
+
+**El orden de fases movió dos de estos veredictos**, y vale la pena notarlo: «A resguardo» pasó de
+discutible a falso, y apareció «Con rescate» como candidato que solo funciona mientras la fase 3B no
+exista. Los dos son el mismo error con distinto signo — **nombrar la categoría por el instrumento que
+justo entró primero**.
 
 **Y lo que se muestra no es el nombre de la categoría sino el de la cosa**: «Plazo fijo Comafi»,
 «FCI Mercado Pago». El rótulo del bloque se lee una vez; las filas se leen siempre.
@@ -360,8 +427,23 @@ Cuatro reglas, cada una contra un fracaso concreto:
 3. **No hay rendimiento proyectado como titular.** «Vas a cobrar $730.000» es legítimo **porque es un
    contrato** —el banco ya dio ese número, Grana lo repite—. «Tu cartera rendiría 8% anual» es otra
    cosa: es una promesa.
-4. **El alta la abre el movimiento, no un catálogo.** El usuario transfiere plata a un plazo fijo; el
+4. **El alta la abre el movimiento, no un catálogo.** El usuario transfiere plata a un fondo; el
    destino de esa transferencia gana un grupo nuevo. No se entra por una vidriera de productos.
+
+**Y con el FCI primero, la pregunta se vuelve concreta: ¿cómo se muestra un fondo sin que la pantalla
+se parezca a una app de trading?** La respuesta corta es *mostrando dos números y ninguno más*:
+
+```
+  🟢  FCI Mercado Pago                    $ 800.000
+      Pusiste $800.000 · rescate en el día
+```
+
+Cuánto pusiste y cuándo lo podés tener. **No** el valor de la cuota parte, **no** el rendimiento del
+día, **no** una flechita verde o roja, **no** un porcentaje. Una app de trading se reconoce porque el
+número cambia solo mientras la mirás; acá el número cambia cuando el usuario hace algo.
+
+Es la misma disciplina que ya aplica el resto de Grana: la card del dashboard tampoco muestra el saldo
+minuto a minuto, muestra lo que pasó.
 
 ### 5.5 El usuario que solo quiere controlar gastos
 
@@ -375,55 +457,108 @@ Es la mayoría, y es a quien esta capa puede arruinarle la app. Tres defensas:
 
 ---
 
-## 6. Recorte de una primera fase
+## 6. El orden de las fases
 
-### 6.1 Los cuatro puntos de partida posibles
+### 6.1 El orden
 
-| Empezar por | Qué habilita | Riesgo |
+| Fase | Qué entra | Liquidez | Qué la hace difícil |
+|---|---|---|---|
+| **3A** | **FCI / dinero con rescate** | Inmediata | El valor no lo da ningún contrato |
+| **3B** | **Plazo fijo / bloqueado a fecha** | A fecha | El vencimiento, la renovación, la capitalización |
+| **3C** | **Posiciones variables**: brokers, CEDEARs, acciones | De mercado | Valuación continua, pérdida, el problema del comitente |
+| **—** | **USD** | — | **No es una fase**: es moneda y cambio, y ya existe (§1.1) |
+
+### 6.2 Por qué FCI primero, y qué se paga por eso
+
+**Por qué.** Es lo que la gente usa hoy. El plazo fijo es el instrumento canónico de los documentos y
+de los libros, pero en 2026 el dinero con rescate —el FCI money market de la billetera, la cuenta que
+«rinde»— es donde está parada la plata de la mayoría. Una capa de instrumentos que se estrena sin
+cubrir eso se estrena para el usuario equivocado.
+
+Y hay una razón de producto además de la de uso: **el FCI es el instrumento donde la pregunta de esta
+capa se siente**. Quien tiene un plazo fijo ya sabe que esa plata no la puede tocar; el que tiene
+$800.000 en un FCI de la billetera **cree que los tiene disponibles**, y esa confusión es exactamente
+la que Grana existe para deshacer.
+
+**Qué se paga.** Dos cosas, y conviene tenerlas escritas porque las dos aparecen en la primera
+pantalla:
+
+1. **Se pierde la ventaja del contrato.** Ningún banco le dice a Grana cuánto vale ese FCI hoy. La
+   respuesta propuesta —*vale lo que pusiste, y la verdad llega con el rescate*— está trabajada en
+   §3.4 y es lo que permite entregar sin construir valuación.
+2. **Se empieza por el borde del criterio de admisión.** El FCI pasa el test por poco (§2.1). En la
+   versión anterior de este documento eso era una razón para no empezar ahí; ahora es la primera
+   decisión que la fase tiene que tomar, y está tomada: **es posición**, porque *rescatable en el día*
+   no es lo mismo que *gastable hoy*.
+
+### 6.3 Recorte estricto de la fase 3A
+
+**Entra:**
+
+- **Alta manual de una posición**: cuenta o custodio de origen, monto colocado, nombre del fondo o la
+  entidad, moneda.
+- **La plata sale del disponible**, con el movimiento real que la saca de la cuenta.
+- **Rescate total o parcial**, con el monto que efectivamente volvió.
+- **La diferencia** entre lo colocado y lo rescatado, mostrada como lo que es y no como ingreso.
+- **Actualización manual del valor**, opcional y puntual.
+- **Una línea nueva en la card del mes**, de flujo (§3.3).
+
+**No entra:**
+
+| Fuera | Por qué |
+|---|---|
+| Cotizaciones automáticas | Integración y dependencia externa. Y no hace falta: la verdad llega con el rescate (§3.4) |
+| Rendimiento diario | Requiere valuación continua. Además invita a mirar la app como un tablero |
+| Gráficos y evolución | Es la fase 5. Un gráfico acá convierte la pantalla en un broker |
+| Integración con brokers | Fase 3C, y trae el problema del comitente |
+| Performance, TIR, comparativas | Eso es asesorar. Regla 10 |
+| Plazo fijo y vencimientos | Fase 3B |
+| Asignar posiciones a propósitos | §4.3, la pregunta abierta |
+
+**Y la disponibilidad de rescate, simple.** T+0 / T+1 / T+2 existe y el usuario lo conoce, pero en la
+primera versión **no hace falta que gobierne nada**: nada se calcula distinto según eso. Si entra,
+entra como un rótulo del fondo —un dato que se muestra— y no como una regla del modelo. Convertirlo en
+regla obligaría a definir qué pasa un viernes a las 18, y esa pregunta no la abre esta fase.
+
+### 6.4 Qué problema de modelo obliga a resolver
+
+Es el valor real de la fase: los cinco problemas que **hay** que contestar para que exista, y que
+después sirven para todos los instrumentos que vengan.
+
+| # | Problema | Estado en este documento |
 |---|---|---|
-| **Solo el modelo conceptual** | Nada para el usuario | Un modelo sin un caso real que lo ejerza es un modelo sin probar. Se descubre que está mal recién cuando se implementa |
-| **USD** | Casi nada: ya existe como moneda y como `exchange` | **Es una trampa barata.** Parece un instrumento y no lo es (§1.1). Se haría trabajo para no mover ninguna pregunta |
-| **FCI money market** | Mucho: es lo más común entre usuarios jóvenes | Es el **borde** del criterio de admisión (§2.1) y encima trae valuación diaria. Empezar por el caso ambiguo es empezar discutiendo la excepción |
-| **Plazo fijo** | El circuito completo: sale, vence, vuelve | Diseñar todo alrededor de un instrumento con vencimiento **obligatorio** |
+| 1 | **Cómo representar plata colocada que no está disponible** | Resuelto: es una **posición**, y la plata sale de la cuenta con un movimiento real. Sin flag de «cuenta que no cuenta» (modelo §5) |
+| 2 | **Cómo vuelve al disponible al rescatar** | Resuelto en la forma: otro movimiento real, en sentido contrario. Falta el circuito dibujado |
+| 3 | **Cómo registrar la diferencia entre lo colocado y lo rescatado** | Propuesto: se determina **en el rescate**, contra el capital colocado, sin estimar nada (§3.4) |
+| 4 | **Cómo mostrar rendimiento o pérdida sin que sea sueldo ni gasto** | Resuelto en la regla —no es `income` ni `expense`— y **abierto en el nombre** del término (§7.2 C) |
+| 5 | **Cómo se refleja en el mes sin romper la lectura de liquidez** | Resuelto: una línea de **flujo**, que se queda en los meses pasados, distinta de «Guardado» que es stock (§3.3) |
 
-### 6.2 La propuesta
+Tres de los cinco ya tienen respuesta propuesta; los otros dos necesitan la pantalla. **Ese es el
+tamaño real de la fase**: no es «agregar FCI», es cerrar estos cinco — y cerrarlos una vez sirve para
+3B y 3C sin volver a discutirlos.
 
-**Empezar por plazo fijo, pero construyendo el mecanismo, no el instrumento.**
+### 6.5 El rescate parcial, que es donde se pone difícil
 
-El plazo fijo tiene una propiedad que ninguno de los otros tiene, y es la razón de elegirlo: **el
-contrato da todos los números**. Capital, plazo, tasa y lo que vas a cobrar salen del banco, no de una
-valuación. Eso permite ejercer el circuito contable entero —salida, tenencia, vuelta, rendimiento
-separado del capital, stock vs. flujo, la línea nueva del mes— **sin construir la capa de valuación**,
-que es la más cara y la que trae la pérdida (§3.4).
+Merece párrafo propio porque es lo único del recorte que no tiene respuesta obvia, y está adentro del
+alcance pedido.
 
-O sea: es el instrumento que más enseña por unidad de trabajo.
+Con rescate total no hay problema: la posición se cierra, volvieron $X, el capital era $Y, la
+diferencia es $X − $Y. Con **rescate parcial** aparece la pregunta: si pusiste $500.000, el fondo vale
+$550.000 y rescatás $200.000 — ¿cuánto capital queda colocado, y cuánta ganancia se realizó?
 
-**Y el riesgo que trae es real**, es el que el propio pedido de este documento nombra, y hay que
-atacarlo explícitamente:
+Dos caminos:
 
-> Si se diseña alrededor del plazo fijo, el vencimiento termina siendo obligatorio y el FCI no entra
-> sin rehacer.
+- **A · La diferencia se realiza solo al cerrar.** Un rescate parcial mueve capital y nada más: quedan
+  $300.000 colocados y la ganancia aparece entera el día que se cierra la posición. **Simple, exacto en
+  el total, y difiere el momento.** Y sobre todo: **evita el prorrateo**, que el modelo ya tiene
+  anotado como pregunta abierta (§7.3 del modelo).
+- **B · Se prorratea en cada rescate.** El usuario declara cuánto vale el total al momento de
+  rescatar, y la ganancia se reparte proporcionalmente. **Exacto en el momento**, y a cambio le pide un
+  dato en el peor momento —cuando está sacando plata— y mete el prorrateo en la primera fase.
 
-Tres mitigaciones concretas, todas de diseño y ninguna de código:
-
-1. **Dibujar la lista con dos instrumentos desde el primer mock**, aunque solo se implemente uno: un
-   plazo fijo con fecha y un FCI sin fecha. Una lista que nunca vio una fila sin vencimiento va a
-   asumir que todas lo tienen.
-2. **Tratar el vencimiento como un atributo opcional de la posición**, no como parte de su identidad.
-   Una posición sin fecha no es un caso raro: es la mitad del mundo.
-3. **Escribir el circuito de rescate antes que el de vencimiento.** «Saqué la plata» es el caso
-   general; «venció» es un caso particular del plazo fijo que además puede renovarse.
-
-### 6.3 Qué NO entra en esa primera fase
-
-- **Valuación de mercado.** Sin ella no hay CEDEARs ni acciones, y está bien: es la capa que trae la
-  pérdida, y la pérdida bien mostrada es un problema de diseño propio.
-- **Repartir posiciones a propósitos.** El techo del reparto es la pregunta abierta de §4.3.
-- **Cualquier cosa que toque `savings_purpose_allocation`.**
-- **Cripto** (§2.2) y **el problema del comitente** —un broker con muchas tenencias adentro—, que es
-  el que va a pedir que la posición tenga cuenta padre.
-
----
+**Propuesto: A**, con la limitación dicha en pantalla en vez de escondida. Es una aproximación honesta
+—no pierde plata, difiere el momento— y mantiene la fase chica. B queda disponible para cuando la
+valuación exista de verdad.
 
 ## 7. Decisiones: lo que se puede cerrar ahora y lo que no
 
@@ -441,15 +576,22 @@ Tres mitigaciones concretas, todas de diseño y ninguna de código:
 | 8 | **El bloque vive dentro de `/savings`**, no en el detalle de cuenta | Modelo §1 y E4 del módulo |
 | 9 | **Sin nada, no hay bloque** | E8 del módulo, ya QA-eado |
 | 10 | **Grana no recomienda instrumentos** | Regla 10 del modelo |
-| 11 | **La primera fase es plazo fijo como caso, mecanismo genérico como entrega** | Propuesto acá (§6.2) |
-| 12 | **Cripto queda fuera** de esta vuelta | Propuesto acá (§2.2) |
+| 11 | **El orden es 3A FCI · 3B plazo fijo · 3C variables**, y USD no es fase | Decidido por producto (§6.1) |
+| 12 | **El FCI es posición, no cuenta**: rescatable en el día ≠ gastable hoy | Resuelto acá (§2.1) |
+| 13 | **La primera versión no construye valuación**: la posición vale lo que se puso, y **la verdad llega con el rescate** | Propuesto acá (§3.4) |
+| 14 | **Sin cotizaciones, sin rendimiento diario, sin gráficos, sin broker** en 3A | Recorte (§6.3) |
+| 15 | **T+0/T+1/T+2 es un rótulo, no una regla** en la primera versión | Propuesto acá (§6.3) |
+| 16 | **El rescate parcial mueve capital; la diferencia se realiza al cerrar** | Propuesto acá (§6.5) |
+| 17 | **Cripto queda fuera** de esta vuelta | Propuesto acá (§2.2) |
 
 ### 7.2 No decidir todavía
 
 | # | Pregunta abierta | Por qué esperar |
 |---|---|---|
 | A | **¿El techo del reparto pasa a ser «guardado + colocado», y el propósito distingue las dos partes?** | Es la pregunta central de la fase. Se contesta con la pantalla delante, no antes (§4.3) |
-| B | **¿El FCI money market es posición o cuenta?** | Es el borde del criterio. Se mira con usuarios, no se argumenta |
+| B | ~~¿El FCI money market es posición o cuenta?~~ **Cerrada**: es posición (§2.1) | El orden de fases la volvió inevitable, así que se tomó. Queda para validar con usuarios, no para decidir de nuevo |
+| B2 | **Cómo se llama la posición si el usuario no sabe el nombre del fondo** | «FCI Mercado Pago» funciona; «Cocos Ahorro» también. Pero mucha gente solo sabe que «la plata rinde en la billetera». Es copy y necesita la pantalla |
+| B3 | **Si el rescate parcial con la limitación de §6.5 se entiende**, o si el usuario espera ver la ganancia en el momento | Es la única aproximación del recorte, y hay que mirarla |
 | C | **Cómo se llama el término del rendimiento** en la card del mes | Depende de cómo quede la línea nueva |
 | D | **Qué hace Grana con una posición sin valuación**: ¿vale lo que costó, y cómo lo dice? | Es copy y es honestidad; necesita la pantalla |
 | E | **El drift de las cuentas que rinden solas** | Ya está abierto en el modelo (§7.5) y esta capa lo agrava |
@@ -471,7 +613,16 @@ propósito naciera colgado de una fila.
 
 1. **Nada de esto se implementa antes del QA visual nativo de `extract-savings-module`.** Es la
    compuerta vigente.
-2. Cuando se retome: **redibujar `fase-3a-plazo-fijo.html`** con la navegación del módulo ya
-   construido —la cuenta como atajo contextual, no como puerta— y **con un segundo instrumento sin
-   vencimiento en la lista**, aunque no se implemente.
-3. Con esos dos mocks, decidir A y B de §7.2. Recién después, un change.
+2. Cuando se retome, **el primer artefacto es un mock de la fase 3A**: el alta de un FCI desde el
+   movimiento que saca la plata, la fila en el bloque, el rescate total y el parcial, y la línea nueva
+   del mes. Dibujado sobre la navegación del módulo ya construido.
+3. `docs/design/modelo-de-dinero/fase-3a-plazo-fijo.html` **cambia de número**: pasa a ser la
+   referencia de la **3B**, no de la primera fase. Su razonamiento contable —stock vs. flujo, los tres
+   desenlaces, el interés que no es ingreso— **sigue vigente y es de donde sale medio este documento**;
+   lo que cambia es cuándo se construye. Cuando esto sea un change, conviene renombrarlo o dejarle el
+   aviso arriba, como ya tienen los otros mocks.
+4. Con el mock de 3A delante, decidir **A** (el techo del reparto), **B2** y **B3** de §7.2. Recién
+   después, un change.
+5. **El nombre del bloque se decide con el mock, no antes** — pero conviene entrar con «Puesto a
+   trabajar» como hipótesis y no con una lista abierta, para que la discusión sea sobre una pantalla y
+   no sobre una tabla de sinónimos.
