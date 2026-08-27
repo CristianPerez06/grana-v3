@@ -5,11 +5,12 @@ import { useTranslations } from 'next-intl'
 import { PURPOSE_SEEDS, type Purpose } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { parseMoneyInput } from '@grana/validation'
-import { ChevronDown, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { allocateToPurpose, unallocateFromPurpose } from '@/app/_actions/savings'
+import { cn } from '@/lib/utils'
 import { DrawerBackHeader } from './drawer-back-header'
 
 type Currency = 'ARS' | 'USD'
@@ -163,26 +164,39 @@ export function PurposeAllocate({
         <div className="flex items-start justify-between">
           <label
             htmlFor="allocation-amount"
-            className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft"
+            className="pt-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft"
           >
             {t('amount_label')}
           </label>
-          {/* La moneda se elige acá, con el mismo chip que el alta de
-              movimientos. Cambiarla cambia el piso: lo que hay sin destino en
-              pesos no es lo que hay sin destino en dólares. */}
-          <button
-            type="button"
-            onClick={() =>
-              setCurrency(
-                currencies[(currencies.indexOf(currency) + 1) % currencies.length] ?? currency,
-              )
-            }
-            disabled={currencies.length < 2}
-            className="inline-flex items-center gap-1 rounded-[9px] border border-border bg-[#FAFBFC] px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
-          >
-            {currency}
-            {currencies.length > 1 && <ChevronDown className="size-3" aria-hidden />}
-          </button>
+          {/* El MISMO segmentado que el formulario de guardar, y no un chip
+              distinto: son dos pantallas hermanas del mismo overlay, y quien
+              acaba de elegir «Pesos» en una no debería encontrarse un «ARS» que
+              hay que tocar para descubrir que se puede cambiar.
+
+              Está SIEMPRE, como en el resto de la app: una pantalla donde el
+              selector a veces está y a veces no obliga a buscarlo.
+
+              Cambiar la moneda cambia el piso: lo que hay sin destino en pesos
+              no es lo que hay sin destino en dólares. */}
+          <div className="flex shrink-0 rounded-xl border border-border bg-surface-sunken p-0.5">
+            {currencies.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setCurrency(option)}
+                aria-pressed={currency === option}
+                disabled={currencies.length < 2}
+                className={cn(
+                  'min-h-11 rounded-lg px-3 text-[12.5px] font-bold transition-colors',
+                  currency === option
+                    ? 'bg-card text-text shadow-sm'
+                    : 'text-text-muted hover:text-text',
+                )}
+              >
+                {option === 'USD' ? t('currency_usd') : t('currency_ars')}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="mt-2 flex items-baseline gap-1.5">
           <span className="text-[27px] font-semibold leading-none text-text opacity-50">

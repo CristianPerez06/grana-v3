@@ -185,7 +185,16 @@ export function SavingsDrawer({
   // En el fondo de la pila la flecha CIERRA. Antes caía en la vista de detalle,
   // que era la misma lista que la página de atrás: entrabas desde la lista del
   // módulo, volvías, y aparecía otra lista.
-  const back = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : (onClose(), s)))
+  //
+  // La decisión se toma FUERA del updater de `setStack`. Metida adentro —un
+  // `(onClose(), s)` en la rama del fondo— React ejecutaba `onClose` mientras
+  // recalculaba el estado, o sea un `setState` del padre durante el render de
+  // este componente: "Cannot update a component while rendering a different
+  // component". Un updater tiene que ser puro; cerrar es un efecto.
+  const back = () => {
+    if (stack.length > 1) setStack((s) => s.slice(0, -1))
+    else onClose()
+  }
   const queryClient = useQueryClient()
 
   // Las lecturas corren SOLO con el overlay abierto: son los topes de las
@@ -1000,28 +1009,29 @@ const SavingsForm = ({
               Las dos opciones a la vista también dicen que hay dos — el chip
               obligaba a tocarlo para enterarse.
 
-              Aparece solo con dos monedas que ofrecer: quien tiene únicamente
-              pesos no debería confirmar que tiene pesos. */}
-          {currencyOptions.length > 1 && (
-            <div className="flex shrink-0 rounded-xl border border-border bg-surface-sunken p-0.5">
-              {currencyOptions.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setCurrency(option)}
-                  aria-pressed={currency === option}
-                  className={cn(
-                    'min-h-11 rounded-[9px] px-3 text-[12.5px] font-bold transition-colors',
-                    currency === option
-                      ? 'bg-card text-text shadow-sm'
-                      : 'text-text-muted hover:text-text',
-                  )}
-                >
-                  {option === 'USD' ? t('currency_usd') : t('currency_ars')}
-                </button>
-              ))}
-            </div>
-          )}
+              Está SIEMPRE, aunque haya una sola moneda que ofrecer: el resto de
+              la app muestra su selector de moneda siempre, y una pantalla donde
+              a veces está y a veces no obliga a buscarlo. Con una sola opción no
+              hay nada que elegir, y el control lo dice mostrándola sola. */}
+          <div className="flex shrink-0 rounded-xl border border-border bg-surface-sunken p-0.5">
+            {currencyOptions.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setCurrency(option)}
+                aria-pressed={currency === option}
+                disabled={currencyOptions.length < 2}
+                className={cn(
+                  'min-h-11 rounded-lg px-3 text-[12.5px] font-bold transition-colors',
+                  currency === option
+                    ? 'bg-card text-text shadow-sm'
+                    : 'text-text-muted hover:text-text',
+                )}
+              >
+                {option === 'USD' ? t('currency_usd') : t('currency_ars')}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="mt-2 flex items-baseline gap-1.5">
           <span className="text-[27px] font-semibold leading-none text-text opacity-50">
