@@ -22,8 +22,10 @@ import { MovementFiltersSheet } from '../../../components/movements/MovementFilt
 import { QuickAddFab } from '../../../components/transactions/QuickAddFab'
 import { PendingRecurrencesBlock } from '../../../components/recurrences/PendingRecurrencesBlock'
 import { PendingReimbursementsBlock } from '../../../components/transactions/PendingReimbursementsBlock'
+import { CategorySpendingOverviewContainer } from '../../../components/transactions/CategorySpendingOverviewContainer'
 import { RecurrenceSuggestionBanner } from '../../../components/recurrences/RecurrenceSuggestionBanner'
 import {
+  getMonthCategoryLinesFeed,
   getMovementFilterOptions,
   getMovementsFeedPage,
   hasAnyTransaction,
@@ -35,6 +37,7 @@ import {
   emptyFilters,
   hasActiveContentFilters,
   hasActiveSearch,
+  isPureCategoryDrill,
   type MovementFiltersState,
 } from '../../../lib/transactions/feed-filters'
 import { useLocale, useT } from '../../../lib/locale-context'
@@ -95,12 +98,20 @@ export default function MovimientosScreen() {
   // without a second pass through the sheet.
   const [optionsCategoryId, setOptionsCategoryId] = useState<string | null>(null)
 
-  // Single mutation point: every filter change resets the page limit in the SAME
-  // state update. Doing it in two setStates would fire an intermediate fetch
-  // with the new filter and the old limit — `limit` is part of the query key.
+  // Single mutation point: a filter change that MOVES THE QUERY resets the page
+  // limit in the SAME state update. Doing it in two setStates would fire an
+  // intermediate fetch with the new filter and the old limit — `limit` is part
+  // of the query key.
+  //
+  // The reset is keyed on the projected query, not on "some field changed":
+  // `overviewMode` lives in this state but never reaches the feed (it selects
+  // which breakdown the card reads), so flipping Egresos / Ingresos must not
+  // collapse a list the user had already expanded.
   const applyFilters = (next: MovementFiltersState) => {
+    const movesTheQuery =
+      JSON.stringify(adaptFiltersForQuery(next)) !== JSON.stringify(adaptFiltersForQuery(filters))
     setFilters(next)
-    setLimit(DEFAULT_MOVEMENTS_LIMIT)
+    if (movesTheQuery) setLimit(DEFAULT_MOVEMENTS_LIMIT)
   }
   const patchFilters = (patch: Partial<MovementFiltersState>) =>
     applyFilters({ ...filters, ...patch })
@@ -124,10 +135,53 @@ export default function MovimientosScreen() {
 
   const adapted = useMemo(() => adaptFiltersForQuery(filters), [filters])
 
+  // ── Which lens the list below reads ────────────────────────────────────────
+  // In a PURE CATEGORY DRILL (the category is the only content filter) the list
+  // switches to the DEVENGADO lens, so the amounts it shows add up to the weight
+  // the donut gave that category: the cuota of the month instead of the parent,
+  // the user's part of a shared movement, the reimbursement as its own
+  // subtracting row. Any other filter on top and we are answering a different
+  // question — back to the general CAJA feed, which honours all filters combined
+  // and promises no reconciliation. See the `spending-by-category` spec.
+  const drilling = isPureCategoryDrill(filters)
+  const drillCurrency: 'ARS' | 'USD' = filters.currency === 'USD' ? 'USD' : 'ARS'
+
   const feedQuery = useQuery({
     queryKey: ['transactions', 'feed', { filters: adapted, limit }] as const,
     queryFn: () => getMovementsFeedPage(adapted, limit),
+    enabled: !drilling,
   })
+
+  const drillQuery = useQuery({
+    queryKey: [
+      'transactions',
+      'category-lines',
+      filters.month,
+      filters.categoryId,
+      drillCurrency,
+      filters.subcategoryId,
+    ] as const,
+    queryFn: () =>
+      getMonthCategoryLinesFeed(
+        filters.month,
+        filters.categoryId as string,
+        drillCurrency,
+        filters.subcategoryId ?? undefined,
+      ),
+    enabled: drilling,
+  })
+
+  // One list, two sources. The drilled read returns a whole month of one
+  // category, so it does not paginate and never offers "cargar más".
+  const listQuery = drilling ? drillQuery : feedQuery
+  const installmentChips = useMemo(() => {
+    if (!drilling || !drillQuery.data) return undefined
+    const chips = new Map<string, string>()
+    for (const [id, { n, total }] of drillQuery.data.installments) {
+      chips.set(id, t('cards.detail.installment_chip', { n, total }))
+    }
+    return chips
+  }, [drilling, drillQuery.data, t])
 
   const optionsQuery = useQuery({
     queryKey: ['transactions', 'filter-options', optionsCategoryId] as const,
@@ -135,8 +189,8 @@ export default function MovimientosScreen() {
   })
   const options = optionsQuery.data
 
-  const movements = feedQuery.data?.movements ?? []
-  const isEmpty = feedQuery.isSuccess && movements.length === 0
+  const movements = (drilling ? drillQuery.data?.movements : feedQuery.data?.movements) ?? []
+  const isEmpty = listQuery.isSuccess && movements.length === 0
   const hasFilters = hasActiveContentFilters(filters)
   const hasSearch = hasActiveSearch(filters)
   const narrowed = hasFilters || hasSearch
@@ -275,6 +329,10 @@ export default function MovimientosScreen() {
       emptyState={emptyState}
       showAccount
       showFeedBadges
+      // Only set while drilled: the "Cuota n de N" chip is what tells the user
+      // the row is the cuota of THIS month and not the whole purchase — which is
+      // exactly why the amounts add up to the donut.
+      installmentChips={installmentChips}
       onPressMovement={(m) => router.push(`/transactions/${m.id}`)}
     />
   )
@@ -300,11 +358,20 @@ export default function MovimientosScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerClassName="gap-4 px-6 py-6 pb-28"
       >
+        {/* The ONLY month control on this screen. It governs the card, the
+            pending blocks and the feed at once — which is why the card does not
+            bring the selector web keeps inside it. */}
         <MonthNavigator
           year={year}
           month={monthNum}
           onPrev={canGoBack ? () => patchFilters({ month: shiftMonth(month, -1) }) : undefined}
           onNext={canGoForward ? () => patchFilters({ month: shiftMonth(month, +1) }) : undefined}
+        />
+
+        <CategorySpendingOverviewContainer
+          filters={filters}
+          patchFilters={patchFilters}
+          options={options}
         />
 
         {/* Action chips: Buscar / Filtros. Recurrencias is NOT here — it already
@@ -368,11 +435,11 @@ export default function MovimientosScreen() {
         <PendingReimbursementsBlock todayISO={todayISO} />
         <RecurrenceSuggestionBanner />
 
-        {feedQuery.isPending ? (
+        {listQuery.isPending ? (
           <View className="overflow-hidden rounded-2xl border border-border bg-card">
             <MovementListSkeleton />
           </View>
-        ) : feedQuery.isError ? (
+        ) : listQuery.isError ? (
           <View className="rounded-[20px] border border-dashed border-border p-8">
             <Text className="text-center text-sm text-text-muted">
               {t('transactions.route.feed_error')}
@@ -387,7 +454,9 @@ export default function MovimientosScreen() {
                 {list}
               </View>
             )}
-            {feedQuery.data?.hasMore && (
+            {/* The drilled list is a whole month of one category: it does not
+                paginate, so there is nothing to load more of. */}
+            {!drilling && feedQuery.data?.hasMore && (
               <Pressable
                 onPress={() => setLimit(feedQuery.data.nextLimit)}
                 className="items-center rounded-xl border border-border bg-card py-3"

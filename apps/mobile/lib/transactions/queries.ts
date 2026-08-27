@@ -8,6 +8,7 @@ import { supabase } from '../supabase'
 import {
   getGlobalMovementsPage,
   getInstallmentFamily,
+  getMonthCategoryLines,
   getMovementFilterOptions as getMovementFilterOptionsImpl,
   getPendingReimbursements as getPendingReimbursementsImpl,
   getReimbursementsForExpense,
@@ -15,6 +16,7 @@ import {
   hasAnyTransaction as hasAnyTransactionImpl,
   toFinancialMovement,
   type FinancialMovement,
+  type MonthCategoryLines,
   type MovementFilterOptions,
   type MovementFilters,
   type PendingReimbursementVM,
@@ -44,6 +46,30 @@ export async function getMovementsFeedPage(
   limit: number,
 ): Promise<MovementsFeedPage> {
   return getGlobalMovementsPage(supabase, { limit, filters })
+}
+
+// ── Drilled reconciliation list ───────────────────────────────────────────────
+// The rows that COMPOSE a category's weight in the "En qué se fue" donut for the
+// month + currency on screen. Uses the DEVENGADO lens, not the CAJA lens of the
+// general feed: it shows the cuota of the month (never the off-ledger parent),
+// the user's part of a shared movement, and the received reimbursement as its own
+// subtracting row — so the sum of what it displays equals the donut weight BY
+// CONSTRUCTION. The `category-lines-reconcile` invariant test guards the lens
+// helpers against drift.
+//
+// This is a DRILL-ONLY view. It applies when the category is the only content
+// filter active (optionally narrowed by subcategory); the moment the user layers
+// an account / type / amount / text filter on top, the screen goes back to
+// `getMovementsFeedPage`, which honours all filters combined and makes no
+// reconciliation promise.
+export type { MonthCategoryLines }
+export async function getMonthCategoryLinesFeed(
+  month: string,
+  categoryId: string,
+  currency: 'ARS' | 'USD',
+  subcategoryId?: string,
+): Promise<MonthCategoryLines> {
+  return getMonthCategoryLines(supabase, month, categoryId, currency, subcategoryId)
 }
 
 // Option catalog for the filters sheet (active accounts + active categories +

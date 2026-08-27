@@ -3,10 +3,15 @@ export {
   getDashboardHero,
   getMonthBalanceSeries,
   getMonthCategoryBreakdown,
+  getMonthIncomeBreakdown,
   getMonthSpending,
+  getMonthSubcategoryBreakdown,
+  hasUsdAccount,
   resolveMonthRange,
+  SUBCATEGORY_UNCATEGORIZED_ID,
   UNCATEGORIZED_ID,
   type MonthCategoryBreakdown,
+  type MonthSubcategoryBreakdown,
 } from './queries'
 
 export {
