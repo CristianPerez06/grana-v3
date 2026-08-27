@@ -247,12 +247,18 @@ export const SaveSuggestionStrip = ({ year, month }: { year: number; month: numb
           abajo, y cuanto más alta más se parece a algo que hay que resolver
           antes de mirar el saldo, que es justo lo que promete no ser. */}
       <div className="flex shrink-0 items-center gap-4">
-        <Button onClick={save} disabled={pending} className="whitespace-nowrap">
+        {/* Más angosto que el `px-4` del sistema: sin el monto adentro, el
+            label es una palabra, y el aire de un botón se calibra contra lo que
+            dice — el mismo padding que aguanta «Guardar US$ 10.000,00» le queda
+            enorme a «Guardar». Y lo que se ahorra acá es lo que hace entrar a
+            las tres acciones en una línea de teléfono. */}
+        <Button onClick={save} disabled={pending} className="whitespace-nowrap px-3">
           {t('cta')}
         </Button>
-        {/* «Ahora no» y «Este mes no»: el mismo giro con distinto alcance, y esa
-            simetría dice la escala sin explicarla — una posterga hasta el
-            próximo ingreso, la otra hasta el mes que viene. */}
+        {/* «Ahora no» y «No más este mes»: las dos arrancan con un no y lo único
+            que las separa es el alcance — una posterga hasta el próximo ingreso,
+            la otra hasta el mes que viene. «Suficiente por este mes» decía lo
+            mismo y no entraba en un teléfono. */}
         <button
           type="button"
           onClick={() => close(false)}

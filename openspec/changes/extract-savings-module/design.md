@@ -708,10 +708,15 @@ que se salía era el tercer control. Se probó partirlas en dos filas y se desca
 hacia abajo, y cuanto más alta más se parece a algo que hay que resolver antes de mirar el saldo, que
 es justo lo que promete no ser.
 
-Lo que sobraba era el copy: **«Suficiente por este mes» → «Este mes no»**. Y queda mejor de lo que
-estaba, porque las dos salidas pasan a ser el mismo giro con distinto alcance —«Ahora no» / «Este mes
-no»—, y esa simetría dice la escala sola: una posterga hasta el próximo ingreso, la otra hasta el mes
-que viene. El texto largo lo explicaba; el corto lo muestra.
+Lo que sobraba era el copy: **«Suficiente por este mes» → «No más este mes»**. Y queda mejor de lo que
+estaba, porque las dos salidas pasan a arrancar igual —«Ahora no» / «No más este mes»— y lo único que
+las separa es el alcance: una posterga hasta el próximo ingreso, la otra hasta el mes que viene. El
+texto largo lo explicaba; el corto lo muestra.
+
+El botón también adelgaza —`px-3` en vez del `px-4` del sistema—, y no por ganar píxeles: **el aire de
+un botón se calibra contra lo que dice**, y el padding que aguantaba «Guardar US$ 10.000,00» le queda
+enorme a «Guardar». Que además sea lo que termina de hacer entrar la fila es la consecuencia, no el
+motivo.
 
 Medido de 320 a 430, con un monto de ocho cifras en el texto: las tres acciones entran en una línea y
 nada se sale de la pantalla.

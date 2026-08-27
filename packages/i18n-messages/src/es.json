@@ -2112,7 +2112,7 @@
       "body": "Podés apartar {amount} de este ingreso. Sigue en tus cuentas.",
       "cta": "Guardar",
       "later": "Ahora no",
-      "enough_this_month": "Este mes no"
+      "enough_this_month": "No más este mes"
     },
     "back": "Volver",
     "accounts_total": "Tus cuentas en {currency}",

@@ -264,9 +264,10 @@ definición.
 - [x] 6.12 **La tira, en teléfono** (E25): «Suficiente por este mes» se salía de la pantalla. **El
   monto va en un solo lugar** —estaba en el cuerpo y en el botón, a dos renglones de distancia—: queda
   en el TEXTO, que es donde vive la propuesta, y el botón vuelve a ser «Guardar». Eso solo no
-  alcanzaba: lo que se salía era el tercer control, así que **«Suficiente por este mes» → «Este mes
-  no»**, que además empareja las dos salidas —«Ahora no» / «Este mes no»— y dice la escala sola. Sin
-  filas de más. Medido de 320 a 430 con ocho cifras en el texto
+  alcanzaba: lo que se salía era el tercer control, así que **«Suficiente por este mes» → «No más
+  este mes»**, que además empareja las dos salidas —«Ahora no» / «No más este mes»—, y el botón pasa a
+  `px-3`, porque el aire se calibra contra lo que dice y ya no dice un monto. Sin filas de más. Medido
+  de 320 a 430 con ocho cifras en el texto
 - [ ] 6.5 QA nativo del módulo — **bloqueado por el mismo acceso que el issue #58**
 - [x] 5.5 **Con tests lo nuevo que es lógica pura**: `moneyParts` —que parte lo que devuelve `Intl`
   en vez de armar el número a mano, y si el corte se moviera pondría un «$» en el medio de la cifra—
