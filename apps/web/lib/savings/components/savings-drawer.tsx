@@ -18,7 +18,7 @@ import {
 } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { parseMoneyInput } from '@grana/validation'
-import { Calendar, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Calendar, ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Drawer } from '@/components/ui/drawer'
 import { purposeGlyph, purposeTint } from '@/lib/savings/purpose-emblem'
 import { shortDate } from '@/lib/savings/short-date'
@@ -852,6 +852,12 @@ const SavingsForm = ({
   const setAmount = (next: string) => onDraftChange({ ...draft, amount: next })
   const setDate = (next: string) => onDraftChange({ ...draft, date: next })
 
+  /** Cicla entre las monedas que hay para ofrecer, como el resto de la app. */
+  const cycleCurrency = () => {
+    if (currencyOptions.length < 2) return
+    setCurrency(currencyOptions[(currencyOptions.indexOf(currency) + 1) % currencyOptions.length])
+  }
+
   // The currency is offered ONLY when there is more than one to offer. Coming
   // from an income it is inherited and never asked; opened loose, a user who
   // only holds pesos should not have to confirm that they hold pesos.
@@ -996,42 +1002,31 @@ const SavingsForm = ({
           an amount should not look like two different apps, and the chip is what
           gives this one its currency selector. */}
       <div className="mt-4 rounded-2xl border border-border bg-card px-[22px] pb-[22px] pt-5 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start justify-between">
           <label
             htmlFor="savings-amount"
-            className="pt-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft"
+            className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft"
           >
             {t('amount_label')}
           </label>
-          {/* Segmentado y no un desplegable de 22px: la moneda es la decisión
-              que MÁS cambia el significado de lo que se escribe, y estaba en el
-              control más chico de la pantalla, por debajo del mínimo de 44 px.
-              Las dos opciones a la vista también dicen que hay dos — el chip
-              obligaba a tocarlo para enterarse.
+          {/* EL chip de moneda de la app, el mismo del alta de movimientos: el
+              código, un chevron, y ciclar al tocarlo. Se había probado un
+              segmentado con «Pesos / Dólares» —más grande y con las dos opciones
+              a la vista— y el problema no era que fuera peor, era que era OTRO:
+              esta pantalla pide un monto igual que las de movimientos, y dos
+              controles distintos para la misma decisión obligan a aprenderla dos
+              veces.
 
-              Está SIEMPRE, aunque haya una sola moneda que ofrecer: el resto de
-              la app muestra su selector de moneda siempre, y una pantalla donde
-              a veces está y a veces no obliga a buscarlo. Con una sola opción no
-              hay nada que elegir, y el control lo dice mostrándola sola. */}
-          <div className="flex shrink-0 rounded-xl border border-border bg-surface-sunken p-0.5">
-            {currencyOptions.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setCurrency(option)}
-                aria-pressed={currency === option}
-                disabled={currencyOptions.length < 2}
-                className={cn(
-                  'min-h-11 rounded-lg px-3 text-[12.5px] font-bold transition-colors',
-                  currency === option
-                    ? 'bg-card text-text shadow-sm'
-                    : 'text-text-muted hover:text-text',
-                )}
-              >
-                {option === 'USD' ? t('currency_usd') : t('currency_ars')}
-              </button>
-            ))}
-          </div>
+              Siempre visible, deshabilitado cuando hay una sola moneda. */}
+          <button
+            type="button"
+            onClick={cycleCurrency}
+            disabled={currencyOptions.length < 2}
+            className="inline-flex items-center gap-1 rounded-[9px] border border-border bg-[#FAFBFC] px-2.5 py-1 text-xs font-bold text-text disabled:opacity-100"
+          >
+            {currency}
+            {currencyOptions.length > 1 && <ChevronDown className="size-3" aria-hidden />}
+          </button>
         </div>
         <div className="mt-2 flex items-baseline gap-1.5">
           <span className="text-[27px] font-semibold leading-none text-text opacity-50">
