@@ -1144,17 +1144,23 @@ const SavingsForm = ({
           movimientos en ancho de teléfono. Como card entera pesaba igual que el
           monto, y acá la fecha es casi siempre hoy — el foco es cuánto y para
           qué. */}
-      <div className="mt-3 flex items-center gap-3 rounded-2xl border border-border-soft bg-card px-3 py-2.5">
+      <div className="mt-2.5 flex items-center gap-3 rounded-xl border border-border-soft bg-card px-3 py-1.5">
         <DatePicker
           value={date}
           onChange={setDate}
           label={t('date_label')}
           max={formatDateISO(getTodayAR())}
           trigger={
-            <button type="button" className="flex min-w-0 items-center gap-2.5 text-left">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#FAFBFC] text-text-muted">
-                <Calendar className="size-[18px]" aria-hidden />
-              </span>
+            /* El ícono, suelto y sin su recuadro de fondo. El cuadrado de 36px
+               era lo que fijaba el alto de toda la fila —para mostrar una fecha
+               de dos palabras— y ese alto es el que empujaba el CTA fuera de la
+               pantalla en web. Sigue siendo tocable: los 44px salen del
+               pseudo-elemento, no del cuadrado. */
+            <button
+              type="button"
+              className="relative flex min-w-0 items-center gap-2 py-1.5 text-left after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-['']"
+            >
+              <Calendar className="size-4 shrink-0 text-text-muted" aria-hidden />
               <span className="truncate text-[13px] font-semibold text-text">
                 {shortDate(date)}
               </span>
@@ -1270,8 +1276,8 @@ const SavingsForm = ({
         </div>
       )}
 
-      <div className="mt-3 rounded-2xl border border-border-soft bg-card p-4 text-[14px]">
-        <p className="flex justify-between py-1 text-text-muted">
+      <div className="mt-2.5 rounded-xl border border-border-soft bg-card px-4 py-3 text-[13.5px]">
+        <p className="flex justify-between py-0.5 text-text-muted">
           <span>
             {mode === 'save'
               ? t('available_now')
@@ -1283,14 +1289,14 @@ const SavingsForm = ({
           </span>
           <span className="font-semibold tabular-nums text-text">{money(limit, currency)}</span>
         </p>
-        <p className="flex justify-between py-1 text-text-muted">
+        <p className="flex justify-between py-0.5 text-text-muted">
           <span>{mode === 'save' ? t('you_will_save') : t('you_will_release')}</span>
           <span className="font-semibold tabular-nums text-emerald-deep">
             {value > 0 ? '−' : ''}
             {money(value, currency)}
           </span>
         </p>
-        <p className="mt-1.5 flex justify-between border-t border-border-soft pt-2.5 text-text-muted">
+        <p className="mt-1.5 flex justify-between border-t border-border-soft pt-2 text-text-muted">
           <span>
             {mode === 'save'
               ? t('left_to_spend')
@@ -1314,7 +1320,7 @@ const SavingsForm = ({
 
       {/* The copy never suggests a transfer happened. Grana does not invent a
           financial fact to represent an intention. */}
-      <p className="mt-3 px-1 text-[13px] leading-snug text-text-muted">
+      <p className="mt-2.5 px-1 text-[12.5px] leading-snug text-text-muted">
         {mode === 'save' ? t('save_note') : t('release_note')}
       </p>
 
@@ -1329,7 +1335,7 @@ const SavingsForm = ({
           puede cachar. Sin monto escrito, el botón dice lo mismo con $5.000 que
           con $500.000. Vuelve al verbo solo mientras no hay monto: «Guardar $ 0»
           sería un botón que anuncia una operación que no existe. */}
-      <Button className="mt-5 h-12" onClick={submit} disabled={pending || value <= 0 || overLimit}>
+      <Button className="mt-4 h-12" onClick={submit} disabled={pending || value <= 0 || overLimit}>
         {value > 0
           ? t(mode === 'save' ? 'save_amount' : 'release_amount', {
               amount: money(value, currency),

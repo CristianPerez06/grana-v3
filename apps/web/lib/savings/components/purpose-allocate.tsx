@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { MoneyAmountInput } from '@/components/ui/money-amount-input'
 import { MoneyCalculatorPopover } from '@/components/ui/money-calculator-popover'
 import { allocateToPurpose, unallocateFromPurpose } from '@/app/_actions/savings'
+import { cn } from '@/lib/utils'
 import { DrawerBackHeader } from './drawer-back-header'
 
 type Currency = 'ARS' | 'USD'
@@ -85,11 +86,24 @@ export function PurposeAllocate({
   const [amount, setAmount] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [showAllPurposes, setShowAllPurposes] = useState(false)
   const [pending, startTransition] = useTransition()
 
   // Las sugerencias que el usuario todavía no tiene: ofrecerle crear algo que ya
   // existe lo empuja contra el nombre único con el atajo que existe para
   // ahorrarle trabajo.
+  /** Seis chips antes de plegar, el mismo techo que el formulario de guardar. */
+  const PURPOSE_CHIP_LIMIT = 6
+  const shownPurposes =
+    showAllPurposes || purposes.length <= PURPOSE_CHIP_LIMIT
+      ? purposes
+      : (() => {
+          const head = purposes.slice(0, PURPOSE_CHIP_LIMIT)
+          if (chosen == null || head.some((p) => p.id === chosen.id)) return head
+          return [...head.slice(0, PURPOSE_CHIP_LIMIT - 1), chosen]
+        })()
+  const hiddenPurposes = purposes.length - shownPurposes.length
+
   const taken = new Set(purposes.map((p) => p.name.trim().toLowerCase()))
   const suggestions = PURPOSE_SEEDS.filter(
     (seed) => !taken.has(t(`purposes.seeds.${seed.key}`).trim().toLowerCase()),
@@ -211,55 +225,78 @@ export function PurposeAllocate({
           naturaleza, así que caben como chips. */}
       {fixedPurpose == null && (
         <div className="mt-3">
-          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
-            {t('purposes.pick_inline')}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {purposes.map((option) => (
+          {/* La puerta para crear va a la DERECHA del rótulo, igual que en el
+              formulario de guardar y que en la página: al final de los chips
+              caía sola en su fila cuando la última estaba llena. */}
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+              {t('purposes.pick_inline')}
+            </p>
+            <button
+              type="button"
+              onClick={onCreateCustom}
+              className="relative flex shrink-0 items-center gap-1 text-[12px] font-extrabold text-emerald-deep transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
+            >
+              <Plus className="size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+              {t('purposes.new')}
+            </button>
+          </div>
+          {/* Mismos chips compactos y mismo techo que en guardar: con diez
+              propósitos, la lista completa empujaba el resumen y el CTA fuera de
+              la pantalla. El elegido entra siempre entre los visibles. */}
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {shownPurposes.map((option) => (
               <button
                 key={option.id}
                 type="button"
                 onClick={() => setChosen(option)}
-                className={`flex min-h-[44px] items-center gap-2 rounded-full border px-3.5 text-[13.5px] font-semibold transition-colors ${
+                className={cn(
+                  "relative flex items-center gap-1.5 rounded-full border px-3 py-2 text-[13px] font-semibold transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-['']",
                   chosen?.id === option.id
                     ? 'border-emerald-deep bg-emerald-deep/5 text-text'
-                    : 'border-border-soft bg-card text-text hover:bg-surface-sunken'
-                }`}
+                    : 'border-border-soft bg-card text-text hover:bg-surface-sunken',
+                )}
               >
                 <span aria-hidden>{option.icon ?? '🫙'}</span>
                 {option.name}
               </button>
             ))}
-            {suggestions.map((seed) => (
+            {hiddenPurposes > 0 && (
               <button
-                key={seed.key}
                 type="button"
-                disabled={creating}
-                onClick={async () => {
-                  setCreating(true)
-                  const created = await onCreateSeed(seed.key)
-                  if (created) setChosen(created)
-                  setCreating(false)
-                }}
-                className="flex min-h-[44px] items-center gap-2 rounded-full border border-dashed border-border px-3.5 text-[13.5px] font-semibold text-text-muted transition-colors hover:bg-surface-sunken disabled:opacity-50"
+                onClick={() => setShowAllPurposes(true)}
+                className="relative flex items-center rounded-full border border-dashed border-border px-3 py-2 text-[13px] font-bold text-text-muted transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:bg-surface-sunken hover:text-text"
               >
-                <span aria-hidden>{seed.icon}</span>
-                {t(`purposes.seeds.${seed.key}`)}
+                +{hiddenPurposes}
               </button>
-            ))}
-            <button
-              type="button"
-              onClick={onCreateCustom}
-              className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-dashed border-border px-3.5 text-[13.5px] font-bold text-emerald-deep transition-colors hover:bg-surface-sunken"
-            >
-              <Plus size={15} strokeWidth={2.5} />
-              {t('purposes.create_inline')}
-            </button>
+            )}
+            {/* Las sugerencias solo cuando NO hay propósitos plegados: son un
+                atajo para quien todavía no armó los suyos, y ofrecerlas al lado
+                de un «+3» sería empujar a crear mientras se esconde lo que ya
+                existe. */}
+            {hiddenPurposes === 0 &&
+              suggestions.map((seed) => (
+                <button
+                  key={seed.key}
+                  type="button"
+                  disabled={creating}
+                  onClick={async () => {
+                    setCreating(true)
+                    const created = await onCreateSeed(seed.key)
+                    if (created) setChosen(created)
+                    setCreating(false)
+                  }}
+                  className="relative flex items-center gap-1.5 rounded-full border border-dashed border-border px-3 py-2 text-[13px] font-semibold text-text-muted transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:bg-surface-sunken disabled:opacity-50"
+                >
+                  <span aria-hidden>{seed.icon}</span>
+                  {t(`purposes.seeds.${seed.key}`)}
+                </button>
+              ))}
           </div>
         </div>
       )}
 
-      <div className="mt-3 rounded-2xl border border-border-soft bg-card p-4 text-[14px]">
+      <div className="mt-2.5 rounded-xl border border-border-soft bg-card px-4 py-3 text-[13.5px]">
         <p className="flex justify-between py-1 text-text-muted">
           <span>
             {allocating

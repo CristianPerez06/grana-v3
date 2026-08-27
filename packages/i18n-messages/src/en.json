@@ -2096,8 +2096,8 @@
     "saved_in": "Saved in {purpose}",
     "stays_saved": "Stays set aside",
     "stays_in": "Stays in {purpose}",
-    "save_note": "The money doesn't move. It just stops counting as available to spend.",
-    "release_note": "The money doesn't move. It just counts as available to spend again.",
+    "save_note": "It does not leave your accounts: it stops counting as spendable.",
+    "release_note": "It does not leave your accounts: it counts as spendable again.",
     "errors": {
       "exceeds_available": "You can't set aside more than you have available: {limit}.",
       "exceeds_reserved": "You can't make available more than you have set aside: {limit}.",

@@ -2096,8 +2096,8 @@
     "saved_in": "Tenés guardado en {purpose}",
     "stays_saved": "Queda guardado",
     "stays_in": "Queda en {purpose}",
-    "save_note": "La plata no se mueve. Solo deja de contar como disponible para gastar.",
-    "release_note": "La plata no se mueve. Solo vuelve a contar como disponible para gastar.",
+    "save_note": "No se mueve de tus cuentas: deja de contar como disponible.",
+    "release_note": "No se mueve de tus cuentas: vuelve a contar como disponible.",
     "errors": {
       "exceeds_available": "No podés guardar más de lo que tenés disponible: {limit}.",
       "exceeds_reserved": "No podés volver a usar más de lo que tenés guardado: {limit}.",
