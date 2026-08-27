@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { Pencil, Trash2 } from 'lucide-react-native'
 import { RESERVE_HISTORY_LIMIT, type Purpose } from '@grana/savings'
@@ -61,6 +62,18 @@ export const PurposeGroup = ({
   const { data } = usePurposeHistory(true, currency, purpose.id)
   const history = data ?? { entries: [], hasMore: false }
 
+  /**
+   * Cuántos repartos se leen sin desplegar.
+   *
+   * Cinco entran sin empujar las dos acciones fuera de la pantalla, que es para
+   * lo que se entra acá. El historial se consulta de vez en cuando; las acciones
+   * son de todos los días.
+   */
+  const HISTORY_PREVIEW = 5
+  const [showAllHistory, setShowAllHistory] = useState(false)
+  const shownEntries = showAllHistory ? history.entries : history.entries.slice(0, HISTORY_PREVIEW)
+  const moreEntries = history.entries.length - shownEntries.length
+
   return (
     <View>
       <SheetBackHeader
@@ -115,7 +128,7 @@ export const PurposeGroup = ({
               </Text>
             ) : (
               <View className="mt-1.5">
-                {history.entries.map((entry) => (
+                {shownEntries.map((entry) => (
                   <View
                     key={entry.id}
                     className="flex-row items-center justify-between border-t border-border-soft py-2.5"
@@ -141,6 +154,20 @@ export const PurposeGroup = ({
                 ))}
               </View>
             )}
+            {/* El resto, detrás de un control: el historial crecía sin límite y
+                empujaba fuera de pantalla justo las acciones para las que se
+                entra acá. */}
+            {moreEntries > 0 && (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setShowAllHistory(true)}
+                className="min-h-[44px] justify-center"
+              >
+                <Text className="text-[12.5px] font-bold text-text-muted">
+                  {t('savings.history_more', { count: String(moreEntries) })}
+                </Text>
+              </Pressable>
+            )}
             {history.hasMore && (
               <Text className="mt-2 text-[12px] text-text-soft">
                 {t('savings.history_truncated', { count: String(RESERVE_HISTORY_LIMIT) })}
@@ -148,34 +175,51 @@ export const PurposeGroup = ({
             )}
         </>
 
-        {/* SIN «Guardar», y es una separación de niveles: guardar cambia el
-            TOTAL, así que vive un nivel arriba, donde el total está a la vista.
-            Acá las acciones son sobre ESTE grupo. */}
+        {/* Los BOTONES son lo que se le hace a ESTE propósito: sumarle y
+            sacarle. Los dos mueven su reparto y ninguno mueve el total guardado.
+
+            «Guardar» no está, y es separación de niveles: cambia el TOTAL, así
+            que vive un nivel arriba, donde el total está a la vista (D18).
+            «Volver a usar» tampoco está acá abajo por la misma razón —también
+            cambia el total— y bajó a enlace. Tenerlo como botón hacía que esta
+            pantalla se contradijera: excluía a Guardar por cambiar el total e
+            incluía, con el mismo peso, otra que también lo cambia. */}
         <View className="mt-4 flex-row gap-2">
           <View className="flex-1">
             <Button title={t('savings.purposes.allocate_more')} onPress={onAllocate} />
           </View>
           <View className="flex-1">
             <Button
-              title={t('savings.release')}
+              title={t('savings.purposes.unallocate')}
               variant="secondary"
-              onPress={onRelease}
+              onPress={onUnallocate}
               disabled={reserved <= 0}
             />
           </View>
         </View>
 
-        {/* Quitar el destino es el inverso de destinar y no toca ningún total:
-            va como enlace, sin competir con los dos de arriba. */}
-        <View className="mt-3 flex-row justify-center">
+        {/* «Volver a usar», como enlace y no como botón.
+
+            Es la única salida de acá que vuelve la plata GASTABLE, y por eso no
+            comparte peso con las dos de arriba, que no tocan el total. Pero
+            tampoco se va de la pantalla: parado en Viaje, querer usar esos pesos
+            es un caso real, y mandarlo al total le cobraría dos taps y
+            re-elegir un propósito que ya tenía delante.
+
+            Separado por un divisor y no pegado a los botones: lo que lo
+            distingue no es la forma, es que hace otra cosa. */}
+        <View className="mt-4 border-t border-border-soft pt-3">
+          <Text className="text-[12.5px] leading-[1.45] text-text-muted">
+            {t('savings.purposes.unallocate_note')}
+          </Text>
           <Pressable
-            onPress={onUnallocate}
+            onPress={onRelease}
             disabled={reserved <= 0}
             accessibilityRole="button"
-            className={`min-h-[44px] justify-center ${reserved <= 0 ? 'opacity-40' : ''}`}
+            className={`mt-2 min-h-[44px] justify-center ${reserved <= 0 ? 'opacity-40' : ''}`}
           >
-            <Text className="text-[13px] font-bold text-positive">
-              {t('savings.purposes.unallocate')}
+            <Text className="text-[13px] font-bold text-emerald-deep underline">
+              {t('savings.release')}
             </Text>
           </Pressable>
         </View>

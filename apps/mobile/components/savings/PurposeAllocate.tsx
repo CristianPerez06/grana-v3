@@ -36,6 +36,7 @@ export const PurposeAllocate = ({
   availableFor,
   onCreateSeed,
   onCreateCustom,
+  justCreated = false,
   onDone,
   onBack,
 }: {
@@ -46,6 +47,12 @@ export const PurposeAllocate = ({
   /** Las monedas que el usuario tiene en juego. */
   currencies: Currency[]
   direction: 'allocate' | 'unallocate'
+  /**
+   * Se llegó acá creando el propósito. Cambia el título y suma una línea: es lo
+   * que convierte esta pantalla en la CONFIRMACIÓN de la anterior en vez de un
+   * paso que aparece de la nada.
+   */
+  justCreated?: boolean
   /**
    * El piso de CADA moneda. Una función y no un número porque la moneda se
    * elige acá: el detalle dejó de estar partido por moneda, así que la elección
@@ -116,17 +123,27 @@ export const PurposeAllocate = ({
     <View>
       <SheetBackHeader
         title={
-          purpose != null
-            ? t(
-                allocating
-                  ? 'savings.purposes.allocate_title'
-                  : 'savings.purposes.unallocate_title',
-                { purpose: purpose.name },
-              )
-            : t('savings.purposes.allocate')
+          justCreated && purpose != null
+            ? t('savings.purposes.created_title', { purpose: purpose.name })
+            : purpose != null
+              ? t(
+                  allocating
+                    ? 'savings.purposes.allocate_title'
+                    : 'savings.purposes.unallocate_title',
+                  { purpose: purpose.name },
+                )
+              : t('savings.purposes.allocate')
         }
         onBack={onBack}
       />
+
+      {/* Lo que el propósito recién creado TODAVÍA no tiene, y la pregunta que
+          sigue. */}
+      {justCreated && (
+        <Text className="mt-3 text-[13px] leading-snug text-text-muted">
+          {t('savings.purposes.created_body')}
+        </Text>
+      )}
 
       <View className="mt-4 rounded-2xl border border-border bg-card p-4">
         <View className="flex-row items-start justify-between">
@@ -275,6 +292,20 @@ export const PurposeAllocate = ({
           disabled={busy || value <= 0 || overLimit || purpose == null}
         />
       </View>
+
+      {/* La salida del acuse: el propósito YA quedó creado, y obligar a destinar
+          algo para poder irse convertiría una confirmación en un peaje. */}
+      {justCreated && (
+        <Pressable
+          accessibilityRole="button"
+          onPress={onBack}
+          className="mt-3 min-h-[44px] items-center justify-center"
+        >
+          <Text className="text-[13px] font-bold text-text-muted">
+            {t('savings.purposes.created_skip')}
+          </Text>
+        </Pressable>
+      )}
     </View>
   )
 }

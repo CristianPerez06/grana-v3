@@ -793,3 +793,68 @@ Los tres lugares donde más chances hay de que rompa, en orden: el envoltorio po
 monedas del total —Yoga y el navegador no deciden el quiebre de línea con las mismas reglas—, los
 bordes que hacen de divisor, que dependen de `overflow: hidden` con margen negativo, y el efecto que
 corre el origen cuando el grupo elegido no tiene saldo.
+
+## E27 — Un espejo escrito a mano se despega, y nadie lo nota hasta que lo ve un usuario
+
+El módulo nativo se escribió mirando el de web, pantalla por pantalla. Aun así, una comparación
+sistemática **superficie por superficie** encontró **nueve divergencias**, tres de ellas graves — y
+ninguna de las tres es un detalle visual: las tres cambian lo que el usuario puede hacer.
+
+La causa no es descuido. La nativa se construyó contra la web **de hoy**, pero varias de las cosas que
+la web tiene hoy son **correcciones del QA** — decisiones que se tomaron después de ver la pantalla
+funcionando, y que en el código quedan como una línea sin nada que grite «esto se arregló». Copiar la
+forma no copia el historial.
+
+### Las tres graves
+
+1. **Lo tipeado se perdía en el desvío.** En la nativa el monto vivía adentro de `SavingsForm`, que se
+   desmonta cuando la pila muestra otra vista. Ir a crear un propósito en el medio de guardar —que es
+   lo que el «+» ofrece— borraba el monto y devolvía el formulario en cero. Es el mismo bug que el QA
+   de web reportó con estas palabras: *«no dice nada al guardar y vuelve a abrir el drawer en cero»*.
+2. **El detalle de un propósito tenía las acciones al revés.** Los botones eran *Destinar más* y
+   *Volver a usar*, y *Quitar destino* era el enlace. Es exactamente la contradicción que la web
+   corrigió: la pantalla excluye a *Guardar* por cambiar el total, y ponía con el mismo peso otra
+   acción que **también** cambia el total. Los botones son las dos que mueven el reparto y no el
+   total; *Volver a usar* baja a enlace, con su nota.
+3. **El tope negaba sin ofrecer la salida.** Con $60.000 sin destino y $70.000 pedidos, la nativa
+   decía «no podés» y punto. La web dice el tope **y nombra la salida** —«elegí un propósito»— porque
+   la plata podía salir de un propósito que la pantalla ni mencionaba. Es el caso que se QA-eó a mano.
+
+### Las otras seis
+
+4. **Crear un propósito desde el módulo cerraba el sheet en silencio.** Con la poda del detalle, el
+   `back()` del fondo pasó a cerrar, así que el flujo terminaba sin acuse y con un propósito en cero
+   en una lista que el usuario no llegaba a ver. Ahora sigue a destinarle, con el destino ya elegido.
+5. **No existía el acuse de creación** (E22): ni el título «Creaste X» ni la línea que explica qué le
+   falta, ni la salida «Ahora no».
+6. **Los chips no tenían orden ni techo.** Venían alfabéticos —así los devuelve `listPurposes`— y sin
+   plegado, así que con diez propósitos la lista empujaba el CTA fuera de pantalla. Ahora ordenan por
+   saldo, el techo cuenta propósitos, «Sin destino» va siempre visible y fuera del conteo, y el
+   control de overflow vive en la fila del rótulo.
+7. **No existían los atajos de monto** (`+$10.000`, `+$50.000`, «Todo»), y esto tiene su ironía: el
+   comentario que los justifica en web dice *«escribir 50.000 en un teclado de teléfono son cinco
+   toques que un chip resuelve en uno»*. La función que existe **por** los teléfonos era la única que
+   no estaba en el teléfono.
+8. **El historial de un propósito no tenía techo**, así que empujaba fuera de pantalla las dos
+   acciones para las que se entra ahí.
+9. **El pie no se dibujaba sin nada guardado.** El puente con el banco explica una diferencia que
+   existe igual cuando no hay nada apartado.
+
+### Lo que esto deja como método
+
+La comparación que las encontró tiene dos partes, y la segunda es la que sirve para siempre:
+
+- **Leer las dos implementaciones de cada superficie una al lado de la otra.** Cara, pero es la única
+  que ve una jerarquía invertida: las dos pantallas tienen los mismos tres controles y las mismas
+  tres frases; lo que cambia es cuál es botón y cuál es enlace.
+- **Comparar qué CLAVES DE i18N renderiza cada app.** Mecánico, corre en segundos, y encuentra
+  funcionalidad faltante sin leer una línea de layout: una frase que la web muestra y la nativa no es
+  una decisión que a la nativa le falta. Encontró cinco de las nueve —el mensaje del tope, el acuse,
+  los atajos, el techo del historial y «Ahora no»—, y las cinco eran comportamiento, no texto.
+
+Quedó una diferencia **aceptada**: `savings.date_label` («Fecha») no se usa en la nativa porque ahí el
+selector de fecha es el del sistema operativo, que se rotula solo.
+
+Y una regla que vale más allá de este módulo: **la paridad no se declara, se mide.** Mientras la
+única prueba de que dos apps coinciden sea que alguien las escribió mirando la otra, coinciden hasta
+la primera corrección que se haga de un solo lado.

@@ -6,6 +6,8 @@ import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { formatDateISO, getTodayAR } from '@grana/money-logic'
 import { formatForDisplay, parseMoneyInput } from '@grana/validation'
 import {
+  MODULE_CURRENCIES,
+  moduleGroupCurrency,
   PURPOSE_SEEDS,
   type AvailableSums,
   type Purpose,
@@ -67,6 +69,12 @@ type SheetView =
       /** Nulo: se llegó desde el resto y el propósito se elige en la misma pantalla. */
       purpose: Purpose | null
       direction: 'allocate' | 'unallocate'
+      /**
+       * Se llegó acá creando el propósito. La pantalla lo ACUSA: sin eso, crear
+       * desde el módulo terminaba en un formulario de destinar que no decía en
+       * ningún lado que el propósito se había creado.
+       */
+      justCreated?: boolean
     }
 
 /**
@@ -79,10 +87,34 @@ type SheetView =
  */
 export type SavingsDrawerInitialView = Exclude<SheetView, { kind: 'detail' }>
 
+/** Lo tipeado en el formulario, que sobrevive a los desvíos de la pila. */
+type Draft = {
+  amount: string
+  date: string
+  /** `null` hasta que el usuario la cambia: antes vale la de la vista. */
+  currency: Currency | null
+}
+
+const emptyDraft = (): Draft => ({
+  amount: '',
+  date: formatDateISO(getTodayAR()),
+  currency: null,
+})
+
 const money = (amount: number, currency: Currency) =>
   currency === 'USD' ? formatUSD(amount) : formatARS(amount, true)
 
 const CURRENCY_SYMBOL: Record<Currency, string> = { ARS: '$', USD: 'U$D' }
+
+/**
+ * Los pasos de los atajos de monto, POR MONEDA y no un número fijo: +$10.000
+ * tiene sentido en pesos y sería absurdo en dólares, donde el mismo gesto es
+ * +US$ 10.
+ */
+const AMOUNT_STEPS: Record<Currency, readonly number[]> = {
+  ARS: [10_000, 50_000],
+  USD: [10, 50],
+}
 
 /** Ayer, en fecha financiera AR. */
 const yesterdayISO = (): string => {
@@ -122,6 +154,19 @@ export const SavingsDrawer = ({
   const t = useT()
   const queryClient = useQueryClient()
   const [stack, setStack] = useState<SheetView[]>([initialView])
+  /**
+   * El borrador del formulario: monto, fecha y moneda.
+   *
+   * Vive ACÁ y no adentro de `SavingsForm` porque el formulario se DESMONTA
+   * cuando la pila muestra otra vista. Ir a crear un propósito en el medio de
+   * guardar —que es lo que el «+» ofrece— borraba el monto tipeado y devolvía al
+   * formulario en cero, con el CTA deshabilitado y sin nada que explicara por
+   * qué. Perder el monto es cobrarle al usuario haber querido ser prolijo.
+   *
+   * Se resetea al ABRIR el sheet, no al cambiar de vista: dentro de una misma
+   * apertura el borrador es uno solo y sobrevive a los desvíos.
+   */
+  const [draft, setDraft] = useState<Draft>(emptyDraft)
   const view = stack[stack.length - 1]
   const push = (next: SheetView) => setStack((s) => [...s, next])
   // En el fondo de la pila la flecha CIERRA. Antes revelaba el detalle; ahora ese
@@ -144,7 +189,10 @@ export const SavingsDrawer = ({
   const [wasVisible, setWasVisible] = useState(visible)
   if (visible !== wasVisible) {
     setWasVisible(visible)
-    if (visible) setStack([initialView])
+    if (visible) {
+      setStack([initialView])
+      setDraft(emptyDraft())
+    }
   }
 
   const rowFor = (currency: Currency): AvailableSums =>
@@ -185,6 +233,13 @@ export const SavingsDrawer = ({
 
   const groupAmount = (currency: Currency, purposeId: string | null): number =>
     purposeSums.find((s) => s.currencyCode === currency && s.purposeId === purposeId)?.reserved ?? 0
+
+  /** La moneda del resto sin destino, o `null` si no hay nada sin repartir. */
+  const restCurrency: Currency | null = MODULE_CURRENCIES.some((c) => groupAmount(c, null) > 0)
+    ? moduleGroupCurrency(
+        MODULE_CURRENCIES.map((c) => ({ currency: c, reserved: groupAmount(c, null) })),
+      )
+    : null
 
   /** Refresca sin cerrar: tocar una etiqueta no termina ninguna operación. */
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['savings'] })
@@ -263,6 +318,8 @@ export const SavingsDrawer = ({
             purpose={purposeById(view.purposeId)}
             purposeId={view.purposeId}
             groupAmount={groupAmount}
+            draft={draft}
+            onDraftChange={setDraft}
             lockedPurpose={view.locked}
             purposes={purposes}
             onSetPurpose={(purposeId: string | null) =>
@@ -304,12 +361,34 @@ export const SavingsDrawer = ({
             initialName={view.name}
             initialIcon={view.icon}
             onDone={async (created) => {
+              // Editar solo vuelve. Crear elige lo recién creado: obligar a
+              // buscarlo de nuevo en la lista sería un paso que no decide nada.
               if (view.purpose != null) {
                 back()
               } else if (stack.some((v) => v.kind === 'form' || v.kind === 'picker')) {
                 pickPurpose(created.id, created)
               } else {
-                back()
+                // Creado desde la PANTALLA, donde no hay operación en curso a la
+                // que volver. Un propósito recién creado está en cero y no sirve
+                // para nada hasta que se le destine algo, así que en vez de
+                // cerrar —y dejar una fila vacía en una lista que el usuario ni
+                // llega a ver— sigue al acto que le da sentido, con el destino ya
+                // elegido.
+                //
+                // Salvo que no haya nada sin destino: ahí destinar tiene tope
+                // cero y sería mandar a una pantalla que no puede hacer nada. El
+                // propósito queda creado y vacío, que es lo que se pidió.
+                if (restCurrency == null) onClose()
+                else
+                  setStack([
+                    {
+                      kind: 'allocate',
+                      currency: restCurrency,
+                      purpose: created,
+                      direction: 'allocate',
+                      justCreated: true,
+                    },
+                  ])
               }
               void refresh()
             }}
@@ -343,6 +422,7 @@ export const SavingsDrawer = ({
             }
             onCreateSeed={createFromSeed}
             onCreateCustom={() => push({ kind: 'purposeForm', purpose: null })}
+            justCreated={view.justCreated}
             onDone={() => {
               // Navegar PRIMERO. Refrescar antes dejaba la pantalla un instante
               // con los datos nuevos y el monto todavía escrito: el tope pasaba
@@ -424,6 +504,8 @@ const SavingsForm = ({
   purpose,
   purposeId,
   groupAmount,
+  draft,
+  onDraftChange,
   lockedPurpose,
   purposes,
   onSetPurpose,
@@ -445,6 +527,9 @@ const SavingsForm = ({
    * pasar a dólares con el tope de los pesos.
    */
   groupAmount: (currency: Currency, purposeId: string | null) => number
+  /** Lo tipeado, que vive en el drawer para sobrevivir a los desvíos. */
+  draft: Draft
+  onDraftChange: (next: Draft) => void
   /** Se llegó desde un grupo: el propósito se hereda y no se ofrece cambiarlo. */
   lockedPurpose: boolean
   /** Los propósitos del usuario, como chips: elegir no debería costar pantalla. */
@@ -456,9 +541,16 @@ const SavingsForm = ({
   onDone: () => Promise<void>
 }) => {
   const t = useT()
-  const [currency, setCurrency] = useState<Currency>(initialCurrency)
-  const [amount, setAmount] = useState('')
-  const [date, setDate] = useState(formatDateISO(getTodayAR()))
+  const [showAllPurposes, setShowAllPurposes] = useState(false)
+
+  // Nada de estado local acá: lo tipeado vive en el drawer, que no se desmonta
+  // al ir a crear un propósito.
+  const currency = draft.currency ?? initialCurrency
+  const amount = draft.amount
+  const date = draft.date
+  const setCurrency = (next: Currency) => onDraftChange({ ...draft, currency: next })
+  const setAmount = (next: string) => onDraftChange({ ...draft, amount: next })
+  const setDate = (next: string) => onDraftChange({ ...draft, date: next })
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -476,11 +568,76 @@ const SavingsForm = ({
    */
   const unassignedIsTotal = purposes.length === 0
 
-  /** Los orígenes posibles: al volver a usar, solo los que tienen plata ACÁ. */
-  const purposeOptions: (Purpose | null)[] =
-    mode === 'save'
-      ? [null, ...purposes]
-      : [null, ...purposes].filter((o) => groupAmount(currency, o?.id ?? null) > 0)
+  /**
+   * Cuántos propósitos se muestran antes de plegar el resto.
+   *
+   * SEIS. Se probó con ocho y el efecto fue que con diez propósitos no se
+   * plegaba ninguno: el control desaparecía, y con él la única señal de que la
+   * lista sigue. Un techo tan alto que nunca se alcanza no es un techo.
+   *
+   * Uno de tolerancia: esconder un solo chip detrás de un control que ocupa casi
+   * lo mismo no es esconder nada.
+   */
+  const PURPOSE_CHIP_LIMIT = 6
+  const PURPOSE_CHIP_SLACK = 1
+
+  /**
+   * Los orígenes posibles, ORDENADOS POR SALDO.
+   *
+   * Al volver a usar, solo los que tienen plata acá.
+   *
+   * El orden importa porque decide qué se pliega: la lista venía alfabética
+   * —`listPurposes` ordena por nombre— así que lo escondido eran los últimos del
+   * abecedario. «Viaje» con $45.000 se plegaba antes que «Prueba» con $0, que es
+   * exactamente al revés de lo que alguien busca.
+   *
+   * Por saldo descendente, y a igualdad por nombre para que el orden sea
+   * estable. «Sin destino» queda siempre primero, fuera del criterio: no compite
+   * con los propósitos, es el default.
+   */
+  const purposeOptions: (Purpose | null)[] = (() => {
+    const named = [...purposes].sort(
+      (a, b) =>
+        groupAmount(currency, b.id) - groupAmount(currency, a.id) || a.name.localeCompare(b.name),
+    )
+    return mode === 'save'
+      ? [null, ...named]
+      : [null, ...named].filter((o) => groupAmount(currency, o?.id ?? null) > 0)
+  })()
+
+  /**
+   * Los chips que se dibujan, y cuántos quedan plegados.
+   *
+   * El techo cuenta PROPÓSITOS, y «Sin destino» no es uno: va siempre visible y
+   * fuera del conteo. Contándolo, este formulario mostraba cinco propósitos y el
+   * de destinar seis —que no lo ofrece— con el mismo techo y la misma lista.
+   *
+   * El elegido entra SIEMPRE, aunque caiga fuera del corte: un chip seleccionado
+   * que se esconde al plegar deja la pantalla diciendo que se va a guardar «sin
+   * destino» cuando en realidad va a otro lado.
+   */
+  const hasRestOption = purposeOptions.some((o) => o == null)
+  const namedOptions = purposeOptions.filter((o): o is Purpose => o != null)
+  const shownNamed =
+    showAllPurposes || namedOptions.length <= PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK
+      ? namedOptions
+      : (() => {
+          const head = namedOptions.slice(0, PURPOSE_CHIP_LIMIT)
+          if (purposeId == null || head.some((o) => o.id === purposeId)) return head
+          const chosen = namedOptions.find((o) => o.id === purposeId)
+          return chosen == null ? head : [...head.slice(0, PURPOSE_CHIP_LIMIT - 1), chosen]
+        })()
+  const shownOptions: (Purpose | null)[] = hasRestOption ? [null, ...shownNamed] : shownNamed
+  const hiddenCount = namedOptions.length - shownNamed.length
+
+  /**
+   * ¿Hay otro origen que el usuario pueda elegir, acá y ahora?
+   *
+   * Es la MISMA condición que dibuja los chips, y tiene que serlo: el mensaje de
+   * tope ofrece esa salida, y ofrecer una salida que la pantalla no tiene es
+   * peor que no ofrecer ninguna.
+   */
+  const canPickOrigin = !lockedPurpose && purposeOptions.length > 1
 
   const cycleCurrency = () => {
     if (currencyOptions.length < 2) return
@@ -543,7 +700,16 @@ const SavingsForm = ({
           })
         : unassignedIsTotal
           ? t('savings.errors.exceeds_reserved', { limit: money(limit, currency) })
-          : t('savings.errors.exceeds_unassigned_reserved', { limit: money(limit, currency) })
+          : // Con otro origen a mano, el mensaje NO se queda en negar: dice el
+            // tope y nombra la salida. Negar y callar deja al usuario probando
+            // números contra una pared — con $60.000 sin destino y $70.000
+            // pedidos, la plata podía salir de un propósito que la pantalla ni
+            // mencionaba.
+            canPickOrigin
+            ? t('savings.errors.exceeds_unassigned_reserved_pick', {
+                limit: money(limit, currency),
+              })
+            : t('savings.errors.exceeds_unassigned_reserved', { limit: money(limit, currency) })
     : null
   const amountInputWidth = Math.max(1, formatForDisplay(amount).length) * 20 + 2
 
@@ -639,6 +805,40 @@ const SavingsForm = ({
       {/* La fecha, compacta y con atajos: el mismo patrón que el alta de
           movimientos. Como card entera pesaba igual que el monto, y acá la fecha
           es casi siempre hoy — el foco es cuánto y para qué. */}
+      {/* Atajos de monto: suman al valor actual, y «Todo» lleva al tope. Guardar
+          suele ser una cifra redonda, y escribir 50.000 en el teclado de un
+          teléfono son cinco toques que un chip resuelve en uno.
+
+          Un atajo que deja el monto por encima del tope no se ofrece: sería un
+          botón que solo sirve para romper el formulario. «Todo» se muestra
+          siempre que haya algo, porque es el que más se usa y su número no es
+          adivinable. */}
+      {limit > 0 && (
+        <View className="mt-3 flex-row flex-wrap gap-2">
+          {AMOUNT_STEPS[currency]
+            .filter((step) => value + step <= limit)
+            .map((step) => (
+              <Pressable
+                key={step}
+                accessibilityRole="button"
+                onPress={() => setAmount(String(value + step))}
+                className="min-h-[44px] justify-center rounded-full border border-border-soft bg-card px-3.5"
+              >
+                <Text className="text-[13px] font-bold text-text">
+                  +{money(step, currency)}
+                </Text>
+              </Pressable>
+            ))}
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setAmount(String(limit))}
+            className="min-h-[44px] justify-center rounded-full border border-border-soft bg-card px-3.5"
+          >
+            <Text className="text-[13px] font-bold text-text">{t('savings.shortcut_all')}</Text>
+          </Pressable>
+        </View>
+      )}
+
       <View className="mt-3 flex-row items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2">
         <View className="min-w-0 flex-1">
           <DateField value={date} onChange={setDate} />
@@ -679,13 +879,43 @@ const SavingsForm = ({
           desde el que se entró. */}
       {/* Al volver a usar, un chip solo no es una elección. Al guardar la fila
           va igual aunque no haya ningún propósito: ahí vive el «+». */}
-      {!lockedPurpose && (mode === 'save' || purposeOptions.length > 1) && (
+      {(mode === 'save' ? !lockedPurpose : canPickOrigin) && (
         <View className="mt-3">
-          <Text className="text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
-            {mode === 'save' ? t('savings.purposes.label') : t('savings.purposes.source_label')}
-          </Text>
+          {/* El control de overflow vive en la fila del RÓTULO, no entre los
+              chips: al final de una fila que envuelve, queda huérfano en su
+              propio renglón cuando la última fila está llena, y ahí no se lee
+              como acción sino como algo cortado. */}
+          <View className="flex-row items-center justify-between gap-3">
+            <Text className="shrink text-[10.5px] font-extrabold uppercase tracking-widest text-text-soft">
+              {mode === 'save' ? t('savings.purposes.label') : t('savings.purposes.source_label')}
+            </Text>
+            {hiddenCount > 0 && (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setShowAllPurposes(true)}
+                className="min-h-[44px] shrink-0 justify-center"
+              >
+                <Text className="text-[12px] font-extrabold text-text-muted">
+                  {t('savings.purposes.show_more', { count: String(hiddenCount) })}
+                </Text>
+              </Pressable>
+            )}
+            {/* La vuelta atrás. Desplegar sin poder volver a plegar deja la
+                pantalla más alta para siempre por una mirada de un segundo. */}
+            {showAllPurposes && namedOptions.length > PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK && (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setShowAllPurposes(false)}
+                className="min-h-[44px] shrink-0 justify-center"
+              >
+                <Text className="text-[12px] font-extrabold text-text-muted">
+                  {t('savings.purposes.show_less')}
+                </Text>
+              </Pressable>
+            )}
+          </View>
           <View className="mt-2 flex-row flex-wrap gap-2">
-            {purposeOptions.map((option) => {
+            {shownOptions.map((option) => {
               const id = option?.id ?? null
               return (
                 <Pressable

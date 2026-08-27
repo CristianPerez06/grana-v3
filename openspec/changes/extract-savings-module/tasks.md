@@ -277,6 +277,11 @@ definición.
   la tira siguiendo la moneda del último ingreso y el nombre con espacio de más; **falta agregarle el
   módulo nativo entero**, que se construyó después de ampliarlo: la ruta, la entrada del menú, la fila
   del dashboard navegando y el overlay sin vista de detalle
+- [x] 6.14 **Comparativa web ↔ nativa, superficie por superficie** (E27): **nueve divergencias**, tres
+  graves —lo tipeado se perdía en el desvío, el detalle de un propósito tenía botón y enlace
+  invertidos, y el tope negaba sin ofrecer la salida—. Las nueve corregidas. La comparación mecánica
+  de claves de i18n encontró cinco de ellas y hoy da **cero** diferencias: la única que queda es
+  `date_label`, aceptada porque en nativo el selector de fecha lo rotula el sistema operativo
 - [ ] 6.13 **El módulo nativo no se ejecutó nunca.** Typecheck y lint en verde es todo lo que hay:
   no hay forma de correr Expo desde acá. Lo que más riesgo tiene, en orden: el envoltorio de las dos
   monedas de la card oscura (Yoga y el navegador no rompen la línea igual), los bordes que hacen de

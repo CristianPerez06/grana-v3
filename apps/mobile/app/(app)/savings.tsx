@@ -147,9 +147,7 @@ export default function SavingsScreen() {
               <SavingsEmpty onSave={() => setDrawer(SAVE_ARS)} />
             )}
 
-            {hasAnythingSaved && (
-              <SavingsLedger sums={rows} history={history} monthNet={monthNet} />
-            )}
+            <SavingsLedger sums={rows} history={history} monthNet={monthNet} />
           </>
         )}
       </ScrollView>
