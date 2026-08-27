@@ -2122,7 +2122,7 @@
     "purposes": {
       "unallocate_note": "Quitar el destino devuelve la plata a «Sin destino»: sigue guardada. Para poder gastarla, usá «Volver a usar».",
       "breakdown_title": "En qué está repartido",
-      "none_explainer": "Está guardado, pero todavía no dijiste para qué.",
+      "none_explainer": "Sigue guardado: falta decir para qué.",
       "label": "Para qué",
       "none": "Sin destino",
       "choose": "¿Para qué?",
@@ -2175,7 +2175,7 @@
       "allocate_more": "Destinar más"
     },
     "history_count": "Historial ({count})",
-    "module_support": "Plata apartada: sigue en tus cuentas, pero no cuenta para gastar.",
+    "module_support": "Sigue en tus cuentas, pero no cuenta para gastar.",
     "release_from_unassigned": "Volver a usar de acá",
     "shortcut_all": "Todo",
     "save_amount": "Guardar {amount}",

@@ -54,9 +54,29 @@ export const SavingsBreakdown = ({
             Adentro del título pero FUERA de la grilla: sigue sin ser un
             propósito —no navega, no tiene ícono propio, no se ordena por monto
             entre ellos— y por eso conserva su forma aparte. */}
-        <h2 className="px-[3px] text-[14.5px] font-extrabold tracking-[-0.02em] text-text sm:text-[17px]">
-          {t('purposes.breakdown_title')}
-        </h2>
+        <div className="flex items-center justify-between gap-3 px-[3px]">
+          <h2 className="min-w-0 text-[14.5px] font-extrabold tracking-[-0.02em] text-text sm:text-[17px]">
+            {t('purposes.breakdown_title')}
+          </h2>
+          {/* La puerta para crear, a la altura del título y a la derecha. Al pie
+              de la grilla quedaba lejos: con seis propósitos hay que recorrer la
+              lista entera para encontrarla, y lo que se busca al querer crear
+              uno no está abajo de todos los que ya existen.
+
+              Solo cuando YA hay propósitos: sin ninguno, la puerta es la card
+              punteada de abajo, que además hace de estado vacío. Dos accesos a
+              la vez serían dos formas de hacer lo mismo en la misma pantalla. */}
+          {groups.length > 0 && (
+            <button
+              type="button"
+              onClick={overlay.openNewPurpose}
+              className="relative flex shrink-0 items-center gap-1.5 text-[12.5px] font-extrabold text-emerald-deep transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
+            >
+              <Plus className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
+              {t('purposes.new')}
+            </button>
+          )}
+        </div>
 
         {restHasMoney && (
           <UnassignedBlock
@@ -83,32 +103,33 @@ export const SavingsBreakdown = ({
               />
             </li>
           ))}
-          {/* La puerta para crear, al FINAL de la grilla y con la misma forma
-              que una card: es lo que hace que sin ningún propósito la sección no
-              sea un título sobre una lista vacía — se ve una sola card punteada
-              que invita, y con propósitos es la última de la fila.
-
-              Punteada, como «Sin destino»: las dos dicen «acá falta algo». */}
-          <li>
-            <button
-              type="button"
-              onClick={overlay.openNewPurpose}
-              className="flex min-h-[72px] w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border px-3.5 py-[13px] text-[13.5px] font-bold text-text-muted transition-colors hover:border-text-soft hover:bg-card hover:text-text"
-            >
-              <Plus className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
-              {t('purposes.new')}
-            </button>
-          </li>
+          {/* Sin ningún propósito, la card punteada ES el estado vacío: evita
+              que la sección sea un título sobre una lista vacía, y de paso es la
+              puerta para crear el primero. Con propósitos desaparece — ahí la
+              puerta está arriba, junto al título. */}
+          {groups.length === 0 && (
+            <li>
+              <button
+                type="button"
+                onClick={overlay.openNewPurpose}
+                className="flex min-h-[72px] w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border px-3.5 py-[13px] text-[13.5px] font-bold text-text-muted transition-colors hover:border-text-soft hover:bg-card hover:text-text"
+              >
+                <Plus className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
+                {t('purposes.new')}
+              </button>
+            </li>
+          )}
         </ul>
 
-        {/* Con el resto en cero su explicación no desaparece: baja acá, en gris,
-            porque sigue siendo lo que evita entender «guardado» como una cuenta
-            aparte. */}
-        {!restHasMoney && (
-          <p className="px-[3px] pt-1 text-[11.5px] font-semibold leading-[1.45] text-text-soft">
-            {t('purposes.none_explainer')}
-          </p>
-        )}
+        {/* Con el resto en cero NO baja ninguna explicación al pie.
+
+            La había: el handoff pedía que la frase de «Sin destino» pasara acá
+            cuando el bloque no se dibuja. Funcionaba con el copy largo, que
+            explicaba qué era el resto en general. Con el copy corto —«Sigue
+            guardado: falta decir para qué»— quedaba explicando algo que no está
+            en pantalla, y el usuario que repartió TODO no necesita que le
+            expliquen un sobrante que no tiene. Cuando vuelva a haberlo, vuelve
+            con su bloque y su frase. */}
       </section>
     </div>
   )

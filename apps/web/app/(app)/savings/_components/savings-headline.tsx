@@ -208,12 +208,16 @@ const DarkAmount = ({ value, currency }: { value: number; currency: BalanceCurre
 }
 
 /**
- * 44px en teléfono y 48 en desktop: el mínimo del repo, no más.
+ * La barra mide 38px en teléfono y 42 en desktop, y el ÁREA TÁCTIL 44.
  *
- * Venían de 48 y 60 —los del handoff— y era alto de sobra: son tres botones de
- * una línea, con un ícono de 16px, y ese zócalo compite en altura con el bloque
- * que lleva los dos montos del total. La botonera acompaña a la card, no pesa
- * como ella.
+ * Los 60px del handoff eran alto de sobra: son tres botones de una línea con un
+ * ícono de 16px, y ese zócalo competía en altura con el bloque que lleva los dos
+ * montos. Pero bajar el alto real por debajo de 44 rompe el mínimo del repo, así
+ * que el área sale de un pseudo-elemento centrado —el mismo recurso que usan los
+ * enlaces de texto del módulo—: se ve más bajo y se toca igual.
+ *
+ * Se desborda 3px arriba y abajo de la barra, y no molesta a nadie: arriba está
+ * la card oscura y abajo el borde, ninguno clickeable.
  *
  * El divisor va por prop y no por un selector de hermano adyacente: `[&+&]`
  * depende de que las dos clases sean idénticas carácter por carácter, así que
@@ -236,7 +240,7 @@ const BarAction = ({
     type="button"
     onClick={onClick}
     className={cn(
-      'flex min-h-11 items-center justify-center gap-2 px-2 text-[12px] font-extrabold tracking-[-0.01em] text-text transition-colors hover:bg-surface-sunken sm:min-h-12 sm:text-[13px]',
+      'relative flex min-h-[38px] items-center justify-center gap-2 px-2 text-[12px] font-extrabold tracking-[-0.01em] text-text transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[\'\'] hover:bg-surface-sunken sm:min-h-[42px] sm:text-[13px]',
       divided && 'border-l border-border-soft',
     )}
   >
