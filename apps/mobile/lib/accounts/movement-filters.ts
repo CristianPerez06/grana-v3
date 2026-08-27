@@ -1,6 +1,6 @@
 import { resolveMonthRange } from '@grana/dashboard'
 import { getTodayAR } from '@grana/money-logic'
-import type { MovementTypeFilter, TransactionWithDetails } from '@grana/transactions'
+import { movementMatchesText, type FinancialMovement, type TransactionWithDetails } from '@grana/transactions'
 import type { Locale } from '../locale'
 import type { MovementFiltersState } from '../transactions/feed-filters'
 
@@ -10,10 +10,9 @@ import type { MovementFiltersState } from '../transactions/feed-filters'
 // application of those filters over the account's fully-loaded history, and the
 // month labels the inline navigator renders.
 //
-// The account detail filters in memory and the feed filters in the database.
-// That is not drift: the detail loads the account's whole history (it needs it
-// for the per-row running balance), while the feed paginates — filtering a
-// partial page there would answer a different question than the user asked.
+// The account detail filters in memory and the feed filters in the database —
+// see `applyAccountFilters` below for why that is correct and why it is not a
+// difference in WHAT matches.
 export type AccountMovementFilters = MovementFiltersState
 
 // ── Month helpers ──────────────────────────────────────────────────────────────
@@ -56,58 +55,47 @@ export {
   clearContentFilters,
 } from '../transactions/feed-filters'
 
-// ── Matching + application ───────────────────────────────────────────────────────
-
-// Free-text match over description, category name/canonical and the source /
-// destination account names. Native analogue of web's `movementMatchesText`.
-//
-// NOTE: this matches MORE than the feed's search does. The feed's match runs in
-// SQL (`get_movements_page`) over title, effective description and account
-// names — it does NOT reach category names. The divergence follows from the
-// feed filtering server-side and is documented in the `transactions` spec; do
-// not "fix" it by filtering the feed's page in memory.
-export function movementMatchesText(tx: TransactionWithDetails, query: string): boolean {
-  const normalized = query.trim().toLocaleLowerCase('es-AR')
-  if (!normalized) return true
-  const haystack = [
-    tx.description,
-    tx.category?.name,
-    tx.category?.canonical_name,
-    tx.subcategory?.name,
-    tx.source_account?.name,
-    tx.destination_account?.name,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLocaleLowerCase('es-AR')
-  return haystack.includes(normalized)
-}
+// ── Application ──────────────────────────────────────────────────────────────
 
 // Apply the month range + content filters + search to the account's movements.
 // Pure; mirror of web's `applyAccountFilters` over the native row model.
 //
-// `kindById` carries the DERIVED movement kind per row. The type axis is `kind`
-// (what `MovementFilters` declares and the RPC compares), not the
-// `transaction_type` column, so the shared filters sheet speaks one language on
-// both surfaces. The caller derives it once per load with `toFinancialMovement`
-// — the single kind derivation in the repo — rather than re-typing the rules
-// here.
+// `movementById` carries the DERIVED `FinancialMovement` per row, which this
+// function needs for two things. The type axis is `kind` (what `MovementFilters`
+// declares and the RPC compares), not the `transaction_type` column, so the
+// shared filters sheet speaks one language on both surfaces. And the free-text
+// match is `movementMatchesText` of `@grana/transactions` — the SAME function
+// web's account detail uses, not a native copy of it: the searchable field set
+// is declared once, and a parallel native matcher is exactly the
+// "mirror … keep in sync" pattern that drifted this search apart in the first
+// place. The caller derives the map once per load with `toFinancialMovement` —
+// the single kind derivation in the repo — rather than re-typing the rules here.
+//
+// This surface filters in MEMORY while the global feed filters in the DATABASE.
+// That is not drift, and it is not a divergence in what matches: both run the
+// same field set. It follows from how the two read — the detail loads the
+// account's whole history (it needs it for the per-row running balance), while
+// the feed paginates, so filtering a partial page there would answer a different
+// question than the user asked. Do not "fix" the feed by filtering its page.
 export function applyAccountFilters(
   movements: TransactionWithDetails[],
   filters: AccountMovementFilters,
-  kindById: Map<string, MovementTypeFilter>,
+  movementById: Map<string, FinancialMovement>,
 ): TransactionWithDetails[] {
   const { from, to } = resolveMonthRange(filters.month)
   return movements.filter((tx) => {
     if (tx.date < from || tx.date > to) return false
-    if (filters.type && kindById.get(tx.id) !== filters.type) return false
+    if (filters.type && movementById.get(tx.id)?.kind !== filters.type) return false
     if (filters.currency && tx.currency_code !== filters.currency) return false
     if (filters.accountId && tx.account_id !== filters.accountId) return false
     if (filters.categoryId && tx.category_id !== filters.categoryId) return false
     if (filters.subcategoryId && tx.subcategory_id !== filters.subcategoryId) return false
     if (filters.amountMin != null && tx.amount < filters.amountMin) return false
     if (filters.amountMax != null && tx.amount > filters.amountMax) return false
-    if (filters.query && !movementMatchesText(tx, filters.query)) return false
+    if (filters.query) {
+      const movement = movementById.get(tx.id)
+      if (!movement || !movementMatchesText(movement, filters.query)) return false
+    }
     return true
   })
 }

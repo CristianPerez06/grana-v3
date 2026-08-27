@@ -71,20 +71,64 @@ export const shiftMonth = (month: string, delta: number): string => {
 }
 
 /**
- * Free-text match against a movement's user-visible fields (title, description,
- * account, destination account on transfers). Used by both server-side query
- * filtering (`getGlobalMovementsPage`) and client-side filtering on the
- * /accounts/[id] shell.
+ * Free-text match against a movement's visible text. THE canonical declaration
+ * of the searchable field set, in code — the `ilike` clause of the
+ * `get_movements_page` RPC mirrors this same set in SQL for the paginated feeds
+ * (see `supabase/migrations/0057_get_movements_page_search_fields.sql`). Changing
+ * what is searchable means changing BOTH; the two cannot share code, so they
+ * point at each other.
+ *
+ * This function serves the two account-detail surfaces (web and mobile), which
+ * filter in memory because they hold the account's full history. The two feed
+ * surfaces (`/transactions`, the native Movimientos tab) paginate, so their match
+ * runs in the database — filtering a partial page would answer a different
+ * question than the user asked.
+ *
+ * IN the set:
+ *   1. the derived `title` (the category name on income/expense; the fixed label
+ *      on transfer / exchange / card payment / adjustment)
+ *   2. the effective `description` (a reimbursement inherits its expense's)
+ *   3. the source account name, and 4. its institution name
+ *   5. the destination account name, and 6. its institution name — on `transfer`
+ *      AND `exchange`, the two kinds that have a second end
+ *
+ * The institution is in because it is the account's PRIMARY text on the row
+ * (`institutionName?.trim() || name`): the user reads "Galicia", not the name
+ * they gave the account, and no dedicated filter reaches it.
+ *
+ * OUT of the set, deliberately:
+ *   • Category and subcategory as an explicit axis — both have a dedicated,
+ *     precise filter, and the category already comes in through `title` on
+ *     income/expense, which is the case that matters (an expense with no
+ *     description IS titled by its category). Adding them would only change the
+ *     result on the kinds whose title is a fixed label.
+ *   • Amount and date — `amountMin`/`amountMax` and the month/range already own
+ *     those axes; matching them as text would mean normalizing number formats
+ *     for nothing.
+ *   • `canonical_name` — an internal translation slug, not text the user sees.
+ *
+ * Known limit: the match runs over the STORED text, not its rendered label. What
+ * the user typed matches in any locale; what Grana generates does not — system
+ * categories are stored in Spanish and rendered translated, and the row's type
+ * label is translated at render (`t(typeLabelKey[kind])`) rather than read off
+ * `title`. Pre-existing; closing it means moving the title derivation out of SQL.
  */
 export const movementMatchesText = (movement: FinancialMovement, query: string): boolean => {
   const normalizedQuery = query.trim().toLocaleLowerCase('es-AR')
   if (!normalizedQuery) return true
 
+  // The destination fields live only on the two-ended kinds, so the union needs
+  // an `in` narrowing — but no kind check: `transfer` and `exchange` are exactly
+  // the kinds that declare them, which is the rule we want.
+  const hasDestination = 'destination_account_name' in movement
+
   const haystack = [
     movement.title,
     movement.description,
     movement.account_name,
-    movement.kind === 'transfer' ? movement.destination_account_name : null,
+    movement.account_institution_name,
+    hasDestination ? movement.destination_account_name : null,
+    hasDestination ? movement.destination_account_institution_name : null,
   ]
     .filter(Boolean)
     .join(' ')
