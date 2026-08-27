@@ -79,7 +79,9 @@ El quiebre depende del CONTENIDO —cuánto miden ese nombre y esos números—,
 pantalla: no es un breakpoint. Dos filas del mismo ancho se parten distinto si sus montos son
 distintos.
 
-El nombre trunca con puntos suspensivos, pero no por debajo de un piso que lo deje irreconocible.
+En una LISTA la fila no se parte: el nombre trunca con puntos suspensivos hasta donde haga falta, y
+todas las cards conservan el mismo alto. Una grilla con altos distintos deja de leerse como grilla, y
+un nombre truncado se recupera abriendo el propósito.
 
 #### Scenario: Ocho cifras en las dos monedas, en un teléfono de 360px
 
@@ -97,10 +99,10 @@ El nombre trunca con puntos suspensivos, pero no por debajo de un piso que lo de
 
 #### Scenario: Un propósito de nombre largo con un monto grande
 
-- **WHEN** el nombre y el monto no entran en una línea
-- **THEN** el nombre queda arriba y el monto abajo, alineado a la derecha
-- **AND** el nombre conserva un ancho mínimo que lo deja reconocible por su principio
-- **AND** el monto se muestra entero
+- **WHEN** el nombre y el monto no entran juntos en la card
+- **THEN** el monto se muestra entero
+- **AND** el nombre trunca con puntos suspensivos
+- **AND** la card conserva el mismo alto que las demás de la grilla
 
 #### Scenario: «Sin destino» con su botón
 

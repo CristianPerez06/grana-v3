@@ -326,42 +326,35 @@ const PurposeCard = ({ group, onOpen }: { group: ModuleGroup; onOpen: () => void
         {purposeGlyph(group.icon)}
       </span>
 
-      {/* Nombre y montos en la MISMA fila mientras entren, y en dos líneas
-          cuando no —nombre arriba, montos abajo, alineados a la derecha para
-          que la columna de números siga siendo una columna (D24)—.
+      {/* La fila NO se parte en dos líneas, ni siquiera con el nombre truncado
+          muy temprano: la card queda de un alto y la grilla se lee como grilla.
+          Probado el quiebre por contenido —nombre arriba, montos abajo— y
+          descartado en QA: con montos normales las cards crecían de 79 a 96px y
+          la lista perdía su ritmo, que es lo que la hace una grilla y no una
+          pila de bloques de altos distintos.
 
-          El que cede es el nombre, pero hasta un piso: con dos montos de ocho
-          cifras en un teléfono de 360px le quedaban 66px, que es «Vacaci…» —un
-          nombre truncado tan temprano no es reconocible por su principio, que es
-          justo lo que la regla del truncado promete. Con `min-w-[7.5rem]` el
-          nombre nunca baja de ~13 caracteres: si los montos no entran al lado de
-          eso, bajan ellos.
+          Así que acá vale D24 sin piso: el que cede es el nombre, hasta donde
+          haga falta. Un nombre truncado se recupera abriendo el propósito;
+          un monto cortado no se recupera con nada. */}
+      <span className="min-w-0 flex-1 truncate text-[14.5px] font-extrabold tracking-[-0.015em] text-text">
+        {group.name}
+      </span>
 
-          El quiebre lo decide EL CONTENIDO —cuánto miden ese nombre y esos
-          números—, no el ancho de pantalla: un propósito de nombre corto con un
-          monto chico sigue en una línea en el mismo teléfono donde otro se
-          parte en dos. */}
-      <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-[13px] gap-y-1">
-        <span className="min-w-[7.5rem] flex-1 truncate text-[14.5px] font-extrabold tracking-[-0.015em] text-text">
-          {group.name}
-        </span>
-
-        {/* Los montos no se achican ni se parten: el que cede es el nombre. */}
-        <span className="ml-auto flex shrink-0 flex-col items-end">
-          {visible.map((a, i) => (
-            <span
-              key={a.currency}
-              className={cn(
-                'whitespace-nowrap tabular-nums',
-                i === 0
-                  ? 'text-[16.5px] font-extrabold tracking-[-0.02em] text-text'
-                  : 'text-[11.5px] font-bold text-text-muted',
-              )}
-            >
-              {money(a.reserved, a.currency)}
-            </span>
-          ))}
-        </span>
+      {/* Los montos no se achican ni se parten: el que cede es el nombre. */}
+      <span className="flex shrink-0 flex-col items-end">
+        {visible.map((a, i) => (
+          <span
+            key={a.currency}
+            className={cn(
+              'whitespace-nowrap tabular-nums',
+              i === 0
+                ? 'text-[16.5px] font-extrabold tracking-[-0.02em] text-text'
+                : 'text-[11.5px] font-bold text-text-muted',
+            )}
+          >
+            {money(a.reserved, a.currency)}
+          </span>
+        ))}
       </span>
 
       <ChevronRight className="size-[18px] shrink-0 text-text-soft" aria-hidden />

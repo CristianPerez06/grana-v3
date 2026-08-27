@@ -580,10 +580,18 @@ horizontal, sin ninguna señal: el número simplemente no estaba.
 Esa es la falla que D24 nombra: *un monto cortado no es un detalle de layout, se lee como un número
 poco confiable*. Y era la peor de las tres, porque el número cortado era el TOTAL.
 
-**2. La card de un propósito dejaba el nombre en 66px.** El nombre cede antes que el monto, eso está
-bien y es la regla — pero cede *hasta un piso*. «Vacaciones en Japón con la familia» truncado a
-«Vacaci…» ya no es reconocible por su principio, que es exactamente lo que el truncado promete a
-cambio de recortar. Con piso, el mismo nombre conserva 212px y llega hasta «con la…».
+**2. La card de un propósito deja el nombre en 66px, y así se queda.** Se probó ponerle un piso al
+nombre —«Vacaciones en Japón con la familia» truncado a «Vacaci…» ya no es reconocible por su
+principio, que es lo que el truncado promete a cambio de recortar— y que los montos bajaran a una
+segunda línea cuando no entraran al lado. **Se descartó en QA, y con razón**: con montos normales las
+cards pasaban de 79 a 96px y algunas se partían y otras no, así que la grilla quedaba con tres altos
+distintos y dejaba de leerse como grilla. El ritmo de la lista vale más que los caracteres que se
+recuperan.
+
+Acá vale D24 tal cual, sin piso: el que cede es el nombre, hasta donde haga falta. Un nombre truncado
+se recupera abriendo el propósito; un monto cortado no se recupera con nada. Y el nombre no es la
+información que se viene a buscar a esta pantalla: el ícono ya identifica al propósito, y el número
+es lo que se lee.
 
 **3. El bloque «Sin destino» metía el monto debajo del botón.** A 320px, con `min-w-0`, el bloque de
 texto se encogía por debajo de su propio número; como los montos van `nowrap`, lo que no entra no se
@@ -603,19 +611,26 @@ pantalla; cada fila sabe cuánto miden sus cosas.
 Tres detalles que costaron y conviene no volver a descubrir:
 
 - **`truncate` es `nowrap`, así que el min-content de un nombre es el nombre ENTERO.** Quitarle el
-  `min-w-0` al contenedor para proteger el monto hacía que el nombre dejara de truncar y desbordara
-  la card. El nombre necesita poder encogerse; el que necesita piso es el monto. Son contenedores
+  `min-w-0` al contenedor de «Sin destino» para proteger su monto está bien —ahí el rótulo es una
+  palabra corta—, pero hacerlo donde vive un nombre libre lo dejaba sin truncar y desbordando la
+  card. El nombre necesita poder encogerse; el que necesita piso es el monto. Son contenedores
   distintos y la respuesta es distinta en cada uno.
 - **El divisor no puede ser un elemento** si la fila se parte: al apilarse quedaba como una rayita
   vertical al costado del monto de abajo. Pasa a ser el borde de cada mitad —`border-l` y `border-t`—
   con el contenedor recortando el que daría contra el marco. La línea aparece siempre entre las dos y
   nunca alrededor, en las dos direcciones, sin que nadie tenga que saber cuál se dibujó.
-- **Un piso de nombre se escribe en `rem`, no en caracteres.** `min-w-[7.5rem]` son ~13 caracteres de
-  este cuerpo; el navegador no sabe contar caracteres, y `ch` mide el «0» de la fuente, que en una
-  extrabold con tracking negativo no es el ancho promedio de una letra.
+- **Partir por contenido tiene un costo que no se ve midiendo una fila sola: la lista pierde el
+  ritmo.** Cuando el quiebre depende del contenido, dos cards vecinas quedan de altos distintos —una
+  se partió y la otra no—, y una grilla con tres altos deja de leerse como grilla. Vale la pena
+  donde el bloque es único (la card del total, «Sin destino»); no vale donde hay una lista.
 
 Verificado de 320 a 1280 con montos de ocho cifras en las dos monedas: ningún desborde en ninguna
-caja, ningún scroll horizontal, y el nombre nunca por debajo de su piso.
+caja y ningún scroll horizontal. Y con los montos reales del QA, las cards de propósito miden las
+tres 72px, como antes.
+
+Vale anotar que la card del total se rompía **también con montos normales**: con $195.000,00 y
+US$900,00 —los del QA— el de dólares quedaba en «US$ 900,0» contra el borde. No hacía falta el caso
+extremo para perder un número.
 
 ### Lo que esto destapó y no se corrige acá
 

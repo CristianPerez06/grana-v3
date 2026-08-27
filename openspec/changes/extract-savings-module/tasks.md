@@ -229,13 +229,14 @@ definición.
 - [x] 6.3 **Auditado**: los únicos `+` del módulo son glifos de signo, no sumas, y cada `money()`
   lleva su moneda explícita. `moduleHasSavings` usa `some` y no una suma
 - [x] 6.7 **La grilla en 360 px con montos de ocho cifras en las dos monedas** — corrido sobre la
-  pantalla real, midiendo cajas de 320 a 1280. **Las tres zonas que llevan plata se rompían** (E24):
-  la card del total cortaba el monto de dólares contra el borde y lo dejaba en «US$ 12.» sin ninguna
-  señal, la card de un propósito dejaba el nombre en 66px («Vacaci…»), y a 320px el monto de «Sin
-  destino» se metía por debajo del botón «Destinar». Las tres se arreglan con la misma regla: cada
-  pieza pide como mínimo lo que mide su propio número y la fila se parte cuando esos mínimos no
-  entran — **por contenido, sin un solo `@media`**. Verificado: ningún desborde, ningún scroll
-  horizontal, y el nombre nunca por debajo de su piso
+  pantalla real, midiendo cajas de 320 a 1280 (E24). **La card del total cortaba el monto de
+  dólares** contra el borde —«US$ 12.», y también «US$ 900,0» con los montos reales del QA— y a
+  320px el monto de «Sin destino» se metía por debajo del botón «Destinar». Los dos se arreglan con
+  la misma regla: cada pieza pide como mínimo lo que mide su propio número y la fila se parte cuando
+  esos mínimos no entran — **por contenido, sin un solo `@media`**.
+  **Las cards de propósito NO se tocan**: se probó partirlas en dos líneas y se descartó en QA
+  —crecían de 79 a 96px y la grilla quedaba con altos distintos—. Ahí el nombre trunca sin piso y las
+  tres miden 72px. Verificado: ningún desborde y ningún scroll horizontal de 320 a 1280
 - [ ] 6.7b **Los centavos del módulo, contra la preferencia de la app** (E24, destapado por 6.7).
   El módulo formatea con centavos fijos —en tres definiciones locales de `money`— mientras la app
   tiene `showCents` y el dashboard lo respeta: la fila «Guardado» y el total del módulo son el mismo
