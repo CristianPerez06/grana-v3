@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   buildCategorySlices,
   buildSliceMetaLine,
+  generateSubTints,
+  groupForDonut,
+  NO_OTHERS_CAP,
   type CategorySliceInput,
   type SliceMetaTemplates,
 } from '@grana/money-logic'
@@ -103,5 +106,89 @@ describe('buildSliceMetaLine', () => {
   it('rounds the percentage for display', () => {
     const line = buildSliceMetaLine({ percentage: 24.6 }, { movementCount: 5 }, templates)
     expect(line).toBe('25% · 5 movimientos')
+  })
+})
+
+// ── groupForDonut ─────────────────────────────────────────────────────────────
+// The ranking needs EVERY category, the donut needs a legible top-N. Consumers
+// build uncapped and regroup here, so this must reproduce `buildCategorySlices`'
+// tail logic exactly — otherwise the donut and the ranking disagree on "Otros".
+
+describe('groupForDonut', () => {
+  const uncapped = (...values: number[]) =>
+    buildCategorySlices(
+      values.map((v, i) => cat(String.fromCharCode(97 + i), v)),
+      { topN: NO_OTHERS_CAP, othersLabel: 'Otros' },
+    )
+
+  it('leaves a breakdown at or under topN untouched', () => {
+    const b = uncapped(50, 30, 20)
+    expect(groupForDonut(b, 6, 'Otros')).toBe(b)
+  })
+
+  it('folds the tail beyond topN into one "Otros" slice', () => {
+    const b = uncapped(40, 30, 20, 6, 4)
+    const { slices } = groupForDonut(b, 3, 'Otros')
+    expect(slices).toHaveLength(4)
+    expect(slices[3].categoryId).toBeNull()
+    expect(slices[3].label).toBe('Otros')
+    expect(slices[3].value).toBe(10)
+    expect(slices[3].percentage).toBeCloseTo(10)
+  })
+
+  it('keeps the arcs contiguous: "Otros" starts where the last named slice ends', () => {
+    const b = uncapped(40, 30, 20, 6, 4)
+    const { slices } = groupForDonut(b, 3, 'Otros')
+    const last = slices[2]
+    expect(slices[3].offset).toBeCloseTo(last.offset + last.percentage)
+    expect(slices[3].offset + slices[3].percentage).toBeCloseTo(100)
+  })
+
+  it('matches what buildCategorySlices would have produced with the same cap', () => {
+    const values = [40, 30, 20, 6, 4]
+    const capped = buildCategorySlices(
+      values.map((v, i) => cat(String.fromCharCode(97 + i), v)),
+      { topN: 3, othersLabel: 'Otros' },
+    )
+    const regrouped = groupForDonut(uncapped(...values), 3, 'Otros')
+    expect(regrouped.total).toBe(capped.total)
+    expect(regrouped.slices.map((s) => [s.categoryId, s.value])).toEqual(
+      capped.slices.map((s) => [s.categoryId, s.value]),
+    )
+  })
+
+  it('preserves the total (it regroups, it does not recompute)', () => {
+    const b = uncapped(40, 30, 20, 6, 4)
+    expect(groupForDonut(b, 2, 'Otros').total).toBe(b.total)
+  })
+})
+
+// ── generateSubTints ──────────────────────────────────────────────────────────
+// Native and web read the same string, and React Native's colour parser only
+// handles the COMMA form of hsl() reliably — so the format is load-bearing.
+
+describe('generateSubTints', () => {
+  it('emits the comma form of hsl() so React Native can parse it', () => {
+    for (const tint of generateSubTints('#D95F3D', 4)) {
+      expect(tint).toMatch(/^hsl\(\d+, \d+%, \d+%\)$/)
+    }
+  })
+
+  it('returns one tint per slice, and nothing for zero slices', () => {
+    expect(generateSubTints('#D95F3D', 0)).toEqual([])
+    expect(generateSubTints('#D95F3D', 1)).toHaveLength(1)
+    expect(generateSubTints('#D95F3D', 8)).toHaveLength(8)
+  })
+
+  it('ramps lightness from lightest to darkest so neighbours read apart', () => {
+    const light = (t: string) => Number(/(\d+)%\)$/.exec(t)![1])
+    const tints = generateSubTints('#D95F3D', 5)
+    for (let i = 1; i < tints.length; i++) {
+      expect(light(tints[i])).toBeLessThan(light(tints[i - 1]))
+    }
+  })
+
+  it('falls back to a neutral hue on an unparseable colour', () => {
+    expect(generateSubTints('not-a-color', 1)[0]).toMatch(/^hsl\(0, /)
   })
 })

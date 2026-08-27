@@ -1,9 +1,5 @@
-# spending-by-category Specification
+## MODIFIED Requirements
 
-## Purpose
-
-"En qué se fue": el desglose de los gastos del mes agrupados por categoría, pesado por **neto** (gastos − reintegros recibidos) y **por moneda**. Es la carta de presentación del módulo Movimientos —un donut + ranking, con navegación por mes y drill-down al listado filtrado— y esa es su **superficie única**: el rediseño del dashboard (`redesign-dashboard-home-v2`) retiró de ahí la dona y su teaser, para no sostener la misma lectura en dos lugares. El dashboard sigue consumiendo `getMonthCategoryBreakdown`, que es la fuente del devengado con que arma "Gastaste", pero no vuelve a presentar el desglose. Responde una de las tres preguntas centrales del usuario, complementando "cuánto tengo" y "qué viene".
-## Requirements
 ### Requirement: El módulo Movimientos abre con un desglose de gastos por categoría del mes
 
 El módulo de movimientos SHALL presentar, en **ambas plataformas** (web `/transactions` y la pantalla nativa Movimientos), como carta de presentación arriba del listado, un **desglose de los gastos del mes agrupados por categoría**, que responde "¿en qué se fue?". El listado de movimientos SHALL seguir accesible (el desglose lo antecede, no lo reemplaza).
@@ -121,23 +117,6 @@ El neto de una categoría PUEDE quedar **negativo** (un **crédito**): cuando lo
 
 ---
 
-### Requirement: El desglose se presenta como donut más ranking
-
-El desglose SHALL mostrarse como un **donut** que representa el peso relativo de cada categoría, acompañado de un **ranking** ordenado de mayor a menor (categoría, monto y porcentaje). Las categorías de menor peso SHALL poder agruparse en una entrada **"Otros"** para mantener el donut legible.
-
-#### Scenario: El donut refleja los pesos y el ranking los ordena
-
-- **WHEN** el usuario tiene gastos en varias categorías
-- **THEN** el donut muestra cada categoría proporcional a su peso
-- **AND** el ranking las lista de mayor a menor con su monto y porcentaje
-
-#### Scenario: La cola se agrupa en "Otros"
-
-- **WHEN** hay más categorías de las que el donut muestra legiblemente
-- **THEN** las de menor peso se agrupan en una entrada "Otros"
-
----
-
 ### Requirement: Tocar una categoría abre sus movimientos
 
 Al tocar una categoría del desglose (donut o ranking), el sistema SHALL abrir, debajo del desglose, la **lista de las líneas que componen el peso de esa categoría** en el mes y la moneda visualizados. Esta lista SHALL usar la **misma lente contable (CONSUMO / devengado)** que el desglose, de modo que **la suma de los montos mostrados en la lista iguale el peso de la categoría en el donut**. La lista drilleada NO SHALL usar la lente CAJA del listado general (`get_movements_page`); el listado general conserva su semántica sin cambios y se restablece al limpiar el filtro de categoría.
@@ -236,55 +215,6 @@ Cuando el desglose está en modo subcategoría (una categoría activa con sus su
 - **AND** aparece el chip de filtro "USD" entre los filtros activos de la pantalla
 - **AND** quitar ese chip devuelve el donut y el feed a ARS
 
-### Requirement: El desglose navega por mes
+## REMOVED Requirements
 
-El desglose SHALL permitir navegar entre meses, mostrando por defecto el mes actual (según la zona horaria financiera).
-
-#### Scenario: Navegar a un mes anterior
-
-- **WHEN** el usuario navega al mes anterior en el desglose
-- **THEN** el donut y el ranking se recalculan con los gastos de ese mes
-
----
-
-### Requirement: El desglose cuenta la parte del miembro en los movimientos compartidos
-
-En un hogar (módulo Compartido), el desglose "En qué se fue" responde "¿en qué se fue **MI** plata?" bajo el modelo de **cuenta corriente**: un movimiento compartido pertenece a cada miembro **por su parte**, no por el total. Por lo tanto, el desglose SHALL contar la **parte de la usuaria** en los movimientos compartidos (gastos y reintegros), no su total:
-
-- Un **gasto compartido** (`is_shared = true`) SHALL contar solo la **parte de la usuaria** = `shared_expense_split.amount_assigned` de la fila cuyo `user_id` es la usuaria. NO SHALL contar el monto total.
-- Esto SHALL aplicar **sin importar quién cargó el gasto**: como la RLS del hogar expone los movimientos compartidos de ambos miembros, un gasto compartido cargado por el otro miembro SHALL contar también solo la parte de la usuaria (y NO su total).
-- Un movimiento **propio no compartido** (`is_shared = false`) SHALL contar su monto **completo**.
-- Si la usuaria **no tiene fila de split** en un gasto compartido (parte 0 / no asignada), ese gasto NO SHALL aparecer en su desglose (es 100% del otro miembro).
-- La regla SHALL ser **simétrica para los reintegros compartidos**: un reintegro compartido SHALL netear solo la **parte de la usuaria** (`amount_assigned`), no su total, para no doble-contar contra el gasto ya contado por su parte.
-
-Como la RLS de `shared_expense_split` expone las filas de **ambos** miembros del hogar, la resolución de "la parte de la usuaria" SHALL filtrar explícitamente por su `user_id` (no asumir que el único split visible es el suyo).
-
-El desglose de **ingresos** NO SHALL verse afectado: el ingreso no se comparte (`is_shared` solo aplica a gastos).
-
-#### Scenario: Un gasto compartido cuenta solo mi parte
-
-- **WHEN** hay un gasto compartido de $100.000 al 50% (mi parte $50.000) en categoría Transporte
-- **THEN** el desglose cuenta $50.000 en Transporte, no $100.000
-
-#### Scenario: El gasto compartido del otro miembro solo cuenta mi parte
-
-- **WHEN** mi compañero/a cargó una nafta compartida de $101.994 al 50% (mi parte $50.997)
-- **THEN** el desglose cuenta $50.997 en su categoría (no $101.994, ni $0)
-- **AND** no aparece el total del gasto del otro
-
-#### Scenario: Un compartido sin parte propia no aparece
-
-- **WHEN** hay un gasto compartido en el hogar donde la usuaria tiene 0% (sin fila de split propia)
-- **THEN** ese gasto NO aparece en el desglose de la usuaria
-
-#### Scenario: El reintegro compartido netea solo mi parte
-
-- **WHEN** un gasto compartido cuenta por mi parte ($50.000) y recibo un reintegro compartido al 50% de $20.000 (mi parte $10.000)
-- **THEN** la categoría netea $10.000 (mi parte del reintegro), quedando en $40.000
-- **AND** NO se resta el total del reintegro ($20.000)
-
-#### Scenario: Los gastos propios no se ven afectados
-
-- **WHEN** tengo un gasto propio no compartido de $30.000
-- **THEN** el desglose lo cuenta completo ($30.000)
-
+(ninguno — el bloque *"Paridad de plataforma — MOBILE PENDIENTE (tech lead)"* del requirement *"Tocar una categoría abre sus movimientos"* no era un requirement propio sino una nota dentro de él, y sale con la reescritura de arriba: la lista drilleada deja de ser web-only y `getMonthCategoryLines` queda hoisteada a `@grana/transactions`, que es exactamente lo que la nota recomendaba.)

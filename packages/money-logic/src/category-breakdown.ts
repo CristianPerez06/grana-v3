@@ -128,3 +128,50 @@ export function buildSliceMetaLine(
   }
   return templates.movements(ctx.movementCount, share)
 }
+
+// ── groupForDonut ─────────────────────────────────────────────────────────────
+
+/** Named arcs the donut shows before folding the rest into one "Otros" slice. */
+export const DONUT_TOP = 6
+/**
+ * `topN` value that disables the "Otros" tail entirely, so every category
+ * survives as its own slice. Consumers build the breakdown uncapped (the ranking
+ * needs the full list) and regroup for the donut with `groupForDonut`.
+ */
+export const NO_OTHERS_CAP = Number.MAX_SAFE_INTEGER
+/** Category rows a ranking shows before folding the rest into "+ N más". */
+export const RANKING_VISIBLE = 10
+
+/**
+ * Regroup an uncapped, sorted breakdown into the donut's top-N + "Otros" view,
+ * recomputing the cumulative offsets so the arcs stay contiguous. Pure mirror of
+ * `buildCategorySlices`' tail logic, applied after the fact so the ranking can
+ * keep the full per-category list while the donut stays legible.
+ */
+export function groupForDonut(
+  breakdown: CategoryBreakdown,
+  topN: number,
+  othersLabel: string,
+): CategoryBreakdown {
+  if (breakdown.slices.length <= topN) return breakdown
+  const named = breakdown.slices.slice(0, topN)
+  const rest = breakdown.slices.slice(topN)
+  const last = named[named.length - 1]
+  const othersValue = rest.reduce((acc, s) => acc + s.value, 0)
+  const othersPercentage = rest.reduce((acc, s) => acc + s.percentage, 0)
+  return {
+    total: breakdown.total,
+    slices: [
+      ...named,
+      {
+        categoryId: null,
+        label: othersLabel,
+        color: OTHERS_COLOR,
+        icon: null,
+        value: othersValue,
+        percentage: othersPercentage,
+        offset: last.offset + last.percentage,
+      },
+    ],
+  }
+}
