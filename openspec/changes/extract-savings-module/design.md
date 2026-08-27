@@ -130,6 +130,12 @@ prometa** (E8).
 
 ## E10 — Apagar el módulo nunca puede secuestrar plata
 
+> **Estado: decidido, no cableado.** Apagar el módulo solo tiene sentido cuando exista el sistema de
+> planes —monetización y Play Store—, y hoy el repo no tiene ni banderas ni suscripciones. Lo que se
+> construyó es la decisión, no la superficie: `packages/savings/src/module-access.ts` (13 tests)
+> responde en qué estado está el módulo y qué se puede hacer en cada uno; ninguna pantalla lo consume.
+> Este entry queda como la norma que ese cableado tendrá que cumplir cuando llegue (tasks 4b).
+
 El borde es el entregable (E2), así que hay que decir **qué pasa cuando el módulo está apagado** — por
 un plan vencido, un rollout parcial o una bandera de depuración.
 

@@ -96,19 +96,40 @@
   montado en la card de saldo**, y así queda hasta que exista el módulo nativo — ahí no hay a dónde
   navegar todavía
 
-## 4b. El borde (E10)
+## 4b. El borde (E10) — DIFERIDO
+
+**Apagar el módulo es una decisión de monetización, y no hay con qué monetizar todavía**: el repo no
+tiene ni banderas ni tabla de planes ni suscripciones. Cablearlo hoy sería escribir —y mantener— una
+superficie que ningún usuario puede alcanzar, con el riesgo que tiene todo camino que no se recorre:
+se rompe en silencio. Se retoma cuando exista el sistema de planes, junto con la publicación en Play
+Store.
+
+Lo que SÍ queda hecho y empujado, porque es lo que se olvida y no cuesta nada guardar: la **decisión**
+como lógica pura (`packages/savings/src/module-access.ts`, 13 tests). `moduleAccess` resuelve los tres
+estados, `moduleShowsNav` / `moduleRouteIsOpen` / `moduleShowsDashboardRow` / `moduleCan` responden qué
+se ve y qué se puede en cada uno. Nada de la UI lo consume: el módulo está siempre encendido.
+`apps/web/lib/savings/module-enabled.ts` lee `NEXT_PUBLIC_SAVINGS_MODULE` y tampoco lo usa nadie —es
+el enchufe, esperando el cable.
+
+El comportamiento ya está normado en E10 y en el spec, así que lo diferido es el cableado, no la
+definición.
 
 - [ ] 4b.1 **Estado apagado con guardado en cero**: sin entrada de menú, sin ruta, sin fila en el
-  dashboard. No hay plata que rescatar ni número que explicar
+  dashboard. No hay plata que rescatar ni número que explicar — *decidido en `moduleAccess`/
+  `moduleShowsNav`; falta cablear*
 - [ ] 4b.2 **Estado apagado con guardado > 0**: la fila del dashboard **se queda y navega** —la card
   tiene que seguir cerrando— y el módulo entra en **estado degradado**: la grilla, los grupos en solo
-  lectura y **una sola acción, volver a usar**. Sin crear, sin destinar, sin guardar más
+  lectura y **una sola acción, volver a usar**. Sin crear, sin destinar, sin guardar más — *decidido
+  en `moduleCan` (`degraded` solo habilita `read` y `release`); falta cablear*
 - [ ] 4b.3 La lista de grupos sobrevive al apagado **porque la acción la necesita**: el invariante de
   la fase 2 no deja sacar de un propósito sin nombrarlo
 - [ ] 4b.4 **Verificar que apagar el módulo no cambia ningún número.** El guardado sigue restando del
-  disponible: la bandera controla la superficie, nunca la plata
-- [ ] 4b.5 **No existe fallback al drawer viejo.** Mantenerlo montado en el dashboard reintroduciría
-  el acoplamiento que este change saca
+  disponible: la bandera controla la superficie, nunca la plata. Por construcción se cumple —la
+  bandera no toca ninguna consulta— pero se verifica cuando se cablee, no antes
+- [x] 4b.5 **No existe fallback al drawer viejo.** Mantenerlo montado en el dashboard reintroduciría
+  el acoplamiento que este change saca. En web ya no existe: la fila de guardado es un `Link` a
+  `/savings` y `balance-card.tsx` no monta `SavingsDrawer`. En mobile sigue montado y así queda hasta
+  que exista el módulo nativo (4.4)
 
 ## 4c. El rediseño (handoff de Claude Design, E12–E15)
 
