@@ -20,10 +20,12 @@ export const SavingsHeadlineSkeleton = async () => {
     >
       <div className="bg-surface-dark px-[18px] pb-4 pt-[18px] sm:px-7 sm:pb-[22px] sm:pt-6">
         <span className="block h-3 w-20 animate-pulse rounded bg-navy-soft" />
-        <div className="mt-[15px] grid grid-cols-[1fr_1px_1fr] items-start gap-4">
-          <span className="block h-7 w-36 animate-pulse rounded bg-navy-soft sm:h-9" />
+        {/* Centrados como los montos de verdad: alineados a la izquierda, la
+            grilla se corría al resolver. */}
+        <div className="mt-[15px] grid grid-cols-[1fr_1px_1fr] items-stretch gap-4">
+          <span className="mx-auto block h-7 w-36 animate-pulse rounded bg-navy-soft sm:h-9" />
           <span aria-hidden className="h-full w-px self-stretch bg-navy-border" />
-          <span className="block h-7 w-24 animate-pulse rounded bg-navy-soft sm:h-9" />
+          <span className="mx-auto block h-7 w-24 animate-pulse rounded bg-navy-soft sm:h-9" />
         </div>
         <span className="mt-[15px] block h-3 w-full max-w-[22rem] animate-pulse rounded bg-navy-soft" />
       </div>

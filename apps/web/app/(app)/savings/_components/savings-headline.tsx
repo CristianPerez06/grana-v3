@@ -102,21 +102,18 @@ export const SavingsHeadline = ({
             {t('total_saved')}
           </p>
 
-          {/* Las dos monedas separadas por un divisor de 1px. Ninguna es
-              principal: la cuenta de dólares no es un apéndice de la de pesos.
-              NUNCA se suman, y el divisor es lo que lo dice sin escribirlo.
+          {/* La card se parte en DOS MITADES, una por moneda, con un divisor de
+              1px entre ellas y cada monto centrado en la suya.
 
-              En teléfono las columnas son MITADES (`1fr`), que es lo que hace
-              que el par ocupe el ancho y se lea como una unidad. De `sm` para
-              arriba pasan a `auto`: con la card a 960 px, dos mitades dejaban
-              cada monto flotando en 470 px de vacío y —peor— ponían el divisor
-              en el centro geométrico de la card, a media card de distancia de
-              los dos números. Un divisor que separa dos vacíos no separa nada.
+              Las mitades son iguales en todos los tamaños: ninguna moneda es
+              principal, y la cuenta de dólares no es un apéndice de la de pesos.
+              Que cada una ocupe media card lo dice antes que cualquier rótulo, y
+              el divisor de punta a punta dice lo otro — que NUNCA se suman.
 
-              Con `auto` el par se encoge a su contenido y queda pegado a la
-              izquierda, en la misma línea vertical que el rótulo de arriba y la
-              frase de abajo: UNA alineación para toda la card. */}
-          <div className="mt-[15px] grid grid-cols-[1fr_1px_1fr] items-start gap-4 sm:w-fit sm:grid-cols-[auto_1px_auto] sm:gap-7">
+              Centrados y no alineados al borde: en columnas de igual ancho, un
+              monto pegado a su izquierda se lee como el arranque de una lista;
+              centrado, se lee como el valor de esa mitad. */}
+          <div className="mt-[15px] grid grid-cols-[1fr_1px_1fr] items-stretch gap-4">
             <DarkAmount value={moduleRowFor(sums, 'ARS').reserved} currency="ARS" />
             <div aria-hidden className="h-full w-px self-stretch bg-navy-border" />
             <DarkAmount value={moduleRowFor(sums, 'USD').reserved} currency="USD" />
@@ -198,7 +195,7 @@ const DarkAmount = ({ value, currency }: { value: number; currency: BalanceCurre
   return (
     <p
       className={cn(
-        'whitespace-nowrap text-[27px] font-extrabold leading-none tracking-[-0.045em] tabular-nums sm:text-[34px]',
+        'whitespace-nowrap text-center text-[27px] font-extrabold leading-none tracking-[-0.045em] tabular-nums sm:text-[34px]',
         empty ? 'text-white/[0.42]' : 'text-white',
       )}
     >
