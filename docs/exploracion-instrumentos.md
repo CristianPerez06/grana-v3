@@ -33,6 +33,29 @@ Son las reglas ya decididas. Cualquier idea de acá que las contradiga está mal
 | **Una cuenta usable para pagar es cuenta** | Aunque rinda. Sigue en «Para gastar» |
 | **Un FCI es posición solo si requiere una acción previa** para poder gastar esa plata | El criterio es de comportamiento, no de producto |
 
+### Acuerdos cerrados de FCI v1
+
+Firmados por producto. No se vuelven a discutir por texto.
+
+1. **El criterio de admisión es** *¿puedo pagar con esa plata sin hacer nada antes?* Sí → cuenta.
+   No → posición.
+2. **No se clasifica por nombre de producto.** El mismo money market puede ser cuenta o posición
+   según si se usa directo o requiere rescate.
+3. **Hay dos altas distintas**: «ya lo tenía» —carga de stock, no toca el mes— y «lo puse hoy» —salida
+   de liquidez, movimiento financiero, no gasto—.
+4. **El riesgo de duplicar patrimonio es real** y aparece en el mock, con este copy a probar:
+
+   > **«¿El saldo que le cargaste a tu cuenta en Grana ya incluye esta plata?»**
+   > · **Sí** → *«Ajustaremos el saldo de tu cuenta para mover esa plata al fondo sin duplicarla.»*
+   > · **No** → *«Solo registramos la posición sin tocar tus cuentas.»*
+
+5. **El rescate parcial v1 es simple**: reduce el capital registrado, no fuerza cuotapartes ni VCP, no
+   inventa rendimiento parcial, y usa copy honesto —**«pusiste»**, no «tenés»— mientras el valor
+   actual no esté confirmado.
+
+**Lo único que NO se cierra por texto es el nombre visible de la sección** — se decide sobre el mock
+(§5.2 y abajo).
+
 ---
 
 ## 0. La pregunta, en una línea
@@ -406,6 +429,24 @@ rendimiento (§5.5).
 
 **Qué me haría cambiar de opinión:** que en el mock «Puesto a trabajar» se lea como que Grana promete
 que la plata rinde. Es lo único que lo tumba, y se ve en pantalla, no en una tabla.
+
+### 5.2b El nombre no se cierra acá: se cierra en el mock
+
+Producto levantó **dos alertas** sobre «Puesto a trabajar» que esta tabla no puede resolver, porque
+las dos son sobre cómo se lee y no sobre qué significa:
+
+1. **Puede sonar a promesa de rendimiento o a lenguaje de fintech.**
+2. **Puede confundirse con «plata trabajando para un propósito»** — que está justo arriba en la misma
+   pantalla, con «Emergencia» y «Viaje».
+
+Por eso el naming pasó a pantalla: **`docs/design/modelo-de-dinero/fase-3a-fci-naming.html`**, con las
+tres versiones —A «Puesto a trabajar», B «Plata colocada», C «Inversiones» como control— con los
+**mismos datos y la misma estructura**, y cada una debajo de «Guardado», que es donde va a estar
+siempre.
+
+**Y la recomendación de este documento no gobierna esa decisión.** Si en el mock A dispara cualquiera
+de las dos alertas, gana B. Si C —el control— se entiende mucho mejor que las dos, la conclusión no es
+usar C: es que ni A ni B se entienden y hay que buscar una cuarta.
 
 ### 5.3 Nombre de sección ≠ tipos internos
 
@@ -822,9 +863,10 @@ la respuesta va a ser más chica de lo que parecía antes de dibujar.
 
 1. **Nada de esto se implementa antes del QA visual nativo de `extract-savings-module`.** Es la
    compuerta vigente, y el change está congelado.
-2. El primer artefacto es un **mock de la fase 3A**: los dos caminos de alta, la fila, el rescate total
-   y el parcial, y la línea nueva del mes. Dibujado sobre la navegación del módulo ya construido, y
-   **con las tres filas de estado**, aunque solo se implemente «con rescate».
+2. ✅ **El mock existe**: `docs/design/modelo-de-dinero/fase-3a-fci-naming.html`. Tiene la comparativa
+   de naming en contexto, los tres estados de la lista —cero, un FCI, y FCI + plazo fijo futuro—, las
+   dos altas con la pregunta de duplicación, el rescate total y el parcial, y las doce preguntas que
+   tiene que contestar. **Ninguna tabla, ningún schema, ninguna migración.**
 3. `docs/design/modelo-de-dinero/fase-3a-plazo-fijo.html` **cambia de número**: pasa a ser referencia
    de la **3B**. Su razonamiento contable —stock vs. flujo, el interés que no es ingreso— sigue vigente
    y es de donde sale medio este documento; lo que cambia es cuándo se construye.

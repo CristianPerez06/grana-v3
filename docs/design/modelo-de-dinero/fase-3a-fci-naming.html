@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fase 3A · FCI — el nombre y los circuitos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  --navy:#0B1A2B; --page:#F6F7F9; --card:#FFF; --border:#E6EAEF; --border-soft:#EEF1F4;
+  --text:#0B1A2B; --muted:#6B7683; --soft:#8A94A3; --neutral:#7A8494;
+  --emerald:#10B981; --emerald-deep:#059669; --emerald-bg:#ECFDF5;
+  --terracotta:#B56A5A; --slate:#3A6B8A; --plum:#8A6E98; --warning:#C49A3C;
+  --warm-bg:#F8EFDA; --warm-bd:#DFCCA4; --warm-tx:#6B4E14; --warm-dp:#8A5A16;
+  --tile:#F1F3F6;
+  --sans:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --shadow:0 1px 2px rgba(11,26,43,.05),0 6px 18px rgba(11,26,43,.05);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#EEF1F5;color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+.doc{max-width:1320px;margin:0 auto;padding:0 28px 110px}
+.masthead{background:var(--navy);color:#fff;padding:52px 28px 44px;margin-bottom:44px}
+.masthead .in{max-width:1320px;margin:0 auto}
+.eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.62);margin:0 0 12px;font-weight:600}
+.masthead h1{margin:0 0 12px;font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.masthead p{margin:0;max-width:70ch;color:rgba(255,255,255,.68);font-size:16px}
+.masthead .warn{margin-top:24px;padding:14px 18px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-size:14px;color:rgba(255,255,255,.8);max-width:84ch}
+.masthead .warn b{color:#fff;font-weight:700}
+.masthead .warn ul{margin:9px 0 0;padding-left:18px}
+.masthead .warn li{margin-top:4px}
+
+h2.sec{margin:56px 0 6px;font-size:24px;font-weight:800;letter-spacing:-.02em}
+h2.sec .n{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--navy);color:#fff;font-size:14px;font-weight:700;margin-right:11px;vertical-align:2px}
+p.lead{margin:0 0 26px;font-size:15px;color:var(--muted);max-width:80ch}
+p.lead b{color:var(--text);font-weight:600}
+
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:34px 30px;align-items:start}
+.cols.two{grid-template-columns:repeat(auto-fit,minmax(370px,1fr))}
+.col{display:flex;flex-direction:column;gap:13px}
+.col > h3{margin:0;font-size:16px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+.tag{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:999px}
+.t-a{background:var(--emerald-bg);color:var(--emerald-deep)}
+.t-b{background:#F1EEF6;color:var(--plum)}
+.t-c{background:#EAF1F6;color:var(--slate)}
+.t-warn{background:#FBF3E2;color:var(--warm-dp)}
+.t-no{background:#FBEDEA;color:var(--terracotta)}
+
+.note{font-size:13.5px;color:var(--muted);border-left:2px solid var(--border);padding-left:14px}
+.note b{color:var(--text);font-weight:600}
+.note.warn{border-left-color:var(--warm-bd)}
+.note.no{border-left-color:var(--terracotta)}
+.note.ok{border-left-color:var(--emerald)}
+
+.phone{width:100%;max-width:392px;border:1px solid var(--border);border-radius:22px;background:var(--page);overflow:hidden;box-shadow:var(--shadow)}
+.scr{padding:15px;display:flex;flex-direction:column;gap:11px}
+.hdr{background:var(--navy);color:#fff;padding:13px 16px 15px}
+.hdr .bk{font-size:12px;color:rgba(255,255,255,.6)}
+.hdr h4{margin:5px 0 0;font-size:18px;font-weight:800;letter-spacing:-.02em}
+
+/* card oscura del total */
+.tot{border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
+.tot .dark{background:var(--navy);color:#fff;padding:15px 16px 13px}
+.tot .lbl{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.tot .pair{display:grid;grid-template-columns:1fr 1px 1fr;gap:0;margin-top:11px}
+.tot .pair .divi{background:rgba(255,255,255,.15)}
+.tot .pair .h{text-align:center;padding:0 8px;font-size:22px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.tot .pair .h s{text-decoration:none;font-size:.78em;font-weight:700;color:rgba(255,255,255,.5)}
+.tot .pair .h.zero{color:rgba(255,255,255,.42)}
+.tot .sup{margin:11px 0 0;font-size:11.5px;font-weight:600;color:rgba(255,255,255,.6);line-height:1.45}
+.tot .bar{display:grid;grid-template-columns:1fr 1fr 1fr;background:#fff}
+.tot .bar div{padding:11px 4px;text-align:center;font-size:11.5px;font-weight:800;color:var(--text)}
+.tot .bar div + div{border-left:1px solid var(--border-soft)}
+
+/* seccion generica */
+.blk{display:flex;flex-direction:column;gap:9px}
+.blk .bh{display:flex;align-items:center;justify-content:space-between;padding:0 3px}
+.blk .bh h5{margin:0;font-size:14px;font-weight:800;letter-spacing:-.02em}
+.blk .bh .add{font-size:12px;font-weight:800;color:var(--emerald-deep)}
+
+/* fila de propósito / instrumento */
+.row{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--border-soft);border-radius:15px;padding:12px 13px}
+.row .ic{flex:0 0 auto;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:18px;background:var(--tile)}
+.row .ic.g{background:#EAF1F6}.row .ic.p{background:#F1EEF6}.row .ic.e{background:var(--emerald-bg)}
+.row .nm{flex:1;min-width:0;font-size:14px;font-weight:800;letter-spacing:-.015em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .nm em{display:block;font-style:normal;font-size:11px;font-weight:600;color:var(--soft);letter-spacing:0;margin-top:2px}
+.row .am{flex:0 0 auto;text-align:right}
+.row .am b{display:block;font-size:15.5px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.row .am s{display:block;text-decoration:none;font-size:11px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.row .chev{color:#C4CBD4;font-size:15px;flex:0 0 auto}
+
+/* bloque «sin destino» cálido */
+.warmblk{background:var(--warm-bg);border:1px dashed var(--warm-bd);border-radius:17px;padding:11px 13px}
+.warmblk .t{display:flex;align-items:center;gap:11px}
+.warmblk .ring{width:32px;height:32px;border-radius:50%;border:1.5px dashed rgba(138,90,22,.5);display:grid;place-items:center;font-size:14px;color:var(--warm-dp)}
+.warmblk .k{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--warm-dp)}
+.warmblk .v{font-size:15.5px;font-weight:800;color:var(--warm-tx);font-variant-numeric:tabular-nums}
+.warmblk .btn{margin-left:auto;background:var(--warm-dp);color:#fff;border-radius:9px;padding:7px 12px;font-size:11.5px;font-weight:800}
+
+/* estado vacío / ausencia */
+.ghostblk{border:1px dashed var(--border);border-radius:15px;padding:16px 14px;text-align:center;font-size:13px;color:#B6BFCA;font-weight:600;background:repeating-linear-gradient(135deg,#FAFBFC,#FAFBFC 8px,#F4F6F8 8px,#F4F6F8 16px)}
+
+/* formularios */
+.c{background:#fff;border:1px solid var(--border-soft);border-radius:15px}
+.c.pad{padding:13px 14px}
+.fld{padding:11px 14px;border-top:1px solid var(--border-soft);display:flex;align-items:center;gap:11px}
+.fld:first-child{border-top:0}
+.fld .k{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.fld .v{font-size:14.5px;font-weight:600;margin-top:1px}
+.fld .v.ph{color:#B6BFCA;font-weight:500}
+.fld .gr{flex:1;min-width:0}
+.amt{padding:14px 15px 15px;position:relative}
+.amt .lbl{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}
+.amt .cur{position:absolute;right:13px;top:12px;border:1px solid var(--border);border-radius:9px;padding:4px 9px;font-size:11.5px;font-weight:700}
+.amt .val{display:flex;align-items:baseline;gap:6px;margin-top:8px;justify-content:center}
+.amt .val .s{font-size:21px;font-weight:600;color:var(--soft)}
+.amt .val .n{font-size:34px;font-weight:700;letter-spacing:-.025em;line-height:1;font-variant-numeric:tabular-nums}
+.calc{padding:12px 14px}
+.calc div{display:flex;justify-content:space-between;align-items:baseline;font-size:13.5px;padding:4px 0}
+.calc div span:first-child{color:var(--muted)}
+.calc div span:last-child{font-weight:700;font-variant-numeric:tabular-nums}
+.calc .rule{border-top:1px solid var(--border-soft);margin-top:5px;padding-top:8px}
+.calc .rule span:last-child{font-size:15.5px;font-weight:800}
+.calc .pos span:last-child{color:var(--emerald-deep)}
+.calc .neg span:last-child{color:var(--terracotta)}
+.cta{background:var(--emerald);color:#fff;border-radius:12px;padding:14px;text-align:center;font-size:15px;font-weight:800}
+.cta.ghost{background:#fff;color:var(--muted);border:1px solid var(--border);font-weight:700}
+
+/* pregunta de duplicación */
+.ask{background:#fff;border:1px solid var(--border-soft);border-radius:15px;padding:13px 14px}
+.ask h6{margin:0 0 4px;font-size:14px;font-weight:800;letter-spacing:-.01em;line-height:1.35}
+.ask p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.45}
+.ask .opts{display:flex;gap:8px;margin-top:11px}
+.ask .opts div{flex:1;border:1px solid var(--border);border-radius:11px;padding:9px;text-align:center;font-size:13px;font-weight:700}
+.ask .opts div.on{border-color:var(--emerald);background:var(--emerald-bg);color:var(--emerald-deep)}
+.ask .out{margin-top:11px;padding:11px 12px;border-radius:11px;font-size:12.5px;line-height:1.45}
+.ask .out.si{background:#FBF3E2;color:var(--warm-tx);border:1px solid var(--warm-bd)}
+.ask .out.no{background:var(--emerald-bg);color:#065F46;border:1px solid #A7F3D0}
+
+/* card del mes */
+.month{background:#fff;border:1px solid var(--border-soft);border-radius:16px;padding:14px 15px}
+.month .k{font-size:9.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--soft);margin-bottom:9px}
+.month .l{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:13.5px}
+.month .l span:first-child{color:var(--muted)}
+.month .l span:last-child{font-weight:700;font-variant-numeric:tabular-nums}
+.month .l.new{background:var(--emerald-bg);margin:3px -8px;padding:6px 8px;border-radius:8px}
+.month .l.new span:first-child{color:var(--emerald-deep);font-weight:700}
+.month .l.new span:last-child{color:var(--emerald-deep)}
+.month .l.tot{border-top:1px solid var(--border-soft);margin-top:6px;padding-top:9px}
+.month .l.tot span:last-child{font-size:15.5px;font-weight:800}
+
+/* tabla de criterios */
+table.mx{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:8px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+table.mx th,table.mx td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--border-soft);vertical-align:top}
+table.mx th{background:#F8FAFB;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}
+table.mx td b{font-weight:700}
+table.mx tr:last-child td{border-bottom:0}
+.yes{color:var(--emerald-deep);font-weight:800}
+.no{color:var(--terracotta);font-weight:800}
+.mid{color:var(--warning);font-weight:800}
+
+/* checklist */
+ol.chk{counter-reset:c;list-style:none;padding:0;margin:14px 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}
+ol.chk li{counter-increment:c;background:#fff;border:1px solid var(--border-soft);border-radius:14px;padding:13px 15px 13px 48px;position:relative;font-size:13.5px;line-height:1.5;box-shadow:var(--shadow)}
+ol.chk li::before{content:counter(c);position:absolute;left:14px;top:13px;width:22px;height:22px;border-radius:7px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800}
+ol.chk li b{font-weight:700}
+ol.chk li em{display:block;font-style:normal;margin-top:5px;color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body>
+
+<div class="masthead"><div class="in">
+  <p class="eyebrow">Mock exploratorio · fase 3A</p>
+  <h1>FCI — el nombre de la sección, y los cuatro circuitos</h1>
+  <p>Comparativa de naming en contexto, con los mismos datos y la misma estructura, más los circuitos
+     que la fase 3A tendría que resolver. Es la pantalla de la discusión que <b>no</b> se puede seguir
+     dando en prosa.</p>
+  <div class="warn">
+    <b>Qué NO es esto.</b>
+    <ul>
+      <li>No es código de producción, no propone schema y no hay migraciones.</li>
+      <li>No modifica <b>extract-savings-module</b>, que está congelado hasta el QA visual nativo.</li>
+      <li>No es diseño final: es una herramienta para decidir el nombre y validar los circuitos.</li>
+    </ul>
+  </div>
+  <div class="warn">
+    <b>Acuerdos cerrados que este mock da por firmes</b> — ver <b>docs/exploracion-instrumentos.md</b>.
+    <ul>
+      <li><b>Criterio de admisión:</b> ¿puedo pagar con esa plata sin hacer nada antes? Sí → cuenta. No → posición.</li>
+      <li><b>No se clasifica por producto:</b> el mismo money market puede ser cuenta o posición.</li>
+      <li><b>Dos altas distintas:</b> «ya lo tenía» (stock, no toca el mes) y «lo puse hoy» (salida de liquidez).</li>
+      <li><b>Rescate parcial v1:</b> reduce capital, sin cuotapartes ni VCP, con copy honesto.</li>
+      <li><b>USD es moneda, no instrumento.</b></li>
+    </ul>
+  </div>
+</div></div>
+
+<div class="doc">
+
+<!-- ════════════════════ 1 ════════════════════ -->
+<h2 class="sec"><span class="n">1</span>El nombre, debajo de «Guardado»</h2>
+<p class="lead">Tres variantes con <b>exactamente los mismos datos y la misma estructura</b>. Lo único
+que cambia es el rótulo de la sección nueva. La prueba no es leer el nombre solo: es leerlo
+<b>abajo de «Guardado»</b>, que es donde va a estar siempre.</p>
+
+<div class="cols">
+
+  <div class="col">
+    <h3>Versión A <span class="tag t-a">Puesto a trabajar</span></h3>
+    <div class="phone">
+      <div class="hdr"><div class="bk">← Inicio</div><h4>Ahorro e inversión</h4></div>
+      <div class="scr">
+        <div class="tot">
+          <div class="dark">
+            <div class="lbl">Guardado</div>
+            <div class="pair"><div class="h"><s>$</s> 200.000</div><div class="divi"></div><div class="h zero"><s>US$</s> 0</div></div>
+            <p class="sup">Sigue en tus cuentas, pero no cuenta para gastar.</p>
+          </div>
+          <div class="bar"><div>↓ Guardar</div><div>↑ Volver a usar</div><div>⤳ Destinar</div></div>
+        </div>
+        <div class="blk">
+          <div class="bh"><h5>En qué está repartido</h5><span class="add">+ Nuevo propósito</span></div>
+          <div class="row"><span class="ic e">🛟</span><span class="nm">Emergencia</span><span class="am"><b>$ 150.000</b></span><span class="chev">›</span></div>
+          <div class="row"><span class="ic p">✈️</span><span class="nm">Viaje</span><span class="am"><b>$ 50.000</b></span><span class="chev">›</span></div>
+        </div>
+        <div class="blk">
+          <div class="bh"><h5>Puesto a trabajar</h5><span class="add">+ Agregar</span></div>
+          <div class="row"><span class="ic g">📈</span><span class="nm">FCI Mercado Pago<em>con rescate</em></span><span class="am"><b>$ 800.000</b></span><span class="chev">›</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="note ok"><b>El contraste se explica solo.</b> «Guardado» está quieto; «puesto a
+      trabajar» hace algo y salió de la cuenta. Un usuario que barre la pantalla no necesita que
+      nadie se lo aclare.</div>
+    <div class="note warn"><b>La alerta a validar:</b> ¿se lee como que Grana promete que esa plata
+      rinde? La fila no muestra ningún rendimiento — pero el rótulo sí sugiere actividad.</div>
+    <div class="note warn"><b>Segunda alerta:</b> ¿se confunde con «plata trabajando para un
+      propósito»? Arriba, «Emergencia» y «Viaje» también son plata con un fin. Mirar si alguien
+      cree que las dos secciones dicen lo mismo.</div>
+  </div>
+
+  <div class="col">
+    <h3>Versión B <span class="tag t-b">Plata colocada</span></h3>
+    <div class="phone">
+      <div class="hdr"><div class="bk">← Inicio</div><h4>Ahorro e inversión</h4></div>
+      <div class="scr">
+        <div class="tot">
+          <div class="dark">
+            <div class="lbl">Guardado</div>
+            <div class="pair"><div class="h"><s>$</s> 200.000</div><div class="divi"></div><div class="h zero"><s>US$</s> 0</div></div>
+            <p class="sup">Sigue en tus cuentas, pero no cuenta para gastar.</p>
+          </div>
+          <div class="bar"><div>↓ Guardar</div><div>↑ Volver a usar</div><div>⤳ Destinar</div></div>
+        </div>
+        <div class="blk">
+          <div class="bh"><h5>En qué está repartido</h5><span class="add">+ Nuevo propósito</span></div>
+          <div class="row"><span class="ic e">🛟</span><span class="nm">Emergencia</span><span class="am"><b>$ 150.000</b></span><span class="chev">›</span></div>
+          <div class="row"><span class="ic p">✈️</span><span class="nm">Viaje</span><span class="am"><b>$ 50.000</b></span><span class="chev">›</span></div>
+        </div>
+        <div class="blk">
+          <div class="bh"><h5>Plata colocada</h5><span class="add">+ Agregar</span></div>
+          <div class="row"><span class="ic g">📈</span><span class="nm">FCI Mercado Pago<em>con rescate</em></span><span class="am"><b>$ 800.000</b></span><span class="chev">›</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="note warn"><b>El riesgo a mirar:</b> «Guardado» y «colocada» son los dos participios
+      de <i>dejé la plata en algún lado</i>. Leídos seguidos, ¿queda claro que uno sigue en tus
+      cuentas y el otro no?</div>
+    <div class="note"><b>A favor:</b> es neutro, no promete nada y no se puede confundir con
+      rendimiento. Si la alerta de A resulta cierta, este gana por descarte.</div>
+    <div class="note warn"><b>Segundo punto:</b> «colocar» es la palabra del que vende
+      —«colocación a plazo»—. Preguntar si suena a banco o si ya se naturalizó.</div>
+  </div>
+
+  <div class="col">
+    <h3>Versión C <span class="tag t-c">Inversiones · control</span></h3>
+    <div class="phone">
+      <div class="hdr"><div class="bk">← Inicio</div><h4>Ahorro e inversión</h4></div>
+      <div class="scr">
+        <div class="tot">
+          <div class="dark">
+            <div class="lbl">Guardado</div>
+            <div class="pair"><div class="h"><s>$</s> 200.000</div><div class="divi"></div><div class="h zero"><s>US$</s> 0</div></div>
+            <p class="sup">Sigue en tus cuentas, pero no cuenta para gastar.</p>
+          </div>
+          <div class="bar"><div>↓ Guardar</div><div>↑ Volver a usar</div><div>⤳ Destinar</div></div>
+        </div>
+        <div class="blk">
+          <div class="bh"><h5>En qué está repartido</h5><span class="add">+ Nuevo propósito</span></div>
+          <div class="row"><span class="ic e">🛟</span><span class="nm">Emergencia</span><span class="am"><b>$ 150.000</b></span><span class="chev">›</span></div>
+          <div class="row"><span class="ic p">✈️</span><span class="nm">Viaje</span><span class="am"><b>$ 50.000</b></span><span class="chev">›</span></div>
+        </div>
+        <div class="blk">
+          <div class="bh"><h5>Inversiones</h5><span class="add">+ Agregar</span></div>
+          <div class="row"><span class="ic g">📈</span><span class="nm">FCI Mercado Pago<em>con rescate</em></span><span class="am"><b>$ 800.000</b></span><span class="chev">›</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="note"><b>Es el control, no un candidato.</b> Sirve para medir cuánto se entiende A y B
+      contra la palabra que todo el mundo ya conoce.</div>
+    <div class="note no"><b>Por qué no puede ganar aunque se entienda mejor:</b> en 3B el bloque va a
+      tener un plazo fijo, y para un argentino un plazo fijo <i>no se siente</i> una inversión: se
+      siente cubrirse. Es la objeción que el modelo ya tiene escrita contra «Invertir».</div>
+    <div class="note"><b>Si C gana por goleada</b>, la conclusión no es usar C: es que ni A ni B se
+      entienden, y hay que buscar una cuarta.</div>
+  </div>
+
+</div>
+
+<h2 class="sec"><span class="n">2</span>Los tres estados de la lista</h2>
+<p class="lead">Con el nombre de la versión A, para no repetir tres veces lo mismo. Lo que se prueba
+acá es la <b>estructura</b>: que aguante cero, uno y —cuando llegue 3B— dos instrumentos de
+naturaleza distinta <b>sin rehacerse</b>.</p>
+
+<div class="cols">
+  <div class="col">
+    <h3>Cero instrumentos <span class="tag t-a">hoy</span></h3>
+    <div class="phone"><div class="scr">
+      <div class="tot">
+        <div class="dark">
+          <div class="lbl">Guardado</div>
+          <div class="pair"><div class="h"><s>$</s> 200.000</div><div class="divi"></div><div class="h zero"><s>US$</s> 0</div></div>
+          <p class="sup">Sigue en tus cuentas, pero no cuenta para gastar.</p>
+        </div>
+        <div class="bar"><div>↓ Guardar</div><div>↑ Volver a usar</div><div>⤳ Destinar</div></div>
+      </div>
+      <div class="blk">
+        <div class="bh"><h5>En qué está repartido</h5><span class="add">+ Nuevo propósito</span></div>
+        <div class="row"><span class="ic e">🛟</span><span class="nm">Emergencia</span><span class="am"><b>$ 200.000</b></span><span class="chev">›</span></div>
+      </div>
+      <div class="ghostblk">Acá NO va nada.<br>Ni card vacía, ni botón gris, ni «todavía no invertiste».</div>
+    </div></div>
+    <div class="note ok"><b>Sin nada, no hay bloque</b> (regla E8 del módulo, ya QA-eada). Un bloque
+      apagado enseña a ignorar la pantalla, y esa lección no se revierte.</div>
+    <div class="note"><b>Entonces, ¿por dónde entra el primero?</b> Por el acto: al registrar el
+      movimiento que saca la plata de la cuenta, o desde el menú del módulo. Nunca por una vidriera
+      de productos.</div>
+  </div>
+
+  <div class="col">
+    <h3>Un FCI <span class="tag t-a">fase 3A</span></h3>
+    <div class="phone"><div class="scr">
+      <div class="tot">
+        <div class="dark">
+          <div class="lbl">Guardado</div>
+          <div class="pair"><div class="h"><s>$</s> 200.000</div><div class="divi"></div><div class="h zero"><s>US$</s> 0</div></div>
+          <p class="sup">Sigue en tus cuentas, pero no cuenta para gastar.</p>
+        </div>
+        <div class="bar"><div>↓ Guardar</div><div>↑ Volver a usar</div><div>⤳ Destinar</div></div>
+      </div>
+      <div class="blk">
+        <div class="bh"><h5>Puesto a trabajar</h5><span class="add">+ Agregar</span></div>
+        <div class="row"><span class="ic g">📈</span><span class="nm">FCI Mercado Pago<em>con rescate</em></span><span class="am"><b>$ 800.000</b></span><span class="chev">›</span></div>
+      </div>
+    </div></div>
+    <div class="note"><b>Dos números y ninguno más:</b> cuánto pusiste y cuándo lo podés tener. Sin
+      cuota parte, sin rendimiento del día, sin flecha verde, sin porcentaje.</div>
+    <div class="note ok"><b>La prueba del trading:</b> una app de trading se reconoce porque el
+      número cambia solo mientras la mirás. Acá cambia cuando el usuario hace algo.</div>
+  </div>
+
+  <div class="col">
+    <h3>FCI + plazo fijo <span class="tag t-c">futuro, 3B</span></h3>
+    <div class="phone"><div class="scr">
+      <div class="tot">
+        <div class="dark">
+          <div class="lbl">Guardado</div>
+          <div class="pair"><div class="h"><s>$</s> 200.000</div><div class="divi"></div><div class="h zero"><s>US$</s> 0</div></div>
+          <p class="sup">Sigue en tus cuentas, pero no cuenta para gastar.</p>
+        </div>
+        <div class="bar"><div>↓ Guardar</div><div>↑ Volver a usar</div><div>⤳ Destinar</div></div>
+      </div>
+      <div class="blk">
+        <div class="bh"><h5>Puesto a trabajar</h5><span class="add">+ Agregar</span></div>
+        <div class="row"><span class="ic g">📈</span><span class="nm">FCI Mercado Pago<em>con rescate</em></span><span class="am"><b>$ 800.000</b></span><span class="chev">›</span></div>
+        <div class="row"><span class="ic p">🔒</span><span class="nm">Plazo fijo Comafi<em>vence el 24 de sep</em></span><span class="am"><b>$ 700.000</b></span><span class="chev">›</span></div>
+      </div>
+    </div></div>
+    <div class="note ok"><b>Está dibujado aunque no se implemente.</b> Es la mitigación del riesgo
+      principal de empezar por FCI: una lista que nunca vio una fila sin rescate va a asumir que
+      todas lo tienen.</div>
+    <div class="note"><b>Nombre de sección ≠ estado de fila.</b> La sección se llama una cosa; las
+      filas dicen <b>con rescate</b>, <b>vence el…</b>, y en 3C <b>valuación variable</b>. Por eso
+      «Con rescate» no puede ser el nombre de la sección: se rompe en esta pantalla.</div>
+  </div>
+</div>
+
+<h2 class="sec"><span class="n">3</span>Alta A — «Ya lo tenía»</h2>
+<p class="lead">El usuario que llega a Grana con la vida financiera ya armada. <b>Si esta puerta no
+existe, la app le pide que mienta</b>: la única forma de registrar el fondo sería fingir que lo
+suscribió hoy. Es carga de stock: no toca el ledger, no crea línea en el mes y <b>no baja «Para
+gastar»</b>.</p>
+
+<div class="cols two">
+  <div class="col">
+    <h3>El formulario <span class="tag t-a">4 campos</span></h3>
+    <div class="phone"><div class="scr">
+      <div class="dh" style="display:flex;justify-content:space-between;padding:2px">
+        <div><div style="font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)">Agregar</div>
+        <div style="font-size:19px;font-weight:800;letter-spacing:-.02em;margin-top:2px">Ya lo tenía</div></div>
+      </div>
+      <div class="c amt">
+        <div class="lbl">Cuánto tenés</div><div class="cur">ARS ⌄</div>
+        <div class="val"><span class="s">$</span><span class="n">250.000</span></div>
+      </div>
+      <div class="c">
+        <div class="fld"><span class="ic" style="width:32px;height:32px;border-radius:9px;background:var(--tile);display:grid;place-items:center;font-size:14px">📈</span><div class="gr"><div class="k">Fondo o entidad</div><div class="v">FCI Mercado Pago</div></div></div>
+        <div class="fld"><span class="ic" style="width:32px;height:32px;border-radius:9px;background:var(--tile);display:grid;place-items:center;font-size:14px">🏦</span><div class="gr"><div class="k">Dónde está · opcional</div><div class="v ph">Elegir cuenta o custodio</div></div></div>
+        <div class="fld"><span class="ic" style="width:32px;height:32px;border-radius:9px;background:var(--tile);display:grid;place-items:center;font-size:14px">📅</span><div class="gr"><div class="k">Desde cuándo · opcional</div><div class="v ph">No lo sé</div></div></div>
+      </div>
+      <div class="cta">Agregar</div>
+    </div></div>
+    <div class="note"><b>Lo que no pide:</b> cuotapartes, VCP, tasa, rendimiento estimado. Ninguno
+      hace falta para el circuito y todos convierten esto en un formulario de banco.</div>
+    <div class="note warn"><b>A validar:</b> ¿«Dónde está» opcional es un alivio o genera duda?
+      Sirve para el corte por ubicación, pero exigirlo pide un dato que mucha gente no tiene claro
+      — «¿el fondo de la billetera es de Mercado Pago o del banco?».</div>
+  </div>
+
+  <div class="col">
+    <h3>La pregunta que evita duplicar <span class="tag t-warn">el punto crítico</span></h3>
+    <div class="phone"><div class="scr">
+      <div class="ask">
+        <h6>¿El saldo que le cargaste a tu cuenta en Grana ya incluye esta plata?</h6>
+        <p>Lo preguntamos para no contarla dos veces.</p>
+        <div class="opts"><div class="on">Sí</div><div>No</div></div>
+        <div class="out si"><b>Ajustaremos el saldo de tu cuenta</b> para mover esa plata al fondo sin duplicarla.</div>
+      </div>
+      <div class="ask">
+        <h6 style="color:var(--soft);font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase">La otra respuesta</h6>
+        <div class="opts"><div>Sí</div><div class="on">No</div></div>
+        <div class="out no"><b>Solo registramos la posición</b> sin tocar tus cuentas.</div>
+      </div>
+      <div class="month">
+        <div class="k">El mes, en los dos casos</div>
+        <div class="l"><span>Tenías</span><span>−$ 2.729.825,17</span></div>
+        <div class="l"><span>Entró</span><span>+$ 8.021.007,00</span></div>
+        <div class="l"><span>Se fué</span><span>−$ 205.433,66</span></div>
+        <div class="l"><span>Guardado</span><span>−$ 200.000,00</span></div>
+        <div class="l tot"><span>Para gastar</span><span>$ 4.885.748,17</span></div>
+      </div>
+    </div></div>
+    <div class="note ok"><b>El mes no cambia, y es correcto.</b> No pasó nada hoy: esa plata ya
+      estaba afuera. Cargar la posición hace visible algo que Grana no sabía; no mueve ningún número
+      que ya estaba bien.</div>
+    <div class="note warn"><b>La duda abierta:</b> ¿el usuario puede contestar esa pregunta? Le pide
+      entender cómo Grana calcula. Si no la puede contestar, hay que buscar otra forma — o resignar
+      esta puerta, que sería peor.</div>
+    <div class="note warn"><b>Y si contesta mal:</b> ¿se puede corregir después sin rehacer la
+      posición? Es lo segundo a mirar.</div>
+  </div>
+</div>
+
+<h2 class="sec"><span class="n">4</span>Alta B — «Lo puse hoy»</h2>
+<p class="lead">Sale de una cuenta, <b>baja «Para gastar»</b>, y no es un gasto de consumo. Es el
+circuito donde se juega la regla más importante de toda la capa: que la plata que sale
+<b>no contamine «Se fué»</b>.</p>
+
+<div class="cols two">
+  <div class="col">
+    <h3>El formulario <span class="tag t-a">3 campos</span></h3>
+    <div class="phone"><div class="scr">
+      <div class="dh" style="display:flex;justify-content:space-between;padding:2px">
+        <div><div style="font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)">Agregar</div>
+        <div style="font-size:19px;font-weight:800;letter-spacing:-.02em;margin-top:2px">Lo puse hoy</div></div>
+      </div>
+      <div class="c amt">
+        <div class="lbl">Cuánto pusiste</div><div class="cur">ARS ⌄</div>
+        <div class="val"><span class="s">$</span><span class="n">100.000</span></div>
+      </div>
+      <div class="c">
+        <div class="fld"><span class="ic" style="width:32px;height:32px;border-radius:9px;background:var(--slate);color:#fff;display:grid;place-items:center;font-size:13px">MP</span><div class="gr"><div class="k">Sale de</div><div class="v">Mercado Pago</div></div></div>
+        <div class="fld"><span class="ic" style="width:32px;height:32px;border-radius:9px;background:var(--tile);display:grid;place-items:center;font-size:14px">📈</span><div class="gr"><div class="k">Hacia</div><div class="v">FCI Mercado Pago</div></div></div>
+        <div class="fld"><span class="ic" style="width:32px;height:32px;border-radius:9px;background:var(--tile);display:grid;place-items:center;font-size:14px">📅</span><div class="gr"><div class="k">Fecha</div><div class="v">Hoy · 27 de ago</div></div></div>
+      </div>
+      <div class="c calc">
+        <div><span>Para gastar ahora</span><span>$ 4.885.748,17</span></div>
+        <div class="minus"><span>Ponés a trabajar</span><span style="color:var(--emerald-deep)">−$ 100.000,00</span></div>
+        <div class="rule"><span>Te queda para gastar</span><span>$ 4.785.748,17</span></div>
+      </div>
+      <div class="cta">Confirmar</div>
+    </div></div>
+    <div class="note"><b>Sumar capital a un fondo que ya existe es este mismo formulario</b>, con
+      «Hacia» ya elegido. Tres campos: monto, cuenta de origen y fecha.</div>
+  </div>
+
+  <div class="col">
+    <h3>Cómo se ve en el mes <span class="tag t-warn">la línea nueva</span></h3>
+    <div class="phone"><div class="scr">
+      <div class="month">
+        <div class="k">Resumen del mes · agosto</div>
+        <div class="l"><span>Tenías</span><span>−$ 2.729.825,17</span></div>
+        <div class="l"><span>Entró</span><span>+$ 8.021.007,00</span></div>
+        <div class="l"><span>Se fué</span><span>−$ 205.433,66</span></div>
+        <div class="l"><span>Guardado</span><span>−$ 200.000,00</span></div>
+        <div class="l new"><span>Puse a trabajar</span><span>−$ 100.000,00</span></div>
+        <div class="l tot"><span>Para gastar</span><span>$ 4.785.748,17</span></div>
+      </div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        <b style="color:var(--text)">«Se fué» queda intacto en −$ 205.433,66.</b> Si los $100.000
+        entraran ahí, la card diría que gastaste $305.433 en un mes en que gastaste $205.433 — y ese
+        número alimenta la tira de ritmo, la comparación con el mes pasado y «En qué se fue».
+        <b style="color:var(--text)">El error no queda ahí: se propaga.</b>
+      </div>
+      <div class="month" style="opacity:.62">
+        <div class="k">Agosto, mirado en noviembre</div>
+        <div class="l"><span>Tenías</span><span>−$ 2.729.825,17</span></div>
+        <div class="l"><span>Entró</span><span>+$ 8.021.007,00</span></div>
+        <div class="l"><span>Se fué</span><span>−$ 205.433,66</span></div>
+        <div class="l" style="color:#B6BFCA"><span>Guardado</span><span>no se dibuja</span></div>
+        <div class="l new"><span>Puse a trabajar</span><span>−$ 100.000,00</span></div>
+        <div class="l tot"><span>Saldo al cierre</span><span>$ 5.085.748,17</span></div>
+      </div>
+    </div></div>
+    <div class="note ok"><b>La diferencia clave:</b> «Guardado» es <b>stock</b> y desaparece de un mes
+      cerrado; «Puse a trabajar» es <b>flujo</b> y se queda para siempre en el mes donde ocurrió.
+      Guardar no saca plata de las cuentas; poner a trabajar sí.</div>
+    <div class="note warn"><b>A validar:</b> ¿«Puse a trabajar» funciona como rótulo de línea, o
+      compite con el nombre de la sección? Y en un mes con suscripción <b>y</b> rescate: ¿dos líneas,
+      o una neta? Una neta esconde que hubo dos actos; dos líneas alargan la card.</div>
+    <div class="note"><b>En Movimientos aparece</b> como fila propia, y <b>fuera</b> de la analítica
+      de gastos — igual que ya hacen <i>transferencia</i> y <i>cambio de moneda</i>. No es una
+      excepción nueva.</div>
+  </div>
+</div>
+
+<h2 class="sec"><span class="n">5</span>Rescate total — donde llega la verdad</h2>
+<p class="lead">El FCI no tiene contrato: nadie le dice a Grana cuánto vale hoy. <b>Por eso la verdad
+no llega con una valuación, llega con el rescate</b> — ahí el usuario sabe exactamente cuánto volvió,
+se lo dice el banco. Tres campos, y el resultado sale solo.</p>
+
+<div class="cols two">
+  <div class="col">
+    <h3>Pide tres cosas <span class="tag t-a">y calcula la cuarta</span></h3>
+    <div class="phone"><div class="scr">
+      <div class="dh" style="display:flex;justify-content:space-between;padding:2px">
+        <div><div style="font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)">FCI Mercado Pago</div>
+        <div style="font-size:19px;font-weight:800;letter-spacing:-.02em;margin-top:2px">Rescatar todo</div></div>
+      </div>
+      <div class="c amt">
+        <div class="lbl">Cuánto volvió</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">380.000</span></div>
+      </div>
+      <div class="c">
+        <div class="fld"><span class="ic" style="width:32px;height:32px;border-radius:9px;background:var(--slate);color:#fff;display:grid;place-items:center;font-size:13px">MP</span><div class="gr"><div class="k">Vuelve a</div><div class="v">Mercado Pago</div></div></div>
+        <div class="fld"><span class="ic" style="width:32px;height:32px;border-radius:9px;background:var(--tile);display:grid;place-items:center;font-size:14px">📅</span><div class="gr"><div class="k">Fecha</div><div class="v">Hoy · 27 de ago</div></div></div>
+      </div>
+      <div class="c calc">
+        <div><span>Volvieron</span><span>$ 380.000,00</span></div>
+        <div><span>Habías puesto</span><span>$ 350.000,00</span></div>
+        <div class="rule pos"><span>Ganaste</span><span>+$ 30.000,00</span></div>
+      </div>
+      <div class="cta">Rescatar todo</div>
+    </div></div>
+    <div class="note ok"><b>Grana no estimó nada.</b> Repite lo que el banco le dijo al usuario y hace
+      una resta. Es toda la capa de valuación que la fase 3A necesita.</div>
+  </div>
+
+  <div class="col">
+    <h3>Y si perdiste <span class="tag t-no">raro, pero posible</span></h3>
+    <div class="phone"><div class="scr">
+      <div class="c calc">
+        <div><span>Volvieron</span><span>$ 346.000,00</span></div>
+        <div><span>Habías puesto</span><span>$ 350.000,00</span></div>
+        <div class="rule neg"><span>Perdiste</span><span>−$ 4.000,00</span></div>
+      </div>
+      <div class="month">
+        <div class="k">Resumen del mes · agosto</div>
+        <div class="l"><span>Tenías</span><span>−$ 2.729.825,17</span></div>
+        <div class="l"><span>Entró</span><span>+$ 8.021.007,00</span></div>
+        <div class="l"><span>Se fué</span><span>−$ 205.433,66</span></div>
+        <div class="l new"><span>Rescataste</span><span>+$ 380.000,00</span></div>
+        <div class="l tot"><span>Para gastar</span><span>$ 5.265.748,17</span></div>
+      </div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        <b style="color:var(--text)">Los $380.000 no entran en «Entró».</b> Metería en el mismo
+        renglón que el sueldo plata que nunca fue sueldo — y $350.000 de eso son <b style="color:var(--text)">los
+        mismos pesos que salieron</b>, contados dos veces.
+      </div>
+    </div></div>
+    <div class="note no"><b>La pérdida no es un gasto:</b> no gastaste nada. Y el circuito la tiene
+      que soportar desde el día uno aunque casi nunca se vea — un circuito que solo maneja el caso
+      feliz se descubre roto el peor día.</div>
+    <div class="note warn"><b>A validar:</b> cómo se llama el término. «Ganaste / Perdiste» es claro
+      pero suena a apuesta. «Rendimiento» es preciso y más frío. Es copy, y se decide acá.</div>
+  </div>
+</div>
+
+<h2 class="sec"><span class="n">6</span>Rescate parcial — la simplificación, dicha en pantalla</h2>
+<p class="lead">Es lo único del recorte que no tiene respuesta obvia. La regla v1: <b>el rescate
+reduce el capital registrado y no reconoce rendimiento parcial</b>; el resultado aparece cuando lo
+rescatado supera lo puesto, o al cerrar. Sin cuotapartes y sin VCP.</p>
+
+<div class="cols">
+  <div class="col">
+    <h3>Primer rescate parcial <span class="tag t-a">sin resultado</span></h3>
+    <div class="phone"><div class="scr">
+      <div class="c amt">
+        <div class="lbl">Cuánto volvió</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">200.000</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Habías puesto</span><span>$ 350.000,00</span></div>
+        <div class="minus"><span>Rescatás</span><span style="color:var(--emerald-deep)">−$ 200.000,00</span></div>
+        <div class="rule"><span>Queda puesto</span><span>$ 150.000,00</span></div>
+      </div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5;background:#FBF3E2;border-color:var(--warm-bd)">
+        <b style="color:var(--warm-tx)">Todavía no calculamos ganancia.</b> Mientras rescates menos
+        de lo que pusiste, esto solo devuelve tu capital. La ganancia aparece cuando rescates el
+        resto.
+      </div>
+      <div class="cta">Rescatar $ 200.000</div>
+    </div></div>
+    <div class="note ok"><b>La simplificación se dice, no se esconde.</b> El usuario tiene derecho a
+      saber que Grana está redondeando <b>el cuándo</b>, no el cuánto.</div>
+  </div>
+
+  <div class="col">
+    <h3>La fila, después <span class="tag t-warn">copy honesto</span></h3>
+    <div class="phone"><div class="scr">
+      <div class="blk">
+        <div class="bh"><h5>Puesto a trabajar</h5><span class="add">+ Agregar</span></div>
+        <div class="row"><span class="ic g">📈</span><span class="nm">FCI Mercado Pago<em>pusiste $ 150.000 · con rescate</em></span><span class="am"><b>$ 150.000</b></span><span class="chev">›</span></div>
+      </div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        Dice <b style="color:var(--text)">«pusiste»</b>, no <b style="color:var(--text)">«tenés»</b>.
+        Grana no sabe cuánto vale el fondo hoy, y afirmar que tenés $150.000 sería inventarlo.
+      </div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        <b style="color:var(--text)">La actualización manual es opcional.</b> Si el usuario mira su
+        banco y carga «hoy vale $162.000», la fila lo muestra con su fecha. Sirve para que el bloque
+        no mienta a los seis meses — no para calcular nada.
+      </div>
+    </div></div>
+    <div class="note warn"><b>La pregunta central de este bloque:</b> ¿el usuario acepta no ver la
+      ganancia en el momento, o la espera? Si la espera, hay que ir al camino de preguntar «¿cuánto
+      quedó en el fondo?» y meter un campo más en la v1.</div>
+  </div>
+
+  <div class="col">
+    <h3>Segundo rescate <span class="tag t-a">acá sí</span></h3>
+    <div class="phone"><div class="scr">
+      <div class="c amt">
+        <div class="lbl">Cuánto volvió</div><div class="cur">ARS</div>
+        <div class="val"><span class="s">$</span><span class="n">200.000</span></div>
+      </div>
+      <div class="c calc">
+        <div><span>Quedaba puesto</span><span>$ 150.000,00</span></div>
+        <div><span>Volvieron</span><span>$ 200.000,00</span></div>
+        <div class="rule pos"><span>Ganaste</span><span>+$ 50.000,00</span></div>
+      </div>
+      <div class="c pad" style="font-size:12.5px;color:var(--muted);line-height:1.5">
+        <b style="color:var(--text)">Total exacto, momento diferido.</b> Sobre $350.000 puestos
+        volvieron $400.000: la ganancia real fue $50.000 y es la que quedó registrada. Lo único que
+        se corrió es <b style="color:var(--text)">cuándo</b> se reconoció.
+      </div>
+      <div class="cta">Rescatar y cerrar</div>
+    </div></div>
+    <div class="note"><b>La limitación que hay que asumir:</b> una posición rescatada a medias y
+      nunca cerrada deja el resultado sin reconocer. Por eso el recorte incluye la acción de
+      <b>cerrar la posición</b> sin movimiento, para el que dejó de tenerla.</div>
+  </div>
+</div>
+
+<h2 class="sec"><span class="n">7</span>Qué tiene que contestar esta pantalla</h2>
+<p class="lead">El mock no existe para gustar: existe para <b>cerrar decisiones</b>. Estas son, en
+orden, y ninguna se contesta leyendo — se contestan mirando a alguien usarlo.</p>
+
+<ol class="chk">
+  <li><b>¿El nombre se entiende sin explicación, estando debajo de «Guardado»?</b>
+    <em>Es la pregunta que abrió este mock. A / B / C con los mismos datos, y la respuesta correcta
+    puede ser «ninguno».</em></li>
+  <li><b>¿«Puesto a trabajar» promete rendimiento?</b>
+    <em>Es la única alerta que tumba a la versión A. Si alguien dice «entonces Grana me dice cuánto
+    gano», gana B.</em></li>
+  <li><b>¿«Puesto a trabajar» se confunde con «plata para un propósito»?</b>
+    <em>Arriba en la misma pantalla hay «Emergencia» y «Viaje», que también son plata con un fin.</em></li>
+  <li><b>¿«Plata colocada» se distingue de «Guardado»?</b>
+    <em>Los dos son participios de dejé la plata en algún lado. Es la alerta simétrica de B.</em></li>
+  <li><b>¿Se entiende por qué esa plata no está en «Para gastar»?</b>
+    <em>Si esto falla, falla la premisa entera de la capa, no el nombre.</em></li>
+  <li><b>¿Los dos caminos de alta se distinguen sin que nadie los explique?</b>
+    <em>Si no, van a cargar mal el stock preexistente y el patrimonio queda inflado.</em></li>
+  <li><b>¿La pregunta de duplicación se puede contestar?</b>
+    <em>Le pide al usuario entender cómo Grana calcula. Si no la puede contestar, hay que buscar
+    otra forma — o resignar el alta A, que sería peor.</em></li>
+  <li><b>¿La línea nueva del mes se lee como gasto?</b>
+    <em>Es el error que toda esta capa existe para evitar.</em></li>
+  <li><b>¿La fila parece un broker?</b>
+    <em>Si sí, el bloque cambia de tono y arrastra al módulo entero.</em></li>
+  <li><b>¿Se acepta no ver la ganancia en el rescate parcial?</b>
+    <em>Si no, hay que preguntar «cuánto quedó en el fondo» y sumar un campo a la v1.</em></li>
+  <li><b>¿«Pusiste $150.000» se entiende, o esperan ver cuánto tienen?</b>
+    <em>Es el copy que sostiene toda la honestidad del recorte.</em></li>
+  <li><b>¿La lista aguanta las dos filas de estado distinto?</b>
+    <em>Si no, 3B obliga a rehacerla — y ese es el riesgo principal de haber empezado por FCI.</em></li>
+</ol>
+
+<h2 class="sec"><span class="n">8</span>Lo que este mock NO decide</h2>
+<div class="cols two">
+  <div class="col">
+    <table class="mx">
+      <tr><th>Queda abierto</th><th>Por qué no acá</th></tr>
+      <tr><td><b>El techo del reparto</b> a propósitos</td><td>¿«guardado + colocado» es un pozo único o se distingue? Es la pregunta central de la fase 4</td></tr>
+      <tr><td><b>Si el ajuste por duplicación lo hace la app</b> o se le pide al usuario</td><td>Mejor UX vs. no inventar. Se ve recién con gente usando el alta A</td></tr>
+      <tr><td><b>Si el custodio es obligatorio</b></td><td>Depende de si el corte por ubicación entra en 3A</td></tr>
+      <tr><td><b>Cómo se llama el resultado</b></td><td>«Ganaste» suena a apuesta; «Rendimiento» es frío. Copy</td></tr>
+      <tr><td><b>T+0 / T+1 / T+2</b></td><td>En la v1 es un rótulo, no una regla. Nada se calcula distinto</td></tr>
+      <tr><td><b>Todo lo de 3B y 3C</b></td><td>Vencimientos, renovación, capitalización, CEDEARs, valuación automática</td></tr>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note no"><b>Y no hay una sola tabla propuesta.</b> Ningún dato, ningún schema, ninguna
+      migración. Es deliberado: es el mismo orden que evitó que el propósito naciera colgado de una
+      fila, y que costó una migración aprender.</div>
+    <div class="note"><b>Recién con las doce preguntas de arriba contestadas</b> tiene sentido
+      preguntarse qué datos hacen falta — y ahí, casi seguro, la respuesta va a ser más chica de lo
+      que parecía antes de dibujar.</div>
+    <div class="note ok"><b>Y nada de esto se construye</b> antes del QA visual nativo de
+      <b>extract-savings-module</b>, que sigue siendo la compuerta vigente.</div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>
