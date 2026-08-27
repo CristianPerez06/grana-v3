@@ -1052,11 +1052,13 @@ const SavingsForm = ({
         onBack={onCancel}
       />
 
-      {/* Same amount hero as "Registrar movimiento" — same radius, same type
-          scale, same currency chip, same calculator. Two surfaces that ask for
-          an amount should not look like two different apps, and the chip is what
-          gives this one its currency selector. */}
-      <div className="mt-4 rounded-2xl border border-border bg-card px-[22px] pb-[22px] pt-5 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]">
+      {/* El MISMO héroe de monto que «Registrar movimiento»: mismo radio, mismo
+          padding, misma escala de tipo, mismo chip y misma calculadora. Era la
+          misma idea con otros números —46px de monto contra los 30 de allá, y
+          más padding— y eso hacía dos cosas: pedía scroll en un drawer que
+          entraba justo, y ponía la misma pregunta con dos caras distintas en dos
+          pantallas de la misma app. */}
+      <div className="mt-4 rounded-[16px] border border-border bg-card px-5 py-[18px] transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]">
         <div className="flex items-start justify-between">
           <label
             htmlFor="savings-amount"
@@ -1084,7 +1086,7 @@ const SavingsForm = ({
           </button>
         </div>
         <div className="mt-2 flex items-baseline gap-1.5">
-          <span className="text-[27px] font-semibold leading-none text-text opacity-50">
+          <span className="text-[22px] font-bold leading-none text-text opacity-50">
             {currency === 'USD' ? 'U$D' : '$'}
           </span>
           <MoneyAmountInput
@@ -1093,7 +1095,7 @@ const SavingsForm = ({
             onChange={setAmount}
             placeholder="0"
             autoFocus
-            className="w-full min-w-0 bg-transparent text-[46px] font-bold leading-none tracking-[-0.045em] tabular-nums text-text outline-none placeholder:text-text-soft/40"
+            className="w-full min-w-0 bg-transparent text-[30px] font-extrabold leading-none tracking-[-0.02em] tabular-nums text-text outline-none placeholder:text-text-soft/40"
           />
           <MoneyCalculatorPopover
             seed={amount}
@@ -1199,9 +1201,28 @@ const SavingsForm = ({
           ahí vive el «+», que es de dónde sale el primero. */}
       {(mode === 'save' ? !lockedPurpose : canPickOrigin) && (
         <div className="mt-3">
-          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
-            {mode === 'save' ? t('purposes.label') : t('purposes.source_label')}
-          </p>
+          {/* La puerta para crear va a la DERECHA del rótulo, no al final de los
+              chips: ahí caía sola en una fila propia cuando los chips llenaban
+              la última, y un «+» suelto en su renglón se lee como un chip más
+              que no se entiende. Es el mismo lugar que ocupa en la página, al
+              lado de «En qué está repartido». */}
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-soft">
+              {mode === 'save' ? t('purposes.label') : t('purposes.source_label')}
+            </p>
+            {/* Crear uno nuevo solo tiene sentido al guardar. Un propósito recién
+                creado no tiene plata, así que como ORIGEN no serviría para nada. */}
+            {mode === 'save' && (
+              <button
+                type="button"
+                onClick={onPickPurpose}
+                className="relative flex shrink-0 items-center gap-1 text-[12px] font-extrabold text-emerald-deep transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
+              >
+                <Plus className="size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+                {t('purposes.new')}
+              </button>
+            )}
+          </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {shownOptions.map((option) => {
               const id = option?.id ?? null
@@ -1243,19 +1264,6 @@ const SavingsForm = ({
                 className="relative flex items-center rounded-full border border-dashed border-border px-3 py-2 text-[13px] font-bold text-text-muted transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:bg-surface-sunken hover:text-text"
               >
                 +{hiddenCount}
-              </button>
-            )}
-            {/* Crear uno nuevo solo tiene sentido al guardar. Un propósito
-                recién creado no tiene plata, así que como ORIGEN no serviría
-                para nada. */}
-            {mode === 'save' && (
-              <button
-                type="button"
-                onClick={onPickPurpose}
-                aria-label={t('purposes.new')}
-                className="flex size-11 items-center justify-center rounded-full border border-dashed border-border text-emerald-deep transition-colors hover:bg-surface-sunken"
-              >
-                <Plus size={16} strokeWidth={2.5} aria-hidden />
               </button>
             )}
           </div>

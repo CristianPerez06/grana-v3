@@ -158,8 +158,10 @@ export function PurposeAllocate({
         </p>
       )}
 
-      {/* Mismo héroe de monto que el resto de las superficies que piden plata. */}
-      <div className="mt-4 rounded-[18px] border border-border bg-card px-[22px] pb-[22px] pt-5 transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]">
+      {/* Mismo héroe de monto que el resto de las superficies que piden plata:
+          mismo radio, mismo padding y misma escala que «Registrar movimiento» y
+          que el formulario de guardar. */}
+      <div className="mt-4 rounded-[16px] border border-border bg-card px-5 py-[18px] transition-shadow focus-within:border-[#C9CFD7] focus-within:shadow-[0_0_0_4px_rgba(11,26,43,0.05)]">
         <div className="flex items-start justify-between">
           <label
             htmlFor="allocation-amount"
@@ -188,7 +190,7 @@ export function PurposeAllocate({
           </button>
         </div>
         <div className="mt-2 flex items-baseline gap-1.5">
-          <span className="text-[27px] font-semibold leading-none text-text opacity-50">
+          <span className="text-[22px] font-bold leading-none text-text opacity-50">
             {currency === 'USD' ? 'U$D' : '$'}
           </span>
           <MoneyAmountInput
@@ -196,7 +198,7 @@ export function PurposeAllocate({
             value={amount}
             onChange={setAmount}
             autoFocus
-            className="w-full border-none bg-transparent p-0 text-[27px] font-semibold leading-none text-text outline-none"
+            className="w-full min-w-0 border-none bg-transparent p-0 text-[30px] font-extrabold leading-none tracking-[-0.02em] tabular-nums text-text outline-none placeholder:text-text-soft/40"
           />
           <MoneyCalculatorPopover seed={amount} onResult={setAmount} />
         </div>
