@@ -86,9 +86,14 @@ export const SavingsHeadline = ({
       openPurpose: (purpose, currency) => setDrawer({ kind: 'group', currency, purpose }),
       openRestAllocate: (currency) =>
         setDrawer({ kind: 'allocate', currency, purpose: null, direction: 'allocate' }),
-      // `locked` porque el origen ya está elegido: se tocó la fila del resto.
+      // «Sin destino» viene PRESELECCIONADO, no bloqueado. Se tocó su enlace, así
+      // que es lo que se quiere sacar — pero bloquearlo cerraba una puerta que
+      // existe: con $60.000 sin destino y $70.000 pedidos, la pantalla decía «no
+      // podés» y escondía los propósitos, que era justo de donde podía salir el
+      // resto. Preseleccionado se obtiene lo mismo con un chip menos que tocar, y
+      // el tope que no alcanza ofrece la salida en vez de solo negarla.
       openRestRelease: (currency) =>
-        setDrawer({ kind: 'form', mode: 'release', currency, purposeId: null, locked: true }),
+        setDrawer({ kind: 'form', mode: 'release', currency, purposeId: null, locked: false }),
       openNewPurpose: () => setDrawer({ kind: 'purposeForm', purpose: null }),
     }),
     [],
