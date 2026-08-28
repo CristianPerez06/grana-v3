@@ -388,6 +388,29 @@ definición.
   los otros dos ya entraban. Es exactamente lo que el corolario de la política Web ↔ Mobile nombra
   como señal, y la razón de que la checklist pida los dos archivos nombrados y no uno.
 
+  **Quinta — la card de «Sin destino», demasiado alta en nativo.**
+
+  ```
+  ### La card de «Sin destino» tenía aire muerto abajo
+  - Web mobile:   apps/web/app/(app)/savings/_components/savings-breakdown.tsx
+  - Nativo:       apps/mobile/components/savings/SavingsBreakdown.tsx
+  - Cambio:       card a py-2.5; el separador a mt-2/pt-2 (`sm:` devuelve el aire
+                  en escritorio); en nativo, el botón «Destinar» y el enlace
+                  «Volver a usar de acá» pasan de `min-h-[44px]` —alto REAL— a
+                  padding propio más `hitSlop`. Estructura, copy y lógica intactos.
+  - Divergencia:  los 44px táctiles, otra vez: web los saca de un `after:h-11`
+                  que no ocupa lugar y nativo no tiene pseudo-elementos.
+                  `hitSlop` es el equivalente; queda como divergencia aceptada.
+  - Runtime:      requiere `expo start -c`.
+  - Cierra:       caso 3.
+  ```
+
+  El aire muerto era UNO solo y medible: el enlace tenía `min-h-[44px]` con el texto
+  arriba, así que medía 44px reales para una línea de 17 y los 27 sobrantes colgaban
+  al pie. Web ya lo había resuelto con el pseudo-elemento —el comentario del archivo
+  lo dice con todas las letras— y nativo nunca lo recibió. La card pasa de 133px a
+  90px; web, de 98 a 90. Las dos quedan en la misma altura.
+
 - [x] 6.14 **Comparativa web ↔ nativa, superficie por superficie** (E27): **nueve divergencias**, tres
   graves —lo tipeado se perdía en el desvío, el detalle de un propósito tenía botón y enlace
   invertidos, y el tope negaba sin ofrecer la salida—. Las nueve corregidas. La comparación mecánica

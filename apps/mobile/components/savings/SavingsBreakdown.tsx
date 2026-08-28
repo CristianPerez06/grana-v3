@@ -12,6 +12,7 @@ import {
 import type { ModuleAmount, ModuleGroup, Purpose, PurposeSums } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
 import { useT } from '../../lib/locale-context'
+import { TAP_SLOP } from './tap-slop'
 
 type Currency = 'ARS' | 'USD'
 
@@ -176,7 +177,7 @@ const UnassignedBlock = ({
   const visible = moduleVisibleAmounts(amounts)
 
   return (
-    <View className="rounded-3xl border border-dashed border-savings-unassigned-border bg-savings-unassigned-bg px-[15px] py-3">
+    <View className="rounded-3xl border border-dashed border-savings-unassigned-border bg-savings-unassigned-bg px-[15px] py-2.5">
       <View className="flex-row flex-wrap items-center gap-3">
         {/* Una etiqueta, no un «+». El «+» ya es el glifo de CREAR en esta misma
             pantalla, y dos círculos punteados con el mismo signo se leen como la
@@ -212,7 +213,8 @@ const UnassignedBlock = ({
         <Pressable
           onPress={onAllocate}
           accessibilityRole="button"
-          className="min-h-[44px] shrink-0 justify-center rounded-lg bg-savings-unassigned-deep px-3.5"
+          hitSlop={TAP_SLOP}
+          className="shrink-0 justify-center rounded-lg bg-savings-unassigned-deep px-3.5 py-2"
         >
           <Text className="text-[12px] font-extrabold text-savings-unassigned-on-deep">
             {t('savings.purposes.allocate')}
@@ -223,17 +225,23 @@ const UnassignedBlock = ({
       {/* La explicación y su acción en una fila. Alineadas ARRIBA: el párrafo
           ocupa varias líneas y el enlace una, así que alineado abajo el enlace se
           hundía al pie de un párrafo que arrancaba mucho más arriba. */}
-      <View className="mt-2.5 flex-row items-start justify-between gap-3 border-t border-dashed border-savings-unassigned-border pt-2.5">
+      <View className="mt-2 flex-row items-start justify-between gap-3 border-t border-dashed border-savings-unassigned-border pt-2">
         <Text className="flex-1 text-[11.5px] font-semibold leading-[1.45] text-savings-unassigned-text">
           {t('savings.purposes.none_explainer')}
         </Text>
         {/* Enlace y no un segundo botón: es la acción que SÍ mueve el disponible,
             y dos botones gemelos acá invitaban a confundirla con destinar, que no
             lo mueve. */}
+        {/* Los 44 táctiles por `hitSlop` y no por alto propio. Con `min-h-[44px]`
+            y el texto arriba, el enlace medía 44px reales para una línea de 17:
+            los 27 sobrantes colgaban abajo y eran el aire muerto al pie de la
+            card. Web ya lo resolvía con un pseudo-elemento, que tampoco ocupa
+            lugar; acá había quedado como alto de verdad. */}
         <Pressable
           onPress={onRelease}
           accessibilityRole="button"
-          className="min-h-[44px] shrink-0 justify-start"
+          hitSlop={TAP_SLOP}
+          className="shrink-0"
         >
           <Text className="text-[12.5px] font-extrabold leading-[1.45] text-savings-unassigned-deep underline">
             {t('savings.release_from_unassigned')}

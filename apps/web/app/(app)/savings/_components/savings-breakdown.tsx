@@ -210,7 +210,7 @@ const UnassignedBlock = ({
   const visible = moduleVisibleAmounts(amounts)
 
   return (
-    <section className="rounded-3xl border border-dashed border-savings-unassigned-border bg-savings-unassigned-bg px-[15px] py-3 sm:px-5 sm:py-[14px]">
+    <section className="rounded-3xl border border-dashed border-savings-unassigned-border bg-savings-unassigned-bg px-[15px] py-2.5 sm:px-5 sm:py-[14px]">
       {/* La fila se parte por contenido, igual que todo lo demás: si el monto
           más ancho y el botón no entran juntos, el botón baja a la línea de
           abajo en vez de pisarlo. */}
@@ -291,7 +291,7 @@ const UnassignedBlock = ({
           Y el enlace no infla la fila: 44 px de área táctil por un
           pseudo-elemento centrado, no por alto propio. Con `min-h-11` medía 44
           px de verdad, casi tres veces su texto, y ese sobrante era el hueco. */}
-      <div className="mt-2.5 flex items-start justify-between gap-3 border-t border-dashed border-savings-unassigned-border pt-2.5">
+      <div className="mt-2 flex items-start justify-between gap-3 border-t border-dashed border-savings-unassigned-border pt-2 sm:mt-2.5 sm:pt-2.5">
         <p className="flex-1 text-[11.5px] font-semibold leading-[1.45] text-savings-unassigned-text/85">
           {t('purposes.none_explainer')}
         </p>
