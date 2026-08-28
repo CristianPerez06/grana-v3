@@ -505,6 +505,9 @@ Es lo contrario — es Grana admitiendo que tu plata rindió y ella no se enter�
 
 ## 12. Decisiones
 
+> **La lista consolidada y lista para spec está en §16.** Esta sección es el detalle de trabajo —cada
+> decisión con el razonamiento que la produjo—; §16 es el resumen sin argumentos, para leer de una.
+
 ### 12.1 Se pueden tomar ahora
 
 | # | Decisión | Por qué se puede cerrar |
@@ -659,5 +662,75 @@ mirar— y **aun así eligió mal**. Un ganador solo vale contra lo que estaba s
    ser opcional.
 6. **Recién ahora tiene sentido un spec.** Con las 17 decisiones cerradas, lo que falta es forma de
    datos — y sigue siendo lo último, después del QA visual nativo.
-4. **Aparte y en cualquier momento**, porque no depende de nada de esto: el copy de «Tu banco muestra»
+7. **Aparte y en cualquier momento**, porque no depende de nada de esto: el copy de «Tu banco muestra»
    en el puente del módulo de ahorro (§2.3), que hoy le pone al banco palabras que el banco no dijo.
+
+---
+
+## 16. Listo para spec futura
+
+Las decisiones cerradas de esta capa, sin argumentos. Cada una está dibujada; la columna de la derecha
+dice dónde mirarla.
+
+| # | Decisión cerrada | Dónde está dibujada |
+|---|---|---|
+| 1 | **Vive en Cuentas**, en el detalle de cada cuenta. No en «Ahorro e inversión» | `interes-acreditado-flujo.html` · 1–3 |
+| 2 | **No aparece en Inicio.** Ni banner, ni card, ni línea, en ningún estado y para ningún usuario | `marca-cuenta-intereses.html` · D2 |
+| 3 | **No es inversión, no es FCI, no es Guardado.** La cuenta sigue contando entera en «Para gastar» porque se puede usar directo | Contexto fijo, arriba |
+| 4 | **«Interés acreditado» entra dentro de «Entró»** en la card de Inicio. Sin línea propia | `interes-acreditado-flujo.html` · 7 |
+| 5 | **«Entró» debe volverse explorable:** total agregado en la card, desglose por subtipo al tocarlo | `interes-acreditado-flujo.html` · 7b |
+| 6 | **La conciliación nace desde saldo real vs. saldo según Grana.** Un solo campo; Grana hace la resta | `interes-acreditado-flujo.html` · 3 |
+| 7 | **No persigue al usuario.** Regla 15 del modelo canónico, con sus tres pruebas | `marca-cuenta-intereses.html` · D2 · `modelo-de-dinero.md` §4 |
+| 8 | **Marca opcional por cuenta:** «esta cuenta puede acreditar intereses». Preferencia de comportamiento, no un tipo nuevo | `marca-cuenta-intereses.html` · 1–2 |
+| 9 | **El switch viene apagado por defecto**, también en la sugerencia posterior al primer interés | `marca-cuenta-intereses.html` · 7 |
+| 10 | **El historial puede sugerir, pero no pisa un «no» explícito.** Se infiere sobre el silencio, nunca sobre una marca apagada a mano | `marca-cuenta-intereses.html` · 6 y 8 |
+
+**Y las que sostienen a las diez de arriba**, cerradas en el camino y con el mismo estatus:
+
+- El rótulo canónico es **«Interés acreditado»**; «Rindió» queda como copy secundario.
+- En Movimientos aparece con **período en vez de fecha**, avatar neutro, y **fuera de la analítica de
+  gastos** — igual que transferencia y cambio de moneda.
+- **Grana no clasifica sola:** sugiere una causa por signo e historial, con el motivo escrito, y
+  **«Ajuste · no sé» siempre existe**.
+- Un negativo **nunca se asume gasto**.
+- **Diferencia cero guarda la fecha** y no crea movimiento.
+- **Por moneda, siempre.** Una moneda por vez.
+- **Ningún porcentaje, ninguna tasa, ninguna proyección**, en ninguna pantalla.
+
+---
+
+## 17. No decidir todavía
+
+Lo que queda para el spec o para un mock futuro. Ninguna de estas se resuelve por texto.
+
+| | Qué queda abierto | Por qué espera |
+|---|---|---|
+| **A** | **El schema.** Ninguna tabla, ninguna columna, ningún SQL, ninguna migración | Es el mismo orden que evitó que el propósito naciera colgado de una fila, y que costó una migración aprender |
+| **B** | **Si la conciliación usa `adjustment` extendido con un subtipo, o un tipo nuevo** | Es forma de datos y va después de las pantallas. La exploración se inclina por el subtipo (§4), pero no lo cierra |
+| **C** | **El copy final exacto** de cada pantalla | El de este documento es la dirección, no el texto de producción |
+| **D** | **El umbral definitivo de la sugerencia periódica** —los ~1 / 3 / 6 meses por historial— | Son una propuesta. Y hay que medir qué pasa cuando un umbral se cumple y el usuario no actúa: una señal encendida seis meses deja de significar algo |
+| **E** | **Si la marca se vuelve a sugerir después de 3 conciliaciones, o nunca más** | Tres es un número sin probar. Y si al reaparecer molesta, la respuesta correcta es **no volver a ofrecerla nunca**, no bajar el número |
+| **F** | **El diseño final del desglose de «Entró»**, y sobre todo **cómo se anuncia que la línea se toca** | Es el único riesgo real de la decisión 4: si nadie la toca, el interés queda invisible. El chevron es la propuesta, y el techo está puesto — nada que densifique Inicio |
+| **G** | **La relación futura con FCI / «Plata colocada»** | Otra capa, pausada. La pregunta que le queda: si Inicio no explica subtipos para los intereses, ¿los explicaría para una colocación? El motivo documentado allá —que «Se fué» contamina la analítica— **resultó falso** y está corregido, así que la decisión quedó abierta de nuevo |
+
+**Además, sin fecha y sin dependencia de nada de esto:** el copy de «Tu banco muestra» en el puente del
+módulo de ahorro (§2.3), que hoy le pone al banco un número que es de Grana.
+
+---
+
+## 18. La compuerta, que no se movió
+
+> **Nada de esta capa modifica el change `extract-savings-module`, que sigue congelado y esperando el
+> QA visual nativo.**
+
+Ni una línea de código, ni una migración, ni un archivo de OpenSpec activo. Todo lo producido acá vive
+en `docs/` — este documento y los tres mocks:
+
+| Archivo | Qué guarda |
+|---|---|
+| `docs/design/modelo-de-dinero/interes-acreditado-flujo.html` | **El flujo definitivo**, diez pantallas y un solo camino |
+| `docs/design/modelo-de-dinero/marca-cuenta-intereses.html` | **La marca opcional** y la regla que gobierna la capa |
+| `docs/design/modelo-de-dinero/conciliacion-saldo-rendimiento.html` | **El razonamiento**: comparativas de copy, A vs. B de la card, y el hallazgo de la colisión que cambió el naming de instrumentos |
+
+**El orden que queda para cuando se retome:** QA visual nativo → archivar `extract-savings-module` →
+recién ahí, spec de esta capa. Y el spec arranca con §16 en la mano y §17 sin abrir.
