@@ -334,7 +334,7 @@ export const PurposeAllocate = ({
       )}
 
       <View className="mt-2.5 rounded-xl border border-border-soft bg-card px-4 py-2.5">
-        <View className="flex-row justify-between py-1">
+        <View className="flex-row justify-between py-0.5">
           <Text className="text-[13.5px] text-text-muted">
             {allocating
               ? t('savings.purposes.unassigned_available')
@@ -342,7 +342,7 @@ export const PurposeAllocate = ({
           </Text>
           <Text className="text-[13.5px] font-semibold text-text">{money(available)}</Text>
         </View>
-        <View className="flex-row justify-between py-1">
+        <View className="flex-row justify-between py-0.5">
           <Text className="text-[13.5px] text-text-muted">
             {t(allocating ? 'savings.purposes.will_allocate' : 'savings.purposes.will_unallocate')}
           </Text>
@@ -350,7 +350,7 @@ export const PurposeAllocate = ({
             {`${value > 0 ? '−' : ''}${money(value)}`}
           </Text>
         </View>
-        <View className="mt-1.5 flex-row justify-between border-t border-border-soft pt-2.5">
+        <View className="mt-1.5 flex-row justify-between border-t border-border-soft pt-2">
           <Text className="text-[13.5px] text-text-muted">
             {t(allocating ? 'savings.purposes.left_unassigned' : 'savings.purposes.stays_allocated')}
           </Text>
