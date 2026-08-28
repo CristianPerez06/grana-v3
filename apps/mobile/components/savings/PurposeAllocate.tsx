@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
-import { ChevronDown } from 'lucide-react-native'
+import { ChevronDown, Plus } from 'lucide-react-native'
 import { colors } from '../../lib/colors'
 import { PURPOSE_SEEDS, type Purpose } from '@grana/savings'
 import { formatARS, formatUSD } from '@grana/i18n-messages'
@@ -34,6 +34,7 @@ export const PurposeAllocate = ({
   currencies,
   direction,
   availableFor,
+  allocatedIn,
   onCreateSeed,
   onCreateCustom,
   justCreated = false,
@@ -59,6 +60,12 @@ export const PurposeAllocate = ({
    * bajó al formulario, donde es un dato de la operación.
    */
   availableFor: (currency: Currency) => number
+  /**
+   * Lo destinado a un propósito en esta moneda. Solo para ORDENAR los chips:
+   * los que ya tienen plata primero, que son los que se buscan. Sin esto la
+   * lista queda alfabética y lo que se pliega son los últimos del abecedario.
+   */
+  allocatedIn: (currency: Currency, purposeId: string) => number
   /** Crea la sugerencia y devuelve el propósito, para dejarlo seleccionado. */
   onCreateSeed: (seedKey: string) => Promise<Purpose | null>
   onCreateCustom: () => void
@@ -72,6 +79,31 @@ export const PurposeAllocate = ({
   const [amount, setAmount] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [showAllPurposes, setShowAllPurposes] = useState(false)
+
+  /** Seis chips —dos filas— antes de plegar, igual que el formulario de guardar. */
+  const PURPOSE_CHIP_LIMIT = 6
+  const PURPOSE_CHIP_SLACK = 1
+  // Por saldo descendente y, a igualdad, por nombre: lo que se pliega son los
+  // que menos tienen, no los últimos del abecedario.
+  const sortedPurposes = [...purposes].sort(
+    (a, b) =>
+      allocatedIn(currency, b.id) - allocatedIn(currency, a.id) || a.name.localeCompare(b.name),
+  )
+  /**
+   * El elegido entra SIEMPRE, aunque caiga fuera del corte: un chip seleccionado
+   * que se esconde al plegar deja la pantalla diciendo que se destina a otro
+   * lado del que se eligió.
+   */
+  const shownPurposes =
+    showAllPurposes || sortedPurposes.length <= PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK
+      ? sortedPurposes
+      : (() => {
+          const head = sortedPurposes.slice(0, PURPOSE_CHIP_LIMIT)
+          if (chosen == null || head.some((x) => x.id === chosen.id)) return head
+          return [...head.slice(0, PURPOSE_CHIP_LIMIT - 1), chosen]
+        })()
+  const hiddenPurposes = sortedPurposes.length - shownPurposes.length
 
   const money = (value: number) => (currency === 'USD' ? formatUSD(value) : formatARS(value, true))
 
@@ -194,11 +226,54 @@ export const PurposeAllocate = ({
           chips. */}
       {fixedPurpose == null && (
         <View className="mt-3">
-          <Text className="text-[11px] font-bold uppercase tracking-wider text-text-soft">
-            {t('savings.purposes.pick_inline')}
-          </Text>
+          {/* La puerta para crear va a la DERECHA del rótulo, igual que en el
+              formulario de guardar, que en la página y que en web: al final de
+              los chips caía sola en su fila cuando la última estaba llena, y ahí
+              no se lee como acción sino como un chip cortado. Acá había quedado
+              como chip. */}
+          <View className="flex-row items-center justify-between gap-3">
+            <Text className="shrink text-[11px] font-bold uppercase tracking-wider text-text-soft">
+              {t('savings.purposes.pick_inline')}
+            </Text>
+            <View className="shrink-0 flex-row items-center gap-3">
+              {hiddenPurposes > 0 && (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setShowAllPurposes(true)}
+                  className="min-h-[44px] shrink-0 justify-center"
+                >
+                  <Text className="text-[12px] font-extrabold text-text-muted">
+                    {t('savings.purposes.show_more', { count: String(hiddenPurposes) })}
+                  </Text>
+                </Pressable>
+              )}
+              {showAllPurposes && sortedPurposes.length > PURPOSE_CHIP_LIMIT + PURPOSE_CHIP_SLACK && (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setShowAllPurposes(false)}
+                  className="min-h-[44px] shrink-0 justify-center"
+                >
+                  <Text className="text-[12px] font-extrabold text-text-muted">
+                    {t('savings.purposes.show_less')}
+                  </Text>
+                </Pressable>
+              )}
+              <Pressable
+                accessibilityRole="button"
+                onPress={onCreateCustom}
+                className="min-h-[44px] shrink-0 flex-row items-center gap-1"
+              >
+                <Plus size={13} color={colors.emeraldDeep} strokeWidth={2.5} />
+                <Text className="text-[12px] font-extrabold text-positive">
+                  {t('savings.purposes.new')}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+          {/* Mismo techo que en guardar: con diez propósitos, la lista completa
+              empujaba el resumen y el CTA fuera de la pantalla. */}
           <View className="mt-2 flex-row flex-wrap gap-1.5">
-            {purposes.map((option) => (
+            {shownPurposes.map((option) => (
               <Pressable
                 key={option.id}
                 accessibilityRole="button"
@@ -214,7 +289,12 @@ export const PurposeAllocate = ({
                 <Text className="text-[13px] font-semibold text-text">{option.name}</Text>
               </Pressable>
             ))}
-            {suggestions.map((seed) => (
+            {/* Las sugerencias solo cuando NO hay propósitos plegados: son un
+                atajo para quien todavía no armó los suyos, y ofrecerlas al lado
+                de un «+3» sería empujar a crear mientras se esconde lo que ya
+                existe. */}
+            {hiddenPurposes === 0 &&
+              suggestions.map((seed) => (
               <Pressable
                 key={seed.key}
                 accessibilityRole="button"
@@ -238,15 +318,6 @@ export const PurposeAllocate = ({
                 </Text>
               </Pressable>
             ))}
-            <Pressable
-              accessibilityRole="button"
-              onPress={onCreateCustom}
-              className="min-h-[44px] flex-row items-center justify-center gap-1.5 rounded-full border border-dashed border-border px-3"
-            >
-              <Text className="text-[13px] font-bold text-positive">
-                + {t('savings.purposes.create_inline')}
-              </Text>
-            </Pressable>
           </View>
         </View>
       )}

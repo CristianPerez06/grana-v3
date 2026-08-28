@@ -357,31 +357,37 @@ export function PurposeAllocate({
         {t('purposes.allocate_note')}
       </p>
 
-      {(limitError ?? error) && (
-        <p className="mt-3 text-[13px] font-semibold text-negative">{limitError ?? error}</p>
-      )}
-
-      <Button
-        className="mt-4 h-11"
-        onClick={submit}
-        disabled={pending || value <= 0 || overLimit || purpose == null}
-      >
-        {t(allocating ? 'purposes.allocate' : 'purposes.unallocate')}
-      </Button>
-
-      {/* La salida explícita, solo recién creado. La flecha de arriba cierra
-          igual, pero bajo un título que dice «Listo, creaste…» se lee como
-          «volver a crear», no como «terminé». Destinar es OPCIONAL: un propósito
-          en cero es un estado válido, y hay que poder llegar a él diciéndolo. */}
-      {justCreated && (
-        <button
-          type="button"
-          onClick={onBack}
-          className="relative mx-auto mt-3 block text-[13px] font-bold text-text-muted transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
+      {/* El CTA no se scrollea: queda PEGADO al pie del panel, y el mensaje de
+          tope viaja con él. Misma razón que en el formulario de guardar — cuánto
+          mide esta pantalla lo decide cuántos propósitos tiene el usuario, así
+          que no hay presupuesto de píxeles que aguante. */}
+      <div className="sticky bottom-0 z-10 -mx-5 -mb-6 mt-4 bg-page px-5 pb-6 pt-3">
+        {(limitError ?? error) && (
+          <p className="mb-2 text-[13px] font-semibold text-negative">{limitError ?? error}</p>
+        )}
+        <Button
+          className="h-11"
+          onClick={submit}
+          disabled={pending || value <= 0 || overLimit || purpose == null}
         >
-          {t('purposes.created_skip')}
-        </button>
-      )}
+          {t(allocating ? 'purposes.allocate' : 'purposes.unallocate')}
+        </Button>
+
+        {/* La salida explícita, solo recién creado. La flecha de arriba cierra
+            igual, pero bajo un título que dice «Listo, creaste…» se lee como
+            «volver a crear», no como «terminé». Destinar es OPCIONAL: un
+            propósito en cero es un estado válido, y hay que poder llegar a él
+            diciéndolo. */}
+        {justCreated && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="relative mx-auto mt-3 block text-[13px] font-bold text-text-muted transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] hover:text-text"
+          >
+            {t('purposes.created_skip')}
+          </button>
+        )}
+      </div>
     </div>
   )
 }

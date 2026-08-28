@@ -1382,24 +1382,39 @@ const SavingsForm = ({
         {mode === 'save' ? t('save_note') : t('release_note')}
       </p>
 
-      {(limitError ?? error) && (
-        <p role="alert" className="mt-3 px-1 text-[13px] font-semibold text-negative">
-          {limitError ?? error}
-        </p>
-      )}
+      {/* El CTA no se scrollea: queda PEGADO al pie del panel.
+          En un teléfono este formulario mide más que la sheet —y cuánto más lo
+          decide el usuario, no el diseño: diez propósitos son dos filas de chips
+          más que tres—, así que cualquier presupuesto de píxeles que cierre hoy
+          lo rompe mañana el que tiene doce. Pegado, el botón está a la vista
+          desde que se abre, se tipee lo que se tipee.
 
-      {/* El CTA dice el MONTO, no solo el verbo. Es lo último que se lee antes
-          de confirmar, y es donde un error de tipeo —un cero de más— todavía se
-          puede cachar. Sin monto escrito, el botón dice lo mismo con $5.000 que
-          con $500.000. Vuelve al verbo solo mientras no hay monto: «Guardar $ 0»
-          sería un botón que anuncia una operación que no existe. */}
-      <Button className="mt-4 h-12" onClick={submit} disabled={pending || value <= 0 || overLimit}>
-        {value > 0
-          ? t(mode === 'save' ? 'save_amount' : 'release_amount', {
-              amount: money(value, currency),
-            })
-          : t(mode === 'save' ? 'save' : 'release')}
-      </Button>
+          El mensaje de tope viaja CON el botón, no arriba en el scroll: explica
+          por qué está apagado, y un botón apagado cuya explicación quedó fuera
+          de pantalla no deja avanzar y tampoco dice por qué.
+
+          Los `-mx-5 px-5` estiran el fondo hasta los bordes del panel, para que
+          lo que pasa por abajo no se lea a través. */}
+      <div className="sticky bottom-0 z-10 -mx-5 -mb-6 mt-4 bg-page px-5 pb-6 pt-3">
+        {(limitError ?? error) && (
+          <p role="alert" className="mb-2 px-1 text-[13px] font-semibold text-negative">
+            {limitError ?? error}
+          </p>
+        )}
+        {/* El CTA dice el MONTO, no solo el verbo. Es lo último que se lee antes
+            de confirmar, y es donde un error de tipeo —un cero de más— todavía
+            se puede cachar. Sin monto escrito, el botón dice lo mismo con $5.000
+            que con $500.000. Vuelve al verbo solo mientras no hay monto:
+            «Guardar $ 0» sería un botón que anuncia una operación que no
+            existe. */}
+        <Button className="h-12" onClick={submit} disabled={pending || value <= 0 || overLimit}>
+          {value > 0
+            ? t(mode === 'save' ? 'save_amount' : 'release_amount', {
+                amount: money(value, currency),
+              })
+            : t(mode === 'save' ? 'save' : 'release')}
+        </Button>
+      </div>
     </div>
   )
 }

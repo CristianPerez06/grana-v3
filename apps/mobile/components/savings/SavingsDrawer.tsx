@@ -424,6 +424,7 @@ export const SavingsDrawer = ({
                 ? groupAmount(c, null)
                 : groupAmount(c, view.purpose?.id ?? null)
             }
+            allocatedIn={(c: Currency, id: string) => groupAmount(c, id)}
             onCreateSeed={createFromSeed}
             onCreateCustom={() => push({ kind: 'purposeForm', purpose: null })}
             justCreated={view.justCreated}
